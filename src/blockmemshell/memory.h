@@ -90,12 +90,12 @@ extern "C" {
 #define BMSduplicateMemory(ptr, source)       ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSduplicateMemoryArray(ptr, source, num) ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), (num)*sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSduplicateMemorySize(ptr, source, size) ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), (size_t)(size), __FILE__, __LINE__ ))
-#define BMSfreeMemory(ptr)                    { BMSfreeMemory_call( (void*)(*(ptr)), __FILE__, __LINE__ ); *(ptr) = NULL; }
-#define BMSfreeMemoryNull(ptr)                { if( *(ptr) != NULL ) BMSfreeMemory( (ptr) ); }
-#define BMSfreeMemoryArray(ptr)               { BMSfreeMemory_call( (void*)(*(ptr)), __FILE__, __LINE__ ); *(ptr) = NULL; }
-#define BMSfreeMemoryArrayNull(ptr)           { if( *(ptr) != NULL ) BMSfreeMemoryArray( (ptr) ); }
-#define BMSfreeMemorySize(ptr)                { BMSfreeMemory_call( (void*)(*(ptr)), __FILE__, __LINE__ ); *(ptr) = NULL; }
-#define BMSfreeMemorySizeNull(ptr)            { if( *(ptr) != NULL ) BMSfreeMemorySize( (ptr) ); }
+#define BMSfreeMemory(ptr)                    BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ );
+#define BMSfreeMemoryNull(ptr)                BMSfreeMemoryNull_call( (void**)(ptr), __FILE__, __LINE__ );
+#define BMSfreeMemoryArray(ptr)               BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ );
+#define BMSfreeMemoryArrayNull(ptr)           BMSfreeMemoryNull_call( (void**)(ptr), __FILE__, __LINE__ );
+#define BMSfreeMemorySize(ptr)                BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ );
+#define BMSfreeMemorySizeNull(ptr)            BMSfreeMemoryNull_call( (void**)(ptr), __FILE__, __LINE__ );
 
 #ifndef NDEBUG
 #define BMSgetPointerSize(ptr)                BMSgetPointerSize_call(ptr)
@@ -169,10 +169,18 @@ void* BMSduplicateMemory_call(
    int                   line                /**< line number in source file where the duplication is performed */
    );
 
-/** frees an allocated memory element */
+/** frees an allocated memory element and sets pointer to NULL */
 EXTERN
 void BMSfreeMemory_call(
-   void*                 ptr,                /**< pointer to memory element */
+   void**                ptr,                /**< pointer to pointer to memory element */
+   const char*           filename,           /**< source file where the deallocation is performed */
+   int                   line                /**< line number in source file where the deallocation is performed */
+   );
+
+/** frees an allocated memory element if pointer is not NULL and sets pointer to NULL */
+EXTERN
+void BMSfreeMemoryNull_call(
+   void**                ptr,                /**< pointer to pointer to memory element */
    const char*           filename,           /**< source file where the deallocation is performed */
    int                   line                /**< line number in source file where the deallocation is performed */
    );

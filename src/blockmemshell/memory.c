@@ -467,24 +467,44 @@ void* BMSduplicateMemory_call(
    return ptr;
 }
 
-/** frees an allocated memory element */
+/** frees an allocated memory element and sets pointer to NULL */
 void BMSfreeMemory_call(
-   void*                 ptr,                /**< pointer to memory element */
+   void**                ptr,                /**< pointer to pointer to memory element */
    const char*           filename,           /**< source file where the deallocation is performed */
    int                   line                /**< line number in source file where the deallocation is performed */
    )
 {
-   if( ptr != NULL )
+   assert( ptr != NULL );
+   if( *ptr != NULL )
    {
 #if !defined(NDEBUG) && defined(NPARASCIP)
-      removeMemlistEntry(ptr, filename, line);
+      removeMemlistEntry(*ptr, filename, line);
 #endif
-      free(ptr);
+      free(*ptr);
+      *ptr = NULL;
    }
    else
    {
       printErrorHeader(filename, line);
       printError("Tried to free null pointer.\n");
+   }
+}
+
+/** frees an allocated memory element if pointer is not NULL and sets pointer to NULL */
+void BMSfreeMemoryNull_call(
+   void**                ptr,                /**< pointer to pointer to memory element */
+   const char*           filename,           /**< source file where the deallocation is performed */
+   int                   line                /**< line number in source file where the deallocation is performed */
+   )
+{
+   assert( ptr != NULL );
+   if ( *ptr != NULL )
+   {
+#if !defined(NDEBUG) && defined(NPARASCIP)
+      removeMemlistEntry(*ptr, filename, line);
+#endif
+      free(*ptr);
+      *ptr = NULL;
    }
 }
 
