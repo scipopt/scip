@@ -1905,6 +1905,21 @@ void* BMSallocBlockMemoryArray_call(
    return BMSallocBlockMemory_work(blkmem, size, filename, line);
 }
 
+/** allocates array in the block memory pool and clears it */
+void* BMSallocClearBlockMemoryArray_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   size_t                num,                /**< size of array to be allocated */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr;
+   ptr = BMSallocBlockMemoryArray_call(blkmem, num, typesize, filename, line);
+   if ( ptr != NULL )
+      BMSclearMemorySize(ptr, num * typesize);
+   return ptr;
+}
 
 /** resizes memory element in the block memory pool, and copies the data */
 void* BMSreallocBlockMemory_call(
@@ -2657,6 +2672,21 @@ void* BMSallocBufferMemory_call(
    }
 #endif
 
+   return ptr;
+}
+
+/** allocates the next unused buffer and clears it */
+void* BMSallocClearBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   size_t                size,               /**< minimal required size of the buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr;
+   ptr = BMSallocBufferMemory_call(buffer, size, filename, line);
+   if ( ptr != NULL )
+      BMSclearMemorySize(ptr, size);
    return ptr;
 }
 

@@ -396,6 +396,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSallocBlockMemory(mem,ptr)          ASSIGN((ptr), BMSallocBlockMemory_call((mem), sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSallocBlockMemorySize(mem,ptr,size) ASSIGN((ptr), BMSallocBlockMemory_call((mem), (size_t)(size), __FILE__, __LINE__))
 #define BMSallocBlockMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocBlockMemoryArray_call((mem), (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSallocClearBlockMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocClearBlockMemoryArray_call((mem), (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSreallocBlockMemorySize(mem,ptr,oldsize,newsize) ASSIGN((ptr), BMSreallocBlockMemory_call((mem), (void*)(*(ptr)), \
                                                 (size_t)(oldsize), (size_t)(newsize), __FILE__, __LINE__))
 #define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum) ASSIGN((ptr), BMSreallocBlockMemoryArray_call((mem), (void*)(*(ptr)), \
@@ -429,6 +430,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 #define BMSdestroyBlockMemoryNull(mem)                       /**/
 #define BMSallocBlockMemory(mem,ptr)                         BMSallocMemory(ptr)
 #define BMSallocBlockMemoryArray(mem,ptr,num)                BMSallocMemoryArray(ptr,num)
+#define BMSallocClearBlockMemoryArray(mem,ptr,num)           BMSallocClearMemoryArray(ptr,num)
 #define BMSallocBlockMemorySize(mem,ptr,size)                BMSallocMemorySize(ptr,size)
 #define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum)    BMSreallocMemoryArray(ptr,newnum)
 #define BMSreallocBlockMemorySize(mem,ptr,oldsize,newsize)   BMSreallocMemorySize(ptr,newsize)
@@ -487,6 +489,16 @@ void* BMSallocBlockMemory_call(
 /** allocates array in the block memory pool */
 EXTERN
 void* BMSallocBlockMemoryArray_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   size_t                num,                /**< size of array to be allocated */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   );
+
+/** allocates array in the block memory pool and clears it */
+EXTERN
+void* BMSallocClearBlockMemoryArray_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    size_t                num,                /**< size of array to be allocated */
    size_t                typesize,           /**< size of each component */
@@ -609,6 +621,7 @@ typedef struct BMS_BufMem BMS_BUFMEM;        /**< buffer memory for temporary ob
 #define BMSreallocBufferMemorySize(mem,ptr,size) \
                                              ASSIGN((ptr), BMSreallocBufferMemory_call((mem), (void*)(*(ptr)), (size_t)(size), __FILE__, __LINE__))
 #define BMSallocBufferMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocBufferMemory_call((mem), (num)*sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSallocClearBufferMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocClearBufferMemory_call((mem), (num)*sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSreallocBufferMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSreallocBufferMemory_call((mem), (void*)(*(ptr)), (num)*sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSduplicateBufferMemory(mem,ptr,source,size) \
                                              ASSIGN((ptr), BMSduplicateBufferMemory_call((mem), (const void*)(source), (size_t)(size), __FILE__, __LINE__))
@@ -661,6 +674,15 @@ void BMSsetBufferMemoryArraygrowinit(
 /** allocates the next unused buffer */
 EXTERN
 void* BMSallocBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   size_t                size,               /**< minimal required size of the buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   );
+
+/** allocates the next unused buffer and clears it */
+EXTERN
+void* BMSallocClearBufferMemory_call(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
    size_t                size,               /**< minimal required size of the buffer */
    const char*           filename,           /**< source file of the function call */
