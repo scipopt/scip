@@ -551,12 +551,13 @@ typedef struct BMS_BufMem BMS_BUFMEM;        /**< buffer memory for temporary ob
                                              ASSIGN((ptr), BMSduplicateBufferMemory_call((mem), (const void*)(source), (size_t)(size), __FILE__, __LINE__))
 #define BMSduplicateBufferMemoryArray(mem,ptr,source,num) \
                                              ASSIGN((ptr), BMSduplicateBufferMemory_call((mem), (const void*)(source), (num)*sizeof(**(ptr)), __FILE__, __LINE__))
-#define BMSfreeBufferMemory(mem,ptr)         { BMSfreeBufferMemory_call((mem), (void*)(*(ptr)), __FILE__, __LINE__); *(ptr) = NULL; }
-#define BMSfreeBufferMemoryNull(mem,ptr)     { if ( *(ptr) != NULL ) BMSfreeBufferMemory_call((mem), (void*)(*(ptr)), __FILE__, __LINE__); (*ptr) = NULL; }
-#define BMSfreeBufferMemoryArray(mem,ptr)    { BMSfreeBufferMemory_call((mem), (void*)(*(ptr)), __FILE__, __LINE__); *(ptr) = NULL; }
-#define BMSfreeBufferMemoryArrayNull(mem,ptr){ if ( *(ptr) != NULL ) BMSfreeBufferMemoryArray((mem), (ptr)); }
-#define BMSfreeBufferMemorySize(mem,ptr)     { BMSfreeBufferMemory_call((mem), (void*)(*(ptr)), __FILE__, __LINE__); *(ptr) = NULL; }
-#define BMSfreeBufferMemorySizeNull(mem,ptr) { if ( *(ptr) != NULL ) BMSfreeBufferMemorySize((mem), (ptr), __FILE__, __LINE__); }
+
+#define BMSfreeBufferMemory(mem,ptr)         BMSfreeBufferMemory_call((mem), (void**)(ptr), __FILE__, __LINE__)
+#define BMSfreeBufferMemoryNull(mem,ptr)     BMSfreeBufferMemoryNull_call((mem), (void**)(ptr), __FILE__, __LINE__)
+#define BMSfreeBufferMemoryArray(mem,ptr)    BMSfreeBufferMemory_call((mem), (void**)(ptr), __FILE__, __LINE__)
+#define BMSfreeBufferMemoryArrayNull(mem,ptr) BMSfreeBufferMemoryNull_call((mem), (void**)(ptr), __FILE__, __LINE__)
+#define BMSfreeBufferMemorySize(mem,ptr)     BMSfreeBufferMemory_call((mem), (void**)(ptr), __FILE__, __LINE__);
+#define BMSfreeBufferMemorySizeNull(mem,ptr) BMSfreeBufferMemoryNull_call((mem), (void**)(ptr), __FILE__, __LINE__)
 
 #define BMScreateBufferMemory(fac,init,clean) BMScreateBufferMemory_call((fac), (init), (clean), __FILE__, __LINE__)
 #define BMSdestroyBufferMemory(mem)          BMSdestroyBufferMemory_call((mem), __FILE__, __LINE__)
@@ -623,11 +624,20 @@ void* BMSduplicateBufferMemory_call(
    int                   line                /**< line number in source file of the function call */
    );
 
-/** frees a buffer */
+/** frees a buffer and sets pointer to NULL */
 EXTERN
 void BMSfreeBufferMemory_call(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
-   void*                 ptr,                /**< pointer to the allocated memory buffer */
+   void**                ptr,                /**< pointer to pointer to the allocated memory buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   );
+
+/** frees a buffer if pointer is not NULL and sets pointer to NULL */
+EXTERN
+void BMSfreeBufferMemoryNull_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   void**                ptr,                /**< pointer to pointer to the allocated memory buffer */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
    );

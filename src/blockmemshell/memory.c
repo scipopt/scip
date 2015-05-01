@@ -2566,76 +2566,109 @@ void* BMSduplicateBufferMemory_call(
    return ptr;
 }
 
-/** frees a buffer */
-void BMSfreeBufferMemory_call(
+/** work for freeing a buffer */
+inline static
+void BMSfreeBufferMemory_work(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
-   void*                 ptr,                /**< pointer to the allocated memory buffer */
+   void**                ptr,                /**< pointer to pointer to the allocated memory buffer */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
    )
 {  /*lint --e{715}*/
-#ifndef SCIP_NOBUFFERMEM
    int bufnum;
 
    assert( buffer != NULL );
    assert( buffer->firstfree <= buffer->ndata );
    assert( buffer->firstfree >= 1 );
+   assert( ptr != NULL );
+   assert( *ptr != NULL );
 
-   if ( ptr != NULL )
-   {
-      /* Search the pointer in the buffer list:
-       * Usually, buffers are allocated and freed like a stack, such that the freed pointer is
-       * most likely at the end of the buffer list.
-       */
-      bufnum = buffer->firstfree-1;
-      while ( bufnum >= 0 && buffer->data[bufnum] != ptr )
-         --bufnum;
+   /* Search the pointer in the buffer list:
+    * Usually, buffers are allocated and freed like a stack, such that the freed pointer is
+    * most likely at the end of the buffer list.
+    */
+   bufnum = buffer->firstfree-1;
+   while ( bufnum >= 0 && buffer->data[bufnum] != *ptr )
+      --bufnum;
 
 #ifndef NDEBUG
-      if ( bufnum < 0 )
-      {
-         printErrorHeader(filename, line);
-         printError("Tried to free unkown buffer pointer.\n");
-         return;
-      }
-      if ( ! buffer->used[bufnum] )
-      {
-         printErrorHeader(filename, line);
-         printError("Tried to free buffer pointer already freed.\n");
-         return;
-      }
+   if ( bufnum < 0 )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to free unkown buffer pointer.\n");
+      return;
+   }
+   if ( ! buffer->used[bufnum] )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to free buffer pointer already freed.\n");
+      return;
+   }
 #endif
 
 #ifdef CHECKMEM
-      /* check that the memory is cleared */
-      if( buffer->clean )
-      {
-         char* tmpptr = (char*)(buffer->data[bufnum]);
-         unsigned int inc = buffer->size[bufnum] / sizeof(*tmpptr);
-         tmpptr += inc;
+   /* check that the memory is cleared */
+   if( buffer->clean )
+   {
+      char* tmpptr = (char*)(buffer->data[bufnum]);
+      unsigned int inc = buffer->size[bufnum] / sizeof(*tmpptr);
+      tmpptr += inc;
 
-         while( --tmpptr >= (char*)(buffer->data[bufnum]) )
-            assert(*tmpptr == '\0');
-      }
+      while( --tmpptr >= (char*)(buffer->data[bufnum]) )
+         assert(*tmpptr == '\0');
+   }
 #endif
 
-      assert( buffer->data[bufnum] == ptr );
-      buffer->used[bufnum] = FALSE;
+   assert( buffer->data[bufnum] == *ptr );
+   buffer->used[bufnum] = FALSE;
 
-      while ( buffer->firstfree > 0 && !buffer->used[buffer->firstfree-1] )
-         --buffer->firstfree;
+   while ( buffer->firstfree > 0 && !buffer->used[buffer->firstfree-1] )
+      --buffer->firstfree;
 
-      debugMessage("Freed buffer %d/%d at %p of size %u for pointer %p, first free is %d.\n",
-         bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], ptr, buffer->firstfree);
-   }
+   debugMessage("Freed buffer %d/%d at %p of size %u for pointer %p, first free is %d.\n",
+      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], *ptr, buffer->firstfree);
+
+   *ptr = NULL;
+}
+
+/** frees a buffer and sets pointer to NULL */
+void BMSfreeBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   void**                ptr,                /**< pointer to pointer to the allocated memory buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{  /*lint --e{715}*/
+   assert( ptr != NULL );
+
+#ifndef SCIP_NOBUFFERMEM
+   if ( *ptr != NULL )
+      BMSfreeBufferMemory_work(buffer, ptr, filename, line);
    else
    {
       printErrorHeader(filename, line);
       printError("Tried to free null buffer pointer.\n");
    }
-
 #else
-   BMSfreeMemory(&ptr);
+   BMSfreeMemory(ptr);
+#endif
+}
+
+/** frees a buffer if pointer is not NULL and sets pointer to NULL */
+void BMSfreeBufferMemoryNull_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   void**                ptr,                /**< pointer to pointer to the allocated memory buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{  /*lint --e{715}*/
+   assert( ptr != NULL );
+
+#ifndef SCIP_NOBUFFERMEM
+   if ( *ptr != NULL )
+      BMSfreeBufferMemory_work(buffer, ptr, filename, line);
+#else
+   BMSfreeMemory(ptr);
 #endif
 }
 
