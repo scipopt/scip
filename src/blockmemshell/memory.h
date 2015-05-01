@@ -225,9 +225,7 @@ typedef struct BMS_ChkMem BMS_CHKMEM;           /**< collection of memory chunks
 
 #define BMScreateChunkMemory(sz,isz,gbf)      BMScreateChunkMemory_call( (sz), (isz), (gbf), __FILE__, __LINE__ )
 #define BMSclearChunkMemory(mem)              BMSclearChunkMemory_call( (mem), __FILE__, __LINE__ )
-#define BMSclearChunkMemoryNull(mem)          { if( (mem) != NULL ) BMSclearChunkMemory( (mem) ); }
 #define BMSdestroyChunkMemory(mem)            BMSdestroyChunkMemory_call( (mem), __FILE__, __LINE__ )
-#define BMSdestroyChunkMemoryNull(mem)        { if( *(mem) != NULL ) BMSdestroyChunkMemory( (mem) ); }
 
 #define BMSallocChunkMemory(mem,ptr)          ASSIGN((ptr), BMSallocChunkMemory_call((mem), sizeof(**(ptr)), \
                                                 __FILE__, __LINE__))
@@ -358,9 +356,7 @@ typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of
 
 #define BMScreateBlockMemory(csz,gbf)         BMScreateBlockMemory_call( (csz), (gbf), __FILE__, __LINE__ )
 #define BMSclearBlockMemory(mem)              BMSclearBlockMemory_call( (mem), __FILE__, __LINE__ )
-#define BMSclearBlockMemoryNull(mem)          { if( (mem) != NULL ) BMSclearBlockMemory( (mem) ); }
 #define BMSdestroyBlockMemory(mem)            BMSdestroyBlockMemory_call( (mem), __FILE__, __LINE__ )
-#define BMSdestroyBlockMemoryNull(mem)        { if( *(mem) != NULL ) BMSdestroyBlockMemory( (mem) ); }
 
 #define BMSallocBlockMemory(mem,ptr)          ASSIGN((ptr), BMSallocBlockMemory_call((mem), sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSallocBlockMemorySize(mem,ptr,size) ASSIGN((ptr), BMSallocBlockMemory_call((mem), (size_t)(size), __FILE__, __LINE__))
