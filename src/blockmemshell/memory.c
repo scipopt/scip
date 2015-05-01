@@ -2105,6 +2105,7 @@ struct BMS_BufMem
    void**                data;               /**< allocated memory chunks for arbitrary data */
    int*                  size;               /**< sizes of buffers in bytes */
    unsigned int*         used;               /**< 1 iff corresponding buffer is in use */
+   long long             totalmem;           /**< total memory consumption of buffer */
    unsigned int          clean;              /**< 1 iff the memory blocks in the buffer should be initialized to zero? */
    int                   ndata;              /**< number of memory chunks */
    int                   firstfree;          /**< first unused memory chunk */
@@ -2130,6 +2131,7 @@ BMS_BUFMEM* BMScreateBufferMemory_call(
       buffer->data = NULL;
       buffer->size = NULL;
       buffer->used = NULL;
+      buffer->totalmem = 0LL;
       buffer->clean = clean;
       buffer->ndata = 0;
       buffer->firstfree = 0;
@@ -2330,7 +2332,9 @@ void* BMSallocBufferMemory_call(
 
          BMSclearMemorySize(tmpptr, newsize - buffer->size[bufnum]);
       }
+      buffer->totalmem += ((int)newsize) - buffer->size[bufnum];
       buffer->size[bufnum] = (int) newsize;
+
       if ( buffer->data[bufnum] == NULL )
       {
          printErrorHeader(filename, line);
@@ -2430,6 +2434,7 @@ void* BMSreallocBufferMemory_call(
       /* enlarge buffer */
       newsize = calcMemoryGrowSize((size_t) buffer->arraygrowinit, buffer->arraygrowfac, size);
       BMSreallocMemorySize(&buffer->data[bufnum], newsize);
+      buffer->totalmem += ((int)newsize) - buffer->size[bufnum];
       buffer->size[bufnum] = (int) newsize;
       if ( buffer->data[bufnum] == NULL )
       {
@@ -2565,14 +2570,17 @@ long long BMSgetBufferMemoryUsed(
    const BMS_BUFMEM*     buffer              /**< buffer memory */
    )
 {
+#ifdef CHECKMEM
    long long totalmem = 0LL;
    int i;
 
    assert( buffer != NULL );
    for (i = 0; i < buffer->ndata; ++i)
       totalmem += buffer->size[i];
+   assert(totalmem == buffer->totalmem);
+#endif
 
-   return totalmem;
+   return buffer->totalmem;
 }
 
 /** outputs statistics about currently allocated buffers to the screen */
