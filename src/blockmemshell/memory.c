@@ -2103,9 +2103,9 @@ void BMScheckEmptyBlockMemory_call(
 struct BMS_BufMem
 {
    void**                data;               /**< allocated memory chunks for arbitrary data */
-   int*                  size;               /**< sizes of buffers in bytes */
+   unsigned int*         size;               /**< sizes of buffers in bytes */
    unsigned int*         used;               /**< 1 iff corresponding buffer is in use */
-   long long             totalmem;           /**< total memory consumption of buffer */
+   size_t                totalmem;           /**< total memory consumption of buffer */
    unsigned int          clean;              /**< 1 iff the memory blocks in the buffer should be initialized to zero? */
    int                   ndata;              /**< number of memory chunks */
    int                   firstfree;          /**< first unused memory chunk */
@@ -2134,7 +2134,7 @@ BMS_BUFMEM* BMScreateBufferMemory_call(
       buffer->data = NULL;
       buffer->size = NULL;
       buffer->used = NULL;
-      buffer->totalmem = 0LL;
+      buffer->totalmem = 0UL;
       buffer->clean = clean;
       buffer->ndata = 0;
       buffer->firstfree = 0;
@@ -2322,7 +2322,7 @@ void* BMSallocBufferMemory_call(
    /* check, if the current buffer is large enough */
    bufnum = buffer->firstfree;
    assert( ! buffer->used[bufnum] );
-   if ( buffer->size[bufnum] < (int) size )
+   if ( buffer->size[bufnum] < size )
    {
       size_t newsize;
 
@@ -2334,13 +2334,14 @@ void* BMSallocBufferMemory_call(
       if( buffer->clean )
       {
          char* tmpptr = (char*)(buffer->data[bufnum]);
-         int inc = buffer->size[bufnum] / sizeof(*tmpptr);
+         unsigned int inc = buffer->size[bufnum] / sizeof(*tmpptr);
          tmpptr += inc;
 
          BMSclearMemorySize(tmpptr, newsize - buffer->size[bufnum]);
       }
-      buffer->totalmem += ((int)newsize) - buffer->size[bufnum];
-      buffer->size[bufnum] = (int) newsize;
+      assert( newsize > buffer->size[bufnum] );
+      buffer->totalmem += newsize - buffer->size[bufnum];
+      buffer->size[bufnum] = newsize;
 
       if ( buffer->data[bufnum] == NULL )
       {
@@ -2349,14 +2350,14 @@ void* BMSallocBufferMemory_call(
          return NULL;
       }
    }
-   assert( buffer->size[bufnum] >= (int) size );
+   assert( buffer->size[bufnum] >= size );
 
 #ifdef CHECKMEM
    /* check that the memory is cleared */
    if( buffer->clean )
    {
       char* tmpptr = (char*)(buffer->data[bufnum]);
-      int inc = buffer->size[bufnum] / sizeof(*tmpptr);
+      unsigned int inc = buffer->size[bufnum] / sizeof(*tmpptr);
       tmpptr += inc;
 
       while( --tmpptr >= (char*)(buffer->data[bufnum]) )
@@ -2368,7 +2369,7 @@ void* BMSallocBufferMemory_call(
    buffer->used[bufnum] = TRUE;
    buffer->firstfree++;
 
-   debugMessage("Allocated buffer %d/%d at %p of size %d (required size: %lu) for pointer %p.\n",
+   debugMessage("Allocated buffer %d/%d at %p of size %u (required size: %lu) for pointer %p.\n",
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
 
 #else
@@ -2434,15 +2435,16 @@ void* BMSreallocBufferMemory_call(
    assert( buffer->size[bufnum] >= 1 );
 
    /* check if the buffer has to be enlarged */
-   if ( (int) size > buffer->size[bufnum] )
+   if ( size > buffer->size[bufnum] )
    {
       size_t newsize;
 
       /* enlarge buffer */
       newsize = calcMemoryGrowSize(buffer->arraygrowinit, buffer->arraygrowfac, size);
       BMSreallocMemorySize(&buffer->data[bufnum], newsize);
-      buffer->totalmem += ((int)newsize) - buffer->size[bufnum];
-      buffer->size[bufnum] = (int) newsize;
+      assert( newsize > buffer->size[bufnum] );
+      buffer->totalmem += newsize - buffer->size[bufnum];
+      buffer->size[bufnum] = newsize;
       if ( buffer->data[bufnum] == NULL )
       {
          printErrorHeader(filename, line);
@@ -2451,10 +2453,10 @@ void* BMSreallocBufferMemory_call(
       }
       newptr = buffer->data[bufnum];
    }
-   assert( buffer->size[bufnum] >= (int) size );
+   assert( buffer->size[bufnum] >= size );
    assert( newptr == buffer->data[bufnum] );
 
-   debugMessage("Reallocated buffer %d/%d at %p to size %d (required size: %lu) for pointer %p.\n",
+   debugMessage("Reallocated buffer %d/%d at %p to size %u (required size: %lu) for pointer %p.\n",
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, newptr);
 
 #else
@@ -2533,7 +2535,7 @@ void BMSfreeBufferMemory_call(
       if( buffer->clean )
       {
          char* tmpptr = (char*)(buffer->data[bufnum]);
-         int inc = buffer->size[bufnum] / sizeof(*tmpptr);
+         unsigned int inc = buffer->size[bufnum] / sizeof(*tmpptr);
          tmpptr += inc;
 
          while( --tmpptr >= (char*)(buffer->data[bufnum]) )
@@ -2547,7 +2549,7 @@ void BMSfreeBufferMemory_call(
       while ( buffer->firstfree > 0 && !buffer->used[buffer->firstfree-1] )
          --buffer->firstfree;
 
-      debugMessage("Freed buffer %d/%d at %p of size %d for pointer %p, first free is %d.\n",
+      debugMessage("Freed buffer %d/%d at %p of size %u for pointer %p, first free is %d.\n",
          bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], ptr, buffer->firstfree);
    }
    else
@@ -2578,13 +2580,13 @@ long long BMSgetBufferMemoryUsed(
    )
 {
 #ifdef CHECKMEM
-   long long totalmem = 0LL;
+   size_t totalmem = 0UL;
    int i;
 
    assert( buffer != NULL );
    for (i = 0; i < buffer->ndata; ++i)
       totalmem += buffer->size[i];
-   assert(totalmem == buffer->totalmem);
+   assert( totalmem == buffer->totalmem );
 #endif
 
    return buffer->totalmem;
@@ -2595,16 +2597,16 @@ void BMSprintBufferMemory(
    BMS_BUFMEM*           buffer              /**< memory buffer storage */
    )
 {
-   int totalmem;
+   size_t totalmem;
    int i;
 
    assert( buffer != NULL );
 
-   totalmem = 0;
+   totalmem = 0UL;
    for (i = 0; i < buffer->ndata; ++i)
    {
-      printf("[%c] %8d bytes at %p\n", buffer->used[i] ? '*' : ' ', buffer->size[i], buffer->data[i]);
+      printf("[%c] %8u bytes at %p\n", buffer->used[i] ? '*' : ' ', buffer->size[i], buffer->data[i]);
       totalmem += buffer->size[i];
    }
-   printf("    %8d bytes total in %d buffers\n", totalmem, buffer->ndata);
+   printf("    %8lu bytes total in %d buffers\n", totalmem, buffer->ndata);
 }
