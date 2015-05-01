@@ -465,8 +465,8 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdLimit)
 
 /** enable or disable all plugin timers depending on the value of the flag \p enabled */
 void SCIPsetEnableOrDisablePluginClocks(
-   SCIP_SET*            set,                /**< SCIP settings */
-   SCIP_Bool            enabled             /**< should plugin clocks be enabled? */
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_Bool             enabled             /**< should plugin clocks be enabled? */
    )
 {
    int i;

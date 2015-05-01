@@ -465,8 +465,8 @@ SCIP_RETCODE SCIPsetSetEmphasis(
 /** enable or disable all plugin timers depending on the value of the flag \p enabled */
 extern
 void SCIPsetEnableOrDisablePluginClocks(
-   SCIP_SET*            set,                /**< SCIP settings */
-   SCIP_Bool            enabled             /**< should plugin clocks be enabled? */
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_Bool             enabled             /**< should plugin clocks be enabled? */
    );
 
 /** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances; should be called for

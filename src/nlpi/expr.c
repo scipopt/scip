@@ -1140,7 +1140,7 @@ SCIP_RETCODE polynomialdataPower(
 static
 void polynomialdataApplyChildmap(
    SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
-   int*                   childmap           /**< mapping of child indices */
+   int*                  childmap            /**< mapping of child indices */
    )
 {
    SCIP_EXPRDATA_MONOMIAL* monomial;
@@ -5389,7 +5389,7 @@ int SCIPexprGetOpIndex(
 
 /** gives real belonging to a SCIP_EXPR_CONST operand */
 SCIP_Real SCIPexprGetOpReal(
-   SCIP_EXPR* expr                           /**< expression */
+   SCIP_EXPR*            expr                /**< expression */
    )
 {
    assert(expr != NULL);
@@ -8440,9 +8440,9 @@ SCIP_RETCODE SCIPexprtreeSubstituteVars(
 /** quicksort an array of quadratic elements; pivot is the medial element (taken from scip/sorttpl.c) */
 static
 void quadelemsQuickSort(
-   SCIP_QUADELEM*       elems,               /**< array to be sorted */
-   int                  start,               /**< starting index */
-   int                  end                  /**< ending index */
+   SCIP_QUADELEM*        elems,              /**< array to be sorted */
+   int                   start,              /**< starting index */
+   int                   end                 /**< ending index */
    )
 {
    assert(start <= end);
