@@ -135,8 +135,14 @@ for (my $i = 0; $i < $narg; ++$i)
       # make sure that no comment ends and afterwards starts on the same line
       if ( $str =~ /\*\/(.*)\/\*/ )
       {
-	 # simply warn, but continue (parsing might not be correct, however)
-	 printf("%d: line contains two comments - merge into one?\n%s\n\n", $line, $_);
+	 if ( $str =~ /\*lint/ )
+	 {
+	 }
+	 else
+	 {
+	    # simply warn, but continue (parsing might not be correct, however)
+	    printf("%d: line contains two comments - merge into one?\n%s\n\n", $line, $_);
+	 }
       }
 
       # if we are in a comment that started in previous lines, we search for the end of the comment
