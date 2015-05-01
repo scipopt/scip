@@ -90,12 +90,12 @@ extern "C" {
 #define BMSduplicateMemory(ptr, source)       ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSduplicateMemorySize(ptr, source, size) ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), (size_t)(size), __FILE__, __LINE__ ))
 #define BMSduplicateMemoryArray(ptr, source, num) ASSIGN((ptr), BMSduplicateMemoryArray_call( (const void*)(source), (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSfreeMemory(ptr)                    BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ );
-#define BMSfreeMemoryNull(ptr)                BMSfreeMemoryNull_call( (void**)(ptr), __FILE__, __LINE__ );
-#define BMSfreeMemoryArray(ptr)               BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ );
-#define BMSfreeMemoryArrayNull(ptr)           BMSfreeMemoryNull_call( (void**)(ptr), __FILE__, __LINE__ );
-#define BMSfreeMemorySize(ptr)                BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ );
-#define BMSfreeMemorySizeNull(ptr)            BMSfreeMemoryNull_call( (void**)(ptr), __FILE__, __LINE__ );
+#define BMSfreeMemory(ptr)                    BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ )
+#define BMSfreeMemoryNull(ptr)                BMSfreeMemoryNull_call( (void**)(ptr), __FILE__, __LINE__ )
+#define BMSfreeMemoryArray(ptr)               BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ )
+#define BMSfreeMemoryArrayNull(ptr)           BMSfreeMemoryNull_call( (void**)(ptr), __FILE__, __LINE__ )
+#define BMSfreeMemorySize(ptr)                BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ )
+#define BMSfreeMemorySizeNull(ptr)            BMSfreeMemoryNull_call( (void**)(ptr), __FILE__, __LINE__ )
 
 #ifndef NDEBUG
 #define BMSgetPointerSize(ptr)                BMSgetPointerSize_call(ptr)
