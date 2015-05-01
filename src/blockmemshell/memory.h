@@ -227,10 +227,8 @@ typedef struct BMS_ChkMem BMS_CHKMEM;           /**< collection of memory chunks
 #define BMSclearChunkMemory(mem)              BMSclearChunkMemory_call( (mem), __FILE__, __LINE__ )
 #define BMSdestroyChunkMemory(mem)            BMSdestroyChunkMemory_call( (mem), __FILE__, __LINE__ )
 
-#define BMSallocChunkMemory(mem,ptr)          ASSIGN((ptr), BMSallocChunkMemory_call((mem), sizeof(**(ptr)), \
-                                                __FILE__, __LINE__))
-#define BMSduplicateChunkMemory(mem, ptr, source) \
-                                                ASSIGN((ptr), BMSduplicateChunkMemory_call((mem), (const void*)(source), \
+#define BMSallocChunkMemory(mem,ptr)          ASSIGN((ptr), BMSallocChunkMemory_call((mem), sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSduplicateChunkMemory(mem, ptr, source) ASSIGN((ptr), BMSduplicateChunkMemory_call((mem), (const void*)(source), \
                                                 sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSfreeChunkMemory(mem,ptr)           BMSfreeChunkMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), __FILE__, __LINE__ )
 #define BMSfreeChunkMemoryNull(mem,ptr)       BMSfreeChunkMemoryNull_call( (mem), (void**)(ptr) )
