@@ -2537,8 +2537,9 @@ size_t calcMemoryGrowSize(
 }
 #endif
 
-/** allocates the next unused buffer */
-void* BMSallocBufferMemory_call(
+/** work for allocating the next unused buffer */
+inline static
+void* BMSallocBufferMemory_work(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
    size_t                size,               /**< minimal required size of the buffer */
    const char*           filename,           /**< source file of the function call */
@@ -2548,15 +2549,6 @@ void* BMSallocBufferMemory_call(
    void* ptr;
 #ifndef SCIP_NOBUFFERMEM
    int bufnum;
-#endif
-
-#ifndef NDEBUG
-   if ( size > (size_t)(UINT_MAX / 8) )
-   {
-      printErrorHeader(filename, line);
-      printError("Tried to allocate buffer of size exceeding %d.\n", INT_MAX / 8);
-      return NULL;
-   }
 #endif
 
 #ifndef SCIP_NOBUFFERMEM
@@ -2675,23 +2667,69 @@ void* BMSallocBufferMemory_call(
    return ptr;
 }
 
-/** allocates the next unused buffer and clears it */
-void* BMSallocClearBufferMemory_call(
+/** allocates the next unused buffer */
+void* BMSallocBufferMemory_call(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
    size_t                size,               /**< minimal required size of the buffer */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
    )
 {
+#ifndef NDEBUG
+   if ( size > (size_t)(UINT_MAX / 2) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate buffer of size exceeding %u.\n", UINT_MAX / 2);
+      return NULL;
+   }
+#endif
+
+   return BMSallocBufferMemory_work(buffer, size, filename, line);
+}
+
+/** allocates the next unused buffer array */
+void* BMSallocBufferMemoryArray_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   size_t                num,                /**< size of array to be allocated */
+   size_t                typesize,           /**< size of components */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   size_t size;
+
+#ifndef NDEBUG
+   if ( num > (size_t)(UINT_MAX / typesize) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate buffer of size exceeding %u.\n", UINT_MAX);
+      return NULL;
+   }
+#endif
+
+   size = num * typesize;
+   return BMSallocBufferMemory_work(buffer, size, filename, line);
+}
+
+/** allocates the next unused buffer and clears it */
+void* BMSallocClearBufferMemoryArray_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   size_t                num,                /**< size of array to be allocated */
+   size_t                typesize,           /**< size of components */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
    void* ptr;
-   ptr = BMSallocBufferMemory_call(buffer, size, filename, line);
+   ptr = BMSallocBufferMemoryArray_call(buffer, num, typesize, filename, line);
    if ( ptr != NULL )
-      BMSclearMemorySize(ptr, size);
+      BMSclearMemorySize(ptr, num * typesize);
    return ptr;
 }
 
-/** reallocates the buffer to at least the given size */
-void* BMSreallocBufferMemory_call(
+/** work for reallocating the buffer to at least the given size */
+inline static
+void* BMSreallocBufferMemory_work(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
    void*                 ptr,                /**< pointer to the allocated memory buffer */
    size_t                size,               /**< minimal required size of the buffer */
@@ -2771,6 +2809,51 @@ void* BMSreallocBufferMemory_call(
    return newptr;
 }
 
+/** reallocates the buffer to at least the given size */
+void* BMSreallocBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   void*                 ptr,                /**< pointer to the allocated memory buffer */
+   size_t                size,               /**< minimal required size of the buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+#ifndef NDEBUG
+   if ( size > (size_t)(UINT_MAX / 2) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate buffer of size exceeding %u.\n", UINT_MAX / 2);
+      return NULL;
+   }
+#endif
+
+   return BMSreallocBufferMemory_work(buffer, ptr, size, filename, line);
+}
+
+/** reallocates an array in the buffer to at least the given size */
+void* BMSreallocBufferMemoryArray_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   void*                 ptr,                /**< pointer to the allocated memory buffer */
+   size_t                num,                /**< size of array to be allocated */
+   size_t                typesize,           /**< size of components */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   size_t size;
+#ifndef NDEBUG
+   if ( num > (size_t)(UINT_MAX / typesize) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate array of size exceeding %u.\n", UINT_MAX);
+      return NULL;
+   }
+#endif
+
+   size = num * typesize;
+   return BMSreallocBufferMemory_work(buffer, ptr, size, filename, line);
+}
+
 /** allocates the next unused buffer and copies the given memory into the buffer */
 void* BMSduplicateBufferMemory_call(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
@@ -2790,6 +2873,30 @@ void* BMSduplicateBufferMemory_call(
    /* copy the source memory into the buffer */
    if ( ptr != NULL )
       BMScopyMemorySize(ptr, source, size);
+
+   return ptr;
+}
+
+/** allocates an array in the next unused buffer and copies the given memory into the buffer */
+void* BMSduplicateBufferMemoryArray_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   const void*           source,             /**< memory block to copy into the buffer */
+   size_t                num,                /**< size of array to be allocated */
+   size_t                typesize,           /**< size of components */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr;
+
+   assert( source != NULL );
+
+   /* allocate a buffer of the given size */
+   ptr = BMSallocBufferMemoryArray_call(buffer, num, typesize, filename, line);
+
+   /* copy the source memory into the buffer */
+   if ( ptr != NULL )
+      BMScopyMemorySize(ptr, source, num * typesize);
 
    return ptr;
 }
