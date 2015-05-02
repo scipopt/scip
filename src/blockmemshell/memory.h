@@ -26,6 +26,7 @@
 
 #include <limits.h>
 #include <stdlib.h>
+#include <stddef.h>
 
 /* special thanks to Daniel Junglas for following template and macros */
 #ifdef __cplusplus
@@ -65,19 +66,23 @@ extern "C" {
  * detection.
  *************************************************************************************/
 
+/* Note: values that are passed as a size_t parameter are first converted to ptrdiff_t to be sure that negative numbers
+ * are extended to the larger size. Then they are converted to size_t. Thus, negative numbers are converted to very
+ * large size_t values. This is then checked within the functions. */
+
 #define BMSallocMemory(ptr)                   ASSIGN((ptr), BMSallocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSallocMemorySize(ptr,size)          ASSIGN((ptr), BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ ))
-#define BMSallocMemoryCPP(size)               BMSallocMemory_call( (size_t)(size), __FILE__, __LINE__ )
-#define BMSallocClearMemorySize(ptr,size)     ASSIGN((ptr), BMSallocClearMemory_call((size_t)(1), (size_t)(size), __FILE__, __LINE__ ))
-#define BMSallocMemoryArray(ptr,num)          ASSIGN((ptr), BMSallocMemoryArray_call((size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSallocMemoryArrayCPP(num,size)      BMSallocMemoryArray_call( (size_t)((num), (size_t)(size), __FILE__, __LINE__ )
-#define BMSallocClearMemoryArray(ptr,num)     ASSIGN((ptr), BMSallocClearMemory_call((size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSreallocMemorySize(ptr,size)        ASSIGN((ptr), BMSreallocMemory_call((void*)(*(ptr)), (size_t)(size), __FILE__, __LINE__ ))
-#define BMSreallocMemoryArray(ptr,num)        ASSIGN((ptr), BMSreallocMemoryArray_call( *(ptr), (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSallocMemorySize(ptr,size)          ASSIGN((ptr), BMSallocMemory_call( (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ ))
+#define BMSallocMemoryCPP(size)               BMSallocMemory_call( (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ )
+#define BMSallocClearMemorySize(ptr,size)     ASSIGN((ptr), BMSallocClearMemory_call((size_t)(1), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ ))
+#define BMSallocMemoryArray(ptr,num)          ASSIGN((ptr), BMSallocMemoryArray_call((size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSallocMemoryArrayCPP(num,size)      BMSallocMemoryArray_call( (size_t)(ptrdiff_t)(num), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ )
+#define BMSallocClearMemoryArray(ptr,num)     ASSIGN((ptr), BMSallocClearMemory_call((size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSreallocMemorySize(ptr,size)        ASSIGN((ptr), BMSreallocMemory_call((void*)(*(ptr)), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ ))
+#define BMSreallocMemoryArray(ptr,num)        ASSIGN((ptr), BMSreallocMemoryArray_call( *(ptr), (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
 
 #define BMSclearMemory(ptr)                   BMSclearMemory_call( (void*)(ptr), sizeof(*(ptr)) )
 #define BMSclearMemoryArray(ptr, num)         BMSclearMemory_call( (void*)(ptr), (num)*sizeof(*(ptr)) )
-#define BMSclearMemorySize(ptr, size)         BMSclearMemory_call( (void*)(ptr), (size_t)(size) )
+#define BMSclearMemorySize(ptr, size)         BMSclearMemory_call( (void*)(ptr), (size_t)(ptrdiff_t)(size) )
 
 #define BMScopyMemory(ptr, source)            BMScopyMemory_call( (void*)(ptr), (const void*)(source), sizeof(*(ptr)) )
 #define BMScopyMemoryArray(ptr, source, num)  BMScopyMemory_call( (void*)(ptr), (const void*)(source), (num)*sizeof(*(ptr)) )
@@ -88,8 +93,9 @@ extern "C" {
 #define BMSmoveMemorySize(ptr, source, size)  BMSmoveMemory_call( (void*)(ptr), (const void*)(source), (size_t)(size) )
 
 #define BMSduplicateMemory(ptr, source)       ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), sizeof(**(ptr)), __FILE__, __LINE__ ))
-#define BMSduplicateMemorySize(ptr, source, size) ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), (size_t)(size), __FILE__, __LINE__ ))
-#define BMSduplicateMemoryArray(ptr, source, num) ASSIGN((ptr), BMSduplicateMemoryArray_call( (const void*)(source), (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSduplicateMemorySize(ptr, source, size) ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ ))
+#define BMSduplicateMemoryArray(ptr, source, num) ASSIGN((ptr), BMSduplicateMemoryArray_call( (const void*)(source), (size_t)(ptrdiff_t)(num), \
+                                                  sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSfreeMemory(ptr)                    BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ )
 #define BMSfreeMemoryNull(ptr)                BMSfreeMemoryNull_call( (void**)(ptr), __FILE__, __LINE__ )
 #define BMSfreeMemoryArray(ptr)               BMSfreeMemory_call( (void**)(ptr), __FILE__, __LINE__ )
@@ -384,34 +390,37 @@ long long BMSgetChunkMemoryUsed_call(
 
 typedef struct BMS_BlkMem BMS_BLKMEM;           /**< block memory: collection of chunk blocks */
 
-
 #ifndef BMS_NOBLOCKMEM
 
 /* block memory methods for faster memory access */
+
+/* Note: values that are passed as a size_t parameter are first converted to ptrdiff_t to be sure that negative numbers
+ * are extended to the larger size. Then they are converted to size_t. Thus, negative numbers are converted to very
+ * large size_t values. This is then checked within the functions. */
 
 #define BMScreateBlockMemory(csz,gbf)         BMScreateBlockMemory_call( (csz), (gbf), __FILE__, __LINE__ )
 #define BMSclearBlockMemory(mem)              BMSclearBlockMemory_call( (mem), __FILE__, __LINE__ )
 #define BMSdestroyBlockMemory(mem)            BMSdestroyBlockMemory_call( (mem), __FILE__, __LINE__ )
 
 #define BMSallocBlockMemory(mem,ptr)          ASSIGN((ptr), BMSallocBlockMemory_call((mem), sizeof(**(ptr)), __FILE__, __LINE__))
-#define BMSallocBlockMemorySize(mem,ptr,size) ASSIGN((ptr), BMSallocBlockMemory_call((mem), (size_t)(size), __FILE__, __LINE__))
-#define BMSallocBlockMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocBlockMemoryArray_call((mem), (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
-#define BMSallocClearBlockMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocClearBlockMemoryArray_call((mem), (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSallocBlockMemorySize(mem,ptr,size) ASSIGN((ptr), BMSallocBlockMemory_call((mem), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__))
+#define BMSallocBlockMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocBlockMemoryArray_call((mem), (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSallocClearBlockMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocClearBlockMemoryArray_call((mem), (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSreallocBlockMemorySize(mem,ptr,oldsize,newsize) ASSIGN((ptr), BMSreallocBlockMemory_call((mem), (void*)(*(ptr)), \
-                                                (size_t)(oldsize), (size_t)(newsize), __FILE__, __LINE__))
+                                                (size_t)(ptrdiff_t)(oldsize), (size_t)(ptrdiff_t)(newsize), __FILE__, __LINE__))
 #define BMSreallocBlockMemoryArray(mem,ptr,oldnum,newnum) ASSIGN((ptr), BMSreallocBlockMemoryArray_call((mem), (void*)(*(ptr)), \
-                                                (size_t)(oldnum), (size_t)(newnum), sizeof(**(ptr)), __FILE__, __LINE__))
+                                                (size_t)(ptrdiff_t)(oldnum), (size_t)(ptrdiff_t)(newnum), sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSduplicateBlockMemory(mem, ptr, source) ASSIGN((ptr), BMSduplicateBlockMemory_call((mem), (const void*)(source), \
                                                 sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSduplicateBlockMemoryArray(mem, ptr, source, num) ASSIGN((ptr), BMSduplicateBlockMemoryArray_call( (mem), (const void*)(source), \
-                                                (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
+                                                (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
 
 #define BMSfreeBlockMemory(mem,ptr)           BMSfreeBlockMemory_call( (mem), (void**)(ptr), sizeof(**(ptr)), __FILE__, __LINE__ )
 #define BMSfreeBlockMemoryNull(mem,ptr)       BMSfreeBlockMemoryNull_call( (mem), (void**)(ptr), sizeof(**(ptr)), __FILE__, __LINE__ )
 #define BMSfreeBlockMemoryArray(mem,ptr,num)  BMSfreeBlockMemory_call( (mem), (void**)(ptr), (num)*sizeof(**(ptr)), __FILE__, __LINE__ )
 #define BMSfreeBlockMemoryArrayNull(mem,ptr,num) BMSfreeBlockMemoryNull_call( (mem), (void**)(ptr), (num)*sizeof(**(ptr)), __FILE__, __LINE__ )
-#define BMSfreeBlockMemorySize(mem,ptr,size)  BMSfreeBlockMemory_call( (mem), (void**)(ptr), (size_t)(size), __FILE__, __LINE__ )
-#define BMSfreeBlockMemorySizeNull(mem,ptr,size) BMSfreeBlockMemory_call( (mem), (void**)(ptr), (size_t)(size), __FILE__, __LINE__ )
+#define BMSfreeBlockMemorySize(mem,ptr,size)  BMSfreeBlockMemory_call( (mem), (void**)(ptr), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ )
+#define BMSfreeBlockMemorySizeNull(mem,ptr,size) BMSfreeBlockMemory_call( (mem), (void**)(ptr), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ )
 
 #define BMSgarbagecollectBlockMemory(mem)     BMSgarbagecollectBlockMemory_call(mem)
 #define BMSgetBlockMemoryUsed(mem)            BMSgetBlockMemoryUsed_call(mem)
@@ -615,18 +624,22 @@ void BMScheckEmptyBlockMemory_call(
 
 typedef struct BMS_BufMem BMS_BUFMEM;        /**< buffer memory for temporary objects */
 
+/* Note: values that are passed as a size_t parameter are first converted to ptrdiff_t to be sure that negative numbers
+ * are extended to the larger size. Then they are converted to size_t. Thus, negative numbers are converted to very
+ * large size_t values. This is then checked within the functions. */
 
 #define BMSallocBufferMemory(mem,ptr)        ASSIGN((ptr), BMSallocBufferMemory_call((mem), sizeof(**(ptr)), __FILE__, __LINE__))
-#define BMSallocBufferMemorySize(mem,ptr,size) ASSIGN((ptr), BMSallocBufferMemory_call((mem), (size_t)(size), __FILE__, __LINE__))
+#define BMSallocBufferMemorySize(mem,ptr,size) ASSIGN((ptr), BMSallocBufferMemory_call((mem), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__))
 #define BMSreallocBufferMemorySize(mem,ptr,size) \
-                                             ASSIGN((ptr), BMSreallocBufferMemory_call((mem), (void*)(*(ptr)), (size_t)(size), __FILE__, __LINE__))
-#define BMSallocBufferMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocBufferMemoryArray_call((mem), (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
-#define BMSallocClearBufferMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocClearBufferMemoryArray_call((mem), (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
-#define BMSreallocBufferMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSreallocBufferMemoryArray_call((mem), (void*)(*(ptr)), (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
+                                             ASSIGN((ptr), BMSreallocBufferMemory_call((mem), (void*)(*(ptr)), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__))
+#define BMSallocBufferMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocBufferMemoryArray_call((mem), (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSallocClearBufferMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSallocClearBufferMemoryArray_call((mem), (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
+#define BMSreallocBufferMemoryArray(mem,ptr,num) ASSIGN((ptr), BMSreallocBufferMemoryArray_call((mem), (void*)(*(ptr)), (size_t)(ptrdiff_t)(num), \
+                                                 sizeof(**(ptr)), __FILE__, __LINE__))
 #define BMSduplicateBufferMemory(mem,ptr,source,size) \
-                                             ASSIGN((ptr), BMSduplicateBufferMemory_call((mem), (const void*)(source), (size_t)(size), __FILE__, __LINE__))
+                                             ASSIGN((ptr), BMSduplicateBufferMemory_call((mem), (const void*)(source), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__))
 #define BMSduplicateBufferMemoryArray(mem,ptr,source,num) ASSIGN((ptr), BMSduplicateBufferMemoryArray_call((mem), \
-                                                (const void*)(source), (size_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
+                                                (const void*)(source), (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__))
 
 #define BMSfreeBufferMemory(mem,ptr)         BMSfreeBufferMemory_call((mem), (void**)(ptr), __FILE__, __LINE__)
 #define BMSfreeBufferMemoryNull(mem,ptr)     BMSfreeBufferMemoryNull_call((mem), (void**)(ptr), __FILE__, __LINE__)
