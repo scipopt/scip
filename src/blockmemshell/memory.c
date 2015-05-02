@@ -104,7 +104,7 @@ struct Memlist
 };
 
 static MEMLIST*          memlist = NULL;     /**< global memory list for debugging purposes */
-static long long         memused = 0;        /**< number of allocated bytes */
+static size_t            memused = 0;        /**< number of allocated bytes */
 
 #ifdef CHECKMEM
 /** checks, whether the number of allocated bytes match the entries in the memory list */
@@ -114,7 +114,7 @@ void checkMemlist(
    )
 {
    MEMLIST* list = memlist;
-   long long used = 0;
+   size_t used = 0;
 
    while( list != NULL )
    {
@@ -150,7 +150,7 @@ void addMemlistEntry(
    list->line = line;
    list->next = memlist;
    memlist = list;
-   memused += (long long)size;
+   memused += size;
    checkMemlist();
 }
 
@@ -179,7 +179,8 @@ void removeMemlistEntry(
       assert(ptr == list->ptr);
 
       *listptr = list->next;
-      memused -= (long long)list->size;
+      assert( list->size <= memused );
+      memused -= list->size;
       free(list->filename);
       free(list);
    }
@@ -213,21 +214,20 @@ void BMSdisplayMemory_call(
    )
 {
    MEMLIST* list;
-   long long used;
+   size_t used = 0;
 
    printInfo("Allocated memory:\n");
    list = memlist;
-   used = 0;
    while( list != NULL )
    {
       printInfo("%12p %8"SIZET_FORMAT" %s:%d\n", list->ptr, list->size, list->filename, list->line);
-      used += (long long)list->size;
+      used += list->size;
       list = list->next;
    }
-   printInfo("Total:    %8lld\n", memused);
+   printInfo("Total:    %8"SIZET_FORMAT"\n", memused);
    if( used != memused )
    {
-      errorMessage("Used memory in list sums up to %"LONGINT_FORMAT" instead of %"LONGINT_FORMAT"\n", used, memused);
+      errorMessage("Used memory in list sums up to %"SIZET_FORMAT" instead of %"SIZET_FORMAT"\n", used, memused);
    }
    checkMemlist();
 }
@@ -249,7 +249,7 @@ long long BMSgetMemoryUsed_call(
    void
    )
 {
-   return memused;
+   return (long long) memused;
 }
 
 #else
