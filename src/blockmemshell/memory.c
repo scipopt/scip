@@ -1969,7 +1969,6 @@ void* BMSreallocBlockMemory_call(
 }
 
 /** resizes array in the block memory pool, and copies the data */
-EXTERN
 void* BMSreallocBlockMemoryArray_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    void*                 ptr,                /**< memory element to reallocated */
