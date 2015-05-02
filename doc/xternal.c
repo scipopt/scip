@@ -77,6 +77,7 @@
  *
  *   - \ref CODE    "Coding style guidelines"
  *   - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
+ *   - \ref MEMORY  "Using the memory functions of SCIP"
  *   - \ref DEBUG   "Debugging"
  *
  * @subsection HOWTOADD How to add ...
@@ -5662,6 +5663,75 @@
  *  the @c paramchgd parameter of the @c SCIPaddXyzParam() method, also giving a pointer to the data, which is
  *  needed in this method, as @c paramdata. If this method is not NULL, it is called every time
  *  the value of the parameter is changed.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page MEMORY Using the memory functions of SCIP
+ *
+ *  SCIP provides three ways for allocating memory.
+ *
+ *  @section STDMEM Standard memory
+ *
+ *  SCIP provides an access to the standard C functions @c malloc and @c free with the additional feature of tracking
+ *  memory in debug mode. In this way, memory leaks can be easily detected. This feature is automatically acitvated in
+ *  debug mode.
+ *
+ *  The most important functions are
+ *  - SCIPallocMemory(), SCIPallocMemoryArray() to allocate Memory
+ *  - SCIPfreeMemory(), SCIPfreeMemoryArray() to free memory
+ *
+ *  @section BLKMEM Block memory
+ *
+ *  SCIP offers its own block memory handling, which allows efficient handling of smaller blocks of memory in cases in
+ *  which many blocks of the same (small) size appear. This is adaquate for branch-and-cut codes in which small blocks
+ *  of the same size are allocated and freed very often (for data structures used to store rows or branch-and-bound
+ *  nodes). Actually, most blocks allocated within SCIP have small sizes like 8, 16, 30, 32, 64.  The idea is simple:
+ *  There is a separate list of memory blocks for each interesting small size. When allocating memory, the list is
+ *  checked for a free spot in the list; if no such spot exists the list is enlarged. Freeing just sets the block to be
+ *  available. Very large blocks are handled separatedly. See the dissertation of Tobias Achterberg for more details.
+ *
+ *  One important comment is that freeing block memory requires the size of the block in order to find the right list.
+ *
+ *  The most important functions are
+ *  - SCIPallocBlockMemory(), SCIPallocBlockMemoryArray() to allocate Memory
+ *  - SCIPfreeBlockMemory(), SCIPfreeBlockMemoryArray() to free memory
+ *
+ *  An example code is:
+ *  \code
+ *  SCIP_RETCODE dosomething(
+ *     SCIP*                 scip
+ *     )
+ *  {
+ *     int nvars;
+ *     int* array;
+ *
+ *     nvars = SCIPgetNVars(scip);
+ *     SCIP_CALL( SCIPallocBlockMemoryArray(scip, &array, nvars) );
+ *
+ *     do something ...
+ *
+ *     SCIPfreeBlockMemoryArray(scip, &array, nvars);
+ *  }
+ *  \endcode
+ *
+ *  @section BUFMEM Buffer memory
+ *
+ *  In addition to block memory, SCIP offers buffer memory. This should be used if smaller sizes of memory are locally
+ *  used within a function and are freed within the same function. For this purpose, SCIP has a list of memory buffers
+ *  that are reused for this purpose. In this way, a very efficient allocation/freeing is possible.
+ *
+ *  The most important functions are
+ *  - SCIPallocBufferMemory(), SCIPallocBufferMemoryArray() to allocate Memory
+ *  - SCIPfreeBufferMemory(), SCIPfreeBufferMemoryArray() to free memory
+ *
+ *  @section GENMEM General notes
+ *
+ *  The following holds for all three types of memory functions:
+ *  - In debug mode the arguments are checked for overly large allocations (negative sizes are converted into very large values of type @c size_t).
+ *  - The functions allways allocate at least one byte, so that freeing is always possible.
+ *  - The freeing methods set the pointer to the memory to NULL.
+ *  - For maximum speed you should free memory in the reverse order in which it was allocated.
+ *    For block and buffer memory this @b significantly speeds up the code.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
