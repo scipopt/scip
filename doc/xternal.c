@@ -5744,10 +5744,10 @@
  *    following example, taken from the file src/scip/cons_linear.c:
  *    \code
  *    SCIP_RETCODE consdataCatchEvent(
- *       SCIP*                 scip,               /**< SCIP data structure *\/
- *       SCIP_CONSDATA*        consdata,           /**< linear constraint data *\/
- *       SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing *\/
- *       int                   pos                 /**< array position of variable to catch bound change events for *\/
+ *       SCIP*                 scip,               /**< SCIP data structure */
+ *       SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+ *       SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+ *       int                   pos                 /**< array position of variable to catch bound change events for */
  *       )
  *       {
  *          assert(scip != NULL);
