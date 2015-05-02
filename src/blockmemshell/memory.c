@@ -2571,7 +2571,7 @@ void* BMSallocBufferMemory_work(
       int i;
 
       /* create additional buffers */
-      newsize = calcMemoryGrowSize(buffer->arraygrowinit, buffer->arraygrowfac, (unsigned) (buffer->firstfree + 1));
+      newsize = calcMemoryGrowSize((size_t)buffer->arraygrowinit, buffer->arraygrowfac, (unsigned) (buffer->firstfree + 1));
       BMSreallocMemoryArray(&buffer->data, newsize);
       if ( buffer->data == NULL )
       {
@@ -2613,7 +2613,7 @@ void* BMSallocBufferMemory_work(
       size_t newsize;
 
       /* enlarge buffer */
-      newsize = calcMemoryGrowSize(buffer->arraygrowinit, buffer->arraygrowfac, size);
+      newsize = calcMemoryGrowSize((size_t)buffer->arraygrowinit, buffer->arraygrowfac, size);
       BMSreallocMemorySize(&buffer->data[bufnum], newsize);
 
       /* clear new memory */
@@ -2627,7 +2627,7 @@ void* BMSallocBufferMemory_work(
       }
       assert( newsize > buffer->size[bufnum] );
       buffer->totalmem += newsize - buffer->size[bufnum];
-      buffer->size[bufnum] = newsize;
+      buffer->size[bufnum] = (unsigned int) newsize;
 
       if ( buffer->data[bufnum] == NULL )
       {
@@ -2787,11 +2787,11 @@ void* BMSreallocBufferMemory_work(
       size_t newsize;
 
       /* enlarge buffer */
-      newsize = calcMemoryGrowSize(buffer->arraygrowinit, buffer->arraygrowfac, size);
+      newsize = calcMemoryGrowSize((size_t)buffer->arraygrowinit, buffer->arraygrowfac, size);
       BMSreallocMemorySize(&buffer->data[bufnum], newsize);
       assert( newsize > buffer->size[bufnum] );
       buffer->totalmem += newsize - buffer->size[bufnum];
-      buffer->size[bufnum] = newsize;
+      buffer->size[bufnum] = (unsigned int) newsize;
       if ( buffer->data[bufnum] == NULL )
       {
          printErrorHeader(filename, line);
@@ -3038,7 +3038,7 @@ long long BMSgetBufferMemoryUsed(
    assert( totalmem == buffer->totalmem );
 #endif
 
-   return buffer->totalmem;
+   return (long long) buffer->totalmem;
 }
 
 /** outputs statistics about currently allocated buffers to the screen */
