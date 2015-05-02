@@ -2571,7 +2571,7 @@ void* BMSallocBufferMemory_work(
       int i;
 
       /* create additional buffers */
-      newsize = calcMemoryGrowSize((size_t)buffer->arraygrowinit, buffer->arraygrowfac, (unsigned) (buffer->firstfree + 1));
+      newsize = calcMemoryGrowSize((size_t)buffer->arraygrowinit, buffer->arraygrowfac, (size_t) (buffer->firstfree + 1));
       BMSreallocMemoryArray(&buffer->data, newsize);
       if ( buffer->data == NULL )
       {
