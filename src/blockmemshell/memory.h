@@ -81,16 +81,16 @@ extern "C" {
 #define BMSreallocMemoryArray(ptr,num)        ASSIGN((ptr), BMSreallocMemoryArray_call( *(ptr), (size_t)(ptrdiff_t)(num), sizeof(**(ptr)), __FILE__, __LINE__ ))
 
 #define BMSclearMemory(ptr)                   BMSclearMemory_call( (void*)(ptr), sizeof(*(ptr)) )
-#define BMSclearMemoryArray(ptr, num)         BMSclearMemory_call( (void*)(ptr), (num)*sizeof(*(ptr)) )
+#define BMSclearMemoryArray(ptr, num)         BMSclearMemory_call( (void*)(ptr), (size_t)(ptrdiff_t)(num)*sizeof(*(ptr)) )
 #define BMSclearMemorySize(ptr, size)         BMSclearMemory_call( (void*)(ptr), (size_t)(ptrdiff_t)(size) )
 
 #define BMScopyMemory(ptr, source)            BMScopyMemory_call( (void*)(ptr), (const void*)(source), sizeof(*(ptr)) )
-#define BMScopyMemoryArray(ptr, source, num)  BMScopyMemory_call( (void*)(ptr), (const void*)(source), (num)*sizeof(*(ptr)) )
-#define BMScopyMemorySize(ptr, source, size)  BMScopyMemory_call( (void*)(ptr), (const void*)(source), (size_t)(size) )
+#define BMScopyMemoryArray(ptr, source, num)  BMScopyMemory_call( (void*)(ptr), (const void*)(source), (size_t)(ptrdiff_t)(num)*sizeof(*(ptr)) )
+#define BMScopyMemorySize(ptr, source, size)  BMScopyMemory_call( (void*)(ptr), (const void*)(source), (size_t)(ptrdiff_t)(size) )
 
 #define BMSmoveMemory(ptr, source)            BMSmoveMemory_call( (void*)(ptr), (const void*)(source), sizeof(*(ptr)) )
-#define BMSmoveMemoryArray(ptr, source, num)  BMSmoveMemory_call( (void*)(ptr), (const void*)(source), (num) * sizeof(*(ptr)) )
-#define BMSmoveMemorySize(ptr, source, size)  BMSmoveMemory_call( (void*)(ptr), (const void*)(source), (size_t)(size) )
+#define BMSmoveMemoryArray(ptr, source, num)  BMSmoveMemory_call( (void*)(ptr), (const void*)(source), (size_t)(ptrdiff_t)(num) * sizeof(*(ptr)) )
+#define BMSmoveMemorySize(ptr, source, size)  BMSmoveMemory_call( (void*)(ptr), (const void*)(source), (size_t)(ptrdiff_t)(size) )
 
 #define BMSduplicateMemory(ptr, source)       ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSduplicateMemorySize(ptr, source, size) ASSIGN((ptr), BMSduplicateMemory_call( (const void*)(source), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ ))
