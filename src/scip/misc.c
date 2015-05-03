@@ -5723,8 +5723,7 @@ void depthFirstSearch(
    int*                  ndfsnodes           /**< pointer to store number of nodes that can be reached starting at startnode */
    )
 {
-   int stacksize;
-   int currnode;
+   int stackidx;
 
    assert(digraph != NULL);
    assert(startnode >= 0);
@@ -5738,44 +5737,48 @@ void depthFirstSearch(
    /* put start node on the stack */
    dfsstack[0] = startnode;
    stackadjvisited[0] = 0;
-   stacksize = 1;
+   stackidx = 0;
 
-   while( stacksize > 0 )
+   while( stackidx >= 0 )
    {
+      int currnode;
+      int sadv;
+
       /* get next node from stack */
-      currnode = dfsstack[stacksize - 1];
+      currnode = dfsstack[stackidx];
+
+      sadv = stackadjvisited[stackidx];
+      assert( 0 <= sadv && sadv <= digraph->nsuccessors[currnode] );
 
       /* mark current node as visited */
-      assert(visited[currnode] == (stackadjvisited[stacksize - 1] > 0));
+      assert( visited[currnode] == (sadv > 0) );
       visited[currnode] = TRUE;
 
       /* iterate through the successor list until we reach unhandled node */
-      while( stackadjvisited[stacksize - 1] < digraph->nsuccessors[currnode]
-         && visited[digraph->successors[currnode][stackadjvisited[stacksize - 1]]] )
-      {
-         stackadjvisited[stacksize - 1]++;
-      }
+      while( sadv < digraph->nsuccessors[currnode] && visited[digraph->successors[currnode][sadv]] )
+         ++sadv;
 
       /* the current node was completely handled, remove it from stack */
-      if( stackadjvisited[stacksize - 1] == digraph->nsuccessors[currnode] )
+      if( sadv == digraph->nsuccessors[currnode] )
       {
-         stacksize--;
+         --stackidx;
 
          /* store node in the sorted nodes array */
-         dfsnodes[(*ndfsnodes)] = currnode;
-         (*ndfsnodes)++;
+         dfsnodes[(*ndfsnodes)++] = currnode;
       }
       /* handle next unhandled successor node */
       else
       {
-         assert(!visited[digraph->successors[currnode][stackadjvisited[stacksize - 1]]]);
+         assert( ! visited[digraph->successors[currnode][sadv]] );
+
+         /* store current stackadjvisted index */
+         stackadjvisited[stackidx] = sadv + 1;
 
          /* put the successor node onto the stack */
-         dfsstack[stacksize] = digraph->successors[currnode][stackadjvisited[stacksize - 1]];
-         stackadjvisited[stacksize] = 0;
-         stackadjvisited[stacksize - 1]++;
-         stacksize++;
-         assert(stacksize <= digraph->nnodes);
+         ++stackidx;
+         dfsstack[stackidx] = digraph->successors[currnode][sadv];
+         stackadjvisited[stackidx] = 0;
+         assert( stackidx < digraph->nnodes );
       }
    }
 }
