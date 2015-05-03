@@ -449,7 +449,7 @@ void* BMSreallocMemory_call(
    return newptr;
 }
 
-/** allocates memory for an array; returns NULL if memory allocation failed */
+/** reallocates array; returns NULL if memory allocation failed */
 void* BMSreallocMemoryArray_call(
    void*                 ptr,                /**< pointer to memory to reallocate */
    size_t                num,                /**< number of components of array to allocate */

@@ -150,7 +150,7 @@ void* BMSreallocMemory_call(
    int                   line                /**< line number in source file where the reallocation is performed */
    );
 
-/** allocates memory for an array; returns NULL if memory allocation failed */
+/** reallocates array; returns NULL if memory allocation failed */
 EXTERN
 void* BMSreallocMemoryArray_call(
    void*                 ptr,                /**< pointer to memory to reallocate */
