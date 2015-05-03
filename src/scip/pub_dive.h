@@ -38,10 +38,9 @@ extern "C" {
  *  is applied at every node in the tree, whereas probing LPs might be solved less frequently.
  *
  *  Starting from the current LP candidates, the algorithm determines a fraction of the candidates that should be
- *  branched on; if a single candidate should be fixed, the algorithm selects a candidate which minimizes the
- *  score defined by the @p diveset.
- *  If more than one candidate should be selected, the candidates are sorted in non-decreasing order
- *  of their score.
+ *  branched on; if a single candidate should be fixed, the algorithm selects a candidate which minimizes the score
+ *  defined by the @p diveset.  If more than one candidate should be selected, the candidates are sorted in
+ *  non-decreasing order of their score.
  *
  *  The algorithm iteratively selects the the next (unfixed) candidate in the list, until the
  *  targeted depth is reached, or the last node is proven to be infeasible. It optionally backtracks and tries the
@@ -63,11 +62,8 @@ extern "C" {
  *        is non-basic, e.g., when barrier without crossover is used, the method returns without performing a dive.
  *
  *  @note currently, when multiple diving heuristics call this method and solve an LP at the same node, only the first
- *        call will be executed, @see SCIPgetLastDiveNode()
- *
- *  @todo generalize method to work correctly with pseudo or external branching/diving candidates
+ *        call will be executed, @see SCIPgetLastDiveNode().
  */
-
 EXTERN
 SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP*                 scip,               /**< SCIP data structure */

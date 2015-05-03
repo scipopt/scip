@@ -21,15 +21,18 @@
  * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
  */
 
-/* the indicator constraint handler is included for the diving algorithm SCIPperformGenericDivingAlgorithm() */
 #include "scip/pub_dive.h"
 #include "pub_heur.h"
+#include "scip/struct_heur.h"
+#include "scip/struct_stat.h"
 
 /* the indicator constraint handler is included for the diving algorithm SCIPperformGenericDivingAlgorithm() */
 #include "scip/cons_indicator.h"
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
 
+
+/** solve probing LP */
 static
 SCIP_RETCODE solveLP(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -60,7 +63,7 @@ SCIP_RETCODE solveLP(
 #ifdef NDEBUG
    if( retstat != SCIP_OKAY )
    {
-      SCIPwarningMessage(scip, "Error while solving LP in %s diving heuristic; LP solve terminated with code <%d>\n", SCIPdivesetGetName(diveset), retstat);
+      SCIPwarningMessage(scip, "Error while solving LP in %s diving heuristic; LP solve terminated with code <%d>.\n", SCIPdivesetGetName(diveset), retstat);
    }
 #else
    SCIP_CALL( retstat );
@@ -81,10 +84,9 @@ SCIP_RETCODE solveLP(
  *  is applied at every node in the tree, whereas probing LPs might be solved less frequently.
  *
  *  Starting from the current LP candidates, the algorithm determines a fraction of the candidates that should be
- *  branched on; if a single candidate should be fixed, the algorithm selects a candidate which minimizes the
- *  score defined by the @p diveset.
- *  If more than one candidate should be selected, the candidates are sorted in non-decreasing order
- *  of their score.
+ *  branched on; if a single candidate should be fixed, the algorithm selects a candidate which minimizes the score
+ *  defined by the @p diveset.  If more than one candidate should be selected, the candidates are sorted in
+ *  non-decreasing order of their score.
  *
  *  The algorithm iteratively selects the the next (unfixed) candidate in the list, until the
  *  targeted depth is reached, or the last node is proven to be infeasible. It optionally backtracks and tries the
@@ -110,9 +112,6 @@ SCIP_RETCODE solveLP(
  *
  *  @todo generalize method to work correctly with pseudo or external branching/diving candidates
  */
-#include "scip/struct_heur.h"
-#include "scip/struct_stat.h"
-
 SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< settings for diving */
@@ -164,7 +163,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
    *result = SCIP_DELAYED;
 
-   /* do not call heuristic of node was already detected to be infeasible */
+   /* do not call heuristic in node that was already detected to be infeasible */
    if( nodeinfeasible )
       return SCIP_OKAY;
 
@@ -301,8 +300,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       SCIP_Real lastlpobjval;
       SCIP_Bool nextcandroundup;
       SCIP_Bool allroundable;
-      int c;
       SCIP_Bool infeasible;
+      int c;
 
       /* remember the last LP depth  */
       assert(lastlpdepth < SCIPgetProbingDepth(scip));
@@ -379,10 +378,11 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       /* choose next candidate variable, usually done at the end of the previous iteration */
       enfosuccess = FALSE;
       vals[0] = vals[1] = SCIP_INVALID;
+
       SCIP_CALL( SCIPenforceDiveSolution(scip, diveset, worksol, &nextcandvar, vals, &enfosuccess, &infeasible) );
 
-      /* if we did not succeed finding an enforcement, the solution is potentially feasible and we break immediately*/
-      if( !enfosuccess )
+      /* if we did not succeed finding an enforcement, the solution is potentially feasible and we break immediately */
+      if( ! enfosuccess )
          break;
 
       /* start propagating candidate variables
@@ -393,6 +393,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       do
       {
          SCIP_Longint localdomreds;
+
          /* ensure that a new candidate was successfully determined (usually at the end of the previous loop iteration) */
          assert(enfosuccess);
          assert(nextcandvar != NULL);
@@ -407,6 +408,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          do
          {
             assert(nextcandvar != NULL);
+
             /* dive deeper into the tree */
             SCIP_CALL( SCIPnewProbingNode(scip) );
             ++totalnprobingnodes;
@@ -421,6 +423,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                cutoff = TRUE;
                break;
             }
+
             if( SCIPisFeasLT(scip, nextcandsol, SCIPvarGetLbLocal(nextcandvar)) || SCIPisFeasGT(scip, nextcandsol, SCIPvarGetUbLocal(nextcandvar)) )
             {
                SCIPdebugMessage("selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
@@ -469,8 +472,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                SCIP_CALL( SCIPchgVarUbProbing(scip, nextcandvar, value) );
             }
 
-            localdomreds = 0;
             /* apply domain propagation */
+            localdomreds = 0;
             SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, &localdomreds) );
 
             /* resolve the diving LP if the diving resolve frequency is reached or a sufficient number of intermediate bound changes
@@ -508,7 +511,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          domreds += localdomreds;
 
          /* store candidate for pseudo cost update and choose next candidate only if no cutoff was detected */
-         if( !cutoff )
+         if( ! cutoff )
          {
             int insertidx = SCIPgetProbingDepth(scip) - lastlpdepth - 1;
             assert(SCIPgetProbingDepth(scip) > 0);
@@ -560,7 +563,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
 
       /* check new LP candidates and use the LP Objective gain to update pseudo cost information */
-      if( !cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
+      if( ! cutoff && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
       {
          int v;
          SCIP_Real gain;

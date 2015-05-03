@@ -6409,13 +6409,14 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsIndicator)
    return SCIP_OKAY;
 }
 
+/** choose diving strategy */
 static
 SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveIndicator)
 {
+   SCIP_Real bestscore = SCIP_REAL_MIN;
    SCIP_CONS** indconss;
    int nindconss;
    int c;
-   SCIP_Real bestscore;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -6426,8 +6427,6 @@ SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveIndicator)
 
    indconss = SCIPconshdlrGetConss(conshdlr);
    nindconss = SCIPconshdlrGetNConss(conshdlr);
-
-   bestscore = SCIP_REAL_MIN;
 
    /* loop over indicator constraints and score indicator variables with already integral solution value  */
    for( c = 0; c < nindconss; ++c )
