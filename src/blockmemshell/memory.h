@@ -132,7 +132,7 @@ void* BMSallocMemory_call(
    int                   line                /**< line number in source file where the allocation is performed */
    );
 
-/** allocates memory for an array; returns NULL if memory allocation failed */
+/** allocates array; returns NULL if memory allocation failed */
 EXTERN
 void* BMSallocMemoryArray_call(
    size_t                num,                /**< number of components of array to allocate */

@@ -370,7 +370,7 @@ void* BMSallocMemory_call(
    return ptr;
 }
 
-/** allocates memory for an array; returns NULL if memory allocation failed */
+/** allocates array; returns NULL if memory allocation failed */
 void* BMSallocMemoryArray_call(
    size_t                num,                /**< number of components of array to allocate */
    size_t                typesize,           /**< size of each component */
