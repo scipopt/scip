@@ -556,7 +556,7 @@ void* BMSduplicateMemory_call(
    return ptr;
 }
 
-/** allocates array and copies the contents of the given memory element into the new memory element */
+/** allocates array and copies the contents of the given source array into the new array */
 void* BMSduplicateMemoryArray_call(
    const void*           source,             /**< pointer to source memory element */
    size_t                num,                /**< number of components of array to allocate */

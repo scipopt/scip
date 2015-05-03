@@ -194,7 +194,7 @@ void* BMSduplicateMemory_call(
    int                   line                /**< line number in source file where the duplication is performed */
    );
 
-/** allocates array and copies the contents of the given memory element into the new memory element */
+/** allocates array and copies the contents of the given source array into the new array */
 EXTERN
 void* BMSduplicateMemoryArray_call(
    const void*           source,             /**< pointer to source memory element */
