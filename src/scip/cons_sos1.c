@@ -1941,115 +1941,115 @@ SCIP_RETCODE updateImplicationGraphSOS1(
    int nodev;
    int w;
 
+   assert( update != NULL );
+
+   /* update implication graph if possible */
    *update = FALSE;
    nodev = varGetNodeSOS1(conshdlrdata, var); /* possibly -1 if var is not involved in an SOS1 constraint */
 
-   /* update implication graph if possible */
-
    /* if nodev is an index of an SOS1 variable and at least one lower bound of a variable that is not x_v is infinity */
-   if ( nodev >= 0 && ! SCIPisInfinity(scip, REALABS(bound) ) && ninftynonzero <= 1 )
+   if ( nodev < 0 || SCIPisInfinity(scip, REALABS(bound)) || ninftynonzero > 1 )
+      return SCIP_OKAY;
+
+   /* for every variable x_w: compute upper bound of a_w * x_w if x_v is known to be nonzero */
+   for (w = 0; w < nvars; ++w)
    {
-      /* for every variable x_w: compute upper bound of a_w * x_w if x_v is known to be nonzero */
-      for (w = 0; w < nvars; ++w)
+      int newninftynonzero;
+      SCIP_Bool implinfty = FALSE;
+      int nodew;
+
+      /* get node of x_w in conflict graph: nodew = -1 if it is no SOS1 variable */
+      nodew = varGetNodeSOS1(conshdlrdata, vars[w]);
+
+      newninftynonzero = ninftynonzero;
+
+      /* variable should not be fixed to be already zero (note x_v is fixed to be nonzero by assumption) */
+      if ( nodew < 0 || ( nodev != nodew && ! isConnectedSOS1(adjacencymatrix, NULL, nodev, nodew) && ! isImpliedZero(conflictgraph, implnodes, nodew) ) )
       {
-         int newninftynonzero;
-         SCIP_Bool implinfty = FALSE;
-         int nodew;
+         SCIP_Real implbound;
+         SCIP_Bool implcoverw;
+         int nodecliq;
+         int indcliq;
+         int ind;
+         int j;
 
-         /* get node of x_w in conflict graph: nodew = -1 if it is no SOS1 variable */
-         nodew = varGetNodeSOS1(conshdlrdata, vars[w]);
+         /* boundnonzero is the bound of x_v if x_v is nonzero we use this information to get a bound of x_w if x_v is
+          * nonzero; therefore, we have to perform some recomputations */
+         implbound = boundnonzero - bound;
+         ind = varincover[w];
+         assert( cliquecoversizes[ind] > 0 );
 
-         newninftynonzero = ninftynonzero;
-
-         /* variable should not be fixed to be already zero (note x_v is fixed to be nonzero by assumption) */
-         if ( nodew < 0 || ( nodev != nodew && ! isConnectedSOS1(adjacencymatrix, NULL, nodev, nodew) && ! isImpliedZero(conflictgraph, implnodes, nodew) ) )
+         implcoverw = FALSE;
+         for (j = 0; j < cliquecoversizes[ind]; ++j)
          {
-            SCIP_Real implbound;
-            SCIP_Bool implcoverw;
-            int nodecliq;
-            int indcliq;
-            int ind;
-            int j;
+            indcliq = cliquecovers[ind][j];
+            assert( 0 <= indcliq && indcliq < nvars );
 
-            /* boundnonzero is the bound of x_v if x_v is nonzero
-               we use this information to get a bound of x_w if x_v is nonzero;
-               therefore, we have to perform some recomputations */
-            implbound = boundnonzero - bound;
-            ind = varincover[w];
-            assert( cliquecoversizes[ind] > 0 );
+            nodecliq = varGetNodeSOS1(conshdlrdata, vars[indcliq]); /* possibly -1 if variable is not involved in an SOS1 constraint */
 
-            implcoverw = FALSE;
-            for (j = 0; j < cliquecoversizes[ind]; ++j)
+            /* if nodecliq is not a member of an SOS1 constraint or the variable corresponding to nodecliq is not implied to be zero if x_v != 0  */
+            if ( nodecliq < 0 || (! isConnectedSOS1(adjacencymatrix, NULL, nodev, nodecliq) && ! isImpliedZero(conflictgraph, implnodes, nodecliq) ) )
             {
-               indcliq = cliquecovers[ind][j];
-               assert( 0 <= indcliq && indcliq < nvars );
-
-               nodecliq = varGetNodeSOS1(conshdlrdata, vars[indcliq]); /* possibly -1 if variable is not involved in an SOS1 constraint */
-
-               /* if nodecliq is not a member of an SOS1 constraint or the variable corresponding to nodecliq is not implied to be zero if x_v != 0  */
-               if ( nodecliq < 0 || (! isConnectedSOS1(adjacencymatrix, NULL, nodev, nodecliq) && ! isImpliedZero(conflictgraph, implnodes, nodecliq) ) )
+               if ( indcliq == w )
                {
-                  if ( indcliq == w )
-                  {
-                     if ( ! SCIPisInfinity(scip, REALABS(bounds[w])) )
-                        implbound += bounds[w];
-                     else
-                        --newninftynonzero;
-                     implcoverw = TRUE;
-                  }
-                  else if ( implcoverw )
-                  {
-                     if ( SCIPisInfinity(scip, REALABS( bounds[indcliq] )) )
-                        implinfty = TRUE;
-                     else
-                        implbound -= bounds[indcliq];
-                     break;
-                  }
+                  if ( ! SCIPisInfinity(scip, REALABS(bounds[w])) )
+                     implbound += bounds[w];
                   else
-                  {
-                     if ( SCIPisInfinity(scip, REALABS( bounds[indcliq] ) ) )
-                        implinfty = TRUE;
-                     break;
-                  }
+                     --newninftynonzero;
+                  implcoverw = TRUE;
                }
-            }
-
-            /* check whether x_v != 0 implies a bound change of x_w */
-            if ( ! implinfty && newninftynonzero == 0 )
-            {
-               SCIP_Real newbound;
-               SCIP_Real coef;
-               SCIP_Real lb;
-               SCIP_Real ub;
-
-               lb = SCIPvarGetLbLocal(vars[w]);
-               ub = SCIPvarGetUbLocal(vars[w]);
-               coef = coefs[w];
-               assert( ! SCIPisFeasZero(scip, coef) );
-               newbound = implbound / coef;
-
-               /* check if an implication can be added/updated or assumption x_v != 0 is infeasible */
-               if ( lower )
+               else if ( implcoverw )
                {
-                  if ( SCIPisFeasPositive(scip, coef) && SCIPisFeasLT(scip, lb, newbound) )
-                  {
-                     SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, TRUE, nchgbds, update) );
-                  }
-                  else if ( SCIPisFeasNegative(scip, coef) && SCIPisFeasGT(scip, ub, newbound) )
-                  {
-                     SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, FALSE, nchgbds, update) );
-                  }
+                  if ( SCIPisInfinity(scip, REALABS( bounds[indcliq] )) )
+                     implinfty = TRUE;
+                  else
+                     implbound -= bounds[indcliq];
+                  break;
                }
                else
                {
-                  if ( SCIPisFeasPositive(scip, coef) && SCIPisFeasGT(scip, ub, newbound) )
-                  {
-                     SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, FALSE, nchgbds, update) );
-                  }
-                  else if ( SCIPisFeasNegative(scip, coef) && SCIPisFeasLT(scip, lb, newbound) )
-                  {
-                     SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, TRUE, nchgbds, update) );
-                  }
+                  if ( SCIPisInfinity(scip, REALABS( bounds[indcliq] ) ) )
+                     implinfty = TRUE;
+                  break;
+               }
+            }
+         }
+
+         /* check whether x_v != 0 implies a bound change of x_w */
+         if ( ! implinfty && newninftynonzero == 0 )
+         {
+            SCIP_Real newbound;
+            SCIP_Real coef;
+            SCIP_Real lb;
+            SCIP_Real ub;
+
+            lb = SCIPvarGetLbLocal(vars[w]);
+            ub = SCIPvarGetUbLocal(vars[w]);
+            coef = coefs[w];
+            assert( ! SCIPisFeasZero(scip, coef) );
+            newbound = implbound / coef;
+
+            /* check if an implication can be added/updated or assumption x_v != 0 is infeasible */
+            if ( lower )
+            {
+               if ( SCIPisFeasPositive(scip, coef) && SCIPisFeasLT(scip, lb, newbound) )
+               {
+                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, TRUE, nchgbds, update) );
+               }
+               else if ( SCIPisFeasNegative(scip, coef) && SCIPisFeasGT(scip, ub, newbound) )
+               {
+                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, FALSE, nchgbds, update) );
+               }
+            }
+            else
+            {
+               if ( SCIPisFeasPositive(scip, coef) && SCIPisFeasGT(scip, ub, newbound) )
+               {
+                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, FALSE, nchgbds, update) );
+               }
+               else if ( SCIPisFeasNegative(scip, coef) && SCIPisFeasLT(scip, lb, newbound) )
+               {
+                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, TRUE, nchgbds, update) );
                }
             }
          }
