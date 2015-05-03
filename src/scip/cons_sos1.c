@@ -215,6 +215,7 @@ struct SCIP_ConshdlrData
    /* event handler */
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler for bound change events */
    SCIP_VAR**            fixnonzerovars;     /**< stack of variables fixed to nonzero marked by event handler */
+   int                   maxnfixnonzerovars; /**< size of stack fixnonzerovars */
    int                   nfixnonzerovars;    /**< number of variables fixed to nonzero marked by event handler */
    /* presolving */
    int                   cntextsos1;         /**< counts number of extended SOS1 constraints */
@@ -8708,7 +8709,7 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
          /* store variable fixed to be nonzero on stack */
          assert( 0 <= conshdlrdata->nfixnonzerovars );
          assert( conshdlrdata->fixnonzerovars != NULL );
-         if ( conshdlrdata->nfixnonzerovars < SCIPgetNVars(scip) )
+         if ( conshdlrdata->nfixnonzerovars < conshdlrdata->maxnfixnonzerovars )
             conshdlrdata->fixnonzerovars[conshdlrdata->nfixnonzerovars++] = SCIPeventGetVar(event);
 
          ++(consdata->nfixednonzeros);
@@ -8727,7 +8728,7 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
          /* store variable fixed to be nonzero on stack */
          assert( 0 <= conshdlrdata->nfixnonzerovars );
          assert( conshdlrdata->fixnonzerovars != NULL );
-         if ( conshdlrdata->nfixnonzerovars < SCIPgetNVars(scip) )
+         if ( conshdlrdata->nfixnonzerovars < conshdlrdata->maxnfixnonzerovars )
             conshdlrdata->fixnonzerovars[conshdlrdata->nfixnonzerovars++] = SCIPeventGetVar(event);
 
          ++(consdata->nfixednonzeros);
@@ -8739,11 +8740,13 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
       if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
          --(consdata->nfixednonzeros);
       break;
+
    case SCIP_EVENTTYPE_UBRELAXED:
       /* if variable is not fixed to be nonzero anymore */
       if ( SCIPisFeasNegative(scip, oldbound) && ! SCIPisFeasNegative(scip, newbound) )
          --(consdata->nfixednonzeros);
       break;
+
    default:
       SCIPerrorMessage("invalid event type.\n");
       return SCIP_INVALIDDATA;
@@ -8829,6 +8832,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    conshdlrdata->branchsos = TRUE;
    conshdlrdata->eventhdlr = NULL;
    conshdlrdata->fixnonzerovars = NULL;
+   conshdlrdata->maxnfixnonzerovars = 0;
    conshdlrdata->nfixnonzerovars = 0;
    conshdlrdata->conflictgraph = NULL;
    conshdlrdata->localconflicts = NULL;
