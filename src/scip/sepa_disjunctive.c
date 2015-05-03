@@ -82,12 +82,16 @@ int getVarRank(
    int                   nrows               /**< number of rows */
    )
 {
-   SCIP_Real maxweight;
-   int maxrank;
+   SCIP_Real maxweight = 0.0;
+   int maxrank = 0;
    int r;
 
+   assert( scip != NULL );
+   assert( binvrow != NULL || nrows == 0 );
+   assert( rowsmaxval != NULL || nrows == 0 );
+   assert( rows != NULL || nrows == 0 );
+
    /* compute maximum row weights resulting from multiplication */
-   maxweight = 0.0;
    for (r = 0; r < nrows; ++r)
    {
       SCIP_Real val;
@@ -98,7 +102,6 @@ int getVarRank(
    }
 
    /* compute rank */
-   maxrank = 0;
    for (r = 0; r < nrows; ++r)
    {
       SCIP_Real val;
@@ -121,7 +124,7 @@ SCIP_RETCODE addSimplexNonSlackSOS1(
    int                   ncols,              /**< number of LP columns */
    SCIP_Real*            coef,               /**< row of \f$B^{-1} \cdot A\f$ */
    SCIP_Real*            cutcoefs,           /**< pointer to store simplex-coefficients of the non-basic non-slack variables */
-   int*                  nonbasicnumber      /**< pointer to store number of simplex-coefficients that have been added so far */
+   int*                  nonbasicnumber      /**< pointer to number increased by the number of simplex-coefficients that have been added so far */
    )
 {
    int c;
@@ -130,13 +133,11 @@ SCIP_RETCODE addSimplexNonSlackSOS1(
    assert( cutcoefs != NULL );
    assert( cols != NULL );
 
-   *nonbasicnumber = 0;
    for (c = 0; c < ncols; ++c)
    {
+      assert( cols[c] != NULL );
       if ( SCIPcolGetBasisStatus(cols[c]) == SCIP_BASESTAT_LOWER  || SCIPcolGetBasisStatus(cols[c]) == SCIP_BASESTAT_UPPER )
-      {
          cutcoefs[(*nonbasicnumber)++] = coef[c];
-      }
    }
 
    return SCIP_OKAY;
@@ -144,7 +145,8 @@ SCIP_RETCODE addSimplexNonSlackSOS1(
 
 
 /** add simplex-coefficients of the non-basic slack variables
- *  Note: This function has to be called after the call of addSimplexNonSlackSOS1()
+ *
+ *  @note This function has to be called after the call of addSimplexNonSlackSOS1()
  */
 static
 SCIP_RETCODE addSimplexSlackSOS1(
@@ -153,7 +155,7 @@ SCIP_RETCODE addSimplexSlackSOS1(
    int                   nrows,              /**< number LP rows */
    SCIP_Real*            binvrow,            /**< row of \f$B^{-1}\f$ */
    SCIP_Real*            cutcoefs,           /**< pointer to store simplex-coefficients of the non-basic non-slack variables */
-   int*                  nonbasicnumber      /**< pointer to store the number of simplex-coefficients that have been added so far */
+   int*                  nonbasicnumber      /**< pointer to number increased by the number of simplex-coefficients that have been added so far */
    )
 {
    int r;
@@ -168,6 +170,7 @@ SCIP_RETCODE addSimplexSlackSOS1(
    {
       SCIP_ROW* row;
       row = rows[r];
+      assert( row != NULL );
 
       if ( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_UPPER || SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER )
       {
@@ -198,7 +201,7 @@ SCIP_RETCODE addRowValuesDisjCutSOS1(
    SCIP_Real             cutlhs2,            /**< left hand side of the second sum of simplex rows */
    SCIP_Real*            cutcoefs1,          /**< coefficients of the first sum of simplex rows */
    SCIP_Real*            cutcoefs2,          /**< coefficients of the second sum of simplex rows */
-   SCIP_Real*            cutcoefs,           /**< pointer to store cut coefficients (length: nscipvars) */
+   SCIP_Real*            cutcoefs,           /**< pointer to store cut coefficients (length: nscipvars), initialized to 0 */
    SCIP_ROW**            row,                /**< pointer to store disjunctive cut inequality */
    SCIP_Bool*            madeintegral        /**< pointer to store whether cut has been scaled to integral values */
    )
@@ -213,12 +216,13 @@ SCIP_RETCODE addRowValuesDisjCutSOS1(
    SCIP_Real sgn;
    SCIP_Real lb;
    SCIP_Real ub;
-   int nonbasicnumber;
+   int nonbasicnumber = 0;
    int rownnonz;
    int ind;
    int r;
    int c;
 
+   assert( scip != NULL );
    assert( row != NULL );
    assert( rows != NULL );
    assert( cols != NULL );
@@ -226,9 +230,9 @@ SCIP_RETCODE addRowValuesDisjCutSOS1(
    assert( cutcoefs2 != NULL );
    assert( cutcoefs != NULL );
    assert( sepa != NULL );
+   assert( madeintegral != NULL );
 
    *madeintegral = FALSE;
-   nonbasicnumber = 0;
 
    /* check signs */
    if ( SCIPisFeasPositive(scip, cutlhs1) == SCIPisFeasPositive(scip, cutlhs2) )
@@ -243,6 +247,7 @@ SCIP_RETCODE addRowValuesDisjCutSOS1(
    for (c = 0; c < ncols; ++c)
    {
       col = cols[c];
+      assert( col != NULL );
       ind = SCIPcolGetLPPos(col);
       assert( ind >= 0 );
 
@@ -320,20 +325,23 @@ SCIP_RETCODE addRowValuesDisjCutSOS1(
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, cutname, cutlhs, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
    else
       SCIP_CALL( SCIPcreateEmptyRowSepa(scip, row, sepa, cutname, cutlhs, SCIPinfinity(scip), TRUE, FALSE, TRUE) );
+
    SCIP_CALL( SCIPcacheRowExtensions(scip, *row) );
    for (c = 0; c < ncols; ++c)
    {
       ind = SCIPcolGetLPPos(cols[c]);
       assert( ind >= 0 );
-      if( ! SCIPisFeasZero(scip, cutcoefs[ind]) )
+      if ( ! SCIPisFeasZero(scip, cutcoefs[ind]) )
+      {
          SCIP_CALL( SCIPaddVarToRow(scip, *row, SCIPcolGetVar(cols[c]), cutcoefs[ind] ) );
+      }
    }
    SCIP_CALL( SCIPflushRowExtensions(scip, *row) );
 
    /* try to scale the cut to integral values
-    * @todo find better but still stable disjunctive cut settings: look at dcmulti, gesa3, khb0525, misc06, p2756
+    * @todo find better but still stable disjunctive cut settings
     */
-   if( scale )
+   if ( scale )
    {
       int maxdepth;
       int depth;
@@ -343,17 +351,17 @@ SCIP_RETCODE addRowValuesDisjCutSOS1(
       depth = SCIPgetDepth(scip);
       assert( depth >= 0 );
       maxdepth = SCIPgetMaxDepth(scip);
-      if( depth == 0 )
+      if ( depth == 0 )
       {
          maxdnom = 1000;
          maxscale = 1000.0;
       }
-      else if( depth <= maxdepth/4 )
+      else if ( depth <= maxdepth/4 )
       {
          maxdnom = 1000;
          maxscale = 1000.0;
       }
-      else if( depth <= maxdepth/2 )
+      else if ( depth <= maxdepth/2 )
       {
          maxdnom = 100;
          maxscale = 100.0;
@@ -662,7 +670,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       SCIP_VAR* var;
       SCIP_COL* col;
 
-      int nonbasicnumber;
+      int nonbasicnumber = 0;
       int cutrank = 0;
       int edgenumber;
       int rownnonz;
