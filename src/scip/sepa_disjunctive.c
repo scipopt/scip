@@ -511,10 +511,19 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
       return SCIP_OKAY;
 
-   /* if too many sos1 constraints, separator is usually very slow: delay it until no other cuts have been found */
+   /* if too many sos1 constraints, the separator is usually very slow: delay it until no other cuts have been found */
    if ( sepadata->maxconsdelay >= 0 && nconss >= sepadata->maxconsdelay )
-      return SCIP_OKAY;
+   {
+      ncutsfound = SCIPgetNCutsFound(scip);
+      if ( ncutsfound > sepadata->lastncutsfound || ! SCIPsepaWasLPDelayed(sepa) )
+      {
+         sepadata->lastncutsfound = ncutsfound;
+         *result = SCIP_DELAYED;
+         return SCIP_OKAY;
+      }
+   }
 
+   /* if too many columns, the separator is usually very slow: delay it until no other cuts have been found */
    if ( ncols >= 5 * nrows )
    {
       int ncutsfound;
