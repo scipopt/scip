@@ -346,10 +346,10 @@ void* BMSallocMemory_call(
    debugMessage("malloc %"SIZET_FORMAT" bytes [%s:%d]\n", size, filename, line);
 
 #ifndef NDEBUG
-   if ( size > (size_t)(UINT_MAX / 2) )
+   if ( size > (size_t)(UINT_MAX) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %d.\n", INT_MAX / 2);
+      printError("Tried to allocate standard memory of size exceeding %u.\n", UINT_MAX);
       return NULL;
    }
 #endif
