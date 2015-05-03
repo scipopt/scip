@@ -188,7 +188,7 @@ SCIP_RETCODE addSimplexSlackSOS1(
  *  compute a disjunctive cut inequality.
  */
 static
-SCIP_RETCODE addRowValuesDisjCutSOS1(
+SCIP_RETCODE generateDisjCutSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_ROW**            rows,               /**< LP rows */
@@ -743,7 +743,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       cutlhs2 = SCIPcolGetPrimsol(col);
 
       /* add coefficients to cut */
-      SCIP_CALL( addRowValuesDisjCutSOS1(scip, sepa, rows, nrows, cols, ncols, ndisjcuts, TRUE, cutlhs1, cutlhs2, cutcoefs1, cutcoefs2, cutcoefs, &row, &madeintegral) );
+      SCIP_CALL( generateDisjCutSOS1(scip, sepa, rows, nrows, cols, ncols, ndisjcuts, TRUE, cutlhs1, cutlhs2, cutcoefs1, cutcoefs2, cutcoefs, &row, &madeintegral) );
 
       /* raise cutrank for present cut */
       ++cutrank;
