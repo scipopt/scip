@@ -187,7 +187,7 @@ void removeMemlistEntry(
    else
    {
       printErrorHeader(filename, line);
-      printError("Tried to free unknown pointer <%p>\n", ptr);
+      printError("Tried to free unknown pointer <%p>.\n", ptr);
    }
    checkMemlist();
 }
@@ -1425,7 +1425,7 @@ void freeChkmemElement(
       BMS_CHKMEM* correctchkmem;
 
       printErrorHeader(filename, line);
-      printError("pointer %p does not belong to chunk block %p (size: %d)\n", ptr, chkmem, chkmem->elemsize);
+      printError("pointer %p does not belong to chunk block %p (size: %d).\n", ptr, chkmem, chkmem->elemsize);
    }
 #endif
 
@@ -1462,7 +1462,7 @@ BMS_CHKMEM* BMScreateChunkMemory_call(
    if( chkmem == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for chunk block\n");
+      printError("Insufficient memory for chunk block.\n");
    }
    debugMessage("created chunk memory %p [elemsize: %d]\n", (void*)chkmem, (int)size);
 
@@ -1483,7 +1483,7 @@ void BMSclearChunkMemory_call(
    else
    {
       printErrorHeader(filename, line);
-      printError("Tried to clear null chunk block\n");
+      printError("Tried to clear null chunk block.\n");
    }
 }
 
@@ -1503,7 +1503,7 @@ void BMSdestroyChunkMemory_call(
    else
    {
       printErrorHeader(filename, line);
-      printError("Tried to destroy null chunk block\n");
+      printError("Tried to destroy null chunk block.\n");
    }
 }
 
@@ -1525,7 +1525,7 @@ void* BMSallocChunkMemory_call(
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for new chunk\n");
+      printError("Insufficient memory for new chunk.\n");
    }
    debugMessage("alloced %8"SIZET_FORMAT" bytes in %p [%s:%d]\n", size, (void*)ptr, filename, line);
 
@@ -1556,7 +1556,7 @@ void* BMSduplicateChunkMemory_call(
    return ptr;
 }
 
-/** frees a memory element of the given chunk block */
+/** frees a memory element of the given chunk block and sets pointer to NULL */
 void BMSfreeChunkMemory_call(
    BMS_CHKMEM*           chkmem,             /**< chunk block */
    void**                ptr,                /**< pointer to pointer to memory element to free */
@@ -1581,11 +1581,11 @@ void BMSfreeChunkMemory_call(
    else
    {
       printErrorHeader(filename, line);
-      printError("Tried to free null block pointer\n");
+      printError("Tried to free null chunk pointer.\n");
    }
 }
 
-/** frees a memory element of the given chunk block if pointer is not NULL */
+/** frees a memory element of the given chunk block if pointer is not NULL and sets pointer to NULL */
 void BMSfreeChunkMemoryNull_call(
    BMS_CHKMEM*           chkmem,             /**< chunk block */
    void**                ptr,                /**< pointer to pointer to memory element to free */
@@ -1690,9 +1690,10 @@ void checkBlkmem(
 #endif
 
 
-/** finds the chunk block, to whick the given pointer belongs to;
- *  this could be done by selecting the chunk block of the corresponding element size, but in a case of an
- *  error (free gives an incorrect element size), we want to identify and output the correct element size
+/** finds the chunk block, to whick the given pointer belongs to
+ *
+ *  This could be done by selecting the chunk block of the corresponding element size, but in a case of an
+ *  error (free gives an incorrect element size), we want to identify and output the correct element size.
  */
 static
 BMS_CHKMEM* findChkmem(
