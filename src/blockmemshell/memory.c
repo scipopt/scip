@@ -296,7 +296,7 @@ long long BMSgetMemoryUsed_call(
 
 #endif
 
-/** allocates memory and initializes it with 0; returns NULL if memory allocation failed */
+/** allocates array and initializes it with 0; returns NULL if memory allocation failed */
 void* BMSallocClearMemory_call(
    size_t                num,                /**< number of memory element to allocate */
    size_t                typesize,           /**< size of one memory element to allocate */

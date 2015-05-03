@@ -115,7 +115,7 @@ extern "C" {
 #define BMSgetMemoryUsed()                    0LL
 #endif
 
-/** allocates memory and initializes it with 0; returns NULL if memory allocation failed */
+/** allocates array and initializes it with 0; returns NULL if memory allocation failed */
 EXTERN
 void* BMSallocClearMemory_call(
    size_t                num,                /**< number of memory element to allocate */
