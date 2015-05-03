@@ -9,7 +9,7 @@
 /*  BMS is distributed under the terms of the ZIB Academic License.          */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
+/*  along with BMS; see the file COPYING. If not email to scip@zib.de.       */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
