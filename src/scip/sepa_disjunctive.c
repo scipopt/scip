@@ -201,7 +201,7 @@ SCIP_RETCODE generateDisjCutSOS1(
    SCIP_Real             cutlhs2,            /**< left hand side of the second sum of simplex rows */
    SCIP_Real*            cutcoefs1,          /**< coefficients of the first sum of simplex rows */
    SCIP_Real*            cutcoefs2,          /**< coefficients of the second sum of simplex rows */
-   SCIP_Real*            cutcoefs,           /**< pointer to store cut coefficients (length: nscipvars), initialized to 0 */
+   SCIP_Real*            cutcoefs,           /**< pointer to store cut coefficients (length: nscipvars) */
    SCIP_ROW**            row,                /**< pointer to store disjunctive cut inequality */
    SCIP_Bool*            madeintegral        /**< pointer to store whether cut has been scaled to integral values */
    )
