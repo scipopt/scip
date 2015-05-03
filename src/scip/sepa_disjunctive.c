@@ -387,9 +387,9 @@ SCIP_RETCODE addRowValuesDisjCutSOS1(
 static
 SCIP_DECL_SEPACOPY(sepaCopyDisjunctive)
 {
-   assert(scip != NULL);
-   assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   assert( scip != NULL );
+   assert( sepa != NULL );
+   assert( strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0 );
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaDisjunctive(scip) );
@@ -404,11 +404,11 @@ SCIP_DECL_SEPAFREE(sepaFreeDisjunctive)/*lint --e{715}*/
 {
    SCIP_SEPADATA* sepadata;
 
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+   assert( strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0 );
 
    /* free separator data */
    sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
+   assert( sepadata != NULL );
 
    SCIPfreeMemory(scip, &sepadata);
 
@@ -454,23 +454,23 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    int j;
    int i;
 
-   assert(sepa != NULL);
-   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
-   assert(scip != NULL);
-   assert(result != NULL);
+   assert( sepa != NULL );
+   assert( strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0 );
+   assert( scip != NULL );
+   assert( result != NULL );
 
    *result = SCIP_DIDNOTRUN;
 
    /* only generate disjunctive cuts if we are not close to terminating */
-   if( SCIPisStopped(scip) )
+   if ( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
    /* only generate disjunctive cuts if an optimal LP solution is at hand */
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
+   if ( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
    /* only generate disjunctive cuts if the LP solution is basic */
-   if( ! SCIPisLPSolBasic(scip) )
+   if ( ! SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
    /* get LP data */
@@ -478,8 +478,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
 
    /* return if LP has no columns or no rows */
-   if( ncols == 0 || nrows == 0 )
+   if ( ncols == 0 || nrows == 0 )
       return SCIP_OKAY;
+
+   assert( cols != NULL );
+   assert( rows != NULL );
 
    /* get constraint handler data */
    conshdlr = SCIPfindConshdlr(scip, "SOS1");
@@ -493,7 +496,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
 
    /* get sepa data */
    sepadata = SCIPsepaGetData(sepa);
-   assert(sepadata != NULL);
+   assert( sepadata != NULL );
 
    /* check for maxdepth < depth, maxinvcutsroot = 0 and maxinvcuts = 0 */
    depth = SCIPgetDepth(scip);
@@ -504,7 +507,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
 
    /* only call the cut separator a given number of times at each node */
    ncalls = SCIPsepaGetNCallsAtNode(sepa);
-   if( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
+   if ( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
       return SCIP_OKAY;
 
@@ -517,7 +520,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       int ncutsfound;
 
       ncutsfound = SCIPgetNCutsFound(scip);
-      if( ncutsfound > sepadata->lastncutsfound || ! SCIPsepaWasLPDelayed(sepa) )
+      if ( ncutsfound > sepadata->lastncutsfound || ! SCIPsepaWasLPDelayed(sepa) )
       {
          sepadata->lastncutsfound = ncutsfound;
          *result = SCIP_DELAYED;
@@ -801,11 +804,9 @@ SCIP_RETCODE SCIPincludeSepaDisjunctive(
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
-         SEPA_USESSUBSCIP, SEPA_DELAY,
-         sepaExeclpDisjunctive, NULL,
-         sepadata) );
+         SEPA_USESSUBSCIP, SEPA_DELAY, sepaExeclpDisjunctive, NULL, sepadata) );
 
-   assert(sepa != NULL);
+   assert( sepa != NULL );
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyDisjunctive) );
@@ -816,7 +817,7 @@ SCIP_RETCODE SCIPincludeSepaDisjunctive(
          "node depth of separating bipartite disjunctive cuts (-1: no limit)",
          &sepadata->maxdepth, TRUE, DEFAULT_MAXDEPTH, -1, INT_MAX, NULL, NULL) );
 
-      SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxrounds",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxrounds",
          "maximal number of separation rounds per iteration in a branching node (-1: no limit)",
          &sepadata->maxrounds, TRUE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
 
