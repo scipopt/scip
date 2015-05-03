@@ -514,6 +514,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    /* if too many sos1 constraints, the separator is usually very slow: delay it until no other cuts have been found */
    if ( sepadata->maxconsdelay >= 0 && nconss >= sepadata->maxconsdelay )
    {
+      int ncutsfound;
+
       ncutsfound = SCIPgetNCutsFound(scip);
       if ( ncutsfound > sepadata->lastncutsfound || ! SCIPsepaWasLPDelayed(sepa) )
       {
