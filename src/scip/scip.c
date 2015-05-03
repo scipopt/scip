@@ -30498,7 +30498,7 @@ void SCIPresetDiveset(
    SCIPdivesetReset(diveset, scip->set);
 }
 
-/** stores the candidate score and preferred rounding direction for a candidate variable */
+/** gets the candidate score and preferred rounding direction for a candidate variable */
 SCIP_RETCODE SCIPgetDivesetScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< general diving settings */
@@ -30574,10 +30574,10 @@ SCIP_Real SCIPgetDiveLPResolveDomChgQuot(
 
 /** enforces a probing/diving solution by suggesting bound changes that minimize the score w.r.t. the current diving settings
  *
- *  the process is guided by the enforcement priorities of the constraint handlers and the scoring mechanism provided by
+ *  The process is guided by the enforcement priorities of the constraint handlers and the scoring mechanism provided by
  *  the diving settings.
- *  the suggested bound changes are stored in an array and need to be applied manually afterwards. The constraint handlers
- *  are called in decreasing priority of their enforcement priority
+ *  The suggested bound changes are stored in an array and need to be applied manually afterwards. The constraint handlers
+ *  are called in decreasing priority of their enforcement priority.
  */
 SCIP_RETCODE SCIPenforceDiveSolution(
    SCIP*                 scip,               /**< SCIP data structure */

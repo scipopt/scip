@@ -190,6 +190,7 @@ SCIP_RETCODE SCIPdivesetCreate(
 {
    char paramname[SCIP_MAXSTRLEN];
    const char* divesetname;
+
    assert(diveset != NULL);
    assert(set != NULL);
    assert(divesetgetscore != NULL);
@@ -197,7 +198,7 @@ SCIP_RETCODE SCIPdivesetCreate(
 
    SCIP_ALLOC( BMSallocMemory(diveset) );
 
-   /* as a convenience, the name gets inferred from the heuristic to which the diveset is added if no name is provided */
+   /* for convenience, the name gets inferred from the heuristic to which the diveset is added if no name is provided */
    divesetname = (name == NULL ? SCIPheurGetName(heur) : name);
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*diveset)->name, divesetname, strlen(divesetname)+1) );
    (*diveset)->heur = NULL;
@@ -215,40 +216,46 @@ SCIP_RETCODE SCIPdivesetCreate(
          &(*diveset)->minreldepth, TRUE, minreldepth, 0.0, 1.0, NULL, NULL) );
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxreldepth", (*diveset)->name);
-   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
-         paramname,
+   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
          "maximal relative depth to start diving",
          &(*diveset)->maxreldepth, TRUE, maxreldepth, 0.0, 1.0, NULL, NULL) );
+
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterquot", (*diveset)->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal fraction of diving LP iterations compared to node LP iterations",
          &(*diveset)->maxlpiterquot, FALSE, maxlpiterquot, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxlpiterofs", (*diveset)->name);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem,
          paramname,
          "additional number of allowed LP iterations",
          &(*diveset)->maxlpiterofs, FALSE, maxlpiterofs, 0, INT_MAX, NULL, NULL) );
+
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveubquot", (*diveset)->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)",
          &(*diveset)->maxdiveubquot, TRUE, maxdiveubquot, 0.0, 1.0, NULL, NULL) );
+
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveavgquot", (*diveset)->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)",
          &(*diveset)->maxdiveavgquot, TRUE, maxdiveavgquot, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveubquotnosol", (*diveset)->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal UBQUOT when no solution was found yet (0.0: no limit)",
          &(*diveset)->maxdiveubquotnosol, TRUE, maxdiveubquotnosol, 0.0, 1.0, NULL, NULL) );
+
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/maxdiveavgquotnosol", (*diveset)->name);
    SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem,
          paramname,
          "maximal AVGQUOT when no solution was found yet (0.0: no limit)",
          &(*diveset)->maxdiveavgquotnosol, TRUE, maxdiveavgquotnosol, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/backtrack", (*diveset)->name);
    SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem,
          paramname,
@@ -515,7 +522,7 @@ SCIP_RETCODE SCIPdivesetFree(
    return SCIP_OKAY;
 }
 
-/** stores the candidate score and preferred rounding direction for a candidate variable */
+/** get the candidate score and preferred rounding direction for a candidate variable */
 SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_DIVESET*         diveset,            /**< general diving settings */
    SCIP_SET*             set,                /**< SCIP settings */
