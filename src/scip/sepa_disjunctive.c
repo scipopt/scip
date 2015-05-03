@@ -765,8 +765,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
 
             /* add cut */
             SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-            assert( ! infeasible );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+            if ( infeasible )
+            {
+               *result = SCIP_CUTOFF;
+               break;
+            }
             ++ndisjcuts;
          }
       }
@@ -779,10 +783,13 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    sepadata->lastncutsfound = SCIPgetNCutsFound(scip);
 
    /* evaluate the result of the separation */
-   if ( ndisjcuts > 0 )
-      *result = SCIP_SEPARATED;
-   else
-      *result = SCIP_DIDNOTFIND;
+   if ( *result != SCIP_CUTOFF )
+   {
+      if ( ndisjcuts > 0 )
+         *result = SCIP_SEPARATED;
+      else
+         *result = SCIP_DIDNOTFIND;
+   }
 
    SCIPdebugMessage("Number of found disjunctive cuts: %d.\n", ndisjcuts);
 
