@@ -1879,10 +1879,10 @@ void* BMSallocBlockMemory_call(
    )
 {
 #ifndef NDEBUG
-   if ( size > (size_t)(UINT_MAX / 2) )
+   if ( size > (size_t)(UINT_MAX) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate block of size exceeding %u.\n", UINT_MAX/2);
+      printError("Tried to allocate block of size exceeding %u.\n", UINT_MAX);
       return NULL;
    }
 #endif
@@ -1948,10 +1948,10 @@ void* BMSreallocBlockMemory_call(
    }
 
 #ifndef NDEBUG
-   if ( newsize > (size_t)(UINT_MAX / 2) )
+   if ( newsize > (size_t)(UINT_MAX) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate block of size exceeding %u.\n", UINT_MAX/2);
+      printError("Tried to allocate block of size exceeding %u.\n", UINT_MAX);
       return NULL;
    }
 #endif
@@ -2682,10 +2682,10 @@ void* BMSallocBufferMemory_call(
    )
 {
 #ifndef NDEBUG
-   if ( size > (size_t)(UINT_MAX / 2) )
+   if ( size > (size_t)(UINT_MAX) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate buffer of size exceeding %u.\n", UINT_MAX / 2);
+      printError("Tried to allocate buffer of size exceeding %u.\n", UINT_MAX);
       return NULL;
    }
 #endif
@@ -2749,10 +2749,10 @@ void* BMSreallocBufferMemory_work(
 #endif
 
 #ifndef NDEBUG
-   if ( size > (size_t)(INT_MAX / 8) )
+   if ( size > (size_t)(UINT_MAX) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate buffer of size exceeding %d.\n", INT_MAX / 8);
+      printError("Tried to allocate buffer of size exceeding %u.\n", UINT_MAX);
       return NULL;
    }
 #endif
@@ -2825,10 +2825,10 @@ void* BMSreallocBufferMemory_call(
    )
 {
 #ifndef NDEBUG
-   if ( size > (size_t)(UINT_MAX / 2) )
+   if ( size > (size_t)(UINT_MAX) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate buffer of size exceeding %u.\n", UINT_MAX / 2);
+      printError("Tried to allocate buffer of size exceeding %u.\n", UINT_MAX);
       return NULL;
    }
 #endif
