@@ -8665,9 +8665,9 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsSOS1)
 
 /* ---------------- Callback methods of event handler ---------------- */
 
-/* exec the event handler
+/** exec the event handler
  *
- * We update the number of variables fixed to be nonzero
+ *  We update the number of variables fixed to be nonzero
  */
 static
 SCIP_DECL_EVENTEXEC(eventExecSOS1)
@@ -8714,6 +8714,7 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
          ++(consdata->nfixednonzeros);
       }
       break;
+
    case SCIP_EVENTTYPE_UBTIGHTENED:
       /* if variable is now fixed to be nonzero */
       if ( ! SCIPisFeasNegative(scip, oldbound) && SCIPisFeasNegative(scip, newbound) )
@@ -8732,6 +8733,7 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
          ++(consdata->nfixednonzeros);
       }
       break;
+
    case SCIP_EVENTTYPE_LBRELAXED:
       /* if variable is not fixed to be nonzero anymore */
       if ( SCIPisFeasPositive(scip, oldbound) && ! SCIPisFeasPositive(scip, newbound) )
@@ -8755,7 +8757,7 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
 }
 
 
-/** compute best diving score*/
+/** compute best diving score */
 static
 SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveSOS1)
 {
@@ -9012,11 +9014,10 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 
 /** creates and captures a SOS1 constraint
  *
- *  We set the constraint to not be modifable. If the weights are non
- *  NULL, the variables are ordered according to these weights (in
- *  ascending order).
+ *  We set the constraint to not be modifable. If the weights are non NULL, the variables are ordered according to these
+ *  weights (in ascending order).
  *
- *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ *  @note The constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons().
  */
 SCIP_RETCODE SCIPcreateConsSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9098,15 +9099,17 @@ SCIP_RETCODE SCIPcreateConsSOS1(
 
    /* branching on multiaggregated variables does not seem to work well, so avoid it */
    for (v = 0; v < nvars; ++v)
+   {
       SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, consdata->vars[v]) );
+   }
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
-   assert(transformed == SCIPconsIsTransformed(*cons));
+   assert( transformed == SCIPconsIsTransformed(*cons) );
 
    /* replace original variables by transformed variables in transformed constraint, add locks, and catch events */
-   for( v = nvars - 1; v >= 0; --v )
+   for (v = nvars - 1; v >= 0; --v)
    {
       /* always use transformed variables in transformed constraints */
       if ( transformed )
