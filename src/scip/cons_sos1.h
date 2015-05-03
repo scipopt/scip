@@ -49,7 +49,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
  *  NULL, the variables are ordered according to these weights (in
  *  ascending order).
  *
- *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
+ *  @note The constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons().
  */
 EXTERN
 SCIP_RETCODE SCIPcreateConsSOS1(
