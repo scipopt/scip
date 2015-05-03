@@ -5745,12 +5745,11 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
    if ( rowub != NULL )
    {
       SCIP_Bool useboundvar;
-      int cnt;
+      int cnt = 0;
       int j;
 
-      /* loop through all variables. We check whether all bound variables (if existent) are equal; if this is the
+      /* Loop through all variables. We check whether all bound variables (if existent) are equal; if this is the
        * case then the bound constraint can be strengthened */
-      cnt = 0;
       localubs = local;
       useboundvar = strengthen;
       for (j = 0; j < nnodes; ++j)
@@ -5798,10 +5797,8 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
                val = nodedata->ubboundcoef;
             }
             /* else if the bound variable equals the stored bound variable */
-            else if ( SCIPvarCompare(ubboundvar, nodedata->ubboundvar) == 0 )
-            {
+            else if ( ubboundvar == nodedata->ubboundvar )
                val = nodedata->ubboundcoef;
-            }
             else /* else use bounds on the variables */
             {
                useboundvar = FALSE;
@@ -6229,7 +6226,8 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Cons(
    }
 
    /* generate bound constraint from conflict graph nodes */
-   SCIP_CALL( generateBoundInequalityFromSOS1Nodes(scip, conshdlr, conshdlrdata->conflictgraph, nodes, nvars, 1.0, local, global, strengthen, removable, SCIPconsGetName(cons), rowlb, rowub) );
+   SCIP_CALL( generateBoundInequalityFromSOS1Nodes(scip, conshdlr, conshdlrdata->conflictgraph, nodes, nvars, 1.0, local, global,
+         strengthen, removable, SCIPconsGetName(cons), rowlb, rowub) );
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &nodes);
