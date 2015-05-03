@@ -581,7 +581,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
 
             succind = succ[i];
             varsucc = SCIPnodeGetVarSOS1(conflictgraph, succind);
-            if ( SCIPvarIsActive(varsucc) && succind < j && ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, varsucc) ) && SCIPcolGetBasisStatus(SCIPvarGetCol(varsucc)) == SCIP_BASESTAT_BASIC )
+            if ( SCIPvarIsActive(varsucc) && succind < j && ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, varsucc) ) &&
+                 SCIPcolGetBasisStatus(SCIPvarGetCol(varsucc)) == SCIP_BASESTAT_BASIC )
             {
                fixings1[nrelevantedges] = j;
                fixings2[nrelevantedges] = succind;
@@ -628,15 +629,14 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    SCIP_CALL( SCIPgetLPBasisInd(scip, basisind) );
 
    /* create vector "basisrow" with basisrow[column of non-slack basis variable] = corresponding row of B^-1;
-    * compute maximum absolute value of nonbasic row coefficients
-    */
+    * compute maximum absolute value of nonbasic row coefficients */
    for (j = 0; j < nrows; ++j)
    {
       SCIP_COL** rowcols;
       SCIP_Real* rowvals;
       SCIP_ROW* row;
       SCIP_Real val;
-      SCIP_Real max;
+      SCIP_Real max = 0.0;
       int nnonz;
 
       /* fill basisrow vector */
@@ -646,10 +646,11 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
 
       /* compute maximum absolute value of nonbasic row coefficients */
       row = rows[j];
+      assert( row != NULL );
       rowvals = SCIProwGetVals(row);
       nnonz = SCIProwGetNNonz(row);
       rowcols = SCIProwGetCols(row);
-      max = 0.0;
+
       for (i = 0; i < nnonz; ++i)
       {
          if ( SCIPcolGetBasisStatus(rowcols[i]) == SCIP_BASESTAT_LOWER  || SCIPcolGetBasisStatus(rowcols[i]) == SCIP_BASESTAT_UPPER )
@@ -727,6 +728,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       SCIP_CALL( SCIPgetLPBInvARow(scip, basisrow[ind], binvrow, coef, NULL, NULL) );
 
       /* add the simplex-coefficients of the non-basic non-slack variables; */
+      nonbasicnumber = 0;
       SCIP_CALL( addSimplexNonSlackSOS1(cols, ncols, coef, cutcoefs2, &nonbasicnumber) );
 
       /* add the simplex-coefficients of the non-basic slack variables; */
@@ -780,7 +782,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    else
       *result = SCIP_DIDNOTFIND;
 
-   SCIPdebugMessage("end searching disjunctive cuts: found %d cuts\n", ndisjcuts);
+   SCIPdebugMessage("Number of found disjunctive cuts: %d.\n", ndisjcuts);
 
    /* free buffer arrays */
    SCIPfreeBufferArrayNull(scip, &cutcoefs);
