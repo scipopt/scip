@@ -1899,7 +1899,6 @@ void* BMSallocBlockMemoryArray_call(
    int                   line                /**< line number in source file of the function call */
    )
 {
-   size_t size;
 #ifndef NDEBUG
    if ( num > (size_t)(UINT_MAX / typesize) )
    {
@@ -1909,8 +1908,7 @@ void* BMSallocBlockMemoryArray_call(
    }
 #endif
 
-   size = num * typesize;
-   return BMSallocBlockMemory_work(blkmem, size, filename, line);
+   return BMSallocBlockMemory_work(blkmem, num * typesize, filename, line);
 }
 
 /** allocates array in the block memory pool and clears it */
@@ -1923,13 +1921,15 @@ void* BMSallocClearBlockMemoryArray_call(
    )
 {
    void* ptr;
+
    ptr = BMSallocBlockMemoryArray_call(blkmem, num, typesize, filename, line);
    if ( ptr != NULL )
       BMSclearMemorySize(ptr, num * typesize);
+
    return ptr;
 }
 
-/** resizes memory element in the block memory pool, and copies the data */
+/** resizes memory element in the block memory pool and copies the data */
 void* BMSreallocBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    void*                 ptr,                /**< memory element to reallocated */
@@ -1969,7 +1969,7 @@ void* BMSreallocBlockMemory_call(
    return newptr;
 }
 
-/** resizes array in the block memory pool, and copies the data */
+/** resizes array in the block memory pool and copies the data */
 void* BMSreallocBlockMemoryArray_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    void*                 ptr,                /**< memory element to reallocated */
@@ -2001,7 +2001,6 @@ void* BMSreallocBlockMemoryArray_call(
       return ptr;
 
    newptr = BMSallocBlockMemoryArray_call(blkmem, newnum, typesize, filename, line);
-   /* @todo possibly have to align sizes */
    if ( newptr != NULL )
       BMScopyMemorySize(newptr, ptr, MIN(oldnum, newnum) * typesize);
    BMSfreeBlockMemory_call(blkmem, &ptr, oldnum * typesize, filename, line);
@@ -2009,7 +2008,7 @@ void* BMSreallocBlockMemoryArray_call(
    return newptr;
 }
 
-/** duplicates memory element in the block memory pool, and copies the data */
+/** duplicates memory element in the block memory pool and copies the data */
 void* BMSduplicateBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const void*           source,             /**< memory element to duplicate */
@@ -2029,7 +2028,7 @@ void* BMSduplicateBlockMemory_call(
    return ptr;
 }
 
-/** duplicates array in the block memory pool, and copies the data */
+/** duplicates array in the block memory pool and copies the data */
 void* BMSduplicateBlockMemoryArray_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const void*           source,             /**< memory element to duplicate */
@@ -2126,8 +2125,10 @@ void BMSfreeBlockMemoryNull_call(
    assert( ptr != NULL );
 
    if( *ptr != NULL )
+   {
       BMSfreeBlockMemory_work(blkmem, ptr, size, filename, line);
-   checkBlkmem(blkmem);
+      checkBlkmem(blkmem);
+   }
 }
 
 /** calls garbage collection of block memory, frees chunks without allocated memory elements, and frees
@@ -2445,7 +2446,7 @@ BMS_BUFMEM* BMScreateBufferMemory_call(
    return buffer;
 }
 
-/** frees buffer memory */
+/** destroys buffer memory */
 void BMSdestroyBufferMemory_call(
    BMS_BUFMEM**          buffer,             /**< pointer to memory buffer storage */
    const char*           filename,           /**< source file of the function call */
@@ -2702,8 +2703,6 @@ void* BMSallocBufferMemoryArray_call(
    int                   line                /**< line number in source file of the function call */
    )
 {
-   size_t size;
-
 #ifndef NDEBUG
    if ( num > (size_t)(UINT_MAX / typesize) )
    {
@@ -2713,8 +2712,7 @@ void* BMSallocBufferMemoryArray_call(
    }
 #endif
 
-   size = num * typesize;
-   return BMSallocBufferMemory_work(buffer, size, filename, line);
+   return BMSallocBufferMemory_work(buffer, num * typesize, filename, line);
 }
 
 /** allocates the next unused buffer and clears it */
@@ -2727,9 +2725,11 @@ void* BMSallocClearBufferMemoryArray_call(
    )
 {
    void* ptr;
+
    ptr = BMSallocBufferMemoryArray_call(buffer, num, typesize, filename, line);
    if ( ptr != NULL )
       BMSclearMemorySize(ptr, num * typesize);
+
    return ptr;
 }
 
@@ -2846,7 +2846,6 @@ void* BMSreallocBufferMemoryArray_call(
    int                   line                /**< line number in source file of the function call */
    )
 {
-   size_t size;
 #ifndef NDEBUG
    if ( num > (size_t)(UINT_MAX / typesize) )
    {
@@ -2856,8 +2855,7 @@ void* BMSreallocBufferMemoryArray_call(
    }
 #endif
 
-   size = num * typesize;
-   return BMSreallocBufferMemory_work(buffer, ptr, size, filename, line);
+   return BMSreallocBufferMemory_work(buffer, ptr, num * typesize, filename, line);
 }
 
 /** allocates the next unused buffer and copies the given memory into the buffer */
@@ -3005,12 +3003,14 @@ void BMSfreeBufferMemoryNull_call(
 {  /*lint --e{715}*/
    assert( ptr != NULL );
 
-#ifndef SCIP_NOBUFFERMEM
    if ( *ptr != NULL )
+   {
+#ifndef SCIP_NOBUFFERMEM
       BMSfreeBufferMemory_work(buffer, ptr, filename, line);
 #else
-   BMSfreeMemory(ptr);
+      BMSfreeMemory(ptr);
 #endif
+   }
 }
 
 /** gets number of used buffers */
@@ -3022,7 +3022,6 @@ int BMSgetNUsedBufferMemory(
 
    return buffer->firstfree;
 }
-
 
 /** returns the number of allocated bytes in the buffer memory */
 long long BMSgetBufferMemoryUsed(

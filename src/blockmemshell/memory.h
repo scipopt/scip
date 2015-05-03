@@ -347,7 +347,7 @@ void* BMSduplicateChunkMemory_call(
    int                   line                /**< line number in source file of the function call */
    );
 
-/** frees a memory element of the given chunk block */
+/** frees a memory element of the given chunk block and sets pointer to NULL */
 EXTERN
 void BMSfreeChunkMemory_call(
    BMS_CHKMEM*           chkmem,             /**< chunk block */
@@ -357,7 +357,7 @@ void BMSfreeChunkMemory_call(
    int                   line                /**< line number in source file of the function call */
    );
 
-/** frees a memory element of the given chunk block if pointer is not NULL */
+/** frees a memory element of the given chunk block if pointer is not NULL and sets pointer to NULL */
 EXTERN
 void BMSfreeChunkMemoryNull_call(
    BMS_CHKMEM*           chkmem,             /**< chunk block */
@@ -515,7 +515,7 @@ void* BMSallocClearBlockMemoryArray_call(
    int                   line                /**< line number in source file of the function call */
    );
 
-/** resizes memory element in the block memory pool, and copies the data */
+/** resizes memory element in the block memory pool and copies the data */
 EXTERN
 void* BMSreallocBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -526,7 +526,7 @@ void* BMSreallocBlockMemory_call(
    int                   line                /**< line number in source file of the function call */
    );
 
-/** resizes array in the block memory pool, and copies the data */
+/** resizes array in the block memory pool and copies the data */
 EXTERN
 void* BMSreallocBlockMemoryArray_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -538,7 +538,7 @@ void* BMSreallocBlockMemoryArray_call(
    int                   line                /**< line number in source file of the function call */
    );
 
-/** duplicates memory element in the block memory pool, and copies the data */
+/** duplicates memory element in the block memory pool and copies the data */
 EXTERN
 void* BMSduplicateBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -548,7 +548,7 @@ void* BMSduplicateBlockMemory_call(
    int                   line                /**< line number in source file of the function call */
    );
 
-/** duplicates array in the block memory pool, and copies the data */
+/** duplicates array in the block memory pool and copies the data */
 EXTERN
 void* BMSduplicateBlockMemoryArray_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -662,7 +662,7 @@ BMS_BUFMEM* BMScreateBufferMemory_call(
    int                   line                /**< line number in source file of the function call */
    );
 
-/** frees memory buffer storage */
+/** destroys buffer memory */
 EXTERN
 void BMSdestroyBufferMemory_call(
    BMS_BUFMEM**          buffer,             /**< pointer to memory buffer storage */
