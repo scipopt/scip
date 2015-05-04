@@ -6417,7 +6417,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
          {
             SCIP_SUCCDATA* succdata;
             SCIP_VAR* succvar;
-            SCIP_ROW* cut;
+            SCIP_ROW* cut = NULL;
             SCIP_Bool bound1lower;
             SCIP_Bool bound2lower;
             SCIP_Real solvalsucc;
@@ -6541,7 +6541,8 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                }
             }
 
-            SCIP_CALL( SCIPreleaseRow(scip, &cut) );
+            if ( cut != NULL )
+               SCIP_CALL( SCIPreleaseRow(scip, &cut) );
          }
       }
    }
