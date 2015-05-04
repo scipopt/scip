@@ -203,7 +203,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
 
-   SCIP_Real* vals;
+   SCIP_Real vals[2];
    SCIP_VAR** previouscands;
    SCIP_Real* lpcandsscores;
    SCIP_Real* previousvals;
@@ -368,9 +368,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
    /* link the working solution to the dive set */
    SCIPdivesetSetWorkSolution(diveset, worksol);
-
-   /* allocate buffer array to store enforcement decision */
-   SCIP_CALL( SCIPallocBufferArray(scip, &vals, 2) );
 
    if( onlylpbranchcands )
    {
@@ -782,7 +779,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    }
    SCIPfreeBufferArray(scip, &previousvals);
    SCIPfreeBufferArray(scip, &previouscands);
-   SCIPfreeBufferArray(scip, &vals);
 
    return SCIP_OKAY;
 }
