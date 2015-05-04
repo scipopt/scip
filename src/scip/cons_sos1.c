@@ -8732,7 +8732,7 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
 
 /** compute best diving score */
 static
-SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveSOS1)
+SCIP_DECL_CONSHDLRDETERMDIVEVAR(conshdlrDetermDiveVarSOS1)
 {
    SCIP_DIGRAPH* conflictgraph;
    SCIP_Real bestscore = SCIP_REAL_MIN;
@@ -8745,6 +8745,7 @@ SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveSOS1)
    assert( diveset != NULL );
    assert( vals != NULL );
    assert( success != NULL );
+   assert( divetype != NULL );
 
    /* get number of SOS1 variables */
    nsos1vars = SCIPgetNSOS1Vars(conshdlr);
@@ -8779,6 +8780,7 @@ SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveSOS1)
             vals[roundup ? 1 : 0] = 0.0;
 
             *success = TRUE;
+            *divetype = SCIP_DIVETYPE_SOS1VARIABLE;
          }
       }
    }
@@ -8832,7 +8834,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySOS1, consCopySOS1) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSOS1) );
-   SCIP_CALL( SCIPsetConshdlrEnfoDive(scip, conshdlr, conshdlrEnfoDiveSOS1) );
+   //SCIP_CALL( SCIPsetConshdlrDetermDiveVar(scip, conshdlr, conshdlrDetermDiveVarSOS1) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolSOS1) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSOS1) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSOS1) );
