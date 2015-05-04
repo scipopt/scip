@@ -240,6 +240,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_DIVETYPE divetype;
 
    int nlpcands;
+   int lpsolvefreq;
 
    assert(scip != NULL);
    assert(result != NULL);
@@ -301,7 +302,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
 
-   onlylpbranchcands = TRUE;
+   onlylpbranchcands = SCIPdivesetUseOnlyLPBranchcands(diveset);
    /* don't try to dive, if there are no diving candidates */
    if( onlylpbranchcands && nlpcands == 0 )
       return SCIP_OKAY;
@@ -352,7 +353,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
 
    /* allocate buffer storage for previous candidates and their branching values for pseudo cost updates */
-   previouscandssize = MAX(1, SCIPgetDiveLPSolveFreq(scip));
+   lpsolvefreq = SCIPdivesetGetLPSolveFreq(diveset);
+   previouscandssize = MAX(1, lpsolvefreq);
    SCIP_CALL( SCIPallocBufferArray(scip, &previouscands, previouscandssize) );
    SCIP_CALL( SCIPallocBufferArray(scip, &previousvals, previouscandssize) );
 
@@ -619,12 +621,12 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             /* apply domain propagation */
             localdomreds = 0;
             SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, &localdomreds) );
-
             /* resolve the diving LP if the diving resolve frequency is reached or a sufficient number of intermediate bound changes
              * was reached
              */
-            if( !cutoff && ((SCIPgetDiveLPSolveFreq(scip) > 0 && ((SCIPgetProbingDepth(scip) - lastlpdepth) % SCIPgetDiveLPSolveFreq(scip)) == 0)
-                  || (domreds + localdomreds > SCIPgetDiveLPResolveDomChgQuot(scip) * SCIPgetNVars(scip))) )
+            if( !cutoff
+                  && ((lpsolvefreq > 0 && ((SCIPgetProbingDepth (scip) - lastlpdepth) % lpsolvefreq) == 0)
+                  || (domreds + localdomreds > SCIPdivesetGetLPResolveDomChgQuot(diveset) * SCIPgetNVars(scip))) )
             {
                SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, &lperror, &cutoff) );
 
@@ -773,8 +775,11 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
    SCIPdivesetSetWorkSolution(diveset, NULL);
 
-   SCIPfreeBufferArray(scip, &lpcandroundup);
-   SCIPfreeBufferArray(scip, &lpcandsscores);
+   if( onlylpbranchcands )
+   {
+      SCIPfreeBufferArray(scip, &lpcandroundup);
+      SCIPfreeBufferArray(scip, &lpcandsscores);
+   }
    SCIPfreeBufferArray(scip, &previousvals);
    SCIPfreeBufferArray(scip, &previouscands);
    SCIPfreeBufferArray(scip, &vals);

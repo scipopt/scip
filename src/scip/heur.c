@@ -183,8 +183,12 @@ SCIP_RETCODE SCIPdivesetCreate(
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveubquotnosol, /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol,/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Real             lpresolvedomchgquot,/**< percentage of immediate domain changes during probing to trigger LP resolve */
+   int                   lpsolvefreq,        /**< LP solve frequency for (0: only if enough domain reductions are found by propagation)*/
    int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
+                                              *   more general constraint handler diving variable selection? */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
    )
 {
@@ -261,6 +265,25 @@ SCIP_RETCODE SCIPdivesetCreate(
          paramname,
          "use one level of backtracking if infeasibility is encountered?",
          &(*diveset)->backtrack, FALSE, backtrack, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/lpresolvedomchgquot", (*diveset)->name);
+   SCIP_CALL( SCIPsetAddRealParam(set, messagehdlr, blkmem, paramname,
+         "percentage of immediate domain changes during probing to trigger LP resolve",
+         &(*diveset)->lpresolvedomchgquot, FALSE, lpresolvedomchgquot,  0.0, SCIP_REAL_MAX, NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/lpsolvefreq", (*diveset)->name);
+   SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem,
+         paramname,
+         "LP solve frequency for diving heuristics (0: only after enough domain changes have been found)",
+         &(*diveset)->lpsolvefreq, FALSE, lpsolvefreq, 0, INT_MAX,
+         NULL, NULL) );
+
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/onlylpbranchcands", (*diveset)->name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem,
+            paramname,
+            "should only LP branching candidates be considered instead of the slower but "
+            "more general constraint handler diving variable selection?",
+            &(*diveset)->onlylpbranchcands, FALSE, onlylpbranchcands, NULL, NULL) );
 
    SCIPdivesetReset(*diveset, set);
 
@@ -493,6 +516,38 @@ SCIP_Bool SCIPdivesetUseBacktrack(
    )
 {
    return diveset->backtrack;
+}
+
+/** returns the LP solve frequency for diving LPs (0: dynamically based on number of intermediate domain reductions) */
+int SCIPdivesetGetLPSolveFreq(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->lpsolvefreq;
+}
+
+/** returns the domain reduction quotient for triggering an immediate resolve of the diving LP (0.0: always resolve)*/
+SCIP_Real SCIPdivesetGetLPResolveDomChgQuot(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->lpresolvedomchgquot;
+}
+
+/** should only LP branching candidates be considered instead of the slower but
+ *  more general constraint handler diving variable selection?
+ */
+SCIP_Bool SCIPdivesetUseOnlyLPBranchcands(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->onlylpbranchcands;
 }
 
 /** update diveset LP statistics, should be called after every LP solved by this diving heuristic */

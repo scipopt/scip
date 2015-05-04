@@ -321,6 +321,26 @@ SCIP_Bool SCIPdivesetUseBacktrack(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
+/** returns the LP solve frequency for diving LPs (0: dynamically based on number of intermediate domain reductions) */
+EXTERN
+int SCIPdivesetGetLPSolveFreq(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** returns the domain reduction quotient for triggering an immediate resolve of the diving LP (0.0: always resolve)*/
+EXTERN
+SCIP_Real SCIPdivesetGetLPResolveDomChgQuot(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** should only LP branching candidates be considered instead of the slower but
+ *  more general constraint handler diving variable selection?
+ */
+EXTERN
+SCIP_Bool SCIPdivesetUseOnlyLPBranchcands(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
 /** frees memory of a diveset */
 EXTERN
 SCIP_RETCODE SCIPdivesetFree(

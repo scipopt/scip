@@ -3492,8 +3492,12 @@ SCIP_RETCODE SCIPcreateDiveset(
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveubquotnosol, /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol,/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Real             lpresolvedomchgquot,/**< percentage of immediate domain changes during probing to trigger LP resolve */
+   int                   lpsolvefreq,        /**< LP solve frequency for (0: only if enough domain reductions are found by propagation)*/
    int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
+                                              *   more general constraint handler diving variable selection? */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
    );
 
@@ -14599,18 +14603,6 @@ void SCIPupdateDivesetStats(
    int                   nprobingnodes,      /**< the number of probing nodes explored this time */
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
    SCIP_Bool             solfound            /**< was a solution found at the leaf? */
-   );
-
-/** returns the LP solve frequency for diving LPs (-1: never) */
-EXTERN
-int SCIPgetDiveLPSolveFreq(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-/** returns the domain reduction quotient for triggering an immediate resolve of the diving LP (0.0: always resolve)*/
-EXTERN
-SCIP_Real SCIPgetDiveLPResolveDomChgQuot(
-   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** enforces a probing/diving solution by suggesting bound changes that maximizes the score w.r.t. the current diving settings
