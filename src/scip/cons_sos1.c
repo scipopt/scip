@@ -6547,6 +6547,124 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
 }
 
 
+/** separates SOS1 constraints for arbitrary solutions */
+static
+SCIP_RETCODE separateSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SOL*             sol,                /**< solution to be separated (or NULL) */
+   int                   nconss,             /**< number of constraints */
+   SCIP_CONS**           conss,              /**< SOS1 constraints */
+   SCIP_RESULT*          result              /**< result */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   int depth;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( conss != NULL );
+   assert( result != NULL );
+
+   *result = SCIP_DIDNOTRUN;
+
+   if ( nconss == 0 )
+      return SCIP_OKAY;
+
+   /* only separate cuts if we are not close to terminating */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
+   *result = SCIP_DIDNOTFIND;
+
+   /* get constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   /* get node depth */
+   depth = SCIPgetDepth(scip);
+
+
+   /* separate bound (clique) inequalities */
+   if ( conshdlrdata->boundcutsfreq >= 0 && ( (conshdlrdata->boundcutsfreq == 0 && depth == 0) || (conshdlrdata->boundcutsfreq > 0 && depth % conshdlrdata->boundcutsfreq == 0)) )
+   {
+      int maxboundcuts;
+      int ngen = 0;
+
+      /* determine maximal number of cuts*/
+      if ( depth == 0 )
+         maxboundcuts = conshdlrdata->maxboundcutsroot;
+      else
+         maxboundcuts = conshdlrdata->maxboundcuts;
+
+      if ( maxboundcuts >= 1 )
+      {
+         /* separate bound inequalities from SOS1 constraints */
+         if( conshdlrdata->boundcutsfromsos1 )
+         {
+            SCIP_Bool cutoff;
+            SCIP_CALL( initsepaBoundInequalityFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, sol, TRUE, maxboundcuts, &ngen, &cutoff) );
+            if ( cutoff )
+            {
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+         }
+
+         /* separate bound inequalities from the conflict graph */
+         if( conshdlrdata->boundcutsfromgraph )
+         {
+            SCIP_Bool cutoff;
+            SCIP_CALL( sepaBoundInequalitiesFromGraph(scip, conshdlr, conshdlrdata, sol, maxboundcuts, &ngen, &cutoff) );
+            if ( cutoff )
+            {
+               *result = SCIP_CUTOFF;
+               return SCIP_OKAY;
+            }
+         }
+      }
+
+      /* evaluate results */
+      if ( ngen > 0 )
+         *result = SCIP_SEPARATED;
+      SCIPdebugMessage("Separated %d bound (clique) inequalities.\n", ngen);
+   }
+
+
+   /* separate implied bound inequalities */
+   if ( conshdlrdata->implcutsfreq >= 0 && ( (conshdlrdata->implcutsfreq == 0 && depth == 0) || (conshdlrdata->implcutsfreq > 0 && depth % conshdlrdata->implcutsfreq == 0)) )
+   {
+      int maximplcuts;
+      int ngen = 0;
+
+      /* determine maximal number of cuts*/
+      if ( depth == 0 )
+         maximplcuts = conshdlrdata->maximplcutsroot;
+      else
+         maximplcuts = conshdlrdata->maximplcuts;
+
+      /* call separator for implied bound cuts */
+      if ( maximplcuts >= 1 )
+      {
+         SCIP_Bool cutoff;
+         SCIP_CALL( sepaImplBoundCutsSOS1(scip, conshdlr, conshdlrdata, sol, maximplcuts, &ngen, &cutoff) );
+         if ( cutoff )
+         {
+            *result = SCIP_CUTOFF;
+            return SCIP_OKAY;
+         }
+      }
+
+      /* evaluate results */
+      if ( ngen > 0 )
+         *result = SCIP_SEPARATED;
+      SCIPdebugMessage("Separated %d implied bound inequalities.\n", ngen);
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /* -------------------------- heuristic methods --------------------------------*/
 
 /** gets weights determining an order of the variables in a heuristic for the maximum weighted independent set problem */
@@ -7173,7 +7291,7 @@ SCIP_RETCODE checkLinearConssVarboundSOS1(
 
 /** sets node data of conflict graph nodes */
 static
-SCIP_RETCODE setNodeDataSOS1(
+SCIP_RETCODE computeNodeDataSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< SOS1 constraint handler data */
@@ -7497,7 +7615,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
        SCIP_CALL( initConflictgraph(scip, conshdlrdata, conss, nconss) );
 
        /* add data to conflict graph nodes */
-       SCIP_CALL( setNodeDataSOS1(scip, conshdlr, conshdlrdata, conshdlrdata->nsos1vars) );
+       SCIP_CALL( computeNodeDataSOS1(scip, conshdlr, conshdlrdata, conshdlrdata->nsos1vars) );
 
        /* initialize tclique graph */
        SCIP_CALL( initTCliquegraph(scip, conshdlr, conshdlrdata, conshdlrdata->conflictgraph, conshdlrdata->nsos1vars) );
@@ -7863,109 +7981,13 @@ SCIP_DECL_CONSINITLP(consInitlpSOS1)
 static
 SCIP_DECL_CONSSEPALP(consSepalpSOS1)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   int depth;
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   *result = SCIP_DIDNOTRUN;
-
-   if ( nconss == 0 )
-      return SCIP_OKAY;
-
-   /* only separate cuts if we are not close to terminating */
-   if( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTFIND;
-
-   /* get constraint handler data */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-
-   /* get node depth */
-   depth = SCIPgetDepth(scip);
-
-
-   /* separate bound (clique) inequalities */
-   if ( conshdlrdata->boundcutsfreq >= 0 && ( (conshdlrdata->boundcutsfreq == 0 && depth == 0) || (conshdlrdata->boundcutsfreq > 0 && depth % conshdlrdata->boundcutsfreq == 0)) )
-   {
-      int maxboundcuts;
-      int ngen = 0;
-
-      /* determine maximal number of cuts*/
-      if ( depth == 0 )
-         maxboundcuts = conshdlrdata->maxboundcutsroot;
-      else
-         maxboundcuts = conshdlrdata->maxboundcuts;
-
-      if ( maxboundcuts >= 1 )
-      {
-         /* separate bound inequalities from SOS1 constraints */
-         if( conshdlrdata->boundcutsfromsos1 )
-         {
-            SCIP_Bool cutoff;
-            SCIP_CALL( initsepaBoundInequalityFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, NULL, TRUE, maxboundcuts, &ngen, &cutoff) );
-            if ( cutoff )
-            {
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-         }
-
-         /* separate bound inequalities from the conflict graph */
-         if( conshdlrdata->boundcutsfromgraph )
-         {
-            SCIP_Bool cutoff;
-            SCIP_CALL( sepaBoundInequalitiesFromGraph(scip, conshdlr, conshdlrdata, NULL, maxboundcuts, &ngen, &cutoff) );
-            if ( cutoff )
-            {
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-         }
-      }
-
-      /* evaluate results */
-      if ( ngen > 0 )
-         *result = SCIP_SEPARATED;
-      SCIPdebugMessage("Separated %d bound (clique) inequalities.\n", ngen);
-   }
-
-
-   /* separate implied bound inequalities */
-   if ( conshdlrdata->implcutsfreq >= 0 && ( (conshdlrdata->implcutsfreq == 0 && depth == 0) || (conshdlrdata->implcutsfreq > 0 && depth % conshdlrdata->implcutsfreq == 0)) )
-   {
-      int maximplcuts;
-      int ngen = 0;
-
-      /* determine maximal number of cuts*/
-      if ( depth == 0 )
-         maximplcuts = conshdlrdata->maximplcutsroot;
-      else
-         maximplcuts = conshdlrdata->maximplcuts;
-
-      /* call separator for implied bound cuts */
-      if ( maximplcuts >= 1 )
-      {
-         SCIP_Bool cutoff;
-         SCIP_CALL( sepaImplBoundCutsSOS1(scip, conshdlr, conshdlrdata, NULL, maximplcuts, &ngen, &cutoff) );
-         if ( cutoff )
-         {
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
-         }
-      }
-
-      /* evaluate results */
-      if ( ngen > 0 )
-         *result = SCIP_SEPARATED;
-      SCIPdebugMessage("Separated %d implied bound inequalities.\n", ngen);
-   }
+   SCIP_CALL( separateSOS1(scip, conshdlr, NULL, nconss, conss, result) );
 
    return SCIP_OKAY;
 }
@@ -7975,112 +7997,13 @@ SCIP_DECL_CONSSEPALP(consSepalpSOS1)
 static
 SCIP_DECL_CONSSEPASOL(consSepasolSOS1)
 {  /*lint --e{715}*/
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   int depth;
-
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( result != NULL );
 
-   *result = SCIP_DIDNOTRUN;
-
-   if ( nconss == 0 )
-      return SCIP_OKAY;
-
-   /* only separate cuts if we are not close to terminating */
-   if( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
-   /* only separate cuts if an optimal LP solution is at hand */
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-      return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTFIND;
-
-   /* get constraint handler data */
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-   assert( conshdlrdata != NULL );
-
-   /* get node depth */
-   depth = SCIPgetDepth(scip);
-
-   /* separate bound (clique) inequalities */
-   if ( conshdlrdata->boundcutsfreq >= 0 && ( (conshdlrdata->boundcutsfreq == 0 && depth == 0) || (conshdlrdata->boundcutsfreq > 0 && depth % conshdlrdata->boundcutsfreq == 0)) )
-   {
-      int maxboundcuts;
-      int ngen = 0;
-
-      /* determine maximal number of cuts*/
-      if ( depth == 0 )
-         maxboundcuts = conshdlrdata->maxboundcutsroot;
-      else
-         maxboundcuts = conshdlrdata->maxboundcuts;
-
-      if ( maxboundcuts >= 1 )
-      {
-         /* separate bound inequalities from SOS1 constraints */
-         if( conshdlrdata->boundcutsfromsos1 )
-         {
-            SCIP_Bool cutoff;
-            SCIP_CALL( initsepaBoundInequalityFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, sol, TRUE, maxboundcuts, &ngen, &cutoff) );
-            if ( cutoff )
-            {
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-         }
-
-         /* separate bound inequalities from the conflict graph */
-         if( conshdlrdata->boundcutsfromgraph )
-         {
-            SCIP_Bool cutoff;
-            SCIP_CALL( sepaBoundInequalitiesFromGraph(scip, conshdlr, conshdlrdata, sol, maxboundcuts, &ngen, &cutoff) );
-            if ( cutoff )
-            {
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
-            }
-         }
-      }
-
-      /* evaluate results */
-      if ( ngen > 0 )
-         *result = SCIP_SEPARATED;
-      SCIPdebugMessage("Separated %d bound (clique) inequalities.\n", ngen);
-   }
-
-   /* separate implied bound inequalities */
-   if ( conshdlrdata->implcutsfreq >= 0 && ( (conshdlrdata->implcutsfreq == 0 && depth == 0) || (conshdlrdata->implcutsfreq > 0 && depth % conshdlrdata->implcutsfreq == 0)) )
-   {
-      int maximplcuts;
-      int ngen = 0;
-
-      /* determine maximal number of cuts*/
-      if ( depth == 0 )
-         maximplcuts = conshdlrdata->maximplcutsroot;
-      else
-         maximplcuts = conshdlrdata->maximplcuts;
-
-      /* call separator for implied bound cuts */
-      ngen = 0;
-      if ( maximplcuts >= 1 )
-      {
-         SCIP_Bool cutoff;
-         SCIP_CALL( sepaImplBoundCutsSOS1(scip, conshdlr, conshdlrdata, NULL, maximplcuts, &ngen, &cutoff) );
-         if ( cutoff )
-         {
-            *result = SCIP_CUTOFF;
-            return SCIP_OKAY;
-         }
-      }
-
-      /* evaluate results */
-      if ( ngen > 0 )
-         *result = SCIP_SEPARATED;
-      SCIPdebugMessage("Separated %d implied bound inequalities.\n", ngen);
-   }
+   SCIP_CALL( separateSOS1(scip, conshdlr, sol, nconss, conss, result) );
 
    return SCIP_OKAY;
 }

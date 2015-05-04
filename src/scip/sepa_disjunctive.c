@@ -58,6 +58,7 @@
 /** separator data */
 struct SCIP_SepaData
 {
+   SCIP_CONSHDLR*        conshdlr;           /**< SOS1 constraint handler */
    SCIP_Real             maxweightrange;     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    int                   maxrank;            /**< maximal rank of a cut that could not be scaled to integral coefficients (-1: unlimited) */
    int                   maxrankintegral;    /**< maximal rank of a cut that could be scaled to integral coefficients (-1: unlimited) */
@@ -117,66 +118,56 @@ int getVarRank(
 }
 
 
-/** add simplex-coefficients of the non-basic non-slack variables */
+/** gets the nonbasic coefficients of a simplex row */
 static
-SCIP_RETCODE addSimplexNonSlackSOS1(
-   SCIP_COL**            cols,               /**< LP columns */
-   int                   ncols,              /**< number of LP columns */
-   SCIP_Real*            coef,               /**< row of \f$B^{-1} \cdot A\f$ */
-   SCIP_Real*            cutcoefs,           /**< pointer to store simplex-coefficients of the non-basic non-slack variables */
-   int*                  nonbasicnumber      /**< pointer to number increased by the number of simplex-coefficients that have been added so far */
-   )
-{
-   int c;
-
-   assert( nonbasicnumber != NULL );
-   assert( cutcoefs != NULL );
-   assert( cols != NULL );
-
-   for (c = 0; c < ncols; ++c)
-   {
-      assert( cols[c] != NULL );
-      if ( SCIPcolGetBasisStatus(cols[c]) == SCIP_BASESTAT_LOWER  || SCIPcolGetBasisStatus(cols[c]) == SCIP_BASESTAT_UPPER )
-         cutcoefs[(*nonbasicnumber)++] = coef[c];
-   }
-
-   return SCIP_OKAY;
-}
-
-
-/** add simplex-coefficients of the non-basic slack variables
- *
- *  @note This function has to be called after the call of addSimplexNonSlackSOS1()
- */
-static
-SCIP_RETCODE addSimplexSlackSOS1(
+SCIP_RETCODE getSimplexCoefficients(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_ROW**            rows,               /**< LP rows */
    int                   nrows,              /**< number LP rows */
+   SCIP_COL**            cols,               /**< LP columns */
+   int                   ncols,              /**< number of LP columns */
+   SCIP_Real*            coef,               /**< row of \f$B^{-1} \cdot A\f$ */
    SCIP_Real*            binvrow,            /**< row of \f$B^{-1}\f$ */
-   SCIP_Real*            cutcoefs,           /**< pointer to store simplex-coefficients of the non-basic non-slack variables */
-   int*                  nonbasicnumber      /**< pointer to number increased by the number of simplex-coefficients that have been added so far */
+   SCIP_Real*            simplexcoefs,       /**< pointer to store the nonbasic simplex-coefficients */
+   int*                  nonbasicnumber      /**< pointer to store the number of nonbasic simplex-coefficients */
    )
 {
    int r;
+   int c;
 
    assert( scip != NULL );
    assert( rows != NULL );
-   assert( binvrow != NULL );
-   assert( cutcoefs != NULL );
    assert( nonbasicnumber != NULL );
+   assert( simplexcoefs != NULL );
+   assert( cols != NULL );
 
+   *nonbasicnumber = 0;
+
+   /* note: the non-slack variables have to be added first (see the function generateDisjCutSOS1()) */
+
+   /* get simplex-coefficients of the non-basic non-slack variables */
+   for (c = 0; c < ncols; ++c)
+   {
+      SCIP_COL* col;
+
+      col = cols[c];
+      assert( col != NULL );
+      if ( SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_LOWER  || SCIPcolGetBasisStatus(col) == SCIP_BASESTAT_UPPER )
+         simplexcoefs[(*nonbasicnumber)++] = coef[c];
+   }
+
+   /* get simplex-coefficients of the non-basic slack variables */
    for (r = 0; r < nrows; ++r)
    {
       SCIP_ROW* row;
       row = rows[r];
       assert( row != NULL );
 
-      if ( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_UPPER || SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER )
+      if ( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER || SCIProwGetBasisStatus(row) == SCIP_BASESTAT_UPPER )
       {
          assert( SCIPisFeasZero(scip, SCIPgetRowLPActivity(scip, row) - SCIProwGetRhs(row)) || SCIPisFeasZero(scip, SCIPgetRowLPActivity(scip, row) - SCIProwGetLhs(row)) );
 
-         cutcoefs[(*nonbasicnumber)++] = binvrow[r];
+         simplexcoefs[(*nonbasicnumber)++] = binvrow[r];
       }
    }
 
@@ -184,9 +175,7 @@ SCIP_RETCODE addSimplexSlackSOS1(
 }
 
 
-/** Based on the @p c th row of the simplex tableau and the sum of simplex taubleau rows @p j with @p j neighbor of @p c,
- *  compute a disjunctive cut inequality.
- */
+/** computes a disjunctive cut inequality based on two simplex taubleau rows */
 static
 SCIP_RETCODE generateDisjCutSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -199,8 +188,8 @@ SCIP_RETCODE generateDisjCutSOS1(
    SCIP_Bool             scale,              /**< should cut be scaled */
    SCIP_Real             cutlhs1,            /**< left hand side of the first sum of simplex rows */
    SCIP_Real             cutlhs2,            /**< left hand side of the second sum of simplex rows */
-   SCIP_Real*            cutcoefs1,          /**< coefficients of the first sum of simplex rows */
-   SCIP_Real*            cutcoefs2,          /**< coefficients of the second sum of simplex rows */
+   SCIP_Real*            simplexcoefs1,      /**< simplex coefficients of first row */
+   SCIP_Real*            simplexcoefs2,      /**< simplex coefficients of second row */
    SCIP_Real*            cutcoefs,           /**< pointer to store cut coefficients (length: nscipvars) */
    SCIP_ROW**            row,                /**< pointer to store disjunctive cut inequality */
    SCIP_Bool*            madeintegral        /**< pointer to store whether cut has been scaled to integral values */
@@ -226,8 +215,8 @@ SCIP_RETCODE generateDisjCutSOS1(
    assert( row != NULL );
    assert( rows != NULL );
    assert( cols != NULL );
-   assert( cutcoefs1 != NULL );
-   assert( cutcoefs2 != NULL );
+   assert( simplexcoefs1 != NULL );
+   assert( simplexcoefs2 != NULL );
    assert( cutcoefs != NULL );
    assert( sepa != NULL );
    assert( madeintegral != NULL );
@@ -255,7 +244,7 @@ SCIP_RETCODE generateDisjCutSOS1(
       {
          lb = SCIPcolGetLb(col);
 
-         cutcoefs[ind] = MAX(sgn * cutlhs2 * cutcoefs1[nonbasicnumber], sgn * cutlhs1 * cutcoefs2[nonbasicnumber]);
+         cutcoefs[ind] = MAX(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber]);
          cutlhs += cutcoefs[ind] * lb;
          ++nonbasicnumber;
       }
@@ -263,7 +252,7 @@ SCIP_RETCODE generateDisjCutSOS1(
       {
          ub = SCIPcolGetUb(col);
 
-         cutcoefs[ind] = MIN(sgn * cutlhs2 * cutcoefs1[nonbasicnumber], sgn * cutlhs1 * cutcoefs2[nonbasicnumber]);
+         cutcoefs[ind] = MIN(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber]);
          cutlhs += cutcoefs[ind] * ub;
          ++nonbasicnumber;
       }
@@ -292,7 +281,7 @@ SCIP_RETCODE generateDisjCutSOS1(
          {
             assert( SCIPisFeasZero(scip, SCIPgetRowLPActivity(scip, rows[r]) - SCIProwGetRhs(rows[r])) );
 
-            cutcoef = MAX(sgn * cutlhs2 * cutcoefs1[nonbasicnumber], sgn * cutlhs1 * cutcoefs2[nonbasicnumber]);
+            cutcoef = MAX(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber]);
             cutlhs -= cutcoef * rhsrow;
             ++nonbasicnumber;
          }
@@ -301,7 +290,7 @@ SCIP_RETCODE generateDisjCutSOS1(
             assert( SCIProwGetBasisStatus(rows[r]) == SCIP_BASESTAT_LOWER );
             assert( SCIPisFeasZero(scip, SCIPgetRowLPActivity(scip, rows[r]) - SCIProwGetLhs(rows[r])) );
 
-            cutcoef = MIN(sgn * cutlhs2 * cutcoefs1[nonbasicnumber], sgn * cutlhs1 * cutcoefs2[nonbasicnumber]);
+            cutcoef = MIN(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber]);
             cutlhs -= cutcoef * lhsrow;
             ++nonbasicnumber;
          }
@@ -418,6 +407,21 @@ SCIP_DECL_SEPAFREE(sepaFreeDisjunctive)/*lint --e{715}*/
 }
 
 
+/** solving process initialization method of separator */
+static
+SCIP_DECL_SEPAEXITSOL(sepaInitsolDisjunctive)
+{  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   sepadata->conshdlr = SCIPfindConshdlr(scip, "SOS1");
+
+   return SCIP_OKAY;
+}
+
+
 /** LP solution separation method for disjunctive cuts */
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
@@ -428,8 +432,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    SCIP_ROW** rows;
    SCIP_COL** cols;
    SCIP_Real* cutcoefs = NULL;
-   SCIP_Real* cutcoefs1 = NULL;
-   SCIP_Real* cutcoefs2 = NULL;
+   SCIP_Real* simplexcoefs1 = NULL;
+   SCIP_Real* simplexcoefs2 = NULL;
    SCIP_Real* coef = NULL;
    SCIP_Real* binvrow = NULL;
    SCIP_Real* rowsmaxval = NULL;
@@ -484,8 +488,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    assert( cols != NULL );
    assert( rows != NULL );
 
-   /* get constraint handler data */
-   conshdlr = SCIPfindConshdlr(scip, "SOS1");
+   /* get sepa data */
+   sepadata = SCIPsepaGetData(sepa);
+   assert( sepadata != NULL );
+
+   /* get constraint handler */
+   conshdlr = sepadata->conshdlr;
    if ( conshdlr == NULL )
       return SCIP_OKAY;
 
@@ -493,10 +501,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    nconss = SCIPconshdlrGetNConss(conshdlr);
    if ( nconss == 0 )
       return SCIP_OKAY;
-
-   /* get sepa data */
-   sepadata = SCIPsepaGetData(sepa);
-   assert( sepadata != NULL );
 
    /* check for maxdepth < depth, maxinvcutsroot = 0 and maxinvcuts = 0 */
    depth = SCIPgetDepth(scip);
@@ -511,22 +515,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
       return SCIP_OKAY;
 
-   /* if too many sos1 constraints, the separator is usually very slow: delay it until no other cuts have been found */
+   /* if too many SOS1 constraints, the separator is usually very slow: delay it until no other cuts have been found */
    if ( sepadata->maxconsdelay >= 0 && nconss >= sepadata->maxconsdelay )
-   {
-      int ncutsfound;
-
-      ncutsfound = SCIPgetNCutsFound(scip);
-      if ( ncutsfound > sepadata->lastncutsfound || ! SCIPsepaWasLPDelayed(sepa) )
-      {
-         sepadata->lastncutsfound = ncutsfound;
-         *result = SCIP_DELAYED;
-         return SCIP_OKAY;
-      }
-   }
-
-   /* if too many columns, the separator is usually very slow: delay it until no other cuts have been found */
-   if ( ncols >= 5 * nrows )
    {
       int ncutsfound;
 
@@ -622,8 +612,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
    SCIP_CALL( SCIPallocBufferArray(scip, &basisrow, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &coef, ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs1, ncols) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs2, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &simplexcoefs1, ncols) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &simplexcoefs2, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
 
@@ -685,7 +675,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       SCIP_VAR* var;
       SCIP_COL* col;
 
-      int nonbasicnumber = 0;
+      int nonbasicnumber;
       int cutrank = 0;
       int edgenumber;
       int rownnonz;
@@ -703,11 +693,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       SCIP_CALL( SCIPgetLPBInvRow(scip, basisrow[ind], binvrow, NULL, NULL) );
       SCIP_CALL( SCIPgetLPBInvARow(scip, basisrow[ind], binvrow, coef, NULL, NULL) );
 
-      /* add the simplex-coefficients of the non-basic non-slack variables; */
-      SCIP_CALL( addSimplexNonSlackSOS1(cols, ncols, coef, cutcoefs1, &nonbasicnumber) );
-
-      /* add the simplex-coefficients of the non-basic slack variables; */
-      SCIP_CALL( addSimplexSlackSOS1(scip, rows, nrows, binvrow, cutcoefs1, &nonbasicnumber) );
+      /* get the simplex-coefficients of the non-basic variables */
+      SCIP_CALL( getSimplexCoefficients(scip, rows, nrows, cols, ncols, coef, binvrow, simplexcoefs1, &nonbasicnumber) );
 
       /* get rank of variable if not known already */
       if ( varrank[ind] < 0 )
@@ -729,12 +716,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       SCIP_CALL( SCIPgetLPBInvRow(scip, basisrow[ind], binvrow, NULL, NULL) );
       SCIP_CALL( SCIPgetLPBInvARow(scip, basisrow[ind], binvrow, coef, NULL, NULL) );
 
-      /* add the simplex-coefficients of the non-basic non-slack variables; */
-      nonbasicnumber = 0;
-      SCIP_CALL( addSimplexNonSlackSOS1(cols, ncols, coef, cutcoefs2, &nonbasicnumber) );
-
-      /* add the simplex-coefficients of the non-basic slack variables; */
-      SCIP_CALL( addSimplexSlackSOS1(scip, rows, nrows, binvrow, cutcoefs2, &nonbasicnumber) );
+      /* get the simplex-coefficients of the non-basic variables */
+      SCIP_CALL( getSimplexCoefficients(scip, rows, nrows, cols, ncols, coef, binvrow, simplexcoefs2, &nonbasicnumber) );
 
       /* get rank of variable if not known already */
       if ( varrank[ind] < 0 )
@@ -745,7 +728,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       cutlhs2 = SCIPcolGetPrimsol(col);
 
       /* add coefficients to cut */
-      SCIP_CALL( generateDisjCutSOS1(scip, sepa, rows, nrows, cols, ncols, ndisjcuts, TRUE, cutlhs1, cutlhs2, cutcoefs1, cutcoefs2, cutcoefs, &row, &madeintegral) );
+      SCIP_CALL( generateDisjCutSOS1(scip, sepa, rows, nrows, cols, ncols, ndisjcuts, TRUE, cutlhs1, cutlhs2, simplexcoefs1, simplexcoefs2, cutcoefs, &row, &madeintegral) );
 
       /* raise cutrank for present cut */
       ++cutrank;
@@ -795,8 +778,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
 
    /* free buffer arrays */
    SCIPfreeBufferArrayNull(scip, &cutcoefs);
-   SCIPfreeBufferArrayNull(scip, &cutcoefs2);
-   SCIPfreeBufferArrayNull(scip, &cutcoefs1);
+   SCIPfreeBufferArrayNull(scip, &simplexcoefs2);
+   SCIPfreeBufferArrayNull(scip, &simplexcoefs1);
    SCIPfreeBufferArrayNull(scip, &coef);
    SCIPfreeBufferArrayNull(scip, &binvrow);
    SCIPfreeBufferArrayNull(scip, &basisrow);
@@ -820,6 +803,7 @@ SCIP_RETCODE SCIPincludeSepaDisjunctive(
 
    /* create separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   sepadata->conshdlr = NULL;
    sepadata->lastncutsfound = 0;
 
    /* include separator */
@@ -831,6 +815,7 @@ SCIP_RETCODE SCIPincludeSepaDisjunctive(
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyDisjunctive) );
    SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeDisjunctive) );
+   SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolDisjunctive) );
 
    /* add separator parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxdepth",
