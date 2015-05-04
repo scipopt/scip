@@ -37,26 +37,19 @@ extern "C" {
  *  name, SCIP enters probing mode (not diving mode) and dives along a path into the tree. Domain propagation
  *  is applied at every node in the tree, whereas probing LPs might be solved less frequently.
  *
- *  Starting from the current LP candidates, the algorithm determines a fraction of the candidates that should be
- *  branched on; if a single candidate should be fixed, the algorithm selects a candidate which minimizes the score
- *  defined by the @p diveset.  If more than one candidate should be selected, the candidates are sorted in
- *  non-decreasing order of their score.
+ *  Starting from the current LP solution, the algorithm selects candidates which maximize the
+ *  score defined by the @p diveset and whose solution value has not yet been rendered infeasible by propagation,
+ *  and propagates the bound change on this candidate.
  *
- *  The algorithm iteratively selects the the next (unfixed) candidate in the list, until the
- *  targeted depth is reached, or the last node is proven to be infeasible. It optionally backtracks and tries the
+ *  The algorithm iteratively selects the the next (unfixed) candidate in the list, until either enough domain changes
+ *  or the resolve frequency of the LP trigger an LP resolve (and hence, the set of potential candidates changes),
+ *  or the last node is proven to be infeasible. It optionally backtracks and tries the
  *  other branching direction.
  *
  *  After the set of remaining candidates is empty or the targeted depth is reached, the node LP is
  *  solved, and the old candidates are replaced by the new LP candidates.
  *
  *  @see heur_guideddiving.c for an example implementation of a dive set controlling the diving algorithm.
- *
- *  @see the parameter @p heuristics/startdivefrac to determine the fraction of candidates that should be dived on at the
- *       beginning. Setting this parameter to 0.0 will result in an LP solved after every candidate selection.
- *
- *  @note the fraction of candidate variables is subject to change during solving. It is decreased by a factor of
- *        2 every time the algorithm could not dive half as deep as desired. However, if it succeeded, the fraction
- *        is multiplied by a factor of 1.1.
  *
  *  @note the node from where the algorithm is called is checked for a basic LP solution. If the solution
  *        is non-basic, e.g., when barrier without crossover is used, the method returns without performing a dive.
