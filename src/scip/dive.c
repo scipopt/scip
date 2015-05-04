@@ -75,6 +75,84 @@ SCIP_RETCODE solveLP(
    return SCIP_OKAY;
 }
 
+/**< select the next variable and type of diving */
+static
+SCIP_RETCODE selectNextDiving(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIVESET*         diveset,            /**< dive set */
+   SCIP_SOL*             worksol,            /**< current working solution */
+   SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered? */
+   SCIP_Bool             storelpcandscores,  /**< should the scores of the LP candidates be updated? */
+   SCIP_VAR**            nextcandvar,        /**< pointer to store the next candidate variable */
+   SCIP_VAR**            lpcands,            /**< LP branching candidates, or NULL if not needed */
+   SCIP_Real *           lpcandssol,         /**< solution values LP branching candidates, or NULL if not needed */
+   SCIP_Real*            lpcandsfrac,        /**< fractionalities of LP branching candidates, or NULL if not needed*/
+   SCIP_Real*            lpcandsscores,      /**< array with LP branching candidate scores, or NULL */
+   SCIP_Bool*            lpcandroundup,      /**< array to remember whether the preferred branching direction is upwards */
+   int                   nlpcands,           /**< number of current LP cands */
+   SCIP_Real*            vals,               /**< 2-element buffer to store first and alternative how diving should proceed */
+   SCIP_DIVETYPE*        divetype,           /**< pointer to the type of the next dive to be applied */
+   SCIP_Bool*            enfosuccess,        /**< pointer to store whether a candidate was sucessfully found */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the diving can be immediately aborted because it is infeasible */
+   )
+{
+   assert(scip != NULL);
+   assert(worksol != NULL);
+   assert(nextcandvar != NULL);
+   assert(!onlylpbranchcands || lpcandsscores != NULL);
+   assert(!onlylpbranchcands || lpcandroundup != NULL);
+   assert(vals != NULL);
+   assert(divetype != NULL);
+   assert(enfosuccess != NULL);
+   assert(infeasible != NULL);
+
+   /* we use diving solution enforcement provided by the constraint handlers */
+   if( !onlylpbranchcands )
+   {
+      SCIP_CALL( SCIPdetermineDiveVar(scip, diveset, worksol, nextcandvar, vals, divetype, enfosuccess, infeasible) );
+   }
+   else
+   {
+      int c;
+      int bestcandidx;
+      SCIP_Real bestscore;
+      SCIP_Real score;
+
+      bestscore = SCIP_REAL_MIN;
+      bestcandidx = -1;
+      /* search for the candidate that maximizes the dive set score function and whose solution value is still feasible */
+      for (c = 0; c < nlpcands; ++c)
+      {
+         assert(SCIPgetSolVal(scip, worksol, lpcands[c]) == lpcandssol[c]);
+
+         /* scores are kept in arrays for faster reuse */
+         if( storelpcandscores )
+         {
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, lpcands[c], lpcandssol[c], lpcandsfrac[c], &lpcandsscores[c], &lpcandroundup[c]) );
+         }
+
+         score = lpcandsscores[c];
+         /* update the best candidate if it has a higher score and a solution value which does not violate one of the local bounds */
+         if( SCIPisFeasLE(scip, SCIPvarGetLbLocal(lpcands[c]), lpcandssol[c]) && SCIPisFeasGE(scip, SCIPvarGetUbLocal(lpcands[c]), lpcandssol[c]) && score > bestscore )
+         {
+            bestcandidx = c;
+            bestscore = score;
+         }
+      }
+
+      /* there is no guarantee that a candidate is found since local bounds might render all solution values infeasible */
+      *enfosuccess = (bestcandidx >= 0);
+      if( *enfosuccess )
+      {
+         *nextcandvar = lpcands[bestcandidx];
+         vals[lpcandroundup[bestcandidx] ? 0 : 1] = SCIPceil(scip, lpcandssol[bestcandidx]);
+         vals[lpcandroundup[bestcandidx] ? 1 : 0] = SCIPfloor(scip, lpcandssol[bestcandidx]);
+         *divetype = SCIP_DIVETYPE_INTEGRALITY;
+      }
+   }
+   return SCIP_OKAY;
+}
+
 
 
 /** performs a diving within the limits of the diveset parameters
@@ -83,26 +161,26 @@ SCIP_RETCODE solveLP(
  *  name, SCIP enters probing mode (not diving mode) and dives along a path into the tree. Domain propagation
  *  is applied at every node in the tree, whereas probing LPs might be solved less frequently.
  *
+<<<<<<< HEAD
  *  Starting from the current LP candidates, the algorithm determines a fraction of the candidates that should be
  *  branched on; if a single candidate should be fixed, the algorithm selects a candidate which minimizes the score
  *  defined by the @p diveset.  If more than one candidate should be selected, the candidates are sorted in
  *  non-decreasing order of their score.
+=======
+ *  Starting from the current LP solution, the algorithm selects candidates which maximize the
+ *  score defined by the @p diveset and whose solution value has not yet been rendered infeasible by propagation,
+ *  and propagates the bound change on this candidate.
+>>>>>>> extended diving algorithm
  *
- *  The algorithm iteratively selects the the next (unfixed) candidate in the list, until the
- *  targeted depth is reached, or the last node is proven to be infeasible. It optionally backtracks and tries the
+ *  The algorithm iteratively selects the the next (unfixed) candidate in the list, until either enough domain changes
+ *  or the resolve frequency of the LP trigger an LP resolve (and hence, the set of potential candidates changes),
+ *  or the last node is proven to be infeasible. It optionally backtracks and tries the
  *  other branching direction.
  *
  *  After the set of remaining candidates is empty or the targeted depth is reached, the node LP is
  *  solved, and the old candidates are replaced by the new LP candidates.
  *
  *  @see heur_guideddiving.c for an example implementation of a dive set controlling the diving algorithm.
- *
- *  @see the parameter @p heuristics/startdivefrac to determine the fraction of candidates that should be dived on at the
- *       beginning. Setting this parameter to 0.0 will result in an LP solved after every candidate selection.
- *
- *  @note the fraction of candidate variables is subject to change during solving. It is decreased by a factor of
- *        2 every time the algorithm could not dive half as deep as desired. However, if it succeeded, the fraction
- *        is multiplied by a factor of 1.1.
  *
  *  @note the node from where the algorithm is called is checked for a basic LP solution. If the solution
  *        is non-basic, e.g., when barrier without crossover is used, the method returns without performing a dive.
@@ -127,7 +205,10 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
    SCIP_Real* vals;
    SCIP_VAR** previouscands;
+   SCIP_Real* lpcandsscores;
    SCIP_Real* previousvals;
+   SCIP_Real* lpcandsfrac;
+   SCIP_Bool* lpcandroundup;
    SCIP_Real searchubbound;
    SCIP_Real searchavgbound;
    SCIP_Real searchbound;
@@ -147,6 +228,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    int totalnprobingnodes;
    int lastlpdepth;
    int previouscandssize;
+   int lpcandsscoressize;
 
    SCIP_Bool success;
    SCIP_Bool enfosuccess;
@@ -154,6 +236,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_Bool cutoff;
    SCIP_Bool backtracked;
    SCIP_Bool backtrack;
+   SCIP_Bool onlylpbranchcands;
+   SCIP_DIVETYPE divetype;
 
    int nlpcands;
 
@@ -202,6 +286,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    maxnlpiterations += SCIPdivesetGetMaxLPIterOffset(diveset);
 
 
+
    /* don't try to dive, if we took too many LP iterations during diving */
    if( SCIPdivesetGetNLPIterations(diveset) >= maxnlpiterations )
       return SCIP_OKAY;
@@ -214,10 +299,11 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    /* todo maybe store those constraints once and not every time */
    indconshdlr = SCIPfindConshdlr(scip, "indicator");
 
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
 
+   onlylpbranchcands = TRUE;
    /* don't try to dive, if there are no diving candidates */
-   if( nlpcands == 0 )
+   if( onlylpbranchcands && nlpcands == 0 )
       return SCIP_OKAY;
 
    /* calculate the objective search bound */
@@ -283,6 +369,21 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
    /* allocate buffer array to store enforcement decision */
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, 2) );
+
+   if( onlylpbranchcands )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &lpcandsscores, nlpcands) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &lpcandroundup, nlpcands) );
+
+      lpcandsscoressize = nlpcands;
+   }
+   else
+   {
+      lpcandroundup = NULL;
+      lpcandsscores = NULL;
+      lpcandsscoressize = 0;
+   }
+
    enfosuccess = TRUE;
 
    /* LP loop; every time a new LP was solved, conditions are checked
@@ -372,14 +473,30 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
 
 
+      /* ensure array sizes for the diving on the fractional variables */
+      if( onlylpbranchcands && nlpcands > lpcandsscoressize )
+      {
+         assert(nlpcands > 0);
+         assert(lpcandsscores != NULL);
+         assert(lpcandroundup != NULL);
+
+         SCIP_CALL( SCIPreallocBufferArray(scip, &lpcandsscores, nlpcands) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &lpcandroundup, nlpcands) );
+
+         lpcandsscoressize = nlpcands;
+      }
+
+
       nextcandvar = NULL;
       nextcandsol = SCIP_INVALID;
-      nextcandroundup = FALSE;
-      /* choose next candidate variable, usually done at the end of the previous iteration */
       enfosuccess = FALSE;
       vals[0] = vals[1] = SCIP_INVALID;
+      divetype = SCIP_DIVETYPE_NONE;
 
-      SCIP_CALL( SCIPenforceDiveSolution(scip, diveset, worksol, &nextcandvar, vals, &enfosuccess, &infeasible) );
+      /* select the next diving action by choosing next the candidate variable */
+      SCIP_CALL( selectNextDiving(scip, diveset, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth, &nextcandvar,
+             lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, nlpcands,
+             vals, &divetype, &enfosuccess, &infeasible) );
 
       /* if we did not succeed finding an enforcement, the solution is potentially feasible and we break immediately */
       if( ! enfosuccess )
@@ -432,44 +549,71 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                break;
             }
 
-            /* apply rounding of best candidate */
-            if( nextcandroundup == !backtracked )
+            /* depending on the selected dive type, the child nodes are explored differently: Integrality diving renders the diving solution (more) infeasible
+             * by adjusting one of the bounds of the selected variable. SOS1 diving renders the solution infeasible by fixing the variable itself to
+             * zero in one branch and fixing all its conflict graph neighbors to zero in the other child
+             */
+            switch (divetype)
             {
-               SCIP_Real value = vals[backtracked ? 1 : 0];
-               if( SCIPisFeasIntegral(scip, nextcandsol) )
-               {
-                  /* only indicator variables can have integral solution value */
-                  assert(SCIPvarGetType(nextcandvar) == SCIP_VARTYPE_BINARY);
-                  value = 1.0;
-               }
+               case SCIP_DIVETYPE_INTEGRALITY:
+                  /* apply rounding of best candidate */
+                  if( nextcandroundup == !backtracked )
+                  {
+                     SCIP_Real value = vals[backtracked ? 1 : 0];
+                     if( SCIPisFeasIntegral(scip, nextcandsol) )
+                     {
+                        /* only indicator variables can have integral solution value */
+                        assert(SCIPvarGetType(nextcandvar) == SCIP_VARTYPE_BINARY);
+                        value = 1.0;
+                     }
 
-               /* round variable up */
-               SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
-                  SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
-                  SCIPvarGetName(nextcandvar),
-                  nextcandsol, SCIPvarGetLbLocal(nextcandvar), SCIPvarGetUbLocal(nextcandvar),
-                  value, SCIPvarGetUbLocal(nextcandvar));
+                     /* round variable up */
+                     SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+                                      SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
+                                      SCIPvarGetName(nextcandvar),
+                                      nextcandsol, SCIPvarGetLbLocal(nextcandvar), SCIPvarGetUbLocal(nextcandvar),
+                                      value, SCIPvarGetUbLocal(nextcandvar));
 
-               SCIP_CALL( SCIPchgVarLbProbing(scip, nextcandvar, value) );
-            }
-            else
-            {
-               SCIP_Real value = vals[backtracked ? 1 : 0];
+                     SCIP_CALL( SCIPchgVarLbProbing(scip, nextcandvar, value) );
+                  }
+                  else
+                  {
+                     SCIP_Real value = vals[backtracked ? 1 : 0];
 
-               if( SCIPisFeasIntegral(scip, nextcandsol) )
-               {
-                  /* only indicator variables can have integral solution value */
-                  assert(SCIPvarGetType(nextcandvar) == SCIP_VARTYPE_BINARY);
-                  value = 0.0;
-               }
-               /* round variable down */
-               SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
-                  SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
-                  SCIPvarGetName(nextcandvar),
-                  nextcandsol, SCIPvarGetLbLocal(nextcandvar), SCIPvarGetUbLocal(nextcandvar),
-                  SCIPvarGetLbLocal(nextcandvar), value);
+                     if( SCIPisFeasIntegral(scip, nextcandsol) )
+                     {
+                        /* only indicator variables can have integral solution value */
+                        assert(SCIPvarGetType(nextcandvar) == SCIP_VARTYPE_BINARY);
+                        value = 0.0;
+                     }
+                     /* round variable down */
+                     SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
+                                      SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
+                                      SCIPvarGetName(nextcandvar),
+                                      nextcandsol, SCIPvarGetLbLocal(nextcandvar), SCIPvarGetUbLocal(nextcandvar),
+                                      SCIPvarGetLbLocal(nextcandvar), value);
 
-               SCIP_CALL( SCIPchgVarUbProbing(scip, nextcandvar, value) );
+                     SCIP_CALL( SCIPchgVarUbProbing(scip, nextcandvar, value) );
+                  }
+                  break;
+               /* @todo implement SOS1-type diving */
+               case SCIP_DIVETYPE_SOS1VARIABLE:
+                  /* ensure that the two branching directions for SOS are disjoint */
+                  assert(SCIPisZero(scip, vals[0]) != SCIPisZero(scip, vals[1]));
+                  if( SCIPisZero(scip, vals[backtracked ? 1 : 0]) )
+                  {
+                     /* have variable nextcandvar fixed to zero */
+                  }
+                  else
+                  {
+                     /* have conflicting variables with nextcandvar fixed to zero */
+                  }
+                  SCIPerrorMessage("Error: SOS1 Diving not implemented yet\n");
+               default:
+                  SCIPerrorMessage("Error: Unsupported divetype <%d> selected, aborting\n", divetype);
+                  SCIPABORT();
+                  return SCIP_INVALIDDATA;
+                  break;
             }
 
             /* apply domain propagation */
@@ -536,8 +680,13 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                enfosuccess = FALSE;
                nextcandvar = NULL;
                vals[0] = vals[1] = SCIP_INVALID;
+               divetype = SCIP_DIVETYPE_NONE;
 
-               SCIP_CALL( SCIPenforceDiveSolution(scip, diveset, worksol, &nextcandvar, vals, &enfosuccess, &infeasible) );
+               /* select the next diving action */
+               SCIP_CALL( selectNextDiving(scip, diveset, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth, &nextcandvar,
+                      lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, nlpcands,
+                      vals, &divetype, &enfosuccess, &infeasible) );
+
 
                /* in case of an unsuccesful candidate search, we solve the node LP */
                if( !enfosuccess )
@@ -624,6 +773,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
    SCIPdivesetSetWorkSolution(diveset, NULL);
 
+   SCIPfreeBufferArray(scip, &lpcandroundup);
+   SCIPfreeBufferArray(scip, &lpcandsscores);
    SCIPfreeBufferArray(scip, &previousvals);
    SCIPfreeBufferArray(scip, &previouscands);
    SCIPfreeBufferArray(scip, &vals);

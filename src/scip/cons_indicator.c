@@ -6409,9 +6409,9 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsIndicator)
    return SCIP_OKAY;
 }
 
-/** choose diving strategy */
+/** constraint handler method to determine a diving variable by assigning a variable and two values for diving */
 static
-SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveIndicator)
+SCIP_DECL_CONSHDLRDETERMDIVEVAR(conshdlrDetermDiveVarIndicator)
 {
    SCIP_Real bestscore = SCIP_REAL_MIN;
    SCIP_CONS** indconss;
@@ -6424,6 +6424,7 @@ SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveIndicator)
    assert(diveset != NULL);
    assert(vals != NULL);
    assert(success != NULL);
+   assert(divetype != NULL);
 
    indconss = SCIPconshdlrGetConss(conshdlr);
    nindconss = SCIPconshdlrGetNConss(conshdlr);
@@ -6459,6 +6460,7 @@ SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveIndicator)
                vals[roundup ? 1 : 0] = 0.0;
 
                *success = TRUE;
+               *divetype = SCIP_DIVETYPE_INTEGRALITY;
             }
          }
       }
@@ -6523,7 +6525,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteIndicator) );
    SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableIndicator) );
    SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableIndicator) );
-   SCIP_CALL( SCIPsetConshdlrEnfoDive(scip, conshdlr, conshdlrEnfoDiveIndicator) );
+   SCIP_CALL( SCIPsetConshdlrDetermDiveVar(scip, conshdlr, conshdlrDetermDiveVarIndicator) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitIndicator) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolIndicator) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeIndicator) );

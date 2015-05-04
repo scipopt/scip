@@ -176,9 +176,9 @@ SCIP_DECL_CONSLOCK(consLockIntegral)
    return SCIP_OKAY;
 }
 
-/** constraint handler method to enforce a solution obtained during diving by assigning a variable and two values for branching */
+/** constraint handler method to render a diving solution infeasible by assigning a variable and two values for branching */
 static
-SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveIntegral)
+SCIP_DECL_CONSHDLRDETERMDIVEVAR(conshdlrDetermDiveVarIntegral)
 {
    SCIP_VAR** vars;
    SCIP_Real solval;
@@ -196,6 +196,7 @@ SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveIntegral)
    assert(diveset != NULL);
    assert(varptr != NULL);
    assert(vals != NULL);
+   assert(divetype != NULL);
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -237,6 +238,7 @@ SCIP_DECL_CONSHDLRENFODIVE(conshdlrEnfoDiveIntegral)
             }
 
             *success = TRUE;
+            *divetype = SCIP_DIVETYPE_INTEGRALITY;
          }
       }
    }
@@ -270,7 +272,7 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyIntegral, consCopyIntegral) );
-   SCIP_CALL( SCIPsetConshdlrEnfoDive(scip, conshdlr, conshdlrEnfoDiveIntegral) );
+   SCIP_CALL( SCIPsetConshdlrDetermDiveVar(scip, conshdlr, conshdlrDetermDiveVarIntegral) );
 
    return SCIP_OKAY;
 }

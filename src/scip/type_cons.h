@@ -790,10 +790,12 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 #define SCIP_DECL_CONSGETNVARS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, \
       int* nvars, SCIP_Bool* success)
 
-/** constraint handler method to enforce a solution obtained during diving by assigning a variable and two values for branching
+/** constraint handler method to determine a diving variable by assigning a variable and two values for diving
  *
- *  The constraint handler can provide this callback to enforce the current solution in probing/diving mode. The solution is
- *  enforced by deciding for a variable and two values (one with higher priority and one alternative) that
+ *  this callback is used inside the various diving heuristics of SCIP and does not affect the normal branching
+ *  of the actual search.
+ *  The constraint handler can provide this callback to render the current solution infeasible. The solution is
+ *  rendered infeasible by deciding for a variable and two values (one with higher priority and one alternative) that
  *  the user of the diveset argument (mostly a diving heuristic) should proceed with. The success pointer is used to indicate
  *  whether the constraint handler succeeded in selecting a variable. The infeasible pointer should be set to TRUE if
  *  the constraint handler found a local infeasibility.  If the constraint handler needs to select between several
@@ -813,11 +815,12 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  output:
  *  - varptr          : a pointer to store the candidate with the highest score
  *  - vals            : buffer array to store exactly two values for proceeding with diving
+ *  - divetype,       : pointer to the type of the next dive to be applied
  *  - success         : pointer to store whether the constraint handler succeeded selecting a variable
  *  - infeasible      : pointer to store whether the constraint handler detected an infeasibility in the local node
  */
-#define SCIP_DECL_CONSHDLRENFODIVE(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_DIVESET* diveset, \
-      SCIP_SOL* sol, SCIP_VAR** varptr, SCIP_Real* vals, SCIP_Bool* success, SCIP_Bool* infeasible)
+#define SCIP_DECL_CONSHDLRDETERMDIVEVAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_DIVESET* diveset, \
+      SCIP_SOL* sol, SCIP_VAR** varptr, SCIP_Real* vals, SCIP_DIVETYPE* divetype, SCIP_Bool* success, SCIP_Bool* infeasible)
 
 #ifdef __cplusplus
 }
