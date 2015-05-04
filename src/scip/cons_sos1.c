@@ -3124,12 +3124,14 @@ SCIP_RETCODE propVariableNonzero(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
    SCIP_DIGRAPH*         implgraph,          /**< implication graph */
+   SCIP_CONS*            cons,               /**< some arbitrary SOS1 constraint */
    int                   node,               /**< conflict graph node of variable that is known to be nonzero */
    SCIP_Bool             implprop,           /**< whether implication graph propagation shall be applied */
    SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
    int*                  ngen                /**< number of domain changes */
    )
 {
+   int inferinfo;
    int* succ;
    int nsucc;
    int s;
@@ -3141,6 +3143,7 @@ SCIP_RETCODE propVariableNonzero(
    assert( node >= 0 );
 
    *cutoff = FALSE;
+   inferinfo = -node - 1;
 
    /* by assumption zero is outside the domain of variable */
    assert( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(SCIPnodeGetVarSOS1(conflictgraph, node))) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(SCIPnodeGetVarSOS1(conflictgraph, node))) );
@@ -3160,29 +3163,22 @@ SCIP_RETCODE propVariableNonzero(
 
       if ( ! SCIPisFeasZero(scip, lb) || ! SCIPisFeasZero(scip, ub) )
       {
-         /* if variable cannot be nonzero */
-         if ( SCIPisFeasPositive(scip, lb) || SCIPisFeasNegative(scip, ub) )
+         SCIP_Bool infeasible;
+         SCIP_Bool tightened;
+         SCIP_Bool success;
+
+         /* fix variable if it is not multi-aggregated */
+         SCIP_CALL( inferVariableZero(scip, succvar, cons, inferinfo, &infeasible, &tightened, &success) );
+
+         if ( infeasible )
          {
+            /* variable cannot be nonzero */
             *cutoff = TRUE;
             return SCIP_OKAY;
          }
-
-         /* fix variable if it is not multi-aggregated */
-         if ( SCIPvarGetStatus(succvar) != SCIP_VARSTATUS_MULTAGGR )
-         {
-            SCIP_Bool infeasible;
-            SCIP_Bool tightened;
-
-            SCIP_CALL( SCIPtightenVarLb(scip, succvar, 0.0, FALSE, &infeasible, &tightened) );
-            assert( ! infeasible );
-            if ( tightened )
-               ++(*ngen);
-
-            SCIP_CALL( SCIPtightenVarUb(scip, succvar, 0.0, FALSE, &infeasible, &tightened) );
-            assert( ! infeasible );
-            if ( tightened )
-               ++(*ngen);
-         }
+         if ( tightened )
+            ++(*ngen);
+         assert( success || SCIPvarGetStatus(succvar) == SCIP_VARSTATUS_MULTAGGR );
       }
    }
 
@@ -3225,7 +3221,7 @@ SCIP_RETCODE propVariableNonzero(
                   SCIP_Bool infeasible;
                   SCIP_Bool tightened;
 
-                  SCIP_CALL( SCIPtightenVarLb(scip, var, succdata->lbimpl, FALSE, &infeasible, &tightened) );
+                  SCIP_CALL( SCIPinferVarLbCons(scip, var, succdata->lbimpl, cons, inferinfo, FALSE, &infeasible, &tightened) );
                   if ( infeasible )
                   {
                      *cutoff = TRUE;
@@ -3241,7 +3237,7 @@ SCIP_RETCODE propVariableNonzero(
                   SCIP_Bool infeasible;
                   SCIP_Bool tightened;
 
-                  SCIP_CALL( SCIPtightenVarUb(scip, var, succdata->ubimpl, FALSE, &infeasible, &tightened) );
+                  SCIP_CALL( SCIPinferVarUbCons(scip, var, succdata->ubimpl, cons, inferinfo, FALSE, &infeasible, &tightened) );
                   if ( infeasible )
                   {
                      *cutoff = TRUE;
@@ -7511,6 +7507,10 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
        {
           SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, conshdlrdata->nsos1vars) );
        }
+
+       /* initialize stack of variables fixed to nonzero */
+       conshdlrdata->maxnfixnonzerovars = conshdlrdata->nsos1vars;
+       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->fixnonzerovars, conshdlrdata->maxnfixnonzerovars) );
     }
     return SCIP_OKAY;
 }
@@ -7569,6 +7569,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
    assert(conshdlrdata->tcliquegraph == NULL);
    assert(conshdlrdata->tcliquedata == NULL);
 
+   /* free stack of variables fixed to nonzero */
+   SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->fixnonzerovars, conshdlrdata->maxnfixnonzerovars); /*lint !e737*/
+
    /* free graph for storing local conflicts */
    if ( conshdlrdata->localconflicts != NULL )
       SCIPdigraphFree(&conshdlrdata->localconflicts);
@@ -7608,7 +7611,7 @@ SCIP_DECL_CONSDELETE(consDeleteSOS1)
       for (j = 0; j < (*consdata)->nvars; ++j)
       {
          SCIP_CALL( SCIPdropVarEvent(scip, (*consdata)->vars[j], SCIP_EVENTTYPE_BOUNDCHANGED, conshdlrdata->eventhdlr,
-               (SCIP_EVENTDATA*)cons, -1) ); /*lint !e740*/
+               (SCIP_EVENTDATA*)cons, -1) ); /*lint !e737 !e740*/
       }
    }
 
@@ -7772,7 +7775,10 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
       conflictgraph = conshdlrdata->conflictgraph;
       nsos1vars = conshdlrdata->nsos1vars;
       if ( nsos1vars < 2 )
+      {
+         SCIP_CALL( freeConflictgraph(conshdlrdata));
          return SCIP_OKAY;
+      }
 
       /* allocate buffer arrays */
       SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix, nsos1vars) );
@@ -8309,6 +8315,8 @@ SCIP_DECL_CONSPROP(consPropSOS1)
       int nsos1vars;
       int j;
 
+      assert( nconss > 0 );
+
       /* get number of SOS1 variables */
       nsos1vars = conshdlrdata->nsos1vars;
 
@@ -8325,7 +8333,7 @@ SCIP_DECL_CONSPROP(consPropSOS1)
          {
             SCIP_Bool cutoff;
 
-            SCIP_CALL( propVariableNonzero(scip, conflictgraph, implgraph, j, conshdlrdata->implprop, &cutoff, &ngen) );
+            SCIP_CALL( propVariableNonzero(scip, conflictgraph, implgraph, conss[0], j, conshdlrdata->implprop, &cutoff, &ngen) );
             if ( cutoff )
             {
                *result = SCIP_CUTOFF;
@@ -8378,7 +8386,6 @@ SCIP_DECL_CONSPROP(consPropSOS1)
 static
 SCIP_DECL_CONSRESPROP(consRespropSOS1)
 {  /*lint --e{715}*/
-   SCIP_CONSDATA* consdata;
    SCIP_VAR* var;
 
    assert( scip != NULL );
@@ -8391,11 +8398,33 @@ SCIP_DECL_CONSRESPROP(consRespropSOS1)
    *result = SCIP_DIDNOTFIND;
    SCIPdebugMessage("Propagation resolution method of SOS1 constraint <%s>.\n", SCIPconsGetName(cons));
 
-   consdata = SCIPconsGetData(cons);
-   assert( consdata != NULL );
-   assert( 0 <= inferinfo && inferinfo < consdata->nvars );
-   var = consdata->vars[inferinfo];
-   assert( var != infervar );
+   /* check whether conflict was detected in variable propagation or constraint propagation */
+   if ( inferinfo < 0 )
+   {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
+      assert( conshdlr != NULL );
+
+      /* get constraint handler data */
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+      assert( conshdlrdata->conflictgraph != NULL );
+      assert( inferinfo <= -conshdlrdata->maxnfixnonzerovars );
+
+      var = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, -inferinfo + 1);
+   }
+   else
+   {
+      SCIP_CONSDATA* consdata;
+
+      /* get constraint data */
+      consdata = SCIPconsGetData(cons);
+      assert( consdata != NULL );
+      assert( inferinfo < consdata->nvars );
+
+      var = consdata->vars[inferinfo];
+   }
+   assert( var != NULL && var != infervar );
 
    /* check if lower bound of var was the reason */
    if ( SCIPisFeasPositive(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) )
