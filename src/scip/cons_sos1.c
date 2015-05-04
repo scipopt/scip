@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_sos1b.c
+/**@file   cons_sos1.c
  * @brief  constraint handler for SOS type 1 constraints
  * @author Tobias Fischer
  * @author Marc Pfetsch
