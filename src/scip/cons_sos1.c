@@ -8312,20 +8312,25 @@ SCIP_DECL_CONSPROP(consPropSOS1)
    /* if conflict graph propagation shall be used */
    if ( conshdlrdata->conflictprop && conflictgraph != NULL )
    {
-      int nsos1vars;
+      SCIP_VAR** fixnonzerovars;
+      int nfixnonzerovars;
       int j;
 
       assert( nconss > 0 );
 
-      /* get number of SOS1 variables */
-      nsos1vars = conshdlrdata->nsos1vars;
+      /* stack of variables fixed to nonzero */
+      nfixnonzerovars = conshdlrdata->nfixnonzerovars;
+      fixnonzerovars = conshdlrdata->fixnonzerovars;
+      assert( fixnonzerovars != NULL );
 
-      /* check each SOS1 variable */
-      for (j = 0; j < nsos1vars; ++j)
+      /* check each variable from stack */
+      for (j = 0; j < nfixnonzerovars; ++j)
       {
          SCIP_VAR* var;
 
-         var = SCIPnodeGetVarSOS1(conflictgraph, j);
+         var = fixnonzerovars[j];
+         assert( var != NULL );
+         assert( varGetNodeSOS1(conshdlrdata, var) >= 0 && varGetNodeSOS1(conshdlrdata, var) < conshdlrdata->nsos1vars );
          SCIPdebugMessage("Propagating SOS1 variable <%s>.\n", SCIPvarGetName(var) );
 
          /* if zero is outside the domain of variable */
@@ -8333,7 +8338,7 @@ SCIP_DECL_CONSPROP(consPropSOS1)
          {
             SCIP_Bool cutoff;
 
-            SCIP_CALL( propVariableNonzero(scip, conflictgraph, implgraph, conss[0], j, conshdlrdata->implprop, &cutoff, &ngen) );
+            SCIP_CALL( propVariableNonzero(scip, conflictgraph, implgraph, conss[0], varGetNodeSOS1(conshdlrdata, var), conshdlrdata->implprop, &cutoff, &ngen) );
             if ( cutoff )
             {
                *result = SCIP_CUTOFF;
@@ -8409,7 +8414,7 @@ SCIP_DECL_CONSRESPROP(consRespropSOS1)
       conshdlrdata = SCIPconshdlrGetData(conshdlr);
       assert( conshdlrdata != NULL );
       assert( conshdlrdata->conflictgraph != NULL );
-      assert( inferinfo <= -conshdlrdata->maxnfixnonzerovars );
+      assert( inferinfo >= -conshdlrdata->maxnfixnonzerovars );
 
       var = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, -inferinfo + 1);
    }
