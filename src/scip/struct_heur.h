@@ -47,6 +47,7 @@ struct SCIP_Diveset
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Real             lpresolvedomchgquot;/**< percentage of immediate domain changes during probing to trigger LP resolve */
    SCIP_Longint          nlpiterations;      /**< LP iterations used in this dive set */
    SCIP_Longint          nlps;               /**< the number of LPs solved by this dive set */
    SCIP_Longint          totaldepth;         /**< the total depth used in this dive set */
@@ -60,7 +61,10 @@ struct SCIP_Diveset
    int                   ncalls;             /**< the total number of calls of this dive set */
    int                   nsolcalls;          /**< the total number of successful calls with a solution */
    int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
+   int                   lpsolvefreq;        /**< LP solve frequency for diving heuristics */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_Bool             onlylpbranchcands;  /**< should only LP branching candidates be considered instead of the slower but
+                                              *   more general constraint handler diving variable selection? */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore));  /**< method for candidate score and rounding direction */
 };
 

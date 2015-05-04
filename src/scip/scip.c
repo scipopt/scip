@@ -7306,8 +7306,12 @@ SCIP_RETCODE SCIPcreateDiveset(
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveubquotnosol, /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol,/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Real             lpresolvedomchgquot,/**< percentage of immediate domain changes during probing to trigger LP resolve */
+   int                   lpsolvefreq,        /**< LP solve frequency for (0: only if enough domain reductions are found by propagation)*/
    int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
+                                              *   more general constraint handler diving variable selection? */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
    )
 {
@@ -7318,7 +7322,7 @@ SCIP_RETCODE SCIPcreateDiveset(
    /* create the diveset (this will add diving specific parameters for this heuristic) */
    SCIP_CALL( SCIPdivesetCreate(&divesetptr, heur, name, scip->set, scip->messagehdlr, scip->mem->setmem,
          minreldepth, maxreldepth, maxlpiterquot, maxdiveubquot, maxdiveavgquot, maxdiveubquotnosol,
-         maxdiveavgquotnosol, maxlpiterofs, backtrack, divesetgetscore) );
+         maxdiveavgquotnosol, lpresolvedomchgquot, lpsolvefreq, maxlpiterofs, backtrack, onlylpbranchcands, divesetgetscore) );
 
    assert(divesetptr != NULL);
    if( diveset != NULL )
@@ -30548,28 +30552,6 @@ void SCIPupdateDivesetStats(
    assert(SCIPinProbing(scip));
 
    SCIPdivesetUpdateStats(diveset, scip->stat, SCIPgetDepth(scip), nprobingnodes, nbacktracks, solfound);
-}
-
-/** returns the LP solve frequency for diving LPs (-1: never)*/
-int SCIPgetDiveLPSolveFreq(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return scip->set->heur_divelpsolvefreq;
-}
-
-/** returns the domain reduction quotient for triggering an immediate resolve of the diving LP (0.0: always resolve)*/
-SCIP_Real SCIPgetDiveLPResolveDomChgQuot(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return scip->set->heur_divelpresolvedomchgquot;
 }
 
 /** enforces a probing/diving solution by suggesting bound changes that maximizes the score w.r.t. the current diving settings
