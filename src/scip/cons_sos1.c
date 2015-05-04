@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_sos1.c
+/**@file   cons_sos1b.c
  * @brief  constraint handler for SOS type 1 constraints
  * @author Tobias Fischer
  * @author Marc Pfetsch
@@ -43,20 +43,22 @@
  *
  * The validity of the SOS1 constraints can be enforced by different branching rules:
  *
- * - If classical SOS branching is used, branching is performed on only one SOS1 constraint. Depending on the parameters,
- *   there are two ways to choose this branching constraint. Either the constraint with the most number of nonzeros
- *   or the one with the largest nonzero-variable weight. The later version allows the user to specify
- *   an order for the branching importance of the constraints. Constraint branching can also be turned off.
+ * - If classical SOS branching is used, branching is performed on only one SOS1 constraint.
+ *   Depending on the parameters, there are two ways to choose this branching constraint. Either
+ *   the constraint with the most number of nonzeros or the one with the largest nonzero-variable
+ *   weight. The later version allows the user to specify an order for the branching importance of
+ *   the constraints. Constraint branching can also be turned off.
  *
- * - Another way is to branch on the neighborhood of a single variable @p i, i.e., in one branch \f$x_i\f$ is fixed to zero
- *   and in the other its neighbors from the conflict graph.
+ * - Another way is to branch on the neighborhood of a single variable @p i, i.e., in one branch
+ *   \f$x_i\f$ is fixed to zero and in the other its neighbors from the conflict graph.
  *
- * - If bipartite branching is used, then we branch using complete bipartite subgraphs of the conflict graph, i.e.,
- *   in one branch fix the variables from the first bipartite partition and the variables from the second bipartite
- *   partition in the other.
+ * - If bipartite branching is used, then we branch using complete bipartite subgraphs of the
+ *   conflict graph, i.e., in one branch fix the variables from the first bipartite partition and
+ *   the variables from the second bipartite partition in the other.
  *
- * - In addition to variable domain fixings, it is sometimes also possible to add new SOS1 constraints to the branching
- *   nodes. This results in a nonstatic conflict graph, which may change dynamically with every branching node.
+ * - In addition to variable domain fixings, it is sometimes also possible to add new SOS1
+ *   constraints to the branching nodes. This results in a nonstatic conflict graph, which may
+ *   change dynamically with every branching node.
  *
  *
  * @todo Possibly allow to generate local cuts via strengthened local cuts (would need to modified coefficients of rows).
@@ -108,8 +110,8 @@
 #define DEFAULT_NEIGHBRANCH        TRUE /**< if TRUE turn neighborhood branching method on */
 #define DEFAULT_BIPBRANCH         FALSE /**< if TRUE turn bipartite branching method on */
 #define DEFAULT_SOS1BRANCH        FALSE /**< if TRUE turn SOS1 branching method on */
-#define DEFAULT_FIXNONZERO        FALSE /**< if TRUE and neighborhood branching is used, then fix variables (positive in sign) to the value of the
-                                         *   feasibility tolerance if feasible */
+#define DEFAULT_FIXNONZERO        FALSE /**< if neighborhood branching is used, then fix the branching variable (if positive in sign) to the value of the
+                                         *   feasibility tolerance */
 #define DEFAULT_ADDCOMPS          FALSE /**< if TRUE then add complementarity constraints to the branching nodes (can be used in combination with
                                          *   neighborhood or bipartite branching) */
 #define DEFAULT_MAXADDCOMPS          -1 /**< maximal number of complementarity constraints added per branching node (-1: no limit) */
@@ -231,8 +233,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             neighbranch;        /**< if TRUE turn neighborhood branching method on */
    SCIP_Bool             bipbranch;          /**< if TRUE turn bipartite branching method on */
    SCIP_Bool             sos1branch;         /**< if TRUE turn SOS1 branching method on */
-   SCIP_Bool             fixnonzero;         /**< if TRUE and neighborhood branching is used, then fix variables (positive in sign) to the value of the
-                                              *   feasibility tolerance if feasible */
+   SCIP_Bool             fixnonzero;         /**< if neighborhood branching is used, then fix the branching variable (if positive in sign) to the value of the
+                                              *   feasibility tolerance */
    SCIP_Bool             addcomps;           /**< if TRUE then add complementarity constraints to the branching nodes additionally to domain fixings
                                               *   (can be used in combination with neighborhood or bipartite branching) */
    int                   maxaddcomps;        /**< maximal number of complementarity cons. and cor. bound ineq. added per branching node (-1: no limit) */
@@ -8037,6 +8039,12 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOS1)
       return SCIP_PARAMETERWRONGVAL;
    }
 
+   if ( conshdlrdata->fixnonzero && ( conshdlrdata->bipbranch || conshdlrdata->sos1branch ) )
+   {
+      SCIPerrorMessage("Incompatible parameter setting: nonzero fixing is not compatible with bipartite or sos1 branching.\n");
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
    if ( conshdlrdata->sos1branch )
    {
       if ( conshdlrdata->nstrongrounds != 0 )
@@ -8083,6 +8091,12 @@ SCIP_DECL_CONSENFOPS(consEnfopsSOS1)
    if ( conshdlrdata->addcomps && conshdlrdata->fixnonzero )
    {
       SCIPerrorMessage("Incompatible parameter setting: addcomps = TRUE and fixnonzero = TRUE.\n");
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
+   if ( conshdlrdata->fixnonzero && ( conshdlrdata->bipbranch || conshdlrdata->sos1branch ) )
+   {
+      SCIPerrorMessage("Incompatible parameter setting: nonzero fixing is not compatible with bipartite or sos1 branching.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
@@ -8879,7 +8893,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
          &conshdlrdata->sos1branch, TRUE, DEFAULT_SOS1BRANCH, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/fixnonzero",
-         "if TRUE and neighborhood branching is used, then fix variables (positive in sign) to the value of the feasibility tolerance if feasible",
+         "if neighborhood branching is used, then fix the branching variable (if positive in sign) to the value of the feasibility tolerance",
          &conshdlrdata->fixnonzero, TRUE, DEFAULT_FIXNONZERO, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/addcomps",

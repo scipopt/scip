@@ -20,6 +20,14 @@ features:
 - the original problem can now be permuted directly after reading (if misc/permutationseed has value >= 0)
 - added methods to compute strongly connected components with Tarjan's Algorithm
 - improved clique and variable bound heuristics
+- new branching rules for SOS1 constraints for branching on a neighborhood or a complete bipartite subgraph of
+  the conflict graph. In addition to variable domain fixings, it is sometimes also possible to add complementarity 
+  constraints to the branching nodes. This results in a nonstatic conflict graph, which may change dynamically 
+  with every branching node.
+- improved separation procedure of SOS1 constraint handler, including bound (clique) cuts and implied bound cuts
+- new disjunctive cut separator for SOS1 constraints
+- new presolving components for SOS1 constraints, including bound tightening and clique extension
+- added method to propagate implications of SOS1 variables
 
 parameters:
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
@@ -52,7 +60,58 @@ parameters:
   for ranged rows and equations
 - new advanced parameter "constraints/linear/multaggrremove" to perform multi-aggregations in linear constraint handler
   only if the constraint can be removed afterwards
-
+- new parameter "constraints/SOS1/maxextensions" to define maximal number of extensions that will be computed for each SOS1 constraint in 
+  presolving
+- new parameter "constraints/SOS1/maxconsdelayext" to delay clique extension if the number of SOS1 constraints is larger than predefined 
+  value
+- new parameter "constraints/SOS1/maxtightenbds" to define the maximal number of bound tightening rounds per presolving round
+- new parameter "constraints/SOS1/updateconflpresol" to update the conflict graph during the presolving procedure
+- new parameter "constraints/SOS1/conflictprop" to define whether to use conflict graph propagation
+- new parameter "constraints/SOS1/implprop" to define whether to use implication graph propagation
+- new parameter "constraints/SOS1/sosconsprop" to define whether to use SOS1 constraint propagation 
+- new parameter "constraints/SOS1/neighbranch" to branch on a neighborhood of the conflict graph
+- new parameter "constraints/SOS1/bipbranch" to branch on a complete bipartite subgraph of the conflict graph
+- new parameter "constraints/SOS1/sos1branch" to branch on a single SOS1 constraint, i.e., a clique of the conflict graph
+- new parameter "constraints/SOS1/fixnonzero": If neighborhood branching is used, then fix the branching variable (if positive in sign) 
+  to the value of the feasibility tolerance
+- new parameter "constraints/SOS1/addcomps" to add local complementarity constraints to the branching nodes (can be used in combination 
+  with neighborhood or bipartite branching)
+- new parameter "constraints/SOS1/maxaddcomps" to define the maximal number of complementarity constraints added per branching node
+- new parameter "constraints/SOS1/addcompsdepth" to define the maximal depth for adding complementarity constraints
+- new parameter "constraints/SOS1/addcompsfeas" to define a minimal feasibility value for local complementarity constraints in order to be 
+  added to the branching node
+- new parameter "constraints/SOS1/addbdsfeas" to define a minimal feasibility value for local bound (clique) inequalities in order to be 
+  added to the branching node
+- new parameter "constraints/SOS1/nstrongrounds" to define the maximal number of strong branching rounds to perform for each node (only 
+  available for neighborhood and bipartite branching)
+- new parameter "constraints/SOS1/nstrongiter" to define the maximal number LP iterations to perform for each strong branching round
+- new parameter "constraints/SOS1/boundcutsfromsos1" to define whether to separate bound (clique) inequalities from initial SOS1 constraints
+- new parameter "constraints/SOS1/boundcutsfromgraph" to define whether to separate bound (clique) inequalities from the conflict graph
+- new parameter "constraints/SOS1/boundcutsfreq" to define the frequency for separating bound (clique) cuts
+- new parameter "constraints/SOS1/boundcutsdepth" to define the node depth of separating bound (clique) cuts
+- new parameter "constraints/SOS1/maxboundcuts" to define the maximal number of bound (clique) cuts separated per branching node
+- new parameter "constraints/SOS1/maxboundcutsroot" to define the maximal number of bound (clique) cuts separated per iteration in the root 
+  node
+- new parameter "constraints/SOS1/strthenboundcuts" to define whether to strengthen bound (clique) cuts in case bound variables are 
+  available
+- new parameter "constraints/SOS1/implcutsfreq" to define the frequency for separating implied bound cuts
+- new parameter "constraints/SOS1/implcutsdepth" to define the node depth of separating implied bound cuts
+- new parameter "constraints/SOS1/maximplcuts" to define the maximal number of implied bound cuts separated per branching node
+- new parameter "constraints/SOS1/maximplcutsroot" to define the maximal number of implied bound cuts separated per iteration in the root 
+  node
+- new parameter "separating/disjunctive/maxrank" to define the maximal permissible rank of a disjunctive cut that could not be scaled to 
+  integral coefficients
+- new parameter "separating/disjunctive/maxrankintegral" to define the maximal permissible rank of a disjunctive cut that could be scaled 
+  to integral coefficients
+- new parameter "separating/disjunctive/maxweightrange" to define the maximal valid range of simplex tableau row weights
+- new parameter "separating/disjunctive/maxdepth" to define the node depth of separating disjunctive cuts
+- new parameter "separating/disjunctive/maxrounds" to define the maximal number of separation rounds of disjunctive cuts in a branching node
+- new parameter "separating/disjunctive/maxinvcuts" to define the maximal number of disjunctive cuts investigated per iteration in a 
+  branching node
+- new parameter "separating/disjunctive/maxinvcutsroot" to define the maximal number of disjunctive cuts investigated per iteration in the 
+  root node
+- new parameter "separating/disjunctive/maxconsdelay" to delay separation of disjunctive cuts if number of SOS1 constraints is larger than 
+  predefined value
 
 performance improvements:
 - adjusted (hard) diving heuristics to solve fewer LPs at shallow depths of the tree; after an LP was solved,
@@ -66,6 +125,7 @@ performance improvements:
   coefficients
 - using sparsity information of the SoPlex LP
 - new presolving/propagation algorithm using the gcd for ranged rows and equations in cons_linear
+- improved propagation of SOS1 constraint handler using the information from a conflict
 
 interface:
 - new method SCIPcutGetLPActivityQuot() in pub_cutpool.h to get the potion of LP's where this cut was sharp in an optimal basis.
@@ -79,9 +139,15 @@ interface:
 - rename all file "*_vbc.?" to the more generic "*_visual.?"
 - submenu for setting "vbc" settings renamed to "visual"
 - rename SCIPdigraphGetSuccessorsDatas() -> SCIPdigraphGetSuccessorsData()
+- SCIPdigraphSetNSuccessors() sets the number of successors of some digraph node to a given value
 - added new sorting functions SCIPsortRealRealRealBoolBoolPtr(), SCIPsortDownRealRealRealBoolBoolPtr()
 - added new sorting functions SCIPsortIntIntIntReal(), SCIPsortDownIntIntIntReal()
 - safe-guarded buffer array (re)allocations to check for negative size or size > INT_MAX
+- SCIPvarIsSOS1() returns whether some variable is involved in an SOS1 constraint
+- SCIPgetConflictgraphSOS1() gets conflict graph of SOS1 constraints
+- SCIPvarGetNodeSOS1() returns node of SOS1 variable in the conflict graph
+- SCIPnodeGetVarSOS1() returns SOS1 variable associated to some given node in the conflict graph
+
 
 fixed bugs:
 - fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)
