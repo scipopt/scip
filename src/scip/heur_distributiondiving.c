@@ -362,7 +362,7 @@ SCIP_RETCODE calcBranchScore(
    assert(var != NULL);
    assert(upscore != NULL);
    assert(downscore != NULL);
-   assert(!SCIPisIntegral(scip, lpsolval));
+   assert(!SCIPisIntegral(scip, lpsolval) || SCIPvarIsBinary(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
    varcol = SCIPvarGetCol(var);
@@ -381,8 +381,18 @@ SCIP_RETCODE calcBranchScore(
    squaredbounddiff = 0.0;
    SCIPvarCalcDistributionParameters(scip, varlb, varub, vartype, &currentmean, &squaredbounddiff);
 
-   newlb = SCIPfeasCeil(scip, lpsolval);
-   newub = SCIPfeasFloor(scip, lpsolval);
+   /* unfixed binary variables may have an integer solution value in the LP solution, eg, at the presence of indicator constraints */
+   if( !SCIPvarIsBinary(var) )
+   {
+      newlb = SCIPfeasCeil(scip, lpsolval);
+      newub = SCIPfeasFloor(scip, lpsolval);
+   }
+   else
+   {
+      newlb = 1.0;
+      newub = 0.0;
+   }
+
 
    /* calculate the variable's uniform distribution after branching up and down, respectively. */
    squaredbounddiffup = 0.0;
