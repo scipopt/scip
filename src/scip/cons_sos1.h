@@ -208,9 +208,9 @@ EXTERN
 SCIP_RETCODE SCIPmakeSOS1sFeasible(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
-   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
    SCIP_SOL*             sol,                /**< solution */
-   SCIP_Bool*            changed             /**< pointer to store whether the solution has been changed */
+   SCIP_Bool*            changed,            /**< pointer to store whether the solution has been changed */
+   SCIP_Bool*            success             /**< pointer to store whether SOS1 constraints have been turned feasible */
    );
 
 #ifdef __cplusplus

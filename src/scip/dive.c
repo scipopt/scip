@@ -26,8 +26,9 @@
 #include "scip/struct_heur.h"
 #include "scip/struct_stat.h"
 
-/* the indicator constraint handler is included for the diving algorithm SCIPperformGenericDivingAlgorithm() */
+/* the indicator and SOS1 constraint handlers are included for the diving algorithm SCIPperformGenericDivingAlgorithm() */
 #include "scip/cons_indicator.h"
+#include "scip/cons_sos1.h"
 
 #define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
 
@@ -198,6 +199,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    )
 {
    SCIP_CONSHDLR* indconshdlr;               /* constraint handler for indicator constraints */
+   SCIP_CONSHDLR* sos1conshdlr;              /* constraint handler for SOS1 constraints */
    SCIP_VAR** lpcands;
    SCIP_Real* lpcandssol;
 
@@ -292,9 +294,10 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    if( SCIPdivesetGetNLPIterations(diveset) + MINLPITER > maxnlpiterations )
       maxnlpiterations = SCIPdivesetGetNLPIterations(diveset) + MINLPITER;
 
-   /* if indicator variables are present, add them to the set of diving candidates */
+   /* if indicator or SOS1 variables are present, add them to the set of diving candidates */
    /* todo maybe store those constraints once and not every time */
    indconshdlr = SCIPfindConshdlr(scip, "indicator");
+   sos1conshdlr = SCIPfindConshdlr(scip, "SOS1");
 
    SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
 
@@ -428,6 +431,13 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
          /* create solution from diving LP and try to round it */
          SCIP_CALL( SCIProundSol(scip, worksol, &success) );
+
+         /* adjust SOS1 constraints */
+         if( success && sos1conshdlr != NULL )
+         {
+            SCIP_Bool changed;
+            SCIP_CALL( SCIPmakeSOS1sFeasible(scip, sos1conshdlr, worksol, &changed, &success) );
+         }
 
          /* succesfully rounded solutions are tried for primal feasibility */
          if( success )

@@ -8817,6 +8817,7 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
    {
       int* succ;
       int nsucc;
+      int s;
 
       assert( ! SCIPisFeasZero(scip, bestsolval) );
       assert( bestnode >= 0 && bestnode < nsos1vars );
@@ -9542,30 +9543,59 @@ SCIP_Real SCIPnodeGetSolvalVarboundUbSOS1(
 SCIP_RETCODE SCIPmakeSOS1sFeasible(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
-   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
    SCIP_SOL*             sol,                /**< solution */
-   SCIP_Bool*            changed             /**< pointer to store whether the solution has been changed */
+   SCIP_Bool*            changed,            /**< pointer to store whether the solution has been changed */
+   SCIP_Bool*            success             /**< pointer to store whether SOS1 constraints have been turned feasible */
    )
 {
-   SCIP_Bool* indicatorzero;   /* indicates which solution values are zero */
-   SCIP_Bool* indset;          /* indicator vector of feasible solution; i.e., an independent set */
+   SCIP_DIGRAPH* conflictgraph;  /* conflict graph for SOS1 constraints */
+   SCIP_Bool* indicatorzero;     /* indicates which solution values are zero */
+   SCIP_Bool* indset;            /* indicator vector of feasible solution; i.e., an independent set */
+   SCIP_Bool allroundable;
    int nsos1vars;
    int j;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
-   assert( conflictgraph != NULL );
    assert( sol != NULL );
    assert( changed != NULL );
 
    *changed = FALSE;
+   *success = FALSE;
+
+   /* get number of SOS1 variables */
    nsos1vars = SCIPgetNSOS1Vars(conshdlr);
+   if ( nsos1vars < 1 )
+   {
+      *success = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* get conflict graph */
+   conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
+   assert( conflictgraph != NULL );
+
+   /* determine if variables with nonzero solution value are roundable */
+   allroundable = TRUE;
+   for (j = 0; j < nsos1vars && allroundable; ++j)
+   {
+      if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, j))) )
+      {
+         SCIP_VAR* var;
+
+         var = SCIPnodeGetVarSOS1(conflictgraph, j);
+         if ( ! SCIPvarMayRoundDown(var) && ! SCIPvarMayRoundUp(var) )
+            allroundable = FALSE;
+      }
+   }
+   if ( ! allroundable )
+      return SCIP_OKAY;
 
    /* allocate buffer arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &indset, nsos1vars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &indicatorzero, nsos1vars) );
 
-   /* call greedy algorithm for the maximum weighted independent set problem */
+   /* get array that indicates which solution values are zero */
    for (j = 0; j < nsos1vars; ++j)
    {
       indset[j] = 0;
@@ -9574,6 +9604,8 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
       else
          indicatorzero[j] = FALSE;
    }
+
+   /* call greedy algorithm for the maximum weighted independent set problem */
    SCIP_CALL( maxWeightIndSetHeuristic(scip, sol, conshdlr, conflictgraph, nsos1vars, indicatorzero, indset) );
 
    /* make solution feasible */
@@ -9609,6 +9641,8 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
       }
    }
 #endif
+
+   *success = TRUE;
 
    /* free buffer arrays */
    SCIPfreeBufferArray(scip, &indicatorzero);
