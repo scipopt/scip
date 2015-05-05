@@ -533,7 +533,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             /* apply all suggested domain changes of the variables */
             for( d = 0; d < nbdchanges; ++d )
             {
-
                bdchgvar = bdchgvars[d];
                bdchgvalue = bdchgvals[d];
                nextcandsol = SCIPgetSolVal(scip, worksol, bdchgvar);
@@ -557,6 +556,12 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                   cutoff = TRUE;
                   break;
                }
+
+               SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g],",
+                     SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
+                     SCIPvarGetName(bdchgvar), nextcandsol, SCIPvarGetLbLocal(bdchgvar), SCIPvarGetUbLocal(bdchgvar));
+
+               /* tighten the lower and/or upper bound depending on the bound change type */
                switch( bdchgdir )
                {
                   case SCIP_BRANCHDIR_UPWARDS:
@@ -583,11 +588,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                      break;
                }
 
-               SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
-                     SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
-                     SCIPvarGetName(bdchgvar),
-                     nextcandsol, SCIPvarGetLbLocal(bdchgvar), SCIPvarGetUbLocal(bdchgvar),
-                     bdchgvalue, SCIPvarGetUbLocal(bdchgvar));
+               SCIPdebugMessage("newbounds=[%g,%g]\n",
+                     SCIPvarGetLbLocal(bdchgvar), SCIPvarGetUbLocal(bdchgvar));
             }
             /* break loop immediately if we detected a cutoff */
             if( cutoff )
