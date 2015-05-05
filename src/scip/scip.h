@@ -14448,6 +14448,21 @@ SCIP_RETCODE SCIPchgVarUbProbing(
    SCIP_Real             newbound            /**< new value for bound */
    );
 
+/** gets variable's objective value in current probing
+ *
+ *  @return the variable's objective value in current probing.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_Real SCIPgetVarObjProbing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to get the bound for */
+   );
+
 /** injects a change of variable's bounds into current probing node to fix the variable to the specified value;
  *  the same can also be achieved with a call to SCIPfixVar(), but in this case, the bound changes would be treated
  *  like deductions instead of branching decisions
@@ -14464,6 +14479,24 @@ SCIP_RETCODE SCIPfixVarProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable to change the bound for */
    SCIP_Real             fixedval            /**< value to fix variable to */
+   );
+
+/** changes (column) variable's objective value during probing mode
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @pre The variable needs to be a column variable.
+ */
+EXTERN
+SCIP_RETCODE SCIPchgVarObjProbing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the objective for */
+   SCIP_Real             newobj              /**< new objective function value */
    );
 
 /** applies domain propagation on the probing sub problem, that was changed after SCIPstartProbing() was called;
@@ -14546,6 +14579,38 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
    SCIP_Bool*            cutoff              /**< pointer to store whether the probing LP was infeasible or the objective
                                               *   limit was reached (or NULL, if not needed) */
 
+   );
+
+/** adds a row to the LP in the current probing node
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPaddRowProbing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row to be added */
+   );
+
+/** applies the cuts in the separation storage to the LP and clears the storage afterwards;
+ *  this method can only be applied during probing; the user should resolve the probing LP afterwards
+ *  in order to get a new solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPapplyCutsProbing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    );
 
 /** resets diving settings by both resetting counters and discarding adapted values through search */

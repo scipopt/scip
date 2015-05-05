@@ -554,6 +554,12 @@ SCIP_Real SCIPvarGetObj(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
+/** gets the unchanged objective function value of variable (ignoring temproray changes performed in probing mode) */
+EXTERN
+SCIP_Real SCIPvarGetUnchangedObj(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
 /** gets original lower bound of original problem variable (i.e. the bound set in problem creation) */
 EXTERN
 SCIP_Real SCIPvarGetLbOriginal(

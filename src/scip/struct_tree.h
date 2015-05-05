@@ -47,6 +47,9 @@ struct SCIP_Probingnode
    int                   ninitialrows;       /**< number of LP rows before the node was processed */
    int                   ncols;              /**< total number of columns of this node's LP */
    int                   nrows;              /**< total number of rows of this node's LP */
+   SCIP_VAR**            origobjvars;        /**< variables whose objective function coefficients have changed */
+   SCIP_Real*            origobjvals;        /**< original objective function coefficients */
+   int                   nchgdobjs;          /**< number of changed objective coefficients */
    SCIP_Bool             lpwasprimfeas;      /**< primal feasibility of saved LP state information */
    SCIP_Bool             lpwasdualfeas;      /**< dual feasibility of saved LP state information */
 };
@@ -198,6 +201,7 @@ struct SCIP_Tree
    int                   cutoffdepth;        /**< depth of first node in active path that is marked being cutoff */
    int                   repropdepth;        /**< depth of first node in active path that has to be propagated again */
    int                   repropsubtreecount; /**< cyclicly increased counter to create markers for subtree repropagation */
+   int                   probingsumchgdobjs; /**< number of changed objective coefficients in all probing nodes */
    SCIP_Bool             focusnodehaslp;     /**< is LP being processed in the focus node? */
    SCIP_Bool             probingnodehaslp;   /**< was the LP solved (at least once) in the current probing node? */
    SCIP_Bool             focuslpconstructed; /**< was the LP of the focus node already constructed? */
@@ -208,6 +212,7 @@ struct SCIP_Tree
    SCIP_Bool             probinglpwasrelax;  /**< was the LP a valid relaxation before we entered the probing mode? */
    SCIP_Bool             probingsolvedlp;    /**< was the LP solved during probing mode, i.e., was SCIPsolveProbingLP() called? */
    SCIP_Bool             forcinglpmessage;   /**< was forcing LP solving message be posted */
+   SCIP_Bool             probingobjchanged;  /**< was the objective function changed during probing? */
    SCIP_Bool             sbprobing;          /**< is the probing mode used for strong branching? */
    SCIP_Bool             probinglpwasprimfeas;/**< primal feasibility when probing started */
    SCIP_Bool             probinglpwasdualfeas;/**< dual feasibility when probing started */

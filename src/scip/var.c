@@ -1909,6 +1909,7 @@ SCIP_RETCODE varCreate(
    (*var)->scip = set->scip;
 #endif
    (*var)->obj = obj;
+   (*var)->unchangedobj = obj;
    (*var)->branchfactor = 1.0;
    (*var)->rootsol = 0.0;
    (*var)->bestrootsol = 0.0;
@@ -5768,12 +5769,14 @@ SCIP_RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.original.transvar != NULL )
          {
+            /* @todo: shouldn't we take into account objsense and objfactor here? */
             SCIP_CALL( SCIPvarChgObj(var->data.original.transvar, blkmem, set, prob, primal, lp, eventqueue, newobj) );
          }
          else
          {
             assert(set->stage == SCIP_STAGE_PROBLEM);
             var->obj = newobj;
+            var->unchangedobj = newobj;
          }
          break;
 
@@ -5781,6 +5784,10 @@ SCIP_RETCODE SCIPvarChgObj(
       case SCIP_VARSTATUS_COLUMN:
          oldobj = var->obj;
          var->obj = newobj;
+
+         /* update unchanged objective value of variable */
+         if( !lp->divingobjchg )
+            var->unchangedobj = newobj;
 
          /* update the number of variables with non-zero objective coefficient;
           * we only want to do the update, if the variable is added to the problem;
@@ -5840,12 +5847,15 @@ SCIP_RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_ORIGINAL:
          if( var->data.original.transvar != NULL )
          {
+            /* @todo: shouldn't we take into account objsense and objfactor here? */
             SCIP_CALL( SCIPvarAddObj(var->data.original.transvar, blkmem, set, stat, transprob, origprob, primal, tree, lp, eventqueue, addobj) );
          }
          else
          {
             assert(set->stage == SCIP_STAGE_PROBLEM);
             var->obj += addobj;
+            var->unchangedobj += addobj;
+            assert(SCIPsetIsEQ(set, var->obj, var->unchangedobj));
          }
          break;
 
@@ -5853,6 +5863,13 @@ SCIP_RETCODE SCIPvarAddObj(
       case SCIP_VARSTATUS_COLUMN:
          oldobj = var->obj;
          var->obj += addobj;
+
+         /* update unchanged objective value of variable */
+         if( !lp->divingobjchg )
+         {
+            var->unchangedobj += addobj;
+            assert(SCIPsetIsEQ(set, var->obj, var->unchangedobj));
+         }
 
          /* update the number of variables with non-zero objective coefficient;
           * we only want to do the update, if the variable is added to the problem;
@@ -12029,8 +12046,8 @@ SCIP_Bool SCIPvarIsTransformedOrigvar(
    return ( SCIPvarGetStatus(parentvar) == SCIP_VARSTATUS_ORIGINAL );
 }
 
-/** gets objective value of variable in current SCIP_LP; the value can be different from the bound stored in the variable's own
- *  data due to diving, that operate only on the LP without updating the variables
+/** gets objective value of variable in current SCIP_LP; the value can be different from the objective value stored in
+ *  the variable's own data due to diving, that operate only on the LP without updating the variables
  */
 SCIP_Real SCIPvarGetObjLP(
    SCIP_VAR*             var                 /**< problem variable */
@@ -16718,6 +16735,15 @@ SCIP_Real SCIPvarGetObj(
    return var->obj;
 }
 
+/** gets the unchanged objective function value of a variable (ignoring temproray changes performed in probing mode) */
+SCIP_Real SCIPvarGetUnchangedObj(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->unchangedobj;
+}
 
 /** gets corresponding objective value of active, fixed, or multi-aggregated problem variable of given variable
  *  e.g. obj(x) = 1 this method returns for ~x the value -1

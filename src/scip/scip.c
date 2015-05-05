@@ -25645,7 +25645,7 @@ SCIP_RETCODE SCIPcreateRowCons(
 {
    SCIP_CALL( checkStage(scip, "SCIPcreateRowCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
          name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_CONS, (void*) conshdlr, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -25677,7 +25677,7 @@ SCIP_RETCODE SCIPcreateRowSepa(
 {
    SCIP_CALL( checkStage(scip, "SCIPcreateRowSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
          name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_SEPA, (void*) sepa, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -25708,7 +25708,7 @@ SCIP_RETCODE SCIPcreateRowUnspec(
 {
    SCIP_CALL( checkStage(scip, "SCIPcreateRowUnspec", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
          name, len, cols, vals, lhs, rhs, SCIP_ROWORIGINTYPE_UNSPEC, NULL, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -25770,7 +25770,7 @@ SCIP_RETCODE SCIPcreateEmptyRowCons(
 {
    SCIP_CALL( checkStage(scip, "SCIPcreateEmptyRowCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
          name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_CONS, (void*) conshdlr, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -25799,7 +25799,7 @@ SCIP_RETCODE SCIPcreateEmptyRowSepa(
 {
    SCIP_CALL( checkStage(scip, "SCIPcreateEmptyRowSepa", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
          name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_SEPA, (void*) sepa, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -25827,7 +25827,7 @@ SCIP_RETCODE SCIPcreateEmptyRowUnspec(
 {
    SCIP_CALL( checkStage(scip, "SCIPcreateEmptyRowUnspec", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat,
+   SCIP_CALL( SCIProwCreate(row, scip->mem->probmem, scip->set, scip->stat, scip->lp,
          name, 0, NULL, NULL, lhs, rhs, SCIP_ROWORIGINTYPE_UNSPEC, NULL, local, modifiable, removable) );
 
    return SCIP_OKAY;
@@ -29335,40 +29335,6 @@ SCIP_Real SCIPgetRelaxFeastolFactor(
    return scip->set->sepa_feastolfac;
 }
 
-#if 0
-/**@todo make this method available; implement methods SCIPaddProbingRow() and SCIPaddProbingCol();
- *       -> the probing node needs a counter (like the fork) on the number of added rows and cols,
- *          and treeBacktrackProbing() needs to shrink the LP;
- *       this is useful, e.g., for the feaspump heuristic, s.t. it can temporarily add the auxiliary columns
- *       needed to represent the objective function for integer variables not on one of their bounds
- */
-/** applies the cuts in the separation storage to the LP and clears the storage afterwards;
- *  this method can only be applied during probing; the user should resolve the probing LP afterwards
- *  in order to get a new solution
- */
-SCIP_RETCODE SCIPapplyCuts(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
-   )
-{
-   SCIP_CALL( checkStage(scip, "SCIPapplyCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   if( !SCIPtreeProbing(scip->tree) )
-   {
-      SCIPerrorMessage("not in probing mode\n");
-      return SCIP_INVALIDCALL;
-   }
-
-   SCIP_CALL( SCIPsepastoreApplyCuts(scip->sepastore, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-         scip->origprob, scip->eventqueue, scip->eventfilter, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, cutoff) );
-
-   return SCIP_OKAY;
-}
-#endif
-
-
-
-
 /*
  * LP diving methods
  */
@@ -30083,7 +30049,8 @@ SCIP_RETCODE SCIPbacktrackProbing(
    }
 
    SCIP_CALL( SCIPtreeBacktrackProbing(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
-         scip->origprob, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable, probingdepth) );
+         scip->origprob, scip->lp, scip->primal, scip->branchcand, scip->eventqueue, scip->eventfilter,
+         scip->cliquetable, probingdepth) );
 
    return SCIP_OKAY;
 }
@@ -30111,7 +30078,7 @@ SCIP_RETCODE SCIPendProbing(
 
    /* switch back from probing to normal operation mode and restore variables and constraints to focus node */
    SCIP_CALL( SCIPtreeEndProbing(scip->tree, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat,
-         scip->transprob, scip->origprob, scip->lp,
+         scip->transprob, scip->origprob, scip->lp, scip->primal,
          scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable) );
 
    /* enables the collection of statistics for a variable */
@@ -30188,6 +30155,34 @@ SCIP_RETCODE SCIPchgVarUbProbing(
    return SCIP_OKAY;
 }
 
+/** gets variable's objective value in current probing
+ *
+ *  @return the variable's objective value in current probing.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_Real SCIPgetVarObjProbing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to get the bound for */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarObj", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      SCIPerrorMessage("not in probing mode\n");
+      return SCIP_INVALID;
+   }
+
+   return SCIPvarGetObjLP(var);
+}
+
 /** injects a change of variable's bounds into current probing node to fix the variable to the specified value;
  *  the same can also be achieved with a call to SCIPfixVar(), but in this case, the bound changes would be treated
  *  like deductions instead of branching decisions
@@ -30244,6 +30239,86 @@ SCIP_RETCODE SCIPfixVarProbing(
    return SCIP_OKAY;
 }
 
+/** changes (column) variable's objective value during probing mode
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  @pre The variable needs to be a column variable.
+ */
+SCIP_RETCODE SCIPchgVarObjProbing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the objective for */
+   SCIP_Real             newobj              /**< new objective function value */
+   )
+{
+   SCIP_NODE* node;
+   SCIP_Real oldobj;
+
+   SCIP_CALL( checkStage(scip, "SCIPchgVarObjProbing", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      SCIPerrorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN )
+   {
+      SCIPerrorMessage("variable is not a column variable\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* get current probing node */
+   node = SCIPtreeGetCurrentNode(scip->tree);
+   assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
+
+   /* get old objective function value */
+   oldobj = SCIPvarGetObj(var);
+
+   if( SCIPisEQ(scip, oldobj, newobj) )
+      return SCIP_OKAY;
+
+   if( node->data.probingnode->nchgdobjs == 0 )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &node->data.probingnode->origobjvars, 1) ); /*lint !e506*/
+      SCIP_CALL( SCIPallocMemoryArray(scip, &node->data.probingnode->origobjvals, 1) ); /*lint !e506*/
+   }
+   else
+   {
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &node->data.probingnode->origobjvars, node->data.probingnode->nchgdobjs + 1) ); /*lint !e776*/
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &node->data.probingnode->origobjvals, node->data.probingnode->nchgdobjs + 1) ); /*lint !e776*/
+   }
+
+   node->data.probingnode->origobjvars[node->data.probingnode->nchgdobjs] = var;
+   node->data.probingnode->origobjvals[node->data.probingnode->nchgdobjs] = oldobj;
+   ++node->data.probingnode->nchgdobjs;
+   ++scip->tree->probingsumchgdobjs;
+
+   assert(SCIPtreeProbingObjChanged(scip->tree) == SCIPlpDivingObjChanged(scip->lp));
+
+   /* inform tree and LP that the objective was changed and invalidate the LP's cutoff bound, since this has nothing to
+    * do with the current objective value anymore; the cutoff bound is reset in SCIPendProbing()
+    */
+   if( !SCIPtreeProbingObjChanged(scip->tree) )
+   {
+      SCIP_CALL( SCIPlpSetCutoffbound(scip->lp, scip->set, scip->transprob, SCIPsetInfinity(scip->set)) );
+
+      SCIPtreeMarkProbingObjChanged(scip->tree);
+      SCIPlpMarkDivingObjChanged(scip->lp);
+   }
+   assert(SCIPisInfinity(scip, scip->lp->cutoffbound));
+
+   /* perform the objective change */
+   SCIP_CALL( SCIPvarChgObj(var, scip->mem->probmem, scip->set,  scip->transprob, scip->primal, scip->lp, scip->eventqueue, newobj) );
+
+   return SCIP_OKAY;
+}
+
 /** applies domain propagation on the probing sub problem, that was changed after SCIPstartProbing() was called;
  *  the propagated domains of the variables can be accessed with the usual bound accessing calls SCIPvarGetLbLocal()
  *  and SCIPvarGetUbLocal(); the propagation is only valid locally, i.e. the local bounds as well as the changed
@@ -30263,12 +30338,55 @@ SCIP_RETCODE SCIPpropagateProbing(
    SCIP_Longint*         ndomredsfound       /**< pointer to store the number of domain reductions found, or NULL */
    )
 {
+   SCIP_VAR** objchgvars;
+   SCIP_Real* objchgvals;
+   SCIP_Bool changedobj;
+   int nobjchg;
+
    SCIP_CALL( checkStage(scip, "SCIPpropagateProbing", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtreeProbing(scip->tree) )
    {
       SCIPerrorMessage("not in probing mode\n");
       return SCIP_INVALIDCALL;
+   }
+
+   objchgvars = NULL;
+   objchgvals = NULL;
+   changedobj = FALSE;
+   nobjchg = 0;
+
+   /* undo objective changes if we want to propagate during probing */
+   if( scip->tree->probingobjchanged )
+   {
+      SCIP_VAR** vars;
+      int nvars;
+      int i;
+
+      vars = SCIPgetVars(scip);
+      nvars = SCIPgetNVars(scip);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &objchgvals, MIN(nvars, scip->tree->probingsumchgdobjs)) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &objchgvars, MIN(nvars, scip->tree->probingsumchgdobjs)) );
+      nobjchg = 0;
+
+      for( i = 0; i < nvars; ++i )
+      {
+         if( !SCIPisEQ(scip, vars[i]->unchangedobj, SCIPgetVarObjProbing(scip, vars[i])) )
+         {
+            objchgvars[nobjchg] = vars[i];
+            objchgvals[nobjchg] = SCIPgetVarObjProbing(scip, vars[i]);
+            ++nobjchg;
+
+            SCIP_CALL( SCIPvarChgObj(vars[i], scip->mem->probmem, scip->set, scip->transprob, scip->primal, scip->lp,
+                  scip->eventqueue, vars[i]->unchangedobj) );
+         }
+      }
+      assert(nobjchg <= scip->tree->probingsumchgdobjs);
+
+      SCIPlpUnmarkDivingObjChanged(scip->lp);
+      scip->tree->probingobjchanged = FALSE;
+      changedobj = TRUE;
    }
 
    if( ndomredsfound != NULL )
@@ -30280,6 +30398,27 @@ SCIP_RETCODE SCIPpropagateProbing(
 
    if( ndomredsfound != NULL )
       *ndomredsfound += scip->stat->nprobboundchgs + scip->stat->nprobholechgs;
+
+   /* restore old objective function */
+   if( changedobj )
+   {
+      int i;
+
+      assert(objchgvars != NULL);
+      assert(objchgvals != NULL);
+
+      SCIPlpMarkDivingObjChanged(scip->lp);
+      scip->tree->probingobjchanged = TRUE;
+
+      for( i = 0; i < nobjchg; ++i )
+      {
+         SCIP_CALL( SCIPvarChgObj(objchgvars[i], scip->mem->probmem, scip->set,  scip->transprob, scip->primal,
+               scip->lp, scip->eventqueue, objchgvals[i]) );
+      }
+
+      SCIPfreeBufferArray(scip, &objchgvars);
+      SCIPfreeBufferArray(scip, &objchgvals);
+   }
 
    return SCIP_OKAY;
 }
@@ -30402,7 +30541,7 @@ SCIP_RETCODE solveProbingLP(
             && SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))) )
    {
       /* analyze the infeasible LP (only if all columns are in the LP and no external pricers exist) */
-      if( !scip->set->misc_exactsolve && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
+      if( !scip->set->misc_exactsolve && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) && !scip->tree->probingobjchanged )
       {
          SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
                scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, NULL) );
@@ -30468,6 +30607,75 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
    return SCIP_OKAY;
 }
 
+/** adds a row to the LP in the current probing node
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPaddRowProbing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_ROW*             row                 /**< row to be added */
+   )
+{
+   SCIP_NODE* node;
+   int depth;
+
+   assert(scip != NULL);
+   assert(row != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPaddRowProbing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      SCIPerrorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   /* get depth of current node */
+   node = SCIPtreeGetCurrentNode(scip->tree);
+   assert(node != NULL);
+   depth = SCIPnodeGetDepth(node);
+
+   SCIP_CALL( SCIPlpAddRow(scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter, row, depth) );
+
+   return SCIP_OKAY;
+}
+
+
+/** applies the cuts in the separation storage to the LP and clears the storage afterwards;
+ *  this method can only be applied during probing; the user should resolve the probing LP afterwards
+ *  in order to get a new solution
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPapplyCutsProbing(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPapplyCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( !SCIPtreeProbing(scip->tree) )
+   {
+      SCIPerrorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIP_CALL( SCIPsepastoreApplyCuts(scip->sepastore, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
+         scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, scip->eventfilter, scip->cliquetable,
+         FALSE, SCIP_EFFICIACYCHOICE_LP, cutoff) );
+
+   return SCIP_OKAY;
+}
 
 /** get candidates for diving from indicator constraints */
 static
@@ -33994,7 +34202,7 @@ SCIP_RETCODE SCIProundSol(
       return SCIP_INVALIDCALL;
    }
 
-   SCIP_CALL( SCIPsolRound(sol, scip->set, scip->stat, scip->transprob, scip->tree, success) );
+   SCIP_CALL( SCIPsolRound(sol, scip->lp, scip->set, scip->stat, scip->transprob, scip->tree, success) );
 
    return SCIP_OKAY;
 }

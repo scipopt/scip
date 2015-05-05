@@ -2,6 +2,7 @@ SCIP version NEXT
 ==================
 
 features:
+- possible to change objective coefficients during probing mode
 - variable histories can be transferred between sub-SCIPs solved by LNS heuristics and the component presolver
   and the main SCIP to reuse this information.
 - tighter reliability notions introduced for reliability branching, based on pseudo-cost relative errors
