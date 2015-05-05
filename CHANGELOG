@@ -2,6 +2,7 @@ SCIP version NEXT
 ==================
 
 features:
+- obbt propagator applies now additional separation and propagation in order to learn stronger and more bound tightenings
 - possible to change objective coefficients during probing mode
 - variable histories can be transferred between sub-SCIPs solved by LNS heuristics and the component presolver
   and the main SCIP to reuse this information.
