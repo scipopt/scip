@@ -6409,26 +6409,28 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsIndicator)
    return SCIP_OKAY;
 }
 
-/** constraint handler method to determine a diving variable by assigning a variable and two values for diving */
+/** constraint handler method to suggest dive bound changes during the generic diving algorithm */
 static
-SCIP_DECL_CONSHDLRDETERMDIVEVAR(conshdlrDetermDiveVarIndicator)
+SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIndicator)
 {
-   SCIP_Real bestscore = SCIP_REAL_MIN;
    SCIP_CONS** indconss;
    int nindconss;
    int c;
+   SCIP_VAR* bestvar;
+   SCIP_Bool bestvarroundup;
+   SCIP_Real bestscore = SCIP_REAL_MIN;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(diveset != NULL);
-   assert(vals != NULL);
    assert(success != NULL);
-   assert(divetype != NULL);
 
    indconss = SCIPconshdlrGetConss(conshdlr);
    nindconss = SCIPconshdlrGetNConss(conshdlr);
 
+   bestvar = FALSE;
+   bestvarroundup = FALSE;
    /* loop over indicator constraints and score indicator variables with already integral solution value  */
    for( c = 0; c < nindconss; ++c )
    {
@@ -6453,17 +6455,21 @@ SCIP_DECL_CONSHDLRDETERMDIVEVAR(conshdlrDetermDiveVarIndicator)
             if( score > bestscore )
             {
                bestscore = score;
-               *varptr = binvar;
-
-               /* assign vals depending on whether we want to round down or up first */
-               vals[roundup ? 0 : 1] = 1.0;
-               vals[roundup ? 1 : 0] = 0.0;
-
                *success = TRUE;
-               *divetype = SCIP_DIVETYPE_INTEGRALITY;
+               bestvar = binvar;
+               bestvarroundup = roundup;
             }
          }
       }
+   }
+
+   assert(! *success || bestvar != NULL);
+
+   if( *success )
+   {
+      /* if the diving score voted for fixing the best variable to 1.0, we add this as the preferred bound change */
+      SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, bestvar, SCIP_BRANCHDIR_UPWARDS, 1.0, bestvarroundup) );
+      SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, bestvar, SCIP_BRANCHDIR_DOWNWARDS, 0.0, ! bestvarroundup) );
    }
 
    return SCIP_OKAY;
@@ -6525,7 +6531,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteIndicator) );
    SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableIndicator) );
    SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableIndicator) );
-   SCIP_CALL( SCIPsetConshdlrDetermDiveVar(scip, conshdlr, conshdlrDetermDiveVarIndicator) );
+   SCIP_CALL( SCIPsetConshdlrDetermDiveBdChgs(scip, conshdlr, conshdlrDetermDiveBdChgsIndicator) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitIndicator) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolIndicator) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeIndicator) );
