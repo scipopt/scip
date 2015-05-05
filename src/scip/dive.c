@@ -116,6 +116,7 @@ SCIP_RETCODE selectNextDiving(
       bestcandidx = -1;
 
       SCIPdivesetClearBoundChanges(diveset);
+      /* todo calculate number of LP candidates whose local bounds do not agree with their last LP solution value */
       /* search for the candidate that maximizes the dive set score function and whose solution value is still feasible */
       for (c = 0; c < nlpcands; ++c)
       {
@@ -395,6 +396,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       int c;
       SCIP_Bool allroundable;
       SCIP_Bool infeasible;
+      int prevcandsinsertidx;
 
       /* remember the last LP depth  */
       assert(lastlpdepth < SCIPgetProbingDepth(scip));
@@ -489,6 +491,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       /* if we did not succeed finding an enforcement, the solution is potentially feasible and we break immediately */
       if( ! enfosuccess )
          break;
+
+      prevcandsinsertidx = -1;
 
       /* start propagating candidate variables
        *   - until the desired targetdepth is reached,
@@ -642,23 +646,24 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          {
             if( nbdchanges == 1 && (bdchgdir == SCIP_BRANCHDIR_UPWARDS || bdchgdir == SCIP_BRANCHDIR_DOWNWARDS) )
             {
-               int insertidx = SCIPgetProbingDepth(scip) - lastlpdepth - 1;
+               ++prevcandsinsertidx;
+               assert(prevcandsinsertidx <= SCIPgetProbingDepth(scip) - lastlpdepth - 1);
                assert(SCIPgetProbingDepth(scip) > 0);
                assert(bdchgvar != NULL);
                assert(bdchgvalue != SCIP_INVALID);
 
                /* extend array in case of a dynamic, domain change based LP resolve strategy */
-               if( insertidx >= previouscandssize )
+               if( prevcandsinsertidx >= previouscandssize )
                {
                   previouscandssize *= 2;
                   SCIP_CALL( SCIPreallocBufferArray(scip, &previouscands, previouscandssize) );
                   SCIP_CALL( SCIPreallocBufferArray(scip, &previousvals, previouscandssize) );
                }
-               assert(previouscandssize > insertidx);
+               assert(previouscandssize > prevcandsinsertidx);
 
                /* store candidate for pseudo cost update */
-               previouscands[insertidx] = bdchgvar;
-               previousvals[insertidx] = bdchgvalue;
+               previouscands[prevcandsinsertidx] = bdchgvar;
+               previousvals[prevcandsinsertidx] = bdchgvalue;
             }
 
             /* choose next candidate variable and resolve the LP if none is found. */
@@ -710,12 +715,13 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          gain /= (1.0 * (SCIPgetProbingDepth(scip) - lastlpdepth));
 
          /* loop over previously fixed candidates and share gain improvement */
-         for( v = 0; v < (SCIPgetProbingDepth(scip) - lastlpdepth); ++v )
+         for( v = 0; v <= prevcandsinsertidx; ++v )
          {
             SCIP_VAR* cand = previouscands[v];
             SCIP_Real val = previousvals[v];
             SCIP_Real solval = SCIPgetSolVal(scip, worksol, cand);
 
+            /* todo: should the gain be shared with a smaller weight, instead of dividing the gain itself? */
             /* it may happen that a variable had an integral solution value beforehand, e.g., for indicator variables */
             if( ! SCIPisZero(scip, val - solval) )
             {
