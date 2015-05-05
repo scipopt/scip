@@ -96,7 +96,7 @@
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 /* presolving */
-#define DEFAULT_MAXEXTENSIONS         1 /**< maximal number of extensions that will be computed for each SOS1 constraint */
+#define DEFAULT_MAXEXTENSIONS         1 /**< maximal number of extensions that will be computed for each SOS1 constraint */ //
 #define DEFAULT_MAXCONSDELAYEXT      -1 /**< delay clique extension if number of SOS1 constraints is larger than predefined value (-1: no limit) */
 #define DEFAULT_MAXTIGHTENBDS         5 /**< maximal number of bound tightening rounds per presolving round (-1: no limit) */
 #define DEFAULT_UPDATECONFLPRESOL FALSE /**< if TRUE then update conflict graph during presolving procedure */
@@ -774,6 +774,7 @@ SCIP_RETCODE extensionOperatorSOS1(
    SCIP_CONS*            cons,               /**< constraint to be extended */
    SCIP_VAR**            vars,               /**< variables of extended clique */
    SCIP_Real*            weights,            /**< weights of extended clique */
+   SCIP_Bool             usebacktrack,       /**< whether backtracking is needed for the computation */
    int**                 cliques,            /**< all cliques found so far */
    int*                  ncliques,           /**< number of clique found so far */
    int*                  cliquesizes,        /**< number of variables of current clique */
@@ -786,7 +787,7 @@ SCIP_RETCODE extensionOperatorSOS1(
    SCIP_Bool*            success             /**< pointer to store if at least one new clique was found */
    )
 {
-   int* workingsetnew;
+   int* workingsetnew = NULL;
    int nextsnew;
    int nworkingsetnew;
    int mincands;
@@ -950,15 +951,36 @@ SCIP_RETCODE extensionOperatorSOS1(
       }
       else if ( nextsnew < nworkingsetnew ) /* else if the number of of candidates equals zero */
       {
-         SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, vars, weights,
-               cliques, ncliques, cliquesizes, newclique, workingsetnew, nworkingsetnew, nextsnew, maxextensions, naddconss, success) );
-
-         if ( *maxextensions <= 0 )
+         /* if, backtracking is used, it is not necessary to keep the memory for 'workingsetnew' */
+         if ( usebacktrack )
          {
-            SCIPfreeBufferArray(scip, &workingsetnew);
+            SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, vars, weights, usebacktrack,
+                  cliques, ncliques, cliquesizes, newclique, workingsetnew, nworkingsetnew, nextsnew, maxextensions, naddconss, success) );
+            if ( *maxextensions <= 0 )
+            {
+               SCIPfreeBufferArrayNull(scip, &workingsetnew);
+               return SCIP_OKAY;
+            }
+         }
+         else
+         {
+            int w;
+
+            assert( nworkingset >= nworkingsetnew );
+            for (w = 0; w < nworkingsetnew; ++w)
+               workingset[w] = workingsetnew[w];
+            nworkingset = nworkingsetnew;
+
+            SCIPfreeBufferArrayNull(scip, &workingsetnew);
+
+            SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, vars, weights, usebacktrack,
+                  cliques, ncliques, cliquesizes, newclique, workingset, nworkingset, nextsnew, maxextensions, naddconss, success) );
+            assert( *maxextensions <= 0 );
             return SCIP_OKAY;
          }
       }
+      assert( workingsetnew != NULL );
+      assert( workingset != NULL );
 
       /* remove selvertex from clique */
       --cliquesizes[*ncliques];
@@ -980,7 +1002,7 @@ SCIP_RETCODE extensionOperatorSOS1(
       }
    }
 
-   SCIPfreeBufferArray(scip, &workingsetnew);
+   SCIPfreeBufferArrayNull(scip, &workingsetnew);
 
    return SCIP_OKAY;
 }
@@ -1619,9 +1641,9 @@ SCIP_RETCODE presolRoundConssSOS1(
 
                /* find extensions for the clique */
                maxextensions = conshdlrdata->maxextensions;
-
                SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, consvars, consweights,
-                     cliques, &ncliques, cliquesizes, newclique, comsucc, ncomsucc, 0, &maxextensions, naddconss, &extended) );
+                     (maxextensions <= 1) ? FALSE : TRUE, cliques, &ncliques, cliquesizes, newclique, comsucc, ncomsucc, 0, &maxextensions,
+                     naddconss, &extended) );
             }
 
             /* if an extension was found for the current clique then free the old SOS1 constraint */
