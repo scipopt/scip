@@ -96,7 +96,7 @@
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 /* presolving */
-#define DEFAULT_MAXEXTENSIONS         1 /**< maximal number of extensions that will be computed for each SOS1 constraint */ //
+#define DEFAULT_MAXEXTENSIONS         1 /**< maximal number of extensions that will be computed for each SOS1 constraint */
 #define DEFAULT_MAXCONSDELAYEXT      -1 /**< delay clique extension if number of SOS1 constraints is larger than predefined value (-1: no limit) */
 #define DEFAULT_MAXTIGHTENBDS         5 /**< maximal number of bound tightening rounds per presolving round (-1: no limit) */
 #define DEFAULT_UPDATECONFLPRESOL FALSE /**< if TRUE then update conflict graph during presolving procedure */
@@ -8752,12 +8752,16 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
 }
 
 
-/** compute best diving score */
+/** constraint handler method to determine a diving variable by assigning a variable and two values for diving */
 static
-SCIP_DECL_CONSHDLRDETERMDIVEVAR(conshdlrDetermDiveVarSOS1)
+SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
 {
    SCIP_DIGRAPH* conflictgraph;
+   SCIP_VAR* bestvar;
+   SCIP_Bool bestvarroundup;
+   SCIP_Real bestsolval;
    SCIP_Real bestscore = SCIP_REAL_MIN;
+   int bestnode;
    int nsos1vars;
    int v;
 
@@ -8765,15 +8769,18 @@ SCIP_DECL_CONSHDLRDETERMDIVEVAR(conshdlrDetermDiveVarSOS1)
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( diveset != NULL );
-   assert( vals != NULL );
    assert( success != NULL );
-   assert( divetype != NULL );
 
    /* get number of SOS1 variables */
    nsos1vars = SCIPgetNSOS1Vars(conshdlr);
 
    /* get conflict graph of SOS1 constraints */
    conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
+
+   bestvar = NULL;
+   bestsolval = 0.0;
+   bestnode = -1;
+   bestvarroundup = FALSE;
 
    /* loop over SOS1 variables  */
    for (v = 0; v < nsos1vars; ++v)
@@ -8795,15 +8802,42 @@ SCIP_DECL_CONSHDLRDETERMDIVEVAR(conshdlrDetermDiveVarSOS1)
          if ( score > bestscore )
          {
             bestscore = score;
-            *varptr = var;
-
-            /* assign vals depending on whether we want to round down or up first */
-            vals[roundup ? 0 : 1] = 1.0;
-            vals[roundup ? 1 : 0] = 0.0;
 
             *success = TRUE;
-            *divetype = SCIP_DIVETYPE_SOS1VARIABLE;
+            bestvar = var;
+            bestnode = v;
+            bestsolval = solval;
+            bestvarroundup = roundup;
          }
+      }
+   }
+   assert( !(*success) || bestvar != NULL );
+
+   if ( *success )
+   {
+      int* succ;
+      int nsucc;
+
+      assert( ! SCIPisFeasZero(scip, bestsolval) );
+      assert( bestnode >= 0 && bestnode < nsos1vars );
+
+      nsucc = SCIPdigraphGetNSuccessors(conflictgraph, bestnode);
+      succ = SCIPdigraphGetSuccessors(conflictgraph, bestnode);
+
+      /* if the diving score voted for fixing the best variable to 0.0, we add this as the preferred bound change;
+       * otherwise, fixing the neighbors in the conflict graph to 0.0, we add as preferred bound change.
+       */
+      if ( SCIPisFeasNegative(scip, bestsolval) )
+      {
+         SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, bestvar, SCIP_BRANCHDIR_FIXED, 0.0, bestvarroundup) );
+         for (s = 0; s < nsucc; ++s)
+            SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, SCIPnodeGetVarSOS1(conflictgraph, succ[s]), SCIP_BRANCHDIR_FIXED, 0.0, ! bestvarroundup) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, bestvar, SCIP_BRANCHDIR_FIXED, 0.0, !bestvarroundup) );
+         for (s = 0; s < nsucc; ++s)
+            SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, SCIPnodeGetVarSOS1(conflictgraph, succ[s]), SCIP_BRANCHDIR_FIXED, 0.0, bestvarroundup) );
       }
    }
 
@@ -8856,7 +8890,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySOS1, consCopySOS1) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSOS1) );
-   //SCIP_CALL( SCIPsetConshdlrDetermDiveVar(scip, conshdlr, conshdlrDetermDiveVarSOS1) );
+   //SCIP_CALL( SCIPsetConshdlrDetermDiveBdChgs(scip, conshdlr, conshdlrDetermDiveBdChgsSOS1) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolSOS1) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSOS1) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSOS1) );
