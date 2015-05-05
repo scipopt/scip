@@ -2663,10 +2663,10 @@ SCIP_RETCODE SCIPsetConshdlrGetNVars(
  *       - \ref SCIP_STAGE_PROBLEM
  */
 EXTERN
-SCIP_RETCODE SCIPsetConshdlrDetermDiveVar(
+SCIP_RETCODE SCIPsetConshdlrDetermDiveBdChgs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSHDLRDETERMDIVEVAR((*conshdlrdetermdivevar)) /**< constraint handler diving solution enforcement method */
+   SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS((*conshdlrdetermdivebdchgs)) /**< constraint handler diving solution enforcement method */
    );
 
 /** returns the constraint handler of the given name, or NULL if not existing */
@@ -14609,21 +14609,22 @@ void SCIPupdateDivesetStats(
  *
  *  the process is guided by the enforcement priorities of the constraint handlers and the scoring mechanism provided by
  *  the diving settings.
- *  If a constraint handler successfully assigned a variable for diving, it also provides information how the diving should be
- *  processed by filling the vals buffer with two values (one for the prioritized child and one for the alternative)
- *  and by assigning an appropriate divetype to inform the diving heuristic how to create the child nodes during diving.
+ *  Constraint handlers may suggest diving bound changes in decreasing order of their enforcement priority, based on the
+ *  solution values in the solution @p sol and the current local bounds of the variables. A diving bound change
+ *  is a triple (variable,branching direction,value) and is used inside SCIPperformGenericDivingAlgorithm().
  *
- *  The constraint handlers are processed in decreasing order of their enforcement priority, the method stops after the
- *  first successful constraint handler
+ *  After a successful call, the diveset holds two arrays of suggested dive bound changes, one for the preferred child
+ *  and one for the alternative.
+ *
+ *  @see SCIPdivesetGetDiveBoundChangeData() for retrieving the dive bound change suggestions.
+ *
+ *  The method stops after the first constraint handler was successful
  */
 EXTERN
-SCIP_RETCODE SCIPdetermineDiveVar(
+SCIP_RETCODE SCIPdetermineDiveBoundChanges(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< diving settings to control scoring */
    SCIP_SOL*             sol,                /**< current solution of diving mode */
-   SCIP_VAR**            varptr,             /**< variable pointer to store variable for diving */
-   SCIP_Real*            vals,               /**< buffer array to store exactly two values for proceeding with diving */
-   SCIP_DIVETYPE*        divetype,           /**< pointer to the type of the next dive to be applied */
    SCIP_Bool*            success,            /**< pointer to store whether constraint handler successfully found a variable */
    SCIP_Bool*            infeasible          /**< pointer to store whether the current node was detected to be infeasible */
    );

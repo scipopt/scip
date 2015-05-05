@@ -790,14 +790,16 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 #define SCIP_DECL_CONSGETNVARS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, \
       int* nvars, SCIP_Bool* success)
 
-/** constraint handler method to determine a diving variable by assigning a variable and two values for diving
+/** constraint handler method to suggest dive bound changes during the generic diving algorithm
  *
  *  this callback is used inside the various diving heuristics of SCIP and does not affect the normal branching
  *  of the actual search.
  *  The constraint handler can provide this callback to render the current solution infeasible. The solution is
- *  rendered infeasible by deciding for a variable and two values (one with higher priority and one alternative) that
- *  the user of the diveset argument (mostly a diving heuristic) should proceed with. The success pointer is used to indicate
- *  whether the constraint handler succeeded in selecting a variable. The infeasible pointer should be set to TRUE if
+ *  rendered infeasible by determining bound changes that should be applied to the next explored search node.
+ *  An alternative in case that the preferred bound change(s) were detected infeasible must be provided.
+ *
+ *  The success pointer must be used to indicate
+ *  whether the constraint handler succeeded in selecting dive bound changes. The infeasible pointer should be set to TRUE if
  *  the constraint handler found a local infeasibility.  If the constraint handler needs to select between several
  *  candidates, it may use the scoring mechanism of the diveset argument to control its choice.
  *
@@ -813,14 +815,11 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - sol             : current diving solution, usually the LP relaxation solution
  *
  *  output:
- *  - varptr          : a pointer to store the candidate with the highest score
- *  - vals            : buffer array to store exactly two values for proceeding with diving
- *  - divetype,       : pointer to the type of the next dive to be applied
- *  - success         : pointer to store whether the constraint handler succeeded selecting a variable
+ *  - success         : pointer to store whether the constraint handler succeeded to determine dive bound changes
  *  - infeasible      : pointer to store whether the constraint handler detected an infeasibility in the local node
  */
-#define SCIP_DECL_CONSHDLRDETERMDIVEVAR(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_DIVESET* diveset, \
-      SCIP_SOL* sol, SCIP_VAR** varptr, SCIP_Real* vals, SCIP_DIVETYPE* divetype, SCIP_Bool* success, SCIP_Bool* infeasible)
+#define SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_DIVESET* diveset, \
+      SCIP_SOL* sol, SCIP_Bool* success, SCIP_Bool* infeasible)
 
 #ifdef __cplusplus
 }

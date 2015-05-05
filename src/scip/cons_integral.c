@@ -176,9 +176,9 @@ SCIP_DECL_CONSLOCK(consLockIntegral)
    return SCIP_OKAY;
 }
 
-/** constraint handler method to render a diving solution infeasible by assigning a variable and two values for branching */
+/** constraint handler method to suggest dive bound changes during the generic diving algorithm */
 static
-SCIP_DECL_CONSHDLRDETERMDIVEVAR(conshdlrDetermDiveVarIntegral)
+SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIntegral)
 {
    SCIP_VAR** vars;
    SCIP_Real solval;
@@ -190,13 +190,11 @@ SCIP_DECL_CONSHDLRDETERMDIVEVAR(conshdlrDetermDiveVarIntegral)
    int nint;
    int nimpl;
    int v;
+   int bestcandidx;
 
    assert(scip != NULL);
    assert(sol != NULL);
    assert(diveset != NULL);
-   assert(varptr != NULL);
-   assert(vals != NULL);
-   assert(divetype != NULL);
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -208,39 +206,38 @@ SCIP_DECL_CONSHDLRDETERMDIVEVAR(conshdlrDetermDiveVarIntegral)
 
    ninteger = nbin + nint + nimpl;
    bestscore = SCIP_REAL_MIN;
-
+   bestcandidx = -1;
    /* loop over solution values and get score of fractional variables */
    for( v = 0; v < ninteger; ++v )
    {
       solval = SCIPgetSolVal(scip, sol, vars[v]);
 
       /* skip variable if solution value disagrees with the local bounds */
-      if( !SCIPisFeasIntegral(scip, solval) && SCIPisGE(scip, solval, SCIPvarGetLbLocal(vars[v])) && SCIPisLE(scip, solval, SCIPvarGetUbLocal(vars[v])) )
+      if( ! SCIPisFeasIntegral(scip, solval) && SCIPisGE(scip, solval, SCIPvarGetLbLocal(vars[v])) && SCIPisLE(scip, solval, SCIPvarGetUbLocal(vars[v])) )
       {
          SCIP_CALL( SCIPgetDivesetScore(scip, diveset, vars[v], solval, solval - SCIPfloor(scip, solval), &score, &roundup) );
 
          /* we search for candidates with maximum score */
          if( score > bestscore )
          {
+            bestcandidx = v;
             bestscore = score;
-            *varptr = vars[v];
-
-            /* prioritize the direction suggested by the diving settings */
-            if( roundup )
-            {
-               vals[0] = SCIPceil(scip, solval);
-               vals[1] = SCIPfloor(scip, solval);
-            }
-            else
-            {
-               vals[1] = SCIPceil(scip, solval);
-               vals[0] = SCIPfloor(scip, solval);
-            }
-
             *success = TRUE;
-            *divetype = SCIP_DIVETYPE_INTEGRALITY;
          }
       }
+   }
+
+   assert(! *success || bestcandidx >= 0);
+
+   if( *success )
+   {
+      solval = SCIPgetSolVal(scip, sol, vars[bestcandidx]);
+
+      /* if we want to round up the best candidate, it is added as the preferred bound change */
+      SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, vars[bestcandidx], SCIP_BRANCHDIR_UPWARDS,
+            SCIPceil(scip, solval), roundup) );
+      SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, vars[bestcandidx], SCIP_BRANCHDIR_DOWNWARDS,
+            SCIPfloor(scip, solval), ! roundup) );
    }
 
    return SCIP_OKAY;
@@ -272,7 +269,7 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyIntegral, consCopyIntegral) );
-   SCIP_CALL( SCIPsetConshdlrDetermDiveVar(scip, conshdlr, conshdlrDetermDiveVarIntegral) );
+   SCIP_CALL( SCIPsetConshdlrDetermDiveBdChgs(scip, conshdlr, conshdlrDetermDiveBdChgsIntegral) );
 
    return SCIP_OKAY;
 }

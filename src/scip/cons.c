@@ -2083,7 +2083,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consgetvars = consgetvars;
    (*conshdlr)->consgetnvars = consgetnvars;
    (*conshdlr)->conshdlrdata = conshdlrdata;
-   (*conshdlr)->conshdlrdetermdivevar = NULL;
+   (*conshdlr)->conshdlrdetermdivebdchgs = NULL;
    (*conshdlr)->conss = NULL;
    (*conshdlr)->consssize = 0;
    (*conshdlr)->nconss = 0;
@@ -3227,14 +3227,11 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
 }
 
 /** calls diving solution enforcement callback of constraint handler, if it exists */
-SCIP_RETCODE SCIPconshdlrDetermineDiveVar(
+SCIP_RETCODE SCIPconshdlrDetermineDiveBoundChanges(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_DIVESET*         diveset,            /**< diving settings to control scoring */
    SCIP_SOL*             sol,                /**< current solution of diving mode */
-   SCIP_VAR**            varptr,             /**< variable pointer to store variable for diving */
-   SCIP_Real*            vals,               /**< buffer array to store exactly two values for proceeding with diving */
-   SCIP_DIVETYPE*        divetype,           /**< pointer to the type of the next dive to be applied */
    SCIP_Bool*            success,            /**< pointer to store whether constraint handler successfully found a variable */
    SCIP_Bool*            infeasible          /**< pointer to store whether the current node was detected to be infeasible */
    )
@@ -3243,15 +3240,12 @@ SCIP_RETCODE SCIPconshdlrDetermineDiveVar(
    assert(set != NULL);
    assert(diveset != NULL);
    assert(sol != NULL);
-   assert(varptr != NULL);
-   assert(vals != NULL);
    assert(success != NULL);
    assert(infeasible != NULL);
-   assert(divetype != NULL);
 
-   if( conshdlr->conshdlrdetermdivevar != NULL )
+   if( conshdlr->conshdlrdetermdivebdchgs != NULL )
    {
-      SCIP_CALL( conshdlr->conshdlrdetermdivevar(set->scip, conshdlr, diveset, sol, varptr, vals, divetype, success, infeasible) );
+      SCIP_CALL( conshdlr->conshdlrdetermdivebdchgs(set->scip, conshdlr, diveset, sol, success, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -4231,14 +4225,14 @@ void SCIPconshdlrSetGetNVars(
 }
 
 /** sets diving enforcement method of constraint handler */
-void SCIPconshdlrSetDetermDiveVar(
+void SCIPconshdlrSetDetermDiveBdChgs(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSHDLRDETERMDIVEVAR((*conshdlrdetermdivevar)) /**< constraint handler diving solution enforcement method */
+   SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS((*conshdlrdetermdivebdchgs)) /**< constraint handler diving solution enforcement method */
    )
 {
    assert(conshdlr != NULL);
 
-   conshdlr->conshdlrdetermdivevar = conshdlrdetermdivevar;
+   conshdlr->conshdlrdetermdivebdchgs = conshdlrdetermdivebdchgs;
 }
 
 /** gets array with constraints of constraint handler; the first SCIPconshdlrGetNActiveConss() entries are the active
