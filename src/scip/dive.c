@@ -88,6 +88,7 @@ SCIP_RETCODE selectNextDiving(
    SCIP_Real*            lpcandsfrac,        /**< fractionalities of LP branching candidates, or NULL if not needed*/
    SCIP_Real*            lpcandsscores,      /**< array with LP branching candidate scores, or NULL */
    SCIP_Bool*            lpcandroundup,      /**< array to remember whether the preferred branching direction is upwards */
+   int*                  nviollpcands,       /**< pointer to store the number of LP candidates whose solution value already violates local bounds */
    int                   nlpcands,           /**< number of current LP cands */
    SCIP_Bool*            enfosuccess,        /**< pointer to store whether a candidate was sucessfully found */
    SCIP_Bool*            infeasible          /**< pointer to store whether the diving can be immediately aborted because it is infeasible */
@@ -99,7 +100,9 @@ SCIP_RETCODE selectNextDiving(
    assert(!onlylpbranchcands || lpcandroundup != NULL);
    assert(enfosuccess != NULL);
    assert(infeasible != NULL);
+   assert(nviollpcands != NULL);
 
+   *nviollpcands = 0;
    /* we use diving solution enforcement provided by the constraint handlers */
    if( !onlylpbranchcands )
    {
@@ -130,11 +133,16 @@ SCIP_RETCODE selectNextDiving(
 
          score = lpcandsscores[c];
          /* update the best candidate if it has a higher score and a solution value which does not violate one of the local bounds */
-         if( SCIPisFeasLE(scip, SCIPvarGetLbLocal(lpcands[c]), lpcandssol[c]) && SCIPisFeasGE(scip, SCIPvarGetUbLocal(lpcands[c]), lpcandssol[c]) && score > bestscore )
+         if( SCIPisFeasLE(scip, SCIPvarGetLbLocal(lpcands[c]), lpcandssol[c]) && SCIPisFeasGE(scip, SCIPvarGetUbLocal(lpcands[c]), lpcandssol[c]) )
          {
-            bestcandidx = c;
-            bestscore = score;
+            if( score > bestscore )
+            {
+               bestcandidx = c;
+               bestscore = score;
+            }
          }
+         else
+            ++(*nviollpcands);
       }
 
       /* there is no guarantee that a candidate is found since local bounds might render all solution values infeasible */
@@ -159,16 +167,9 @@ SCIP_RETCODE selectNextDiving(
  *  name, SCIP enters probing mode (not diving mode) and dives along a path into the tree. Domain propagation
  *  is applied at every node in the tree, whereas probing LPs might be solved less frequently.
  *
-<<<<<<< HEAD
- *  Starting from the current LP candidates, the algorithm determines a fraction of the candidates that should be
- *  branched on; if a single candidate should be fixed, the algorithm selects a candidate which minimizes the score
- *  defined by the @p diveset.  If more than one candidate should be selected, the candidates are sorted in
- *  non-decreasing order of their score.
-=======
  *  Starting from the current LP solution, the algorithm selects candidates which maximize the
  *  score defined by the @p diveset and whose solution value has not yet been rendered infeasible by propagation,
  *  and propagates the bound change on this candidate.
->>>>>>> extended diving algorithm
  *
  *  The algorithm iteratively selects the the next (unfixed) candidate in the list, until either enough domain changes
  *  or the resolve frequency of the LP trigger an LP resolve (and hence, the set of potential candidates changes),
@@ -226,6 +227,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    int lastlpdepth;
    int previouscandssize;
    int lpcandsscoressize;
+   int nviollpcands;
 
    SCIP_Bool success;
    SCIP_Bool enfosuccess;
@@ -485,7 +487,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       enfosuccess = FALSE;
       /* select the next diving action by selecting appropriate dive bound changes for the preferred and alternative child */
       SCIP_CALL( selectNextDiving(scip, diveset, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
-             lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, nlpcands,
+             lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, &nviollpcands, nlpcands,
              &enfosuccess, &infeasible) );
 
       /* if we did not succeed finding an enforcement, the solution is potentially feasible and we break immediately */
@@ -611,7 +613,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
              */
             if( ! cutoff
                   && ((lpsolvefreq > 0 && ((SCIPgetProbingDepth (scip) - lastlpdepth) % lpsolvefreq) == 0)
-                  || (domreds + localdomreds > SCIPdivesetGetLPResolveDomChgQuot(diveset) * SCIPgetNVars(scip))) )
+                  || (domreds + localdomreds > SCIPdivesetGetLPResolveDomChgQuot(diveset) * SCIPgetNVars(scip))
+                  || (onlylpbranchcands && nviollpcands > (int)(SCIPdivesetGetLPResolveDomChgQuot(diveset) * SCIPgetNVars(scip)))) )
             {
                SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, &lperror, &cutoff) );
 
@@ -674,7 +677,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
                /* select the next diving action */
                SCIP_CALL( selectNextDiving(scip, diveset, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
-                      lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, nlpcands,
+                      lpcands, lpcandssol, lpcandsfrac, lpcandsscores, lpcandroundup, &nviollpcands, nlpcands,
                       &enfosuccess, &infeasible) );
 
 
