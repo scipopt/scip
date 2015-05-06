@@ -176,35 +176,6 @@ SCIP_HEUR* SCIPdivesetGetHeur(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
-/** adds a diving bound change to the dive set together with the information if this is a bound change
- *  for the preferred direction or not
- */
-EXTERN
-SCIP_RETCODE SCIPdivesetAddDiveBoundChange(
-   SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_VAR*             var,                /**< variable to apply the bound change to */
-   SCIP_BRANCHDIR        dir,                /**< direction of the bound change */
-   SCIP_Real             value,              /**< value to adjust this variable bound to */
-   SCIP_Bool             preferred           /**< is this a bound change for the preferred child? */
-   );
-
-/**< get the dive bound change data for the preferred or the alternative direction */
-EXTERN
-void SCIPdivesetGetDiveBoundChangeData(
-   SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_VAR***           variables,          /**< pointer to store variables for the specified direction */
-   SCIP_BRANCHDIR**      directions,         /**< pointer to store the branching directions */
-   SCIP_Real**           values,             /**< pointer to store bound change values */
-   int*                  ndivebdchgs,        /**< pointer to store the number of dive bound changes */
-   SCIP_Bool             preferred           /**< should the dive bound changes for the preferred child be output? */
-   );
-
-/** clear the diveset bound change data structure */
-EXTERN
-void SCIPdivesetClearBoundChanges(
-   SCIP_DIVESET*         diveset             /**< diving settings */
-   );
-
 /** get the working solution of this dive set */
 EXTERN
 SCIP_SOL* SCIPdivesetGetWorkSolution(

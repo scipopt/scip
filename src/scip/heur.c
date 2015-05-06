@@ -194,7 +194,6 @@ SCIP_RETCODE SCIPdivesetCreate(
 {
    char paramname[SCIP_MAXSTRLEN];
    const char* divesetname;
-   int p;
 
    assert(diveset != NULL);
    assert(set != NULL);
@@ -213,16 +212,6 @@ SCIP_RETCODE SCIPdivesetCreate(
 
    SCIP_CALL( heurAddDiveset(heur, *diveset) );
    (*diveset)->sol = NULL;
-
-   /* allocate one slot for the prioritized and the unprioritized bound change */
-   for( p = 0; p <= 1; ++p )
-   {
-      SCIP_ALLOC( BMSallocMemoryArray(&(*diveset)->divebdchgdirs[p], 1) );
-      SCIP_ALLOC( BMSallocMemoryArray(&(*diveset)->divebdchgvars[p], 1) );
-      SCIP_ALLOC( BMSallocMemoryArray(&(*diveset)->divebdchgvals[p], 1) );
-      (*diveset)->ndivebdchanges[p] = 0;
-      (*diveset)->divebdchgsize[p] = 1;
-   }
 
    /* add collection of diving heuristic specific parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/minreldepth", (*diveset)->name);
@@ -299,73 +288,6 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIPdivesetReset(*diveset, set);
 
    return SCIP_OKAY;
-}
-
-/** adds a diving bound change to the dive set together with the information if this is a bound change
- *  for the preferred direction or not
- */
-SCIP_RETCODE SCIPdivesetAddDiveBoundChange(
-   SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_VAR*             var,                /**< variable to apply the bound change to */
-   SCIP_BRANCHDIR        dir,                /**< direction of the bound change */
-   SCIP_Real             value,              /**< value to adjust this variable bound to */
-   SCIP_Bool             preferred           /**< is this a bound change for the preferred child? */
-   )
-{
-   int idx = preferred ? 0 : 1;
-   int pos = diveset->ndivebdchanges[idx];
-
-   assert(pos < diveset->divebdchgsize[idx]);
-
-   if( pos == diveset->divebdchgsize[idx] - 1 )
-   {
-      SCIP_ALLOC( BMSreallocMemoryArray(&diveset->divebdchgdirs[idx], diveset->divebdchgsize[idx] + 1) );
-      SCIP_ALLOC( BMSreallocMemoryArray(&diveset->divebdchgvars[idx], diveset->divebdchgsize[idx] + 1) );
-      SCIP_ALLOC( BMSreallocMemoryArray(&diveset->divebdchgvals[idx], diveset->divebdchgsize[idx] + 1) );
-      diveset->divebdchgsize[idx] += 1;
-   }
-
-   diveset->divebdchgvars[idx][pos] = var;
-   diveset->divebdchgdirs[idx][pos] = dir;
-   diveset->divebdchgvals[idx][pos] = value;
-
-   ++diveset->ndivebdchanges[idx];
-
-   return SCIP_OKAY;
-}
-
-/**< get the dive bound change data for the preferred or the alternative direction */
-void SCIPdivesetGetDiveBoundChangeData(
-   SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_VAR***           variables,          /**< pointer to store variables for the specified direction */
-   SCIP_BRANCHDIR**      directions,         /**< pointer to store the branching directions */
-   SCIP_Real**           values,             /**< pointer to store bound change values */
-   int*                  ndivebdchgs,        /**< pointer to store the number of dive bound changes */
-   SCIP_Bool             preferred           /**< should the dive bound changes for the preferred child be output? */
-   )
-{
-   int idx = preferred ? 0 : 1;
-
-   assert(variables != NULL);
-   assert(directions != NULL);
-   assert(values != NULL);
-   assert(ndivebdchgs != NULL);
-
-   *variables = diveset->divebdchgvars[idx];
-   *directions = diveset->divebdchgdirs[idx];
-   *values = diveset->divebdchgvals[idx];
-   *ndivebdchgs = diveset->ndivebdchanges[idx];
-}
-
-/** clear the diveset bound change data structure */
-void SCIPdivesetClearBoundChanges(
-   SCIP_DIVESET*         diveset             /**< diving settings */
-   )
-{
-   int p;
-
-   for( p = 0; p < 2; ++p )
-      diveset->ndivebdchanges[p] = 0;
 }
 
 /** get the heuristic to which this diving setting belongs */
@@ -646,17 +568,8 @@ SCIP_RETCODE SCIPdivesetFree(
    SCIP_DIVESET**        diveset             /**< general diving settings */
    )
 {
-   int p;
    assert(*diveset != NULL);
    assert((*diveset)->name != NULL);
-
-   /* free diving bound change storage */
-   for( p = 0; p <= 1; ++p )
-   {
-      BMSfreeMemoryArray(&(*diveset)->divebdchgdirs[p]);
-      BMSfreeMemoryArray(&(*diveset)->divebdchgvals[p]);
-      BMSfreeMemoryArray(&(*diveset)->divebdchgvars[p]);
-   }
 
    BMSfreeMemoryArray(&(*diveset)->name);
    BMSfreeMemory(diveset);

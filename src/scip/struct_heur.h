@@ -38,9 +38,6 @@ struct SCIP_Diveset
    SCIP_HEUR*            heur;               /**< the heuristic to which this dive set belongs */
    char*                 name;               /**< name of dive controller, in case that a heuristic has several */
    SCIP_SOL*             sol;                /**< working solution of this dive set */
-   SCIP_VAR**            divebdchgvars[2];   /**< two arrays to store variables for branching */
-   SCIP_BRANCHDIR*       divebdchgdirs[2];   /**< arrays to hold the directions for diving */
-   SCIP_Real*            divebdchgvals[2];   /**< arrays to store bound change values for diving */
    SCIP_Real             minreldepth;        /**< minimal relative depth to start diving */
    SCIP_Real             maxreldepth;        /**< maximal relative depth to start diving */
    SCIP_Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
@@ -57,8 +54,6 @@ struct SCIP_Diveset
    SCIP_Longint          totalsoldepth;      /**< the sum of depths at which this dive set found solutions */
    SCIP_Longint          totalnnodes;        /**< the total number of probing nodes explored by this dive set */
    SCIP_Longint          totalnbacktracks;   /**< the total number of backtracks during the execution of this dive set */
-   int                   divebdchgsize[2];   /**< holds the two sizes of the dive bound change information */
-   int                   ndivebdchanges[2];  /**< current number of stored dive bound changes for the next depth */
    int                   mindepth;           /**< the minimum depth reached by all executions of the dive set */
    int                   maxdepth;           /**< the maximum depth reached by an execution of the dive set */
    int                   minsoldepth;        /**< the minimum depth at which this dive set found a solution */

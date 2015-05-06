@@ -12223,7 +12223,7 @@ SCIP_RETCODE SCIPtransformProb(
    SCIP_CALL( SCIPlpCreate(&scip->lp, scip->set, scip->messagehdlr, scip->stat, SCIPprobGetName(scip->origprob)) );
    SCIP_CALL( SCIPrelaxationCreate(&scip->relaxation) );
    SCIP_CALL( SCIPprimalCreate(&scip->primal) );
-   SCIP_CALL( SCIPtreeCreate(&scip->tree, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
+   SCIP_CALL( SCIPtreeCreate(&scip->tree, scip->mem->probmem, scip->set, SCIPsetGetNodesel(scip->set, scip->stat)) );
    SCIP_CALL( SCIPconflictCreate(&scip->conflict, scip->mem->probmem, scip->set) );
    SCIP_CALL( SCIPcliquetableCreate(&scip->cliquetable, scip->set, scip->mem->probmem) );
 
@@ -30557,17 +30557,25 @@ void SCIPupdateDivesetStats(
 /** enforces a probing/diving solution by suggesting bound changes that maximize the score w.r.t. the current diving settings
  *
  *  the process is guided by the enforcement priorities of the constraint handlers and the scoring mechanism provided by
- *  the diving settings.
+ *  the dive set.
  *  Constraint handlers may suggest diving bound changes in decreasing order of their enforcement priority, based on the
  *  solution values in the solution @p sol and the current local bounds of the variables. A diving bound change
  *  is a triple (variable,branching direction,value) and is used inside SCIPperformGenericDivingAlgorithm().
  *
- *  After a successful call, the diveset holds two arrays of suggested dive bound changes, one for the preferred child
+ *  After a successful call, SCIP holds two arrays of suggested dive bound changes, one for the preferred child
  *  and one for the alternative.
  *
- *  @see SCIPdivesetGetDiveBoundChangeData() for retrieving the dive bound change suggestions.
+ *  @see SCIPgetDiveBoundChangeData() for retrieving the dive bound change suggestions.
  *
  *  The method stops after the first constraint handler was successful
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 SCIP_RETCODE SCIPdetermineDiveBoundChanges(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -30585,11 +30593,13 @@ SCIP_RETCODE SCIPdetermineDiveBoundChanges(
    assert(infeasible != NULL);
    assert(success != NULL);
 
+   SCIP_CALL( checkStage(scip, "SCIPdetermineDiveBoundChanges", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
    *success = FALSE;
    *infeasible = FALSE;
 
    /* we invalidate the previously stored bound changes */
-   SCIPdivesetClearBoundChanges(diveset);
+   SCIPclearDiveBoundChanges(scip);
 
    /* loop over constraint handlers until a constraint handler successfully found a variable/value assignment for proceeding
     * or a constraint handler detected the infeasibility of the local node
@@ -30607,14 +30617,89 @@ SCIP_RETCODE SCIPdetermineDiveBoundChanges(
          SCIP_BRANCHDIR* bdchgdirs;
          SCIP_Real* values;
          int nbdchanges;
-         SCIPdivesetGetDiveBoundChangeData(diveset, &bdchgvars, &bdchgdirs, &values, &nbdchanges, TRUE);
+         SCIPtreeGetDiveBoundChangeData(scip->tree, &bdchgvars, &bdchgdirs, &values, &nbdchanges, TRUE);
          assert(nbdchanges > 0);
-         SCIPdivesetGetDiveBoundChangeData(diveset, &bdchgvars, &bdchgdirs, &values, &nbdchanges, FALSE);
+         SCIPtreeGetDiveBoundChangeData(scip->tree, &bdchgvars, &bdchgdirs, &values, &nbdchanges, FALSE);
          assert(nbdchanges > 0);
       }
 #endif
 
    return SCIP_OKAY;
+}
+
+/** adds a diving bound change to the diving bound change storage of SCIP together with the information if this is a
+ *  bound change for the preferred direction or not
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPaddDiveBoundChange(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to apply the bound change to */
+   SCIP_BRANCHDIR        dir,                /**< direction of the bound change */
+   SCIP_Real             value,              /**< value to adjust this variable bound to */
+   SCIP_Bool             preferred           /**< is this a bound change for the preferred child? */
+   )
+{
+   assert(scip->tree != NULL);
+   assert(scip->mem->probmem != NULL);
+   assert(SCIPinProbing(scip));
+
+   SCIP_CALL( checkStage(scip, "SCIPaddDiveBoundChange", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPtreeAddDiveBoundChange(scip->tree, scip->mem->probmem, var, dir, value, preferred) );
+
+   return SCIP_OKAY;
+}
+
+/** get the dive bound change data for the preferred or the alternative direction
+ *
+ *   @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+void SCIPgetDiveBoundChangeData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           variables,          /**< pointer to store variables for the specified direction */
+   SCIP_BRANCHDIR**      directions,         /**< pointer to store the branching directions */
+   SCIP_Real**           values,             /**< pointer to store bound change values */
+   int*                  ndivebdchgs,        /**< pointer to store the number of dive bound changes */
+   SCIP_Bool             preferred           /**< should the dive bound changes for the preferred child be output? */
+   )
+{
+   assert(variables != NULL);
+   assert(directions != NULL);
+   assert(values != NULL);
+   assert(ndivebdchgs != NULL);
+   assert(SCIPinProbing(scip));
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetDiveBoundChangeData", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPtreeGetDiveBoundChangeData(scip->tree, variables, directions, values, ndivebdchgs, preferred);
+}
+
+/** clear the dive bound change data structures
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+void SCIPclearDiveBoundChanges(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip->tree != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPclearDiveBoundChanges", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPtreeClearDiveBoundChanges(scip->tree);
 }
 
 
