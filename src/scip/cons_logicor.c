@@ -4409,14 +4409,16 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
             SCIP_Bool cutoff;
 
             /* handle all cases with less than three variables in a logicor constraint */
-            SCIP_CALL( fixDeleteOrUpgradeCons(scip, cons, conshdlrdata->eventhdlr, conshdlrdata->conshdlrlinear, conshdlrdata->conshdlrsetppc, nfixedvars, nchgbds, nchgcoefs, ndelconss, naddconss, nupgdconss, &cutoff) );
+            SCIP_CALL( fixDeleteOrUpgradeCons(scip, cons, conshdlrdata->eventhdlr, conshdlrdata->conshdlrlinear,
+                  conshdlrdata->conshdlrsetppc, nfixedvars, nchgbds, nchgcoefs, ndelconss, naddconss, nupgdconss, &cutoff) );
 
             if( cutoff )
             {
                *result = SCIP_CUTOFF;
                goto TERMINATE;
             }
-            else if( *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds || *nchgcoefs > oldnchgcoefs || *ndelconss > oldndelconss  || *nupgdconss > oldnupgdconss )
+            else if( *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds || *nchgcoefs > oldnchgcoefs
+               || *ndelconss > oldndelconss  || *nupgdconss > oldnupgdconss )
                *result = SCIP_SUCCESS;
 
             if( SCIPconsIsDeleted(cons) )
@@ -4439,14 +4441,16 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
             SCIP_Bool cutoff;
 
             /* handle all cases with less than three variables in a logicor constraint */
-            SCIP_CALL( fixDeleteOrUpgradeCons(scip, cons, conshdlrdata->eventhdlr, conshdlrdata->conshdlrlinear, conshdlrdata->conshdlrsetppc, nfixedvars, nchgbds, nchgcoefs, ndelconss, naddconss, nupgdconss, &cutoff) );
+            SCIP_CALL( fixDeleteOrUpgradeCons(scip, cons, conshdlrdata->eventhdlr, conshdlrdata->conshdlrlinear,
+                  conshdlrdata->conshdlrsetppc, nfixedvars, nchgbds, nchgcoefs, ndelconss, naddconss, nupgdconss, &cutoff) );
 
             if( cutoff )
             {
                *result = SCIP_CUTOFF;
                goto TERMINATE;
             }
-            else if( *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds || *nchgcoefs > oldnchgcoefs || *ndelconss > oldndelconss  || *nupgdconss > oldnupgdconss )
+            else if( *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds || *nchgcoefs > oldnchgcoefs
+               || *ndelconss > oldndelconss  || *nupgdconss > oldnupgdconss )
                *result = SCIP_SUCCESS;
 
             if( SCIPconsIsDeleted(cons) )
@@ -4478,7 +4482,8 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       /* check constraints for redundancy */
       if( conshdlrdata->presolpairwise && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
       {
-         SCIP_CALL( removeRedundantConssAndNonzeros(scip, conss, nconss, &entries, &nentries, conshdlrdata->eventhdlr, conshdlrdata->usestrengthening, &firstchange, nfixedvars, ndelconss, nchgcoefs, &cutoff) );
+         SCIP_CALL( removeRedundantConssAndNonzeros(scip, conss, nconss, &entries, &nentries, conshdlrdata->eventhdlr,
+               conshdlrdata->usestrengthening, &firstchange, nfixedvars, ndelconss, nchgcoefs, &cutoff) );
 
          if( cutoff )
             goto TERMINATE;

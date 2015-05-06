@@ -182,7 +182,7 @@ struct SCIP_ConsData
    SCIP_Longint          weightsum;          /**< sum of all weights */
    SCIP_Longint          onesweightsum;      /**< sum of weights of variables fixed to one */
    unsigned int          propagated:1;       /**< is the knapsack constraint already propagated? */
-   unsigned int          presolved:1;        /**< is the knapsack constraint already presolved? */
+   unsigned int          presolvedtiming:3;  /**< max level in which the knapsack constraint is already presolved */
    unsigned int          sorted:1;           /**< are the knapsack items sorted by weight? */
    unsigned int          cliquepartitioned:1;/**< is the clique partition valid? */
    unsigned int          negcliquepartitioned:1;/**< is the negated clique partition valid? */
@@ -642,7 +642,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->ncliques = 0;
    (*consdata)->nnegcliques = 0;
    (*consdata)->propagated = FALSE;
-   (*consdata)->presolved = FALSE;
+   (*consdata)->presolvedtiming = 0;
    (*consdata)->sorted = FALSE;
    (*consdata)->cliquepartitioned = FALSE;
    (*consdata)->negcliquepartitioned = FALSE;
@@ -764,7 +764,7 @@ void consdataChgWeight(
    }
 
    consdata->propagated = FALSE;
-   consdata->presolved = FALSE;
+   consdata->presolvedtiming = 0;
    consdata->sorted = FALSE;
 
    /* recalculate cliques extraction after a weight was increased */
@@ -6261,7 +6261,7 @@ SCIP_RETCODE addCoef(
       consdata->merged = FALSE;
    }
    consdata->propagated = FALSE;
-   consdata->presolved = FALSE;
+   consdata->presolvedtiming = 0;
    consdata->cliquesadded = FALSE; /* new coefficient might lead to larger cliques */
 
    return SCIP_OKAY;
@@ -6326,7 +6326,7 @@ SCIP_RETCODE delCoefPos(
    SCIP_CALL( SCIPreleaseVar(scip, &var) );
 
    consdata->propagated = FALSE;
-   consdata->presolved = FALSE;
+   consdata->presolvedtiming = 0;
    consdata->sorted = (consdata->sorted && pos == consdata->nvars - 1);
 
    /* try to use old clique partitions */
@@ -11533,7 +11533,7 @@ SCIP_RETCODE preprocessConstraintPairs(
    sortItems(consdata0);
 
    /* check constraint against all prior constraints */
-   for( c = (consdata0->presolved ? firstchange : 0); c < chkind; ++c )
+   for( c = (consdata0->presolvedtiming == SCIP_PRESOLTIMING_EXHAUSTIVE ? firstchange : 0); c < chkind; ++c )
    {
       SCIP_CONS* cons1;
       SCIP_CONSDATA* consdata1;
@@ -11553,7 +11553,7 @@ SCIP_RETCODE preprocessConstraintPairs(
       assert(consdata1 != NULL);
 
       /* if both constraints didn't change since last pair processing, we can ignore the pair */
-      if( consdata0->presolved && consdata1->presolved )
+      if( consdata0->presolvedtiming >= SCIP_PRESOLTIMING_EXHAUSTIVE && consdata1->presolvedtiming >= SCIP_PRESOLTIMING_EXHAUSTIVE )
          continue;
 
       assert(consdata1->nvars >= 1);
@@ -12411,13 +12411,13 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 
       /* force presolving the constraint in the initial round */
       if( nrounds == 0 )
-         consdata->presolved = FALSE;
-      else if( consdata->presolved )
+         consdata->presolvedtiming = FALSE;
+      else if( consdata->presolvedtiming >= presoltiming )
          continue;
 
       SCIPdebugMessage("presolving knapsack constraint <%s>\n", SCIPconsGetName(cons));
       SCIPdebugPrintCons(scip, cons, NULL);
-      consdata->presolved = TRUE;
+      consdata->presolvedtiming = presoltiming;
 
       if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgbds > 0
          || *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds )
@@ -12518,7 +12518,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          }
       }
       /* remember the first changed constraint to begin the next aggregation round with */
-      if( firstchange == INT_MAX && !consdata->presolved )
+      if( firstchange == INT_MAX && consdata->presolvedtiming != SCIP_PRESOLTIMING_EXHAUSTIVE )
          firstchange = c;
    }
 
@@ -12549,7 +12549,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          if( !SCIPconsIsActive(cons) || SCIPconsIsModifiable(cons) )
             continue;
 
-         npaircomparisons += ((!SCIPconsGetData(cons)->presolved) ? (SCIP_Longint) c : ((SCIP_Longint) c - (SCIP_Longint) firstchange));
+         npaircomparisons += ((SCIPconsGetData(cons)->presolvedtiming < SCIP_PRESOLTIMING_EXHAUSTIVE) ? (SCIP_Longint) c : ((SCIP_Longint) c - (SCIP_Longint) firstchange));
 
          SCIP_CALL( preprocessConstraintPairs(scip, conss, firstchange, c, ndelconss) );
 
@@ -12914,7 +12914,7 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
    case SCIP_EVENTTYPE_LBTIGHTENED:
       eventdata->consdata->onesweightsum += eventdata->weight;
       eventdata->consdata->propagated = FALSE;
-      eventdata->consdata->presolved = FALSE;
+      eventdata->consdata->presolvedtiming = 0;
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
       eventdata->consdata->onesweightsum -= eventdata->weight;
@@ -12946,7 +12946,7 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
       }
       /*lint -fallthrough*/
    case SCIP_EVENTTYPE_IMPLADDED: /* further preprocessing might be possible due to additional implications */
-      eventdata->consdata->presolved = FALSE;
+      eventdata->consdata->presolvedtiming = 0;
       break;
    case SCIP_EVENTTYPE_VARDELETED:
       eventdata->consdata->varsdeleted = TRUE;

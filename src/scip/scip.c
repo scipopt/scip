@@ -13081,6 +13081,10 @@ SCIP_RETCODE presolve(
       scip->stat->lastnpresolupgdconss = scip->stat->npresolupgdconss;
       scip->stat->lastnpresolchgcoefs = scip->stat->npresolchgcoefs;
       scip->stat->lastnpresolchgsides = scip->stat->npresolchgsides;
+#ifdef SCIP_DISABLED_CODE
+      scip->stat->lastnpresolimplications = scip->stat->nimplications;
+      scip->stat->lastnpresolcliques = SCIPcliquetableGetNCliques(scip->cliquetable);
+#endif
 
       /* set presolving flag */
       scip->stat->performpresol = TRUE;

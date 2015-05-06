@@ -35,6 +35,7 @@ extern "C" {
 
 
 /** presolving execution timing flags */
+#define SCIP_PRESOLTIMING_NONE            0x000u  /**< presolving disabled */
 #define SCIP_PRESOLTIMING_FAST            0x001u  /**< timing for fast presolving methods */
 #define SCIP_PRESOLTIMING_MEDIUM          0x002u  /**< timing for more expensive presolving methods */
 #define SCIP_PRESOLTIMING_EXHAUSTIVE      0x004u  /**< timing for most expensive presolving methods */

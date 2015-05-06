@@ -193,16 +193,20 @@ struct SCIP_Stat
    int                   npresolupgdconss;   /**< number of presolving constraint upgrades in current run */
    int                   npresolchgcoefs;    /**< number of presolving coefficient changes in current run */
    int                   npresolchgsides;    /**< number of presolving side changes in current run */
-   int                   lastnpresolfixedvars;/**< number of presolving fixings in current run */
-   int                   lastnpresolaggrvars;/**< number of presolving aggregations in current run */
-   int                   lastnpresolchgvartypes;/**< number of presolving variable type changes in current run */
-   int                   lastnpresolchgbds;  /**< number of presolving bound changes in current run */
-   int                   lastnpresoladdholes;/**< number of presolving hole additions in current run */
-   int                   lastnpresoldelconss;/**< number of presolving constraint deletions in current run */
-   int                   lastnpresoladdconss;/**< number of presolving constraint additions in current run */
-   int                   lastnpresolupgdconss;/**< number of presolving constraint upgrades in current run */
-   int                   lastnpresolchgcoefs;/**< number of presolving coefficient changes in current run */
-   int                   lastnpresolchgsides;/**< number of presolving side changes in current run */
+   int                   lastnpresolfixedvars;/**< number of presolving fixings before presolving round */
+   int                   lastnpresolaggrvars;/**< number of presolving aggregations before presolving round */
+   int                   lastnpresolchgvartypes;/**< number of presolving variable type changes before presolving round */
+   int                   lastnpresolchgbds;  /**< number of presolving bound changes before presolving round */
+   int                   lastnpresoladdholes;/**< number of presolving hole additions before presolving round */
+   int                   lastnpresoldelconss;/**< number of presolving constraint deletions before presolving round */
+   int                   lastnpresoladdconss;/**< number of presolving constraint additions before presolving round */
+   int                   lastnpresolupgdconss;/**< number of presolving constraint upgrades before presolving round */
+   int                   lastnpresolchgcoefs;/**< number of presolving coefficient changes before presolving round */
+   int                   lastnpresolchgsides;/**< number of presolving side changes before presolving round */
+#ifdef SCIP_DISABLED_CODE
+   int                   lastnpresolimplications;/**< number of implications before presolving round */
+   int                   lastnpresolcliques; /**< number of cliques before presolving round */
+#endif
    int                   solindex;           /**< consecutively numbered solution index */
    int                   nrunsbeforefirst;   /**< number of runs until first primal solution */
    int                   firstprimaldepth;   /**< depth in which first primal solution was found */
