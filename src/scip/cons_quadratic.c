@@ -29,7 +29,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-
 #include <assert.h>
 #include <string.h> /* for strcmp */ 
 #include <ctype.h>  /* for isspace */
@@ -7243,9 +7242,14 @@ SCIP_RETCODE computeInteriorPoint(
 
    /* initializing the subproblem */
    SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
+   SCIP_CALL( SCIPnlpiSetMessageHdlr(nlpi, SCIPgetMessagehdlr(scip)) );
 
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_subquad", SCIPgetProbName(scip));
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &prob, probname) );
+
+#ifdef SCIP_DEBUG_INT
+   SCIP_CALL( SCIPnlpiSetIntPar(nlpi, prob, SCIP_NLPPAR_VERBLEVEL, 1) );
+#endif
 
    /* ask memory to store data needed to create vars and linear coefficients */
    nquadvars = consdata->nquadvars;
@@ -7374,9 +7378,11 @@ SCIP_RETCODE computeInteriorPoint(
       case SCIP_NLPSOLSTAT_LOCINFEASIBLE:
       case SCIP_NLPSOLSTAT_GLOBINFEASIBLE:
          /* fallthrough */
+         /* TODO: we could still use the point, and let evaluateGauge decide whether the point is interior or not */
          SCIPdebugMessage("cons %s: failed to find an interior point.  solution status: %d, termination status: %d\n",
                SCIPconsGetName(cons), SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
          goto TERMINATE;
+         break;
 
       case SCIP_NLPSOLSTAT_UNBOUNDED:
       case SCIP_NLPSOLSTAT_UNKNOWN:
@@ -7424,7 +7430,8 @@ TERMINATE:
 
    if( *success )
    {
-      printf("Computation successfull, point found:\n");
+      printf("Computation successfull, NLP soltat: %d, termstat: %d\nPoint found:\n",
+               SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
       for( i = 0; i < nquadvars; i++ )
          printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[i].var), consdata->interiorpoint[i]);
    }
@@ -7669,20 +7676,25 @@ SCIP_RETCODE evaluateGauge(
       {
          assert(consdata->nlinvars > 0);
 #ifdef SCIP_DEBUG_GAUGE
-         printf("For current level, there is no interior point");
-         printf("side: %15.20g interiorpointval: %15.20g\n", side, consdata->interiorpointval);
+         printf("For current level, there is no interior point. ");
+         printf("rhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->rhs, side, consdata->interiorpointval);
          if( consdata->nlinvars == 1 )
          {
             SCIP_VAR* var;
 
             var = consdata->linvars[0];
-            printf("var <%s> [%15.20g, %15.20g] is linpart\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-            assert(SCIPisFeasZero(scip, aterm));
+            printf("var <%s> = %g in [%15.20g, %15.20g] is linpart\n", SCIPvarGetName(var),
+                  SCIPgetSolVal(scip, refsol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
+            //assert(SCIPisFeasZero(scip, aterm));
          }
 #endif
          *gaugeval = -1.0;
          return SCIP_OKAY;
       }
+#ifdef SCIP_DEBUG_GAUGE
+      printf("For current level, there is interior point. ");
+      printf("rhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->rhs, side, consdata->interiorpointval);
+#endif
       assert(SCIPisPositive(scip, aterm));
    }
    else
@@ -7822,12 +7834,12 @@ SCIP_RETCODE computeReferencePointGauge(
    {
       SCIP_Real level;
 
-      level = 0;
+      level = consdata->rhs;
       for( j = 0; j < consdata->nlinvars; j++ )
          level -= SCIPgetSolVal(scip, refsol, consdata->linvars[j]) * consdata->lincoefs[j];
 
       printf("Summary:\n");
-      printf("For cons <%s>: gauge at level %g evaluated at (refsol - intpoint) is %g\n",
+      printf("For cons <%s>: gauge at level %g evaluated at (refsol - intpoint) is %.10f\n",
             SCIPconsGetName(cons), level, gaugeval);
       printf("refsol - intpoint:\n");
 
@@ -7847,7 +7859,7 @@ SCIP_RETCODE computeReferencePointGauge(
     * in this case, since the solution is feasible, gaugeval <= 1
     * is it a good idea to modify the point if it is interior?
     */
-   if( gaugeval < 1.0 )
+   if( SCIPisLE(scip, gaugeval, 1.0) )
    {
       gaugeval = 1.0;
       *success = FALSE;
@@ -7872,6 +7884,7 @@ SCIP_RETCODE computeReferencePointGauge(
    }
 
 #ifdef SCIP_DEBUG_GAUGE
+   printf("successful application of guage: %g\n", gaugeval);
    printf("modified reference point:\n");
    for( j = 0; j < consdata->nquadvars; ++j )
       printf("%s = % 20.15g\n", SCIPvarGetName(consdata->quadvarterms[j].var), (*ref)[j]);
@@ -7929,6 +7942,18 @@ SCIP_RETCODE generateCutSol(
       SCIP_CALL( computeReferencePointGauge(scip, conshdlr, cons, refsol, checkcurvmultivar, &ref, &success) );
    }
 
+   if( success )
+   {
+      SCIP_CALL( generateCut(scip, conshdlr, cons, ref, sol, violside, row, efficacy, checkcurvmultivar, minefficacy) );
+
+      /* if cut fails, try again without modifying reference point via gauge */
+      if( *row == NULL || (efficacy != NULL && !SCIPisGT(scip, *efficacy, minefficacy)) || !SCIPisCutApplicable(scip, *row) )  /*lint !e644 */
+      {
+         printf("gauge cut fail, try without modifying\n");
+         success = FALSE;
+      }
+   }
+
    if( !success )
    {
       for( j = 0; j < consdata->nquadvars; ++j )
@@ -7943,9 +7968,9 @@ SCIP_RETCODE generateCutSol(
          ref[j] = SCIPgetSolVal(scip, refsol, var);
          ref[j] = MIN(ub, MAX(lb, ref[j])); /* project value into bounds */
       }
-   }
 
-   SCIP_CALL( generateCut(scip, conshdlr, cons, ref, sol, violside, row, efficacy, checkcurvmultivar, minefficacy) );
+      SCIP_CALL( generateCut(scip, conshdlr, cons, ref, sol, violside, row, efficacy, checkcurvmultivar, minefficacy) );
+   }
 
    SCIPfreeBufferArray(scip, &ref);
 
