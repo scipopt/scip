@@ -97,8 +97,10 @@ struct SCIP_ConshdlrData
                                               *   by using clique and implications */
    SCIP_Bool             usestrengthening;   /**< should pairwise constraint comparison try to strengthen constraints by
                                               *   removing superflous non-zeros? */
-   int                   nlastcliques;       /**< number of cliques after last negated clique presolving round */
-   int                   nlastimpls;         /**< number of implications after last negated clique presolving round */
+   int                   nlastcliquesneg;    /**< number of cliques after last negated clique presolving round */
+   int                   nlastimplsneg;      /**< number of implications after last negated clique presolving round */
+   int                   nlastcliquesshorten;/**< number of cliques after last shortening of constraints */
+   int                   nlastimplsshorten;  /**< number of implications after last shortening of constraints */
 };
 
 /* @todo it might speed up exit-presolve to remember all positions for variables when catching the varfixed event, or we
@@ -177,8 +179,10 @@ SCIP_RETCODE conshdlrdataCreate(
 
    SCIP_CALL( SCIPallocMemory(scip, conshdlrdata) );
 
-   (*conshdlrdata)->nlastcliques = 0;
-   (*conshdlrdata)->nlastimpls = 0;
+   (*conshdlrdata)->nlastcliquesneg = 0;
+   (*conshdlrdata)->nlastimplsneg = 0;
+   (*conshdlrdata)->nlastcliquesshorten = 0;
+   (*conshdlrdata)->nlastimplsshorten = 0;
 
    /* set event handler for catching events on watched variables */
    (*conshdlrdata)->eventhdlr = eventhdlr;
@@ -3070,6 +3074,7 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
 static
 SCIP_RETCODE shortenConss(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< logic or constraint handler data */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
    SCIP_CONS**           conss,              /**< all constraints */
    int                   nconss,             /**< number of constraints */
@@ -3106,6 +3111,13 @@ SCIP_RETCODE shortenConss(
       return SCIP_OKAY;
 
    assert(conss != NULL);
+
+   if( SCIPgetNCliques(scip) == conshdlrdata->nlastcliquesshorten
+      && SCIPgetNImplications(scip) == conshdlrdata->nlastimplsshorten )
+      return SCIP_OKAY;
+
+   conshdlrdata->nlastcliquesshorten = SCIPgetNCliques(scip);
+   conshdlrdata->nlastimplsshorten = SCIPgetNImplications(scip);
 
    nbinprobvars = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
 
@@ -3280,8 +3292,11 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
    if( nconss == 0 )
       return SCIP_OKAY;
 
-   if( SCIPgetNCliques(scip) == conshdlrdata->nlastcliques && SCIPgetNImplications(scip) == conshdlrdata->nlastimpls )
+   if( SCIPgetNCliques(scip) == conshdlrdata->nlastcliquesneg && SCIPgetNImplications(scip) == conshdlrdata->nlastimplsneg )
       return SCIP_OKAY;
+
+   conshdlrdata->nlastcliquesneg = SCIPgetNCliques(scip);
+   conshdlrdata->nlastimplsneg = SCIPgetNImplications(scip);
 
    /* estimate the maximal number of variables in a logicor constraint */
    size = SCIPgetNVars(scip) - SCIPgetNContVars(scip);
@@ -3851,8 +3866,10 @@ SCIP_DECL_CONSINITPRE(consInitpreLogicor)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   conshdlrdata->nlastcliques = 0;
-   conshdlrdata->nlastimpls = 0;
+   conshdlrdata->nlastcliquesneg = 0;
+   conshdlrdata->nlastimplsneg = 0;
+   conshdlrdata->nlastcliquesshorten = 0;
+   conshdlrdata->nlastimplsshorten = 0;
 
    /* catch all variable event for deleted variables, which is only used in presolving */
    for( c = nconss - 1; c >= 0; --c )
@@ -4454,7 +4471,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
    }
 
    /* preprocess pairs of logic or constraints and apply negated clique presolving */
-   if( oldnfixedvars == *nfixedvars && oldnchgbds == *nchgbds && oldndelconss == *ndelconss && oldnupgdconss == *nupgdconss && oldnchgcoefs == *nchgcoefs )
+   if( SCIPisPresolveFinished(scip) )
    {
       SCIP_Bool cutoff = FALSE;
 
@@ -4472,10 +4489,10 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
          /* try to tighten constraints by reducing the number of variables in the constraints using implications and
           * cliques, also derive fixations through them, @see SCIPshrinkDisjunctiveVarSet()
           */
-         if( conshdlrdata->useimplications && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0
-            && (SCIPgetNCliques(scip) != conshdlrdata->nlastcliques || SCIPgetNImplications(scip) > conshdlrdata->nlastimpls) )
+         if( conshdlrdata->useimplications && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
          {
-            SCIP_CALL( shortenConss(scip, conshdlrdata->eventhdlr, conss, nconss, &entries, &nentries, nfixedvars, ndelconss, nchgcoefs, &cutoff) );
+            SCIP_CALL( shortenConss(scip, conshdlrdata, conshdlrdata->eventhdlr, conss, nconss,
+                  &entries, &nentries, nfixedvars, ndelconss, nchgcoefs, &cutoff) );
 
             if( cutoff )
                goto TERMINATE;
@@ -4484,16 +4501,12 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
          /* check for redundant constraints due to negated clique information */
          if( conshdlrdata->usenegatedclique && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
          {
-            SCIP_CALL( removeConstraintsDueToNegCliques(scip, conshdlr, conshdlrdata->conshdlrsetppc, conshdlrdata->eventhdlr, conss, nconss, &entries, &nentries, nfixedvars, ndelconss, nupgdconss, nchgcoefs, &cutoff) );
+            SCIP_CALL( removeConstraintsDueToNegCliques(scip, conshdlr, conshdlrdata->conshdlrsetppc,
+                  conshdlrdata->eventhdlr, conss, nconss, &entries, &nentries, nfixedvars, ndelconss,
+                  nupgdconss, nchgcoefs, &cutoff) );
 
             if( cutoff )
                goto TERMINATE;
-         }
-
-         if( conshdlrdata->useimplications || conshdlrdata->usenegatedclique )
-         {
-            conshdlrdata->nlastcliques = SCIPgetNCliques(scip);
-            conshdlrdata->nlastimpls = SCIPgetNImplications(scip);
          }
       }
    }
