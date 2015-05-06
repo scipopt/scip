@@ -5099,8 +5099,8 @@ SCIP_RETCODE exprParse(
          SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_TAN, arg1) );
       }
    }
-   /* Unsupported single argument operands */
-   else if( strncmp(str, "realpower", 9) == 0 || strncmp(str, "intpower", 8) == 0  || strncmp(str, "signpower", 9) == 0 )
+   /* Unsupported two arguments operands */
+   else if( strncmp(str, "realpower", 9) == 0 || strncmp(str, "intpower", 8) == 0 || strncmp(str, "signpower", 9) == 0 || strncmp(str, "power", 5) == 0 )
    {
       SCIPerrorMessage("parsing of expression %.*s is unsupported yet.\n", (int) (lastchar - str + 1), str);
       return SCIP_READERROR;
