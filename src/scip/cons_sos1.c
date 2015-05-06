@@ -8374,8 +8374,10 @@ SCIP_DECL_CONSRESPROP(consRespropSOS1)
       assert( conshdlrdata != NULL );
       assert( conshdlrdata->conflictgraph != NULL );
       assert( inferinfo >= -conshdlrdata->maxnfixnonzerovars );
+      assert( inferinfo >= -conshdlrdata->nsos1vars );
+      assert( inferinfo <= -1 );
 
-      var = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, -inferinfo + 1);
+      var = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, -inferinfo - 1);
    }
    else
    {
@@ -8388,7 +8390,8 @@ SCIP_DECL_CONSRESPROP(consRespropSOS1)
 
       var = consdata->vars[inferinfo];
    }
-   assert( var != NULL && var != infervar );
+   assert( var != NULL );
+   assert( var != infervar );
 
    /* check if lower bound of var was the reason */
    if ( SCIPisFeasPositive(scip, SCIPvarGetLbAtIndex(var, bdchgidx, FALSE)) )
