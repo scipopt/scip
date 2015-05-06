@@ -5673,11 +5673,11 @@
  *  @section STDMEM Standard memory
  *
  *  SCIP provides an access to the standard C functions @c malloc and @c free with the additional feature of tracking
- *  memory in debug mode. In this way, memory leaks can be easily detected. This feature is automatically acitvated in
+ *  memory in debug mode. In this way, memory leaks can be easily detected. This feature is automatically activated in
  *  debug mode.
  *
  *  The most important functions are
- *  - SCIPallocMemory(), SCIPallocMemoryArray() to allocate Memory
+ *  - SCIPallocMemory(), SCIPallocMemoryArray() to allocate memory
  *  - SCIPfreeMemory(), SCIPfreeMemoryArray() to free memory
  *
  *  @section BLKMEM Block memory
@@ -5693,7 +5693,7 @@
  *  One important comment is that freeing block memory requires the size of the block in order to find the right list.
  *
  *  The most important functions are
- *  - SCIPallocBlockMemory(), SCIPallocBlockMemoryArray() to allocate Memory
+ *  - SCIPallocBlockMemory(), SCIPallocBlockMemoryArray() to allocate memory
  *  - SCIPfreeBlockMemory(), SCIPfreeBlockMemoryArray() to free memory
  *
  *  An example code is:
@@ -5716,13 +5716,23 @@
  *
  *  @section BUFMEM Buffer memory
  *
- *  In addition to block memory, SCIP offers buffer memory. This should be used if smaller sizes of memory are locally
- *  used within a function and are freed within the same function. For this purpose, SCIP has a list of memory buffers
+ *  In addition to block memory, SCIP offers buffer memory. This should be used if memory is locally
+ *  used within a function and freed within the same function. For this purpose, SCIP has a list of memory buffers
  *  that are reused for this purpose. In this way, a very efficient allocation/freeing is possible.
  *
  *  The most important functions are
- *  - SCIPallocBufferMemory(), SCIPallocBufferMemoryArray() to allocate Memory
- *  - SCIPfreeBufferMemory(), SCIPfreeBufferMemoryArray() to free memory
+ *  - SCIPallocBufferMemory(), SCIPallocBufferArray() to allocate memory
+ *  - SCIPfreeBufferMemory(), SCIPfreeBufferArray() to free memory
+ *
+ *  SCIP 3.2 introduced a new type of buffer memory, the clean buffer. It provides memory which is initialized to zero
+ *  and requires the user to reset the memory to zero before freeing it. This can be used at performance-critical
+ *  places where only few nonzeros are added to a dense array and removing these nonzeros individually is much faster
+ *  than clearing the whole array. Same as the normal buffer array, the clean buffer should be used for temporary memory
+ *  allocated and freed within the same function.
+ *
+ *  The most important functions are
+ *  - SCIPallocCleanBufferArray() to allocate memory
+ *  - SCIPfreeCleanBufferArray() to free memory
  *
  *  @section GENMEM General notes
  *
