@@ -269,6 +269,12 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
    diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
+   /* if there are no integer branching candidates (note that, e.g., SOS1 candidates may be present) */
+   if ( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) < 1 )
+      return SCIP_OKAY;
+
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
 
    return SCIP_OKAY;

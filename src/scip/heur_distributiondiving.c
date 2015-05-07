@@ -951,6 +951,10 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
 
+   /* if there are no integer branching candidates (note that, e.g., SOS1 candidates may be present) */
+   if ( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) < 1 )
+      return SCIP_OKAY;
+
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
