@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -555,6 +555,9 @@ SCIP_RETCODE SCIPapplyRens(
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
+   /* disable statistic timing inside sub SCIP */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+
    /* set limits for the subproblem */
    heurdata->nodelimit = maxnodes;
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", nstallnodes) );
@@ -619,19 +622,20 @@ SCIP_RETCODE SCIPapplyRens(
 
       upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
 
-      if( !SCIPisInfinity(scip,-1.0*SCIPgetLowerbound(scip)) )
+      if( !SCIPisInfinity(scip, -1.0 * SCIPgetLowerbound(scip)) )
       {
-         cutoff = (1-minimprove)*SCIPgetUpperbound(scip) + minimprove*SCIPgetLowerbound(scip);
+         cutoff = (1 - minimprove) * SCIPgetUpperbound(scip)
+               + minimprove * SCIPgetLowerbound(scip);
       }
       else
       {
-         if( SCIPgetUpperbound ( scip ) >= 0 )
-            cutoff = ( 1 - minimprove ) * SCIPgetUpperbound ( scip );
+         if( SCIPgetUpperbound(scip) >= 0 )
+            cutoff = (1 - minimprove) * SCIPgetUpperbound(scip);
          else
-            cutoff = ( 1 + minimprove ) * SCIPgetUpperbound ( scip );
+            cutoff = (1 + minimprove) * SCIPgetUpperbound(scip);
       }
       cutoff = MIN(upperbound, cutoff);
-      SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
+      SCIP_CALL(SCIPsetObjlimit(subscip, cutoff));
    }
 
    /* presolve the subproblem */
@@ -698,6 +702,11 @@ SCIP_RETCODE SCIPapplyRens(
          SCIP_CALL( retcode );
 #endif
          SCIPwarningMessage(scip, "Error while solving subproblem in RENS heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+      }
+      else
+      {
+         /* transfer variable statistics from sub-SCIP */
+         SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
       }
 
       /* print solving statistics of subproblem if we are in SCIP's debug mode */

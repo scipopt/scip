@@ -1,0 +1,10 @@
+# SCIP version 2.1.1.6
+
+#  should we try to lift variables into other clique constraints, fix variables, aggregate them, and also shrink the amount of variables in clique constraints
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/setppc/cliquelifting = TRUE
+
+# should we try to generate extra cliques out of all binary variables to maybe fasten redundant constraint detection 
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/setppc/addvariablesascliques = TRUE
+

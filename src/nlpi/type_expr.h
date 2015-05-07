@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -71,9 +71,10 @@ enum SCIP_ExprOp {
    SCIP_EXPR_LINEAR    = 66,  /**< linear term sum_{i=1}^n a_i op_i (n operands) */
    SCIP_EXPR_QUADRATIC = 67,  /**< quadratic term sum_{i,j=1}^n a_{i,j} op_i op_j (n operands) */
    SCIP_EXPR_POLYNOMIAL= 68,  /**< polynomial term sum_{I} a_{I}ops^I (I a multiindex, n operands) */
+   SCIP_EXPR_USER      = 69,  /**< a user defined expression */
    /**@} */
 
-   SCIP_EXPR_LAST      = 69   /**< no expression, used for counting reasons */
+   SCIP_EXPR_LAST      = 70   /**< no expression, used for counting reasons */
 };
 
 /** Curvature types */
@@ -107,6 +108,8 @@ typedef struct SCIP_ExprData_Quadratic SCIP_EXPRDATA_QUADRATIC; /**< the data of
 
 typedef struct SCIP_ExprData_Monomial   SCIP_EXPRDATA_MONOMIAL;   /**< a monomial as part of the data in a polynomial expression */
 typedef struct SCIP_ExprData_Polynomial SCIP_EXPRDATA_POLYNOMIAL; /**< the data of a polynomial expression (SCIP_EXPR_POLYNOMIAL) */
+
+typedef struct SCIP_ExprData_User      SCIP_EXPRDATA_USER;      /**< expression data of a user expression (not the user-data of a user expression) */
 
 #define SCIP_EXPR_DEGREEINFINITY 65535       /**< value that stands for an infinite degree of an expression (see SCIPexprGetMaxDegree) */
 
@@ -211,6 +214,90 @@ typedef struct SCIP_ExprGraph     SCIP_EXPRGRAPH;     /**< an expression graph (
 #define SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTFORCE (0x10 | SCIP_EXPRBOUNDSTATUS_TIGHTENEDBYPARENTRECENT) /**< bounds may have recently been tightened by reverse propagation in a parent, in any case we want to propagate bounds further down */
 
 typedef char             SCIP_EXPRBOUNDSTATUS;     /**< bitflags that indicate the status of bounds stored in a node of an expression graph */
+
+
+typedef struct SCIP_UserExprData SCIP_USEREXPRDATA; /**< the user data of a user expression */
+
+/** signature of an user's expression under/over estimation function
+ * The function should return nan, inf, or -inf in result if the function is undefined for the given arguments.
+ *
+ * - infinity      value for infinity
+ * - data          user expression data
+ * - nargs         number of arguments
+ * - argvals       values of arguments
+ * - argbounds     bounds on value of arguments
+ * - overestimate  flag indicating whether to over- or under estimate the expression
+ * - coeffs        buffer where to store resulting coeffs of arguments for the estimator
+ * - constant      buffer where to store resulting constant of the estimator
+ * - success       buffer to indicate whether under-/overestimation was successful
+ */
+#define SCIP_DECL_USEREXPRESTIMATE(x) SCIP_RETCODE x (SCIP_Real infinity, SCIP_USEREXPRDATA* data, int nargs, SCIP_Real* argvals, SCIP_INTERVAL* argbounds, SCIP_Bool overestimate, SCIP_Real* coeffs, SCIP_Real* constant, SCIP_Bool *success)
+
+/** signature of an user's expression (pointwise) evaluation function
+ * The function should return nan, inf, or -inf in result if the function is undefined for the given arguments.
+ *
+ * - data      user expression data
+ * - nargs     number of arguments
+ * - argvals   values of arguments
+ * - funcvalue buffer where to store result of function evaluation
+ * - gradient  buffer where to store result of gradient evaluation (NULL if not requested)
+ * - hessian   buffer where to store result of Hessian evaluation (NULL if not requested, currently full dense matrix)
+ */
+#define SCIP_DECL_USEREXPREVAL(x) SCIP_RETCODE x (SCIP_USEREXPRDATA* data, int nargs, SCIP_Real* argvals, SCIP_Real* funcvalue, SCIP_Real* gradient, SCIP_Real* hessian)
+
+/** signature of an user's expression (interval) evaluation function
+ * The function should return an empty interval if the function is undefined for the given arguments.
+ *
+ * - infinity  value for infinity
+ * - data      user expression data
+ * - nargs     number of arguments
+ * - argvals   interval values of arguments
+ * - funvalue  buffer where to store result of function evaluation
+ * - gradient  buffer where to store result of gradient evaluation (NULL if not requested)
+ * - hessian   buffer where to store result of Hessian evaluation (NULL if not requested, currently full dense matrix)
+ */
+#define SCIP_DECL_USEREXPRINTEVAL(x) SCIP_RETCODE x (SCIP_Real infinity, SCIP_USEREXPRDATA* data, int nargs, SCIP_INTERVAL* argvals, SCIP_INTERVAL* funcvalue, SCIP_INTERVAL* gradient, SCIP_INTERVAL* hessian)
+
+/** signature of a user's expression curvature check function
+ *
+ * - infinity  value for infinity
+ * - data      user expression data
+ * - nargs     number of arguments
+ * - argbounds bounds on value of arguments
+ * - argcurv   curvature of arguments
+ * - result    buffer where to store result of curvature check
+ */
+#define SCIP_DECL_USEREXPRCURV(x) SCIP_RETCODE x (SCIP_Real infinity, SCIP_USEREXPRDATA* data, int nargs, SCIP_INTERVAL* argbounds, SCIP_EXPRCURV* argcurv, SCIP_EXPRCURV* result)
+
+/** signature of an user's expression interval propagation function
+ * The function should compute intervals of the arguments given an interval for the function itself and all arguments.
+ *
+ * - infinity    value for infinity
+ * - data        user expression data
+ * - nargs       number of arguments
+ * - argbounds   bounds on values of arguments (on output: tightened bounds)
+ * - funcbounds  bounds on function value
+ * - cutoff      buffer to indicate whether an empty child interval was found
+ */
+#define SCIP_DECL_USEREXPRPROP(x) SCIP_RETCODE x (SCIP_Real infinity, SCIP_USEREXPRDATA* data, int nargs, SCIP_INTERVAL* argbounds, SCIP_INTERVAL funcbounds, SCIP_Bool* cutoff)
+
+/** signature of a user's expression data copy function
+ *
+ * - blkmem       block memory
+ * - nchildren    number of children in expression
+ * - datasource   source user expression data
+ * - datatarget   target user expression data
+ */
+#define SCIP_DECL_USEREXPRCOPYDATA(x) SCIP_RETCODE x (BMS_BLKMEM* blkmem, int nchildren, SCIP_USEREXPRDATA* datasource, SCIP_USEREXPRDATA** datatarget)
+
+/** signature of a user's expression data free function
+ *
+ * - blkmem       block memory
+ * - nchildren    number of children in expression
+ * - data         user expression data to free
+ */
+#define SCIP_DECL_USEREXPRFREEDATA(x) void x (BMS_BLKMEM* blkmem, int nchildren, SCIP_USEREXPRDATA* data)
+
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -370,7 +370,6 @@ public:
    BMS_BLKMEM*           blkmem;             /**< block memory used to allocate expresstion tree */
    SCIP_EXPR*            root;               /**< copy of expression tree; @todo we should not need to make a copy */
 };
-
 
 #ifndef NO_CPPAD_USER_ATOMIC
 
@@ -1204,6 +1203,429 @@ void evalSignPower(
 
 #endif
 
+
+#ifndef NO_CPPAD_USER_ATOMIC
+
+template<class Type>
+SCIP_RETCODE exprEvalUser(
+   SCIP_EXPR* expr,
+   Type* x,
+   Type& funcval,
+   Type* gradient,
+   Type* hessian
+   )
+{
+   return SCIPexprEvalUser(expr, x, &funcval, gradient, hessian);
+}
+
+template<>
+SCIP_RETCODE exprEvalUser(
+   SCIP_EXPR* expr,
+   SCIPInterval* x,
+   SCIPInterval& funcval,
+   SCIPInterval* gradient,
+   SCIPInterval* hessian
+   )
+{
+   return SCIPexprEvalIntUser(expr, SCIPInterval::infinity, x, &funcval, gradient, hessian);
+}
+
+/** Automatic differentiation of user expression as CppAD user-atomic function.
+ *
+ * This class implements forward and reverse operations for a function given by a user expression for use within CppAD.
+ */
+template<class Type>
+class atomic_userexpr : public CppAD::atomic_base<Type>
+{
+public:
+   atomic_userexpr()
+   : CppAD::atomic_base<Type>("userexpr"),
+     expr(NULL)
+   {
+      /* indicate that we want to use bool-based sparsity pattern */
+      this->option(CppAD::atomic_base<Type>::bool_sparsity_enum);
+   }
+
+private:
+   /** user expression */
+   SCIP_EXPR* expr;
+
+   /** stores user expression corresponding to next call to forward or reverse
+    *
+    * how is this supposed to be threadsafe? (we use only one global instantiation of this class)
+    */
+   virtual void set_id(size_t id)
+   {
+      expr = (SCIP_EXPR*)(void*)id;
+      assert(SCIPexprGetOperator(expr) == SCIP_EXPR_USER);
+   }
+
+   /** forward sweep of userexpr
+    *
+    * We follow http://www.coin-or.org/CppAD/Doc/atomic_forward.xml
+    *   Note, that p and q are interchanged!
+    *
+    * For a scalar variable t, let
+    *   Y(t) = f(X(t))
+    *   X(t) = x^0 + x^1 t^1 + ... + x^p t^p
+    * where for x^i the i an index, while for t^i the i is an exponent.
+    * Thus, x^k = 1/k! X^(k) (0),   where X^(k)(.) denotes the k-th derivative.
+    *
+    * Next, let y^k = 1/k! Y^(k)(0) be the k'th taylor coefficient of Y. Thus,
+    *   y^0 = Y^(0)(0)     =     Y(0)   = f(X(0)) = f(x^0)
+    *   y^1 = Y^(1)(0)     =     Y'(0)  = f'(X(0)) * X'(0) = f'(x^0) * x^1
+    *   y^2 = 1/2 Y^(2)(0) = 1/2 Y''(0) = 1/2 X'(0) * f''(X(0)) X'(0) + 1/2 * f'(X(0)) * X''(0) = 1/2 x^1 * f''(x^0) * x^1 + f'(x^0) * x^2
+    *
+    * As x^k = (tx[k], tx[(p+1)+k], tx[2*(p+1)+k], ..., tx[n*(p+1)+k], we get
+    *   ty[0] = y^0 = f(x^0) = f(tx[{1..n}*(p+1)])
+    *   ty[1] = y^1 = f'(x^0) * tx[{1..n}*(p+1)+1] = sum(i=1..n, grad[i] * tx[i*(p+1)+1]),  where grad = f'(x^0)
+    *   ty[2] = 1/2 sum(i,j=1..n, x[i*(p+1)+1] * x[j*(p+1)+q] * hessian[i,j]) + sum(i=1..n, grad[i] * x[i*(p+1)+2])
+    */
+   bool forward(
+      size_t                      q,            /**< lowest order Taylor coefficient that we are evaluating */
+      size_t                      p,            /**< highest order Taylor coefficient that we are evaluating */
+      const CppAD::vector<bool>&  vx,           /**< indicates whether argument is a variable, or empty vector */
+      CppAD::vector<bool>&        vy,           /**< vector to store which function values depend on variables, or empty vector */
+      const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
+      CppAD::vector<Type>&        ty            /**< vector to store taylor coefficients of y */
+   )
+   {
+      assert(expr != NULL);
+      assert(ty.size() == p+1);
+      assert(q <= p);
+
+      size_t n = tx.size() / (p+1);
+      assert(n == (size_t)SCIPexprGetNChildren(expr));
+      assert(n >= 1);
+
+      if( vx.size() > 0 )
+      {
+         assert(vx.size() == n);
+         assert(vy.size() == 1);
+         assert(p == 0);
+
+         /* y_0 is a variable if at least one of the x_i is a variable */
+         vy[0] = false;
+         for( size_t i = 0; i < n; ++i )
+            if( vx[i] )
+            {
+               vy[0] = true;
+               break;
+            }
+      }
+
+      Type* x = new Type[n];
+      Type* gradient = NULL;
+      Type* hessian = NULL;
+
+      if( q <= 1 && 1 <= p )
+         gradient = new Type[n];
+      if( q <= 2 && 2 <= p )
+         hessian = new Type[n*n];
+
+      for( size_t i = 0; i < n; ++i )
+         x[i] = tx[i * (p+1) + 0];
+
+      if( exprEvalUser(expr, x, ty[0], gradient, hessian) != SCIP_OKAY )
+      {
+         delete[] x;
+         delete[] gradient;
+         delete[] hessian;
+         return false;
+      }
+
+      if( gradient != NULL )
+      {
+         ty[1] = 0.0;
+         for( size_t i = 0; i < n; ++i )
+            ty[1] += gradient[i] * tx[i * (p+1) + 1];
+      }
+
+      if( hessian != NULL )
+      {
+         ty[2] = 0.0;
+         for( size_t i = 0; i < n; ++i )
+         {
+            for( size_t j = 0; j < n; ++j )
+               ty[2] += 0.5 * hessian[i*n+j] * tx[i * (p+1) + 1] * tx[j * (p+1) + 1];
+
+            ty[2] += gradient[i] * tx[i * (p+1) + 2];
+         }
+      }
+
+      delete[] x;
+      delete[] gradient;
+      delete[] hessian;
+
+      /* higher order derivatives not implemented */
+      if( p > 2 )
+         return false;
+
+      return true;
+   }
+
+   /** reverse sweep of userexpr
+    *
+    * We follow http://www.coin-or.org/CppAD/Doc/atomic_reverse.xml
+    *   Note, that there q is our p.
+    *
+    * For a scalar variable t, let
+    *   Y(t) = f(X(t))
+    *   X(t) = x^0 + x^1 t^1 + ... + x^p t^p
+    * where for x^i the i an index, while for t^i the i is an exponent.
+    * Thus, x^k = 1/k! X^(k) (0),   where X^(k)(.) denotes the k-th derivative.
+    *
+    * Next, let y^k = 1/k! Y^(k)(0) be the k'th taylor coefficient of Y. Thus,
+    *   Y(t) = y^0 + y^1 t^1 + y^2 t^2 + ...
+    * y^0, y^1, ... are the taylor coefficients of f(x).
+    *
+    * Further, let F(x^0,..,x^p) by given as F^k(x) = y^k. Thus,
+    *   F^0(x) = y^0 = Y^(0)(0)   = f(x^0)
+    *   F^1(x) = y^1 = Y^(1)(0)   = f'(x^0) * x^1
+    *   F^2(x) = y^2 = 1/2 Y''(0) = 1/2 x^1 f''(x^0) x^1 + f'(x^0) x^2
+    *
+    * Given functions G: R^(p+1) -> R and H: R^(n*(p+1)) -> R, where H(x^0, x^1, .., x^p) = G(F(x^0,..,x^p)),
+    * we have to return the value of \f$\partial H / \partial x^l, l = 0..p,\f$ in px. Therefor,
+    * \f$
+    *  px^l = \partial H / \partial x^l
+    *       = sum(k=0..p, (\partial G / \partial y^k) * (\partial y^k / \partial x^l)
+    *       = sum(k=0..p, py[k] * (\partial F^k / \partial x^l)
+    * \f$
+    *
+    * For p = 0, this means
+    * \f$
+    *  px^0 = py[0] * \partial F^0 / \partial x^0
+    *       = py[0] * \partial f(x^0) / \partial x^0
+    *       = py[0] * f'(x^0)
+    * \f$
+    *
+    * For p = 1, this means
+    * \f$
+    * %l=0:
+    *  px^0 = py[0] * \partial F^0    / \partial x^0) + py[1] * \partial F^1 / \partial x^0)
+    *       = py[0] * \partial f(x^0) / \partial x^0) + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
+    *       = py[0] * f'(x^0)                         + py[1] * f''(x^0) * x^1
+    * %l=1:
+    *  px^1 = py[0] * \partial F^0    / \partial x^1) + py[1] * \partial F^1 / \partial x^1)
+    *       = py[0] * \partial f(x^0) / \partial x^1) + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
+    *       = py[0] * 0                               + py[1] * f'(x^0)
+    * \f$
+    *
+    * As x^k = (tx[k], tx[(p+1)+k], tx[2*(p+1)+k], ..., tx[n*(p+1)+k] and
+    *   px^k = (px[k], px[(p+1)+k], px[2*(p+1)+k], ..., px[n*(p+1)+k], we get
+    * for p = 0:
+    *   px[i] = (px^0)_i = py[0] * grad[i]
+    * for p = 1:
+    *   px[i*2+0] = (px^0)_i = py[0] * grad[i] + py[1] * sum(j, hessian[j,i] * tx[j*2+1])
+    *   px[i*2+1] = (px^1)_i = py[1] * grad[i]
+    */
+   bool reverse(
+      size_t                      p,            /**< highest order Taylor coefficient that we are evaluating */
+      const CppAD::vector<Type>&  tx,           /**< values for taylor coefficients of x */
+      const CppAD::vector<Type>&  ty,           /**< values for taylor coefficients of y */
+      CppAD::vector<Type>&        px,           /**< vector to store partial derivatives of h(x) = g(y(x)) w.r.t. x */
+      const CppAD::vector<Type>&  py            /**< values for partial derivatives of g(x) w.r.t. y */
+      )
+   {
+      assert(expr != NULL);
+      assert(px.size() == tx.size());
+      assert(py.size() == p+1);
+
+      size_t n = tx.size() / (p+1);
+      assert(n == (size_t)SCIPexprGetNChildren(expr));
+      assert(n >= 1);
+
+      Type* x = new Type[n];
+      Type funcval;
+      Type* gradient = new Type[n];
+      Type* hessian = NULL;
+
+      if( p == 1 )
+         hessian = new Type[n*n];
+
+      for( size_t i = 0; i < n; ++i )
+         x[i] = tx[i * (p+1) + 0];
+
+      if( exprEvalUser(expr, x, funcval, gradient, hessian) != SCIP_OKAY )
+      {
+         delete[] x;
+         delete[] gradient;
+         delete[] hessian;
+         return false;
+      }
+
+      switch( p )
+      {
+      case 0:
+         // px[j] = (px^0)_j = py[0] * grad[j]
+         for( size_t i = 0; i < n; ++i )
+            px[i] = py[0] * gradient[i];
+         break;
+
+      case 1:
+         //  px[i*2+0] = (px^0)_i = py[0] * grad[i] + py[1] * sum(j, hessian[j,i] * tx[j*2+1])
+         //  px[i*2+1] = (px^1)_i = py[1] * grad[i]
+         for( size_t i = 0; i < n; ++i )
+         {
+            px[i*2+0] = py[0] * gradient[i];
+            for( size_t j = 0; j < n; ++j )
+               px[i*2+0] += py[1] * hessian[i+n*j] * tx[j*2+1];
+
+            px[i*2+1] = py[1] * gradient[i];
+         }
+         break;
+
+      default:
+         return false;
+      }
+
+      return true;
+   }
+
+   using CppAD::atomic_base<Type>::for_sparse_jac;
+
+   /** computes sparsity of jacobian during a forward sweep
+    * For a 1 x q matrix R, we have to return the sparsity pattern of the 1 x q matrix S(x) = f'(x) * R.
+    * Since we assume f'(x) to be dense, the sparsity of S will be the sparsity of R.
+    */
+   bool for_sparse_jac(
+      size_t                     q,  /**< number of columns in R */
+      const CppAD::vector<bool>& r,  /**< sparsity of R, columnwise */
+      CppAD::vector<bool>&       s   /**< vector to store sparsity of S, columnwise */
+      )
+   {
+      assert(expr != NULL);
+      assert(s.size() == q);
+
+      size_t n = r.size() / q;
+      assert(n == (size_t)SCIPexprGetNChildren(expr));
+
+      // sparsity for S(x) = f'(x) * R
+      for( size_t j = 0; j < q; j++ )
+      {
+         s[j] = false;
+         for( size_t i = 0; i < n; i++ )
+            s[j] |= r[i * q + j];
+      }
+
+      return true;
+   }
+
+   using CppAD::atomic_base<Type>::rev_sparse_jac;
+
+   /** computes sparsity of jacobian during a reverse sweep
+    * For a q x 1 matrix S, we have to return the sparsity pattern of the q x 1 matrix R(x) = S * f'(x).
+    * Since we assume f'(x) to be dense, the sparsity of R will be the sparsity of S.
+    */
+   bool rev_sparse_jac(
+      size_t                     q,  /**< number of rows in R */
+      const CppAD::vector<bool>&       rt, /**< sparsity of R, rowwise */
+      CppAD::vector<bool>& st  /**< vector to store sparsity of S, rowwise */
+      )
+   {
+      assert(expr != NULL);
+      assert(rt.size() == q);
+
+      size_t n = st.size() / q;
+      assert(n == (size_t)SCIPexprGetNChildren(expr));
+
+      // sparsity for S(x)^T = f'(x)^T * R^T
+      for( size_t j = 0; j < q; j++ )
+         for( size_t i = 0; i < n; i++ )
+            st[i * q + j] = rt[j];
+
+      return true;
+   }
+
+   using CppAD::atomic_base<Type>::rev_sparse_hes;
+
+   /** computes sparsity of hessian during a reverse sweep
+    * Assume V(x) = (g(f(x)))'' R  for a function g:R->R and a matrix R.
+    * we have to specify the sparsity pattern of V(x) and T(x) = (g(f(x)))'.
+    */
+   bool rev_sparse_hes(
+      const CppAD::vector<bool>&              vx, /**< indicates whether argument is a variable, or empty vector */
+      const CppAD::vector<bool>&              s,  /**< sparsity pattern of S = g'(y) */
+      CppAD::vector<bool>&                    t,  /**< vector to store sparsity pattern of T(x) = (g(f(x)))' */
+      size_t                                  q,  /**< number of columns in S and R */
+      const CppAD::vector<bool>& r,  /**< sparsity pattern of R */
+      const CppAD::vector<bool>& u,  /**< sparsity pattern of U(x) = g''(f(x)) f'(x) R */
+      CppAD::vector<bool>&      v   /**< vector to store sparsity pattern of V(x) = (g(f(x)))'' R */
+   )
+   {
+      assert(expr != NULL);
+      size_t n = vx.size();
+      assert((size_t)SCIPexprGetNChildren(expr) == n);
+      assert(s.size() == 1);
+      assert(t.size() == n);
+      assert(r.size() == n * q);
+      assert(u.size() == q);
+      assert(v.size() == n * q);
+
+      size_t i, j, k;
+
+      // sparsity for T(x) = S(x) * f'(x)
+      for( i = 0; i < n; ++i )
+         t[i] = s[0];
+
+      // V(x) = f'(x)^T * g''(y) * f'(x) * R  +  g'(y) * f''(x) * R
+      // U(x) = g''(y) * f'(x) * R
+      // S(x) = g'(y)
+
+      // back propagate the sparsity for U
+      for( j = 0; j < q; j++ )
+         for( i = 0; i < n; i++ )
+            v[ i * q + j] = u[j];
+
+      // include forward Jacobian sparsity in Hessian sparsity
+      // sparsity for g'(y) * f''(x) * R  (Note f''(x) is assumed to be dense)
+      if( s[0] )
+         for( j = 0; j < q; j++ )
+            for( i = 0; i < n; i++ )
+               for( k = 0; k < n; ++k )
+                  v[ i * q + j] |= r[ k * q + j];
+
+      return true;
+   }
+
+};
+
+template<class Type>
+static
+void evalUser(
+   Type&                 resultant,          /**< resultant */
+   const Type*           args,               /**< operands */
+   SCIP_EXPR*            expr                /**< expression that holds the user expression */
+   )
+{
+   vector<Type> in(args, args + SCIPexprGetNChildren(expr));
+   vector<Type> out(1);
+
+   static atomic_userexpr<typename Type::value_type> u;
+   u(in, out, (size_t)(void*)expr);
+
+   resultant = out[0];
+   return;
+}
+
+#else
+
+template<class Type>
+static
+void evalUser(
+   Type&                 resultant,          /**< resultant */
+   const Type*           args,               /**< operands */
+   SCIP_EXPR*            expr                /**< expression that holds the user expression */
+   )
+{
+   CppAD::ErrorHandler::Call(true, __LINE__, __FILE__,
+      "evalUser()",
+      "Error: user expressions in CppAD not possible without CppAD user atomic facility"
+      );
+}
+
+#endif
+
 /** template for evaluation for minimum operator
  *
  *  Only implemented for real numbers, thus gives error by default.
@@ -1665,7 +2087,11 @@ SCIP_RETCODE eval(
       break;
    }
 
-   default:
+   case SCIP_EXPR_USER:
+      evalUser(val, buf, expr);
+      break;
+
+   case SCIP_EXPR_LAST:
       return SCIP_ERROR;
    }
 
@@ -1889,6 +2315,12 @@ SCIP_RETCODE SCIPexprintEval(
 
    int n = SCIPexprtreeGetNVars(tree);
 
+   if( n == 0 )
+   {
+      SCIP_CALL( SCIPexprtreeEval(tree, NULL, val) );
+      return SCIP_OKAY;
+   }
+
    if( data->need_retape_always || data->need_retape )
    {
       for( int i = 0; i < n; ++i )
@@ -1951,6 +2383,12 @@ SCIP_RETCODE SCIPexprintEvalInt(
    assert(SCIPexprtreeGetRoot(tree)  != NULL);
 
    int n = SCIPexprtreeGetNVars(tree);
+
+   if( n == 0 )
+   {
+      SCIP_CALL( SCIPexprtreeEvalInt(tree, infinity, NULL, val) );
+      return SCIP_OKAY;
+   }
 
    SCIPInterval::infinity = infinity;
 
@@ -2017,6 +2455,9 @@ SCIP_RETCODE SCIPexprintGrad(
 
    int n = SCIPexprtreeGetNVars(tree);
 
+   if( n == 0 )
+      return SCIP_OKAY;
+
    vector<double> jac(data->f.Jacobian(data->x));
 
    for( int i = 0; i < n; ++i )
@@ -2060,6 +2501,9 @@ SCIP_RETCODE SCIPexprintGradInt(
 
    int n = SCIPexprtreeGetNVars(tree);
 
+   if( n == 0 )
+      return SCIP_OKAY;
+
    vector<SCIPInterval> jac(data->int_f.Jacobian(data->int_x));
 
    for (int i = 0; i < n; ++i)
@@ -2097,6 +2541,9 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
    assert(data != NULL);
 
    int n = SCIPexprtreeGetNVars(tree);
+   if( n == 0 )
+      return SCIP_OKAY;
+
    int nn = n*n;
 
    if( data->need_retape_always )
@@ -2177,6 +2624,9 @@ SCIP_RETCODE SCIPexprintHessianDense(
       *val = data->val;
 
    int n = SCIPexprtreeGetNVars(tree);
+
+   if( n == 0 )
+      return SCIP_OKAY;
 
 #if 1
    /* this one uses reverse mode */

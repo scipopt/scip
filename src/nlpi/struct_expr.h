@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -94,6 +94,20 @@ struct SCIP_ExprData_Monomial
    int*                  childidxs;          /**< children corresponding to factors */
    SCIP_Real*            exponents;          /**< value of exponent for each factor */
    SCIP_Bool             sorted;             /**< are the factors sorted (by childidx)? */
+};
+
+/** data of a user-defined expression
+ */
+struct SCIP_ExprData_User
+{
+   SCIP_USEREXPRDATA*    userdata;           /**< user data for expression */
+   SCIP_DECL_USEREXPREVAL    ((*eval));      /**< evaluation function */
+   SCIP_DECL_USEREXPRINTEVAL ((*inteval));   /**< interval evaluation function */
+   SCIP_DECL_USEREXPRCURV    ((*curv));      /**< curvature check function */
+   SCIP_DECL_USEREXPRPROP    ((*prop));      /**< interval propagation function */
+   SCIP_DECL_USEREXPRESTIMATE ((*estimate)); /**< under-/over-estimator function */
+   SCIP_DECL_USEREXPRCOPYDATA ((*copydata)); /**< expression data copy function, or NULL if nothing to copy */
+   SCIP_DECL_USEREXPRFREEDATA ((*freedata)); /**< expression data free function, or NULL if nothing to free */
 };
 
 /** a node in an expression graph */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,7 +25,7 @@
 #include "scip/def.h"
 #include "scip/set.h"
 #include "scip/stat.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"
@@ -166,7 +166,7 @@ SCIP_RETCODE primalSetCutoffbound(
 {
    assert(primal != NULL);
    assert(cutoffbound <= SCIPsetInfinity(set));
-   assert(SCIPsetIsLE(set, cutoffbound, primal->upperbound));
+   assert(primal->upperbound == SCIP_INVALID || SCIPsetIsLE(set, cutoffbound, primal->upperbound));
    assert(!SCIPtreeInRepropagation(tree));
 
    SCIPdebugMessage("changing cutoff bound from %g to %g\n", primal->cutoffbound, cutoffbound);
@@ -189,7 +189,7 @@ SCIP_RETCODE SCIPprimalSetCutoffbound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< current LP data */
@@ -278,10 +278,10 @@ SCIP_RETCODE primalSetUpperbound(
       SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, prob, eventqueue, tree, lp, cutoffbound) );
    }
 
-   /* update upper bound in VBC output */
+   /* update upper bound in visualization output */
    if( SCIPtreeGetCurrentDepth(tree) >= 0 )
    {
-      SCIPvbcUpperbound(stat->vbc, stat, primal->upperbound);
+      SCIPvisualUpperbound(stat->visual, set, stat, primal->upperbound);
    }
 
    return SCIP_OKAY;
@@ -609,8 +609,8 @@ SCIP_RETCODE primalAddSol(
          (SCIP_Real)(primal->nsols - insertpos)/(SCIP_Real)(2.0*primal->nsols - 1.0));
    }
 
-   /* change color of node in VBC output */
-   SCIPvbcFoundSolution(stat->vbc, set, stat, SCIPtreeGetCurrentNode(tree));
+   /* change color of node in visualization output */
+   SCIPvisualFoundSolution(stat->visual, set, stat, SCIPtreeGetCurrentNode(tree), insertpos == 0 ? TRUE : FALSE, sol);
 
    /* check, if the global upper bound has to be updated */
    if( obj < primal->upperbound )

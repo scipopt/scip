@@ -1,0 +1,14 @@
+# SCIP version 3.0.2.1
+
+# should model constraints be marked as initial?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+reading/initialconss = FALSE
+
+# should columns be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reading/dynamiccols = TRUE
+
+# should rows be added and removed dynamically to the LP?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reading/dynamicrows = TRUE
+

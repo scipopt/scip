@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -830,12 +830,6 @@ SCIP_DECL_PROPINITSOL(propInitsolProbing)
    propdata->nuseless = 0;
    propdata->ntotaluseless = 0;
    propdata->nsumuseless = 0;
-#if 0
-   propdata->nfixings = 0;
-   propdata->naggregations = 0;
-   propdata->nimplications = 0;
-   propdata->nbdchgs = 0;
-#endif
 
    return SCIP_OKAY;
 }

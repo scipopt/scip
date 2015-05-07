@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -320,7 +320,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
          {
             SCIP_CALL( SCIPgetVarStrongbranchWithPropagation(scip, lpcands[c], lpcandssol[c], lpobjval, INT_MAX,
                   maxproprounds, skipdown[i] ? NULL : &down, skipup[i] ? NULL : &up, &downvalid,
-                  &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror, newlbs, newubs) );
+                  &upvalid, NULL, NULL, &downinf, &upinf, &downconflict, &upconflict, &lperror, newlbs, newubs) );
 
             SCIPdebugMessage("-> down=%.9g (gain=%.9g, valid=%u, inf=%u, conflict=%u), up=%.9g (gain=%.9g, valid=%u, inf=%u, conflict=%u)\n",
                down, down - lpobjval, downvalid, downinf, downconflict, up, up - lpobjval, upvalid, upinf, upconflict);

@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -52,9 +52,10 @@ PERMUTE=${19}
 VALGRIND=${20}
 REOPT=${21}
 OPTCOMMAND=${22}
+SETCUTOFF=${23}
 
 # check if all variables defined (by checking the last one)
-if test -z $OPTCOMMAND
+if test -z $SETCUTOFF
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -79,6 +80,7 @@ then
     echo "VALGRIND      = $VALGRIND"
     echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
+    echo "SETCUTOFF     = $SETCUTOFF"
     exit 1;
 fi
 
@@ -87,7 +89,7 @@ fi
 
 # the srun queue requires a format duration HH:MM:SS (and optionally days),
 # whereas the qsub requires the memory limit in kB
-if test "QUEUETYPE" != "qsub"
+if test "$QUEUETYPE" != "qsub"
 then
     TIMEFORMAT="format"
     MEMFORMAT="MB"
@@ -97,7 +99,7 @@ else
 fi
 # call routines for creating the result directory, checking for existence
 # of passed settings, etc
-. ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $VALGRIND
+. ./configuration_set.sh $BINNAME $TSTNAME $SETNAMES $TIMELIMIT $TIMEFORMAT $MEMLIMIT $MEMFORMAT $VALGRIND $SETCUTOFF
 
 
 # at the first time, some files need to be initialized. set to "" after the innermost loop
@@ -122,11 +124,19 @@ do
         COUNT=`expr $COUNT + 1`
 
         # check if problem instance exists
-        if ! test -f $SCIPPATH/$INSTANCE
-        then
-            echo "input file "$SCIPPATH/$INSTANCE" not found!"
-            continue
-        fi
+        SCIP_INSTANCEPATH=$SCIPPATH
+        for IPATH in ${POSSIBLEPATHS[@]}
+        do
+            if test "$IPATH" = "DONE"
+            then
+                echo "input file $INSTANCE not found!"
+                SKIPINSTANCE="true"
+            elif test -f $IPATH/$INSTANCE
+            then
+                SCIP_INSTANCEPATH=$IPATH
+                break
+            fi
+        done
         # the cluster queue has an upper bound of 2000 jobs; if this limit is
         # reached the submitted jobs are dumped; to avoid that we check the total
         # load of the cluster and wait until it is save (total load not more than
@@ -151,23 +161,26 @@ do
             fi
 
             # call tmp file configuration for SCIP
-            . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $SOLUFILE
+            . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $SCIP_INSTANCEPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
+            	$FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $SOLUFILE
 
             # check queue type
             if test  "$QUEUETYPE" = "srun"
             then
-            # additional environment variables needed by runcluster.sh
+            # additional environment variables needed by run.sh
                 export SOLVERPATH=$SCIPPATH
                 export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
                 export BASENAME=$FILENAME
-                export FILENAME=$INSTANCE
+                export FILENAME=$SCIP_INSTANCEPATH/$INSTANCE
                 export CLIENTTMPDIR
                 export HARDTIMELIMIT
                 export HARDMEMLIMIT
+                export CHECKERPATH=$SCIPPATH/solchecker
                 sbatch --job-name=SCIP$SHORTPROBNAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
             else
                 # -V to copy all environment variables
-                qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTPROBNAME -v SOLVERPATH=$SCIPPATH,EXECNAME=$SCIPPATH/../$BINNAME,BASENAME=$FILENAME,FILENAME=$i,CLIENTTMPDIR=$CLIENTTMPDIR -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
+                qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTPROBNAME -v SOLVERPATH=$SCIPPATH,EXECNAME=$SCIPPATH/../$BINNAME, \
+                    BASENAME=$FILENAME,FILENAME=$SCIP_INSTANCEPATH/$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
             fi
         done # end for SETNAME
         # after the first termination of the set loop, no file needs to be initialized anymore

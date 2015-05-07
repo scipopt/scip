@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -156,6 +156,97 @@ SCIP_Real SCIPheurGetSetupTime(
 EXTERN
 SCIP_Real SCIPheurGetTime(
    SCIP_HEUR*            heur                /**< primal heuristic */
+   );
+
+/** get the heuristic to which this diving setting belongs */
+EXTERN
+SCIP_HEUR* SCIPdivesetGetHeur(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the minimum relative depth of the diving settings */
+EXTERN
+SCIP_Real SCIPdivesetGetMinRelDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the maximum relative depth of the diving settings */
+EXTERN
+SCIP_Real SCIPdivesetGetMaxRelDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the number of successful runs of the diving settings */
+EXTERN
+int SCIPdivesetGetNSuccess(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the maximum LP iterations quotient of the diving settings */
+EXTERN
+SCIP_Real SCIPdivesetGetMaxLPIterQuot(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the maximum LP iterations offset of the diving settings */
+EXTERN
+int SCIPdivesetGetMaxLPIterOffset(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the number of LP iterations of the diving settings */
+EXTERN
+SCIP_Longint SCIPdivesetGetNLPIterations(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the maximum upper bound quotient parameter of the diving settings if no solution is available */
+EXTERN
+SCIP_Real SCIPdivesetGetUbQuotNoSol(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the average quotient parameter of the diving settings if no solution is available */
+EXTERN
+SCIP_Real SCIPdivesetGetAvgQuotNoSol(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the maximum upper bound quotient parameter of the diving settings if an incumbent solution exists */
+EXTERN
+SCIP_Real SCIPdivesetGetUbQuot(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the average upper bound quotient parameter of the diving settings if an incumbent solution exists */
+EXTERN
+SCIP_Real SCIPdivesetGetAvgQuot(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** should backtracking be applied? */
+EXTERN
+SCIP_Bool SCIPdivesetUseBacktrack(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** increases LP iterations counter of diving settings */
+EXTERN
+void SCIPdivesetIncreaseNLPIterations(
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
+   );
+
+/** increases success counter of diving settings by 1 */
+EXTERN
+void SCIPdivesetIncreaseNSuccess(
+   SCIP_DIVESET*         diveset             /**< diving settings which happened to earn the reward */
+   );
+
+/** frees memory of a diveset */
+EXTERN
+SCIP_RETCODE SCIPdivesetFree(
+   SCIP_DIVESET**        diveset             /**< general diving settings */
    );
 
 #ifdef __cplusplus

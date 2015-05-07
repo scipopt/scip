@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -21,20 +21,24 @@
 # environment variables passed as arguments
 INSTANCE=$1      #  instance name to solve
 SCIPPATH=$2      # - path to working directory for test (usually, the check subdirectory)
-TMPFILE=$3       # - the batch file to control SCIP
-SETNAME=$4       # - specified basename of settings-file, or 'default'
-SETFILE=$5       # - instance/settings specific set-file
-THREADS=$6       # - the number of LP solver threads to use
-SETCUTOFF=$7     # - should optimal instance value be used as objective limit (0 or 1)?
-FEASTOL=$8       # - feasibility tolerance, or 'default'
-TIMELIMIT=$9     # - time limit for the solver
-MEMLIMIT=${10}   # - memory limit for the solver
-NODELIMIT=${11}  # - node limit for the solver
-LPS=${12}        # - LP solver to use
-DISPFREQ=${13}   # - display frequency for chronological output table
-REOPT=${14}      # - true if we use reoptimization, i.e., using a difflist file instead if an instance file
-OPTCOMMAND=${15} # - command that should per executed after reading the instance, e.g. optimize, presolve or count
-SOLUFILE=${16}   # - solu file, only necessary if $SETCUTOFF is 1
+SCIP_INSTANCEPATH=$3 # instance path
+TMPFILE=$4       # - the batch file to control SCIP
+SETNAME=$5       # - specified basename of settings-file, or 'default'
+SETFILE=$6       # - instance/settings specific set-file
+THREADS=$7       # - the number of LP solver threads to use
+SETCUTOFF=$8     # - should optimal instance value be used as objective limit (0 or 1)?
+FEASTOL=$9       # - feasibility tolerance, or 'default'
+TIMELIMIT=${10}  # - time limit for the solver
+MEMLIMIT=${11}   # - memory limit for the solver
+NODELIMIT=${12}  # - node limit for the solver
+LPS=${13}        # - LP solver to use
+DISPFREQ=${14}   # - display frequency for chronological output table
+REOPT=${15}      # - true if we use reoptimization, i.e., using a difflist file instead if an instance file
+OPTCOMMAND=${16} # - command that should per executed after reading the instance, e.g. optimize, presolve or count
+CLIENTTMPDIR=${17}
+SOLBASENAME=${18}
+SETCUTOFF=${19}
+SOLUFILE=${20}   # - solu file, only necessary if $SETCUTOFF is 1
 
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
@@ -43,6 +47,9 @@ SOLUFILE=${16}   # - solu file, only necessary if $SETCUTOFF is 1
 
 # new environment variables after running this script
 # -None
+
+#set solfile
+SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.sol
 
 # reset TMPFILE
 echo > $TMPFILE
@@ -100,6 +107,7 @@ then
 	    if test ""$CUTOFF != ""
 	    then
 	        echo set limits objective $CUTOFF      >> $TMPFILE
+        	echo set heur emph off                 >> $TMPFILE
 	    fi
 	fi
 
@@ -111,4 +119,13 @@ else
 	cat $SCIPPATH/$INSTANCE                >> $TMPFILE
 fi
 
-echo quit                                  >> $TMPFILE
+# currently, the solution checker only supports .mps-files.
+# compare instance name (without .gz) to instance name stripped by .mps.
+#if they are unequal, we have an mps-file
+TMPINSTANCE=`basename $SCIP_INSTANCEPATH/$INSTANCE .gz`
+TMPINSTANCEB=`basename $TMPINSTANCE .mps`
+if test "$TMPINSTANCEB" != "$TMPINSTANCE"
+then
+   echo write sol $SOLFILE             >> $TMPFILE
+fi
+echo quit                              >> $TMPFILE

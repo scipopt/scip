@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1061,6 +1061,18 @@ SCIP_RETCODE SCIPvarDelClique(
    SCIP_CLIQUE*          clique              /**< clique the variable should be removed from */
    );
 
+/** adds a clique to the list of cliques of the given binary variable, but does not change the clique
+ *  itself
+ */
+extern
+SCIP_RETCODE SCIPvarAddCliqueToList(
+   SCIP_VAR*             var,                /**< problem variable  */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             value,              /**< value of the variable in the clique */
+   SCIP_CLIQUE*          clique              /**< clique that should be removed from the variable's clique list */
+   );
+
 /** deletes a clique from the list of cliques the binary variable is member of, but does not change the clique
  *  itself
  */
@@ -1201,6 +1213,7 @@ SCIP_Real SCIPvarGetImplRedcost(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             varfixing,          /**< FALSE if for x == 0, TRUE for x == 1 */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem, or NULL */
    SCIP_LP*              lp                  /**< current LP data */
    );
 
@@ -1235,6 +1248,22 @@ SCIP_RETCODE SCIPvarAddToRow(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_ROW*             row,                /**< LP row */
    SCIP_Real             val                 /**< value of coefficient */
+   );
+
+
+/** merge two variable histories together; a typical use case is that \p othervar is an image of the target variable
+ *  in a SCIP copy. Method should be applied with care, especially because no internal checks are performed whether
+ *  the history merge is reasonable
+ *
+ *  @note Do not use this method if the two variables originate from two SCIP's with different objective functions, since
+ *        this corrupts the variable pseudo costs
+ *  @note Apply with care; no internal checks are performed if the two variables should be merged
+ */
+extern
+void SCIPvarMergeHistories(
+   SCIP_VAR*             targetvar,          /**< the variable that should contain both histories afterwards */
+   SCIP_VAR*             othervar,           /**< the variable whose history is to be merged with that of the target variable */
+   SCIP_STAT*            stat                /**< problem statistics */
    );
 
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
@@ -1282,6 +1311,99 @@ extern
 SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** gets the an estimate of the variable's pseudo cost variance in direction \p dir */
+extern
+SCIP_Real SCIPvarGetPseudocostVariance(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Bool             onlycurrentrun      /**< return pseudo cost variance only for current branch and bound run */
+   );
+
+/** calculates a confidence bound for this variable under the assumption of normally distributed pseudo costs
+ *
+ *  The confidence bound \f$ \theta \geq 0\f$ denotes the interval borders \f$ [X - \theta, \ X + \theta]\f$, which contains
+ *  the true pseudo costs of the variable, i.e., the expected value of the normal distribution, with a probability
+ *  of 95 %.
+ *
+ *  @return value of confidence bound for this variable
+ */
+extern
+SCIP_Real SCIPvarCalcPscostConfidenceBound(
+   SCIP_VAR*             var,                /**< variable in question */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BRANCHDIR        dir,                /**< the branching direction for the confidence bound */
+   SCIP_Bool             onlycurrentrun,     /**< should only the current run be taken into account */
+   SCIP_CONFIDENCELEVEL  clevel              /**< confidence level for the interval */
+   );
+
+/** check if the current pseudo cost relative error in a direction violates the given threshold. The Relative
+ *  Error is calculated at a specific confidence level
+ */
+extern
+SCIP_Bool SCIPvarIsPscostRelerrorReliable(
+   SCIP_VAR*             var,                /**< variable in question */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             threshold,          /**< threshold for relative errors to be considered reliable (enough) */
+   SCIP_CONFIDENCELEVEL  clevel              /**< a given confidence level */
+   );
+
+/** check if variable pseudo-costs have a significant difference in location. The significance depends on
+ *  the choice of \p clevel and on the kind of tested hypothesis. The one-sided hypothesis, which
+ *  should be rejected, is that fracy * mu_y >= fracx * mu_x, where mu_y and mu_x denote the
+ *  unknown location means of the underlying pseudo-cost distributions of x and y.
+ *
+ *  This method is applied best if variable x has a better pseudo-cost score than y. The method hypothesizes that y were actually
+ *  better than x (despite the current information), meaning that y can be expected to yield branching
+ *  decisions as least as good as x in the long run. If the method returns TRUE, the current history information is
+ *  sufficient to safely rely on the alternative hypothesis that x yields indeed a better branching score (on average)
+ *  than y.
+ *
+ *  @note The order of x and y matters for the one-sided hypothesis
+ *
+ *  @note set \p onesided to FALSE if you are not sure which variable is better. The hypothesis tested then reads
+ *        fracy * mu_y == fracx * mu_x vs the alternative hypothesis fracy * mu_y != fracx * mu_x.
+ *
+ *  @return TRUE if the hypothesis can be safely rejected at the given confidence level
+ */
+extern
+SCIP_Bool SCIPvarSignificantPscostDifference(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VAR*             varx,               /**< variable x */
+   SCIP_Real             fracx,              /**< the fractionality of variable x */
+   SCIP_VAR*             vary,               /**< variable y */
+   SCIP_Real             fracy,              /**< the fractionality of variable y */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_CONFIDENCELEVEL  clevel,             /**< confidence level for rejecting hypothesis */
+   SCIP_Bool             onesided            /**< should a one-sided hypothesis y >= x be tested? */
+   );
+
+/** tests at a given confidence level whether the variable pseudo-costs only have a small probability to
+ *  exceed a \p threshold. This is useful to determine if past observations provide enough evidence
+ *  to skip an expensive strong-branching step if there is already a candidate that has been proven to yield an improvement
+ *  of at least \p threshold.
+ *
+ *  @note use \p clevel to adjust the level of confidence. For SCIP_CONFIDENCELEVEL_MIN, the method returns TRUE if
+ *        the estimated probability to exceed \p threshold is less than 25 %.
+ *
+ *  @see  SCIP_Confidencelevel for a list of available levels. The used probability limits refer to the one-sided levels
+ *        of confidence.
+ *
+ *  @return TRUE if the variable pseudo-cost probabilistic model is likely to be smaller than \p threshold
+ *          at the given confidence level \p clevel.
+ */
+extern
+SCIP_Bool SCIPvarPscostThresholdProbabilityTest(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VAR*             var,                /**< variable x */
+   SCIP_Real             frac,               /**< the fractionality of variable x */
+   SCIP_Real             threshold,          /**< the threshold to test against */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_CONFIDENCELEVEL  clevel              /**< confidence level for rejecting hypothesis */
    );
 
 /** increases the VSIDS of the variable by the given weight */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -944,6 +944,21 @@ int SCIPpropGetFreq(
    assert(prop != NULL);
 
    return prop->freq;
+}
+
+/** enables or disables all clocks of \p prop, depending on the value of the flag */
+void SCIPpropEnableOrDisableClocks(
+   SCIP_PROP*            prop,               /**< the propagator for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the propagator be enabled? */
+   )
+{
+   assert(prop != NULL);
+
+   SCIPclockEnableOrDisable(prop->setuptime, enable);
+   SCIPclockEnableOrDisable(prop->presoltime, enable);
+   SCIPclockEnableOrDisable(prop->proptime, enable);
+   SCIPclockEnableOrDisable(prop->resproptime, enable);
+   SCIPclockEnableOrDisable(prop->sbproptime, enable);
 }
 
 /** gets time in seconds used for setting up this propagator for new stages */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -554,7 +554,6 @@ void collectNonBinaryImplicationData(
       SCIP_VAR** implvars;
       SCIP_Real* implbounds;
       SCIP_BOUNDTYPE* implboundtypes;
-      int nbinimplsvar;
       int idx;
       int w;
 
@@ -562,11 +561,8 @@ void collectNonBinaryImplicationData(
       implvars = SCIPvarGetImplVars(var, value);
       implboundtypes = SCIPvarGetImplTypes(var, value);
       implbounds = SCIPvarGetImplBounds(var, value);
-      nbinimplsvar = SCIPvarGetNBinImpls(var, value);
 
-
-      /* update implication counter on all by non-binary implication implied variables */
-      for( w = SCIPvarGetNImpls(var, value) - 1; w >= nbinimplsvar; --w )
+      for( w = SCIPvarGetNImpls(var, value) - 1; w >= 0; --w )
       {
          assert(implvars != NULL);
          assert(implboundtypes != NULL);
@@ -688,108 +684,6 @@ void collectNonBinaryImplicationData(
                implidx[*nimplidx] = idx;
                ++(*nimplidx);
             }
-         }
-      }
-   }
-}
-
-/** collect binary implication data for variable set reduction and global bound implications; only variable which have
- *  the vartype SCIP_VARTYPE_BINARY have binary implications, otherwise the implications are saved as variable bounds
- */
-static
-void collectBinaryImplicationData(
-   SCIP_VAR*             var,                /**< set variable */
-   int                   varidx,             /**< for lower bound set variable index, for upper bound set variable index
-                                              *   + number of variables
-                                              */
-   int                   pos,                /**< variables's position in bdchinfos */
-   SCIP_Bool             value,              /**< value used for clique and implication info */
-   SCIP_Real*            bounds,             /**< array of bounds where one of them must be fullfilled */
-   SCIP_Bool*            boundtypes,         /**< array of bound types */
-   SCIP_Real*            newbounds,          /**< array of implied bounds(, size is two times number of variables, first
-                                              *   half for implied lower bounds, second for implied upper bounds)
-                                              */
-   int*                  counts,             /**< array of number of implication on a bound (, size is two times number of
-                                              *   variables, first half for implied lower bounds, second for implied upper
-                                              *   bounds)
-                                              */
-   int*                  issetvar,           /**< array containing for set variables the position in the current set, or
-                                              *   0 if it is not a set variable or -1, if it is a redundant(i.e. implies
-                                              *   another set variable) set variables(, size is two times number of
-                                              *   variables, first half for implied lower bounds, second for implied
-                                              *   upper bounds) */
-   int                   nvars,              /**< number of problem variables */
-   int*                  foundbin,           /**< pointer to store the lowest index of a binary implication variable when found */
-   int*                  implidx,            /**< array to store the variable indices (for upper bound 'nvars' is added
-                                              *   to the index) which are implied
-                                              */
-   int*                  nimplidx            /**< pointer to store the number of implied variables */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
-   assert(varidx >= 0);
-   assert(pos >= 0);
-   assert(bounds != NULL);
-   assert(boundtypes != NULL);
-   assert(newbounds != NULL);
-   assert(counts != NULL);
-   assert(issetvar != NULL);
-   assert(2 * nvars > varidx);
-   assert(foundbin != NULL);
-   assert(implidx != NULL);
-   assert(nimplidx != NULL);
-
-   /* if the set variable is not yet redundant check the implication data */
-   if( issetvar[varidx] > 0 )
-   {
-      SCIP_VAR** implvars;
-      SCIP_BOUNDTYPE* implboundtypes;
-      int nbinimplsvar;
-      int idx;
-      int w;
-
-      implvars = SCIPvarGetImplVars(var, value);
-      implboundtypes = SCIPvarGetImplTypes(var, value);
-      nbinimplsvar = SCIPvarGetNBinImpls(var, value);
-
-      /* update implication counter on all by binary implication implied variables */
-      for( w = nbinimplsvar - 1; w >= 0; --w )
-      {
-         /* no self implication should exist in the implication data structure */
-         assert(implvars[w] != var);
-
-         /* do not look at fixed variables */
-         if( SCIPvarGetLbGlobal(implvars[w]) > 0.5 || SCIPvarGetUbGlobal(implvars[w]) < 0.5 )
-            continue;
-
-         idx = SCIPvarGetProbindex(implvars[w]);
-         assert(idx >= 0);
-
-         if( implboundtypes[w] == SCIP_BOUNDTYPE_UPPER )
-            idx += nvars;
-
-         assert(counts[idx] <= pos+1);
-
-         /* set variable 'var' with bound implies other set variable 'implvars[w]' with corresponding bound so we can
-          * remove the set variable 'var'
-          */
-         if( issetvar[idx] > 0 )
-         {
-            SCIPdebugMessage("set variable <%s> %s %g implies other set variable <%s> %s %g\n", SCIPvarGetName(var), boundtypes[pos] ? "<=" : ">=", bounds[pos], SCIPvarGetName(implvars[w]), implboundtypes[w] ? "<=" : ">=", implboundtypes[w] ? 0.0 : 1.0);
-
-            issetvar[varidx] = -1;
-            break;
-         }
-
-         /* update implication counter */
-         if( counts[idx] == pos )
-         {
-            ++counts[idx];
-            *foundbin = MIN(*foundbin, idx);
-
-            implidx[*nimplidx] = idx;
-            ++(*nimplidx);
          }
       }
    }
@@ -1075,16 +969,6 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
          if( SCIPvarIsBinary(var) )
          {
             collectBinaryCliqueData(var, varidx, v, value, bounds, boundtypes, newbounds, counts, issetvar, nprobvars, &foundbin, implidx, &nimplidx);
-
-            /* only variable which have the vartype SCIP_VARTYPE_BINARY have binary implications, otherwise the
-             * implications are saved as variable bounds
-             *
-             * @note if implications on two binary variables are stored in the clique data, the following if block can be deleted
-             */
-            if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
-            {
-               collectBinaryImplicationData(var, varidx, v, value, bounds, boundtypes, newbounds, counts, issetvar, nprobvars, &foundbin, implidx, &nimplidx);
-            }
          }
       }
 

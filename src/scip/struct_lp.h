@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -206,6 +206,8 @@ struct SCIP_Row
    SCIP_Longint          validpsactivitydomchg; /**< domain change number for which pseudo activity value is valid */
    SCIP_Longint          validactivitybdsdomchg;/**< domain change number for which activity bound values are valid */
    SCIP_Longint          obsoletenode;       /**< last node where this row was removed due to aging */
+   SCIP_Longint          activeinlpcounter;  /**< counter for the number of times this row was active in an optimal LP solution */
+   SCIP_Longint          nlpsaftercreation;  /**< counter for the number of LPs after the row has been created */
    SCIP_ROWSOLVALS*      storedsolvals;      /**< values stored before entering diving or probing mode */
    void*                 origin;             /**< pointer to constraint handler or separator who created the row (NULL if unkown) */
    char*                 name;               /**< name of the row */
@@ -317,6 +319,7 @@ struct SCIP_Lp
    int                   lpiitlim;           /**< current iteration limit setting in LPI */
    int                   lpifastmip;         /**< current FASTMIP setting in LPI */
    int                   lpithreads;         /**< current THREADS setting in LPI */
+   int                   lpitiming;          /**< current timing type in LPI */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */

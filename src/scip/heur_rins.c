@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -524,6 +524,9 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
 
+   /* disable statistic timing inside sub SCIP */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+
    /* set limits for the subproblem */
    heurdata->nodelimit = nnodes;
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nnodes) );
@@ -591,18 +594,18 @@ SCIP_DECL_HEUREXEC(heurExecRins)
    assert( !SCIPisInfinity(scip,SCIPgetUpperbound(scip)) );
 
    upperbound = SCIPgetUpperbound(scip) - SCIPsumepsilon(scip);
-   if( !SCIPisInfinity(scip,-1.0*SCIPgetLowerbound(scip)) )
+   if( !SCIPisInfinity(scip, -1.0 * SCIPgetLowerbound(scip)) )
    {
-      cutoff = (1-heurdata->minimprove)*SCIPgetUpperbound(scip) + heurdata->minimprove*SCIPgetLowerbound(scip);
+      cutoff = (1 - heurdata->minimprove) * SCIPgetUpperbound(scip) + heurdata->minimprove * SCIPgetLowerbound(scip);
    }
    else
    {
-      if( SCIPgetUpperbound ( scip ) >= 0 )
-         cutoff = ( 1 - heurdata->minimprove ) * SCIPgetUpperbound ( scip );
+      if( SCIPgetUpperbound(scip) >= 0 )
+         cutoff = (1 - heurdata->minimprove) * SCIPgetUpperbound(scip);
       else
-         cutoff = ( 1 + heurdata->minimprove ) * SCIPgetUpperbound ( scip );
+         cutoff = (1 + heurdata->minimprove) * SCIPgetUpperbound(scip);
    }
-   cutoff = MIN(upperbound, cutoff );
+   cutoff = MIN(upperbound, cutoff);
    SCIP_CALL( SCIPsetObjlimit(subscip, cutoff) );
 
    /* catch LP events of sub-SCIP */
@@ -634,6 +637,11 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       SCIP_CALL( retcode );
 #endif
       SCIPwarningMessage(scip, "Error while solving subproblem in RINS heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+   }
+   else
+   {
+      /* we try to merge variable statistics with those of our main SCIP */
+      SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
    }
 
    /* print solving statistics of subproblem if we are in SCIP's debug mode */

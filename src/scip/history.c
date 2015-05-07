@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -74,6 +74,8 @@ void SCIPhistoryReset(
    history->pscostcount[1] = 0.0;
    history->pscostsum[0] = 0.0;
    history->pscostsum[1] = 0.0;
+   history->pscostsquaressum[0] = 0.0;
+   history->pscostsquaressum[1] = 0.0;
    history->vsids[0] = 0.0;
    history->vsids[1] = 0.0;
    history->conflengthsum[0] = 0.0;
@@ -108,6 +110,8 @@ void SCIPhistoryUnite(
    history->pscostcount[1] += addhistory->pscostcount[1-d];
    history->pscostsum[0] += addhistory->pscostsum[d];
    history->pscostsum[1] += addhistory->pscostsum[1-d];
+   history->pscostsquaressum[0] += addhistory->pscostsquaressum[d];
+   history->pscostsquaressum[1] += addhistory->pscostsquaressum[1-d];
    history->vsids[0] += addhistory->vsids[d];
    history->vsids[1] += addhistory->vsids[1-d];
    history->conflengthsum[0] += addhistory->conflengthsum[d];
@@ -137,6 +141,7 @@ void SCIPhistoryUpdatePseudocost(
 {
    SCIP_Real distance;
    SCIP_Real eps;
+   SCIP_Real sumcontribution;
    int dir;
 
    assert(history != NULL);
@@ -175,9 +180,11 @@ void SCIPhistoryUpdatePseudocost(
     */
    objdelta += SCIPsetPseudocostdelta(set);
 
+   sumcontribution = weight * objdelta/distance;
    /* update the pseudo cost values */
    history->pscostcount[dir] += weight;
-   history->pscostsum[dir] += weight * objdelta/distance;
+   history->pscostsum[dir] += sumcontribution;
+   history->pscostsquaressum[dir] += sumcontribution * sumcontribution;
 
    SCIPdebugMessage("updated pseudo costs of history %p: dir=%d, distance=%g, objdelta=%g, weight=%g  ->  %g/%g\n",
       (void*)history, dir, distance, objdelta, weight, history->pscostcount[dir], history->pscostsum[dir]);
@@ -397,6 +404,38 @@ SCIP_Real SCIPhistoryGetPseudocost(
       return solvaldelta * (history->pscostcount[1] > 0.0 ? history->pscostsum[1] / history->pscostcount[1] : 1.0);
    else
       return -solvaldelta * (history->pscostcount[0] > 0.0 ? history->pscostsum[0] / history->pscostcount[0] : 1.0);
+}
+
+/** returns the variance of pseudo costs about the mean. */
+SCIP_Real SCIPhistoryGetPseudocostVariance(
+   SCIP_HISTORY*         history,            /**< branching and inference history */
+   SCIP_BRANCHDIR        direction           /**< direction of variable: 1 for upwards history, 0 for downwards history */
+   )
+{
+   int dir;
+   SCIP_Real correctionfactor;
+
+   assert(history != NULL);
+   assert(direction == SCIP_BRANCHDIR_UPWARDS || direction == SCIP_BRANCHDIR_DOWNWARDS);
+
+   dir = (direction == SCIP_BRANCHDIR_UPWARDS ? 1 : 0);
+   correctionfactor = history->pscostcount[dir] - 1.0;
+
+   /* TODO what to do in case of noninteger weights? */
+   if( correctionfactor > 0.9 )
+   {
+      SCIP_Real totalvariance;
+
+      SCIP_Real sum;
+
+      sum = history->pscostsum[dir];
+      totalvariance = history->pscostsquaressum[dir];
+      totalvariance -= (1 / history->pscostcount[dir]) * sum * sum;
+      totalvariance = MAX(0.0, totalvariance);
+      return 1.0 / correctionfactor * totalvariance;
+   }
+   else
+      return 0.0;
 }
 
 /** returns the (possible fractional) number of (partial) pseudo cost updates performed on this pseudo cost entry in 

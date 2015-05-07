@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,7 +33,7 @@
 #include "scip/prob.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/mem.h"
 #include "scip/history.h"
 
@@ -72,9 +72,12 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->strongpropclock, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->reoptupdatetime, SCIP_CLOCKTYPE_DEFAULT) );
 
+   /* turn statistic timing on or off, depending on the user parameter */
+   SCIPstatEnableOrDisableStatClocks(*stat, set->time_statistictiming);
+
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
-   SCIP_CALL( SCIPvbcCreate(&(*stat)->vbc, messagehdlr) );
+   SCIP_CALL( SCIPvisualCreate(&(*stat)->visual, messagehdlr) );
 
    (*stat)->status = SCIP_STATUS_UNKNOWN;
    (*stat)->marked_nvaridx = 0;
@@ -124,7 +127,7 @@ SCIP_RETCODE SCIPstatFree(
 
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
-   SCIPvbcFree(&(*stat)->vbc);
+   SCIPvisualFree(&(*stat)->visual);
 
    BMSfreeMemory(stat);
 
@@ -247,6 +250,7 @@ void SCIPstatReset(
    stat->ndualresolvelps = 0;
    stat->nlexdualresolvelps = 0;
    stat->nnodelps = 0;
+   stat->nisstoppedcalls = 0;
    stat->ninitlps = 0;
    stat->ndivinglps = 0;
    stat->nsbdivinglps = 0;
@@ -275,6 +279,7 @@ void SCIPstatReset(
    stat->firstlptime = 0.0;
    stat->firstlpdualbound = SCIP_UNKNOWN;
    stat->ncopies = 0;
+   stat->nclockskipsleft = 0;
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
@@ -542,4 +547,34 @@ void SCIPstatUpdateMemsaveMode(
    }
    else
       stat->memsavemode = FALSE;
+}
+
+/** enables or disables all statistic clocks of \p stat concerning LP execution time, strong branching time, etc.
+ *
+ *  @note: The (pre-)solving time clocks which are relevant for the output during (pre-)solving
+ *         are not affected by this method
+ *
+ *  @see: For completely disabling all timing of SCIP, consider setting the parameter timing/enabled to FALSE
+ */
+void SCIPstatEnableOrDisableStatClocks(
+   SCIP_STAT*          stat,             /**< SCIP statistics */
+   SCIP_Bool           enable            /**< should the LP clocks be enabled? */
+   )
+{
+   assert(stat != NULL);
+
+   SCIPclockEnableOrDisable(stat->primallptime, enable);
+   SCIPclockEnableOrDisable(stat->duallptime, enable);
+   SCIPclockEnableOrDisable(stat->lexduallptime, enable);
+   SCIPclockEnableOrDisable(stat->barrierlptime, enable);
+   SCIPclockEnableOrDisable(stat->divinglptime, enable);
+   SCIPclockEnableOrDisable(stat->strongbranchtime, enable);
+   SCIPclockEnableOrDisable(stat->conflictlptime, enable);
+   SCIPclockEnableOrDisable(stat->lpsoltime, enable);
+   SCIPclockEnableOrDisable(stat->pseudosoltime, enable);
+   SCIPclockEnableOrDisable(stat->sbsoltime, enable);
+   SCIPclockEnableOrDisable(stat->nodeactivationtime, enable);
+   SCIPclockEnableOrDisable(stat->nlpsoltime, enable);
+   SCIPclockEnableOrDisable(stat->copyclock, enable);
+   SCIPclockEnableOrDisable(stat->strongpropclock, enable);
 }

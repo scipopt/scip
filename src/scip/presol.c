@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -619,6 +619,18 @@ SCIP_Bool SCIPpresolIsInitialized(
    assert(presol != NULL);
 
    return presol->initialized;
+}
+
+/** enables or disables all clocks of \p presol, depending on the value of the flag */
+void SCIPpresolEnableOrDisableClocks(
+   SCIP_PRESOL*          presol,             /**< the presolver for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the presolver be enabled? */
+   )
+{
+   assert(presol != NULL);
+
+   SCIPclockEnableOrDisable(presol->setuptime, enable);
+   SCIPclockEnableOrDisable(presol->presolclock, enable);
 }
 
 /** gets time in seconds used in this presolver for setting up for next stages */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -42,7 +42,7 @@ extern "C" {
 
 typedef struct SCIP_Heur SCIP_HEUR;               /**< primal heuristic */
 typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal heuristic data */
-
+typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all diving heuristics */
 
 /** copy method for heuristic plugins (called when SCIP copies plugins)
  *
@@ -118,6 +118,25 @@ typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal he
  */
 #define SCIP_DECL_HEUREXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_HEUR* heur, SCIP_HEURTIMING heurtiming, \
       SCIP_Bool nodeinfeasible, SCIP_RESULT* result)
+
+
+/* callbacks for diving heuristic specific settings */
+
+/** calculate score and preferred rounding direction for the candidate variable; the best candidate minimizes the
+ *  score
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - cand            : Candidate variable for which the score should be determined
+ *  - candsol         : solution value of variable in LP relaxation solution
+ *  - candsfrac       : fractional part of solution value of variable
+ *  - score           : pointer for diving score value - small scores are preferred
+ *  - roundup         : pointer to store whether the preferred rounding direction is upwards
+ *
+ *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code
+ */
+#define SCIP_DECL_DIVESETGETSCORE(x) SCIP_RETCODE x (SCIP* scip, SCIP_VAR* cand, SCIP_Real candsol, SCIP_Real candsfrac, \
+   SCIP_Real* score, SCIP_Bool* roundup)
 
 #ifdef __cplusplus
 }

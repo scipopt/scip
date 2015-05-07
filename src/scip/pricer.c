@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -627,6 +627,18 @@ SCIP_Real SCIPpricerGetTime(
    assert(pricer != NULL);
 
    return SCIPclockGetTime(pricer->pricerclock);
+}
+
+/** enables or disables all clocks of \p pricer, depending on the value of the flag */
+void SCIPpricerEnableOrDisableClocks(
+   SCIP_PRICER*          pricer,             /**< the pricer for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the pricer be enabled? */
+   )
+{
+   assert(pricer != NULL);
+
+   SCIPclockEnableOrDisable(pricer->setuptime, enable);
+   SCIPclockEnableOrDisable(pricer->pricerclock, enable);
 }
 
 /** returns whether the given pricer is in use in the current problem */

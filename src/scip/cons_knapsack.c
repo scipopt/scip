@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2183,17 +2183,17 @@ SCIP_RETCODE GUBsetCalcCliquePartition(
             /* greedily fill up the clique */
             for( j = i + 1; j < nvarsused; ++j )
             {
-	       /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
-	       if( cliquepartition[varseq[j]] == -1 && SCIPvarIsActive(tmpvars[varseq[j]]) )
+               /* if variable is not active (multi-aggregated or fixed), it cannot be in any clique */
+               if( cliquepartition[varseq[j]] == -1 && SCIPvarIsActive(tmpvars[varseq[j]]) )
                {
                   int k;
 
                   /* check if every variable in the actual clique is in clique with the new variable */
-		  for( k = ncliquevars - 1; k >= 0; --k )
+                  for( k = ncliquevars - 1; k >= 0; --k )
                   {
                      if( !SCIPvarsHaveCommonClique(tmpvars[varseq[j]], tmpvalues[varseq[j]], cliquevars[k],
                            cliquevalues[k], TRUE) )
-                         break;
+                        break;
                   }
 
                   if( k == -1 )
@@ -2217,7 +2217,7 @@ SCIP_RETCODE GUBsetCalcCliquePartition(
       if( i * nvars > maxncliquevarscomp )
          break;
    }
-   /* if we had to much variables fill up the cliquepartition and put each variable in a separate clique */
+   /* if we had too many variables fill up the cliquepartition and put each variable in a separate clique */
    for( ; i < nvars; ++i )
    {
       if( cliquepartition[varseq[i]] == -1 )
@@ -2238,7 +2238,7 @@ SCIP_RETCODE GUBsetCalcCliquePartition(
    return SCIP_OKAY;
 }
 
-/** constructs sophisticated partion of knapsack variables into nonoverlapping GUBs; current partion uses trivial GUBs */
+/** constructs sophisticated partition of knapsack variables into non-overlapping GUBs; current partition uses trivial GUBs */
 static
 SCIP_RETCODE GUBsetGetCliquePartition(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2291,7 +2291,7 @@ SCIP_RETCODE GUBsetGetCliquePartition(
       if( gubfirstvar[cliqueidx] == -1 )
       {
          /* corresponding GUB constraint in GUB set data structure was already constructed (as initial trivial GUB);
-          * note: no assert for gubconssidx, because it can changed due to deleting emtpy GUBs in GUBsetMoveVar()
+          * note: no assert for gubconssidx, because it can changed due to deleting empty GUBs in GUBsetMoveVar()
           */
          assert(gubset->gubvarsidx[i] == 0);
          assert(gubset->gubconss[gubset->gubconssidx[i]]->gubvars[gubset->gubvarsidx[i]] == i);
@@ -2302,7 +2302,7 @@ SCIP_RETCODE GUBsetGetCliquePartition(
       /* variable is additional element of GUB constraint defined by clique partition */
       else
       {
-	 assert(gubfirstvar[cliqueidx] >= 0 && gubfirstvar[cliqueidx] < i);
+         assert(gubfirstvar[cliqueidx] >= 0 && gubfirstvar[cliqueidx] < i);
 
          /* move variable to GUB constraint defined by clique partition; index of this GUB constraint is given by the
           * first variable of this GUB constraint
@@ -8105,7 +8105,7 @@ void normalizeWeights(
  *
  *  3. use the duality between a^Tx <= capacity   <=>   a^T~x >= weightsum - capacity to tighten weights, e.g.
  *
- *     11x1 + 10x2 + 7x3 + 7x4 + 5x5 <= 27    <=>   10~x1 + 10~x2 + 7~x3 + 7~x4 + 5~x5 >= 13
+ *     11x1 + 10x2 + 7x3 + 7x4 + 5x5 <= 27    <=>   11~x1 + 10~x2 + 7~x3 + 7~x4 + 5~x5 >= 13
  *
  *     the above constraint can be changed to       8~x1 + 8~x2 + 6.5~x3 + 6.5~x4 + 5~x5 >= 13
  *
@@ -9106,6 +9106,7 @@ SCIP_RETCODE simplifyInequalities(
    int oldnchgsides;
    int candpos;
    int candpos2;
+   int offsetv;
    int nvars;
    int v;
 
@@ -9145,7 +9146,6 @@ SCIP_RETCODE simplifyInequalities(
 
       if( SCIPconsIsDeleted(cons) )
          return SCIP_OKAY;
-
       /* 2. delete redundant variables */
       SCIP_CALL( detectRedundantVars(scip, cons, ndelconss, nchgcoefs, nchgsides, naddconss) );
 
@@ -9206,6 +9206,22 @@ SCIP_RETCODE simplifyInequalities(
       if( weights[nvars - 1] == 1 && weights[nvars - 2] == 1 )
          return SCIP_OKAY;
 
+      v = 0;
+      /* determine coefficients as big as the capacity, these we do not need to take into account when calculating the
+       * gcd
+       */
+      while( weights[v] == consdata->capacity )
+      {
+         ++v;
+         assert(v < nvars);
+      }
+
+      /* all but one variable are as big as the capacity, this is handled elsewhere */
+      if( v == nvars - 1 )
+         return SCIP_OKAY;
+
+      offsetv = v;
+
       gcd = -1;
       candpos = -1;
       candpos2 = -1;
@@ -9213,7 +9229,7 @@ SCIP_RETCODE simplifyInequalities(
       /* calculate greatest common divisor over all integer and binary variables and determine the candidate where we might
        * change the coefficient
        */
-      for( v = nvars - 1; v >= 0; --v )
+      for( v = nvars - 1; v >= offsetv; --v )
       {
          weight = weights[v];
          assert(weight >= 1);
@@ -9276,24 +9292,34 @@ SCIP_RETCODE simplifyInequalities(
       /* we should have found one coefficient, that led to a gcd of 1, otherwise we could normalize the constraint
        * further
        */
-      assert(candpos >= 0 && candpos < nvars);
+      assert(((candpos >= offsetv) || (candpos == -1 && offsetv > 0)) && candpos < nvars);
 
       /* determine the remainder of the capacity and the gcd */
       rest = consdata->capacity % gcd;
       assert(rest >= 0);
       assert(rest < gcd);
 
+      if( candpos == -1 )
+      {
+         /* we assume that the constraint was normalized */
+         assert(rest > 0);
+
+         /* replace old with new capacity */
+         consdata->capacity -= rest;
+         ++(*nchgsides);
+
+         /* replace old big coefficients with new capacity */
+         for( v = 0; v < offsetv; ++v )
+            consdataChgWeight(consdata, v, consdata->capacity);
+
+         *nchgcoefs += offsetv;
+         goto CONTINUE;
+      }
+
       /* determine the remainder of the coefficient candidate and the gcd */
       restweight = weights[candpos] % gcd;
       assert(restweight >= 1);
       assert(restweight < gcd);
-
-      if( rest > 0 )
-      {
-         /* replace old with new capacity */
-         consdata->capacity -= rest;
-         ++(*nchgsides);
-      }
 
       /* calculate new coefficient */
       if( restweight > rest )
@@ -9303,7 +9329,26 @@ SCIP_RETCODE simplifyInequalities(
 
       assert(newweight == 0 || SCIPcalcGreComDiv(gcd, newweight) == gcd);
 
-      SCIPdebugMessage("gcd = %"SCIP_LONGINT_FORMAT", rest = %"SCIP_LONGINT_FORMAT", restweight = %"SCIP_LONGINT_FORMAT"; changing weight of variable <%s> to %"SCIP_LONGINT_FORMAT" and reduced capacity by %"SCIP_LONGINT_FORMAT"\n", gcd, rest, restweight, SCIPvarGetName(vars[candpos]), newweight, rest);
+      SCIPdebugMessage("gcd = %"SCIP_LONGINT_FORMAT", rest = %"SCIP_LONGINT_FORMAT", restweight = %"SCIP_LONGINT_FORMAT"; possible new weight of variable <%s> %"SCIP_LONGINT_FORMAT", possible new capacity %"SCIP_LONGINT_FORMAT", offset of coefficients as big as capacity %d\n", gcd, rest, restweight, SCIPvarGetName(vars[candpos]), newweight, consdata->capacity - rest, offsetv);
+
+      /* must not change weights and capacity if one variable would be removed and we have a big coefficient,
+       * e.g., 11x1 + 6x2 + 6x3 + 5x4 <= 11 => gcd = 6, offsetv = 1 => newweight = 0, but we would lose x1 = 1 => x4 = 0
+       */
+      if( newweight == 0 && offsetv > 0 )
+         return SCIP_OKAY;
+
+      if( rest > 0 )
+      {
+         /* replace old with new capacity */
+         consdata->capacity -= rest;
+         ++(*nchgsides);
+
+         /* replace old big coefficients with new capacity */
+         for( v = 0; v < offsetv; ++v )
+            consdataChgWeight(consdata, v, consdata->capacity);
+
+         *nchgcoefs += offsetv;
+      }
 
       if( newweight == 0 )
       {
@@ -9323,6 +9368,7 @@ SCIP_RETCODE simplifyInequalities(
       assert(consdata->nvars == nvars);
       assert(consdata->weights == weights);
 
+   CONTINUE:
       /* now constraint can be normalized, dividing it by the gcd */
       for( v = nvars - 1; v >= 0; --v )
       {
@@ -9849,14 +9895,11 @@ SCIP_RETCODE tightenWeightsLift(
    memlimitreached = FALSE;
    for( i = 0; i < consdata->nvars && !memlimitreached; ++i )
    {
+      SCIP_CLIQUE** cliques;
       SCIP_VAR* var;
       SCIP_Longint weight;
       SCIP_Bool value;
       int varprobindex;
-      SCIP_VAR** implvars;
-      SCIP_BOUNDTYPE* impltypes;
-      int nimpls;
-      SCIP_CLIQUE** cliques;
       int ncliques;
       int j;
 
@@ -9905,50 +9948,6 @@ SCIP_RETCODE tightenWeightsLift(
          ++tmp;
       }
 
-      /* get implications of the knapsack item fixed to one: x == 1 -> y == (1-v);
-       * the negation of these implications (y == v -> x == 0) are the ones that we are interested in
-       */
-      nimpls = SCIPvarGetNBinImpls(var, value);
-      implvars = SCIPvarGetImplVars(var, value);
-      impltypes = SCIPvarGetImplTypes(var, value);
-
-      for( j = 0; j < nimpls && !memlimitreached; ++j )
-      {
-         int probindex;
-         SCIP_Bool implvalue;
-
-         assert(SCIPvarIsBinary(implvars[j]));
-         probindex = SCIPvarGetProbindex(implvars[j]);
-         assert(probindex < nbinvars);
-
-         /* this assert should hold, but if not there is a old continue later on */
-         assert(probindex >= 0);
-
-         /* consider only implications with active implvar */
-         if( probindex < 0 )
-            continue;
-
-         implvalue = (impltypes[j] == SCIP_BOUNDTYPE_UPPER); /* the negation of the implication */
-
-         /* insert the item into the list of the implied variable/value */
-         if( !zeroiteminserted[implvalue][probindex] )
-         {
-            if( firstidxs[implvalue][probindex] == 0 )
-            {
-               tmpboolindices2[tmp2] = implvalue;
-               tmpindices2[tmp2] = probindex;
-               ++tmp2;
-            }
-            SCIP_CALL( insertZerolist(scip, liftcands, nliftcands, firstidxs, zeroweightsums,
-                  &zeroitems, &nextidxs, &zeroitemssize, &nzeroitems, probindex, implvalue, i, weight,
-                  &memlimitreached) );
-            zeroiteminserted[implvalue][probindex] = TRUE;
-            tmpboolindices[tmp] = implvalue;
-            tmpindices[tmp] = probindex;
-            ++tmp;
-         }
-      }
-
       /* get the cliques where the knapsack item is member of with value 1 */
       ncliques = SCIPvarGetNCliques(var, value);
       cliques = SCIPvarGetCliques(var, value);
@@ -9977,6 +9976,9 @@ SCIP_RETCODE tightenWeightsLift(
                continue;
 
             probindex = SCIPvarGetProbindex(cliquevars[k]);
+            if( probindex == -1 )
+               continue;
+
             assert(0 <= probindex && probindex < nbinvars);
             implvalue = cliquevalues[k];
 
@@ -10422,7 +10424,9 @@ SCIP_RETCODE tightenWeights(
          {
             assert(newweight > weights[pos]);
 
-            SCIPdebugMessage("in constraint <%s> changing weight %lld to %lld\n", SCIPconsGetName(cons), maxweight, newweight);
+            SCIPdebugMessage("in constraint <%s> changing weight %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT"\n",
+               SCIPconsGetName(cons), maxweight, newweight);
+
             consdataChgWeight(consdata, pos, newweight);
 
             ++pos;
@@ -10453,7 +10457,9 @@ SCIP_RETCODE tightenWeights(
             newweight = capacity - sumcoef;
             assert(newweight > weights[pos]);
 
-            SCIPdebugMessage("in constraint <%s> changing weight %lld to %lld\n", SCIPconsGetName(cons), maxweight, newweight);
+            SCIPdebugMessage("in constraint <%s> changing weight %"SCIP_LONGINT_FORMAT" to %"SCIP_LONGINT_FORMAT"\n",
+               SCIPconsGetName(cons), maxweight, newweight);
+
             consdataChgWeight(consdata, pos, newweight);
 
             break;
@@ -10984,7 +10990,7 @@ SCIP_RETCODE addNegatedCliques(
 
                assert(beforelastweight > 0);
                /* add the clique to the clique table */
-               SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+               SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
                if( *cutoff )
                   goto TERMINATE;
                *nbdchgs += thisnbdchgs;
@@ -11004,7 +11010,7 @@ SCIP_RETCODE addNegatedCliques(
                      SCIPdebugPrintf("\n");
                   }
 #endif
-                  SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+                  SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
                   if( *cutoff )
                      goto TERMINATE;
                   *nbdchgs += thisnbdchgs;
@@ -11177,7 +11183,7 @@ SCIP_RETCODE addCliques(
 
             assert(beforelastweight > 0);
             /* add the clique to the clique table */
-            SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+            SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
             if( *cutoff )
                goto TERMINATE;
             *nbdchgs += thisnbdchgs;
@@ -11194,7 +11200,7 @@ SCIP_RETCODE addCliques(
                   SCIPdebugPrintf("\n");
                }
 #endif
-               SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+               SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
                if( *cutoff )
                   goto TERMINATE;
                *nbdchgs += thisnbdchgs;
@@ -11222,7 +11228,7 @@ SCIP_RETCODE addCliques(
 #endif
 
       /* add the clique to the clique table */
-      SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+      SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
       if( *cutoff )
          goto TERMINATE;
       *nbdchgs += thisnbdchgs;
@@ -11240,7 +11246,7 @@ SCIP_RETCODE addCliques(
             SCIPdebugPrintf("\n");
          }
 #endif
-         SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, cutoff, &thisnbdchgs) );
+         SCIP_CALL( SCIPaddClique(scip, cliquevars, NULL, ncliquevars, FALSE, cutoff, &thisnbdchgs) );
          if( *cutoff )
             goto TERMINATE;
          *nbdchgs += thisnbdchgs;

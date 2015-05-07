@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,8 +28,7 @@
 #include "scip/set.h"
 #include "scip/clock.h"
 #include "scip/stat.h"
-#include "scip/vbc.h"
-#include "scip/event.h"
+#include "scip/visual.h"
 #include "scip/paramset.h"
 #include "scip/tree.h"
 #include "scip/scip.h"
@@ -665,7 +664,7 @@ SCIP_RETCODE SCIPnodepqBound(
          if( !parentfelldown )
             pos--;
 
-         SCIPvbcCutoffNode(stat->vbc, stat, node);
+         SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
 
          /* issue NODEINFEASIBLE event */
          SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
@@ -1150,6 +1149,18 @@ SCIP_Bool SCIPnodeselIsInitialized(
    assert(nodesel != NULL);
 
    return nodesel->initialized;
+}
+
+/** enables or disables all clocks of \p nodesel, depending on the value of the flag */
+void SCIPnodeselEnableOrDisableClocks(
+   SCIP_NODESEL*         nodesel,            /**< the node selector for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the node selector be enabled? */
+   )
+{
+   assert(nodesel != NULL);
+
+   SCIPclockEnableOrDisable(nodesel->setuptime, enable);
+   SCIPclockEnableOrDisable(nodesel->nodeseltime, enable);
 }
 
 /** gets time in seconds used in this node selector for setting up for next stages */

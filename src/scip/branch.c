@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -254,8 +254,8 @@ SCIP_RETCODE branchcandCalcLPCands(
 
          primsol = SCIPcolGetPrimsol(col);
          assert(primsol < SCIP_INVALID);
-         assert(SCIPsetIsFeasGE(set, primsol, col->lb));
-         assert(SCIPsetIsFeasLE(set, primsol, col->ub));
+         assert(SCIPsetIsInfinity(set, -col->lb) || SCIPsetIsFeasGE(set, primsol, col->lb));
+         assert(SCIPsetIsInfinity(set, col->ub) || SCIPsetIsFeasLE(set, primsol, col->ub));
 
          var = col->var;
          assert(var != NULL);
@@ -1557,10 +1557,22 @@ SCIP_RETCODE SCIPbranchruleExecExternSol(
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;
+      SCIP_Bool runbranchrule;
 
       loclowerbound = SCIPnodeGetLowerbound(tree->focusnode);
       glblowerbound = SCIPtreeGetLowerbound(tree, set);
-      if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound)) )
+      assert(!SCIPsetIsInfinity(set, loclowerbound));
+
+      /* we distinguish between finite and infinite global lower bounds to avoid comparisons between different values > SCIPinfinity() */
+      if( SCIPsetIsInfinity(set, -glblowerbound) )
+         runbranchrule = SCIPsetIsInfinity(set, -loclowerbound) || SCIPsetIsGE(set, branchrule->maxbounddist, 1.0);
+      else
+      {
+         assert(!SCIPsetIsInfinity(set, -loclowerbound));
+         runbranchrule = SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound));
+      }
+
+      if( runbranchrule )
       {
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
@@ -1925,6 +1937,18 @@ void SCIPbranchruleSetMaxbounddist(
    assert(maxbounddist >= -1);
 
    branchrule->maxbounddist = maxbounddist;
+}
+
+/** enables or disables all clocks of \p branchrule, depending on the value of the flag */
+void SCIPbranchruleEnableOrDisableClocks(
+   SCIP_BRANCHRULE*      branchrule,         /**< the branching rule for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the branching rule be enabled? */
+   )
+{
+   assert(branchrule != NULL);
+
+   SCIPclockEnableOrDisable(branchrule->setuptime, enable);
+   SCIPclockEnableOrDisable(branchrule->branchclock, enable);
 }
 
 /** gets time in seconds used in this branching rule for setting up for next stages */

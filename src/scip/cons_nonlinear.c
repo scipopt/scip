@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2972,6 +2972,7 @@ SCIP_RETCODE reformulate(
             /* do not increase i, since node was removed and not necessarily replaced here */
             break;
          }
+
          case SCIP_EXPR_POLYNOMIAL:
          {
             /* if polynomial has several monomials, replace by a sum of nodes each having a single monomial and one that has all linear and quadratic monomials
@@ -3375,9 +3376,27 @@ SCIP_RETCODE reformulate(
             break;
          }
 
+         case SCIP_EXPR_USER:
+         {
+            /* ensure all children are linear */
+            SCIP_CALL( reformEnsureChildrenMinCurvature( scip, exprgraph, node, SCIP_EXPRCURV_LINEAR, conss, nconss, naddcons ) );
+
+            /* unknown curvature can be handled by user estimator callback or interval gradient */
+            /*
+            if( SCIPexprgraphGetNodeCurvature( node ) == SCIP_EXPRCURV_UNKNOWN )
+            {
+               SCIPerrorMessage("user expression with unknown curvature not supported\n");
+               return SCIP_ERROR;
+            }
+            */
+
+            ++i;
+            break;
+         }
+
          case SCIP_EXPR_LAST:
-         default:
-            SCIPerrorMessage("got expression with invalid operand\n");
+            SCIPABORT();
+            break;
          }
       }
    }
@@ -4796,6 +4815,226 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    return SCIP_OKAY;
 }
 
+/** Computes the linear coeffs and the constant in a linear expression
+ * both scaled by a given scalar value.
+ * The coeffs of the variables will be stored in the given array at
+ * their variable index.
+ * The constant of the given linear expression will be added to the given
+ * buffer.
+ */
+static
+SCIP_RETCODE getCoeffsAndConstantFromLinearExpr(
+   SCIP_EXPR*           expr,           /**< the linear expression */
+   SCIP_Real            scalar,         /**< the scalar value, i.e. the coeff of the given expression */
+   SCIP_Real*           varcoeffs,      /**< buffer array to store the computed coefficients */
+   SCIP_Real*           constant        /**< buffer to hold the constant value of the given expression */
+)
+{
+   switch( SCIPexprGetOperator( expr ) )
+   {
+   case SCIP_EXPR_VARIDX: /* set coeff for this variable to current scalar */
+   {
+      /* TODO: can a linear expression contain the same variable twice?
+       * if yes varcoeffs need to be initialized to zero before calling this function
+       * and coeff must not be overridden but summed up instead. */
+      varcoeffs[SCIPexprGetOpIndex( expr )] = scalar;
+      return SCIP_OKAY;
+   }
+
+   case SCIP_EXPR_CONST:
+   {
+      /* constant value increases */
+      *constant += scalar * SCIPexprGetOpReal( expr );
+      return SCIP_OKAY;
+   }
+
+   case SCIP_EXPR_MUL: /* need to find the constant part of the muliplication and then recurse  */
+   {
+      SCIP_EXPR** children;
+      children = SCIPexprGetChildren( expr );
+
+      /* first part is constant */
+      if( SCIPexprGetOperator( children[0] ) == SCIP_EXPR_CONST )
+      {
+         SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[1], scalar * SCIPexprGetOpReal( children[0] ), varcoeffs, constant ) );
+         return SCIP_OKAY;
+      }
+
+      /* second part is constant */
+      if( SCIPexprGetOperator( children[1] ) == SCIP_EXPR_CONST )
+      {
+         SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[0], scalar * SCIPexprGetOpReal( children[1] ), varcoeffs, constant ) );
+         return SCIP_OKAY;
+      }
+
+      /* nonlinear -> break out to error case  */
+      break;
+   }
+
+   case SCIP_EXPR_PLUS: /* just recurse */
+   {
+      SCIP_EXPR** children;
+      children = SCIPexprGetChildren( expr );
+      SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[0], scalar, varcoeffs, constant ) );
+      SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[1], scalar, varcoeffs, constant ) );
+      return SCIP_OKAY;
+   }
+
+   case SCIP_EXPR_MINUS: /* recursion on second child is called with negated scalar */
+   {
+      SCIP_EXPR** children;
+      children = SCIPexprGetChildren( expr );
+      SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[0], scalar, varcoeffs, constant ) );
+      SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[1], -scalar, varcoeffs, constant ) );
+      return SCIP_OKAY;
+   }
+
+   case SCIP_EXPR_LINEAR: /* add scaled constant and recurse on children with their coeff multiplied into scalar */
+   {
+      SCIP_Real* childCoeffs;
+      SCIP_EXPR** children;
+      int i;
+
+      *constant += scalar * SCIPexprGetLinearConstant( expr );
+
+      children = SCIPexprGetChildren( expr );
+      childCoeffs = SCIPexprGetLinearCoefs( expr );
+
+      for( i = 0; i < SCIPexprGetNChildren( expr ); ++i )
+      {
+         SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[i], scalar * childCoeffs[i], varcoeffs, constant ) );
+      }
+
+      return SCIP_OKAY;
+   }
+
+   default:
+      break;
+   }
+
+   SCIPerrorMessage( "Cannot extract linear coefficients from expressions with operator %d\n", SCIPexprGetOperator( expr ) );
+   assert( FALSE );
+   return SCIP_ERROR;
+}
+
+/** adds estimator from user callback of a constraints user expression tree to a row
+ */
+static
+SCIP_RETCODE addUserEstimator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   int                   exprtreeidx,        /**< for which tree an estimator should be added */
+   SCIP_Real*            x,                  /**< value of expression tree variables where to generate cut */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_ROW*             row,                /**< row where to add cut */
+   SCIP_Bool*            success             /**< buffer to store whether a cut was succefully added to the row */
+)
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPRTREE* exprtree;
+   SCIP_EXPR** children;
+   SCIP_VAR** vars;
+   SCIP_Real* params;
+   SCIP_INTERVAL* varbounds;
+
+   SCIP_INTERVAL* childbounds;
+   SCIP_Real* childvals;
+   SCIP_Real* childcoeffs;
+
+   SCIP_Real constant;
+   SCIP_Real treecoef;
+   int nvars;
+   int nchildren;
+   int i;
+
+   consdata = SCIPconsGetData( cons );
+   assert( consdata != NULL );
+   assert( exprtreeidx >= 0 );
+   assert( exprtreeidx < consdata->nexprtrees );
+   assert( consdata->exprtrees != NULL );
+   assert( success != NULL );
+
+   exprtree = consdata->exprtrees[exprtreeidx];
+   assert( exprtree != NULL );
+   assert( SCIPexprGetOperator(SCIPexprtreeGetRoot(exprtree)) == SCIP_EXPR_USER );
+
+   /* if user did not implement estimator callback, then we cannot do anything */
+   if( !SCIPexprHasUserEstimator(SCIPexprtreeGetRoot(exprtree)) )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   params = SCIPexprtreeGetParamVals( exprtree );
+   nvars = SCIPexprtreeGetNVars( exprtree );
+   vars = SCIPexprtreeGetVars( exprtree );
+   nchildren = SCIPexprGetNChildren( SCIPexprtreeGetRoot( exprtree ) );
+   children = SCIPexprGetChildren( SCIPexprtreeGetRoot( exprtree ) );
+
+   /* Get bounds of variables */
+   SCIP_CALL( SCIPallocBufferArray( scip, &varbounds, nchildren ) );
+
+   for( i = 0; i < nvars; ++i )
+   {
+      double lb = SCIPvarGetLbLocal( vars[i] );
+      double ub = SCIPvarGetUbLocal( vars[i] );
+      SCIPintervalSetBounds( &varbounds[i],
+                             -infty2infty( SCIPinfinity( scip ), INTERVALINFTY, -MIN( lb, ub ) ),
+                             +infty2infty( SCIPinfinity( scip ), INTERVALINFTY,  MAX( lb, ub ) ) );
+   }
+
+   /* Compute bounds and solution value for the user expressions children */
+   SCIP_CALL( SCIPallocBufferArray( scip, &childcoeffs, nchildren ) );
+   SCIP_CALL( SCIPallocBufferArray( scip, &childbounds, nchildren ) );
+   SCIP_CALL( SCIPallocBufferArray( scip, &childvals, nchildren ) );
+
+   for( i = 0; i < nchildren; ++i )
+   {
+      SCIP_CALL( SCIPexprEval( children[i], x, params, &childvals[i] ) );
+      SCIP_CALL( SCIPexprEvalInt( children[i], INTERVALINFTY, varbounds, params, &childbounds[i] ) );
+   }
+
+   /* varbounds not needed any longer */
+   SCIPfreeBufferArray( scip, &varbounds );
+
+   /* call estimator for user expressions to compute coeffs and constant for the user expressions children */
+   SCIP_CALL( SCIPexprEstimateUser( SCIPexprtreeGetRoot( exprtree ), INTERVALINFTY, childvals, childbounds, overestimate, childcoeffs, &constant, success ) );
+
+   if( *success )
+   {
+      SCIP_Real* varcoeffs;
+      SCIP_CALL( SCIPallocBufferArray( scip, &varcoeffs, nvars ) );
+
+      treecoef = consdata->nonlincoefs[exprtreeidx];
+      constant *= treecoef;
+
+      for( i = 0; i < nchildren; ++i )
+      {
+         SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[i], childcoeffs[i]*treecoef, varcoeffs, &constant ) );
+      }
+
+      if( !SCIPisInfinity( scip, -SCIProwGetLhs( row ) ) )
+      {
+         SCIP_CALL( SCIPchgRowLhs( scip, row, SCIProwGetLhs( row ) - constant ) );
+      }
+
+      if( !SCIPisInfinity( scip,  SCIProwGetRhs( row ) ) )
+      {
+         SCIP_CALL( SCIPchgRowRhs( scip, row, SCIProwGetRhs( row ) - constant ) );
+      }
+
+      SCIP_CALL( SCIPaddVarsToRow( scip, row, nvars, vars, varcoeffs ) );
+
+      SCIPfreeBufferArray( scip, &varcoeffs );
+   }
+
+   SCIPfreeBufferArray( scip, &childcoeffs );
+   SCIPfreeBufferArray( scip, &childbounds );
+   SCIPfreeBufferArray( scip, &childvals );
+
+   return SCIP_OKAY;
+}
+
 /** adds estimator from interval gradient of a constraints univariate expression tree to a row
  * a reference point is used to decide in which corner to generate the cut
  */
@@ -5054,6 +5293,14 @@ SCIP_RETCODE generateCut(
          if( !success )
          {
             SCIPdebugMessage("failed to generate polyhedral estimator for %d-dim concave function in exprtree %d, fall back to intervalgradient cut\n", SCIPexprtreeGetNVars(consdata->exprtrees[i]), i);
+            SCIP_CALL( addIntervalGradientEstimator(scip, exprint, cons, i, x, newsol, side == SCIP_SIDETYPE_LEFT, *row, &success) );
+         }
+      }
+      else if( SCIPexprGetOperator( SCIPexprtreeGetRoot( consdata->exprtrees[i] ) ) == SCIP_EXPR_USER )
+      {
+         SCIP_CALL( addUserEstimator( scip, cons, i, x, side == SCIP_SIDETYPE_LEFT, *row, &success ) );
+         if( !success ) /* the user estimation may not be implemented -> try interval estimator */
+         {
             SCIP_CALL( addIntervalGradientEstimator(scip, exprint, cons, i, x, newsol, side == SCIP_SIDETYPE_LEFT, *row, &success) );
          }
       }
@@ -5776,7 +6023,7 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
 
          SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
 
-         if( checkresult != SCIP_INFEASIBLE )
+         if( checkresult != SCIP_INFEASIBLE && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
          {
             SCIPdebugMessage("linear constraint is feasible, thus do not add\n");
          }

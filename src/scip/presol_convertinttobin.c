@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,12 +37,12 @@
 #define PRESOL_DESC            "converts integer variables to binaries"
 #define PRESOL_PRIORITY        +6000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              0 /**< maximal number of presolving rounds the presolver participates in (-1: no
-					 *   limit) */
+                                          *   limit) */
 #define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
 
 #define DEFAULT_MAXDOMAINSIZE  SCIP_LONGINT_MAX   /**< absolute value of maximum domain size which will be converted */
 #define DEFAULT_ONLYPOWERSOFTWO           FALSE   /**< should only integer variables with a domain size of 2^p - 1 be
-						   *   converted(, there we don't need an knapsack-constraint) */
+                                                    *   converted(, there we don't need an knapsack-constraint) */
 #define DEFAULT_SAMELOCKSINBOTHDIRECTIONS FALSE   /**< should only integer variables with uplocks equals downlocks be converted */
 
 /** presolver data */
@@ -174,13 +174,13 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
       /* check for domainsize is not 2^p - 1 if necessary */
       if( presoldata->onlypoweroftwo )
       {
-	 /* stop if domainsize is not 2^p - 1*/
+         /* stop if domainsize is not 2^p - 1*/
          SCIP_Longint tmp;
 
-	 assert(domainsize < SCIP_LONGINT_MAX);
+         assert(domainsize < SCIP_LONGINT_MAX);
          tmp = domainsize + 1;
 
-         while( tmp%2 == 0 )
+         while( tmp % 2 == 0 )
             tmp /= 2;
          if( tmp != 1 )
             continue;
@@ -203,7 +203,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
          nnewbinvars++;
       }
       else if( scalar == domainsize + 1 )
-	noconsknapsack = TRUE;
+         noconsknapsack = TRUE;
 
       assert(scalar > domainsize);
 
@@ -248,7 +248,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
          {
             SCIP_Longint divisor;
 
-	    divisor = (SCIP_Longint)pow(2.0, nodd); /*lint !e747*/
+            divisor = (SCIP_Longint)pow(2.0, nodd); /*lint !e747*/
             assert(divisor >= 2);
 
             for( v2 = nodd; v2 < nnewbinvars; ++v2 )
@@ -258,7 +258,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
          }
 
          SCIP_CALL( SCIPcreateConsKnapsack(scip, &newcons, newconsname, nnewbinvars - nodd, &newbinvars[nodd],
-	       &weights[nodd], domainsize,
+               &weights[nodd], domainsize,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, newcons) );
          SCIPdebugPrintCons(scip, newcons, NULL);

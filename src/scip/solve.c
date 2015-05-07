@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -29,7 +29,7 @@
 #include "scip/stat.h"
 #include "scip/buffer.h"
 #include "scip/clock.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/interrupt.h"
 #include "scip/event.h"
 #include "scip/lp.h"
@@ -58,7 +58,9 @@
 
 
 #define MAXNLPERRORS  10                /**< maximal number of LP error loops in a single node */
-
+#define MAXNCLOCKSKIPS 64               /**< maximum number of SCIPsolveIsStopped() calls without checking the clock */
+#define NINITCALLS 1000L                /**< minimum number of calls to SCIPsolveIsStopped() prior to dynamic clock skips */
+#define SAFETYFACTOR 1e-2               /**< the probability that SCIP skips the clock call after the time limit has already been reached */
 
 /** returns whether the solving process will be / was stopped before proving optimality;
  *  if the solving process was stopped, stores the reason as status in stat
@@ -71,6 +73,10 @@ SCIP_Bool SCIPsolveIsStopped(
 {
    assert(set != NULL);
    assert(stat != NULL);
+   assert(set->istimelimitfinite || SCIPsetIsInfinity(set, set->limit_time));
+
+   /* increase the number of calls to this method */
+   ++stat->nisstoppedcalls;
 
    /* in case lowerbound >= upperbound, we do not want to terminate with SCIP_STATUS_GAPLIMIT but with the ordinary 
     * SCIP_STATUS_OPTIMAL/INFEASIBLE/...
@@ -90,9 +96,48 @@ SCIP_Bool SCIPsolveIsStopped(
       stat->status = SCIP_STATUS_USERINTERRUPT;
       stat->userinterrupt = FALSE;
    }
-   else if( SCIPclockGetTime(stat->solvingtime) >= set->limit_time )
-      stat->status = SCIP_STATUS_TIMELIMIT;
-   else if( SCIPgetMemUsed(set->scip) >= set->limit_memory*1048576.0 - set->mem_externestim )
+   /* only measure the clock if a time limit is set */
+   else if( set->istimelimitfinite )
+   {
+      /* check if we have already called this function sufficiently often for a valid estimation of its average call interval */
+      if( stat->nclockskipsleft <= 0 || stat->nisstoppedcalls < NINITCALLS )
+      {
+         SCIP_Real currtime = SCIPclockGetTime(stat->solvingtime);
+
+         /* use the measured time to update the average time interval between two calls to this method */
+         if( set->time_rareclockcheck && stat->nisstoppedcalls >= NINITCALLS )
+         {
+            SCIP_Real avgisstoppedfreq;
+            int nclockskips = MAXNCLOCKSKIPS;
+
+            avgisstoppedfreq = currtime / stat->nisstoppedcalls;
+
+            /* if we are approaching the time limit, reset the number of clock skips to 0 */
+            if( (SAFETYFACTOR * (set->limit_time - currtime) / (avgisstoppedfreq + 1e-6)) < nclockskips )
+               nclockskips = 0;
+
+            stat->nclockskipsleft = nclockskips;
+         }
+         else
+            stat->nclockskipsleft = 0;
+
+         /* set the status if the time limit was hit */
+         if( currtime >= set->limit_time )
+         {
+            stat->status = SCIP_STATUS_TIMELIMIT;
+            return TRUE;
+         }
+      }
+      else if( SCIPclockGetLastTime(stat->solvingtime) >= set->limit_time )
+      {
+         /* use information if clock has been updated more recently */
+         stat->status = SCIP_STATUS_TIMELIMIT;
+         return TRUE;
+      }
+      else
+         --stat->nclockskipsleft;
+   }
+   if( SCIPgetMemUsed(set->scip) >= set->limit_memory*1048576.0 - set->mem_externestim )
       stat->status = SCIP_STATUS_MEMLIMIT;
    else if( set->stage >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap) )
       stat->status = SCIP_STATUS_GAPLIMIT;
@@ -2165,7 +2210,7 @@ SCIP_RETCODE priceAndCutLoop(
 
                if( stat->ninitconssadded != oldninitconssadded )
                {
-                  SCIPdebugMessage("new initial constraints added during propagation: old=%lld, new=%lld\n", oldninitconssadded, stat->ninitconssadded);
+                  SCIPdebugMessage("new initial constraints added during propagation: old=%"SCIP_LONGINT_FORMAT", new=%"SCIP_LONGINT_FORMAT"\n", oldninitconssadded, stat->ninitconssadded);
 
                   SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, lp, branchcand,
                         eventqueue, eventfilter, FALSE, FALSE, cutoff) );
@@ -2280,7 +2325,8 @@ SCIP_RETCODE priceAndCutLoop(
          /* global cut pool separation */
          if( !enoughcuts && !delayedsepa )
          {
-            SCIP_CALL( cutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, FALSE, root, actdepth, &enoughcuts, cutoff) );
+            SCIP_CALL( cutpoolSeparate(cutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, FALSE, root,
+                  actdepth, &enoughcuts, cutoff) );
 
             if( *cutoff )
             {
@@ -2298,7 +2344,8 @@ SCIP_RETCODE priceAndCutLoop(
          if( !(*cutoff) && !(*lperror) && !enoughcuts && lp->solved )
          {
             /* apply a separation round */
-            SCIP_CALL( separationRoundLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, transprob, primal, tree, lp, sepastore, actdepth, bounddist, delayedsepa,
+            SCIP_CALL( separationRoundLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, transprob, primal, tree,
+                  lp, sepastore, actdepth, bounddist, delayedsepa,
                   &delayedsepa, &enoughcuts, cutoff, lperror, &mustsepa, &mustprice) );
             assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
@@ -2307,7 +2354,8 @@ SCIP_RETCODE priceAndCutLoop(
                && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
                && nsepastallrounds >= maxnsepastallrounds-1 && delayedsepa )
             {
-               SCIP_CALL( separationRoundLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, transprob, primal, tree, lp, sepastore, actdepth, bounddist, delayedsepa,
+               SCIP_CALL( separationRoundLP(blkmem, set, messagehdlr, stat, eventqueue, eventfilter, transprob, primal,
+                     tree, lp, sepastore, actdepth, bounddist, delayedsepa,
                      &delayedsepa, &enoughcuts, cutoff, lperror, &mustsepa, &mustprice) );
                assert(SCIPbufferGetNUsed(set->buffer) == 0);
             }
@@ -2318,7 +2366,8 @@ SCIP_RETCODE priceAndCutLoop(
          {
             assert( !(*lperror) );
 
-            SCIP_CALL( cutpoolSeparate(delayedcutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, TRUE, root, actdepth, &enoughcuts, cutoff) );
+            SCIP_CALL( cutpoolSeparate(delayedcutpool, blkmem, set, stat, eventqueue, eventfilter, lp, sepastore, TRUE,
+                  root, actdepth, &enoughcuts, cutoff) );
 
             if( *cutoff )
             {
@@ -2362,7 +2411,8 @@ SCIP_RETCODE priceAndCutLoop(
                   SCIPdebugMessage(" -> separation changed bound: call propagators that are applicable before LP is solved\n");
 
                   /* propagate domains */
-                  SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE, SCIP_PROPTIMING_BEFORELP, cutoff) );
+                  SCIP_CALL( propagateDomains(blkmem, set, stat, primal, tree, SCIPtreeGetCurrentDepth(tree), 0, FALSE,
+                        SCIP_PROPTIMING_BEFORELP, cutoff) );
                   assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
                   /* in the root node, remove redundant rows permanently from the LP */
@@ -2375,7 +2425,8 @@ SCIP_RETCODE priceAndCutLoop(
 
                if( stat->ninitconssadded != oldninitconssadded )
                {
-                  SCIPdebugMessage("new initial constraints added during propagation: old=%lld, new=%lld\n", oldninitconssadded, stat->ninitconssadded);
+                  SCIPdebugMessage("new initial constraints added during propagation: old=%"SCIP_LONGINT_FORMAT", new=%"SCIP_LONGINT_FORMAT"\n",
+                        oldninitconssadded, stat->ninitconssadded);
 
                   SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, lp, branchcand,
                         eventqueue, eventfilter, FALSE, FALSE, cutoff) );
@@ -3466,7 +3517,8 @@ SCIP_RETCODE propAndSolve(
       }
 
       /* update lower bound with the pseudo objective value, and cut off node by bounding */
-      SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, lp, branchcand, eventqueue, conflict, cutoff) );
+      SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, lp, branchcand, eventqueue, conflict,
+            cutoff) );
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
    assert(*cutoff || !SCIPtreeHasFocusNodeLP(tree) || (lp->flushed && lp->solved));
@@ -3474,7 +3526,8 @@ SCIP_RETCODE propAndSolve(
    /* solve external relaxations with negative priority */
    if( solverelax && !(*cutoff) )
    {
-      SCIP_CALL( solveNodeRelax(set, stat, tree, transprob, origprob, actdepth, FALSE, cutoff, propagateagain, solvelpagain, solverelaxagain) );
+      SCIP_CALL( solveNodeRelax(set, stat, tree, transprob, origprob, actdepth, FALSE, cutoff, propagateagain, solvelpagain,
+            solverelaxagain) );
       assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
       /* check, if the path was cutoff */
@@ -3485,7 +3538,8 @@ SCIP_RETCODE propAndSolve(
             (actdepth == 0), SCIP_EFFICIACYCHOICE_RELAX, cutoff, propagateagain, solvelpagain) );
 
       /* update lower bound with the pseudo objective value, and cut off node by bounding */
-      SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, lp, branchcand, eventqueue, conflict, cutoff) );
+      SCIP_CALL( applyBounding(blkmem, set, stat, transprob, origprob, primal, tree, lp, branchcand, eventqueue, conflict,
+            cutoff) );
    }
    assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
@@ -4336,8 +4390,8 @@ SCIP_RETCODE SCIPsolveCIP(
       /* check for restart */
       if( !(*restart) )
       {
-         /* change color of node in VBC output */
-         SCIPvbcSolvedNode(stat->vbc, stat, focusnode);
+         /* change color of node in visualization */
+         SCIPvisualSolvedNode(stat->visual, set, stat, focusnode);
 
          /* check, if the current solution is feasible */
          if( !infeasible )
@@ -4383,8 +4437,8 @@ SCIP_RETCODE SCIPsolveCIP(
             /* node solution is not feasible */
             if( tree->nchildren == 0 )
             {
-               /* change color of node in VBC output */
-               SCIPvbcCutoffNode(stat->vbc, stat, focusnode);
+               /* change color of node in visualization output */
+               SCIPvisualCutoffNode(stat->visual, set, stat, focusnode, TRUE);
 
                nodechecked = TRUE;
                SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, SCIP_EVENTTYPE_NODEINFEASIBLE, focusnode->lowerbound) );
@@ -4498,6 +4552,13 @@ SCIP_RETCODE SCIPsolveCIP(
        * another restart
        */
       *restart = *restart || (stat->userrestart && SCIPtreeGetNNodes(tree) > 0 && restartAllowed(set, stat));
+      if( set->limit_autorestartnodes == stat->nnodes && stat->ntotalnodes - stat->nruns + 1 == set->limit_autorestartnodes )
+      {
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+               "(run %d, node %"SCIP_LONGINT_FORMAT") restarting: triggering parameter controlled restart)\n",
+               stat->nruns, stat->nnodes);
+         *restart = TRUE ;
+      }
 
       /* display node information line */
       SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, (SCIPnodeGetDepth(focusnode) == 0) && infeasible && !foundsol, TRUE) );

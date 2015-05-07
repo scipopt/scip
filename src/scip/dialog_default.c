@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -545,50 +545,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
    SCIPdialogMessage(scip, NULL, "\n");
 
    *nextdialog = SCIPdialogGetParent(dialog);
-
-   return SCIP_OKAY;
-}
-
-/** dialog execution method for the conflictgraph command */
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecConflictgraph)
-{  /*lint --e{715}*/
-   SCIP_RETCODE retcode;
-   SCIP_Bool endoffile;
-   char* filename;
-
-   assert(nextdialog != NULL);
-
-   *nextdialog = NULL;
-
-   if( !SCIPisTransformed(scip) )
-   {
-      SCIPdialogMessage(scip, NULL, "cannot call method before problem was transformed\n");
-      SCIPdialoghdlrClearBuffer(dialoghdlr);
-   }
-   else
-   {
-      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
-      if( endoffile )
-      {
-         *nextdialog = NULL;
-         return SCIP_OKAY;
-      }
-
-      if( filename[0] != '\0' )
-      {
-         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
-
-         retcode = SCIPwriteImplicationConflictGraph(scip, filename);
-         if( retcode == SCIP_FILECREATEERROR )
-            SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
-         else
-         {
-            SCIP_CALL( retcode );
-         }
-      }
-   }
-
-   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    return SCIP_OKAY;
 }
@@ -3672,19 +3628,6 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   /* write conflictgraph */
-   if( !SCIPdialogHasEntry(submenu, "conflictgraph") )
-   {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
-            NULL,
-            SCIPdialogExecConflictgraph, NULL, NULL,
-            "conflictgraph",
-            "write binary variable implications of transformed problem as conflict graph to file",
-            FALSE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
-   }
-
    /* write cliquegraph */
    if( !SCIPdialogHasEntry(submenu, "cliquegraph") )
    {
@@ -4625,13 +4568,12 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
 
-   /* set vbc */
-   if( !SCIPdialogHasEntry(setmenu, "vbc") )
+   /* set visualization */
+   if( !SCIPdialogHasEntry(setmenu, "visual") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &submenu,
-            NULL,
-            SCIPdialogExecMenu, NULL, NULL,
-            "vbc", "change parameters for VBC tool output", TRUE, NULL) );
+            NULL, SCIPdialogExecMenu, NULL, NULL,
+            "visual", "change parameters for visualization output", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4392,7 +4392,7 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, FALSE, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
 
@@ -4435,7 +4435,7 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, FALSE, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
 
@@ -4561,7 +4561,7 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, FALSE, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
 
@@ -4605,7 +4605,7 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, FALSE, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
 

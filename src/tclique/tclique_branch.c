@@ -3,7 +3,7 @@
 /*                        This file is part of the program                   */
 /*                    TCLIQUE --- Algorithm for Maximum Cliques              */
 /*                                                                           */
-/*    Copyright (C) 1996-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 1996-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  TCLIQUE is distributed under the terms of the ZIB Academic License.      */
@@ -714,7 +714,7 @@ int branch(
    BMS_CHKMEM*      mem,                /**< block memory */
    CLIQUEHASH*      cliquehash,         /**< clique hash table */
    int*             buffer,             /**< buffer of size nnodes */
-   int              level,		/**< level of b&b tree */
+   int              level,              /**< level of b&b tree */
    int*             V,                  /**< non-zero weighted nodes for branching */
    int              nV,                 /**< number of non-zero weighted nodes for branching */
    int*             Vzero,              /**< zero weighted nodes */
@@ -733,7 +733,7 @@ int branch(
    TCLIQUE_WEIGHT   maxfirstnodeweight, /**< maximum weight of branching nodes in level 0; 0 if not used
                                          **  (for cliques with at least one fractional node) */
    int*             ntreenodes,         /**< pointer to store number of nodes of b&b tree */
-   int              maxntreenodes,	/**< maximal number of nodes of b&b tree */
+   int              maxntreenodes,      /**< maximal number of nodes of b&b tree */
    int              backtrackfreq,      /**< frequency to backtrack to first level of tree (0: no premature backtracking) */
    int              maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
    int              fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */
@@ -771,7 +771,7 @@ int branch(
    /* increase the number of nodes, and stop solving, if the node limit is exceeded */
    (*ntreenodes)++;
 #ifdef TCLIQUE_DEBUG
-   debugMessage("(level %d, treenode %d) maxclique = %d, curclique = %d [mem=%lld (%lld), cliques=%d]\n",
+   debugMessage("(level %d, treenode %d) maxclique = %d, curclique = %d [mem=%"SCIP_LONGINT_FORMAT" (%"SCIP_LONGINT_FORMAT"), cliques=%d]\n",
       level, *ntreenodes, *maxcliqueweight, *curcliqueweight,
       BMSgetChunkMemoryUsed(mem), BMSgetMemoryUsed(), cliquehash == NULL ? 0 : cliquehash->ncliques);
 
@@ -1009,7 +1009,7 @@ void tcliqueMaxClique(
    TCLIQUE_WEIGHT   maxfirstnodeweight, /**< maximum weight of branching nodes in level 0; 0 if not used
                                          *   for cliques with at least one fractional node) */
    TCLIQUE_WEIGHT   minweight,          /**< lower bound for weight of generated cliques */
-   int              maxntreenodes,	/**< maximal number of nodes of b&b tree */
+   int              maxntreenodes,      /**< maximal number of nodes of b&b tree */
    int              backtrackfreq,      /**< frequency to backtrack to first level of tree (0: no premature backtracking) */
    int              maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
    int              fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */

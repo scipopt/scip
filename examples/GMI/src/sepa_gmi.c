@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -686,7 +686,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
          {
             /* Compute value of the slack variable (we only care about the correct fractionality) */
             if ( SCIPisInfinity(scip, SCIProwGetRhs(row)) )
-               primsol = SCIPgetRowLPActivity(scip, row) - SCIProwGetLhs(row);
+               primsol = SCIProwGetLhs(row) - SCIPgetRowLPActivity(scip, row);
             else
                primsol = SCIProwGetRhs(row) - SCIPgetRowLPActivity(scip, row);
 
@@ -705,11 +705,15 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
          SCIP_Bool success;
          SCIP_Bool cutislocal;
 
+         /* dummy data structures for sparsity information */
+         int* inds = NULL;
+         int ninds = -1;
+
          /* get the row of B^-1 for this basic integer variable with fractional solution value */
-         SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow) );
+         SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, inds, &ninds) );
 
          /* get the tableau row for this basic integer variable with fractional solution value */
-         SCIP_CALL( SCIPgetLPBInvARow(scip, i, binvrow, binvarow) );
+         SCIP_CALL( SCIPgetLPBInvARow(scip, i, binvrow, binvarow, inds, &ninds) );
 
          /* this is an approximation (one could also pass over coefficients and check whether local rows have been used): */
          cutislocal = (depth != 0) ? TRUE : FALSE;

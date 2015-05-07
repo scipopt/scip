@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -739,15 +739,6 @@ int SCIPvarGetNImpls(
    SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    );
 
-/** gets number of implications  y <= 0 or y >= 1 for x == 0 or x == 1 of given active problem variable x with binary y, 
- *  there are no implications for nonbinary variable x
- */
-EXTERN
-int SCIPvarGetNBinImpls(
-   SCIP_VAR*             var,                /**< active problem variable */
-   SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
-   );
-
 /** gets array with implication variables y of implications  y <= b or y >= b for x == 0 or x == 1 of given active
  *  problem variable x, there are no implications for nonbinary variable x;
  *  the implications are sorted such that implications with binary implied variables precede the ones with non-binary
@@ -930,7 +921,6 @@ SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
 #define SCIPvarGetVubCoefs(var)         (SCIPvboundsGetCoefs((var)->vubs))
 #define SCIPvarGetVubConstants(var)     (SCIPvboundsGetConstants((var)->vubs))
 #define SCIPvarGetNImpls(var, fix)      (SCIPimplicsGetNImpls((var)->implics, fix))
-#define SCIPvarGetNBinImpls(var, fix)   (SCIPimplicsGetNBinImpls((var)->implics, fix))
 #define SCIPvarGetImplVars(var, fix)    (SCIPimplicsGetVars((var)->implics, fix))
 #define SCIPvarGetImplTypes(var, fix)   (SCIPimplicsGetTypes((var)->implics, fix))
 #define SCIPvarGetImplBounds(var, fix)  (SCIPimplicsGetBounds((var)->implics, fix))

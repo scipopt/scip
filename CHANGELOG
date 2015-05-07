@@ -1,7 +1,110 @@
+SCIP version NEXT
+==================
+
+features:
+- variable histories can be transferred between sub-SCIPs solved by LNS heuristics and the component presolver
+  and the main SCIP to reuse this information.
+- tighter reliability notions introduced for reliability branching, based on pseudo-cost relative errors
+  and comparing candidates with the best pseudo-candidate using a 2-sample student-T test. These methods
+  are used in disjunction with the existing reliability notion that uses a fixed number as reliability
+  threshold for every variable before turning off strong-branching. This means, the classical method
+  must be turned off by setting parameters minreliable and maxreliable to 0. The behavior is
+  controlled through several parameters.
+- new distribution branching rule to base decisions on row activity (normal) distribution over domain space
+- new heuristic heur_indicator that tries to make partial solutions with indicator constraints feasible. It also
+  tries to improve them (or external solutions) by a one-opt local search.
+- can now output information for BAK: Branch-and-bound Analysis Kit
+- added scripts check_xpress.awk, check_xpress.sh, evalcheck_xpress.sh and check_cluster_xpress.sh and target
+  "testclusterxpress" and "testxpress" in Makefile
+- the MPS reader can now read semi-integer variables, they are handled by creating bound disjunction constraints
+- the original problem can now be permuted directly after reading (if misc/permutationseed has value >= 0)
+- added methods to compute strongly connected components with Tarjan's Algorithm
+- improved clique and variable bound heuristics
+- extended AMPL interface to allow for setting of constraint and variable properties via AMPL suffixes:
+  the following suffixes for constraints are recognized by interface: initial, separate, enforce, check, propagate,
+  dynamic, removable; additionally, for variables the suffixes initial and removable are recognized;
+  we refer to the SCIP documentation (e.g, SCIPcreateVar; SCIPcreateConsLinear) for their meaning;
+  setting them 1 enables the flag (TRUE), setting them to 2 disables the flag (FALSE), not setting them or setting
+  them to 0 will use a default value
+
+parameters:
+- new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
+  (set to FALSE for static order) (default is FALSE)
+- new parameter "heuristics/shiftandpropagate/maxcutoffquot" to select a maximum percentage of allowed cutoffs before stopping the heuristic
+  (default is 0.0)
+- new parameter "limits/autororestart" for triggering an automatic restart after this many nodes, or -1 for no auto restart [default is -1]
+- new parameter "separating/cutselrestart" for cut selection during restart copy process ('a'ge, activity 'q'uotient) [default is 'a']
+- new parameter "separating/cutselsubscip" for cut selection for sub SCIPs ('a'ge, activity 'q'uotient) [default is 'a']
+- new parameter "branching/relpscost/userelerrorreliability" to enable relative error based reliability
+- new parameter "branching/relpscost/lowerrortol" to define a lower reliability threshold for relative error based reliability
+- new parameter "branching/relpscost/higherrortol" to define the highest reliability threshold for relative error based reliability
+- new parameter "branching/relpscost/usehyptestforreliability" to enable strong branching decisions based on a 2-sample student-T test
+  of all prior pseudo-cost observations   between the best pseudo-candidate and the candidate for which to decide whether strong-branching
+  should be applied
+- new parameter "branching/relpscost/usedynamicconfidence" to use a dynamic confidence level based on the amount of
+  strong-branching simplex-iterations compared to the overall simplex iterations (default is FALSE)
+- new parameter "branching/relpscost/confidencelevel" to set the confidence level to be used by statistical tests
+- new parameter "branching/relpscost/skipbadinitcands" for skipping strong-branching candidates whose estimated gain
+  is significantly worse than the one of the locally best (sb or pseudo) candidate
+- rowrepswitch set to 2.0, so row representation is activated if LP has at least 2 times more rows than columns
+- rename parameter "vbc/filename" to "visual/vbcfilename"
+- rename parameter "vbc/realtime" to "visual/realtime"
+- rename parameter "vbc/dispsols" to "visual/dispsols"
+- added parameter to switch pseudo cost update in diving heuristics (enabled by default)
+- one can now set emphasis parameters at the beginning of a settings file; it should start with "emphasis:" and
+  the contain the emphasis string, e.g., "emphasis: feasibility" or "emphasis: heuristics off".
+- new parameter "heur/indicator/improvesols" that turns on the improvement of external solutions by one-opt
+- new advanced parameter "constraints/linear/rangedrowpropagation" to disabled newly implemented propagtion algorithm
+  for ranged rows and equations
+- new advanced parameter "constraints/linear/multaggrremove" to perform multi-aggregations in linear constraint handler
+  only if the constraint can be removed afterwards
+
+
+performance improvements:
+- adjusted (hard) diving heuristics to solve fewer LPs at shallow depths of the tree; after an LP was solved,
+  the next depth to perform an LP solve is determined dynamically based on the heuristic success so far
+  and the difference between the depth and the maximum dive depth; if more than one candidate should
+  be rounded, all candidates are sorted w.r.t. the diving score and then attempted in order of their score
+  unless their LP solution has already become infeasible from intermediate propagations.
+- all hard diving heuristics additionally consider indicator variables as candidate variables and try to
+  make indicator constraints feasible before passing a rounded solution to SCIPtrySol()
+- improved vartype upgradability from continuous to implicit variables in cons_linear.c, depending on their objective
+  coefficients
+- using sparsity information of the SoPlex LP
+- new presolving/propagation algorithm using the gcd for ranged rows and equations in cons_linear
+
+interface:
+- new method SCIPcutGetLPActivityQuot() in pub_cutpool.h to get the potion of LP's where this cut was sharp in an optimal basis.
+- methods which support statistical tests in pub_misc.h, SCIPstudentTGetCriticalValue(), SCIPcomputeTwoSampleTTestValue() etc.
+- new enum SCIP_CONFIDENCE_LEVEL for different levels of confidence for statistical tests.
+- new struct SCIP_DIVESET that bundles options for SCIP's diving heuristics; all hard diving heuristics (those
+  without 'obj' at the beginning) create their diveset and store it in their heuristic data.
+- new callback SCIP_DECL_DIVESETGETSCORE to implement scoring function to guide diving
+- new method SCIPperformGenericDivingAlgorithm() that performs diving with periodic LP resolve according to
+  the diveset argument.
+- rename all file "*_vbc.?" to the more generic "*_visual.?"
+- submenu for setting "vbc" settings renamed to "visual"
+- rename SCIPdigraphGetSuccessorsDatas() -> SCIPdigraphGetSuccessorsData()
+- added new sorting functions SCIPsortRealRealRealBoolBoolPtr(), SCIPsortDownRealRealRealBoolBoolPtr()
+- added new sorting functions SCIPsortIntIntIntReal(), SCIPsortDownIntIntIntReal()
+- safe-guarded buffer array (re)allocations to check for negative size or size > INT_MAX
+
+fixed bugs:
+- fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)
+
 SCIP version 3.1.1
 ==================
 
 fixed bugs:
+- fixed wrong handling of infinite activities and primal values in sepastore.c and lp.c
+- fixed bug in cons_abspower.c, forbid changing of the right hand side to infinity
+- fixed wrong comparison when executing branching rule for external branching candidates
+- fixed bug in lp.c which leads to wrong primal and dual feasibility
+- fixed bug in cons_quadratic.c which leads to an overflow when SCIP allocates memory for a dense matrix
+- fixed bug in primal.c and tree.c by using SCIPinfinity() as a cutoffbound to delete child nodes
+- fixed bug in cons_quadratic which leads to wrong min/max activities
+- fixed wrong conversion of reals representing negative integer values
+- in debug mode, SCIP checks that no NaN's are introduced in SCIPsolSetVal()
 - fixed bug in proximity heuristic which attempted to enter diving mode even at nodes without a constructed LP
 - fixed wrong pseudo cost updates during diving heuristic execution after backtracking
 - fixed bug 697 (and 699), calling SCIPsolve() after the problem was already solved and SCIPfreeSolve() was called now
@@ -44,17 +147,41 @@ fixed bugs:
   SCIPvarIsBinary() returned true
 - treat activities of pseudo solutions as invalid when containing positive and negative infinity contributions
 - fixed bug in cons_setppc, wrongly aggregating variables if dual-presolving was disabled
+- fixed bug that objective limit was not reset correctly during SCIPfreeTransform() for maximization problems
+- fixed bug in cons_sos1: locks and events were not initialized if constraint was added to transformed problem
+- fixed bug(?) in reader_mps: variables are now written in columns section even of they occur in no constraint
+  and have an objective coefficient of 0 (otherwise, CPLEX and Gurobi cannot read the file)
+- fixed bug that hitting the time limit while solving a pure LP and then continuing the solving process lead to
+  not solving the LP, but always creating a single child node until maximum depth is reached
+- fixed bug in reader_lp which created two indicator constraints with the same name to trigger an equality
+- fixed bug leading to an incorrect dual bound when solving probing LPs within a DURINGPRICINGLOOP heuristic
+- fixed bug in components presolver with handling of dual fixable variables: unboundedness was not detected,
+  better handle components with single variables by dual fixing propagator
+- fixed bug in prop_dualfixing: don't fix variables to infinite values during solving
+- fixed bug in cons_setppc with dual presolving disabled
+- fixed sign of the dual multipliers returned by AMPL interfaces for maximization
+- fixed bug in GMI example: fractionality of slack variable is now computed correctly
+- issues in component solving by presol_components do not lead to stopping the overall process, anymore, the component
+  is just disregarded
+- fixed bug when reading indicator constraints for linear constraints (equations/ranged rows) from MPS files
+- fixed LP interface of CPLEX: functions getBInv* return the correct sign of the coefficients.
+- fixed	bug in cons_indicator with handling local bounds
+- fixed assert in cons_soc.c: now soc with 1 lhs variable are allowed
 
 performance improvements:
+- improved solving of LPs in OBBT propagator
 - improved activity-delta computation and thereby propagation for linear constraints
 - improved memory management of proximity heuristic
+- disabled statistic timing in all subscips via new parameter timing/statistictiming
 
 features:
+- use clock average to reduce number of system calls via timing/rareclockcheck parameter
 - added copy mechanism for conjunction constraints
 - added Makefile support for cygwin 64 Bit
 - added revised lpi_xprs for using XPRESS as LP solver
 
 interface:
+- added methods SCIPconvertRealTo[Long]Int() to convert reals that represent integers to [long] ints.
 - added methods SCIPisDualfeasEQ() and related to perform checks w.r.t. to the dual feasibility tolerance
 - forbid to call SCIPfixVar() in SCIP_STAGE_PRESOLVED stage, which is not allowed since it calls SCIPchgVarLb/Ub()
 - rename SCIPdigraphGetNodeDatas() to SCIPdigraphGetNodeData(); SCIPdigraphSetNodeDatas() to SCIPdigraphSetNodeData()
@@ -63,14 +190,26 @@ interface:
   the created subscip automatically at the end.
 - new method SCIPdeleteSubproblemProximity() to free proximity subproblem manually as external caller
 - added dialog for writing the finite solution (calling SCIPcreateFiniteSolCopy() before writing)
+- new method SCIPhasPerformedPresolve() to check, e.g., whether LP duals are accessible
+- AMPL interface now returns dual multipliers if problem is an LP and presolving was turned off
+- changes in clock type are now transferred to SoPlex
+- corrected wrong primal bound in statistics for unbounded problems
 
 parameters:
+- new parameter timing/rareclockcheck to call the system time less frequently, based on the current average time interval
+  between two calls to SCIPsolveIsStopped(); the default value is FALSE
+- new parameter timing/statistictiming to enable/disable all timers for statistic output of SCIP;
+  the default value is TRUE
 - changed default value of parameter heuristics/proximity/minimprove to 0.02; previous value was 0.25
 - changed default value of parameter heuristics/proximity/usefinallp to FALSE
 
 Makefile:
 - allow to turn off block and buffer memory by the makefile parameters NOBLKMEM, NOBUFMEM, NOBLKBUFMEM;
   also remove the now superfluous makefiles for noblkmem, nobufmem, noblkbufmem
+
+misc:
+- moved assertions in comparison methods from scip.c to set.c
+- added more checks to SCIP{alloc,realloc,dupliacte}BufferArray() to handle overflows properly
 
 SCIP version 3.1.0
 ==================

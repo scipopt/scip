@@ -6,7 +6,7 @@
 =opt= bienst1                       46.75
 =opt= bienst2                        54.6
 =opt= binkar10_1               6742.20002
-=best= d10200                       12448
+=best= d10200                       12432
 =best= d20200                       12301
 =opt= dano3_3                  576.344633
 =opt= dano3_4                  576.435225
@@ -14,7 +14,7 @@
 =opt= fiball                          138
 =best= germanrr                47366588.8
 =opt= haprp                    3673280.68
-=best= leo1                     421359487
+=best= leo1                     410749407
 =best= leo2                     425958116
 =opt= lrn                      44481892.1
 =opt= mcf2                     65.6666667
@@ -28,7 +28,7 @@
 =opt= neos-1061020              -142745.3
 =opt= neos-1062641        -1.15926468e-09
 =best= neos-1067731               1025569
-=best= neos-1096528                    388
+=opt= neos-1096528                    388
 =opt= neos-1109824                    378
 =best= neos-1112782        5.72148826e+11
 =best= neos-1112787  5.65037620162588e+11
@@ -57,7 +57,7 @@
 =best= neos-1324574                      8
 =best= neos-1330346                      8
 =opt= neos-1330635                25.8781
-=best= neos-1337307                -202319
+=opt= neos-1337307                -202319
 =opt= neos-1337489                    -77
 =best= neos-1346382                   -176
 =unkn= neos-1354092      
@@ -159,7 +159,7 @@
 =opt= neos-555771                    18.6
 =opt= neos-555884                 1232700
 =opt= neos-555927                  690000
-=best= neos-565672    	       96847.6569
+=best= neos-565672            95863.191029
 =opt= neos-565815                      14
 =opt= neos-570431                       9
 =best= neos-574665             5761665.22
@@ -259,11 +259,11 @@
 =opt= neos-863472                11.64809
 =best= neos-872648             48.9858978
 =best= neos-873061             116.249628
-=best= neos-876808             173836.215
+=best= neos-876808              171340.007
 =opt= neos-880324                  108.67
 =opt= neos-881765                       0
 =opt= neos-885086                    -243
-=best= neos-885524               12335.272
+=best= neos-885524               12329.201
 =opt= neos-886822                   28755
 =opt= neos-892255                      14
 =opt= neos-905856                      -6
@@ -344,6 +344,6 @@
 =best= seymour.disj-10                287
 =best= sp97ic                    404237985
 =best= sp98ar                    543622634
-=best= sp98ic                    450923675
-=opt= sp98ir                    219676790
+=opt= sp98ic                  449144758.4
+=opt= sp98ir                  219676790.4
 =opt= Test3                    2673520.21

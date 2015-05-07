@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,15 +13,16 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   type_vbc.h
- * @brief  type definitions for VBC Tool output
+/**@file   type_visual.h
+ * @brief  type definitions for output for visualization tools (VBC, BAK)
  * @author Tobias Achterberg
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_TYPE_VBC_H__
-#define __SCIP_TYPE_VBC_H__
+#ifndef __SCIP_TYPE_VISUAL_H__
+#define __SCIP_TYPE_VISUAL_H__
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,7 +64,7 @@ enum SCIP_VBCColor
 typedef enum SCIP_VBCColor SCIP_VBCCOLOR;
 
 
-typedef struct SCIP_Vbc SCIP_VBC;                 /**< VBC Tool data structure */
+typedef struct SCIP_Visual SCIP_VISUAL;      /**< VBC Tool data structure */
 
 #ifdef __cplusplus
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,7 +33,7 @@
 #include "scip/def.h"
 #include "scip/type_stat.h"
 #include "scip/type_clock.h"
-#include "scip/type_vbc.h"
+#include "scip/type_visual.h"
 #include "scip/type_history.h"
 
 #ifdef __cplusplus
@@ -134,8 +134,8 @@ struct SCIP_Stat
    SCIP_HISTORY*         glbhistory;         /**< global history information over all variables */
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */
-   SCIP_VBC*             vbc;                /**< VBC Tool information */
-   SCIP_HEUR*            firstprimalheur;    /**< heuristic which found the first primal solution */     
+   SCIP_VISUAL*          visual;             /**< visualization information */
+   SCIP_HEUR*            firstprimalheur;    /**< heuristic which found the first primal solution */
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
    SCIP_Longint          lpcount;            /**< internal counter, where all lp calls are counted; this includes the restored lps after diving and probing */
@@ -159,6 +159,7 @@ struct SCIP_Stat
    SCIP_Longint          nrootstrongbranchs; /**< number of strong branching calls at the root node */
    SCIP_Longint          nconflictlps;       /**< number of LPs solved during conflict analysis */
    SCIP_Longint          nnlps;              /**< number of NLPs solved */
+   SCIP_Longint          nisstoppedcalls;    /**< number of calls to SCIPsolveIsStopped() */
    int                   subscipdepth;       /**< depth of current scip instance (increased by each copy call) */
    int                   nruns;              /**< number of branch and bound runs on current problem, including current run */
    int                   nconfrestarts;      /**< number of restarts performed due to conflict analysis */
@@ -208,6 +209,7 @@ struct SCIP_Stat
    int                   firstprimaldepth;   /**< depth in which first primal solution was found */
    int                   ncopies;            /**< counter how often SCIPcopy() was performed */
    int                   nreoptruns;         /**< number of reoptimization runs */
+   int                   nclockskipsleft;    /**< how many times the timing should be skipped in SCIPsolveIsStopped() */
    SCIP_Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
    SCIP_Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
    SCIP_Bool             userrestart;        /**< has the user asked to restart the solving process? */

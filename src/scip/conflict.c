@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -119,7 +119,7 @@
 #include "scip/set.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/history.h"
 #include "scip/paramset.h"
 #include "scip/lp.h"
@@ -756,6 +756,17 @@ SCIP_Bool SCIPconflicthdlrIsInitialized(
    return conflicthdlr->initialized;
 }
 
+/** enables or disables all clocks of \p conflicthdlr, depending on the value of the flag */
+void SCIPconflicthdlrEnableOrDisableClocks(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< the conflict handler for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the conflict handler be enabled? */
+   )
+{
+   assert(conflicthdlr != NULL);
+
+   SCIPclockEnableOrDisable(conflicthdlr->setuptime, enable);
+   SCIPclockEnableOrDisable(conflicthdlr->conflicttime, enable);
+}
 
 /** gets time in seconds used in this conflict handler for setting up for next stages */
 SCIP_Real SCIPconflicthdlrGetSetupTime(
@@ -1902,13 +1913,13 @@ SCIP_RETCODE detectImpliedBounds(
          {
             assert(SCIPsetIsZero(set, bounds[v]));
             bounds[v] = 1.0;
-            nbinimpls[v] = SCIPvarGetNBinImpls(var, TRUE) + (SCIP_Longint)SCIPvarGetNCliques(var, TRUE) * 2;
+            nbinimpls[v] = (SCIP_Longint)SCIPvarGetNCliques(var, TRUE) * 2;
          }
          else
          {
             assert(SCIPsetIsEQ(set, bounds[v], 1.0));
             bounds[v] = 0.0;
-            nbinimpls[v] = SCIPvarGetNBinImpls(var, FALSE) + (SCIP_Longint)SCIPvarGetNCliques(var, FALSE) * 2;
+            nbinimpls[v] = (SCIP_Longint)SCIPvarGetNCliques(var, FALSE) * 2;
          }
       }
       else if( SCIPvarIsIntegral(var) )
@@ -2234,8 +2245,8 @@ SCIP_RETCODE SCIPconflictFlushConss(
       SCIPdebugMessage("flushing %d conflict sets at focus depth %d (maxconflictsets: %d, maxsize: %d)\n",
          conflict->nconflictsets, focusdepth, maxconflictsets, maxsize);
 
-      /* mark the focus node to have produced conflict sets in the VBC tool output */
-      SCIPvbcFoundConflict(stat->vbc, stat, tree->path[focusdepth]);
+      /* mark the focus node to have produced conflict sets in the visualization output */
+      SCIPvisualFoundConflict(stat->visual, stat, tree->path[focusdepth]);
 
       /* insert the conflict sets at the corresponding nodes */
       nconflictsetsused = 0;
@@ -2529,6 +2540,10 @@ SCIP_RETCODE SCIPconflictCreate(
    SCIP_CALL( SCIPclockCreate(&(*conflict)->boundlpanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->sbanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*conflict)->pseudoanalyzetime, SCIP_CLOCKTYPE_DEFAULT) );
+
+   /* enable or disable timing depending on the parameter statistic timing */
+   SCIPconflictEnableOrDisableClocks((*conflict), set->time_statistictiming);
+
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->bdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
          conflictBdchginfoComp) );
    SCIP_CALL( SCIPpqueueCreate(&(*conflict)->forcedbdchgqueue, set->mem_arraygrowinit, set->mem_arraygrowfac,
@@ -6949,3 +6964,20 @@ SCIP_Longint SCIPconflictGetNPseudoReconvergenceLiterals(
 
    return conflict->npseudoreconvliterals;
 }
+
+/** enables or disables all clocks of \p conflict, depending on the value of the flag */
+void SCIPconflictEnableOrDisableClocks(
+   SCIP_CONFLICT*        conflict,            /**< the conflict analysis data for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the conflict analysis data be enabled? */
+   )
+{
+   assert(conflict != NULL);
+
+   SCIPclockEnableOrDisable(conflict->boundlpanalyzetime, enable);
+   SCIPclockEnableOrDisable(conflict->dIBclock, enable);
+   SCIPclockEnableOrDisable(conflict->inflpanalyzetime, enable);
+   SCIPclockEnableOrDisable(conflict->propanalyzetime, enable);
+   SCIPclockEnableOrDisable(conflict->pseudoanalyzetime, enable);
+   SCIPclockEnableOrDisable(conflict->sbanalyzetime, enable);
+}
+

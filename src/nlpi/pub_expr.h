@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -247,6 +247,18 @@ SCIP_Real* SCIPexprGetMonomialExponents(
    SCIP_EXPRDATA_MONOMIAL* monomial          /**< monomial */
    );
 
+/** gets user data of a user expression */
+EXTERN
+SCIP_USEREXPRDATA* SCIPexprGetUserData(
+   SCIP_EXPR*              expr
+   );
+
+/** indicates whether a user expression has the estimator callback defined */
+EXTERN
+SCIP_Bool SCIPexprHasUserEstimator(
+   SCIP_EXPR*              expr
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -275,6 +287,8 @@ SCIP_Real* SCIPexprGetMonomialExponents(
 #define SCIPexprGetMonomialNFactors(monomial)     (monomial)->nfactors
 #define SCIPexprGetMonomialChildIndices(monomial) (monomial)->childidxs
 #define SCIPexprGetMonomialExponents(monomial)    (monomial)->exponents
+#define SCIPexprGetUserData(expr)                 ((SCIP_EXPRDATA_USER*)(expr)->data.data)->userdata
+#define SCIPexprHasUserEstimator(expr)            (((SCIP_EXPRDATA_USER*)expr->data.data)->estimate != NULL)
 
 #endif
 
@@ -550,6 +564,23 @@ void SCIPexprSortMonomials(
    SCIP_EXPR*            expr                /**< polynomial expression */
    );
 
+/** creates a user expression */
+EXTERN
+SCIP_RETCODE SCIPexprCreateUser(
+   BMS_BLKMEM*           blkmem,             /**< block memory data structure */
+   SCIP_EXPR**           expr,               /**< pointer to buffer for expression address */
+   int                   nchildren,          /**< number of children */
+   SCIP_EXPR**           children,           /**< children of expression */
+   SCIP_USEREXPRDATA*    data,               /**< user data for expression, expression assumes ownership */
+   SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
+   SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function, or NULL if not implemented */
+   SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
+   SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function, or NULL if not implemented */
+   SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
+   SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
+   SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
+   );
+
 /** indicates whether the expression contains a SCIP_EXPR_PARAM */
 EXTERN
 SCIP_Bool SCIPexprHasParam(
@@ -596,6 +627,16 @@ SCIP_RETCODE SCIPexprSimplify(
    SCIP_Real*            lincoefs            /**< array to store coefficients of linear part, or NULL */
    );
 
+/** evaluates an expression w.r.t. given values for children expressions */
+EXTERN
+SCIP_RETCODE SCIPexprEvalShallow(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            argvals,            /**< values for children, can be NULL if the expression has no children */
+   SCIP_Real*            varvals,            /**< values for variables, can be NULL if the expression operand is not a variable */
+   SCIP_Real*            param,              /**< values for parameters, can be NULL if the expression operand is not a parameter */
+   SCIP_Real*            val                 /**< buffer to store value */
+   );
+
 /** evaluates an expression w.r.t. a point */
 EXTERN
 SCIP_RETCODE SCIPexprEval(
@@ -603,6 +644,17 @@ SCIP_RETCODE SCIPexprEval(
    SCIP_Real*            varvals,            /**< values for variables, can be NULL if the expression is constant */
    SCIP_Real*            param,              /**< values for parameters, can be NULL if the expression is not parameterized */
    SCIP_Real*            val                 /**< buffer to store value */
+   );
+
+/** evaluates an expression w.r.t. given interval values for children expressions */
+EXTERN
+SCIP_RETCODE SCIPexprEvalIntShallow(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             infinity,           /**< value to use for infinity */
+   SCIP_INTERVAL*        argvals,            /**< interval values for children, can be NULL if the expression has no children */
+   SCIP_INTERVAL*        varvals,            /**< interval values for variables, can be NULL if the expression is constant */
+   SCIP_Real*            param,              /**< values for parameters, can be NULL if the expression is not parameterized */
+   SCIP_INTERVAL*        val                 /**< buffer to store value */
    );
 
 /** evaluates an expression w.r.t. an interval */
@@ -615,6 +667,27 @@ SCIP_RETCODE SCIPexprEvalInt(
    SCIP_INTERVAL*        val                 /**< buffer to store value */
    );
 
+/** evaluates a user expression w.r.t. given values for children expressions */
+EXTERN
+SCIP_RETCODE SCIPexprEvalUser(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real*            argvals,            /**< values for children */
+   SCIP_Real*            val,                /**< buffer to store function value */
+   SCIP_Real*            gradient,           /**< buffer to store gradient values, or NULL if not requested */
+   SCIP_Real*            hessian             /**< buffer to store values of full Hessian, or NULL if not requested */
+   );
+
+/** evaluates a user expression w.r.t. an interval */
+EXTERN
+SCIP_RETCODE SCIPexprEvalIntUser(
+   SCIP_EXPR*            expr,               /**< expression */
+   SCIP_Real             infinity,           /**< value to use for infinity */
+   SCIP_INTERVAL*        argvals,            /**< values for children */
+   SCIP_INTERVAL*        val,                /**< buffer to store value */
+   SCIP_INTERVAL*        gradient,           /**< buffer to store gradient values, or NULL if not requested */
+   SCIP_INTERVAL*        hessian             /**< buffer to store values of full Hessian, or NULL if not requested */
+   );
+
 /** tries to determine the curvature type of an expression w.r.t. given variable domains */
 EXTERN
 SCIP_RETCODE SCIPexprCheckCurvature(
@@ -625,6 +698,20 @@ SCIP_RETCODE SCIPexprCheckCurvature(
    SCIP_EXPRCURV*        curv,               /**< buffer to store curvature of expression */
    SCIP_INTERVAL*        bounds              /**< buffer to store bounds on expression */
    );
+
+/** under-/overestimates a user expression w.r.t. to given values and bounds for children expressions */
+EXTERN
+SCIP_RETCODE SCIPexprEstimateUser(
+   SCIP_EXPR*           expr,           /**< expression */
+   SCIP_Real            infinity,       /**< value to use for infinity */
+   SCIP_Real*           argvals,        /**< values for children */
+   SCIP_INTERVAL*       argbounds,      /**< bounds for children */
+   SCIP_Bool            overestimate,   /**< whether to overestimate the expression */
+   SCIP_Real*           coeffs,         /**< buffer to store the linear coefficients for each child expression that gives a valid under-/overestimator */
+   SCIP_Real*           constant,       /**< buffer to store the constant value of the linear under-/overestimator */
+   SCIP_Bool*           success         /**< buffer to store whether an estimator was successfully computed */
+);
+
 
 /** substitutes variables (SCIP_EXPR_VARIDX) by expressions
  * Note that only the children of the given expr are checked!
@@ -1080,6 +1167,18 @@ SCIP_RETCODE SCIPexprgraphGetNodePolynomialMonomialCurvature(
    SCIP_EXPRCURV*        curv                /**< buffer to store monomial curvature */
    );
 
+/** gives the user data belonging to a SCIP_EXPR_USER expression */
+EXTERN
+SCIP_USEREXPRDATA* SCIPexprgraphGetNodeUserData(
+   SCIP_EXPRGRAPHNODE*   node
+   );
+
+/** indicates whether a user expression has the estimator callback defined */
+EXTERN
+SCIP_Bool SCIPexprgraphHasNodeUserEstimator(
+   SCIP_EXPRGRAPHNODE*   node
+   );
+
 /** gets bounds of a node in an expression graph */
 EXTERN
 SCIP_INTERVAL SCIPexprgraphGetNodeBounds(
@@ -1128,6 +1227,8 @@ SCIP_EXPRCURV SCIPexprgraphGetNodeCurvature(
 #define SCIPexprgraphGetNodePolynomialMonomials(node)    ((SCIP_EXPRDATA_POLYNOMIAL*)(node)->data.data)->monomials
 #define SCIPexprgraphGetNodePolynomialNMonomials(node)   ((SCIP_EXPRDATA_POLYNOMIAL*)(node)->data.data)->nmonomials
 #define SCIPexprgraphGetNodePolynomialConstant(node)     ((SCIP_EXPRDATA_POLYNOMIAL*)(node)->data.data)->constant
+#define SCIPexprgraphGetNodeUserData(node)               ((SCIP_EXPRDATA_USER*)(node)->data.data)->userdata
+#define SCIPexprgraphHasNodeUserEstimator(node)          (((SCIP_EXPRDATA_USER*)node->data.data)->estimate != NULL)
 #define SCIPexprgraphGetNodeBounds(node)                 (node)->bounds
 #define SCIPexprgraphGetNodeVal(node)                    (node)->value
 #define SCIPexprgraphGetNodeCurvature(node)              (node)->curv
@@ -1184,6 +1285,21 @@ SCIP_RETCODE SCIPexprgraphNodePolynomialAddMonomials(
    int                   nmonomials,         /**< number of monomials */
    SCIP_EXPRDATA_MONOMIAL** monomials,       /**< monomials */
    SCIP_Bool             copymonomials       /**< whether to copy monomials or to assume ownership */
+   );
+
+/** creates an expression graph node for a user expression */
+EXTERN
+SCIP_RETCODE SCIPexprgraphCreateNodeUser(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_EXPRGRAPHNODE**  node,               /**< buffer to store expression graph node */
+   SCIP_USEREXPRDATA*    data,               /**< user data for expression, node assumes ownership */
+   SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
+   SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function */
+   SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
+   SCIP_DECL_USEREXPRPROP    ((*prop)),      /**< interval propagation function */
+   SCIP_DECL_USEREXPRESTIMATE ((*estimate)), /**< estimation function, or NULL if convex, concave, or not implemented */
+   SCIP_DECL_USEREXPRCOPYDATA ((*copydata)), /**< expression data copy function, or NULL if nothing to copy */
+   SCIP_DECL_USEREXPRFREEDATA ((*freedata))  /**< expression data free function, or NULL if nothing to free */
    );
 
 /** given a node of an expression graph, splitup a linear part which variables are not used somewhere else in the same expression

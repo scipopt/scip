@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -563,7 +563,11 @@ SCIP_RETCODE delCoefPos(
  *  - fix the variable with the smallest object coefficient to one if the constraint is not modifiable and all
  *    variable are independant
  *  - fix all independant variables with negative object coefficient to one
- *  - fix all remaining independant variables to zero 
+ *  - fix all remaining independant variables to zero
+ *
+ *  also added the special case were exactly one variable is locked by this constraint and another variable without any
+ *  uplocks has a better objective value than this single variable
+ *  - here we fix the variable to 0.0 (if the objective contribution is non-negative)
  *
  * Note: the following dual reduction for logic or constraints is already performed by the presolver "dualfix"
  *       - if a variable in a set covering constraint is only locked by that constraint and has negative or zero
@@ -585,6 +589,7 @@ SCIP_RETCODE dualPresolving(
    SCIP_VAR* var;
    SCIP_VAR* activevar;
    SCIP_Real bestobjval;
+   SCIP_Real bestobjvalnouplocks;
    SCIP_Real objval;
    SCIP_Real fixval;
    SCIP_Bool infeasible;
@@ -593,6 +598,7 @@ SCIP_RETCODE dualPresolving(
    int nfixables;
    int nvars;
    int idx;
+   int idxnouplocks;
    int v;
 
    assert(scip != NULL);
@@ -625,7 +631,9 @@ SCIP_RETCODE dualPresolving(
 
    vars = consdata->vars;
    idx = -1;
+   idxnouplocks = -1;
    bestobjval = SCIP_INVALID;
+   bestobjvalnouplocks = SCIP_INVALID;
 
    nfixables = 0;
 
@@ -667,6 +675,19 @@ SCIP_RETCODE dualPresolving(
          return SCIP_OKAY;
       }
 
+      /* remember best variable with no uplocks, this variable dominates all other with exactly one downlock */
+      if( SCIPvarGetNLocksDown(var) > 1 && SCIPvarGetNLocksUp(var) == 0 )
+      {
+         SCIP_CALL( SCIPvarGetAggregatedObj(var, &objval) );
+
+         /* check if the current variable has a smaller objective coefficient then the best one */
+         if( SCIPisLT(scip, objval, bestobjval) )
+         {
+            idxnouplocks = v;
+            bestobjvalnouplocks = objval;
+         }
+      }
+
       /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
        * variables
        */
@@ -693,6 +714,40 @@ SCIP_RETCODE dualPresolving(
       }
    }
 
+   nvars = consdata->nvars;
+
+   /* check if we have a single variable dominated by another */
+   if( nfixables == 1 && idxnouplocks >= 0 )
+   {
+      assert(bestobjvalnouplocks != SCIP_INVALID); /*lint !e777*/
+
+      for( v = nvars - 1; v >= 0; --v )
+      {
+         var = vars[v];
+         assert(var != NULL);
+
+         /* check if a variable only appearing in this constraint is dominated by another */
+         if( SCIPvarGetNLocksDown(var) == 1 && SCIPvarGetNLocksUp(var) == 0 )
+         {
+            assert(idxnouplocks != v);
+
+            SCIP_CALL( SCIPvarGetAggregatedObj(var, &objval) );
+
+            if( SCIPisGE(scip, objval, bestobjvalnouplocks) && !SCIPisNegative(scip, objval) )
+            {
+               SCIP_CALL( SCIPfixVar(scip, var, 0.0, &infeasible, &fixed) );
+               assert(!infeasible);
+               assert(fixed);
+
+               SCIPdebugMessage(" -> dual fixing <%s> == 0.0\n", SCIPvarGetName(var));
+               ++(*nfixedvars);
+            }
+
+            break;
+         }
+      }
+   }
+
    if( nfixables < 2 )
       return SCIP_OKAY;
 
@@ -706,7 +761,7 @@ SCIP_RETCODE dualPresolving(
    /* fix all redundant variables to their best bound */
 
    /* first part of all variables */
-   for( v = 0; v < idx; ++v )
+   for( v = 0; v < nvars; ++v )
    {
       var = vars[v];
       assert(var != NULL);
@@ -715,6 +770,9 @@ SCIP_RETCODE dualPresolving(
        * variables
        */
       if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 )
+         continue;
+
+      if( v == idx )
          continue;
 
       activevar = var;
@@ -738,44 +796,7 @@ SCIP_RETCODE dualPresolving(
       assert(!infeasible);
       assert(fixed);
 
-      SCIPdebugMessage(" -> fixed <%s> == %g\n", SCIPvarGetName(var), fixval);
-      ++(*nfixedvars);
-   }
-
-   /* second part of all variables */
-   for( v = idx + 1; v < nvars; ++v )
-   {
-      var = vars[v];
-      assert(var != NULL);
-
-      /* in case an other constraints has also locks on that variable we cannot perform a dual reduction on these
-       * variables
-       */
-      if( SCIPvarGetNLocksDown(var) > 1 || SCIPvarGetNLocksUp(var) > 0 )
-         continue;
-
-      activevar = var;
-      negated = FALSE;
-
-      /* get the active variable */
-      SCIP_CALL( SCIPvarGetProbvarBinary(&activevar, &negated) );
-      assert(SCIPvarIsActive(activevar));
-
-      if( negated )
-         objval = -SCIPvarGetObj(activevar);
-      else
-         objval = SCIPvarGetObj(activevar);
-
-      if( objval > 0.0 )
-         fixval = 0.0;
-      else
-         fixval = 1.0;
-
-      SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );
-      assert(!infeasible);
-      assert(fixed);
-
-      SCIPdebugMessage(" -> fixed <%s> == %g\n", SCIPvarGetName(var), fixval);
+      SCIPdebugMessage(" -> dual fixing <%s> == %g\n", SCIPvarGetName(var), fixval);
       ++(*nfixedvars);
    }
 
@@ -1176,24 +1197,21 @@ SCIP_RETCODE mergeMultiples(
    SCIP_CALL( SCIPallocBufferArray(scip, &negarray, nvars) );
 
    vars = consdata->vars;
-   /* all variables should be active or negative active variables, otherwise something went wrong with applyFixings()
-    * called before mergeMultiples()
-    */
-   for( v = nvars - 1; v >= 0; --v )
-   {
-      assert(SCIPvarIsActive(vars[v]) || (SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(vars[v]))));
-      negarray[v] = SCIPvarIsNegated(vars[v]);
-   }
 
    /* initialize entries array */
    for( v = nvars - 1; v >= 0; --v )
    {
-      assert(negarray[v] ? SCIPvarIsNegated(vars[v]) : TRUE);
+      /* all variables should be active or negative active variables, otherwise something went wrong with applyFixings()
+       * called before mergeMultiples()
+       */
+      assert(SCIPvarIsActive(vars[v]) ||
+         (SCIPvarGetStatus(vars[v]) == SCIP_VARSTATUS_NEGATED && SCIPvarIsActive(SCIPvarGetNegationVar(vars[v]))));
+      negarray[v] = SCIPvarIsNegated(vars[v]);
       var = negarray[v] ? SCIPvarGetNegationVar(vars[v]) : vars[v];
+      assert(SCIPvarIsActive(var));
 
       pos = SCIPvarGetProbindex(var);
 
-      assert(SCIPvarIsActive(var));
       /* check variable type, either pure binary or an integer/implicit integer variable with 0/1 bounds */
       assert((pos < nbinvars && SCIPvarGetType(var) == SCIP_VARTYPE_BINARY)
 	 || (SCIPvarIsBinary(var) &&
@@ -1209,6 +1227,7 @@ SCIP_RETCODE mergeMultiples(
    for( v = nvars - 1; v >= 0; --v )
    {
       var = negarray[v] ? SCIPvarGetNegationVar(vars[v]) : vars[v];
+      assert(SCIPvarIsActive(var));
 
       pos = SCIPvarGetProbindex(var);
 
@@ -3538,7 +3557,7 @@ SCIP_RETCODE fixDeleteOrUpgradeCons(
          /* a two-variable logicor constraint x + y >= 1 yields the implication x == 0 -> y == 1, and is represented
           * by the clique inequality ~x + ~y <= 1
           */
-         SCIP_CALL( SCIPaddClique(scip, consdata->vars, values, consdata->nvars, &implinfeasible, &nimplbdchgs) );
+         SCIP_CALL( SCIPaddClique(scip, consdata->vars, values, consdata->nvars, FALSE, &implinfeasible, &nimplbdchgs) );
          *nchgbds += nimplbdchgs;
          if( implinfeasible )
          {
@@ -3854,7 +3873,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreLogicor)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_Bool redundant;
-   int nchgcoefs;
+   int nchgcoefs = 0;
    int c;
    int v;
 

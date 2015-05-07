@@ -11,7 +11,7 @@ testcluster:
 		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) false $(OPTCOMMAND);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) false $(OPTCOMMAND) $(SETCUTOFF);
 
 .PHONY: testclusterreopt
 testclusterreopt:
@@ -20,7 +20,7 @@ testclusterreopt:
 		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) true $(OPTCOMMAND);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) true $(OPTCOMMAND) $(SETCUTOFF);
 
 .PHONY: testclustercpx
 testclustercpx:
@@ -46,12 +46,28 @@ testclustergurobi:
 		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
 		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
+.PHONY: testclusterxpress
+testclusterxpress:
+		cd check; \
+		$(SHELL) ./check_cluster_xpress.sh $(TEST) $(XPRESS) $(SETTINGS) \
+		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
+		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+
+.PHONY: testclustermosek
+testclustermosek:
+		cd check; \
+		$(SHELL) ./check_cluster_mosek.sh $(TEST) $(MOSEK) $(SETTINGS) \
+		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
+		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+
 .PHONY: testgamscluster
 testgamscluster:
 		cd check; \
 		$(SHELL) ./check_gamscluster.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) \
 		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) \
-		"$(CONVERTSCIP)" $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+		"$(CONVERTSCIP)" $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) $(SETCUTOFF);
 
 
 SCIPEXAMPLES	=	Binpacking CallableLibrary Coloring Eventhdlr GMI LOP MIPSolver Scheduler TSP VRP
@@ -66,14 +82,9 @@ docexamples:
 
 .PHONY: coverage
 coverage:
-		-ln -s ../../../../src $(OBJDIR)/lib/scip
-		-ln -s ../../../../src $(OBJDIR)/lib/tclique
-		-ln -s ../../../../src $(OBJDIR)/lib/dijkstra
-		-ln -s ../../../../src $(OBJDIR)/lib/blockmemshell
-		-ln -s ../../../../src $(OBJDIR)/lib/nlpi
-		-ln -s ../../../../src $(OBJDIR)/lib/xml
-		-mkdir -p gcov
-		lcov -d $(OBJDIR) -z
-		make  $^ test
-		lcov -d $(OBJDIR) -c >gcov/scip.capture
-		genhtml -o gcov gcov/scip.capture
+		$(SHELL) ./check/check_coverage.sh $(MAINFILE) $(notdir $(MAINFILE)).$(HOSTNAME) $(MEM) $(VERSION) $(LPS) $(OBJDIR);
+
+.PHONY: solchecker
+solchecker:
+		cd ./check/solchecker; \
+		$(MAKE);

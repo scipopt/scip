@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -137,7 +137,6 @@ struct SCIP_Set
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
    SCIP_Bool             limitchanged;       /**< marks whether any of the limit parameters was changed */
-   SCIP_Bool             nlpenabled;         /**< marks whether an NLP relaxation should be constructed */
 
    /* branching settings */
    char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct, 'q'uotient) */
@@ -148,6 +147,7 @@ struct SCIP_Set
    SCIP_Real             branch_clamp;       /**< minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
    char                  branch_lpgainnorm;  /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
    SCIP_Bool             branch_delaypscost; /**< whether to delay pseudo costs updates for continuous variables to after separation */
+   SCIP_Bool             branch_divingpscost;/**< should pseudo costs be updated also in diving and probing mode? */
    SCIP_Bool             branch_forceall;    /**< should all strong branching children be regarded even if
                                               *   one is detected to be infeasible? (only with propagation) */
    SCIP_Bool             branch_checksbsol;  /**< should LP solutions during strong branching with propagation be checked for feasibility? */
@@ -221,6 +221,12 @@ struct SCIP_Set
 
    /* history settings */
    SCIP_Bool             history_valuebased; /**< should statistics be collected for variable domain value pairs? */
+   SCIP_Bool             history_allowmerge; /**< should variable histories be merged from sub-SCIPs whenever possible? */
+   SCIP_Bool             history_allowtransfer; /**< should variable histories be transferred to initialize SCIP copies? */
+
+   /* heuristic settings */
+   SCIP_Real             heur_divestartfrac; /**< start percentage of diving candidates that should be fixed before LP resolve */
+   int                   heur_divelpsolvefreq; /**< LP solve frequency for diving heuristics */
 
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */
@@ -238,6 +244,9 @@ struct SCIP_Set
    int                   limit_maxsol;       /**< maximal number of solutions to store in the solution storage */
    int                   limit_maxorigsol;   /**< maximal number of solutions candidates to store in the solution storage of the original problem */
    int                   limit_restarts;     /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
+   int                   limit_autorestartnodes;/**< nodes to trigger automatic restart */
+
+   SCIP_Bool             istimelimitfinite;  /**< is the time limit finite */
 
    /* LP settings */
    int                   lp_solvefreq;       /**< frequency for solving LP at the nodes (-1: never; 0: only root LP) */
@@ -401,9 +410,13 @@ struct SCIP_Set
    SCIP_Real             sepa_orthofac;      /**< factor to scale orthogonality of cut in separation score calculation */
    SCIP_Real             sepa_feastolfac;    /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
    SCIP_Real             sepa_primfeastol;   /**< primal feasibility tolerance derived from cut feasibility (set by sepastore, not a parameter) */
+   SCIP_Real             sepa_minactivityquot; /**< minimum cut activity quotient to convert cuts into constraints
+                                                *   during a restart (0.0: all cuts are converted) */
    char                  sepa_orthofunc;     /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
    char                  sepa_efficacynorm;  /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum, 's'um,
                                               *   'd'iscrete) */
+   char                  sepa_cutselrestart; /**< cut selection during restart ('a'ge, activity 'q'uotient) */
+   char                  sepa_cutselsubscip; /**< cut selection for sub SCIPs  ('a'ge, activity 'q'uotient) */
    int                   sepa_maxruns;       /**< maximal number of runs for which separation is enabled (-1: unlimited) */
    int                   sepa_maxrounds;     /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   sepa_maxroundsroot; /**< maximal number of separation rounds in the root node (-1: unlimited) */
@@ -421,15 +434,19 @@ struct SCIP_Set
    SCIP_CLOCKTYPE        time_clocktype;     /**< default clock type to use */
    SCIP_Bool             time_enabled;       /**< is timing enabled? */
    SCIP_Bool             time_reading;       /**< belongs reading time to solving time? */
+   SCIP_Bool             time_rareclockcheck;/**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
+   SCIP_Bool             time_statistictiming;  /**< should timing for statistic output be enabled? */
 
    /* tree compression parameters (for reoptimization) */
    SCIP_Bool             compr_enable;       /**< should automatic tree compression after presolving be enabled? (only for reoptimization) */
    SCIP_Real             compr_time;         /**< maximum time to run tree compression heuristics */
 
-   /* VBC tool settings */
-   char*                 vbc_filename;       /**< name of the VBC Tool output file, or - if no output should be created */
-   SCIP_Bool             vbc_realtime;       /**< should the real solving time be used instead of time step counter in VBC output? */
-   SCIP_Bool             vbc_dispsols;       /**< should the node where solutions are found be visualized? */
+   /* visualization settings */
+   char*                 visual_vbcfilename; /**< name of the VBC tool output file, or - if no VBC output should be created */
+   char*                 visual_bakfilename; /**< name of the BAK tool output file, or - if no BAK output should be created */
+   SCIP_Bool             visual_realtime;    /**< should the real solving time be used instead of time step counter in visualization? */
+   SCIP_Bool             visual_dispsols;    /**< should the node where solutions are found be visualized? */
+   SCIP_Bool             visual_objextern;   /**< should be output the external value of the objective? */
 
    /* Reading */
    SCIP_Bool             read_initialconss;  /**< should model constraints be marked as initial? */

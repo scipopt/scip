@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3482,7 +3482,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 #ifdef SCIP_DEBUG
       if( (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 )
       {
-         SCIPdebugMessage("### %d vars [%lld dom] ===>>> fixed [cont: %d, int: %d, bin: %d], %scutoff detected\n",
+         SCIPdebugMessage("### %d vars [%"SCIP_LONGINT_FORMAT" dom] ===>>> fixed [cont: %d, int: %d, bin: %d], %scutoff detected\n",
             matrix->ncols, ndomrelations, nconvarsfixed, nintvarsfixed, nbinvarsfixed, (*result != SCIP_CUTOFF) ? "no " : "");
       }
 #endif

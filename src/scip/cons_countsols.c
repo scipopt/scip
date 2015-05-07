@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -658,12 +658,12 @@ SCIP_RETCODE collectSolution(
 
       if( sol == NULL )
       {
-         lbvalues[v] = (SCIP_Longint)(SCIPvarGetLbLocal(var) + 0.5);
-         ubvalues[v] = (SCIP_Longint)(SCIPvarGetUbLocal(var) + 0.5);
+         lbvalues[v] = SCIPconvertRealToLongint(scip, SCIPvarGetLbLocal(var));
+         ubvalues[v] = SCIPconvertRealToLongint(scip, SCIPvarGetUbLocal(var));
       }
       else
       {
-         lbvalues[v] = (SCIP_Longint)(SCIPgetSolVal(scip, sol, var) + 0.5);
+         lbvalues[v] = SCIPconvertRealToLongint(scip, SCIPgetSolVal(scip, sol, var));
          ubvalues[v] = lbvalues[v];
       }
 
@@ -2201,7 +2201,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
 
          if( requiredsize > buffersize )
          {
-	    buffersize = requiredsize;
+            buffersize = requiredsize;
             SCIP_CALL( SCIPreallocBufferArray(scip, &buffer, requiredsize) );
             SCIPgetNCountedSolsstr(scip, &buffer, buffersize, &requiredsize);
          }

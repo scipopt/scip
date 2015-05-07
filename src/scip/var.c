@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1561,19 +1561,16 @@ SCIP_RETCODE varRemoveImplicsVbs(
       varfixing = FALSE;
       do
       {
-         int nimpls;
-         int nbinimpls;
          SCIP_VAR** implvars;
          SCIP_BOUNDTYPE* impltypes;
+         int nimpls;
          int i;
 
          nimpls = SCIPimplicsGetNImpls(var->implics, varfixing);
-         nbinimpls = SCIPimplicsGetNBinImpls(var->implics, varfixing);
          implvars = SCIPimplicsGetVars(var->implics, varfixing);
          impltypes = SCIPimplicsGetTypes(var->implics, varfixing);
 
-         /* process the implications on binary variables */
-         for( i = 0; i < nbinimpls; i++ )
+         for( i = 0; i < nimpls; i++ )
          {
             SCIP_VAR* implvar;
             SCIP_BOUNDTYPE impltype;
@@ -1581,36 +1578,6 @@ SCIP_RETCODE varRemoveImplicsVbs(
             implvar = implvars[i];
             impltype = impltypes[i];
             assert(implvar != var);
-            assert(SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY);
-
-            /* remove for all implications z == 0 / 1  ==>  x <= 0 / x >= 1 (x binary)
-             * the following implication from x's implications 
-             *   x == 1  ==>  z <= 0            , for z == 1  ==>  x <= 0
-             *   x == 0  ==>  z <= 0            , for z == 1  ==>  x >= 1
-             *
-             *   x == 1  ==>  z >= 1            , for z == 0  ==>  x <= 0
-             *   x == 0  ==>  z >= 1            , for z == 0  ==>  x >= 1
-             */
-            if( implvar->implics != NULL ) /* implvar may have been aggregated in the mean time */
-            {
-               SCIPdebugMessage("deleting implication: <%s> == %d  ==>  <%s> %s\n", 
-                  SCIPvarGetName(implvar), (impltype == SCIP_BOUNDTYPE_UPPER),
-                  SCIPvarGetName(var), varfixing ? "<= 0 " : ">= 1");
-               SCIP_CALL( SCIPimplicsDel(&implvar->implics, blkmem, set, (impltype == SCIP_BOUNDTYPE_UPPER), var, 
-                     varfixing ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER) );
-            }
-         }
-
-         /* process the implications on non-binary variables */
-         for( i = nbinimpls; i < nimpls; i++ )
-         {
-            SCIP_VAR* implvar;
-            SCIP_BOUNDTYPE impltype;
-
-            implvar = implvars[i];
-            impltype = impltypes[i];
-            assert(implvar != var);
-            assert(SCIPvarGetType(implvar) != SCIP_VARTYPE_BINARY);
 
             /* remove for all implications z == 0 / 1  ==>  x <= p / x >= p (x not binary)
              * the following variable bound from x's variable bounds 
@@ -1834,6 +1801,13 @@ SCIP_RETCODE varRemoveImplicsVbs(
          SCIPvboundsShrink(&var->vubs, blkmem, newnvbds);
          var->closestvblpcount = -1;
       }
+   }
+
+   /* remove the variable from all cliques */
+   if( SCIPvarIsBinary(var) )
+   {
+      SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
+      SCIPcliquelistFree(&var->cliquelist, blkmem);
    }
 
    /**@todo variable bounds like x <= b*z + d with z general integer are not removed from x's vbd arrays, because
@@ -2168,6 +2142,12 @@ SCIP_RETCODE SCIPvarCopy(
       }
 
       assert(targetdata == NULL || result == SCIP_SUCCESS);
+   }
+
+   /* we initialize histories of the variables by copying the source variable-information */
+   if( set->history_allowtransfer )
+   {
+      SCIPvarMergeHistories((*var), sourcevar, stat);
    }
 
    /* in case the copying was successfully, add the created variable data to the variable as well as all callback
@@ -3344,6 +3324,11 @@ SCIP_RETCODE SCIPvarTransform(
       (*transvar)->lazylb = origvar->lazylb;
       (*transvar)->lazyub = origvar->lazyub;
 
+      /* transfer eventual variable statistics; do not update global statistics, because this has been done
+       * when original variable was created
+       */
+      SCIPhistoryUnite((*transvar)->history, origvar->history, FALSE);
+
       /* transform user data */
       if( origvar->vartrans != NULL )
       {
@@ -3651,13 +3636,6 @@ SCIP_RETCODE SCIPvarFix(
       assert(var->vlbs == NULL);
       assert(var->vubs == NULL);
       assert(var->implics == NULL);
-
-      /* remove the variable from all cliques */
-      if( SCIPvarIsBinary(var) )
-      {
-         SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
-         SCIPcliquelistFree(&var->cliquelist, blkmem);
-      }
       assert(var->cliquelist == NULL);
 
       /* clear the history of the variable */
@@ -3876,6 +3854,7 @@ SCIP_RETCODE SCIPvarGetActiveRepresentatives(
 
       assert(var != NULL);
 
+      /* TODO: maybe we should test here on SCIPsetIsZero() instead of 0.0 */
       if( scalar == 0.0 )
          continue;
 
@@ -4188,6 +4167,28 @@ SCIP_RETCODE SCIPvarFlattenAggregationGraph(
    return SCIP_OKAY;
 }
 
+/** merge two variable histories together; a typical use case is that \p othervar is an image of the target variable
+ *  in a SCIP copy. Method should be applied with care, especially because no internal checks are performed whether
+ *  the history merge is reasonable
+ *
+ *  @note Do not use this method if the two variables originate from two SCIP's with different objective functions, since
+ *        this corrupts the variable pseudo costs
+ *  @note Apply with care; no internal checks are performed if the two variables should be merged
+ */
+void SCIPvarMergeHistories(
+   SCIP_VAR*             targetvar,          /**< the variable that should contain both histories afterwards */
+   SCIP_VAR*             othervar,           /**< the variable whose history is to be merged with that of the target variable */
+   SCIP_STAT*            stat                /**< problem statistics */
+   )
+{
+   /* merge only the history of the current run into the target history */
+   SCIPhistoryUnite(targetvar->history, othervar->historycrun, FALSE);
+
+   /* apply the changes also to the global history */
+   SCIPhistoryUnite(stat->glbhistory, othervar->historycrun, FALSE);
+}
+
+
 
 /** tightens the bounds of both variables in aggregation x = a*y + c */
 static
@@ -4480,6 +4481,7 @@ SCIP_RETCODE SCIPvarAggregate(
     * aggregated variable
     */
    SCIP_CALL( varRemoveImplicsVbs(var, blkmem, set, FALSE, FALSE) );
+   assert(var->cliquelist == NULL);
 
    /* set the aggregated variable's objective value to 0.0 */
    obj = var->obj;
@@ -4593,35 +4595,6 @@ SCIP_RETCODE SCIPvarAggregate(
       }
    }
    SCIPimplicsFree(&var->implics, blkmem);
-
-   /* move the cliques to the aggregation variable:
-    *  - remove the variable from all cliques it is contained in
-    *  - add all cliques again to the variable, thus adding it to the aggregated variable
-    *  - free the cliquelist data structures
-    */
-   if( SCIPvarIsBinary(var) )
-   {
-      SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
-      if( var->cliquelist != NULL && SCIPvarIsBinary(aggvar) )
-      {
-         for( i = 0; i < 2; ++i )
-         {
-            SCIP_CLIQUE** cliques;
-            int ncliques;
-
-            ncliques = SCIPcliquelistGetNCliques(var->cliquelist, (SCIP_Bool)i);
-            cliques = SCIPcliquelistGetCliques(var->cliquelist, (SCIP_Bool)i);
-            for( j = 0; j < ncliques && !(*infeasible); ++j )
-            {
-               SCIP_CALL( SCIPvarAddClique(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-                     (SCIP_Bool)i, cliques[j], infeasible, NULL) );
-               assert(ncliques == SCIPcliquelistGetNCliques(var->cliquelist, (SCIP_Bool)i));
-            }
-         }
-      }
-      SCIPcliquelistFree(&var->cliquelist, blkmem);
-   }
-   assert(var->cliquelist == NULL);
 
    /* add the history entries to the aggregation variable and clear the history of the aggregated variable */
    SCIPhistoryUnite(aggvar->history, var->history, scalar < 0.0);
@@ -5264,13 +5237,6 @@ SCIP_RETCODE SCIPvarMultiaggregate(
       assert(var->vlbs == NULL);
       assert(var->vubs == NULL);
       assert(var->implics == NULL);
-
-      /* the variable also has to be removed from all cliques */
-      if( SCIPvarIsBinary(var) )
-      {
-         SCIPcliquelistRemoveFromCliques(var->cliquelist, var);
-         SCIPcliquelistFree(&var->cliquelist, blkmem);
-      }
       assert(var->cliquelist == NULL);
 
       /* set the aggregated variable's objective value to 0.0 */
@@ -8987,6 +8953,7 @@ SCIP_RETCODE varAddImplic(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
@@ -9060,12 +9027,35 @@ SCIP_RETCODE varAddImplic(
    {
       assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
 
-      /* add implication x == 0/1 -> y <= b / y >= b to the implications list of x */
-      SCIPdebugMessage("adding implication: <%s> == %u  ==>  <%s> %s %g\n", 
-         SCIPvarGetName(var), varfixing,
-         SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", implbound);
-      SCIP_CALL( SCIPimplicsAdd(&var->implics, blkmem, set, stat, varfixing, implvar, impltype, implbound,
-            isshortcut, &conflict, added) );
+      if( SCIPvarIsBinary(implvar) )
+      {
+         SCIP_VAR* vars[2];
+         SCIP_Bool vals[2];
+
+         assert(SCIPsetIsFeasEQ(set, implbound, 1.0) || SCIPsetIsFeasZero(set, implbound));
+         assert((impltype == SCIP_BOUNDTYPE_UPPER) == SCIPsetIsFeasZero(set, implbound));
+
+         vars[0] = var;
+         vars[1] = implvar;
+         vals[0] = varfixing;
+         vals[1] = (impltype == SCIP_BOUNDTYPE_UPPER);
+
+         /* add the clique to the clique table */
+         SCIP_CALL( SCIPcliquetableAdd(cliquetable, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
+               eventqueue, vars, vals, 2, FALSE, &conflict, nbdchgs) );
+
+         if( !conflict )
+            return SCIP_OKAY;
+      }
+      else
+      {
+         /* add implication x == 0/1 -> y <= b / y >= b to the implications list of x */
+         SCIPdebugMessage("adding implication: <%s> == %u  ==>  <%s> %s %g\n",
+            SCIPvarGetName(var), varfixing,
+            SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_UPPER ? "<=" : ">=", implbound);
+         SCIP_CALL( SCIPimplicsAdd(&var->implics, blkmem, set, stat, varfixing, implvar, impltype, implbound,
+               isshortcut, &conflict, added) );
+      }
    }
    assert(!conflict || !(*added));
 
@@ -9124,82 +9114,7 @@ SCIP_RETCODE varAddImplic(
    assert(SCIPvarIsActive(implvar)); /* a fixed implvar would either cause a redundancy or infeasibility */
 
    /* check, whether implied variable is binary */
-   if( SCIPvarGetType(implvar) == SCIP_VARTYPE_BINARY )
-   {
-      SCIP_Bool inverseadded;
-
-      assert(SCIPsetIsEQ(set, implbound, 0.0) == (impltype == SCIP_BOUNDTYPE_UPPER));
-      assert(SCIPsetIsEQ(set, implbound, 1.0) == (impltype == SCIP_BOUNDTYPE_LOWER));
-
-      /* add inverse implication y == 0/1 -> x == 0/1 to the implications list of y:
-       *   x == 0 -> y == 0  <->  y == 1 -> x == 1
-       *   x == 1 -> y == 0  <->  y == 1 -> x == 0
-       *   x == 0 -> y == 1  <->  y == 0 -> x == 1
-       *   x == 1 -> y == 1  <->  y == 0 -> x == 0
-       */
-      SCIPdebugMessage("adding inverse implication: <%s> == %d  ==>  <%s> == %d\n",
-         SCIPvarGetName(implvar), (impltype == SCIP_BOUNDTYPE_UPPER), SCIPvarGetName(var), !varfixing);
-      SCIP_CALL( SCIPimplicsAdd(&implvar->implics, blkmem, set, stat, 
-            (impltype == SCIP_BOUNDTYPE_UPPER), var, varfixing ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER, 
-            varfixing ? 0.0 : 1.0, isshortcut, &conflict, &inverseadded) );
-      assert(inverseadded == !conflict); /* if there is no conflict, the implication must not be redundant */
-
-      /* on conflict, fix the variable to the opposite value */
-      if( conflict )
-      {
-         SCIPdebugMessage(" -> implication yields a conflict: fix <%s> == %d\n", 
-            SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER);
-
-         /* remove the original implication (which is now redundant due to the fixing of the implvar) */
-         SCIPdebugMessage(" -> deleting implication: <%s> == %u  ==>  <%s> %s %g\n", 
-            SCIPvarGetName(var), varfixing, SCIPvarGetName(implvar), impltype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",
-            implbound);
-         SCIP_CALL( SCIPimplicsDel(&var->implics, blkmem, set, varfixing, implvar, impltype) );
-
-         /* during solving stage it can happen that the global bound change cannot be applied directly because it conflicts
-          * with the local bound, in this case we need to store the bound change as pending bound change
-          */
-         if( SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING )
-         {
-            assert(tree != NULL);
-            assert(transprob != NULL);
-            assert(SCIPprobIsTransformed(transprob));
-
-            /* fix implvar */
-            if( impltype == SCIP_BOUNDTYPE_UPPER )
-            {
-               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
-                     tree, lp, branchcand, eventqueue, implvar, 0.0, SCIP_BOUNDTYPE_UPPER, FALSE) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob,
-                     tree, lp, branchcand, eventqueue, implvar, 1.0, SCIP_BOUNDTYPE_LOWER, FALSE) );
-            }
-         }
-         else
-         {
-            /* fix implvar */
-            if( impltype == SCIP_BOUNDTYPE_UPPER )
-            {
-               SCIP_CALL( SCIPvarChgUbGlobal(implvar, blkmem, set, stat, lp, branchcand, eventqueue, 0.0) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPvarChgLbGlobal(implvar, blkmem, set, stat, lp, branchcand, eventqueue, 1.0) );
-            }
-         }
-
-         if( nbdchgs != NULL )
-            (*nbdchgs)++;
-      }
-      else if( inverseadded )
-      {
-         /* issue IMPLADDED event */
-         SCIP_CALL( varEventImplAdded(implvar, blkmem, set, eventqueue) );
-      }
-   }
-   else
+   if( !SCIPvarIsBinary(implvar) )
    {
       SCIP_Real lb;
       SCIP_Real ub;
@@ -9245,6 +9160,7 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
@@ -9269,8 +9185,7 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
    implbounds = SCIPimplicsGetBounds(implvar->implics, implvarfixing);
 
    /* if variable has too many implications, the implication graph may become too dense */
-   if( nimpls > MAXIMPLSCLOSURE )
-      return SCIP_OKAY;
+   i = MIN(nimpls, MAXIMPLSCLOSURE) - 1;
 
    /* we have to iterate from back to front, because in varAddImplic() it may happen that a conflict is detected and
     * implvars[i] is fixed, s.t. the implication y == varfixing -> z <= b / z >= b is deleted; this affects the
@@ -9278,7 +9193,6 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
     * deleted; in this case, the subsequent elements are moved to the front; if we iterate from back to front, the
     * only thing that can happen is that we add the same implication twice - this does no harm
     */
-   i = nimpls-1;
    while ( i >= 0 && !(*infeasible) )
    {
       SCIP_Bool added;
@@ -9290,8 +9204,8 @@ SCIP_RETCODE varAddTransitiveBinaryClosureImplic(
        */
       if( SCIPvarIsActive(implvars[i]) )
       {
-         SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-               varfixing, implvars[i], impltypes[i], implbounds[i], TRUE, infeasible, nbdchgs, &added) );
+         SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable, branchcand,
+               eventqueue, varfixing, implvars[i], impltypes[i], implbounds[i], TRUE, infeasible, nbdchgs, &added) );
          assert(SCIPimplicsGetNImpls(implvar->implics, implvarfixing) <= nimpls);
          nimpls = SCIPimplicsGetNImpls(implvar->implics, implvarfixing);
          i = MIN(i, nimpls); /* some elements from the array could have been removed */
@@ -9318,6 +9232,7 @@ SCIP_RETCODE varAddTransitiveImplic(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Bool             varfixing,          /**< FALSE if y should be added in implications for x == 0, TRUE for x == 1 */
@@ -9339,8 +9254,9 @@ SCIP_RETCODE varAddTransitiveImplic(
    assert(infeasible != NULL);
 
    /* add implication x == varfixing -> y <= b / y >= b to the implications list of x */
-   SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
+   SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable, branchcand, eventqueue,
          varfixing, implvar, impltype, implbound, FALSE, infeasible, nbdchgs, &added) );
+
    if( *infeasible || var == implvar || !transitive || !added )
       return SCIP_OKAY;
 
@@ -9354,14 +9270,14 @@ SCIP_RETCODE varAddTransitiveImplic(
       implvarfixing = (impltype == SCIP_BOUNDTYPE_LOWER);
 
       /* binary variable: implications of implvar */
-      SCIP_CALL( varAddTransitiveBinaryClosureImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-            eventqueue, varfixing, implvar, implvarfixing, infeasible, nbdchgs) );
+      SCIP_CALL( varAddTransitiveBinaryClosureImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+            branchcand, eventqueue, varfixing, implvar, implvarfixing, infeasible, nbdchgs) );
 
       /* inverse implication */
       if( !(*infeasible) )
       {
          SCIP_CALL( varAddTransitiveBinaryClosureImplic(implvar, blkmem, set, stat, transprob, origprob, tree, lp,
-               branchcand, eventqueue, !implvarfixing, var, !varfixing, infeasible, nbdchgs) );
+               cliquetable, branchcand, eventqueue, !implvarfixing, var, !varfixing, infeasible, nbdchgs) );
       }
    }
    else
@@ -9418,14 +9334,16 @@ SCIP_RETCODE varAddTransitiveImplic(
                if( vlbcoefs[i] >= 0.0 )
                {
                   vbimplbound = adjustedUb(set, SCIPvarGetType(vlbvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-                        varfixing, vlbvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, TRUE, infeasible, nbdchgs, &added) );
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                        branchcand, eventqueue, varfixing, vlbvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, TRUE,
+                        infeasible, nbdchgs, &added) );
                }
                else
                {
                   vbimplbound = adjustedLb(set, SCIPvarGetType(vlbvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-                        varfixing, vlbvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, TRUE, infeasible, nbdchgs, &added) );
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                        branchcand, eventqueue, varfixing, vlbvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, TRUE,
+                        infeasible, nbdchgs, &added) );
                }
                nvlbvars = SCIPvboundsGetNVbds(implvar->vlbs);
                i = MIN(i, nvlbvars); /* some elements from the array could have been removed */
@@ -9486,14 +9404,16 @@ SCIP_RETCODE varAddTransitiveImplic(
                if( vubcoefs[i] >= 0.0 )
                {
                   vbimplbound = adjustedLb(set, SCIPvarGetType(vubvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-                        varfixing, vubvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, TRUE, infeasible, nbdchgs, &added) );
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                        branchcand, eventqueue, varfixing, vubvars[i], SCIP_BOUNDTYPE_LOWER, vbimplbound, TRUE,
+                        infeasible, nbdchgs, &added) );
                }
                else
                {
                   vbimplbound = adjustedUb(set, SCIPvarGetType(vubvars[i]), vbimplbound);
-                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-                        varfixing, vubvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, TRUE, infeasible, nbdchgs, &added) );
+                  SCIP_CALL( varAddImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                        branchcand, eventqueue, varfixing, vubvars[i], SCIP_BOUNDTYPE_UPPER, vbimplbound, TRUE,
+                        infeasible, nbdchgs, &added) );
                }
                nvubvars = SCIPvboundsGetNVbds(implvar->vubs);
                i = MIN(i, nvubvars); /* some elements from the array could have been removed */
@@ -9788,8 +9708,9 @@ SCIP_RETCODE SCIPvarAddVlb(
                 *   b > 0, x >= b*z + d  <->  z == 1 -> x >= b+d
                 *   b < 0, x >= b*z + d  <->  z == 0 -> x >= d
                 */
-               SCIP_CALL( varAddTransitiveImplic(vlbvar, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                     eventqueue, (vlbcoef >= 0.0), var, SCIP_BOUNDTYPE_LOWER, maxvlb, transitive, infeasible, nbdchgs) );
+               SCIP_CALL( varAddTransitiveImplic(vlbvar, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                     branchcand, eventqueue, (vlbcoef >= 0.0), var, SCIP_BOUNDTYPE_LOWER, maxvlb, transitive,
+                     infeasible, nbdchgs) );
             }
             else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
             {
@@ -9797,8 +9718,8 @@ SCIP_RETCODE SCIPvarAddVlb(
                 *   b > 0, x >= b*z + d  <->  x == 0 -> z <= -d/b
                 *   b < 0, x >= b*z + d  <->  x == 0 -> z >= -d/b
                 */
-               SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                     eventqueue, FALSE, vlbvar, (vlbcoef >= 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER),
+               SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                     branchcand, eventqueue, FALSE, vlbvar, (vlbcoef >= 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER),
                      -vlbconstant/vlbcoef, transitive, infeasible, nbdchgs) );
             }
             else
@@ -10140,8 +10061,9 @@ SCIP_RETCODE SCIPvarAddVub(
                 *   b > 0, x <= b*z + d  <->  z == 0 -> x <= d
                 *   b < 0, x <= b*z + d  <->  z == 1 -> x <= b+d
                 */
-               SCIP_CALL( varAddTransitiveImplic(vubvar, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                     eventqueue, (vubcoef < 0.0), var, SCIP_BOUNDTYPE_UPPER, minvub, transitive, infeasible, nbdchgs) );
+               SCIP_CALL( varAddTransitiveImplic(vubvar, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                     branchcand, eventqueue, (vubcoef < 0.0), var, SCIP_BOUNDTYPE_UPPER, minvub, transitive, infeasible,
+                     nbdchgs) );
             }
             else if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
             {
@@ -10149,8 +10071,8 @@ SCIP_RETCODE SCIPvarAddVub(
                 *   b > 0, x <= b*z + d  <->  x == 1 -> z >= (1-d)/b
                 *   b < 0, x <= b*z + d  <->  x == 1 -> z <= (1-d)/b
                 */
-               SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                     eventqueue, TRUE, vubvar, (vubcoef >= 0.0 ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER),
+               SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                     branchcand, eventqueue, TRUE, vubvar, (vubcoef >= 0.0 ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER),
                      (1.0-vubconstant)/vubcoef, transitive, infeasible, nbdchgs) );
             }
             else
@@ -10275,8 +10197,8 @@ SCIP_RETCODE SCIPvarAddImplic(
          SCIPvarAdjustBd(implvar, set, impltype, &implbound);
          if( SCIPvarIsActive(implvar) || SCIPvarGetStatus(implvar) == SCIP_VARSTATUS_FIXED )
          {
-            SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                  eventqueue, varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
+            SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, transprob, origprob, tree, lp, cliquetable,
+                  branchcand, eventqueue, varfixing, implvar, impltype, implbound, transitive, infeasible, nbdchgs) );
          }
       }
       break;
@@ -10524,6 +10446,9 @@ SCIP_RETCODE SCIPvarFixBinary(
       }
    }
 
+   /* during presolving, the variable should have been removed immediately from all its cliques */
+   assert(SCIPsetGetStage(set) >= SCIP_STAGE_SOLVING || var->cliquelist == NULL);
+
    return SCIP_OKAY;
 }
 
@@ -10650,6 +10575,28 @@ SCIP_RETCODE SCIPvarsAddClique(
    return SCIP_OKAY;
 }
 
+/** adds a clique to the list of cliques of the given binary variable, but does not change the clique
+ *  itself
+ */
+SCIP_RETCODE SCIPvarAddCliqueToList(
+   SCIP_VAR*             var,                /**< problem variable  */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             value,              /**< value of the variable in the clique */
+   SCIP_CLIQUE*          clique              /**< clique that should be removed from the variable's clique list */
+   )
+{
+   assert(var != NULL);
+   assert(SCIPvarIsBinary(var));
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+
+   /* add clique to variable's clique list */
+   SCIP_CALL( SCIPcliquelistAdd(&var->cliquelist, blkmem, set, value, clique) );
+
+   return SCIP_OKAY;
+}
+
+
 /** deletes a clique from the list of cliques the binary variable is member of, but does not change the clique
  *  itself
  */
@@ -10661,8 +10608,7 @@ SCIP_RETCODE SCIPvarDelCliqueFromList(
    )
 {
    assert(var != NULL);
-   assert(SCIPvarIsBinary(var)); 
-   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+   assert(SCIPvarIsBinary(var));
 
    /* delete clique from variable's clique list */
    SCIP_CALL( SCIPcliquelistDel(&var->cliquelist, blkmem, value, clique) );
@@ -10696,7 +10642,7 @@ SCIP_RETCODE SCIPvarDelClique(
       SCIP_CALL( SCIPcliquelistDel(&var->cliquelist, blkmem, value, clique) );
 
       /* delete variable from clique */
-      SCIP_CALL( SCIPcliqueDelVar(clique, var, value) );
+      SCIPcliqueDelVar(clique, var, value);
 
       /* check consistency of cliquelist */
       SCIPcliquelistCheck(var->cliquelist, var);
@@ -12648,6 +12594,7 @@ SCIP_Real SCIPvarGetRedcost(
    return 0.0;
 }
 
+#define MAX_CLIQUELENGTH 50
 /** returns for the given binary variable the reduced cost which are given by the variable itself and its implication if
  *  the binary variable is fixed to the given value
  */
@@ -12656,16 +12603,13 @@ SCIP_Real SCIPvarGetImplRedcost(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             varfixing,          /**< FALSE if for x == 0, TRUE for x == 1 */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_PROB*            prob,               /**< transformed problem, or NULL */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
-   SCIP_VAR** vars;
-   SCIP_VAR* implvar;
-   SCIP_BOUNDTYPE* boundtypes;
    SCIP_Real implredcost;
-   SCIP_Real redcost;
-   int nbinvars;
-   int v;
+   int ncliques;
+   int nvars;
 
    assert(SCIPvarIsBinary(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
@@ -12673,31 +12617,228 @@ SCIP_Real SCIPvarGetImplRedcost(
    /* get reduced cost of given variable */
    implredcost = SCIPvarGetRedcost(var, set, varfixing, stat, lp);
 
-   /* collect binary implication information */
-   nbinvars = SCIPimplicsGetNBinImpls(var->implics, varfixing);
-   vars =  SCIPimplicsGetVars(var->implics, varfixing);
-   boundtypes = SCIPimplicsGetTypes(var->implics, varfixing);
+#ifdef SCIP_MORE_DEBUG
+   SCIPdebugMessage("variable <%s> itself has reduced cost of %g\n", SCIPvarGetName(var), implredcost);
+#endif
 
-   for( v = 0; v < nbinvars; ++v )
+   /* the following algorithm is expensive */
+   ncliques = SCIPvarGetNCliques(var, varfixing);
+
+   if( ncliques > 0 )
    {
-      implvar = vars[v];
-      assert(implvar != NULL);
+      SCIP_CLIQUE** cliques;
+      SCIP_CLIQUE* clique;
+      SCIP_VAR** clqvars;
+      SCIP_VAR** probvars;
+      SCIP_VAR* clqvar;
+      SCIP_Bool* clqvalues;
+      int* entries;
+      int* ids;
+      SCIP_Real redcost;
+      SCIP_Bool cleanedup;
+      int nclqvars;
+      int nentries;
+      int nids;
+      int id;
+      int c;
+      int v;
 
-      /* ignore binary variable which are fixed */
-      if( SCIPvarGetLbLocal(implvar) > 0.5 || SCIPvarGetUbLocal(implvar) < 0.5 )
-         continue;
+      assert(prob != NULL);
+      assert(SCIPprobIsTransformed(prob));
 
-      assert((SCIP_Bool)SCIP_BOUNDTYPE_LOWER == FALSE);
-      assert((SCIP_Bool)SCIP_BOUNDTYPE_UPPER == TRUE);
+      nentries = SCIPprobGetNVars(prob) - SCIPprobGetNContVars(prob) + 1;
 
-      if( (SCIP_Bool)boundtypes[v] != varfixing )
-         redcost = SCIPvarGetRedcost(implvar, set, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
-      else
-         redcost = -SCIPvarGetRedcost(implvar, set, boundtypes[v] == SCIP_BOUNDTYPE_LOWER, stat, lp);
+      SCIP_CALL_ABORT( SCIPsetAllocBufferArray(set, &ids, 2*nentries) );
+      nids = 0;
+      /* @todo move this memory allocation to SCIP_SET and add a memory list there, to decrease the number of
+       *       allocations and clear ups
+       */
+      SCIP_CALL_ABORT( SCIPsetAllocBufferArray(set, &entries, nentries) );
+      BMSclearMemoryArray(entries, nentries);
 
-      if( !SCIPsetIsDualfeasZero(set, redcost) )
-         implredcost += redcost;
+      cliques = SCIPvarGetCliques(var, varfixing);
+      assert(cliques != NULL);
+
+      for( c = ncliques - 1; c >= 0; --c )
+      {
+         clique = cliques[c];
+         assert(clique != NULL);
+         nclqvars = SCIPcliqueGetNVars(clique);
+         assert(nclqvars > 0);
+
+         if( nclqvars > MAX_CLIQUELENGTH )
+            continue;
+
+         clqvars = SCIPcliqueGetVars(clique);
+         clqvalues = SCIPcliqueGetValues(clique);
+         assert(clqvars != NULL);
+         assert(clqvalues != NULL);
+
+         cleanedup = SCIPcliqueIsCleanedUp(clique);
+
+         for( v = nclqvars - 1; v >= 0; --v )
+         {
+            clqvar = clqvars[v];
+            assert(clqvar != NULL);
+
+            /* ignore binary variable which are fixed */
+            if( clqvar != var && (cleanedup || SCIPvarIsActive(clqvar)) &&
+               (SCIPvarGetLbLocal(clqvar) < 0.5 && SCIPvarGetUbLocal(clqvar) > 0.5) )
+            {
+               int probindex = SCIPvarGetProbindex(clqvar) + 1;
+               assert(0 < probindex && probindex < nentries);
+
+#if 0
+               /* check that the variable was not yet visited or does not appear with two contradicting implications, ->
+                * can appear since there is no guarantee that all these infeasible bounds were found
+                */
+               assert(!entries[probindex] || entries[probindex] == (clqvalues[v] ? probindex : -probindex));
+#endif
+               if( entries[probindex] == 0 )
+               {
+                  ids[nids] = probindex;
+                  ++nids;
+
+                  /* mark variable as visited */
+                  entries[probindex] = (clqvalues[v] ? probindex : -probindex);
+               }
+            }
+         }
+      }
+
+      probvars = SCIPprobGetVars(prob);
+      assert(probvars != NULL);
+
+      /* add all implied reduced cost */
+      for( v = nids - 1; v >= 0; --v )
+      {
+         id = ids[v];
+         assert(0 < id && id < nentries);
+         assert(entries[id] != 0);
+         assert(probvars[id - 1] != NULL);
+         assert(SCIPvarIsActive(probvars[id - 1]));
+         assert(SCIPvarIsBinary(probvars[id - 1]));
+         assert(SCIPvarGetLbLocal(probvars[id - 1]) < 0.5 && SCIPvarGetUbLocal(probvars[id - 1]) > 0.5);
+
+         if( (entries[id] > 0) != varfixing )
+            redcost = SCIPvarGetRedcost(probvars[id - 1], set, (entries[id] < 0), stat, lp);
+         else
+            redcost = -SCIPvarGetRedcost(probvars[id - 1], set, (entries[id] < 0), stat, lp);
+
+         if( (varfixing && SCIPsetIsDualfeasPositive(set, redcost)) || (!varfixing && SCIPsetIsDualfeasNegative(set, redcost)) )
+            implredcost += redcost;
+      }
+
+      SCIPsetFreeBufferArray(set, &entries);
+      SCIPsetFreeBufferArray(set, &ids);
    }
+
+#ifdef SCIP_MORE_DEBUG
+   SCIPdebugMessage("variable <%s> incl. cliques (%d) has implied reduced cost of %g\n", SCIPvarGetName(var), ncliques,
+      implredcost);
+#endif
+
+   /* collect non-binary implication information */
+   nvars = SCIPimplicsGetNImpls(var->implics, varfixing);
+
+   if( nvars > 0 )
+   {
+      SCIP_VAR** vars;
+      SCIP_VAR* implvar;
+      SCIP_COL* col;
+      SCIP_Real* bounds;
+      SCIP_BOUNDTYPE* boundtypes;
+      SCIP_Real redcost;
+      SCIP_Real lb;
+      SCIP_Real ub;
+      SCIP_Bool lpissolbasic;
+      int v;
+
+      vars =  SCIPimplicsGetVars(var->implics, varfixing);
+      boundtypes = SCIPimplicsGetTypes(var->implics, varfixing);
+      bounds = SCIPimplicsGetBounds(var->implics, varfixing);
+      lpissolbasic = SCIPlpIsSolBasic(lp);
+
+      for( v = nvars - 1; v >= 0; --v )
+      {
+         implvar = vars[v];
+         assert(implvar != NULL);
+
+         lb = SCIPvarGetLbLocal(implvar);
+         ub = SCIPvarGetUbLocal(implvar);
+
+         /* ignore binary variable which are fixed or not of column status */
+         if( SCIPvarGetStatus(implvar) != SCIP_VARSTATUS_COLUMN || SCIPsetIsFeasEQ(set, lb, ub) )
+            continue;
+
+         col = SCIPvarGetCol(implvar);
+         assert(col != NULL);
+         redcost = 0.0;
+
+         /* solved lp with basis information or not? */
+         if( lpissolbasic )
+         {
+            SCIP_BASESTAT basestat = SCIPcolGetBasisStatus(col);
+
+            /* check if the implication is not not yet applied */
+            if( basestat == SCIP_BASESTAT_LOWER && boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasGT(set, bounds[v], lb) )
+            {
+               redcost = SCIPcolGetRedcost(col, stat, lp);
+               assert(!SCIPsetIsDualfeasNegative(set, redcost));
+
+               if( !varfixing )
+                  redcost *= (lb - bounds[v]);
+               else
+                  redcost *= (bounds[v] - lb);
+            }
+            else if( basestat == SCIP_BASESTAT_UPPER && boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasLT(set, bounds[v], ub) )
+            {
+               redcost = SCIPcolGetRedcost(col, stat, lp);
+               assert(!SCIPsetIsDualfeasPositive(set, redcost));
+
+               if( varfixing )
+                  redcost *= (bounds[v] - ub);
+               else
+                  redcost *= (ub - bounds[v]);
+            }
+         }
+         else
+         {
+            SCIP_Real primsol = SCIPcolGetPrimsol(col);
+
+            /* check if the implication is not not yet applied */
+            if( boundtypes[v] == SCIP_BOUNDTYPE_LOWER && SCIPsetIsFeasEQ(set, lb, primsol) && SCIPsetIsFeasGT(set, bounds[v], lb) )
+            {
+               redcost = SCIPcolGetRedcost(col, stat, lp);
+               assert(!SCIPsetIsDualfeasNegative(set, redcost));
+
+               if( varfixing )
+                  redcost *= (lb - bounds[v]);
+               else
+                  redcost *= (bounds[v] - lb);
+            }
+            else if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER && SCIPsetIsFeasEQ(set, ub, primsol) && SCIPsetIsFeasLT(set, bounds[v], ub) )
+            {
+               redcost = SCIPcolGetRedcost(col, stat, lp);
+               assert(!SCIPsetIsDualfeasPositive(set, redcost));
+
+               if( varfixing )
+                  redcost *= (bounds[v] - ub);
+               else
+                  redcost *= (ub - bounds[v]);
+            }
+         }
+
+         /* improve implied reduced cost */
+         if( (varfixing && SCIPsetIsDualfeasPositive(set, redcost)) || (!varfixing && SCIPsetIsDualfeasNegative(set, redcost)) )
+            implredcost += redcost;
+      }
+   }
+
+#ifdef SCIP_MORE_DEBUG
+   SCIPdebugMessage("variable <%s> incl. cliques (%d) and implications (%d) has implied reduced cost of %g\n",
+      SCIPvarGetName(var), ncliques, nvars, implredcost);
+#endif
 
    return implredcost;
 }
@@ -13356,6 +13497,12 @@ SCIP_RETCODE SCIPvarAddToRow(
    }
 }
 
+/* optionally, define this compiler flag to write complete variable histories to a file */
+#ifdef SCIP_HISTORYTOFILE
+SCIP_Longint counter = 0l;
+const char* historypath="/OPTI/bzfhende/pseudocosts"; /* allows for user-defined path; use '.' for calling directory of SCIP */
+#endif
+
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
  *  "solvaldelta" in the variable's solution value and resulting change of "objdelta" in the in the LP's objective value
  */
@@ -13390,6 +13537,22 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
+      /* append history to file */
+#ifdef SCIP_HISTORYTOFILE
+   {
+      FILE* f;
+      char filename[256];
+
+      sprintf(filename, "%s/%s.pse", historypath, SCIPgetProbName(set->scip));
+      f = fopen(filename, "a");
+      if( NULL != f )
+      {
+         fprintf(f, "%lld %s \t %lld \t %d %15.9f %.3f\n", ++counter,
+            SCIPvarGetName(var), stat->nnodes, SCIPgetDepth(set->scip), objdelta, solvaldelta);
+         fclose(f);
+      }
+   }
+#endif
       SCIPhistoryUpdatePseudocost(var->history, set, solvaldelta, objdelta, weight);
       SCIPhistoryUpdatePseudocost(var->historycrun, set, solvaldelta, objdelta, weight);
       SCIPhistoryUpdatePseudocost(stat->glbhistory, set, solvaldelta, objdelta, weight);
@@ -13602,6 +13765,312 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
       SCIPABORT();
       return 0.0; /*lint !e527*/
    }
+}
+
+/** gets the an estimate of the variable's pseudo cost variance in direction \p dir */
+SCIP_Real SCIPvarGetPseudocostVariance(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Bool             onlycurrentrun      /**< return pseudo cost variance only for current branch and bound run */
+   )
+{
+   assert(var != NULL);
+   assert(dir == SCIP_BRANCHDIR_DOWNWARDS || dir == SCIP_BRANCHDIR_UPWARDS);
+
+   switch( SCIPvarGetStatus(var) )
+   {
+   case SCIP_VARSTATUS_ORIGINAL:
+      if( var->data.original.transvar == NULL )
+         return 0.0;
+      else
+         return SCIPvarGetPseudocostVariance(var->data.original.transvar, dir, onlycurrentrun);
+
+   case SCIP_VARSTATUS_LOOSE:
+   case SCIP_VARSTATUS_COLUMN:
+      if( onlycurrentrun )
+         return SCIPhistoryGetPseudocostVariance(var->historycrun, dir);
+      else
+         return SCIPhistoryGetPseudocostVariance(var->history, dir);
+
+   case SCIP_VARSTATUS_FIXED:
+      return 0.0;
+
+   case SCIP_VARSTATUS_AGGREGATED:
+      if( var->data.aggregate.scalar > 0.0 )
+         return SCIPvarGetPseudocostVariance(var->data.aggregate.var, dir, onlycurrentrun);
+      else
+         return SCIPvarGetPseudocostVariance(var->data.aggregate.var, SCIPbranchdirOpposite(dir), onlycurrentrun);
+
+   case SCIP_VARSTATUS_MULTAGGR:
+      return 0.0;
+
+   case SCIP_VARSTATUS_NEGATED:
+      return SCIPvarGetPseudocostVariance(var->negatedvar, SCIPbranchdirOpposite(dir), onlycurrentrun);
+
+   default:
+      SCIPerrorMessage("unknown variable status\n");
+      SCIPABORT();
+      return 0.0; /*lint !e527*/
+   }
+}
+
+/** calculates a confidence bound for this variable under the assumption of normally distributed pseudo costs
+ *
+ *  The confidence bound \f$ \theta \geq 0\f$ denotes the interval borders \f$ [X - \theta, \ X + \theta]\f$, which contains
+ *  the true pseudo costs of the variable, i.e., the expected value of the normal distribution, with a probability
+ *  of 2 * clevel - 1.
+ *
+ *  @return value of confidence bound for this variable
+ */
+SCIP_Real SCIPvarCalcPscostConfidenceBound(
+   SCIP_VAR*             var,                /**< variable in question */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_BRANCHDIR        dir,                /**< the branching direction for the confidence bound */
+   SCIP_Bool             onlycurrentrun,     /**< should only the current run be taken into account */
+   SCIP_CONFIDENCELEVEL  clevel              /**< confidence level for the interval */
+   )
+{
+   SCIP_Real confidencebound;
+
+   confidencebound = SCIPvarGetPseudocostVariance(var, dir, onlycurrentrun);
+   if( SCIPsetIsFeasPositive(set, confidencebound) )
+   {
+      SCIP_Real count;
+
+      if( onlycurrentrun )
+         count = SCIPvarGetPseudocostCountCurrentRun(var, dir);
+      else
+         count = SCIPvarGetPseudocostCount(var, dir);
+      /* assertion is valid because variance is positive */
+      assert(count > 1.9);
+
+      confidencebound /= count;
+      confidencebound = sqrt(confidencebound);
+
+      /* the actual, underlying distribution of the mean is a student-t-distribution with degrees of freedom equal to
+       * the number of pseudo cost evaluations of this variable in the respective direction. */
+      confidencebound *= SCIPstudentTGetCriticalValue(clevel, (int)SCIPsetFloor(set, count) - 1);
+   }
+   else
+      confidencebound = 0.0;
+
+   return confidencebound;
+}
+
+/** check if the current pseudo cost relative error in a direction violates the given threshold. The Relative
+ *  Error is calculated at a specific confidence level
+ */
+SCIP_Bool SCIPvarIsPscostRelerrorReliable(
+   SCIP_VAR*             var,                /**< variable in question */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_Real             threshold,          /**< threshold for relative errors to be considered reliable (enough) */
+   SCIP_CONFIDENCELEVEL  clevel              /**< a given confidence level */
+   )
+{
+   SCIP_Real downsize;
+   SCIP_Real upsize;
+   SCIP_Real size;
+   SCIP_Real relerrorup;
+   SCIP_Real relerrordown;
+   SCIP_Real relerror;
+
+   /* check, if the pseudo cost score of the variable is reliable */
+   downsize = SCIPvarGetPseudocostCountCurrentRun(var, SCIP_BRANCHDIR_DOWNWARDS);
+   upsize = SCIPvarGetPseudocostCountCurrentRun(var, SCIP_BRANCHDIR_UPWARDS);
+   size = MIN(downsize, upsize);
+
+   relerrordown = 0.0;
+   relerrorup = 0.0;
+
+   /* Pseudo costs relative error can only be reliable if both directions have been tried at least twice */
+   if( size < 1.5 )
+      return FALSE;
+
+   /* use the relative error between the current mean pseudo cost value of the candidate and its upper
+    * confidence interval bound at confidence level of 95% for individual variable reliability.
+    * this is only possible if we have at least 2 measurements and therefore a valid variance estimate.
+    */
+   if( downsize >= 1.5 )
+   {
+      SCIP_Real normval;
+
+      relerrordown = SCIPvarCalcPscostConfidenceBound(var, set, SCIP_BRANCHDIR_DOWNWARDS, TRUE, clevel);
+      normval = MAX(1.0, SCIPvarGetPseudocostCurrentRun(var, stat, -1.0));
+
+      relerrordown /= normval;
+   }
+   else
+      relerrordown = 0.0;
+
+   if( upsize >= 2.0 )
+   {
+      SCIP_Real normval;
+
+      relerrorup = SCIPvarCalcPscostConfidenceBound(var, set, SCIP_BRANCHDIR_UPWARDS, TRUE, clevel);
+      normval = MAX(1.0, SCIPvarGetPseudocostCurrentRun(var, stat, +1.0));
+
+      relerrorup /= normval;
+   }
+   else
+      relerrorup = 0.0;
+
+   /* consider the relative error threshold violated, if it is violated in at least one branching direction */
+   relerror = MAX(relerrorup, relerrordown);
+
+   return (relerror <= threshold);
+}
+
+/** check if variable pseudo-costs have a significant difference in location. The significance depends on
+ *  the choice of \p clevel and on the kind of tested hypothesis. The one-sided hypothesis, which
+ *  should be rejected, is that fracy * mu_y >= fracx * mu_x, where mu_y and mu_x denote the
+ *  unknown location means of the underlying pseudo-cost distributions of x and y.
+ *
+ *  This method is applied best if variable x has a better pseudo-cost score than y. The method hypothesizes that y were actually
+ *  better than x (despite the current information), meaning that y can be expected to yield branching
+ *  decisions as least as good as x in the long run. If the method returns TRUE, the current history information is
+ *  sufficient to safely rely on the alternative hypothesis that x yields indeed a better branching score (on average)
+ *  than y.
+ *
+ *  @note The order of x and y matters for the one-sided hypothesis
+ *
+ *  @note set \p onesided to FALSE if you are not sure which variable is better. The hypothesis tested then reads
+ *        fracy * mu_y == fracx * mu_x vs the alternative hypothesis fracy * mu_y != fracx * mu_x.
+ *
+ *  @return TRUE if the hypothesis can be safely rejected at the given confidence level
+ */
+SCIP_Bool SCIPvarSignificantPscostDifference(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VAR*             varx,               /**< variable x */
+   SCIP_Real             fracx,              /**< the fractionality of variable x */
+   SCIP_VAR*             vary,               /**< variable y */
+   SCIP_Real             fracy,              /**< the fractionality of variable y */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_CONFIDENCELEVEL  clevel,             /**< confidence level for rejecting hypothesis */
+   SCIP_Bool             onesided            /**< should a one-sided hypothesis y >= x be tested? */
+   )
+{
+   SCIP_Real meanx;
+   SCIP_Real meany;
+   SCIP_Real variancex;
+   SCIP_Real variancey;
+   SCIP_Real countx;
+   SCIP_Real county;
+   SCIP_Real tresult;
+   SCIP_Real realdirection;
+
+
+   if( varx == vary )
+      return FALSE;
+
+   countx = SCIPvarGetPseudocostCount(varx, dir);
+   county = SCIPvarGetPseudocostCount(vary, dir);
+
+   /* if not at least 2 measurements were taken, return FALSE */
+   if( countx < 1.5 || county < 1.5 )
+      return FALSE;
+
+   realdirection = (dir == SCIP_BRANCHDIR_DOWNWARDS ? -1.0 : 1.0);
+
+   meanx = fracx * SCIPvarGetPseudocost(varx, stat, realdirection);
+   meany = fracy * SCIPvarGetPseudocost(vary, stat, realdirection);
+
+   variancex = SQR(fracx) * SCIPvarGetPseudocostVariance(varx, dir, FALSE);
+   variancey = SQR(fracy) * SCIPvarGetPseudocostVariance(vary, dir, FALSE);
+
+   /* if there is no variance, the means are taken from a constant distribution */
+   if( SCIPsetIsFeasEQ(set, variancex + variancey, 0.0) )
+      return (onesided ? SCIPsetIsFeasGT(set, meanx, meany) : !SCIPsetIsFeasEQ(set, meanx, meany));
+
+   tresult = SCIPcomputeTwoSampleTTestValue(meanx, meany, variancex, variancey, countx, county);
+
+   /* for the two-sided hypothesis, just take the absolute of t */
+   if( !onesided )
+      tresult = REALABS(tresult);
+
+   return (tresult >= SCIPstudentTGetCriticalValue(clevel, (int)(countx + county - 2)));
+}
+
+/** tests at a given confidence level whether the variable pseudo-costs only have a small probability to
+ *  exceed a \p threshold. This is useful to determine if past observations provide enough evidence
+ *  to skip an expensive strong-branching step if there is already a candidate that has been proven to yield an improvement
+ *  of at least \p threshold.
+ *
+ *  @note use \p clevel to adjust the level of confidence. For SCIP_CONFIDENCELEVEL_MIN, the method returns TRUE if
+ *        the estimated probability to exceed \p threshold is less than 25 %.
+ *
+ *  @see  SCIP_Confidencelevel for a list of available levels. The used probability limits refer to the one-sided levels
+ *        of confidence.
+ *
+ *  @return TRUE if the variable pseudo-cost probabilistic model is likely to be smaller than \p threshold
+ *          at the given confidence level \p clevel.
+ */
+SCIP_Bool SCIPvarPscostThresholdProbabilityTest(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VAR*             var,                /**< variable x */
+   SCIP_Real             frac,               /**< the fractionality of variable x */
+   SCIP_Real             threshold,          /**< the threshold to test against */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_CONFIDENCELEVEL  clevel              /**< confidence level for rejecting hypothesis */
+   )
+{
+   SCIP_Real mean;
+   SCIP_Real variance;
+   SCIP_Real count;
+   SCIP_Real realdirection;
+   SCIP_Real probability;
+   SCIP_Real problimit;
+
+   count = SCIPvarGetPseudocostCount(var, dir);
+
+   /* if not at least 2 measurements were taken, return FALSE */
+   if( count < 1.5 )
+      return FALSE;
+
+   realdirection = (dir == SCIP_BRANCHDIR_DOWNWARDS ? -1.0 : 1.0);
+
+   mean = frac * SCIPvarGetPseudocost(var, stat, realdirection);
+   variance = SQR(frac) * SCIPvarGetPseudocostVariance(var, dir, FALSE);
+
+   /* if mean is at least threshold, it has at least a 50% probability to exceed threshold, we therefore return FALSE */
+   if( SCIPsetIsFeasGE(set, mean, threshold) )
+      return FALSE;
+
+   /* if there is no variance, the means are taken from a constant distribution */
+   if( SCIPsetIsFeasEQ(set, variance, 0.0) )
+      return SCIPsetIsFeasLT(set, mean, threshold);
+
+   /* obtain probability of a normally distributed random variable at given mean and variance to yield at most threshold */
+   probability = SCIPnormalCDF(mean, variance, threshold);
+
+   /* determine a probability limit corresponding to the given confidence level */
+   switch( clevel )
+   {
+      case SCIP_CONFIDENCELEVEL_MIN:
+         problimit = 0.75;
+         break;
+      case SCIP_CONFIDENCELEVEL_LOW:
+         problimit = 0.875;
+         break;
+      case SCIP_CONFIDENCELEVEL_MEDIUM:
+         problimit = 0.9;
+         break;
+      case SCIP_CONFIDENCELEVEL_HIGH:
+         problimit = 0.95;
+         break;
+      case SCIP_CONFIDENCELEVEL_MAX:
+         problimit = 0.975;
+         break;
+      default:
+         problimit = -1;
+         SCIPerrorMessage("Confidence level set to unknown value <%d>", (int)clevel);
+         SCIPABORT();
+         break;
+   }
+
+   return (probability >= problimit);
 }
 
 /** find the corresponding history entry if already existing, otherwise create new entry */
@@ -15646,7 +16115,6 @@ SCIP_DECL_HASHGETKEY(SCIPhashGetKeyVar)
 #undef SCIPvarGetVubCoefs
 #undef SCIPvarGetVubConstants
 #undef SCIPvarGetNImpls
-#undef SCIPvarGetNBinImpls
 #undef SCIPvarGetImplVars
 #undef SCIPvarGetImplTypes
 #undef SCIPvarGetImplBounds
@@ -16659,20 +17127,6 @@ int SCIPvarGetNImpls(
    return SCIPimplicsGetNImpls(var->implics, varfixing);
 }
 
-/** gets number of implications  y <= 0 or y >= 1 for x == 0 or x == 1 of given active problem variable x with binary y, 
- *  there are no implications for nonbinary variable x
- */
-int SCIPvarGetNBinImpls(
-   SCIP_VAR*             var,                /**< active problem variable */
-   SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
-   )
-{
-   assert(var != NULL);
-   assert(SCIPvarIsActive(var));
-
-   return SCIPimplicsGetNBinImpls(var->implics, varfixing);
-}
-
 /** gets array with implication variables y of implications  y <= b or y >= b for x == 0 or x == 1 of given active
  *  problem variable x, there are no implications for nonbinary variable x;
  *  the implications are sorted such that implications with binary implied variables precede the ones with non-binary
@@ -16742,7 +17196,6 @@ int SCIPvarGetNCliques(
    )
 {
    assert(var != NULL);
-   assert(SCIPvarIsActive(var));
 
    return SCIPcliquelistGetNCliques(var->cliquelist, varfixing);
 }
@@ -16754,7 +17207,6 @@ SCIP_CLIQUE** SCIPvarGetCliques(
    )
 {
    assert(var != NULL);
-   assert(SCIPvarIsActive(var));
 
    return SCIPcliquelistGetCliques(var->cliquelist, varfixing);
 }

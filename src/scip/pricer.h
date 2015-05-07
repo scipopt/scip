@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -118,6 +118,13 @@ extern
 SCIP_RETCODE SCIPpricerDeactivate(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** enables or disables all clocks of \p pricer, depending on the value of the flag */
+extern
+void SCIPpricerEnableOrDisableClocks(
+   SCIP_PRICER*          pricer,             /**< the pricer for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the pricer be enabled? */
    );
 
 /** calls reduced cost pricing method of variable pricer */

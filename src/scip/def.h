@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,9 +81,10 @@
 extern "C" {
 #endif
 
-#define SCIP_VERSION                310 /**< SCIP version number (multiplied by 100 to get integer number) */
+
+#define SCIP_VERSION                311 /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION               1 /**< SCIP sub version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2014 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_COPYRIGHT   "Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -275,6 +276,17 @@ extern "C" {
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
+
+#define SCIP_CALL_TERMINATE(retcode, x, TERM)   do                                                            \
+                       {                                                                                      \
+                          if( ((retcode) = (x)) != SCIP_OKAY )                                                \
+                          {                                                                                   \
+                             SCIPerrorMessage("Error <%d> in function call\n", retcode);                      \
+                             goto TERM;                                                                       \
+                          }                                                                                   \
+                       }                                                                                      \
+                       while( FALSE )
+
 
 /*
  * Define to mark deprecated API functions

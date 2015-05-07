@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -18,6 +18,7 @@
  * @brief   generalized variable bounds propagator
  * @author  Stefan Weltge
  * @author  Ambros Gleixner
+ * @author  Benjamin Mueller
  */
 
 /**@todo should we only discard events catched from nodes that are not the current node's ancestors? */
@@ -31,6 +32,7 @@
 
 #include "scip/prop_genvbounds.h"
 #include "scip/debug.h"
+#include "scip/cons_linear.h"
 
 #define PROP_NAME                            "genvbounds"
 #define PROP_DESC                            "generalized variable bounds propagator"
@@ -49,6 +51,7 @@
 #define DEFAULT_PROPAGATE_IN_ROOT_NODE  TRUE /**< apply genvbounds in root node if no new incumbent was found? */
 #define DEFAULT_SORT                    TRUE /**< sort genvbounds and wait for bound change events? (otherwise all
                                               *   genvbounds are applied in each node) */
+#define DEFAULT_PROPASCONSS            FALSE /**< should genvbounds be transformed to (linear) constraints? */
 
 #define EVENTHDLR_NAME                       "genvbounds"
 #define EVENTHDLR_DESC                       "event handler for generalized variable bounds propagator"
@@ -102,6 +105,7 @@ struct SCIP_PropData
    SCIP_HASHMAP*         startmap;           /**< hashmap to provide fast access to startindices array */
    SCIP_PROP*            prop;               /**< pointer to genvbounds propagator */
    SCIP_NODE*            lastnodecaught;     /**< last node where events for starting indices were caught */
+   SCIP_VAR*             cutoffboundvar;     /**< artificial variable representing primal cutoff bound */
    int*                  componentsstart;    /**< stores the components starting indices in genvboundstore array; the
                                               *   entry componentsstart[ncomponents] is equal to ngenvbounds, which
                                               *   makes it easier to iterate over all components */
@@ -123,6 +127,7 @@ struct SCIP_PropData
    SCIP_Bool             propinrootnode;     /**< apply genvbounds in root node if no new incumbent was found? */
    SCIP_Bool             sort;               /**< sort genvbounds and wait for bound change events? (otherwise all
                                               *   genvbounds are applied in each node) */
+   SCIP_Bool             propasconss;        /**< should genvbounds be transformed to (linear) constraints? */
 };
 
 
@@ -133,12 +138,10 @@ struct SCIP_PropData
 /** returns correct cutoff bound value */
 static
 SCIP_Real getCutoffboundGenVBound(
-   SCIP*                 scip,               /**< SCIP data structure */
-   GENVBOUND*            genvbound           /**< genvbound */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
-   assert(genvbound != NULL);
 
    SCIPdebugMessage("cutoff = %.9g (%.9g + %.9g * %.9g)\n",
       (SCIPgetCutoffbound(scip) + SCIPgetTransObjoffset(scip)) * SCIPgetTransObjscale(scip),
@@ -342,7 +345,7 @@ SCIP_Real getGenVBoundsBound(
       return (genvbound->boundtype == SCIP_BOUNDTYPE_LOWER) ? -SCIPinfinity(scip) : SCIPinfinity(scip);
 
    if( genvbound->cutoffcoef != 0.0 )
-      boundval += genvbound->cutoffcoef * getCutoffboundGenVBound(scip, genvbound);
+      boundval += genvbound->cutoffcoef * getCutoffboundGenVBound(scip);
 
    boundval += genvbound->constant;
 
@@ -659,7 +662,7 @@ SCIP_RETCODE resolveGenVBoundPropagation(
 
    /* subtract constant terms from bound value */
    tmpboundval = *boundval;
-   tmpboundval -= genvbound->cutoffcoef * getCutoffboundGenVBound(scip, genvbound);
+   tmpboundval -= genvbound->cutoffcoef * getCutoffboundGenVBound(scip);
    tmpboundval -= genvbound->constant;
 
    SCIPdebugMessage("subtracting constant terms gives boundval=%.15g\n", tmpboundval);
@@ -801,7 +804,7 @@ SCIP_RETCODE resolveGenVBoundPropagation(
       tmpboundval += slack;
 
    /* add constant terms again */
-   tmpboundval += genvbound->cutoffcoef * getCutoffboundGenVBound(scip, genvbound);
+   tmpboundval += genvbound->cutoffcoef * getCutoffboundGenVBound(scip);
    tmpboundval += genvbound->constant;
 
    /* boundval should not have been decreased; if this happened nevertheless, maybe due to numerical errors, we quit
@@ -1345,8 +1348,6 @@ SCIP_RETCODE setUpEvents(
          /* loop over all coefficients in this genvbound */
          for( k = 0; k < genvbound->ncoefs; k++ )
          {
-            assert(!SCIPisZero(scip, genvbound->coefs[k]));
-
             if( SCIPisPositive(scip, genvbound->coefs[k]) )
             {
                SCIP_CALL( addEventData(scip, propdata, genvbound->vars[k], j, i, SCIP_BOUNDTYPE_LOWER) );
@@ -1419,6 +1420,9 @@ SCIP_RETCODE setUpEvents(
  *  there is an arc from genvbound1 to genvbound2 iff c1 = +1 and x_i1 appears with positive coefficient in RHS2 or
  *  c1 = -1 and x_i1 appears with negative coefficient in RHS2; in this case, a bound change of x_i1 deduced from
  *  genvbound1 improves genvbound2's minactivity in RHS2.
+ *
+ *  The method computes the strongly connected components and sorts them topologically. The order of the nodes in an
+ *  strongly connected component is arbitrary.
  */
 static
 SCIP_RETCODE sortGenVBounds(
@@ -1428,6 +1432,8 @@ SCIP_RETCODE sortGenVBounds(
 {
    GENVBOUND** genvboundssorted;            /* array to store the sorted genvbounds */
    SCIP_DIGRAPH* graph;
+   int* strongcomponents;
+   int* strongcompstartidx;
    int sortedindex;
    int i;
 
@@ -1476,6 +1482,10 @@ SCIP_RETCODE sortGenVBounds(
    SCIP_CALL( SCIPallocMemoryArray(scip, &genvboundssorted, propdata->ngenvbounds) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->componentsstart), propdata->ncomponents + 1) );
 
+   /* allocate memory for strong component arrays */
+   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcomponents, SCIPdigraphGetNNodes(graph)) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcompstartidx, SCIPdigraphGetNNodes(graph)) );
+
    /* compute sorted genvbounds array, fill componentsstart array */
    sortedindex = 0;
    propdata->componentsstart[propdata->ncomponents] = propdata->ngenvbounds;
@@ -1484,18 +1494,45 @@ SCIP_RETCODE sortGenVBounds(
       int j;
       int *nodes;
       int nnodes;
+      int nstrongcomponents;
 
       SCIPdigraphGetComponent(graph, i, &nodes, &nnodes);
       propdata->componentsstart[i] = sortedindex;
 
-      for( j = 0; j < nnodes; j++ )
+      /* compute the strong components of the i-th undirected component */
+      if( nnodes > 2 )
       {
-         assert(nodes[j] < propdata->ngenvbounds);
-         genvboundssorted[sortedindex] = propdata->genvboundstore[nodes[j]];
-         sortedindex++;
+         SCIPdigraphComputeDirectedComponents(graph, i, strongcomponents, strongcompstartidx, &nstrongcomponents);
+
+         for( j = 0; j < nnodes; ++j )
+         {
+            int node;
+
+            /* take the nodes at the end of the strong components array first to respect the topological
+             * order of the different strong components
+             */
+            node = strongcomponents[nnodes - j - 1];
+
+            assert(node < propdata->ngenvbounds);
+            genvboundssorted[sortedindex] = propdata->genvboundstore[node];
+            sortedindex++;
+         }
+      }
+      else
+      {
+         for( j = 0; j < nnodes; j++ )
+         {
+            assert(nodes[j] < propdata->ngenvbounds);
+            genvboundssorted[sortedindex] = propdata->genvboundstore[nodes[j]];
+            sortedindex++;
+         }
       }
    }
    assert(sortedindex == propdata->ngenvbounds);
+
+   /* free strong component arrays */
+   SCIPfreeMemoryArray(scip, &strongcompstartidx);
+   SCIPfreeMemoryArray(scip, &strongcomponents);
 
    /* free digraph */
    SCIPdigraphFree(&graph);
@@ -1772,6 +1809,131 @@ SCIP_RETCODE execGenVBounds(
    return SCIP_OKAY;
 }
 
+/* adds all genvbounds in the genvboundstore as constraints to the problem; afterwards clears the genvboundstore */
+static
+SCIP_RETCODE createConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        propdata            /**< data of the genvbounds propagator */
+   )
+{
+   int i;
+
+   assert(scip != NULL);
+   assert(propdata != NULL);
+   assert(propdata->propasconss);
+
+   /* ensure that the cutoffboundvar is available */
+   if( propdata->cutoffboundvar == NULL )
+   {
+      SCIP_Real ub;
+      char name[16];
+
+      /* set the upper bound to the best primal value in the original problem */
+      ub = getCutoffboundGenVBound(scip);
+
+      SCIPdebugMessage("initialize cutoffboundvar with UB = %e\n", ub);
+
+      (void) SCIPsnprintf(name, 16, "cutoffboundvar");
+      SCIP_CALL( SCIPcreateVarBasic(scip, &propdata->cutoffboundvar, name, -SCIPinfinity(scip), ub, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, propdata->cutoffboundvar) );
+
+      SCIP_CALL( SCIPaddVar(scip, propdata->cutoffboundvar) );
+
+      /* lock the variable because it should not be subject to dual presolving reductions; because we create the
+       * linear constraints as non-check constraints, the cutoffboundvar will not be locked by the linear constraint
+       * handler
+       */
+      SCIP_CALL( SCIPaddVarLocks(scip, propdata->cutoffboundvar, 1, 1) );
+   }
+
+   assert(propdata->cutoffboundvar != NULL);
+
+   /* now iterate over all genvbounds in the store and construct a linear constraint for each of them */
+   for( i = 0; i < propdata->ngenvbounds; ++i )
+   {
+      GENVBOUND* genvbound;
+      SCIP_CONS* cons;
+      SCIP_VAR** vars;
+      SCIP_Real* vals;
+      char name[SCIP_MAXSTRLEN];
+      int nvars;
+      int j;
+
+      genvbound = propdata->genvboundstore[i];
+      assert(genvbound != NULL);
+
+      nvars = genvbound->ncoefs + 2;
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals, nvars) );
+
+      SCIPdebugPrintf("add cons: ");
+
+      /* copy the coefs/vars array */
+      for( j = 0; j < genvbound->ncoefs; j++ )
+      {
+         vars[j] = genvbound->vars[j];
+         vals[j] = genvbound->coefs[j];
+         SCIPdebugPrintf("%e%s + ", vals[j], SCIPvarGetName(vars[j]));
+      }
+
+      /* add the variable and the coefficient of the genvbound */
+      vars[genvbound->ncoefs] = genvbound->var;
+      vals[genvbound->ncoefs] = (genvbound->boundtype == SCIP_BOUNDTYPE_LOWER) ? -1.0 : 1.0;
+
+      SCIPdebugPrintf("%e%s + ", vals[genvbound->ncoefs], SCIPvarGetName(vars[genvbound->ncoefs]));
+
+      /* add cutoffcoef * cutoffboundvar */
+      vars[genvbound->ncoefs + 1] = propdata->cutoffboundvar;
+      vals[genvbound->ncoefs + 1] = genvbound->cutoffcoef;
+
+      SCIPdebugPrintf("%e%s <= %e\n", vals[genvbound->ncoefs + 1], SCIPvarGetName(vars[genvbound->ncoefs + 1]), -1.0*genvbound->constant);
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "genvbound_cons%d", genvbound->index);
+
+      /* create linear constraint with only propagate flag as TRUE */
+      SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nvars, vars, vals, -SCIPinfinity(scip), -genvbound->constant,
+            FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+      /* free memory */
+      SCIPfreeBufferArray(scip, &vars);
+      SCIPfreeBufferArray(scip, &vals);
+   }
+
+   /* now delete all genvbounds in the genvboundstore */
+   if( propdata->ngenvbounds > 0 )
+   {
+      assert(propdata->genvboundstore != NULL);
+
+      for( i = propdata->ngenvbounds - 1; i >= 0; i-- )
+      {
+         SCIP_CALL( freeGenVBound(scip, propdata->genvboundstore[i]) );
+      }
+
+      /* free genvboundstore hashmaps */
+      SCIPhashmapFree(&(propdata->lbgenvbounds));
+      SCIPhashmapFree(&(propdata->ubgenvbounds));
+
+      /* drop and free all events */
+      SCIP_CALL( dropAndFreeEvents(scip, propdata) );
+
+      /* free componentsstart array */
+      SCIP_CALL( freeComponentsData(scip, propdata) );
+
+      /* free starting indices data */
+      SCIP_CALL( freeStartingData(scip, propdata) );
+
+      SCIPfreeMemoryArray(scip, &(propdata->genvboundstore));
+      propdata->genvboundstore = NULL;
+      propdata->ngenvbounds = 0;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 
 /*
  * Public methods
@@ -1807,6 +1969,13 @@ SCIP_RETCODE SCIPgenVBoundAdd(
    assert(coefs != NULL);
    assert(ncoefs >= 0);
    assert(coefcutoffbound <= 0.0);
+   assert(!SCIPisInfinity(scip, -constant));
+
+   if( ncoefs < 0 || coefcutoffbound > 0.0 || SCIPisInfinity(scip, -constant) )
+   {
+      SCIPerrorMessage("cannot create generalized variable bound from invalid data\n");
+      return SCIP_INVALIDDATA;
+   }
 
    propdata = SCIPpropGetData(genvboundprop);
    assert(propdata != NULL);
@@ -1952,6 +2121,7 @@ SCIP_DECL_PROPINIT(propInitGenvbounds)
    propdata->gstartcomponents = NULL;
    propdata->lastcutoff = SCIPinfinity(scip);
    propdata->lastnodecaught = NULL;
+   propdata->cutoffboundvar = NULL;
    propdata->ngenvbounds = -1;
    propdata->ncomponents = -1;
    propdata->nindices = -1;
@@ -1998,6 +2168,34 @@ SCIP_DECL_PROPPRESOL(propPresolGenvbounds)
 }
 
 
+/** presolving initialization method of propagator (called when presolving is about to begin) */
+static
+SCIP_DECL_PROPINITPRE(propInitpreGenvbounds)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* get propagator data */
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   /* lock the variable because it should not be deleted after a restart */
+   if( propdata->cutoffboundvar != NULL )
+   {
+      SCIPdebugMessage("propinitpre in problem <%s>: locking cutoffboundvar (current downlocks=%d, uplocks=%d)\n",
+         SCIPgetProbName(scip), SCIPvarGetNLocksDown(propdata->cutoffboundvar),
+         SCIPvarGetNLocksUp(propdata->cutoffboundvar));
+
+      SCIP_CALL( SCIPaddVarLocks(scip, propdata->cutoffboundvar, 1, 1) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** presolving deinitialization method of propagator (called after presolving has been finished) */
 static
 SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
@@ -2028,7 +2226,9 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
       genvbound = propdata->genvboundstore[i];
       assert(genvbound != NULL);
 
-      /* replace non-active by active variables and update constant */
+      /* replace non-active by active variables and update constant; note that this may result in coefficients where
+       * SCIPisZero() is true; this should not create any problems
+       */
       SCIP_CALL( SCIPgetProbvarLinearSum(scip, genvbound->vars, genvbound->coefs, &genvbound->ncoefs, genvbound->ncoefs, &genvbound->constant, &requiredsize, TRUE) );
 
       /* if space was not enough we need to resize the buffers */
@@ -2086,6 +2286,34 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
+   /* update upper bound of the cutoffboundvar */
+   if( propdata->cutoffboundvar != NULL )
+   {
+      SCIP_Real newub;
+      SCIP_Real oldub;
+      SCIP_Bool infeasible;
+      SCIP_Bool tightened;
+
+      assert(propdata->propasconss);
+
+      /* compute the primal bound in the original problem */
+      newub = getCutoffboundGenVBound(scip);
+      oldub = SCIPvarGetUbLocal(propdata->cutoffboundvar);
+
+      if( SCIPisInfinity(scip, newub) == FALSE && SCIPisFeasLT(scip, newub, oldub) )
+      {
+         SCIP_CALL( SCIPtightenVarUbGlobal(scip, propdata->cutoffboundvar, newub, FALSE, &infeasible, &tightened) );
+
+         if( tightened )
+         {
+            SCIPdebugMessage("tightened UB of cutoffboundvar to %e (old: %e, infeas: %d, tightened: %d)\n",
+               newub, oldub, infeasible, tightened);
+         }
+
+         assert(infeasible == FALSE);
+      }
+   }
+
    SCIPdebugMessage("propexec in problem <%s> at depth %d%s\n", SCIPgetProbName(scip), SCIPgetDepth(scip),
       SCIPinProbing(scip) ? " in probing" : "");
 
@@ -2097,6 +2325,13 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
       return SCIP_OKAY;
    }
 
+   /* add the genvbounds in the genvboundstore as constraints to the problem; afterwards clear the genvboundstore */
+   if( propdata->propasconss )
+   {
+      SCIP_CALL( createConstraints(scip, propdata) );
+      return SCIP_OKAY;
+   }
+
    /* propagate locally and globally */
    SCIP_CALL( execGenVBounds(scip, propdata, result, TRUE, NULL) );
 
@@ -2105,6 +2340,8 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
     */
    if( *result == SCIP_SUCCESS )
       *result = SCIP_REDUCEDDOM;
+
+   SCIPdebugMessage("end of exec\n");
 
    return SCIP_OKAY;
 }
@@ -2223,6 +2460,15 @@ SCIP_DECL_PROPEXITSOL(propExitsolGenvbounds)
       SCIP_CALL( freeStartingData(scip, propdata) );
    }
 
+   /* release the cutoffboundvar and undo the locks */
+   if( propdata->cutoffboundvar != NULL && SCIPisInRestart(scip) == FALSE )
+   {
+      SCIPaddVarLocks(scip, propdata->cutoffboundvar, -1, -1);
+      SCIPreleaseVar(scip, &(propdata->cutoffboundvar));
+      propdata->cutoffboundvar = NULL;
+      SCIPdebugMessage("release cutoffboundvar!\n");
+   }
+
    return SCIP_OKAY;
 }
 
@@ -2258,6 +2504,7 @@ SCIP_DECL_EVENTEXEC(eventExecGenvbounds)
 
    assert(scip != NULL);
    assert(eventdata != NULL);
+
    assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_LBTIGHTENED || SCIPeventGetType(event) ==
       SCIP_EVENTTYPE_UBTIGHTENED);
 
@@ -2349,6 +2596,7 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
 
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeGenvbounds) );
    SCIP_CALL( SCIPsetPropInit(scip, prop, propInitGenvbounds) );
+   SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreGenvbounds) );
    SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreGenvbounds) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolGenvbounds) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolGenvbounds, PROP_PRESOL_PRIORITY,
@@ -2367,6 +2615,10 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
    SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/sort",
          "sort genvbounds and wait for bound change events?",
          &propdata->sort, TRUE, DEFAULT_SORT, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/propasconss",
+         "should genvbounds be transformed to (linear) constraints?",
+         &propdata->propasconss, TRUE, DEFAULT_PROPASCONSS, NULL, NULL) );
 
    /* include event handler */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &propdata->eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecGenvbounds, NULL) );

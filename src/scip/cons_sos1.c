@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2241,6 +2241,8 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
    SCIP_Bool modifiable;
+   SCIP_Bool transformed;
+   int v;
 
    modifiable = FALSE;
 
@@ -2252,6 +2254,9 @@ SCIP_RETCODE SCIPcreateConsSOS1(
       return SCIP_PLUGINNOTFOUND;
    }
 
+   /* are we in the transformed problem? */
+   transformed = SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED;
+
    /* create constraint data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
    consdata->vars = NULL;
@@ -2259,7 +2264,7 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    consdata->maxvars = nvars;
    consdata->rowub = NULL;
    consdata->rowlb = NULL;
-   consdata->nfixednonzeros = -1;
+   consdata->nfixednonzeros = transformed ? 0 : -1;
    consdata->weights = NULL;
 
    if ( nvars > 0 )
@@ -2284,6 +2289,22 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
+   assert(transformed == SCIPconsIsTransformed(*cons));
+
+   /* replace original variables by transformed variables in transformed constraint, add locks, and catch events */
+   for( v = nvars - 1; v >= 0; --v )
+   {
+      /* always use transformed variables in transformed constraints */
+      if ( transformed )
+      {
+         SCIP_CALL( SCIPgetTransformedVar(scip, consdata->vars[v], &(consdata->vars[v])) );
+      }
+      assert( consdata->vars[v] != NULL );
+      assert( transformed == SCIPvarIsTransformed(consdata->vars[v]) );
+
+      /* handle the new variable */
+      SCIP_CALL( handleNewVariableSOS1(scip, *cons, consdata, consdata->vars[v], transformed) );
+   }
 
    return SCIP_OKAY;
 }

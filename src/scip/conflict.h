@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -168,6 +168,13 @@ extern
 void SCIPconflicthdlrSetExitsol(
    SCIP_CONFLICTHDLR*    conflicthdlr,       /**< conflict handler */
    SCIP_DECL_CONFLICTEXITSOL((*conflictexitsol))/**< solving process deinitialization method of conflict handler */
+   );
+
+/** enables or disables all clocks of \p conflicthdlr, depending on the value of the flag */
+extern
+void SCIPconflicthdlrEnableOrDisableClocks(
+   SCIP_CONFLICTHDLR*    conflicthdlr,       /**< the conflict handler for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the conflict handler be enabled? */
    );
 
 /*
@@ -666,6 +673,13 @@ SCIP_Longint SCIPconflictGetNPseudoReconvergenceConss(
 extern
 SCIP_Longint SCIPconflictGetNPseudoReconvergenceLiterals(
    SCIP_CONFLICT*        conflict            /**< conflict analysis data */
+   );
+
+/** enables or disables all clocks of \p conflict, depending on the value of the flag */
+extern
+void SCIPconflictEnableOrDisableClocks(
+   SCIP_CONFLICT*        conflict,            /**< the conflict analysis data for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the conflict analysis data be enabled? */
    );
 
 #ifdef __cplusplus

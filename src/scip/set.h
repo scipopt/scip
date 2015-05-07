@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -462,6 +462,13 @@ SCIP_RETCODE SCIPsetSetEmphasis(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** enable or disable all plugin timers depending on the value of the flag \p enabled */
+extern
+void SCIPsetEnableOrDisablePluginClocks(
+   SCIP_SET*            set,                /**< SCIP settings */
+   SCIP_Bool            enabled             /**< should plugin clocks be enabled? */
    );
 
 /** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances; should be called for
@@ -1035,7 +1042,7 @@ int SCIPsetGetSepaMaxcuts(
    SCIP_Bool             root                /**< are we at the root node? */
    );
 
-/** Checks, if an iterativly updated value is reliable or should be recomputed from scratch.
+/** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.
  *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
  *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
  *  were cancelled out when increasing the value and are random after decreasing it.

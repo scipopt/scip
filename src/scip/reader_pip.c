@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1458,11 +1458,12 @@ SCIP_RETCODE readConstraints(
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
 
-   SCIP_Bool newsection;
    PIPSENSE sense;
+   SCIP_RETCODE retcode = SCIP_OKAY;
    SCIP_Real sidevalue;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   SCIP_Bool newsection;
    SCIP_Bool initial;
    SCIP_Bool separate;
    SCIP_Bool enforce;
@@ -1551,9 +1552,8 @@ SCIP_RETCODE readConstraints(
          return SCIP_INVALIDDATA;
       }
 
-      SCIP_CALL( SCIPcreateConsNonlinear(scip, &cons, name, 0, NULL, NULL, 1, &exprtree, NULL, lhs, rhs,
-            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
-      SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+      SCIP_CALL_TERMINATE( retcode, SCIPcreateConsNonlinear(scip, &cons, name, 0, NULL, NULL, 1, &exprtree, NULL, lhs, rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE), TERMINATE );
    }
    else
    {
@@ -1593,14 +1593,14 @@ SCIP_RETCODE readConstraints(
 
       if( nquadcoefs == 0 )
       {
-         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, nlinvars, linvars, lincoefs, lhs, rhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+         retcode = SCIPcreateConsLinear(scip, &cons, name, nlinvars, linvars, lincoefs, lhs, rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
       }
       else
       {
-         SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs,
-               nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+         retcode = SCIPcreateConsQuadratic(scip, &cons, name, nlinvars, linvars, lincoefs,
+            nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable);
       }
 
       /* free memory */
@@ -1611,16 +1611,24 @@ SCIP_RETCODE readConstraints(
       SCIPfreeBufferArray(scip, &quadcoefs);
    }
 
-   SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIPdebugMessage("(line %d) created constraint: ", pipinput->linenumber);
-   SCIPdebugPrintCons(scip, cons, NULL);
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   if( retcode == SCIP_OKAY )
+   {
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+      SCIPdebugMessage("(line %d) created constraint: ", pipinput->linenumber);
+      SCIPdebugPrintCons(scip, cons, NULL);
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
 
  TERMINATE:
    if( exprtree != NULL )
    {
       SCIP_CALL( SCIPexprtreeFree(&exprtree) );
    }
+
+   if( hasError(pipinput) )
+      retcode = SCIP_READERROR;
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -3753,7 +3761,10 @@ SCIP_RETCODE SCIPreadPip(
    )
 {  /*lint --e{715}*/
    PIPINPUT pipinput;
+   SCIP_RETCODE retcode;
    int i;
+
+   retcode = SCIP_OKAY;
 
    /* initialize PIP input data */
    pipinput.file = NULL;
@@ -3782,25 +3793,30 @@ SCIP_RETCODE SCIPreadPip(
    SCIP_CALL( SCIPgetBoolParam(scip, "reading/dynamicrows", &(pipinput.dynamicrows)) );
 
    /* read the file */
-   SCIP_CALL( readPIPFile(scip, &pipinput, filename) );
+   retcode = readPIPFile(scip, &pipinput, filename);
 
    /* free dynamically allocated memory */
-   SCIPfreeMemoryArray(scip, &pipinput.token);
-   SCIPfreeMemoryArray(scip, &pipinput.tokenbuf);
-   for( i = 0; i < PIP_MAX_PUSHEDTOKENS; ++i )
+   for( i = PIP_MAX_PUSHEDTOKENS - 1; i >= 0 ; --i )
    {
       SCIPfreeMemoryArray(scip, &pipinput.pushedtokens[i]);
    }
+   SCIPfreeMemoryArray(scip, &pipinput.tokenbuf);
+   SCIPfreeMemoryArray(scip, &pipinput.token);
+
+   if( retcode == SCIP_PLUGINNOTFOUND )
+      retcode = SCIP_READERROR;
 
    /* evaluate the result */
    if( pipinput.haserror )
-      return SCIP_READERROR;
+      retcode = SCIP_READERROR;
    else
    {
       /* set objective sense */
       SCIP_CALL( SCIPsetObjsense(scip, pipinput.objsense) );
       *result = SCIP_SUCCESS;
    }
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -924,7 +924,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* disable output to console */
 
 #ifdef SCIP_DEBUG
-   /* for debugging DINS, enable MIP output */
+   /* for debugging crossover, enable MIP output */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1) );
 #endif
@@ -945,6 +945,9 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
    if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
+
+   /* disable statistic timing inside sub SCIP */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 
    /* set limits for the subproblem */
    heurdata->nodelimit = nstallnodes;
@@ -1067,6 +1070,10 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
 
+   /* merge histories of the subscip-variables to the SCIP variables. */
+   SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
+   SCIPdebugMessage("Transferring variable histories complete\n");
+
    /* check, whether a solution was found */
    if( SCIPgetNSols(subscip) > 0 )
    {
@@ -1115,7 +1122,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
          }
       }
 
-      /* if solution is not better then incumbent or could not be added to problem => run is counted as a failure */
+      /* if solution is not better than incumbent or could not be added to problem => run is counted as a failure */
       if( !success || solindex != SCIPsolGetIndex(SCIPgetBestSol(scip)) )
          updateFailureStatistic(scip, heurdata);
    }

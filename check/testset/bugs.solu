@@ -32,6 +32,7 @@
 =opt= neos4.mps.cuts    -1.17250584e+10
 =opt= bug_502                         3
 =opt= bug_503                         7
+=opt= problematic                  0.25
 =unkn= bug486
 =opt= je2A                   7217766.92
 =unkn= bug490

@@ -1,0 +1,18 @@
+# SCIP version 3.0.0
+
+# frequency for calling separator <cgmip> (-1: never, 0: only in root node)
+# [type: int, range: [-1,2147483647], default: -1]
+separating/cgmip/freq = 0
+
+# use CMIR-generator (otherwise add cut directly)?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+separating/cgmip/usecmir = FALSE
+
+# add constraint to subscip that only allows violated cuts (otherwise add obj. limit)?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/addviolationcons = TRUE
+
+# add constraint handler to filter out violated cuts?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+separating/cgmip/addviolconshdlr = TRUE
+

@@ -1,0 +1,158 @@
+# SCIP version 2.1.1.6
+
+# maximal number of restarts (-1: unlimited)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/maxrestarts = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/nonlinear/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/quadratic/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/linear/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/abspower/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/and/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/bivariate/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/bounddisjunction/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/conjunction/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/cumulative/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/disjunction/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/indicator/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/knapsack/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/linking/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/logicor/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/or/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/orbitope/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/pseudoboolean/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/setppc/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/soc/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/SOS1/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/SOS2/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/superindicator/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/varbound/maxprerounds = 0
+
+# maximal number of presolving rounds the constraint handler participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+constraints/xor/maxprerounds = 0
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/components/maxrounds = 0
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/domcol/maxrounds = 0
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/dualfix/maxrounds = 0
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/gateextraction/maxrounds = 0
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/implics/maxrounds = 0
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/inttobinary/maxrounds = 0
+
+# maximal number of presolving rounds the presolver participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+presolving/trivial/maxrounds = 0
+
+# maximal number of presolving rounds the propagator participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+propagating/genvbounds/maxprerounds = 0
+
+# maximal number of presolving rounds the propagator participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+propagating/obbt/maxprerounds = 0
+
+# maximal number of presolving rounds the propagator participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+propagating/probing/maxprerounds = 0
+
+# maximal number of presolving rounds the propagator participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+propagating/pseudoobj/maxprerounds = 0
+
+# maximal number of presolving rounds the propagator participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+propagating/redcost/maxprerounds = 0
+
+# maximal number of presolving rounds the propagator participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+propagating/rootredcost/maxprerounds = 0
+
+# maximal number of presolving rounds the propagator participates in (-1: no limit)
+# [type: int, range: [-1,2147483647], default: -1]
+propagating/vbounds/maxprerounds = 0
+

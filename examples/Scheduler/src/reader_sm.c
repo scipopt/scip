@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -467,7 +467,7 @@ int computeUbmakespan(
       int i;
 
       nsuccessors = SCIPdigraphGetNSuccessors(precedencegraph, j);
-      distances = SCIPdigraphGetSuccessorsDatas(precedencegraph, j);
+      distances = SCIPdigraphGetSuccessorsData(precedencegraph, j);
 
       duration = durations[j];
 
@@ -827,7 +827,7 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
          void** distances;
 
          successors = SCIPdigraphGetSuccessors(precedencegraph, j);
-         distances = SCIPdigraphGetSuccessorsDatas(precedencegraph, j);
+         distances = SCIPdigraphGetSuccessorsData(precedencegraph, j);
 
          for( i = 0; i < nsuccessors; ++i )
          {

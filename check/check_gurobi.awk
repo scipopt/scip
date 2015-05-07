@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -159,8 +159,21 @@ BEGIN {
    aborted = 0;
 }
 /^Solved in/ {
+   iters = $3;
+   tottime = $6;
    aborted = 0;
 }
+/^Barrier solved model in/ {
+   iters = $5;
+   tottime = $8;
+   aborted = 0;
+}
+/^Barrier performed/ {
+   iters = $3;
+   tottime = $6;
+   aborted = 1;
+}
+
 /^Optimal objective/ {
    pb = $3;
    db = $3;

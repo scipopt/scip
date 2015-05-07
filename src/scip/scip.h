@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -335,6 +335,15 @@ SCIP_Bool SCIPisExactSolve(
  */
 EXTERN
 SCIP_Bool SCIPisPresolveFinished(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns whether SCIP has performed presolving during the last solve
+ *
+ *  @return Returns TRUE if presolving was performed during the last solve
+ */
+EXTERN
+SCIP_Bool SCIPhasPerformedPresolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
@@ -747,6 +756,22 @@ SCIP_RETCODE SCIPcopyOrigVars(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap             /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
+   );
+
+/** merges the histories of variables from a source SCIP into a target SCIP. The two data structures should point to
+ *  different SCIP instances.
+ *
+ *  @note the notion of source and target is inverted here; \p sourcescip usually denotes a copied SCIP instance, whereas
+ *        \p targetscip denotes the original instance
+ */
+
+EXTERN
+SCIP_RETCODE SCIPmergeVariableStatistics(
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_VAR**            sourcevars,         /**< source variables for history merge */
+   SCIP_VAR**            targetvars,         /**< target variables for history merge */
+   int                   nvars               /**< number of variables in both variable arrays */
    );
 
 /** returns copy of the source constraint; if there already is a copy of the source constraint in the constraint hash
@@ -3559,12 +3584,34 @@ int SCIPgetNCompr(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** sets the priority of a compression */
-EXTERN
+/** set the priority of a tree compression method */
 SCIP_RETCODE SCIPsetComprPriority(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COMPR*           compr,              /**< compression */
    int                   priority            /**< new priority of the tree compression */
+   );
+
+/** create a diving set associated with a primal heuristic. The primal heuristic needs to be included
+ *  before this method can be called
+ */
+EXTERN
+SCIP_RETCODE SCIPcreateDiveset(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIVESET**        diveset,            /**< common diving heuristic settings */
+   SCIP_HEUR*            heur,               /**< primal heuristic to which the diveset belongs*/
+   SCIP_Real             minreldepth,        /**< minimal relative depth to start diving */
+   SCIP_Real             maxreldepth,        /**< maximal relative depth to start diving */
+   SCIP_Real             maxlpiterquot,      /**< maximal fraction of diving LP iterations compared to node LP iterations */
+   SCIP_Real             maxdiveubquot,      /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
+                                              *   where diving is performed (0.0: no limit) */
+   SCIP_Real             maxdiveavgquot,     /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
+                                              *   where diving is performed (0.0: no limit) */
+   SCIP_Real             maxdiveubquotnosol, /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Real             maxdiveavgquotnosol,/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
+   SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
+
    );
 
 /** creates an event handler and includes it in SCIP
@@ -7347,6 +7394,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
                                               *   otherwise, it can only be used as an estimate value */
    SCIP_Bool*            upvalid,            /**< stores whether the returned up value is a valid dual bound, or NULL;
                                               *   otherwise, it can only be used as an estimate value */
+   SCIP_Longint*         ndomredsdown,       /**< pointer to store the number of domain reductions down, or NULL */
+   SCIP_Longint*         ndomredsup,         /**< pointer to store the number of domain reductions up, or NULL */
    SCIP_Bool*            downinf,            /**< pointer to store whether the downwards branch is infeasible, or NULL */
    SCIP_Bool*            upinf,              /**< pointer to store whether the upwards branch is infeasible, or NULL */
    SCIP_Bool*            downconflict,       /**< pointer to store whether a conflict constraint was created for an
@@ -7956,6 +8005,31 @@ SCIP_RETCODE SCIPtightenVarUb(
    SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
+/** fixes variable in preprocessing or in the current node, if the new bound is tighter (w.r.t. bound strengthening
+ *  epsilon) than the current bound; if possible, adjusts bound to integral value; the given inference constraint is
+ *  stored, such that the conflict analysis is able to find out the reason for the deduction of the bound change
+ *
+ *  @note In presolving stage when not in probing mode the variable will be fixed directly, otherwise this method
+ *        changes first the lowerbound by calling SCIPinferVarLbCons and second the upperbound by calling
+ *        SCIPinferVarUbCons
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ */
+EXTERN
+SCIP_RETCODE SCIPinferVarFixCons(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             fixedval,           /**< new value for fixation */
+   SCIP_CONS*            infercons,          /**< constraint that deduced the bound change */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
+   );
+
 /** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
  *  (w.r.t. bound strengthening epsilon) than the current bound; if possible, adjusts bound to integral value;
  *  the given inference constraint is stored, such that the conflict analysis is able to find out the reason
@@ -8037,6 +8111,31 @@ SCIP_RETCODE SCIPinferBinvarCons(
    int                   inferinfo,          /**< user information for inference to help resolving the conflict */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
    SCIP_Bool*            tightened           /**< pointer to store whether the fixing tightened the local bounds, or NULL */
+   );
+
+/** fixes variable in preprocessing or in the current node, if the new bound is tighter (w.r.t. bound strengthening
+ *  epsilon) than the current bound; if possible, adjusts bound to integral value; the given inference constraint is
+ *  stored, such that the conflict analysis is able to find out the reason for the deduction of the bound change
+ *
+ *  @note In presolving stage when not in probing mode the variable will be fixed directly, otherwise this method
+ *        changes first the lowerbound by calling SCIPinferVarLbProp and second the upperbound by calling
+ *        SCIPinferVarUbProp
+ *
+ *  @note If SCIP is in presolving stage, it can happen that the internal variable array (which get be accessed via
+ *        SCIPgetVars()) gets resorted.
+ *
+ *  @note During presolving, an integer variable which bound changes to {0,1} is upgraded to a binary variable.
+ */
+EXTERN
+SCIP_RETCODE SCIPinferVarFixProp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to change the bound for */
+   SCIP_Real             fixedval,           /**< new value for fixation */
+   SCIP_PROP*            inferprop,          /**< propagator that deduced the bound change */
+   int                   inferinfo,          /**< user information for inference to help resolving the conflict */
+   SCIP_Bool             force,              /**< force tightening even if below bound strengthening tolerance */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether the bound change is infeasible */
+   SCIP_Bool*            tightened           /**< pointer to store whether the bound was tightened, or NULL */
    );
 
 /** changes lower bound of variable in preprocessing or in the current node, if the new bound is tighter
@@ -8180,10 +8279,11 @@ SCIP_RETCODE SCIPtightenVarUbGlobal(
    );
 
 /** for a multi-aggregated variable, returns the global lower bound computed by adding the global bounds from all aggregation variables
- * this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbGlobal
  *
- * @return the global lower bound computed by adding the global bounds from all aggregation variables
+ *  This global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is not updated if bounds of aggregation variables are changing
+ *  calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbGlobal.
+ *
+ *  @return the global lower bound computed by adding the global bounds from all aggregation variables
  */
 EXTERN
 SCIP_Real SCIPcomputeVarLbGlobal(
@@ -8192,10 +8292,11 @@ SCIP_Real SCIPcomputeVarLbGlobal(
    );
 
 /** for a multi-aggregated variable, returns the global upper bound computed by adding the global bounds from all aggregation variables
- * this global bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbGlobal
  *
- * @return the global upper bound computed by adding the global bounds from all aggregation variables
+ *  This global bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is not updated if bounds of aggregation variables are changing
+ *  calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbGlobal.
+ *
+ *  @return the global upper bound computed by adding the global bounds from all aggregation variables
  */
 EXTERN
 SCIP_Real SCIPcomputeVarUbGlobal(
@@ -8204,10 +8305,11 @@ SCIP_Real SCIPcomputeVarUbGlobal(
    );
 
 /** for a multi-aggregated variable, returns the local lower bound computed by adding the local bounds from all aggregation variables
- * this local bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbLocal
  *
- * @return the local lower bound computed by adding the global bounds from all aggregation variables
+ *  This local bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ *  calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetLbLocal.
+ *
+ *  @return the local lower bound computed by adding the global bounds from all aggregation variables
  */
 EXTERN
 SCIP_Real SCIPcomputeVarLbLocal(
@@ -8216,10 +8318,11 @@ SCIP_Real SCIPcomputeVarLbLocal(
    );
 
 /** for a multi-aggregated variable, returns the local upper bound computed by adding the local bounds from all aggregation variables
- * this local bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
- * calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbLocal
  *
- * @return the local upper bound computed by adding the global bounds from all aggregation variables
+ *  This local bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is not updated if bounds of aggregation variables are changing
+ *  calling this function for a non-multi-aggregated variable results in a call to SCIPvarGetUbLocal.
+ *
+ *  @return the local upper bound computed by adding the global bounds from all aggregation variables
  */
 EXTERN
 SCIP_Real SCIPcomputeVarUbLocal(
@@ -8372,6 +8475,7 @@ SCIP_RETCODE SCIPaddClique(
    SCIP_VAR**            vars,               /**< binary variables in the clique from which at most one can be set to 1 */
    SCIP_Bool*            values,             /**< values of the variables in the clique; NULL to use TRUE for all vars */
    int                   nvars,              /**< number of variables in the clique */
+   SCIP_Bool             isequation,         /**< is the clique an equation or an inequality? */
    SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*                  nbdchgs             /**< pointer to store the number of performed bound changes, or NULL */
    );
@@ -8426,6 +8530,28 @@ SCIP_RETCODE SCIPcalcNegatedCliquePartition(
    int const             nvars,              /**< number of variables in the clique */
    int*const             cliquepartition,    /**< array of length nvars to store the clique partition */
    int*const             ncliques            /**< pointer to store the number of cliques actually contained in the partition */
+   );
+
+/** force SCIP to clean up all cliques; cliques do not get automatically cleaned up after presolving. Use
+ *  this method to prevent inactive variables in cliques when retrieved via SCIPgetCliques()
+ *
+ *  @return SCIP_OKAY if everything worked, otherwise a suitable error code is passed
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+SCIP_RETCODE SCIPcleanupCliques(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            infeasible          /**< pointer to store if cleanup detected infeasibility */
    );
 
 /** gets the number of cliques in the clique table
@@ -9017,6 +9143,111 @@ SCIP_Real SCIPgetVarPseudocostCountCurrentRun(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
+   );
+
+/** get pseudo cost variance of the variable, either for entire solve or only for current branch and bound run
+ *
+ *  @return returns the (corrected) variance of pseudo code information collected so far.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_Real SCIPgetVarPseudocostVariance(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Bool             onlycurrentrun      /**< only for pseudo costs of current branch and bound run */
+   );
+
+/** calculates a confidence bound for this variable under the assumption of normally distributed pseudo costs
+ *
+ *  The confidence bound \f$ \theta \geq 0\f$ denotes the interval borders \f$ [X - \theta, \ X + \theta]\f$, which contains
+ *  the true pseudo costs of the variable, i.e., the expected value of the normal distribution, with a probability
+ *  of 2 * clevel - 1.
+ *
+ *  @return value of confidence bound for this variable
+ */
+EXTERN
+SCIP_Real SCIPcalculatePscostConfidenceBound(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable in question */
+   SCIP_BRANCHDIR        dir,                /**< the branching direction for the confidence bound */
+   SCIP_Bool             onlycurrentrun,     /**< should only the current run be taken into account */
+   SCIP_CONFIDENCELEVEL  clevel              /**< confidence level for the interval */
+   );
+
+/** check if variable pseudo-costs have a significant difference in location. The significance depends on
+ *  the choice of \p clevel and on the kind of tested hypothesis. The one-sided hypothesis, which
+ *  should be rejected, is that fracy * mu_y >= fracx * mu_x, where mu_y and mu_x denote the
+ *  unknown location means of the underlying pseudo-cost distributions of x and y.
+ *
+ *  This method is applied best if variable x has a better pseudo-cost score than y. The method hypothesizes that y were actually
+ *  better than x (despite the current information), meaning that y can be expected to yield branching
+ *  decisions as least as good as x in the long run. If the method returns TRUE, the current history information is
+ *  sufficient to safely rely on the alternative hypothesis that x yields indeed a better branching score (on average)
+ *  than y.
+ *
+ *  @note The order of x and y matters for the one-sided hypothesis
+ *
+ *  @note set \p onesided to FALSE if you are not sure which variable is better. The hypothesis tested then reads
+ *        fracy * mu_y == fracx * mu_x vs the alternative hypothesis fracy * mu_y != fracx * mu_x.
+ *
+ *  @return TRUE if the hypothesis can be safely rejected at the given confidence level
+ */
+EXTERN
+SCIP_Bool SCIPsignificantVarPscostDifference(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             varx,               /**< variable x */
+   SCIP_Real             fracx,              /**< the fractionality of variable x */
+   SCIP_VAR*             vary,               /**< variable y */
+   SCIP_Real             fracy,              /**< the fractionality of variable y */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_CONFIDENCELEVEL  clevel,             /**< confidence level for rejecting hypothesis */
+   SCIP_Bool             onesided            /**< should a one-sided hypothesis y >= x be tested? */
+   );
+
+/** tests at a given confidence level whether the variable pseudo-costs only have a small probability to
+ *  exceed a \p threshold. This is useful to determine if past observations provide enough evidence
+ *  to skip an expensive strong-branching step if there is already a candidate that has been proven to yield an improvement
+ *  of at least \p threshold.
+ *
+ *  @note use \p clevel to adjust the level of confidence. For SCIP_CONFIDENCELEVEL_MIN, the method returns TRUE if
+ *        the estimated probability to exceed \p threshold is less than 25 %.
+ *
+ *  @see  SCIP_Confidencelevel for a list of available levels. The used probability limits refer to the one-sided levels
+ *        of confidence.
+ *
+ *  @return TRUE if the variable pseudo-cost probabilistic model is likely to be smaller than \p threshold
+ *          at the given confidence level \p clevel.
+ */
+EXTERN
+SCIP_Bool SCIPpscostThresholdProbabilityTest(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable x */
+   SCIP_Real             frac,               /**< the fractionality of variable x */
+   SCIP_Real             threshold,          /**< the threshold to test against */
+   SCIP_BRANCHDIR        dir,                /**< branching direction */
+   SCIP_CONFIDENCELEVEL  clevel              /**< confidence level for rejecting hypothesis */
+   );
+
+/** check if the current pseudo cost relative error in a direction violates the given threshold. The Relative
+ *  Error is calculated at a specific confidence level
+ *
+ *  @return TRUE if relative error in variable pseudo costs is smaller than \p threshold
+ */
+EXTERN
+SCIP_Bool SCIPisVarPscostRelerrorReliable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable in question */
+   SCIP_Real             threshold,          /**< threshold for relative errors to be considered reliable (enough) */
+   SCIP_CONFIDENCELEVEL  clevel              /**< a given confidence level */
    );
 
 /** gets the variable's pseudo cost score value for the given LP solution value
@@ -11327,7 +11558,10 @@ EXTERN
 SCIP_RETCODE SCIPgetLPBInvRow(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   r,                  /**< row number */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
+   SCIP_Real*            coefs,              /**< array to store the coefficients of the row */
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
+                                              *  (-1: if we do not store sparsity informations) */
    );
 
 /** gets a column from the inverse basis matrix B^-1
@@ -11348,7 +11582,10 @@ SCIP_RETCODE SCIPgetLPBInvCol(
                                               *   to get the array which links the B^-1 column numbers to the row and
                                               *   column numbers of the LP! c must be between 0 and nrows-1, since the
                                               *   basis has the size nrows * nrows */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   SCIP_Real*            coefs,              /**< array to store the coefficients of the column */
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
+                                              *  (-1: if we do not store sparsity informations) */
    );
 
 /** gets a row from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A)
@@ -11366,7 +11603,10 @@ SCIP_RETCODE SCIPgetLPBInvARow(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   r,                  /**< row number */
    SCIP_Real*            binvrow,            /**< row in B^-1 from prior call to SCIPgetLPBInvRow(), or NULL */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
+   SCIP_Real*            coefs,              /**< array to store the coefficients of the row */
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
+                                              *  (-1: if we do not store sparsity informations) */
    );
 
 /** gets a column from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A),
@@ -11384,7 +11624,10 @@ EXTERN
 SCIP_RETCODE SCIPgetLPBInvACol(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   c,                  /**< column number which can be accessed by SCIPcolGetLPPos() */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   SCIP_Real*            coefs,              /**< array to store the coefficients of the column */
+   int*                  inds,               /**< array to store the non-zero indices, or NULL */
+   int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
+                                              *  (-1: if we do not store sparsity informations) */
    );
 
 /** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding
@@ -11436,6 +11679,12 @@ SCIP_RETCODE SCIPcalcMIR(
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce MIR cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce MIR cut for */
    SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
+   SCIP_Real             maxweight,          /**< largest magnitude of weights; set to -1.0 if sparsity information is
+                                              *   unknown */
+   int*                  weightinds,         /**< sparsity pattern of weights; size nrowinds; NULL if sparsity info is
+                                              *   unknown */
+   int                   nweightinds,        /**< number of nonzeros in weights; -1 if rowinds is NULL */
+   int                   rowlensum,          /**< total number of non-zeros in used rows (row associated with nonzero weight coefficient); -1 if unknown */
    int*                  sidetypes,          /**< specify row side type (-1 = lhs, 0 = unkown, 1 = rhs) or NULL for automatic choices */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
@@ -11470,6 +11719,9 @@ SCIP_RETCODE SCIPcalcStrongCG(
    SCIP_Real             minfrac,            /**< minimal fractionality of rhs to produce strong CG cut for */
    SCIP_Real             maxfrac,            /**< maximal fractionality of rhs to produce strong CG cut for */
    SCIP_Real*            weights,            /**< row weights in row summation; some weights might be set to zero */
+   int*                  inds,               /**< indices of non-zero entries in weights array, or NULL */
+   int                   ninds,              /**< number of indices of non-zero entries in weights array, -1 if inds is
+                                              *   NULL */
    SCIP_Real             scale,              /**< additional scaling factor multiplied to all rows */
    SCIP_Real*            mircoef,            /**< array to store strong CG coefficients: must be of size SCIPgetNVars() */
    SCIP_Real*            mirrhs,             /**< pointer to store the right hand side of the strong CG row */
@@ -12305,8 +12557,8 @@ SCIP_RETCODE SCIPprintRow(
 
 /** returns whether the NLP relaxation has been enabled
  *
- * If the NLP relaxation is enabled, then SCIP will construct the NLP relaxation when the solving process is about to begin.
- * To check whether an NLP is existing, use SCIPisNLPConstructed().
+ *  If the NLP relaxation is enabled, then SCIP will construct the NLP relaxation when the solving process is about to begin.
+ *  To check whether an NLP is existing, use SCIPisNLPConstructed().
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -12316,7 +12568,7 @@ SCIP_RETCODE SCIPprintRow(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *
- * @see SCIPenableNLP
+ *  @see SCIPenableNLP
  */
 EXTERN
 SCIP_Bool SCIPisNLPEnabled(
@@ -12325,9 +12577,9 @@ SCIP_Bool SCIPisNLPEnabled(
 
 /** marks that there are constraints that are representable by nonlinear rows
  *
- * This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows.
+ *  This method should be called by a constraint handler if it has constraints that have a representation as nonlinear rows.
  *
- * The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
+ *  The function should be called before the branch-and-bound process is initialized, e.g., when presolve is exiting.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_INITPRESOLVE
@@ -12761,8 +13013,7 @@ SCIP_RETCODE SCIPgetNLPI(
 /**@name NLP Diving Methods */
 /**@{ */
 
-/** initiates NLP diving
- * making methods SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), SCIPchgVarsBoundsDiveNLP(), and SCIPsolveDiveNLP() available
+/** initiates NLP diving making methods SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), SCIPchgVarsBoundsDiveNLP(), and SCIPsolveDiveNLP() available
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -12777,7 +13028,8 @@ SCIP_RETCODE SCIPstartDiveNLP(
    );
 
 /** ends NLP diving
- * resets changes made by SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), and SCIPchgVarsBoundsDiveNLP()
+ *
+ *  Resets changes made by SCIPchgVarObjDiveNLP(), SCIPchgVarBoundsDiveNLP(), and SCIPchgVarsBoundsDiveNLP().
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -13052,8 +13304,9 @@ SCIP_RETCODE SCIPaddLinearCoefsToNlRow(
    );
 
 /** changes linear coefficient of a variables in a row
- * setting the coefficient to 0.0 means that it is removed from the row
- * the variable does not need to exists before
+ *
+ *  Setting the coefficient to 0.0 means that it is removed from the row
+ *  the variable does not need to exists before.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -13072,7 +13325,8 @@ SCIP_RETCODE SCIPchgNlRowLinearCoef(
    );
 
 /** adds quadratic variable to the nonlinear row
- * after adding a quadratic variable, it can be used to add quadratic elements
+ *
+ *  After adding a quadratic variable, it can be used to add quadratic elements.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -13090,7 +13344,8 @@ SCIP_RETCODE SCIPaddQuadVarToNlRow(
    );
 
 /** adds quadratic variables to the nonlinear row
- * after adding quadratic variables, they can be used to add quadratic elements
+ *
+ *  After adding quadratic variables, they can be used to add quadratic elements.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -13109,7 +13364,8 @@ SCIP_RETCODE SCIPaddQuadVarsToNlRow(
    );
 
 /** add a quadratic element to the nonlinear row
- * variable indices of the quadratic element need to be relative to quadratic variables array of row
+ *
+ *  Variable indices of the quadratic element need to be relative to quadratic variables array of row.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -13127,7 +13383,8 @@ SCIP_RETCODE SCIPaddQuadElementToNlRow(
    );
 
 /** adds quadratic elements to the nonlinear row
- * variable indices of the quadratic elements need to be relative to quadratic variables array of row
+ *
+ *  Variable indices of the quadratic elements need to be relative to quadratic variables array of row.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -13146,8 +13403,9 @@ SCIP_RETCODE SCIPaddQuadElementsToNlRow(
    );
 
 /** changes coefficient in quadratic part of a row
- * setting the coefficient in the quadelement to 0.0 means that it is removed from the row
- * the element does not need to exists before
+ *
+ *  Setting the coefficient in the quadelement to 0.0 means that it is removed from the row
+ *  the element does not need to exists before.
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -14519,6 +14777,59 @@ SCIP_RETCODE SCIPsolveProbingLPWithPricing(
 
    );
 
+/** resets diving settings by both resetting counters and discarding adapted values through search */
+EXTERN
+void SCIPresetDiveset(
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_DIVESET*         diveset              /**< diving settings */
+   );
+
+/** performs a diving within the limits of the diveset parameters
+ *
+ *  This method performs a diving according to the settings defined by the diving settings @p diveset; Contrary to the
+ *  name, SCIP enters probing mode (not diving mode) and dives along a path into the tree. Domain propagation
+ *  is applied at every node in the tree, whereas probing LPs might be solved less frequently.
+ *
+ *  Starting from the current LP candidates, the algorithm determines a fraction of the candidates that should be
+ *  branched on; if a single candidate should be fixed, the algorithm selects a candidate which minimizes the
+ *  score defined by the @p diveset.
+ *  If more than one candidate should be selected, the candidates are sorted in non-decreasing order
+ *  of their score.
+ *
+ *  The algorithm iteratively selects the the next (unfixed) candidate in the list, until the
+ *  targeted depth is reached, or the last node is proven to be infeasible. It optionally backtracks and tries the
+ *  other branching direction.
+ *
+ *  After the set of remaining candidates is empty or the targeted depth is reached, the node LP is
+ *  solved, and the old candidates are replaced by the new LP candidates.
+ *
+ *  @see heur_guideddiving.c for an example implementation of a dive set controlling the diving algorithm.
+ *
+ *  @see the parameter @p heuristics/startdivefrac to determine the fraction of candidates that should be dived on at the
+ *       beginning. Setting this parameter to 0.0 will result in an LP solved after every candidate selection.
+ *
+ *  @note the fraction of candidate variables is subject to change during solving. It is decreased by a factor of
+ *        2 every time the algorithm could not dive half as deep as desired. However, if it succeeded, the fraction
+ *        is multiplied by a factor of 1.1.
+ *
+ *  @note the node from where the algorithm is called is checked for a basic LP solution. If the solution
+ *        is non-basic, e.g., when barrier without crossover is used, the method returns without performing a dive.
+ *
+ *  @note currently, when multiple diving heuristics call this method and solve an LP at the same node, only the first
+ *        call will be executed, @see SCIPgetLastDiveNode()
+ *
+ *  @todo generalize method to work correctly with pseudo or external branching/diving candidates
+ */
+EXTERN
+SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
+   SCIP*              scip,               /**< SCIP data structure */
+   SCIP_DIVESET*      diveset,            /**< settings for diving */
+   SCIP_SOL*          worksol,            /**< non-NULL working solution */
+   SCIP_HEUR*         heur,               /**< the calling primal heuristic */
+   SCIP_RESULT*       result,             /**< SCIP result pointer */
+   SCIP_Bool          nodeinfeasible      /**< is the current node known to be infeasible? */
+   );
+
 /**@} */
 
 
@@ -14873,7 +15184,8 @@ SCIP_Real SCIPgetBranchScoreMultiple(
    );
 
 /** computes a branching point for a continuous or discrete variable
- * @see SCIPbranchGetBranchingPoint
+ *
+ *  @see SCIPbranchGetBranchingPoint
  *
  *  @return the branching point for a continuous or discrete variable.
  *
@@ -15018,20 +15330,22 @@ SCIP_RETCODE SCIPbranchVarVal(
    );
 
 /** n-ary branching on a variable x using a given value
- * Branches on variable x such that up to n/2 children are created on each side of the usual branching value.
- * The branching value is selected as in SCIPbranchVarVal().
- * The parameters minwidth and widthfactor determine the domain width of the branching variable in the child nodes.
- * If n is odd, one child with domain width 'width' and having the branching value in the middle is created.
- * Otherwise, two children with domain width 'width' and being left and right of the branching value are created.
- * Next further nodes to the left and right are created, where width is multiplied by widthfactor with increasing distance from the first nodes.
- * The initial width is calculated such that n/2 nodes are created to the left and to the right of the branching value.
- * If this value is below minwidth, the initial width is set to minwidth, which may result in creating less than n nodes.
  *
- * Giving a large value for widthfactor results in creating children with small domain when close to the branching value
- * and large domain when closer to the current variable bounds. That is, setting widthfactor to a very large value and n to 3
- * results in a ternary branching where the branching variable is mostly fixed in the middle child.
- * Setting widthfactor to 1.0 results in children where the branching variable always has the same domain width
- * (except for one child if the branching value is not in the middle).
+ *  Branches on variable x such that up to n/2 children are created on each side of the usual branching value.
+ *  The branching value is selected as in SCIPbranchVarVal().
+ *  The parameters minwidth and widthfactor determine the domain width of the branching variable in the child nodes.
+ *  If n is odd, one child with domain width 'width' and having the branching value in the middle is created.
+ *  Otherwise, two children with domain width 'width' and being left and right of the branching value are created.
+ *  Next further nodes to the left and right are created, where width is multiplied by widthfactor with increasing distance
+ *  from the first nodes.
+ *  The initial width is calculated such that n/2 nodes are created to the left and to the right of the branching value.
+ *  If this value is below minwidth, the initial width is set to minwidth, which may result in creating less than n nodes.
+ *
+ *  Giving a large value for widthfactor results in creating children with small domain when close to the branching value
+ *  and large domain when closer to the current variable bounds. That is, setting widthfactor to a very large value and n to 3
+ *  results in a ternary branching where the branching variable is mostly fixed in the middle child.
+ *  Setting widthfactor to 1.0 results in children where the branching variable always has the same domain width
+ *  (except for one child if the branching value is not in the middle).
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -15911,6 +16225,9 @@ SCIP_RETCODE SCIPprintTransSol(
    );
 
 /** outputs dual solution from LP solver to file stream
+ *
+ *  @note This only works if no presolving has been performed, which can be checked by calling method \ref
+ *        SCIPhasPerformedPresolve().
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -18692,8 +19009,11 @@ int SCIPgetNImplications(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  *       - \ref SCIP_STAGE_EXITSOLVE
+ *
+ *  @deprecated because binary implications are now stored as cliques
  */
 EXTERN
+SCIP_DEPRECATED
 SCIP_RETCODE SCIPwriteImplicationConflictGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name, or NULL for stdout */
@@ -18795,6 +19115,38 @@ EXTERN
 SCIP_RETCODE SCIPstopClock(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CLOCK*           clck                /**< clock timer */
+   );
+
+/** enables or disables all statistic clocks of SCIP concerning plugin statistics,
+ *  LP execution time, strong branching time, etc.
+ *
+ *  Method reads the value of the parameter timing/statistictiming. In order to disable statistic timing,
+ *  set the parameter to FALSE.
+ *
+ *  @note: The (pre-)solving time clocks which are relevant for the output during (pre-)solving
+ *         are not affected by this method
+ *
+ *  @see: For completely disabling all timing of SCIP, consider setting the parameter timing/enabled to FALSE
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPenableOrDisableStatisticTiming(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** starts the current solving time
@@ -19598,6 +19950,24 @@ SCIP_Bool SCIPisSumRelGE(
    SCIP_Real             val2                /**< second value to be compared */
    );
 
+/** converts the given real number representing an integer to an int; in optimized mode the function gets inlined for
+ *  performance; in debug mode we check some additional conditions
+ */
+EXTERN
+int SCIPconvertRealToInt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             real                /**< double bound to convert */
+   );
+
+/** converts the given real number representing an integer to a long integer; in optimized mode the function gets inlined for
+ *  performance; in debug mode we check some additional conditions
+ */
+EXTERN
+SCIP_Longint SCIPconvertRealToLongint(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             real                /**< double bound to convert */
+   );
+
 /** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.
  *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
  *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
@@ -19695,6 +20065,8 @@ SCIP_Bool SCIPisUpdateUnreliable(
 #define SCIPisSumRelLE(scip, val1, val2)          SCIPsetIsSumRelLE((scip)->set, val1, val2)
 #define SCIPisSumRelGT(scip, val1, val2)          SCIPsetIsSumRelGT((scip)->set, val1, val2)
 #define SCIPisSumRelGE(scip, val1, val2)          SCIPsetIsSumRelGE((scip)->set, val1, val2)
+#define SCIPconvertRealToInt(scip, real)          ((int)((real) < 0 ? ((real) - 0.5) : ((real) + 0.5)))
+#define SCIPconvertRealToLongint(scip, real)      ((SCIP_Longint)((real) < 0 ? ((real) - 0.5) : ((real) + 0.5)))
 
 #define SCIPisUpdateUnreliable(scip, newval, oldval) SCIPsetIsUpdateUnreliable((scip)->set, newval, oldval)
 #endif
@@ -19776,11 +20148,10 @@ void SCIPprintReal(
                                                      BMSfreeBlockMemorySizeNull(SCIPblkmem(scip), (ptr), (size))
 
 #define SCIPallocBuffer(scip,ptr)               SCIPallocBufferSize(scip, (void**)(ptr), (int)sizeof(**(ptr)))
-#define SCIPallocBufferArray(scip,ptr,num)      SCIPallocBufferSize(scip, (void**)(ptr), (num)*(int)sizeof(**(ptr)))
-#define SCIPreallocBufferArray(scip,ptr,num)    SCIPreallocBufferSize(scip, (void**)(ptr), (num)*(int)sizeof(**(ptr)))
+#define SCIPallocBufferArray(scip,ptr,num)      SCIPallocBufferArraySafe(scip, (void**)(ptr), (num), sizeof(**(ptr)))
+#define SCIPreallocBufferArray(scip,ptr,num)    SCIPreallocBufferArraySafe(scip, (void**)(ptr), (num), sizeof(**(ptr)))
 #define SCIPduplicateBuffer(scip,ptr,source)    SCIPduplicateBufferSize(scip, (void**)(ptr), source, (int)sizeof(**(ptr)))
-#define SCIPduplicateBufferArray(scip,ptr,source,num) \
-                                                     SCIPduplicateBufferSize(scip, (void**)(ptr), source, (num)*(int)sizeof(**(ptr)))
+#define SCIPduplicateBufferArray(scip,ptr,source,num) SCIPduplicateBufferArraySafe(scip, (void**)(ptr), source, (num), sizeof(**(ptr)))
 #define SCIPfreeBuffer(scip,ptr)                SCIPfreeBufferSize(scip, (void**)(ptr), 0)
 #define SCIPfreeBufferNull(scip,ptr)            { if( *(ptr) != NULL ) SCIPfreeBuffer(scip, ptr); }
 #define SCIPfreeBufferArray(scip,ptr)           SCIPfreeBufferSize(scip, (void**)(ptr), 0)
@@ -19874,6 +20245,53 @@ SCIP_RETCODE SCIPreallocBufferSize(
    SCIP*                 scip,               /**< SCIP data structure */
    void**                ptr,                /**< pointer to the buffer */
    int                   size                /**< required size in bytes of buffer */
+   );
+
+/** gets a memory buffer with at least size for num elements of size elemsize
+ *
+ *  checks for overflow of required size or negative number of elements
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+EXTERN
+SCIP_RETCODE SCIPallocBufferArraySafe(
+   SCIP*                 scip,               /**< SCIP data structure */
+   void**                ptr,                /**< pointer to store the buffer */
+   int                   num,                /**< number of entries to allocate */
+   size_t                elemsize            /**< size of one element in the array */
+   );
+
+/** reallocates a memory buffer to have size for at least num elements of size elemsize
+ *
+ *  checks for overflow of required size or negative number of elements
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+EXTERN
+SCIP_RETCODE SCIPreallocBufferArraySafe(
+   SCIP*                 scip,               /**< SCIP data structure */
+   void**                ptr,                /**< pointer to the buffer */
+   int                   num,                /**< number of entries to reallocate */
+   size_t                elemsize            /**< size of one element in the array */
+   );
+
+/** allocates a memory buffer with at least size for num elements of size elemsize and copies
+ *  the given memory into the buffer
+ *
+ *  checks for overflow of required size or negative number of elements
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+EXTERN
+SCIP_RETCODE SCIPduplicateBufferArraySafe(
+   SCIP*                 scip,               /**< SCIP data structure */
+   void**                ptr,                /**< pointer to the buffer */
+   const void*           source,             /**< memory block to copy into the buffer */
+   int                   num,                /**< number of entries to duplicate */
+   size_t                elemsize            /**< size of one element in the array */
    );
 
 /** frees a memory buffer */

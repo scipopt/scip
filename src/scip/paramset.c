@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2244,26 +2244,170 @@ SCIP_RETCODE SCIPparamsetSetString(
    return SCIP_OKAY;
 }
 
-/** parses a parameter file line "paramname = paramvalue" and sets parameter accordingly */
+/** parses emphasis settings */
 static
-SCIP_RETCODE paramsetParse(
+SCIP_RETCODE emphasisParse(
    SCIP_PARAMSET*        paramset,           /**< parameter set */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    char*                 line                /**< line to parse (is modified during parse, but not freed) */
    )
 {
+   SCIP_PARAMSETTING paramsetting;
+   SCIP_Bool globalemphasis = FALSE;
+   char* paramname;
+   char* paramvaluestr;
+
+   assert( paramset != NULL );
+   assert( line != NULL );
+
+   /* find the start of the parameter name */
+   while ( *line == ' ' || *line == '\t' || *line == '\r' )
+      line++;
+   if ( *line == '\0' || *line == '\n' || *line == '#' )
+      return SCIP_OKAY;
+   paramname = line;
+
+   /* find the end of the parameter name */
+   while ( *line != ' ' && *line != '\t' && *line != '\r' && *line != '\n' && *line != '#' && *line != '\0' && *line != '=' && *line != ':' )
+      line++;
+   *line = '\0';
+   ++line;
+
+   /* check for global emphasis settings */
+   if ( strcmp(paramname, "default") == 0 )
+   {
+      SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_DEFAULT, FALSE) );
+      globalemphasis = TRUE;
+   }
+   else if ( strcmp(paramname, "counter") == 0 )
+   {
+      SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_COUNTER, FALSE) );
+      globalemphasis = TRUE;
+   }
+   else if ( strcmp(paramname, "cpsolver") == 0 )
+   {
+      SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_CPSOLVER, FALSE) );
+      globalemphasis = TRUE;
+   }
+   else if ( strcmp(paramname, "easycip") == 0 )
+   {
+      SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_EASYCIP, FALSE) );
+      globalemphasis = TRUE;
+   }
+   else if ( strcmp(paramname, "feasibility") == 0 )
+   {
+      SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_FEASIBILITY, FALSE) );
+      globalemphasis = TRUE;
+   }
+   else if ( strcmp(paramname, "hardlp") == 0 )
+   {
+      SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_HARDLP, FALSE) );
+      globalemphasis = TRUE;
+   }
+   else if ( strcmp(paramname, "optimality") == 0 )
+   {
+      SCIP_CALL( SCIPparamsetSetEmphasis(paramset, set, messagehdlr, SCIP_PARAMEMPHASIS_OPTIMALITY, FALSE) );
+      globalemphasis = TRUE;
+   }
+
+   /* check whether rest of line is clean */
+   if ( globalemphasis )
+   {
+      /* check, if the rest of the line is clean */
+      while ( *line == ' ' || *line == '\t' || *line == '\r' )
+         ++line;
+      if ( *line != '\0' && *line != '\n' && *line != '#' )
+      {
+         SCIPerrorMessage("additional characters after global emphasis setting: %s.\n", line);
+         return SCIP_READERROR;
+      }
+      return SCIP_OKAY;
+   }
+
+   /* find the start of the parameter value string */
+   while ( *line == ' ' || *line == '\t' || *line == '\r' )
+      ++line;
+   if ( *line == '\0' || *line == '\n' || *line == '#' )
+   {
+      SCIPerrorMessage("emphasis parameter value is missing\n");
+      return SCIP_READERROR;
+   }
+   paramvaluestr = line;
+
+   /* find the end of the parameter value string */
+   while ( *line != ' ' && *line != '\t' && *line != '\r' && *line != '\n' && *line != '#' && *line != '\0' )
+      ++line;
+
+   if ( *line == '#' )
+      *line = '\0';
+   else if ( *line != '\0' )
+   {
+      *line = '\0';
+      ++line;
+      /* check, if the rest of the line is clean */
+      while ( *line == ' ' || *line == '\t' || *line == '\r' )
+         ++line;
+      if ( *line != '\0' && *line != '\n' && *line != '#' )
+      {
+         SCIPerrorMessage("additional characters after emphasis parameter value: %s.\n", line);
+         return SCIP_READERROR;
+      }
+   }
+
+   /* determine type of setting */
+   if ( strcmp(paramvaluestr, "default") == 0 )
+      paramsetting = SCIP_PARAMSETTING_DEFAULT;
+   else if ( strcmp(paramvaluestr, "aggressive") == 0 )
+      paramsetting = SCIP_PARAMSETTING_AGGRESSIVE;
+   else if ( strcmp(paramvaluestr, "fast") == 0 )
+      paramsetting = SCIP_PARAMSETTING_FAST;
+   else if ( strcmp(paramvaluestr, "off") == 0 )
+      paramsetting = SCIP_PARAMSETTING_OFF;
+   else
+   {
+      SCIPerrorMessage("unkown parameter setting: %s.\n", paramvaluestr);
+      return SCIP_READERROR;
+   }
+
+   /* check which kind of emphasis we want to set */
+   if ( strcmp(paramname, "heuristics") )
+   {
+      SCIP_CALL( SCIPsetSetHeuristics(set, messagehdlr, paramsetting, FALSE) );
+   }
+   else if ( strcmp(paramname, "presolving") )
+   {
+      SCIP_CALL( SCIPsetSetPresolving(set, messagehdlr, paramsetting, FALSE) );
+   }
+   else if ( strcmp(paramname, "separating") )
+   {
+      SCIP_CALL( SCIPsetSetSeparating(set, messagehdlr, paramsetting, FALSE) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** parses a parameter file line "paramname = paramvalue" and sets parameter accordingly */
+static
+SCIP_RETCODE paramsetParse(
+   SCIP_PARAMSET*        paramset,           /**< parameter set */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   char*                 line,               /**< line to parse (is modified during parse, but not freed) */
+   SCIP_Bool*            foundnormalparam    /**< pointer to store whether a normal parameter (not emphasis setting) has been found */
+   )
+{
    SCIP_PARAM* param;
    char* paramname;
    char* paramvaluestr;
+   char* paramend;
    char* lastquote;
    SCIP_Bool quoted;
-   SCIP_Bool fix;
+   SCIP_Bool fix = FALSE;
 
    assert(paramset != NULL);
    assert(line != NULL);
-
-   fix = FALSE;
+   assert(foundnormalparam != NULL);
 
    /* find the start of the parameter name */
    while( *line == ' ' || *line == '\t' || *line == '\r' )
@@ -2273,28 +2417,42 @@ SCIP_RETCODE paramsetParse(
    paramname = line;
 
    /* find the end of the parameter name */
-   while( *line != ' ' && *line != '\t' && *line != '\r' && *line != '\n' && *line != '#' && *line != '\0' && *line != '=' )
+   while( *line != ' ' && *line != '\t' && *line != '\r' && *line != '\n' && *line != '#' && *line != '\0' && *line != '=' && *line != ':' )
       line++;
-   if( *line == '=' )
-   {
-      *line = '\0';
-      line++;
-   }
-   else
-   {
-      *line = '\0';
+   paramend = line;
+
+   /* skip possible whitespace */
+   while( *line == ' ' || *line == '\t' || *line == '\r' )
       line++;
 
-      /* search for the '=' char in the line */
-      while( *line == ' ' || *line == '\t' || *line == '\r' )
-         line++;
-      if( *line != '=' )
+   /* check whether first part consists of "emphasis:" */
+   if ( *line == ':' )
+   {
+      *paramend = '\0';  /* could have paramend == line */
+      if ( strcmp(paramname, "emphasis") != 0 )
       {
-         SCIPerrorMessage("character '=' was expected after the parameter name\n");
+         SCIPerrorMessage("expected \"emphasis:\" at beginning of line.\n");
          return SCIP_READERROR;
       }
-      line++;
+
+      /* check that emphasis settings only appear at beginning of file */
+      if ( *foundnormalparam )
+      {
+         SCIPerrorMessage("emphasis settings have to appear at top of file.\n");
+         return SCIP_READERROR;
+      }
+
+      /* parse emphasis line */
+      SCIP_CALL( emphasisParse(paramset, set, messagehdlr, line+1) );        /**< message handler */
+      return SCIP_OKAY;
    }
+   else if ( *line != '=' )
+   {
+      SCIPerrorMessage("expected character '=' after the parameter name.\n");
+      return SCIP_READERROR;
+   }
+   *paramend = '\0';  /* could have paramend == line */
+   ++line;
 
    /* find the start of the parameter value string */
    while( *line == ' ' || *line == '\t' || *line == '\r' )
@@ -2380,6 +2538,8 @@ SCIP_RETCODE paramsetParse(
    if( fix )
       SCIPparamSetFixed(param, TRUE);
 
+   *foundnormalparam = TRUE;
+
    return SCIP_OKAY;
 }
 
@@ -2392,6 +2552,7 @@ SCIP_RETCODE SCIPparamsetRead(
    )
 {
    SCIP_RETCODE retcode;
+   SCIP_Bool foundnormalparam = FALSE;
    FILE* file;
    char line[1024];
    int lineno;
@@ -2414,7 +2575,7 @@ SCIP_RETCODE SCIPparamsetRead(
    while( fgets(line, (int) sizeof(line), file) != NULL && retcode == SCIP_OKAY )
    {
       lineno++;
-      retcode = paramsetParse(paramset, set, messagehdlr, line);
+      retcode = paramsetParse(paramset, set, messagehdlr, line, &foundnormalparam);
    }
 
    /* close input file */
@@ -3471,6 +3632,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       break;
 
    case SCIP_PARAMEMPHASIS_COUNTER:
+      /* TODO: should constraints/linear/detectlowerbound and detectcutoffbound be set to FALSE? */
       /* avoid logicor upgrade since the logicor constraint handler does not perform full propagation */ 
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "constraints/linear/upgrade/logicor", FALSE, quiet) );
 
@@ -3497,14 +3659,14 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "propagating/maxroundsroot", -1, quiet) );
 
       /* adjust conflict analysis for depth first search */
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/fuiplevels", 1, quiet) );        
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "conflict/fuiplevels", 1, quiet) );
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "conflict/dynamic", FALSE, quiet) );
 
       /* prefer binary variables for branching */
       SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "branching/preferbinary", TRUE, quiet) );
 
       /* turn on aggressive constraint aging */ 
-      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/agelimit", 1, quiet) );       
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "constraints/agelimit", 1, quiet) );
 
       /* turn off components presolver since we are currently not able to handle that in case of counting */
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/components/maxrounds", 0, quiet) );
@@ -3894,11 +4056,11 @@ SCIP_RETCODE SCIPparamsetCopyParams(
          break;
 
       case SCIP_PARAMTYPE_STRING:
-         /* the vbc parameters are explicitly not copied to avoid that the vbc file of the original SCIP is overwritten;
-          * to avoid that hard coded comparison, each parameter could get a Bool flag which tells if the value
+         /* the visualization parameters are explicitly not copied to avoid that the visualization file of the original SCIP is overwritten;
+          * to avoid a hard coded comparison, each parameter could get a Bool flag which tells if the value
           * of that parameter can be copied
           */
-         if( strncmp(sourceparam->name, "vbc/", 4) != 0 )
+         if( strncmp(sourceparam->name, "visual/", 7) != 0 )
          {
             SCIP_CALL( paramCopyString(sourceparam, targetparam, set, messagehdlr) );
          }

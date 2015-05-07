@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3447,7 +3447,10 @@ SCIP_RETCODE generateLinearizationCut(
 
    SCIP_CALL( SCIPaddVarToRow(scip, *row, x, xmult*exponent*tmp) );
    SCIP_CALL( SCIPaddVarToRow(scip, *row, z, zcoef) );
-   SCIP_CALL( SCIPchgRowRhs(scip, *row, rhs + ((exponent-1)*refpoint-xoffset)*tmp) );
+
+   /* do not change the right hand side to an infinite value (this would trigger an assertion in lp.c) */
+   if( !SCIPisInfinity(scip, rhs + ((exponent-1)*refpoint-xoffset)*tmp) )
+      SCIP_CALL( SCIPchgRowRhs(scip, *row, rhs + ((exponent-1)*refpoint-xoffset)*tmp) );
 
    return SCIP_OKAY;
 }

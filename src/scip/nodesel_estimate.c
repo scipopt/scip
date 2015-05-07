@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -147,11 +147,13 @@ SCIP_DECL_NODESELSELECT(nodeselSelectEstimate)
 
    bestnodefreq = (nodeseldata->bestnodefreq == 0 ? INT_MAX : nodeseldata->bestnodefreq);
 
-   /* cehck if we don't want to do plunging yet */
+   /* check if we don't want to do plunging yet */
    if( SCIPgetNNodes(scip) < nodeseldata->plungeoffset )
    {
       /* we don't want to plunge yet: select best node from the tree */
-      SCIPdebugMessage("nnodes=%lld < %d=plungeoffset -> don't start plunging\n", SCIPgetNNodes(scip), nodeseldata->plungeoffset);
+      SCIPdebugMessage("nnodes=%"SCIP_LONGINT_FORMAT" < %d=plungeoffset -> don't start plunging\n", SCIPgetNNodes(scip),
+         nodeseldata->plungeoffset);
+
       if( SCIPgetNNodes(scip) % bestnodefreq == 0 )
          *selnode = SCIPgetBestboundNode(scip);
       else

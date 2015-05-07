@@ -113,12 +113,12 @@ function writeConfig(solverID) {
 #cp "${libdir}/$libname" "${gamspath}/$libname"
 #ln -s "${libdir}/$libname" "${gamspath}/$libname"
 
-# hide libstdc++ and libgfortran
-if test -e "${gamspath}/libstdc++.so.6" ; then
-  echo "Moving ${gamspath}/libstdc++.so.6 to ${gamspath}/libstdc++.so.6.hide"
-  mv "${gamspath}/libstdc++.so.6" "${gamspath}/libstdc++.so.6.hide"
-fi
-if test -e "${gamspath}/libgfortran.so.3" ; then
-  echo "Moving ${gamspath}/libgfortran.so.3 to ${gamspath}/libgfortran.so.3.hide"
-  mv "${gamspath}/libgfortran.so.3" "${gamspath}/libgfortran.so.3.hide"
-fi
+# hide libstdc++ and libgfortran - this was only necessary with GAMS < 24.3
+#if test -e "${gamspath}/libstdc++.so.6" ; then
+#  echo "Moving ${gamspath}/libstdc++.so.6 to ${gamspath}/libstdc++.so.6.hide"
+#  mv "${gamspath}/libstdc++.so.6" "${gamspath}/libstdc++.so.6.hide"
+#fi
+#if test -e "${gamspath}/libgfortran.so.3" ; then
+#  echo "Moving ${gamspath}/libgfortran.so.3 to ${gamspath}/libgfortran.so.3.hide"
+#  mv "${gamspath}/libgfortran.so.3" "${gamspath}/libgfortran.so.3.hide"
+#fi
