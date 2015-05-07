@@ -1586,14 +1586,6 @@ SCIP_RETCODE findNewBounds(
          /* separate current OBBT LP solution */
          if( iterationsleft && propdata->separatesol )
          {
-#ifndef NDEBUG
-            SCIP_Real oldub;
-            SCIP_Real oldlb;
-
-            oldub = SCIPvarGetUbLocal(currbound->var);
-            oldlb = SCIPvarGetLbLocal(currbound->var);
-#endif
-
             propdata->nprobingiterations -= SCIPgetNLPIterations(scip);
             SCIP_CALL( applySeparation(scip, propdata, currbound, nleftiterations, &success) );
             propdata->nprobingiterations += SCIPgetNLPIterations(scip);
@@ -1601,6 +1593,7 @@ SCIP_RETCODE findNewBounds(
             /* remember best solution value after solving additional separations LPs */
             if( success )
             {
+#ifndef NDEBUG
                SCIP_Real newval = SCIPvarGetLPSol(currbound->var);
 
                /* round new bound if the variable is integral */
@@ -1609,9 +1602,11 @@ SCIP_RETCODE findNewBounds(
                      SCIPceil(scip, newval) : SCIPfloor(scip, newval);
 
                assert((currbound->boundtype == SCIP_BOUNDTYPE_LOWER &&
-                     SCIPisLbBetter(scip, newval, currbound->newval, oldub))
+                     SCIPisGT(scip, newval, currbound->newval))
                   || (currbound->boundtype == SCIP_BOUNDTYPE_UPPER &&
-                     SCIPisUbBetter(scip, newval, oldlb, currbound->newval)));
+                     SCIPisLT(scip, newval, currbound->newval)));
+#endif
+
                currbound->newval = SCIPvarGetLPSol(currbound->var);
             }
          }
