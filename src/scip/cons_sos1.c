@@ -9562,19 +9562,21 @@ SCIP_Real SCIPnodeGetSolvalVarboundUbSOS1(
 }
 
 
-/** based on solution values of the variables, rounds variables to zero to turn all SOS1 constraints feasible */
+/** based on solution values of the variables, rounds variables to zero to turn all SOS1 constraints feasible  */
 SCIP_RETCODE SCIPmakeSOS1sFeasible(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
    SCIP_SOL*             sol,                /**< solution */
    SCIP_Bool*            changed,            /**< pointer to store whether the solution has been changed */
-   SCIP_Bool*            success             /**< pointer to store whether SOS1 constraints have been turned feasible */
+   SCIP_Bool*            success             /**< pointer to store whether SOS1 constraints have been turned feasible and
+                                              *   solution was good enough */
    )
 {
    SCIP_DIGRAPH* conflictgraph;  /* conflict graph for SOS1 constraints */
    SCIP_Bool* indicatorzero;     /* indicates which solution values are zero */
    SCIP_Bool* indset;            /* indicator vector of feasible solution; i.e., an independent set */
    SCIP_Bool allroundable;
+   SCIP_Real roundobjval;
    int nsos1vars;
    int j;
 
@@ -9602,11 +9604,15 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
    allroundable = TRUE;
    for (j = 0; j < nsos1vars && allroundable; ++j)
    {
-      if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, j))) )
-      {
-         SCIP_VAR* var;
+      SCIP_VAR* var;
 
-         var = SCIPnodeGetVarSOS1(conflictgraph, j);
+      var = SCIPnodeGetVarSOS1(conflictgraph, j);
+
+      if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, var)) )
+      {
+         assert( ! SCIPvarMayRoundUp(var) || ! SCIPisFeasPositive(scip, SCIPgetSolVal(scip, sol, var)) );
+         assert( ! SCIPvarMayRoundDown(var) || ! SCIPisFeasNegative(scip, SCIPgetSolVal(scip, sol, var)) );
+
          if ( ! SCIPvarMayRoundDown(var) && ! SCIPvarMayRoundUp(var) )
             allroundable = FALSE;
       }
@@ -9665,7 +9671,13 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
    }
 #endif
 
-   *success = TRUE;
+   /* check whether objective value of rounded solution is good enough */
+   roundobjval = SCIPgetSolOrigObj(scip, sol);
+   if ( SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE )
+      roundobjval *= -1;
+
+   if ( SCIPisLT(scip, roundobjval, SCIPgetUpperbound(scip) ) )
+      *success = TRUE;
 
    /* free buffer arrays */
    SCIPfreeBufferArray(scip, &indicatorzero);
