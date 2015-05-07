@@ -7989,6 +7989,10 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
             }
          }
       }
+      else
+      {
+         SCIPdebugMessage("Adjacency matrix was not created since number of SOS1 variables (%d) is larger than %d.\n", nsos1vars, conshdlrdata->maxsosadjacency);
+      }
 
       /* perform one presolving round for SOS1 constraints */
       SCIP_CALL( presolRoundConssSOS1(scip, eventhdlr, conshdlrdata, conflictgraph, adjacencymatrix, conss, nconss, nsos1vars, naddconss, ndelconss, nupgdconss, nfixedvars, &nremovedvars, result) );
