@@ -4574,7 +4574,7 @@ SCIP_RETCODE SCIPsolveCIP(
       /* if restart limit was exceeded, change the status; if status is different from unknown, ie some other limit was
        * hit, leave it unchanged
        */
-      if( stat->status == SCIP_STATUS_UNKNOWN && set->limit_restarts >= 0 && stat->nruns > set->limit_restarts )
+      if( *restart && stat->status == SCIP_STATUS_UNKNOWN && set->limit_restarts >= 0 && stat->nruns > set->limit_restarts )
       {
          *restart = FALSE;
          stat->status = SCIP_STATUS_RESTARTLIMIT;
