@@ -35,6 +35,8 @@
 
 #define DEFAULT_COVERSIZE            8
 #define DEFAULT_MINLPITER          100LL
+#define DEFAULT_NCOVERCANDS         10
+
 #define DEFAULT_CONFLICTWEIGHT       0.01   /**< weight in score calculations for conflict score */
 #define DEFAULT_CONFLENGTHWEIGHT     0.0    /**< weight in score calculations for conflict length score*/
 #define DEFAULT_INFERENCEWEIGHT      0.1    /**< weight in score calculations for inference score */
@@ -56,6 +58,7 @@ struct SCIP_BranchruleData
    SCIP_SOL*             sol;
    SCIP_Bool             solfound;                /**< found an improving solution */
    SCIP_Bool             propagate;               /**< propagate in probing */
+   int                   ncovercands;             /**< number of candidates to check in each iteration */
    int                   nproprounds;             /**< maximal number of propagation in probing */
    int                   fails;                   /**< number of fails */
    int                   maxcoversize;            /**< maximal size of an improving solution cover */
@@ -193,17 +196,16 @@ SCIP_RETCODE calcHeurCover(
    SCIP_Real             lpobj,                   /**< objectiv value of the LP relaxation */
    SCIP_VAR**            cover,                   /**< found solution cover */
    int*                  coversize,               /**< size of the cover */
-   SCIP_VAR***           bndchgvars,              /**< variable of domain changes */
-   SCIP_Real**           bndchgbounds,            /**< bounds of domain changes */
-   SCIP_BOUNDTYPE**      bndchgtypes,             /**< boundtypes of domain changes */
-   int*                  nbndchgs,                /**< number of bound changes */
    SCIP_Bool*            cutoff,                  /**< pointer to store whether the all-zero node can be pruned */
+   SCIP_Bool*            downinf,                 /**< last down branch is infeasible */
+   SCIP_Bool*            upinf,                   /**< last up branch is infeasibke */
    SCIP_RESULT*          result                   /**< pointer to store the result */
    )
 {
    SCIP_VAR** branchcands;
    SCIP_Real* branchcandssol;
    SCIP_Real* branchcandsfrac;
+   SCIP_Real bestlpobj;
    SCIP_Bool lperror;
    int nbranchcands;
    int niter;
@@ -211,18 +213,15 @@ SCIP_RETCODE calcHeurCover(
    assert(scip != NULL);
    assert(branchruledata != NULL);
    assert(cover != NULL);
-   assert(bndchgvars != NULL);
-   assert(bndchgbounds != NULL);
-   assert(bndchgtypes != NULL);
    assert(result != NULL);
 
    niter = 0;
    *coversize = 0;
    *cutoff = FALSE;
+   *downinf = FALSE;
+   *upinf = FALSE;
 
    SCIPdebugMessage("start constructing cover, lp threshold = %g\n", lpobj);
-
-   SCIPdisableVarHistory(scip);
 
    /* start the probing mode */
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -234,11 +233,15 @@ SCIP_RETCODE calcHeurCover(
       if( nbranchcands > 0 )
       {
          SCIP_Real* score;
+         SCIP_Real bestbranchscore;
+         SCIP_Real bestlpobj;
          SCIP_Longint lpiters;
          SCIP_Longint lpitersleft;
          SCIP_Longint ndomredsfound;
          SCIP_DOMCHG* domchgs;
          SCIP_NODE* probingnode;
+         int bestcand;
+         int ncands;
          int c;
          int d;
 
@@ -260,111 +263,120 @@ SCIP_RETCODE calcHeurCover(
          probingnode = SCIPgetCurrentNode(scip);
          assert(SCIPnodeGetType(probingnode) == SCIP_NODETYPE_PROBINGNODE);
 
-         for( c = 0; c < nbranchcands && lpitersleft > 0 && (*coversize) < branchruledata->maxcoversize; c++ )
+         ncands = MIN(nbranchcands, branchruledata->ncovercands);
+         bestbranchscore = SCIP_REAL_MIN;
+         bestcand = -1;
+
+         for( c = 0; c < ncands && lpitersleft > 0; c++ )
          {
+            SCIP_Real dwbranchobj;
+            SCIP_Real upbranchobj;
+            SCIP_Real branchscore;
             int ndomchgs;
+            int b;
 
-            /* fix the variable to zero */
-            SCIP_CALL( SCIPfixVarProbing(scip, branchcands[c], 0.0) );
-
-            SCIPdebugMessage("-> try fixing var <%s> to 0.0, score = %g\n", SCIPvarGetName(branchcands[c]), score[c]);
-
-            ndomredsfound = 0;
-
-            /* run propagation */
-            if( branchruledata->propagate )
+            for( b = 0; b <= 1; b++ )
             {
-               SCIP_CALL( SCIPpropagateProbing(scip, branchruledata->nproprounds, cutoff, &ndomredsfound) );
-            }
+               if( b == 0 )
+               {
+                  /** test the 0-branch */
+                  SCIP_CALL( SCIPfixVarProbing(scip, branchcands[c], 0.0) );
+               }
+               else
+               {
+                  SCIP_CALL( SCIPfixVarProbing(scip, branchcands[c], 1.0) );
+               }
 
-            if( *cutoff )
-            {
-               assert(branchruledata->propagate);
+               /* run propagation */
+               ndomredsfound = 0;
+               if( branchruledata->propagate )
+               {
+                  SCIP_CALL( SCIPpropagateProbing(scip, branchruledata->nproprounds, cutoff, &ndomredsfound) );
+               }
 
-               SCIPdebugMessage("   cutoff after propagation\n");
-
-               /* we add the variable but do not create the all-zero node */
-               cover[*coversize] = branchcands[c];
-               (*coversize)++;
-
-               SCIPfreeBufferArray(scip, &score);
-               goto TERMINATE;
-            }
-
-            /* solve the probing LP */
-            SCIP_CALL( SCIPsolveProbingLP(scip, lpitersleft, &lperror, cutoff) );
-
-            SCIPdebugMessage("   solved probing LP (obj = %g, lperror = %u, cutoff = %u)\n", SCIPgetLPObjval(scip), lperror, *cutoff);
-
-            /* we stop at lperror and cutoff */
-            if( lperror )
-            {
-               SCIPfreeBufferArray(scip, &score);
-               goto TERMINATE;
-            }
-
-            if( *cutoff )
-            {
-               /* we add the variable but do not create the all-zero node */
-               cover[*coversize] = branchcands[c];
-               (*coversize)++;
-
-               SCIPfreeBufferArray(scip, &score);
-               goto TERMINATE;
-            }
-
-            lpitersleft = lpitersleft - (SCIPgetNLPIterations(scip) - lpiters);
-            lpiters = SCIPgetNLPIterations(scip);
-
-            if( SCIPisGT(scip, SCIPgetLPObjval(scip), lpobj) )
-            {
-               SCIPdebugMessage("   found cover variable <%s>\n", SCIPvarGetName(branchcands[c]));
-
-               assert(nbndchgs[*coversize] == 0);
-               assert(bndchgvars[*coversize] == NULL);
-               assert(bndchgbounds[*coversize] == NULL);
-               assert(bndchgtypes[*coversize] == NULL);
-
-               /* store domain changes */
-               if( ndomredsfound > 0 )
+               if( *cutoff )
                {
                   assert(branchruledata->propagate);
 
-                  SCIPdebugMessage("   store %d domain reductions\n", ndomredsfound);
+                  SCIPdebugMessage("   cutoff after propagation on branch\n");
 
-                  /* allocate buffer */
-                  SCIP_CALL( SCIPallocBufferArray(scip, &bndchgvars[*coversize], ndomredsfound) );
-                  SCIP_CALL( SCIPallocBufferArray(scip, &bndchgbounds[*coversize], ndomredsfound) );
-                  SCIP_CALL( SCIPallocBufferArray(scip, &bndchgtypes[*coversize], ndomredsfound) );
+                  if( b == 0 )
+                     *downinf = TRUE;
+                  else
+                     *upinf = TRUE;
 
-                  domchgs = SCIPnodeGetDomchg(probingnode);
-                  ndomchgs = SCIPnodeGetNDomchg(probingnode, TRUE, TRUE, TRUE);
+                  /* we add the variable but do not create the all-zero node */
+                  cover[*coversize] = branchcands[c];
+                  (*coversize)++;
 
-                  for( d = ndomchgs-1; d >= ndomchgs - ndomredsfound && ndomredsfound > 0; d-- )
-                  {
-                     SCIP_BOUNDCHG* bndchg;
-
-                     bndchg = SCIPdomchgGetBoundchg(domchgs, d);
-                     assert(bndchg != NULL);
-
-                     bndchgvars[*coversize][nbndchgs[*coversize]] = SCIPboundchgGetVar(bndchg);
-                     bndchgbounds[*coversize][nbndchgs[*coversize]] = SCIPboundchgGetNewbound(bndchg);
-                     bndchgtypes[*coversize][nbndchgs[*coversize]] = SCIPboundchgGetBoundtype(bndchg);
-                     nbndchgs[*coversize]++;
-                  }
+                  SCIPfreeBufferArray(scip, &score);
+                  goto TERMINATE;
                }
 
-               cover[*coversize] = branchcands[c];
-               (*coversize)++;
-               break;
-            }
-            else
-            {
+               /* solve the probing LP */
+               SCIP_CALL( SCIPsolveProbingLP(scip, lpitersleft, &lperror, cutoff) );
+
+               if( b == 0 )
+                  dwbranchobj = SCIPgetLPObjval(scip);
+               else
+                  upbranchobj = SCIPgetLPObjval(scip);
+
+               /* we stop at lperror and cutoff */
+               if( lperror )
+               {
+                  SCIPfreeBufferArray(scip, &score);
+                  goto TERMINATE;
+               }
+
+               if( *cutoff )
+               {
+                  if( b == 0 )
+                     *downinf = TRUE;
+                  else
+                     *upinf = TRUE;
+
+                  /* we add the variable but do not create the all-zero node */
+                  cover[*coversize] = branchcands[c];
+                  (*coversize)++;
+
+                  SCIPfreeBufferArray(scip, &score);
+                  goto TERMINATE;
+               }
+
                /* undo the bound change */
                SCIP_CALL( SCIPbacktrackProbing(scip, *coversize) );
 
-               SCIPdebugMessage("   undo fixation\n");
+               lpitersleft = lpitersleft - (SCIPgetNLPIterations(scip) - lpiters);
+               lpiters = SCIPgetNLPIterations(scip);
+
             }
+
+            /* calculate the score and check whether the candidate is better */
+            branchscore = SCIPgetBranchScore(scip, NULL, dwbranchobj, upbranchobj);
+
+            if( lpobj < dwbranchobj && branchscore > bestbranchscore )
+            {
+               bestbranchscore = branchscore;
+               bestcand = c;
+            }
+
+         }
+
+         if( bestcand != -1 )
+         {
+            SCIPdebugMessage("   found cover variable <%s> with branchscore %g\n", SCIPvarGetName(branchcands[bestcand]), bestbranchscore);
+
+            /** open 0-branch */
+            SCIP_CALL( SCIPfixVarProbing(scip, branchcands[c], 0.0) );
+
+            cover[*coversize] = branchcands[c];
+            (*coversize)++;
+            break;
+         }
+         else
+         {
+            /* we can terminate since no candidate is good enough */
+            goto TERMINATE;
          }
 
          SCIPfreeBufferArray(scip, &score);
@@ -405,8 +417,6 @@ SCIP_RETCODE calcHeurCover(
    /* end probing mode */
    SCIP_CALL( SCIPendProbing(scip) );
 
-   SCIPenableVarHistory(scip);
-
    return SCIP_OKAY;
 }
 
@@ -417,10 +427,6 @@ SCIP_RETCODE branchInterdiction(
    SCIP_BRANCHRULEDATA*  branchruledata,          /**< data of branching rule */
    SCIP_VAR**            cover,                   /**< solution cover */
    int                   coversize,               /**< size of the cover */
-   SCIP_VAR***           bndchgvars,              /**< variable of domain changes */
-   SCIP_Real**           bndchgbounds,            /**< bounds of domain changes */
-   SCIP_BOUNDTYPE**      bndchgtypes,             /**< boundtypes of domain changes */
-   int*                  nbndchgs,                /**< number of found domain reductions */
    SCIP_Bool             cutoff,                  /**< true, if the all-zero node can be pruned */
    SCIP_RESULT*          result                   /**< pointer to store the result */
    )
@@ -431,9 +437,6 @@ SCIP_RETCODE branchInterdiction(
    assert(branchruledata != NULL);
    assert(cover != NULL);
    assert(coversize > 0);
-   assert(bndchgvars != NULL);
-   assert(bndchgbounds != NULL);
-   assert(bndchgtypes != NULL);
    assert(result != NULL);
 
    SCIPdebugMessage("perform interdiction branching: create %d nodes\n", coversize + 1 - cutoff);
@@ -475,26 +478,6 @@ SCIP_RETCODE branchInterdiction(
             assert(var != NULL);
 
             SCIP_CALL( SCIPchgVarUbNode(scip, child, var, 0.0) );
-
-            assert(bndchgvars[v] != NULL || nbndchgs[v] == 0);
-            assert(bndchgbounds[v] != NULL || nbndchgs[v] == 0);
-            assert(bndchgtypes[v] != NULL || nbndchgs[v] == 0);
-
-            /* apply domain reductions */
-            for( d = 0; d < nbndchgs[v]; d++ )
-            {
-               assert(bndchgvars[v][d] != NULL);
-
-               if( bndchgtypes[v][d] == SCIP_BOUNDTYPE_LOWER )
-               {
-                  SCIP_CALL( SCIPchgVarLbNode(scip, child, bndchgvars[v][d], bndchgbounds[v][d]) );
-               }
-               else
-               {
-                  assert(bndchgtypes[v][d] == SCIP_BOUNDTYPE_UPPER);
-                  SCIP_CALL( SCIPchgVarUbNode(scip, child, bndchgvars[v][d], bndchgbounds[v][d]) );
-               }
-            }
          }
 
          if( c < coversize )
@@ -531,12 +514,10 @@ SCIP_RETCODE execInterdiction(
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_VAR** cover;
    SCIP_VAR** vars;
-   SCIP_VAR*** bndchgvars;
-   SCIP_Real** bndchgbounds;
-   SCIP_BOUNDTYPE** bndchgtypes;
-   int* nbndchgs;
    SCIP_Real lpobj;
    SCIP_Bool cutoff;
+   SCIP_Bool downinf;
+   SCIP_Bool upinf;
    int nfracbins;
    int coversize;
    int nvars;
@@ -585,20 +566,7 @@ SCIP_RETCODE execInterdiction(
 
    /* allocate memory for the solution cover and bound changes found during propagation */
    SCIP_CALL( SCIPallocBufferArray(scip, &cover, branchruledata->maxcoversize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bndchgvars, branchruledata->maxcoversize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bndchgbounds, branchruledata->maxcoversize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bndchgtypes, branchruledata->maxcoversize) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &nbndchgs, branchruledata->maxcoversize) );
 
-   for( d = 0; d < branchruledata->maxcoversize; d++ )
-   {
-      bndchgvars[d] = NULL;
-      bndchgbounds[d] = NULL;
-      bndchgtypes[d] = NULL;
-      nbndchgs[d] = 0;
-   }
-
-//   lpobj = SCIPnodeGetLowerbound(curnode);
    lpobj = MAX(SCIPgetAvgLowerbound(scip), SCIPnodeGetLowerbound(curnode));
    cutoff = FALSE;
 
@@ -613,32 +581,19 @@ SCIP_RETCODE execInterdiction(
    else
    {
       assert(strcmp(branchruledata->calcsolcover, "h") == 0);
-      SCIP_CALL( calcHeurCover(scip, branchruledata, lpobj, cover, &coversize, bndchgvars, bndchgbounds, bndchgtypes, nbndchgs, &cutoff, result) );
+      SCIP_CALL( calcHeurCover(scip, branchruledata, lpobj, cover, &coversize, &cutoff, &downinf, &upinf, result) );
    }
    assert(*result == SCIP_DIDNOTFIND || *result == SCIP_SUCCESS);
 
    if( coversize > 0 )
    {
-      SCIP_CALL( branchInterdiction(scip, branchruledata, cover, coversize, bndchgvars, bndchgbounds, bndchgtypes, nbndchgs, cutoff, result) );
+      SCIP_CALL( branchInterdiction(scip, branchruledata, cover, coversize, cutoff, result) );
       assert(*result == SCIP_BRANCHED || *result == SCIP_REDUCEDDOM);
    }
    else
       *result = SCIP_DIDNOTFIND;
 
    /* free subproblem */
-   for( d = 0; d < coversize; d++)
-   {
-      if( nbndchgs[d] > 0 )
-      {
-         SCIPfreeBuffer(scip, &bndchgvars[d]);
-         SCIPfreeBuffer(scip, &bndchgbounds[d]);
-         SCIPfreeBuffer(scip, &bndchgtypes[d]);
-      }
-   }
-   SCIPfreeBufferArray(scip, &bndchgvars);
-   SCIPfreeBufferArray(scip, &bndchgbounds);
-   SCIPfreeBufferArray(scip, &bndchgtypes);
-   SCIPfreeBufferArray(scip, &nbndchgs);
    SCIPfreeBufferArray(scip, &cover);
 
    return SCIP_OKAY;
@@ -653,6 +608,19 @@ SCIP_RETCODE execReoptInterdiction(
    SCIP_RESULT*          result                   /**< pointer to store the result */
    )
 {
+   assert(scip != NULL);
+   assert(branchrule != NULL);
+   assert(curnode != NULL);
+   assert(result != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   /* do not run is the constraint need not be split */
+   if( !SCIPnodeSplit(scip, curnode) )
+      return SCIP_OKAY;
+
+   // HIER WEITER ! ! !
+
    return SCIP_OKAY;
 }
 
@@ -761,7 +729,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpInterdiction)
    {
       SCIP_CALL( execReoptInterdiction(scip, branchrule, curnode, result) );
    }
-   else
+
+   if( *result == SCIP_DIDNOTRUN )
    {
       SCIP_CALL( execInterdiction(scip, branchrule, curnode, result) );
    }
@@ -800,6 +769,9 @@ SCIP_RETCODE SCIPincludeBranchruleInterdiction(
    branchruledata->calcsolcover = NULL;
    SCIP_CALL( SCIPaddStringParam(scip, "branching/"BRANCHRULE_NAME"/calcsolcover", "calculate an 'e'xect, 'r'elaxed, or 'h'euristically solution cover",
          &branchruledata->calcsolcover, FALSE, "h", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/"BRANCHRULE_NAME"/ncovercands", "number of candidates to check in each iteration",
+         &branchruledata->ncovercands, FALSE, DEFAULT_NCOVERCANDS, 1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "branching/"BRANCHRULE_NAME"/maxcoversize", "maximal size of a solution cover",
          &branchruledata->maxcoversize, FALSE, DEFAULT_COVERSIZE, 2, INT_MAX, NULL, NULL) );

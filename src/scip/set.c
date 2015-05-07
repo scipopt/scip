@@ -306,6 +306,7 @@
 #define SCIP_DEFAULT_REOPT_STRONGBRANCHINIT FALSE/**< try to fix variables before reoptimizing by probing like strong branching */
 #define SCIP_DEFAULT_REOPT_REDUCETOFRONTIER TRUE/**< delete stored nodes which were not reoptimized */
 #define SCIP_DEFAULT_REOPT_DYNLOCALDELAY    FALSE/**< increase the local delay by 0.5% if no subproblem was restarted. */
+#define SCIP_DEFAULT_REOPT_SAVECONSPROP     FALSE/**< save constraint propagation */
 #define SCIP_DEFAULT_REOPT_FORCEHEURRESTART   3 /**< force a restart if the last n optimal solutions are found by reoptssols heuristic */
 
 /* Propagating */
@@ -1465,11 +1466,6 @@ SCIP_RETCODE SCIPsetCreate(
             &(*set)->misc_calcintegral, FALSE, SCIP_DEFAULT_MISC_CALCINTEGRAL,
             NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-            "misc/reusesols",
-            "should solutions from orig space used in primal space after transformation?",
-            &(*set)->misc_reusesols, FALSE, SCIP_DEFAULT_MISC_REUSESOLS,
-            NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
             "misc/finitesolutionstore",
             "should SCIP try to remove infinite fixings from solutions copied to the solution store?",
             &(*set)->misc_finitesolstore, FALSE, SCIP_DEFAULT_MISC_FINITESOLSTORE,
@@ -1647,25 +1643,10 @@ SCIP_RETCODE SCIPsetCreate(
          "maximal number of saved nodes",
          &(*set)->reopt_maxsavednodes, TRUE, SCIP_DEFAULT_REOPT_MAXSAVEDNODES, -1, INT_MAX,
          NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "reoptimization/dynamicdiffofnodes",
-         "should maximal number of bound changes calculated automatically, depending on number of variables?",
-         &(*set)->reopt_dynamicdiffofnodes, TRUE, SCIP_DEFAULT_REOPT_DYNAMIXDIFF,
-         NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/maxdiffofnodes",
-         "maximal number of bound changes between two ancestor nodes such that the path get not shrunk. (-1: frequency = floor(log2(#origbinvars))-1)",
-         &(*set)->reopt_maxdiffofnodes, TRUE, SCIP_DEFAULT_REOPT_MAXDIFFOFNODES, -1, INT_MAX,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "reoptimization/savelpbasis",
-         "save LP basis of feasible and branched nodes during reoptimization",
-         &(*set)->reopt_savelpbasis, TRUE, SCIP_DEFAULT_REOPT_SAVELPBASIS,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "reoptimization/globalcons/sepasols",
-         "save global constraints to separate solutions found so far.",
-         &(*set)->reopt_sepaglbsols, FALSE, SCIP_DEFAULT_REOPT_SEPAGLBSOLS,
+         "maximal number of bound changes between two stored nodes on one path",
+         &(*set)->reopt_maxdiffofnodes, TRUE, SCIP_DEFAULT_REOPT_MAXDIFFOFNODES, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/globalcons/sepainfsubtrees",
@@ -1673,13 +1654,8 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->reopt_sepaglbinfsubtrees, FALSE, SCIP_DEFAULT_REOPT_SEPAGLBINFSUBTREES,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "reoptimization/localcons/sepasols",
-         "save local constraints to separate solutions found so far.",
-         &(*set)->reopt_sepalocsols, FALSE, SCIP_DEFAULT_REOPT_SEPALOCSOLS,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/sepabestsol",
-         "separate only the best solution, i.e, for constraint shortest path.",
+         "separate only the best solution, i.e., for constrained shortest path",
          &(*set)->reopt_sepabestsol, TRUE, SCIP_DEFAULT_REOPT_SEPABESTSOL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -1689,28 +1665,28 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/solvelpdiff",
-         "difference of boundchanges between ancestor nodes to solve the LP.",
+         "maximal number of bound changes at node to skip solving the LP",
          &(*set)->reopt_solvelpdiff, TRUE, SCIP_DEFAULT_REOPT_SOLVELPDIFF, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/savesols",
-         "number of best solutions which should be saved for the following runs.",
+         "number of best solutions which should be saved for the following runs. (-1: save all)",
          &(*set)->reopt_savesols, TRUE, SCIP_DEFAULT_REOPT_SAVESOLS, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/objsimrootLP",
          "similarity of two sequential objective function to disable solving the root LP.",
-         &(*set)->reopt_objsimrootLP, TRUE, SCIP_DEFAULT_REOPT_OBJSIMROOTLP, -1, 1,
+         &(*set)->reopt_objsimrootlp, TRUE, SCIP_DEFAULT_REOPT_OBJSIMROOTLP, -1, 1,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/objsimsol",
-         "similarity of two objective function to reuse stored solutions.",
+         "similarity of two objective functions to reuse stored solutions",
          &(*set)->reopt_objsimsol, TRUE, SCIP_DEFAULT_REOPT_OBJSIMSOL, -1, 1,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/delay",
-         "start reoptimizing the search tree if the current and previous objective have this similarity.",
-         &(*set)->reopt_delay, TRUE, SCIP_DEFAULT_REOPT_DELAY, -1, 1,
+         "minimum similarity for using reoptimization of the search tree.",
+         &(*set)->reopt_objsimdelay, TRUE, SCIP_DEFAULT_REOPT_DELAY, -1, 1,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/commontimelimit",
@@ -1719,28 +1695,28 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/shrinktransit",
-         "replace branched transit nodes by their child nodes, if the number of bound changes is not to large.",
-         &(*set)->reopt_shrinktransit, TRUE, SCIP_DEFAULT_REOPT_SHRINKTRANSIT,
+         "replace branched inner nodes by their child nodes, if the number of bound changes is not to large",
+         &(*set)->reopt_shrinkinner, TRUE, SCIP_DEFAULT_REOPT_SHRINKTRANSIT,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/strongbranchinginit",
-         "try to fix variables before reoptimizing by probing like strong branching.",
-         &(*set)->reopt_strongbranchinginit, TRUE, SCIP_DEFAULT_REOPT_STRONGBRANCHINIT,
+         " try to fix variables before reoptimizing by probing like strong branching",
+         &(*set)->reopt_sbinit, TRUE, SCIP_DEFAULT_REOPT_STRONGBRANCHINIT,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/reducetofrontier",
-         "delete stored nodes which were not reoptimized.",
+         "delete stored nodes which were not reoptimized",
          &(*set)->reopt_reducetofrontier, TRUE, SCIP_DEFAULT_REOPT_REDUCETOFRONTIER,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "reoptimization/dynlocdelay",
-         "increase the local delay by 0.5% if no subproblem was restarted.",
-         &(*set)->reopt_dynamiclocaldelay, TRUE, SCIP_DEFAULT_REOPT_DYNLOCALDELAY,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/forceheurrestart",
-         "force a restart if the optimal solution was found n times in a row by reoptsols.",
+         "force a restart if the last n optimal solutions were found by heuristic reoptsols",
          &(*set)->reopt_forceheurrestart, TRUE, SCIP_DEFAULT_REOPT_FORCEHEURRESTART, 1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/saveconsprop",
+         "save constraint propagations",
+         &(*set)->reopt_saveconsprop, TRUE, SCIP_DEFAULT_REOPT_SAVECONSPROP,
          NULL, NULL) );
 
    /* separation parameters */

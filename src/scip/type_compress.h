@@ -95,7 +95,7 @@ typedef struct SCIP_ComprData SCIP_COMPRDATA;      /**< locally defined tree com
  */
 #define SCIP_DECL_COMPREXITSOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_COMPR* compr)
 
-/** execution method of primal heuristic
+/** execution method of tree compression technique
  *
  *  Try to compress the current search tree. The method is called in the node processing loop.
  *
@@ -105,10 +105,9 @@ typedef struct SCIP_ComprData SCIP_COMPRDATA;      /**< locally defined tree com
  *  - result          : pointer to store the result of the heuristic call
  *
  *  possible return values for *result:
- *  - SCIP_COMPRESSED : the tree could be compressed
+ *  - SCIP_SUCCESS    : the tree could be compressed
  *  - SCIP_DIDNITFIND : the method could not compress the tree
  *  - SCIP_DIDNOTRUN  : the compression was skipped
- *  - SCIP_DELAYED    : the compression was delayed
  */
 #define SCIP_DECL_COMPREXEC(x) SCIP_RETCODE x (SCIP* scip, SCIP_COMPR* compr, SCIP_RESULT* result)
 

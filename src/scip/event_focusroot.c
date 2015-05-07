@@ -107,8 +107,10 @@ static SCIP_DECL_EVENTINIT(eventInitFocusroot)
          eventhdlrdata->savelpbasis = FALSE;
       else
       {
-         SCIP_CALL(SCIPgetBoolParam(scip, "reoptimization/savelpbasis", &eventhdlrdata->savelpbasis));
+//         SCIP_CALL(SCIPgetBoolParam(scip, "reoptimization/savelpbasis", &eventhdlrdata->savelpbasis));
       }
+
+      eventhdlrdata->savelpbasis = FALSE;
 
       eventhdlrdata->init = TRUE;
    }

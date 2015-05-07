@@ -71,18 +71,6 @@ void SCIPnodeGetParentBranchingsReopt(
    int                   branchvarssize      /**< available slots in arrays */
    );
 
-EXTERN
-void SCIPnodeGetParentConsAndPropReopt(
-   SCIP_NODE*            node,               /**< node data */
-   SCIP_VAR**            vars,               /**< array of variables on which the branching has been performed in the parent node */
-   SCIP_Real*            bounds,             /**< array of bounds which the branching in the parent node set */
-   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branching in the parent node set */
-   int*                  nvars,              /**< number of variables on which branching has been performed in the parent node
-                                              *   if this is larger than the array size, arrays should be reallocated and method
-                                              *   should be called again */
-   int                   varssize            /**< available slots in arrays */
-   );
-
 /** returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node */
 EXTERN
 void SCIPnodeGetAncestorBranchings(
@@ -95,7 +83,9 @@ void SCIPnodeGetAncestorBranchings(
    int                   branchvarssize      /**< available slots in arrays */
    );
 
-/** SPECIAL FOR REOPTIMIZATION: returns the set of variable branchings that were performed until a given ancestor node (nodes on the path to the given parent) to create this node */
+/** returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root)
+ *  to create this node sorted by the nodes, starting from the current node going up to the @param parent node.
+ */
 EXTERN
 void SCIPnodeGetAncestorBranchingsReopt(
    SCIP_NODE*            node,               /**< node data */
@@ -108,38 +98,30 @@ void SCIPnodeGetAncestorBranchingsReopt(
    int                   branchvarssize      /**< available slots in arrays */
    );
 
-EXTERN
-void SCIPnodeGetConsProps(
-   SCIP_NODE*            node,
-   SCIP_VAR**            vars,
-   SCIP_Real*            varbounds,
-   SCIP_BOUNDTYPE*       varboundtypes,
-   int*                  nconspropvars,
-   int                   conspropvarssize
-   );
-
-/*
- * SPECIAL FOR REOPTIMIZATION: return all bound changes applied after the first dual reduction
+/** return all bound changes based on constraint propagation; stop saving the bound changes if we reach a branching
+ * decision based on a dual information
  */
 EXTERN
-void SCIPnodeGetAfterDualBranchingsReopt(
-   SCIP_NODE*            node,
-   SCIP_VAR**            vars,
-   SCIP_Real*            varbounds,
-   SCIP_BOUNDTYPE*       varboundtypes,
-   int                   start,
-   int*                  nbranchvars,
-   int                   branchvarssize
+void SCIPnodeGetConsProps(
+   SCIP_NODE*            node,               /**< node */
+   SCIP_VAR**            vars,               /**< array of variables on which constraint propagation triggers a bound change */
+   SCIP_Real*            varbounds,          /**< array of bounds set by constraint propagation */
+   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes set by constraint propagation */
+   int*                  nconspropvars,      /**< number of variables on which constraint propagation triggers a bound change
+                                              *   if this is larger than the array size, arrays should be reallocated and method
+                                              *   should be called again */
+   int                   conspropvarssize    /**< available slots in arrays */
    );
 
+/** gets all bound changes applied after the first and before second dual reduction */
 EXTERN
-void SCIPnodeGetConsAndPropReopt(
-   SCIP_NODE*            node,               /**< node data */
-   SCIP_NODE*            parent,             /**< node data of the last ancestor node */
-   SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
-   SCIP_Real*            branchbounds,       /**< array of bounds which the branchings in all ancestors set */
-   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branchings in all ancestors set */
-   int*                  nbranchvars,        /**< number of variables on which branchings have been performed in all ancestors
+void SCIPnodeGetAfterDualBranchingsReopt(
+   SCIP_NODE*            node,               /**< node */
+   SCIP_VAR**            vars,               /**< array of variables on which the branching has been performed in the parent node */
+   SCIP_Real*            varbounds,          /**< array of bounds which the branching in the parent node set */
+   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes which the branching in the parent node set */
+   int                   start,              /**< first free slot in the arrays */
+   int*                  nbranchvars,        /**< number of variables on which branching has been performed in the parent node
                                               *   if this is larger than the array size, arrays should be reallocated and method
                                               *   should be called again */
    int                   branchvarssize      /**< available slots in arrays */
@@ -219,44 +201,32 @@ SCIP_Real SCIPnodeGetEstimate(
    );
 
 
+/** gets the reoptimization type of a node */
 EXTERN
 SCIP_REOPTTYPE SCIPnodeGetReopttype(
-   SCIP_NODE*           node
+   SCIP_NODE*            node                /**< node */
    );
 
+/** gets the unique id to identify the node during reoptimization; id is 0 if the node is the root or not part of the
+ * reoptimization tree
+ */
 EXTERN
-int SCIPnodeGetReoptID(
-   SCIP_NODE*            node
+unsigned int SCIPnodeGetReoptID(
+   SCIP_NODE*            node                /**< node */
    );
 
-/** sets the LPI state of the given child node */
-EXTERN
-SCIP_RETCODE SCIPchildSetLpistate(
-   SCIP_NODE*            node,               /**< node to set the LPI state for */
-   SCIP_LPISTATE*        lpistate            /**< LPI state */
-   );
-
+/** gets the reoptimization type of the node */
 EXTERN
 void SCIPnodeSetReopttype(
-   SCIP_NODE*            node,
-   SCIP_REOPTTYPE        type
+   SCIP_NODE*            node,               /**< node */
+   SCIP_REOPTTYPE        type                /**< reoptimization type */
    );
 
+/** set a unique id to identify the node during reoptimization */
 EXTERN
 void SCIPnodeSetReoptID(
-   SCIP_NODE*            node,
-   int                   id
-   );
-
-EXTERN
-int SCIPnodeGetReoptredies(
-   SCIP_NODE*           node
-   );
-
-EXTERN
-SCIP_RETCODE SCIPnodeSetReoptredies(
-   SCIP_NODE*           node,
-   unsigned int         nrredies
+   SCIP_NODE*            node,               /**< node */
+   int                   id                  /**< unique id */
    );
 
 /** gets the domain change information of the node, i.e., the information about the differences in the

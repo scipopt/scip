@@ -36,7 +36,7 @@ extern "C" {
 struct SCIP_Compr
 {
    SCIP_Longint          ncalls;             /**< number of times, this compression was called */
-   SCIP_Longint          ncompressed;        /**< number of compressions found so far by this method */
+   SCIP_Longint          nfound;              /**< number of compressions found so far by this method */
    SCIP_Real             rate;               /**< rate of the last compression */
    SCIP_Real             loi;                /**< loss of information of the last compression */
    char*                 name;               /**< name of tree compression */
@@ -55,9 +55,7 @@ struct SCIP_Compr
    int                   mindepth;           /**< minimal depth for calling compression, -1 if no threshold exists */
    int                   minnnodes;          /**< minimal number of nodes for calling compression, -1 if no threshold exists */
    int                   nnodes;             /**< number of nodes of the last compression */
-   SCIP_Bool             usessubscip;        /**< does the tree compression use a secondary SCIP instance? */
    SCIP_Bool             initialized;        /**< is tree compression initialized? */
-   char                  dispchar;           /**< display character of tree compression */
 };
 
 #ifdef __cplusplus

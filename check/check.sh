@@ -98,7 +98,7 @@ do
         fi
         # overwrite the tmp file now
         # call tmp file configuration for SCIP
-        . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $SOLUFILE
+        . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ  $REOPT $OPTCOMMAND $SOLUFILE
 
         # additional environment variables needed by run.sh
         export SOLVERPATH=$SCIPPATH

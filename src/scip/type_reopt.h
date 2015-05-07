@@ -50,9 +50,8 @@ enum SCIP_ReoptType
    SCIP_REOPTTYPE_STRBRANCHED = 3,
    SCIP_REOPTTYPE_LOGICORNODE = 4,
    SCIP_REOPTTYPE_LEAF        = 5,
-   SCIP_REOPTTYPE_INFEASIBLE  = 6,
-   SCIP_REOPTTYPE_PRUNED      = 7,
-   SCIP_REOPTTYPE_FEASIBLE    = 8
+   SCIP_REOPTTYPE_PRUNED      = 6,
+   SCIP_REOPTTYPE_FEASIBLE    = 7
 };
 typedef enum SCIP_ReoptType SCIP_REOPTTYPE;     /**< type nodes during reoptimization */
 

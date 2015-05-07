@@ -54,21 +54,18 @@ struct SCIP_Probingnode
 /** sibling information (should not exceed the size of a pointer) */
 struct SCIP_Sibling
 {
-   SCIP_LPISTATE*        lpistate;           /**< LP state information */
    int                   arraypos;           /**< position of node in the siblings array */
 };
 
 /** child information (should not exceed the size of a pointer) */
 struct SCIP_Child
 {
-   SCIP_LPISTATE*        lpistate;           /**< LP state information */
    int                   arraypos;           /**< position of node in the children array */
 };
 
 /** leaf information (should not exceed the size of a pointer) */
 struct SCIP_Leaf
 {
-   SCIP_LPISTATE*        lpistate;           /**< LP state information */
    SCIP_NODE*            lpstatefork;        /**< fork/subroot node defining the LP state of the leaf */
 };
 
@@ -124,9 +121,6 @@ struct SCIP_Node
    SCIP_Longint          number;             /**< successively assigned number of the node */
    SCIP_Real             lowerbound;         /**< lower (dual) bound of subtree */
    SCIP_Real             estimate;           /**< estimated value of feasible solution in subtree */
-   int                   reoptredies;
-   int                   reoptID;
-   SCIP_REOPTTYPE        reopttype;
    union
    {
       SCIP_PROBINGNODE*  probingnode;        /**< data for probing nodes */
@@ -147,6 +141,8 @@ struct SCIP_Node
    unsigned int          cutoff:1;           /**< should the node and all sub nodes be cut off from the tree? */
    unsigned int          reprop:1;           /**< should propagation be applied again, if the node is on the active path? */
    unsigned int          repropsubtreemark:9;/**< subtree repropagation marker for subtree repropagation */
+   unsigned int          reoptid:29;         /**< unique id to identify the node during reoptimization */
+   unsigned int          reopttype:3;        /**< node type during reoptimization */
 };
 
 /** bound change information for pending bound changes */

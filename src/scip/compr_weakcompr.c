@@ -29,11 +29,9 @@
 
 #define COMPR_NAME             "weakcompr"
 #define COMPR_DESC             "reduce the search frontier to k+1 or max{2, |C|+1} nodes."
-#define COMPR_DISPCHAR         'W'
 #define COMPR_PRIORITY         1000
 #define COMPR_MINDEPTH         0
 #define COMPR_MINNNODES        50
-#define COMPR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAUL_MEM_REPR        10
 /*
@@ -47,11 +45,6 @@ struct SCIP_ComprData
    SCIP_REOPTNODE**      representatives;         /**< list of representatives */
    int                   nrepresentatives;        /**< number of representatives */
    int                   allocmemrepr;            /**< allocated memory for representatives */
-
-   /* statistics */
-   SCIP_Real             rate;                    /**< compression rate */
-   SCIP_Real             loi;                     /**< loss of information */
-   int                   nnodes;                  /**< number of nodes after compression */
 
    /* parameter */
    SCIP_Bool             convertconss;            /**< convert added logic-or constraints of size k into k nodes */
@@ -461,14 +454,8 @@ SCIP_RETCODE applyCompression(
    SCIP_CALL( SCIPsetReoptCompression(scip, comprdata->representatives, comprdata->nrepresentatives, &success) );
 
    if( success )
-   {
-      comprdata->nnodes = SCIPgetNReoptNodeIDs(scip, NULL)+1;
-      comprdata->rate = ((SCIP_Real) comprdata->nnodes)/old_nnodes;
-
-      SCIPcomprUpdateRate(compr, comprdata->rate);
-      SCIPcomprUpdateNNodes(compr, comprdata->nnodes);
       *result = SCIP_SUCCESS;
-   }
+
    return SCIP_OKAY;
 }
 
@@ -514,9 +501,6 @@ SCIP_DECL_COMPRINIT(comprInitWeakcompr)
 
    comprdata->allocmemrepr = DEFAUL_MEM_REPR;
    comprdata->nrepresentatives = 0;
-   comprdata->rate = 0.0;
-   comprdata->loi = 0.0;
-   comprdata->nnodes = 0;
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &comprdata->representatives, comprdata->allocmemrepr) );
 
    return SCIP_OKAY;
@@ -579,9 +563,8 @@ SCIP_RETCODE SCIPincludeComprWeakcompr(
    assert(comprdata != NULL);
 
    /* include tree compression */
-   SCIP_CALL( SCIPincludeComprBasic(scip, &compr,COMPR_NAME, COMPR_DESC,
-         COMPR_DISPCHAR, COMPR_PRIORITY, COMPR_MINDEPTH, COMPR_MINNNODES,
-         COMPR_USESSUBSCIP, comprExecWeakcompr, comprdata) );
+   SCIP_CALL( SCIPincludeComprBasic(scip, &compr,COMPR_NAME, COMPR_DESC, COMPR_PRIORITY, COMPR_MINDEPTH,
+         COMPR_MINNNODES, comprExecWeakcompr, comprdata) );
 
    assert(compr != NULL);
 

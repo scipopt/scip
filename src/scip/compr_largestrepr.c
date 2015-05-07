@@ -30,12 +30,10 @@
 
 #define COMPR_NAME             "largestrepr"
 #define COMPR_DESC             "heuristic searching for large common representatives"
-#define COMPR_DISPCHAR         'L'
 #define COMPR_PRIORITY         2000
 #define COMPR_MINDEPTH         0
 #define COMPR_MINNNODES        20
 #define COMPR_TIMING           SCIP_COMPRTIMING_AFTERPRESOL
-#define COMPR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAUL_MEM_REPR        10
 
@@ -564,7 +562,6 @@ SCIP_RETCODE applyCompression(
    )
 {
    SCIP_Bool success;
-   int old_nnodes;
    int r;
 
    assert(scip != NULL);
@@ -580,21 +577,12 @@ SCIP_RETCODE applyCompression(
    for(r = 0; r < comprdata->nrepresentatives; r++)
       SCIPreoptnodeSetParentID(comprdata->representatives[r], 0);
 
-   old_nnodes = SCIPgetNReoptNodeIDs(scip, NULL)+1;
-
    success = FALSE;
    SCIP_CALL( SCIPsetReoptCompression(scip, comprdata->representatives, comprdata->nrepresentatives, &success) );
 
    if( success )
-   {
-      comprdata->nnodes = SCIPgetNReoptNodeIDs(scip, NULL)+1;
-      comprdata->rate = ((SCIP_Real) comprdata->nnodes)/old_nnodes;
-
-      SCIPcomprUpdateRate(compr, comprdata->rate);
-      SCIPcomprUpdateNNodes(compr, comprdata->nnodes);
-      SCIPcomprUpdateLOI(compr, comprdata->loi);
       *result = SCIP_SUCCESS;
-   }
+
    return SCIP_OKAY;
 }
 
@@ -739,8 +727,8 @@ SCIP_RETCODE SCIPincludeComprLargestrepr(
    assert(comprdata != NULL);
 
    /* include tree compression */
-   SCIP_CALL( SCIPincludeComprBasic(scip, &compr, COMPR_NAME, COMPR_DESC, COMPR_DISPCHAR,
-         COMPR_PRIORITY, COMPR_MINDEPTH, COMPR_MINNNODES, COMPR_USESSUBSCIP, comprExecLargestrepr, comprdata) );
+   SCIP_CALL( SCIPincludeComprBasic(scip, &compr, COMPR_NAME, COMPR_DESC, COMPR_PRIORITY, COMPR_MINDEPTH,
+         COMPR_MINNNODES, comprExecLargestrepr, comprdata) );
 
    assert(compr != NULL);
 

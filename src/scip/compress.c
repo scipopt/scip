@@ -98,11 +98,9 @@ SCIP_RETCODE SCIPcomprCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of tree compression */
    const char*           desc,               /**< description of tree compression */
-   char                  dispchar,           /**< display character of tree compression */
    int                   priority,           /**< priority of the tree compression */
    int                   mindepth,           /**< minimal depth for calling compression */
    int                   minnnodes,          /**< minimal number of nodes for calling compression */
-   SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_COMPRCOPY    ((*comprcopy)),    /**< copy method of tree compression or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_COMPRFREE    ((*comprfree)),    /**< destructor of tree compression */
    SCIP_DECL_COMPRINIT    ((*comprinit)),    /**< initialize tree compression */
@@ -124,11 +122,9 @@ SCIP_RETCODE SCIPcomprCreate(
    SCIP_ALLOC( BMSallocMemory(compr) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*compr)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*compr)->desc, desc, strlen(desc)+1) );
-   (*compr)->dispchar = dispchar;
    (*compr)->priority = priority;
    (*compr)->mindepth = mindepth;
    (*compr)->minnnodes = minnnodes;
-   (*compr)->usessubscip = usessubscip;
    (*compr)->comprcopy = comprcopy;
    (*compr)->comprfree = comprfree;
    (*compr)->comprinit = comprinit;
@@ -140,7 +136,7 @@ SCIP_RETCODE SCIPcomprCreate(
    SCIP_CALL( SCIPclockCreate(&(*compr)->setuptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*compr)->comprclock, SCIP_CLOCKTYPE_DEFAULT) );
    (*compr)->ncalls = 0;
-   (*compr)->ncompressed = 0;
+   (*compr)->nfound = 0;
    (*compr)->rate = 0.0;
    (*compr)->initialized = FALSE;
    (*compr)->nnodes = 0;
@@ -211,7 +207,7 @@ SCIP_RETCODE SCIPcomprInit(
       SCIPclockReset(compr->comprclock);
 
       compr->ncalls = 0;
-      compr->ncompressed = 0;
+      compr->nfound = 0;
    }
 
    if( compr->comprinit != NULL )
@@ -347,7 +343,7 @@ SCIP_RETCODE SCIPcomprExec(
       compr->ncalls++;
 
    if( *result == SCIP_SUCCESS )
-      compr->ncompressed++;
+      compr->nfound++;
 
    return SCIP_OKAY;
 }
@@ -441,11 +437,11 @@ void SCIPcomprSetExitsol(
    compr->comprexitsol = comprexitsol;
 }
 
-/** should the compression be executed at the given depth, frequency, timing, ... */
+/** should the compression be executed at the given depth, number of nodes */
 SCIP_Bool SCIPcomprShouldBeExecuted(
    SCIP_COMPR*           compr,              /**< tree compression */
    int                   depth,              /**< depth of current node */
-   int                   nnodes             /**< number of open nodes */
+   int                   nnodes              /**< number of open nodes */
    )
 {
    assert(compr != NULL);
@@ -473,26 +469,6 @@ const char* SCIPcomprGetDesc(
    assert(compr != NULL);
 
    return compr->desc;
-}
-
-/** gets display character of tree compression */
-char SCIPcomprGetDispchar(
-   SCIP_COMPR*           compr               /**< tree compression */
-   )
-{
-   assert(compr != NULL);
-
-   return compr->dispchar;
-}
-
-/** does the heuristic use a secondary SCIP instance? */
-SCIP_Bool SCIPcomprUsesSubscip(
-   SCIP_COMPR*           compr               /**< tree compression */
-   )
-{
-   assert(compr != NULL);
-
-   return compr->usessubscip;
 }
 
 /** gets priority of tree compression */
@@ -556,73 +532,7 @@ SCIP_Longint SCIPcomprGetNCompressionFound(
 {
    assert(compr != NULL);
 
-   return compr->ncompressed;
-}
-
-/* returns the compression rate of the last compression */
-SCIP_Real SCIPcomprGetRate(
-   SCIP_COMPR*           compr
-)
-{
-   assert(compr != NULL);
-
-   return compr->rate;
-}
-
-/* set the rate of the compression */
-void SCIPcomprUpdateRate(
-   SCIP_COMPR*           compr,
-   SCIP_Real             rate
-   )
-{
-   assert(compr != NULL);
-   assert(compr->initialized);
-
-   compr->rate = rate;
-}
-
-/* return the number of nodes of the last compression */
-int SCIPcomprGetNNodes(
-   SCIP_COMPR*           compr
-)
-{
-   assert(compr != NULL);
-
-   return compr->nnodes;
-}
-
-/* update the number of nodes of the last compression */
-void SCIPcomprUpdateNNodes(
-   SCIP_COMPR*           compr,
-   int                   nnodes
-   )
-{
-   assert(compr != NULL);
-   assert(compr->initialized);
-
-   compr->nnodes = nnodes;
-}
-
-/* returns the loss of information of the last compression */
-SCIP_Real SCIPcomprGetLOI(
-   SCIP_COMPR*           compr
-)
-{
-   assert(compr != NULL);
-
-   return compr->loi;
-}
-
-/* update the loss of information of the last compression */
-void SCIPcomprUpdateLOI(
-   SCIP_COMPR*           compr,
-   SCIP_Real             loi
-   )
-{
-   assert(compr != NULL);
-   assert(compr->initialized);
-
-   compr->loi = loi;
+   return compr->nfound;
 }
 
 /** is tree compression initialized? */

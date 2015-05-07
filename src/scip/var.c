@@ -53,7 +53,6 @@
 #include "scip/sol.h"
 #include "scip/stat.h"
 #include "scip/tree.h"
-#include "scip/struct_scip.h"
 
 #include "scip/debug.h"
 
@@ -7021,8 +7020,6 @@ SCIP_RETCODE SCIPvarChgBdGlobal(
       SCIPerrorMessage("unknown bound type\n");
       return SCIP_INVALIDDATA;
    }
-
-
 
    return SCIP_OKAY;
 }

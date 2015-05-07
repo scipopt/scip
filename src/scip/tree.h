@@ -164,14 +164,17 @@ SCIP_RETCODE SCIPnodeDelCons(
    SCIP_CONS*            cons                /**< constraint to locally delete */
    );
 
-extern
-SCIP_RETCODE SCIPnodeGetAddedcons(
-   SCIP_NODE*           node,
-   SCIP_CONS**          addecons
+/** returns all constraints added to a given node */
+void SCIPnodeGetAddedConss(
+   SCIP_NODE*          node,                      /**< node */
+   SCIP_CONS**         addedconss,                /**< array to store the constraints */
+   int*                naddedconss,               /**< number of added constraints */
+   int                 addedconsssize             /**< size of the constraint array */
    );
 
+/** returns the number of added constraints to the given node */
 extern
-int SCIPnodeGetNAddedcons(
+int SCIPnodeGetNAddedConss(
    SCIP_NODE*           node
    );
 
@@ -316,22 +319,23 @@ SCIP_RETCODE SCIPnodePropagateImplics(
    );
 
 extern
-void SCIPnodeGetPseudoBranchings(
+void SCIPnodeGetDualBoundchgs(
    SCIP_NODE*            node,               /**< node data */
-   SCIP_VAR**            pseudobranchvars,   /**< array of variables on which the branching has been performed in the parent node */
-   SCIP_Real*            pseudobranchbounds, /**< array of bounds which the branching in the parent node set */
-   int*                  npseudobranchvars,  /**< number of variables on which branching has been performed in the parent node
+   SCIP_VAR**            vars,               /**< array of variables on which the bound change is based on dual information */
+   SCIP_Real*            bounds,             /**< array of bounds which are based on dual information */
+   int*                  nvars,              /**< number of variables on which the bound change is based on dual information
                                               *   if this is larger than the array size, arrays should be reallocated and method
                                               *   should be called again */
-   int                   pseudobranchvarssize/**< available slots in arrays */
+   int                   varssize            /**< available slots in arrays */
    );
 
+/** counts the number of bound changes due to branching, constraint propagation, and propagation */
 extern
-int SCIPnodeGetNDomchg(
+void SCIPnodeGetNDomchg(
    SCIP_NODE*            node,               /**< node */
-   SCIP_Bool             branching,          /**< count branching decisions */
-   SCIP_Bool             consinfer,          /**< count constraint propagation */
-   SCIP_Bool             propinfer           /**< count propagation */
+   int*                  nbranchings,        /**< pointer to store number of branchings (or NULL if not needed) */
+   int*                  nconsprop,          /**< pointer to store number of constraint propagations (or NULL if not needed) */
+   int*                  nprop               /**< pointer to store number of propagations (or NULL if not needed) */
    );
 
 extern

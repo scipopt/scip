@@ -2702,17 +2702,10 @@ SCIP_RETCODE solveNodeLP(
 #endif
          if( stored )
          {
-            SCIP_EVENT event;
-
             if( bestsol != SCIPgetBestSol(set->scip) )
                SCIPstoreSolutionGap(set->scip);
 
-            /* issue NODEFEASIBLE event */
-            SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
-            SCIP_CALL( SCIPeventChgNode(&event, tree->focusnode) );
-            SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
-
-            SCIP_CALL( SCIPcheckNodeCutoff(set->scip, tree->focusnode, &event, tree->focusnode->lowerbound) );
+            SCIP_CALL( SCIPcheckNodeCutoff(set->scip, tree->focusnode, SCIP_EVENTTYPE_NODEFEASIBLE, tree->focusnode->lowerbound) );
 
             stat->nlpsolsfound++;
          }
@@ -4207,7 +4200,7 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_Bool unbounded;
    SCIP_Bool infeasible;
    SCIP_Bool foundsol;
-   SCIP_Bool eventthrown;
+   SCIP_Bool nodechecked;
 
    assert(set != NULL);
    assert(blkmem != NULL);
@@ -4262,7 +4255,7 @@ SCIP_RETCODE SCIPsolveCIP(
 
       foundsol = FALSE;
       infeasible = FALSE;
-      eventthrown = FALSE;
+      nodechecked = FALSE;
 
       do
       {
@@ -4327,7 +4320,7 @@ SCIP_RETCODE SCIPsolveCIP(
       SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
       SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
 
-      assert(eventthrown == FALSE);
+      assert(nodechecked == FALSE);
 
       /* solve focus node */
       SCIP_CALL( solveNode(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp, relaxation, pricestore, sepastore, branchcand,
@@ -4382,13 +4375,7 @@ SCIP_RETCODE SCIPsolveCIP(
                SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp,
                      eventqueue, eventfilter, FALSE) );
 
-               /* issue NODEFEASIBLE event */
-               SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
-               SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
-               SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
-               eventthrown = TRUE;
-
-               SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, &event, focusnode->lowerbound) );
+               SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, SCIP_EVENTTYPE_NODEFEASIBLE, focusnode->lowerbound) );
             }
          }
          else if( !unbounded )
@@ -4399,8 +4386,8 @@ SCIP_RETCODE SCIPsolveCIP(
                /* change color of node in VBC output */
                SCIPvbcCutoffNode(stat->vbc, stat, focusnode);
 
-               /* issue NODEINFEASIBLE event */
-               SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+               nodechecked = TRUE;
+               SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, SCIP_EVENTTYPE_NODEINFEASIBLE, focusnode->lowerbound) );
 
                /* increase the cutoff counter of the branching variable */
                if( stat->lastbranchvar != NULL )
@@ -4411,14 +4398,9 @@ SCIP_RETCODE SCIPsolveCIP(
             }
             else
             {
-               /* issue NODEBRANCHED event */
-               SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEBRANCHED) );
+               nodechecked = TRUE;
+               SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, SCIP_EVENTTYPE_NODEBRANCHED, focusnode->lowerbound) );
             }
-            SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
-            SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
-            eventthrown = TRUE;
-
-            SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, &event, focusnode->lowerbound) );
          }
          assert(SCIPbufferGetNUsed(set->buffer) == 0);
 
@@ -4492,13 +4474,8 @@ SCIP_RETCODE SCIPsolveCIP(
          SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, lp,
                eventqueue, eventfilter, TRUE) );
 
-         /* issue NODEFEASIBLE event */
-         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
-         SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
-         SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
-         eventthrown = TRUE;
-
-         SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, &event, focusnode->lowerbound) );
+         nodechecked = TRUE;
+         SCIP_CALL( SCIPcheckNodeCutoff(set->scip, focusnode, SCIP_EVENTTYPE_NODEFEASIBLE, focusnode->lowerbound) );
       }
 
       /* compute number of successfully applied conflicts */
@@ -4553,13 +4530,9 @@ SCIP_RETCODE SCIPsolveCIP(
    if( tree->focusnode != NULL && SCIPtreeGetNNodes(tree) == 0
       && SCIPsetIsGE(set, tree->focusnode->lowerbound, primal->cutoffbound) )
    {
-      if(!eventthrown)
+      if(!nodechecked)
       {
-         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
-         SCIP_CALL( SCIPeventChgNode(&event, tree->focusnode) );
-         SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
-
-         SCIP_CALL( SCIPcheckNodeCutoff(set->scip, tree->focusnode, &event, tree->focusnode->lowerbound) );
+         SCIP_CALL( SCIPcheckNodeCutoff(set->scip, tree->focusnode, SCIP_EVENTTYPE_NODEINFEASIBLE, tree->focusnode->lowerbound) );
       }
 
       focusnode = NULL;

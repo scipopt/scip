@@ -32,8 +32,8 @@ MEMLIMIT=${10}   # - memory limit for the solver
 NODELIMIT=${11}  # - node limit for the solver
 LPS=${12}        # - LP solver to use
 DISPFREQ=${13}   # - display frequency for chronological output table
-OPTCOMMAND=${14} # - command that should per executed after reading the instance, e.g. optimize, presolve or count
-REOPT=${15}      # - true if we use reoptimization, i.e., using a difflist file instead if an instance file
+REOPT=${14}      # - true if we use reoptimization, i.e., using a difflist file instead if an instance file
+OPTCOMMAND=${15} # - command that should per executed after reading the instance, e.g. optimize, presolve or count
 SOLUFILE=${16}   # - solu file, only necessary if $SETCUTOFF is 1
 
 #args=("$@")
@@ -107,7 +107,7 @@ then
 	echo display statistics                >> $TMPFILE
 	echo checksol                          >> $TMPFILE
 else
-	# read the difflist file
+    # read the difflist file
 	cat $SCIPPATH/$INSTANCE                >> $TMPFILE
 fi
 

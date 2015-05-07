@@ -86,13 +86,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->collectvarhistory = TRUE;
    (*stat)->performpresol = FALSE;
    (*stat)->subscipdepth = 0;
-   (*stat)->reopt_feasnodesoverall = 0;
-   (*stat)->reopt_infeasnodesoverall = 0;
-   (*stat)->reopt_prunednodesoverall = 0;
-   (*stat)->reopt_strbrnodesoverall = 0;
-   (*stat)->reopt_rediednodesoverall = 0;
-   (*stat)->reopt_nruns = 0;
-   (*stat)->reopt_infsubtrees = 0;
+   (*stat)->nreoptruns = 0;
 
    SCIPstatReset(*stat, set);
 
@@ -284,11 +278,6 @@ void SCIPstatReset(
    stat->marked_nvaridx = -1;
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
-   stat->reopt_feasnodes = 0;
-   stat->reopt_infeasnodes = 0;
-   stat->reopt_prunednodes = 0;
-   stat->reopt_strbrnodes = 0;
-   stat->reopt_rediednodes = 0;
 
    SCIPstatResetImplications(stat);
    SCIPstatResetPresolving(stat);

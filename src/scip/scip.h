@@ -3458,11 +3458,9 @@ SCIP_RETCODE SCIPincludeCompr(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of tree compression */
    const char*           desc,               /**< description of tree compression */
-   char                  dispchar,           /**< display character of tree compression */
    int                   priority,           /**< priority of the tree compression */
    int                   mindepth,           /**< minimal depth level to call compression at (-1: no limit) */
    int                   minnnodes,          /**< minimal number of nodes to call compression */
-   SCIP_Bool             usessubscip,        /**< does the compression use a secondary SCIP instance? */
    SCIP_DECL_COMPRCOPY   ((*comprcopy)),     /**< copy method of tree compression or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_COMPRFREE   ((*comprfree)),     /**< destructor of tree compression */
    SCIP_DECL_COMPRINIT   ((*comprinit)),     /**< initialize tree compression */
@@ -3487,11 +3485,9 @@ SCIP_RETCODE SCIPincludeComprBasic(
    SCIP_COMPR**          compr,              /**< pointer to tree compression */
    const char*           name,               /**< name of tree compression */
    const char*           desc,               /**< description of tree compression */
-   char                  dispchar,           /**< display character of tree compression */
    int                   priority,           /**< priority of the tree compression */
    int                   mindepth,           /**< minimal depth level to call tree compression at (-1: no limit) */
    int                   minnnodes,          /**< minimal number of nodes to call the compression */
-   SCIP_Bool             usessubscip,        /**< does the compression use a secondary SCIP instance? */
    SCIP_DECL_COMPREXEC   ((*comprexec)),     /**< execution method of tree compression */
    SCIP_COMPRDATA*       comprdata           /**< tree compression data */
    );
@@ -5688,15 +5684,21 @@ SCIP_RETCODE SCIPaddConsNode(
    SCIP_NODE*            validnode           /**< node at which the constraint is valid, or NULL */
    );
 
-/*
- * returns the number of domain changes at a given node
+/** returns the number of domain changes at a given node
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
  */
-int SCIPgetNDomchgs(
-   SCIP*                 scip,
-   SCIP_NODE*            node,
-   SCIP_Bool             branching,          /**< count branching decisions */
-   SCIP_Bool             consinfer,          /**< count constraint propagation */
-   SCIP_Bool             propinfer           /**< count propagation */
+SCIP_RETCODE SCIPgetNDomchgs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< node */
+   int*                  nbranchings,        /**< pointer to store number of branchings (or NULL if not needed) */
+   int*                  nconsprop,          /**< pointer to store number of constraint propagations (or NULL if not needed) */
+   int*                  nprop               /**< pointer to store number of propagations (or NULL if not needed) */
    );
 
 /** adds constraint locally to the current node (and all of its subnodes), even if it is a global constraint;
@@ -6174,7 +6176,7 @@ EXTERN
 SCIP_RETCODE SCIPcheckNodeCutoff(
    SCIP*                 scip,                    /**< SCIP data structure */
    SCIP_NODE*            node,                    /**< node of the search tree */
-   SCIP_EVENT*           event,                   /**< event */
+   SCIP_EVENTTYPE        eventtype,               /**< eventtype */
    SCIP_Real             lowerbound               /**< lower bound of the node */
    );
 
@@ -16947,7 +16949,7 @@ SCIP_Real SCIPgetReoptNodeLb(
 EXTERN
 int SCIPgetReoptnodeNVars(
    SCIP*                 scip,                    /**< SCIP data structure */
-   int                   id                       /**< id of the node */
+   SCIP_REOPTNODE*       reoptnode                /**< node of the reoptimization tree */
    );
 
 /* returns the number of children of @param node */
@@ -16990,6 +16992,13 @@ SCIP_RETCODE SCIPaddReoptnodeCons(
 /* returns the number of added constraints stored in the reopttree at ID id*/
 EXTERN
 int SCIPgetReoptnodeNConss(
+   SCIP*                 scip,                    /**< SCIP data structure */
+   int                   id                       /**< id of the node */
+   );
+
+/* returns the number of stored bound changes based on dual information in the reopttree at ID id */
+EXTERN
+int SCIPgetReoptnodeNDualBoundChgs(
    SCIP*                 scip,                    /**< SCIP data structure */
    int                   id                       /**< id of the node */
    );
@@ -17071,6 +17080,16 @@ SCIP_RETCODE SCIPapplyReopt(
    int                   id                       /**< id of the node */
    );
 
+/* reoptimize a node and reconstruct the pruned part in the fashion of interdiction branching */
+EXTERN
+SCIP_RETCODE SCIPapplyReoptInterdiction(
+   SCIP*                 scip,                    /**< SCIP data structure */
+   int                   id,                      /**< id of the node */
+   SCIP_NODE**           nodes,                   /**< array of nodes to create */
+   int                   nnodes,                  /**< size of the array */
+   int*                  permutation              /**< permutation of variable order */
+   );
+
 /** returns if the given node contains bound changes based on dual information */
 EXTERN
 SCIP_Bool SCIPnodeHasDualBndchgs(
@@ -17085,8 +17104,7 @@ SCIP_REOPTTYPE SCIPreoptGetNodeType(
    int                   id                       /**< id of the node */
    );
 
-/* remove the stored information about bound changes
- * based in dual information */
+/* remove the stored information about bound changes based in dual information */
 EXTERN
 SCIP_RETCODE SCIPnodeReoptResetDualcons(
    SCIP*                 scip,                    /**< SCIP data structure */
@@ -17097,6 +17115,14 @@ SCIP_RETCODE SCIPnodeReoptResetDualcons(
 EXTERN
 SCIP_RETCODE SCIPsplitReoptRoot(
    SCIP*                 scip                     /**< SCIP data structure */
+   );
+
+/* use some kind of interdiction branching to handle dual information with the root node */
+SCIP_RETCODE SCIPinterdictReoptRoot(
+   SCIP*                 scip,                    /**< SCIP data structure */
+   SCIP_VAR**            varorder,                /**< ordered array of variables */
+   SCIP_Real*            vals,                    /**< values of variables */
+   int                   nvars                    /**< number of variables */
    );
 
 /* returns a constraint which splits the current node into to disjoint parts */

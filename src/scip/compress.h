@@ -52,11 +52,9 @@ SCIP_RETCODE SCIPcomprCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
    const char*           name,               /**< name of tree compression */
    const char*           desc,               /**< description of tree compression */
-   char                  dispchar,           /**< display character of tree compression */
    int                   priority,           /**< priority of the tree compression */
    int                   mindepth,           /**< minimal depth for calling compression */
    int                   minnnodes,          /**< minimal number of nodes for calling compression */
-   SCIP_Bool             usessubscip,        /**< does the separator use a secondary SCIP instance? */
    SCIP_DECL_COMPRCOPY   ((*comprcopy)),     /**< copy method of tree compression or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_COMPRFREE   ((*comprfree)),     /**< destructor of tree compression */
    SCIP_DECL_COMPRINIT   ((*comprinit)),     /**< initialize tree compression */

@@ -153,10 +153,6 @@ struct SCIP_Set
    SCIP_Bool             branch_checksbsol;  /**< should LP solutions during strong branching with propagation be checked for feasibility? */
    SCIP_Bool             branch_roundsbsol;  /**< should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE) */
 
-   /* tree compression paramters */
-   SCIP_Bool             compr_enable;       /**< should automatic compression after presolving be enabled? */
-   SCIP_Real             compr_time;         /**< maximum time to run */
-
    /* conflict analysis settings */
    SCIP_Real             conf_maxvarsfac;    /**< maximal fraction of variables involved in a conflict constraint */
    int                   conf_minmaxvars;    /**< minimal absolute maximum of variables involved in a conflict constraint */
@@ -322,7 +318,6 @@ struct SCIP_Set
    SCIP_Bool             misc_transorigsols; /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
    SCIP_Bool             misc_calcintegral;  /**< should SCIP calculate the primal dual integral value which may require
                                               *   a large number of additional clock calls (and decrease the performance)? */
-   SCIP_Bool             misc_reusesols;     /**< should solutions from orig space used in primal space after transformation? */
    SCIP_Bool             misc_finitesolstore;/**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
 
    /* node selection settings */
@@ -377,25 +372,20 @@ struct SCIP_Set
 
    /* reoptimization settings */
    SCIP_Real             reopt_objsimsol;    /**< similarity of two objective functions to reuse stored solutions. */
-   SCIP_Real             reopt_objsimrootLP; /**< similarity of two sequential objective function to disable solving the root LP. */
-   SCIP_Real             reopt_delay;        /**< similarity from which reoptimizing the search tree starts. */
+   SCIP_Real             reopt_objsimrootlp; /**< similarity of two sequential objective function to disable solving the root LP. */
+   SCIP_Real             reopt_objsimdelay;  /**< minimum similarity for using reoptimization of the search tree. */
    SCIP_Bool             reopt_enable;       /**< enable reoptimization */
-   SCIP_Bool             reopt_dynamicdiffofnodes; /**< should the maximal number of bound changes calculated automatically,
-                                                  depending on the number of variables? */
-   SCIP_Bool             reopt_savelpbasis;  /**< save the LP basis of feasible and branched nodes during reoptimization */
-   SCIP_Bool             reopt_sepaglbsols;  /**< save global constraints to separate solutions found so far */
    SCIP_Bool             reopt_sepaglbinfsubtrees;/**< save global constraints to separate infeasible subtrees */
-   SCIP_Bool             reopt_sepalocsols;  /**< save local constraints to separate solutions found so far */
-   SCIP_Bool             reopt_sepabestsol;  /**< separate only the best solution, i.e., for constraint shortest path */
+   SCIP_Bool             reopt_sepabestsol;  /**< separate only the best solution, i.e., for constrained shortest path */
    SCIP_Bool             reopt_commontimelimit;/**< time limit over all reoptimization rounds? */
-   SCIP_Bool             reopt_shrinktransit;/**< replace branched transit nodes by their child nodes, if the number of bound changes is not to large */
-   SCIP_Bool             reopt_strongbranchinginit;/**< try to fix variables before reoptimizing by probing like strong branching */
+   SCIP_Bool             reopt_shrinkinner;  /**< replace branched inner nodes by their child nodes, if the number of bound changes is not to large */
+   SCIP_Bool             reopt_sbinit;       /**< try to fix variables before reoptimizing by probing like strong branching */
    SCIP_Bool             reopt_reducetofrontier; /**< delete stored nodes which were not reoptimized */
-   SCIP_Bool             reopt_dynamiclocaldelay;/**< increase the local delay by 0.5% if no subproblem was restarted. */
+   SCIP_Bool             reopt_saveconsprop; /**< save constraint propagations */
    int                   reopt_maxsavednodes;/**< maximal number of saved nodes */
-   int                   reopt_maxdiffofnodes;/**< maximal number of children */
+   int                   reopt_maxdiffofnodes;/**< maximal number of bound changes between two stored nodes on one path */
    int                   reopt_solvelp;      /**< strategy for solving the LP at nodes from reoptimization */
-   int                   reopt_solvelpdiff;  /**< difference of path length between two ancestor nodes to solve the LP */
+   int                   reopt_solvelpdiff;  /**< maximal number of bound changes at node to skip solving the LP */
    int                   reopt_savesols;     /**< number of best solutions which should be saved for the following runs. (-1: save all) */
    int                   reopt_forceheurrestart; /**< force a restart if the last n optimal solutions were found by heuristic reoptsols */
 
@@ -431,6 +421,10 @@ struct SCIP_Set
    SCIP_CLOCKTYPE        time_clocktype;     /**< default clock type to use */
    SCIP_Bool             time_enabled;       /**< is timing enabled? */
    SCIP_Bool             time_reading;       /**< belongs reading time to solving time? */
+
+   /* tree compression parameters (for reoptimization) */
+   SCIP_Bool             compr_enable;       /**< should automatic tree compression after presolving be enabled? (only for reoptimization) */
+   SCIP_Real             compr_time;         /**< maximum time to run tree compression heuristics */
 
    /* VBC tool settings */
    char*                 vbc_filename;       /**< name of the VBC Tool output file, or - if no output should be created */
