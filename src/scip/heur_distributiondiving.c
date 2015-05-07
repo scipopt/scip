@@ -14,8 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_distributiondiving.c
- * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
- * @author Tobias Achterberg
+ * @brief Diving heuristic that chooses fixings w.r.t. changes in the solution density after Pryor and Chinneck.
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -28,7 +28,7 @@
 #include "pub_dive.h"
 
 #define HEUR_NAME             "distributiondiving"
-#define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the fractionalities"
+#define HEUR_DESC             "Diving heuristic that chooses fixings w.r.t. changes in the solution density"
 #define HEUR_DISPCHAR         'f'
 #define HEUR_PRIORITY         -1003000
 #define HEUR_FREQ             10
@@ -36,7 +36,7 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
-#define EVENT_DISTRIBUTION    SCIP_EVENTTYPE_BOUNDCHANGED /**< the event tyoe to be handled by this event handler */
+#define EVENT_DISTRIBUTION    SCIP_EVENTTYPE_BOUNDCHANGED /**< the event type to be handled by this event handler */
 #define EVENTHDLR_NAME "eventhdlr_distributiondiving"
 #define SQUARED(x) ((x) * (x))
 /*
@@ -182,7 +182,7 @@ SCIP_RETCODE heurdataEnsureArraySize(
    return SCIP_OKAY;
 }
 
-/* update the variables current lower and upper bound */
+/** update the variables current lower and upper bound */
 static
 void heurdataUpdateCurrentBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1005,7 +1005,7 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
    SCIP_HEUR* heur;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
-   /* create distributiondivingdata */
+   /* create distributiondiving data */
    heurdata = NULL;
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 

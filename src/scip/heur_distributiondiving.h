@@ -15,8 +15,10 @@
 
 /**@file   heur_distributiondiving.h
  * @ingroup PRIMALHEURISTICS
- * @brief
+ * @brief Diving heuristic that chooses fixings w.r.t. changes in the solution density after Pryor and Chinneck.
  * @author Gregor Hendel
+ *
+ * @see branch_distribution.h for further explanations of probability based branching schemes and references.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
