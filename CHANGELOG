@@ -142,12 +142,14 @@ interface:
 - SCIPdigraphSetNSuccessors() sets the number of successors of some digraph node to a given value
 - added new sorting functions SCIPsortRealRealRealBoolBoolPtr(), SCIPsortDownRealRealRealBoolBoolPtr()
 - added new sorting functions SCIPsortIntIntIntReal(), SCIPsortDownIntIntIntReal()
+- added SCIPcomputeArraysIntersection() to compute the set intersection of two ordered arrays
+- added SCIPcomputeArraysSetminus() to compute the set difference of two ordered arrays
 - safe-guarded buffer array (re)allocations to check for negative size or size > INT_MAX
 - SCIPvarIsSOS1() returns whether some variable is involved in an SOS1 constraint
 - SCIPgetConflictgraphSOS1() gets conflict graph of SOS1 constraints
 - SCIPvarGetNodeSOS1() returns node of SOS1 variable in the conflict graph
 - SCIPnodeGetVarSOS1() returns SOS1 variable associated to some given node in the conflict graph
-
+- SCIPmakeSOS1sFeasible() based on solution values, fixes variables to zero to turn all SOS1 constraints feasible
 
 fixed bugs:
 - fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)

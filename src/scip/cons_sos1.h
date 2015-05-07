@@ -176,34 +176,7 @@ SCIP_VAR* SCIPnodeGetVarSOS1(
    int                   node                /**< node from the conflict graph */
    );
 
-/** gets (variable) lower bound value of current LP relaxation solution for a given node from the conflict graph */
-EXTERN
-SCIP_Real SCIPnodeGetSolvalVarboundLbSOS1(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
-   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
-   int                   node                /**< node of the conflict graph */
-   );
-
-/** gets (variable) upper bound value of current LP relaxation solution for a given node from the conflict graph */
-EXTERN
-SCIP_Real SCIPnodeGetSolvalVarboundUbSOS1(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
-   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
-   int                   node                /**< node of the conflict graph */
-   );
-
-/** returns solution value of imaginary binary big-M variable of a given node from the conflict graph */
-EXTERN
-SCIP_Real SCIPnodeGetSolvalBinaryBigMSOS1(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
-   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
-   int                   node                /**< node of the conflict graph */
-   );
-
-/** based on solution values of the variables, rounds variables to zero to turn all SOS1 constraints feasible  */
+/** based on solution values of the variables, fixes variables to zero to turn all SOS1 constraints feasible  */
 EXTERN
 SCIP_RETCODE SCIPmakeSOS1sFeasible(
    SCIP*                 scip,               /**< SCIP pointer */

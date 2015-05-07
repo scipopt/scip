@@ -374,6 +374,110 @@ SCIP_Bool SCIPisViolatedSOS1(
 }
 
 
+/** returns solution value of imaginary binary big-M variable of a given node from the conflict graph */
+static
+SCIP_Real SCIPnodeGetSolvalBinaryBigMSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   int                   node                /**< node of the conflict graph */
+   )
+{
+   SCIP_Real bound;
+   SCIP_VAR* var;
+   SCIP_Real val;
+
+   assert( scip != NULL );
+   assert( conflictgraph != NULL );
+   assert( node >= 0 && node < SCIPdigraphGetNNodes(conflictgraph) );
+
+   var = SCIPnodeGetVarSOS1(conflictgraph, node);
+   val = SCIPgetSolVal(scip, sol, var);
+
+   if ( SCIPisFeasNegative(scip, val) )
+   {
+      bound = SCIPvarGetLbLocal(var);
+      assert( SCIPisFeasNegative(scip, bound) );
+
+      if ( SCIPisInfinity(scip, -val) )
+         return 1.0;
+      else if ( SCIPisInfinity(scip, -bound) )
+         return 0.0;
+      else
+         return (val/bound);
+   }
+   else if ( SCIPisFeasPositive(scip, val) )
+   {
+      bound = SCIPvarGetUbLocal(var);
+      assert( SCIPisFeasPositive(scip, bound) );
+      assert( SCIPisFeasPositive(scip, val) );
+
+      if ( SCIPisInfinity(scip, val) )
+         return 1.0;
+      else if ( SCIPisInfinity(scip, bound) )
+         return 0.0;
+      else
+         return (val/bound);
+   }
+   else
+      return 0.0;
+}
+
+
+/** gets (variable) lower bound value of current LP relaxation solution for a given node from the conflict graph */
+static
+SCIP_Real SCIPnodeGetSolvalVarboundLbSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   int                   node                /**< node of the conflict graph */
+   )
+{
+   SCIP_NODEDATA* nodedata;
+
+   assert( scip != NULL );
+   assert( conflictgraph != NULL );
+   assert( node >= 0 && node < SCIPdigraphGetNNodes(conflictgraph) );
+
+   /* get node data */
+   nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conflictgraph, node);
+   assert( nodedata != NULL );
+
+   /* if variable is not involved in a variable upper bound constraint */
+   if ( nodedata->lbboundvar == NULL || ! nodedata->lbboundcomp )
+      return SCIPvarGetLbLocal(nodedata->var);
+
+   return nodedata->lbboundcoef * SCIPgetSolVal(scip, sol, nodedata->lbboundvar);
+}
+
+
+/** gets (variable) upper bound value of current LP relaxation solution for a given node from the conflict graph */
+static
+SCIP_Real SCIPnodeGetSolvalVarboundUbSOS1(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   int                   node                /**< node of the conflict graph */
+   )
+{
+   SCIP_NODEDATA* nodedata;
+
+   assert( scip != NULL );
+   assert( conflictgraph != NULL );
+   assert( node >= 0 && node < SCIPdigraphGetNNodes(conflictgraph) );
+
+   /* get node data */
+   nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conflictgraph, node);
+   assert( nodedata != NULL );
+
+   /* if variable is not involved in a variable upper bound constraint */
+   if ( nodedata->ubboundvar == NULL || ! nodedata->ubboundcomp )
+      return SCIPvarGetUbLocal(nodedata->var);
+
+   return nodedata->ubboundcoef * SCIPgetSolVal(scip, sol, nodedata->ubboundvar);
+}
+
+
 /** returns SOS1 index of variable or -1 if variable is not involved in an SOS1 constraint */
 static
 int varGetNodeSOS1(
@@ -1466,7 +1570,6 @@ SCIP_RETCODE presolRoundConssSOS1(
    int csize;
    int iter;
    int c;
-   int i;
 
    /* create digraph whose nodes represent variables and cliques in the conflict graph */
    csize = MAX(1, conshdlrdata->maxextensions) * nconss;
@@ -1551,7 +1654,6 @@ SCIP_RETCODE presolRoundConssSOS1(
          int cliquesize = 0;
          int ncomsucc = 0;
          int varprobind;
-         int k;
          int j;
 
          /* get clique and size of clique */
@@ -1581,6 +1683,7 @@ SCIP_RETCODE presolRoundConssSOS1(
                ncomsucc = SCIPdigraphGetNSuccessors(vertexcliquegraph, varprobind);
                succ = SCIPdigraphGetSuccessors(vertexcliquegraph, varprobind);
 
+               /* get all (already processed) cliques that contain 'varpropind' */
                for (j = 0; j < ncomsucc; ++j)
                {
                   /* successors should have been sorted in a former step of the algorithm */
@@ -1588,36 +1691,24 @@ SCIP_RETCODE presolRoundConssSOS1(
                   comsucc[j] = succ[j];
                }
 
-               for (v = 1; v < cliquesize; ++v)
+               /* loop through remaining nodes of clique (case v = 0 already processed) */
+               for (v = 1; v < cliquesize && ncomsucc > 0; ++v)
                {
-                  int ncomsuccsave = 0;
-                  k = 0;
-
                   varprobind = newclique[v];
+
+                  /* get all (already processed) cliques that contain 'varpropind' */
                   nsucc = SCIPdigraphGetNSuccessors(vertexcliquegraph, varprobind);
                   succ = SCIPdigraphGetSuccessors(vertexcliquegraph, varprobind);
+                  assert( succ != NULL || nsucc == 0 );
 
-                  /* determine successors that are in comsucc */
-                  for (j = 0; j < ncomsucc; ++j)
+                  if ( nsucc < 1 )
                   {
-                     for (i = k; i < nsucc; ++i)
-                     {
-                        assert( i == 0 || succ[i] > succ[i-1] );
-
-                        if ( succ[i] > comsucc[j] )
-                        {
-                           k = i;
-                           break;
-                        }
-                        else if ( succ[i] == comsucc[j] )
-                        {
-                           comsucc[ncomsuccsave++] = succ[i];
-                           k = i + 1;
-                           break;
-                        }
-                     }
+                     ncomsucc = 0;
+                     break;
                   }
-                  ncomsucc = ncomsuccsave;
+
+                  /* get intersection with comsucc */
+                  SCIP_CALL( SCIPcomputeArraysIntersection(comsucc, ncomsucc, succ, nsucc, comsucc, &ncomsucc) );
                }
             }
 
@@ -3599,79 +3690,6 @@ SCIP_RETCODE getCoverVertices(
 }
 
 
-/* computes set difference of two arrays */
-static
-SCIP_RETCODE getSetminusArray(
-   int*                  array1,             /**< first array (entries sorted in ascending order) */
-   int                   narray1,            /**< number of entries of first array */
-   int*                  array2,             /**< second array (entries sorted in ascending order) */
-   int                   narray2,            /**< number of entries of second array */
-   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
-                                              *   (note: it is possible to use array1 for this input argument) */
-   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
-                                              *   (note: it is possible to use narray1 for this input argument) */
-   )
-{
-   int entry1;
-   int entry2;
-   int cnt;
-   int v;
-   int j;
-   int k;
-
-   assert( array1 != NULL );
-   assert( array2 != NULL );
-   assert( setminusarray != NULL );
-   assert( nsetminusarray != NULL );
-
-   k = 0;
-   cnt = 0;
-   for (v = 0; v < narray1; ++v)
-   {
-      entry1 = array1[v];
-      for (j = k; j < narray2; ++j)
-      {
-         entry2 = array2[j];
-         if ( entry2 > entry1 )
-         {
-            /* array1[v] does not appear in array2 list. Add entry to setminus array and go to next vertex in array1 */
-            setminusarray[cnt++] = entry1;
-            k = j;
-            break;
-         }
-         else if ( entry2 == entry1 )
-         {
-            /* vertices are equal */
-            k = j + 1;
-            break;
-         }
-      }
-
-      /* if we have reached the end of array2 */
-      if ( j == narray2 )
-      {
-         int i;
-
-         for (i = v; i < narray1; ++i)
-            setminusarray[cnt++] = array1[i];
-         break;
-      }
-      else if ( k == narray2 )
-      {
-         int i;
-
-         for (i = v+1; i < narray1; ++i)
-            setminusarray[cnt++] = array1[i];
-         break;
-      }
-   }
-   /* store size of setminus array */
-   *nsetminusarray = cnt;
-
-   return SCIP_OKAY;
-}
-
-
 /** get vertices of variables that will be fixed to zero for each node */
 static
 SCIP_RETCODE getBranchingVerticesSOS1(
@@ -4596,13 +4614,13 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
             }
 
             /* compute second partition of fixingsnode2 (that is fixingsnode2 \setminus fixingsnode21 ) */
-            SCIP_CALL( getSetminusArray(fixingsnode2, nfixingsnode2, fixingsnode21, nfixingsnode21, fixingsnode22, &nfixingsnode22) );
+            SCIP_CALL( SCIPcomputeArraysSetminus(fixingsnode2, nfixingsnode2, fixingsnode21, nfixingsnode21, fixingsnode22, &nfixingsnode22) );
             assert ( nfixingsnode22 + nfixingsnode21 == nfixingsnode2 );
 
             /* compute cover set (that are all the vertices not in fixingsnode1 and fixingsnode21, whose neighborhood covers all the vertices of fixingsnode22) */
             SCIP_CALL( getCoverVertices(conflictgraph, verticesarefixed, -1, fixingsnode22, nfixingsnode22, coverarray, &ncoverarray) );
-            SCIP_CALL( getSetminusArray(coverarray, ncoverarray, fixingsnode1, nfixingsnode1, coverarray, &ncoverarray) );
-            SCIP_CALL( getSetminusArray(coverarray, ncoverarray, fixingsnode21, nfixingsnode21, coverarray, &ncoverarray) );
+            SCIP_CALL( SCIPcomputeArraysSetminus(coverarray, ncoverarray, fixingsnode1, nfixingsnode1, coverarray, &ncoverarray) );
+            SCIP_CALL( SCIPcomputeArraysSetminus(coverarray, ncoverarray, fixingsnode21, nfixingsnode21, coverarray, &ncoverarray) );
 
             for (j = 0; j < ncoverarray; ++j)
             {
@@ -4843,7 +4861,7 @@ SCIP_RETCODE resetConflictgraphSOS1(
          nsucc = SCIPdigraphGetNSuccessors(conflictgraph, j);
 
          /* reset number of successors */
-         SCIP_CALL( getSetminusArray(succ, nsucc, succloc, nsuccloc, succ, &k) );
+         SCIP_CALL( SCIPcomputeArraysSetminus(succ, nsucc, succloc, nsuccloc, succ, &k) );
          SCIP_CALL( SCIPdigraphSetNSuccessors(conflictgraph, j, k) );
          SCIP_CALL( SCIPdigraphSetNSuccessors(localconflicts, j, 0) );
       }
@@ -8762,7 +8780,6 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
    SCIP_DIGRAPH* conflictgraph;
    SCIP_VAR* bestvar;
    SCIP_Bool bestvarfixneigh;
-   SCIP_Real bestsolval;
    SCIP_Real bestscore = SCIP_REAL_MIN;
    int bestnode;
    int nsos1vars;
@@ -8781,7 +8798,6 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
    conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
 
    bestvar = NULL;
-   bestsolval = 0.0;
    bestnode = -1;
    bestvarfixneigh = FALSE;
 
@@ -8827,7 +8843,6 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
             *success = TRUE;
             bestvar = var;
             bestnode = v;
-            bestsolval = solval;
             bestvarfixneigh = fixneigh;
          }
       }
@@ -8840,7 +8855,6 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
       int nsucc;
       int s;
 
-      assert( ! SCIPisFeasZero(scip, bestsolval) );
       assert( bestnode >= 0 && bestnode < nsos1vars );
 
       nsucc = SCIPdigraphGetNSuccessors(conflictgraph, bestnode);
@@ -9461,108 +9475,7 @@ SCIP_VAR* SCIPnodeGetVarSOS1(
 }
 
 
-/** returns solution value of imaginary binary big-M variable of a given node from the conflict graph */
-SCIP_Real SCIPnodeGetSolvalBinaryBigMSOS1(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
-   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
-   int                   node                /**< node of the conflict graph */
-   )
-{
-   SCIP_Real bound;
-   SCIP_VAR* var;
-   SCIP_Real val;
-
-   assert( scip != NULL );
-   assert( conflictgraph != NULL );
-   assert( node >= 0 && node < SCIPdigraphGetNNodes(conflictgraph) );
-
-   var = SCIPnodeGetVarSOS1(conflictgraph, node);
-   val = SCIPgetSolVal(scip, sol, var);
-
-   if ( SCIPisFeasNegative(scip, val) )
-   {
-      bound = SCIPvarGetLbLocal(var);
-      assert( SCIPisFeasNegative(scip, bound) );
-
-      if ( SCIPisInfinity(scip, -val) )
-         return 1.0;
-      else if ( SCIPisInfinity(scip, -bound) )
-         return 0.0;
-      else
-         return (val/bound);
-   }
-   else if ( SCIPisFeasPositive(scip, val) )
-   {
-      bound = SCIPvarGetUbLocal(var);
-      assert( SCIPisFeasPositive(scip, bound) );
-      assert( SCIPisFeasPositive(scip, val) );
-
-      if ( SCIPisInfinity(scip, val) )
-         return 1.0;
-      else if ( SCIPisInfinity(scip, bound) )
-         return 0.0;
-      else
-         return (val/bound);
-   }
-   else
-      return 0.0;
-}
-
-
-/** gets (variable) lower bound value of current LP relaxation solution for a given node from the conflict graph */
-SCIP_Real SCIPnodeGetSolvalVarboundLbSOS1(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
-   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
-   int                   node                /**< node of the conflict graph */
-   )
-{
-   SCIP_NODEDATA* nodedata;
-
-   assert( scip != NULL );
-   assert( conflictgraph != NULL );
-   assert( node >= 0 && node < SCIPdigraphGetNNodes(conflictgraph) );
-
-   /* get node data */
-   nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conflictgraph, node);
-   assert( nodedata != NULL );
-
-   /* if variable is not involved in a variable upper bound constraint */
-   if ( nodedata->lbboundvar == NULL || ! nodedata->lbboundcomp )
-      return SCIPvarGetLbLocal(nodedata->var);
-
-   return nodedata->lbboundcoef * SCIPgetSolVal(scip, sol, nodedata->lbboundvar);
-}
-
-
-/** gets (variable) upper bound value of current LP relaxation solution for a given node from the conflict graph */
-SCIP_Real SCIPnodeGetSolvalVarboundUbSOS1(
-   SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
-   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
-   int                   node                /**< node of the conflict graph */
-   )
-{
-   SCIP_NODEDATA* nodedata;
-
-   assert( scip != NULL );
-   assert( conflictgraph != NULL );
-   assert( node >= 0 && node < SCIPdigraphGetNNodes(conflictgraph) );
-
-   /* get node data */
-   nodedata = (SCIP_NODEDATA*)SCIPdigraphGetNodeData(conflictgraph, node);
-   assert( nodedata != NULL );
-
-   /* if variable is not involved in a variable upper bound constraint */
-   if ( nodedata->ubboundvar == NULL || ! nodedata->ubboundcomp )
-      return SCIPvarGetUbLocal(nodedata->var);
-
-   return nodedata->ubboundcoef * SCIPgetSolVal(scip, sol, nodedata->ubboundvar);
-}
-
-
-/** based on solution values of the variables, rounds variables to zero to turn all SOS1 constraints feasible  */
+/** based on solution values of the variables, fixes variables to zero to turn all SOS1 constraints feasible */
 SCIP_RETCODE SCIPmakeSOS1sFeasible(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
