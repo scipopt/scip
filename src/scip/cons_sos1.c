@@ -8761,7 +8761,7 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
 {
    SCIP_DIGRAPH* conflictgraph;
    SCIP_VAR* bestvar;
-   SCIP_Bool bestvarroundup;
+   SCIP_Bool bestvarfixneigh;
    SCIP_Real bestsolval;
    SCIP_Real bestscore = SCIP_REAL_MIN;
    int bestnode;
@@ -8783,7 +8783,7 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
    bestvar = NULL;
    bestsolval = 0.0;
    bestnode = -1;
-   bestvarroundup = FALSE;
+   bestvarfixneigh = FALSE;
 
    /* loop over SOS1 variables  */
    for (v = 0; v < nsos1vars; ++v)
@@ -8794,12 +8794,30 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
          SCIP_VAR* var;
          SCIP_Real solval;
          SCIP_Real score;
-         SCIP_Bool roundup;
+         SCIP_Real bound;
+         SCIP_Bool fixneigh;
 
          var = SCIPnodeGetVarSOS1(conflictgraph, v);
          solval = SCIPgetSolVal(scip, sol, var);
 
-         SCIP_CALL( SCIPgetDivesetScore(scip, diveset, var, solval, 0.0, &score, &roundup) );
+         /* compute (variable) bound of candidate */
+         if ( SCIPisFeasNegative(scip, solval) )
+            bound = SCIPnodeGetSolvalVarboundLbSOS1(scip, conflictgraph, sol, v);
+         else
+            bound = SCIPnodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, v);
+
+         /* we always fix the candidates neighbors in the conflict graph to zero */
+         fixneigh = TRUE;
+
+         /* ensure finiteness */
+         bound = MIN(10E05, REALABS(bound));
+         score = MIN(10E05, REALABS(solval));
+         assert( ! SCIPisInfinity(scip, bound) );
+         assert( ! SCIPisInfinity(scip, score) );
+         assert( SCIPisFeasPositive(scip, bound + SCIPepsilon(scip)) );
+
+         /* score fractionality of candidate */
+         score /= (bound + SCIPepsilon(scip));
 
          /* best candidate maximizes the score */
          if ( score > bestscore )
@@ -8810,7 +8828,7 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
             bestvar = var;
             bestnode = v;
             bestsolval = solval;
-            bestvarroundup = roundup;
+            bestvarfixneigh = fixneigh;
          }
       }
    }
@@ -8829,19 +8847,21 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
       succ = SCIPdigraphGetSuccessors(conflictgraph, bestnode);
 
       /* if the diving score voted for fixing the best variable to 0.0, we add this as the preferred bound change;
-       * otherwise, fixing the neighbors in the conflict graph to 0.0, we add as preferred bound change.
+       * otherwise, fixing the neighbors in the conflict graph to 0.0 is the preferred bound change.
        */
-      if ( SCIPisFeasNegative(scip, bestsolval) )
+      assert( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(bestvar)) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(bestvar)) );
+      SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, bestvar, SCIP_BRANCHDIR_FIXED, 0.0, !bestvarfixneigh) );
+      for (s = 0; s < nsucc; ++s)
       {
-         SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, bestvar, SCIP_BRANCHDIR_FIXED, 0.0, bestvarroundup) );
-         for (s = 0; s < nsucc; ++s)
-            SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, SCIPnodeGetVarSOS1(conflictgraph, succ[s]), SCIP_BRANCHDIR_FIXED, 0.0, ! bestvarroundup) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, bestvar, SCIP_BRANCHDIR_FIXED, 0.0, !bestvarroundup) );
-         for (s = 0; s < nsucc; ++s)
-            SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, SCIPnodeGetVarSOS1(conflictgraph, succ[s]), SCIP_BRANCHDIR_FIXED, 0.0, bestvarroundup) );
+         SCIP_VAR* var;
+
+         var = SCIPnodeGetVarSOS1(conflictgraph, succ[s]);
+
+         /* if variable is not already fixed */
+         if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
+         {
+            SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, var, SCIP_BRANCHDIR_FIXED, 0.0, bestvarfixneigh) );
+         }
       }
    }
 
@@ -8894,7 +8914,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopySOS1, consCopySOS1) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteSOS1) );
-   //SCIP_CALL( SCIPsetConshdlrDetermDiveBdChgs(scip, conshdlr, conshdlrDetermDiveBdChgsSOS1) );
+   SCIP_CALL( SCIPsetConshdlrDetermDiveBdChgs(scip, conshdlr, conshdlrDetermDiveBdChgsSOS1) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolSOS1) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSOS1) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeSOS1) );
@@ -9621,7 +9641,7 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
       }
    }
 
-#ifdef SCIP_DEBUG
+#ifdef SCIP_NDEBUG
    for (j = 0; j < nsos1vars; ++j)
    {
       SCIP_Real solval;
