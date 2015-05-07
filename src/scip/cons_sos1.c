@@ -97,9 +97,10 @@
 
 /* presolving */
 #define DEFAULT_MAXEXTENSIONS         1 /**< maximal number of extensions that will be computed for each SOS1 constraint */
-#define DEFAULT_MAXCONSDELAYEXT      -1 /**< delay clique extension if number of SOS1 constraints is larger than predefined value (-1: no limit) */
 #define DEFAULT_MAXTIGHTENBDS         5 /**< maximal number of bound tightening rounds per presolving round (-1: no limit) */
 #define DEFAULT_UPDATECONFLPRESOL FALSE /**< if TRUE then update conflict graph during presolving procedure */
+#define DEFAULT_MAXSOSADJACENCY   10000 /**< do not create an adjacency matrix in presolving if number of SOS1 variables is larger than predefined
+                                         *   value (-1: no limit) */
 
 /* propagation */
 #define DEFAULT_CONFLICTPROP      TRUE /**< whether to use conflict graph propagation */
@@ -222,9 +223,10 @@ struct SCIP_ConshdlrData
    /* presolving */
    int                   cntextsos1;         /**< counts number of extended SOS1 constraints */
    int                   maxextensions;      /**< maximal number of extensions that will be computed for each SOS1 constraint */
-   int                   maxconsdelayext;    /**< delay clique extension if number of sos1 constraints is larger than predefined value (-1: no limit) */
    int                   maxtightenbds;      /**< maximal number of bound tightening rounds per presolving round (-1: no limit) */
    SCIP_Bool             updateconflpresol;  /**< if TRUE then update conflict graph during presolving procedure */
+   int                   maxsosadjacency;    /**< do not create an adjacency matrix in presolving if number of SOS1 variables is larger than predefined
+                                              *   value (-1: no limit) */
    /* propagation */
    SCIP_Bool             conflictprop;       /**< whether to use conflict graph propagation */
    SCIP_Bool             implprop;           /**< whether to use implication graph propagation */
@@ -1536,8 +1538,12 @@ SCIP_RETCODE presolRoundConsSOS1(
  *  - If a variable is fixed to zero, we can remove the variable.
  *  - If a variable appears twice, it can be fixed to 0.
  *  - We substitute appregated variables.
- *  - Search for larger SOS1 constraints in the conflict graph
  *  - Remove redundant SOS1 constraints
+ *
+ *  If the adjacency matrix of the conflict graph is present, then
+ *  we perform the following additional presolving steps
+ *
+ *  - Search for larger SOS1 constraints in the conflict graph
  */
 static
 SCIP_RETCODE presolRoundConssSOS1(
@@ -1545,7 +1551,7 @@ SCIP_RETCODE presolRoundConssSOS1(
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
-   SCIP_Bool**           adjacencymatrix,    /**< adjacency matrix of conflict graph */
+   SCIP_Bool**           adjacencymatrix,    /**< adjacency matrix of conflict graph (or NULL) */
    SCIP_CONS**           conss,              /**< SOS1 constraints */
    int                   nconss,             /**< number of SOS1 constraints */
    int                   nsos1vars,          /**< number of SOS1 variables */
@@ -1570,6 +1576,18 @@ SCIP_RETCODE presolRoundConssSOS1(
    int csize;
    int iter;
    int c;
+
+   assert( scip != NULL );
+   assert( eventhdlr != NULL );
+   assert( conshdlrdata != NULL );
+   assert( conflictgraph != NULL );
+   assert( conss != NULL );
+   assert( naddconss != NULL );
+   assert( ndelconss != NULL );
+   assert( nupgdconss != NULL );
+   assert( nfixedvars != NULL );
+   assert( nremovedvars != NULL );
+   assert( result != NULL );
 
    /* create digraph whose nodes represent variables and cliques in the conflict graph */
    csize = MAX(1, conshdlrdata->maxextensions) * nconss;
@@ -1648,7 +1666,7 @@ SCIP_RETCODE presolRoundConssSOS1(
       /* get variables of constraint */
       vars = consdata->vars;
 
-      if ( nvars > 1 && conshdlrdata->maxextensions != 0 && ( nconss <= conshdlrdata->maxconsdelayext || conshdlrdata->maxconsdelayext == -1 ) )
+      if ( nvars > 1 && conshdlrdata->maxextensions != 0 )
       {
          SCIP_Bool extended = FALSE;
          int cliquesize = 0;
@@ -1722,7 +1740,7 @@ SCIP_RETCODE presolRoundConssSOS1(
                continue;
             }
 
-            if ( conshdlrdata->maxextensions != 0 )
+            if ( conshdlrdata->maxextensions != 0 && adjacencymatrix != NULL )
             {
                int maxextensions;
                ncomsucc = 0;
@@ -7940,47 +7958,54 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
          return SCIP_OKAY;
       }
 
-      /* allocate buffer arrays */
-      SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix, nsos1vars) );
-      for (i = 0; i < nsos1vars; ++i)
+      /* we do not create the adjacency matrix of the conflict graph if the number of SOS1 variables is larger than a predefined value */
+      if ( conshdlrdata->maxsosadjacency == -1 || nsos1vars <= conshdlrdata->maxsosadjacency )
       {
-         SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix[i], i+1) );
-      }
-
-      /* create adjacency matrix */
-      for (i = 0; i < nsos1vars; ++i)
-      {
-         for (j = 0; j < i+1; ++j)
-            adjacencymatrix[i][j] = 0;
-      }
-      for (i = 0; i < nsos1vars; ++i)
-      {
-         int* succ;
-         int nsucc;
-
-         succ = SCIPdigraphGetSuccessors(conflictgraph, i);
-         nsucc = SCIPdigraphGetNSuccessors(conflictgraph, i);
-
-         for (j = 0; j < nsucc; ++j)
+         /* allocate buffer arrays for adjacency matrix  */
+         SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix, nsos1vars) );
+         for (i = 0; i < nsos1vars; ++i)
          {
-            if ( i > succ[j] )
-               adjacencymatrix[i][succ[j]] = 1;
+            SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix[i], i+1) );
+         }
+
+         /* create adjacency matrix */
+         for (i = 0; i < nsos1vars; ++i)
+         {
+            for (j = 0; j < i+1; ++j)
+               adjacencymatrix[i][j] = 0;
+         }
+         for (i = 0; i < nsos1vars; ++i)
+         {
+            int* succ;
+            int nsucc;
+
+            succ = SCIPdigraphGetSuccessors(conflictgraph, i);
+            nsucc = SCIPdigraphGetNSuccessors(conflictgraph, i);
+
+            for (j = 0; j < nsucc; ++j)
+            {
+               if ( i > succ[j] )
+                  adjacencymatrix[i][succ[j]] = 1;
+            }
          }
       }
 
       /* perform one presolving round for SOS1 constraints */
       SCIP_CALL( presolRoundConssSOS1(scip, eventhdlr, conshdlrdata, conflictgraph, adjacencymatrix, conss, nconss, nsos1vars, naddconss, ndelconss, nupgdconss, nfixedvars, &nremovedvars, result) );
 
-      /* perform one presolving round for SOS1 variables */
-      if ( conshdlrdata->maxtightenbds != 0 && *result != SCIP_CUTOFF )
+      if ( adjacencymatrix != NULL )
       {
-         SCIP_CALL( presolRoundVarsSOS1(scip, conshdlrdata, conflictgraph, adjacencymatrix, nsos1vars, nchgbds, naddconss, result) );
-      }
+         /* perform one presolving round for SOS1 variables */
+         if ( conshdlrdata->maxtightenbds != 0 && *result != SCIP_CUTOFF )
+         {
+            SCIP_CALL( presolRoundVarsSOS1(scip, conshdlrdata, conflictgraph, adjacencymatrix, nsos1vars, nchgbds, naddconss, result) );
+         }
 
-      /* free adjacency matrix */
-      for (j = nsos1vars-1; j >= 0; --j)
-         SCIPfreeBufferArrayNull(scip, &adjacencymatrix[j]);
-      SCIPfreeBufferArrayNull(scip, &adjacencymatrix);
+         /* free adjacency matrix */
+         for (j = nsos1vars-1; j >= 0; --j)
+            SCIPfreeBufferArrayNull(scip, &adjacencymatrix[j]);
+         SCIPfreeBufferArrayNull(scip, &adjacencymatrix);
+      }
 
       /* free memory allocated in function initConflictgraph() */
       SCIP_CALL( freeConflictgraph(conshdlrdata));
@@ -8946,10 +8971,6 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    /* add SOS1 constraint handler parameters */
 
    /* presolving parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxconsdelayext",
-         "delay clique extension if number of sos1 constraints is larger than predefined value (-1: no limit)",
-         &conshdlrdata->maxconsdelayext, TRUE, DEFAULT_MAXCONSDELAYEXT, -1, INT_MAX, NULL, NULL) );
-
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxextensions",
          "maximal number of extensions that will be computed for each SOS1 constraint  (-1: no limit)",
          &conshdlrdata->maxextensions, TRUE, DEFAULT_MAXEXTENSIONS, -1, INT_MAX, NULL, NULL) );
@@ -8961,6 +8982,10 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/updateconflpresol",
          "if TRUE then update conflict graph during presolving procedure",
          &conshdlrdata->updateconflpresol, TRUE, DEFAULT_UPDATECONFLPRESOL, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxsosadjacency",
+         "do not create an adjacency matrix in presolving if number of SOS1 variables is larger than predefined value (-1: no limit)",
+         &conshdlrdata->maxsosadjacency, TRUE, DEFAULT_MAXSOSADJACENCY, -1, INT_MAX, NULL, NULL) );
 
    /* propagation parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/conflictprop",

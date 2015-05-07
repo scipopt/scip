@@ -62,10 +62,10 @@ parameters:
   only if the constraint can be removed afterwards
 - new parameter "constraints/SOS1/maxextensions" to define maximal number of extensions that will be computed for each SOS1 constraint in 
   presolving
-- new parameter "constraints/SOS1/maxconsdelayext" to delay clique extension if the number of SOS1 constraints is larger than predefined 
-  value
 - new parameter "constraints/SOS1/maxtightenbds" to define the maximal number of bound tightening rounds per presolving round
 - new parameter "constraints/SOS1/updateconflpresol" to update the conflict graph during the presolving procedure
+- new parameter "constraints/SOS1/maxsosadjacency" to define that the adjacency matrix of the conflict graph is not created in presolving if 
+  the number of SOS1 variables is too large
 - new parameter "constraints/SOS1/conflictprop" to define whether to use conflict graph propagation
 - new parameter "constraints/SOS1/implprop" to define whether to use implication graph propagation
 - new parameter "constraints/SOS1/sosconsprop" to define whether to use SOS1 constraint propagation 
