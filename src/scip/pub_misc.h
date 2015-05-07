@@ -5377,12 +5377,12 @@ SCIP_RETCODE SCIPgetRandomSubset(
  */
 
 
-/* computes intersection of two arrays that are both in strictly ascending order */
+/* computes set intersection (duplicates removed) of two arrays that are ordered ascendingly */
 EXTERN
 SCIP_RETCODE SCIPcomputeArraysIntersection(
-   int*                  array1,             /**< first array (entries in strictly ascending order) */
+   int*                  array1,             /**< first array (in ascending order) */
    int                   narray1,            /**< number of entries of first array */
-   int*                  array2,             /**< second array (entries in strictly ascending order) */
+   int*                  array2,             /**< second array (in ascending order) */
    int                   narray2,            /**< number of entries of second array */
    int*                  intersectarray,     /**< intersection of array1 and array2
                                               *   (note: it is possible to use array1 for this input argument) */
@@ -5390,12 +5390,12 @@ SCIP_RETCODE SCIPcomputeArraysIntersection(
                                               *   (note: it is possible to use narray1 for this input argument) */
    );
 
-/* computes set difference of two arrays that are both in strictly ascending order */
+/* computes set difference (duplicates removed) of two arrays that are ordered ascendingly */
 EXTERN
 SCIP_RETCODE SCIPcomputeArraysSetminus(
-   int*                  array1,             /**< first array (entries in strictly ascending order) */
+   int*                  array1,             /**< first array (in ascending order) */
    int                   narray1,            /**< number of entries of first array */
-   int*                  array2,             /**< second array (entries in strictly ascending order) */
+   int*                  array2,             /**< second array (in ascending order) */
    int                   narray2,            /**< number of entries of second array */
    int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
                                               *   (note: it is possible to use array1 for this input argument) */
