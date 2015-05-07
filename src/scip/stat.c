@@ -277,6 +277,11 @@ void SCIPstatReset(
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
 
+   stat->ndivesetlpiterations = 0;
+   stat->ndivesetcalls = 0;
+   stat->ndivesetlps = 0;
+   stat->totaldivesetdepth = 0;
+
    SCIPstatResetImplications(stat);
    SCIPstatResetPresolving(stat);
    SCIPstatResetPrimalDualIntegral(stat, set, FALSE);

@@ -336,6 +336,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_coefdiving.o \
 			scip/heur_crossover.o \
 			scip/heur_dins.o \
+			scip/heur_distributiondiving.o \
 			scip/heur_dualval.o \
 			scip/heur_feaspump.o \
 			scip/heur_fixandinfer.o \
@@ -441,6 +442,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/debug.o \
 			scip/dialog.o \
 			scip/disp.o \
+			scip/dive.o \
 			scip/event.o \
 			scip/fileio.o \
 			scip/heur.o \

@@ -2655,6 +2655,22 @@ SCIP_RETCODE SCIPsetConshdlrGetNVars(
    SCIP_DECL_CONSGETNVARS((*consgetnvars))   /**< constraint variable number getter method */
    );
 
+/** sets diving enforcement method of constraint handler
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPsetConshdlrDetermDiveBdChgs(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS((*conshdlrdetermdivebdchgs)) /**< constraint handler diving solution enforcement method */
+   );
+
 /** returns the constraint handler of the given name, or NULL if not existing */
 EXTERN
 SCIP_CONSHDLR* SCIPfindConshdlr(
@@ -3460,13 +3476,15 @@ SCIP_RETCODE SCIPsetHeurPriority(
    );
 
 /** create a diving set associated with a primal heuristic. The primal heuristic needs to be included
- *  before this method can be called
+ *  before this method can be called. The diveset is installed in the array of divesets of the heuristic
+ *  and can be retrieved later by accessing SCIPheurGetDivesets()
  */
 EXTERN
 SCIP_RETCODE SCIPcreateDiveset(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET**        diveset,            /**< common diving heuristic settings */
-   SCIP_HEUR*            heur,               /**< primal heuristic to which the diveset belongs*/
+   SCIP_HEUR*            heur,               /**< primal heuristic to which the diveset belongs */
+   const char*           name,               /**< name for the diveset, or NULL if the name of the heuristic should be used */
    SCIP_Real             minreldepth,        /**< minimal relative depth to start diving */
    SCIP_Real             maxreldepth,        /**< maximal relative depth to start diving */
    SCIP_Real             maxlpiterquot,      /**< maximal fraction of diving LP iterations compared to node LP iterations */
@@ -3476,8 +3494,12 @@ SCIP_RETCODE SCIPcreateDiveset(
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveubquotnosol, /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol,/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Real             lpresolvedomchgquot,/**< percentage of immediate domain changes during probing to trigger LP resolve */
+   int                   lpsolvefreq,        /**< LP solve frequency for (0: only if enough domain reductions are found by propagation)*/
    int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
+                                              *   more general constraint handler diving variable selection? */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
    );
 
@@ -14616,60 +14638,122 @@ SCIP_RETCODE SCIPapplyCutsProbing(
 /** resets diving settings by both resetting counters and discarding adapted values through search */
 EXTERN
 void SCIPresetDiveset(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_DIVESET*         diveset              /**< diving settings */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
-/** performs a diving within the limits of the diveset parameters
+/** stores the candidate score and preferred rounding direction for a candidate variable */
+EXTERN
+SCIP_RETCODE SCIPgetDivesetScore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIVESET*         diveset,            /**< general diving settings */
+   SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
+   SCIP_Real             divecandsol,        /**< LP solution value of the candidate */
+   SCIP_Real             divecandfrac,       /**< fractionality of the candidate */
+   SCIP_Real*            candscore,          /**< pointer to store the candidate score */
+   SCIP_Bool*            roundup             /**< pointer to store whether preferred direction for diving is upwards */
+   );
+
+/** update diveset LP statistics, should be called after every LP solved by this diving heuristic */
+EXTERN
+void SCIPupdateDivesetLPStats(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
+   );
+
+/** update diveset statistics and global diveset statistics */
+EXTERN
+void SCIPupdateDivesetStats(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIVESET*         diveset,            /**< diveset to be reset */
+   int                   nprobingnodes,      /**< the number of probing nodes explored this time */
+   int                   nbacktracks,        /**< the number of backtracks during probing this time */
+   SCIP_Bool             solfound            /**< was a solution found at the leaf? */
+   );
+
+/** enforces a probing/diving solution by suggesting bound changes that maximize the score w.r.t. the current diving settings
  *
- *  This method performs a diving according to the settings defined by the diving settings @p diveset; Contrary to the
- *  name, SCIP enters probing mode (not diving mode) and dives along a path into the tree. Domain propagation
- *  is applied at every node in the tree, whereas probing LPs might be solved less frequently.
+ *  the process is guided by the enforcement priorities of the constraint handlers and the scoring mechanism provided by
+ *  the dive set.
+ *  Constraint handlers may suggest diving bound changes in decreasing order of their enforcement priority, based on the
+ *  solution values in the solution @p sol and the current local bounds of the variables. A diving bound change
+ *  is a triple (variable,branching direction,value) and is used inside SCIPperformGenericDivingAlgorithm().
  *
- *  Starting from the current LP candidates, the algorithm determines a fraction of the candidates that should be
- *  branched on; if a single candidate should be fixed, the algorithm selects a candidate which minimizes the
- *  score defined by the @p diveset.
- *  If more than one candidate should be selected, the candidates are sorted in non-decreasing order
- *  of their score.
+ *  After a successful call, SCIP holds two arrays of suggested dive bound changes, one for the preferred child
+ *  and one for the alternative.
  *
- *  The algorithm iteratively selects the the next (unfixed) candidate in the list, until the
- *  targeted depth is reached, or the last node is proven to be infeasible. It optionally backtracks and tries the
- *  other branching direction.
+ *  @see SCIPgetDiveBoundChangeData() for retrieving the dive bound change suggestions.
  *
- *  After the set of remaining candidates is empty or the targeted depth is reached, the node LP is
- *  solved, and the old candidates are replaced by the new LP candidates.
+ *  The method stops after the first constraint handler was successful
  *
- *  @see heur_guideddiving.c for an example implementation of a dive set controlling the diving algorithm.
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @see the parameter @p heuristics/startdivefrac to determine the fraction of candidates that should be dived on at the
- *       beginning. Setting this parameter to 0.0 will result in an LP solved after every candidate selection.
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
  *
- *  @note the fraction of candidate variables is subject to change during solving. It is decreased by a factor of
- *        2 every time the algorithm could not dive half as deep as desired. However, if it succeeded, the fraction
- *        is multiplied by a factor of 1.1.
- *
- *  @note the node from where the algorithm is called is checked for a basic LP solution. If the solution
- *        is non-basic, e.g., when barrier without crossover is used, the method returns without performing a dive.
- *
- *  @note currently, when multiple diving heuristics call this method and solve an LP at the same node, only the first
- *        call will be executed, @see SCIPgetLastDiveNode()
- *
- *  @todo generalize method to work correctly with pseudo or external branching/diving candidates
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
-SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
-   SCIP*              scip,               /**< SCIP data structure */
-   SCIP_DIVESET*      diveset,            /**< settings for diving */
-   SCIP_SOL*          worksol,            /**< non-NULL working solution */
-   SCIP_HEUR*         heur,               /**< the calling primal heuristic */
-   SCIP_RESULT*       result,             /**< SCIP result pointer */
-   SCIP_Bool          nodeinfeasible      /**< is the current node known to be infeasible? */
+SCIP_RETCODE SCIPdetermineDiveBoundChanges(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_DIVESET*         diveset,            /**< diving settings to control scoring */
+   SCIP_SOL*             sol,                /**< current solution of diving mode */
+   SCIP_Bool*            success,            /**< pointer to store whether constraint handler successfully found a variable */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the current node was detected to be infeasible */
+   );
+
+/** adds a diving bound change to the diving bound change storage of SCIP together with the information if this is a
+ *  bound change for the preferred direction or not
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+SCIP_RETCODE SCIPaddDiveBoundChange(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable to apply the bound change to */
+   SCIP_BRANCHDIR        dir,                /**< direction of the bound change */
+   SCIP_Real             value,              /**< value to adjust this variable bound to */
+   SCIP_Bool             preferred           /**< is this a bound change for the preferred child? */
+   );
+
+/** get the dive bound change data for the preferred or the alternative direction
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+void SCIPgetDiveBoundChangeData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR***           variables,          /**< pointer to store variables for the specified direction */
+   SCIP_BRANCHDIR**      directions,         /**< pointer to store the branching directions */
+   SCIP_Real**           values,             /**< pointer to store bound change values */
+   int*                  ndivebdchgs,        /**< pointer to store the number of dive bound changes */
+   SCIP_Bool             preferred           /**< should the dive bound changes for the preferred child be output? */
+   );
+
+/** clear the dive bound change data structures
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+EXTERN
+void SCIPclearDiveBoundChanges(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /**@} */
-
-
-
 
 /*
  * branching methods

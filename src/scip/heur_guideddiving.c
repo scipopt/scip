@@ -24,6 +24,7 @@
 #include <string.h>
 
 #include "scip/heur_guideddiving.h"
+#include "scip/pub_dive.h"
 
 #define HEUR_NAME             "guideddiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings in direction of incumbent solutions"
@@ -49,12 +50,15 @@
 #define DEFAULT_MAXDIVEAVGQUOT      0.0 /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
                                          *   where diving is performed (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
+#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15 /**< percentage of immediate domain changes during probing to trigger LP resolve */
+#define DEFAULT_LPSOLVEFREQ           1 /**< LP solve frequency for diving heuristics */
+#define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
+                                         *   more general constraint handler diving variable selection? */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_DIVESET*         diveset;            /**< diving settings */
 };
 
 /*
@@ -92,9 +96,6 @@ SCIP_DECL_HEURFREE(heurFreeGuideddiving) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   assert(heurdata->diveset != NULL);
-
-   SCIP_CALL( SCIPdivesetFree(&heurdata->diveset) );
 
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
@@ -118,9 +119,6 @@ SCIP_DECL_HEURINIT(heurInitGuideddiving) /*lint --e{715}*/
 
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
-
-   /* initialize data by resetting the diving settings */
-   SCIPresetDiveset(scip, heurdata->diveset);
 
    return SCIP_OKAY;
 }
@@ -175,7 +173,10 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   diveset = heurdata->diveset;
+   assert(SCIPheurGetNDivesets(heur) > 0);
+   assert(SCIPheurGetDivesets(heur) != NULL);
+   diveset = SCIPheurGetDivesets(heur)[0];
+   assert(diveset != NULL);
 
    /* call generic diving algorithm */
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
@@ -186,7 +187,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
 
 /* callbacks for diving */
 
-/** calculate score and preferred rounding direction for the candidate variable; the best candidate minimizes the
+/** calculate score and preferred rounding direction for the candidate variable; the best candidate maximizes the
  *  score
  */
 static
@@ -218,7 +219,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreGuideddiving)
       obj /= objnorm;
 
    /* calculate objective gain and fractionality for the selected rounding direction */
-   if( roundup )
+   if( *roundup )
    {
       candsfrac = 1.0 - candsfrac;
       objgain = obj * candsfrac;
@@ -230,17 +231,17 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreGuideddiving)
 
    /* penalize too small fractions */
    if( candsfrac < 0.01 )
-      candsfrac += 10.0;
+      candsfrac *= 0.1;
 
    /* prefer decisions on binary variables */
    if( !SCIPvarIsBinary(cand) )
-      candsfrac *= 1000.0;
+      candsfrac *= 0.1;
 
    /* prefer variables which cannot be rounded by scoring their fractionality */
    if( !(SCIPvarMayRoundDown(cand) || SCIPvarMayRoundUp(cand)) )
-      *score = candsfrac;
+      *score = -candsfrac;
    else
-      *score = 2.0 + objgain;
+      *score = -2.0 - objgain;
 
    return SCIP_OKAY;
 }
@@ -273,11 +274,10 @@ SCIP_RETCODE SCIPincludeHeurGuideddiving(
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitGuideddiving) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitGuideddiving) );
 
-   heurdata->diveset = NULL;
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
-   SCIP_CALL( SCIPcreateDiveset(scip, &heurdata->diveset, heur, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, 1.0, 1.0, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreGuideddiving) );
+   SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, 1.0, 1.0, DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
+         DEFAULT_MAXLPITEROFS, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, divesetGetScoreGuideddiving) );
 
    return SCIP_OKAY;
 }

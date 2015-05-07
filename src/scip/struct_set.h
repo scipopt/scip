@@ -218,10 +218,6 @@ struct SCIP_Set
    SCIP_Bool             history_allowmerge; /**< should variable histories be merged from sub-SCIPs whenever possible? */
    SCIP_Bool             history_allowtransfer; /**< should variable histories be transferred to initialize SCIP copies? */
 
-   /* heuristic settings */
-   SCIP_Real             heur_divestartfrac; /**< start percentage of diving candidates that should be fixed before LP resolve */
-   int                   heur_divelpsolvefreq; /**< LP solve frequency for diving heuristics */
-
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */
    SCIP_Real             limit_memory;       /**< maximal memory usage in MB */

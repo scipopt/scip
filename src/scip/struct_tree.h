@@ -179,6 +179,9 @@ struct SCIP_Tree
    SCIP_NODE**           siblings;           /**< array with siblings of the focus node */
    SCIP_Real*            childrenprio;       /**< array with node selection priorities of children */
    SCIP_Real*            siblingsprio;       /**< array with node selection priorities of siblings */
+   SCIP_VAR**            divebdchgvars[2];   /**< two arrays to store variables for branching */
+   SCIP_BRANCHDIR*       divebdchgdirs[2];   /**< arrays to hold the directions for diving */
+   SCIP_Real*            divebdchgvals[2];   /**< arrays to store bound change values for diving */
    int*                  pathnlpcols;        /**< array with number of LP columns for each problem in active path (except
                                               *   newly added columns of the focus node and the current probing node) */
    int*                  pathnlprows;        /**< array with number of LP rows for each problem in active path (except
@@ -187,6 +190,8 @@ struct SCIP_Tree
    SCIP_LPINORMS*        probinglpinorms;    /**< LP pricing norms information before probing started */
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
    SCIP_Longint          focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
+   int                   divebdchgsize[2];   /**< holds the two sizes of the dive bound change information */
+   int                   ndivebdchanges[2];  /**< current number of stored dive bound changes for the next depth */
    int                   pendingbdchgssize;  /**< size of pendingbdchgs array */
    int                   npendingbdchgs;     /**< number of pending bound changes */
    int                   childrensize;       /**< available slots in children vector */

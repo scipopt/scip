@@ -74,6 +74,7 @@
 #include "scip/heur_coefdiving.h"
 #include "scip/heur_crossover.h"
 #include "scip/heur_dins.h"
+#include "scip/heur_distributiondiving.h"
 #include "scip/heur_dualval.h"
 #include "scip/heur_feaspump.h"
 #include "scip/heur_fixandinfer.h"
