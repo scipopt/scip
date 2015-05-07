@@ -6333,17 +6333,7 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
       /* possibly generate rows if not yet done */
       if ( consdata->rowub == NULL || consdata->rowlb == NULL )
       {
-         SCIP_ROW* rowlb = NULL;
-         SCIP_ROW* rowub = NULL;
-
-         SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], FALSE, TRUE, TRUE, FALSE, &rowlb, &rowub) );
-
-         /* if row(s) should be globally stored in constraint data */
-         if ( rowlb != NULL && consdata->rowlb == NULL )
-            consdata->rowlb = rowlb;
-
-         if ( rowub != NULL && consdata->rowub == NULL )
-            consdata->rowub = rowub;
+         SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], FALSE, TRUE, TRUE, FALSE, &consdata->rowlb, &consdata->rowub) );
       }
 
       /* put corresponding rows into LP */
