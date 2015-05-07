@@ -6468,8 +6468,8 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIndicator)
    if( *success )
    {
       /* if the diving score voted for fixing the best variable to 1.0, we add this as the preferred bound change */
-      SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, bestvar, SCIP_BRANCHDIR_UPWARDS, 1.0, bestvarroundup) );
-      SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, bestvar, SCIP_BRANCHDIR_DOWNWARDS, 0.0, ! bestvarroundup) );
+      SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_UPWARDS, 1.0, bestvarroundup) );
+      SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_DOWNWARDS, 0.0, ! bestvarroundup) );
    }
 
    return SCIP_OKAY;

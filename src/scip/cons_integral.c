@@ -234,9 +234,9 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIntegral)
       solval = SCIPgetSolVal(scip, sol, vars[bestcandidx]);
 
       /* if we want to round up the best candidate, it is added as the preferred bound change */
-      SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, vars[bestcandidx], SCIP_BRANCHDIR_UPWARDS,
+      SCIP_CALL( SCIPaddDiveBoundChange(scip, vars[bestcandidx], SCIP_BRANCHDIR_UPWARDS,
             SCIPceil(scip, solval), roundup) );
-      SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, vars[bestcandidx], SCIP_BRANCHDIR_DOWNWARDS,
+      SCIP_CALL( SCIPaddDiveBoundChange(scip, vars[bestcandidx], SCIP_BRANCHDIR_DOWNWARDS,
             SCIPfloor(scip, solval), ! roundup) );
    }
 

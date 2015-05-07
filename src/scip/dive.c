@@ -119,7 +119,7 @@ SCIP_RETCODE selectNextDiving(
       bestscore = SCIP_REAL_MIN;
       bestcandidx = -1;
 
-      SCIPdivesetClearBoundChanges(diveset);
+      SCIPclearDiveBoundChanges(scip);
       /* todo calculate number of LP candidates whose local bounds do not agree with their last LP solution value */
       /* search for the candidate that maximizes the dive set score function and whose solution value is still feasible */
       for (c = 0; c < nlpcands; ++c)
@@ -151,9 +151,9 @@ SCIP_RETCODE selectNextDiving(
       if( *enfosuccess )
       {
          /* if we want to round up the best candidate, it is added as the preferred bound change */
-         SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, lpcands[bestcandidx], SCIP_BRANCHDIR_UPWARDS,
+         SCIP_CALL( SCIPaddDiveBoundChange(scip, lpcands[bestcandidx], SCIP_BRANCHDIR_UPWARDS,
                SCIPceil(scip, lpcandssol[bestcandidx]), lpcandroundup[bestcandidx]) );
-         SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, lpcands[bestcandidx], SCIP_BRANCHDIR_DOWNWARDS,
+         SCIP_CALL( SCIPaddDiveBoundChange(scip, lpcands[bestcandidx], SCIP_BRANCHDIR_DOWNWARDS,
                SCIPfloor(scip, lpcandssol[bestcandidx]), ! lpcandroundup[bestcandidx]) );
       }
    }
@@ -535,7 +535,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
             nbdchanges = 0;
             /* get the bound change information stored in the dive set */
-            SCIPdivesetGetDiveBoundChangeData(diveset, &bdchgvars, &bdchgdirs, &bdchgvals, &nbdchanges, !backtracked);
+            SCIPgetDiveBoundChangeData(scip, &bdchgvars, &bdchgdirs, &bdchgvals, &nbdchanges, !backtracked);
 
             assert(nbdchanges > 0);
             assert(bdchgvars != NULL);

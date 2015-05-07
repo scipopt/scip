@@ -40,15 +40,6 @@
 extern "C" {
 #endif
 
-/**< represents different methods for a dive set to explore the next children */
-enum SCIP_DiveType
-{
-	SCIP_DIVETYPE_NONE        = 0,                /**< no method specified */
-	SCIP_DIVETYPE_INTEGRALITY = 1,                /**< use branching on a variable by shrinking the domain in the child nodes */
-	SCIP_DIVETYPE_SOS1VARIABLE = 3                /**< branch on a variable solution value by exploiting special-ordered set conflict structure */
-};
-typedef enum SCIP_DiveType SCIP_DIVETYPE;
-
 typedef struct SCIP_Heur SCIP_HEUR;               /**< primal heuristic */
 typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal heuristic data */
 typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all diving heuristics */
