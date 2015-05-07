@@ -275,7 +275,7 @@ void SCIPvarCalcDistributionParameters(
  *  random variable x takes a value between -infinity and parameter \p value.
  *
  *  The distribution is given by the respective mean and deviation. This implementation
- *  uses the error function erf().
+ *  uses the error function SCIPerf().
  */
 SCIP_Real SCIPcalcCumulativeDistribution(
    SCIP*                 scip,               /**< current SCIP */
@@ -304,13 +304,13 @@ SCIP_Real SCIPcalcCumulativeDistribution(
    }
    assert( std != 0.0 ); /* for lint */
 
-   /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for erf() function */
+   /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for SCIPerf() function */
    normvalue = (value - mean)/(std * SQRTOFTWO);
 
    SCIPdebugMessage(" Normalized value %g = ( %g - %g ) / (%g * 1.4142136)\n", normvalue, value, mean, std);
 
    /* calculate the cumulative distribution function for normvalue. For negative normvalues, we negate
-    * the normvalue and use the oddness of the erf()-function; special treatment for values close to zero.
+    * the normvalue and use the oddness of the SCIPerf()-function; special treatment for values close to zero.
     */
    if( SCIPisFeasZero(scip, normvalue) )
       return .5;
@@ -318,14 +318,14 @@ SCIP_Real SCIPcalcCumulativeDistribution(
    {
       SCIP_Real erfresult;
 
-      erfresult = erf(normvalue);
+      erfresult = SCIPerf(normvalue);
       return  erfresult / 2.0 + 0.5;
    }
    else
    {
       SCIP_Real erfresult;
 
-      erfresult = erf(-normvalue);
+      erfresult = SCIPerf(-normvalue);
 
       return 0.5 - erfresult / 2.0;
    }
@@ -1115,7 +1115,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, NULL, &nlpcands, NULL) );
 
    if( nlpcands == 0 )
       return SCIP_OKAY;

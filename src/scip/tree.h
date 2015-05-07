@@ -37,6 +37,7 @@
 #include "scip/type_tree.h"
 #include "scip/type_branch.h"
 #include "scip/type_prop.h"
+#include "scip/type_implics.h"
 #include "scip/pub_tree.h"
 
 #ifndef NDEBUG
@@ -109,6 +110,7 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the given node can be cut off */
    SCIP_Bool             exitsolve           /**< are we in exitsolve stage, so we only need to loose the children */
    );
@@ -180,6 +182,7 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
    SCIP_Real             newbound,           /**< new value for bound */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
@@ -204,6 +207,7 @@ SCIP_RETCODE SCIPnodeAddBoundchg(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
    SCIP_Real             newbound,           /**< new value for bound */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
@@ -301,6 +305,7 @@ SCIP_RETCODE SCIPnodePropagateImplics(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 
@@ -368,7 +373,8 @@ SCIP_RETCODE SCIPtreeCreatePresolvingRoot(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
 /** frees the temporary presolving root and resets tree data structure */
@@ -386,7 +392,8 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
 /** returns the node selector associated with the given node priority queue */
@@ -638,9 +645,11 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_PRIMAL*          primal,             /**< primal data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    int                   probingdepth        /**< probing depth of the node in the probing path that should be reactivated */
    );
 
@@ -657,9 +666,11 @@ SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_PRIMAL*          primal,             /**< primal LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
 
@@ -778,6 +789,18 @@ SCIP_NODE* SCIPtreeGetRootNode(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
+/** returns whether we are in probing and the objective value of at least one column was changed */
+extern
+SCIP_Bool SCIPtreeProbingObjChanged(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
+/** marks the current probing node to have a changed objective function */
+extern
+void SCIPtreeMarkProbingObjChanged(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -805,6 +828,8 @@ SCIP_NODE* SCIPtreeGetRootNode(
 #define SCIPtreeHasCurrentNodeLP(tree)  (SCIPtreeProbing(tree) ? (tree)->probingnodehaslp : SCIPtreeHasFocusNodeLP(tree))
 #define SCIPtreeGetEffectiveRootDepth(tree) ((tree)->effectiverootdepth)
 #define SCIPtreeGetRootNode(tree)       ((tree)->root)
+#define SCIPtreeProbingObjChanged(tree) ((tree)->probingobjchanged)
+#define SCIPtreeMarkProbingObjChanged(tree) ((tree)->probingobjchanged = TRUE)
 
 #endif
 

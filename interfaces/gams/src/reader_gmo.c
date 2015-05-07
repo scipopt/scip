@@ -2344,6 +2344,7 @@ SCIP_RETCODE writeGmoSolution(
             int origmaxorigsol;
             int orignlpverblevel;
             int origmaxpresolrounds;
+            char origsolvetracefile[SCIP_MAXSTRLEN];
             /* SCIP_Real origfeastol; */
             SCIP_Bool resolvenlp;
             SCIP_Real** solvals;
@@ -2388,6 +2389,8 @@ SCIP_RETCODE writeGmoSolution(
             /* adapt some parameter values for possible resolve's */
             if( resolvenlp )
             {
+               char* tmp;
+
                /* don't store solutions in original problem, so they don't get in a way when transforming for resolve */
                SCIP_CALL( SCIPgetIntParam(scip, "limits/maxorigsol", &origmaxorigsol) );
                SCIP_CALL( SCIPsetIntParam(scip, "limits/maxorigsol", 0) );
@@ -2400,6 +2403,10 @@ SCIP_RETCODE writeGmoSolution(
 
                SCIP_CALL( SCIPgetIntParam(scip, "heuristics/subnlp/maxpresolverounds", &origmaxpresolrounds) );
                SCIP_CALL( SCIPsetIntParam(scip, "heuristics/subnlp/maxpresolverounds", 0) );
+
+               SCIP_CALL( SCIPgetStringParam(scip, "gams/solvetrace/file", &tmp) );
+               strcpy(origsolvetracefile, tmp);
+               SCIP_CALL( SCIPsetStringParam(scip, "gams/solvetrace/file", "") );
             }
 
             SCIP_CALL( SCIPcreateClock(scip, &resolveclock) );
@@ -2482,6 +2489,7 @@ SCIP_RETCODE writeGmoSolution(
                SCIP_CALL( SCIPsetIntParam(scip, "heuristics/subnlp/nlpverblevel", orignlpverblevel) ); /*lint !e644*/
                /* SCIP_CALL( SCIPsetRealParam(scip, "numerics/feastol", origfeastol) ); */
                SCIP_CALL( SCIPsetIntParam(scip, "heuristics/subnlp/maxpresolverounds", origmaxpresolrounds) ); /*lint !e644*/
+               SCIP_CALL( SCIPsetStringParam(scip, "gams/solvetrace/file", origsolvetracefile) );
             }
 
             for( s = 0; s < nsols; ++s )

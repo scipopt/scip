@@ -13,39 +13,31 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_visual.h
- * @brief  datastructures for output for visualization tools (VBC, BAK)
- * @author Tobias Achterberg
- * @author Marc Pfetsch
+/**@file   presol_stuffing.h
+ * @brief  fix singleton continuous variables
+ * @author Dieter Weninger
+ *
+ * Investigate singleton continuous variables if one can be fixed at a bound.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_STRUCT_VISUAL_H__
-#define __SCIP_STRUCT_VISUAL_H__
+#ifndef __SCIP_PRESOL_STUFFING_H__
+#define __SCIP_PRESOL_STUFFING_H__
 
-#include <stdio.h>
 
-#include "scip/def.h"
-#include "scip/type_visual.h"
-#include "scip/type_misc.h"
+#include "scip/scip.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** visual data structure */
-struct SCIP_Visual
-{
-   FILE*                 vbcfile;            /**< file to store VBC information */
-   FILE*                 bakfile;            /**< file to store BAK information */
-   SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler to use */
-   SCIP_HASHMAP*         nodenum;            /**< hash map for mapping nodes to node numbers */
-   SCIP_Longint          timestep;           /**< time step counter for non real time output */
-   SCIP_NODE*            lastnode;           /**< last node that was colored */
-   SCIP_VBCCOLOR         lastcolor;          /**< last color that was used */
-   SCIP_Bool             userealtime;        /**< should the real solving time be used instead of a time step counter? */
-};
+/** creates the stuffing presolver and includes it in SCIP */
+EXTERN
+SCIP_RETCODE SCIPincludePresolStuffing(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 #ifdef __cplusplus
 }

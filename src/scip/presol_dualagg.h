@@ -13,39 +13,43 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_visual.h
- * @brief  datastructures for output for visualization tools (VBC, BAK)
- * @author Tobias Achterberg
- * @author Marc Pfetsch
+/**@file   presol_dualagg.h
+ * @brief  aggregate variables by dual arguments
+ * @author Dieter Weninger
+ *
+ * This presolver looks for variables which could not be handled by
+ * duality fixing because of one up-/downlock.
+ * If the constraint which delivers the up-/downlock has
+ * a specific structure, we can aggregate the corresponding variable.
+ *
+ * In more detail (for a minimization problem and the case of only one uplock):
+ *
+ * Given a variable x_i with c_i <= 0 and only one up lock (originating from a constraint c),
+ * we are looking for a binary variable x_j such that:
+ * 1) if x_j = 0, constraint c can only be fulfilled for x_i = lb_i, and
+ * 2) if x_j = 1, constraint c becomes redundant and x_i can be dual-fixed to its upper bound ub_i
+ * (or vice versa). Then we can perform the following aggregation: x_i = lb_i + x_j (ub_i - lb_i).
+ *
+ * Similar arguments apply for the case of only one down lock and c_i >= 0.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_STRUCT_VISUAL_H__
-#define __SCIP_STRUCT_VISUAL_H__
+#ifndef __SCIP_PRESOL_DUALAGG_H__
+#define __SCIP_PRESOL_DUALAGG_H__
 
-#include <stdio.h>
 
-#include "scip/def.h"
-#include "scip/type_visual.h"
-#include "scip/type_misc.h"
+#include "scip/scip.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** visual data structure */
-struct SCIP_Visual
-{
-   FILE*                 vbcfile;            /**< file to store VBC information */
-   FILE*                 bakfile;            /**< file to store BAK information */
-   SCIP_MESSAGEHDLR*     messagehdlr;        /**< message handler to use */
-   SCIP_HASHMAP*         nodenum;            /**< hash map for mapping nodes to node numbers */
-   SCIP_Longint          timestep;           /**< time step counter for non real time output */
-   SCIP_NODE*            lastnode;           /**< last node that was colored */
-   SCIP_VBCCOLOR         lastcolor;          /**< last color that was used */
-   SCIP_Bool             userealtime;        /**< should the real solving time be used instead of a time step counter? */
-};
+/** creates the dualagg presolver and includes it in SCIP */
+EXTERN
+SCIP_RETCODE SCIPincludePresolDualagg(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 #ifdef __cplusplus
 }

@@ -298,6 +298,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_inference.o \
 			scip/branch_leastinf.o \
 			scip/branch_mostinf.o \
+			scip/branch_multaggr.o \
 			scip/branch_pscost.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
@@ -330,6 +331,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/dialog_default.o \
 			scip/disp_default.o \
 			scip/heur_actconsdiving.o \
+			scip/heur_bound.o \
 			scip/heur_clique.o \
 			scip/heur_coefdiving.o \
 			scip/heur_crossover.o \
@@ -382,6 +384,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_convertinttobin.o \
 			scip/presol_domcol.o\
 			scip/presol_implfree.o\
+			scip/presol_dualagg.o\
 			scip/presol_dualinfer.o\
 			scip/presol_gateextraction.o \
 			scip/presol_implics.o \
@@ -389,6 +392,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_redvub.o \
 			scip/presol_trivial.o \
 			scip/presol_tworowbnd.o \
+			scip/presol_stuffing.o \
 			scip/prop_dualfix.o \
 			scip/prop_genvbounds.o \
 			scip/prop_obbt.o \
@@ -649,8 +653,7 @@ check:		test
 .PHONY: test
 test:
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND) $(SETCUTOFF);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS);
 
 .PHONY: testcount
 testcount:
@@ -733,7 +736,7 @@ endif
 .PHONY: testgams
 testgams:
 		cd check; \
-		$(SHELL) ./check_gamscluster.sh $(TEST) $(TESTGAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy "$(CLIENTTMPDIR)" 1 true;
+		$(SHELL) ./check_gamscluster.sh $(TEST) $(TESTGAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy "$(CLIENTTMPDIR)" 1 true $(SETCUTOFF);
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@

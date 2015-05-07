@@ -408,6 +408,14 @@ SCIP_RETCODE calcActivityBounds(
                matrix->minactivity[row] += val * matrix->ub[col];
          }
       }
+
+      /* consider infinite bound contributions for the activities */
+      if( matrix->maxactivityneginf[row] + matrix->maxactivityposinf[row] > 0 )
+         matrix->maxactivity[row] = SCIPinfinity(scip);
+
+      if( matrix->minactivityneginf[row] + matrix->minactivityposinf[row] > 0 )
+         matrix->minactivity[row] = -SCIPinfinity(scip);
+
    }
 
    return SCIP_OKAY;

@@ -710,7 +710,7 @@ void checkRowObjprod(
    for( c = row->len - 1; c >= 0; --c )
    {
       if( cols[c]->lppos >= 0 )
-         objprod += row->vals[c] * cols[c]->obj;
+         objprod += row->vals[c] * cols[c]->unchangedobj;
    }
 
    assert(ABS(objprod - row->objprod) < 1e-06 * MAX(1.0,objprod));
@@ -1883,7 +1883,7 @@ void rowAddNorms(
       row->sumnorm += absval;
 
       /* update objective function scalar product */
-      row->objprod += val * col->obj;
+      row->objprod += val * col->unchangedobj;
    }
 
    if( updateidxvals )
@@ -1962,7 +1962,7 @@ void rowDelNorms(
       row->sumnorm = MAX(row->sumnorm, 0.0);
 
       /* update objective function scalar product */
-      row->objprod -= val * col->obj;
+      row->objprod -= val * col->unchangedobj;
    }
 
    if( updateval )
@@ -3129,6 +3129,7 @@ SCIP_RETCODE SCIPcolCreate(
 
    (*col)->var = var;
    (*col)->obj = SCIPvarGetObj(var);
+   (*col)->unchangedobj = SCIPvarGetUnchangedObj(var);
    (*col)->lb = SCIPvarGetLbLocal(var);
    (*col)->ub = SCIPvarGetUbLocal(var);
    (*col)->flushedobj = 0.0;
@@ -3440,6 +3441,65 @@ SCIP_RETCODE insertColChgcols(
    return SCIP_OKAY;
 }
 
+/** Is the new value reliable or may we have cancellation?
+ *
+ *  @note: Here we only consider cancellations which can occur during decreasing the oldvalue to newvalue; not the
+ *  cancellations which can occur during increasing the oldvalue to the newvalue
+ */
+static
+SCIP_Bool isNewValueUnreliable(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             newvalue,           /**< new value */
+   SCIP_Real             oldvalue            /**< old reliable value */
+   )
+{
+   SCIP_Real quotient;
+
+   assert(set != NULL);
+   assert(oldvalue < SCIP_INVALID);
+
+   quotient = (REALABS(newvalue)+1.0) / (REALABS(oldvalue) + 1.0);
+
+   return SCIPsetIsZero(set, quotient);
+}
+
+/** update norms of objective function vector */
+static
+void lpUpdateObjNorms(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             oldobj,             /**< old objective value of variable */
+   SCIP_Real             newobj              /**< new objective value of variable */
+   )
+{
+   if( REALABS(newobj) != REALABS(oldobj) )   /*lint !e777*/
+   {
+      if( !lp->objsqrnormunreliable )
+      {
+         SCIP_Real oldvalue;
+
+         oldvalue = lp->objsqrnorm;
+         lp->objsqrnorm += SQR(newobj) - SQR(oldobj);
+
+         /* due to numerical cancellations, we recalculate lp->objsqrnorm using all variables */
+         if( SCIPsetIsLT(set, lp->objsqrnorm, 0.0) || isNewValueUnreliable(set, lp->objsqrnorm, oldvalue) )
+            lp->objsqrnormunreliable = TRUE;
+         else
+         {
+            assert(SCIPsetIsGE(set, lp->objsqrnorm, 0.0));
+
+            /* due to numerical troubles it still can appear that lp->objsqrnorm is a little bit smaller than 0 */
+            lp->objsqrnorm = MAX(lp->objsqrnorm, 0.0);
+
+            assert(lp->objsqrnorm >= 0.0);
+         }
+      }
+
+      lp->objsumnorm += REALABS(newobj) - REALABS(oldobj);
+      lp->objsumnorm = MAX(lp->objsumnorm, 0.0);
+   }
+}
+
 /** changes objective value of column */
 SCIP_RETCODE SCIPcolChgObj(
    SCIP_COL*             col,                /**< LP column to change */
@@ -3483,6 +3543,18 @@ SCIP_RETCODE SCIPcolChgObj(
 
    /* store new objective function value */
    col->obj = newobj;
+
+   /* update original objective value, as long as we are not in diving or probing and changed objective values */
+   if( !lp->divingobjchg )
+   {
+      SCIP_Real oldobj = col->unchangedobj;
+
+      assert(SCIPsetIsEQ(set, newobj, SCIPvarGetUnchangedObj(col->var)));
+      col->unchangedobj = newobj;
+
+      /* update the objective function vector norms */
+      lpUpdateObjNorms(lp, set, oldobj, newobj);
+   }
 
    return SCIP_OKAY;
 }
@@ -4824,6 +4896,7 @@ SCIP_RETCODE SCIProwCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp,                 /**< current LP data */
    const char*           name,               /**< name of row */
    int                   len,                /**< number of nonzeros in the row */
    SCIP_COL**            cols,               /**< array with columns of row entries */
@@ -8936,6 +9009,9 @@ SCIP_RETCODE SCIPlpAddCol(
    /* update column arrays of all linked rows */
    colUpdateAddLP(col, set);
 
+   /* update the objective function vector norms */
+   lpUpdateObjNorms(lp, set, 0.0, col->unchangedobj);
+
    checkLinks(lp);
 
    return SCIP_OKAY;
@@ -9105,6 +9181,9 @@ SCIP_RETCODE SCIPlpShrinkCols(
 
          /* update column arrays of all linked rows */
          colUpdateDelLP(col, set);
+
+         /* update the objective function vector norms */
+         lpUpdateObjNorms(lp, set, col->unchangedobj, 0.0);
       }
       assert(lp->ncols == newncols);
       lp->lpifirstchgcol = MIN(lp->lpifirstchgcol, newncols);
@@ -13531,28 +13610,22 @@ SCIP_RETCODE lpAlgorithm(
    assert(lperror != NULL);
 
    /* check if a time limit is set, and set time limit for LP solver accordingly */
+   lptimelimit = SCIPsetInfinity(set);
    if( set->istimelimitfinite )
-   {
       lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
-      success = FALSE;
-      if( lptimelimit > 0.0 )
-         SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_LPTILIM, lptimelimit, &success) );
 
-      if( lptimelimit <= 0.0 || !success )
-      {
-         SCIPdebugMessage("time limit of %f seconds could not be set\n", lptimelimit);
-         *lperror = ((lptimelimit > 0.0) ? TRUE : FALSE);
-         *timelimit = TRUE;
-         return SCIP_OKAY;
-      }
-      SCIPdebugMessage("calling LP algorithm <%s> with a time limit of %f seconds\n", lpalgoName(lpalgo), lptimelimit);
-   }
-#ifndef NDEBUG
-   else
+   success = FALSE;
+   if( lptimelimit > 0.0 )
+      SCIP_CALL( lpSetRealpar(lp, SCIP_LPPAR_LPTILIM, lptimelimit, &success) );
+
+   if( lptimelimit <= 0.0 || !success )
    {
-      SCIPdebugMessage("calling LP algorithm <%s> (with no time limit)\n", lpalgoName(lpalgo));
+      SCIPdebugMessage("time limit of %f seconds could not be set\n", lptimelimit);
+      *lperror = ((lptimelimit > 0.0) ? TRUE : FALSE);
+      *timelimit = TRUE;
+      return SCIP_OKAY;
    }
-#endif
+   SCIPdebugMessage("calling LP algorithm <%s> with a time limit of %f seconds\n", lpalgoName(lpalgo), lptimelimit);
 
    /* call appropriate LP algorithm */
    switch( lpalgo )
@@ -14911,6 +14984,8 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       case SCIP_LPSOLSTAT_TIMELIMIT:
          SCIPdebugMessage(" -> LP time limit exceeded\n");
 
+         /* make sure that we evaluate the time limit exactly in order to avoid erroneous warning */
+         stat->nclockskipsleft = 0;
          if( !SCIPsolveIsStopped(set, stat, FALSE) )
          {
             SCIPmessagePrintWarning(messagehdlr, "LP solver reached time limit, but SCIP time limit is not exceeded yet; "
@@ -15043,6 +15118,72 @@ void SCIPlpInvalidateRootObjval(
 
    lp->rootlpobjval = SCIP_INVALID;
    lp->rootlooseobjval = SCIP_INVALID;
+}
+
+/** recomputes local and global pseudo objective values */
+void SCIPlpRecomputeLocalAndGlobalPseudoObjval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   SCIP_VAR** vars;
+   int nvars;
+   int v;
+
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+
+   vars = prob->vars;
+   nvars = prob->nvars;
+
+   lp->glbpseudoobjvalinf = 0;
+   lp->glbpseudoobjval = 0.0;
+
+   lp->pseudoobjvalinf = 0;
+   lp->pseudoobjval = 0.0;
+
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_Real obj = SCIPvarGetObj(vars[v]);
+
+      if( SCIPsetIsPositive(set, obj) )
+      {
+         /* update the global pseudo objective value */
+         if( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(vars[v])) )
+            ++(lp->glbpseudoobjvalinf);
+         else
+            lp->glbpseudoobjval += obj * SCIPvarGetLbGlobal(vars[v]);
+
+         /* update the local pseudo objective value */
+         if( SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(vars[v])) )
+            ++(lp->pseudoobjvalinf);
+         else
+            lp->pseudoobjval += obj * SCIPvarGetLbLocal(vars[v]);
+      }
+
+      if( SCIPsetIsNegative(set, obj) )
+      {
+         /* update the global pseudo objective value */
+         if( SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(vars[v])) )
+            ++(lp->glbpseudoobjvalinf);
+         else
+            lp->glbpseudoobjval += obj * SCIPvarGetUbGlobal(vars[v]);
+
+         /* update the local pseudo objective value */
+         if( SCIPsetIsInfinity(set, SCIPvarGetUbLocal(vars[v])) )
+            ++(lp->pseudoobjvalinf);
+         else
+            lp->pseudoobjval += obj * SCIPvarGetUbLocal(vars[v]);
+      }
+   }
+
+   /* the recomputed values are reliable */
+   lp->relglbpseudoobjval = lp->glbpseudoobjval;
+   lp->glbpseudoobjvalid = TRUE;
+   lp->relpseudoobjval = lp->pseudoobjval;
+   lp->pseudoobjvalid = TRUE;
 }
 
 /** gets the global pseudo objective value; that is all variables set to their best (w.r.t. the objective function)
@@ -15198,28 +15339,6 @@ SCIP_Real SCIPlpGetModifiedProvedPseudoObjval(
       return -SCIPsetInfinity(set);
    else
       return pseudoobjval;
-}
-
-/** Is the new value reliable or may we have cancellation?  
- *
- *  @note: Here we only consider cancellations which can occur during decreasing the oldvalue to newvalue; not the
- *  cancellations which can occur during increasing the oldvalue to the newvalue
- */
-static
-SCIP_Bool isNewValueUnreliable(
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             newvalue,           /**< new value */
-   SCIP_Real             oldvalue            /**< old reliable value */
-   )
-{
-   SCIP_Real quotient;
-
-   assert(set != NULL);
-   assert(oldvalue < SCIP_INVALID);
-
-   quotient = (REALABS(newvalue)+1.0) / (REALABS(oldvalue) + 1.0);
-
-   return SCIPsetIsZero(set, quotient);
 }
 
 /** compute the objective delta due the new objective coefficient */
@@ -15433,43 +15552,6 @@ void getObjvalDeltaUb(
    {
       (*deltainf) = 0;
       (*deltaval) = obj * (newub - oldub);
-   }
-}
-
-/** update norms of objective function vector */
-static
-void lpUpdateObjNorms(
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_Real             oldobj,             /**< old objective value of variable */
-   SCIP_Real             newobj              /**< new objective value of variable */
-   )
-{
-   if( REALABS(newobj) != REALABS(oldobj) )   /*lint !e777*/
-   {
-      if( !lp->objsqrnormunreliable )
-      {
-         SCIP_Real oldvalue;
-
-         oldvalue = lp->objsqrnorm;
-         lp->objsqrnorm += SQR(newobj) - SQR(oldobj);
-
-         /* due to numerical cancellations, we recalculate lp->objsqrnorm using all variables */
-         if( SCIPsetIsLT(set, lp->objsqrnorm, 0.0) || isNewValueUnreliable(set, lp->objsqrnorm, oldvalue) )
-            lp->objsqrnormunreliable = TRUE;
-         else
-         {
-            assert(SCIPsetIsGE(set, lp->objsqrnorm, 0.0));
-
-            /* due to numerical troubles it still can appear that lp->objsqrnorm is a little bit smaller than 0 */
-            lp->objsqrnorm = MAX(lp->objsqrnorm, 0.0);
-
-            assert(lp->objsqrnorm >= 0.0);
-         }
-      }
-
-      lp->objsumnorm += REALABS(newobj) - REALABS(oldobj);
-      lp->objsumnorm = MAX(lp->objsumnorm, 0.0);
    }
 }
 
@@ -15702,17 +15784,20 @@ SCIP_RETCODE SCIPlpUpdateVarObj(
          /* the objective coefficient can only be changed during presolving, that implies that the global and local
           * domain of the variable are the same
           */
-         assert(SCIPsetIsEQ(set, SCIPvarGetLbGlobal(var), SCIPvarGetLbLocal(var)));
-         assert(SCIPsetIsEQ(set, SCIPvarGetUbGlobal(var), SCIPvarGetUbLocal(var)));
+         assert(lp->probing || SCIPsetIsEQ(set, SCIPvarGetLbGlobal(var), SCIPvarGetLbLocal(var)));
+         assert(lp->probing || SCIPsetIsEQ(set, SCIPvarGetUbGlobal(var), SCIPvarGetUbLocal(var)));
 
          /* compute the pseudo objective delta due the new objective coefficient */
          getObjvalDeltaObj(set, oldobj, newobj, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), &deltaval, &deltainf);
 
-         /* update the pseudo and loose objective values */
-         lpUpdateObjval(lp, set, var, deltaval, deltainf, TRUE, FALSE, TRUE);
+         /* update the local pseudo objective value */
+         lpUpdateObjval(lp, set, var, deltaval, deltainf, TRUE, FALSE, FALSE);
 
-         /* update the objective function vector norms */
-         lpUpdateObjNorms(lp, set, oldobj, newobj);
+         /* compute the pseudo objective delta due the new objective coefficient */
+         getObjvalDeltaObj(set, oldobj, newobj, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var), &deltaval, &deltainf);
+
+         /* update the global pseudo objective value */
+         lpUpdateObjval(lp, set, var, deltaval, deltainf, FALSE, FALSE, TRUE);
       }
    }
 
@@ -16861,9 +16946,12 @@ SCIP_RETCODE lpDelColset(
       {
          assert(col->removable);
 
-         /* mark column to be deleted from the LPI and update column arrays of all linked rows */
+         /* mark column to be deleted from the LPI, update column arrays of all linked rows, and update the objective
+          * function vector norms
+          */
          markColDeleted(col);
          colUpdateDelLP(col, set);
+         lpUpdateObjNorms(lp, set, col->unchangedobj, 0.0);
          col->lpdepth = -1;
 
          lp->cols[c] = NULL;
@@ -18455,6 +18543,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIPlpDiving
 #undef SCIPlpDivingObjChanged
 #undef SCIPlpMarkDivingObjChanged
+#undef SCIPlpUnmarkDivingObjChanged
 
 /** gets objective value of column */
 SCIP_Real SCIPcolGetObj(
@@ -19130,7 +19219,7 @@ void SCIPlpRecalculateObjSqrNorm(
 
       for( c = lp->ncols - 1; c >= 0; --c )
       {
-         lp->objsqrnorm += SQR(cols[c]->obj);  /*lint !e613*/
+         lp->objsqrnorm += SQR(cols[c]->unchangedobj);  /*lint !e613*/
       }
       assert(SCIPsetIsGE(set, lp->objsqrnorm, 0.0));
 
@@ -19289,9 +19378,20 @@ void SCIPlpMarkDivingObjChanged(
    )
 {
    assert(lp != NULL);
-   assert(lp->diving);
+   assert(lp->diving || lp->probing);
 
    lp->divingobjchg = TRUE;
+}
+
+/** marks the diving LP to not have a changed objective function anymore */
+void SCIPlpUnmarkDivingObjChanged(
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->diving || lp->probing);
+
+   lp->divingobjchg = FALSE;
 }
 
 /** compute relative interior point

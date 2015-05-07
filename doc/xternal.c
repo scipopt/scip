@@ -887,6 +887,8 @@
  *
  * If are using SCIP as a black box solver, here you will find some tips and tricks what you can do.
  *
+ * @section TUTORIAL_OPTIMIZE Read and optimize a problem instance
+ *
  * First of all, we need a SCIP binary and an example problem file to work with.  Therefore, you can either download the
  * SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
  * precompiled binary and an example problem separately. SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, OSiL, and other formats (see \ref FILEREADERS).
@@ -898,7 +900,8 @@
  * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.mps.
  *
  * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/#download">SCIP download
- * section</a> and download an appropriate binary for your operating system. To follow this tutorial, we recommend downloading the instance
+ * section</a> and download an appropriate binary for your operating system. The SCIP source code distribution already comes with
+ * the example problem instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
  * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
  * the <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
  *
@@ -931,7 +934,7 @@
  * solution" to show the nonzero variables of the best found solution.
 
  * \code
- * SCIP> read check/instances/MIP/stein27.mps
+ * SCIP> read check/instances/MIP/stein27.fzn
  * original problem has 27 variables (27 bin, 0 int, 0 impl, 0 cont) and 118 constraints
  * SCIP> optimize
  *
@@ -998,6 +1001,40 @@
  * solutions. The optimal objective value always has to be 18, but the solution vector may differ. If you are interested
  * in this behavior, which is called "performance variability", you may have a look at the MIPLIB2010 paper.
  *
+ * @section TUTORIAL_FILEIO Writing problems and solutions to a file
+
+ * SCIP can also write information to files. E.g., we could store the incumbent solution to a file, or output the
+ * problem instance in another file format (the LP format is much more human readable than the MPS format, for example).
+ *
+ * \code
+ * SCIP> write solution stein27.sol
+ *
+ * written solution information to file <stein27.sol>
+ *
+ * SCIP> write problem stein27.lp
+ * written original problem to file <stein27.lp>
+ *
+ * SCIP> q
+ * ...
+ * \endcode
+ *
+ * Passing starting solutions can increase the solving performance so that SCIP does not need to construct an initial feasible solution
+ * by itself. After reading the problem instance, use the "read" command again, this time with a file containing solution information.
+ * Solutions can be specified in a raw or xml-format and must have the file extension ".sol", see the documentation of the
+ * <a href="http://scip.zib.de/doc/html/reader__sol_8h.php">solution reader of SCIP</a> for further information.
+ *
+ * Customized settings are not written or read with the "write" and "read" commands, but with the three commands
+ *
+ * \code
+ * SCIP> set save _settingsfilename_
+ * SCIP> set diffsave _settingsfilename_
+ * SCIP> set load _settingsfilename_
+ * \endcode
+ *
+ * See the section on parameters \ref TUTORIAL_PARAMETERS for more information.
+ *
+ * @section TUTORIAL_STATISTICS Displaying detailed solving statistics
+ *
  * We might want to have some more information now. Which were the heuristics that found the solutions? What plugins
  *  were called during the solutions process and how much time did they spend? How did the instance that we were solving
  *  look?  Information on certain plugin types (e.g., heuristics, branching rules, separators) we get by
@@ -1034,6 +1071,8 @@
  * several hundred cuts (of which only a few entered the LP). The oneopt heuristic found one solution in 4 calls,
  * whereas coefdiving failed all 57 times it was called. All the LPs have been solved with the dual simplex algorithm, which
  * took about 0.2 seconds of the 0.7 seconds overall solving time.
+ *
+ * @section TUTORIAL_PARAMETERS Changing parameters from the interactive shell
  *
  * Now, we can start playing around with parameters. Rounding and shifting seem to be quite successful on this instance,
  * wondering what happens if we disable them? Or what happens, if we are even more rigorous and disable all heuristics?
@@ -1141,20 +1180,31 @@
  * solution, change parameters and so on. Entering "optimize" we continue the solving process from the point on at which
  * it has been interrupted.
  *
- * SCIP can also write information to files. E.g., we could store the incumbent solution to a file, or output the
- * problem instance in another file format (the LP format is much more human readable than the MPS format, for example).
+ * Once you found a non-default parameter setting that you wish to save and use in the future, use either the command
+ * \code
+ * SCIP> set save settingsfile.set
+ * \endcode
+ * to save <b>all</b> parameter values to the specified file, or
+ * \code
+ * SCIP> set diffsave settingsfile.set
+ * \endcode
+ * in order to save only the nondefault parameters. The latter has several advantages, you can, e.g., combine parameter
+ * settings from multiple settings files stored by the latter command, as long as they only affect mutually exclusive
+ * parameter values.
+ *
+ * For loading a previously stored settings file, use the "load" command:
  *
  * \code
- * SCIP> write solution stein27.sol
- *
- * written solution information to file <stein27.sol>
- *
- * SCIP> write problem stein27.lp
- * written original problem to file <stein27.lp>
- *
- * SCIP> q
- * ...
+ * SCIP> set load settingsfile.set
  * \endcode
+ *
+ * Special attention should be drawn to the reserved settings file name "scip.set"; whenever the SCIP interactive shell
+ * is started from a working directory that contains a settings file with the name "scip.set", it will be automatically
+ * replace the default settings.
+ *
+ * For using special settings for automated tests as described in \ref TEST, save your custom settings in a subdirectory
+ * "SCIP_HOME/settings".
+ *
  *
  * We hope this tutorial gave you an overview of what is possible using the SCIP interactive shell. Please also read our
  * \ref FAQ, in particular the section <a href="http://scip.zib.de/#faq">Using SCIP as a standalone MIP/MINLP-Solver</a>.
@@ -6022,6 +6072,80 @@
  *  allcmpres.sh printsoltimes=1 ...
  *  \endcode
  *  As in the evaluation, the output contains the two additional columns of the solving time until the first and the best solution was found.
+ *
+ *  @section STATISTICS Statistical tests
+ *
+ *  The \c allcmpres script also performs two statistical tests for comparing different settings: For deciding whether
+ *  more feasible solutions have been found or more instances have been solved to optimality or not, we use a McNemar
+ *  test. For comparing the running time and number of nodes, we use a variant of the Wilcoxon signed rank test. A
+ *  detailed explanation can be found in the PhD thesis of Timo Berthold (Heuristic algorithms in global MINLP solvers).
+ *
+ *  @subsection McNemar McNemar test
+ *
+ *  Assume that we compare two settings \c S1 and \c S2 with respect to the number of instances solved to optimality
+ *  within the timelimit. The null hypothesis would be "Both settings lead to an equal number of instances being solved
+ *  to optimality", which we would like to disprove. Let \f$n_1\f$ be the number of instances solved by setting \c S1
+ *  but not by \c S2, and let \f$n_2\f$ be the number of instances solved by setting \c S2 but not by \c S1.  The
+ *  McNemar test statistic is
+ *  \f[
+ *    \chi^2 = \frac{(n_1 - n_2)^2}{n_1 + n_2}.
+ *  \f]
+ *  Under the null hypothesis, \f$\chi^2\f$ is chi-squared distributed with one degree of freedom. This allows to compute
+ *  a \f$p\f$-value as the probability for obtaining a similar or even more extreme result under the null hypothesis.
+ *  More explicitly, \c allcmpres uses the following evaluation:
+ *  - \f$0.05 < p\f$: The null hypothesis is accepted (marked by "X").
+ *  - \f$0.005 < p \leq 0.05\f$: The null hypothesis might be false (marked by "!").
+ *  - \f$0.0005 < p \leq 0.005\f$: The null hypothesis can be false (marked by "!!").
+ *  - \f$p \leq 0.0005\f$: The null hypothesis is very likely false (marked by "!!!").
+ *
+ *  As an example consider the following output:
+ *  \code
+ *    McNemar (feas)                              x2  0.0000, 0.05 < p           X
+ *    McNemar (opt)                               x2  6.0000, p ~ (0.005, 0.05]  !
+ *  \endcode
+ *  Here, \c x2 represents \f$\chi^2\f$.
+ *
+ *  In this case, the test with respect to the number of found feasible solutions is irrelevant, since their number is
+ *  equal. In particular, the null hypothesis gets accepted (i.e., there is no difference in the settings - this is
+ *  marked by "X").
+ *
+ *  With respect to the number of instances solved to optimality within the timelimit, we have that \f$0.005 < p <=
+ *  0.05\f$ (marked by <tt>p ~ (0.005, 0.05)</tt>). Thus, there is some evidence that the null hypothesis is false, i.e., the
+ *  settings perform differently; this is marked by "!". In the concrete case, we have 230 instances, all of which are
+ *  solved by setting \c S2, but only 224 by setting \c S1.
+ *
+ *  @subsection Wilcoxon Wilcoxon signed rank test
+ *
+ *  Assume that we compare two settings \c S1 and \c S2 with respect to their solution times (within the time limit). We
+ *  generate a sorted list of the ratios of the run times, where ratios that are (absolutely or relatively) within 1\%
+ *  of 1.0 are discarded, and ratios between 0.0 and 0.99 are replaced with their negative inverse in order to
+ *  obtain a symmetric distribution for the ratios around the origin.
+ *  We then assign ranks 1 to \c N to the remaining \c N data points in nondecreasing
+ *  order of their absolute ratio. This yields two groups \c G1
+ *  and \c G2 depending on whether the ratios are smaller than -1.0 or larger than 1.0 (\c G1 contains the instances for which
+ *  setting \c S1 is faster). Then the sums of the ranks in groups \c G1 and \c G2 are computed, yielding values \c R1
+ *  and \c R2, respectively.
+ *
+ *  The Wilcoxon test statistic is then
+ *  \f[
+ *     z = \frac{\min(R1, R2) - \frac{N(N+1)}{4}}{\sqrt{\frac{N(N+1)(2N+1)}{24}}},
+ *  \f]
+ *  which we assume to be (approximately) normally distributed (with zero mean) and allows to compute the probability
+ *  \f$p\f$ that one setting is faster than the other. (Note that for \f$N \leq 60\f$, we apply a correction by
+ *  subtracting 0.5 from the numerator).
+ *
+ *  As an example consider the following output:
+ *  \code
+ *    Wilcoxon (time)                             z  -0.1285, 0.05 <= p          X
+ *    Wilcoxon (nodes)                            z -11.9154, p < 0.0005       !!!
+ *  \endcode
+ *  While the \f$z\f$-value is close to zero for the run time, it is extremely negative regarding the solving nodes. This latter
+ *  tendency for the number of nodes is significant on a 0.05 % level, i.e., the probability \f$p\f$ that setting \c S1 uses more
+ *  nodes than setting \c S2 is negligible (this null hypothesis is rejected - marked by "!!!").
+ *
+ *  However, the null hypothesis is not rejected with respect to the run time. In the concrete case, setting \c S1 has a
+ *  shifted geometric mean of its run times (over 230 instances) of 248.5, for \c S2 it is 217.6. This makes a ratio of
+ *  0.88. Still - the null hypothesis is not rejected.
  *
  *  @section SOLVER Testing and Evaluating for other solvers
  *

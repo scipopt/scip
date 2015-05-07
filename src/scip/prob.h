@@ -234,6 +234,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_LP*              lp,                 /**< current LP data (may be NULL) */
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    );
@@ -245,6 +246,7 @@ SCIP_RETCODE SCIPprobChgVarType(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to add */
    SCIP_VARTYPE          vartype             /**< new type of variable */
    );
@@ -256,6 +258,7 @@ SCIP_RETCODE SCIPprobVarChangedStatus(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var                 /**< problem variable */
    );
 

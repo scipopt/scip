@@ -785,7 +785,8 @@ SCIP_RETCODE getVariableIndex(
 {
    assert(scip != NULL);
    assert(varssize != NULL);
-   assert(vars != NULL || *varssize == 0);
+   assert(vars != NULL);
+   assert(*vars != NULL || *varssize == 0);
    assert(nvars != NULL);
    assert(*nvars <= *varssize);
    assert(varhash != NULL);
@@ -808,7 +809,7 @@ SCIP_RETCODE getVariableIndex(
    if( *nvars + 1 > *varssize )
    {
       *varssize = SCIPcalcMemGrowSize(scip, *nvars + 1);
-      if( vars == NULL )
+      if( *vars == NULL )
       {
          SCIP_CALL( SCIPallocBufferArray(scip, vars, *varssize) );
       }
@@ -3763,8 +3764,6 @@ SCIP_RETCODE SCIPreadPip(
    PIPINPUT pipinput;
    SCIP_RETCODE retcode;
    int i;
-
-   retcode = SCIP_OKAY;
 
    /* initialize PIP input data */
    pipinput.file = NULL;

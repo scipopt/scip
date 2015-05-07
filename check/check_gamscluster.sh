@@ -30,9 +30,8 @@ PPN=${15}
 CLIENTTMPDIR=${16}
 NOWAITCLUSTER=${17}
 EXCLUSIVE=${18}
-
 # set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the GAMS solver
-SETCUTOFF=0
+SETCUTOFF=${19}
 
 # set this to 1 if you want the scripts to (try to) pass a best known solution (from .gdx file) to the GAMS solver
 PASSSTARTSOL=0

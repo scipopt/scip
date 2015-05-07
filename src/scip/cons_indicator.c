@@ -310,6 +310,7 @@ struct SCIP_ConshdlrData
    SCIP_HASHMAP*         lbhash;             /**< hash map from variable to index of lower bound column in alternative LP */
    SCIP_HASHMAP*         ubhash;             /**< hash map from variable to index of upper bound column in alternative LP */
    SCIP_HASHMAP*         slackhash;          /**< hash map from slack variable to row index in alternative LP */
+   SCIP_HASHMAP*         binvarhash;         /**< hash map from binary indicator variable to indicator constraint */
    int                   nslackvars;         /**< # slack variables */
    int                   niiscutsgen;        /**< number of IIS-cuts generated */
    int                   objcutindex;        /**< index of objectice cut in alternative LP (-1 if not added) */
@@ -981,7 +982,7 @@ SCIP_RETCODE checkIIS(
             if ( var == slackvar )
                continue;
 
-            /* if variable new */
+            /* if variable is new */
             if ( ! SCIPhashmapExists(varhash, var) )
             {
                /* add variable in map */
@@ -4075,20 +4076,44 @@ SCIP_RETCODE separateIISRounding(
       for (j = 0; j < nconss; ++j)
       {
          SCIP_CONSDATA* consdata;
+         SCIP_Real binvarval;
+         SCIP_VAR* binvarneg;
 
          assert( conss[j] != NULL );
          consdata = SCIPconsGetData(conss[j]);
          assert( consdata != NULL );
 
+         binvarval = SCIPgetVarSol(scip, consdata->binvar);
+
 #ifdef SCIP_DEBUG
-         if ( SCIPisFeasEQ(scip, SCIPgetVarSol(scip, consdata->binvar), 1.0) )
+         if ( SCIPisFeasEQ(scip, binvarval, 1.0) )
             ++nvarsone;
-         else if ( SCIPisFeasZero(scip, SCIPgetVarSol(scip, consdata->binvar)) )
+         else if ( SCIPisFeasZero(scip, binvarval) )
             ++nvarszero;
          else
             ++nvarsfrac;
 #endif
 
+         /* check whether complementary (negated) variable is present as well */
+         binvarneg = SCIPvarGetNegatedVar(consdata->binvar);
+         assert( binvarneg != NULL );
+
+         /* negated variable is present as well */
+         assert( conshdlrdata->binvarhash != NULL );
+         if ( SCIPhashmapExists(conshdlrdata->binvarhash, (void*) binvarneg) )
+         {
+            SCIP_Real binvarnegval;
+            binvarnegval = SCIPgetVarSol(scip, binvarneg);
+
+            /* take larger one */
+            if ( binvarval > binvarnegval )
+               S[j] = TRUE;
+            else
+               S[j] = FALSE;
+            continue;
+         }
+
+         /* check for threshold */
          if ( SCIPisFeasLT(scip, SCIPgetVarSol(scip, consdata->binvar), threshold) )
          {
             S[j] = TRUE;
@@ -5047,6 +5072,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
          }
       }
       SCIPhashmapFree(&conshdlrdata->slackhash);
+      if ( conshdlrdata->binvarhash != NULL )
+         SCIPhashmapFree(&conshdlrdata->binvarhash);
    }
 
    return SCIP_OKAY;
@@ -5176,6 +5203,22 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
          SCIPconsIsPropagated(sourcecons), SCIPconsIsLocal(sourcecons),
          SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons),
          SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+
+   /* make sure that binary variable hash exists */
+   if ( conshdlrdata->sepaalternativelp )
+   {
+      if ( conshdlrdata->binvarhash == NULL )
+      {
+         SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binvarhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNOrigVars(scip))) );
+      }
+
+      /* check whether binary variable is present: note that a binary variable might appear several times, but this seldomly happens. */
+      assert( conshdlrdata->binvarhash != NULL );
+      if ( ! SCIPhashmapExists(conshdlrdata->binvarhash, (void*) consdata->binvar) )
+      {
+         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binvarhash, (void*) consdata->binvar, (void*) (*targetcons)) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -6506,6 +6549,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->sepaalternativelp = DEFAULT_SEPAALTERNATIVELP;
    conshdlrdata->nolinconscont = DEFAULT_NOLINCONSCONT;
    conshdlrdata->forcerestart = DEFAULT_FORCERESTART;
+   conshdlrdata->binvarhash = NULL;
 
    /* initialize constraint handler data */
    initConshdlrData(scip, conshdlrdata);
@@ -6865,7 +6909,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    assert( SCIPconsGetNUpgradeLocks(lincons) > 0 );
 
    /* add slack variable */
-   if ( conshdlrdata->scaleslackvar )
+   if ( conshdlrdata->scaleslackvar && nvars > 0 )
    {
       absvalsum = absvalsum/((SCIP_Real) nvars);
       if ( slackvartype == SCIP_VARTYPE_IMPLINT )
