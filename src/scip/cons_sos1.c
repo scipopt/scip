@@ -5834,11 +5834,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
                if ( ! global && ! SCIPisFeasEQ(scip, val, SCIPvarGetUbLocal(var)) )
                {
                   localubs = TRUE;
-
-                  /* restart 'for'-loop, since we need the local bounds of the variables */
-                  j = -1;
-                  cnt = 0;
-                  continue;
+                  val = SCIPvarGetUbLocal(var);
                }
             }
          }
@@ -5944,11 +5940,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
                if ( ! global && ! SCIPisFeasEQ(scip, val, SCIPvarGetLbLocal(var)) )
                {
                   locallbs = TRUE;
-
-                  /* restart 'for'-loop, since we need the local bounds of the variables */
-                  j = -1;
-                  cnt = 0;
-                  continue;
+                  val = SCIPvarGetUbLocal(var);
                }
             }
          }
