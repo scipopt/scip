@@ -6339,10 +6339,10 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
          SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], FALSE, TRUE, TRUE, FALSE, &rowlb, &rowub) );
 
          /* if row(s) should be globally stored in constraint data */
-         if ( rowlb != NULL )
+         if ( rowlb != NULL && consdata->rowlb == NULL )
             consdata->rowlb = rowlb;
 
-         if ( rowub != NULL )
+         if ( rowub != NULL && consdata->rowub == NULL )
             consdata->rowub = rowub;
       }
 
