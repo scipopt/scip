@@ -7415,31 +7415,33 @@ SCIP_RETCODE computeInteriorPoint(
 TERMINATE:
 
 #ifdef SCIP_DEBUG_INT
-   printf("Computation of interior point for cons <%s>:\n", SCIPconsGetName(cons));
-   printf(" - has %d linear variables\n", consdata->nlinvars);
+   SCIPdebugMessage("Computation of interior point for cons <%s>:\n", SCIPconsGetName(cons));
+   SCIPdebugMessage(" - has %d linear variables\n", consdata->nlinvars);
    if( consdata->isconvex )
    {
-      printf(" - is convex. rhs: %g maximum activity of linear variables: %g\n", consdata->rhs, consdata->rhs - nlpiside);
-      printf(" - searched for point whose quadratic part is <= %g\n", nlpiside);
+      SCIPdebugMessage(" - is convex. rhs: %g maximum activity of linear variables: %g\n", consdata->rhs, consdata->rhs - nlpiside);
+      SCIPdebugMessage(" - searched for point whose quadratic part is <= %g\n", nlpiside);
    }
    else
    {
-      printf(" - is concave. lhs: %g minimum activity of linear variables: %g\n", consdata->lhs, consdata->lhs - nlpiside);
-      printf(" - searched for point whose quadratic part is >= %g\n", nlpiside);
+      SCIPdebugMessage(" - is concave. lhs: %g minimum activity of linear variables: %g\n", consdata->lhs, consdata->lhs - nlpiside);
+      SCIPdebugMessage(" - searched for point whose quadratic part is >= %g\n", nlpiside);
    }
 
    if( *success )
    {
-      printf("Computation successfull, NLP soltat: %d, termstat: %d\nPoint found:\n",
+      SCIPdebugMessage("Computation successfull, NLP soltat: %d, termstat: %d\nPoint found:\n",
                SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
       for( i = 0; i < nquadvars; i++ )
-         printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[i].var), consdata->interiorpoint[i]);
+      {
+         SCIPdebugMessage("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[i].var), consdata->interiorpoint[i]);
+      }
    }
    else
    {
-      printf("Computation failed. NLP soltat: %d, termstat: %d\n",
+      SCIPdebugMessage("Computation failed. NLP soltat: %d, termstat: %d\n",
                SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
-      printf("run with SCIP_DEBUG for more info\n");
+      SCIPdebugMessage("run with SCIP_DEBUG for more info\n");
       SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
       SCIPinfoMessage(scip, NULL, ";\n");
       /* FIXME: instance camshape100 says that there is no interior point (interior empty)
@@ -7581,11 +7583,13 @@ SCIP_RETCODE computeGauge(
    }
 
 #ifdef SCIP_DEBUG_INT
-   printf("quadratic part at interior point: %g\n", consdata->interiorpointval);
+   SCIPdebugMessage("quadratic part at interior point: %g\n", consdata->interiorpointval);
 
    for( j = 0; j < consdata->nquadvars; j++ )
-      printf("b_gauge[%s] = %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), consdata->gaugecoefs[j]);
-   printf("c_gauge = %g\n", consdata->gaugeconst);
+   {
+      SCIPdebugMessage("b_gauge[%s] = %g\n", SCIPvarGetName(consdata->quadvarterms[j].var), consdata->gaugecoefs[j]);
+   }
+   SCIPdebugMessage("c_gauge = %g\n", consdata->gaugeconst);
 #endif
 
    SCIPhashmapFree(&varmap);
@@ -7659,42 +7663,41 @@ SCIP_RETCODE evaluateGauge(
          side -= SCIPgetSolVal(scip, refsol, consdata->linvars[i]) * consdata->lincoefs[i];
 
       aterm = side - consdata->interiorpointval;
-      /* if the interior point is not interior (this can happen
-       * since we are not so strict at the moment of computing
-       * the interior point, which makes sense in the case that
-       * the constaraint is quadratic <= t. Since we compute
-       * a point in quadratic <= min t, it might be that for a
-       * single t, interior point is not actually interior)
-       * Also if min t = -infinity, we might have computed an
-       * interior point for a fix t. then, it can happen that
-       * aterm is negative.
-       * However, if there is only one linear variable we
-       * should use isFeasZero because if aterm is negative, it should
-       * still aterm >= 0, according to SCIP's definition of >=
+
+      /* it can happen that the interior point is not really interior, since we are not so strict at the moment of
+       * computing the interior point, which makes sense in the case that the constaraint is quadratic <= linear expr,
+       * since we compute a point in quadratic <= min linear expr and it might be that this set consists of a single
+       * point which will not be interior. furthermore, if this set is empty, we could just take any point and it could
+       * happen that for some value of linear expr, the point is actually interior, but for many it could not be.
+       * also, if min linear expr = -infinity, we might have computed an interior point using some finite value.
+       * the point will not be an interior point, if and only if aterm is negative.
        */
+#ifdef SCIP_DEBUG_GAUGE
       if( SCIPisLE(scip, aterm, 0.0) )
       {
-         assert(consdata->nlinvars > 0);
-#ifdef SCIP_DEBUG_GAUGE
-         printf("For current level, there is no interior point. ");
-         printf("rhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->rhs, side, consdata->interiorpointval);
+         SCIPdebugMessage("For current level, there is no interior point. ");
+         SCIPdebugMessage("rhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->rhs, side, consdata->interiorpointval);
          if( consdata->nlinvars == 1 )
          {
             SCIP_VAR* var;
 
             var = consdata->linvars[0];
-            printf("var <%s> = %g in [%15.20g, %15.20g] is linpart\n", SCIPvarGetName(var),
+            SCIPdebugMessage("var <%s> = %g in [%15.20g, %15.20g] is linpart\n", SCIPvarGetName(var),
                   SCIPgetSolVal(scip, refsol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-            //assert(SCIPisFeasZero(scip, aterm));
          }
+      }
+      else
+      {
+         SCIPdebugMessage("For current level, there is interior point. ");
+         SCIPdebugMessage("rhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->rhs, side, consdata->interiorpointval);
+      }
 #endif
+      if( SCIPisLE(scip, aterm, 0.0) )
+      {
+         assert(consdata->nlinvars > 0);
          *gaugeval = -1.0;
          return SCIP_OKAY;
       }
-#ifdef SCIP_DEBUG_GAUGE
-      printf("For current level, there is interior point. ");
-      printf("rhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->rhs, side, consdata->interiorpointval);
-#endif
       assert(SCIPisPositive(scip, aterm));
    }
    else
@@ -7704,21 +7707,30 @@ SCIP_RETCODE evaluateGauge(
          side -= SCIPgetSolVal(scip, refsol, consdata->linvars[i]) * consdata->lincoefs[i];
 
       aterm = side - consdata->interiorpointval;
+
+#ifdef SCIP_DEBUG_GAUGE
       if( SCIPisGE(scip, aterm, 0.0) )
       {
-         assert(consdata->nlinvars > 0);
-#ifdef SCIP_DEBUG_GAUGE
-         printf("For current level, there is no interior point");
-         printf("side: %15.20g interiorpointval: %15.20g\n", side, consdata->interiorpointval);
+         SCIPdebugMessage("For current level, there is no interior point. ");
+         SCIPdebugMessage("lhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->lhs, side, consdata->interiorpointval);
          if( consdata->nlinvars == 1 )
          {
             SCIP_VAR* var;
 
             var = consdata->linvars[0];
-            printf("var <%s> [%15.20g, %15.20g] is linpart\n", SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
-            assert(SCIPisFeasZero(scip, aterm));
+            SCIPdebugMessage("var <%s> = %g in [%15.20g, %15.20g] is linpart\n", SCIPvarGetName(var),
+                  SCIPgetSolVal(scip, refsol, var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var));
          }
+      }
+      else
+      {
+         SCIPdebugMessage("For current level, there is interior point. ");
+         SCIPdebugMessage("lhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->lhs, side, consdata->interiorpointval);
+      }
 #endif
+      if( SCIPisGE(scip, aterm, 0.0) )
+      {
+         assert(consdata->nlinvars > 0);
          *gaugeval = -1.0;
          return SCIP_OKAY;
       }
@@ -7771,7 +7783,7 @@ SCIP_RETCODE evaluateGauge(
    *success = TRUE;
 
 #ifdef SCIP_DEBUG_GAUGE
-   printf("Gauge's aterm = %g, bterm = %g, cterm = %g\n", aterm, bterm, cterm);
+   SCIPdebugMessage("Gauge's aterm = %g, bterm = %g, cterm = %g\n", aterm, bterm, cterm);
 #endif
    return SCIP_OKAY;
 }
@@ -7825,7 +7837,7 @@ SCIP_RETCODE computeReferencePointGauge(
    if( !(*success) )
    {
 #ifdef SCIP_DEBUG_GAUGE
-      printf("Couldn't evaluate gauge!\n");
+      SCIPdebugMessage("Couldn't evaluate gauge!\n");
 #endif
       return SCIP_OKAY;
    }
@@ -7838,20 +7850,20 @@ SCIP_RETCODE computeReferencePointGauge(
       for( j = 0; j < consdata->nlinvars; j++ )
          level -= SCIPgetSolVal(scip, refsol, consdata->linvars[j]) * consdata->lincoefs[j];
 
-      printf("Summary:\n");
-      printf("For cons <%s>: gauge at level %g evaluated at (refsol - intpoint) is %.10f\n",
+      SCIPdebugMessage("Summary:\n");
+      SCIPdebugMessage("For cons <%s>: gauge at level %g evaluated at (refsol - intpoint) is %.10f\n",
             SCIPconsGetName(cons), level, gaugeval);
-      printf("refsol - intpoint:\n");
+      SCIPdebugMessage("refsol - intpoint:\n");
 
       for( j = 0; j < consdata->nquadvars; ++j )
       {
          SCIP_VAR* vvar;
          vvar = consdata->quadvarterms[j].var;
-         printf("%s: % 20.15g  - %g = %g\n", SCIPvarGetName(vvar), SCIPgetSolVal(scip, refsol, vvar),
+         SCIPdebugMessage("%s: % 20.15g  - %g = %g\n", SCIPvarGetName(vvar), SCIPgetSolVal(scip, refsol, vvar),
                consdata->interiorpoint[j], SCIPgetSolVal(scip, refsol, vvar) - consdata->interiorpoint[j]);
       }
       if( gaugeval <= 1.0 )
-         printf("refsol is in the closure of the region (gaugeval <= 1), don't modify reference point\n");
+         SCIPdebugMessage("refsol is in the closure of the region (gaugeval <= 1), don't modify reference point\n");
    }
 #endif
 
@@ -7884,10 +7896,12 @@ SCIP_RETCODE computeReferencePointGauge(
    }
 
 #ifdef SCIP_DEBUG_GAUGE
-   printf("successful application of guage: %g\n", gaugeval);
-   printf("modified reference point:\n");
+   SCIPdebugMessage("successful application of guage: %g\n", gaugeval);
+   SCIPdebugMessage("modified reference point:\n");
    for( j = 0; j < consdata->nquadvars; ++j )
-      printf("%s = % 20.15g\n", SCIPvarGetName(consdata->quadvarterms[j].var), (*ref)[j]);
+   {
+      SCIPdebugMessage("%s = % 20.15g\n", SCIPvarGetName(consdata->quadvarterms[j].var), (*ref)[j]);
+   }
 #endif
 
    return SCIP_OKAY;
@@ -7949,7 +7963,7 @@ SCIP_RETCODE generateCutSol(
       /* if cut fails, try again without modifying reference point via gauge */
       if( *row == NULL || (efficacy != NULL && !SCIPisGT(scip, *efficacy, minefficacy)) || !SCIPisCutApplicable(scip, *row) )  /*lint !e644 */
       {
-         printf("gauge cut fail, try without modifying\n");
+         SCIPdebugMessage("gauge cut fail, try without modifying\n");
          success = FALSE;
       }
    }
@@ -10516,20 +10530,10 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
 #ifndef NDEBUG
    int                i;
 #endif
-#ifdef CONVSTAT
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   int                nconvex;
-
-   nconvex = 0;
-#endif
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(conss != NULL || nconss == 0);
-
-#ifdef CONVSTAT
-   conshdlrdata = SCIPconshdlrGetData(conshdlr);
-#endif
 
    for( c = 0; c < nconss; ++c )
    {
@@ -10563,24 +10567,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
       /* tell SCIP that we have something nonlinear */
       if( SCIPconsIsAdded(conss[c]) && consdata->nquadvars > 0 )
          SCIPenableNLP(scip);
-
-#ifdef CONVSTAT
-      /* check how many convex constraints are */
-      SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );
-      consdata = SCIPconsGetData(conss[c]);
-      assert(consdata != NULL);
-
-      if( consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs) )
-         nconvex++;
-      if( consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs) )
-         nconvex++;
-#endif
    }
-
-#ifdef CONVSTAT
-   printf("Number of convex quadratic functions: %d\n", nconvex);
-   exit(0);
-#endif
 
    return SCIP_OKAY;
 }
