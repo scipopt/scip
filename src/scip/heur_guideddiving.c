@@ -160,7 +160,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
 
-   /* if there are no integer branching candidates (note that, e.g., SOS1 candidates may be present) */
+   /* if there are no integer variables (note that, e.g., SOS1 variables may be present) */
    if ( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) < 1 )
       return SCIP_OKAY;
 
