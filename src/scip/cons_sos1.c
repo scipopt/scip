@@ -8850,7 +8850,7 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
        * otherwise, fixing the neighbors in the conflict graph to 0.0 is the preferred bound change.
        */
       assert( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(bestvar)) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(bestvar)) );
-      SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, bestvar, SCIP_BRANCHDIR_FIXED, 0.0, !bestvarfixneigh) );
+      SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_FIXED, 0.0, !bestvarfixneigh) );
       for (s = 0; s < nsucc; ++s)
       {
          SCIP_VAR* var;
@@ -8860,7 +8860,7 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
          /* if variable is not already fixed */
          if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
          {
-            SCIP_CALL( SCIPdivesetAddDiveBoundChange(diveset, var, SCIP_BRANCHDIR_FIXED, 0.0, bestvarfixneigh) );
+            SCIP_CALL( SCIPaddDiveBoundChange(scip, var, SCIP_BRANCHDIR_FIXED, 0.0, bestvarfixneigh) );
          }
       }
    }
