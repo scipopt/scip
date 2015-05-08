@@ -7668,7 +7668,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
           SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, conshdlrdata->nsos1vars) );
        }
 
-       /* initialize stack of variables fixed to nonzero */
+       /* initialize stack of variables fixed to nonzero (memory may be already allocated in consTransSOS1()) */
        if ( conshdlrdata->fixnonzerovars == NULL )
        {
           conshdlrdata->maxnfixnonzerovars = conshdlrdata->nsos1vars;
@@ -8838,6 +8838,7 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
          SCIP_Real solval;
          SCIP_Real score;
          SCIP_Real bound;
+         SCIP_Real fracval;
          SCIP_Bool fixneigh;
 
          var = SCIPnodeGetVarSOS1(conflictgraph, v);
@@ -8849,18 +8850,37 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
          else
             bound = SCIPnodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, v);
 
-         /* we always fix the candidates neighbors in the conflict graph to zero */
-         fixneigh = TRUE;
-
          /* ensure finiteness */
          bound = MIN(10E05, REALABS(bound));
-         score = MIN(10E05, REALABS(solval));
+         fracval = MIN(10E05, REALABS(solval));
          assert( ! SCIPisInfinity(scip, bound) );
-         assert( ! SCIPisInfinity(scip, score) );
+         assert( ! SCIPisInfinity(scip, fracval) );
          assert( SCIPisFeasPositive(scip, bound + SCIPepsilon(scip)) );
 
-         /* score fractionality of candidate */
-         score /= (bound + SCIPepsilon(scip));
+         /* get fractionality of candidate */
+         fracval /= (bound + SCIPepsilon(scip));
+
+         /* should SOS1 variables be scored by the diving heuristics specific score function;
+          *  otherwise use the score function of the SOS1 constraint handler
+          */
+         if ( SCIPdivesetUseSpecificSOS1Score(diveset) )
+         {
+            SCIP_Bool roundup;
+
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval, &score, &roundup) );
+
+            fixneigh = roundup;
+            if ( SCIPisFeasNegative(scip, solval) )
+               fixneigh = !fixneigh;
+         }
+         else
+         {
+            /* we always fix the candidates neighbors in the conflict graph to zero */
+            fixneigh = TRUE;
+
+            /* score fractionality of candidate */
+            score = fracval;
+         }
 
          /* best candidate maximizes the score */
          if ( score > bestscore )

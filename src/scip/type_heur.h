@@ -40,6 +40,15 @@
 extern "C" {
 #endif
 
+/**< represents different methods for a dive set to explore the next children */
+enum SCIP_DiveType
+{
+   SCIP_DIVETYPE_NONE        = 0,                /**< no method specified */
+   SCIP_DIVETYPE_INTEGRALITY = 1,                /**< use branching on a variable by shrinking the domain in the child nodes */
+   SCIP_DIVETYPE_SOS1VARIABLE = 2                /**< branch on a variable solution value by exploiting special-ordered set conflict structure */
+};
+typedef enum SCIP_DiveType SCIP_DIVETYPE;
+
 typedef struct SCIP_Heur SCIP_HEUR;               /**< primal heuristic */
 typedef struct SCIP_HeurData SCIP_HEURDATA;       /**< locally defined primal heuristic data */
 typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all diving heuristics */
@@ -128,6 +137,7 @@ typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all
  *  input:
  *  - scip            : SCIP main data structure
  *  - cand            : Candidate variable for which the score should be determined
+ *  - divetype        : represents different methods for a dive set to explore the next children
  *  - candsol         : solution value of variable in LP relaxation solution
  *  - candsfrac       : fractional part of solution value of variable
  *  - score           : pointer for diving score value - small scores are preferred
@@ -135,7 +145,7 @@ typedef struct SCIP_Diveset SCIP_DIVESET;         /**< common parameters for all
  *
  *  returns SCIP_OKAY if everything worked, otherwise, a suitable error code
  */
-#define SCIP_DECL_DIVESETGETSCORE(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, SCIP_VAR* cand, SCIP_Real candsol, SCIP_Real candsfrac, \
+#define SCIP_DECL_DIVESETGETSCORE(x) SCIP_RETCODE x (SCIP* scip, SCIP_DIVESET* diveset, SCIP_DIVETYPE divetype, SCIP_VAR* cand, SCIP_Real candsol, SCIP_Real candsfrac, \
    SCIP_Real* score, SCIP_Bool* roundup)
 
 #ifdef __cplusplus

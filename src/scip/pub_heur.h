@@ -341,6 +341,14 @@ SCIP_Bool SCIPdivesetUseOnlyLPBranchcands(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
+/** should SOS1 variables be scored by the diving heuristics specific score function;
+ *  otherwise use the score function of the SOS1 constraint handler
+ */
+EXTERN
+SCIP_Bool SCIPdivesetUseSpecificSOS1Score(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
 /** frees memory of a diveset */
 EXTERN
 SCIP_RETCODE SCIPdivesetFree(

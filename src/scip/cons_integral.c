@@ -215,7 +215,7 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIntegral)
       /* skip variable if solution value disagrees with the local bounds */
       if( ! SCIPisFeasIntegral(scip, solval) && SCIPisGE(scip, solval, SCIPvarGetLbLocal(vars[v])) && SCIPisLE(scip, solval, SCIPvarGetUbLocal(vars[v])) )
       {
-         SCIP_CALL( SCIPgetDivesetScore(scip, diveset, vars[v], solval, solval - SCIPfloor(scip, solval), &score, &roundup) );
+         SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, vars[v], solval, solval - SCIPfloor(scip, solval), &score, &roundup) );
 
          /* we search for candidates with maximum score */
          if( score > bestscore )
