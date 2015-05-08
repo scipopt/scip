@@ -775,7 +775,7 @@ void BMSfreeBufferMemoryNull_call(
 
 /** gets number of used buffers */
 EXTERN
-int BMSgetNUsedBufferMemory(
+size_t BMSgetNUsedBufferMemory(
    BMS_BUFMEM*           buffer              /**< memory buffer storage */
    );
 

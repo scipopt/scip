@@ -1425,7 +1425,7 @@ void freeChkmemElement(
       BMS_CHKMEM* correctchkmem;
 
       printErrorHeader(filename, line);
-      printError("pointer %p does not belong to chunk block %p (size: %d).\n", ptr, chkmem, chkmem->elemsize);
+      printError("Pointer %p does not belong to chunk block %p (size: %d).\n", ptr, chkmem, chkmem->elemsize);
    }
 #endif
 
@@ -2062,6 +2062,9 @@ void BMSfreeBlockMemory_work(
    BMS_CHKMEM* chkmem;
    int hashnumber;
 
+   assert(ptr != NULL);
+   assert(*ptr != NULL);
+
    /* calculate hash number of given size */
    alignSize(&size);
    hashnumber = getHashNumber((int)size);
@@ -2399,12 +2402,12 @@ void BMScheckEmptyBlockMemory_call(
 struct BMS_BufMem
 {
    void**                data;               /**< allocated memory chunks for arbitrary data */
-   unsigned int*         size;               /**< sizes of buffers in bytes */
+   size_t*               size;               /**< sizes of buffers in bytes */
    unsigned int*         used;               /**< 1 iff corresponding buffer is in use */
    size_t                totalmem;           /**< total memory consumption of buffer */
    unsigned int          clean;              /**< 1 iff the memory blocks in the buffer should be initialized to zero? */
-   int                   ndata;              /**< number of memory chunks */
-   int                   firstfree;          /**< first unused memory chunk */
+   size_t                ndata;              /**< number of memory chunks */
+   size_t                firstfree;          /**< first unused memory chunk */
    double                arraygrowfac;       /**< memory growing factor for dynamically allocated arrays */
    unsigned int          arraygrowinit;      /**< initial size of dynamically allocated arrays */
 };
@@ -2453,7 +2456,7 @@ void BMSdestroyBufferMemory_call(
    int                   line                /**< line number in source file of the function call */
    )
 {
-   int i;
+   size_t i;
 
    if ( *buffer != NULL )
    {
@@ -2555,7 +2558,7 @@ void* BMSallocBufferMemory_work(
 {
    void* ptr;
 #ifndef SCIP_NOBUFFERMEM
-   int bufnum;
+   size_t bufnum;
 #endif
 
 #ifndef SCIP_NOBUFFERMEM
@@ -2570,10 +2573,10 @@ void* BMSallocBufferMemory_work(
    if ( buffer->firstfree == buffer->ndata )
    {
       size_t newsize;
-      int i;
+      size_t i;
 
       /* create additional buffers */
-      newsize = calcMemoryGrowSize((size_t)buffer->arraygrowinit, buffer->arraygrowfac, (size_t) (buffer->firstfree + 1));
+      newsize = calcMemoryGrowSize((size_t)buffer->arraygrowinit, buffer->arraygrowfac, buffer->firstfree + 1);
       BMSreallocMemoryArray(&buffer->data, newsize);
       if ( buffer->data == NULL )
       {
@@ -2597,13 +2600,13 @@ void* BMSallocBufferMemory_work(
       }
 
       /* init data */
-      for (i = buffer->ndata; i < (int) newsize; ++i)
+      for (i = buffer->ndata; i < newsize; ++i)
       {
          buffer->data[i] = NULL;
          buffer->size[i] = 0;
          buffer->used[i] = FALSE;
       }
-      buffer->ndata = (int) newsize;
+      buffer->ndata = newsize;
    }
    assert(buffer->firstfree < buffer->ndata);
 
@@ -2622,14 +2625,14 @@ void* BMSallocBufferMemory_work(
       if( buffer->clean )
       {
          char* tmpptr = (char*)(buffer->data[bufnum]);
-         unsigned int inc = buffer->size[bufnum] / sizeof(*tmpptr);
+         size_t inc = buffer->size[bufnum] / sizeof(*tmpptr);
          tmpptr += inc;
 
          BMSclearMemorySize(tmpptr, newsize - buffer->size[bufnum]);
       }
       assert( newsize > buffer->size[bufnum] );
       buffer->totalmem += newsize - buffer->size[bufnum];
-      buffer->size[bufnum] = (unsigned int) newsize;
+      buffer->size[bufnum] = newsize;
 
       if ( buffer->data[bufnum] == NULL )
       {
@@ -2657,7 +2660,7 @@ void* BMSallocBufferMemory_work(
    buffer->used[bufnum] = TRUE;
    buffer->firstfree++;
 
-   debugMessage("Allocated buffer %d/%d at %p of size %u (required size: %lu) for pointer %p.\n",
+   debugMessage("Allocated buffer %"SIZET_FORMAT"/%"SIZET_FORMAT" at %p of size %"SIZET_FORMAT" (required size: %lu) for pointer %p.\n",
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
 
 #else
@@ -2745,7 +2748,7 @@ void* BMSreallocBufferMemory_work(
 {
    void* newptr;
 #ifndef SCIP_NOBUFFERMEM
-   int bufnum;
+   size_t bufnum;
 #endif
 
 #ifndef NDEBUG
@@ -2773,11 +2776,10 @@ void* BMSreallocBufferMemory_work(
     * most likely at the end of the buffer list.
     */
    bufnum = buffer->firstfree - 1;
-   while ( bufnum >= 0 && buffer->data[bufnum] != ptr )
+   while ( bufnum > 0 && buffer->data[bufnum] != ptr )
       --bufnum;
 
    newptr = ptr;
-   assert( bufnum >= 0 );
    assert( buffer->data[bufnum] == newptr );
    assert( buffer->used[bufnum] );
    assert( buffer->size[bufnum] >= 1 );
@@ -2792,7 +2794,7 @@ void* BMSreallocBufferMemory_work(
       BMSreallocMemorySize(&buffer->data[bufnum], newsize);
       assert( newsize > buffer->size[bufnum] );
       buffer->totalmem += newsize - buffer->size[bufnum];
-      buffer->size[bufnum] = (unsigned int) newsize;
+      buffer->size[bufnum] = newsize;
       if ( buffer->data[bufnum] == NULL )
       {
          printErrorHeader(filename, line);
@@ -2804,7 +2806,7 @@ void* BMSreallocBufferMemory_work(
    assert( buffer->size[bufnum] >= size );
    assert( newptr == buffer->data[bufnum] );
 
-   debugMessage("Reallocated buffer %d/%d at %p to size %u (required size: %lu) for pointer %p.\n",
+   debugMessage("Reallocated buffer %"SIZET_FORMAT"/%"SIZET_FORMAT" at %p to size %"SIZET_FORMAT" (required size: %lu) for pointer %p.\n",
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, newptr);
 
 #else
@@ -2914,7 +2916,7 @@ void BMSfreeBufferMemory_work(
    int                   line                /**< line number in source file of the function call */
    )
 {  /*lint --e{715}*/
-   int bufnum;
+   size_t bufnum;
 
    assert( buffer != NULL );
    assert( buffer->firstfree <= buffer->ndata );
@@ -2927,11 +2929,11 @@ void BMSfreeBufferMemory_work(
     * most likely at the end of the buffer list.
     */
    bufnum = buffer->firstfree-1;
-   while ( bufnum >= 0 && buffer->data[bufnum] != *ptr )
+   while ( bufnum > 0 && buffer->data[bufnum] != *ptr )
       --bufnum;
 
 #ifndef NDEBUG
-   if ( bufnum < 0 )
+   if ( bufnum == 0 && buffer->data[bufnum] != *ptr )
    {
       printErrorHeader(filename, line);
       printError("Tried to free unkown buffer pointer.\n");
@@ -2964,7 +2966,7 @@ void BMSfreeBufferMemory_work(
    while ( buffer->firstfree > 0 && !buffer->used[buffer->firstfree-1] )
       --buffer->firstfree;
 
-   debugMessage("Freed buffer %d/%d at %p of size %u for pointer %p, first free is %d.\n",
+   debugMessage("Freed buffer %"SIZET_FORMAT"/%"SIZET_FORMAT" at %p of size %"SIZET_FORMAT" for pointer %p, first free is %"SIZET_FORMAT".\n",
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], *ptr, buffer->firstfree);
 
    *ptr = NULL;
@@ -3014,7 +3016,7 @@ void BMSfreeBufferMemoryNull_call(
 }
 
 /** gets number of used buffers */
-int BMSgetNUsedBufferMemory(
+size_t BMSgetNUsedBufferMemory(
    BMS_BUFMEM*           buffer              /**< memory buffer storage */
    )
 {
@@ -3047,15 +3049,15 @@ void BMSprintBufferMemory(
    )
 {
    size_t totalmem;
-   int i;
+   size_t i;
 
    assert( buffer != NULL );
 
    totalmem = 0UL;
    for (i = 0; i < buffer->ndata; ++i)
    {
-      printf("[%c] %8u bytes at %p\n", buffer->used[i] ? '*' : ' ', buffer->size[i], buffer->data[i]);
+      printf("[%c] %8"SIZET_FORMAT" bytes at %p\n", buffer->used[i] ? '*' : ' ', buffer->size[i], buffer->data[i]);
       totalmem += buffer->size[i];
    }
-   printf("    %8lu bytes total in %d buffers\n", totalmem, buffer->ndata);
+   printf("    %8"SIZET_FORMAT" bytes total in %"SIZET_FORMAT" buffers\n", totalmem, buffer->ndata);
 }
