@@ -6471,7 +6471,7 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIndicator)
    indconss = SCIPconshdlrGetConss(conshdlr);
    nindconss = SCIPconshdlrGetNConss(conshdlr);
 
-   bestvar = FALSE;
+   bestvar = NULL;
    bestvarroundup = FALSE;
    /* loop over indicator constraints and score indicator variables with already integral solution value  */
    for( c = 0; c < nindconss; ++c )
