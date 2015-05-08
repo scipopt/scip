@@ -880,6 +880,7 @@ SCIP_RETCODE extensionOperatorSOS1(
    SCIP_CONS*            cons,               /**< constraint to be extended */
    SCIP_VAR**            vars,               /**< variables of extended clique */
    SCIP_Real*            weights,            /**< weights of extended clique */
+   SCIP_Bool             firstcall,          /**< whether this is the first call of extension operator */
    SCIP_Bool             usebacktrack,       /**< whether backtracking is needed for the computation */
    int**                 cliques,            /**< all cliques found so far */
    int*                  ncliques,           /**< number of clique found so far */
@@ -917,10 +918,14 @@ SCIP_RETCODE extensionOperatorSOS1(
    assert( naddconss != NULL );
    assert( success != NULL );
 
-   *success = FALSE;
+   if ( firstcall )
+      *success = FALSE;
 
    mincands = nworkingset;
+   if ( mincands < 1 )
+      return SCIP_OKAY;
 
+   /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &workingsetnew, nworkingset) );
 
 #ifdef SCIP_DEBUG
@@ -935,11 +940,13 @@ SCIP_RETCODE extensionOperatorSOS1(
 #endif
 
    /* determine candidate with minimum number of disconnections */
-   for (i = nexts; i < nworkingset && mincands != 0; ++i)
+   for (i = 0; i < nworkingset; ++i)
    {
-      int pos = -1;
-      int vertex = workingset[i];
+      int pos = nexts;
+      int vertex;
       int cnt = 0;
+
+      vertex = workingset[i];
 
       /* count disconnections */
       for (j = nexts; j < nworkingset && cnt < mincands; ++j)
@@ -947,6 +954,8 @@ SCIP_RETCODE extensionOperatorSOS1(
          if ( vertex != workingset[j] && ! isConnectedSOS1(adjacencymatrix, NULL, vertex, workingset[j]) )
          {
             cnt++;
+
+            /* save position of potential candidate */
             pos = j;
          }
       }
@@ -964,6 +973,8 @@ SCIP_RETCODE extensionOperatorSOS1(
          else
          {
             selpos = i;
+
+            /* preincrement */
             btriter = 1;
          }
       }
@@ -971,7 +982,7 @@ SCIP_RETCODE extensionOperatorSOS1(
 
    /* If fixed point is initially chosen from candidates then number of disconnections will be preincreased by one. */
 
-   /* Backtrackcycle */
+   /* backtrackcycle */
    for (btriter = mincands + btriter; btriter >= 1; --btriter)
    {
       assert( selpos >= 0);
@@ -1060,7 +1071,7 @@ SCIP_RETCODE extensionOperatorSOS1(
          /* if backtracking is used, it is necessary to keep the memory for 'workingsetnew' */
          if ( usebacktrack )
          {
-            SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, vars, weights, usebacktrack,
+            SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, vars, weights, FALSE, usebacktrack,
                   cliques, ncliques, cliquesizes, newclique, workingsetnew, nworkingsetnew, nextsnew, maxextensions, naddconss, success) );
             if ( *maxextensions <= 0 )
             {
@@ -1079,7 +1090,7 @@ SCIP_RETCODE extensionOperatorSOS1(
 
             SCIPfreeBufferArrayNull(scip, &workingsetnew);
 
-            SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, vars, weights, usebacktrack,
+            SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, vars, weights, FALSE, usebacktrack,
                   cliques, ncliques, cliquesizes, newclique, workingset, nworkingset, nextsnew, maxextensions, naddconss, success) );
             assert( *maxextensions <= 0 );
             return SCIP_OKAY;
@@ -1099,6 +1110,7 @@ SCIP_RETCODE extensionOperatorSOS1(
          /* select a candidate that is not connected to the fixed vertex */
          for (j = nexts; j < nworkingset; ++j)
          {
+            assert( fixvertex != workingset[j] );
             if ( ! isConnectedSOS1(adjacencymatrix, NULL, fixvertex, workingset[j]) )
             {
                selpos = j;
@@ -1747,8 +1759,9 @@ SCIP_RETCODE presolRoundConssSOS1(
 
                /* find extensions for the clique */
                maxextensions = conshdlrdata->maxextensions;
+               extended = FALSE;
                SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, consvars, consweights,
-                     (maxextensions <= 1) ? FALSE : TRUE, cliques, &ncliques, cliquesizes, newclique, comsucc, ncomsucc, 0, &maxextensions,
+                     TRUE, (maxextensions <= 1) ? FALSE : TRUE, cliques, &ncliques, cliquesizes, newclique, comsucc, ncomsucc, 0, &maxextensions,
                      naddconss, &extended) );
             }
 
