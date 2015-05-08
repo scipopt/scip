@@ -24,6 +24,7 @@ features:
   the conflict graph. In addition to variable domain fixings, it is sometimes also possible to add complementarity 
   constraints to the branching nodes. This results in a nonstatic conflict graph, which may change dynamically 
   with every branching node.
+- modified diving heuristics to handle SOS1 constraints
 - improved separation procedure of SOS1 constraint handler, including bound (clique) cuts and implied bound cuts
 - new disjunctive cut separator for SOS1 constraints
 - new presolving components for SOS1 constraints, including bound tightening and clique extension
