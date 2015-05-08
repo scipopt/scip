@@ -12435,7 +12435,8 @@ SCIP_RETCODE initPresolve(
 
    /* inform plugins that the presolving is abound to begin */
    SCIP_CALL( SCIPsetInitprePlugins(scip->set, scip->mem->probmem, scip->stat) );
-   assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
+   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
 
    /* delete the variables from the problems that were marked to be deleted */
    SCIP_CALL( SCIPprobPerformVarDeletions(scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->cliquetable, scip->lp, scip->branchcand) );
@@ -12458,7 +12459,8 @@ SCIP_RETCODE exitPresolve(
    int nvars;
    int v;
 #ifndef NDEBUG
-   int nusedbuffers;
+   size_t nusedbuffers;
+   size_t nusedcleanbuffers;
 #endif
 
    assert(scip != NULL);
@@ -12508,12 +12510,14 @@ SCIP_RETCODE exitPresolve(
     * change by calling SCIPsetExitprePlugins() or SCIPprobExitPresolve()
     */
 #ifndef NDEBUG
-   nusedbuffers = SCIPbufferGetNUsed(scip->set->buffer);
+   nusedbuffers = BMSgetNUsedBufferMemory(SCIPbuffer(scip));
+   nusedcleanbuffers = BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip));
 #endif
 
    /* inform plugins that the presolving is finished, and perform final modifications */
    SCIP_CALL( SCIPsetExitprePlugins(scip->set, scip->mem->probmem, scip->stat) );
-   assert(SCIPbufferGetNUsed(scip->set->buffer) == nusedbuffers);
+   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
    /* remove empty and single variable cliques from the clique table, and convert all two variable cliques
     * into implications
@@ -12534,7 +12538,8 @@ SCIP_RETCODE exitPresolve(
 
    /* exit presolving */
    SCIP_CALL( SCIPprobExitPresolve(scip->transprob,  scip->set) );
-   assert(SCIPbufferGetNUsed(scip->set->buffer) == nusedbuffers);
+   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == nusedbuffers);
+   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == nusedcleanbuffers);
 
    if( !solved )
    {
@@ -12633,7 +12638,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
                &scip->stat->npresolchgsides, &result) );
-         assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
 
          lastranpresol = FALSE;
          ++j;
@@ -12656,7 +12662,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
                &scip->stat->npresolchgsides, &result) );
-         assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
 
          lastranpresol = TRUE;
          ++i;
@@ -12714,7 +12721,8 @@ SCIP_RETCODE presolveRound(
             &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
             &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
             &scip->stat->npresolchgsides, &result) );
-      assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+      assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
+      assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
       if( result == SCIP_CUTOFF )
       {
          *infeasible = TRUE;
@@ -12773,7 +12781,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
                &scip->stat->npresolchgsides, &result) );
-         assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
 
          lastranpresol = FALSE;
          ++j;
@@ -12793,7 +12802,8 @@ SCIP_RETCODE presolveRound(
                &scip->stat->npresolchgbds, &scip->stat->npresoladdholes, &scip->stat->npresoldelconss,
                &scip->stat->npresoladdconss, &scip->stat->npresolupgdconss, &scip->stat->npresolchgcoefs, 
                &scip->stat->npresolchgsides, &result) );
-         assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
+         assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
 
          lastranpresol = TRUE;
          ++i;
@@ -13087,7 +13097,8 @@ SCIP_RETCODE presolve(
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL, "\n");
       }
    }
-   assert(SCIPbufferGetNUsed(scip->set->buffer) == 0);
+   assert(BMSgetNUsedBufferMemory(SCIPbuffer(scip)) == 0);
+   assert(BMSgetNUsedBufferMemory(SCIPcleanbuffer(scip)) == 0);
 
    /* stop presolving time */
    SCIPclockStop(scip->stat->presolvingtime, scip->set);
@@ -38880,32 +38891,40 @@ BMS_BLKMEM* SCIPblkmem(
    assert(scip->set != NULL);
    assert(scip->mem != NULL);
 
-   switch( scip->set->stage )
-   {
-   case SCIP_STAGE_INIT:
-   case SCIP_STAGE_PROBLEM:
-   case SCIP_STAGE_TRANSFORMING:
-   case SCIP_STAGE_TRANSFORMED:
-   case SCIP_STAGE_INITPRESOLVE:
-   case SCIP_STAGE_PRESOLVING:
-   case SCIP_STAGE_EXITPRESOLVE:
-   case SCIP_STAGE_PRESOLVED:
-   case SCIP_STAGE_INITSOLVE:
-   case SCIP_STAGE_SOLVING:
-   case SCIP_STAGE_SOLVED:
-   case SCIP_STAGE_EXITSOLVE:
-   case SCIP_STAGE_FREETRANS:
-   case SCIP_STAGE_FREE:
-      return scip->mem->probmem;
-   default:
-      SCIPerrorMessage("invalid SCIP stage <%d>\n", scip->set->stage);
-      return NULL;
-   }  /*lint !e788*/
+   return scip->mem->probmem;
 }
 
-/** returns the total number of bytes used in block memory
+/** returns buffer memory for short living temporary objects
  *
- *  @return the total number of bytes used in block memory.
+ *  @return the buffer memory for short living temporary objects
+ */
+BMS_BUFMEM* SCIPbuffer(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   return scip->mem->buffer;
+}
+
+/** returns clean buffer memory for short living temporary objects initialized to all zero
+ *
+ *  @return the buffer memory for short living temporary objects initialized to all zero
+ */
+BMS_BUFMEM* SCIPcleanbuffer(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+   assert(scip->mem != NULL);
+
+   return scip->mem->cleanbuffer;
+}
+
+/** returns the total number of bytes used in block and buffer memory
+ *
+ *  @return the total number of bytes used in block and buffer memory.
  */
 SCIP_Longint SCIPgetMemUsed(
    SCIP*                 scip                /**< SCIP data structure */
@@ -38974,170 +38993,6 @@ SCIP_RETCODE SCIPensureBlockMemoryArray_call(
    return SCIP_OKAY;
 }
 
-/** gets a memory buffer with at least the given size
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-SCIP_RETCODE SCIPallocBufferSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to store the buffer */
-   int                   size                /**< required size in bytes of buffer */
-   )
-{
-   assert(scip != NULL);
-   assert(ptr != NULL);
-
-   SCIP_CALL( SCIPsetAllocBufferSize(scip->set, ptr, size) );
-
-   return SCIP_OKAY;
-}
-
-/** allocates a memory buffer with at least the given size and copies the given memory into the buffer
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-SCIP_RETCODE SCIPduplicateBufferSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to store the buffer */
-   const void*           source,             /**< memory block to copy into the buffer */
-   int                   size                /**< required size in bytes of buffer */
-   )
-{
-   assert(scip != NULL);
-   assert(ptr != NULL);
-
-   SCIP_CALL( SCIPsetDuplicateBufferSize(scip->set, ptr, source, size) );
-
-   return SCIP_OKAY;
-}
-
-/** reallocates a memory buffer to at least the given size
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-SCIP_RETCODE SCIPreallocBufferSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to the buffer */
-   int                   size                /**< required size in bytes of buffer */
-   )
-{
-   assert(scip != NULL);
-   assert(ptr != NULL);
-
-   SCIP_CALL( SCIPsetReallocBufferSize(scip->set, ptr, size) );
-
-   return SCIP_OKAY;
-}
-
-/** gets a memory buffer with at least size for num elements of size elemsize
- *
- *  checks for overflow of required size or negative number of elements
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-SCIP_RETCODE SCIPallocBufferArraySafe(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to store the buffer */
-   int                   num,                /**< number of entries to allocate */
-   size_t                elemsize            /**< size of one element in the array */
-   )
-{
-   assert(scip != NULL);
-   assert(ptr != NULL);
-   assert(elemsize > 0);
-   assert(elemsize <= INT_MAX);
-
-   if( num < 0 || num > (int)(INT_MAX / elemsize) )
-   {
-      *ptr = NULL;
-      return SCIP_NOMEMORY;
-   }
-
-   SCIP_CALL( SCIPsetAllocBufferSize(scip->set, ptr, num * (int)elemsize) );
-
-   return SCIP_OKAY;
-}
-
-/** reallocates a memory buffer to have size for at least num elements of size elemsize
- *
- *  checks for overflow of required size or negative number of elements
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-SCIP_RETCODE SCIPreallocBufferArraySafe(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to the buffer */
-   int                   num,                /**< number of entries to reallocate */
-   size_t                elemsize            /**< size of one element in the array */
-   )
-{
-   assert(scip != NULL);
-   assert(ptr != NULL);
-   assert(elemsize > 0);
-   assert(elemsize <= INT_MAX);
-
-   if( num < 0 || num > (int)(INT_MAX / elemsize) )
-   {
-      *ptr = NULL;
-      return SCIP_NOMEMORY;
-   }
-
-   SCIP_CALL( SCIPsetReallocBufferSize(scip->set, ptr, num * (int)elemsize) );
-
-   return SCIP_OKAY;
-}
-
-/** allocates a memory buffer with at least size for num elements of size elemsize and copies
- *  the given memory into the buffer
- *
- *  checks for overflow of required size or negative number of elements
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-SCIP_RETCODE SCIPduplicateBufferArraySafe(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to the buffer */
-   const void*           source,             /**< memory block to copy into the buffer */
-   int                   num,                /**< number of entries to duplicate */
-   size_t                elemsize            /**< size of one element in the array */
-   )
-{
-   assert(scip != NULL);
-   assert(ptr != NULL);
-   assert(elemsize > 0);
-   assert(elemsize <= INT_MAX);
-
-   if( num < 0 || num > (int)(INT_MAX / elemsize) )
-   {
-      *ptr = NULL;
-      return SCIP_NOMEMORY;
-   }
-
-   SCIP_CALL( SCIPsetDuplicateBufferSize(scip->set, ptr, source, num * (int)elemsize) );
-
-   return SCIP_OKAY;
-}
-
-/** frees a memory buffer */
-void SCIPfreeBufferSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to the buffer */
-   int                   dummysize           /**< used to get a safer define for SCIPfreeBuffer() and SCIPfreeBufferArray() */
-   )
-{  /*lint --e{715}*/
-   assert(scip != NULL);
-   assert(ptr != NULL);
-   assert(dummysize == 0);
-
-   SCIPsetFreeBufferSize(scip->set, ptr);
-}
-
 /** prints output about used memory */
 void SCIPprintMemoryDiagnostic(
    SCIP*                 scip                /**< SCIP data structure */
@@ -39156,7 +39011,10 @@ void SCIPprintMemoryDiagnostic(
    BMSdisplayBlockMemory(scip->mem->probmem);
 
    SCIPmessagePrintInfo(scip->messagehdlr, "\nMemory Buffers:\n");
-   SCIPbufferPrint(scip->set->buffer);
+   BMSprintBufferMemory(SCIPbuffer(scip));
+
+   SCIPmessagePrintInfo(scip->messagehdlr, "\nClean Memory Buffers:\n");
+   BMSprintBufferMemory(SCIPcleanbuffer(scip));
 }
 
 

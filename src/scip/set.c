@@ -217,10 +217,8 @@
 /* Memory */
 
 #define SCIP_DEFAULT_MEM_SAVEFAC            0.8 /**< fraction of maximal mem usage when switching to memory saving mode */
-#define SCIP_DEFAULT_MEM_ARRAYGROWFAC       1.2 /**< memory growing factor for dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_TREEGROWFAC        2.0 /**< memory growing factor for tree array */
 #define SCIP_DEFAULT_MEM_PATHGROWFAC        2.0 /**< memory growing factor for path array */
-#define SCIP_DEFAULT_MEM_ARRAYGROWINIT        4 /**< initial size of dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_TREEGROWINIT     65536 /**< initial size of tree array */
 #define SCIP_DEFAULT_MEM_PATHGROWINIT       256 /**< initial size of path array */
 
@@ -481,6 +479,36 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdLimit)
 {  /*lint --e{715}*/
 
    SCIPmarkLimitChanged(scip);
+   return SCIP_OKAY;
+}
+
+/** information method for a parameter change of mem_arraygrowfac */
+static
+SCIP_DECL_PARAMCHGD(paramChgdArraygrowfac)
+{  /*lint --e{715}*/
+   SCIP_Real newarraygrowfac;
+
+   newarraygrowfac = SCIPparamGetReal(param);
+
+   /* change arraygrowfac */
+   BMSsetBufferMemoryArraygrowfac(SCIPbuffer(scip), newarraygrowfac);
+   BMSsetBufferMemoryArraygrowfac(SCIPcleanbuffer(scip), newarraygrowfac);
+
+   return SCIP_OKAY;
+}
+
+/** information method for a parameter change of mem_arraygrowinit */
+static
+SCIP_DECL_PARAMCHGD(paramChgdArraygrowinit)
+{  /*lint --e{715}*/
+   int newarraygrowinit;
+
+   newarraygrowinit = SCIPparamGetInt(param);
+
+   /* change arraygrowinit */
+   BMSsetBufferMemoryArraygrowinit(SCIPbuffer(scip), newarraygrowinit);
+   BMSsetBufferMemoryArraygrowinit(SCIPcleanbuffer(scip), newarraygrowinit);
+
    return SCIP_OKAY;
 }
 
@@ -781,9 +809,10 @@ SCIP_RETCODE SCIPsetCreate(
 
    (*set)->stage = SCIP_STAGE_INIT;
    (*set)->scip = scip;
+   (*set)->buffer = SCIPbuffer(scip);
+   (*set)->cleanbuffer = SCIPcleanbuffer(scip);
 
    SCIP_CALL( SCIPparamsetCreate(&(*set)->paramset, blkmem) );
-   SCIP_CALL( SCIPbufferCreate(&(*set)->buffer) );
 
    (*set)->readers = NULL;
    (*set)->nreaders = 0;
@@ -1399,12 +1428,12 @@ SCIP_RETCODE SCIPsetCreate(
          "memory/arraygrowfac",
          "memory growing factor for dynamically allocated arrays",
          &(*set)->mem_arraygrowfac, TRUE, SCIP_DEFAULT_MEM_ARRAYGROWFAC, 1.0, 10.0,
-         NULL, NULL) );
+         paramChgdArraygrowfac, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "memory/arraygrowinit",
          "initial size of dynamically allocated arrays",
          &(*set)->mem_arraygrowinit, TRUE, SCIP_DEFAULT_MEM_ARRAYGROWINIT, 0, INT_MAX,
-         NULL, NULL) );
+         paramChgdArraygrowinit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "memory/treegrowfac",
          "memory growing factor for tree array",
@@ -1901,9 +1930,6 @@ SCIP_RETCODE SCIPsetFree(
 
    /* free parameter set */
    SCIPparamsetFree(&(*set)->paramset, blkmem);
-
-   /* free memory buffers */
-   SCIPbufferFree(&(*set)->buffer);
 
    /* free file readers */
    for( i = 0; i < (*set)->nreaders; ++i )

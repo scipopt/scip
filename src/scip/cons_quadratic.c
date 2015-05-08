@@ -4427,7 +4427,6 @@ SCIP_RETCODE checkCurvature(
    SCIP_CONSDATA* consdata;
    double*        matrix;
    SCIP_HASHMAP*  var2index;
-   SCIP_RETCODE   retcode;
    int            i;
    int            n;
    int            nn;
@@ -4472,21 +4471,19 @@ SCIP_RETCODE checkCurvature(
       return SCIP_OKAY;
    }
 
-   /* lower triangular of quadratic term matrix */
+   /* do not check curvature if n is too large */
    nn = n * n;
-   retcode = SCIPallocBufferArray(scip, &matrix, nn);
-
-   /* do not check curvature if there has been an overflow or too little memory */
-   if( retcode == SCIP_NOMEMORY )
+   if( nn < 0 || (unsigned) (int) nn > UINT_MAX / sizeof(SCIP_Real) )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "cons_quadratic - not enough memory to check curvature\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "cons_quadratic - n is too large to check the curvature\n");
       consdata->isconvex = FALSE;
       consdata->isconcave = FALSE;
       consdata->iscurvchecked = TRUE;
       return SCIP_OKAY;
    }
-   assert(retcode == SCIP_OKAY);
 
+   /* lower triangular of quadratic term matrix */
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix, nn) );
    BMSclearMemoryArray(matrix, nn);
 
    consdata->isconvex  = TRUE;

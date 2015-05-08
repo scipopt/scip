@@ -4076,8 +4076,8 @@ SCIP_RETCODE separateIISRounding(
       for (j = 0; j < nconss; ++j)
       {
          SCIP_CONSDATA* consdata;
-         SCIP_Real binvarval;
-         SCIP_VAR* binvarneg;
+         SCIP_Real binvarval = 0.0;
+         SCIP_VAR* binvarneg = NULL;
 
          assert( conss[j] != NULL );
          consdata = SCIPconsGetData(conss[j]);
@@ -4102,8 +4102,7 @@ SCIP_RETCODE separateIISRounding(
          assert( conshdlrdata->binvarhash != NULL );
          if ( SCIPhashmapExists(conshdlrdata->binvarhash, (void*) binvarneg) )
          {
-            SCIP_Real binvarnegval;
-            binvarnegval = SCIPgetVarSol(scip, binvarneg);
+            SCIP_Real binvarnegval = SCIPgetVarSol(scip, binvarneg);
 
             /* take larger one */
             if ( binvarval > binvarnegval )

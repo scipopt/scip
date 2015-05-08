@@ -97,6 +97,14 @@ interface:
 - added new sorting functions SCIPsortRealRealRealBoolBoolPtr(), SCIPsortDownRealRealRealBoolBoolPtr()
 - added new sorting functions SCIPsortIntIntIntReal(), SCIPsortDownIntIntIntReal()
 - safe-guarded buffer array (re)allocations to check for negative size or size > INT_MAX
+- moved buffer memory handling to blockmemory/memory.?;
+  remove files type_buffer.h, struct_buffer.h buffer.h buffer.c;
+  removed functions SCIP*buffer*() from scip.? and replaced them by macros;
+  new function SCIPbuffermem() to get buffer memory;
+  redesigned buffer interface to be similar to block memory;
+  added checks for strange sizes
+- new function BMSallocClearBlockMemoryArray()/SCIPallocClearBlockMemoryArray() and
+  BMSallocClearBufferMemoryArray(), SCIPallocClearBufferArray() to allocate arrays that are initialized to 0
 
 fixed bugs:
 - fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)

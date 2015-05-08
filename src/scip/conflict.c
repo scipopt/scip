@@ -1966,7 +1966,7 @@ SCIP_RETCODE detectImpliedBounds(
       SCIPdebugPrintf("]\n");
 
       SCIP_CALL( SCIPsetAllocBufferArray(set, &vars, v) );
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &redundants, v) );
+      SCIP_CALL( SCIPsetAllocCleanBufferArray(set, &redundants, v) );
 
       /* initialize conflict variable data */
       for( v = 0; v < nbdchginfos; ++v )
@@ -1985,6 +1985,8 @@ SCIP_RETCODE detectImpliedBounds(
       if( *redundant )
       {
          SCIPdebugMessage("conflict set (%p) is redundant because at least one global reduction, fulfills the conflict constraint\n", (void*)conflictset);
+
+         BMSclearMemoryArray(redundants, nbdchginfos);
       }
       else if( *nredvars > 0 )
       {
@@ -2007,6 +2009,9 @@ SCIP_RETCODE detectImpliedBounds(
                relaxedbds[v] = relaxedbds[nbdchginfos - 1];
                sortvals[v] = sortvals[nbdchginfos - 1];
 
+               /* reset redundants[v] to 0 */
+               redundants[v] = 0;
+
                --nbdchginfos;
             }
          }
@@ -2014,38 +2019,9 @@ SCIP_RETCODE detectImpliedBounds(
 
          SCIPdebugMessage("removed %d redundant of %d variables from conflictset (%p)\n", (*nredvars), conflictset->nbdchginfos, (void*)conflictset);
          conflictset->nbdchginfos = nbdchginfos;
-
-#ifdef SCIP_DEBUG
-         nvars = SCIPprobGetNVars(prob);
-
-         SCIPdebugMessage("could shorten conflict (in %s) to:\n", SCIPprobGetName(prob));
-         SCIPdebugMessage("[");
-         for( v = 0; v < nbdchginfos; ++v )
-         {
-            int confidx;
-
-            var = SCIPbdchginfoGetVar(bdchginfos[v]);;
-
-            confidx = SCIPvarGetProbindex(var);
-            assert(confidx >= 0);
-
-            if( boundtypes[v] )
-               confidx += nvars;
-
-            /* if conflict variable was marked to be redundant remove it */
-            if( redundants[confidx] > 0 )
-            {
-               SCIPdebugPrintf("%s %s %g", SCIPvarGetName(SCIPbdchginfoGetVar(bdchginfos[v])), (!boundtypes[v]) ? ">=" : "<=", bounds[v]);
-               if( v < nbdchginfos - 1 )
-                  SCIPdebugPrintf(", ");
-            }
-         }
-         SCIPdebugPrintf("]\n");
-#endif
-
       }
 
-      SCIPsetFreeBufferArray(set, &redundants);
+      SCIPsetFreeCleanBufferArray(set, &redundants);
       SCIPsetFreeBufferArray(set, &vars);
    }
 

@@ -3112,7 +3112,7 @@ SCIP_RETCODE shortenConss(
    SCIP_CALL( SCIPallocBufferArray(scip, &probvars, nbinprobvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &bounds, nbinprobvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, nbinprobvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &redundants, nbinprobvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &redundants, nbinprobvars) );
 
    for( c = nconss - 1; c >= 0; --c )
    {
@@ -3171,7 +3171,8 @@ SCIP_RETCODE shortenConss(
       }
 
       /* use implications and cliques to derive global fixings and to shrink the number of variables in this constraints */
-      SCIP_CALL( SCIPshrinkDisjunctiveVarSet(scip, probvars, bounds, boundtypes, redundants, consdata->nvars, &nredvars, nfixedvars, &redundant, TRUE) );
+      SCIP_CALL( SCIPshrinkDisjunctiveVarSet(scip, probvars, bounds, boundtypes, redundants, consdata->nvars, &nredvars,
+            nfixedvars, &redundant, TRUE) );
 
       /* remove redundant constraint */
       if( redundant )
@@ -3179,6 +3180,21 @@ SCIP_RETCODE shortenConss(
          SCIP_CALL( SCIPdelCons(scip, cons) );
          ++(*ndelconss);
 
+         /* reset redundants array to FALSE */
+#if 1
+         BMSclearMemoryArray(redundants, consdata->nvars);
+#else
+         if( nredvars > 0 )
+         {
+            for( v = consdata->nvars - 1; v >= 0; --v )
+            {
+               if( redundants[v] )
+               {
+                  redundants[v] = FALSE;
+               }
+            }
+         }
+#endif
          continue;
       }
 
@@ -3190,6 +3206,9 @@ SCIP_RETCODE shortenConss(
             if( redundants[v] )
             {
                SCIP_CALL( delCoefPos(scip, cons, eventhdlr, v) );
+
+               /* reset entry to FALSE */
+               redundants[v] = FALSE;
             }
          }
          *nchgcoefs += nredvars;
@@ -3216,7 +3235,7 @@ SCIP_RETCODE shortenConss(
 
  TERMINATE:
    /* free temporary memory */
-   SCIPfreeBufferArray(scip, &redundants);
+   SCIPfreeCleanBufferArray(scip, &redundants);
    SCIPfreeBufferArray(scip, &boundtypes);
    SCIPfreeBufferArray(scip, &bounds);
    SCIPfreeBufferArray(scip, &probvars);

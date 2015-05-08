@@ -434,7 +434,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_zerohalf.o
 
 SCIPLIBOBJ	=	scip/branch.o \
-			scip/buffer.o \
 			scip/clock.o \
 			scip/conflict.o \
 			scip/cons.o \
