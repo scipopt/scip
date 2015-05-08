@@ -1046,7 +1046,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    *nredvars = 0;
    ncountnonzeros = 0;
 
-   maxcountnonzeros = (int)(2*nprobvars*CLEARRATIO); /*!lint !e790*/
+   maxcountnonzeros = (int)(2*nprobvars*CLEARRATIO); /*lint !e790*/
 
    /* initialize variable indices data */
    for( v = 0; v < nvars; ++v )
