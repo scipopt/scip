@@ -1045,6 +1045,7 @@ SCIP_RETCODE extensionOperatorSOS1(
          /* add directed edges to the vertex-clique graph */
          for (j = 0; j < consdata->nvars; ++j)
          {
+            /* add arc from clique vertex to clique (needed in presolRoundConssSOS1() to delete redundand cliques) */
             SCIP_CALL( SCIPdigraphAddArcSafe(vertexcliquegraph, cliques[*ncliques][j], cliqueind, NULL) );
          }
 
