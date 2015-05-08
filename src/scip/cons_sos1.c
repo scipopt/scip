@@ -7669,9 +7669,13 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
        }
 
        /* initialize stack of variables fixed to nonzero */
-       conshdlrdata->maxnfixnonzerovars = conshdlrdata->nsos1vars;
-       SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->fixnonzerovars, conshdlrdata->maxnfixnonzerovars) );
+       if ( conshdlrdata->fixnonzerovars == NULL )
+       {
+          conshdlrdata->maxnfixnonzerovars = conshdlrdata->nsos1vars;
+          SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->fixnonzerovars, conshdlrdata->maxnfixnonzerovars) );
+       }
     }
+
     return SCIP_OKAY;
 }
 
@@ -7827,6 +7831,13 @@ SCIP_DECL_CONSTRANS(consTransSOS1)
    assert( sourcedata != NULL );
    assert( sourcedata->nvars > 0 );
    assert( sourcedata->nvars <= sourcedata->maxvars );
+
+   /* initialize stack of variables fixed to nonzero */
+   if ( conshdlrdata->fixnonzerovars == NULL )
+   {
+      conshdlrdata->maxnfixnonzerovars = SCIPgetNTotalVars(scip);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &conshdlrdata->fixnonzerovars, conshdlrdata->maxnfixnonzerovars) );
+   }
 
    /* create constraint data */
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
@@ -8318,19 +8329,24 @@ SCIP_DECL_CONSPROP(consPropSOS1)
 
          var = fixnonzerovars[j];
          assert( var != NULL );
-         assert( varGetNodeSOS1(conshdlrdata, var) >= 0 && varGetNodeSOS1(conshdlrdata, var) < conshdlrdata->nsos1vars );
-         SCIPdebugMessage("Propagating SOS1 variable <%s>.\n", SCIPvarGetName(var) );
 
-         /* if zero is outside the domain of variable */
-         if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
+         /* if variable is involved in an SOS1 constraint */
+         if ( varGetNodeSOS1(conshdlrdata, var) >= 0 )
          {
-            SCIP_Bool cutoff;
+            assert( varGetNodeSOS1(conshdlrdata, var) < conshdlrdata->nsos1vars );
+            SCIPdebugMessage("Propagating SOS1 variable <%s>.\n", SCIPvarGetName(var) );
 
-            SCIP_CALL( propVariableNonzero(scip, conflictgraph, implgraph, conss[0], varGetNodeSOS1(conshdlrdata, var), conshdlrdata->implprop, &cutoff, &ngen) );
-            if ( cutoff )
+            /* if zero is outside the domain of variable */
+            if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
             {
-               *result = SCIP_CUTOFF;
-               return SCIP_OKAY;
+               SCIP_Bool cutoff;
+
+               SCIP_CALL( propVariableNonzero(scip, conflictgraph, implgraph, conss[0], varGetNodeSOS1(conshdlrdata, var), conshdlrdata->implprop, &cutoff, &ngen) );
+               if ( cutoff )
+               {
+                  *result = SCIP_CUTOFF;
+                  return SCIP_OKAY;
+               }
             }
          }
       }
