@@ -1057,7 +1057,7 @@ SCIP_RETCODE extensionOperatorSOS1(
       }
       else if ( nextsnew < nworkingsetnew ) /* else if the number of of candidates equals zero */
       {
-         /* if, backtracking is used, it is not necessary to keep the memory for 'workingsetnew' */
+         /* if backtracking is used, it is necessary to keep the memory for 'workingsetnew' */
          if ( usebacktrack )
          {
             SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, vars, weights, usebacktrack,
@@ -1270,7 +1270,11 @@ SCIP_RETCODE getSOS1Implications(
    int                   node                /**< node of the implication graph */
    )
 {
+   SCIP_SUCCDATA** succdatas;
    int sos1node;
+   int* succ;
+   int nsucc;
+   int s;
 
    assert( scip != NULL );
    assert( implgraph != NULL );
@@ -1283,33 +1287,26 @@ SCIP_RETCODE getSOS1Implications(
    sos1node = varGetNodeSOS1(conshdlrdata, vars[node]);
    if ( sos1node < 0 )
       return SCIP_OKAY;
-   else
+
+   succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, node);
+   nsucc = SCIPdigraphGetNSuccessors(implgraph, node);
+   succ = SCIPdigraphGetSuccessors(implgraph, node);
+
+   for (s = 0; s < nsucc; ++s)
    {
-      SCIP_SUCCDATA** succdatas;
-      int* succ;
-      int nsucc;
-      int s;
+      SCIP_SUCCDATA* data;
+      int succnode;
+      succnode = succ[s];
+      data = succdatas[s];
+      sos1node = varGetNodeSOS1(conshdlrdata, vars[succnode]);
 
-      succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, node);
-      nsucc = SCIPdigraphGetNSuccessors(implgraph, node);
-      succ = SCIPdigraphGetSuccessors(implgraph, node);
-
-      for (s = 0; s < nsucc; ++s)
+      /* if node is SOS1 and the corresponding variable is implied to be nonzero */
+      assert( succdatas[s] != NULL );
+      if ( sos1node >= 0 && ! implnodes[sos1node] && ( SCIPisFeasPositive(scip, data->lbimpl) || SCIPisFeasNegative(scip, data->ubimpl) ) )
       {
-         SCIP_SUCCDATA* data;
-         int succnode;
-         succnode = succ[s];
-         data = succdatas[s];
-         sos1node = varGetNodeSOS1(conshdlrdata, vars[succnode]);
-
-         /* if node is SOS1 and the corresponding variable is implied to be nonzero */
-         assert( succdatas[s] != NULL );
-         if ( sos1node >= 0 && ! implnodes[sos1node] && ( SCIPisFeasPositive(scip, data->lbimpl) || SCIPisFeasNegative(scip, data->ubimpl) ) )
-         {
-            assert( sos1node == succnode );
-            implnodes[sos1node] = TRUE;
-            SCIP_CALL( getSOS1Implications(scip, conshdlrdata, vars, implgraph, implhash, implnodes, succnode) );
-         }
+         assert( sos1node == succnode );
+         implnodes[sos1node] = TRUE;
+         SCIP_CALL( getSOS1Implications(scip, conshdlrdata, vars, implgraph, implhash, implnodes, succnode) );
       }
    }
 
@@ -2404,16 +2401,9 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          origrhs = SCIPgetRhsLinear(scip, linearconss[c]);
          origlhs = SCIPgetLhsLinear(scip, linearconss[c]);
 
-         /* allocate buffer arrays */
-         SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvars, noriglinvars) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &trafolinvals, noriglinvars) );
-
          /* copy variables and coefficients of linear constraint */
-         for (v = 0; v < noriglinvars; ++v)
-         {
-            trafolinvars[v] = origlinvars[v];
-            trafolinvals[v] = origlinvals[v];
-         }
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvars, origlinvars, noriglinvars) );
+         SCIP_CALL( SCIPduplicateBufferArray(scip, &trafolinvals, origlinvals, noriglinvars) );
          ntrafolinvars = noriglinvars;
 
          /* transform linear constraint */
@@ -2517,10 +2507,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
 
          if ( trafolinvals[v] < 0.0 )
          {
-            SCIP_Real tmp;
-            tmp = lb;
-            lb = ub;
-            ub = tmp;
+            SCIPswapPointers((void**)&lb, (void**)&ub);
          }
 
          if ( SCIPisInfinity(scip, REALABS(lb)) )
@@ -2655,7 +2642,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          }
          else
          {
-            assert( v-ntrafolinvars >= 0 );
+            assert( v >= ntrafolinvars );
             var = sos1linvars[v-ntrafolinvars];/*lint !e679*/
             trafoubv = 0.0;
          }
