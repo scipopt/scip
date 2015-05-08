@@ -52,7 +52,7 @@
 #define DEFAULT_MAXROUNDSROOT       100 /**< maximal number of separation rounds in the root node (-1: no limit) */
 #define DEFAULT_MAXINVCUTS           50 /**< maximal number of cuts investigated per iteration in a branching node */
 #define DEFAULT_MAXINVCUTSROOT      250 /**< maximal number of cuts investigated per iteration in the root node */
-#define DEFAULT_MAXCONSDELAY         -1 /**< delay separation if number of SOS1 constraints is larger than predefined value (-1: no limit) */
+#define DEFAULT_MAXCONFSDELAY        -1 /**< delay separation if number of conflict graph edges is larger than predefined value (-1: no limit) */
 
 
 /** separator data */
@@ -67,7 +67,7 @@ struct SCIP_SepaData
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: no limit) */
    int                   maxinvcuts;         /**< maximal number of cuts separated per iteration in a branching node */
    int                   maxinvcutsroot;     /**< maximal number of cuts separated per iteration in the root node */
-   int                   maxconsdelay;       /**< delay separation if number of sos1 constraints is larger than predefined value (-1: no limit) */
+   int                   maxconfsdelay;      /**< delay separation if number of conflict graph edges is larger than predefined value (-1: no limit) */
    int                   lastncutsfound;     /**< total number of cuts found after last call of separator */
 };
 
@@ -515,8 +515,12 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
       return SCIP_OKAY;
 
-   /* if too many SOS1 constraints, the separator is usually very slow: delay it until no other cuts have been found */
-   if ( sepadata->maxconsdelay >= 0 && nconss >= sepadata->maxconsdelay )
+   /* get conflict graph and number of conflict graph edges (not that the digraph arcs were added in both directions) */
+   conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
+   nedges = SCIPceil(scip, (SCIP_Real)SCIPdigraphGetNArcs(conflictgraph)/2);
+
+   /* if too many conflict graph edges, the separator can be slow: delay it until no other cuts have been found */
+   if ( sepadata->maxconfsdelay >= 0 && nedges >= sepadata->maxconfsdelay )
    {
       int ncutsfound;
 
@@ -538,10 +542,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
 
    /* get number of SOS1 variables */
    nsos1vars = SCIPgetNSOS1Vars(conshdlr);
-
-   /* get conflict graph and number of conflict graph edges */
-   conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
-   nedges = SCIPdigraphGetNArcs(conflictgraph);
 
    /* allocate buffer arrays */
    SCIP_CALL( SCIPallocBufferArray(scip, &edgearray, nedges) );
@@ -838,9 +838,9 @@ SCIP_RETCODE SCIPincludeSepaDisjunctive(
          "maximal number of cuts investigated per iteration in the root node",
          &sepadata->maxinvcutsroot, TRUE, DEFAULT_MAXINVCUTSROOT, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxconsdelay",
-         "delay separation if number of sos1 constraints is larger than predefined value (-1: no limit)",
-         &sepadata->maxconsdelay, TRUE, DEFAULT_MAXCONSDELAY, -1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxconfsdelay",
+         "delay separation if number of conflict graph edges is larger than predefined value (-1: no limit)",
+         &sepadata->maxconfsdelay, TRUE, DEFAULT_MAXCONFSDELAY, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxrank",
          "maximal rank of a disj. cut that could not be scaled to integral coefficients (-1: unlimited)",
