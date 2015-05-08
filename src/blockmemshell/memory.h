@@ -16,6 +16,7 @@
 /**@file   memory.h
  * @brief  memory allocation routines
  * @author Tobias Achterberg
+ * @author Gerald Gamrath
  * @author Marc Pfetsch
  */
 
