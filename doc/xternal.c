@@ -5738,7 +5738,7 @@
  *
  *  The following holds for all three types of memory functions:
  *  - In debug mode the arguments are checked for overly large allocations (negative sizes are converted into very large values of type @c size_t).
- *  - The functions allways allocate at least one byte, so that freeing is always possible.
+ *  - The functions always allocate at least one byte, so that freeing is always possible.
  *  - The freeing methods set the pointer to the memory to NULL.
  *  - For maximum speed you should free memory in the reverse order in which it was allocated.
  *    For block and buffer memory this @b significantly speeds up the code.
