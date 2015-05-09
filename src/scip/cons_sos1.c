@@ -154,6 +154,84 @@ SCIP_RETCODE fixVariableZeroNode(
 }
 
 
+/** try to fix variable to 0
+ *
+ *  Try to treat fixing by special consideration of multiaggregated variables. For a multi-aggregation
+ *  \f[
+ *  x = \sum_{i=1}^n \alpha_i x_i + c,
+ *  \f]
+ *  we can express the fixing \f$x = 0\f$ by fixing all \f$x_i\f$ to 0 if \f$c = 0\f$ and the lower bounds of \f$x_i\f$
+ *  are nonnegative if \f$\alpha_i > 0\f$ or the upper bounds are nonpositive if \f$\alpha_i < 0\f$.
+ */
+static
+SCIP_RETCODE fixVariableZero(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_VAR*             var,                /**< variable to be fixed to 0*/
+   SCIP_Bool*            infeasible,         /**< if fixing is infeasible */
+   SCIP_Bool*            tightened           /**< if fixing was performed */
+   )
+{
+   assert( scip != NULL );
+   assert( var != NULL );
+   assert( infeasible != NULL );
+   assert( tightened != NULL );
+
+   *infeasible = FALSE;
+   *tightened = FALSE;
+
+   if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+   {
+      SCIP_Real aggrconst;
+
+      /* if constant is 0 */
+      aggrconst = SCIPvarGetMultaggrConstant(var);
+      if ( SCIPisZero(scip, aggrconst) )
+      {
+         SCIP_VAR** aggrvars;
+         SCIP_Real* aggrvals;
+         SCIP_Bool allnonnegative = TRUE;
+         int naggrvars;
+         int i;
+
+         SCIP_CALL( SCIPflattenVarAggregationGraph(scip, var) );
+
+         /* check whether all variables are "nonnegative" */
+         naggrvars = SCIPvarGetMultaggrNVars(var);
+         aggrvars = SCIPvarGetMultaggrVars(var);
+         aggrvals = SCIPvarGetMultaggrScalars(var);
+         for (i = 0; i < naggrvars; ++i)
+         {
+            if ( (SCIPisPositive(scip, aggrvals[i]) && SCIPisNegative(scip, SCIPvarGetLbLocal(aggrvars[i]))) ||
+                 (SCIPisNegative(scip, aggrvals[i]) && SCIPisPositive(scip, SCIPvarGetUbLocal(aggrvars[i]))) )
+            {
+               allnonnegative = FALSE;
+               break;
+            }
+         }
+
+         if ( allnonnegative )
+         {
+            /* all variables are nonnegative -> fix variables */
+            for (i = 0; i < naggrvars; ++i)
+            {
+               SCIP_Bool fixed;
+               SCIP_CALL( SCIPfixVar(scip, aggrvars[i], 0.0, infeasible, &fixed) );
+               if ( *infeasible )
+                  return SCIP_OKAY;
+               *tightened = *tightened || fixed;
+            }
+         }
+      }
+   }
+   else
+   {
+      SCIP_CALL( SCIPfixVar(scip, var, 0.0, infeasible, tightened) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** fix variable in local node to 0, and return whether the operation was feasible
  *
  *  @note We do not add a linear constraint if the variable is multi-aggregated as in
@@ -633,8 +711,12 @@ SCIP_RETCODE presolRoundSOS1(
       {
          if ( j != lastFixedNonzero )
          {
-            SCIP_CALL( SCIPfixVar(scip, vars[j], 0.0, &infeasible, &fixed) );
-            assert( ! infeasible );
+            SCIP_CALL( fixVariableZero(scip, vars[j], &infeasible, &fixed) );
+            if ( infeasible )
+            {
+               *cutoff = TRUE;
+               return SCIP_OKAY;
+            }
             if ( fixed )
                ++(*nfixedvars);
          }
