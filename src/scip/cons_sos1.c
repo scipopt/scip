@@ -107,7 +107,10 @@ struct SCIP_ConshdlrData
 };
 
 
-/** fix variable in given node to 0 or add constraint if variable is multi-aggregated */
+/** fix variable in given node to 0 or add constraint if variable is multi-aggregated
+ *
+ *  @todo Try to handle multi-aggregated variables as in fixVariableZero() below.
+ */
 static
 SCIP_RETCODE fixVariableZeroNode(
    SCIP*                 scip,               /**< SCIP pointer */
