@@ -14,7 +14,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   scip.c
+/**@file   pub_dive.c
  * @brief  library methods for diving heuristics
  * @author Gregor Hendel
  *
