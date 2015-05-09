@@ -292,7 +292,7 @@ SCIP_RETCODE SCIPdivesetCreate(
 
 /** get the heuristic to which this diving setting belongs */
 SCIP_HEUR* SCIPdivesetGetHeur(
-   SCIP_DIVESET*         diveset             /** diving settings */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
    return diveset->heur;
@@ -300,7 +300,7 @@ SCIP_HEUR* SCIPdivesetGetHeur(
 
 /** get the working solution of this dive set */
 SCIP_SOL* SCIPdivesetGetWorkSolution(
-   SCIP_DIVESET*         diveset             /** diving settings */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
    assert(diveset != NULL);
@@ -310,8 +310,8 @@ SCIP_SOL* SCIPdivesetGetWorkSolution(
 
 /** set the working solution for this dive set */
 void SCIPdivesetSetWorkSolution(
-   SCIP_DIVESET*         diveset,            /** diving settings */
-   SCIP_SOL*             sol                 /** new working solution for this dive set, or NULL */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_SOL*             sol                 /**< new working solution for this dive set, or NULL */
    )
 {
    assert(diveset != NULL);
@@ -321,7 +321,7 @@ void SCIPdivesetSetWorkSolution(
 
 /** get the name of the dive set */
 const char* SCIPdivesetGetName(
-   SCIP_DIVESET*         diveset             /** diving settings */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
    assert(diveset != NULL);

@@ -14,7 +14,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   pub_dive.c
+/**@file   pub_dive.h
  * @brief  library methods for diving heuristics
  * @author Gregor Hendel
  *

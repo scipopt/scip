@@ -20,21 +20,21 @@
  * Perform bound tightening on two inequalities with some common variables.
  *
  * Let two constraints be given:
- *
- * A_{iR} x_R + A_{iS} x_S              >= b_i  (1)
- * A_{kR} x_R              + A_{kT} x_T >= b_k  (2)
- *
- * with N the set of variable indexes, R \subseteq N, S \subseteq N, T \subseteq N,
- * R \cap S = \emptyset, R \cap T = \emptyset, S \cap T = \emptyset and i \not= k.
+ * \f{eqnarray*}{
+ *   A_{iR} x_R + A_{iS} x_S              \geq b_i\\
+ *   A_{kR} x_R              + A_{kT} x_T \geq b_k
+ * \f}
+ * with \f$N\f$ the set of variable indexes, \f$R \subseteq N\f$, \f$S \subseteq N\f$, \f$T \subseteq N\f$,
+ * \f$R \cap S = \emptyset\f$, \f$R \cap T = \emptyset\f$, \f$S \cap T = \emptyset\f$ and \f$i \not= k\f$.
  *
  * Solve the following two LPs
+ * \f{eqnarray*}{
+ *   L = \min \{ A_{kR} x_R : A_{iR} x_R + A_{iS} x_S \geq b_i \}\\
+ *   U = \max \{ A_{kR} x_R : A_{iR} x_R + A_{iS} x_S \geq b_i \}
+ * \f}
+ * and use \f$L\f$ and \f$U\f$ for getting bounds on \f$x_T\f$.
  *
- * L = min{ A_{kR} x_R : A_{iR} x_R + A_{iS} x_S >= b_i }
- * U = max{ A_{kR} x_R : A_{iR} x_R + A_{iS} x_S >= b_i }
- *
- * and use L and U for getting bounds on x_T.
- *
- * If L + infimum(A_{kT}x_T) >= b_k, then constraint (2) is redundant.
+ * If \f$L + \mbox{infimum}(A_{kT}x_T) \geq b_k\f$, then the second constraint above is redundant.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

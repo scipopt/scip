@@ -179,20 +179,20 @@ SCIP_HEUR* SCIPdivesetGetHeur(
 /** get the working solution of this dive set */
 EXTERN
 SCIP_SOL* SCIPdivesetGetWorkSolution(
-   SCIP_DIVESET*         diveset             /** diving settings */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** set the working solution for this dive set */
 EXTERN
 void SCIPdivesetSetWorkSolution(
-   SCIP_DIVESET*         diveset,            /** diving settings */
-   SCIP_SOL*             sol                 /** new working solution for this dive set, or NULL */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_SOL*             sol                 /**< new working solution for this dive set, or NULL */
    );
 
 /** get the name of the dive set */
 EXTERN
 const char* SCIPdivesetGetName(
-   SCIP_DIVESET*         diveset             /** diving settings */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the minimum relative depth of the diving settings */
