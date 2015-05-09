@@ -2366,6 +2366,28 @@ int SCIPnlpiOracleGetMaxDegree(
    return maxdegree;
 }
 
+/** Gives the evaluation capabilities that are shared among all expression trees in the problem. */
+SCIP_EXPRINTCAPABILITY SCIPnlpiOracleGetEvalCapability(
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   )
+{
+   int c;
+   SCIP_EXPRINTCAPABILITY evalcapability;
+
+   assert(oracle != NULL);
+
+   if( oracle->objective->exprtree != NULL )
+      evalcapability = SCIPexprintGetExprtreeCapability(oracle->exprinterpreter, oracle->objective->exprtree);
+   else
+      evalcapability = SCIP_EXPRINTCAPABILITY_ALL;
+
+   for( c = 0; c < oracle->nconss; ++c )
+      if( oracle->conss[c]->exprtree != NULL )
+         evalcapability &= SCIPexprintGetExprtreeCapability(oracle->exprinterpreter, oracle->conss[c]->exprtree);
+
+   return evalcapability;
+}
+
 /** evaluates the objective function in a given point */
 SCIP_RETCODE SCIPnlpiOracleEvalObjectiveValue(
    SCIP_NLPIORACLE*      oracle,             /**< pointer to NLPIORACLE data structure */
