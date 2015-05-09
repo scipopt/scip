@@ -5457,6 +5457,7 @@ SCIP_RETCODE exprParse(
 #undef SCIPexprGetMonomialExponents
 #undef SCIPexprGetUserData
 #undef SCIPexprHasUserEstimator
+#undef SCIPexprGetUserEvalCapability
 
 /** gives operator of expression */
 SCIP_EXPROP SCIPexprGetOperator(
@@ -5725,6 +5726,17 @@ SCIP_Bool SCIPexprHasUserEstimator(
    assert(expr->data.data != NULL);
 
    return ((SCIP_EXPRDATA_USER*)expr->data.data)->estimate != NULL;
+}
+
+/** gives the evaluation capability of a user expression */
+SCIP_EXPRINTCAPABILITY SCIPexprGetUserEvalCapability(
+   SCIP_EXPR*              expr
+   )
+{
+   assert(expr != NULL);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_USER*)expr->data.data)->evalcapability;
 }
 
 /** creates a simple expression */
@@ -6912,6 +6924,7 @@ SCIP_RETCODE SCIPexprCreateUser(
    int                   nchildren,          /**< number of children */
    SCIP_EXPR**           children,           /**< children of expression */
    SCIP_USEREXPRDATA*    data,               /**< user data for expression, expression assumes ownership */
+   SCIP_EXPRINTCAPABILITY evalcapability,    /**< capability of evaluation functions (partially redundant, currently) */
    SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
    SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function, or NULL if not implemented */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
@@ -6929,6 +6942,8 @@ SCIP_RETCODE SCIPexprCreateUser(
    assert(expr != NULL);
    assert(children != NULL || nchildren == 0);
    assert(eval != NULL);
+   assert((evalcapability & SCIP_EXPRINTCAPABILITY_FUNCVALUE) != 0);  /* the function evaluation is not optional */
+   assert(((evalcapability & SCIP_EXPRINTCAPABILITY_INTFUNCVALUE) == 0) || inteval != NULL);  /* if capability says it can do interval evaluation, then the corresponding callback needs to be provided */
    assert(curv != NULL);
    assert(copydata != NULL || data == NULL);
    assert(freedata != NULL || data == NULL);
@@ -6936,6 +6951,7 @@ SCIP_RETCODE SCIPexprCreateUser(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &userexprdata) );
 
    userexprdata->userdata = data;
+   userexprdata->evalcapability = evalcapability;
    userexprdata->eval = eval;
    userexprdata->inteval = inteval;
    userexprdata->curv = curv;
@@ -11593,7 +11609,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
          userdata = exprdata->userdata;
 
       SCIP_CALL( SCIPexprCreateUser(exprgraph->blkmem, expr, node->nchildren, childexprs,
-         userdata, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata) );
+         userdata, exprdata->evalcapability, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata) );
 
       break;
    }
@@ -13151,6 +13167,7 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPRGRAPHNODE**  node,               /**< buffer to store expression graph node */
    SCIP_USEREXPRDATA*    data,               /**< user data for expression, node assumes ownership */
+   SCIP_EXPRINTCAPABILITY evalcapability,    /**< evaluation capability */
    SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
    SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
@@ -13166,12 +13183,15 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    assert(blkmem != NULL);
    assert(node   != NULL);
    assert(eval != NULL);
+   assert((evalcapability & SCIP_EXPRINTCAPABILITY_FUNCVALUE) != 0);  /* the function evaluation is not optional */
+   assert(((evalcapability & SCIP_EXPRINTCAPABILITY_INTFUNCVALUE) == 0) || inteval != NULL);  /* if capability says it can do interval evaluation, then the corresponding callback needs to be provided */
    assert(copydata != NULL || data == NULL);
    assert(freedata != NULL || data == NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &exprdata) );
 
    exprdata->userdata = data;
+   exprdata->evalcapability = evalcapability;
    exprdata->eval = eval;
    exprdata->estimate = estimate;
    exprdata->inteval = inteval;
