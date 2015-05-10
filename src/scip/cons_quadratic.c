@@ -7242,6 +7242,8 @@ SCIP_RETCODE computeInteriorPoint(
       nlpiside = consdata->lhs - nlpiside;
    }
 
+   nquadvars = consdata->nquadvars;
+
    /* if we are looking for any interior point and the 0 is one, then use it */
    if( method == 'a' && ((consdata->isconvex && SCIPisGE(scip, nlpiside, 0.0))
             || (consdata->isconcave && SCIPisLE(scip, nlpiside, 0.0))) )
@@ -7274,7 +7276,6 @@ SCIP_RETCODE computeInteriorPoint(
 #endif
 
    /* ask for memory to store data needed to create vars and linear coefficients */
-   nquadvars = consdata->nquadvars;
    SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nquadvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &ubs, nquadvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lininds, nquadvars) );
