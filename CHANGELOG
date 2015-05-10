@@ -15,6 +15,9 @@ fixed bugs:
 - fixed bug in heur_nlpdiving.c: wrong counting of fix variables
 - fixed bug in cons_quadratic.c: do not generate linearization cuts for disabled constraints
 
+features:
+- extended expression parsing to support power, realpower, and signpower operators
+
 misc:
 - moved assertions in comparison methods from scip.c to set.c
 - added more checks to SCIP{alloc,realloc,dupliacte}BufferArray() to handle overflows properly
