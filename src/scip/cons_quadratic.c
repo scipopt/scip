@@ -7179,6 +7179,12 @@ SCIP_RETCODE computeInteriorPoint(
    if( !SCIPisIpoptAvailableIpopt() )
       return SCIP_OKAY;
 
+   nlpi = NULL;
+   lbs = NULL;
+   ubs = NULL;
+   lincoefs = NULL;
+   lininds = NULL;
+
 #ifdef SCIP_DEBUG_INT
    SCIPinfoMessage(scip, NULL, "Computing interior point for\n");
    SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
@@ -7455,8 +7461,12 @@ TERMINATE:
    SCIPfreeBufferArrayNull(scip, &ubs);
    SCIPfreeBufferArrayNull(scip, &lininds);
    SCIPfreeBufferArrayNull(scip, &lincoefs);
-   SCIP_CALL( SCIPnlpiFreeProblem(nlpi, &prob) );
-   SCIP_CALL( SCIPnlpiFree(&nlpi) );
+
+   if( nlpi != NULL )
+   {
+      SCIP_CALL( SCIPnlpiFreeProblem(nlpi, &prob) );
+      SCIP_CALL( SCIPnlpiFree(&nlpi) );
+   }
 
    return SCIP_OKAY;
 }
@@ -7773,7 +7783,6 @@ SCIP_RETCODE computeReferencePointGauge(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_SOL*             refsol,             /**< reference point where to compute gauge, or NULL if LP solution should be used */
-   SCIP_Bool             checkcurvmultivar,  /**< are we allowed to check the curvature of a multivariate quadratic function, if not done yet */
    SCIP_Real**           ref,                /**< pointer to store reference point */
    SCIP_Bool*            success             /**< buffer to store whether we succeeded computing reference point */
    )
@@ -7912,11 +7921,11 @@ SCIP_RETCODE generateCutSol(
    SCIP_CALL( SCIPallocBufferArray(scip, &ref, consdata->nquadvars) );
    success = FALSE;
 
-   if( conshdlrdata->gaugecuts &&
+   if( conshdlrdata->gaugecuts && consdata->isgaugeavailable &&
          ((consdata->isconvex && violside == SCIP_SIDETYPE_RIGHT) ||
           (consdata->isconcave && violside == SCIP_SIDETYPE_LEFT)) )
    {
-      SCIP_CALL( computeReferencePointGauge(scip, conshdlr, cons, refsol, checkcurvmultivar, &ref, &success) );
+      SCIP_CALL( computeReferencePointGauge(scip, conshdlr, cons, refsol, &ref, &success) );
    }
 
    if( success )
