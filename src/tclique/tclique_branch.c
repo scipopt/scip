@@ -716,7 +716,7 @@ int branch(
    BMS_CHKMEM*           mem,                /**< block memory */
    CLIQUEHASH*           cliquehash,         /**< clique hash table */
    int*                  buffer,             /**< buffer of size nnodes */
-   int                   level,	             /**< level of b&b tree */
+   int                   level,              /**< level of b&b tree */
    int*                  V,                  /**< non-zero weighted nodes for branching */
    int                   nV,                 /**< number of non-zero weighted nodes for branching */
    int*                  Vzero,              /**< zero weighted nodes */
@@ -877,14 +877,14 @@ int branch(
          }
 
          /* get next branching node */
-	 if( level == 1 && fixednode >= 0 )
-	 {
-	    /* select the fixed node as first "branching" candidate */
-	    for( branchidx = 0; branchidx < nValive && V[branchidx] != fixednode; branchidx++ )
-	    {}
-	    assert(branchidx < nValive);
-	    assert(V[branchidx] == fixednode);
-	 }
+         if( level == 1 && fixednode >= 0 )
+         {
+            /* select the fixed node as first "branching" candidate */
+            for( branchidx = 0; branchidx < nValive && V[branchidx] != fixednode; branchidx++ )
+            {}
+            assert(branchidx < nValive);
+            assert(V[branchidx] == fixednode);
+         }
          else if( level == 1 && maxfirstnodeweight > 0 )
             branchidx = getMaxApBoundIndexNotMaxWeight(V, nValive, apbound, weights, maxfirstnodeweight);
          else
@@ -945,8 +945,8 @@ int branch(
             nValive = 0;
          }
 
-	 /* if we had a fixed node, ignore all other nodes */
-	 if( fixednode >= 0 )
+         /* if we had a fixed node, ignore all other nodes */
+         if( fixednode >= 0 )
             nValive = 0;
       }
 
@@ -1011,7 +1011,7 @@ void tcliqueMaxClique(
    TCLIQUE_WEIGHT        maxfirstnodeweight, /**< maximum weight of branching nodes in level 0; 0 if not used
                                               *   for cliques with at least one fractional node) */
    TCLIQUE_WEIGHT        minweight,          /**< lower bound for weight of generated cliques */
-   int                   maxntreenodes,	     /**< maximal number of nodes of b&b tree */
+   int                   maxntreenodes,      /**< maximal number of nodes of b&b tree */
    int                   backtrackfreq,      /**< frequency to backtrack to first level of tree (0: no premature backtracking) */
    int                   maxnzeroextensions, /**< maximal number of zero-valued variables extending the clique */
    int                   fixednode,          /**< node that is forced to be in the clique, or -1; must have positive weight */
