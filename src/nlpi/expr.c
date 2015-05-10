@@ -5138,8 +5138,8 @@ SCIP_RETCODE exprParse(
    }
    else if( strncmp(str, "power", 5) == 0 )
    {
-      /* we have a string of the form "power(x,y)", first find the closing parenthesis, then the comma;
-       * this is actually intpower
+      /* we have a string of the form "power(...,integer)" (thus, intpower)
+       * first find the closing parenthesis, then the comma
        */
       const char* comma;
       int exponent;
@@ -5170,11 +5170,47 @@ SCIP_RETCODE exprParse(
 
       str = endptr + 1;
    }
-   /* Unsupported two arguments operands */
    else if( strncmp(str, "realpower", 9) == 0 || strncmp(str, "signpower", 9) == 0 )
    {
-      SCIPerrorMessage("parsing of expression %.*s is unsupported yet.\n", (int) (lastchar - str + 1), str);
-      return SCIP_READERROR;
+      /* we have a string of the form "realpower(...,double)" or "signpower(...,double)"
+       * first find the closing parenthesis, then the comma
+       */
+      const char* opname = str;
+      const char* comma;
+
+      str += 9;
+      SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
+
+      SCIP_CALL( exprparseFindSeparatingComma(str+1, &comma, endptr - str - 1) );
+
+      /* parse first argument [str+1..comma-1] */
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, comma - str - 1, comma - 1, nvars, varnames, vartable, recursiondepth + 1) );
+
+      ++comma;
+      /* parse second argument [comma, endptr-1]: it needs to be an number */
+      while( comma < endptr && *comma == ' ' )
+         ++comma;
+      if( !isdigit((unsigned char)comma[0]) && !((comma[0] == '-' || comma[0] == '+') && isdigit((unsigned char)comma[1])) )
+      {
+         SCIPerrorMessage("error parsing number exponent from <%s>\n", comma);
+      }
+      if( !SCIPstrToRealValue(comma, &number, &nonconstendptr) )
+      {
+         SCIPerrorMessage("error parsing number from <%s>\n", comma);
+         return SCIP_READERROR;
+      }
+
+      if( strncmp(opname, "realpower", 9) == 0 )
+      {
+         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_REALPOWER, arg1, number) );
+      }
+      else
+      {
+         assert(strncmp(opname, "signpower", 9) == 0);
+         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_SIGNPOWER, arg1, number) );
+      }
+
+      str = endptr + 1;
    }
    else if( isalpha(*str) || *str == '_' || *str == '#' )
    {
