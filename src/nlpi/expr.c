@@ -4903,6 +4903,43 @@ SCIP_RETCODE exprparseFindClosingParenthesis(
    return SCIP_OKAY;
 }
 
+/** this function sets endptr to point to the next separating comma in str
+ *
+ *  That is, for a given string like "x+f(x,y),z", endptr will point to the comma before "z"
+ *
+ *  Searches for at most length characters.
+ */
+static
+SCIP_RETCODE exprparseFindSeparatingComma(
+   const char*           str,                /**< pointer to the string to be parsed */
+   const char**          endptr,             /**< pointer to point to the comma */
+   int                   length              /**< length of the string to be parsed */
+   )
+{
+   int nopenbrackets;
+
+   *endptr = str;
+
+   /* find a comma without open brackets */
+   nopenbrackets = 0;
+   while( (*endptr - str ) < length && !(nopenbrackets == 0 && *endptr[0] == ',') )
+   {
+      if( *endptr[0] == '(')
+         ++nopenbrackets;
+      if( *endptr[0] == ')')
+         --nopenbrackets;
+      ++*endptr;
+   }
+
+   if( *endptr[0] != ',' )
+   {
+      SCIPerrorMessage("unable to find separating comma in unbalanced expression %.*s\n", length, str);
+      return SCIP_READERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** parses an expression from a string */
 static
 SCIP_RETCODE exprParse(
@@ -5099,8 +5136,42 @@ SCIP_RETCODE exprParse(
          SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_TAN, arg1) );
       }
    }
+   else if( strncmp(str, "power", 5) == 0 )
+   {
+      /* we have a string of the form "power(x,y)", first find the closing parenthesis, then the comma;
+       * this is actually intpower
+       */
+      const char* comma;
+      int exponent;
+
+      str += 5;
+      SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
+
+      SCIP_CALL( exprparseFindSeparatingComma(str+1, &comma, endptr - str - 1) );
+
+      /* parse first argument [str+1..comma-1] */
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, comma - str - 1, comma - 1, nvars, varnames, vartable, recursiondepth + 1) );
+
+      ++comma;
+      /* parse second argument [comma, endptr-1]: it needs to be an integer */
+      while( comma < endptr && *comma == ' ' )
+         ++comma;
+      if( !isdigit((unsigned char)comma[0]) && !((comma[0] == '-' || comma[0] == '+') && isdigit((unsigned char)comma[1])) )
+      {
+         SCIPerrorMessage("error parsing integer exponent from <%s>\n", comma);
+      }
+      if( !SCIPstrToIntValue(comma, &exponent, &nonconstendptr) )
+      {
+         SCIPerrorMessage("error parsing integer from <%s>\n", comma);
+         return SCIP_READERROR;
+      }
+
+      SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_INTPOWER, arg1, exponent) );
+
+      str = endptr + 1;
+   }
    /* Unsupported two arguments operands */
-   else if( strncmp(str, "realpower", 9) == 0 || strncmp(str, "intpower", 8) == 0 || strncmp(str, "signpower", 9) == 0 || strncmp(str, "power", 5) == 0 )
+   else if( strncmp(str, "realpower", 9) == 0 || strncmp(str, "signpower", 9) == 0 )
    {
       SCIPerrorMessage("parsing of expression %.*s is unsupported yet.\n", (int) (lastchar - str + 1), str);
       return SCIP_READERROR;
