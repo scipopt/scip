@@ -1329,7 +1329,7 @@ SCIP_RETCODE consdataFree(
       SCIP_CALL( SCIPreleaseNlRow(scip, &(*consdata)->nlrow) );
    }
 
-   /* free interior point information */
+   /* free interior point information, may exists if constraint is deleted in solving stage */
    SCIPfreeMemoryArrayNull(scip, &(*consdata)->interiorpoint);
    SCIPfreeMemoryArrayNull(scip, &(*consdata)->gaugecoefs);
 
@@ -10699,6 +10699,9 @@ SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
 
       SCIPfreeBlockMemoryArrayNull(scip, &consdata->factorleft,  consdata->nquadvars + 1);
       SCIPfreeBlockMemoryArrayNull(scip, &consdata->factorright, consdata->nquadvars + 1);
+
+      SCIPfreeMemoryArrayNull(scip, &consdata->interiorpoint);
+      SCIPfreeMemoryArrayNull(scip, &consdata->gaugecoefs);
    }
 
    if( SCIPgetStage(scip) != SCIP_STAGE_EXITSOLVE )
