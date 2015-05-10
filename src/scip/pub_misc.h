@@ -202,15 +202,9 @@ void SCIPgmlWriteClosing(
 EXTERN
 SCIP_RETCODE SCIPsparseSolCreate(
    SCIP_SPARSESOL**      sparsesol,          /**< pointer to store the created sparse solution */
-   SCIP_VAR**            vars,               /**< variables in the sparse solution, must not contain continuous
-					      *   variables
-					      */
-   int                   nvars,              /**< number of variables to store, size of the lower and upper bound
-					      *   arrays
-					      */
-   SCIP_Bool             cleared             /**< should the lower and upper bound arrays be cleared (entries set to
-					      *	  0)
-					      */
+   SCIP_VAR**            vars,               /**< variables in the sparse solution, must not contain continuous variables */
+   int                   nvars,              /**< number of variables to store, size of the lower and upper bound arrays */
+   SCIP_Bool             cleared             /**< should the lower and upper bound arrays be cleared (entries set to 0) */
    );
 
 /** frees sparse solution */

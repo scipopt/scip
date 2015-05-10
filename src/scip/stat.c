@@ -544,8 +544,8 @@ void SCIPstatUpdateMemsaveMode(
  *  @see: For completely disabling all timing of SCIP, consider setting the parameter timing/enabled to FALSE
  */
 void SCIPstatEnableOrDisableStatClocks(
-   SCIP_STAT*          stat,             /**< SCIP statistics */
-   SCIP_Bool           enable            /**< should the LP clocks be enabled? */
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   SCIP_Bool             enable              /**< should the LP clocks be enabled? */
    )
 {
    assert(stat != NULL);

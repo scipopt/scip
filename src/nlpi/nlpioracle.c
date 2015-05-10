@@ -977,14 +977,14 @@ SCIP_RETCODE hessLagSparsitySetNzFlagForQuad(
  * adds the indices to a given set of indices, avoiding duplicates */
 static
 SCIP_RETCODE hessLagSparsitySetNzFlagForExprtree(
-   SCIP_NLPIORACLE*      oracle,     /**< NLPI oracle */
-   int**                 colnz,      /**< indices of nonzero entries for each column */
-   int*                  collen,     /**< space allocated to store indices of nonzeros for each column */
-   int*                  colnnz,     /**< number of nonzero entries for each column */
-   int*                  nzcount,    /**< counter for total number of nonzeros; should be increased when nzflag is set to 1 the first time */
-   int*                  exprvaridx, /**< indices of variables from expression tree in NLP */
-   SCIP_EXPRTREE*        exprtree,   /**< expression tree */
-   int                   dim         /**< dimension of matrix */
+   SCIP_NLPIORACLE*      oracle,             /**< NLPI oracle */
+   int**                 colnz,              /**< indices of nonzero entries for each column */
+   int*                  collen,             /**< space allocated to store indices of nonzeros for each column */
+   int*                  colnnz,             /**< number of nonzero entries for each column */
+   int*                  nzcount,            /**< counter for total number of nonzeros; should be increased when nzflag is set to 1 the first time */
+   int*                  exprvaridx,         /**< indices of variables from expression tree in NLP */
+   SCIP_EXPRTREE*        exprtree,           /**< expression tree */
+   int                   dim                 /**< dimension of matrix */
    )
 {
    SCIP_Real*  x;
@@ -1083,15 +1083,15 @@ SCIP_RETCODE hessLagAddQuad(
 /** adds hessian of an expression into hessian structure */
 static
 SCIP_RETCODE hessLagAddExprtree(
-   SCIP_NLPIORACLE*      oracle,     /**< oracle */
-   SCIP_Real             weight,     /**< weight of quadratic part */
-   const SCIP_Real*      x,          /**< point for which hessian should be returned */
-   SCIP_Bool             new_x,      /**< whether point has been evaluated before */
-   int*                  exprvaridx, /**< NLP indices for variables in expression tree */
-   SCIP_EXPRTREE*        exprtree,   /**< expression tree */
-   int*                  hesoffset,  /**< row offsets in sparse matrix that is to be filled */ 
-   int*                  hescol,     /**< column indices in sparse matrix that is to be filled */
-   SCIP_Real*            values      /**< buffer for values of sparse matrix that is to be filled */
+   SCIP_NLPIORACLE*      oracle,             /**< oracle */
+   SCIP_Real             weight,             /**< weight of quadratic part */
+   const SCIP_Real*      x,                  /**< point for which hessian should be returned */
+   SCIP_Bool             new_x,              /**< whether point has been evaluated before */
+   int*                  exprvaridx,         /**< NLP indices for variables in expression tree */
+   SCIP_EXPRTREE*        exprtree,           /**< expression tree */
+   int*                  hesoffset,          /**< row offsets in sparse matrix that is to be filled */
+   int*                  hescol,             /**< column indices in sparse matrix that is to be filled */
+   SCIP_Real*            values              /**< buffer for values of sparse matrix that is to be filled */
    )
 {
    SCIP_Real* xx;
@@ -1425,7 +1425,7 @@ SCIP_RETCODE SCIPnlpiOracleSetProblemName(
 
 /** gets the problem name, or NULL if none set */
 const char* SCIPnlpiOracleGetProblemName(
-   SCIP_NLPIORACLE*     oracle               /**< pointer to NLPIORACLE data structure */
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    )
 {
    assert(oracle != NULL);
@@ -2780,9 +2780,9 @@ SCIP_RETCODE SCIPnlpiOracleGetHessianLagSparsity(
    const int**           col                 /**< pointer to store pointer that stores the indices of variables that appear in each row, offset[nconss] gives length of col, can be NULL */
    )
 {
-   int** colnz;   /** nonzeros in Hessian corresponding to one column */
-   int*  collen;  /** collen[i] is length of array colnz[i] */
-   int*  colnnz;  /** colnnz[i] is number of entries in colnz[i] (<= collen[i]) */ 
+   int** colnz;   /* nonzeros in Hessian corresponding to one column */
+   int*  collen;  /* collen[i] is length of array colnz[i] */
+   int*  colnnz;  /* colnnz[i] is number of entries in colnz[i] (<= collen[i]) */
    int   nnz;
    int   i;
    int   j;

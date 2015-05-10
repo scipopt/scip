@@ -17,8 +17,6 @@
  * @brief  constraint handler for nonlinear constraints \f$\textrm{lhs} \leq \sum_{i=1}^n a_ix_i + \sum_{j=1}^m c_jf_j(x) \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  * @author Ingmar Vierhaus (consparse)
- *
- * @todo implement CONSPARSE callback
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

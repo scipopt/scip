@@ -706,7 +706,7 @@ testblis:
 
 .PHONY: tags
 tags:
-		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/;
+		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/; sed 's!\#undef .*!!g' TAGS > tags; mv tags TAGS
 
 # include target to detect the current git hash
 -include make/local/make.detectgithash

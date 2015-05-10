@@ -247,9 +247,9 @@ void confgraphAddBdchg(
    )
 {
    const char* colors[] = {
-      "#8888ff", /**< blue for constraint resolving */
-      "#ffff00", /**< yellow for propagator resolving */
-      "#55ff55"  /**< green branching decision */
+      "#8888ff", /* blue for constraint resolving */
+      "#ffff00", /* yellow for propagator resolving */
+      "#55ff55"  /* green branching decision */
    };
    char label[SCIP_MAXSTRLEN];
    char depth[SCIP_MAXSTRLEN];
@@ -6951,7 +6951,7 @@ SCIP_Longint SCIPconflictGetNPseudoReconvergenceLiterals(
 
 /** enables or disables all clocks of \p conflict, depending on the value of the flag */
 void SCIPconflictEnableOrDisableClocks(
-   SCIP_CONFLICT*        conflict,            /**< the conflict analysis data for which all clocks should be enabled or disabled */
+   SCIP_CONFLICT*        conflict,           /**< the conflict analysis data for which all clocks should be enabled or disabled */
    SCIP_Bool             enable              /**< should the clocks of the conflict analysis data be enabled? */
    )
 {
