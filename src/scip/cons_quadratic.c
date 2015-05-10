@@ -190,7 +190,9 @@ struct SCIP_ConshdlrData
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
    SCIP_Bool             gaugecuts;          /**< should convex quadratics generated strong cuts via gauge function? */
-   char                  interiorcomputation;/**< how the interior point should be computed */
+   char                  interiorcomputation;/**< how the interior point should be computed: 'a'ny point per constraint,
+                                              * 'm'ost interior per constraint
+                                              */
    int                   enfolplimit;        /**< maximum number of enforcement round before declaring the LP relaxation
                                               * infeasible (-1: no limit); WARNING: if this parameter is not set to -1,
                                               * SCIP might declare sub-optimal solutions optimal or feasible instances
@@ -10644,7 +10646,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       }
 
       /* compute gauge function using interior points per constraint, only when there are quadratic variables */
-      if( conshdlrdata->gaugecuts && conshdlrdata->interiorcomputation != 'g' && consdata->nquadvars >0 )
+      if( conshdlrdata->gaugecuts && consdata->nquadvars > 0 )
       {
          SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
          if( (consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)) ||
@@ -12589,8 +12591,8 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
          &conshdlrdata->gaugecuts, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/interiorcomputation",
-         "how the interior point should be computed: 'a'ny point per constraint, 'm'ost interior per constraint, 'g'lobal interior",
-         &conshdlrdata->interiorcomputation, TRUE, 'a', "amg", NULL, NULL) );
+         "how the interior point should be computed: 'a'ny point per constraint, 'm'ost interior per constraint",
+         &conshdlrdata->interiorcomputation, TRUE, 'a', "am", NULL, NULL) );
 
    conshdlrdata->eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr),CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
