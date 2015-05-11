@@ -9640,6 +9640,36 @@ SCIP_RETCODE SCIPinitVarBranchStats(
    SCIP_Real             upcutoff            /**< value to which cutoff counter for upwards branching should be initialized */
    );
 
+/** initializes the upwards and downwards conflict scores, conflict lengths, inference scores, cutoff scores of a
+ *  variable w.r.t. a value by the given values (SCIP_VALUEHISTORY)
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPinitVarValueBranchStats(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which should be initialized */
+   SCIP_Real             value,              /**< domain value, or SCIP_UNKNOWN */
+   SCIP_Real             downvsids,          /**< value to which VSIDS score for downwards branching should be initialized */
+   SCIP_Real             upvsids,            /**< value to which VSIDS score for upwards branching should be initialized */
+   SCIP_Real             downconflen,        /**< value to which conflict length score for downwards branching should be initialized */
+   SCIP_Real             upconflen,          /**< value to which conflict length score for upwards branching should be initialized */
+   SCIP_Real             downinfer,          /**< value to which inference counter for downwards branching should be initialized */
+   SCIP_Real             upinfer,            /**< value to which inference counter for upwards branching should be initialized */
+   SCIP_Real             downcutoff,         /**< value to which cutoff counter for downwards branching should be initialized */
+   SCIP_Real             upcutoff            /**< value to which cutoff counter for upwards branching should be initialized */
+   );
+
 /** returns the average number of cutoffs found after branching on the variable in given direction;
  *  if branching on the variable in the given direction was yet evaluated, the average number of cutoffs
  *  over all variables for branching in the given direction is returned

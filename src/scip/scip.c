@@ -23808,6 +23808,71 @@ SCIP_RETCODE SCIPinitVarBranchStats(
    return SCIP_OKAY;
 }
 
+/** initializes the upwards and downwards conflict scores, conflict lengths, inference scores, cutoff scores of a
+ *  variable w.r.t. a value by the given values (SCIP_VALUEHISTORY)
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPinitVarValueBranchStats(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which should be initialized */
+   SCIP_Real             value,              /**< domain value, or SCIP_UNKNOWN */
+   SCIP_Real             downvsids,          /**< value to which VSIDS score for downwards branching should be initialized */
+   SCIP_Real             upvsids,            /**< value to which VSIDS score for upwards branching should be initialized */
+   SCIP_Real             downconflen,        /**< value to which conflict length score for downwards branching should be initialized */
+   SCIP_Real             upconflen,          /**< value to which conflict length score for upwards branching should be initialized */
+   SCIP_Real             downinfer,          /**< value to which inference counter for downwards branching should be initialized */
+   SCIP_Real             upinfer,            /**< value to which inference counter for upwards branching should be initialized */
+   SCIP_Real             downcutoff,         /**< value to which cutoff counter for downwards branching should be initialized */
+   SCIP_Real             upcutoff            /**< value to which cutoff counter for upwards branching should be initialized */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPinitVarValueBranchStats", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   assert(downvsids >= 0.0 && upvsids >= 0.0);
+   assert(downconflen >= 0.0 && upconflen >= 0.0);
+   assert(downinfer >= 0.0 && upinfer >= 0.0);
+   assert(downcutoff >= 0.0 && upcutoff >= 0.0);
+
+   if( !SCIPisFeasZero(scip, downvsids) || !SCIPisFeasZero(scip, downinfer) || !SCIPisFeasZero(scip, downcutoff) )
+   {
+      SCIP_CALL( SCIPvarIncNBranchings(var, SCIPblkmem(scip), scip->set, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, value, 1) );
+      SCIP_CALL( SCIPvarIncInferenceSum(var, SCIPblkmem(scip), scip->set, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, value, downinfer) );
+      SCIP_CALL( SCIPvarIncVSIDS(var, SCIPblkmem(scip), scip->set, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, value, downvsids) );
+      SCIP_CALL( SCIPvarIncCutoffSum(var, SCIPblkmem(scip), scip->set, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, value, downcutoff) );
+   }
+
+   if( !SCIPisFeasZero(scip, downconflen) )
+   {
+      SCIP_CALL( SCIPvarIncNActiveConflicts(var, SCIPblkmem(scip), scip->set, scip->stat, SCIP_BRANCHDIR_DOWNWARDS, value, downconflen) );
+   }
+
+   if( !SCIPisFeasZero(scip, upvsids) || !SCIPisFeasZero(scip, upinfer) || !SCIPisFeasZero(scip, upcutoff) )
+   {
+      SCIP_CALL( SCIPvarIncNBranchings(var, SCIPblkmem(scip), scip->set, scip->stat, SCIP_BRANCHDIR_UPWARDS, value, 1) );
+      SCIP_CALL( SCIPvarIncInferenceSum(var, SCIPblkmem(scip), scip->set, scip->stat, SCIP_BRANCHDIR_UPWARDS, value, upinfer) );
+      SCIP_CALL( SCIPvarIncVSIDS(var, SCIPblkmem(scip), scip->set, scip->stat, SCIP_BRANCHDIR_UPWARDS, value, upvsids) );
+      SCIP_CALL( SCIPvarIncCutoffSum(var, SCIPblkmem(scip), scip->set, scip->stat, SCIP_BRANCHDIR_UPWARDS, value, upcutoff) );
+   }
+
+   if( !SCIPisFeasZero(scip, upconflen) )
+   {
+      SCIP_CALL( SCIPvarIncNActiveConflicts(var, SCIPblkmem(scip), scip->set, scip->stat, SCIP_BRANCHDIR_UPWARDS, value, upconflen) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** returns the average number of cutoffs found after branching on the variable in given direction;
  *  if branching on the variable in the given direction was yet evaluated, the average number of cutoffs
  *  over all variables for branching in the given direction is returned
