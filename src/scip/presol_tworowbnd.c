@@ -57,6 +57,8 @@
 #define SUPPORT_THRESHOLD            0.5     /**< threshold for two constraints overlap */
 #define FASTMODE_THRESHOLD          1000     /**< max number of baserows for switching to fast mode */
 
+/* uncomment the following define to debug solving the small LPs */
+/* #define DEBUG_WRITE_CHECK_LPS */
 
 /** type of bound change */
 enum Bndchgtype
@@ -71,7 +73,7 @@ typedef enum Bndchgtype BNDCHGTYPE;
  * Local methods
  */
 
-#if 0
+#ifdef DEBUG_WRITE_CHECK_LPS
 /** write min and max LP to file */
 static
 void writeLPs(
@@ -107,13 +109,13 @@ void writeLPs(
       {
          if( coefbaseoverlap[i] > 0.0 )
          {
-            fprintf(filemax, "+%f %s ", coefbaseoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
-            fprintf(filemin, "+%f %s ", coefbaseoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
+            fprintf(filemax, "+%.24f %s ", coefbaseoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
+            fprintf(filemin, "+%.24f %s ", coefbaseoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
          }
          else
          {
-            fprintf(filemax, "%f %s ", coefbaseoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
-            fprintf(filemin, "%f %s ", coefbaseoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
+            fprintf(filemax, "%.24f %s ", coefbaseoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
+            fprintf(filemin, "%.24f %s ", coefbaseoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
          }
       }
 
@@ -124,13 +126,13 @@ void writeLPs(
       {
          if( coefotheroverlap[i] > 0.0 )
          {
-            fprintf(filemax, "+%f %s ", coefotheroverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
-            fprintf(filemin, "+%f %s ", coefotheroverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
+            fprintf(filemax, "+%.24f %s ", coefotheroverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
+            fprintf(filemin, "+%.24f %s ", coefotheroverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
          }
          else
          {
-            fprintf(filemax, "%f %s ", coefotheroverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
-            fprintf(filemin, "%f %s ", coefotheroverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
+            fprintf(filemax, "%.24f %s ", coefotheroverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
+            fprintf(filemin, "%.24f %s ", coefotheroverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
          }
       }
 
@@ -140,17 +142,17 @@ void writeLPs(
       {
          if( coefothernonoverlap[i] > 0.0 )
          {
-            fprintf(filemax, "+%f %s ", coefothernonoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])));
-            fprintf(filemin, "+%f %s ", coefothernonoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])));
+            fprintf(filemax, "+%.24f %s ", coefothernonoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])));
+            fprintf(filemin, "+%.24f %s ", coefothernonoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])));
          }
          else
          {
-            fprintf(filemax, "%f %s ", coefothernonoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])));
-            fprintf(filemin, "%f %s ", coefothernonoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])));
+            fprintf(filemax, "%.24f %s ", coefothernonoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])));
+            fprintf(filemin, "%.24f %s ", coefothernonoverlap[i], SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])));
          }
       }
-      fprintf(filemax, " >= %f\n", lhs);
-      fprintf(filemin, " >= %f\n", lhs);
+      fprintf(filemax, " >= %.24f\n", lhs);
+      fprintf(filemin, " >= %.24f\n", lhs);
 
       fprintf(filemax, "bounds\n");
       fprintf(filemin, "bounds\n");
@@ -159,20 +161,20 @@ void writeLPs(
       {
          if( !SCIPisInfinity(scip, -lowerbds[overlapidx[i]]) && !SCIPisInfinity(scip, upperbds[overlapidx[i]]) )
          {
-            fprintf(filemax, "\t%f <= %s <= %f\n", lowerbds[overlapidx[i]],
+            fprintf(filemax, "\t%.24f <= %s <= %.24f\n", lowerbds[overlapidx[i]],
                SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])), upperbds[overlapidx[i]]);
-            fprintf(filemin, "\t%f <= %s <= %f\n", lowerbds[overlapidx[i]],
+            fprintf(filemin, "\t%.24f <= %s <= %.24f\n", lowerbds[overlapidx[i]],
                SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])), upperbds[overlapidx[i]]);
          }
          else if( !SCIPisInfinity(scip, -lowerbds[overlapidx[i]]) )
          {
-            fprintf(filemax, "\t%f <= %s\n", lowerbds[overlapidx[i]], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
-            fprintf(filemin, "\t%f <= %s\n", lowerbds[overlapidx[i]], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
+            fprintf(filemax, "\t%.24f <= %s\n", lowerbds[overlapidx[i]], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
+            fprintf(filemin, "\t%.24f <= %s\n", lowerbds[overlapidx[i]], SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])));
          }
          else if( !SCIPisInfinity(scip, upperbds[overlapidx[i]]) )
          {
-            fprintf(filemax, "\t%s <= %f\n", SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])), upperbds[overlapidx[i]]);
-            fprintf(filemin, "\t%s <= %f\n", SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])), upperbds[overlapidx[i]]);
+            fprintf(filemax, "\t%s <= %.24f\n", SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])), upperbds[overlapidx[i]]);
+            fprintf(filemin, "\t%s <= %.24f\n", SCIPvarGetName(SCIPmatrixGetVar(matrix, overlapidx[i])), upperbds[overlapidx[i]]);
          }
       }
 
@@ -180,22 +182,22 @@ void writeLPs(
       {
          if( !SCIPisInfinity(scip, -lowerbds[othernonoverlapidx[i]]) && !SCIPisInfinity(scip, upperbds[othernonoverlapidx[i]]) )
          {
-            fprintf(filemax, "\t%f <= %s <= %f\n", lowerbds[othernonoverlapidx[i]],
+            fprintf(filemax, "\t%.24f <= %s <= %.24f\n", lowerbds[othernonoverlapidx[i]],
                SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])), upperbds[othernonoverlapidx[i]]);
-            fprintf(filemin, "\t%f <= %s <= %f\n", lowerbds[othernonoverlapidx[i]],
+            fprintf(filemin, "\t%.24f <= %s <= %.24f\n", lowerbds[othernonoverlapidx[i]],
                SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])), upperbds[othernonoverlapidx[i]]);
          }
          else if( !SCIPisInfinity(scip, -lowerbds[othernonoverlapidx[i]]) )
          {
-            fprintf(filemax, "\t%f <= %s\n", lowerbds[othernonoverlapidx[i]],
+            fprintf(filemax, "\t%.24f <= %s\n", lowerbds[othernonoverlapidx[i]],
                SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])));
-            fprintf(filemin, "\t%f <= %s\n", lowerbds[othernonoverlapidx[i]],
+            fprintf(filemin, "\t%.24f <= %s\n", lowerbds[othernonoverlapidx[i]],
                SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])));
          }
          else if( !SCIPisInfinity(scip, upperbds[othernonoverlapidx[i]]) )
          {
-            fprintf(filemax, "\t%s <= %f\n", SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])), upperbds[othernonoverlapidx[i]]);
-            fprintf(filemin, "\t%s <= %f\n", SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])), upperbds[othernonoverlapidx[i]]);
+            fprintf(filemax, "\t%s <= %.24f\n", SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])), upperbds[othernonoverlapidx[i]]);
+            fprintf(filemin, "\t%s <= %.24f\n", SCIPvarGetName(SCIPmatrixGetVar(matrix, othernonoverlapidx[i])), upperbds[othernonoverlapidx[i]]);
          }
       }
 
@@ -212,7 +214,7 @@ void writeLPs(
 #endif
 
 
-/** solve two LPs with one row each
+/** solve two LPs with one row (single constraint) each
  *
  * a1x + a3y      >= b1  (other row)
  * a2x      + a4z >= b2  (base row)
@@ -224,6 +226,7 @@ static
 void getActivities(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   int                   baserow,            /**< base row index */
    int                   otherrow,           /**< other row index */
    int                   numoverlap,         /**< overlap-size */
    int*                  overlapidx,         /**< overlap column indexes */
@@ -253,14 +256,17 @@ void getActivities(
    int nminratios;
    int nmaxratios;
    int i;
-   SCIP_Bool infpresent;
+   SCIP_Bool mininfpresent;
+   SCIP_Bool maxinfpresent;
 
    *minact = 0;
    *maxact = 0;
    nminratios = 0;
    nmaxratios = 0;
 
-#if 0
+#ifdef DEBUG_WRITE_CHECK_LPS
+   SCIPmatrixPrintRow(scip,matrix,baserow);
+   SCIPmatrixPrintRow(scip,matrix,otherrow);
    writeLPs(scip, matrix, otherrow, numoverlap, overlapidx, othernonoverlapidx,
       coefbaseoverlap, coefotheroverlap, coefothernonoverlap, lowerbds, upperbds);
 #endif
@@ -270,10 +276,11 @@ void getActivities(
 
    nothernonoverlap = SCIPmatrixGetRowNNonzs(matrix, otherrow) - numoverlap;
    val = 0;
-   infpresent = FALSE;
    consred = FALSE;
 
-   /* compute maximal contribution of non-overlap part to activity */
+   /* compute maximal contribution of non-overlap part of the
+      single constraint to the activity.
+      maybe the single constraint is redundant */
    for( i = 0; i < nothernonoverlap; i++ )
    {
       if( coefothernonoverlap[i] < 0.0 )
@@ -304,9 +311,9 @@ void getActivities(
 
    if( !consred )
    {
-      lhs -= val;
-      objoffset = 0;
-
+      /* we want that every coefficient in the single constraint
+         has a negative sign and hence we need to multiply
+         some columns by -1 */
       for( i = 0; i < numoverlap; i++ )
       {
          tmplowerbds[i] = lowerbds[overlapidx[i]];
@@ -322,48 +329,64 @@ void getActivities(
             coefotheroverlap[i] = -coefotheroverlap[i];
             coefbaseoverlap[i] = -coefbaseoverlap[i];
          }
+      }
 
-         if( coefbaseoverlap[i] < 0.0 )
+
+      /*
+       * solve minimization LP
+       *
+       * we distinguish two column cases:
+       *
+       * a)           b)
+       * min  -       min  +
+       * s.t. -       s.t. -
+       */
+      minlhs = lhs - val;
+      objoffset = 0;
+      mininfpresent = FALSE;
+
+      for( i = 0; i < numoverlap; i++ )
+      {
+         if( coefbaseoverlap[i] > 0.0 )
          {
+            /* b) */
+            if( SCIPisInfinity(scip, -tmplowerbds[i]) || SCIPisInfinity(scip, tmplowerbds[i]) )
+            {
+               *minact = -SCIPinfinity(scip);
+               mininfpresent = TRUE;
+               break;
+            }
+            else
+            {
+               minlhs -= coefotheroverlap[i] * tmplowerbds[i];
+               objoffset += coefbaseoverlap[i] * tmplowerbds[i];
+            }
+         }
+         else
+         {
+            /* a) */
             minratios[nminratios] = coefbaseoverlap[i] / coefotheroverlap[i];
             minsortedidx[nminratios] = i;
             nminratios++;
          }
-         else
-         {
-            maxratios[nmaxratios] = coefbaseoverlap[i] / coefotheroverlap[i];
-            maxsortedidx[nmaxratios] = i;
-            nmaxratios++;
-         }
-
-         if( SCIPisInfinity(scip, -tmplowerbds[i]) || SCIPisInfinity(scip, tmplowerbds[i]) )
-         {
-            infpresent = TRUE;
-            *minact = -SCIPinfinity(scip);
-            *maxact = SCIPinfinity(scip);
-            break;
-         }
-         else
-         {
-            lhs -= coefotheroverlap[i] * tmplowerbds[i];
-            objoffset += coefbaseoverlap[i] * tmplowerbds[i];
-            tmpupperbds[i] -= tmplowerbds[i];
-         }
       }
 
-      if( !infpresent )
+      if( !mininfpresent )
       {
-         /* min case */
-         SCIPsortRealInt(minratios, minsortedidx, nminratios);
-         minlhs = lhs;
+         /* sort the ratios for case a) */
+         if( nminratios > 1 )
+            SCIPsortRealInt(minratios, minsortedidx, nminratios);
+
+         /* pack every variable on their upper bound until we are feasible */
          for( i = nminratios-1; 0 <= i; i-- )
          {
             SCIP_Real tmpval;
 
             if( SCIPisInfinity(scip, tmpupperbds[minsortedidx[i]]) )
             {
-               infpresent = TRUE;
-               *minact = -SCIPinfinity(scip);
+               tmpval = minlhs / coefotheroverlap[minsortedidx[i]];
+               assert(tmpval <= tmpupperbds[minsortedidx[i]]);
+               *minact += coefbaseoverlap[minsortedidx[i]] * tmpval;
                break;
             }
             else
@@ -373,33 +396,83 @@ void getActivities(
                {
                   *minact += coefbaseoverlap[minsortedidx[i]] * tmpupperbds[minsortedidx[i]];
                   minlhs -= tmpval;
+
+                  if( SCIPisEQ(scip, minlhs, 0.0) )
+                     break;
                }
                else
                {
                   tmpval = minlhs / coefotheroverlap[minsortedidx[i]];
-                  if( tmpval > 0.0 )
-                  {
-                     assert(tmpval <= tmpupperbds[minsortedidx[i]]);
-                     *minact += coefbaseoverlap[minsortedidx[i]] * tmpval;
-                  }
+                  assert(tmpval <= tmpupperbds[minsortedidx[i]]);
+                  *minact += coefbaseoverlap[minsortedidx[i]] * tmpval;
                   break;
                }
             }
          }
-         if( !infpresent )
-            *minact += objoffset;
 
-         /* max case */
-         SCIPsortRealInt(maxratios, maxsortedidx, nmaxratios);
-         maxlhs = lhs;
+         /* consider contribution from case b) */
+         if( !mininfpresent )
+         {
+            *minact += objoffset;
+         }
+      }
+
+
+      /*
+       * solve maximization LP
+       *
+       * we distinguish two column cases:
+       *
+       * c)           d)
+       * max  +       max  -
+       * s.t. -       s.t. -
+       */
+      maxlhs = lhs - val;
+      objoffset = 0;
+      maxinfpresent = FALSE;
+
+      for( i = 0; i < numoverlap; i++ )
+      {
+         if( coefbaseoverlap[i] < 0.0 )
+         {
+            /* d) */
+            if( SCIPisInfinity(scip, -tmplowerbds[i]) || SCIPisInfinity(scip, tmplowerbds[i]) )
+            {
+               *maxact = SCIPinfinity(scip);
+               maxinfpresent = TRUE;
+               break;
+            }
+            else
+            {
+               maxlhs -= coefotheroverlap[i] * tmplowerbds[i];
+               objoffset += coefbaseoverlap[i] * tmplowerbds[i];
+            }
+         }
+         else
+         {
+            /* c) */
+            maxratios[nmaxratios] = coefbaseoverlap[i] / coefotheroverlap[i];
+            maxsortedidx[nmaxratios] = i;
+            nmaxratios++;
+         }
+      }
+
+      if( !maxinfpresent )
+      {
+         /* sort the ratios for case c) */
+         if( nmaxratios > 1 )
+            SCIPsortRealInt(maxratios, maxsortedidx, nmaxratios);
+
+         /* pack every variable on their upper bound until we are feasible */
          for( i = 0; i < nmaxratios; i++ )
          {
             SCIP_Real tmpval;
 
             if( SCIPisInfinity(scip, tmpupperbds[maxsortedidx[i]]) )
             {
-               infpresent = TRUE;
-               *maxact = SCIPinfinity(scip);
+               tmpval = maxlhs / coefotheroverlap[maxsortedidx[i]];
+               assert(tmpval <= tmpupperbds[maxsortedidx[i]]);
+               *maxact += coefbaseoverlap[maxsortedidx[i]] * tmpval;
                break;
             }
             else
@@ -409,26 +482,34 @@ void getActivities(
                {
                   *maxact += coefbaseoverlap[maxsortedidx[i]] * tmpupperbds[maxsortedidx[i]];
                   maxlhs -= tmpval;
+
+                  if( SCIPisEQ(scip, maxlhs, 0.0) )
+                     break;
                }
                else
                {
                   tmpval = maxlhs / coefotheroverlap[maxsortedidx[i]];
-                  if( tmpval > 0.0 )
-                  {
-                     assert(tmpval <= tmpupperbds[maxsortedidx[i]]);
-                     *maxact += coefbaseoverlap[maxsortedidx[i]] * tmpval;
-                  }
+                  assert(tmpval <= tmpupperbds[maxsortedidx[i]]);
+                  *maxact += coefbaseoverlap[maxsortedidx[i]] * tmpval;
                   break;
                }
             }
          }
-         if( !infpresent )
+
+         /* consider contribution from case d) */
+         if( !maxinfpresent )
+         {
             *maxact += objoffset;
+         }
+
       }
    }
    else
    {
-      /* min case */
+      /* single constraint is redundant.
+         we calculate the value of the objective function */
+
+      /* minimization LP */
       for( i = 0; i < numoverlap; i++ )
       {
          if( coefbaseoverlap[i] > 0.0 )
@@ -457,7 +538,7 @@ void getActivities(
          }
       }
 
-      /* max case */
+      /* maximization LP */
       for( i = 0; i < numoverlap; i++ )
       {
          if( coefbaseoverlap[i] > 0.0 )
@@ -486,6 +567,69 @@ void getActivities(
          }
       }
    }
+
+#ifdef DEBUG_WRITE_CHECK_LPS
+   {
+      SCIP_Real minsolve = 0.0;
+      SCIP* subscip;
+      SCIP_RETCODE retcode;
+      SCIP_SOL* sol;
+      SCIP_STATUS status;
+      SCIP_VAR** vars;
+      int nvars;
+      int objnonzeros = 0;
+      retcode = SCIPcreate(&subscip);
+      retcode = SCIPincludeDefaultPlugins(subscip);
+      retcode = SCIPreadProb(subscip, "min.lp", NULL);
+      retcode = SCIPsetIntParam(subscip,"presolving/maxrounds",0);
+      vars = SCIPgetVars(subscip);
+      nvars = SCIPgetNVars(subscip);
+      for(i=0; i< nvars; i++)
+      {
+         if(SCIPvarGetObj(vars[i]) != 0.0)
+            objnonzeros++;
+      }
+      assert(numoverlap == objnonzeros);
+
+      retcode = SCIPsolve(subscip);
+      status = SCIPgetStatus(subscip);
+      if(SCIP_STATUS_OPTIMAL == status)
+      {
+         sol = SCIPgetBestSol(subscip);
+         minsolve = SCIPgetSolOrigObj(subscip, sol);
+         assert(SCIPisEQ(scip,minsolve,*minact));
+      }
+      else
+      {
+         assert(SCIPisEQ(scip,-SCIPinfinity(scip),*minact));
+      }
+      retcode = SCIPfree(&subscip);
+   }
+   {
+      SCIP_Real maxsolve = 0.0;
+      SCIP* subscip;
+      SCIP_RETCODE retcode;
+      SCIP_SOL* sol;
+      SCIP_STATUS status;
+      retcode = SCIPcreate(&subscip);
+      retcode = SCIPincludeDefaultPlugins(subscip);
+      retcode = SCIPreadProb(subscip, "max.lp", NULL);
+      retcode = SCIPsetIntParam(subscip,"presolving/maxrounds",0);
+      retcode = SCIPsolve(subscip);
+      status = SCIPgetStatus(subscip);
+      if(SCIP_STATUS_OPTIMAL == status)
+      {
+         sol = SCIPgetBestSol(subscip);
+         maxsolve = SCIPgetSolOrigObj(subscip, sol);
+         assert(SCIPisEQ(scip,maxsolve,*maxact));
+      }
+      else
+      {
+         assert(SCIPisEQ(scip,SCIPinfinity(scip),*maxact));
+      }
+      retcode = SCIPfree(&subscip);
+   }
+#endif
 }
 
 /** calculate min activity */
@@ -651,7 +795,7 @@ void applyTightening(
    SCIP_Real lhs;
    int i;
 
-   getActivities(scip, matrix, otherrow, numoverlap, overlapidx, othernonoverlapidx,
+   getActivities(scip, matrix, baserow, otherrow, numoverlap, overlapidx, othernonoverlapidx,
       coefbaseoverlap, coefotheroverlap, coefothernonoverlap,
       lowerbds, upperbds, tmplowerbds, tmpupperbds, minratios, maxratios,
       minsortedidx, maxsortedidx, &minactoverlap, &maxactoverlap);
