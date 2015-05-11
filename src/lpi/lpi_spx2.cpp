@@ -3666,7 +3666,10 @@ SCIP_RETCODE SCIPlpiGetNorms(
    lpi->spx->getNdualNorms(nrows, ncols);
 
    if( nrows == 0 )
+   {
+      (*lpinorms = NULL);
       return SCIP_OKAY;
+   }
 
    /* allocate lpinorms data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, lpinorms) );

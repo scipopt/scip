@@ -4800,7 +4800,10 @@ SCIP_RETCODE SCIPlpiGetNorms(
 
    // we only store steepest edge norms and don't want to allocate memory otherwise
    if( lpi->pricing != SCIP_PRICING_STEEP && lpi->pricing != SCIP_PRICING_STEEPQSTART)
+   {
+      (*lpinorms) = NULL;
       return SCIP_OKAY;
+   }
 
    nrows = lpi->spx->nRows();
    ncols = lpi->spx->rep() == SPxSolver::COLUMN ? 0 : lpi->spx->nCols();
