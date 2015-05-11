@@ -59,6 +59,11 @@
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
 
+#define SCOREPARAM_VALUES "lhwvd" /**< the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p.,
+                                   *   'v'otes lowest c.p., votes highest c.p.('w'), 'r'evolving */
+#define SCOREPARAM_VALUESLEN 5
+#define DEFAULT_SCOREPARAM 'r'    /**< default scoring parameter to guide the diving */
+
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
@@ -80,7 +85,8 @@ struct SCIP_HeurData
    int                   memsize;            /**< memory size of current arrays, needed for dynamic reallocation */
    int                   varpossmemsize;     /**< memory size of updated vars and varposs array */
 
-   char                  scoreparam;         /**< score parameter to be used */
+   char                  scoreparam;         /**< score user parameter */
+   char                  score;              /**< score to be used depending on user parameter to use fixed score or revolve */
    SCIP_Bool             usescipscore;       /**< should the SCIP branching score be used for weighing up and down score? */
 };
 
@@ -921,7 +927,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
 
    /* loop over candidate rows and determine the candidate up- and down- branching score w.r.t. the score parameter */
    SCIP_CALL( calcBranchScore(scip, heurdata, cand, candsol,
-         &upscore, &downscore, heurdata->scoreparam) );
+         &upscore, &downscore, heurdata->score) );
 
    *roundup = (upscore > downscore);
 
@@ -957,6 +963,12 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
    nlprows = SCIPgetNLPRows(scip);
    if( nlprows == 0 )
       return SCIP_OKAY;
+
+   /* select and store the scoring parameter for this call of the heuristic */
+   if( heurdata->scoreparam == 'r' )
+      heurdata->score = SCOREPARAM_VALUES[SCIPheurGetNCalls(heur) % SCOREPARAM_VALUESLEN];
+   else
+      heurdata->score = heurdata->scoreparam;
 
    SCIP_CALL( heurdataEnsureArraySize(scip, heurdata, nlprows) );
    assert(SCIPheurGetNDivesets(heur) > 0);
@@ -1018,7 +1030,6 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
    heurdata->currentlbs = NULL;
    heurdata->currentubs = NULL;
 
-   heurdata->scoreparam = 'l';
    heurdata->usescipscore = TRUE;
 
    /* create event handler first to finish branch rule data */
@@ -1052,6 +1063,10 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
          DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
          DEFAULT_MAXLPITEROFS, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
          divesetGetScoreDistributiondiving) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/scoreparam",
+         "the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p., 'v'otes lowest c.p., votes highest c.p.('w'), 'r'evolving",
+         &heurdata->scoreparam, TRUE, DEFAULT_SCOREPARAM, "lvdhwr", NULL, NULL) );
 
    return SCIP_OKAY;
 }
