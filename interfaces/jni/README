@@ -7,6 +7,7 @@
    cd lib
    ln -s ../../../../soplex-2.0.0 soplex
    ln -s ../../.. scip
+   ln -s <path to java inlcuds> jniinc (optional if java is not the library path)
    cd ..
 4) make soplex
    - creates shared library of Soplex
