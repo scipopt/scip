@@ -130,7 +130,7 @@ SCIP_DECL_USEREXPREVAL( SCIPuserexprEvalAmpl )
       }
    }
 
-   /* FIXME implement Hessian, or a way to communicate that we don't have Hessians */
+   /* TODO implement Hessian */
    assert(hessian == NULL);
 
    return SCIP_OKAY;
@@ -258,6 +258,11 @@ SCIP_DECL_USEREXPRFREEDATA( SCIPuserexprFreeAmpl )
    BMSfreeBlockMemory(blkmem, &data);
 }
 
+#define CHECKSUFFIX(sufname, idx, defaultval) \
+   ( ( suf_ ## sufname != NULL && (suf_ ## sufname)->u.i[idx] > 0 ) ? \
+     ((suf_ ## sufname)->u.i[idx] == 1) : \
+     defaultval )
+
 static
 SCIP_RETCODE setupVariables(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -268,6 +273,8 @@ SCIP_RETCODE setupVariables(
    int lower;
    int upper;
    int i;
+   SufDesc* suf_initial;
+   SufDesc* suf_removable;
 
    assert(scip != NULL);
    assert(probdata != NULL);
@@ -275,6 +282,14 @@ SCIP_RETCODE setupVariables(
    assert(probdata->vars == NULL);
 
    asl = probdata->asl;
+
+   suf_initial = suf_get("initial", ASL_Sufkind_var);
+   if( suf_initial != NULL && suf_initial->u.i == NULL )
+      suf_initial = NULL;
+
+   suf_removable = suf_get("removable", ASL_Sufkind_var);
+   if( suf_removable != NULL && suf_removable->u.i == NULL )
+      suf_removable = NULL;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->vars, n_var) );
    probdata->nvars = n_var;
@@ -286,7 +301,8 @@ SCIP_RETCODE setupVariables(
    upper = nlvb - nlvbi;
    for( i = lower; i < upper; ++i ) /* continuous and in an objective and in a constraint */
    {
-      SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPcreateVar(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_CONTINUOUS,
+         CHECKSUFFIX(initial, i, TRUE), CHECKSUFFIX(removable, i, FALSE), NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, probdata->vars[i]) );
    }
 
@@ -294,7 +310,8 @@ SCIP_RETCODE setupVariables(
    upper = nlvb;
    for( i = lower; i < upper; ++i ) /* integer and in an objective and in a constraint */
    {
-       SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_INTEGER) );
+       SCIP_CALL( SCIPcreateVar(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_INTEGER,
+          CHECKSUFFIX(initial, i, TRUE), CHECKSUFFIX(removable, i, FALSE), NULL, NULL, NULL, NULL, NULL) );
        SCIP_CALL( SCIPaddVar(scip, probdata->vars[i]) );
    }
 
@@ -303,7 +320,8 @@ SCIP_RETCODE setupVariables(
    upper = nlvc - nlvci;
    for( i = lower; i < upper; ++i ) /* continuous and just in constraints */
    {
-      SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPcreateVar(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_CONTINUOUS,
+         CHECKSUFFIX(initial, i, TRUE), CHECKSUFFIX(removable, i, FALSE), NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, probdata->vars[i]) );
    }
 
@@ -311,7 +329,8 @@ SCIP_RETCODE setupVariables(
    upper = nlvc;
    for( i = lower; i < upper; ++i ) /* integer and just in constraints */
    {
-      SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_INTEGER) );
+      SCIP_CALL( SCIPcreateVar(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_INTEGER,
+         CHECKSUFFIX(initial, i, TRUE), CHECKSUFFIX(removable, i, FALSE), NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, probdata->vars[i]) );
    }
 
@@ -320,7 +339,8 @@ SCIP_RETCODE setupVariables(
    upper = nlvo - nlvoi;
    for( i = lower; i < upper; ++i) /* continuous and just in objectives */
    {
-      SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPcreateVar(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_CONTINUOUS,
+         CHECKSUFFIX(initial, i, TRUE), CHECKSUFFIX(removable, i, FALSE), NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, probdata->vars[i]) );
    }
 
@@ -328,7 +348,8 @@ SCIP_RETCODE setupVariables(
    upper = nlvo ;
    for( i = lower; i < upper; ++i ) /* integer and just in objectives */
    {
-      SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_INTEGER) );
+      SCIP_CALL( SCIPcreateVar(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_INTEGER,
+         CHECKSUFFIX(initial, i, TRUE), CHECKSUFFIX(removable, i, FALSE), NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, probdata->vars[i]) );
    }
 
@@ -338,7 +359,8 @@ SCIP_RETCODE setupVariables(
    upper = MAX(nlvc, nlvo) + nwv;
    for( i = lower; i < upper; ++i ) /* linear arc variables */
    {
-      SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPcreateVar(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_CONTINUOUS,
+         CHECKSUFFIX(initial, i, TRUE), CHECKSUFFIX(removable, i, FALSE), NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, probdata->vars[i]) );
    }
 
@@ -348,7 +370,8 @@ SCIP_RETCODE setupVariables(
    upper = n_var -  niv - nbv;
    for( i = lower; i < upper; ++i ) /* other linear variables */
    {
-      SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPcreateVar(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_CONTINUOUS,
+         CHECKSUFFIX(initial, i, TRUE), CHECKSUFFIX(removable, i, FALSE), NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, probdata->vars[i]) );
    }
 
@@ -356,7 +379,8 @@ SCIP_RETCODE setupVariables(
    upper = n_var -  niv ;
    for( i = lower; i < upper; ++i ) /* linear and binary */
    {
-      SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_BINARY) );
+      SCIP_CALL( SCIPcreateVar(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_BINARY,
+         CHECKSUFFIX(initial, i, TRUE), CHECKSUFFIX(removable, i, FALSE), NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, probdata->vars[i]) );
    }
 
@@ -364,7 +388,8 @@ SCIP_RETCODE setupVariables(
    upper = n_var;
    for( i = lower; i < upper; ++i ) /* linear and integer */
    {
-      SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_INTEGER) );
+      SCIP_CALL( SCIPcreateVar(scip, &probdata->vars[i], var_name(i), LUv[2*i], LUv[2*i+1], 0.0, SCIP_VARTYPE_INTEGER,
+         CHECKSUFFIX(initial, i, TRUE), CHECKSUFFIX(removable, i, FALSE), NULL, NULL, NULL, NULL, NULL) );
       SCIP_CALL( SCIPaddVar(scip, probdata->vars[i]) );
    }
 
@@ -992,9 +1017,23 @@ SCIP_RETCODE setupConstraints(
    int nqpterms;
    struct cgrad* cg;
    int c;
-   SufDesc* suf_curv = NULL;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   SufDesc* suf_initial = NULL;
+   SufDesc* suf_separate = NULL;
+   SufDesc* suf_enforce = NULL;
+   SufDesc* suf_check = NULL;
+   SufDesc* suf_propagate = NULL;
+   SufDesc* suf_dynamic = NULL;
+   SufDesc* suf_removable = NULL;
+   SufDesc* suf_curvature = NULL;
+   SCIP_Bool initial;
+   SCIP_Bool separate;
+   SCIP_Bool enforce;
+   SCIP_Bool check;
+   SCIP_Bool propagate;
+   SCIP_Bool dynamic;
+   SCIP_Bool removable;
 
    assert(scip != NULL);
    assert(probdata != NULL);
@@ -1007,11 +1046,39 @@ SCIP_RETCODE setupConstraints(
    asl = probdata->asl;
    assert(n_con >= 0);
 
+   /* get AMPL suffix values */
+   suf_initial = suf_get("initial", ASL_Sufkind_con);
+   if( suf_initial != NULL && suf_initial->u.i == NULL )
+      suf_initial = NULL;
+   suf_separate = suf_get("separate", ASL_Sufkind_con);
+   if( suf_separate != NULL && suf_separate->u.i == NULL )
+      suf_separate = NULL;
+   suf_enforce = suf_get("enforce", ASL_Sufkind_con);
+   if( suf_enforce != NULL && suf_enforce->u.i == NULL )
+      suf_enforce = NULL;
+   suf_check = suf_get("check", ASL_Sufkind_con);
+   if( suf_check != NULL && suf_check->u.i == NULL )
+      suf_check = NULL;
+   suf_propagate = suf_get("propagate", ASL_Sufkind_con);
+   if( suf_propagate != NULL && suf_propagate->u.i == NULL )
+      suf_propagate = NULL;
+   suf_dynamic = suf_get("dynamic", ASL_Sufkind_con);
+   if( suf_dynamic != NULL && suf_dynamic->u.i == NULL )
+      suf_dynamic = NULL;
+   suf_removable = suf_get("removable", ASL_Sufkind_con);
+   if( suf_removable != NULL && suf_removable->u.i == NULL )
+      suf_removable = NULL;
+
 #ifdef CHECKCURVSUFFIX
-   suf_curv = suf_get("curvature", ASL_Sufkind_con);
-   if( suf_curv != NULL && suf_curv->u.i != NULL )
+   suf_curvature = suf_get("curvature", ASL_Sufkind_con);
+   if( suf_curvature != NULL )
    {
-      SCIPinfoMessage(scip, NULL, "Found curvature suffix for %d constraints in .nl file.\n", (&asl->i.n_var_)[ASL_Sufkind_con & ASL_Sufkind_mask]);
+      if( suf_curvature->u.i != NULL )
+      {
+         SCIPinfoMessage(scip, NULL, "Found curvature suffix for %d constraints in .nl file.\n", (&asl->i.n_var_)[ASL_Sufkind_con & ASL_Sufkind_mask]);
+      }
+      else
+         suf_curvature = NULL;
    }
 #endif
 
@@ -1028,13 +1095,70 @@ SCIP_RETCODE setupConstraints(
       if( SCIPisInfinity(scip, rhs) )
          rhs = SCIPinfinity(scip);
 
+      if( suf_initial != NULL && suf_initial->u.i[c] > 0 )
+      {
+         assert(suf_initial->u.i[c] == 1 || suf_initial->u.i[c] == 2);
+         initial = (suf_initial->u.i[c] == 1);
+      }
+      else
+         initial = TRUE;
+
+      if( suf_separate != NULL && suf_separate->u.i[c] > 0 )
+      {
+         assert(suf_separate->u.i[c] == 1 || suf_separate->u.i[c] == 2);
+         separate = (suf_separate->u.i[c] == 1);
+      }
+      else
+         separate = TRUE;
+
+      if( suf_enforce != NULL && suf_enforce->u.i[c] > 0 )
+      {
+         assert(suf_enforce->u.i[c] == 1 || suf_enforce->u.i[c] == 2);
+         enforce = (suf_enforce->u.i[c] == 1);
+      }
+      else
+         enforce = TRUE;
+
+      if( suf_check != NULL && suf_check->u.i[c] > 0 )
+      {
+         assert(suf_check->u.i[c] == 1 || suf_check->u.i[c] == 2);
+         check = (suf_check->u.i[c] == 1);
+      }
+      else
+         check = TRUE;
+
+      if( suf_propagate != NULL && suf_propagate->u.i[c] > 0 )
+      {
+         assert(suf_propagate->u.i[c] == 1 || suf_propagate->u.i[c] == 2);
+         propagate = (suf_propagate->u.i[c] == 1);
+      }
+      else
+         propagate = TRUE;
+
+      if( suf_dynamic != NULL && suf_dynamic->u.i[c] > 0 )
+      {
+         assert(suf_dynamic->u.i[c] == 1 || suf_dynamic->u.i[c] == 2);
+         dynamic = (suf_dynamic->u.i[c] == 1);
+      }
+      else
+         dynamic = FALSE;
+
+      if( suf_removable != NULL && suf_removable->u.i[c] > 0 )
+      {
+         assert(suf_removable->u.i[c] == 1 || suf_removable->u.i[c] == 2);
+         removable = (suf_removable->u.i[c] == 1);
+      }
+      else
+         removable = FALSE;
+
       nqpterms = c < nlc ? nqpcheck(-(c+1), &rowqp, &colqp, &delsqp) : 0;
       if( nqpterms == 0 )
       {
          /* linear */
          SCIPdebugMessage("constraint %d (%s) is linear\n", c, con_name(c));  /*lint !e534*/
 
-         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, con_name(c), 0, NULL, NULL, lhs, rhs) );
+         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, con_name(c), 0, NULL, NULL, lhs, rhs,
+            initial, separate, enforce, check, propagate, FALSE, FALSE, dynamic, removable, FALSE) );
 
          /* add linear coefficients */
          for( cg = Cgrad[c]; cg; cg = cg->next )
@@ -1044,7 +1168,7 @@ SCIP_RETCODE setupConstraints(
             }
 
       }
-      else if( suf_curv != NULL && suf_curv->u.i != NULL && suf_curv->u.i[c] > 0 )
+      else if( suf_curvature != NULL && suf_curvature->u.i[c] > 0 )
       {
          SCIP_USEREXPRDATA* userexprdata;
          SCIP_EXPRTREE* exprtree;
@@ -1052,8 +1176,8 @@ SCIP_RETCODE setupConstraints(
          SCIP_EXPR* consexpr;
          int i;
 
-         SCIPdebugMessage("constraint %d (%s) has suffix %d, handle as nonlinear userexpr\n", c, con_name(c), suf_curv->u.i[c]);  /*lint !e534*/
-         assert(suf_curv->u.i[c] == 1 || suf_curv->u.i[c] == 2);
+         SCIPdebugMessage("constraint %d (%s) has suffix %d, handle as nonlinear userexpr\n", c, con_name(c), suf_curvature->u.i[c]);  /*lint !e534*/
+         assert(suf_curvature->u.i[c] == 1 || suf_curvature->u.i[c] == 2);
 
          /* TODO would be good to treat linear variables separately */
          nexprvars = 0;
@@ -1069,9 +1193,10 @@ SCIP_RETCODE setupConstraints(
          SCIP_CALL( SCIPallocBlockMemory(scip, &userexprdata) );
          userexprdata->probdata = probdata;
          userexprdata->considx = c;
-         userexprdata->curvature = (suf_curv->u.i[c] == 1 ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE);
+         userexprdata->curvature = (suf_curvature->u.i[c] == 1 ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE);
 
          SCIP_CALL( SCIPexprCreateUser(SCIPblkmem(scip), &consexpr, nexprvars, childexprs, userexprdata,
+            SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_INTFUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_INTGRADIENT,
             SCIPuserexprEvalAmpl, SCIPuserexprIntEvalAmpl,
             SCIPuserexprCurvAmpl, NULL, NULL,
             SCIPuserexprCopyAmpl, SCIPuserexprFreeAmpl) );
@@ -1083,7 +1208,8 @@ SCIP_RETCODE setupConstraints(
          SCIP_CALL( SCIPexprtreeSetVars(exprtree, nexprvars, exprvars) );
 
          /* create nonlinear constraint */
-         SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, con_name(c), 0, NULL, NULL, 1, &exprtree, NULL, lhs, rhs) );
+         SCIP_CALL( SCIPcreateConsNonlinear(scip, &cons, con_name(c), 0, NULL, NULL, 1, &exprtree, NULL, lhs, rhs,
+            initial, separate, enforce, check, propagate, FALSE, FALSE, dynamic, removable, FALSE) );
 
          /* constraint has copy of tree, so free */
          SCIP_CALL( SCIPexprtreeFree(&exprtree) );
@@ -1106,7 +1232,8 @@ SCIP_RETCODE setupConstraints(
 
          SCIPdebugMessage("constraint %d (%s) is quadratic\n", c, con_name(c));  /*lint !e534*/
 
-         SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &cons, con_name(c), 0, NULL, NULL, 0, NULL, NULL, NULL, lhs, rhs) );
+         SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, con_name(c), 0, NULL, NULL, 0, NULL, NULL, NULL, lhs, rhs,
+            initial, separate, enforce, check, propagate, FALSE, FALSE, dynamic, removable) );
 
          /* add quadratic coefficients of constraint */
          for( i = 0; i < n_var; ++i )
@@ -1163,7 +1290,8 @@ SCIP_RETCODE setupConstraints(
          /* expression trees without variables raise assertions in CppAD, workaround here for now */
          if( nexprvars > 0 )
          {
-            SCIP_CALL( SCIPcreateConsBasicNonlinear(scip, &cons, con_name(c), 0, NULL, NULL, 1, &exprtree, NULL, lhs, rhs) );
+            SCIP_CALL( SCIPcreateConsNonlinear(scip, &cons, con_name(c), 0, NULL, NULL, 1, &exprtree, NULL, lhs, rhs,
+               initial, separate, enforce, check, propagate, FALSE, FALSE, dynamic, removable, FALSE) );
 
             /* add linear part of constraint */
             for( cg = Cgrad[c]; cg; cg = cg->next )
@@ -1184,7 +1312,8 @@ SCIP_RETCODE setupConstraints(
             if( !SCIPisInfinity(scip,  rhs) )
                rhs -= val;
 
-            SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons, con_name(c), 0, NULL, NULL, lhs, rhs) );
+            SCIP_CALL( SCIPcreateConsLinear(scip, &cons, con_name(c), 0, NULL, NULL, lhs, rhs,
+               initial, separate, enforce, check, propagate, FALSE, FALSE, dynamic, removable, FALSE) );
 
             /* add linear part of constraint */
             for( cg = Cgrad[c]; cg; cg = cg->next )
@@ -1347,7 +1476,7 @@ SCIP_DECL_READERREAD(readerReadNl)
    const char* filebasename;
    FILE* nl;
    ASL* asl;
-   SufDecl suftable[6];
+   SufDecl suftable[15];
 
    assert(scip != NULL);
    assert(reader != NULL);
@@ -1385,7 +1514,45 @@ SCIP_DECL_READERREAD(readerReadNl)
    suftable[5].kind = ASL_Sufkind_con;
    suftable[5].nextra = 0;
 
-   suf_declare(suftable, 6);
+   /* make ASL aware of suffixes for constraint flags */
+   suftable[6].name = (char*)"initial";  /* should constraint be in initial LP? */
+   suftable[6].kind = ASL_Sufkind_con;
+   suftable[6].nextra = 0;
+
+   suftable[7].name = (char*)"separate";  /* should constraint be in separated? */
+   suftable[7].kind = ASL_Sufkind_con;
+   suftable[7].nextra = 0;
+
+   suftable[8].name = (char*)"enforce";  /* should constraint be enforced? */
+   suftable[8].kind = ASL_Sufkind_con;
+   suftable[8].nextra = 0;
+
+   suftable[9].name = (char*)"check";  /* should constraint be checked? */
+   suftable[9].kind = ASL_Sufkind_con;
+   suftable[9].nextra = 0;
+
+   suftable[10].name = (char*)"propagate";  /* should constraint be propagated? */
+   suftable[10].kind = ASL_Sufkind_con;
+   suftable[10].nextra = 0;
+
+   suftable[11].name = (char*)"dynamic";  /* should constraint be subject to aging? */
+   suftable[11].kind = ASL_Sufkind_con;
+   suftable[11].nextra = 0;
+
+   suftable[12].name = (char*)"removable";  /* should  the relaxation be removed from the LP due to aging or cleanup? */
+   suftable[12].kind = ASL_Sufkind_con;
+   suftable[12].nextra = 0;
+
+   /* make ASL aware of suffixes for variable flags */
+   suftable[13].name = (char*)"initial";  /* should variable be in initial LP? */
+   suftable[13].kind = ASL_Sufkind_var;
+   suftable[13].nextra = 0;
+
+   suftable[14].name = (char*)"removable";  /* is var's column removable from the LP (due to aging or cleanup)? */
+   suftable[14].kind = ASL_Sufkind_var;
+   suftable[14].nextra = 0;
+
+   suf_declare(suftable, 15);
 
    /* let ASL read .nl file
     * jac0dim will do exit(1) if the file is not found

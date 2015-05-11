@@ -342,7 +342,7 @@ struct SCIP_ExprIntData
 public:
    /** constructor */
    SCIP_ExprIntData()
-      : val(0.0), need_retape(true), int_need_retape(true), need_retape_always(false), blkmem(NULL), root(NULL)
+      : val(0.0), need_retape(true), int_need_retape(true), need_retape_always(false), userevalcapability(SCIP_EXPRINTCAPABILITY_ALL), blkmem(NULL), root(NULL)
    { }
 
    /** destructor */
@@ -366,6 +366,7 @@ public:
    bool                  int_need_retape;    /**< will retaping be required for the next interval evaluation? */
 
    bool                  need_retape_always; /**< will retaping be always required? */
+   SCIP_EXPRINTCAPABILITY userevalcapability; /**< (intersection of) capabilities of evaluation rountines of user expressions */
 
    BMS_BLKMEM*           blkmem;             /**< block memory used to allocate expresstion tree */
    SCIP_EXPR*            root;               /**< copy of expression tree; @todo we should not need to make a copy */
@@ -1399,17 +1400,18 @@ private:
     *       = py[0] * f'(x^0)
     * \f$
     *
-    * For p = 1, this means
-    * \f$
-    * %l=0:
-    *  px^0 = py[0] * \partial F^0    / \partial x^0) + py[1] * \partial F^1 / \partial x^0)
-    *       = py[0] * \partial f(x^0) / \partial x^0) + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
+    * For p = 1, this means (for l = 0):
+    * \f[
+    *  px^0 = py[0] * \partial F^0    / \partial x^0 + py[1] * \partial F^1 / \partial x^0
+    *       = py[0] * \partial f(x^0) / \partial x^0 + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
     *       = py[0] * f'(x^0)                         + py[1] * f''(x^0) * x^1
-    * %l=1:
-    *  px^1 = py[0] * \partial F^0    / \partial x^1) + py[1] * \partial F^1 / \partial x^1)
-    *       = py[0] * \partial f(x^0) / \partial x^1) + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
+    * \f]
+    * and (for l=1):
+    * \[
+    *  px^1 = py[0] * \partial F^0    / \partial x^1 + py[1] * \partial F^1 / \partial x^1
+    *       = py[0] * \partial f(x^0) / \partial x^1 + py[1] * \partial (f'(x^0) * x^1) / \partial x^0
     *       = py[0] * 0                               + py[1] * f'(x^0)
-    * \f$
+    * \f]
     *
     * As x^k = (tx[k], tx[(p+1)+k], tx[2*(p+1)+k], ..., tx[n*(p+1)+k] and
     *   px^k = (px[k], px[(p+1)+k], px[2*(p+1)+k], ..., px[n*(p+1)+k], we get
@@ -1598,6 +1600,7 @@ void evalUser(
    SCIP_EXPR*            expr                /**< expression that holds the user expression */
    )
 {
+   assert( args != 0 );
    vector<Type> in(args, args + SCIPexprGetNChildren(expr));
    vector<Type> out(1);
 
@@ -1698,19 +1701,6 @@ void evalSqrt(
    )
 {
    resultant = sqrt(arg);
-}
-
-/** specialization of square-root operator for numbers
- *
- *  We perturb the function a little bit so that it's derivatives are defined in 0.0.
- */
-template<>
-void evalSqrt(
-   CppAD::AD<double>&    resultant,          /**< resultant */
-   const CppAD::AD<double>& arg              /**< operand */
-   )
-{
-   resultant = sqrt(arg + 1e-20) - 1e-10;
 }
 
 /** template for evaluation for absolute value operator */
@@ -2105,16 +2095,16 @@ SCIP_RETCODE eval(
  *  This may be the case if the evaluation sequence depends on values of operands (e.g., in case of abs, sign, signpower, ...).
  */
 static
-bool needAlwaysRetape(SCIP_EXPR* expr)
+void analyzeTree(
+   SCIP_EXPRINTDATA* data,
+   SCIP_EXPR*        expr
+   )
 {
    assert(expr != NULL);
    assert(SCIPexprGetChildren(expr) != NULL || SCIPexprGetNChildren(expr) == 0);
 
    for( int i = 0; i < SCIPexprGetNChildren(expr); ++i )
-   {
-      if( needAlwaysRetape(SCIPexprGetChildren(expr)[i]) )
-         return true;
-   }
+      analyzeTree(data, SCIPexprGetChildren(expr)[i]);
 
    switch( SCIPexprGetOperator(expr) )
    {
@@ -2124,12 +2114,16 @@ bool needAlwaysRetape(SCIP_EXPR* expr)
 #ifdef NO_CPPAD_USER_ATOMIC
    case SCIP_EXPR_SIGNPOWER:
 #endif
-      return true;
+      data->need_retape_always = true;
+      break;
+
+   case SCIP_EXPR_USER:
+      data->userevalcapability &= SCIPexprGetUserEvalCapability(expr);
+      break;
 
    default: ;
    } /*lint !e788*/
 
-   return false;
 }
 
 /** replacement for CppAD's default error handler
@@ -2247,11 +2241,32 @@ SCIP_RETCODE SCIPexprintCompile(
 
    SCIP_CALL( SCIPexprCopyDeep(exprint->blkmem, &data->root, root) );
 
-   data->need_retape_always = needAlwaysRetape(SCIPexprtreeGetRoot(tree));
-
    data->blkmem = exprint->blkmem;
 
+   analyzeTree(data, data->root);
+
    return SCIP_OKAY;
+}
+
+
+/** gives the capability to evaluate an expression by the expression interpreter
+ *
+ * In cases of user-given expressions, higher order derivatives may not be available for the user-expression,
+ * even if the expression interpreter could handle these. This method allows to recognize that, e.g., the
+ * Hessian for an expression is not available because it contains a user expression that does not provide
+ * Hessians.
+ */
+SCIP_EXPRINTCAPABILITY SCIPexprintGetExprtreeCapability(
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   )
+{
+   assert(tree != NULL);
+
+   SCIP_EXPRINTDATA* data = SCIPexprtreeGetInterpreterData(tree);
+   assert(data != NULL);
+
+   return data->userevalcapability;
 }
 
 /** frees interpreter data */

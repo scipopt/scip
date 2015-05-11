@@ -2717,7 +2717,8 @@ SCIP_RETCODE spxSolve(
    assert( rep == SPxSolver::ROW || rep == SPxSolver::COLUMN );
    assert( type == SPxSolver::ENTER || type == SPxSolver::LEAVE );
 
-   SCIPdebugMessage("calling SoPlex solve(): %d cols, %d rows\n", lpi->spx->nCols(), lpi->spx->nRows());
+   SCIPdebugMessage("calling SoPlex solve(): %d cols, %d rows, rep=%s\n", lpi->spx->nCols(), lpi->spx->nRows(),
+      rep == SPxSolver::COLUMN ? "column" : "row");
 
    invalidateSolution(lpi);
 

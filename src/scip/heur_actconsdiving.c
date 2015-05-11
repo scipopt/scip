@@ -24,7 +24,7 @@
 #include <string.h>
 
 #include "scip/heur_actconsdiving.h"
-
+#include "scip/pub_dive.h"
 
 #define HEUR_NAME             "actconsdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the active constraints"
@@ -52,13 +52,16 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  1.0 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 1.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
+#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15 /**< percentage of immediate domain changes during probing to trigger LP resolve */
+#define DEFAULT_LPSOLVEFREQ           1 /**< LP solve frequency for diving heuristics */
+#define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
+                                         *   more general constraint handler diving variable selection? */
 
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_DIVESET*         diveset;            /**< diving settings */
 };
 
 
@@ -70,6 +73,7 @@ struct SCIP_HeurData
 static
 SCIP_Real getNActiveConsScore(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< working solution */
    SCIP_VAR*             var,                /**< variable to get the score value for */
    SCIP_Real*            downscore,          /**< pointer to store the score for branching downwards */
    SCIP_Real*            upscore             /**< pointer to store the score for branching upwards */
@@ -115,7 +119,12 @@ SCIP_Real getNActiveConsScore(
       /* calculate number of active constraint sides, i.e., count equations as two */
       lhs = SCIProwGetLhs(row);
       rhs = SCIProwGetRhs(row);
-      activity = SCIPgetRowLPActivity(scip, row);
+
+      /* @todo this is suboptimal because activity is calculated by looping over all nonzeros of this row, need to
+       * store LP activities instead (which cannot be retrieved if no LP was solved at this node)
+       */
+      activity = SCIPgetRowSolActivity(scip, row, sol);
+
       dualsol = SCIProwGetDualsol(row);
       if( SCIPisFeasEQ(scip, activity, lhs) )
       {
@@ -198,9 +207,6 @@ SCIP_DECL_HEURFREE(heurFreeActconsdiving) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   assert(heurdata->diveset != NULL);
-
-   SCIP_CALL( SCIPdivesetFree(&heurdata->diveset) );
 
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
@@ -224,9 +230,6 @@ SCIP_DECL_HEURINIT(heurInitActconsdiving) /*lint --e{715}*/
 
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
-
-   /* initialize data */
-   SCIPresetDiveset(scip, heurdata->diveset);
 
    return SCIP_OKAY;
 }
@@ -260,7 +263,10 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
    SCIP_DIVESET* diveset;
 
    heurdata = SCIPheurGetData(heur);
-   diveset = heurdata->diveset;
+
+   assert(SCIPheurGetNDivesets(heur) > 0);
+   assert(SCIPheurGetDivesets(heur) != NULL);
+   diveset = SCIPheurGetDivesets(heur)[0];
    assert(diveset != NULL);
 
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
@@ -268,7 +274,7 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
-/** calculate score and preferred rounding direction for the candidate variable; the best candidate minimizes the
+/** calculate score and preferred rounding direction for the candidate variable; the best candidate maximizes the
  *  score
  */
 static
@@ -278,11 +284,14 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreActconsdiving)
    SCIP_Bool mayroundup;
    SCIP_Real downscore;
    SCIP_Real upscore;
+
+
    mayrounddown = SCIPvarMayRoundDown(cand);
    mayroundup = SCIPvarMayRoundUp(cand);
 
    /* first, calculate the variable score */
-   *score = -getNActiveConsScore(scip, cand, &downscore, &upscore);
+   assert(SCIPdivesetGetWorkSolution(diveset) != NULL);
+   *score = getNActiveConsScore(scip, SCIPdivesetGetWorkSolution(diveset), cand, &downscore, &upscore);
 
    /* get the rounding direction: prefer an unroundable direction */
    if( mayrounddown && mayroundup )
@@ -305,9 +314,9 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreActconsdiving)
 
    /* penalize variable if it may be rounded */
    if( mayrounddown || mayroundup )
-      *score += 3.0;
+      *score -= 3.0;
 
-   assert(!(mayrounddown || mayroundup) || *score >= 0.0);
+   assert(!(mayrounddown || mayroundup) || *score <= 0.0);
 
    return SCIP_OKAY;
 }
@@ -340,11 +349,11 @@ SCIP_RETCODE SCIPincludeHeurActconsdiving(
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitActconsdiving) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitActconsdiving) );
 
-   heurdata->diveset = NULL;
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
-   SCIP_CALL( SCIPcreateDiveset(scip, &heurdata->diveset, heur, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreActconsdiving) );
+   SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
+         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS,
+         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, divesetGetScoreActconsdiving) );
 
    return SCIP_OKAY;
 }

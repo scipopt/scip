@@ -63,21 +63,31 @@
 #define DEFAULT_GENVBDSDURINGFILTER      TRUE      /**< try to genrate genvbounds during trivial and aggressive filtering? */
 #define DEFAULT_DUALFEASTOL              1e-9      /**< feasibility tolerance for reduced costs used in obbt; this value
                                                     *   is used if SCIP's dual feastol is greater */
-#define DEFAULT_CONDITIONLIMIT             -1      /**< maximum condition limit used in LP solver (-1.0: no limit) */
+#define DEFAULT_CONDITIONLIMIT           -1.0      /**< maximum condition limit used in LP solver (-1.0: no limit) */
 #define DEFAULT_BOUNDSTREPS              0.01      /**< minimal relative improve for strengthening bounds */
 #define DEFAULT_FILTERING_MIN               2      /**< minimal number of filtered bounds to apply another filter
                                                     *   round */
 #define DEFAULT_ITLIMITFACTOR            10.0      /**< multiple of root node LP iterations used as total LP iteration
                                                     *   limit for obbt (<= 0: no limit ) */
 #define DEFAULT_ONLYNONCONVEXVARS       FALSE      /**< only apply obbt on non-convex variables */
-#define DEFAULT_TIGHTINTBOUNDSDIVE       TRUE      /**< should bounds of integral variables be tightened during
-                                                    *   the diving mode? */
-#define DEFAULT_TIGHTCONTBOUNDSDIVE     FALSE      /**< should bounds of continuous variables be tightened during
-                                                    *   the diving mode? */
-#define DEFAULT_ORDERINGALGO                1      /**< which type of ordering algorithm should we use? (0: no, 1: greedy, 2: greedy reverse) */
+#define DEFAULT_TIGHTINTBOUNDSPROBING    TRUE      /**< should bounds of integral variables be tightened during
+                                                    *   the probing mode? */
+#define DEFAULT_TIGHTCONTBOUNDSPROBING   TRUE      /**< should bounds of continuous variables be tightened during
+                                                    *   the probing mode? */
+#define DEFAULT_ORDERINGALGO                1      /**< which type of ordering algorithm should we use?
+                                                    *   (0: no, 1: greedy, 2: greedy reverse) */
 #define OBBT_SCOREBASE                      5      /**< base that is used to calculate a bounds score value */
 #define GENVBOUND_PROP_NAME             "genvbounds"
 #define INTERVALINFTY                   1E+43      /**< value for infinity in interval operations */
+
+#define DEFAULT_SEPARATESOL              TRUE      /**< should the obbt LP solution be separated? note that that by
+                                                    *   separating solution OBBT will apply all bound tightenings
+                                                    *   immediatly */
+#define DEFAULT_SEPAMINITER                 0      /**< minimum number of iteration spend to separate an obbt LP solution */
+#define DEFAULT_SEPAMAXITER                10      /**< maximum number of iteration spend to separate an obbt LP solution */
+#define DEFAULT_GENVBDSDURINGSEPA        TRUE      /**< try to create genvbounds during separation process? */
+#define DEFAULT_PROPAGATEFREQ               5      /**< trigger a propagation round after that many bound tightenings
+                                                    *   (0: no propagation) */
 
 /** translate from one value of infinity to another
  *
@@ -100,6 +110,7 @@ struct Bound
    unsigned int          found:1;            /**< stores whether a probably tighter value for this bound was found */
    unsigned int          done:1;             /**< has this bound been processed already? */
    unsigned int          nonconvex:1;        /**< is this bound affecting a nonconvex term? */
+   int                   index;              /**< unique index */
 };
 typedef struct Bound BOUND;
 
@@ -111,6 +122,9 @@ struct SCIP_PropData
    SCIP_ROW*             cutoffrow;          /**< pointer to current objective cutoff row */
    SCIP_PROP*            genvboundprop;      /**< pointer to genvbound propagator */
    SCIP_Longint          lastnode;           /**< number of last node where obbt was performed */
+   SCIP_Longint          npropagatedomreds;  /**< number of domain reductions found during propagation */
+   SCIP_Longint          nprobingiterations; /**< number of LP iterations during the probing mode */
+   SCIP_Longint          nfilterlpiters;     /**< number of LP iterations spend for filtering */
    SCIP_Real             dualfeastol;        /**< feasibility tolerance for reduced costs used in obbt; this value is
                                               *   used if SCIP's dual feastol is greater */
    SCIP_Real             conditionlimit;     /**< maximum condition limit used in LP solver (-1.0: no limit) */
@@ -121,26 +135,34 @@ struct SCIP_PropData
    SCIP_Bool             applytrivialfilter; /**< should obbt try to use the LP solution to filter some bounds? */
    SCIP_Bool             genvbdsduringfilter;/**< should we try to generate genvbounds during trivial and aggressive
                                               *   filtering? */
+   SCIP_Bool             genvbdsduringsepa;  /**< try to create genvbounds during separation process? */
    SCIP_Bool             creategenvbounds;   /**< should obbt try to provide genvbounds if possible? */
    SCIP_Bool             normalize;          /**< should coefficients in filtering be normalized w.r.t. the domains
                                               *   sizes? */
    SCIP_Bool             onlynonconvexvars;  /**< only apply obbt on non-convex variables */
-   SCIP_Bool             tightintboundsdive; /**< should bounds of integral variables be tightened during
-                                              *   the diving mode? */
-   SCIP_Bool             tightcontboundsdive;/**< should bounds of continuous variables be tightened during
-                                              *   the diving mode? */
-   int                   orderingalgo;       /**< which type of ordering algorithm should we use? (0: no, 1: greedy, 2: greedy reverse) */
+   SCIP_Bool             tightintboundsprobing; /**< should bounds of integral variables be tightened during
+                                              *   the probing mode? */
+   SCIP_Bool             tightcontboundsprobing;/**< should bounds of continuous variables be tightened during
+                                              *   the probing mode? */
+   SCIP_Bool             separatesol;        /**< should the obbt LP solution be separated? note that that by
+                                              *   separating solution OBBT will apply all bound tightenings
+                                              *   immediatly */
+   int                   orderingalgo;       /**< which type of ordering algorithm should we use?
+                                              *   (0: no, 1: greedy, 2: greedy reverse) */
    int                   nbounds;            /**< length of interesting bounds array */
    int                   nminfilter;         /**< minimal number of filtered bounds to apply another filter round */
-   int                   ndiveiterations;    /**< number of LP iterations during the diving mode */
-   int                   nfilterlpiters;     /**< number of LP iterations spend for filtering */
    int                   nfiltered;          /**< number of filtered bounds by solving auxiliary variables */
    int                   ntrivialfiltered;   /**< number of filtered bounds because the LP value was equal to the bound */
    int                   nsolvedbounds;      /**< number of solved bounds during the loop in applyObbt() */
-   int                   ngenvboundsdive;    /**< number of non-trivial genvbounds generated and added during obbt */
+   int                   ngenvboundsprobing; /**< number of non-trivial genvbounds generated and added during obbt */
    int                   ngenvboundsaggrfil; /**< number of non-trivial genvbounds found during aggressive filtering */
    int                   ngenvboundstrivfil; /**< number of non-trivial genvbounds found during trivial filtering */
    int                   lastidx;            /**< index to store the last undone and unfiltered bound */
+   int                   sepaminiter;        /**< minimum number of iteration spend to separate an obbt LP solution */
+   int                   sepamaxiter;        /**< maximum number of iteration spend to separate an obbt LP solution */
+   int                   propagatefreq;      /**< trigger a propagation round after that many bound tightenings
+                                              *   (0: no propagation) */
+   int                   propagatecounter;   /**< number of bound tightenings since the last propagation round */
 };
 
 
@@ -168,7 +190,8 @@ SCIP_RETCODE solveLP(
    *optimal = FALSE;
    *error = FALSE;
 
-   retcode = SCIPsolveDiveLP(scip, itlimit, error, NULL);
+   retcode = SCIPsolveProbingLP(scip, itlimit, error, NULL);
+
    lpsolstat = SCIPgetLPSolstat(scip);
 
    /* an error should not kill the overall solving process */
@@ -219,7 +242,7 @@ SCIP_RETCODE solveLP(
    return SCIP_OKAY;
 }
 
-/** adds the objective cutoff to the LP; must be in diving mode */
+/** adds the objective cutoff to the LP; must be in probing mode */
 static
 SCIP_RETCODE addObjCutoff(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -234,7 +257,7 @@ SCIP_RETCODE addObjCutoff(
    int i;
 
    assert(scip != NULL);
-   assert(SCIPinDive(scip));
+   assert(SCIPinProbing(scip));
    assert(propdata != NULL);
    assert(propdata->cutoffrow == NULL);
 
@@ -261,7 +284,7 @@ SCIP_RETCODE addObjCutoff(
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
    /* add row to the LP */
-   SCIP_CALL( SCIPaddRowDive(scip, row) );
+   SCIP_CALL( SCIPaddRowProbing(scip, row) );
 
    propdata->cutoffrow = row;
    assert(SCIProwIsInLP(propdata->cutoffrow));
@@ -281,7 +304,7 @@ SCIP_Bool varIsFixedLocal(
 
 /** sets objective to minimize or maximize a single variable */
 static
-SCIP_RETCODE setObjDive(
+SCIP_RETCODE setObjProbing(
    SCIP*                 scip,
    SCIP_PROPDATA*        propdata,
    BOUND*                bound,
@@ -302,11 +325,11 @@ SCIP_RETCODE setObjDive(
    /* set the objective for bound->var */
    if( bound->boundtype == SCIP_BOUNDTYPE_LOWER )
    {
-      SCIP_CALL( SCIPchgVarObjDive(scip, bound->var, coef) );
+      SCIP_CALL( SCIPchgVarObjProbing(scip, bound->var, coef) );
    }
    else
    {
-      SCIP_CALL( SCIPchgVarObjDive(scip, bound->var, -coef) );
+      SCIP_CALL( SCIPchgVarObjProbing(scip, bound->var, -coef) );
    }
 
 #ifdef SCIP_DEBUG
@@ -316,7 +339,7 @@ SCIP_RETCODE setObjDive(
 
    for( i = 0; i < nvars; ++i )
    {
-      if( SCIPgetVarObjDive(scip, vars[i]) != 0.0 )
+      if( SCIPgetVarObjProbing(scip, vars[i]) != 0.0 )
          ++counter;
    }
 
@@ -342,9 +365,9 @@ SCIP_Bool includeVarGenVBound(
       return FALSE;
 
    redcost = SCIPgetVarRedcost(scip, var);
-   assert(redcost != SCIP_INVALID);
+   assert(redcost != SCIP_INVALID); /*lint !e777 */
 
-   if( redcost == SCIP_INVALID )
+   if( redcost == SCIP_INVALID ) /*lint !e777 */
       return FALSE;
 
    if( redcost < SCIPdualfeastol(scip) && redcost > -SCIPdualfeastol(scip) )
@@ -474,13 +497,16 @@ SCIP_RETCODE createGenVBound(
 
    *found = FALSE;
 
-   /* make sure we are in dive mode having an optimal LP solution */
-   assert(SCIPinDive(scip));
+   /* make sure we are in probing mode having an optimal LP solution */
+   assert(SCIPinProbing(scip));
 
    assert(SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL);
 
-   /* only genvbounds created in the root node are globally valid */
-   assert(SCIPgetDepth(scip) == 0);
+   /* only genvbounds created in the root node are globally valid
+    *
+    * note: depth changes to one if we use the probing mode to solve the obbt LPs
+    */
+   assert(SCIPgetDepth(scip) == 0 || (SCIPinProbing(scip) && SCIPgetDepth(scip) == 1));
 
    SCIPdebugMessage("      try to create a genvbound for <%s>...\n", SCIPvarGetName(bound->var));
 
@@ -570,12 +596,12 @@ SCIP_RETCODE createGenVBound(
 
                redcost = SCIPgetVarRedcost(scip, xk);
 
-               assert(redcost != SCIP_INVALID);
+               assert(redcost != SCIP_INVALID); /*lint !e777 */
                assert(xk != xi);
 
                /* in this case dont add a genvbound */
-               if( ( (redcost > SCIPdualfeastol(scip))  && SCIPisInfinity(scip, -SCIPgetVarLbDive(scip, xk)) ) ||
-                  ( (redcost < -SCIPdualfeastol(scip))  && SCIPisInfinity(scip, SCIPgetVarUbDive(scip, xk)) ) )
+               if( ( (redcost > SCIPdualfeastol(scip))  && SCIPisInfinity(scip, -SCIPvarGetLbLocal(xk)) ) ||
+                  ( (redcost < -SCIPdualfeastol(scip))  && SCIPisInfinity(scip, SCIPvarGetUbLocal(xk)) ) )
                {
                   addgenvbound = FALSE;
                   break;
@@ -588,9 +614,9 @@ SCIP_RETCODE createGenVBound(
                idx++;
 
                /* if redcost > 0, then redcost = alpha_k, otherwise redcost = - beta_k */
-               assert(redcost <= 0 || !SCIPisInfinity(scip, -SCIPgetVarLbDive(scip, xk)));
-               assert(redcost >= 0 || !SCIPisInfinity(scip, SCIPgetVarUbDive(scip, xk)));
-               c -= redcost > 0 ? redcost * SCIPgetVarLbDive(scip, xk) : redcost * SCIPgetVarUbDive(scip, xk);
+               assert(redcost <= 0 || !SCIPisInfinity(scip, -SCIPvarGetLbLocal(xk)));
+               assert(redcost >= 0 || !SCIPisInfinity(scip, SCIPvarGetUbLocal(xk)));
+               c -= redcost > 0 ? redcost * SCIPvarGetUbLocal(xk) : redcost * SCIPvarGetLbLocal(xk);
             }
          }
 
@@ -697,6 +723,7 @@ SCIP_RETCODE filterExistingLP(
 
          /* mark bound as filtered */
          bound->filtered = TRUE;
+         SCIPdebugMessage("trivial filtered var: %s boundval=%e solval=%e\n", SCIPvarGetName(bound->var), boundval, solval);
 
          /* get the basis status of the variable */
          basestat = SCIPcolGetBasisStatus(SCIPvarGetCol(bound->var));
@@ -711,8 +738,8 @@ SCIP_RETCODE filterExistingLP(
             SCIP_Bool error;
 
             /* set objective coefficient of the bound */
-            SCIP_CALL( SCIPchgVarObjDive(scip, currbound->var, 0.0) );
-            SCIP_CALL( setObjDive(scip, propdata, bound, 1.0) );
+            SCIP_CALL( SCIPchgVarObjProbing(scip, currbound->var, 0.0) );
+            SCIP_CALL( setObjProbing(scip, propdata, bound, 1.0) );
 
 #ifndef NDEBUG
             for( j = 0; j < SCIPgetNVars(scip); ++j )
@@ -721,18 +748,19 @@ SCIP_RETCODE filterExistingLP(
 
                var = SCIPgetVars(scip)[j];
                assert(var != NULL);
-               assert(SCIPisZero(scip, SCIPgetVarObjDive(scip, var)) || var == bound->var);
+               assert(SCIPisZero(scip, SCIPgetVarObjProbing(scip, var)) || var == bound->var);
             }
 #endif
 
             /* solve the OBBT LP */
-            propdata->ndiveiterations -= SCIPgetNLPIterations(scip);
+            propdata->nprobingiterations -= SCIPgetNLPIterations(scip);
             SCIP_CALL( solveLP(scip, -1, &error, &optimal) );
-            propdata->ndiveiterations += SCIPgetNLPIterations(scip);
-            assert(propdata->ndiveiterations >= 0);
+            propdata->nprobingiterations += SCIPgetNLPIterations(scip);
+            assert(propdata->nprobingiterations >= 0);
 
             /* try to generate a genvbound if we have solved the OBBT LP */
-            if( optimal )
+            if( optimal && propdata->genvboundprop != NULL
+                  && (SCIPgetDepth(scip) == 0 || (SCIPinProbing(scip) && SCIPgetDepth(scip) == 1)) )
             {
                SCIP_Bool found;
 
@@ -747,8 +775,8 @@ SCIP_RETCODE filterExistingLP(
             }
 
             /* restore objective function */
-            SCIP_CALL( setObjDive(scip, propdata, bound, 0.0) );
-            SCIP_CALL( setObjDive(scip, propdata, currbound, 1.0) );
+            SCIP_CALL( setObjProbing(scip, propdata, bound, 0.0) );
+            SCIP_CALL( setObjProbing(scip, propdata, currbound, 1.0) );
          }
 
          /* exchange bound i with propdata->bounds[propdata->lastidx] */
@@ -784,7 +812,7 @@ SCIP_RETCODE filterRound(
    int i;
 
    assert(scip != NULL);
-   assert(SCIPinDive(scip));
+   assert(SCIPinProbing(scip));
    assert(propdata != NULL);
    assert(itlimit == -1 || itlimit >= 0);
    assert(nfiltered != NULL);
@@ -798,9 +826,9 @@ SCIP_RETCODE filterRound(
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
 
    /* solve LP */
-   propdata->nfilterlpiters -= SCIPgetNLPIterations(scip);
+   propdata->nfilterlpiters -= (int) SCIPgetNLPIterations(scip);
    SCIP_CALL( solveLP(scip, itlimit, &error, &optimal) );
-   propdata->nfilterlpiters += SCIPgetNLPIterations(scip);
+   propdata->nfilterlpiters += (int) SCIPgetNLPIterations(scip);
    assert(propdata->nfilterlpiters >= 0);
 
    if( !optimal )
@@ -858,25 +886,26 @@ SCIP_RETCODE filterRound(
                filterbound = propdata->bounds[ objcoefsinds[j] ];
                assert(filterbound != NULL);
 
-               SCIP_CALL( SCIPchgVarObjDive(scip, filterbound->var, 0.0) );
+               SCIP_CALL( SCIPchgVarObjProbing(scip, filterbound->var, 0.0) );
             }
 
 #ifndef NDEBUG
             for( j = 0; j < nvars; ++j )
-               assert(SCIPisZero(scip, SCIPgetVarObjDive(scip, vars[j])));
+               assert(SCIPisZero(scip, SCIPgetVarObjProbing(scip, vars[j])));
 #endif
 
             /* set objective coefficient of the bound */
-            SCIP_CALL( setObjDive(scip, propdata, bound, 1.0) );
+            SCIP_CALL( setObjProbing(scip, propdata, bound, 1.0) );
 
             /* solve the OBBT LP */
-            propdata->nfilterlpiters -= SCIPgetNLPIterations(scip);
+            propdata->nfilterlpiters -= (int) SCIPgetNLPIterations(scip);
             SCIP_CALL( solveLP(scip, -1, &error, &optimal) );
-            propdata->nfilterlpiters += SCIPgetNLPIterations(scip);
+            propdata->nfilterlpiters += (int) SCIPgetNLPIterations(scip);
             assert(propdata->nfilterlpiters >= 0);
 
             /* try to generate a genvbound if we have solved the OBBT LP */
-            if( optimal )
+            if( optimal && propdata->genvboundprop != NULL
+                  && (SCIPgetDepth(scip) == 0 || (SCIPinProbing(scip) && SCIPgetDepth(scip) == 1)) )
             {
                SCIP_Bool found;
 
@@ -903,19 +932,19 @@ SCIP_RETCODE filterRound(
                if( !filterbound->filtered )
                {
                   assert(!SCIPisZero(scip, objcoefs[j]));
-                  SCIP_CALL( SCIPchgVarObjDive(scip, propdata->bounds[ objcoefsinds[j] ]->var, objcoefs[j]) );
+                  SCIP_CALL( SCIPchgVarObjProbing(scip, propdata->bounds[ objcoefsinds[j] ]->var, objcoefs[j]) );
                }
             }
          }
 
          /* get the corresponding variable's objective coefficient */
-         objcoef = SCIPgetVarObjDive(scip, bound->var);
+         objcoef = SCIPgetVarObjProbing(scip, bound->var);
 
          /* change objective coefficient if it was set up for this bound */
           if( (bound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisNegative(scip, objcoef))
              || (bound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisPositive(scip, objcoef)) )
           {
-             SCIP_CALL( SCIPchgVarObjDive(scip, bound->var, 0.0) );
+             SCIP_CALL( SCIPchgVarObjProbing(scip, bound->var, 0.0) );
           }
       }
    }
@@ -944,7 +973,7 @@ SCIP_RETCODE filterBounds(
    int nvars;
 
    assert(scip != NULL);
-   assert(SCIPinDive(scip));
+   assert(SCIPinProbing(scip));
    assert(propdata != NULL);
    assert(itlimit == -1 || itlimit >= 0);
 
@@ -967,7 +996,7 @@ SCIP_RETCODE filterBounds(
 
    for( i = 0; i < nvars; i++ )
    {
-      SCIP_CALL( SCIPchgVarObjDive(scip, vars[i], 0.0) );
+      SCIP_CALL( SCIPchgVarObjProbing(scip, vars[i], 0.0) );
    }
 
    for( i = 0; i < propdata->nbounds; i++ )
@@ -981,7 +1010,7 @@ SCIP_RETCODE filterBounds(
 
          if( !SCIPisZero(scip, objcoef) )
          {
-            SCIP_CALL( SCIPchgVarObjDive(scip, propdata->bounds[i]->var, objcoef) );
+            SCIP_CALL( SCIPchgVarObjProbing(scip, propdata->bounds[i]->var, objcoef) );
 
             /* store nontrivial objective coefficients */
             objcoefs[nobjcoefs] = objcoef;
@@ -1015,7 +1044,7 @@ SCIP_RETCODE filterBounds(
       assert(objcoefsinds[i] >= 0 && objcoefsinds[i] < propdata->nbounds);
       bound = propdata->bounds[ objcoefsinds[i] ];
       assert(bound != NULL);
-      SCIP_CALL( SCIPchgVarObjDive(scip, bound->var, 0.0) );
+      SCIP_CALL( SCIPchgVarObjProbing(scip, bound->var, 0.0) );
    }
 
    /* reset number of nontrivial objective coefficients */
@@ -1023,7 +1052,7 @@ SCIP_RETCODE filterBounds(
 
 #ifndef NDEBUG
    for( i = 0; i < nvars; ++i )
-      assert(SCIPisZero(scip, SCIPgetVarObjDive(scip, vars[i])));
+      assert(SCIPisZero(scip, SCIPgetVarObjProbing(scip, vars[i])));
 #endif
 
    for( i = 0; i < propdata->nbounds; i++ )
@@ -1036,7 +1065,7 @@ SCIP_RETCODE filterBounds(
 
          if( !SCIPisZero(scip, objcoef) )
          {
-            SCIP_CALL( SCIPchgVarObjDive(scip, propdata->bounds[i]->var, objcoef) );
+            SCIP_CALL( SCIPchgVarObjProbing(scip, propdata->bounds[i]->var, objcoef) );
 
             /* store nontrivial objective coefficients */
             objcoefs[nobjcoefs] = objcoef;
@@ -1081,7 +1110,7 @@ SCIP_RETCODE applyBoundChgs(
    int i;
 
    assert(scip != NULL);
-   assert(!SCIPinDive(scip));
+   assert(!SCIPinProbing(scip));
    assert(propdata != NULL);
    assert(result != NULL);
    assert(*result == SCIP_DIDNOTFIND);
@@ -1129,16 +1158,14 @@ SCIP_RETCODE applyBoundChgs(
       }
    }
 
-#ifdef SCIP_DEBUG
-   SCIPdebugMessage("tightened bounds: %d\n", ntightened);
-#endif
+   SCIPdebug( SCIPdebugMessage("tightened bounds: %d\n", ntightened) );
 
    return SCIP_OKAY;
 }
 
-/** tries to tighten a bound in diving mode  */
+/** tries to tighten a bound in probing mode  */
 static
-SCIP_RETCODE tightenBoundDive(
+SCIP_RETCODE tightenBoundProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    BOUND*                bound,              /**< bound that could be tightened */
    SCIP_Real             newval,             /**< new bound value */
@@ -1149,15 +1176,15 @@ SCIP_RETCODE tightenBoundDive(
    SCIP_Real ub;
 
    assert(scip != NULL);
-   assert(SCIPinDive(scip));
+   assert(SCIPinProbing(scip));
    assert(bound != NULL);
    assert(tightened != NULL);
 
    *tightened = FALSE;
 
    /* get old bounds */
-   lb = SCIPgetVarLbDive(scip, bound->var);
-   ub = SCIPgetVarUbDive(scip, bound->var);
+   lb = SCIPvarGetLbLocal(bound->var);
+   ub = SCIPvarGetUbLocal(bound->var);
 
    if( bound->boundtype == SCIP_BOUNDTYPE_LOWER )
    {
@@ -1172,7 +1199,7 @@ SCIP_RETCODE tightenBoundDive(
       /* tighten if really better */
       if( SCIPisLbBetter(scip, newval, lb, ub) )
       {
-         SCIP_CALL( SCIPchgVarLbDive(scip, bound->var, newval) );
+         SCIP_CALL( SCIPchgVarLbProbing(scip, bound->var, newval) );
          *tightened = TRUE;
       }
    }
@@ -1189,7 +1216,7 @@ SCIP_RETCODE tightenBoundDive(
       /* tighten if really better */
       if( SCIPisUbBetter(scip, newval, lb, ub) )
       {
-         SCIP_CALL( SCIPchgVarUbDive(scip, bound->var, newval) );
+         SCIP_CALL( SCIPchgVarUbProbing(scip, bound->var, newval) );
          *tightened = TRUE;
       }
    }
@@ -1216,16 +1243,16 @@ SCIP_DECL_SORTPTRCOMP(compBoundsBoundtype)
    BOUND* bound2 = (BOUND*) elem2;
 
    /* prioritize undone bounds */
-   diff = (bound1->done == FALSE) - (bound2->done == FALSE);
+   diff = (!bound1->done ? 1 : 0) - (!bound2->done ? 1 : 0);
    if( diff != 0 )
       return diff;
 
    /* prioritize unfiltered bounds */
-   diff = (bound1->filtered == FALSE) - (bound2->filtered == FALSE);
+   diff = (!bound1->filtered ? 1 : 0) - (!bound2->filtered ? 1 : 0);
    if( diff != 0 )
       return diff;
 
-   diff = (bound1->boundtype == SCIP_BOUNDTYPE_LOWER) - (bound2->boundtype == SCIP_BOUNDTYPE_LOWER);
+   diff = (bound1->boundtype == SCIP_BOUNDTYPE_LOWER ? 1 : 0) - (bound2->boundtype == SCIP_BOUNDTYPE_LOWER ? 1 : 0);
 
    if( diff == 0 )
       return (bound1->score == bound2->score) ? 0 : (bound1->score > bound2->score ? 1 : -1);
@@ -1236,8 +1263,8 @@ SCIP_DECL_SORTPTRCOMP(compBoundsBoundtype)
 /** sort the propdata->bounds array with their distance or their boundtype key */
 static
 SCIP_RETCODE sortBounds(
-   SCIP*                 scip,
-   SCIP_PROPDATA*        propdata
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        propdata            /**< propagator data */
    )
 {
    assert(scip != NULL);
@@ -1260,17 +1287,17 @@ SCIP_Real evalBound(
    assert(bound != NULL);
 
    if( bound->boundtype == SCIP_BOUNDTYPE_LOWER )
-      return REALABS( SCIPvarGetLPSol(bound->var) - SCIPgetVarLbDive(scip, bound->var) );
+      return REALABS( SCIPvarGetLPSol(bound->var) - SCIPvarGetLbLocal(bound->var) );
    else
-      return REALABS( SCIPgetVarUbDive(scip, bound->var) - SCIPvarGetLPSol(bound->var) );
+      return REALABS( SCIPvarGetUbLocal(bound->var) - SCIPvarGetLPSol(bound->var) );
 }
 
 /** returns the index of the next undone and unfiltered bound with the smallest distance */
 static
 int nextBound(
-   SCIP*                 scip,
-   SCIP_PROPDATA*        propdata,
-   SCIP_Bool             convexphase
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        propdata,           /**< data of the obbt propagator */
+   SCIP_Bool             convexphase         /**< consider only convex variables? */
    )
 {
    SCIP_Real bestval;
@@ -1314,13 +1341,98 @@ int nextBound(
    return bestidx;
 }
 
+/** try to separate the solution of the last OBBT LP in order to learn better variable bounds; we apply additional
+ *  separation rounds as long as the routine finds better bounds; because of dual degeneracy we apply a minimum number of
+ *  separation rounds
+ */
+static
+SCIP_RETCODE applySeparation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        propdata,           /**< data of the obbt propagator */
+   BOUND*                currbound,          /**< current bound */
+   SCIP_Longint*         nleftiterations,    /**< number of left iterations (-1 for no limit) */
+   SCIP_Bool*            success             /**< pointer to store if we have found a better bound */
+   )
+{
+   SCIP_Bool inroot;
+   int i;
+
+   assert(nleftiterations != NULL);
+   assert(success != NULL);
+   assert(SCIPinProbing(scip));
+
+   *success = FALSE;
+
+   /* check if we are originally in the root node */
+   inroot = SCIPgetDepth(scip) == 1;
+
+   for( i = 0; i <= propdata->sepamaxiter; ++i )
+   {
+      SCIP_Longint nlpiter;
+      SCIP_Real oldval;
+      SCIP_Bool cutoff;
+      SCIP_Bool delayed;
+      SCIP_Bool error;
+      SCIP_Bool optimal;
+      SCIP_Bool tightened;
+
+      oldval = SCIPvarGetLPSol(currbound->var);
+
+      /* find and store cuts to separate the current LP solution */
+      SCIP_CALL( SCIPseparateSol(scip, NULL, inroot, FALSE, &delayed, &cutoff) );
+      SCIPdebugMessage("applySeparation() - ncuts = %d\n", SCIPgetNCuts(scip));
+
+      /* leave if we did not found any cut */
+      if( SCIPgetNCuts(scip) == 0 )
+         break;
+
+      /* apply cuts and resolve LP */
+      SCIP_CALL( SCIPapplyCutsProbing(scip, &cutoff) );
+      assert(SCIPgetNCuts(scip) == 0);
+      nlpiter = SCIPgetNLPIterations(scip);
+      SCIP_CALL( solveLP(scip, (int) *nleftiterations, &error, &optimal) );
+      nlpiter = SCIPgetNLPIterations(scip) - nlpiter;
+      SCIPdebugMessage("applySeparation() - optimal=%u error=%u lpiter=%" SCIP_LONGINT_FORMAT "\n", optimal, error, nlpiter);
+      SCIPdebugMessage("oldval = %e newval = %e\n", oldval, SCIPvarGetLPSol(currbound->var));
+
+      /* leave if we did not solve the LP to optimality or an error occured */
+      if( error || !optimal )
+         break;
+
+      /* try to generate a genvbound */
+      if( inroot && propdata->genvboundprop != NULL && propdata->genvbdsduringsepa )
+      {
+         SCIP_Bool found;
+         SCIP_CALL( createGenVBound(scip, propdata, currbound, &found) );
+         propdata->ngenvboundsprobing += found ? 1 : 0;
+      }
+
+      /* try to tight the variable bound */
+      tightened = FALSE;
+      if( !SCIPisEQ(scip, oldval, SCIPvarGetLPSol(currbound->var)) )
+      {
+         SCIP_CALL( tightenBoundProbing(scip, currbound, SCIPvarGetLPSol(currbound->var), &tightened) );
+         SCIPdebugMessage("apply separation - tightened=%u oldval=%e newval=%e\n", tightened, oldval,
+            SCIPvarGetLPSol(currbound->var));
+
+         *success |= tightened;
+      }
+
+      /* leave the separation if we did not tighten the bound and proceed at least propdata->sepaminiter iterations */
+      if( !tightened && i >= propdata->sepaminiter )
+         break;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** finds new variable bounds until no iterations left or all bounds have been checked */
 static
 SCIP_RETCODE findNewBounds(
-   SCIP*                 scip,
-   SCIP_PROPDATA*        propdata,
-   SCIP_Longint*         nleftiterations,
-   SCIP_Bool             convexphase
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROPDATA*        propdata,           /**< data of the obbt propagator */
+   SCIP_Longint*         nleftiterations,    /**< pointer to store the number of left iterations */
+   SCIP_Bool             convexphase         /**< consider only convex variables? */
    )
 {
    SCIP_Longint nolditerations;
@@ -1393,7 +1505,7 @@ SCIP_RETCODE findNewBounds(
       exchangeBounds(propdata, nextboundidx);
 
       /* set objective for curr */
-      SCIP_CALL( setObjDive(scip, propdata, currbound, 1.0) );
+      SCIP_CALL( setObjProbing(scip, propdata, currbound, 1.0) );
 
       SCIPdebugMessage("before solving      Boundtype: %d , LB: %e , UB: %e\n",
          currbound->boundtype == SCIP_BOUNDTYPE_LOWER, SCIPvarGetLbLocal(currbound->var),
@@ -1401,16 +1513,18 @@ SCIP_RETCODE findNewBounds(
       SCIPdebugMessage("before solving      var <%s>, LP value: %f\n",
          SCIPvarGetName(currbound->var), SCIPvarGetLPSol(currbound->var));
 
-      /* now solve the LP */
-      SCIPdebugMessage("dive iterations before solve: %lld \n", SCIPgetNLPIterations(scip));
+      SCIPdebugMessage("probing iterations before solve: %lld \n", SCIPgetNLPIterations(scip));
 
-      propdata->ndiveiterations -= SCIPgetNLPIterations(scip);
-      SCIP_CALL( solveLP(scip, *nleftiterations, &error, &optimal) );
-      propdata->ndiveiterations += SCIPgetNLPIterations(scip);
+      propdata->nprobingiterations -= SCIPgetNLPIterations(scip);
+
+      /* now solve the LP */
+      SCIP_CALL( solveLP(scip, (int) *nleftiterations, &error, &optimal) );
+
+      propdata->nprobingiterations += SCIPgetNLPIterations(scip);
       propdata->nsolvedbounds++;
 
-      SCIPdebugMessage("dive iterations after solve: %lld \n", SCIPgetNLPIterations(scip));
-      SCIPdebugMessage("OPT: %d ERROR:%d\n" , optimal, error);
+      SCIPdebugMessage("probing iterations after solve: %lld \n", SCIPgetNLPIterations(scip));
+      SCIPdebugMessage("OPT: %u ERROR: %u\n" , optimal, error);
       SCIPdebugMessage("after solving      Boundtype: %d , LB: %e , UB: %e\n",
          currbound->boundtype == SCIP_BOUNDTYPE_LOWER, SCIPvarGetLbLocal(currbound->var),
          SCIPvarGetUbLocal(currbound->var) );
@@ -1428,7 +1542,7 @@ SCIP_RETCODE findNewBounds(
          /* set the objective of currbound to zero to null the whole objective; otherwise the objective is wrong when
           * we call findNewBounds() for the convex phase
           */
-         SCIP_CALL( SCIPchgVarObjDive(scip, currbound->var, 0.0) );
+         SCIP_CALL( SCIPchgVarObjProbing(scip, currbound->var, 0.0) );
 
          return SCIP_OKAY;
       }
@@ -1441,17 +1555,63 @@ SCIP_RETCODE findNewBounds(
          currbound->found = TRUE;
 
          /* in root node we may want to create a genvbound (independent of tightening success) */
-         if( SCIPgetDepth(scip) == 0 && propdata->genvboundprop != NULL )
+         if( (SCIPgetDepth(scip) == 0 || (SCIPinProbing(scip) && SCIPgetDepth(scip) == 1))
+               && propdata->genvboundprop != NULL )
          {
             SCIP_Bool found;
 
             SCIP_CALL( createGenVBound(scip, propdata, currbound, &found) );
 
             if( found )
-               propdata->ngenvboundsdive += 1;
+               propdata->ngenvboundsprobing += 1;
          }
 
-         /* try to filter some bounds with the current LP solution */
+         /* try to tighten bound in probing mode */
+         success = FALSE;
+         if( propdata->tightintboundsprobing && SCIPvarIsIntegral(currbound->var) )
+         {
+            SCIPdebugMessage("tightening bound %s = %e bounds: [%e, %e]\n", SCIPvarGetName(currbound->var),
+                currbound->newval, SCIPvarGetLbLocal(currbound->var), SCIPvarGetUbLocal(currbound->var) );
+            SCIP_CALL( tightenBoundProbing(scip, currbound, currbound->newval, &success) );
+            SCIPdebugMessage("tightening bound %s\n", success ? "successful" : "not successful");
+         }
+         else if( propdata->tightcontboundsprobing && !SCIPvarIsIntegral(currbound->var) )
+         {
+            SCIPdebugMessage("tightening bound %s = %e bounds: [%e, %e]\n", SCIPvarGetName(currbound->var),
+               currbound->newval, SCIPvarGetLbLocal(currbound->var), SCIPvarGetUbLocal(currbound->var) );
+            SCIP_CALL( tightenBoundProbing(scip, currbound, currbound->newval, &success) );
+            SCIPdebugMessage("tightening bound %s\n", success ? "successful" : "not successful");
+         }
+
+         /* separate current OBBT LP solution */
+         if( iterationsleft && propdata->separatesol )
+         {
+            propdata->nprobingiterations -= SCIPgetNLPIterations(scip);
+            SCIP_CALL( applySeparation(scip, propdata, currbound, nleftiterations, &success) );
+            propdata->nprobingiterations += SCIPgetNLPIterations(scip);
+
+            /* remember best solution value after solving additional separations LPs */
+            if( success )
+            {
+#ifndef NDEBUG
+               SCIP_Real newval = SCIPvarGetLPSol(currbound->var);
+
+               /* round new bound if the variable is integral */
+               if( SCIPvarIsIntegral(currbound->var) )
+                  newval = currbound->boundtype == SCIP_BOUNDTYPE_LOWER ?
+                     SCIPceil(scip, newval) : SCIPfloor(scip, newval);
+
+               assert((currbound->boundtype == SCIP_BOUNDTYPE_LOWER &&
+                     SCIPisGT(scip, newval, currbound->newval))
+                  || (currbound->boundtype == SCIP_BOUNDTYPE_UPPER &&
+                     SCIPisLT(scip, newval, currbound->newval)));
+#endif
+
+               currbound->newval = SCIPvarGetLPSol(currbound->var);
+            }
+         }
+
+         /* filter bound candidates by using the current LP solution */
          if( propdata->applytrivialfilter )
          {
             SCIP_CALL( filterExistingLP(scip, propdata, &nfiltered, currbound) );
@@ -1459,24 +1619,24 @@ SCIP_RETCODE findNewBounds(
             propdata->ntrivialfiltered += nfiltered;
          }
 
-         /* try to tighten bound in dive mode */
-         success = FALSE;
-         if( propdata->tightintboundsdive && SCIPvarIsIntegral(currbound->var) )
-         {
-            SCIP_CALL( tightenBoundDive(scip, currbound, currbound->newval, &success) );
-            SCIPdebugMessage("tightening bound %s\n", success ? "successful" : "not successful");
-         }
-         else if( propdata->tightcontboundsdive && !SCIPvarIsIntegral(currbound->var) )
-         {
-            SCIP_CALL( tightenBoundDive(scip, currbound, currbound->newval, &success) );
-            SCIPdebugMessage("tightening bound %s\n", success ? "successful" : "not successful");
-         }
+         propdata->propagatecounter += success ? 1 : 0;
 
+         /* propagate if we have found enough bound tightenings */
+         if( propdata->propagatefreq != 0 && propdata->propagatecounter >= propdata->propagatefreq )
+         {
+            SCIP_Longint ndomredsfound;
+            SCIP_Bool cutoff;
 
+            SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, &ndomredsfound) );
+            SCIPdebugMessage("propagation - cutoff %u  ndomreds %" SCIP_LONGINT_FORMAT "\n", cutoff, ndomredsfound);
+
+            propdata->npropagatedomreds += ndomredsfound;
+            propdata->propagatecounter = 0;
+         }
       }
 
       /* set objective to zero */
-      SCIP_CALL( setObjDive(scip, propdata, currbound, 0.0) );
+      SCIP_CALL( setObjProbing(scip, propdata, currbound, 0.0) );
 
       /* find the first unprocessed bound */
       nextboundidx = nextBound(scip, propdata, convexphase);
@@ -1515,15 +1675,19 @@ SCIP_RETCODE applyObbt(
    )
 {
    SCIP_VAR** vars;
+   SCIP_Real* oldlbs;
+   SCIP_Real* oldubs;
+   SCIP_Longint lastnpropagatedomreds;
+   SCIP_Longint nleftiterations;
    SCIP_Real oldconditionlimit;
    SCIP_Real oldboundstreps;
    SCIP_Real olddualfeastol;
    SCIP_Bool hasconditionlimit;
-   SCIP_Longint nleftiterations;
-   int i;
+   SCIP_Bool continuenode;
+   SCIP_Bool boundleft;
    int nfiltered;
    int nvars;
-   SCIP_Bool continuenode;
+   int i;
 
    assert(scip != NULL);
    assert(propdata != NULL);
@@ -1531,20 +1695,53 @@ SCIP_RETCODE applyObbt(
 
    SCIPdebugMessage("apply obbt\n");
 
-   *result = SCIP_DIDNOTFIND;
+   oldlbs = NULL;
+   oldubs = NULL;
+   lastnpropagatedomreds = propdata->npropagatedomreds;
    nleftiterations = itlimit;
    continuenode = SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) == propdata->lastnode;
    propdata->lastidx = -1;
+   boundleft = FALSE;
+   *result = SCIP_DIDNOTFIND;
+
+   /* store old variable bounds if we use propagation during obbt */
+   if( propdata->propagatefreq > 0 )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &oldlbs, propdata->nbounds) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &oldubs, propdata->nbounds) );
+   }
 
    /* reset bound data structure flags; fixed variables are marked as filtered */
    for( i = 0; i < propdata->nbounds; i++ )
    {
-      propdata->bounds[i]->filtered |= varIsFixedLocal(scip, propdata->bounds[i]->var);
-      propdata->bounds[i]->found = FALSE;
+      BOUND* bound = propdata->bounds[i];
+      bound->found = FALSE;
 
-      /* reset done flag if we apply OBBT for a new node */
-      propdata->bounds[i]->done = continuenode ? propdata->bounds[i]->done : FALSE;
+      /* store old variable bounds */
+      if( oldlbs != NULL && oldubs != NULL )
+      {
+         oldlbs[bound->index] = SCIPvarGetLbLocal(bound->var);
+         oldubs[bound->index] = SCIPvarGetUbLocal(bound->var);
+      }
+
+      /* reset 'done' and 'filtered' flag in a new B&B node */
+      if( !continuenode )
+      {
+         bound->done = FALSE;
+         bound->filtered = FALSE;
+      }
+
+      /* mark fixed variables as filtered */
+      bound->filtered |= varIsFixedLocal(scip, bound->var);
+
+      /* check for an unprocessed bound */
+      if( !bound->filtered && !bound->done )
+         boundleft = TRUE;
    }
+
+   /* no bound left to check */
+   if( !boundleft )
+      goto TERMINATE;
 
    /* filter variables via inspecting present LP solution */
    if( propdata->applytrivialfilter && !continuenode )
@@ -1557,12 +1754,11 @@ SCIP_RETCODE applyObbt(
    /* store old dualfeasibletol */
    olddualfeastol = SCIPdualfeastol(scip);
 
-   /* start diving */
-   SCIP_CALL( SCIPstartDive(scip) );
-   SCIPdebugMessage("start dive\n");
+   /* start probing */
+   SCIP_CALL( SCIPstartProbing(scip) );
+   SCIPdebugMessage("start probing\n");
 
    /* tighten dual feastol */
-   olddualfeastol = SCIPdualfeastol(scip);
    if( propdata->dualfeastol < olddualfeastol )
    {
       SCIP_CALL( SCIPchgDualfeastol(scip, propdata->dualfeastol) );
@@ -1581,7 +1777,7 @@ SCIP_RETCODE applyObbt(
 
    /* tighten relative bound improvement limit */
    SCIP_CALL( SCIPgetRealParam(scip, "numerics/boundstreps", &oldboundstreps) );
-   if( oldboundstreps != propdata->boundstreps )
+   if( !SCIPisEQ(scip, oldboundstreps, propdata->boundstreps) )
    {
      SCIP_CALL( SCIPsetRealParam(scip, "numerics/boundstreps", propdata->boundstreps) );
    }
@@ -1600,7 +1796,7 @@ SCIP_RETCODE applyObbt(
    nvars = SCIPgetNVars(scip);
    for( i = 0; i < nvars; ++i )
    {
-      SCIP_CALL( SCIPchgVarObjDive(scip, vars[i], 0.0) );
+      SCIP_CALL( SCIPchgVarObjProbing(scip, vars[i], 0.0) );
    }
 
    /* find new bounds for the variables */
@@ -1618,12 +1814,55 @@ SCIP_RETCODE applyObbt(
       SCIP_CALL( SCIPsetRealParam(scip, "lp/conditionlimit", oldconditionlimit) );
    }
 
+   /* update bound->newval if we have learned additional bound tightenings during SCIPpropagateProbing() */
+   if( oldlbs != NULL && oldubs != NULL && propdata->npropagatedomreds - lastnpropagatedomreds > 0 )
+   {
+      assert(propdata->propagatefreq > 0);
+      for( i = 0; i < propdata->nbounds; ++i )
+      {
+         BOUND* bound = propdata->bounds[i];
+
+         /* it might be the case that a bound found by the additional propagation is better than the bound found after solving an OBBT
+          * LP
+          */
+         if( bound->found )
+         {
+            if( bound->boundtype == SCIP_BOUNDTYPE_LOWER )
+               bound->newval = MAX(bound->newval, SCIPvarGetLbLocal(bound->var)); /*lint !e666*/
+            else
+               bound->newval = MIN(bound->newval, SCIPvarGetUbLocal(bound->var)); /*lint !e666*/
+         }
+         else
+         {
+            SCIP_Real oldlb;
+            SCIP_Real oldub;
+
+            oldlb = oldlbs[bound->index];
+            oldub = oldubs[bound->index];
+
+            if( bound->boundtype == SCIP_BOUNDTYPE_LOWER && SCIPisLbBetter(scip, SCIPvarGetLbLocal(bound->var), oldlb, oldub) )
+            {
+               SCIPdebugMessage("tighter lower bound due to propagation: %d - %e -> %e\n", i, oldlb, SCIPvarGetLbLocal(bound->var));
+               bound->newval = SCIPvarGetLbLocal(bound->var);
+               bound->found = TRUE;
+            }
+
+            if( bound->boundtype == SCIP_BOUNDTYPE_UPPER && SCIPisUbBetter(scip, SCIPvarGetUbLocal(bound->var), oldlb, oldub) )
+            {
+               SCIPdebugMessage("tighter upper bound due to propagation: %d - %e -> %e\n", i, oldub, SCIPvarGetUbLocal(bound->var));
+               bound->newval = SCIPvarGetUbLocal(bound->var);
+               bound->found = TRUE;
+            }
+         }
+      }
+   }
+
    /* reset relative bound improvement limit */
    SCIP_CALL( SCIPsetRealParam(scip, "numerics/boundstreps", oldboundstreps) );
 
-   /* end diving */
-   SCIP_CALL( SCIPendDive(scip) );
-   SCIPdebugMessage("end dive!\n");
+   /* end probing */
+   SCIP_CALL( SCIPendProbing(scip) );
+   SCIPdebugMessage("end probing!\n");
 
    /* release cutoff row if there is one */
    if( propdata->cutoffrow != NULL )
@@ -1634,6 +1873,10 @@ SCIP_RETCODE applyObbt(
 
    /* apply buffered bound changes */
    SCIP_CALL( applyBoundChgs(scip, propdata, result) );
+
+TERMINATE:
+   SCIPfreeBufferArrayNull(scip, &oldubs);
+   SCIPfreeBufferArrayNull(scip, &oldlbs);
 
    return SCIP_OKAY;
 }
@@ -1972,6 +2215,7 @@ SCIP_RETCODE initBounds(
          propdata->bounds[bdidx]->score = getScore(scip, propdata->bounds[bdidx], nlcount[i], maxnlcount);
          propdata->bounds[bdidx]->done = FALSE;
          propdata->bounds[bdidx]->nonconvex = (nccount[i] > 0);
+         propdata->bounds[bdidx]->index = bdidx;
          bdidx++;
 
          /* create upper bound */
@@ -1985,6 +2229,7 @@ SCIP_RETCODE initBounds(
          propdata->bounds[bdidx]->score = getScore(scip, propdata->bounds[bdidx], nlcount[i], maxnlcount);
          propdata->bounds[bdidx]->done = FALSE;
          propdata->bounds[bdidx]->nonconvex = (nccount[i] > 0);
+         propdata->bounds[bdidx]->index = bdidx;
          bdidx++;
       }
    }
@@ -2049,7 +2294,6 @@ SCIP_DECL_PROPINITSOL(propInitsolObbt)
 
    SCIPdebugMessage("creating genvbounds: %s\n", propdata->genvboundprop != NULL ? "true" : "false");
 
-
    return SCIP_OKAY;
 }
 
@@ -2077,7 +2321,7 @@ SCIP_DECL_PROPEXEC(propExecObbt)
    }
 
    /* only run if LP all columns are in the LP, i.e., the LP is a relaxation; e.g., do not run if pricers are active
-    * since pricing is not performed in diving mode
+    * since pricing is not performed in probing mode
     */
    if( !SCIPallColsInLP(scip) )
    {
@@ -2168,10 +2412,10 @@ SCIP_DECL_PROPEXITSOL(propExitsolObbt)
    /* note that because we reset filtered flags to false at each call to obbt, the same bound may be filtered multiple
     * times
     */
-   SCIPstatisticMessage("DIVE-LP: %d  NFILTERED: %d NTRIVIALFILTERED: %d NSOLVED: %d FILTER-LP: %d NGENVB(dive): %d  "
-      " NGENVB(aggr.): %d NGENVB(triv.) %d\n",
-      propdata->ndiveiterations, propdata->nfiltered, propdata->ntrivialfiltered, propdata->nsolvedbounds,
-      propdata->nfilterlpiters, propdata->ngenvboundsdive, propdata->ngenvboundsaggrfil, propdata->ngenvboundstrivfil);
+   SCIPstatisticMessage("DIVE-LP: %" SCIP_LONGINT_FORMAT "  NFILTERED: %d NTRIVIALFILTERED: %d NSOLVED: %d "
+      "FILTER-LP: %" SCIP_LONGINT_FORMAT " NGENVB(dive): %d NGENVB(aggr.): %d NGENVB(triv.) %d\n",
+      propdata->nprobingiterations, propdata->nfiltered, propdata->ntrivialfiltered, propdata->nsolvedbounds,
+      propdata->nfilterlpiters, propdata->ngenvboundsprobing, propdata->ngenvboundsaggrfil, propdata->ngenvboundstrivfil);
 
    /* free memory allocated for the bounds */
    if( propdata->nbounds > 0 )
@@ -2225,15 +2469,17 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
 
    /* initialize statistic variables */
-   propdata->ndiveiterations = 0;
+   propdata->nprobingiterations = 0;
    propdata->nfiltered = 0;
    propdata->ntrivialfiltered = 0;
    propdata->nsolvedbounds = 0;
-   propdata->ngenvboundsdive = 0;
+   propdata->ngenvboundsprobing = 0;
    propdata->ngenvboundsaggrfil = 0;
    propdata->ngenvboundstrivfil = 0;
    propdata->nfilterlpiters = 0;
    propdata->lastidx = -1;
+   propdata->propagatecounter = 0;
+   propdata->npropagatedomreds = 0;
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
@@ -2264,6 +2510,10 @@ SCIP_RETCODE SCIPincludePropObbt(
          "should we try to generate genvbounds during trivial and aggressive filtering?",
          &propdata->genvbdsduringfilter, TRUE, DEFAULT_GENVBDSDURINGFILTER, NULL, NULL) );
 
+  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/genvbdsduringsepa",
+         "try to create genvbounds during separation process?",
+         &propdata->genvbdsduringsepa, TRUE, DEFAULT_GENVBDSDURINGSEPA, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/minfilter",
          "minimal number of filtered bounds to apply another filter round",
          &propdata->nminfilter, TRUE, DEFAULT_FILTERING_MIN, 1, INT_MAX, NULL, NULL) );
@@ -2288,17 +2538,33 @@ SCIP_RETCODE SCIPincludePropObbt(
          "only apply obbt on non-convex variables",
          &propdata->onlynonconvexvars, TRUE, DEFAULT_ONLYNONCONVEXVARS, NULL, NULL) );
 
-  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/tightintboundsdive",
-         "should integral bounds be tightened during the diving mode?",
-         &propdata->tightintboundsdive, TRUE, DEFAULT_TIGHTINTBOUNDSDIVE, NULL, NULL) );
+  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/tightintboundsprobing",
+         "should integral bounds be tightened during the probing mode?",
+         &propdata->tightintboundsprobing, TRUE, DEFAULT_TIGHTINTBOUNDSPROBING, NULL, NULL) );
 
-  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/tightcontboundsdive",
-         "should continuous bounds be tightened during the diving mode?",
-         &propdata->tightcontboundsdive, TRUE, DEFAULT_TIGHTCONTBOUNDSDIVE, NULL, NULL) );
+  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/tightcontboundsprobing",
+         "should continuous bounds be tightened during the probing mode?",
+         &propdata->tightcontboundsprobing, TRUE, DEFAULT_TIGHTCONTBOUNDSPROBING, NULL, NULL) );
 
   SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/orderingalgo",
         "select the type of ordering algorithm which should be used (0: no special ordering, 1: greedy, 2: greedy reverse)",
         &propdata->orderingalgo, TRUE, DEFAULT_ORDERINGALGO, 0, 2, NULL, NULL) );
+
+  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/separatesol",
+         "should the obbt LP solution be separated?",
+         &propdata->separatesol, TRUE, DEFAULT_SEPARATESOL, NULL, NULL) );
+
+  SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/sepaminiter",
+        "minimum number of iteration spend to separate an obbt LP solution",
+        &propdata->sepaminiter, TRUE, DEFAULT_SEPAMINITER, 0, INT_MAX, NULL, NULL) );
+
+  SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/sepamaxiter",
+        "maximum number of iteration spend to separate an obbt LP solution",
+        &propdata->sepamaxiter, TRUE, DEFAULT_SEPAMAXITER, 0, INT_MAX, NULL, NULL) );
+
+  SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/propagatefreq",
+        "trigger a propagation round after that many bound tightenings (0: no propagation)",
+        &propdata->propagatefreq, TRUE, DEFAULT_PROPAGATEFREQ, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

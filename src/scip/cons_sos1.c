@@ -75,10 +75,10 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_FAST
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "SOS1"
@@ -107,7 +107,10 @@ struct SCIP_ConshdlrData
 };
 
 
-/** fix variable in given node to 0 or add constraint if variable is multi-aggregated */
+/** fix variable in given node to 0 or add constraint if variable is multi-aggregated
+ *
+ *  @todo Try to handle multi-aggregated variables as in fixVariableZero() below.
+ */
 static
 SCIP_RETCODE fixVariableZeroNode(
    SCIP*                 scip,               /**< SCIP pointer */
@@ -148,6 +151,84 @@ SCIP_RETCODE fixVariableZeroNode(
          SCIP_CALL( SCIPchgVarLbNode(scip, node, var, 0.0) );
       if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
          SCIP_CALL( SCIPchgVarUbNode(scip, node, var, 0.0) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** try to fix variable to 0
+ *
+ *  Try to treat fixing by special consideration of multiaggregated variables. For a multi-aggregation
+ *  \f[
+ *  x = \sum_{i=1}^n \alpha_i x_i + c,
+ *  \f]
+ *  we can express the fixing \f$x = 0\f$ by fixing all \f$x_i\f$ to 0 if \f$c = 0\f$ and the lower bounds of \f$x_i\f$
+ *  are nonnegative if \f$\alpha_i > 0\f$ or the upper bounds are nonpositive if \f$\alpha_i < 0\f$.
+ */
+static
+SCIP_RETCODE fixVariableZero(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_VAR*             var,                /**< variable to be fixed to 0*/
+   SCIP_Bool*            infeasible,         /**< if fixing is infeasible */
+   SCIP_Bool*            tightened           /**< if fixing was performed */
+   )
+{
+   assert( scip != NULL );
+   assert( var != NULL );
+   assert( infeasible != NULL );
+   assert( tightened != NULL );
+
+   *infeasible = FALSE;
+   *tightened = FALSE;
+
+   if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+   {
+      SCIP_Real aggrconst;
+
+      /* if constant is 0 */
+      aggrconst = SCIPvarGetMultaggrConstant(var);
+      if ( SCIPisZero(scip, aggrconst) )
+      {
+         SCIP_VAR** aggrvars;
+         SCIP_Real* aggrvals;
+         SCIP_Bool allnonnegative = TRUE;
+         int naggrvars;
+         int i;
+
+         SCIP_CALL( SCIPflattenVarAggregationGraph(scip, var) );
+
+         /* check whether all variables are "nonnegative" */
+         naggrvars = SCIPvarGetMultaggrNVars(var);
+         aggrvars = SCIPvarGetMultaggrVars(var);
+         aggrvals = SCIPvarGetMultaggrScalars(var);
+         for (i = 0; i < naggrvars; ++i)
+         {
+            if ( (SCIPisPositive(scip, aggrvals[i]) && SCIPisNegative(scip, SCIPvarGetLbLocal(aggrvars[i]))) ||
+                 (SCIPisNegative(scip, aggrvals[i]) && SCIPisPositive(scip, SCIPvarGetUbLocal(aggrvars[i]))) )
+            {
+               allnonnegative = FALSE;
+               break;
+            }
+         }
+
+         if ( allnonnegative )
+         {
+            /* all variables are nonnegative -> fix variables */
+            for (i = 0; i < naggrvars; ++i)
+            {
+               SCIP_Bool fixed;
+               SCIP_CALL( SCIPfixVar(scip, aggrvars[i], 0.0, infeasible, &fixed) );
+               if ( *infeasible )
+                  return SCIP_OKAY;
+               *tightened = *tightened || fixed;
+            }
+         }
+      }
+   }
+   else
+   {
+      SCIP_CALL( SCIPfixVar(scip, var, 0.0, infeasible, tightened) );
    }
 
    return SCIP_OKAY;
@@ -633,8 +714,12 @@ SCIP_RETCODE presolRoundSOS1(
       {
          if ( j != lastFixedNonzero )
          {
-            SCIP_CALL( SCIPfixVar(scip, vars[j], 0.0, &infeasible, &fixed) );
-            assert( ! infeasible );
+            SCIP_CALL( fixVariableZero(scip, vars[j], &infeasible, &fixed) );
+            if ( infeasible )
+            {
+               *cutoff = TRUE;
+               return SCIP_OKAY;
+            }
             if ( fixed )
                ++(*nfixedvars);
          }
@@ -2177,7 +2262,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsSOS1) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSOS1) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSOS1) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOS1, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOS1, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSOS1) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSOS1, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropSOS1) );

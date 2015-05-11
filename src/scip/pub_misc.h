@@ -84,6 +84,12 @@ SCIP_Real SCIPcomputeTwoSampleTTestValue(
    SCIP_Real             county              /**< number of samples of y */
    );
 
+/** returns the value of the Gauss error function evaluated at a given point */
+EXTERN
+SCIP_Real SCIPerf(
+   SCIP_Real             x                   /**< value to evaluate */
+   );
+
 /** get critical value of a standard normal distribution  at a given confidence level */
 EXTERN
 SCIP_Real SCIPnormalGetCriticalValue(
@@ -196,15 +202,9 @@ void SCIPgmlWriteClosing(
 EXTERN
 SCIP_RETCODE SCIPsparseSolCreate(
    SCIP_SPARSESOL**      sparsesol,          /**< pointer to store the created sparse solution */
-   SCIP_VAR**            vars,               /**< variables in the sparse solution, must not contain continuous
-					      *   variables
-					      */
-   int                   nvars,              /**< number of variables to store, size of the lower and upper bound
-					      *   arrays
-					      */
-   SCIP_Bool             cleared             /**< should the lower and upper bound arrays be cleared (entries set to
-					      *	  0)
-					      */
+   SCIP_VAR**            vars,               /**< variables in the sparse solution, must not contain continuous variables */
+   int                   nvars,              /**< number of variables to store, size of the lower and upper bound arrays */
+   SCIP_Bool             cleared             /**< should the lower and upper bound arrays be cleared (entries set to 0) */
    );
 
 /** frees sparse solution */

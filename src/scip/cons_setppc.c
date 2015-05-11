@@ -45,9 +45,9 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_ALWAYS
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 #define LINCONSUPGD_PRIORITY    +700000 /**< priority of the constraint handler for upgrading of linear constraints */
@@ -4797,13 +4797,12 @@ SCIP_RETCODE preprocessCliques(
    int** varconsidxs;                        /* array consisting of constraint indices in which the corresponding variable exists */
    int* varnconss;                           /* array consisting of number of constraints the variable occurs */
    int* maxnvarconsidx;                      /* maximal number of occurances of a variable */
-   int* countofoverlapping;                  /* the amount of variables which are in another constraint */
-   SCIP_Bool* cliquevalues;                  /* values of clique-variables, either one if the varibale is active or zero if the variable is negated */
+   int* countofoverlapping = NULL;           /* the amount of variables which are in another constraint */
+   SCIP_Bool* cliquevalues = NULL;           /* values of clique-variables, either one if the varibale is active or zero if the variable is negated */
 
    SCIP_HASHMAP* vartoindex;                 /* mapping of SCIP variables to indices */
    SCIP_CONSDATA* consdata;
 
-   SCIP_Bool useadditionalmem;
    SCIP_Bool chgcons0;
    int nvars;
    int c;
@@ -4865,8 +4864,6 @@ SCIP_RETCODE preprocessCliques(
    nusefulvars = 0;
    nusefulconss = 0;
    maxnvars = 0;
-
-   useadditionalmem = FALSE;
 
    /* @todo: check for round limit for adding extra clique constraints */
    /* adding clique constraints which arises from global clique information */
@@ -4945,7 +4942,6 @@ SCIP_RETCODE preprocessCliques(
    SCIP_CALL( SCIPallocBufferArray(scip, &cliquevalues, maxnvars) );
    /* allocate temporary memory for counting an overlap of variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &countofoverlapping, nusefulconss) );
-   useadditionalmem = TRUE;
 
    /* sort usefulvars after indices of variables, negated and active counterparts will stand side by side */
    SCIPsortDownPtr((void**)usefulvars, SCIPvarCompActiveAndNegated, nusefulvars);
@@ -5178,11 +5174,8 @@ SCIP_RETCODE preprocessCliques(
    }
 
  TERMINATE:
-   if( useadditionalmem )
-   {
-      SCIPfreeBufferArray(scip, &countofoverlapping);
-      SCIPfreeBufferArray(scip, &cliquevalues);
-   }
+   SCIPfreeBufferArrayNull(scip, &countofoverlapping);
+   SCIPfreeBufferArrayNull(scip, &cliquevalues);
 
    /* free temporary memory for constraints, variables and the mapping between them in reverse order as they were
     * allocated
@@ -7897,14 +7890,12 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    int startdelconss;
    int c;
    SCIP_Bool cutoff;
-   SCIP_Bool delay;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
-   delay = FALSE;
    *result = SCIP_DIDNOTFIND;
    oldnfixedvars = *nfixedvars;
    oldndelconss = *ndelconss;
@@ -8062,7 +8053,9 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    /* determine singleton variables in set-partitioning/-packing constraints, or doubleton variables (active and
     * negated) in any combination of set-partitioning and set-packing constraints
     */
-   if( nconss > 1 && ((conshdlrdata->nsetpart > 0 && !SCIPdoNotMultaggr(scip) && conshdlrdata->conshdlrlinear != NULL) || (conshdlrdata->dualpresolving && conshdlrdata->nsetpart < nconss && !SCIPdoNotAggr(scip))) )
+   if( nconss > 1 && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0
+      && ((conshdlrdata->nsetpart > 0 && !SCIPdoNotMultaggr(scip) && conshdlrdata->conshdlrlinear != NULL)
+         || (conshdlrdata->dualpresolving && conshdlrdata->nsetpart < nconss && !SCIPdoNotAggr(scip))) )
    {
       SCIP_CALL( removeDoubleAndSingletonsAndPerformDualpresolve(scip, conss, nconss, conshdlrdata->dualpresolving, conshdlrdata->conshdlrlinear != NULL, nfixedvars, naggrvars, ndelconss, nchgcoefs, nchgsides, &cutoff) );
 
@@ -8076,44 +8069,38 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    }
 
    /* clique lifting */
-   if( conshdlrdata->cliquelifting && conshdlrdata->enablecliquelifting )
+   if( conshdlrdata->cliquelifting && conshdlrdata->enablecliquelifting && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
-      if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *ndelconss == oldndelconss &&
-         *nchgcoefs == oldnchgcoefs && SCIPisPresolveFinished(scip) )
+      /* add cliques first before lifting variables */
+      SCIP_CALL( addCliques(scip, conss, nconss, firstclique, lastclique, naddconss, ndelconss, nchgbds, &cutoff) );
+
+      if( cutoff )
       {
-         /* add cliques first before lifting variables */
-         SCIP_CALL( addCliques(scip, conss, nconss, firstclique, lastclique, naddconss, ndelconss, nchgbds, &cutoff) );
-
-	 if( cutoff )
-	 {
-	    *result = SCIP_CUTOFF;
-	    return SCIP_OKAY;
-	 }
-
-         firstclique = nconss;
-         lastclique = -1;
-
-         /* lift variables and check for fixings due to clique infomation */
-	 SCIP_CALL( preprocessCliques(scip, conshdlrdata, conss, nconss, nrounds, &firstchange, &firstclique,
-               &lastclique, nfixedvars, naggrvars, ndelconss, nchgcoefs, &cutoff) );
-	 ++(conshdlrdata->nclqpresolve);
-
-	 if( cutoff )
-	 {
-	    *result = SCIP_CUTOFF;
-	    return SCIP_OKAY;
-	 }
-	 else if( oldnfixedvars < *nfixedvars || oldnaggrvars < *naggrvars || oldndelconss < *ndelconss || oldnchgcoefs < *nchgcoefs )
-	    *result = SCIP_SUCCESS;
-
-	 /* remember the number of fixings */
-	 conshdlrdata->noldfixedvars = *nfixedvars + *naggrvars;
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
       }
-      else
-         delay = TRUE;
+
+      firstclique = nconss;
+      lastclique = -1;
+
+      /* lift variables and check for fixings due to clique infomation */
+      SCIP_CALL( preprocessCliques(scip, conshdlrdata, conss, nconss, nrounds, &firstchange, &firstclique,
+            &lastclique, nfixedvars, naggrvars, ndelconss, nchgcoefs, &cutoff) );
+      ++(conshdlrdata->nclqpresolve);
+
+      if( cutoff )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      else if( oldnfixedvars < *nfixedvars || oldnaggrvars < *naggrvars || oldndelconss < *ndelconss || oldnchgcoefs < *nchgcoefs )
+         *result = SCIP_SUCCESS;
+
+      /* remember the number of fixings */
+      conshdlrdata->noldfixedvars = *nfixedvars + *naggrvars;
    }
 
-   if( oldndelconss == *ndelconss )
+   if( oldndelconss == *ndelconss && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
       /* check constraints for redundancy */
       if( conshdlrdata->presolpairwise )
@@ -8161,10 +8148,6 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
 
    conshdlrdata->enablecliquelifting = FALSE;
    conshdlrdata->noldupgrs = nconss - (*ndelconss - startdelconss);
-
-   /* return the correct result code */
-   if( *result != SCIP_CUTOFF && delay )
-      *result = SCIP_DELAYED;
 
    return SCIP_OKAY;
 }
@@ -8820,7 +8803,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitSetppc) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSetppc) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSetppc) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSetppc, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSetppc, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSetppc) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSetppc, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

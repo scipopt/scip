@@ -24,7 +24,7 @@
 #include <string.h>
 
 #include "scip/heur_pscostdiving.h"
-
+#include "scip/pub_dive.h"
 
 #define HEUR_NAME             "pscostdiving"
 #define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the pseudo cost values"
@@ -52,12 +52,16 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
+#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15 /**< percentage of immediate domain changes during probing to trigger LP resolve */
+#define DEFAULT_LPSOLVEFREQ           1 /**< LP solve frequency for diving heuristics */
+#define DEFAULT_ONLYLPBRANCHCANDS TRUE /**< should only LP branching candidates be considered instead of the slower but
+                                         *   more general constraint handler diving variable selection? */
+
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_DIVESET*         diveset;            /**< diving settings */
 };
 
 /*
@@ -95,7 +99,6 @@ SCIP_DECL_HEURFREE(heurFreePscostdiving) /*lint --e{715}*/
    /* free heuristic data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-   SCIP_CALL( SCIPdivesetFree(&heurdata->diveset) );
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
@@ -118,9 +121,6 @@ SCIP_DECL_HEURINIT(heurInitPscostdiving) /*lint --e{715}*/
 
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
-
-   /* initialize data */
-   SCIPresetDiveset(scip, heurdata->diveset);
 
    return SCIP_OKAY;
 }
@@ -151,20 +151,22 @@ static
 SCIP_DECL_HEUREXEC(heurExecPscostdiving) /*lint --e{715}*/
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
+   SCIP_DIVESET* diveset;
+
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+   assert(SCIPheurGetNDivesets(heur) > 0);
+   assert(SCIPheurGetDivesets(heur) != NULL);
+   diveset = SCIPheurGetDivesets(heur)[0];
+   assert(diveset != NULL);
 
-   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, heurdata->diveset, heurdata->sol, heur, result, nodeinfeasible) );
+   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
 
    return SCIP_OKAY;
 }
 
-/** determine the candidate direction. if the variable may be trivially rounded in one direction, take the other direction;
- *  otherwise, consider first the direction from the root solution, second the candidate fractionality, and
- *  last the direction of smaller pseudo costs
- */
 
-/** returns a score for the given candidate -- the best candidate minimizes the diving score */
+/** returns a score for the given candidate -- the best candidate maximizes the diving score */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
 {
@@ -186,6 +188,10 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
    pscostdown = SCIPgetVarPseudocostVal(scip, cand, 0.0 - candsfrac);
    pscostup = SCIPgetVarPseudocostVal(scip, cand, 1.0 - candsfrac);
 
+   /*  determine the candidate direction. if the variable may be trivially rounded in one direction, take the other direction;
+    *  otherwise, consider first the direction from the root solution, second the candidate fractionality, and
+    *  last the direction of smaller pseudo costs
+    */
    assert(pscostdown >= 0.0 && pscostup >= 0.0);
    if( mayrounddown != mayroundup )
       *roundup = mayrounddown;
@@ -210,8 +216,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScorePscostdiving)
       pscostquot *= 1000.0;
 
    assert(pscostquot >= 0);
-   /* return negative cost quotient because diving algorithm minimizes the score */
-   *score = -pscostquot;
+   *score = pscostquot;
 
    return SCIP_OKAY;
 }
@@ -244,11 +249,10 @@ SCIP_RETCODE SCIPincludeHeurPscostdiving(
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitPscostdiving) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitPscostdiving) );
 
-   heurdata->diveset = NULL;
    /* create a diveset (this will automatically install some additional parameters for the heuristic)*/
-   SCIP_CALL( SCIPcreateDiveset(scip, &heurdata->diveset, heur, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScorePscostdiving) );
+   SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
+         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, divesetGetScorePscostdiving) );
 
    return SCIP_OKAY;
 }

@@ -259,6 +259,12 @@ SCIP_Bool SCIPexprHasUserEstimator(
    SCIP_EXPR*              expr
    );
 
+/** gives the evaluation capability of a user expression */
+EXTERN
+SCIP_EXPRINTCAPABILITY SCIPexprGetUserEvalCapability(
+   SCIP_EXPR*              expr
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -289,6 +295,7 @@ SCIP_Bool SCIPexprHasUserEstimator(
 #define SCIPexprGetMonomialExponents(monomial)    (monomial)->exponents
 #define SCIPexprGetUserData(expr)                 ((SCIP_EXPRDATA_USER*)(expr)->data.data)->userdata
 #define SCIPexprHasUserEstimator(expr)            (((SCIP_EXPRDATA_USER*)expr->data.data)->estimate != NULL)
+#define SCIPexprGetUserEvalCapability(expr)       (((SCIP_EXPRDATA_USER*)expr->data.data)->evalcapability)
 
 #endif
 
@@ -572,6 +579,7 @@ SCIP_RETCODE SCIPexprCreateUser(
    int                   nchildren,          /**< number of children */
    SCIP_EXPR**           children,           /**< children of expression */
    SCIP_USEREXPRDATA*    data,               /**< user data for expression, expression assumes ownership */
+   SCIP_EXPRINTCAPABILITY evalcapability,    /**< capability of evaluation functions (partially redundant, currently) */
    SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
    SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function, or NULL if not implemented */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
@@ -1293,6 +1301,7 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPRGRAPHNODE**  node,               /**< buffer to store expression graph node */
    SCIP_USEREXPRDATA*    data,               /**< user data for expression, node assumes ownership */
+   SCIP_EXPRINTCAPABILITY evalcapability,    /**< evaluation capability */
    SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
    SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */

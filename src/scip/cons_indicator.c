@@ -219,9 +219,9 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< Should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< Should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< Should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< Should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_FAST
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 
 
@@ -310,6 +310,7 @@ struct SCIP_ConshdlrData
    SCIP_HASHMAP*         lbhash;             /**< hash map from variable to index of lower bound column in alternative LP */
    SCIP_HASHMAP*         ubhash;             /**< hash map from variable to index of upper bound column in alternative LP */
    SCIP_HASHMAP*         slackhash;          /**< hash map from slack variable to row index in alternative LP */
+   SCIP_HASHMAP*         binvarhash;         /**< hash map from binary indicator variable to indicator constraint */
    int                   nslackvars;         /**< # slack variables */
    int                   niiscutsgen;        /**< number of IIS-cuts generated */
    int                   objcutindex;        /**< index of objectice cut in alternative LP (-1 if not added) */
@@ -981,7 +982,7 @@ SCIP_RETCODE checkIIS(
             if ( var == slackvar )
                continue;
 
-            /* if variable new */
+            /* if variable is new */
             if ( ! SCIPhashmapExists(varhash, var) )
             {
                /* add variable in map */
@@ -4075,20 +4076,43 @@ SCIP_RETCODE separateIISRounding(
       for (j = 0; j < nconss; ++j)
       {
          SCIP_CONSDATA* consdata;
+         SCIP_Real binvarval = 0.0;
+         SCIP_VAR* binvarneg = NULL;
 
          assert( conss[j] != NULL );
          consdata = SCIPconsGetData(conss[j]);
          assert( consdata != NULL );
 
+         binvarval = SCIPgetVarSol(scip, consdata->binvar);
+
 #ifdef SCIP_DEBUG
-         if ( SCIPisFeasEQ(scip, SCIPgetVarSol(scip, consdata->binvar), 1.0) )
+         if ( SCIPisFeasEQ(scip, binvarval, 1.0) )
             ++nvarsone;
-         else if ( SCIPisFeasZero(scip, SCIPgetVarSol(scip, consdata->binvar)) )
+         else if ( SCIPisFeasZero(scip, binvarval) )
             ++nvarszero;
          else
             ++nvarsfrac;
 #endif
 
+         /* check whether complementary (negated) variable is present as well */
+         binvarneg = SCIPvarGetNegatedVar(consdata->binvar);
+         assert( binvarneg != NULL );
+
+         /* negated variable is present as well */
+         assert( conshdlrdata->binvarhash != NULL );
+         if ( SCIPhashmapExists(conshdlrdata->binvarhash, (void*) binvarneg) )
+         {
+            SCIP_Real binvarnegval = SCIPgetVarSol(scip, binvarneg);
+
+            /* take larger one */
+            if ( binvarval > binvarnegval )
+               S[j] = TRUE;
+            else
+               S[j] = FALSE;
+            continue;
+         }
+
+         /* check for threshold */
          if ( SCIPisFeasLT(scip, SCIPgetVarSol(scip, consdata->binvar), threshold) )
          {
             S[j] = TRUE;
@@ -5047,6 +5071,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
          }
       }
       SCIPhashmapFree(&conshdlrdata->slackhash);
+      if ( conshdlrdata->binvarhash != NULL )
+         SCIPhashmapFree(&conshdlrdata->binvarhash);
    }
 
    return SCIP_OKAY;
@@ -5176,6 +5202,22 @@ SCIP_DECL_CONSTRANS(consTransIndicator)
          SCIPconsIsPropagated(sourcecons), SCIPconsIsLocal(sourcecons),
          SCIPconsIsModifiable(sourcecons), SCIPconsIsDynamic(sourcecons),
          SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+
+   /* make sure that binary variable hash exists */
+   if ( conshdlrdata->sepaalternativelp )
+   {
+      if ( conshdlrdata->binvarhash == NULL )
+      {
+         SCIP_CALL( SCIPhashmapCreate(&conshdlrdata->binvarhash, SCIPblkmem(scip), SCIPcalcHashtableSize(10 * SCIPgetNOrigVars(scip))) );
+      }
+
+      /* check whether binary variable is present: note that a binary variable might appear several times, but this seldomly happens. */
+      assert( conshdlrdata->binvarhash != NULL );
+      if ( ! SCIPhashmapExists(conshdlrdata->binvarhash, (void*) consdata->binvar) )
+      {
+         SCIP_CALL( SCIPhashmapInsert(conshdlrdata->binvarhash, (void*) consdata->binvar, (void*) (*targetcons)) );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -6409,6 +6451,72 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsIndicator)
    return SCIP_OKAY;
 }
 
+/** constraint handler method to suggest dive bound changes during the generic diving algorithm */
+static
+SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIndicator)
+{
+   SCIP_CONS** indconss;
+   int nindconss;
+   int c;
+   SCIP_VAR* bestvar;
+   SCIP_Bool bestvarroundup;
+   SCIP_Real bestscore = SCIP_REAL_MIN;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(diveset != NULL);
+   assert(success != NULL);
+
+   indconss = SCIPconshdlrGetConss(conshdlr);
+   nindconss = SCIPconshdlrGetNConss(conshdlr);
+
+   bestvar = NULL;
+   bestvarroundup = FALSE;
+   /* loop over indicator constraints and score indicator variables with already integral solution value  */
+   for( c = 0; c < nindconss; ++c )
+   {
+      /* check whether constraint is violated */
+      if( SCIPisViolatedIndicator(scip, indconss[c], sol) )
+      {
+         SCIP_VAR* binvar;
+         SCIP_Real solval;
+
+         binvar = SCIPgetBinaryVarIndicator(indconss[c]);
+         solval = SCIPgetSolVal(scip, sol, binvar);
+
+         /* we only treat indicator variables with integral solution values that are not yet fixed */
+         if( SCIPisFeasIntegral(scip, solval) && SCIPvarGetLbLocal(binvar) < SCIPvarGetUbLocal(binvar) - 0.5 )
+         {
+            SCIP_Real score;
+            SCIP_Bool roundup;
+
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, binvar, solval, 0.0, &score, &roundup) );
+
+            /* best candidate maximizes the score */
+            if( score > bestscore )
+            {
+               bestscore = score;
+               *success = TRUE;
+               bestvar = binvar;
+               bestvarroundup = roundup;
+            }
+         }
+      }
+   }
+
+   assert(! *success || bestvar != NULL);
+
+   if( *success )
+   {
+      /* if the diving score voted for fixing the best variable to 1.0, we add this as the preferred bound change */
+      SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_UPWARDS, 1.0, bestvarroundup) );
+      SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_DOWNWARDS, 0.0, ! bestvarroundup) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /* ---------------- Constraint specific interface methods ---------------- */
 
 /** creates the handler for indicator constraints and includes it in SCIP */
@@ -6440,6 +6548,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    conshdlrdata->sepaalternativelp = DEFAULT_SEPAALTERNATIVELP;
    conshdlrdata->nolinconscont = DEFAULT_NOLINCONSCONT;
    conshdlrdata->forcerestart = DEFAULT_FORCERESTART;
+   conshdlrdata->binvarhash = NULL;
 
    /* initialize constraint handler data */
    initConshdlrData(scip, conshdlrdata);
@@ -6465,6 +6574,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteIndicator) );
    SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableIndicator) );
    SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableIndicator) );
+   SCIP_CALL( SCIPsetConshdlrDetermDiveBdChgs(scip, conshdlr, conshdlrDetermDiveBdChgsIndicator) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitIndicator) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolIndicator) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeIndicator) );
@@ -6475,7 +6585,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolIndicator) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpIndicator) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseIndicator) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolIndicator, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolIndicator, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintIndicator) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropIndicator, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
@@ -6798,7 +6908,7 @@ SCIP_RETCODE SCIPcreateConsIndicator(
    assert( SCIPconsGetNUpgradeLocks(lincons) > 0 );
 
    /* add slack variable */
-   if ( conshdlrdata->scaleslackvar )
+   if ( conshdlrdata->scaleslackvar && nvars > 0 )
    {
       absvalsum = absvalsum/((SCIP_Real) nvars);
       if ( slackvartype == SCIP_VARTYPE_IMPLINT )

@@ -257,6 +257,19 @@ SCIP_Bool SCIPpropDoesPresolve(
    SCIP_PROP*            prop                /**< propagator */
    );
 
+/** returns the timing mask of the presolving method of the propagator */
+EXTERN
+SCIP_PRESOLTIMING SCIPpropGetPresolTiming(
+   SCIP_PROP*            prop                /**< propagator */
+   );
+
+/** sets the timing mask of the presolving method of the propagator */
+EXTERN
+void SCIPpropSetPresolTiming(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
+   );
+
 #ifdef __cplusplus
 }
 #endif

@@ -27,7 +27,6 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "scip/buffer.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_clock.h"
@@ -465,8 +464,8 @@ SCIP_RETCODE SCIPsetSetEmphasis(
 /** enable or disable all plugin timers depending on the value of the flag \p enabled */
 extern
 void SCIPsetEnableOrDisablePluginClocks(
-   SCIP_SET*            set,                /**< SCIP settings */
-   SCIP_Bool            enabled             /**< should plugin clocks be enabled? */
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_Bool             enabled             /**< should plugin clocks be enabled? */
    );
 
 /** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances; should be called for
@@ -1744,28 +1743,23 @@ SCIP_Bool SCIPsetIsSumRelGE(
 
 #endif
 
-#ifdef NDEBUG
-#define SCIPsetAllocBufferArray(set,ptr,num)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), \
-                                                                     (int)((num)*sizeof(**(ptr))))      )
-#define SCIPsetDuplicateBufferArray(set,ptr,source,num)                 \
-   ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source,  \
-                            (int)((num)*sizeof(**(ptr)))) )
-#define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
-                                                                       (int)((num)*sizeof(**(ptr)))) )
-#else
-/* Check for integer overflow in allocation size */
-#define SCIPsetAllocBufferArray(set,ptr,num)    ( SCIPbufferAllocMemSave(set, (void**)(ptr), num, sizeof(**(ptr))) )
-#define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( SCIPbufferDuplicateMemSave(set, (void**)(ptr), source, num, sizeof(**(ptr))) )
-#define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMemSave(set, (void**)(ptr), num, sizeof(**(ptr))) )
-#endif
-#define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
-#define SCIPsetAllocBuffer(set,ptr)             ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), (int) sizeof(**(ptr))) )
-#define SCIPsetAllocBufferSize(set,ptr,size)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), size) )
-#define SCIPsetDuplicateBufferSize(set,ptr,source,size)                 \
-   ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, size) )
-#define SCIPsetReallocBufferSize(set,ptr,size)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), size) )
-#define SCIPsetFreeBuffer(set,ptr)             ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
-#define SCIPsetFreeBufferSize(set,ptr)          ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
+#define SCIPsetAllocBuffer(set,ptr)             ( (BMSallocBufferMemory((set)->buffer, (ptr)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetAllocBufferSize(set,ptr,size)    ( (BMSallocBufferMemorySize((set)->buffer, (ptr), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetAllocBufferArray(set,ptr,num)    ( (BMSallocBufferMemoryArray((set)->buffer, (ptr), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetDuplicateBufferSize(set,ptr,source,size) ( (BMSduplicateBufferMemory((set)->buffer, (ptr), (source), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( (BMSduplicateBufferMemoryArray((set)->buffer, (ptr), (source), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetReallocBufferSize(set,ptr,size)  ( (BMSreallocBufferMemorySize((set)->buffer, (ptr), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetReallocBufferArray(set,ptr,num)  ( (BMSreallocBufferMemoryArray((set)->buffer, (ptr), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetFreeBuffer(set,ptr)              BMSfreeBufferMemory((set)->buffer, (ptr))
+#define SCIPsetFreeBufferSize(set,ptr)          BMSfreeBufferMemorySize((set)->buffer, (ptr))
+#define SCIPsetFreeBufferArray(set,ptr)         BMSfreeBufferMemoryArray((set)->buffer, (ptr))
+
+#define SCIPsetAllocCleanBuffer(set,ptr)             ( (BMSallocBufferMemory((set)->cleanbuffer, (ptr)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetAllocCleanBufferSize(set,ptr,size)    ( (BMSallocBufferMemorySize((set)->cleanbuffer, (ptr), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetAllocCleanBufferArray(set,ptr,num)    ( (BMSallocBufferMemoryArray((set)->cleanbuffer, (ptr), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetFreeCleanBuffer(set,ptr)              BMSfreeBufferMemory((set)->cleanbuffer, (ptr))
+#define SCIPsetFreeCleanBufferSize(set,ptr)          BMSfreeBufferMemorySize((set)->cleanbuffer, (ptr))
+#define SCIPsetFreeCleanBufferArray(set,ptr)         BMSfreeBufferMemoryArray((set)->cleanbuffer, (ptr))
 
 #ifdef __cplusplus
 }

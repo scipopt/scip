@@ -17,8 +17,6 @@
  * @brief  constraint handler for nonlinear constraints \f$\textrm{lhs} \leq \sum_{i=1}^n a_ix_i + \sum_{j=1}^m c_jf_j(x) \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  * @author Ingmar Vierhaus (consparse)
- *
- * @todo implement CONSPARSE callback
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -48,9 +46,10 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
-#define CONSHDLR_PROP_TIMING SCIP_PROPTIMING_BEFORELP
+
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_ALWAYS /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define INTERVALINFTY             1E+43 /**< value for infinity in interval operations */
 #define BOUNDTIGHTENING_MINSTRENGTH 0.05/**< minimal required bound tightening strength in expression graph domain tightening for propagating bound change */
@@ -4913,8 +4912,8 @@ SCIP_RETCODE getCoeffsAndConstantFromLinearExpr(
    }
 
    SCIPerrorMessage( "Cannot extract linear coefficients from expressions with operator %d\n", SCIPexprGetOperator( expr ) );
-   assert( FALSE );
-   return SCIP_ERROR;
+   SCIPABORT();
+   return SCIP_ERROR; /*lint !e527*/
 }
 
 /** adds estimator from user callback of a constraints user expression tree to a row
@@ -5260,7 +5259,7 @@ SCIP_RETCODE generateCut(
    {
       if( ref == NULL )
       {
-         SCIP_CALL( SCIPreallocBufferArray(scip, &x, SCIPexprtreeGetNVars(consdata->exprtrees[i])) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &x, SCIPexprtreeGetNVars(consdata->exprtrees[i])) );  /*lint !e644*/
          SCIP_CALL( SCIPgetSolVals(scip, sol, SCIPexprtreeGetNVars(consdata->exprtrees[i]), SCIPexprtreeGetVars(consdata->exprtrees[i]), x) );
       }
       else
@@ -8161,19 +8160,22 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    }
 
    /* run domain propagation (if updated bounds in graph above, then can skip cleanup) */
-   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, !tryupgrades, &propresult, nchgbds, ndelconss) );
-   switch( propresult )
+   if( (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
    {
-   case SCIP_REDUCEDDOM:
-      *result = SCIP_SUCCESS;
-      break;
-   case SCIP_CUTOFF:
-      SCIPdebugMessage("propagation says problem is infeasible in presolve\n");
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   default:
-      assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
-   }  /*lint !e788*/
+      SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, !tryupgrades, &propresult, nchgbds, ndelconss) );
+      switch( propresult )
+      {
+      case SCIP_REDUCEDDOM:
+         *result = SCIP_SUCCESS;
+         break;
+      case SCIP_CUTOFF:
+         SCIPdebugMessage("propagation says problem is infeasible in presolve\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      default:
+         assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
+      }  /*lint !e788*/
+   }
 
    if( conshdlrdata->reformulate && !conshdlrdata->assumeconvex )
    {
@@ -8181,7 +8183,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
        * then try the reformulations (replacing products with binaries, disaggregation, setting default variable bounds)
        * otherwise, we wait with these
        */
-      if( SCIPisPresolveFinished(scip) )
+      if( SCIPisPresolveFinished(scip) || (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
       {
          int naddconssbefore;
 
@@ -8206,13 +8208,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
                consdata->ispresolved = FALSE;
             }
          }
-      }
-      else
-      {
-         SCIPdebugMessage("presolving will wait with reformulation\n");
-
-         /* if we did not try reformulations, ensure that presolving is called again even if there were only a few changes (< abortfac) */
-         *result = SCIP_DELAYED;
       }
    }
 
@@ -9015,7 +9010,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreNonlinear) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolNonlinear) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpNonlinear) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolNonlinear, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolNonlinear, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintNonlinear) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropNonlinear, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

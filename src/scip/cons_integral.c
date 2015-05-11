@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+/*#define SCIP_DEBUG*/
 /**@file   cons_integral.c
  * @brief  constraint handler for the integrality constraint
  * @author Tobias Achterberg
@@ -176,6 +176,74 @@ SCIP_DECL_CONSLOCK(consLockIntegral)
    return SCIP_OKAY;
 }
 
+/** constraint handler method to suggest dive bound changes during the generic diving algorithm */
+static
+SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIntegral)
+{
+   SCIP_VAR** vars;
+   SCIP_Real solval;
+   SCIP_Real score;
+   SCIP_Real bestscore;
+   SCIP_Bool roundup;
+   int ninteger;
+   int nbin;
+   int nint;
+   int nimpl;
+   int v;
+   int bestcandidx;
+
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(diveset != NULL);
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(scip != NULL);
+
+   SCIPdebugMessage("Integral Constraint handler Diving Solution Enforcement\n");
+
+   SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, &nimpl, NULL) );
+
+   ninteger = nbin + nint + nimpl;
+   bestscore = SCIP_REAL_MIN;
+   bestcandidx = -1;
+   /* loop over solution values and get score of fractional variables */
+   for( v = 0; v < ninteger; ++v )
+   {
+      solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+      /* skip variable if solution value disagrees with the local bounds */
+      if( ! SCIPisFeasIntegral(scip, solval) && SCIPisGE(scip, solval, SCIPvarGetLbLocal(vars[v])) && SCIPisLE(scip, solval, SCIPvarGetUbLocal(vars[v])) )
+      {
+         SCIP_CALL( SCIPgetDivesetScore(scip, diveset, vars[v], solval, solval - SCIPfloor(scip, solval), &score, &roundup) );
+
+         /* we search for candidates with maximum score */
+         if( score > bestscore )
+         {
+            bestcandidx = v;
+            bestscore = score;
+            *success = TRUE;
+         }
+      }
+   }
+
+   assert(! *success || bestcandidx >= 0);
+
+   if( *success )
+   {
+      solval = SCIPgetSolVal(scip, sol, vars[bestcandidx]);
+
+      /* if we want to round up the best candidate, it is added as the preferred bound change */
+      SCIP_CALL( SCIPaddDiveBoundChange(scip, vars[bestcandidx], SCIP_BRANCHDIR_UPWARDS,
+            SCIPceil(scip, solval), roundup) );
+      SCIP_CALL( SCIPaddDiveBoundChange(scip, vars[bestcandidx], SCIP_BRANCHDIR_DOWNWARDS,
+            SCIPfloor(scip, solval), ! roundup) );
+   }
+
+   return SCIP_OKAY;
+
+}
+
 /*
  * constraint specific interface methods
  */
@@ -201,6 +269,7 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyIntegral, consCopyIntegral) );
+   SCIP_CALL( SCIPsetConshdlrDetermDiveBdChgs(scip, conshdlr, conshdlrDetermDiveBdChgsIntegral) );
 
    return SCIP_OKAY;
 }

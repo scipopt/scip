@@ -60,10 +60,10 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_ALWAYS /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
 #define NONLINCONSUPGD_PRIORITY   40000 /**< priority of upgrading nonlinear constraints */
@@ -3263,11 +3263,11 @@ SCIP_RETCODE presolveTryAddAND(
       }
 #endif
 
-      /* create and constraint auxvar = x and y */
+      /* create AND-constraint auxvar = x and y, need to be enforced as not redundant */
       (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%sAND%s", SCIPvarGetName(vars[0]), SCIPvarGetName(vars[1]));
       SCIP_CALL( SCIPcreateConsAnd(scip, &andcons, name, auxvar, 2, vars,
             SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
-            SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+            SCIPconsIsSeparated(cons), TRUE, TRUE,
             SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
             SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
       SCIP_CALL( SCIPaddCons(scip, andcons) );
@@ -3609,12 +3609,12 @@ SCIP_RETCODE presolveTryAddLinearReform(
             }
 #endif
 
-            /* add constraint z = x and y */
+            /* add constraint z = x and y; need to be enforced, as it is not redundant w.r.t. existing constraints */
             xvars[1] = y;
             (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "%sAND%s_%s", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateConsAnd(scip, &auxcons, name, auxvar, 2, xvars,
                   SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
-                  SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                  SCIPconsIsSeparated(cons), TRUE, TRUE,
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
             SCIP_CALL( SCIPaddCons(scip, auxcons) );
@@ -3720,14 +3720,14 @@ SCIP_RETCODE presolveTryAddLinearReform(
              */
             if( SCIPisNegative(scip, SCIPintervalGetInf(xbndsone)) )
             {
-               /* add 0 <= z - xbndsone.inf * y constraint (as varbound constraint) */
+               /* add 0 <= z - xbndsone.inf * y constraint (as varbound constraint), need to be enforced as not redundant */
                if( nxvars == 1 )
                   (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s_%s_1", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
                else
                   (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s*more_%s_1", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
                SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetInf(xbndsone), 0.0, SCIPinfinity(scip),
                      SCIPconsIsInitial(cons) /*&& conshdlrdata->binreforminitial*/,
-                     SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                     SCIPconsIsSeparated(cons), TRUE, TRUE,
                      SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
                SCIP_CALL( SCIPaddCons(scip, auxcons) );
@@ -3738,14 +3738,14 @@ SCIP_RETCODE presolveTryAddLinearReform(
             }
             if( SCIPisPositive(scip, SCIPintervalGetSup(xbndsone)) )
             {
-               /* add z - xbndsone.sup * y <= 0 constraint (as varbound constraint) */
+               /* add z - xbndsone.sup * y <= 0 constraint (as varbound constraint), need to be enforced as not redundant */
                if( nxvars == 1 )
                   (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s_%s_2", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
                else
                   (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s*more_%s_2", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
                SCIP_CALL( SCIPcreateConsVarbound(scip, &auxcons, name, auxvar, y, -SCIPintervalGetSup(xbndsone), -SCIPinfinity(scip), 0.0,
                      SCIPconsIsInitial(cons) /*&& conshdlrdata->binreforminitial*/,
-                     SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                     SCIPconsIsSeparated(cons), TRUE, TRUE,
                      SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                      SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
                SCIP_CALL( SCIPaddCons(scip, auxcons) );
@@ -3755,7 +3755,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                ++*naddconss;
             }
 
-            /* add xbndszero.inf <= sum_i a_i*x_i + xbndszero.inf * y - z constraint */
+            /* add xbndszero.inf <= sum_i a_i*x_i + xbndszero.inf * y - z constraint, need to be enforced as not redundant */
             xvars[nxvars]   = y;
             xvars[nxvars+1] = auxvar;
             xcoef[nxvars]   = SCIPintervalGetInf(xbndszero);
@@ -3767,7 +3767,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s*more_%s_3", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateConsLinear(scip, &auxcons, name, nxvars+2, xvars, xcoef, SCIPintervalGetInf(xbndszero), SCIPinfinity(scip),
                   SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
-                  SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                  SCIPconsIsSeparated(cons), TRUE, TRUE,
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
             SCIP_CALL( SCIPaddCons(scip, auxcons) );
@@ -3776,7 +3776,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
             SCIP_CALL( SCIPreleaseCons(scip, &auxcons) );
             ++*naddconss;
 
-            /* add sum_i a_i*x_i + xbndszero.sup * y - z <= xbndszero.sup constraint */
+            /* add sum_i a_i*x_i + xbndszero.sup * y - z <= xbndszero.sup constraint, need to be enforced as not redundant */
             xcoef[nxvars] = SCIPintervalGetSup(xbndszero);
 
             if( nxvars == 1 )
@@ -3785,7 +3785,7 @@ SCIP_RETCODE presolveTryAddLinearReform(
                (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "linreform%s*%s*more_%s_4", SCIPvarGetName(y), SCIPvarGetName(xvars[0]), SCIPconsGetName(cons));
             SCIP_CALL( SCIPcreateConsLinear(scip, &auxcons, name, nxvars+2, xvars, xcoef, -SCIPinfinity(scip), SCIPintervalGetSup(xbndszero),
                   SCIPconsIsInitial(cons) && conshdlrdata->binreforminitial,
-                  SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons), SCIPconsIsChecked(cons),
+                  SCIPconsIsSeparated(cons), TRUE, TRUE,
                   SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
                   SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), SCIPconsIsStickingAtNode(cons)) );
             SCIP_CALL( SCIPaddCons(scip, auxcons) );
@@ -3824,7 +3824,8 @@ SCIP_RETCODE presolveUpgrade(
    SCIP_CONS*            cons,               /**< source constraint to try to convert */
    SCIP_Bool*            upgraded,           /**< buffer to store whether constraint was upgraded */
    int*                  nupgdconss,         /**< buffer to increase if constraint was upgraded */
-   int*                  naddconss           /**< buffer to increase with number of additional constraints created during upgrade */
+   int*                  naddconss,          /**< buffer to increase with number of additional constraints created during upgrade */
+   SCIP_PRESOLTIMING     presoltiming        /**< current presolving timing */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -3981,7 +3982,7 @@ SCIP_RETCODE presolveUpgrade(
 
       SCIP_CALL( conshdlrdata->quadconsupgrades[i]->quadconsupgd(scip, cons,
             nbinlin, nbinquad, nintlin, nintquad, nimpllin, nimplquad, ncontlin, ncontquad, integral,
-            &nupgdconss_, upgdconss, upgdconsssize) );
+            &nupgdconss_, upgdconss, upgdconsssize, presoltiming) );
 
       while( nupgdconss_ < 0 )
       {
@@ -3992,7 +3993,7 @@ SCIP_RETCODE presolveUpgrade(
 
          SCIP_CALL( conshdlrdata->quadconsupgrades[i]->quadconsupgd(scip, cons,
                nbinlin, nbinquad, nintlin, nintquad, nimpllin, nimplquad, ncontlin, ncontquad, integral,
-               &nupgdconss_, upgdconss, upgdconsssize) );
+               &nupgdconss_, upgdconss, upgdconsssize, presoltiming) );
 
          assert(nupgdconss_ != 0);
       }
@@ -4153,8 +4154,8 @@ SCIP_RETCODE presolveDisaggregate(
       SCIP_CALL( SCIPcreateConsQuadratic2(scip, &auxconss[comp], name, 0, NULL, NULL, 0, NULL, 0, NULL,
             (SCIPisInfinity(scip, -consdata->lhs) ? -SCIPinfinity(scip) : 0.0),
             (SCIPisInfinity(scip,  consdata->rhs) ?  SCIPinfinity(scip) : 0.0),
-            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
-            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), TRUE,
+            TRUE, SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons), SCIPconsIsModifiable(cons),
             SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
 
       auxcoefs[comp] = SCIPinfinity(scip);
@@ -4427,7 +4428,6 @@ SCIP_RETCODE checkCurvature(
    SCIP_CONSDATA* consdata;
    double*        matrix;
    SCIP_HASHMAP*  var2index;
-   SCIP_RETCODE   retcode;
    int            i;
    int            n;
    int            nn;
@@ -4472,21 +4472,19 @@ SCIP_RETCODE checkCurvature(
       return SCIP_OKAY;
    }
 
-   /* lower triangular of quadratic term matrix */
+   /* do not check curvature if n is too large */
    nn = n * n;
-   retcode = SCIPallocBufferArray(scip, &matrix, nn);
-
-   /* do not check curvature if there has been an overflow or too little memory */
-   if( retcode == SCIP_NOMEMORY )
+   if( nn < 0 || (unsigned) (int) nn > UINT_MAX / sizeof(SCIP_Real) )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "cons_quadratic - not enough memory to check curvature\n");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "cons_quadratic - n is too large to check the curvature\n");
       consdata->isconvex = FALSE;
       consdata->isconcave = FALSE;
       consdata->iscurvchecked = TRUE;
       return SCIP_OKAY;
    }
-   assert(retcode == SCIP_OKAY);
 
+   /* lower triangular of quadratic term matrix */
+   SCIP_CALL( SCIPallocBufferArray(scip, &matrix, nn) );
    BMSclearMemoryArray(matrix, nn);
 
    consdata->isconvex  = TRUE;
@@ -7520,7 +7518,7 @@ SCIP_RETCODE addLinearizationCuts(
    {
       assert(conss[c] != NULL);  /*lint !e613 */
 
-      if( SCIPconsIsLocal(conss[c]) )  /*lint !e613 */
+      if( SCIPconsIsLocal(conss[c]) || !SCIPconsIsEnabled(conss[c]) )  /*lint !e613 */
          continue;
 
       SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
@@ -10669,7 +10667,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
     * otherwise, we wait with these
     * @todo first do all usual presolving steps, then check SCIPisPresolveFinished(scip), and if true then do reformulations (and usual steps again)
     */
-   doreformulations = (nrounds > 0 || SCIPconshdlrWasPresolvingDelayed(conshdlr)) && SCIPisPresolveFinished(scip);
+   doreformulations = nrounds > 0  && ((presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 || SCIPisPresolveFinished(scip));
    SCIPdebugMessage("presolving will %swait with reformulation\n", doreformulations ? "not " : "");
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -10694,7 +10692,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
       havechange = FALSE;
 #ifdef CHECKIMPLINBILINEAR
-      if( consdata->isimpladded )
+      if( consdata->isimpladded && (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
       {
          int nbilinremoved;
          SCIP_CALL( presolveApplyImplications(scip, conss[c], &nbilinremoved) );
@@ -10714,7 +10712,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
       {
          SCIP_Bool upgraded;
 
-         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );
+         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss, presoltiming) );
          if( upgraded )
          {
             *result = SCIP_SUCCESS;
@@ -10806,7 +10804,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
          continue;
       }
 
-      if( !consdata->ispropagated )
+      if( (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 && !consdata->ispropagated )
       {
          /* try domain propagation if there were bound changes or constraint has changed (in which case, processVarEvents may have set ispropagated to false) */
          SCIP_RESULT propresult;
@@ -10910,7 +10908,7 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
       {
          SCIP_Bool upgraded;
 
-         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );
+         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss, presoltiming) );
          if( upgraded )
          {
             *result = SCIP_SUCCESS;
@@ -10920,10 +10918,6 @@ SCIP_DECL_CONSPRESOL(consPresolQuadratic)
 
       consdata->ispresolved = TRUE;
    }
-
-   /* if we did not try reformulations, ensure that presolving is called again even if there were only a few changes (< abortfac) */
-   if( !doreformulations )
-      *result = SCIP_DELAYED;
 
    return SCIP_OKAY;
 }
@@ -11675,7 +11669,7 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolQuadratic) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpQuadratic) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseQuadratic) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolQuadratic, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolQuadratic, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintQuadratic) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropQuadratic, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

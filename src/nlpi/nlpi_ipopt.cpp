@@ -1053,13 +1053,17 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
 
       if( problem->firstrun )
       {
-         /* if the expression interpreter does not support function values and gradients and hessians, and the problem is not at most quadratic,
+         SCIP_EXPRINTCAPABILITY cap;
+
+         cap = SCIPexprintGetCapability() & SCIPnlpiOracleGetEvalCapability(problem->oracle);
+
+         /* if the expression interpreter or some user expression do not support function values and gradients and Hessians, and the problem is not at most quadratic,
           * change NLP parameters or give an error
           */
-         if( (SCIPexprintGetCapability() & (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN)) != (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN)
+         if( (cap & (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN)) != (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN)
             && SCIPnlpiOracleGetMaxDegree(problem->oracle) > 2 )
          {
-            /* @todo could enable jacobian approximation in Ipopt */
+            /* @todo could enable Jacobian approximation in Ipopt */
             if( !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_FUNCVALUE) ||
                ! (SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_GRADIENT) )
             {
@@ -1069,8 +1073,8 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
                return SCIP_OKAY;
             }
 
-            /* enable hessian approximation if we are nonquadratic and the expression interpreter does not support hessians */
-            if( !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_HESSIAN) )
+            /* enable Hessian approximation if we are nonquadratic and the expression interpreter or user expression do not support Hessians */
+            if( !(cap & SCIP_EXPRINTCAPABILITY_HESSIAN) )
             {
                problem->ipopt->Options()->SetStringValue("hessian_approximation", "limited-memory");
                problem->nlp->approxhessian = true;

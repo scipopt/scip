@@ -47,6 +47,9 @@ struct SCIP_Probingnode
    int                   ninitialrows;       /**< number of LP rows before the node was processed */
    int                   ncols;              /**< total number of columns of this node's LP */
    int                   nrows;              /**< total number of rows of this node's LP */
+   SCIP_VAR**            origobjvars;        /**< variables whose objective function coefficients have changed */
+   SCIP_Real*            origobjvals;        /**< original objective function coefficients */
+   int                   nchgdobjs;          /**< number of changed objective coefficients */
    SCIP_Bool             lpwasprimfeas;      /**< primal feasibility of saved LP state information */
    SCIP_Bool             lpwasdualfeas;      /**< dual feasibility of saved LP state information */
 };
@@ -176,6 +179,9 @@ struct SCIP_Tree
    SCIP_NODE**           siblings;           /**< array with siblings of the focus node */
    SCIP_Real*            childrenprio;       /**< array with node selection priorities of children */
    SCIP_Real*            siblingsprio;       /**< array with node selection priorities of siblings */
+   SCIP_VAR**            divebdchgvars[2];   /**< two arrays to store variables for branching */
+   SCIP_BRANCHDIR*       divebdchgdirs[2];   /**< arrays to hold the directions for diving */
+   SCIP_Real*            divebdchgvals[2];   /**< arrays to store bound change values for diving */
    int*                  pathnlpcols;        /**< array with number of LP columns for each problem in active path (except
                                               *   newly added columns of the focus node and the current probing node) */
    int*                  pathnlprows;        /**< array with number of LP rows for each problem in active path (except
@@ -184,6 +190,8 @@ struct SCIP_Tree
    SCIP_LPINORMS*        probinglpinorms;    /**< LP pricing norms information before probing started */
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
    SCIP_Longint          focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */
+   int                   divebdchgsize[2];   /**< holds the two sizes of the dive bound change information */
+   int                   ndivebdchanges[2];  /**< current number of stored dive bound changes for the next depth */
    int                   pendingbdchgssize;  /**< size of pendingbdchgs array */
    int                   npendingbdchgs;     /**< number of pending bound changes */
    int                   childrensize;       /**< available slots in children vector */
@@ -198,6 +206,7 @@ struct SCIP_Tree
    int                   cutoffdepth;        /**< depth of first node in active path that is marked being cutoff */
    int                   repropdepth;        /**< depth of first node in active path that has to be propagated again */
    int                   repropsubtreecount; /**< cyclicly increased counter to create markers for subtree repropagation */
+   int                   probingsumchgdobjs; /**< number of changed objective coefficients in all probing nodes */
    SCIP_Bool             focusnodehaslp;     /**< is LP being processed in the focus node? */
    SCIP_Bool             probingnodehaslp;   /**< was the LP solved (at least once) in the current probing node? */
    SCIP_Bool             focuslpconstructed; /**< was the LP of the focus node already constructed? */
@@ -208,6 +217,7 @@ struct SCIP_Tree
    SCIP_Bool             probinglpwasrelax;  /**< was the LP a valid relaxation before we entered the probing mode? */
    SCIP_Bool             probingsolvedlp;    /**< was the LP solved during probing mode, i.e., was SCIPsolveProbingLP() called? */
    SCIP_Bool             forcinglpmessage;   /**< was forcing LP solving message be posted */
+   SCIP_Bool             probingobjchanged;  /**< was the objective function changed during probing? */
    SCIP_Bool             sbprobing;          /**< is the probing mode used for strong branching? */
    SCIP_Bool             probinglpwasprimfeas;/**< primal feasibility when probing started */
    SCIP_Bool             probinglpwasdualfeas;/**< dual feasibility when probing started */

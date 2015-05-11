@@ -198,7 +198,8 @@ struct SCIP_Var
 #ifndef NDEBUG
    SCIP*                 scip;               /**< SCIP data structure */
 #endif
-   SCIP_Real             obj;                /**< objective function value of variable */
+   SCIP_Real             obj;                /**< objective function value of variable (might be changed temporarily in probing mode)*/
+   SCIP_Real             unchangedobj;       /**< unchanged objective function value of variable (ignoring temporary changes in probing mode) */
    SCIP_Real             branchfactor;       /**< factor to weigh variable's branching score with */
    SCIP_Real             rootsol;            /**< last primal solution of variable in root node, or zero */
    SCIP_Real             bestrootsol;        /**< best primal solution of variable in root node, or zero, w.r.t. root LP value and root reduced cost */

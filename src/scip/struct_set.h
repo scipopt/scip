@@ -27,7 +27,6 @@
 #include "scip/def.h"
 #include "scip/message.h"
 #include "scip/type_set.h"
-#include "scip/type_buffer.h"
 #include "scip/type_clock.h"
 #include "scip/type_paramset.h"
 #include "scip/type_event.h"
@@ -57,7 +56,8 @@ struct SCIP_Set
    SCIP_STAGE            stage;              /**< SCIP operation stage */
    SCIP*                 scip;               /**< very ugly: pointer to scip main data structure for callback methods */
    SCIP_PARAMSET*        paramset;           /**< set of parameters */
-   SCIP_BUFFER*          buffer;             /**< memory buffers for short living temporary objects */
+   BMS_BUFMEM*           buffer;             /**< memory buffers for short living temporary objects */
+   BMS_BUFMEM*           cleanbuffer;        /**< memory buffers for short living temporary objects init. to all zero */
    SCIP_READER**         readers;            /**< file readers */
    SCIP_PRICER**         pricers;            /**< variable pricers */
    SCIP_CONSHDLR**       conshdlrs;          /**< constraint handlers (sorted by check priority) */
@@ -218,10 +218,6 @@ struct SCIP_Set
    SCIP_Bool             history_allowmerge; /**< should variable histories be merged from sub-SCIPs whenever possible? */
    SCIP_Bool             history_allowtransfer; /**< should variable histories be transferred to initialize SCIP copies? */
 
-   /* heuristic settings */
-   SCIP_Real             heur_divestartfrac; /**< start percentage of diving candidates that should be fixed before LP resolve */
-   int                   heur_divelpsolvefreq; /**< LP solve frequency for diving heuristics */
-
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */
    SCIP_Real             limit_memory;       /**< maximal memory usage in MB */
@@ -322,6 +318,7 @@ struct SCIP_Set
    SCIP_Bool             misc_calcintegral;  /**< should SCIP calculate the primal dual integral value which may require
                                               *   a large number of additional clock calls (and decrease the performance)? */
    SCIP_Bool             misc_finitesolstore;/**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
+   SCIP_Bool             misc_outputorigsol; /**< should the best solution be transformed to the orignal space and be output in command line run? */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,

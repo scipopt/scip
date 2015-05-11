@@ -61,6 +61,7 @@
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_ALWAYS
 
 #define EVENTHDLR_NAME         "xor"
 #define EVENTHDLR_DESC         "event handler for xor constraints"
@@ -2410,9 +2411,8 @@ SCIP_RETCODE checkSystemGF2(
    /* free storage */
    SCIPfreeBufferArray(scip, &s);
    SCIPfreeBufferArray(scip, &p);
-   SCIPfreeBufferArray(scip, &xorbackidx);
-   j = 0;
-   for (i = 0; i < nconss; ++i)
+   j = nconssmat - 1;
+   for (i = nconss - 1; i >= 0 ; --i)
    {
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
@@ -2423,10 +2423,12 @@ SCIP_RETCODE checkSystemGF2(
       if( !xoractive[i] )
          continue;
 
-      SCIPfreeBufferArray(scip, &(A[j++]));
+      SCIPfreeBufferArray(scip, &(A[j]));
+      --j;
    }
    SCIPfreeBufferArray(scip, &A);
    SCIPfreeBufferArray(scip, &b);
+   SCIPfreeBufferArray(scip, &xorbackidx);
    SCIPfreeBufferArray(scip, &xoridx);
    SCIPfreeBufferArray(scip, &xorvars);
    SCIPfreeBufferArray(scip, &xoractive);
@@ -3262,14 +3264,14 @@ SCIP_RETCODE cliquePresolve(
          SCIPdebugMessage("also fix the integer variable <%s> to 0\n", SCIPvarGetName(consdata->intvar));
          SCIP_CALL( SCIPfixVar(scip, consdata->intvar, 0.0, &infeasible, &fixed) );
 
-         assert(infeasible || fixed);
+         assert(infeasible || fixed || SCIPvarGetStatus(consdata->intvar) == SCIP_VARSTATUS_FIXED);
 
          if( infeasible )
          {
             *cutoff = infeasible;
             return SCIP_OKAY;
          }
-         else
+         else if( fixed )
             ++(*nfixedvars);
       }
 
@@ -4414,7 +4416,6 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
    SCIP_CONS* cons;
    SCIP_CONSDATA* consdata;
    SCIP_Bool cutoff;
-   SCIP_Bool delay;
    SCIP_Bool redundant;
    SCIP_Bool aggregated;
    int oldnfixedvars;
@@ -4438,7 +4439,6 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
 
    /* process constraints */
    cutoff = FALSE;
-   delay = FALSE;
    firstchange = INT_MAX;
    for( c = 0; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
    {
@@ -4510,7 +4510,7 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
                (*ndelconss)++;
             }
          }
-	 else
+	 else if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
 	 {
 	    /* try to use clique information to upgrade the constraint to a set-partitioning constraint or fix
 	     * variables
@@ -4522,53 +4522,45 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
 
    /* process pairs of constraints: check them for equal operands;
     * only apply this expensive procedure, if the single constraint preprocessing did not find any reductions
-    * (otherwise, we delay the presolving to be called again next time)
     */
-   if( !cutoff )
+   if( !cutoff && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 && SCIPisPresolveFinished(scip) )
    {
-      if( *nfixedvars == oldnfixedvars && *nchgbds == oldnchgbds && *naggrvars == oldnaggrvars )
+      if( firstchange < nconss && conshdlrdata->presolusehashing )
       {
-         if( firstchange < nconss && conshdlrdata->presolusehashing ) 
-         {
-            /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
-            SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, nchgcoefs, ndelconss, &cutoff) );
-         }
-         if( conshdlrdata->presolpairwise )
-         {
-            SCIP_Longint npaircomparisons;
-            int lastndelconss;
-            npaircomparisons = 0;
-            lastndelconss = *ndelconss;
+         /* detect redundant constraints; fast version with hash table instead of pairwise comparison */
+         SCIP_CALL( detectRedundantConstraints(scip, SCIPblkmem(scip), conss, nconss, &firstchange, nchgcoefs, ndelconss, &cutoff) );
+      }
+      if( conshdlrdata->presolpairwise )
+      {
+         SCIP_Longint npaircomparisons;
+         int lastndelconss;
+         npaircomparisons = 0;
+         lastndelconss = *ndelconss;
 
-            for( c = firstchange; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
+         for( c = firstchange; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
+         {
+            if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
             {
-               if( SCIPconsIsActive(conss[c]) && !SCIPconsIsModifiable(conss[c]) )
+               npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? (SCIP_Longint) c : ((SCIP_Longint) c - (SCIP_Longint) firstchange);
+
+               SCIP_CALL( preprocessConstraintPairs(scip, conss, firstchange, c,
+                     &cutoff, nfixedvars, naggrvars, ndelconss, nchgcoefs) );
+
+               if( npaircomparisons > NMINCOMPARISONS )
                {
-                  npaircomparisons += (SCIPconsGetData(conss[c])->changed) ? (SCIP_Longint) c : ((SCIP_Longint) c - (SCIP_Longint) firstchange);
-
-                  SCIP_CALL( preprocessConstraintPairs(scip, conss, firstchange, c,
-                        &cutoff, nfixedvars, naggrvars, ndelconss, nchgcoefs) );
-
-                  if( npaircomparisons > NMINCOMPARISONS )
-                  {
-                     if( ((SCIP_Real) (*ndelconss - lastndelconss)) / ((SCIP_Real) npaircomparisons) < MINGAINPERNMINCOMPARISONS )
-                        break;
-                     lastndelconss = *ndelconss;
-                     npaircomparisons = 0;
-                  }
+                  if( ((SCIP_Real) (*ndelconss - lastndelconss)) / ((SCIP_Real) npaircomparisons) < MINGAINPERNMINCOMPARISONS )
+                     break;
+                  lastndelconss = *ndelconss;
+                  npaircomparisons = 0;
                }
             }
          }
       }
-      else
-         delay = TRUE;
    }
 
    /* return the correct result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( delay )
-      *result = SCIP_DELAYED;
    else if( *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds || *naggrvars > oldnaggrvars
       || *ndelconss > oldndelconss || *nchgcoefs > oldnchgcoefs )
       *result = SCIP_SUCCESS;
@@ -4999,7 +4991,7 @@ SCIP_RETCODE SCIPincludeConshdlrXor(
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsXor) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpXor) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseXor) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolXor, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolXor, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintXor) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropXor, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

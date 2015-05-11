@@ -43,8 +43,7 @@
                                               *   found reductions? */
 #define PROP_PRESOL_PRIORITY        -2000000 /**< priority of the presolving method (>= 0: before, < 0: after
                                               *   constraint handlers); combined with presolvers */
-#define PROP_PRESOL_DELAY              FALSE /**< should presolving be delay, if other presolvers found
-                                              *   reductions? */
+#define PROP_PRESOLTIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolving method (fast, medium, or exhaustive) */
 #define PROP_PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates
                                               *   in (-1: no limit) */
 #define DEFAULT_GLOBAL_PROPAGATION      TRUE /**< apply global propagation? */
@@ -1483,8 +1482,8 @@ SCIP_RETCODE sortGenVBounds(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->componentsstart), propdata->ncomponents + 1) );
 
    /* allocate memory for strong component arrays */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcomponents, SCIPdigraphGetNNodes(graph)) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcompstartidx, SCIPdigraphGetNNodes(graph)) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcomponents, SCIPdigraphGetNNodes(graph)) ); /*lint !e666*/
+   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcompstartidx, SCIPdigraphGetNNodes(graph)) ); /*lint !e666*/
 
    /* compute sorted genvbounds array, fill componentsstart array */
    sortedindex = 0;
@@ -2306,7 +2305,7 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
 
          if( tightened )
          {
-            SCIPdebugMessage("tightened UB of cutoffboundvar to %e (old: %e, infeas: %d, tightened: %d)\n",
+            SCIPdebugMessage("tightened UB of cutoffboundvar to %e (old: %e, infeas: %u, tightened: %u)\n",
                newub, oldub, infeasible, tightened);
          }
 
@@ -2463,8 +2462,8 @@ SCIP_DECL_PROPEXITSOL(propExitsolGenvbounds)
    /* release the cutoffboundvar and undo the locks */
    if( propdata->cutoffboundvar != NULL && SCIPisInRestart(scip) == FALSE )
    {
-      SCIPaddVarLocks(scip, propdata->cutoffboundvar, -1, -1);
-      SCIPreleaseVar(scip, &(propdata->cutoffboundvar));
+      SCIP_CALL( SCIPaddVarLocks(scip, propdata->cutoffboundvar, -1, -1) );
+      SCIP_CALL( SCIPreleaseVar(scip, &(propdata->cutoffboundvar)) );
       propdata->cutoffboundvar = NULL;
       SCIPdebugMessage("release cutoffboundvar!\n");
    }
@@ -2600,9 +2599,8 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
    SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreGenvbounds) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolGenvbounds) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolGenvbounds, PROP_PRESOL_PRIORITY,
-         PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY) );
+         PROP_PRESOL_MAXROUNDS, PROP_PRESOLTIMING) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropGenvbounds) );
-
 
    SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/global",
          "apply global propagation?",

@@ -2064,7 +2064,7 @@ SCIP_RETCODE spxSolve(
    assert( lpi->spx->preStrongbranchingBasisFreed() );
 
 #ifdef WITH_LPSCHECK
-   CHECK_SOPLEX_PARAM(lpi->spx->setDoubleCheck(CHECK_SPXSOLVE));
+   lpi->spx->setDoubleCheck(CHECK_SPXSOLVE);
 #endif
 
    /* delete starting basis if solving from scratch */

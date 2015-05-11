@@ -327,6 +327,7 @@ SCIP_RETCODE SCIProwCreate(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_LP*              lp,                 /**< current LP data */
    const char*           name,               /**< name of row */
    int                   len,                /**< number of nonzeros in the row */
    SCIP_COL**            cols,               /**< array with columns of row entries */
@@ -1171,6 +1172,14 @@ SCIP_Real SCIPlpGetGlobalPseudoObjval(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** recomputes local and global pseudo objective values */
+extern
+void SCIPlpRecomputeLocalAndGlobalPseudoObjval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
 /** gets the pseudo objective value for the current search node; that is all variables set to their best (w.r.t. the
  *  objective function) local bound
  */
@@ -1650,6 +1659,13 @@ void SCIPlpMarkDivingObjChanged(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/** marks the diving LP to not have a changed objective function anymore */
+extern
+void SCIPlpUnmarkDivingObjChanged(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -1676,6 +1692,7 @@ void SCIPlpMarkDivingObjChanged(
 #define SCIPlpDiving(lp)                (lp)->diving
 #define SCIPlpDivingObjChanged(lp)      (lp)->divingobjchg
 #define SCIPlpMarkDivingObjChanged(lp)  ((lp)->divingobjchg = TRUE)
+#define SCIPlpUnmarkDivingObjChanged(lp) ((lp)->divingobjchg = FALSE)
 
 #endif
 

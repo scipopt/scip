@@ -55,8 +55,9 @@
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                               *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
+
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define DEFAULT_DECOMPOSENORMALPBCONS FALSE /**< decompose all normal pseudo boolean constraint into a "linear" constraint "and" constrainst */
 #define DEFAULT_DECOMPOSEINDICATORPBCONS TRUE /**< decompose all indicator pseudo boolean constraint into a "linear" constraint "and" constrainst */
@@ -3770,10 +3771,10 @@ SCIP_RETCODE computeConsAndDataChanges(
 #ifndef NDEBUG
       /* check that old variables are sorted */
       for( v = nvars - 1; v > 0; --v )
-         assert(SCIPvarGetIndex(vars[v]) > SCIPvarGetIndex(vars[v - 1]));
+         assert(SCIPvarGetIndex(vars[v]) >= SCIPvarGetIndex(vars[v - 1]));
       /* check that new variables are sorted */
       for( v = nnewvars - 1; v > 0; --v )
-         assert(SCIPvarGetIndex(newvars[v]) > SCIPvarGetIndex(newvars[v - 1]));
+         assert(SCIPvarGetIndex(newvars[v]) >= SCIPvarGetIndex(newvars[v - 1]));
 #endif
 
       /* check for changings, if and-constraint did not change we do not need to copy all variables */
@@ -3958,7 +3959,7 @@ SCIP_RETCODE correctLocksAndCaptures(
       res2 = SCIPgetResultantAnd(scip, consanddatas[c - 1]->cons);
       assert(res2 != NULL);
 
-      assert(SCIPvarGetIndex(res1) > SCIPvarGetIndex(res2));
+      assert(SCIPvarGetIndex(res1) >= SCIPvarGetIndex(res2));
    }
 #endif
 
@@ -8533,7 +8534,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitPseudoboolean) );
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitprePseudoboolean) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolPseudoboolean, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYPRESOL) );
+         CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintPseudoboolean) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransPseudoboolean) );
 

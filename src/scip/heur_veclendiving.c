@@ -24,7 +24,7 @@
 #include <string.h>
 
 #include "scip/heur_veclendiving.h"
-
+#include "scip/pub_dive.h"
 
 #define HEUR_NAME             "veclendiving"
 #define HEUR_DESC             "LP diving heuristic that rounds variables with long column vectors"
@@ -52,13 +52,16 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
+#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15 /**< percentage of immediate domain changes during probing to trigger LP resolve */
+#define DEFAULT_LPSOLVEFREQ           1 /**< LP solve frequency for diving heuristics */
+#define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
+                                         *   more general constraint handler diving variable selection? */
 
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_DIVESET*         diveset;            /**< diving settings for diving control */
 };
 
 
@@ -98,8 +101,6 @@ SCIP_DECL_HEURFREE(heurFreeVeclendiving) /*lint --e{715}*/
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   SCIP_CALL( SCIPdivesetFree(&heurdata->diveset) );
-
    SCIPfreeMemory(scip, &heurdata);
    SCIPheurSetData(heur, NULL);
 
@@ -122,9 +123,6 @@ SCIP_DECL_HEURINIT(heurInitVeclendiving) /*lint --e{715}*/
 
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
-
-   /* initialize data */
-   SCIPresetDiveset(scip, heurdata->diveset);
 
    return SCIP_OKAY;
 }
@@ -158,7 +156,10 @@ SCIP_DECL_HEUREXEC(heurExecVeclendiving) /*lint --e{715}*/
    SCIP_DIVESET* diveset;
 
    heurdata = SCIPheurGetData(heur);
-   diveset = heurdata->diveset;
+   assert(SCIPheurGetNDivesets(heur) > 0);
+   assert(SCIPheurGetDivesets(heur) != NULL);
+   diveset = SCIPheurGetDivesets(heur)[0];
+   assert(diveset != NULL);
 
    assert(diveset != NULL);
 
@@ -182,12 +183,12 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreVeclendiving)
 
    colveclen = (SCIPvarGetStatus(cand) == SCIP_VARSTATUS_COLUMN ? SCIPcolGetNNonz(SCIPvarGetCol(cand)) : 0.0);
 
-   /* smaller score is better */
-   *score = (objdelta + SCIPsumepsilon(scip)) / (colveclen + 1.0);
+   /* larger score is better */
+   *score = (colveclen + 1.0) / (objdelta + SCIPsumepsilon(scip));
 
    /* prefer decisions on binary variables */
    if( SCIPvarGetType(cand) != SCIP_VARTYPE_BINARY )
-      *score *= 1000.0;
+      *score *= 0.001;
 
    return SCIP_OKAY;
 
@@ -222,11 +223,10 @@ SCIP_RETCODE SCIPincludeHeurVeclendiving(
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitVeclendiving) );
 
    /* veclendiving heuristic parameters */
-   heurdata->diveset = NULL;
    /* create a diveset (this will automatically install some additional parameters for the heuristic) */
-   SCIP_CALL( SCIPcreateDiveset(scip, &heurdata->diveset, heur, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
-         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, divesetGetScoreVeclendiving) );
+   SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
+         DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
+         DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, divesetGetScoreVeclendiving) );
 
    return SCIP_OKAY;
 }

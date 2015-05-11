@@ -101,6 +101,7 @@ struct SCIP_ExprData_Monomial
 struct SCIP_ExprData_User
 {
    SCIP_USEREXPRDATA*    userdata;           /**< user data for expression */
+   SCIP_EXPRINTCAPABILITY evalcapability;    /**< capabilities of evaluation functions */
    SCIP_DECL_USEREXPREVAL    ((*eval));      /**< evaluation function */
    SCIP_DECL_USEREXPRINTEVAL ((*inteval));   /**< interval evaluation function */
    SCIP_DECL_USEREXPRCURV    ((*curv));      /**< curvature check function */

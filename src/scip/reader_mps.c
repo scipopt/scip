@@ -1043,7 +1043,16 @@ SCIP_RETCODE readRhs(
       {
          cons = SCIPfindCons(scip, mpsinputField2(mpsi));
          if( cons == NULL )
-            mpsinputEntryIgnored(scip, mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_NORMAL);
+         {
+            /* the rhs of the objective row is treated as objective constant */
+            if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
+            {
+               val = atof(mpsinputField3(mpsi));
+               SCIP_CALL( SCIPaddOrigObjoffset(scip, -val) );
+            }
+            else
+               mpsinputEntryIgnored(scip, mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField2(mpsi), SCIP_VERBLEVEL_NORMAL);
+         }
          else
          {
             val = atof(mpsinputField3(mpsi));
@@ -1077,7 +1086,16 @@ SCIP_RETCODE readRhs(
          {
             cons = SCIPfindCons(scip, mpsinputField4(mpsi));
             if( cons == NULL )
-               mpsinputEntryIgnored(scip, mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField4(mpsi), SCIP_VERBLEVEL_NORMAL);
+            {
+               /* the rhs of the objective row is treated as objective constant */
+               if( !strcmp(mpsinputField2(mpsi), mpsinputObjname(mpsi)) )
+               {
+                  val = atof(mpsinputField3(mpsi));
+                  SCIP_CALL( SCIPaddOrigObjoffset(scip, -val) );
+               }
+               else
+                  mpsinputEntryIgnored(scip, mpsi, "RHS", mpsinputField1(mpsi), "row", mpsinputField4(mpsi), SCIP_VERBLEVEL_NORMAL);
+            }
             else
             {
                val = atof(mpsinputField5(mpsi));
@@ -4233,7 +4251,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
                /* compute column entries */
                SCIP_CALL( getLinearCoeffs(scip, rowname, rowvars, rowvals, nrowvars + 1, transformed, matrix, &rhss[k]) );
 
-               printf("%g, %g\n", rowvals[1], rhss[k]);
+               SCIPinfoMessage(scip, file, "%g, %g\n", rowvals[1], rhss[k]);
                ++k;
             }
 
