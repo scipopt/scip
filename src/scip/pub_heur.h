@@ -341,12 +341,6 @@ SCIP_Bool SCIPdivesetUseOnlyLPBranchcands(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
-/** frees memory of a diveset */
-EXTERN
-SCIP_RETCODE SCIPdivesetFree(
-   SCIP_DIVESET**        diveset             /**< general diving settings */
-   );
-
 #ifdef __cplusplus
 }
 #endif

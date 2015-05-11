@@ -171,7 +171,7 @@ SCIP_DECL_HEUREXEC(heurExecLinesearchdiving)
 /** returns a score for the given candidate -- the best candidate maximizes the diving score */
 static
 SCIP_DECL_DIVESETGETSCORE(divesetGetScoreLinesearchdiving)
-{
+{  /*lint --e{715}*/
    SCIP_Real rootsolval;
    SCIP_Real distquot;
 

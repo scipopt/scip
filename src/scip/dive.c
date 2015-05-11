@@ -123,7 +123,7 @@ SCIP_RETCODE selectNextDiving(
       /* search for the candidate that maximizes the dive set score function and whose solution value is still feasible */
       for (c = 0; c < nlpcands; ++c)
       {
-         assert(SCIPgetSolVal(scip, worksol, lpcands[c]) == lpcandssol[c]);
+         assert(SCIPgetSolVal(scip, worksol, lpcands[c]) == lpcandssol[c]); /*lint !e777 doesn't like comparing floats for equality */
 
          /* scores are kept in arrays for faster reuse */
          if( storelpcandscores )
@@ -587,11 +587,11 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                         SCIP_CALL( SCIPchgVarUbProbing(scip, bdchgvar, bdchgvalue) );
                      }
                      break;
+                  case SCIP_BRANCHDIR_AUTO:
                   default:
                      SCIPerrorMessage("Error: Unsupported bound change direction <%d> specified for diving, aborting\n",bdchgdirs[d]);
                      SCIPABORT();
                      return SCIP_INVALIDDATA;
-                     break;
                }
 
                SCIPdebugMessage("newbounds=[%g,%g]\n",
@@ -642,7 +642,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
          while( backtrack );
 
          /* we add the domain reductions from the last evaluated node */
-         domreds += localdomreds;
+         domreds += localdomreds; /*lint !e771 lint thinks localdomreds has not been initialized */
 
          /* store candidate for pseudo cost update and choose next candidate only if no cutoff was detected */
          if( ! cutoff )
@@ -653,7 +653,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                assert(prevcandsinsertidx <= SCIPgetProbingDepth(scip) - lastlpdepth - 1);
                assert(SCIPgetProbingDepth(scip) > 0);
                assert(bdchgvar != NULL);
-               assert(bdchgvalue != SCIP_INVALID);
+               assert(bdchgvalue != SCIP_INVALID); /*lint !e777 doesn't like comparing floats for equality */
 
                /* extend array in case of a dynamic, domain change based LP resolve strategy */
                if( prevcandsinsertidx >= previouscandssize )

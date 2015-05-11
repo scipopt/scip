@@ -30867,17 +30867,6 @@ SCIP_RETCODE SCIPapplyCutsProbing(
    return SCIP_OKAY;
 }
 
-/** resets diving settings by both resetting counters and discarding adapted values through search */
-void SCIPresetDiveset(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_DIVESET*         diveset             /**< diving settings */
-   )
-{
-   assert(diveset != NULL);
-
-   SCIPdivesetReset(diveset, scip->set);
-}
-
 /** gets the candidate score and preferred rounding direction for a candidate variable */
 SCIP_RETCODE SCIPgetDivesetScore(
    SCIP*                 scip,               /**< SCIP data structure */

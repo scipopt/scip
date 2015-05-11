@@ -14635,13 +14635,6 @@ SCIP_RETCODE SCIPapplyCutsProbing(
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    );
 
-/** resets diving settings by both resetting counters and discarding adapted values through search */
-EXTERN
-void SCIPresetDiveset(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_DIVESET*         diveset             /**< diving settings */
-   );
-
 /** stores the candidate score and preferred rounding direction for a candidate variable */
 EXTERN
 SCIP_RETCODE SCIPgetDivesetScore(

@@ -68,8 +68,7 @@ SCIP_RETCODE SCIPdivesetCreate(
 /** resets diving settings counters */
 extern
 void SCIPdivesetReset(
-   SCIP_DIVESET*         diveset,            /**< diveset to be reset */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_DIVESET*         diveset             /**< diveset to be reset */
    );
 
 /** update diveset statistics and global diveset statistics */

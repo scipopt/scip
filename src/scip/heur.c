@@ -83,8 +83,7 @@ SCIP_DECL_PARAMCHGD(paramChgdHeurPriority)
 
 /* resets diving settings counters */
 void SCIPdivesetReset(
-   SCIP_DIVESET*         diveset,            /**< diveset to be reset */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_DIVESET*         diveset             /**< diveset to be reset */
    )
 {
    assert(diveset != NULL);
@@ -156,7 +155,7 @@ SCIP_RETCODE heurAddDiveset(
    else
    {
       assert(heur->ndivesets > 0);
-      SCIP_ALLOC( BMSreallocMemoryArray(&heur->divesets, heur->ndivesets + 1) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&heur->divesets, heur->ndivesets + 1) ); /*lint !e776 I expect no overflow here */
    }
 
    /* append diveset to the end of the array */
@@ -285,7 +284,7 @@ SCIP_RETCODE SCIPdivesetCreate(
             "more general constraint handler diving variable selection?",
             &(*diveset)->onlylpbranchcands, FALSE, onlylpbranchcands, NULL, NULL) );
 
-   SCIPdivesetReset(*diveset, set);
+   SCIPdivesetReset(*diveset);
 
    return SCIP_OKAY;
 }
@@ -564,7 +563,8 @@ void SCIPdivesetUpdateLPStats(
 }
 
 /** frees memory of a diveset */
-SCIP_RETCODE SCIPdivesetFree(
+static
+void divesetFree(
    SCIP_DIVESET**        diveset             /**< general diving settings */
    )
 {
@@ -573,8 +573,6 @@ SCIP_RETCODE SCIPdivesetFree(
 
    BMSfreeMemoryArray(&(*diveset)->name);
    BMSfreeMemory(diveset);
-
-   return SCIP_OKAY;
 }
 
 /** get the candidate score and preferred rounding direction for a candidate variable */
@@ -726,7 +724,7 @@ SCIP_RETCODE SCIPheurFree(
    for( d = 0; d < (*heur)->ndivesets; ++d )
    {
       assert((*heur)->divesets[d] != NULL);
-      SCIPdivesetFree(&((*heur)->divesets[d]));
+      divesetFree(&((*heur)->divesets[d]));
    }
    BMSfreeMemoryArrayNull(&(*heur)->divesets);
    SCIPclockFree(&(*heur)->heurclock);
@@ -780,7 +778,7 @@ SCIP_RETCODE SCIPheurInit(
    for( d = 0; d < heur->ndivesets; ++d )
    {
       assert(heur->divesets[d] != NULL);
-      SCIPdivesetReset(heur->divesets[d], set);
+      SCIPdivesetReset(heur->divesets[d]);
    }
 
    heur->initialized = TRUE;

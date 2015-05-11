@@ -856,9 +856,11 @@ void checkViolations(
       rowindices = NULL;
       *nviolatedrows = 0;
 
+      /* reinitialize the violated rows */
       for( i = 0; i < nrows; ++i )
          violatedrowpos[i] = -1;
 
+      /* clear the violated row counters for all variables */
       BMSclearMemoryArray(matrix->violrows, matrix->ndiscvars);
    }
 
@@ -868,8 +870,13 @@ void checkViolations(
    for( i = 0; i < nrows; ++i )
    {
       int rowpos;
-      assert( colidx < 0 || rowindices != NULL );
-      rowpos = (colidx >= 0 ? rowindices[i] : i);
+      if( colidx >= 0 )
+      {
+         assert(rowindices != NULL);
+         rowpos = rowindices[i];
+      }
+      else
+         rowpos = i;
       /* check, if zero solution violates this row */
       checkRowViolation(scip, matrix, rowpos, violatedrows, violatedrowpos, nviolatedrows, rowweights, updateweights);
 
