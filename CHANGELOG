@@ -28,8 +28,17 @@ features:
   them to 0 will use a default value
 - the MPS reader can now handle objective constants given as (the negation of) the RHS of the objective row
 - we can now upgrade quadratic constraints with one bilinear term to SOC constraints
-- new parameter "misc/outputorigsol" to control whether at the end of a command line run the solution should be output in the orignal space
+- new parameter "misc/outputorigsol" to control whether at the end of a command line run the solution should be output
+  in the orignal space
 - new score in hybrid reliability pseudocost branching that prefers nonlinear variables when solving MINLPs
+- Improved coordination of presolvers. There are three timings for presolvers now, FAST, MEDIUM, and EXHAUSTIVE.
+  Each presolving callback can specify one or more of these timings in which it will be called later.
+  Within a presolving method, the current timing can be checked and the algorithms to be performed selected based on
+  the timing. In one presolving round, first all presolving methods with timing FAST are called, sorted by priority.
+  If they found enough reductions, a new round is started, otherwise, all presolving methods with timing MEDIUM are
+  called. Again, with enough reductions, a new presolving round is started, too few reductions lead to running
+  the EXHAUSTIVE presolvers. Similar to the delay concept used before, we are not neccessarily running all EXHAUSTIVE
+  presolvers but stop as soon as one of them found enough reductions, starting a new presolving round immediately.
 
 parameters:
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
@@ -93,6 +102,12 @@ interface:
 - added new sorting functions SCIPsortRealRealRealBoolBoolPtr(), SCIPsortDownRealRealRealBoolBoolPtr()
 - added new sorting functions SCIPsortIntIntIntReal(), SCIPsortDownIntIntIntReal()
 - safe-guarded buffer array (re)allocations to check for negative size or size > INT_MAX
+- renamed SCIPconshdlrGetPropTimingmask() to SCIPconshdlrGetPropTiming(), new method SCIPconshdlrSetPropTiming()
+- removed SCIPconshdlrIsPresolvingDelayed() and SCIPconshdlrWasPresolvingDelayed()
+- new methods SCIPpresolGetTiming(), SCIPpresolSetTiming(), SCIP{conshdlr,prop}GetPresolTiming(), and
+  SCIP{conshdlr,prop}SetPresolTiming()
+- removed "delay(presol)" parameter from SCIPinclude{Conshdlr,Presol,Prop}() and added "(presol)timing" parameter
+- new parameter "presoltiming" for method SCIPpresolCons()
 
 fixed bugs:
 - fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)
@@ -114,7 +129,7 @@ fixed bugs:
 
 misc:
 - moved assertions in comparison methods from scip.c to set.c
-- added more checks to SCIP{alloc,realloc,dupliacte}BufferArray() to handle overflows properly
+- added more checks to SCIP{alloc,realloc,duplicate}BufferArray() to handle overflows properly
 
 SCIP version 3.1.1
 ==================
