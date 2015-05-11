@@ -143,13 +143,6 @@
 #define SCIP_DEFAULT_HISTORY_ALLOWMERGE   FALSE /**< should variable histories be merged from sub-SCIPs whenever possible? */
 #define SCIP_DEFAULT_HISTORY_ALLOWTRANSFER FALSE /**< should variable histories be transferred to initialize SCIP copies? */
 
-
-/* Heuristics */
-
-#define SCIP_DEFAULT_HEUR_DIVESTARTFRAC         0.15 /**< start percentage of diving candidates that should be fixed before LP resolve */
-#define SCIP_DEFAULT_HEUR_DIVELPSOLVEFREQ       1    /**< LP solve frequency for diving heuristics */
-
-
 /* Limits */
 
 #define SCIP_DEFAULT_LIMIT_TIME           1e+20 /**< maximal time in seconds to run */
@@ -210,7 +203,7 @@
 #define SCIP_DEFAULT_LP_ROWREPSWITCH        2.0 /**< simplex algorithm shall use row representation of the basis
                                                  *   if number of rows divided by number of columns exceeds this value */
 #define SCIP_DEFAULT_LP_THREADS               0 /**< number of threads used for solving the LP (0: automatic) */
-#define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit             
+#define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
 
@@ -224,10 +217,8 @@
 /* Memory */
 
 #define SCIP_DEFAULT_MEM_SAVEFAC            0.8 /**< fraction of maximal mem usage when switching to memory saving mode */
-#define SCIP_DEFAULT_MEM_ARRAYGROWFAC       1.2 /**< memory growing factor for dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_TREEGROWFAC        2.0 /**< memory growing factor for tree array */
 #define SCIP_DEFAULT_MEM_PATHGROWFAC        2.0 /**< memory growing factor for path array */
-#define SCIP_DEFAULT_MEM_ARRAYGROWINIT        4 /**< initial size of dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_TREEGROWINIT     65536 /**< initial size of tree array */
 #define SCIP_DEFAULT_MEM_PATHGROWINIT       256 /**< initial size of path array */
 
@@ -491,10 +482,40 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdLimit)
    return SCIP_OKAY;
 }
 
+/** information method for a parameter change of mem_arraygrowfac */
+static
+SCIP_DECL_PARAMCHGD(paramChgdArraygrowfac)
+{  /*lint --e{715}*/
+   SCIP_Real newarraygrowfac;
+
+   newarraygrowfac = SCIPparamGetReal(param);
+
+   /* change arraygrowfac */
+   BMSsetBufferMemoryArraygrowfac(SCIPbuffer(scip), newarraygrowfac);
+   BMSsetBufferMemoryArraygrowfac(SCIPcleanbuffer(scip), newarraygrowfac);
+
+   return SCIP_OKAY;
+}
+
+/** information method for a parameter change of mem_arraygrowinit */
+static
+SCIP_DECL_PARAMCHGD(paramChgdArraygrowinit)
+{  /*lint --e{715}*/
+   int newarraygrowinit;
+
+   newarraygrowinit = SCIPparamGetInt(param);
+
+   /* change arraygrowinit */
+   BMSsetBufferMemoryArraygrowinit(SCIPbuffer(scip), newarraygrowinit);
+   BMSsetBufferMemoryArraygrowinit(SCIPcleanbuffer(scip), newarraygrowinit);
+
+   return SCIP_OKAY;
+}
+
 /** enable or disable all plugin timers depending on the value of the flag \p enabled */
 void SCIPsetEnableOrDisablePluginClocks(
-   SCIP_SET*            set,                /**< SCIP settings */
-   SCIP_Bool            enabled             /**< should plugin clocks be enabled? */
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_Bool             enabled             /**< should plugin clocks be enabled? */
    )
 {
    int i;
@@ -550,8 +571,8 @@ SCIP_DECL_PARAMCHGD(paramChgdStatistictiming)
 
 
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
- *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the 
- *  copied SCIP instance might not represent the same problem semantics as the original. 
+ *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the
+ *  copied SCIP instance might not represent the same problem semantics as the original.
  *  Note that in this case dual reductions might be invalid. */
 SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */
@@ -625,7 +646,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
             SCIP_CALL( SCIPconshdlrCopyInclude(sourceset->conshdlrs_include[p], targetset, &valid) );
             *allvalid = *allvalid && valid;
             SCIPdebugMessage("Copying conshdlr <%s> was%s valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]), valid ? "" : " not");
-         } 
+         }
          else if( !SCIPconshdlrNeedsCons(sourceset->conshdlrs_include[p]) )
          {
             SCIPdebugMessage("Copying Conshdlr <%s> without constraints not valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]));
@@ -736,7 +757,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->ndialogs - 1; p >= 0; --p )
       {
-         /* @todo: the copying process of dialog handlers is currently not checked for consistency */         
+         /* @todo: the copying process of dialog handlers is currently not checked for consistency */
          SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
       }
    }
@@ -788,9 +809,10 @@ SCIP_RETCODE SCIPsetCreate(
 
    (*set)->stage = SCIP_STAGE_INIT;
    (*set)->scip = scip;
+   (*set)->buffer = SCIPbuffer(scip);
+   (*set)->cleanbuffer = SCIPcleanbuffer(scip);
 
    SCIP_CALL( SCIPparamsetCreate(&(*set)->paramset, blkmem) );
-   SCIP_CALL( SCIPbufferCreate(&(*set)->buffer) );
 
    (*set)->readers = NULL;
    (*set)->nreaders = 0;
@@ -1149,16 +1171,6 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->history_allowtransfer, FALSE, SCIP_DEFAULT_HISTORY_ALLOWTRANSFER,
          NULL, NULL) );
 
-   /* heuristic parameters */
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem, "heuristics/divestartfrac",
-         "start percentage of diving candidates that should be fixed before LP resolve",
-         &(*set)->heur_divestartfrac, FALSE, SCIP_DEFAULT_HEUR_DIVESTARTFRAC,  0.01, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "heuristics/divelpsolvefreq",
-         "LP solve frequency for diving heuristics (0: no LP is solved)",
-         &(*set)->heur_divelpsolvefreq, FALSE, SCIP_DEFAULT_HEUR_DIVELPSOLVEFREQ, 0, INT_MAX,
-         NULL, NULL) );
-
    /* limit parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/time",
@@ -1416,12 +1428,12 @@ SCIP_RETCODE SCIPsetCreate(
          "memory/arraygrowfac",
          "memory growing factor for dynamically allocated arrays",
          &(*set)->mem_arraygrowfac, TRUE, SCIP_DEFAULT_MEM_ARRAYGROWFAC, 1.0, 10.0,
-         NULL, NULL) );
+         paramChgdArraygrowfac, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "memory/arraygrowinit",
          "initial size of dynamically allocated arrays",
          &(*set)->mem_arraygrowinit, TRUE, SCIP_DEFAULT_MEM_ARRAYGROWINIT, 0, INT_MAX,
-         NULL, NULL) );
+         paramChgdArraygrowinit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "memory/treegrowfac",
          "memory growing factor for tree array",
@@ -1918,9 +1930,6 @@ SCIP_RETCODE SCIPsetFree(
 
    /* free parameter set */
    SCIPparamsetFree(&(*set)->paramset, blkmem);
-
-   /* free memory buffers */
-   SCIPbufferFree(&(*set)->buffer);
 
    /* free file readers */
    for( i = 0; i < (*set)->nreaders; ++i )

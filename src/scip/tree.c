@@ -298,6 +298,9 @@ SCIP_RETCODE probingnodeCreate(
    (*probingnode)->ninitialrows = SCIPlpGetNRows(lp);
    (*probingnode)->ncols = (*probingnode)->ninitialcols;
    (*probingnode)->nrows = (*probingnode)->ninitialrows;
+   (*probingnode)->origobjvars = NULL;
+   (*probingnode)->origobjvals = NULL;
+   (*probingnode)->nchgdobjs = 0;
 
    SCIPdebugMessage("created probingnode information (%d cols, %d rows)\n", (*probingnode)->ncols, (*probingnode)->nrows);
 
@@ -356,6 +359,16 @@ SCIP_RETCODE probingnodeFree(
    if( (*probingnode)->lpistate != NULL )
    {
       SCIP_CALL( SCIPlpFreeState(lp, blkmem, &(*probingnode)->lpistate) );
+   }
+
+   /* free objective information */
+   if( (*probingnode)->nchgdobjs > 0 )
+   {
+      assert((*probingnode)->origobjvars != NULL);
+      assert((*probingnode)->origobjvals != NULL);
+
+      BMSfreeMemoryArray(&(*probingnode)->origobjvars);
+      BMSfreeMemoryArray(&(*probingnode)->origobjvals);
    }
 
    BMSfreeBlockMemory(blkmem, probingnode);
@@ -4427,17 +4440,31 @@ SCIP_RETCODE SCIPnodeFocus(
 /** creates an initialized tree data structure */
 SCIP_RETCODE SCIPtreeCreate(
    SCIP_TREE**           tree,               /**< pointer to tree data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODESEL*         nodesel             /**< node selector to use for sorting leaves in the priority queue */
    )
 {
+   int p;
+
    assert(tree != NULL);
+   assert(blkmem != NULL);
 
    SCIP_ALLOC( BMSallocMemory(tree) );
 
    (*tree)->root = NULL;
 
    SCIP_CALL( SCIPnodepqCreate(&(*tree)->leaves, set, nodesel) );
+
+   /* allocate one slot for the prioritized and the unprioritized bound change */
+   for( p = 0; p <= 1; ++p )
+   {
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->divebdchgdirs[p], 1) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->divebdchgvars[p], 1) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->divebdchgvals[p], 1) );
+      (*tree)->ndivebdchanges[p] = 0;
+      (*tree)->divebdchgsize[p] = 1;
+   }
 
    (*tree)->path = NULL;
    (*tree)->focusnode = NULL;
@@ -4496,6 +4523,8 @@ SCIP_RETCODE SCIPtreeFree(
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
+   int p;
+
    assert(tree != NULL);
    assert(*tree != NULL);
    assert((*tree)->nchildren == 0);
@@ -4507,6 +4536,14 @@ SCIP_RETCODE SCIPtreeFree(
 
    /* free node queue */
    SCIP_CALL( SCIPnodepqFree(&(*tree)->leaves, blkmem, set, stat, eventqueue, *tree, lp) );
+
+   /* free diving bound change storage */
+   for( p = 0; p <= 1; ++p )
+   {
+      BMSfreeBlockMemoryArray(blkmem, &(*tree)->divebdchgdirs[p], (*tree)->divebdchgsize[p]);
+      BMSfreeBlockMemoryArray(blkmem, &(*tree)->divebdchgvals[p], (*tree)->divebdchgsize[p]);
+      BMSfreeBlockMemoryArray(blkmem, &(*tree)->divebdchgvars[p], (*tree)->divebdchgsize[p]);
+   }
 
    /* free pointer arrays */
    BMSfreeMemoryArrayNull(&(*tree)->path);
@@ -5850,6 +5887,75 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    return SCIP_OKAY;
 }
 
+/** adds a diving bound change to the tree together with the information if this is a bound change
+ *  for the preferred direction or not
+ */
+#define ARRAYGROWTH 5
+SCIP_RETCODE SCIPtreeAddDiveBoundChange(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_VAR*             var,                /**< variable to apply the bound change to */
+   SCIP_BRANCHDIR        dir,                /**< direction of the bound change */
+   SCIP_Real             value,              /**< value to adjust this variable bound to */
+   SCIP_Bool             preferred           /**< is this a bound change for the preferred child? */
+   )
+{
+   int idx = preferred ? 0 : 1;
+   int pos = tree->ndivebdchanges[idx];
+
+   assert(pos < tree->divebdchgsize[idx]);
+
+   if( pos == tree->divebdchgsize[idx] - 1 )
+   {
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tree->divebdchgdirs[idx], tree->divebdchgsize[idx], tree->divebdchgsize[idx] + ARRAYGROWTH) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tree->divebdchgvars[idx], tree->divebdchgsize[idx], tree->divebdchgsize[idx] + ARRAYGROWTH) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tree->divebdchgvals[idx], tree->divebdchgsize[idx], tree->divebdchgsize[idx] + ARRAYGROWTH) );
+      tree->divebdchgsize[idx] += ARRAYGROWTH;
+   }
+
+   tree->divebdchgvars[idx][pos] = var;
+   tree->divebdchgdirs[idx][pos] = dir;
+   tree->divebdchgvals[idx][pos] = value;
+
+   ++tree->ndivebdchanges[idx];
+
+   return SCIP_OKAY;
+}
+
+/**< get the dive bound change data for the preferred or the alternative direction */
+void SCIPtreeGetDiveBoundChangeData(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_VAR***           variables,          /**< pointer to store variables for the specified direction */
+   SCIP_BRANCHDIR**      directions,         /**< pointer to store the branching directions */
+   SCIP_Real**           values,             /**< pointer to store bound change values */
+   int*                  ndivebdchgs,        /**< pointer to store the number of dive bound changes */
+   SCIP_Bool             preferred           /**< should the dive bound changes for the preferred child be output? */
+   )
+{
+   int idx = preferred ? 0 : 1;
+
+   assert(variables != NULL);
+   assert(directions != NULL);
+   assert(values != NULL);
+   assert(ndivebdchgs != NULL);
+
+   *variables = tree->divebdchgvars[idx];
+   *directions = tree->divebdchgdirs[idx];
+   *values = tree->divebdchgvals[idx];
+   *ndivebdchgs = tree->ndivebdchanges[idx];
+}
+
+/** clear the tree bound change data structure */
+void SCIPtreeClearDiveBoundChanges(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   )
+{
+   int p;
+
+   for( p = 0; p < 2; ++p )
+      tree->ndivebdchanges[p] = 0;
+}
+
 /** creates a probing child node of the current node, which must be the focus node, the current refocused node,
  *  or another probing node; if the current node is the focus or a refocused node, the created probing node is
  *  installed as probing root node
@@ -5962,12 +6068,17 @@ SCIP_RETCODE SCIPtreeStartProbing(
    /* inform LP about probing mode */
    SCIP_CALL( SCIPlpStartProbing(lp) );
 
+   assert(!lp->divingobjchg);
+
    /* remember, whether the LP was flushed and solved */
    tree->probinglpwasflushed = lp->flushed;
    tree->probinglpwassolved = lp->solved;
    tree->probingloadlpistate = FALSE;
    tree->probinglpwasrelax = lp->isrelax;
    tree->probingsolvedlp = FALSE;
+   tree->probingobjchanged = FALSE;
+   lp->divingobjchg = FALSE;
+   tree->probingsumchgdobjs = 0;
    tree->sbprobing = strongbranching;
 
    /* remember the LP state in order to restore the LP solution quickly after probing */
@@ -6115,6 +6226,7 @@ SCIP_RETCODE treeBacktrackProbing(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_PRIMAL*          primal,             /**< primal data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
@@ -6124,6 +6236,7 @@ SCIP_RETCODE treeBacktrackProbing(
    )
 {
    int newpathlen;
+   int i;
 
    assert(tree != NULL);
    assert(SCIPtreeProbing(tree));
@@ -6158,12 +6271,43 @@ SCIP_RETCODE treeBacktrackProbing(
 
       while( tree->pathlen > newpathlen )
       {
-         assert(SCIPnodeGetType(tree->path[tree->pathlen-1]) == SCIP_NODETYPE_PROBINGNODE);
-         assert(tree->pathlen-1 == SCIPnodeGetDepth(tree->path[tree->pathlen-1]));
+         SCIP_NODE* node;
+
+         node = tree->path[tree->pathlen-1];
+
+         assert(SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
+         assert(tree->pathlen-1 == SCIPnodeGetDepth(node));
          assert(tree->pathlen-1 >= SCIPnodeGetDepth(tree->probingroot));
 
+         if( node->data.probingnode->nchgdobjs > 0 )
+         {
+            /* @todo only do this if we don't backtrack to the root node - in that case, we can just restore the unchanged
+             *       objective values
+             */
+            for( i = node->data.probingnode->nchgdobjs - 1; i >= 0; --i )
+            {
+               assert(tree->probingobjchanged);
+               SCIP_CALL( SCIPvarChgObj(node->data.probingnode->origobjvars[i], blkmem, set, transprob, primal, lp,
+                     eventqueue, node->data.probingnode->origobjvals[i]) );
+            }
+            tree->probingsumchgdobjs -= node->data.probingnode->nchgdobjs;
+            assert(tree->probingsumchgdobjs >= 0);
+
+            /* reset probingobjchanged flag and cutoff bound */
+            if( tree->probingsumchgdobjs == 0 )
+            {
+               SCIPlpUnmarkDivingObjChanged(lp);
+               tree->probingobjchanged = FALSE;
+
+               SCIP_CALL( SCIPlpSetCutoffbound(lp, set, transprob, primal->cutoffbound) );
+            }
+
+            /* recompute global and local pseudo objective values */
+            SCIPlpRecomputeLocalAndGlobalPseudoObjval(lp, set, transprob);
+         }
+
          /* undo bound changes by deactivating the probing node */
-         SCIP_CALL( nodeDeactivate(tree->path[tree->pathlen-1], blkmem, set, stat, tree, lp, branchcand, eventqueue) );
+         SCIP_CALL( nodeDeactivate(node, blkmem, set, stat, tree, lp, branchcand, eventqueue) );
 
          /* free the probing node */
          SCIP_CALL( SCIPnodeFree(&tree->path[tree->pathlen-1], blkmem, set, stat, eventqueue, tree, lp) );
@@ -6223,6 +6367,7 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_PRIMAL*          primal,             /**< primal data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
@@ -6235,7 +6380,8 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    assert(0 <= probingdepth && probingdepth <= SCIPtreeGetProbingDepth(tree));
 
    /* undo the domain and constraint set changes and free the temporary probing nodes below the given probing depth */
-   SCIP_CALL( treeBacktrackProbing(tree, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, eventfilter, cliquetable, probingdepth) );
+   SCIP_CALL( treeBacktrackProbing(tree, blkmem, set, stat, transprob, origprob, lp, primal, branchcand, eventqueue,
+         eventfilter, cliquetable, probingdepth) );
 
    assert(SCIPtreeProbing(tree));
    assert(SCIPnodeGetType(SCIPtreeGetCurrentNode(tree)) == SCIP_NODETYPE_PROBINGNODE);
@@ -6255,6 +6401,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_PRIMAL*          primal,             /**< Primal LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
@@ -6275,7 +6422,12 @@ SCIP_RETCODE SCIPtreeEndProbing(
    assert(set != NULL);
 
    /* undo the domain and constraint set changes of the temporary probing nodes and free the probing nodes */
-   SCIP_CALL( treeBacktrackProbing(tree, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, eventfilter, cliquetable, -1) );
+   SCIP_CALL( treeBacktrackProbing(tree, blkmem, set, stat, transprob, origprob, lp, primal, branchcand, eventqueue,
+         eventfilter, cliquetable, -1) );
+   assert(tree->probingsumchgdobjs == 0);
+   assert(!tree->probingobjchanged);
+   assert(!lp->divingobjchg);
+   assert(lp->cutoffbound == primal->cutoffbound); /*lint !e777*/
    assert(SCIPtreeGetCurrentNode(tree) == tree->focusnode);
    assert(!SCIPtreeProbing(tree));
 
@@ -6367,6 +6519,8 @@ SCIP_RETCODE SCIPtreeEndProbing(
       SCIPdebugMessage("clearing lp state at end of probing mode because LP was initially unsolved\n");
       SCIP_CALL( SCIPlpiClearState(lp->lpi) );
    }
+
+   assert(tree->probingobjchanged == SCIPlpDivingObjChanged(lp));
 
    /* reset flags */
    tree->probinglpwasflushed = FALSE;
@@ -6711,6 +6865,8 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeHasCurrentNodeLP
 #undef SCIPtreeGetEffectiveRootDepth
 #undef SCIPtreeGetRootNode
+#undef SCIPtreeProbingObjChanged
+#undef SCIPtreeMarkProbingObjChanged
 
 /** gets the type of the node */
 SCIP_NODETYPE SCIPnodeGetType(
@@ -7296,3 +7452,25 @@ SCIP_NODE* SCIPtreeGetRootNode(
    return tree->root;
 }
 
+/** returns whether we are in probing and the objective value of at least one column was changed */
+
+SCIP_Bool SCIPtreeProbingObjChanged(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(SCIPtreeProbing(tree) || !tree->probingobjchanged);
+
+   return tree->probingobjchanged;
+}
+
+/** marks the current probing node to have a changed objective function */
+void SCIPtreeMarkProbingObjChanged(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+   assert(SCIPtreeProbing(tree));
+
+   tree->probingobjchanged = TRUE;
+}

@@ -25,6 +25,7 @@
 
 
 #include <stdio.h>
+#include <stdint.h>
 #include <math.h>
 #include <limits.h>
 #include <float.h>
@@ -116,6 +117,14 @@ extern "C" {
 #endif
 #endif
 
+/*
+ * Size_t format
+ */
+#if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
+#define SCIP_SIZET_FORMAT           "lu"
+#else
+#define SCIP_SIZET_FORMAT           "zu"
+#endif
 
 /*
  * Floating point values
@@ -200,6 +209,9 @@ extern "C" {
  * Memory settings
  */
 
+/* we use SIZE_MAX / 2 to detect negative sizes which got a very large value when casting to size_t */
+#define SCIP_MAXMEMSIZE              (SIZE_MAX/2) /**< maximum size of allocated memory (array) */
+
 #define SCIP_HASHSIZE_PARAMS         4099 /**< size of hash table in parameter name tables */
 #define SCIP_HASHSIZE_NAMES          131101 /**< size of hash table in name tables */
 #define SCIP_HASHSIZE_CUTPOOLS       131101 /**< size of hash table in cut pools */
@@ -209,8 +221,8 @@ extern "C" {
 #define SCIP_HASHSIZE_CLIQUES_SMALL  8011   /**< size of hash table in clique tables for small problems */
 #define SCIP_HASHSIZE_VBC            131101 /**< size of hash map for node -> nodenum mapping used for VBC output */
 
-/*#define BMS_NOBLOCKMEM*/
-
+#define SCIP_DEFAULT_MEM_ARRAYGROWFAC   1.2 /**< memory growing factor for dynamically allocated arrays */
+#define SCIP_DEFAULT_MEM_ARRAYGROWINIT    4 /**< initial size of dynamically allocated arrays */
 
 /*
  * Global debugging settings

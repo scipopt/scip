@@ -2,6 +2,8 @@ SCIP version NEXT
 ==================
 
 features:
+- obbt propagator applies now additional separation and propagation in order to learn stronger and more bound tightenings
+- possible to change objective coefficients during probing mode
 - variable histories can be transferred between sub-SCIPs solved by LNS heuristics and the component presolver
   and the main SCIP to reuse this information.
 - tighter reliability notions introduced for reliability branching, based on pseudo-cost relative errors
@@ -31,6 +33,14 @@ features:
 - new parameter "misc/outputorigsol" to control whether at the end of a command line run the solution should be output
   in the orignal space
 - new score in hybrid reliability pseudocost branching that prefers nonlinear variables when solving MINLPs
+- new heuristic (heur_bound) which fixes all integer variables to their lower/upper bounds and solves the remaining LP
+- new branching rule multaggr which allows to branch on general disjunctions defined by fractional multi-aggregated variables
+- started support for user-defined operators in expression trees/graphs (see SCIPexprCreateUser()),
+  interface will likely change again in future SCIP versions
+- in the AMPL interface, variable and constraint attributes (flags) can now be set via suffixes, where 0 (unset) stands for the default,
+  1 for TRUE, and other values for FALSE; see SCIPcreateVar() and SCIPcreateCons() for their meaning;
+  for variables, "initial" and "removable" are recognized;
+  for constraints, "initial", "separate", "enforce", "check", "propagate", "dynamic", and "removable" are recognized
 - Improved coordination of presolvers. There are three timings for presolvers now, FAST, MEDIUM, and EXHAUSTIVE.
   Each presolving callback can specify one or more of these timings in which it will be called later.
   Within a presolving method, the current timing can be checked and the algorithms to be performed selected based on
@@ -102,6 +112,14 @@ interface:
 - added new sorting functions SCIPsortRealRealRealBoolBoolPtr(), SCIPsortDownRealRealRealBoolBoolPtr()
 - added new sorting functions SCIPsortIntIntIntReal(), SCIPsortDownIntIntIntReal()
 - safe-guarded buffer array (re)allocations to check for negative size or size > INT_MAX
+- moved buffer memory handling to blockmemory/memory.?;
+  remove files type_buffer.h, struct_buffer.h buffer.h buffer.c;
+  removed functions SCIP*buffer*() from scip.? and replaced them by macros;
+  new function SCIPbuffermem() to get buffer memory;
+  redesigned buffer interface to be similar to block memory;
+  added checks for strange sizes
+- new function BMSallocClearBlockMemoryArray()/SCIPallocClearBlockMemoryArray() and
+  BMSallocClearBufferMemoryArray(), SCIPallocClearBufferArray() to allocate arrays that are initialized to 0
 - renamed SCIPconshdlrGetPropTimingmask() to SCIPconshdlrGetPropTiming(), new method SCIPconshdlrSetPropTiming()
 - removed SCIPconshdlrIsPresolvingDelayed() and SCIPconshdlrWasPresolvingDelayed()
 - new methods SCIPpresolGetTiming(), SCIPpresolSetTiming(), SCIP{conshdlr,prop}GetPresolTiming(), and
@@ -111,6 +129,7 @@ interface:
 
 fixed bugs:
 - fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)
+- try to handle fixings of multi-aggregated variable in cons_sos1 presolving and avoid error
 
 SCIP version 3.1.2
 ==================
@@ -126,6 +145,11 @@ fixed bugs:
 - fixed assert in cons_soc.c: now soc with 1 lhs variable are allowed
 - fixed bug that led to an erroneous warning about the clock type
 - fixed setting of enforcement flag for constraints created by reformulation in nonlinear constraint handlers
+- fixed bug in heur_nlpdiving.c: wrong counting of fix variables
+- fixed bug in cons_quadratic.c: do not generate linearization cuts for disabled constraints
+
+features:
+- extended expression parsing to support power, realpower, and signpower operators
 
 misc:
 - moved assertions in comparison methods from scip.c to set.c

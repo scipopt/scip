@@ -13,21 +13,39 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   type_buffer.h
- * @brief  type definitions for memory buffers for temporary objects
- * @author Tobias Achterberg
+/**@file   branch_multaggr.h
+ * @ingroup BRANCHINGRULES
+ * @brief  fullstrong branching on fractional and multi-aggregated variables
+ * @author Anna Melchiori
+ * @author Gerald Gamrath
+ *
+ * This branching rule uses all fractional binary and integer variables as candidates,
+ * as well as fractional multiaggregated binary and integer variables. Although not
+ * directly contained in the presolved problem anymore, the multi-aggregation provides
+ * an affine linear sum of integer variables, on which branching can be performed.
+ *
+ * For more details, see
+ * G.Gamrath, A.Melchiori, T.Berthold, A.M.Gleixner, D.Salvagnin: Branching on Multi-aggregated Variables
+ * (http://dx.doi.org/10.1007/978-3-319-18008-3_10)
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_TYPE_BUFFER_H__
-#define __SCIP_TYPE_BUFFER_H__
+#ifndef __SCIP_BRANCH_MULTAGGR_H__
+#define __SCIP_BRANCH_MULTAGGR_H__
+
+
+#include "scip/scip.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct SCIP_Buffer SCIP_BUFFER;
+/** creates the multi-aggregated branching rule and includes it in SCIP */
+EXTERN
+SCIP_RETCODE SCIPincludeBranchruleMultAggr(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 #ifdef __cplusplus
 }

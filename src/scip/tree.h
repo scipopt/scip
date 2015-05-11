@@ -320,6 +320,7 @@ SCIP_RETCODE SCIPnodePropagateImplics(
 extern
 SCIP_RETCODE SCIPtreeCreate(
    SCIP_TREE**           tree,               /**< pointer to tree data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODESEL*         nodesel             /**< node selector to use for sorting leaves in the priority queue */
    );
@@ -564,6 +565,36 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    int*                  nchildren           /**< buffer to store number of created children, or NULL */
    );
 
+/** adds a diving bound change to the tree together with the information if this is a bound change
+ *  for the preferred direction or not
+ */
+extern
+SCIP_RETCODE SCIPtreeAddDiveBoundChange(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_VAR*             var,                /**< variable to apply the bound change to */
+   SCIP_BRANCHDIR        dir,                /**< direction of the bound change */
+   SCIP_Real             value,              /**< value to adjust this variable bound to */
+   SCIP_Bool             preferred           /**< is this a bound change for the preferred child? */
+   );
+
+/**< get the dive bound change data for the preferred or the alternative direction */
+extern
+void SCIPtreeGetDiveBoundChangeData(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_VAR***           variables,          /**< pointer to store variables for the specified direction */
+   SCIP_BRANCHDIR**      directions,         /**< pointer to store the branching directions */
+   SCIP_Real**           values,             /**< pointer to store bound change values */
+   int*                  ndivebdchgs,        /**< pointer to store the number of dive bound changes */
+   SCIP_Bool             preferred           /**< should the dive bound changes for the preferred child be output? */
+   );
+
+/** clear the tree dive bound change data structure */
+extern
+void SCIPtreeClearDiveBoundChanges(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
 /** switches to probing mode and creates a probing root */
 extern
 SCIP_RETCODE SCIPtreeStartProbing(
@@ -614,6 +645,7 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_PRIMAL*          primal,             /**< primal data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
@@ -634,6 +666,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_PRIMAL*          primal,             /**< primal LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
@@ -756,6 +789,18 @@ SCIP_NODE* SCIPtreeGetRootNode(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
+/** returns whether we are in probing and the objective value of at least one column was changed */
+extern
+SCIP_Bool SCIPtreeProbingObjChanged(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
+/** marks the current probing node to have a changed objective function */
+extern
+void SCIPtreeMarkProbingObjChanged(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -783,6 +828,8 @@ SCIP_NODE* SCIPtreeGetRootNode(
 #define SCIPtreeHasCurrentNodeLP(tree)  (SCIPtreeProbing(tree) ? (tree)->probingnodehaslp : SCIPtreeHasFocusNodeLP(tree))
 #define SCIPtreeGetEffectiveRootDepth(tree) ((tree)->effectiverootdepth)
 #define SCIPtreeGetRootNode(tree)       ((tree)->root)
+#define SCIPtreeProbingObjChanged(tree) ((tree)->probingobjchanged)
+#define SCIPtreeMarkProbingObjChanged(tree) ((tree)->probingobjchanged = TRUE)
 
 #endif
 

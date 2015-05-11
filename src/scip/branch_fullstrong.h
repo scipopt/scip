@@ -79,6 +79,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
                                               *   branching before solving the LP (-1: no limit, -2: parameter settings) */
    SCIP_Bool             probingbounds,      /**< should valid bounds be identified in a probing-like fashion during
                                               *   strong branching (only with propagation)? */
+   SCIP_Bool             forcestrongbranch,  /**< should strong branching be applied even if there is just a single candidate? */
    int*                  bestcand,           /**< best candidate for branching                        */
    SCIP_Real*            bestdown,           /**< objective value of the down branch for bestcand     */
    SCIP_Real*            bestup,             /**< objective value of the up branch for bestcand       */

@@ -277,6 +277,11 @@ void SCIPstatReset(
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
 
+   stat->ndivesetlpiterations = 0;
+   stat->ndivesetcalls = 0;
+   stat->ndivesetlps = 0;
+   stat->totaldivesetdepth = 0;
+
    SCIPstatResetImplications(stat);
    SCIPstatResetPresolving(stat);
    SCIPstatResetPrimalDualIntegral(stat, set, FALSE);
@@ -542,8 +547,8 @@ void SCIPstatUpdateMemsaveMode(
  *  @see: For completely disabling all timing of SCIP, consider setting the parameter timing/enabled to FALSE
  */
 void SCIPstatEnableOrDisableStatClocks(
-   SCIP_STAT*          stat,             /**< SCIP statistics */
-   SCIP_Bool           enable            /**< should the LP clocks be enabled? */
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   SCIP_Bool             enable              /**< should the LP clocks be enabled? */
    )
 {
    assert(stat != NULL);

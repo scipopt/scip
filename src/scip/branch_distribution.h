@@ -67,9 +67,69 @@ extern "C" {
 #endif
 
 /** creates the distribution branching rule and includes it in SCIP */
-extern
+EXTERN
 SCIP_RETCODE SCIPincludeBranchruleDistribution(
    SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** calculate the variable's distribution parameters (mean and variance) for the bounds specified in the arguments.
+ *  special treatment of infinite bounds necessary */
+EXTERN
+void SCIPvarCalcDistributionParameters(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             varlb,              /**< variable lower bound */
+   SCIP_Real             varub,              /**< variable upper bound */
+   SCIP_VARTYPE          vartype,            /**< type of the variable */
+   SCIP_Real*            mean,               /**< pointer to store mean value */
+   SCIP_Real*            variance            /**< pointer to store the variance of the variable uniform distribution */
+   );
+
+/** calculates the cumulative distribution P(-infinity <= x <= value) that a normally distributed
+ *  random variable x takes a value between -infinity and parameter \p value.
+ *
+ *  The distribution is given by the respective mean and deviation. This implementation
+ *  uses the error function erf().
+ */
+EXTERN
+SCIP_Real SCIPcalcCumulativeDistribution(
+   SCIP*                 scip,               /**< current SCIP */
+   SCIP_Real             mean,               /**< the mean value of the distribution */
+   SCIP_Real             variance,           /**< the square of the deviation of the distribution */
+   SCIP_Real             value               /**< the upper limit of the calculated distribution integral */
+   );
+
+/** calculates the probability of satisfying an LP-row under the assumption
+ *  of uniformly distributed variable values.
+ *
+ *  For inequalities, we use the cumulative distribution function of the standard normal
+ *  distribution PHI(rhs - mu/sqrt(sigma2)) to calculate the probability
+ *  for a right hand side row with mean activity mu and variance sigma2 to be satisfied.
+ *  Similarly, 1 - PHI(lhs - mu/sqrt(sigma2)) is the probability to satisfy a left hand side row.
+ *  For equations (lhs==rhs), we use the centeredness measure p = min(PHI(lhs'), 1-PHI(lhs'))/max(PHI(lhs'), 1 - PHI(lhs')),
+ *  where lhs' = lhs - mu / sqrt(sigma2).
+ */
+EXTERN
+SCIP_Real SCIProwCalcProbability(
+   SCIP*                 scip,               /**< current scip */
+   SCIP_ROW*             row,                /**< the row */
+   SCIP_Real             mu,                 /**< the mean value of the row distribution */
+   SCIP_Real             sigma2,             /**< the variance of the row distribution */
+   int                   rowinfinitiesdown,  /**< the number of variables with infinite bounds to DECREASE activity */
+   int                   rowinfinitiesup     /**< the number of variables with infinite bounds to INCREASE activity */
+   );
+
+/** update the up- and downscore of a single variable after calculating the impact of branching on a
+ *  particular row, depending on the chosen score parameter
+ */
+EXTERN
+SCIP_RETCODE SCIPupdateDistributionScore(
+   SCIP*                 scip,               /**< current SCIP pointer */
+   SCIP_Real             currentprob,        /**< the current probability */
+   SCIP_Real             newprobup,          /**< the new probability if branched upwards */
+   SCIP_Real             newprobdown,        /**< the new probability if branched downwards */
+   SCIP_Real*            upscore,            /**< pointer to store the new score for branching up */
+   SCIP_Real*            downscore,          /**< pointer to store the new score for branching down */
+   char                  scoreparam          /**< parameter to determine the way the score is calculated */
    );
 
 #ifdef __cplusplus

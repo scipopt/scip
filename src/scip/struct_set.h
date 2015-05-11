@@ -27,7 +27,6 @@
 #include "scip/def.h"
 #include "scip/message.h"
 #include "scip/type_set.h"
-#include "scip/type_buffer.h"
 #include "scip/type_clock.h"
 #include "scip/type_paramset.h"
 #include "scip/type_event.h"
@@ -57,7 +56,8 @@ struct SCIP_Set
    SCIP_STAGE            stage;              /**< SCIP operation stage */
    SCIP*                 scip;               /**< very ugly: pointer to scip main data structure for callback methods */
    SCIP_PARAMSET*        paramset;           /**< set of parameters */
-   SCIP_BUFFER*          buffer;             /**< memory buffers for short living temporary objects */
+   BMS_BUFMEM*           buffer;             /**< memory buffers for short living temporary objects */
+   BMS_BUFMEM*           cleanbuffer;        /**< memory buffers for short living temporary objects init. to all zero */
    SCIP_READER**         readers;            /**< file readers */
    SCIP_PRICER**         pricers;            /**< variable pricers */
    SCIP_CONSHDLR**       conshdlrs;          /**< constraint handlers (sorted by check priority) */
@@ -217,10 +217,6 @@ struct SCIP_Set
    SCIP_Bool             history_valuebased; /**< should statistics be collected for variable domain value pairs? */
    SCIP_Bool             history_allowmerge; /**< should variable histories be merged from sub-SCIPs whenever possible? */
    SCIP_Bool             history_allowtransfer; /**< should variable histories be transferred to initialize SCIP copies? */
-
-   /* heuristic settings */
-   SCIP_Real             heur_divestartfrac; /**< start percentage of diving candidates that should be fixed before LP resolve */
-   int                   heur_divelpsolvefreq; /**< LP solve frequency for diving heuristics */
 
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */

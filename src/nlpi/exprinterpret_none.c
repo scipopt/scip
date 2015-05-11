@@ -86,6 +86,22 @@ SCIP_RETCODE SCIPexprintCompile(
    return SCIP_OKAY;
 }  /*lint !e715*/
 
+
+/** gives the capability to evaluate an expression by the expression interpreter
+ *
+ * In cases of user-given expressions, higher order derivatives may not be available for the user-expression,
+ * even if the expression interpreter could handle these. This method allows to recognize that, e.g., the
+ * Hessian for an expression is not available because it contains a user expression that does not provide
+ * Hessians.
+ */
+SCIP_EXPRINTCAPABILITY SCIPexprintGetExprtreeCapability(
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   )
+{
+   return SCIP_EXPRINTCAPABILITY_NONE;
+}
+
 /** frees interpreter data */
 SCIP_RETCODE SCIPexprintFreeData(
    SCIP_EXPRINTDATA**    interpreterdata     /**< interpreter data that should freed */

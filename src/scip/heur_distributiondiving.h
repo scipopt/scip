@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -13,34 +13,31 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_buffer.h
- * @brief  datastructures for memory buffers for temporary objects
- * @author Tobias Achterberg
+/**@file   heur_distributiondiving.h
+ * @ingroup PRIMALHEURISTICS
+ * @brief Diving heuristic that chooses fixings w.r.t. changes in the solution density after Pryor and Chinneck.
+ * @author Gregor Hendel
+ *
+ * @see branch_distribution.h for further explanations of probability based branching schemes and references.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_STRUCT_BUFFER_H__
-#define __SCIP_STRUCT_BUFFER_H__
+#ifndef __SCIP_HEUR_DISTRIBUTIONDIVING_H__
+#define __SCIP_HEUR_DISTRIBUTIONDIVING_H__
 
 
-#include <assert.h>
-
-#include "scip/def.h"
+#include "scip/scip.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** memory buffer storage for temporary objects */
-struct SCIP_Buffer
-{
-   void**                data;               /**< allocated memory chunks for arbitrary data */
-   int*                  size;               /**< sizes of buffers in bytes */
-   SCIP_Bool*            used;               /**< TRUE iff corresponding buffer is in use */
-   int                   ndata;              /**< number of memory chunks */
-   int                   firstfree;          /**< first unused memory chunk */
-};
+/** creates the distributiondiving heuristic and includes it in SCIP */
+EXTERN
+SCIP_RETCODE SCIPincludeHeurDistributiondiving(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 #ifdef __cplusplus
 }

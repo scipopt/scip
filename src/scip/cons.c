@@ -2083,6 +2083,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    (*conshdlr)->consgetvars = consgetvars;
    (*conshdlr)->consgetnvars = consgetnvars;
    (*conshdlr)->conshdlrdata = conshdlrdata;
+   (*conshdlr)->conshdlrdetermdivebdchgs = NULL;
    (*conshdlr)->conss = NULL;
    (*conshdlr)->consssize = 0;
    (*conshdlr)->nconss = 0;
@@ -3223,6 +3224,31 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
    return SCIP_OKAY;
 }
 
+/** calls diving solution enforcement callback of constraint handler, if it exists */
+SCIP_RETCODE SCIPconshdlrDetermineDiveBoundChanges(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_DIVESET*         diveset,            /**< diving settings to control scoring */
+   SCIP_SOL*             sol,                /**< current solution of diving mode */
+   SCIP_Bool*            success,            /**< pointer to store whether constraint handler successfully found a variable */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the current node was detected to be infeasible */
+   )
+{
+   assert(conshdlr != NULL);
+   assert(set != NULL);
+   assert(diveset != NULL);
+   assert(sol != NULL);
+   assert(success != NULL);
+   assert(infeasible != NULL);
+
+   if( conshdlr->conshdlrdetermdivebdchgs != NULL )
+   {
+      SCIP_CALL( conshdlr->conshdlrdetermdivebdchgs(set->scip, conshdlr, diveset, sol, success, infeasible) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** calls enforcing method of constraint handler for pseudo solution for all constraints added after last
  *  conshdlrResetEnfo() call
  */
@@ -4186,6 +4212,17 @@ void SCIPconshdlrSetGetNVars(
    assert(conshdlr != NULL);
 
    conshdlr->consgetnvars = consgetnvars;
+}
+
+/** sets diving enforcement method of constraint handler */
+void SCIPconshdlrSetDetermDiveBdChgs(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS((*conshdlrdetermdivebdchgs)) /**< constraint handler diving solution enforcement method */
+   )
+{
+   assert(conshdlr != NULL);
+
+   conshdlr->conshdlrdetermdivebdchgs = conshdlrdetermdivebdchgs;
 }
 
 /** gets array with constraints of constraint handler; the first SCIPconshdlrGetNActiveConss() entries are the active

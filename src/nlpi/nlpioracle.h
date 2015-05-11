@@ -26,6 +26,7 @@
 
 #include "scip/type_message.h"
 #include "nlpi/type_nlpi.h"
+#include "nlpi/type_exprinterpret.h"
 
 
 #ifdef __cplusplus
@@ -291,6 +292,12 @@ int SCIPnlpiOracleGetConstraintDegree(
  */
 extern
 int SCIPnlpiOracleGetMaxDegree(
+   SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
+   );
+
+/** Gives the evaluation capabilities that are shared among all expression trees in the problem. */
+extern
+SCIP_EXPRINTCAPABILITY SCIPnlpiOracleGetEvalCapability(
    SCIP_NLPIORACLE*      oracle              /**< pointer to NLPIORACLE data structure */
    );
 

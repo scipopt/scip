@@ -4076,8 +4076,8 @@ SCIP_RETCODE separateIISRounding(
       for (j = 0; j < nconss; ++j)
       {
          SCIP_CONSDATA* consdata;
-         SCIP_Real binvarval;
-         SCIP_VAR* binvarneg;
+         SCIP_Real binvarval = 0.0;
+         SCIP_VAR* binvarneg = NULL;
 
          assert( conss[j] != NULL );
          consdata = SCIPconsGetData(conss[j]);
@@ -4102,8 +4102,7 @@ SCIP_RETCODE separateIISRounding(
          assert( conshdlrdata->binvarhash != NULL );
          if ( SCIPhashmapExists(conshdlrdata->binvarhash, (void*) binvarneg) )
          {
-            SCIP_Real binvarnegval;
-            binvarnegval = SCIPgetVarSol(scip, binvarneg);
+            SCIP_Real binvarnegval = SCIPgetVarSol(scip, binvarneg);
 
             /* take larger one */
             if ( binvarval > binvarnegval )
@@ -6452,6 +6451,72 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsIndicator)
    return SCIP_OKAY;
 }
 
+/** constraint handler method to suggest dive bound changes during the generic diving algorithm */
+static
+SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIndicator)
+{
+   SCIP_CONS** indconss;
+   int nindconss;
+   int c;
+   SCIP_VAR* bestvar;
+   SCIP_Bool bestvarroundup;
+   SCIP_Real bestscore = SCIP_REAL_MIN;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(diveset != NULL);
+   assert(success != NULL);
+
+   indconss = SCIPconshdlrGetConss(conshdlr);
+   nindconss = SCIPconshdlrGetNConss(conshdlr);
+
+   bestvar = NULL;
+   bestvarroundup = FALSE;
+   /* loop over indicator constraints and score indicator variables with already integral solution value  */
+   for( c = 0; c < nindconss; ++c )
+   {
+      /* check whether constraint is violated */
+      if( SCIPisViolatedIndicator(scip, indconss[c], sol) )
+      {
+         SCIP_VAR* binvar;
+         SCIP_Real solval;
+
+         binvar = SCIPgetBinaryVarIndicator(indconss[c]);
+         solval = SCIPgetSolVal(scip, sol, binvar);
+
+         /* we only treat indicator variables with integral solution values that are not yet fixed */
+         if( SCIPisFeasIntegral(scip, solval) && SCIPvarGetLbLocal(binvar) < SCIPvarGetUbLocal(binvar) - 0.5 )
+         {
+            SCIP_Real score;
+            SCIP_Bool roundup;
+
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, binvar, solval, 0.0, &score, &roundup) );
+
+            /* best candidate maximizes the score */
+            if( score > bestscore )
+            {
+               bestscore = score;
+               *success = TRUE;
+               bestvar = binvar;
+               bestvarroundup = roundup;
+            }
+         }
+      }
+   }
+
+   assert(! *success || bestvar != NULL);
+
+   if( *success )
+   {
+      /* if the diving score voted for fixing the best variable to 1.0, we add this as the preferred bound change */
+      SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_UPWARDS, 1.0, bestvarroundup) );
+      SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_DOWNWARDS, 0.0, ! bestvarroundup) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /* ---------------- Constraint specific interface methods ---------------- */
 
 /** creates the handler for indicator constraints and includes it in SCIP */
@@ -6509,6 +6574,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteIndicator) );
    SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableIndicator) );
    SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableIndicator) );
+   SCIP_CALL( SCIPsetConshdlrDetermDiveBdChgs(scip, conshdlr, conshdlrDetermDiveBdChgsIndicator) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitIndicator) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolIndicator) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeIndicator) );

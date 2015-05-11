@@ -158,9 +158,40 @@ SCIP_Real SCIPheurGetTime(
    SCIP_HEUR*            heur                /**< primal heuristic */
    );
 
+/** returns array of divesets of this primal heuristic, or NULL if it has no divesets */
+EXTERN
+SCIP_DIVESET** SCIPheurGetDivesets(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   );
+
+/** returns the number of divesets of this primal heuristic */
+EXTERN
+int SCIPheurGetNDivesets(
+   SCIP_HEUR*            heur                /**< primal heuristic */
+   );
+
 /** get the heuristic to which this diving setting belongs */
 EXTERN
 SCIP_HEUR* SCIPdivesetGetHeur(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the working solution of this dive set */
+EXTERN
+SCIP_SOL* SCIPdivesetGetWorkSolution(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** set the working solution for this dive set */
+EXTERN
+void SCIPdivesetSetWorkSolution(
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_SOL*             sol                 /**< new working solution for this dive set, or NULL */
+   );
+
+/** get the name of the dive set */
+EXTERN
+const char* SCIPdivesetGetName(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
@@ -178,7 +209,73 @@ SCIP_Real SCIPdivesetGetMaxRelDepth(
 
 /** get the number of successful runs of the diving settings */
 EXTERN
-int SCIPdivesetGetNSuccess(
+int SCIPdivesetGetSolSuccess(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the number of calls to this dive set */
+EXTERN
+int SCIPdivesetGetNCalls(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the number of calls successfully terminated at a feasible leaf node */
+EXTERN
+int SCIPdivesetGetNSolutionCalls(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the minimum depth reached by this dive set */
+EXTERN
+int SCIPdivesetGetMinDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the maximum depth reached by this dive set */
+EXTERN
+int SCIPdivesetGetMaxDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the average depth this dive set reached during execution */
+EXTERN
+SCIP_Real SCIPdivesetGetAvgDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the minimum depth at which this dive set found a solution */
+EXTERN
+int SCIPdivesetGetMinSolutionDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the maximum depth at which this dive set found a solution */
+EXTERN
+int SCIPdivesetGetMaxSolutionDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the average depth at which this dive set found a solution */
+EXTERN
+SCIP_Real SCIPdivesetGetAvgSolutionDepth(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the total number of LP iterations used by this dive set */
+EXTERN
+SCIP_Longint SCIPdivesetGetNLPIterations(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the total number of probing nodes used by this dive set */
+EXTERN
+SCIP_Longint SCIPdivesetGetNProbingNodes(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** get the total number of backtracks performed by this dive set */
+EXTERN
+SCIP_Longint SCIPdivesetGetNBacktracks(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
@@ -191,12 +288,6 @@ SCIP_Real SCIPdivesetGetMaxLPIterQuot(
 /** get the maximum LP iterations offset of the diving settings */
 EXTERN
 int SCIPdivesetGetMaxLPIterOffset(
-   SCIP_DIVESET*         diveset             /**< diving settings */
-   );
-
-/** get the number of LP iterations of the diving settings */
-EXTERN
-SCIP_Longint SCIPdivesetGetNLPIterations(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
@@ -230,17 +321,24 @@ SCIP_Bool SCIPdivesetUseBacktrack(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
-/** increases LP iterations counter of diving settings */
+/** returns the LP solve frequency for diving LPs (0: dynamically based on number of intermediate domain reductions) */
 EXTERN
-void SCIPdivesetIncreaseNLPIterations(
-   SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
+int SCIPdivesetGetLPSolveFreq(
+   SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
-/** increases success counter of diving settings by 1 */
+/** returns the domain reduction quotient for triggering an immediate resolve of the diving LP (0.0: always resolve)*/
 EXTERN
-void SCIPdivesetIncreaseNSuccess(
-   SCIP_DIVESET*         diveset             /**< diving settings which happened to earn the reward */
+SCIP_Real SCIPdivesetGetLPResolveDomChgQuot(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** should only LP branching candidates be considered instead of the slower but
+ *  more general constraint handler diving variable selection?
+ */
+EXTERN
+SCIP_Bool SCIPdivesetUseOnlyLPBranchcands(
+   SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** frees memory of a diveset */

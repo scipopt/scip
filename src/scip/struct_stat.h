@@ -56,6 +56,7 @@ struct SCIP_Stat
    SCIP_Longint          nnodelpiterations;  /**< number of iterations for totally solving node relaxations */
    SCIP_Longint          ninitlpiterations;  /**< number of iterations for solving nodes' initial relaxations */
    SCIP_Longint          ndivinglpiterations;/**< number of iterations in diving and probing */
+   SCIP_Longint          ndivesetlpiterations; /**< total number of LP iterations performed by divesets */
    SCIP_Longint          nsbdivinglpiterations;/**< number of iterations in probing mode for strong branching */
    SCIP_Longint          nsblpiterations;    /**< number of simplex iterations used in strong branching */
    SCIP_Longint          nrootsblpiterations;/**< number of simplex iterations used in strong branching at the root node */
@@ -150,13 +151,16 @@ struct SCIP_Stat
    SCIP_Longint          nnodelps;           /**< number of LPs solved for node relaxations */
    SCIP_Longint          ninitlps;           /**< number of LPs solved for nodes' initial relaxations */
    SCIP_Longint          ndivinglps;         /**< number of LPs solved during diving and probing */
+   SCIP_Longint          ndivesetlps;        /**< total number of diveset LPs */
    SCIP_Longint          nsbdivinglps;       /**< number of LPs solved during strong branching probing mode */
    SCIP_Longint          nstrongbranchs;     /**< number of strong branching calls */
    SCIP_Longint          nrootstrongbranchs; /**< number of strong branching calls at the root node */
    SCIP_Longint          nconflictlps;       /**< number of LPs solved during conflict analysis */
    SCIP_Longint          nnlps;              /**< number of NLPs solved */
    SCIP_Longint          nisstoppedcalls;    /**< number of calls to SCIPsolveIsStopped() */
+   SCIP_Longint          totaldivesetdepth;  /**< the total probing depth over all diveset calls */
    int                   subscipdepth;       /**< depth of current scip instance (increased by each copy call) */
+   int                   ndivesetcalls;      /**< total number of diveset diving calls */
    int                   nruns;              /**< number of branch and bound runs on current problem, including current run */
    int                   nconfrestarts;      /**< number of restarts performed due to conflict analysis */
    int                   nrootboundchgs;     /**< total number of bound changes generated in the root node */

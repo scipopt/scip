@@ -77,6 +77,7 @@
  *
  *   - \ref CODE    "Coding style guidelines"
  *   - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
+ *   - \ref MEMORY  "Using the memory functions of SCIP"
  *   - \ref DEBUG   "Debugging"
  *
  * @subsection HOWTOADD How to add ...
@@ -5665,6 +5666,85 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page MEMORY Using the memory functions of SCIP
+ *
+ *  SCIP provides three ways for allocating memory.
+ *
+ *  @section STDMEM Standard memory
+ *
+ *  SCIP provides an access to the standard C functions @c malloc and @c free with the additional feature of tracking
+ *  memory in debug mode. In this way, memory leaks can be easily detected. This feature is automatically activated in
+ *  debug mode.
+ *
+ *  The most important functions are
+ *  - SCIPallocMemory(), SCIPallocMemoryArray() to allocate memory
+ *  - SCIPfreeMemory(), SCIPfreeMemoryArray() to free memory
+ *
+ *  @section BLKMEM Block memory
+ *
+ *  SCIP offers its own block memory handling, which allows efficient handling of smaller blocks of memory in cases in
+ *  which many blocks of the same (small) size appear. This is adaquate for branch-and-cut codes in which small blocks
+ *  of the same size are allocated and freed very often (for data structures used to store rows or branch-and-bound
+ *  nodes). Actually, most blocks allocated within SCIP have small sizes like 8, 16, 30, 32, 64.  The idea is simple:
+ *  There is a separate list of memory blocks for each interesting small size. When allocating memory, the list is
+ *  checked for a free spot in the list; if no such spot exists the list is enlarged. Freeing just sets the block to be
+ *  available. Very large blocks are handled separatedly. See the dissertation of Tobias Achterberg for more details.
+ *
+ *  One important comment is that freeing block memory requires the size of the block in order to find the right list.
+ *
+ *  The most important functions are
+ *  - SCIPallocBlockMemory(), SCIPallocBlockMemoryArray() to allocate memory
+ *  - SCIPfreeBlockMemory(), SCIPfreeBlockMemoryArray() to free memory
+ *
+ *  An example code is:
+ *  \code
+ *  SCIP_RETCODE dosomething(
+ *     SCIP*                 scip
+ *     )
+ *  {
+ *     int nvars;
+ *     int* array;
+ *
+ *     nvars = SCIPgetNVars(scip);
+ *     SCIP_CALL( SCIPallocBlockMemoryArray(scip, &array, nvars) );
+ *
+ *     do something ...
+ *
+ *     SCIPfreeBlockMemoryArray(scip, &array, nvars);
+ *  }
+ *  \endcode
+ *
+ *  @section BUFMEM Buffer memory
+ *
+ *  In addition to block memory, SCIP offers buffer memory. This should be used if memory is locally
+ *  used within a function and freed within the same function. For this purpose, SCIP has a list of memory buffers
+ *  that are reused for this purpose. In this way, a very efficient allocation/freeing is possible.
+ *
+ *  The most important functions are
+ *  - SCIPallocBufferMemory(), SCIPallocBufferArray() to allocate memory
+ *  - SCIPfreeBufferMemory(), SCIPfreeBufferArray() to free memory
+ *
+ *  SCIP 3.2 introduced a new type of buffer memory, the clean buffer. It provides memory which is initialized to zero
+ *  and requires the user to reset the memory to zero before freeing it. This can be used at performance-critical
+ *  places where only few nonzeros are added to a dense array and removing these nonzeros individually is much faster
+ *  than clearing the whole array. Same as the normal buffer array, the clean buffer should be used for temporary memory
+ *  allocated and freed within the same function.
+ *
+ *  The most important functions are
+ *  - SCIPallocCleanBufferArray() to allocate memory
+ *  - SCIPfreeCleanBufferArray() to free memory
+ *
+ *  @section GENMEM General notes
+ *
+ *  The following holds for all three types of memory functions:
+ *  - In debug mode the arguments are checked for overly large allocations (negative sizes are converted into very large values of type @c size_t).
+ *  - The functions always allocate at least one byte, so that freeing is always possible.
+ *  - The freeing methods set the pointer to the memory to NULL.
+ *  - For maximum speed you should free memory in the reverse order in which it was allocated.
+ *    For block and buffer memory this @b significantly speeds up the code.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page DEBUG Debugging
  *
  *  If you need to debug your own code that uses SCIP, here are some tips and tricks:
@@ -5674,10 +5754,10 @@
  *    following example, taken from the file src/scip/cons_linear.c:
  *    \code
  *    SCIP_RETCODE consdataCatchEvent(
- *       SCIP*                 scip,               /**< SCIP data structure *\/
- *       SCIP_CONSDATA*        consdata,           /**< linear constraint data *\/
- *       SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing *\/
- *       int                   pos                 /**< array position of variable to catch bound change events for *\/
+ *       SCIP*                 scip,               /**< SCIP data structure */
+ *       SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+ *       SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+ *       int                   pos                 /**< array position of variable to catch bound change events for */
  *       )
  *       {
  *          assert(scip != NULL);

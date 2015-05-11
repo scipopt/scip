@@ -13,42 +13,28 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   mem.h
- * @brief  methods for block memory pools and memory buffers
- * @author Tobias Achterberg
+/**@file   heur_bound.h
+ * @ingroup PRIMALHEURISTICS
+ * @brief  heuristic which fixes all integer variables to a bound (lower/upper) and solves the remaining LP
+ * @author Gerald Gamrath
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_MEM_H__
-#define __SCIP_MEM_H__
+#ifndef __SCIP_HEUR_BOUND_H__
+#define __SCIP_HEUR_BOUND_H__
 
 
-#include "scip/def.h"
-#include "scip/type_retcode.h"
-#include "scip/type_mem.h"
-#include "scip/struct_mem.h"
+#include "scip/scip.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/** creates block and buffer memory structures */
-extern
-SCIP_RETCODE SCIPmemCreate(
-   SCIP_MEM**            mem                 /**< pointer to block and buffer memory structure */
-   );
-
-/** frees block and buffer memory structures */
-extern
-SCIP_RETCODE SCIPmemFree(
-   SCIP_MEM**            mem                 /**< pointer to block and buffer memory structure */
-   );
-
-/** returns the total number of bytes used in block and buffer memory */
-extern
-SCIP_Longint SCIPmemGetUsed(
-   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
+/** creates the bound primal heuristic and includes it in SCIP */
+EXTERN
+SCIP_RETCODE SCIPincludeHeurBound(
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 #ifdef __cplusplus

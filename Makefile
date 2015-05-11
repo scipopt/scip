@@ -298,6 +298,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_inference.o \
 			scip/branch_leastinf.o \
 			scip/branch_mostinf.o \
+			scip/branch_multaggr.o \
 			scip/branch_pscost.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
@@ -330,10 +331,12 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/dialog_default.o \
 			scip/disp_default.o \
 			scip/heur_actconsdiving.o \
+			scip/heur_bound.o \
 			scip/heur_clique.o \
 			scip/heur_coefdiving.o \
 			scip/heur_crossover.o \
 			scip/heur_dins.o \
+			scip/heur_distributiondiving.o \
 			scip/heur_dualval.o \
 			scip/heur_feaspump.o \
 			scip/heur_fixandinfer.o \
@@ -431,7 +434,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_zerohalf.o
 
 SCIPLIBOBJ	=	scip/branch.o \
-			scip/buffer.o \
 			scip/clock.o \
 			scip/conflict.o \
 			scip/cons.o \
@@ -439,6 +441,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/debug.o \
 			scip/dialog.o \
 			scip/disp.o \
+			scip/dive.o \
 			scip/event.o \
 			scip/fileio.o \
 			scip/heur.o \
@@ -703,7 +706,7 @@ testblis:
 
 .PHONY: tags
 tags:
-		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/;
+		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/; sed 's!\#undef .*!!g' TAGS > tags; mv tags TAGS
 
 # include target to detect the current git hash
 -include make/local/make.detectgithash
