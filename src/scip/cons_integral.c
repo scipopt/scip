@@ -179,7 +179,7 @@ SCIP_DECL_CONSLOCK(consLockIntegral)
 /** constraint handler method to suggest dive bound changes during the generic diving algorithm */
 static
 SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIntegral)
-{
+{  /*lint --e{715}*/
    SCIP_VAR** vars;
    SCIP_Real solval;
    SCIP_Real score;
@@ -200,13 +200,15 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIntegral)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
-   SCIPdebugMessage("Integral Constraint handler Diving Solution Enforcement\n");
+   SCIPdebugMessage("integral constraint handler: determine diving bound changes\n");
 
    SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, &nimpl, NULL) );
 
    ninteger = nbin + nint + nimpl;
    bestscore = SCIP_REAL_MIN;
    bestcandidx = -1;
+   *success = FALSE;
+
    /* loop over solution values and get score of fractional variables */
    for( v = 0; v < ninteger; ++v )
    {
@@ -227,7 +229,7 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIntegral)
       }
    }
 
-   assert(! *success || bestcandidx >= 0);
+   assert(!(*success) || bestcandidx >= 0);
 
    if( *success )
    {
