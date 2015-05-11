@@ -126,10 +126,10 @@ SCIP_RETCODE heurdataEnsureArraySize(
       int v;
       int nvars;
 
-      SCIPallocBufferArray(scip, &heurdata->rowinfinitiesdown, newsize);
-      SCIPallocBufferArray(scip, &heurdata->rowinfinitiesup, newsize);
-      SCIPallocBufferArray(scip, &heurdata->rowmeans, newsize);
-      SCIPallocBufferArray(scip, &heurdata->rowvariances, newsize);
+      SCIP_CALL( SCIPallocBufferArray(scip, &heurdata->rowinfinitiesdown, newsize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &heurdata->rowinfinitiesup, newsize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &heurdata->rowmeans, newsize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &heurdata->rowvariances, newsize) );
 
       assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
 
@@ -167,10 +167,10 @@ SCIP_RETCODE heurdataEnsureArraySize(
    }
    else
    {
-      SCIPreallocBufferArray(scip, &heurdata->rowinfinitiesdown, newsize);
-      SCIPreallocBufferArray(scip, &heurdata->rowinfinitiesup, newsize);
-      SCIPreallocBufferArray(scip, &heurdata->rowmeans, newsize);
-      SCIPreallocBufferArray(scip, &heurdata->rowvariances, newsize);
+      SCIP_CALL( SCIPreallocBufferArray(scip, &heurdata->rowinfinitiesdown, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &heurdata->rowinfinitiesup, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &heurdata->rowmeans, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &heurdata->rowvariances, newsize) );
    }
 
    /* loop over extended arrays and invalidate data to trigger initialization of this row when necessary */
@@ -280,10 +280,11 @@ void rowCalculateGauss(
       varmean = 0.0;
       varvariance = 0.0;
       varindex = SCIPvarGetProbindex(colvar);
-      assert((heurdata->currentlbs[varindex] == SCIP_INVALID) == (heurdata->currentubs[varindex] == SCIP_INVALID));
+      assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
+            == (heurdata->currentubs[varindex] == SCIP_INVALID)); /*lint !e777 doesn't like comparing floats for equality */
 
       /* variable bounds need to be watched from now on */
-      if( heurdata->currentlbs[varindex] == SCIP_INVALID )
+      if( heurdata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777 doesn't like comparing floats for equality */
          heurdataUpdateCurrentBounds(scip, heurdata, colvar);
 
       assert(!SCIPisInfinity(scip, colvarlb));
@@ -448,7 +449,7 @@ SCIP_RETCODE calcBranchScore(
       SCIP_CALL( heurdataEnsureArraySize(scip, heurdata, rowpos) );
 
       /* calculate row activity distribution if this is the first candidate to appear in this row */
-      if( heurdata->rowmeans[rowpos] == SCIP_INVALID )
+      if( heurdata->rowmeans[rowpos] == SCIP_INVALID ) /*lint !e777 doesn't like comparing floats for equality */
       {
          rowCalculateGauss(scip, heurdata, row, &heurdata->rowmeans[rowpos], &heurdata->rowvariances[rowpos],
                &heurdata->rowinfinitiesdown[rowpos], &heurdata->rowinfinitiesup[rowpos]);
@@ -621,8 +622,11 @@ void heurdataAddBoundChangeVar(
    }
 
    /* if none of the variables rows was calculated yet, variable needs not to be watched */
-   assert((heurdata->currentlbs[varindex] == SCIP_INVALID) == (heurdata->currentubs[varindex] == SCIP_INVALID));
-   if( heurdata->currentlbs[varindex] == SCIP_INVALID )
+   assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
+      == (heurdata->currentubs[varindex] == SCIP_INVALID)); /*lint !e777 doesn't like comparing floats for equality */
+
+   /* we don't need to enqueue the variable if it hasn't been watched so far */
+   if( heurdata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777 see above */
       return;
 
    /* add the variable to the branch rule data of variables to process updates for */
@@ -703,8 +707,8 @@ SCIP_RETCODE varProcessBoundChanges(
    oldub = heurdata->currentubs[varindex];
 
    /* skip update if the variable has never been subject of previously calculated row activities */
-   assert((oldlb == SCIP_INVALID) == (oldub == SCIP_INVALID));
-   if( oldlb == SCIP_INVALID )
+   assert((oldlb == SCIP_INVALID) == (oldub == SCIP_INVALID)); /*lint !e777 doesn't like comparing floats for equality */
+   if( oldlb == SCIP_INVALID ) /*lint !e777 */
       return SCIP_OKAY;
 
    newlb = SCIPvarGetLbLocal(var);
@@ -735,12 +739,12 @@ SCIP_RETCODE varProcessBoundChanges(
       SCIP_CALL( heurdataEnsureArraySize(scip, heurdata, rowpos) );
 
       /* only consider rows for which activity distribution was already calculated */
-      if( heurdata->rowmeans[rowpos] != SCIP_INVALID )
+      if( heurdata->rowmeans[rowpos] != SCIP_INVALID ) /*lint !e777 doesn't like comparing floats for equality */
       {
          SCIP_Real coeff;
          SCIP_Real coeffsquared;
          assert(heurdata->rowvariances[rowpos] != SCIP_INVALID
-               && SCIPisFeasGE(scip, heurdata->rowvariances[rowpos], 0.0));
+               && SCIPisFeasGE(scip, heurdata->rowvariances[rowpos], 0.0)); /*lint !e777 */
 
          coeff = colvals[r];
          coeffsquared = SQUARED(coeff);
@@ -912,14 +916,15 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
    assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(cand), SCIPvarGetUbLocal(cand)));
    assert(0 <= varindex && varindex < heurdata->varpossmemsize);
 
-   assert((heurdata->currentlbs[varindex] == SCIP_INVALID) == (heurdata->currentubs[varindex] == SCIP_INVALID));
    assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
-         || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(cand), heurdata->currentlbs[varindex]));
+      == (heurdata->currentubs[varindex] == SCIP_INVALID));/*lint !e777 doesn't like comparing floats for equality */
+   assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
+      || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(cand), heurdata->currentlbs[varindex])); /*lint !e777 */
    assert((heurdata->currentubs[varindex] == SCIP_INVALID)
-         || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(cand), heurdata->currentubs[varindex]));
+      || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(cand), heurdata->currentubs[varindex])); /*lint !e777 */
 
    /* if the branching rule has not captured the variable bounds yet, this can be done now */
-   if( heurdata->currentlbs[varindex] == SCIP_INVALID )
+   if( heurdata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777 */
       heurdataUpdateCurrentBounds(scip, heurdata, cand);
 
    upscore = 0.0;
@@ -978,7 +983,7 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
 
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
 
-   heurdataFreeArrays(scip, heurdata);
+   SCIP_CALL( heurdataFreeArrays(scip, heurdata) );
 
    return SCIP_OKAY;
 }
