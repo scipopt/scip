@@ -49,7 +49,7 @@
 #define PRESOL_DESC            "dominated column presolver"
 #define PRESOL_PRIORITY            -1000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_TIMING           (SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE) /* timing of the presolver (fast, medium, or exhaustive) */
+#define PRESOL_TIMING           (SCIP_PRESOLTIMING_EXHAUSTIVE) /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_NUMMINPAIRS         1024     /**< minimal number of pair comparisons */
 #define DEFAULT_NUMMAXPAIRS      1048576     /**< maximal number of pair comparisons */
@@ -2072,7 +2072,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       /* 1.stage: search dominance relations of parallel columns
        *          within equalities and ranged rows
        */
-      if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
+      if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
       {
          SCIP_CALL( detectParallelCols(scip, matrix, pclass, varineq) );
          SCIPsortIntInt(pclass, colidx, ncols);

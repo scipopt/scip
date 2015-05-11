@@ -12411,7 +12411,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 
       /* force presolving the constraint in the initial round */
       if( nrounds == 0 )
-         consdata->presolvedtiming = FALSE;
+         consdata->presolvedtiming = 0;
       else if( consdata->presolvedtiming >= presoltiming )
          continue;
 
