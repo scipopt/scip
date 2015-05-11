@@ -30,6 +30,8 @@
 #ifdef WITH_SCIPDEF
 #include "scip/def.h"
 #include "scip/pub_message.h"
+#else
+#include <stdint.h>
 #endif
 
 #include "blockmemshell/memory.h"
@@ -79,6 +81,13 @@
 #endif
 #else
 #define SIZET_FORMAT SCIP_SIZET_FORMAT
+#endif
+
+#ifndef SCIP_MAXMEMSIZE
+/* we take SIZE_MAX / 2 to detect negative sizes which got a very large value when casting to (unsigned) size_t */
+#define MAXMEMSIZE SIZE_MAX / 2
+#else
+#define MAXMEMSIZE SCIP_MAXMEMSIZE
 #endif
 
 
@@ -310,10 +319,10 @@ void* BMSallocClearMemory_call(
    debugMessage("calloc %"SIZET_FORMAT" elements of %"SIZET_FORMAT" bytes [%s:%d]\n", num, typesize, filename, line);
 
 #ifndef NDEBUG
-   if ( num > (size_t)(UINT_MAX / typesize) )
+   if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %u.\n", UINT_MAX);
+      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -347,10 +356,10 @@ void* BMSallocMemory_call(
    debugMessage("malloc %"SIZET_FORMAT" bytes [%s:%d]\n", size, filename, line);
 
 #ifndef NDEBUG
-   if ( size > (size_t)(UINT_MAX) )
+   if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %u.\n", UINT_MAX);
+      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -385,10 +394,10 @@ void* BMSallocMemoryArray_call(
    debugMessage("malloc %"SIZET_FORMAT" elements of %"SIZET_FORMAT" bytes [%s:%d]\n", num, typesize, filename, line);
 
 #ifndef NDEBUG
-   if ( num > (size_t) (UINT_MAX / typesize) )
+   if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %u.\n", UINT_MAX);
+      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -426,10 +435,10 @@ void* BMSreallocMemory_call(
 #endif
 
 #ifndef NDEBUG
-   if ( size > (size_t)(UINT_MAX) )
+   if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %u.\n", UINT_MAX);
+      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -468,10 +477,10 @@ void* BMSreallocMemoryArray_call(
 #endif
 
 #ifndef NDEBUG
-   if ( num > (size_t)(UINT_MAX / typesize) )
+   if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %u.\n", UINT_MAX);
+      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -1069,7 +1078,7 @@ int createChunk(
    /* create new chunk */
    assert(BMSisAligned(sizeof(CHUNK)));
    assert( chkmem->elemsize < INT_MAX / storesize );
-   assert( sizeof(CHUNK) < UINT_MAX - (size_t)(storesize * chkmem->elemsize) ); /*lint !e571 !e647*/
+   assert( sizeof(CHUNK) < MAXMEMSIZE - (size_t)(storesize * chkmem->elemsize) ); /*lint !e571 !e647*/
    BMSallocMemorySize(&newchunk, sizeof(CHUNK) + storesize * chkmem->elemsize);
    if( newchunk == NULL )
       return FALSE;
@@ -1880,10 +1889,10 @@ void* BMSallocBlockMemory_call(
    )
 {
 #ifndef NDEBUG
-   if ( size > (size_t)(UINT_MAX) )
+   if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate block of size exceeding %u.\n", UINT_MAX);
+      printError("Tried to allocate block of size exceeding %u.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -1901,10 +1910,10 @@ void* BMSallocBlockMemoryArray_call(
    )
 {
 #ifndef NDEBUG
-   if ( num > (size_t)(UINT_MAX / typesize) )
+   if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate block of size exceeding %u.\n", UINT_MAX);
+      printError("Tried to allocate block of size exceeding %u.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -1949,10 +1958,10 @@ void* BMSreallocBlockMemory_call(
    }
 
 #ifndef NDEBUG
-   if ( newsize > (size_t)(UINT_MAX) )
+   if ( newsize > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate block of size exceeding %u.\n", UINT_MAX);
+      printError("Tried to allocate block of size exceeding %u.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -1990,10 +1999,10 @@ void* BMSreallocBlockMemoryArray_call(
    }
 
 #ifndef NDEBUG
-   if ( newnum > (size_t)(UINT_MAX / typesize) )
+   if ( newnum > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate array of size exceeding %u.\n", UINT_MAX);
+      printError("Tried to allocate array of size exceeding %u.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -2687,10 +2696,10 @@ void* BMSallocBufferMemory_call(
    )
 {
 #ifndef NDEBUG
-   if ( size > (size_t)(UINT_MAX) )
+   if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate buffer of size exceeding %u.\n", UINT_MAX);
+      printError("Tried to allocate buffer of size exceeding %u.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -2708,10 +2717,10 @@ void* BMSallocBufferMemoryArray_call(
    )
 {
 #ifndef NDEBUG
-   if ( num > (size_t)(UINT_MAX / typesize) )
+   if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate buffer of size exceeding %u.\n", UINT_MAX);
+      printError("Tried to allocate buffer of size exceeding %u.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -2750,15 +2759,6 @@ void* BMSreallocBufferMemory_work(
    void* newptr;
 #ifndef SCIP_NOBUFFERMEM
    size_t bufnum;
-#endif
-
-#ifndef NDEBUG
-   if ( size > (size_t)(UINT_MAX) )
-   {
-      printErrorHeader(filename, line);
-      printError("Tried to allocate buffer of size exceeding %u.\n", UINT_MAX);
-      return NULL;
-   }
 #endif
 
 #ifndef SCIP_NOBUFFERMEM
@@ -2828,10 +2828,10 @@ void* BMSreallocBufferMemory_call(
    )
 {
 #ifndef NDEBUG
-   if ( size > (size_t)(UINT_MAX) )
+   if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate buffer of size exceeding %u.\n", UINT_MAX);
+      printError("Tried to allocate buffer of size exceeding %u.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -2850,10 +2850,10 @@ void* BMSreallocBufferMemoryArray_call(
    )
 {
 #ifndef NDEBUG
-   if ( num > (size_t)(UINT_MAX / typesize) )
+   if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate array of size exceeding %u.\n", UINT_MAX);
+      printError("Tried to allocate array of size exceeding %u.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
