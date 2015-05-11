@@ -13870,9 +13870,9 @@ SCIP_Real SCIPvarCalcPscostConfidenceBound(
       else
          count = SCIPvarGetPseudocostCount(var, dir);
       /* assertion is valid because variance is positive */
-      assert(count > 1.9);
+      assert(count >= 1.9);
 
-      confidencebound /= count;
+      confidencebound /= count; /*lint !e414 division by zero can obviously not occur */
       confidencebound = sqrt(confidencebound);
 
       /* the actual, underlying distribution of the mean is a student-t-distribution with degrees of freedom equal to
@@ -13912,32 +13912,33 @@ SCIP_Bool SCIPvarIsPscostRelerrorReliable(
    relerrorup = 0.0;
 
    /* Pseudo costs relative error can only be reliable if both directions have been tried at least twice */
-   if( size < 1.5 )
+   if( size <= 1.9 )
       return FALSE;
 
    /* use the relative error between the current mean pseudo cost value of the candidate and its upper
     * confidence interval bound at confidence level of 95% for individual variable reliability.
     * this is only possible if we have at least 2 measurements and therefore a valid variance estimate.
     */
-   if( downsize >= 1.5 )
+   if( downsize >= 1.9 )
    {
       SCIP_Real normval;
 
       relerrordown = SCIPvarCalcPscostConfidenceBound(var, set, SCIP_BRANCHDIR_DOWNWARDS, TRUE, clevel);
-      normval = MAX(1.0, SCIPvarGetPseudocostCurrentRun(var, stat, -1.0));
+      normval = SCIPvarGetPseudocostCurrentRun(var, stat, -1.0);
+      normval = MAX(1.0, normval);
 
       relerrordown /= normval;
    }
    else
       relerrordown = 0.0;
 
-   if( upsize >= 2.0 )
+   if( upsize >= 1.9 )
    {
       SCIP_Real normval;
 
       relerrorup = SCIPvarCalcPscostConfidenceBound(var, set, SCIP_BRANCHDIR_UPWARDS, TRUE, clevel);
-      normval = MAX(1.0, SCIPvarGetPseudocostCurrentRun(var, stat, +1.0));
-
+      normval = SCIPvarGetPseudocostCurrentRun(var, stat, +1.0);
+      normval = MAX(1.0, normval);
       relerrorup /= normval;
    }
    else
@@ -13996,7 +13997,7 @@ SCIP_Bool SCIPvarSignificantPscostDifference(
    county = SCIPvarGetPseudocostCount(vary, dir);
 
    /* if not at least 2 measurements were taken, return FALSE */
-   if( countx < 1.5 || county < 1.5 )
+   if( countx <= 1.9 || county <= 1.9 )
       return FALSE;
 
    realdirection = (dir == SCIP_BRANCHDIR_DOWNWARDS ? -1.0 : 1.0);
@@ -14054,7 +14055,7 @@ SCIP_Bool SCIPvarPscostThresholdProbabilityTest(
    count = SCIPvarGetPseudocostCount(var, dir);
 
    /* if not at least 2 measurements were taken, return FALSE */
-   if( count < 1.5 )
+   if( count <= 1.9 )
       return FALSE;
 
    realdirection = (dir == SCIP_BRANCHDIR_DOWNWARDS ? -1.0 : 1.0);
