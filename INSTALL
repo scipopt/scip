@@ -291,6 +291,9 @@ make[1]: Entering directory `/sw/scip'
 
 make[1]: Leaving directory `/sw/scip'
 ---
+   Note on how to (locally) install CLP:
+    - create a target directory for the installation, e.g. "clp-build" (this is the directory SCIP has to link to)
+    - from within "clp-build", run the "configure" script of coin-Clp, followed by "make install"
 
 
    If you ever need to modify the soft-link targets, delete the soft-links in the "lib/" subdirectory
