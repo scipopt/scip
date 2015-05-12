@@ -72,8 +72,8 @@ public:
    /** frequency for calling propagator */
    const int scip_presol_maxrounds_;
 
-   /** should presolving of propagator be delayed, if other preprocessers found reductions? */
-   const SCIP_Bool scip_presol_delay_;
+   /**< timing mask of the propagator's presolving method */
+   const SCIP_Bool scip_presol_timing_;
 
 
    /** default constructor */
@@ -87,7 +87,7 @@ public:
       unsigned int       timingmask,         /**< positions in the node solving loop where propagator should be executed */
       int                presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
       int                presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
-      SCIP_Bool          presoldelay         /**< should presolving be delayed, if other presolvers found reductions? */
+      SCIP_Bool          presoltiming        /**< timing mask of the propagator's presolving method */
       )
       : scip_(scip),
         scip_name_(0),
@@ -98,7 +98,7 @@ public:
         scip_timingmask_(timingmask),
         scip_presol_priority_(presolpriority),
         scip_presol_maxrounds_(presolmaxrounds),
-        scip_presol_delay_(presoldelay)
+        scip_presol_timing_(presoltiming)
    {
       /* the macro SCIPduplicateMemoryArray does not need the first argument: */
       SCIP_CALL_ABORT( SCIPduplicateMemoryArray(scip_, &scip_name_, name, std::strlen(name)+1) );
