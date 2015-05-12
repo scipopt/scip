@@ -385,7 +385,8 @@ SCIP_RETCODE SCIPpricerRedcost(
 SCIP_RETCODE SCIPpricerFarkas(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob                /**< transformed problem */
+   SCIP_PROB*            prob,               /**< transformed problem */
+   SCIP_RESULT*          result              /**< result of the pricing process */
    )
 {
    int oldnvars;
@@ -407,7 +408,7 @@ SCIP_RETCODE SCIPpricerFarkas(
    SCIPclockStart(pricer->pricerclock, set);
 
    /* call external method */
-   SCIP_CALL( pricer->pricerfarkas(set->scip, pricer) );
+   SCIP_CALL( pricer->pricerfarkas(set->scip, pricer, result) );
 
    /* stop timing */
    SCIPclockStop(pricer->pricerclock, set);
@@ -447,7 +448,7 @@ SCIP_RETCODE SCIPpricerExec(
 
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
-      SCIP_CALL( SCIPpricerFarkas(pricer, set, prob) );
+      SCIP_CALL( SCIPpricerFarkas(pricer, set, prob, result) );
    }
    else
    {

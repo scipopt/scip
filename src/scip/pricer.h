@@ -143,7 +143,8 @@ extern
 SCIP_RETCODE SCIPpricerFarkas(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob                /**< transformed problem */
+   SCIP_PROB*            prob,               /**< transformed problem */
+   SCIP_RESULT*          result              /**< result of the pricing process */
    );
 
 /** depending on the LP's solution status, calls reduced cost or Farkas pricing method of variable pricer */

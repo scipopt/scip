@@ -1934,7 +1934,7 @@ SCIP_RETCODE SCIPpriceLoop(
       mustprice = !lp->flushed || (transprob->ncolvars != *npricedcolvars);
       *mustsepa = *mustsepa || !lp->flushed;
 
-      /* after adding columns, the LP should be primal feasible such that primal simplex is applicable;
+      /* after adding columns, the LP should be primal feasible such that the primal simplex is applicable;
        * if LP was infeasible, we have to use dual simplex
        */
       SCIPdebugMessage("pricing: solve LP\n");
@@ -3873,7 +3873,7 @@ SCIP_RETCODE solveNode(
       assert(SCIPsepastoreGetNCuts(sepastore) == 0);
 
       /* The enforcement detected no infeasibility, so, no branching was performed,
-       * but the pricing was aborted and the current feasible solution does not have to be the 
+       * but the pricing was aborted and the current feasible solution does not have to be the
        * best solution in the current subtree --> we have to do a pseudo branching,
        * so we set infeasible TRUE and add the current solution to the solution pool
        */
