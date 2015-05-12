@@ -410,6 +410,18 @@ public:
 
       return SCIP_OKAY;
    }
+
+   /** constraint handler method to suggest dive bound changes during the generic diving algorithm
+    *
+    *  @see SCIP_DECL_CONSGETDIVEBDCHGS(x) in @ref type_cons.h
+    */
+   virtual SCIP_DECL_CONSGETDIVEBDCHGS(scip_getdivebdchgs)
+   {  /*lint --e{715}*/
+
+      (*success) = FALSE;
+
+      return SCIP_OKAY;
+   }
 };
 
 } /* namespace scip */

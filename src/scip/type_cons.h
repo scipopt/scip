@@ -819,7 +819,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - success         : pointer to store whether the constraint handler succeeded to determine dive bound changes
  *  - infeasible      : pointer to store whether the constraint handler detected an infeasibility in the local node
  */
-#define SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_DIVESET* diveset, \
+#define SCIP_DECL_CONSGETDIVEBDCHGS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_DIVESET* diveset, \
       SCIP_SOL* sol, SCIP_Bool* success, SCIP_Bool* infeasible)
 
 #ifdef __cplusplus

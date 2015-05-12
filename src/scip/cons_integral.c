@@ -178,7 +178,7 @@ SCIP_DECL_CONSLOCK(consLockIntegral)
 
 /** constraint handler method to suggest dive bound changes during the generic diving algorithm */
 static
-SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIntegral)
+SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
    SCIP_Real solval;
@@ -271,7 +271,7 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyIntegral, consCopyIntegral) );
-   SCIP_CALL( SCIPsetConshdlrDetermDiveBdChgs(scip, conshdlr, conshdlrDetermDiveBdChgsIntegral) );
+   SCIP_CALL( SCIPsetConshdlrGetDiveBdChgs(scip, conshdlr, consGetDiveBdChgsIntegral) );
 
    return SCIP_OKAY;
 }

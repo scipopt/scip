@@ -577,6 +577,22 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsObj)
 
    return SCIP_OKAY;
 }
+
+/** constraint handler method to suggest dive bound changes during the generic diving algorithm */
+static
+SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsObj)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   assert(conshdlrdata->objconshdlr != NULL);
+
+   /* call virtual method of conshdlr object */
+   SCIP_CALL( conshdlrdata->objconshdlr->scip_getdivebdchgs(scip, conshdlr, diveset, sol, success, infeasible) );
+
+   return SCIP_OKAY;
+}
 }
 
 
@@ -618,7 +634,7 @@ SCIP_RETCODE SCIPincludeObjConshdlr(
          consActiveObj, consDeactiveObj,
          consEnableObj, consDisableObj, consDelVarsObj,
          consPrintObj, consCopyObj, consParseObj,
-         consGetVarsObj, consGetNVarsObj, conshdlrdata) ); /*lint !e429*/
+         consGetVarsObj, consGetNVarsObj, consGetDiveBdChgsObj, conshdlrdata) ); /*lint !e429*/
 
    return SCIP_OKAY; /*lint !e429*/
 }

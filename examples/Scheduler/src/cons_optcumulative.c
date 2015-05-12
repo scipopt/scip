@@ -4015,7 +4015,7 @@ SCIP_RETCODE SCIPincludeConshdlrOptcumulative(
          consActiveOptcumulative, consDeactiveOptcumulative,
          consEnableOptcumulative, consDisableOptcumulative,
          consDelvarsOptcumulative, consPrintOptcumulative, consCopyOptcumulative, consParseOptcumulative,
-         NULL, NULL,
+         NULL, NULL, NULL,
          conshdlrdata) );
 
    /* add optcumulative constraint handler parameters */

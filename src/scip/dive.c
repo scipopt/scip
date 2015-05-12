@@ -106,7 +106,7 @@ SCIP_RETCODE selectNextDiving(
    /* we use diving solution enforcement provided by the constraint handlers */
    if( !onlylpbranchcands )
    {
-      SCIP_CALL( SCIPdetermineDiveBoundChanges(scip, diveset, worksol, enfosuccess, infeasible) );
+      SCIP_CALL( SCIPgetDiveBoundChanges(scip, diveset, worksol, enfosuccess, infeasible) );
    }
    else
    {

@@ -114,6 +114,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
    SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
    SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
+   SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)), /**< constraint handler diving solution enforcement method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
@@ -236,7 +237,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
 
 /** calls diving solution enforcement callback of constraint handler, if it exists */
 extern
-SCIP_RETCODE SCIPconshdlrDetermineDiveBoundChanges(
+SCIP_RETCODE SCIPconshdlrGetDiveBoundChanges(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_DIVESET*         diveset,            /**< diving settings to control scoring */
@@ -506,9 +507,9 @@ void SCIPconshdlrSetGetNVars(
 
 /** sets diving enforcement method of constraint handler */
 extern
-void SCIPconshdlrSetDetermDiveBdChgs(
+void SCIPconshdlrSetGetDiveBdChgs(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS((*conshdlrdetermdivebdchgs)) /**< constraint handler diving solution enforcement method */
+   SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)) /**< constraint handler diving solution enforcement method */
    );
 
 /*
