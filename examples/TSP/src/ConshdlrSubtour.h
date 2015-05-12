@@ -41,7 +41,7 @@ public:
       )
       : ObjConshdlr(scip, "subtour", "TSP subtour elimination constraints",
          1000000, -2000000, -2000000, 1, -1, 1, 0,
-         FALSE, FALSE, FALSE, TRUE, SCIP_PROPTIMING_BEFORELP)
+         FALSE, FALSE, TRUE, SCIP_PROPTIMING_BEFORELP, SCIP_PRESOLTIMING_FAST)
    {
    }
 

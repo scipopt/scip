@@ -603,8 +603,8 @@ SCIP_DECL_HEURFREE(heurFreeOptcumulative)
 
       for( a = 0; a < heurdata->machineassignments[m]->nassignments; ++a )
       {
-         SCIPfreeBlockMemoryArray(scip, &(heurdata->machineassignments[m]->vars[a]), heurdata->machines[m])
-         SCIPfreeBlockMemoryArray(scip, &(heurdata->machineassignments[m]->solvals[a]), heurdata->machines[m])
+         SCIPfreeBlockMemoryArray(scip, &(heurdata->machineassignments[m]->vars[a]), heurdata->machines[m]);
+         SCIPfreeBlockMemoryArray(scip, &(heurdata->machineassignments[m]->solvals[a]), heurdata->machines[m]);
       }
 
       SCIPfreeBlockMemoryArray(scip, &(heurdata->machineassignments[m]->nones), heurdata->machineassignments[m]->sassignments);
