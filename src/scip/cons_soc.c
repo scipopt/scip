@@ -3011,6 +3011,15 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       if ( ( SCIPisZero(scip, SCIPgetRhsQuadratic(scip, cons)) && SCIPisGT(scip, bilincoef, 0.0) ) ||
            ( SCIPisZero(scip, SCIPgetLhsQuadratic(scip, cons)) && SCIPisLT(scip, bilincoef, 0.0) ) )
          return SCIP_OKAY;
+
+      /* check that bilinear terms do not appear in the rest */
+      quadterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
+      for (i = 0; i < nquadvars; ++i)
+      {
+         term = &quadterms[i];
+         if ( term->var == bilinvar1 || term->var == bilinvar2 )
+            return SCIP_OKAY;
+      }
    }
 
    /* reserve space: nquadvars for orignal constraints + one auxiliary variables for hyberbolic case */
