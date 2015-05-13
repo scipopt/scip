@@ -8922,10 +8922,10 @@ static
 SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
 {
    SCIP_DIGRAPH* conflictgraph;
-   SCIP_VAR* bestvar;
-   SCIP_Bool bestvarfixneigh;
+   SCIP_VAR* bestvar = NULL;
+   SCIP_Bool bestvarfixneigh = FALSE;
    SCIP_Real bestscore = SCIP_REAL_MIN;
-   int bestnode;
+   int bestnode = -1;
    int nsos1vars;
    int v;
 
@@ -8934,18 +8934,16 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( diveset != NULL );
    assert( success != NULL );
+   assert( infeasible != NULL );
 
    *infeasible = FALSE;
+   *success = FALSE;
 
    /* get number of SOS1 variables */
    nsos1vars = SCIPgetNSOS1Vars(conshdlr);
 
    /* get conflict graph of SOS1 constraints */
    conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
-
-   bestvar = NULL;
-   bestnode = -1;
-   bestvarfixneigh = FALSE;
 
    /* loop over SOS1 variables  */
    for (v = 0; v < nsos1vars; ++v)
@@ -8970,8 +8968,8 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
             bound = SCIPnodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, v);
 
          /* ensure finiteness */
-         bound = MIN(10E05, REALABS(bound));/*lint !e666*/
-         fracval = MIN(10E05, REALABS(solval));/*lint !e666*/
+         bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound));/*lint !e666*/
+         fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval));/*lint !e666*/
          assert( ! SCIPisInfinity(scip, bound) );
          assert( ! SCIPisInfinity(scip, fracval) );
          assert( SCIPisFeasPositive(scip, bound + SCIPepsilon(scip)) );
@@ -8980,8 +8978,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
          fracval /= (bound + SCIPepsilon(scip));
 
          /* should SOS1 variables be scored by the diving heuristics specific score function;
-          *  otherwise use the score function of the SOS1 constraint handler
-          */
+          *  otherwise use the score function of the SOS1 constraint handler */
          if ( SCIPdivesetUseSpecificSOS1Score(diveset) )
          {
             SCIP_Bool roundup;
