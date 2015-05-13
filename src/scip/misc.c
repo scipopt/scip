@@ -5819,6 +5819,22 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
    return SCIP_OKAY;
 }
 
+/** sets the number of successors to a given value */
+SCIP_RETCODE SCIPdigraphSetNSuccessors(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node,               /**< node for which the number of successors has to be changed */
+   int                   nsuccessors         /**< new number of successors */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+
+   digraph->nsuccessors[node] = nsuccessors;
+
+   return SCIP_OKAY;
+}
+
 /** returns the number of nodes of the given digraph */
 int SCIPdigraphGetNNodes(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
@@ -7887,6 +7903,159 @@ SCIP_RETCODE SCIPgetRandomSubset(
    return SCIP_OKAY;
 }
 
+
+/*
+ * Arrays
+ */
+
+/* computes set intersection (duplicates removed) of two arrays that are ordered ascendingly */
+SCIP_RETCODE SCIPcomputeArraysIntersection(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   )
+{
+   int cnt = 0;
+   int k = 0;
+   int i;
+   int j;
+
+   assert( array1 != NULL );
+   assert( array2 != NULL );
+   assert( intersectarray != NULL );
+   assert( nintersectarray != NULL );
+
+   /* determine intersection of array1 and array2 */
+   for (j = 0; j < narray1; ++j)
+   {
+      assert( j == 0 || array1[j] >= array1[j-1] );
+
+      /* avoid multiple enumeration */
+      if ( j+1 < narray1 && array1[j] == array1[j+1])
+         continue;
+
+      for (i = k; i < narray2; ++i)
+      {
+         assert( i == 0 || array2[i] >= array2[i-1] );
+
+         if ( array2[i] > array1[j] )
+         {
+            k = i;
+            break;
+         }
+         else if ( array2[i] == array1[j] )
+         {
+            intersectarray[cnt++] = array2[i];
+            k = i + 1;
+            break;
+         }
+      }
+   }
+   *nintersectarray = cnt;
+
+   return SCIP_OKAY;
+}
+
+
+/* computes set difference (duplicates removed) of two arrays that are ordered ascendingly */
+SCIP_RETCODE SCIPcomputeArraysSetminus(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   )
+{
+   int entry1;
+   int entry2;
+   int cnt;
+   int v;
+   int j;
+   int k;
+
+   assert( array1 != NULL );
+   assert( array2 != NULL );
+   assert( setminusarray != NULL );
+   assert( nsetminusarray != NULL );
+
+   k = 0;
+   cnt = 0;
+   for (v = 0; v < narray1; ++v)
+   {
+      assert( v == 0 || array1[v] >= array1[v-1] );
+
+      /* avoid multiple enumeration */
+      if ( v+1 < narray1 && array1[v] == array1[v+1])
+         continue;
+
+      entry1 = array1[v];
+      for (j = k; j < narray2; ++j)
+      {
+         assert( j == 0 || array2[j] >= array2[j-1] );
+
+         entry2 = array2[j];
+         if ( entry2 > entry1 )
+         {
+            /* array1[v] does not appear in array2 list. Add entry to setminus array and go to next vertex in array1 */
+            setminusarray[cnt++] = entry1;
+            k = j;
+            break;
+         }
+         else if ( entry2 == entry1 )
+         {
+            /* vertices are equal */
+            k = j + 1;
+            break;
+         }
+      }
+
+      /* if we have reached the end of array2 */
+      if ( j == narray2 )
+      {
+         int i;
+
+         for (i = v; i < narray1; ++i)
+         {
+            assert( i == 0 || array1[i] >= array1[i-1] );
+
+            /* avoid multiple enumeration */
+            if ( i+1 < narray1 && array1[i] == array1[i+1])
+               continue;
+
+            setminusarray[cnt++] = array1[i];
+         }
+         break;
+      }
+      else if ( k == narray2 )
+      {
+         int i;
+
+         for (i = v+1; i < narray1; ++i)
+         {
+            assert( i == 0 || array1[i] >= array1[i-1] );
+
+            /* avoid multiple enumeration */
+            if ( i+1 < narray1 && array1[i] == array1[i+1])
+               continue;
+
+            setminusarray[cnt++] = array1[i];
+         }
+         break;
+      }
+   }
+   /* store size of setminus array */
+   *nsetminusarray = cnt;
+
+   return SCIP_OKAY;
+}
 
 
 /*

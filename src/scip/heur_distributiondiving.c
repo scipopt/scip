@@ -58,6 +58,8 @@
 #define DEFAULT_LPSOLVEFREQ           1 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
+#define DEFAULT_SPECIFICSOS1SCORE FALSE /**< should SOS1 variables be scored by the diving heuristics specific score function;
+                                         *   otherwise use the score function of the SOS1 constraint handler */
 
 #define SCOREPARAM_VALUES "lhwvd" /**< the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p.,
                                    *   'v'otes lowest c.p., votes highest c.p.('w'), 'r'evolving */
@@ -962,6 +964,10 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
 
+   /* if there are no integer variables (note that, e.g., SOS1 variables may be present) */
+   if ( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) < 1 && ! DEFAULT_SPECIFICSOS1SCORE )
+      return SCIP_OKAY;
+
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
@@ -1066,7 +1072,7 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
          DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT, DEFAULT_MAXDIVEUBQUOT,
          DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL,
          DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
-         DEFAULT_MAXLPITEROFS, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS,
+         DEFAULT_MAXLPITEROFS, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DEFAULT_SPECIFICSOS1SCORE,
          divesetGetScoreDistributiondiving) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/scoreparam",

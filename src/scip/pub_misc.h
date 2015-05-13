@@ -928,6 +928,14 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
    void*                 data                /**< data that should be stored for the arc; or NULL */
    );
 
+/** sets the number of successors to a given value */
+EXTERN
+SCIP_RETCODE SCIPdigraphSetNSuccessors(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node,               /**< node for which the number of successors has to be changed */
+   int                   nsuccessors         /**< new number of successors */
+   );
+
 /** returns the number of nodes of the given digraph */
 EXTERN
 int SCIPdigraphGetNNodes(
@@ -5354,7 +5362,50 @@ SCIP_RETCODE SCIPgetRandomSubset(
    unsigned int          randseed            /**< seed value for random generator */
    );
 
+
+
 /**@} */
+
+
+/*
+ * Arrays
+ */
+
+/**@defgroup Arrays Arrays
+ *
+ *@{
+ */
+
+
+/* computes set intersection (duplicates removed) of two arrays that are ordered ascendingly */
+EXTERN
+SCIP_RETCODE SCIPcomputeArraysIntersection(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   );
+
+/* computes set difference (duplicates removed) of two arrays that are ordered ascendingly */
+EXTERN
+SCIP_RETCODE SCIPcomputeArraysSetminus(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   );
+
+
+/**@} */
+
 
 /*
  * Strings
