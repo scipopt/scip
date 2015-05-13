@@ -52,6 +52,7 @@ features:
 - new disjunctive cut separator for SOS1 constraints
 - new presolving components for SOS1 constraints, including bound tightening and clique extension
 - added method to propagate implications of SOS1 variables
+- convex quadratic contraints can now generate gradient cuts which are supporting to the feasible region
 
 parameters:
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
@@ -138,6 +139,8 @@ parameters:
   root node
 - new parameter "separating/disjunctive/maxconsdelay" to delay separation of disjunctive cuts if number of SOS1 constraints is larger than 
   predefined value
+- new parameter "constraints/quadratic/gaugecuts" to enable convex quadratics to generate gradients cuts which are supporting
+- new parameter "constraints/quadratic/advanced/interiorcomputation" to select the way of computing and interior point for gauge cuts
 
 performance improvements:
 - adjusted (hard) diving heuristics to solve fewer LPs at shallow depths of the tree; after an LP was solved,
