@@ -62,6 +62,9 @@
  *
  *
  * @todo Possibly allow to generate local cuts via strengthened local cuts (would need to modified coefficients of rows).
+ *
+ * @todo Check whether we can avoid turning off multi-aggregation (it is sometimes possible to fix a multi-aggregated
+ * variable to 0 by fixing the aggregating variables to 0).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -93,6 +96,8 @@
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
+#define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_MEDIUM
 
 /* adjacency matrix */
 #define DEFAULT_MAXSOSADJACENCY   50000 /**< do not create an adjacency matrix if number of SOS1 variables is larger than predefined value
@@ -139,12 +144,12 @@
 #define DEFAULT_MAXIMPLCUTS          50 /**< maximal number of implied bound cuts separated per branching node */
 #define DEFAULT_MAXIMPLCUTSROOT     150 /**< maximal number of implied bound cuts separated per iteration in the root node */
 
-#define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
-#define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_MEDIUM
-
 /* event handler properties */
 #define EVENTHDLR_NAME         "SOS1"
 #define EVENTHDLR_DESC         "bound change event handler for SOS1 constraints"
+
+/* defines */
+#define DIVINGCUTOFFVALUE     1e6
 
 
 /** constraint data for SOS1 constraints */
@@ -2665,7 +2670,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          /* if variable is not already covered by an already known clique cover */
          if ( ! coveredvars[v] )
          {
-            SCIP_CALL( SCIPallocBufferArray(scip, &(cliquecovers[ncliquecovers]), ntrafolinvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &(cliquecovers[ncliquecovers]), ntrafolinvars) ); /*lint !e866*/
             SCIP_CALL( computeVarsCoverSOS1(scip, conflictgraph, conflictgraphlin, trafolinvars, coveredvars, cliquecovers[ncliquecovers], &(cliquecoversizes[ncliquecovers]), v, FALSE) );
             ++ncliquecovers;
          }
@@ -3594,7 +3599,7 @@ SCIP_RETCODE initImplGraphSOS1(
    SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix, nsos1vars) );
 
    for (i = 0; i < nsos1vars; ++i)
-      SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix[i], i+1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix[i], i+1) ); /*lint !e866*/
 
    /* create adjacency matrix */
    for (i = 0; i < nsos1vars; ++i)
@@ -4042,13 +4047,12 @@ SCIP_RETCODE performStrongbranchSOS1(
                                               *   (only possible if nfixingsop = 1) */
    int*                  domainfixings,      /**< vertices that can be used to reduce the domain (should have size equal to number of variables) */
    int*                  ndomainfixings,     /**< pointer to store number of vertices that can be used to reduce the domain, could be filled by earlier calls */
-   SCIP_Bool*            reddomain,          /**< pointer to store if domain can be reduced */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether branch is infeasible */
    SCIP_Real*            objval,             /**< pointer to store objective value of LP with fixed variables (SCIP_INVALID if reddomain = TRUE or lperror = TRUE) */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error or a strange solution status occurred */
    )
 {
    SCIP_LPSOLSTAT solstat;
-   SCIP_Bool infeasible = FALSE;
    int i;
 
    assert( scip != NULL );
@@ -4061,13 +4065,13 @@ SCIP_RETCODE performStrongbranchSOS1(
    assert( domainfixings != NULL );
    assert( ndomainfixings != NULL );
    assert( *ndomainfixings >= 0 );
-   assert( reddomain != NULL );
+   assert( infeasible != NULL );
    assert( objval != NULL );
    assert( lperror != NULL );
 
    *objval = SCIP_INVALID; /* for debugging */
    *lperror = FALSE;
-   *reddomain = FALSE;
+   *infeasible = FALSE;
 
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -4099,13 +4103,13 @@ SCIP_RETCODE performStrongbranchSOS1(
    }
 
    /* injects variable fixings into current probing node */
-   for (i = 0; i < nfixingsexec && ! infeasible; ++i)
+   for (i = 0; i < nfixingsexec && ! *infeasible; ++i)
    {
       SCIP_VAR* var;
 
       var = SCIPnodeGetVarSOS1(conflictgraph, fixingsexec[i]);
       if ( SCIPisFeasGT(scip, SCIPvarGetLbLocal(var), 0.0) || SCIPisFeasLT(scip, SCIPvarGetUbLocal(var), 0.0) )
-         infeasible = TRUE;
+         *infeasible = TRUE;
       else
       {
          SCIP_CALL( SCIPfixVarProbing(scip, var, 0.0) );
@@ -4113,12 +4117,12 @@ SCIP_RETCODE performStrongbranchSOS1(
    }
 
    /* apply domain propagation */
-   if ( ! infeasible )
+   if ( ! *infeasible )
    {
-      SCIP_CALL( SCIPpropagateProbing(scip, 0, &infeasible, NULL) );
+      SCIP_CALL( SCIPpropagateProbing(scip, 0, infeasible, NULL) );
    }
 
-   if ( infeasible )
+   if ( *infeasible )
       solstat = SCIP_LPSOLSTAT_INFEASIBLE;
    else
    {
@@ -4137,7 +4141,7 @@ SCIP_RETCODE performStrongbranchSOS1(
    /* if objective limit was reached, then the domain can be reduced */
    if ( solstat == SCIP_LPSOLSTAT_OBJLIMIT || solstat == SCIP_LPSOLSTAT_INFEASIBLE )
    {
-      *reddomain = TRUE;
+      *infeasible = TRUE;
 
       for (i = 0; i < nfixingsop; ++i)
          domainfixings[(*ndomainfixings)++] = fixingsop[i];
@@ -4280,8 +4284,8 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
       /* if variable with index 'vertex' does not violate any complementarity in its neighborhood for the current LP relaxation solution */
       if ( SCIPisPositive(scip, branchpriors[j]) )
       {
-         SCIP_Bool reddomain1;
-         SCIP_Bool reddomain2;
+         SCIP_Bool infeasible1;
+         SCIP_Bool infeasible2;
          SCIP_Bool lperror;
          SCIP_Real objval1;
          SCIP_Real objval2;
@@ -4293,18 +4297,18 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
 
          /* get information for first strong branching execution */
          SCIP_CALL( performStrongbranchSOS1(scip, conflictgraph, fixingsnode1, nfixingsnode1, fixingsnode2, nfixingsnode2,
-               inititer, conshdlrdata->fixnonzero, domainfixings, &ndomainfixings, &reddomain1, &objval1, &lperror) );
+               inititer, conshdlrdata->fixnonzero, domainfixings, &ndomainfixings, &infeasible1, &objval1, &lperror) );
          if ( lperror )
             continue;
 
          /* get information for second strong branching execution */
          SCIP_CALL( performStrongbranchSOS1(scip, conflictgraph, fixingsnode2, nfixingsnode2, fixingsnode1, nfixingsnode1,
-               inititer, FALSE, domainfixings, &ndomainfixings, &reddomain2, &objval2, &lperror) );
+               inititer, FALSE, domainfixings, &ndomainfixings, &infeasible2, &objval2, &lperror) );
          if ( lperror )
             continue;
 
          /* if both subproblems are infeasible */
-         if ( reddomain1 && reddomain2 )
+         if ( infeasible1 && infeasible2 )
          {
             SCIPdebugMessage("detected cutoff.\n");
 
@@ -4318,7 +4322,7 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
 
             return SCIP_OKAY;
          }
-         else if ( ! reddomain1 && ! reddomain2 ) /* both subproblems are feasible */
+         else if ( ! infeasible1 && ! infeasible2 ) /* both subproblems are feasible */
          {
             /* if domain has not been reduced in this for-loop */
             if ( ndomainfixings == 0 )
@@ -4835,6 +4839,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                            if ( ! SCIPisInfinity(scip, -SCIPvarGetLbLocal(var1)) )
                               feas += solval1/SCIPvarGetLbLocal(var1);
                         }
+
                         if ( SCIPisFeasPositive(scip, solval2) )
                         {
                            assert( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var2)));
@@ -4863,6 +4868,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                            if ( ! SCIPisInfinity(scip, -lbboundcoef1) )
                               feas += solval1/lbboundcoef1;
                         }
+
                         if ( SCIPisFeasPositive(scip, solval2) )
                         {
                            assert( SCIPisFeasPositive(scip, ubboundcoef2));
@@ -4907,7 +4913,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                         if ( takebound )
                         {
                            /* create constraint with right hand side = 0.0 */
-                           SCIP_CALL( SCIPcreateConsLinear(scip, &conssos1, name, 0, NULL, NULL, -SCIPinfinity(scip), 0.0, TRUE, FALSE, TRUE, FALSE, TRUE,
+                           SCIP_CALL( SCIPcreateConsLinear(scip, &conssos1, name, 0, NULL, NULL, -SCIPinfinity(scip), 0.0, TRUE, FALSE, TRUE, FALSE, FALSE,
                                  TRUE, FALSE, FALSE, FALSE, FALSE) );
 
                            /* add variables */
@@ -4916,7 +4922,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                         else
                         {
                            /* create constraint with right hand side = 1.0 */
-                           SCIP_CALL( SCIPcreateConsLinear(scip, &conssos1, name, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, FALSE, TRUE, FALSE, TRUE,
+                           SCIP_CALL( SCIPcreateConsLinear(scip, &conssos1, name, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, FALSE, TRUE, FALSE, FALSE,
                                  TRUE, FALSE, FALSE, FALSE, FALSE) );
 
                            /* add variables */
@@ -6877,7 +6883,7 @@ SCIP_RETCODE getVectorOfWeights(
             else
             {
                assert( SCIPisFeasPositive(scip, sum * (SCIP_Real)nviols));
-               val = MIN(10E05, val);
+               val = MIN(1e6, val);
                weights[i] = ( val + SCIPsumepsilon(scip) ) / ( sum * (SCIP_Real)nviols + SCIPsumepsilon(scip) );
             }
          }
@@ -8917,10 +8923,10 @@ static
 SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
 {
    SCIP_DIGRAPH* conflictgraph;
-   SCIP_VAR* bestvar;
-   SCIP_Bool bestvarfixneigh;
+   SCIP_VAR* bestvar = NULL;
+   SCIP_Bool bestvarfixneigh = FALSE;
    SCIP_Real bestscore = SCIP_REAL_MIN;
-   int bestnode;
+   int bestnode = -1;
    int nsos1vars;
    int v;
 
@@ -8929,18 +8935,16 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( diveset != NULL );
    assert( success != NULL );
+   assert( infeasible != NULL );
 
    *infeasible = FALSE;
+   *success = FALSE;
 
    /* get number of SOS1 variables */
    nsos1vars = SCIPgetNSOS1Vars(conshdlr);
 
    /* get conflict graph of SOS1 constraints */
    conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
-
-   bestvar = NULL;
-   bestnode = -1;
-   bestvarfixneigh = FALSE;
 
    /* loop over SOS1 variables  */
    for (v = 0; v < nsos1vars; ++v)
@@ -8965,8 +8969,8 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
             bound = SCIPnodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, v);
 
          /* ensure finiteness */
-         bound = MIN(10E05, REALABS(bound));/*lint !e666*/
-         fracval = MIN(10E05, REALABS(solval));/*lint !e666*/
+         bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound));/*lint !e666*/
+         fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval));/*lint !e666*/
          assert( ! SCIPisInfinity(scip, bound) );
          assert( ! SCIPisInfinity(scip, fracval) );
          assert( SCIPisFeasPositive(scip, bound + SCIPepsilon(scip)) );
@@ -8975,8 +8979,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
          fracval /= (bound + SCIPepsilon(scip));
 
          /* should SOS1 variables be scored by the diving heuristics specific score function;
-          *  otherwise use the score function of the SOS1 constraint handler
-          */
+          *  otherwise use the score function of the SOS1 constraint handler */
          if ( SCIPdivesetUseSpecificSOS1Score(diveset) )
          {
             SCIP_Bool roundup;
@@ -9545,7 +9548,7 @@ int SCIPgetNSOS1Vars(
    {
       SCIPerrorMessage("not an SOS1 constraint handler.\n");
       SCIPABORT();
-      return -1;
+      return -1; /*lint !e527*/
    }
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -9569,7 +9572,7 @@ SCIP_Bool SCIPvarIsSOS1(
    {
       SCIPerrorMessage("not an SOS1 constraint handler.\n");
       SCIPABORT();
-      return FALSE;
+      return FALSE; /*lint !e527*/
    }
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );

@@ -6214,8 +6214,7 @@ SCIP_RETCODE generateCutLTI(
 }
 
 /** computes coefficients of linearization of a square term in a reference point */
-static
-void addSquareLinearization(
+void SCIPaddSquareLinearization(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             sqrcoef,            /**< coefficient of square term */
    SCIP_Real             refpoint,           /**< point where to linearize */
@@ -6281,8 +6280,7 @@ void addSquareLinearization(
 }
 
 /** computes coefficients of secant of a square term */
-static
-void addSquareSecant(
+void SCIPaddSquareSecant(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             sqrcoef,            /**< coefficient of square term */
    SCIP_Real             lb,                 /**< lower bound on variable */
@@ -6331,8 +6329,7 @@ void addSquareSecant(
 }
 
 /** computes coefficients of linearization of a bilinear term in a reference point */
-static
-void addBilinLinearization(
+void SCIPaddBilinLinearization(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
    SCIP_Real             refpointx,          /**< point where to linearize first  variable */
@@ -6378,8 +6375,7 @@ void addBilinLinearization(
 }
 
 /** computes coefficients of McCormick under- or overestimation of a bilinear term */
-static
-void addBilinMcCormick(
+void SCIPaddBilinMcCormick(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
    SCIP_Real             lbx,                /**< lower bound on first variable */
@@ -6623,7 +6619,7 @@ SCIP_RETCODE generateCutConvex(
 
       /* add linearization of square term */
       var = consdata->quadvarterms[j].var;
-      addSquareLinearization(scip, consdata->quadvarterms[j].sqrcoef, ref[j], consdata->quadvarterms[j].nadjbilin == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, success);
+      SCIPaddSquareLinearization(scip, consdata->quadvarterms[j].sqrcoef, ref[j], consdata->quadvarterms[j].nadjbilin == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, success);
 
       /* add linearization of bilinear terms that have var as first variable */
       for( k = 0; k < consdata->quadvarterms[j].nadjbilin && *success; ++k )
@@ -6639,7 +6635,7 @@ SCIP_RETCODE generateCutConvex(
          assert(var2pos < consdata->nquadvars);
          assert(consdata->quadvarterms[var2pos].var == bilinterm->var2);
 
-         addBilinLinearization(scip, bilinterm->coef, ref[j], ref[var2pos], &coef[j], &coef[var2pos], &constant, success);
+         SCIPaddBilinLinearization(scip, bilinterm->coef, ref[j], ref[var2pos], &coef[j], &coef[var2pos], &constant, success);
       }
    }
 
@@ -6720,12 +6716,14 @@ SCIP_RETCODE generateCutNonConvex(
          if( (violside == SCIP_SIDETYPE_LEFT  && sqrcoef <= 0.0) || (violside == SCIP_SIDETYPE_RIGHT && sqrcoef > 0.0) )
          {
             /* convex -> linearize */
-            addSquareLinearization(scip, sqrcoef, ref[j], SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, success);
+            SCIPaddSquareLinearization(scip, sqrcoef, ref[j], SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j],
+               &constant, success);
          }
          else
          {
             /* not convex -> secant approximation */
-            addSquareSecant(scip, sqrcoef, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j], &coef[j], &constant, success);
+            SCIPaddSquareSecant(scip, sqrcoef, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j], &coef[j],
+               &constant, success);
          }
       }
 
@@ -6742,7 +6740,7 @@ SCIP_RETCODE generateCutNonConvex(
          assert(var2pos < consdata->nquadvars);
          assert(consdata->quadvarterms[var2pos].var == bilinterm->var2);
 
-         addBilinMcCormick(scip, bilinterm->coef,
+         SCIPaddBilinMcCormick(scip, bilinterm->coef,
             SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j],
             SCIPvarGetLbLocal(bilinterm->var2), SCIPvarGetUbLocal(bilinterm->var2), ref[var2pos],
             violside == SCIP_SIDETYPE_LEFT, &coef[j], &coef[var2pos], &constant, success);
@@ -13656,6 +13654,405 @@ SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
    SCIPfreeBufferArrayNull(scip, &quadelems);
    SCIPfreeBufferArrayNull(scip, &lininds);
    SCIPfreeBufferArrayNull(scip, &linvals);
+
+   return SCIP_OKAY;
+}
+
+
+/** sets the left hand side of a quadratic constraint
+ *
+ *  @note This method may only be called during problem creation stage for an original constraint.
+ */
+SCIP_RETCODE SCIPchgLhsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             lhs                 /**< new left hand side */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(!SCIPisInfinity(scip, lhs));
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not quadratic\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM || !SCIPconsIsOriginal(cons) )
+   {
+      SCIPerrorMessage("method may only be called during problem creation stage for original constraints\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(!SCIPisInfinity(scip, consdata->lhs));
+
+   /* adjust value to not be smaller than -inf */
+   if( SCIPisInfinity(scip, -lhs) )
+      lhs = -SCIPinfinity(scip);
+
+   /* check for lhs <= rhs */
+   if( !SCIPisLE(scip, lhs, consdata->rhs) )
+      return SCIP_INVALIDDATA;
+
+   consdata->lhs = lhs;
+
+   return SCIP_OKAY;
+}
+
+/** sets the right hand side of a quadratic constraint
+ *
+ *  @note This method may only be called during problem creation stage for an original constraint.
+ */
+SCIP_RETCODE SCIPchgRhsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             rhs                 /**< new right hand side */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(!SCIPisInfinity(scip, -rhs));
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not quadratic\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM || !SCIPconsIsOriginal(cons) )
+   {
+      SCIPerrorMessage("method may only be called during problem creation stage for original constraints\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(!SCIPisInfinity(scip, -consdata->rhs));
+
+   /* adjust value to not be greater than inf */
+   if( SCIPisInfinity(scip, rhs) )
+      rhs = SCIPinfinity(scip);
+
+   /* check for lhs <= rhs */
+   if( !SCIPisLE(scip, consdata->lhs, rhs) )
+      return SCIP_INVALIDDATA;
+
+   consdata->rhs = rhs;
+
+   return SCIP_OKAY;
+}
+
+/** gets the feasibility of the quadratic constraint in the given solution */
+SCIP_Real SCIPgetFeasibilityQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not quadratic\n");
+      SCIPABORT();
+   }
+
+   SCIP_CALL( computeViolation(scip, SCIPconsGetHdlr(cons), cons, sol) );
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, -consdata->lhs) )
+      return SCIPinfinity(scip);
+   else if( SCIPisInfinity(scip, -consdata->lhs) )
+      return (consdata->rhs - consdata->activity);
+   else if( SCIPisInfinity(scip, consdata->rhs) )
+      return (consdata->activity - consdata->lhs);
+
+   assert(!SCIPisInfinity(scip, -consdata->rhs));
+   assert(!SCIPisInfinity(scip, consdata->lhs));
+
+   return MIN( consdata->rhs - consdata->activity, consdata->activity - consdata->lhs );
+}
+
+/** gets the activity of the quadratic constraint in the given solution */
+SCIP_Real SCIPgetActivityQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not quadratic\n");
+      SCIPABORT();
+   }
+
+   SCIP_CALL( computeViolation(scip, SCIPconsGetHdlr(cons), cons, sol) );
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->activity;
+
+}
+
+/** changes the linear coefficient value for a given quadratic variable in a quadratic constraint data; if not
+ *  available, it adds it
+ *
+ *  @note this is only allowed for original constraints and variables in problem creation stage
+ */
+SCIP_RETCODE SCIPchgLinearCoefQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< quadratic variable */
+   SCIP_Real             coef                /**< new coefficient */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool found;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(var != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0  )
+   {
+      SCIPerrorMessage("constraint is not quadratic\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM || !SCIPconsIsOriginal(cons) || !SCIPvarIsOriginal(var) )
+   {
+      SCIPerrorMessage("method may only be called during problem creation stage for original constraints and variables\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   consdata =  SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* check all quadratic variables */
+   found = FALSE;
+   for( i = 0; i < consdata->nquadvars; ++i )
+   {
+      if( var == consdata->quadvarterms[i].var )
+      {
+         if( found || SCIPisZero(scip, coef) )
+         {
+            consdata->quadvarterms[i].lincoef = 0.0;
+
+            /* remember to merge quadratic variable terms */
+            consdata->quadvarsmerged = FALSE;
+         }
+         else
+            consdata->quadvarterms[i].lincoef = coef;
+
+         found = TRUE;
+      }
+   }
+
+   /* check all linear variables */
+   i = 0;
+   while( i < consdata->nlinvars )
+   {
+      if( var == consdata->linvars[i] )
+      {
+         if( found || SCIPisZero(scip, coef) )
+         {
+            SCIP_CALL( delLinearCoefPos(scip, cons, i) );
+
+            /* decrease i by one since otherwise we would skip the coefficient which has been switched to position i */
+            i--;
+         }
+         else
+         {
+            SCIP_CALL( chgLinearCoefPos(scip, cons, i, coef) );
+         }
+
+         found = TRUE;
+      }
+      i++;
+   }
+
+   /* add linear term if necessary */
+   if( !found && !SCIPisZero(scip, coef) )
+   {
+      SCIP_CALL( addLinearCoef(scip, cons, var, coef) );
+   }
+
+   consdata->ispropagated = FALSE;
+   consdata->ispresolved = FALSE;
+
+   SCIPintervalSetEmpty(&consdata->quadactivitybounds);
+   consdata->activity = SCIP_INVALID;
+
+   return SCIP_OKAY;
+}
+
+/** changes the square coefficient value for a given quadratic variable in a quadratic constraint data; if not
+ *  available, it adds it
+ *
+ *  @note this is only allowed for original constraints and variables in problem creation stage
+ */
+SCIP_RETCODE SCIPchgSquareCoefQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< quadratic variable */
+   SCIP_Real             coef                /**< new coefficient */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool found;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(var != NULL);
+   assert(!SCIPisInfinity(scip, REALABS(coef)));
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not quadratic\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM || !SCIPconsIsOriginal(cons) || !SCIPvarIsOriginal(var) )
+   {
+      SCIPerrorMessage("method may only be called during problem creation stage for original constraints and variables\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* find the quadratic variable and change its quadratic coefficient */
+   found = FALSE;
+   for( i = 0; i < consdata->nquadvars; ++i )
+   {
+      if( var == consdata->quadvarterms[i].var )
+      {
+         consdata->quadvarterms[i].sqrcoef = (found || SCIPisZero(scip, coef)) ? 0.0 : coef;
+         found = TRUE;
+      }
+   }
+
+   /* add bilinear term if necessary */
+   if( !found && !SCIPisZero(scip, coef) )
+   {
+      SCIP_CALL( addQuadVarTerm(scip, cons, var, 0.0, coef) );
+   }
+
+   /* update flags and invalidate activities */
+   consdata->isconvex = FALSE;
+   consdata->isconcave = FALSE;
+   consdata->iscurvchecked = FALSE;
+   consdata->ispropagated = FALSE;
+   consdata->ispresolved = FALSE;
+
+   SCIPintervalSetEmpty(&consdata->quadactivitybounds);
+   consdata->activity = SCIP_INVALID;
+
+   /* remember to merge quadratic variable terms */
+   consdata->quadvarsmerged = FALSE;
+
+   return SCIP_OKAY;
+}
+
+/** changes the bilinear coefficient value for a given quadratic variable in a quadratic constraint data; if not
+ *  available, it adds it
+ *
+ *  @note this is only allowed for original constraints and variables in problem creation stage
+ */
+SCIP_RETCODE SCIPchgBilinCoefQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var1,               /**< first variable */
+   SCIP_VAR*             var2,               /**< second variable */
+   SCIP_Real             coef                /**< coefficient of bilinear term */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Bool found;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(var1 != NULL);
+   assert(var2 != NULL);
+   assert(!SCIPisInfinity(scip, REALABS(coef)));
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not quadratic\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM || !SCIPconsIsOriginal(cons) || !SCIPvarIsOriginal(var1) || !SCIPvarIsOriginal(var2) )
+   {
+      SCIPerrorMessage("method may only be called during problem creation stage for original constraints and variables\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( var1 == var2 )
+   {
+      SCIP_CALL( SCIPchgSquareCoefQuadratic(scip, cons, var1, coef) );
+      return SCIP_OKAY;
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* search array of bilinear terms */
+   found = FALSE;
+   for( i = 0; i < consdata->nbilinterms; ++i )
+   {
+      if( (consdata->bilinterms[i].var1 == var1 && consdata->bilinterms[i].var2 == var2) ||
+            (consdata->bilinterms[i].var1 == var2 && consdata->bilinterms[i].var2 == var1)  )
+      {
+         if( found || SCIPisZero(scip, coef) )
+         {
+            consdata->bilinterms[i].coef = 0.0;
+
+            /* remember to merge bilinear terms */
+            consdata->bilinmerged = FALSE;
+         }
+         else
+            consdata->bilinterms[i].coef = coef;
+         found = TRUE;
+      }
+   }
+
+   /* add bilinear term if necessary */
+   if( !found )
+   {
+      SCIP_CALL( SCIPaddBilinTermQuadratic(scip, cons, var1, var2, coef) );
+   }
+
+   /* update flags and invalidate activities */
+   consdata->isconvex = FALSE;
+   consdata->isconcave = FALSE;
+   consdata->iscurvchecked = FALSE;
+   consdata->ispropagated = FALSE;
+   consdata->ispresolved = FALSE;
+
+   SCIPintervalSetEmpty(&consdata->quadactivitybounds);
+   consdata->activity = SCIP_INVALID;
 
    return SCIP_OKAY;
 }

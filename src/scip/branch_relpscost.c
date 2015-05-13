@@ -1065,8 +1065,12 @@ SCIP_RETCODE execRelpscost(
                *result = SCIP_CUTOFF;
                break; /* terminate initialization loop, because node is infeasible */
             }
-            /* proved bound for down child of best candidate is larger than cutoff bound -> increase lower bound of best candidate */
-            else if( bestsbcand != -1 )
+            /* proved bound for down child of best candidate is larger than cutoff bound
+             *  -> increase lower bound of best candidate
+             * we must only do this if the LP is complete, i.e., we are not doing column generation
+             */
+
+            else if( bestsbcand != -1  && allcolsinlp )
             {
                if( !bestsbdowncutoff && bestsbdownvalid && SCIPisGE(scip, bestsbdown, SCIPgetCutoffbound(scip)) )
                {

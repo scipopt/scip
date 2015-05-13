@@ -7908,7 +7908,7 @@ SCIP_RETCODE SCIPgetRandomSubset(
  * Arrays
  */
 
-/* computes set intersection (duplicates removed) of two arrays that are ordered ascendingly */
+/** computes set intersection (duplicates removed) of two arrays that are ordered ascendingly */
 SCIP_RETCODE SCIPcomputeArraysIntersection(
    int*                  array1,             /**< first array (in ascending order) */
    int                   narray1,            /**< number of entries of first array */
@@ -7962,7 +7962,7 @@ SCIP_RETCODE SCIPcomputeArraysIntersection(
 }
 
 
-/* computes set difference (duplicates removed) of two arrays that are ordered ascendingly */
+/** computes set difference (duplicates removed) of two arrays that are ordered ascendingly */
 SCIP_RETCODE SCIPcomputeArraysSetminus(
    int*                  array1,             /**< first array (in ascending order) */
    int                   narray1,            /**< number of entries of first array */
@@ -7976,24 +7976,22 @@ SCIP_RETCODE SCIPcomputeArraysSetminus(
 {
    int entry1;
    int entry2;
-   int cnt;
+   int cnt = 0;
+   int k = 0;
    int v;
    int j;
-   int k;
 
    assert( array1 != NULL );
    assert( array2 != NULL );
    assert( setminusarray != NULL );
    assert( nsetminusarray != NULL );
 
-   k = 0;
-   cnt = 0;
    for (v = 0; v < narray1; ++v)
    {
       assert( v == 0 || array1[v] >= array1[v-1] );
 
       /* avoid multiple enumeration */
-      if ( v+1 < narray1 && array1[v] == array1[v+1])
+      if ( v+1 < narray1 && array1[v] == array1[v+1] )
          continue;
 
       entry1 = array1[v];

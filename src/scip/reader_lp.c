@@ -1086,26 +1086,26 @@ SCIP_RETCODE readCoefficients(
             /* quadratic part in objective has to end with '/2' */
             if( !getNextToken(scip, lpinput) )
             {
-               syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective.");
+               syntaxError(scip, lpinput, "expected '/2' or '/ 2' after end of quadratic part in objective.");
                return SCIP_OKAY;
             }
             if( strcmp(lpinput->token, "/2") == 0 )
             {
-               SCIPdebugMessage("(line %d) saw '/2' after quadratic part in objective\n", lpinput->linenumber);
+               SCIPdebugMessage("(line %d) saw '/2' or '/ 2' after quadratic part in objective\n", lpinput->linenumber);
             }
             else if( *lpinput->token == '/' )
             {
                /* maybe it says '/ 2' */
-               if( !getNextToken(scip, lpinput) || *lpinput->token == '2' )
+               if( !getNextToken(scip, lpinput) || *lpinput->token != '2' )
                {
-                  syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective.");
+                  syntaxError(scip, lpinput, "expected '/2' or '/ 2' after end of quadratic part in objective.");
                   return SCIP_OKAY;
                }
                SCIPdebugMessage("(line %d) saw '/ 2' after quadratic part in objective\n", lpinput->linenumber);
             }
             else
             {
-               syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective.");
+               syntaxError(scip, lpinput, "expected '/2' or '/ 2' after end of quadratic part in objective.");
                return SCIP_OKAY;
             }
          }
@@ -1410,6 +1410,7 @@ SCIP_RETCODE createIndicatorConstraint(
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
    }
+   assert(linsense == LP_SENSE_GE || linsense == LP_SENSE_LE || linsense == LP_SENSE_EQ);
 
    /* read the right hand side */
    linsidesign = +1;
@@ -1451,6 +1452,7 @@ SCIP_RETCODE createIndicatorConstraint(
       break;
    case LP_SENSE_NOTHING:
    default:
+      /* this case cannot occur because it is caught by the syntax check method isSense() above */
       SCIPerrorMessage("invalid constraint sense <%d>\n", linsense);
       return SCIP_INVALIDDATA;
    }
@@ -1577,6 +1579,7 @@ SCIP_RETCODE readConstraints(
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
    }
+   assert(sense == LP_SENSE_GE || sense == LP_SENSE_LE || sense == LP_SENSE_EQ);
 
    /* read the right hand side */
    sidesign = +1;
@@ -1617,6 +1620,7 @@ SCIP_RETCODE readConstraints(
       break;
    case LP_SENSE_NOTHING:
    default:
+      /* this case cannot occur because it is caught by the syntax check method isSense() above */
       SCIPerrorMessage("invalid constraint sense <%d>.\n", sense);
       return SCIP_INVALIDDATA;
    }

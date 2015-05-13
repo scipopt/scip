@@ -1519,6 +1519,17 @@ SCIP_RETCODE SCIPsetBoolParam(
    SCIP_Bool             value               /**< new value of the parameter */
    );
 
+/** checks the value of an existing SCIP_Bool parameter; issues a warning message if value was invalid
+ *
+ *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
+ */
+EXTERN
+SCIP_RETCODE SCIPcheckBoolParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Bool             value               /**< value to check */
+   );
+
 /** changes the value of an existing int parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1565,6 +1576,17 @@ SCIP_RETCODE SCIPsetLongintParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
    SCIP_Longint          value               /**< new value of the parameter */
+   );
+
+/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
+ *
+ *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
+ */
+EXTERN
+SCIP_RETCODE SCIPcheckLongintParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Longint          value               /**< value to check */
    );
 
 /** changes the value of an existing SCIP_Real parameter
@@ -1615,6 +1637,17 @@ SCIP_RETCODE SCIPsetCharParam(
    char                  value               /**< new value of the parameter */
    );
 
+/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
+ *
+ *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
+ */
+EXTERN
+SCIP_RETCODE SCIPcheckCharParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   const char            value               /**< value to check */
+   );
+
 /** changes the value of an existing string(char*) parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1639,6 +1672,17 @@ SCIP_RETCODE SCIPsetStringParam(
    const char*           value               /**< new value of the parameter */
    );
 
+/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
+ *
+ *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
+ */
+EXTERN
+SCIP_RETCODE SCIPcheckStringParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   const char*           value               /**< value to check */
+   );
+
 /** reads parameters from a file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1648,6 +1692,22 @@ EXTERN
 SCIP_RETCODE SCIPreadParams(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name */
+   );
+
+/** writes a single parameter to a file
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+EXTERN
+SCIP_RETCODE SCIPwriteParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   const char*           filename,           /**< file name, or NULL for stdout */
+   SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
+   SCIP_Bool             onlychanged         /**< should only those parameters be written that are changed from their
+                                              *   default value?
+                                              */
    );
 
 /** writes all parameters in the parameter set to a file
@@ -1660,7 +1720,9 @@ SCIP_RETCODE SCIPwriteParams(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< file name, or NULL for stdout */
    SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
-   SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
+   SCIP_Bool             onlychanged         /**< should only those parameters be written that are changed from their
+                                              *   default value?
+                                              */
    );
 
 /** resets a single parameter to its default value

@@ -44,6 +44,7 @@
 #include "scip/def.h"
 #include "scip/retcode.h"
 #include "scip/set.h"
+#include "scip/paramset.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
 #include "scip/visual.h"
@@ -3904,6 +3905,24 @@ SCIP_RETCODE SCIPsetBoolParam(
    return SCIP_OKAY;
 }
 
+/** checks the value of an existing SCIP_Bool parameter; issues a warning message if value was invalid
+ *
+ *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
+ */
+SCIP_RETCODE SCIPcheckBoolParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Bool             value               /**< value to check */
+   )
+{
+   assert(scip != NULL);
+   assert(param != NULL);
+
+   SCIP_CALL_QUIET( SCIPparamCheckBool(param, scip->messagehdlr, value) );
+
+   return SCIP_OKAY;
+}
+
 /** changes the value of an existing int parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -3990,6 +4009,24 @@ SCIP_RETCODE SCIPsetLongintParam(
    assert(scip->set != NULL);
 
    SCIP_CALL( SCIPsetSetLongintParam(scip->set, scip->messagehdlr, name, value) );
+
+   return SCIP_OKAY;
+}
+
+/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
+ *
+ *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
+ */
+SCIP_RETCODE SCIPcheckLongintParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Longint          value               /**< value to check */
+   )
+{
+   assert(scip != NULL);
+   assert(param != NULL);
+
+   SCIP_CALL_QUIET( SCIPparamCheckLongint(param, scip->messagehdlr, value) );
 
    return SCIP_OKAY;
 }
@@ -4084,6 +4121,24 @@ SCIP_RETCODE SCIPsetCharParam(
    return SCIP_OKAY;
 }
 
+/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
+ *
+ *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
+ */
+SCIP_RETCODE SCIPcheckCharParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   const char            value               /**< value to check */
+   )
+{
+   assert(scip != NULL);
+   assert(param != NULL);
+
+   SCIP_CALL_QUIET( SCIPparamCheckChar(param, scip->messagehdlr, value) );
+
+   return SCIP_OKAY;
+}
+
 /** changes the value of an existing string(char*) parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -4129,6 +4184,24 @@ SCIP_RETCODE SCIPsetStringParam(
    return SCIP_OKAY;
 }
 
+/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
+ *
+ *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
+ */
+SCIP_RETCODE SCIPcheckStringParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   const char*           value               /**< value to check */
+   )
+{
+   assert(scip != NULL);
+   assert(param != NULL);
+
+   SCIP_CALL_QUIET( SCIPparamCheckString(param, scip->messagehdlr, value) );
+
+   return SCIP_OKAY;
+}
+
 /** reads parameters from a file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -4147,6 +4220,29 @@ SCIP_RETCODE SCIPreadParams(
    return SCIP_OKAY;
 }
 
+/** writes a single parameter to a file
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+SCIP_RETCODE SCIPwriteParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   const char*           filename,           /**< file name, or NULL for stdout */
+   SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
+   SCIP_Bool             onlychanged         /**< should only those parameters be written that are changed from their
+                                              *   default value?
+                                              */
+   )
+{
+   assert(scip != NULL);
+   assert(param != NULL);
+
+   SCIP_CALL( SCIPparamWrite(param, scip->messagehdlr, filename, comments, onlychanged) );
+
+   return SCIP_OKAY;
+}
+
 /** writes all parameters in the parameter set to a file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -4156,7 +4252,9 @@ SCIP_RETCODE SCIPwriteParams(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< file name, or NULL for stdout */
    SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
-   SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
+   SCIP_Bool             onlychanged         /**< should only those parameters be written that are changed from their
+                                              *   default value?
+                                              */
    )
 {
    assert(scip != NULL);
@@ -17138,9 +17236,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       if( (*cutoff) && !SCIPallColsInLP(scip) )
       {
          *cutoff = FALSE;
-
-         if( valid != NULL )
-            *valid = FALSE;
       }
 
 #ifndef NDEBUG
@@ -17251,6 +17346,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    SCIP_Bool foundsol;
    SCIP_Bool downvalidlocal;
    SCIP_Bool upvalidlocal;
+   SCIP_Bool allcolsinlp;
    int oldnconflicts;
    int nvars;
 
@@ -17268,6 +17364,14 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
 
    /* check whether propagation should be performed */
    propagate = (maxproprounds != 0);
+
+   /* Check, if all existing columns are in LP.
+    * If this is not the case, we may still return that the up and down dual bounds are valid, because the branching
+    * rule should not apply them otherwise.
+    * However, we must not set the downinf or upinf pointers to TRUE based on the dual bound, because we cannot
+    * guarantee that this node can be cut off.
+    */
+   allcolsinlp = SCIPallColsInLP(scip);
 
    /* if maxproprounds is -2, change it to 0, which for the following calls means using the parameter settings */
    if( maxproprounds == -2 )
@@ -17409,7 +17513,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
                down, &downvalidlocal, ndomredsdown, downconflict, lperror, vars, nvars, newlbs, newubs, &foundsol, &cutoff) );
 
          /* check whether a new solutions rendered the previous child infeasible */
-         if( foundsol && !firstchild )
+         if( foundsol && !firstchild && allcolsinlp )
          {
             if( SCIPisGE(scip, *up, SCIPgetCutoffbound(scip)) )
             {
@@ -17443,7 +17547,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
                up, &upvalidlocal, ndomredsup, upconflict, lperror, vars, nvars, newlbs, newubs, &foundsol, &cutoff) );
 
          /* check whether a new solutions rendered the previous child infeasible */
-         if( foundsol && !firstchild )
+         if( foundsol && !firstchild && allcolsinlp )
          {
             if( SCIPisGE(scip, *down, SCIPgetCutoffbound(scip)) )
             {

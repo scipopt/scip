@@ -4004,7 +4004,7 @@ SCIP_RETCODE separateIISRounding(
    int                   maxsepacuts,        /**< maximal number of cuts to be generated */
    int*                  nGen                /**< number of domain changes */
    )
-{
+{ /*lint --e{850}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_LPI* lp;
    int rounds;
@@ -4076,8 +4076,8 @@ SCIP_RETCODE separateIISRounding(
       for (j = 0; j < nconss; ++j)
       {
          SCIP_CONSDATA* consdata;
-         SCIP_Real binvarval = 0.0;
-         SCIP_VAR* binvarneg = NULL;
+         SCIP_Real binvarval;
+         SCIP_VAR* binvarneg;
 
          assert( conss[j] != NULL );
          consdata = SCIPconsGetData(conss[j]);
@@ -6458,8 +6458,8 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
    SCIP_CONS** indconss;
    int nindconss;
    int c;
-   SCIP_VAR* bestvar;
-   SCIP_Bool bestvarroundup;
+   SCIP_VAR* bestvar = NULL;
+   SCIP_Bool bestvarroundup = FALSE;
    SCIP_Real bestscore = SCIP_REAL_MIN;
 
    assert(scip != NULL);
@@ -6467,14 +6467,16 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(diveset != NULL);
    assert(success != NULL);
+   assert(infeasible != NULL);
+
+   *success = FALSE;
+   *infeasible = FALSE;
 
    indconss = SCIPconshdlrGetConss(conshdlr);
    nindconss = SCIPconshdlrGetNConss(conshdlr);
 
-   bestvar = NULL;
-   bestvarroundup = FALSE;
    /* loop over indicator constraints and score indicator variables with already integral solution value  */
-   for( c = 0; c < nindconss; ++c )
+   for (c = 0; c < nindconss; ++c)
    {
       /* check whether constraint is violated */
       if( SCIPisViolatedIndicator(scip, indconss[c], sol) )

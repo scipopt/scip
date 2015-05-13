@@ -17,6 +17,7 @@
  * @ingroup NLPIS
  * @brief   Ipopt NLP interface
  * @author  Stefan Vigerske
+ * @author  Benjamin Müller
  *
  * @todo warm starts
  * @todo use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
@@ -2805,6 +2806,77 @@ SCIP_RETCODE LapackDsyev(
       SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", info);
       return SCIP_ERROR;
    }
+
+   return SCIP_OKAY;
+}
+
+/** solves a linear problem of the form Ax = b
+ *
+ *  Calls Lapacks IpLapackDgetrf routine to calculate a LU factorization and uses this factorization to solve
+ *  the linear problem Ax = b.
+ *  It's here, because Ipopt is linked against Lapack.
+ */
+SCIP_RETCODE SCIPsolveLinearProb(
+   int                   N,                  /**< dimension */
+   SCIP_Real**           A,                  /**< matrix data on input (size N*N) */
+   SCIP_Real*            b,                  /**< right hand side vector (size N) */
+   SCIP_Real*            x,                  /**< buffer to store solution (size N) */
+   SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
+   )
+{
+   SCIP_Real* tmp_A;
+   SCIP_Real* tmp_b;
+   int* tmp_pivot;
+   int info;
+   int i;
+
+   assert(N > 0);
+   assert(A != NULL);
+   assert(b != NULL);
+   assert(x != NULL);
+   assert(success != NULL);
+
+   SCIP_ALLOC( BMSallocMemoryArray(&tmp_A, N*N) );
+   SCIP_ALLOC( BMSallocMemoryArray(&tmp_b, N) );
+   SCIP_ALLOC( BMSallocMemoryArray(&tmp_pivot, N) );
+
+   /* copy values from A into the tmp_A array */
+   for( i = 0; i < N; ++i)
+   {
+      int j;
+      for( j = 0; j < N; ++j )
+         tmp_A[N*i+j] = A[j][i]; /* note that we have to fill tmp_A column wise */
+
+      tmp_b[i] = b[i];
+   }
+
+   /* compute the LU factorization */
+   IpLapackDgetrf(N, tmp_A, tmp_pivot, N, info);
+
+   if( info != 0 )
+   {
+      BMSfreeMemoryArray(&tmp_pivot);
+      BMSfreeMemoryArray(&tmp_b);
+      BMSfreeMemoryArray(&tmp_A);
+
+      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      *success = FALSE;
+
+      return SCIP_OKAY;
+   }
+
+   /* solve linear problem */
+   IpLapackDgetrs(N, 1, tmp_A, N, tmp_pivot, tmp_b, N);
+
+   /* copy the solution */
+   for( i = 0; i < N; ++i )
+      x[i] = tmp_b[i];
+
+   BMSfreeMemoryArray(&tmp_pivot);
+   BMSfreeMemoryArray(&tmp_b);
+   BMSfreeMemoryArray(&tmp_A);
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }

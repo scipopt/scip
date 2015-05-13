@@ -87,8 +87,6 @@ SCIP_RETCODE paramCheckBool(
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
-
    return SCIP_OKAY;
 }
 
@@ -109,8 +107,6 @@ SCIP_RETCODE paramCheckInt(
          value, param->name, param->data.intparam.minvalue, param->data.intparam.maxvalue);
       return SCIP_PARAMETERWRONGVAL;
    }
-
-   SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
 
    return SCIP_OKAY;
 }
@@ -133,8 +129,6 @@ SCIP_RETCODE paramCheckLongint(
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
-
    return SCIP_OKAY;
 }
 
@@ -155,8 +149,6 @@ SCIP_RETCODE paramCheckReal(
          value, param->name, param->data.realparam.minvalue, param->data.realparam.maxvalue);
       return SCIP_PARAMETERWRONGVAL;
    }
-
-   SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
 
    return SCIP_OKAY;
 }
@@ -194,8 +186,6 @@ SCIP_RETCODE paramCheckChar(
       }
    }
 
-   SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
-
    return SCIP_OKAY;
 }
 
@@ -226,8 +216,6 @@ SCIP_RETCODE paramCheckString(
          return SCIP_PARAMETERWRONGVAL;
       }
    }
-
-   SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
 
    return SCIP_OKAY;
 }
@@ -4089,6 +4077,50 @@ void SCIPparamSetFixed(
    param->isfixed = fixed;
 }
 
+/** checks value of SCIP_Bool parameter; issues a warning message if value is invalid */
+SCIP_RETCODE SCIPparamCheckBool(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_Bool             value               /**< value to check */
+   )
+{
+   assert(param != NULL);
+
+   SCIP_CALL_QUIET( paramCheckBool(param, messagehdlr, value) );
+
+   return SCIP_OKAY;
+}
+
+/** checks value of string parameter; issues a warning message if value is invalid */
+SCIP_RETCODE SCIPparamCheckString(
+	SCIP_PARAM*           param,              /**< parameter */
+	SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+	const char*           value               /**< value to check */
+	)
+{
+	return paramCheckString(param, messagehdlr, value);
+}
+
+/** checks value of character parameter; issues a warning message if value is invalid */
+SCIP_RETCODE SCIPparamCheckChar(
+	SCIP_PARAM*           param,              /**< parameter */
+	SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+	const char            value               /**< value to check */
+	)
+{
+	return paramCheckChar(param, messagehdlr, value);
+}
+
+/** checks value of SCIP_Longint parameter; issues a warning message if value is invalid */
+SCIP_RETCODE SCIPparamCheckLongint(
+	SCIP_PARAM*           param,              /**< parameter */
+	SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+	SCIP_Longint		  value               /**< value to check */
+	)
+{
+	return paramCheckLongint(param, messagehdlr, value);
+}
+
 /** sets value of SCIP_Bool parameter */
 SCIP_RETCODE SCIPparamSetBool(
    SCIP_PARAM*           param,              /**< parameter */
@@ -4102,6 +4134,7 @@ SCIP_RETCODE SCIPparamSetBool(
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
    SCIP_CALL_QUIET( paramCheckBool(param, messagehdlr, value) );
+   SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
 
    /* set the parameter's current value */
    if( param->data.boolparam.valueptr != NULL )
@@ -4136,6 +4169,7 @@ SCIP_RETCODE SCIPparamSetInt(
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
    SCIP_CALL_QUIET( paramCheckInt(param, messagehdlr, value) );
+   SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
 
    /* set the parameter's current value */
    if( param->data.intparam.valueptr != NULL )
@@ -4170,6 +4204,7 @@ SCIP_RETCODE SCIPparamSetLongint(
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
    SCIP_CALL_QUIET( paramCheckLongint(param, messagehdlr, value) );
+   SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
 
    /* set the parameter's current value */
    if( param->data.longintparam.valueptr != NULL )
@@ -4206,6 +4241,7 @@ SCIP_RETCODE SCIPparamSetReal(
    value = MAX(value, SCIP_REAL_MIN);
    value = MIN(value, SCIP_REAL_MAX);
    SCIP_CALL_QUIET( paramCheckReal(param, messagehdlr, value) );
+   SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
 
    /* set the parameter's current value */
    if( param->data.realparam.valueptr != NULL )
@@ -4240,6 +4276,7 @@ SCIP_RETCODE SCIPparamSetChar(
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
    SCIP_CALL_QUIET( paramCheckChar(param, messagehdlr, value) );
+   SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
 
    /* set the parameter's current value */
    if( param->data.charparam.valueptr != NULL )
@@ -4274,6 +4311,7 @@ SCIP_RETCODE SCIPparamSetString(
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
    SCIP_CALL_QUIET( paramCheckString(param, messagehdlr, value) );
+   SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
 
    /* set the parameter's current value */
    if( param->data.stringparam.valueptr != NULL )
@@ -4375,6 +4413,49 @@ SCIP_RETCODE SCIPparamSetToDefault(
       SCIPerrorMessage("unknown parameter type\n");
       return SCIP_INVALIDDATA;
    }
+
+   return SCIP_OKAY;
+}
+
+/** writes a single parameter to a file */
+SCIP_RETCODE SCIPparamWrite(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_MESSAGEHDLR*     messagehdlr,         /**< message handler */
+   const char*           filename,           /**< file name, or NULL for stdout */
+   SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
+   SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
+   )
+{
+   SCIP_RETCODE retcode;
+   FILE* file;
+
+   assert(param != NULL);
+
+   /* open the file for writing */
+   if( filename != NULL )
+   {
+      file = fopen(filename, "w");
+      if( file == NULL )
+      {
+         SCIPerrorMessage("cannot open file <%s> for writing\n", filename);
+         SCIPprintSysError(filename);
+         return SCIP_FILECREATEERROR;
+      }
+   }
+   else
+      file = NULL;
+
+   /* write the parameter to the file */
+   retcode = paramWrite(param, messagehdlr, file, comments, onlychanged);
+
+   /* close output file */
+   if( filename != NULL )
+   {
+      assert(file != NULL);  /*lint !e449*/
+      fclose(file);
+   }
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }

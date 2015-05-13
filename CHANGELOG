@@ -52,6 +52,8 @@ features:
 - new disjunctive cut separator for SOS1 constraints
 - new presolving components for SOS1 constraints, including bound tightening and clique extension
 - added method to propagate implications of SOS1 variables
+- convex quadratic contraints can now generate gradient cuts which are supporting to the feasible region
+- new edge-concave cut separator for quadratic constraints
 
 parameters:
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
@@ -138,6 +140,8 @@ parameters:
   root node
 - new parameter "separating/disjunctive/maxconsdelay" to delay separation of disjunctive cuts if number of SOS1 constraints is larger than 
   predefined value
+- new parameter "constraints/quadratic/gaugecuts" to enable convex quadratics to generate gradients cuts which are supporting
+- new parameter "constraints/quadratic/advanced/interiorcomputation" to select the way of computing and interior point for gauge cuts
 
 performance improvements:
 - adjusted (hard) diving heuristics to solve fewer LPs at shallow depths of the tree; after an LP was solved,
@@ -154,6 +158,13 @@ performance improvements:
 - improved propagation of SOS1 constraint handler using the information from a conflict
 
 interface:
+- new method SCIPwriteParam() to write a single parameter to a file
+- new methods SCIPcheckParam{Bool,Char,...}() to check whether a parameter value is within the feasible domain
+- new methods SCIPchgCoefLinear() and SCIPdelCoefLinear() to modify linear constraint during problem creation
+- new methods SCIPchgLhsQuadratic(), SCIPchgRhsQuadratic(), SCIPchgLinearCoefQuadratic(), SCIPchgSquareCoefQuadratic(),
+  and SCIPchgBilinCoefQuadratic() to modify quadratic constraints during problem creation
+- new methods SCIPgetFeasibilityQuadratic() and SCIPgetActivityQuadratic() to get the feasibility and activity of a quadratic
+  constraint in a given solution
 - new method SCIPcutGetLPActivityQuot() in pub_cutpool.h to get the potion of LP's where this cut was sharp in an optimal basis.
 - methods which support statistical tests in pub_misc.h, SCIPstudentTGetCriticalValue(), SCIPcomputeTwoSampleTTestValue() etc.
 - new enum SCIP_CONFIDENCE_LEVEL for different levels of confidence for statistical tests.
@@ -190,6 +201,9 @@ interface:
 - SCIPvarGetNodeSOS1() returns node of SOS1 variable in the conflict graph
 - SCIPnodeGetVarSOS1() returns SOS1 variable associated to some given node in the conflict graph
 - SCIPmakeSOS1sFeasible() based on solution values, fixes variables to zero to turn all SOS1 constraints feasible
+- SCIPsolveLinearProb() solves a linear problem of the form Ax=b for a regular square matrix A
+- new methods SCIPaddSquareLinearization(), SCIPaddSquareSecant(), SCIPaddBilinLinearization(), and SCIPaddBilinMcCormick()
+  in cons_quadratic.h to compute linear under- and overestimation for bilinear and quadratic terms
 
 fixed bugs:
 - fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)
