@@ -62,6 +62,9 @@
  *
  *
  * @todo Possibly allow to generate local cuts via strengthened local cuts (would need to modified coefficients of rows).
+ *
+ * @todo Check whether we can avoid turning off multi-aggregation (it is sometimes possible to fix a multi-aggregated
+ * variable to 0 by fixing the aggregating variables to 0).
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
