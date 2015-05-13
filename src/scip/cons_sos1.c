@@ -6883,7 +6883,7 @@ SCIP_RETCODE getVectorOfWeights(
             else
             {
                assert( SCIPisFeasPositive(scip, sum * (SCIP_Real)nviols));
-               val = MIN(10E05, val);
+               val = MIN(1e6, val);
                weights[i] = ( val + SCIPsumepsilon(scip) ) / ( sum * (SCIP_Real)nviols + SCIPsumepsilon(scip) );
             }
          }
