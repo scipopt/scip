@@ -1410,6 +1410,7 @@ SCIP_RETCODE createIndicatorConstraint(
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
    }
+   assert(linsense == LP_SENSE_GE || linsense == LP_SENSE_LE || linsense == LP_SENSE_EQ);
 
    /* read the right hand side */
    linsidesign = +1;
@@ -1451,6 +1452,7 @@ SCIP_RETCODE createIndicatorConstraint(
       break;
    case LP_SENSE_NOTHING:
    default:
+      /* this case cannot occur because it is caught by the syntax check method isSense() above */
       SCIPerrorMessage("invalid constraint sense <%d>\n", linsense);
       return SCIP_INVALIDDATA;
    }
@@ -1577,6 +1579,7 @@ SCIP_RETCODE readConstraints(
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
    }
+   assert(sense == LP_SENSE_GE || sense == LP_SENSE_LE || sense == LP_SENSE_EQ);
 
    /* read the right hand side */
    sidesign = +1;
@@ -1617,6 +1620,7 @@ SCIP_RETCODE readConstraints(
       break;
    case LP_SENSE_NOTHING:
    default:
+      /* this case cannot occur because it is caught by the syntax check method isSense() above */
       SCIPerrorMessage("invalid constraint sense <%d>.\n", sense);
       return SCIP_INVALIDDATA;
    }
