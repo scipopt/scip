@@ -793,18 +793,18 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 
 /** constraint handler method to suggest dive bound changes during the generic diving algorithm
  *
- *  this callback is used inside the various diving heuristics of SCIP and does not affect the normal branching
+ *  This callback is used inside the various diving heuristics of SCIP and does not affect the normal branching
  *  of the actual search.
  *  The constraint handler can provide this callback to render the current solution infeasible. The solution is
  *  rendered infeasible by determining bound changes that should be applied to the next explored search node.
  *  An alternative in case that the preferred bound change(s) were detected infeasible must be provided.
  *
- *  The success pointer must be used to indicate
- *  whether the constraint handler succeeded in selecting dive bound changes. The infeasible pointer should be set to TRUE if
- *  the constraint handler found a local infeasibility.  If the constraint handler needs to select between several
- *  candidates, it may use the scoring mechanism of the diveset argument to control its choice.
+ *  The success pointer must be used to indicate whether the constraint handler succeeded in selecting diving bound
+ *  changes. The infeasible pointer should be set to TRUE if the constraint handler found a local infeasibility.  If the
+ *  constraint handler needs to select between several candidates, it may use the scoring mechanism of the diveset
+ *  argument to control its choice.
  *
- *  This callback is optional
+ *  This callback is optional.
  *
  *  @note: @p sol is usually the LP relaxation solution unless the caller of the method, usually a diving heuristic,
  *         does not solve LP relaxations at every depth
