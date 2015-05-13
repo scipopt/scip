@@ -4839,6 +4839,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                            if ( ! SCIPisInfinity(scip, -SCIPvarGetLbLocal(var1)) )
                               feas += solval1/SCIPvarGetLbLocal(var1);
                         }
+
                         if ( SCIPisFeasPositive(scip, solval2) )
                         {
                            assert( SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var2)));
@@ -4867,6 +4868,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                            if ( ! SCIPisInfinity(scip, -lbboundcoef1) )
                               feas += solval1/lbboundcoef1;
                         }
+
                         if ( SCIPisFeasPositive(scip, solval2) )
                         {
                            assert( SCIPisFeasPositive(scip, ubboundcoef2));
@@ -4911,7 +4913,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                         if ( takebound )
                         {
                            /* create constraint with right hand side = 0.0 */
-                           SCIP_CALL( SCIPcreateConsLinear(scip, &conssos1, name, 0, NULL, NULL, -SCIPinfinity(scip), 0.0, TRUE, FALSE, TRUE, FALSE, TRUE,
+                           SCIP_CALL( SCIPcreateConsLinear(scip, &conssos1, name, 0, NULL, NULL, -SCIPinfinity(scip), 0.0, TRUE, FALSE, TRUE, FALSE, FALSE,
                                  TRUE, FALSE, FALSE, FALSE, FALSE) );
 
                            /* add variables */
@@ -4920,7 +4922,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                         else
                         {
                            /* create constraint with right hand side = 1.0 */
-                           SCIP_CALL( SCIPcreateConsLinear(scip, &conssos1, name, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, FALSE, TRUE, FALSE, TRUE,
+                           SCIP_CALL( SCIPcreateConsLinear(scip, &conssos1, name, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, FALSE, TRUE, FALSE, FALSE,
                                  TRUE, FALSE, FALSE, FALSE, FALSE) );
 
                            /* add variables */
