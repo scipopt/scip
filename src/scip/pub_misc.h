@@ -5377,7 +5377,7 @@ SCIP_RETCODE SCIPgetRandomSubset(
  */
 
 
-/* computes set intersection (duplicates removed) of two arrays that are ordered ascendingly */
+/** computes set intersection (duplicates removed) of two arrays that are ordered ascendingly */
 EXTERN
 SCIP_RETCODE SCIPcomputeArraysIntersection(
    int*                  array1,             /**< first array (in ascending order) */
@@ -5390,7 +5390,7 @@ SCIP_RETCODE SCIPcomputeArraysIntersection(
                                               *   (note: it is possible to use narray1 for this input argument) */
    );
 
-/* computes set difference (duplicates removed) of two arrays that are ordered ascendingly */
+/** computes set difference (duplicates removed) of two arrays that are ordered ascendingly */
 EXTERN
 SCIP_RETCODE SCIPcomputeArraysSetminus(
    int*                  array1,             /**< first array (in ascending order) */
