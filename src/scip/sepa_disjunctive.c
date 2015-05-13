@@ -97,7 +97,7 @@ int getVarRank(
    {
       SCIP_Real val;
 
-      val = REALABS(binvrow[r] * rowsmaxval[r]);
+      val = REALABS(binvrow[r] * rowsmaxval[r]);/*lint !e613*/
       if ( SCIPisGT(scip, val, maxweight) )
          maxweight = val;
    }
@@ -108,8 +108,8 @@ int getVarRank(
       SCIP_Real val;
       int rank;
 
-      val = REALABS(binvrow[r] * rowsmaxval[r]);
-      rank = SCIProwGetRank(rows[r]);
+      val = REALABS(binvrow[r] * rowsmaxval[r]);/*lint !e613*/
+      rank = SCIProwGetRank(rows[r]);/*lint !e613*/
       if ( rank > maxrank && SCIPisGT(scip, val * maxweightrange, maxweight) )
          maxrank = rank;
    }
@@ -515,9 +515,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
       return SCIP_OKAY;
 
-   /* get conflict graph and number of conflict graph edges (not that the digraph arcs were added in both directions) */
+   /* get conflict graph and number of conflict graph edges (note that the digraph arcs were added in both directions) */
    conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
-   nedges = SCIPceil(scip, (SCIP_Real)SCIPdigraphGetNArcs(conflictgraph)/2);
+   nedges = (int)SCIPceil(scip, (SCIP_Real)SCIPdigraphGetNArcs(conflictgraph)/2);
 
    /* if too many conflict graph edges, the separator can be slow: delay it until no other cuts have been found */
    if ( sepadata->maxconfsdelay >= 0 && nedges >= sepadata->maxconfsdelay )
