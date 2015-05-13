@@ -53,6 +53,7 @@ features:
 - new presolving components for SOS1 constraints, including bound tightening and clique extension
 - added method to propagate implications of SOS1 variables
 - convex quadratic contraints can now generate gradient cuts which are supporting to the feasible region
+- new edge-concave cut separator for quadratic constraints
 
 parameters:
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
