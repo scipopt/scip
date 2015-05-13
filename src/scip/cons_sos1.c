@@ -4047,13 +4047,12 @@ SCIP_RETCODE performStrongbranchSOS1(
                                               *   (only possible if nfixingsop = 1) */
    int*                  domainfixings,      /**< vertices that can be used to reduce the domain (should have size equal to number of variables) */
    int*                  ndomainfixings,     /**< pointer to store number of vertices that can be used to reduce the domain, could be filled by earlier calls */
-   SCIP_Bool*            reddomain,          /**< pointer to store if domain can be reduced */
+   SCIP_Bool*            infeasible,         /**< pointer to store whether branch is infeasible */
    SCIP_Real*            objval,             /**< pointer to store objective value of LP with fixed variables (SCIP_INVALID if reddomain = TRUE or lperror = TRUE) */
    SCIP_Bool*            lperror             /**< pointer to store whether an unresolved LP error or a strange solution status occurred */
    )
 {
    SCIP_LPSOLSTAT solstat;
-   SCIP_Bool infeasible = FALSE;
    int i;
 
    assert( scip != NULL );
@@ -4066,13 +4065,13 @@ SCIP_RETCODE performStrongbranchSOS1(
    assert( domainfixings != NULL );
    assert( ndomainfixings != NULL );
    assert( *ndomainfixings >= 0 );
-   assert( reddomain != NULL );
+   assert( infeasible != NULL );
    assert( objval != NULL );
    assert( lperror != NULL );
 
    *objval = SCIP_INVALID; /* for debugging */
    *lperror = FALSE;
-   *reddomain = FALSE;
+   *infeasible = FALSE;
 
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -4104,13 +4103,13 @@ SCIP_RETCODE performStrongbranchSOS1(
    }
 
    /* injects variable fixings into current probing node */
-   for (i = 0; i < nfixingsexec && ! infeasible; ++i)
+   for (i = 0; i < nfixingsexec && ! *infeasible; ++i)
    {
       SCIP_VAR* var;
 
       var = SCIPnodeGetVarSOS1(conflictgraph, fixingsexec[i]);
       if ( SCIPisFeasGT(scip, SCIPvarGetLbLocal(var), 0.0) || SCIPisFeasLT(scip, SCIPvarGetUbLocal(var), 0.0) )
-         infeasible = TRUE;
+         *infeasible = TRUE;
       else
       {
          SCIP_CALL( SCIPfixVarProbing(scip, var, 0.0) );
@@ -4118,12 +4117,12 @@ SCIP_RETCODE performStrongbranchSOS1(
    }
 
    /* apply domain propagation */
-   if ( ! infeasible )
+   if ( ! *infeasible )
    {
-      SCIP_CALL( SCIPpropagateProbing(scip, 0, &infeasible, NULL) );
+      SCIP_CALL( SCIPpropagateProbing(scip, 0, infeasible, NULL) );
    }
 
-   if ( infeasible )
+   if ( *infeasible )
       solstat = SCIP_LPSOLSTAT_INFEASIBLE;
    else
    {
@@ -4142,7 +4141,7 @@ SCIP_RETCODE performStrongbranchSOS1(
    /* if objective limit was reached, then the domain can be reduced */
    if ( solstat == SCIP_LPSOLSTAT_OBJLIMIT || solstat == SCIP_LPSOLSTAT_INFEASIBLE )
    {
-      *reddomain = TRUE;
+      *infeasible = TRUE;
 
       for (i = 0; i < nfixingsop; ++i)
          domainfixings[(*ndomainfixings)++] = fixingsop[i];
@@ -4285,8 +4284,8 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
       /* if variable with index 'vertex' does not violate any complementarity in its neighborhood for the current LP relaxation solution */
       if ( SCIPisPositive(scip, branchpriors[j]) )
       {
-         SCIP_Bool reddomain1;
-         SCIP_Bool reddomain2;
+         SCIP_Bool infeasible1;
+         SCIP_Bool infeasible2;
          SCIP_Bool lperror;
          SCIP_Real objval1;
          SCIP_Real objval2;
@@ -4298,18 +4297,18 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
 
          /* get information for first strong branching execution */
          SCIP_CALL( performStrongbranchSOS1(scip, conflictgraph, fixingsnode1, nfixingsnode1, fixingsnode2, nfixingsnode2,
-               inititer, conshdlrdata->fixnonzero, domainfixings, &ndomainfixings, &reddomain1, &objval1, &lperror) );
+               inititer, conshdlrdata->fixnonzero, domainfixings, &ndomainfixings, &infeasible1, &objval1, &lperror) );
          if ( lperror )
             continue;
 
          /* get information for second strong branching execution */
          SCIP_CALL( performStrongbranchSOS1(scip, conflictgraph, fixingsnode2, nfixingsnode2, fixingsnode1, nfixingsnode1,
-               inititer, FALSE, domainfixings, &ndomainfixings, &reddomain2, &objval2, &lperror) );
+               inititer, FALSE, domainfixings, &ndomainfixings, &infeasible2, &objval2, &lperror) );
          if ( lperror )
             continue;
 
          /* if both subproblems are infeasible */
-         if ( reddomain1 && reddomain2 )
+         if ( infeasible1 && infeasible2 )
          {
             SCIPdebugMessage("detected cutoff.\n");
 
@@ -4323,7 +4322,7 @@ SCIP_RETCODE getBranchingDecisionStrongbranchSOS1(
 
             return SCIP_OKAY;
          }
-         else if ( ! reddomain1 && ! reddomain2 ) /* both subproblems are feasible */
+         else if ( ! infeasible1 && ! infeasible2 ) /* both subproblems are feasible */
          {
             /* if domain has not been reduced in this for-loop */
             if ( ndomainfixings == 0 )
