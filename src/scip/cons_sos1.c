@@ -877,6 +877,7 @@ SCIP_RETCODE extensionOperatorSOS1(
    SCIP_DIGRAPH*         vertexcliquegraph,  /**< graph that contains the information which cliques contain a given vertex
                                               *   vertices of variables = 0, ..., nsos1vars-1; vertices of cliques = nsos1vars, ..., nsos1vars+ncliques-1*/
    int                   nsos1vars,          /**< number of SOS1 variables */
+   int                   nconss,             /**< number of SOS1 constraints */
    SCIP_CONS*            cons,               /**< constraint to be extended */
    SCIP_VAR**            vars,               /**< variables of extended clique */
    SCIP_Real*            weights,            /**< weights of extended clique */
@@ -1020,7 +1021,9 @@ SCIP_RETCODE extensionOperatorSOS1(
          cliqueind = nsos1vars + *ncliques; /* index of clique in the vertex-clique graph */
 
          /* save new clique */
-         SCIP_CALL( SCIPallocBufferArray(scip, &(cliques[*ncliques]), cliquesizes[*ncliques]) );
+         assert( cliquesizes[*ncliques] >= 0 && cliquesizes[*ncliques] < nsos1vars );
+         assert( ncliques < MAX(1, conshdlrdata->maxextensions) * nconss );
+         SCIP_CALL( SCIPallocBufferArray(scip, &(cliques[*ncliques]), cliquesizes[*ncliques]) );/*lint !e866*/
          for (j = 0 ; j < cliquesizes[*ncliques]; ++j)
          {
             vars[j] = SCIPnodeGetVarSOS1(conshdlrdata->conflictgraph, newclique[j]);
@@ -1072,7 +1075,7 @@ SCIP_RETCODE extensionOperatorSOS1(
          /* if backtracking is used, it is necessary to keep the memory for 'workingsetnew' */
          if ( usebacktrack )
          {
-            SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, vars, weights, FALSE, usebacktrack,
+            SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, nconss, cons, vars, weights, FALSE, usebacktrack,
                   cliques, ncliques, cliquesizes, newclique, workingsetnew, nworkingsetnew, nextsnew, pos, maxextensions, naddconss, success) );
             if ( *maxextensions <= 0 )
             {
@@ -1091,7 +1094,7 @@ SCIP_RETCODE extensionOperatorSOS1(
 
             SCIPfreeBufferArrayNull(scip, &workingsetnew);
 
-            SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, vars, weights, FALSE, usebacktrack,
+            SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, nconss, cons, vars, weights, FALSE, usebacktrack,
                   cliques, ncliques, cliquesizes, newclique, workingset, nworkingset, nextsnew, pos, maxextensions, naddconss, success) );
             assert( *maxextensions <= 0 );
             return SCIP_OKAY;
@@ -1649,6 +1652,7 @@ SCIP_RETCODE presolRoundConssSOS1(
       assert( consdata->nvars >= 0 );
       assert( consdata->nvars <= consdata->maxvars );
       assert( ! SCIPconsIsModifiable(cons) );
+      assert( ncliques < csize );
 
       savendelconss = *ndelconss;
 
@@ -1761,7 +1765,7 @@ SCIP_RETCODE presolRoundConssSOS1(
                /* find extensions for the clique */
                maxextensions = conshdlrdata->maxextensions;
                extended = FALSE;
-               SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, cons, consvars, consweights,
+               SCIP_CALL( extensionOperatorSOS1(scip, conshdlrdata, adjacencymatrix, vertexcliquegraph, nsos1vars, nconss, cons, consvars, consweights,
                      TRUE, (maxextensions <= 1) ? FALSE : TRUE, cliques, &ncliques, cliquesizes, newclique, comsucc, ncomsucc, 0, -1, &maxextensions,
                      naddconss, &extended) );
             }
@@ -1781,7 +1785,9 @@ SCIP_RETCODE presolRoundConssSOS1(
                cliqueind = nsos1vars + ncliques; /* index of clique in vertex-clique graph */
 
                /* add directed edges to the vertex-clique graph */
-               SCIP_CALL( SCIPallocBufferArray(scip, &cliques[ncliques], cliquesize) );
+               assert( cliquesize >= 0 && cliquesize < nsos1vars );
+               assert( ncliques < csize );
+               SCIP_CALL( SCIPallocBufferArray(scip, &cliques[ncliques], cliquesize) );/*lint !e866*/
                for (j = 0; j < cliquesize; ++j)
                {
                   cliques[ncliques][j] = newclique[j];
@@ -6102,7 +6108,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          {
             SCIPerrorMessage("Unexpected error in bound cut creation.\n");
             SCIPABORT();
-            return;   /*lint --e{527}*/
+            return;   /*lint !e527*/
          }
 
          /* add bound cut(s) to separation storage if existent */
@@ -6110,7 +6116,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          {
             SCIPerrorMessage("Unexpected error in bound cut creation.\n");
             SCIPABORT();
-            return;   /*lint --e{527}*/
+            return;   /*lint !e527*/
          }
 
          if ( rowlb != NULL )
@@ -6119,7 +6125,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
             {
                SCIPerrorMessage("Cannot release row,\n");
                SCIPABORT();
-               return;   /*lint --e{527}*/
+               return;   /*lint !e527*/
             }
          }
          if ( rowub != NULL )
@@ -6128,7 +6134,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
             {
                SCIPerrorMessage("Cannot release row,\n");
                SCIPABORT();
-               return;   /*lint --e{527}*/
+               return;   /*lint !e527*/
             }
          }
 
@@ -7959,7 +7965,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
          SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix, nsos1vars) );
          for (i = 0; i < nsos1vars; ++i)
          {
-            SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix[i], i+1) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix[i], i+1) );/*lint !e866*/
          }
 
          /* create adjacency matrix */
@@ -8819,6 +8825,8 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
    assert( diveset != NULL );
    assert( success != NULL );
 
+   *infeasible = FALSE;
+
    /* get number of SOS1 variables */
    nsos1vars = SCIPgetNSOS1Vars(conshdlr);
 
@@ -8852,8 +8860,8 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsSOS1)
             bound = SCIPnodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, v);
 
          /* ensure finiteness */
-         bound = MIN(10E05, REALABS(bound));
-         fracval = MIN(10E05, REALABS(solval));
+         bound = MIN(10E05, REALABS(bound));/*lint !e666*/
+         fracval = MIN(10E05, REALABS(solval));/*lint !e666*/
          assert( ! SCIPisInfinity(scip, bound) );
          assert( ! SCIPisInfinity(scip, fracval) );
          assert( SCIPisFeasPositive(scip, bound + SCIPepsilon(scip)) );
@@ -9482,7 +9490,7 @@ int SCIPvarGetNodeSOS1(
    {
       SCIPerrorMessage("Not an SOS1 constraint handler.\n");
       SCIPABORT();
-      return -1;  /*lint --e{527}*/
+      return -1;  /*lint !e527*/
    }
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -9491,7 +9499,7 @@ int SCIPvarGetNodeSOS1(
    {
       SCIPerrorMessage("Hashmap not yet initialized.\n");
       SCIPABORT();
-      return -1;  /*lint --e{527}*/
+      return -1;  /*lint !e527*/
    }
 
    return varGetNodeSOS1(conshdlrdata, var);
@@ -9516,7 +9524,7 @@ SCIP_VAR* SCIPnodeGetVarSOS1(
    {
       SCIPerrorMessage("variable is not assigned to an index.\n");
       SCIPABORT();
-      return NULL;  /*lint --e{527}*/
+      return NULL;  /*lint !e527*/
    }
 
    return nodedata->var;

@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   disjunctive.h
+/**@file   sepa_disjunctive.h
  * @ingroup SEPARATORS
  * @brief  disjunctive cut separator
  * @author Tobias Fischer
