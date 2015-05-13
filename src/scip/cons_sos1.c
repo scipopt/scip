@@ -96,6 +96,8 @@
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
+#define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_MEDIUM
 
 /* adjacency matrix */
 #define DEFAULT_MAXSOSADJACENCY   50000 /**< do not create an adjacency matrix if number of SOS1 variables is larger than predefined value
@@ -142,12 +144,12 @@
 #define DEFAULT_MAXIMPLCUTS          50 /**< maximal number of implied bound cuts separated per branching node */
 #define DEFAULT_MAXIMPLCUTSROOT     150 /**< maximal number of implied bound cuts separated per iteration in the root node */
 
-#define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
-#define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_MEDIUM
-
 /* event handler properties */
 #define EVENTHDLR_NAME         "SOS1"
 #define EVENTHDLR_DESC         "bound change event handler for SOS1 constraints"
+
+/* defines */
+#define DIVINGCUTOFFVALUE     1e6
 
 
 /** constraint data for SOS1 constraints */
