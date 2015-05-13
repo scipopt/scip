@@ -3523,6 +3523,8 @@ SCIP_RETCODE initImplGraphSOS1(
    if ( conshdlrdata->maxsosadjacency != -1 && nsos1vars > conshdlrdata->maxsosadjacency )
    {
       *success = FALSE;
+      SCIPdebugMessage("Implication graph was not created since number of SOS1 variables (%d) is larger than %d.\n", nsos1vars, conshdlrdata->maxsosadjacency);
+
       return SCIP_OKAY;
    }
    *success = TRUE;
