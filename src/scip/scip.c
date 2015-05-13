@@ -17236,9 +17236,6 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       if( (*cutoff) && !SCIPallColsInLP(scip) )
       {
          *cutoff = FALSE;
-
-         if( valid != NULL )
-            *valid = FALSE;
       }
 
 #ifndef NDEBUG
@@ -17349,6 +17346,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    SCIP_Bool foundsol;
    SCIP_Bool downvalidlocal;
    SCIP_Bool upvalidlocal;
+   SCIP_Bool allcolsinlp;
    int oldnconflicts;
    int nvars;
 
@@ -17366,6 +17364,14 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
 
    /* check whether propagation should be performed */
    propagate = (maxproprounds != 0);
+
+   /* Check, if all existing columns are in LP.
+    * If this is not the case, we may still return that the up and down dual bounds are valid, because the branching
+    * rule should not apply them otherwise.
+    * However, we must not set the downinf or upinf pointers to TRUE based on the dual bound, because we cannot
+    * guarantee that this node can be cut off.
+    */
+   allcolsinlp = SCIPallColsInLP(scip);
 
    /* if maxproprounds is -2, change it to 0, which for the following calls means using the parameter settings */
    if( maxproprounds == -2 )
@@ -17507,7 +17513,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
                down, &downvalidlocal, ndomredsdown, downconflict, lperror, vars, nvars, newlbs, newubs, &foundsol, &cutoff) );
 
          /* check whether a new solutions rendered the previous child infeasible */
-         if( foundsol && !firstchild )
+         if( foundsol && !firstchild && allcolsinlp )
          {
             if( SCIPisGE(scip, *up, SCIPgetCutoffbound(scip)) )
             {
@@ -17541,7 +17547,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
                up, &upvalidlocal, ndomredsup, upconflict, lperror, vars, nvars, newlbs, newubs, &foundsol, &cutoff) );
 
          /* check whether a new solutions rendered the previous child infeasible */
-         if( foundsol && !firstchild )
+         if( foundsol && !firstchild && allcolsinlp )
          {
             if( SCIPisGE(scip, *down, SCIPgetCutoffbound(scip)) )
             {
