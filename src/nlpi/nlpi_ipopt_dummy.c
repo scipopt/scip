@@ -123,7 +123,7 @@ SCIP_RETCODE SCIPsolveLinearProb(
    assert(a != NULL);
    assert(b != NULL);
    assert(x != NULL);
-   assert(succes != NULL);
+   assert(success != NULL);
 
    *success = TRUE;
 
