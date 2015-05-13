@@ -7390,7 +7390,6 @@ SCIP_RETCODE computeInteriorPoint(
          SCIPdebugMessage("cons %s: failed to find an interior point.  solution status: %d, termination status: %d\n",
                SCIPconsGetName(cons), SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
          goto TERMINATE;
-         break;
 
       case SCIP_NLPSOLSTAT_UNBOUNDED:
       case SCIP_NLPSOLSTAT_UNKNOWN:
@@ -7548,7 +7547,7 @@ SCIP_RETCODE computeGauge(
       val = consdata->interiorpoint[i];
       consdata->interiorpointval += (consdata->quadvarterms[i].lincoef + consdata->quadvarterms[i].sqrcoef * val) * val;
       consdata->gaugeconst += consdata->quadvarterms[i].sqrcoef * val * val;
-      SCIPhashmapInsert(varmap, consdata->quadvarterms[i].var, (void *)(size_t)i);
+      SCIP_CALL( SCIPhashmapInsert(varmap, consdata->quadvarterms[i].var, (void *)(size_t)i) );
    }
 
    for( i = 0; i < consdata->nbilinterms; i++ )
@@ -7846,8 +7845,8 @@ SCIP_RETCODE computeReferencePointGauge(
     */
    if( SCIPisFeasLE(scip, gaugeval, 1.0) )
    {
-      gaugeval = 1.0;
       *success = FALSE;
+
       return SCIP_OKAY;
    }
 
