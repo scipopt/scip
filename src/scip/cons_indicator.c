@@ -6458,8 +6458,8 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
    SCIP_CONS** indconss;
    int nindconss;
    int c;
-   SCIP_VAR* bestvar;
-   SCIP_Bool bestvarroundup;
+   SCIP_VAR* bestvar = NULL;
+   SCIP_Bool bestvarroundup = FALSE;
    SCIP_Real bestscore = SCIP_REAL_MIN;
 
    assert(scip != NULL);
@@ -6467,14 +6467,16 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(diveset != NULL);
    assert(success != NULL);
+   assert(infeasible != NULL);
+
+   *success = FALSE;
+   *infeasible = FALSE;
 
    indconss = SCIPconshdlrGetConss(conshdlr);
    nindconss = SCIPconshdlrGetNConss(conshdlr);
 
-   bestvar = NULL;
-   bestvarroundup = FALSE;
    /* loop over indicator constraints and score indicator variables with already integral solution value  */
-   for( c = 0; c < nindconss; ++c )
+   for (c = 0; c < nindconss; ++c)
    {
       /* check whether constraint is violated */
       if( SCIPisViolatedIndicator(scip, indconss[c], sol) )
