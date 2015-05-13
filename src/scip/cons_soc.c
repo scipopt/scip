@@ -3089,7 +3089,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    }
 
    /* treat hyberbolic case */
-   if ( rhsvar == NULL && nbilinterms == 1 )
+   if ( nbilinterms == 1 )
    {
       char name[SCIP_MAXSTRLEN];
       SCIP_VAR* auxvarsum;
@@ -3097,6 +3097,10 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       SCIP_CONS* couplingcons;
       SCIP_VAR* consvars[3];
       SCIP_Real consvals[3];
+
+      /* can only upgrade if rhs is 0 */
+      if ( rhsvar != NULL )
+         goto cleanup;
 
       SCIPdebugMessage("found hyberbolic quadratic constraint <%s> to be SOC\n", SCIPconsGetName(cons));
 
