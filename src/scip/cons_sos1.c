@@ -1022,7 +1022,7 @@ SCIP_RETCODE extensionOperatorSOS1(
 
          /* save new clique */
          assert( cliquesizes[*ncliques] >= 0 && cliquesizes[*ncliques] < nsos1vars );
-         assert( ncliques < MAX(1, conshdlrdata->maxextensions) * nconss );
+         assert( *ncliques < MAX(1, conshdlrdata->maxextensions) * nconss );
          SCIP_CALL( SCIPallocBufferArray(scip, &(cliques[*ncliques]), cliquesizes[*ncliques]) );/*lint !e866*/
          for (j = 0 ; j < cliquesizes[*ncliques]; ++j)
          {
@@ -3409,7 +3409,8 @@ SCIP_RETCODE initImplGraphSOS1(
    int                   nsos1vars,          /**< number of SOS1 variables */
    int                   maxrounds,          /**< maximal number of propagation rounds for generating implications */
    int*                  nchgbds,            /**< pointer to store number of bound changes */
-   SCIP_Bool*            cutoff              /**< pointer to store  whether a cutoff occurred */
+   SCIP_Bool*            cutoff,             /**< pointer to store  whether a cutoff occurred */
+   SCIP_Bool*            success             /**< whether initialization was successful */
    )
 {
    SCIP_HASHMAP* implhash = NULL;
@@ -3429,11 +3430,19 @@ SCIP_RETCODE initImplGraphSOS1(
    assert( cutoff != NULL );
    assert( nchgbds != NULL );
 
-   /* only add globally valid implications to implication graph */
-   assert ( SCIPgetDepth(scip) == 0 );
-
    *nchgbds = 0;
    *cutoff = FALSE;
+
+   /* we do not create the adjacency matrix of the conflict graph if the number of SOS1 variables is larger than a predefined value */
+   if ( conshdlrdata->maxsosadjacency != -1 && nsos1vars > conshdlrdata->maxsosadjacency )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+   *success = TRUE;
+
+   /* only add globally valid implications to implication graph */
+   assert ( SCIPgetDepth(scip) == 0 );
 
    probvars = SCIPgetVars(scip);
    nprobvars = SCIPgetNVars(scip);
@@ -6416,8 +6425,9 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
 
       if ( SCIPgetDepth(scip) == 0 )
       {
-         SCIP_CALL( initImplGraphSOS1(scip, conshdlrdata, conshdlrdata->conflictgraph, conshdlrdata->nsos1vars, conshdlrdata->maxtightenbds, &nchbds, cutoff) );
-         if ( *cutoff )
+         SCIP_Bool success;
+         SCIP_CALL( initImplGraphSOS1(scip, conshdlrdata, conshdlrdata->conflictgraph, conshdlrdata->nsos1vars, conshdlrdata->maxtightenbds, &nchbds, cutoff, &success) );
+         if ( *cutoff || ! success )
             return SCIP_OKAY;
          implgraph = conshdlrdata->implgraph;
       }
@@ -8298,10 +8308,14 @@ SCIP_DECL_CONSPROP(consPropSOS1)
    {
       if ( SCIPgetDepth(scip) == 0 )
       {
+         SCIP_Bool success;
          SCIP_Bool cutoff;
          int nchbds;
 
-         SCIP_CALL( initImplGraphSOS1(scip, conshdlrdata, conflictgraph, conshdlrdata->nsos1vars, conshdlrdata->maxtightenbds, &nchbds, &cutoff) );
+         SCIP_CALL( initImplGraphSOS1(scip, conshdlrdata, conflictgraph, conshdlrdata->nsos1vars, conshdlrdata->maxtightenbds, &nchbds, &cutoff, &success) );
+         if ( ! success )
+            conshdlrdata->implprop = FALSE;
+
          if ( cutoff )
          {
             *result = SCIP_CUTOFF;
