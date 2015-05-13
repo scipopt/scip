@@ -1086,26 +1086,26 @@ SCIP_RETCODE readCoefficients(
             /* quadratic part in objective has to end with '/2' */
             if( !getNextToken(scip, lpinput) )
             {
-               syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective.");
+               syntaxError(scip, lpinput, "expected '/2' or '/ 2' after end of quadratic part in objective.");
                return SCIP_OKAY;
             }
             if( strcmp(lpinput->token, "/2") == 0 )
             {
-               SCIPdebugMessage("(line %d) saw '/2' after quadratic part in objective\n", lpinput->linenumber);
+               SCIPdebugMessage("(line %d) saw '/2' or '/ 2' after quadratic part in objective\n", lpinput->linenumber);
             }
             else if( *lpinput->token == '/' )
             {
                /* maybe it says '/ 2' */
-               if( !getNextToken(scip, lpinput) || *lpinput->token == '2' )
+               if( !getNextToken(scip, lpinput) || *lpinput->token != '2' )
                {
-                  syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective.");
+                  syntaxError(scip, lpinput, "expected '/2' or '/ 2' after end of quadratic part in objective.");
                   return SCIP_OKAY;
                }
                SCIPdebugMessage("(line %d) saw '/ 2' after quadratic part in objective\n", lpinput->linenumber);
             }
             else
             {
-               syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective.");
+               syntaxError(scip, lpinput, "expected '/2' or '/ 2' after end of quadratic part in objective.");
                return SCIP_OKAY;
             }
          }
