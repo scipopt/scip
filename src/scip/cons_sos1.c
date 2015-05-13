@@ -94,12 +94,14 @@
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+/* adjacency matrix */
+#define DEFAULT_MAXSOSADJACENCY   50000 /**< do not create an adjacency matrix if number of SOS1 variables is larger than predefined value
+                                         *   (-1: no limit) */
+
 /* presolving */
 #define DEFAULT_MAXEXTENSIONS         1 /**< maximal number of extensions that will be computed for each SOS1 constraint */
 #define DEFAULT_MAXTIGHTENBDS         5 /**< maximal number of bound tightening rounds per presolving round (-1: no limit) */
 #define DEFAULT_UPDATECONFLPRESOL FALSE /**< if TRUE then update conflict graph during presolving procedure */
-#define DEFAULT_MAXSOSADJACENCY   10000 /**< do not create an adjacency matrix in presolving if number of SOS1 variables is larger than predefined
-                                         *   value (-1: no limit) */
 
 /* propagation */
 #define DEFAULT_CONFLICTPROP      TRUE /**< whether to use conflict graph propagation */
@@ -209,6 +211,9 @@ struct SCIP_ConshdlrData
    SCIP_Bool             isconflocal;        /**< if TRUE then local conflicts are present and conflict graph has to be updated for each node */
    SCIP_HASHMAP*         varhash;            /**< hash map from variable to node in the conflict graph */
    int                   nsos1vars;          /**< number of problem variables that are involved in at least one SOS1 constraint */
+   /* adjacency matrix */
+   int                   maxsosadjacency;    /**< do not create an adjacency matrix in if number of SOS1 variables is larger than predefined
+                                              *   value (-1: no limit) */
    /* implication graph */
    SCIP_DIGRAPH*         implgraph;          /**< implication graph (@p j is successor of @p i if and only if \f$ x_i\not = 0 \Rightarrow x_j\not = 0\f$) */
    int                   nimplnodes;          /**< number of nodes in the implication graph */
@@ -225,8 +230,6 @@ struct SCIP_ConshdlrData
    int                   maxextensions;      /**< maximal number of extensions that will be computed for each SOS1 constraint */
    int                   maxtightenbds;      /**< maximal number of bound tightening rounds per presolving round (-1: no limit) */
    SCIP_Bool             updateconflpresol;  /**< if TRUE then update conflict graph during presolving procedure */
-   int                   maxsosadjacency;    /**< do not create an adjacency matrix in presolving if number of SOS1 variables is larger than predefined
-                                              *   value (-1: no limit) */
    /* propagation */
    SCIP_Bool             conflictprop;       /**< whether to use conflict graph propagation */
    SCIP_Bool             implprop;           /**< whether to use implication graph propagation */
@@ -9103,6 +9106,11 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 
    /* add SOS1 constraint handler parameters */
 
+   /* adjacency matrix parameters */
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxsosadjacency",
+         "do not create an adjacency matrix if number of SOS1 variables is larger than predefined value (-1: no limit)",
+         &conshdlrdata->maxsosadjacency, TRUE, DEFAULT_MAXSOSADJACENCY, -1, INT_MAX, NULL, NULL) );
+
    /* presolving parameters */
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxextensions",
          "maximal number of extensions that will be computed for each SOS1 constraint  (-1: no limit)",
@@ -9115,10 +9123,6 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/updateconflpresol",
          "if TRUE then update conflict graph during presolving procedure",
          &conshdlrdata->updateconflpresol, TRUE, DEFAULT_UPDATECONFLPRESOL, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxsosadjacency",
-         "do not create an adjacency matrix in presolving if number of SOS1 variables is larger than predefined value (-1: no limit)",
-         &conshdlrdata->maxsosadjacency, TRUE, DEFAULT_MAXSOSADJACENCY, -1, INT_MAX, NULL, NULL) );
 
    /* propagation parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/conflictprop",
