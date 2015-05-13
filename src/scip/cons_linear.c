@@ -16655,6 +16655,96 @@ SCIP_RETCODE SCIPaddCoefLinear(
    return SCIP_OKAY;
 }
 
+/** changes coefficient of variable in linear constraint; deletes the variable if coefficient is zero; adds variable if
+ *  not yet contained in the constraint
+ *
+ *  @note This method may only be called during problem creation stage for an original constraint and variable.
+ *
+ *  @note This method requires linear time to search for occurences of the variable in the constraint data.
+ */
+SCIP_RETCODE SCIPchgCoefLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< variable of constraint entry */
+   SCIP_Real             val                 /**< new coefficient of constraint entry */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_VAR** vars;
+   SCIP_Bool found;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(var != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not linear\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM || !SCIPconsIsOriginal(cons) || !SCIPvarIsOriginal(var) )
+   {
+      SCIPerrorMessage("method may only be called during problem creation stage for original constraints and variables\n");
+      return SCIP_INVALIDDATA;
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   vars = consdata->vars;
+   found = FALSE;
+   i = 0;
+   while( i < consdata->nvars )
+   {
+      if( vars[i] == var )
+      {
+         if( found || SCIPisZero(scip, val) )
+         {
+            SCIP_CALL( delCoefPos(scip, cons, i) );
+
+            /* decrease i by one since otherwise we would skip the coefficient which has been switched to position i */
+            i--;
+         }
+         else
+         {
+            SCIP_CALL( chgCoefPos(scip, cons, i, val) );
+         }
+         found = TRUE;
+      }
+      i++;
+   }
+
+   if( !found && !SCIPisZero(scip, val) )
+   {
+      SCIP_CALL( SCIPaddCoefLinear(scip, cons, var, val) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** deletes variable from linear constraint
+ *
+ *  @note This method may only be called during problem creation stage for an original constraint and variable.
+ *
+ *  @note This method requires linear time to search for occurences of the variable in the constraint data.
+ */
+SCIP_RETCODE SCIPdelCoefLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var                 /**< variable of constraint entry */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(var != NULL);
+
+   SCIP_CALL( SCIPchgCoefLinear(scip, cons, var, 0.0) );
+
+   return SCIP_OKAY;
+}
+
 /** gets left hand side of linear constraint */
 SCIP_Real SCIPgetLhsLinear(
    SCIP*                 scip,               /**< SCIP data structure */

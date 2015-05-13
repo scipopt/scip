@@ -511,6 +511,86 @@ SCIP_RETCODE SCIPaddToNlpiProblemQuadratic(
    SCIP_Bool             names               /**< whether to pass constraint names to NLPI */
    );
 
+/** sets the left hand side of a quadratic constraint
+ *
+ *  @note This method may only be called during problem creation stage for an original constraint.
+ */
+EXTERN
+SCIP_RETCODE SCIPchgLhsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             lhs                 /**< new left hand side */
+   );
+
+/** sets the right hand side of a quadratic constraint
+ *
+ *  @note This method may only be called during problem creation stage for an original constraint.
+ */
+EXTERN
+SCIP_RETCODE SCIPchgRhsQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_Real             rhs                 /**< new right hand side */
+   );
+
+/** gets the feasibility of the quadratic constraint in the given solution */
+EXTERN
+SCIP_Real SCIPgetFeasibilityQuadratic(
+	SCIP*                 scip,               /**< SCIP data structure */
+	SCIP_CONS*            cons,               /**< constraint data */
+	SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
+	);
+
+/** gets the activity of the quadratic constraint in the given solution */
+EXTERN
+SCIP_Real SCIPgetActivityQuadratic(
+	SCIP*                 scip,               /**< SCIP data structure */
+	SCIP_CONS*            cons,               /**< constraint data */
+	SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
+	);
+
+/** changes the linear coefficient value for a given quadratic variable in a quadratic constraint data; if not
+ *  available, it adds it
+ *
+ *  @note this is only allowed for original constraints and variables in problem creation stage
+ */
+EXTERN
+SCIP_RETCODE SCIPchgLinearCoefQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< quadratic variable */
+   SCIP_Real             coef                /**< new coefficient */
+   );
+
+/** changes the square coefficient value for a given quadratic variable in a quadratic constraint data; if not
+ *  available, it adds it
+ *
+ *  @note this is only allowed for original constraints and variables in problem creation stage
+ */
+EXTERN
+SCIP_RETCODE SCIPchgSquareCoefQuadratic(
+	SCIP*                 scip,               /**< SCIP data structure */
+	SCIP_CONS*            cons,               /**< constraint data */
+	SCIP_VAR*             var,                /**< quadratic variable */
+	SCIP_Real             coef                /**< new coefficient */
+	);
+
+/** changes the bilinear coefficient value for a given quadratic variable in a quadratic constraint data; if not
+ *  available, it adds it
+ *
+ *  @note this is only allowed for original constraints and variables in problem creation stage
+ */
+EXTERN
+SCIP_RETCODE SCIPchgBilinCoefQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_VAR*             var1,               /**< first quadratic variable */
+   SCIP_VAR*             var2,               /**< second quadratic variable */
+   SCIP_Real             coef                /**< coefficient of bilinear term */
+   );
+
+
+
 #ifdef __cplusplus
 }
 #endif

@@ -157,6 +157,11 @@ performance improvements:
 - improved propagation of SOS1 constraint handler using the information from a conflict
 
 interface:
+- new method SCIPwriteParam() to write a single parameter to a file
+- new methods SCIPcheckParam{Bool,Char,...}() to check whether a parameter value is within the feasible domain
+- new methods SCIPchgCoefLinear() and SCIPdelCoefLinear() to modify linear constraint during problem creation
+- new methods SCIPchgLhsQuadratic(), SCIPchgRhsQuadratic(), SCIPchgLinearCoefQuadratic(), SCIPchgSquareCoefQuadratic(),
+  and SCIPchgBilinCoefQuadratic() to modify quadratic constraints during problem creation
 - new method SCIPcutGetLPActivityQuot() in pub_cutpool.h to get the potion of LP's where this cut was sharp in an optimal basis.
 - methods which support statistical tests in pub_misc.h, SCIPstudentTGetCriticalValue(), SCIPcomputeTwoSampleTTestValue() etc.
 - new enum SCIP_CONFIDENCE_LEVEL for different levels of confidence for statistical tests.

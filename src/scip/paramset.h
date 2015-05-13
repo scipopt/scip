@@ -431,6 +431,38 @@ SCIP_RETCODE SCIPparamsetCopyParams(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler of target SCIP */
    );
 
+/** checks value of SCIP_Bool parameter; issues a warning message if value is invalid */
+extern
+SCIP_RETCODE SCIPparamCheckBool(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_Bool             value               /**< value to check */
+   );
+
+/** checks value of string parameter; issues a warning message if value is invalid */
+extern
+SCIP_RETCODE SCIPparamCheckString(
+	SCIP_PARAM*           param,              /**< parameter */
+	SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+	const char*           value               /**< value to check */
+	);
+
+/** checks value of character parameter; issues a warning message if value is invalid */
+extern
+SCIP_RETCODE SCIPparamCheckChar(
+	SCIP_PARAM*           param,              /**< parameter */
+	SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+	const char            value               /**< value to check */
+	);
+
+/** checks value of SCIP_Longint parameter; issues a warning message if value is invalid */
+extern
+SCIP_RETCODE SCIPparamCheckLongint(
+	SCIP_PARAM*           param,              /**< parameter */
+	SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+	SCIP_Longint		    value               /**< value to check */
+	);
+
 /** sets value of SCIP_Bool parameter */
 extern
 SCIP_RETCODE SCIPparamSetBool(
@@ -510,6 +542,16 @@ SCIP_RETCODE SCIPparamSetToDefault(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   );
+
+/** writes a single parameter to a file */
+extern
+SCIP_RETCODE SCIPparamWrite(
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_MESSAGEHDLR*     messagehdlr,         /**< message handler */
+   const char*           filename,           /**< file name, or NULL for stdout */
+   SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
+   SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
    );
 
 #ifdef __cplusplus
