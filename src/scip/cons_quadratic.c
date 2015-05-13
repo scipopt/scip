@@ -6214,8 +6214,7 @@ SCIP_RETCODE generateCutLTI(
 }
 
 /** computes coefficients of linearization of a square term in a reference point */
-static
-void addSquareLinearization(
+void SCIPaddSquareLinearization(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             sqrcoef,            /**< coefficient of square term */
    SCIP_Real             refpoint,           /**< point where to linearize */
@@ -6281,8 +6280,7 @@ void addSquareLinearization(
 }
 
 /** computes coefficients of secant of a square term */
-static
-void addSquareSecant(
+void SCIPaddSquareSecant(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             sqrcoef,            /**< coefficient of square term */
    SCIP_Real             lb,                 /**< lower bound on variable */
@@ -6331,8 +6329,7 @@ void addSquareSecant(
 }
 
 /** computes coefficients of linearization of a bilinear term in a reference point */
-static
-void addBilinLinearization(
+void SCIPaddBilinLinearization(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
    SCIP_Real             refpointx,          /**< point where to linearize first  variable */
@@ -6378,8 +6375,7 @@ void addBilinLinearization(
 }
 
 /** computes coefficients of McCormick under- or overestimation of a bilinear term */
-static
-void addBilinMcCormick(
+void SCIPaddBilinMcCormick(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
    SCIP_Real             lbx,                /**< lower bound on first variable */
@@ -6623,7 +6619,7 @@ SCIP_RETCODE generateCutConvex(
 
       /* add linearization of square term */
       var = consdata->quadvarterms[j].var;
-      addSquareLinearization(scip, consdata->quadvarterms[j].sqrcoef, ref[j], consdata->quadvarterms[j].nadjbilin == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, success);
+      SCIPaddSquareLinearization(scip, consdata->quadvarterms[j].sqrcoef, ref[j], consdata->quadvarterms[j].nadjbilin == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, success);
 
       /* add linearization of bilinear terms that have var as first variable */
       for( k = 0; k < consdata->quadvarterms[j].nadjbilin && *success; ++k )
@@ -6639,7 +6635,7 @@ SCIP_RETCODE generateCutConvex(
          assert(var2pos < consdata->nquadvars);
          assert(consdata->quadvarterms[var2pos].var == bilinterm->var2);
 
-         addBilinLinearization(scip, bilinterm->coef, ref[j], ref[var2pos], &coef[j], &coef[var2pos], &constant, success);
+         SCIPaddBilinLinearization(scip, bilinterm->coef, ref[j], ref[var2pos], &coef[j], &coef[var2pos], &constant, success);
       }
    }
 
@@ -6720,12 +6716,14 @@ SCIP_RETCODE generateCutNonConvex(
          if( (violside == SCIP_SIDETYPE_LEFT  && sqrcoef <= 0.0) || (violside == SCIP_SIDETYPE_RIGHT && sqrcoef > 0.0) )
          {
             /* convex -> linearize */
-            addSquareLinearization(scip, sqrcoef, ref[j], SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, success);
+            SCIPaddSquareLinearization(scip, sqrcoef, ref[j], SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j],
+               &constant, success);
          }
          else
          {
             /* not convex -> secant approximation */
-            addSquareSecant(scip, sqrcoef, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j], &coef[j], &constant, success);
+            SCIPaddSquareSecant(scip, sqrcoef, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j], &coef[j],
+               &constant, success);
          }
       }
 
@@ -6742,7 +6740,7 @@ SCIP_RETCODE generateCutNonConvex(
          assert(var2pos < consdata->nquadvars);
          assert(consdata->quadvarterms[var2pos].var == bilinterm->var2);
 
-         addBilinMcCormick(scip, bilinterm->coef,
+         SCIPaddBilinMcCormick(scip, bilinterm->coef,
             SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), ref[j],
             SCIPvarGetLbLocal(bilinterm->var2), SCIPvarGetUbLocal(bilinterm->var2), ref[var2pos],
             violside == SCIP_SIDETYPE_LEFT, &coef[j], &coef[var2pos], &constant, success);
