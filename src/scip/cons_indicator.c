@@ -4004,7 +4004,7 @@ SCIP_RETCODE separateIISRounding(
    int                   maxsepacuts,        /**< maximal number of cuts to be generated */
    int*                  nGen                /**< number of domain changes */
    )
-{
+{ /*lint --e{850}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_LPI* lp;
    int rounds;
@@ -4076,8 +4076,8 @@ SCIP_RETCODE separateIISRounding(
       for (j = 0; j < nconss; ++j)
       {
          SCIP_CONSDATA* consdata;
-         SCIP_Real binvarval = 0.0;
-         SCIP_VAR* binvarneg = NULL;
+         SCIP_Real binvarval;
+         SCIP_VAR* binvarneg;
 
          assert( conss[j] != NULL );
          consdata = SCIPconsGetData(conss[j]);

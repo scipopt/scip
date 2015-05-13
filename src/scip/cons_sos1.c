@@ -2670,7 +2670,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          /* if variable is not already covered by an already known clique cover */
          if ( ! coveredvars[v] )
          {
-            SCIP_CALL( SCIPallocBufferArray(scip, &(cliquecovers[ncliquecovers]), ntrafolinvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &(cliquecovers[ncliquecovers]), ntrafolinvars) ); /*lint !e866*/
             SCIP_CALL( computeVarsCoverSOS1(scip, conflictgraph, conflictgraphlin, trafolinvars, coveredvars, cliquecovers[ncliquecovers], &(cliquecoversizes[ncliquecovers]), v, FALSE) );
             ++ncliquecovers;
          }
@@ -3599,7 +3599,7 @@ SCIP_RETCODE initImplGraphSOS1(
    SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix, nsos1vars) );
 
    for (i = 0; i < nsos1vars; ++i)
-      SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix[i], i+1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &adjacencymatrix[i], i+1) ); /*lint !e866*/
 
    /* create adjacency matrix */
    for (i = 0; i < nsos1vars; ++i)
@@ -9548,7 +9548,7 @@ int SCIPgetNSOS1Vars(
    {
       SCIPerrorMessage("not an SOS1 constraint handler.\n");
       SCIPABORT();
-      return -1;
+      return -1; /*lint !e527*/
    }
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
@@ -9572,7 +9572,7 @@ SCIP_Bool SCIPvarIsSOS1(
    {
       SCIPerrorMessage("not an SOS1 constraint handler.\n");
       SCIPABORT();
-      return FALSE;
+      return FALSE; /*lint !e527*/
    }
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
