@@ -162,6 +162,8 @@ interface:
 - new methods SCIPchgCoefLinear() and SCIPdelCoefLinear() to modify linear constraint during problem creation
 - new methods SCIPchgLhsQuadratic(), SCIPchgRhsQuadratic(), SCIPchgLinearCoefQuadratic(), SCIPchgSquareCoefQuadratic(),
   and SCIPchgBilinCoefQuadratic() to modify quadratic constraints during problem creation
+- new methods SCIPgetFeasibilityQuadratic() and SCIPgetActivityQuadratic() to get the feasibility and activity of a quadratic
+  constraint in a given solution
 - new method SCIPcutGetLPActivityQuot() in pub_cutpool.h to get the potion of LP's where this cut was sharp in an optimal basis.
 - methods which support statistical tests in pub_misc.h, SCIPstudentTGetCriticalValue(), SCIPcomputeTwoSampleTTestValue() etc.
 - new enum SCIP_CONFIDENCE_LEVEL for different levels of confidence for statistical tests.
