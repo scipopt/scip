@@ -255,6 +255,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             branchsos;          /**< Branch on SOS condition in enforcing? */
    SCIP_Bool             branchnonzeros;     /**< Branch on SOS cons. with most number of nonzeros? */
    SCIP_Bool             branchweight;       /**< Branch on SOS cons. with highest nonzero-variable weight for branching - needs branchnonzeros to be false */
+   SCIP_Bool             switchsos1branch;   /**< whether to switch to SOS1 branching */
    /* selection rules */
    int                   nstrongrounds;      /**< maximal number of strong branching rounds to perform for each node (-1: auto)
                                               *   (only available for neighborhood and bipartite branching) */
@@ -489,11 +490,28 @@ SCIP_Real SCIPnodeGetSolvalVarboundUbSOS1(
 }
 
 
+/** returns whether variable is involved in an SOS1 constraint */
+static
+SCIP_Bool varIsSOS1(
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< SOS1 constraint handler */
+   SCIP_VAR*             var                 /**< variable */
+   )
+{
+   assert( conshdlrdata != NULL );
+   assert( var != NULL );
+
+   if ( conshdlrdata->varhash == NULL || ! SCIPhashmapExists(conshdlrdata->varhash, var) )
+      return FALSE;
+
+   return TRUE;
+}
+
+
 /** returns SOS1 index of variable or -1 if variable is not involved in an SOS1 constraint */
 static
 int varGetNodeSOS1(
-   SCIP_CONSHDLRDATA*    conshdlrdata,        /**< SOS1 constraint handler */
-   SCIP_VAR*             var                  /**< variable */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< SOS1 constraint handler */
+   SCIP_VAR*             var                 /**< variable */
    )
 {
    assert( conshdlrdata != NULL );
@@ -754,25 +772,23 @@ SCIP_RETCODE handleNewVariableSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_VAR*             var,                /**< variable */
    SCIP_Bool             transformed         /**< whether original variable was transformed */
    )
 {
+   SCIP_DIGRAPH* conflictgraph;
+   int node;
+
    assert( scip != NULL );
    assert( cons != NULL );
    assert( consdata != NULL );
+   assert( conshdlrdata != NULL );
    assert( var != NULL );
 
    /* if we are in transformed problem, catch the variable's events */
    if ( transformed )
    {
-      SCIP_CONSHDLR* conshdlr;
-      SCIP_CONSHDLRDATA* conshdlrdata;
-
-      /* get event handler */
-      conshdlr = SCIPconsGetHdlr(cons);
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert( conshdlrdata != NULL );
       assert( conshdlrdata->eventhdlr != NULL );
 
       /* catch bound change events of variable */
@@ -803,6 +819,84 @@ SCIP_RETCODE handleNewVariableSOS1(
       SCIP_CALL( SCIPaddVarToRow(scip, consdata->rowlb, var, 1.0/SCIPvarGetLbGlobal(var)) );
    }
 
+   /* return if the conflict graph has not been created yet */
+   conflictgraph = conshdlrdata->conflictgraph;
+   if ( conflictgraph == NULL )
+      return SCIP_OKAY;
+
+   /* get node of variable in the conflict graph (or -1) */
+   node = varGetNodeSOS1(conshdlrdata, var);
+   assert( node < conshdlrdata->nsos1vars );
+
+   /* if the variable is not already a node of the conflict graph */
+   if ( node < 0 )
+   {
+      /* variable does not appear in the conflict graph: switch to SOS1 branching rule, which does not make use of a conflict graph
+       * @todo: maybe recompute the conflict graph, implication graph and varhash instead */
+      SCIPdebugMessage("Switched to SOS1 branching rule, since conflict graph could be infeasible.\n");
+      conshdlrdata->switchsos1branch = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* if the constraint is local, then there is no need to act, since local constraints are handled by the local conflict graph in the
+    * function enforceConflictgraph() */
+   if ( ! consdata->local )
+   {
+      SCIP_VAR** vars;
+      int nvars;
+      int v;
+
+      vars = consdata->vars;
+      nvars = consdata->nvars;
+
+      for (v = 0; v < nvars; ++v)
+      {
+         int nodev;
+
+         if ( var == vars[v] )
+            continue;
+
+         /* get node of variable in the conflict graph (or -1) */
+         nodev = varGetNodeSOS1(conshdlrdata, vars[v]);
+         assert( nodev < conshdlrdata->nsos1vars );
+
+         /* if the variable is already a node of the conflict graph */
+         if ( nodev >= 0 )
+         {
+            int nsucc;
+            int nsuccv;
+
+            nsucc = SCIPdigraphGetNSuccessors(conflictgraph, node);
+            nsuccv = SCIPdigraphGetNSuccessors(conflictgraph, nodev);
+
+            /* add arcs if not existent */
+            SCIP_CALL( SCIPdigraphAddArcSafe(conflictgraph, nodev, node, NULL) );
+            SCIP_CALL( SCIPdigraphAddArcSafe(conflictgraph, node, nodev, NULL) );
+
+            /* in case of new arcs: sort successors in ascending order */
+            if ( nsucc < SCIPdigraphGetNSuccessors(conflictgraph, node) )
+            {
+               SCIPdebugMessage("Added new conflict graph arc from variable %s to variable %s.\n", SCIPvarGetName(var), SCIPvarGetName(vars[v]));
+               SCIPsortInt(SCIPdigraphGetSuccessors(conflictgraph, node), SCIPdigraphGetNSuccessors(conflictgraph, node));
+            }
+
+            if ( nsuccv < SCIPdigraphGetNSuccessors(conflictgraph, nodev) )
+            {
+               SCIPdebugMessage("Added new conflict graph arc from variable %s to variable %s.\n", SCIPvarGetName(vars[v]), SCIPvarGetName(var));
+               SCIPsortInt(SCIPdigraphGetSuccessors(conflictgraph, nodev), SCIPdigraphGetNSuccessors(conflictgraph, nodev));
+            }
+         }
+         else
+         {
+            /* variable does not appear in the conflict graph: switch to SOS1 branching rule, which does not make use of a conflict graph
+             * @todo: maybe recompute the conflict graph, implication graph and varhash instead */
+            SCIPdebugMessage("Switched to SOS1 branching rule, since conflict graph could be infeasible.\n");
+            conshdlrdata->switchsos1branch = TRUE;
+            return SCIP_OKAY;
+         }
+      }
+   }
+
    return SCIP_OKAY;
 }
 
@@ -812,6 +906,7 @@ static
 SCIP_RETCODE addVarSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_VAR*             var,                /**< variable to add to the constraint */
    SCIP_Real             weight              /**< weight to determine position */
    )
@@ -823,6 +918,7 @@ SCIP_RETCODE addVarSOS1(
 
    assert( var != NULL );
    assert( cons != NULL );
+   assert( conshdlrdata != NULL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -869,7 +965,7 @@ SCIP_RETCODE addVarSOS1(
    ++consdata->nvars;
 
    /* handle the new variable */
-   SCIP_CALL( handleNewVariableSOS1(scip, cons, consdata, var, transformed) );
+   SCIP_CALL( handleNewVariableSOS1(scip, cons, consdata, conshdlrdata, var, transformed) );
 
    return SCIP_OKAY;
 }
@@ -880,6 +976,7 @@ static
 SCIP_RETCODE appendVarSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_VAR*             var                 /**< variable to add to the constraint */
    )
 {
@@ -888,6 +985,7 @@ SCIP_RETCODE appendVarSOS1(
 
    assert( var != NULL );
    assert( cons != NULL );
+   assert( conshdlrdata != NULL );
 
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
@@ -913,7 +1011,7 @@ SCIP_RETCODE appendVarSOS1(
    ++consdata->nvars;
 
    /* handle the new variable */
-   SCIP_CALL( handleNewVariableSOS1(scip, cons, consdata, var, transformed) );
+   SCIP_CALL( handleNewVariableSOS1(scip, cons, consdata, conshdlrdata, var, transformed) );
 
    return SCIP_OKAY;
 }
@@ -1972,8 +2070,8 @@ SCIP_RETCODE updateConflictGraphSOS1(
                   TRUE, FALSE, FALSE, FALSE) );
 
             /* add variables to SOS1 constraint */
-            SCIP_CALL( SCIPaddVarSOS1(scip, soscons, var1, 1.0) );
-            SCIP_CALL( SCIPaddVarSOS1(scip, soscons, var2, 2.0) );
+            SCIP_CALL( addVarSOS1(scip, soscons, conshdlrdata, var1, 1.0) );
+            SCIP_CALL( addVarSOS1(scip, soscons, conshdlrdata, var2, 2.0) );
 
             /* add constraint */
             SCIP_CALL( SCIPaddCons(scip, soscons) );
@@ -4892,8 +4990,8 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
                               TRUE, FALSE, FALSE, FALSE) );
 
                         /* add variables to SOS1 constraint */
-                        SCIP_CALL( SCIPaddVarSOS1(scip, conssos1, var1, 1.0) );
-                        SCIP_CALL( SCIPaddVarSOS1(scip, conssos1, var2, 2.0) );
+                        SCIP_CALL( addVarSOS1(scip, conssos1, conshdlrdata, var1, 1.0) );
+                        SCIP_CALL( addVarSOS1(scip, conssos1, conshdlrdata, var2, 2.0) );
 
                         /* add SOS1 constraint to the branching node */
                         SCIP_CALL( SCIPaddConsNode(scip, node, conssos1, NULL) );
@@ -7375,7 +7473,6 @@ SCIP_RETCODE checkConComponentsVarbound(
 static
 SCIP_RETCODE checkLinearConssVarboundSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< SOS1 constraint handler data */
    SCIP_CONS**           linconss,           /**< linear constraints */
    int                   nlinconss           /**< number of linear constraints */
@@ -7413,7 +7510,7 @@ SCIP_RETCODE checkLinearConssVarboundSOS1(
          assert( var0 != NULL && var1 != NULL );
 
          /* at least one variable should be an SOS1 variable */
-         if ( SCIPvarIsSOS1(conshdlr, var0) || SCIPvarIsSOS1(conshdlr, var1) )
+         if ( varIsSOS1(conshdlrdata, var0) || varIsSOS1(conshdlrdata, var1) )
          {
             SCIP_Real val0;
             SCIP_Real val1;
@@ -7449,7 +7546,6 @@ SCIP_RETCODE checkLinearConssVarboundSOS1(
 static
 SCIP_RETCODE computeNodeDataSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
-   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< SOS1 constraint handler data */
    int                   nsos1vars           /**< number of SOS1 variables */
    )
@@ -7472,7 +7568,7 @@ SCIP_RETCODE computeNodeDataSOS1(
    linconss = SCIPconshdlrGetConss(linconshdlr);
 
    /* check linear constraints for variable bound constraints */
-   SCIP_CALL( checkLinearConssVarboundSOS1(scip, conshdlr, conshdlrdata, linconss, nlinconss) );
+   SCIP_CALL( checkLinearConssVarboundSOS1(scip, conshdlrdata, linconss, nlinconss) );
 
    /* for each connected component of the conflict graph check whether all the variables correspond to a unique variable
     * upper bound variable */
@@ -7771,7 +7867,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
        SCIP_CALL( initConflictgraph(scip, conshdlrdata, conss, nconss) );
 
        /* add data to conflict graph nodes */
-       SCIP_CALL( computeNodeDataSOS1(scip, conshdlr, conshdlrdata, conshdlrdata->nsos1vars) );
+       SCIP_CALL( computeNodeDataSOS1(scip, conshdlrdata, conshdlrdata->nsos1vars) );
 
        /* initialize tclique graph */
        SCIP_CALL( initTCliquegraph(scip, conshdlr, conshdlrdata, conshdlrdata->conflictgraph, conshdlrdata->nsos1vars) );
@@ -8221,7 +8317,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOS1)
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   if ( conshdlrdata->sos1branch )
+   if ( conshdlrdata->sos1branch || conshdlrdata->switchsos1branch )
    {
       if ( conshdlrdata->nstrongrounds != 0 )
       {
@@ -8276,7 +8372,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsSOS1)
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   if ( conshdlrdata->sos1branch )
+   if ( conshdlrdata->sos1branch || conshdlrdata->switchsos1branch )
    {
       if ( conshdlrdata->nstrongrounds != 0 )
       {
@@ -8734,6 +8830,12 @@ SCIP_DECL_CONSPARSE(consParseSOS1)
    const char* s;
    char* t;
 
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+   assert(cons != NULL);
+   assert(success != NULL);
+
    *success = TRUE;
    s = str;
 
@@ -9060,6 +9162,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    /* create constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
    conshdlrdata->branchsos = TRUE;
+   conshdlrdata->switchsos1branch = FALSE;
    conshdlrdata->eventhdlr = NULL;
    conshdlrdata->fixnonzerovars = NULL;
    conshdlrdata->maxnfixnonzerovars = 0;
@@ -9346,6 +9449,8 @@ SCIP_RETCODE SCIPcreateConsSOS1(
    /* replace original variables by transformed variables in transformed constraint, add locks, and catch events */
    for (v = nvars - 1; v >= 0; --v)
    {
+      SCIP_CONSHDLRDATA* conshdlrdata;
+
       /* always use transformed variables in transformed constraints */
       if ( transformed )
       {
@@ -9354,8 +9459,12 @@ SCIP_RETCODE SCIPcreateConsSOS1(
       assert( consdata->vars[v] != NULL );
       assert( transformed == SCIPvarIsTransformed(consdata->vars[v]) );
 
+      /* get constraint handler data */
+      conshdlrdata = SCIPconshdlrGetData(conshdlr);
+      assert( conshdlrdata != NULL );
+
       /* handle the new variable */
-      SCIP_CALL( handleNewVariableSOS1(scip, *cons, consdata, consdata->vars[v], transformed) );
+      SCIP_CALL( handleNewVariableSOS1(scip, *cons, consdata, conshdlrdata, consdata->vars[v], transformed) );
    }
 
    return SCIP_OKAY;
@@ -9392,19 +9501,27 @@ SCIP_RETCODE SCIPaddVarSOS1(
    SCIP_Real             weight              /**< weight determining position of variable */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+
    assert( scip != NULL );
    assert( var != NULL );
    assert( cons != NULL );
 
    SCIPdebugMessage("adding variable <%s> to constraint <%s> with weight %g\n", SCIPvarGetName(var), SCIPconsGetName(cons), weight);
 
-   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert( conshdlr != NULL );
+   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( addVarSOS1(scip, cons, var, weight) );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   SCIP_CALL( addVarSOS1(scip, cons, conshdlrdata, var, weight) );
 
    return SCIP_OKAY;
 }
@@ -9417,19 +9534,27 @@ SCIP_RETCODE SCIPappendVarSOS1(
    SCIP_VAR*             var                 /**< variable to add to the constraint */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+
    assert( scip != NULL );
    assert( var != NULL );
    assert( cons != NULL );
 
    SCIPdebugMessage("appending variable <%s> to constraint <%s>\n", SCIPvarGetName(var), SCIPconsGetName(cons));
 
-   if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   conshdlr = SCIPconsGetHdlr(cons);
+   assert( conshdlr != NULL );
+   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not an SOS1 constraint.\n");
       return SCIP_INVALIDDATA;
    }
 
-   SCIP_CALL( appendVarSOS1(scip, cons, var) );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
+
+   SCIP_CALL( appendVarSOS1(scip, cons, conshdlrdata, var) );
 
    return SCIP_OKAY;
 }
@@ -9577,10 +9702,7 @@ SCIP_Bool SCIPvarIsSOS1(
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   if ( conshdlrdata->varhash == NULL || ! SCIPhashmapExists(conshdlrdata->varhash, var) )
-      return FALSE;
-
-   return TRUE;
+   return varIsSOS1(conshdlrdata, var);
 }
 
 
