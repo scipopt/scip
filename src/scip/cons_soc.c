@@ -3017,6 +3017,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       for (i = 0; i < nquadvars; ++i)
       {
          term = &quadterms[i];
+         if ( SCIPisZero(scip, term->sqrcoef) )
+            continue;
+
          if ( term->var == bilinvar1 || term->var == bilinvar2 )
             return SCIP_OKAY;
       }
