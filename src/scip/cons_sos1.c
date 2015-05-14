@@ -215,7 +215,7 @@ struct SCIP_ConshdlrData
    SCIP_DIGRAPH*         localconflicts;     /**< local conflicts */
    SCIP_Bool             isconflocal;        /**< if TRUE then local conflicts are present and conflict graph has to be updated for each node */
    SCIP_HASHMAP*         varhash;            /**< hash map from variable to node in the conflict graph */
-   int                   nsos1vars;          /**< number of problem variables that are involved in at least one SOS1 constraint */
+   int                   nsos1vars;          /**< number of problem variables that are part of the SOS1 conflict graph */
    /* adjacency matrix */
    int                   maxsosadjacency;    /**< do not create an adjacency matrix in if number of SOS1 variables is larger than predefined
                                               *   value (-1: no limit) */
@@ -490,7 +490,7 @@ SCIP_Real SCIPnodeGetSolvalVarboundUbSOS1(
 }
 
 
-/** returns whether variable is involved in an SOS1 constraint */
+/** returns whether variable is part of the SOS1 conflict graph */
 static
 SCIP_Bool varIsSOS1(
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< SOS1 constraint handler */
@@ -507,7 +507,7 @@ SCIP_Bool varIsSOS1(
 }
 
 
-/** returns SOS1 index of variable or -1 if variable is not involved in an SOS1 constraint */
+/** returns SOS1 index of variable or -1 if variable is not part of the SOS1 conflict graph */
 static
 int varGetNodeSOS1(
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< SOS1 constraint handler */
@@ -9660,7 +9660,7 @@ SCIP_DIGRAPH* SCIPgetConflictgraphSOS1(
 }
 
 
-/** gets number of problem variables that are involved in at least one SOS1 constraint */
+/** gets number of problem variables that are part of the SOS1 conflict graph */
 int SCIPgetNSOS1Vars(
    SCIP_CONSHDLR*        conshdlr            /**< SOS1 constraint handler */
    )
@@ -9682,7 +9682,7 @@ int SCIPgetNSOS1Vars(
 }
 
 
-/** returns whether variable is involved in an SOS1 constraint */
+/** returns whether variable is part of the SOS1 conflict graph */
 SCIP_Bool SCIPvarIsSOS1(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_VAR*             var                 /**< variable */
@@ -9706,7 +9706,7 @@ SCIP_Bool SCIPvarIsSOS1(
 }
 
 
-/** returns SOS1 index of variable or -1 if variable is not involved in an SOS1 constraint */
+/** returns SOS1 index of variable or -1 if variable is part of the SOS1 conflict graph */
 int SCIPvarGetNodeSOS1(
    SCIP_CONSHDLR*        conshdlr,            /**< SOS1 constraint handler */
    SCIP_VAR*             var                  /**< variable */

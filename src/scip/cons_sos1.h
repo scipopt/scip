@@ -149,20 +149,20 @@ SCIP_DIGRAPH* SCIPgetConflictgraphSOS1(
    SCIP_CONSHDLR*        conshdlr            /**< SOS1 constraint handler */
    );
 
-/** gets number of problem variables that are involved in at least one SOS1 constraint */
+/** gets number of problem variables that are part of the SOS1 conflict graph */
 EXTERN
 int SCIPgetNSOS1Vars(
    SCIP_CONSHDLR*        conshdlr            /**< SOS1 constraint handler */
    );
 
-/** returns whether variable is involved in an SOS1 constraint */
+/** returns whether variable is part of the SOS1 conflict graph */
 EXTERN
 SCIP_Bool SCIPvarIsSOS1(
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
    SCIP_VAR*             var                 /**< variable */
    );
 
-/** returns node of variable in the conflict graph or -1 if variable is not involved in an SOS1 constraint */
+/** returns node of variable in the conflict graph or -1 if variable is not part of in the SOS1 conflict graph */
 EXTERN
 int SCIPvarGetNodeSOS1(
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
