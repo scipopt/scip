@@ -14,8 +14,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_quadratic.c
- * @brief  constraint handler for quadratic constraints \f$\textrm{lhs} \leq \sum_{i,j=1}^n a_{i,j} x_ix_j + \sum_{i=1}^n b_i x_i \leq \textrm{rhs}\f$
+ * @brief  constraint handler for quadratic constraints \f$\textrm{lhs} \leq \sum_{i,j=1}^n a_{i,j} x_i x_j + \sum_{i=1}^n b_i x_i \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
+ * @author Benjamin Mueller
+ * @author Felipe Serrano
  * 
  * @todo SCIP might fix linear variables on +/- infinity; remove them in presolve and take care later
  * @todo round constraint sides to integers if all coefficients and variables are (impl.) integer
@@ -254,7 +256,7 @@ SCIP_Bool conshdlrdataHasUpgrade(
  */
 #define infty2infty(infty1, infty2, val) ((val) >= (infty1) ? (infty2) : (val))
 
-/* catches variable bound change events on a linear variable in a quadratic constraint */
+/** catches variable bound change events on a linear variable in a quadratic constraint */
 static
 SCIP_RETCODE catchLinearVarEvents(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -319,7 +321,7 @@ SCIP_RETCODE catchLinearVarEvents(
    return SCIP_OKAY;
 }
 
-/* drops variable bound change events on a linear variable in a quadratic constraint */
+/** drops variable bound change events on a linear variable in a quadratic constraint */
 static
 SCIP_RETCODE dropLinearVarEvents(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -373,7 +375,7 @@ SCIP_RETCODE dropLinearVarEvents(
    return SCIP_OKAY;
 }
 
-/* catches variable bound change events on a quadratic variable in a quadratic constraint */
+/** catches variable bound change events on a quadratic variable in a quadratic constraint */
 static
 SCIP_RETCODE catchQuadVarEvents(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -418,7 +420,7 @@ SCIP_RETCODE catchQuadVarEvents(
    return SCIP_OKAY;
 }
 
-/* catches variable bound change events on a quadratic variable in a quadratic constraint */
+/** catches variable bound change events on a quadratic variable in a quadratic constraint */
 static
 SCIP_RETCODE dropQuadVarEvents(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -630,9 +632,10 @@ SCIP_RETCODE unlockQuadraticVariable(
 }
 
 /** computes the minimal and maximal activity for the linear part in a constraint data
- *  only sums up terms that contribute finite values
- *  gives the number of terms that contribute infinite values
- *  only computes those activities where the corresponding side of the constraint is finite
+ *
+ *  Only sums up terms that contribute finite values.
+ *  Gives the number of terms that contribute infinite values.
+ *  Only computes those activities where the corresponding side of the constraint is finite.
  */
 static
 void consdataUpdateLinearActivity(
@@ -2032,7 +2035,8 @@ SCIP_RETCODE addQuadVarTerm(
    if( consdata->nquadvars == 1 )
       consdata->quadvarssorted = TRUE;
    else
-      consdata->quadvarssorted = consdata->quadvarssorted && (SCIPvarCompare(consdata->quadvarterms[consdata->nquadvars-2].var, consdata->quadvarterms[consdata->nquadvars-1].var) == -1);
+      consdata->quadvarssorted = consdata->quadvarssorted &&
+         (SCIPvarCompare(consdata->quadvarterms[consdata->nquadvars-2].var, consdata->quadvarterms[consdata->nquadvars-1].var) == -1);
    /* also set to FALSE if nquadvars == 1, since the new variable should be checked for linearity and other stuff in mergeAndClean ... */ 
    consdata->quadvarsmerged = FALSE;
 
@@ -2110,8 +2114,10 @@ SCIP_RETCODE delQuadVarTermPos(
    return SCIP_OKAY;
 }
 
-/** replace variable in quadratic variable term at given position of quadratic constraint data 
- * allows to replace x by coef*y+offset, thereby maintaining linear and square coefficients and bilinear terms */
+/** replace variable in quadratic variable term at given position of quadratic constraint data
+ *
+ * Allows to replace x by coef*y+offset, thereby maintaining linear and square coefficients and bilinear terms.
+ */
 static
 SCIP_RETCODE replaceQuadVarTermPos(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2371,7 +2377,9 @@ SCIP_RETCODE addBilinearTerm(
 }
 
 /** removes a set of bilinear terms and updates adjacency information in quad var terms
- * Note: this function sorts the given array termposs */
+ *
+ * Note: this function sorts the given array termposs.
+ */
 static
 SCIP_RETCODE removeBilinearTermsPos(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2466,9 +2474,10 @@ SCIP_RETCODE removeBilinearTermsPos(
    return SCIP_OKAY;
 }
 
-/* merges quad var terms that correspond to the same variable and does additional cleanup
- * if a quadratic variable terms is actually linear, makes a linear term out of it
- * also replaces squares of binary variables by the binary variables, i.e., adds sqrcoef to lincoef
+/** merges quad var terms that correspond to the same variable and does additional cleanup
+ *
+ *  If a quadratic variable terms is actually linear, makes a linear term out of it
+ *  also replaces squares of binary variables by the binary variables, i.e., adds sqrcoef to lincoef.
  */
 static
 SCIP_RETCODE mergeAndCleanQuadVarTerms(
@@ -2566,7 +2575,7 @@ SCIP_RETCODE mergeAndCleanQuadVarTerms(
    return SCIP_OKAY;
 }
 
-/* merges entries with same linear variable into one entry and cleans up entries with coefficient 0.0 */
+/** merges entries with same linear variable into one entry and cleans up entries with coefficient 0.0 */
 static
 SCIP_RETCODE mergeAndCleanLinearVars(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2638,7 +2647,7 @@ SCIP_RETCODE mergeAndCleanLinearVars(
    return SCIP_OKAY;
 }
 
-/* merges bilinear terms with same variables into a single term, removes bilinear terms with coefficient 0.0 */
+/** merges bilinear terms with same variables into a single term, removes bilinear terms with coefficient 0.0 */
 static
 SCIP_RETCODE mergeAndCleanBilinearTerms(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2749,7 +2758,8 @@ SCIP_RETCODE removeFixedVariables(
 
       SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &offset) );
 
-      SCIPdebugMessage("  linear term %g*<%s> is replaced by %g * <%s> + %g\n", consdata->lincoefs[i], SCIPvarGetName(consdata->linvars[i]), coef, SCIPvarGetName(var), offset);
+      SCIPdebugMessage("  linear term %g*<%s> is replaced by %g * <%s> + %g\n", consdata->lincoefs[i], SCIPvarGetName(consdata->linvars[i]),
+         coef, SCIPvarGetName(var), offset);
 
       /* delete previous variable (this will move another variable to position i) */
       SCIP_CALL( delLinearCoefPos(scip, cons, i) );
@@ -2821,7 +2831,8 @@ SCIP_RETCODE removeFixedVariables(
       offset = 0.0;
       SCIP_CALL( SCIPgetProbvarSum(scip, &var, &coef, &offset) );
 
-      SCIPdebugMessage("  quadratic variable <%s> with status %d is replaced by %g * <%s> + %g\n", SCIPvarGetName(consdata->quadvarterms[i].var), SCIPvarGetStatus(consdata->quadvarterms[i].var), coef, SCIPvarGetName(var), offset);
+      SCIPdebugMessage("  quadratic variable <%s> with status %d is replaced by %g * <%s> + %g\n", SCIPvarGetName(consdata->quadvarterms[i].var),
+         SCIPvarGetStatus(consdata->quadvarterms[i].var), coef, SCIPvarGetName(var), offset);
 
       /* handle fixed variable */
       if( coef == 0.0 )
@@ -2962,8 +2973,7 @@ SCIP_RETCODE removeFixedVariables(
                }
                else
                { /* x_i != y, so we need to add a bilinear term here */
-                  SCIP_CALL( addBilinearTerm(scip, cons, nquadtermsold + j, var2pos,
-                        bilinterm->coef * coef * aggrscalars[j]) );
+                  SCIP_CALL( addBilinearTerm(scip, cons, nquadtermsold + j, var2pos, bilinterm->coef * coef * aggrscalars[j]) );
                }
             }
 
@@ -3133,6 +3143,7 @@ SCIP_RETCODE createNlRow(
    return SCIP_OKAY;
 }
 
+/** solve constraint as presolving */
 static
 SCIP_RETCODE presolveSolve(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3190,8 +3201,10 @@ SCIP_RETCODE presolveSolve(
 
       if( !SCIPisZero(scip, b) && !SCIPisZero(scip, b+c) )
       {
-         SCIPdebugMessage("<%s> = 0 -> %g*<%s> = %g  and  <%s> = 1 -> %g*<%s> = %g\n", SCIPvarGetName(x), b, SCIPvarGetName(y), consdata->rhs, SCIPvarGetName(x), b+c, SCIPvarGetName(y), consdata->rhs - a);
-         SCIPdebugMessage("=> attempt aggregation <%s> = %g*<%s> + %g\n", SCIPvarGetName(y), (consdata->rhs-a)/(b+c) - consdata->rhs/b, SCIPvarGetName(x), consdata->rhs/b);
+         SCIPdebugMessage("<%s> = 0 -> %g*<%s> = %g  and  <%s> = 1 -> %g*<%s> = %g\n", SCIPvarGetName(x), b, SCIPvarGetName(y), consdata->rhs,
+            SCIPvarGetName(x), b+c, SCIPvarGetName(y), consdata->rhs - a);
+         SCIPdebugMessage("=> attempt aggregation <%s> = %g*<%s> + %g\n", SCIPvarGetName(y), (consdata->rhs-a)/(b+c) - consdata->rhs/b,
+            SCIPvarGetName(x), consdata->rhs/b);
 
          SCIP_CALL( SCIPaggregateVars(scip, x, y, (consdata->rhs-a)/(b+c) - consdata->rhs/b, -1.0, -consdata->rhs/b, &infeasible, redundant, &aggregated) );
          if( infeasible )
@@ -3215,6 +3228,7 @@ SCIP_RETCODE presolveSolve(
 
 
 /** reformulates products of binary variables as AND constraint
+ *
  *  For a product x*y, with x and y binary variables, the product is replaced by a new auxiliary variable z and the constraint z = {x and y} is added.
  */
 static
@@ -3312,9 +3326,7 @@ SCIP_RETCODE presolveTryAddAND(
    return SCIP_OKAY;
 }
 
-/** gets bounds of variable y if x takes a certain value
- *  checks whether x = xval has implications on y
- */
+/** gets bounds of variable y if x takes a certain value; checks whether x = xval has implications on y */
 static
 SCIP_RETCODE getImpliedBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -3399,7 +3411,7 @@ SCIP_RETCODE getImpliedBounds(
 /** Reformulates products of binary times bounded continuous variables as system of linear inequalities (plus auxiliary variable).
  * 
  *  For a product x*y, with y a binary variable and x a continous variable with finite bounds,
- *  an auxiliary variable z and the inequalities \f$ x^L * y \leq z \leq x^U * y \f$ and \f$ x - (1-y)*x^U \leq z \leq x - (1-y)*x^L \f$ are added.
+ *  an auxiliary variable z and the inequalities \f$ x^L y \leq z \leq x^U y \f$ and \f$ x - (1-y) x^U \leq z \leq x - (1-y) x^L \f$ are added.
  * 
  *  If x is a linear term consisting of more than one variable, it is split up in groups of linear terms of length at most maxnrvar.
  *  For each product of linear term of length at most maxnrvar with y, an auxiliary z and linear inequalities are added.
@@ -3546,15 +3558,15 @@ SCIP_RETCODE presolveTryAddLinearReform(
             if( !SCIPisZero(scip, MIN(REALABS(act0.inf), REALABS(act0.sup))) &&
                SCIPfeastol(scip) * MAX(REALABS(act0.inf), REALABS(act0.sup)) / MIN(REALABS(act0.inf), REALABS(act0.sup)) >= conshdlrdata->binreformmaxcoef )
             {
-               SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity ratio %g for <%s> = 0.0\n",
-                  bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar), MAX(REALABS(act0.inf), REALABS(act0.sup)) / MIN(REALABS(act0.inf), REALABS(act0.sup)), SCIPvarGetName(y));
+               SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity ratio %g for <%s> = 0.0\n", bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar),
+                  MAX(REALABS(act0.inf), REALABS(act0.sup)) / MIN(REALABS(act0.inf), REALABS(act0.sup)), SCIPvarGetName(y));
                continue;
             }
             if( !SCIPisZero(scip, MIN(REALABS(act1.inf), REALABS(act1.sup))) &&
                SCIPfeastol(scip) * MAX(REALABS(act1.inf), REALABS(act1.sup)) / MIN(REALABS(act1.inf), REALABS(act1.sup)) >= conshdlrdata->binreformmaxcoef )
             {
-               SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity ratio %g for <%s> = 0.0\n",
-                  bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar), MAX(REALABS(act1.inf), REALABS(act1.sup)) / MIN(REALABS(act1.inf), REALABS(act1.sup)), SCIPvarGetName(y));
+               SCIPdebugMessage("skip reform of %g<%s><%s> due to huge activity ratio %g for <%s> = 0.0\n", bilincoef, SCIPvarGetName(y), SCIPvarGetName(bvar),
+                  MAX(REALABS(act1.inf), REALABS(act1.sup)) / MIN(REALABS(act1.inf), REALABS(act1.sup)), SCIPvarGetName(y));
                continue;
             }
 
@@ -3651,7 +3663,8 @@ SCIP_RETCODE presolveTryAddLinearReform(
          }
          else
          {
-            /* product of binary variable with more than one binary or with continuous variables or with binary and user did not like AND -> replace by auxvar and linear constraints */
+            /* product of binary variable with more than one binary or with continuous variables or with binary and user
+             * did not like AND -> replace by auxvar and linear constraints */
             SCIP_Real scale;
 
             /* scale auxiliary constraint by some nice value,
@@ -4264,7 +4277,8 @@ SCIP_RETCODE presolveDisaggregate(
 
 #ifdef CHECKIMPLINBILINEAR
 /** checks if there are bilinear terms x*y with a binary variable x and an implication x = {0,1} -> y = 0
- * in this case, the bilinear term can be removed (x=0 case) or replaced by y (x=1 case)
+ *
+ *  In this case, the bilinear term can be removed (x=0 case) or replaced by y (x=1 case).
  */
 static
 SCIP_RETCODE presolveApplyImplications(
@@ -4851,9 +4865,7 @@ SCIP_Real getGradientMaxElement(
             maxelem = REALABS(consdata->lincoefs[i]);
    }
    else
-   {
       maxelem = consdata->lincoefsmax;
-   }
 
    for( i = 0; i < consdata->nquadvars; ++i )
    {
@@ -5407,7 +5419,7 @@ SCIP_RETCODE generateCutFactorable(
    return SCIP_OKAY;
 }
 
-/* finds intersections of a parametric line (x,y) = (x0,y0) + t [(x1,y1) - (x0,y0)] on curves x*y = wl and x*y = wu
+/* finds intersections of a parametric line (x,y) = (x0,y0) + t [(x1,y1) - (x0,y0)] on curves x*y = wl and x*y = wu;
  * returns TRUE if unsuccessful and FALSE otherwise
  */
 static
@@ -5526,11 +5538,11 @@ SCIP_Bool generateCutLTIfindIntersection(
    return FALSE;
 }
 
-/* generate coefficients for a plane through points (x1, y1_, x1*y1) and (x2, y2, x2*y2)
- * such that intersecting it with one of them (the first if whichuse is FALSE, the second otherwise)
- * gives a tangent to the curve x*y = k
+/** generate coefficients for a plane through points (x1, y1_, x1*y1) and (x2, y2, x2*y2)
+ *  such that intersecting it with one of them (the first if whichuse is FALSE, the second otherwise)
+ *  gives a tangent to the curve x*y = k
  *
- * returns TRUE on error and FALSE on success
+ *  Returns TRUE on error and FALSE on success.
  */
 static
 SCIP_Bool generateCutLTIgenMulCoeff(
@@ -5586,8 +5598,9 @@ SCIP_Bool generateCutLTIgenMulCoeff(
 }
 
 /** computes coefficients of a lifted-tangent inequality for x*y = w
- * The code is an adaptation of the methods in exprMul-upperHull.cpp in Couenne/stable/0.4 rev773,
- * written by P. Belotti and licensed under Eclipse Public License.
+ *
+ *  The code is an adaptation of the methods in exprMul-upperHull.cpp in Couenne/stable/0.4 rev773,
+ *  written by P. Belotti and licensed under Eclipse Public License.
  */
 static
 void generateCutLTIcomputeCoefs(
@@ -5944,7 +5957,8 @@ void generateCutLTIcomputeCoefs(
 }
 
 /** tries to generate a cut if constraint quadratic function is factorable and there are linear variables
- * computes what is called a lifted tangent inequality described in
+ *
+ *  Computes what is called a lifted tangent inequality described in@n
  *   Belotti, Miller, Namazifar, Lifted inequalities for bounded products of variables, SIAG/OPT Views-and-News 22:1, 2011
  */
 static
@@ -6565,7 +6579,8 @@ void SCIPaddBilinMcCormick(
       constant = -constant;
    }
 
-   /* SCIPdebugMessage("%.20g * x[%.20g,%.20g] * y[%.20g,%.20g] %c= %.20g * x %+.20g * y %+.20g\n", bilincoef, lbx, ubx, lby, uby, overestimate ? '<' : '>', coefx, coefy, constant); */
+   /* SCIPdebugMessage("%.20g * x[%.20g,%.20g] * y[%.20g,%.20g] %c= %.20g * x %+.20g * y %+.20g\n", bilincoef, lbx, ubx, lby, uby,
+      overestimate ? '<' : '>', coefx, coefy, constant); */
 
    *lincoefx    += coefx;
    *lincoefy    += coefy;
@@ -6619,7 +6634,8 @@ SCIP_RETCODE generateCutConvex(
 
       /* add linearization of square term */
       var = consdata->quadvarterms[j].var;
-      SCIPaddSquareLinearization(scip, consdata->quadvarterms[j].sqrcoef, ref[j], consdata->quadvarterms[j].nadjbilin == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, success);
+      SCIPaddSquareLinearization(scip, consdata->quadvarterms[j].sqrcoef, ref[j],
+         consdata->quadvarterms[j].nadjbilin == 0 && SCIPvarGetType(var) < SCIP_VARTYPE_CONTINUOUS, &coef[j], &constant, success);
 
       /* add linearization of bilinear terms that have var as first variable */
       for( k = 0; k < consdata->quadvarterms[j].nadjbilin && *success; ++k )
@@ -7134,10 +7150,12 @@ SCIP_RETCODE generateCut(
 
 
 /** computes an interior point for the quadratic part of the convex constraint
- * there are different methods for computing the interior point
- * 'a'ny: solves min 0, f(x) <= rhs, x in bounds
- * 'm'ost interior: solves min f(x), x in bounds
- * TODO: others?
+ *
+ *  There are different methods for computing the interior point
+ *  - 'a'ny: solves min 0, f(x) <= rhs, x in bounds
+ *  - 'm'ost interior: solves min f(x), x in bounds
+ *
+ * @todo: other methods for computing an interior point?
  */
 static
 SCIP_RETCODE computeInteriorPoint(
@@ -7469,15 +7487,15 @@ TERMINATE:
    return SCIP_OKAY;
 }
 
-/** compute gauge function of the set S - s_0
- * where \f$ S = \{ x : f(x) \le c \}\f$ and \f$ s_0 \in \mathring S\f$.
- * Here, \f$ f(x) \f$ is a purely quadratic (i.e, all \f$x\f$ variables
- * appear in a bilinear or quadratic term).
+/** compute gauge function of the set \f$S - s_0\f$ where \f$ S = \{ x : f(x) \le c \}\f$ and \f$ s_0 \in \mathring S\f$.
+ *
+ * Here, \f$ f(x) \f$ is a purely quadratic (i.e, all \f$x\f$ variables appear in a bilinear or quadratic term).
  * Explicitly, \f$ f(x) = \pm x^T A x \pm b^T x \f$ depending whether \f$A\f$
- * is semidefinite positive (+) or semidefinite negative (-).
+ * is positive semidefinite (+) or negative semidefinite (-).
  * The constant \f$c\f$ is rhs - maximum activity of the purely linear part of the constraint
- * if \f$A \succcurlyeq 0\f$ and minimum activity - lhs if \f$A \precurlyeq 0\f$.
- * this is computed only at INITSOL
+ * if \f$A \succeq 0\f$ and minimum activity - lhs if \f$A \preceq 0\f$.
+ * This is computed only at INITSOL.
+ *
  * The method does:
  * 1. compute interior point
  * 2. compute gauge function
@@ -7534,8 +7552,7 @@ SCIP_RETCODE computeGauge(
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(consdata->gaugecoefs), consdata->nquadvars) );
 
-   /* compute value of quadratic part at interior point,
-    * build map and compute gaugeconst (c_gauge) */
+   /* compute value of quadratic part at interior point, build map and compute gaugeconst (c_gauge) */
    consdata->interiorpointval = 0;
    consdata->gaugeconst = 0;
    for( i = 0; i < consdata->nquadvars; i++ )
@@ -7605,12 +7622,13 @@ SCIP_RETCODE computeGauge(
    return SCIP_OKAY;
 }
 
-/** evaluates gauge function of the set S - s_0
- * where \f$ S = \{ x : f(x) \le c \}\f$ and \f$ s_0 \in \mathring S\f.
- * \f$ S = \{ x : f(x) \le c \}\f$ at sol - s_0.
- * see computeGauge for more details
+/** evaluates gauge function of the set \f$S - s_0\f$ where \f$ S = \{ x : f(x) \le c \}\f$ and \f$ s_0 \in \mathring S\f$.
+ *
+ * \f$ S = \{ x : f(x) \le c \}\f$ at \f$sol - s_0\f$;
+ * see computeGauge() for more details
+ *
+ * @todo Think about if user should tell that function is convex or ...
  */
-/* TODO: think about if user should tell that function is convex or... */
 static
 SCIP_RETCODE evaluateGauge(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7773,7 +7791,8 @@ SCIP_RETCODE evaluateGauge(
 }
 
 /** compute reference point suggested by gauge function
- * @todo: should we modify a point in the interior? currently we do not
+ *
+ *  @todo Should we modify a point in the interior? Currently we do not.
  */
 static
 SCIP_RETCODE computeReferencePointGauge(
@@ -7877,8 +7896,7 @@ SCIP_RETCODE computeReferencePointGauge(
    return SCIP_OKAY;
 }
 
-/** generates a cut based on linearization (if convex) or McCormick (if nonconvex) in a solution
- */
+/** generates a cut based on linearization (if convex) or McCormick (if nonconvex) in a solution */
 static
 SCIP_RETCODE generateCutSol(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -7962,8 +7980,10 @@ SCIP_RETCODE generateCutSol(
 }
 
 /** tries to find a cut that intersects with an unbounded ray of the LP
- * for convex functions, we do this by linearizing in the feasible solution of the LPI
- * for nonconvex functions, we just call generateCutSol with the unbounded solution as reference point */
+ *
+ *  For convex functions, we do this by linearizing in the feasible solution of the LPI.
+ *  For nonconvex functions, we just call generateCutSol with the unbounded solution as reference point.
+ */
 static
 SCIP_RETCODE generateCutUnboundedLP(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8278,9 +8298,10 @@ SCIP_RETCODE separatePoint(
 }
 
 /** adds linearizations cuts for convex constraints w.r.t. a given reference point to cutpool and sepastore
- * if separatedlpsol is not NULL, then a cut that separates the LP solution is added to the sepastore and is forced to enter the LP
- * if separatedlpsol is not NULL, but cut does not separate the LP solution, then it is added to the cutpool only
- * if separatedlpsol is NULL, then cut is added to cutpool only
+ *
+ *  - If separatedlpsol is not NULL, then a cut that separates the LP solution is added to the sepastore and is forced to enter the LP.
+ *  - If separatedlpsol is not NULL, but cut does not separate the LP solution, then it is added to the cutpool only.
+ *  - If separatedlpsol is NULL, then cut is added to cutpool only.
  */
 static
 SCIP_RETCODE addLinearizationCuts(
@@ -8289,7 +8310,8 @@ SCIP_RETCODE addLinearizationCuts(
    SCIP_CONS**           conss,              /**< constraints */
    int                   nconss,             /**< number of constraints */
    SCIP_SOL*             ref,                /**< reference point where to linearize, or NULL for LP solution */
-   SCIP_Bool*            separatedlpsol,     /**< buffer to store whether a cut that separates the current LP solution was found and added to LP, or NULL if adding to cutpool only */
+   SCIP_Bool*            separatedlpsol,     /**< buffer to store whether a cut that separates the current LP solution was found and added to LP,
+                                              *   or NULL if adding to cutpool only */
    SCIP_Real             minefficacy         /**< minimal efficacy of a cut when checking for separation of LP solution */
    )
 {
@@ -8323,11 +8345,13 @@ SCIP_RETCODE addLinearizationCuts(
 
       if( consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs) )
       {
-         SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], NULL, ref, SCIP_SIDETYPE_RIGHT, &row, NULL, conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
+         SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], NULL, ref, SCIP_SIDETYPE_RIGHT, &row, NULL,
+               conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
       }
       else if( consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs) )
       {
-         SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], NULL, ref, SCIP_SIDETYPE_LEFT,  &row, NULL, conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
+         SCIP_CALL( generateCutSol(scip, conshdlr, conss[c], NULL, ref, SCIP_SIDETYPE_LEFT,  &row, NULL,
+               conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
       }
       else
          continue;
@@ -8445,8 +8469,7 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    return SCIP_OKAY;
 }
 
-/** computes the infeasibilities of variables from the convexification gaps in the constraints and notifies the branching rule about them
- */
+/** computes the infeasibilities of variables from the convexification gaps in the constraints and notifies the branching rule about them */
 static
 SCIP_RETCODE registerVariableInfeasibilities(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -8875,7 +8898,7 @@ SCIP_RETCODE replaceByLinearConstraints(
    return SCIP_OKAY;
 }
 
-/* tightens a lower bound on a variable and checks the result */
+/** tightens a lower bound on a variable and checks the result */
 static
 SCIP_RETCODE propagateBoundsTightenVarLb(
    SCIP*                 scip,               /**< SCIP data structure */ 
@@ -8918,14 +8941,16 @@ SCIP_RETCODE propagateBoundsTightenVarLb(
    SCIP_CALL( SCIPtightenVarLb(scip, var, bnd, FALSE, &infeas, &tightened) );
    if( infeas )
    {
-      SCIPdebugMessage("%s found constraint <%s> infeasible due to tightened lower bound %g for variable <%s>\n", SCIPinProbing(scip) ? "in probing" : "", SCIPconsGetName(cons), bnd, SCIPvarGetName(var));
+      SCIPdebugMessage("%s found constraint <%s> infeasible due to tightened lower bound %g for variable <%s>\n",
+         SCIPinProbing(scip) ? "in probing" : "", SCIPconsGetName(cons), bnd, SCIPvarGetName(var));
       *result = SCIP_CUTOFF;
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       return SCIP_OKAY;
    }
    if( tightened )
    {
-      SCIPdebugMessage("%s tightened lower bound of variable <%s> in constraint <%s> to %g\n", SCIPinProbing(scip) ? "in probing" : "", SCIPvarGetName(var), SCIPconsGetName(cons), bnd);
+      SCIPdebugMessage("%s tightened lower bound of variable <%s> in constraint <%s> to %g\n",
+         SCIPinProbing(scip) ? "in probing" : "", SCIPvarGetName(var), SCIPconsGetName(cons), bnd);
       ++*nchgbds;
       *result = SCIP_REDUCEDDOM;
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -8934,7 +8959,7 @@ SCIP_RETCODE propagateBoundsTightenVarLb(
    return SCIP_OKAY;
 }
 
-/* tightens an upper bound on a variable and checks the result */
+/** tightens an upper bound on a variable and checks the result */
 static
 SCIP_RETCODE propagateBoundsTightenVarUb(
    SCIP*                 scip,               /**< SCIP data structure */ 
@@ -8977,14 +9002,16 @@ SCIP_RETCODE propagateBoundsTightenVarUb(
    SCIP_CALL( SCIPtightenVarUb(scip, var, bnd, FALSE, &infeas, &tightened) );
    if( infeas )
    {
-      SCIPdebugMessage("%s found constraint <%s> infeasible due to tightened upper bound %g for variable <%s>\n", SCIPinProbing(scip) ? "in probing" : "", SCIPconsGetName(cons), bnd, SCIPvarGetName(var));
+      SCIPdebugMessage("%s found constraint <%s> infeasible due to tightened upper bound %g for variable <%s>\n",
+         SCIPinProbing(scip) ? "in probing" : "", SCIPconsGetName(cons), bnd, SCIPvarGetName(var));
       *result = SCIP_CUTOFF;
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       return SCIP_OKAY;
    }
    if( tightened )
    {
-      SCIPdebugMessage("%s tightened upper bound of variable <%s> in constraint <%s> to %g\n", SCIPinProbing(scip) ? "in probing" : "", SCIPvarGetName(var), SCIPconsGetName(cons), bnd);
+      SCIPdebugMessage("%s tightened upper bound of variable <%s> in constraint <%s> to %g\n",
+         SCIPinProbing(scip) ? "in probing" : "", SCIPvarGetName(var), SCIPconsGetName(cons), bnd);
       ++*nchgbds;
       *result = SCIP_REDUCEDDOM;
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -8993,8 +9020,7 @@ SCIP_RETCODE propagateBoundsTightenVarUb(
    return SCIP_OKAY;
 }
 
-/** solves a quadratic equation \f$ a x^2 + b x \in rhs \f$ (with b an interval) and reduces bounds on x or deduces infeasibility if possible
- */
+/** solves a quadratic equation \f$ a x^2 + b x \in rhs \f$ (with b an interval) and reduces bounds on x or deduces infeasibility if possible */
 static
 SCIP_RETCODE propagateBoundsQuadVar(
    SCIP*                 scip,               /**< SCIP data structure */ 
@@ -9018,7 +9044,8 @@ SCIP_RETCODE propagateBoundsQuadVar(
 
    /* compute solution of a*x^2 + b*x \in rhs */
    if( a == 0.0 && SCIPintervalGetInf(b) == 0.0 && SCIPintervalGetSup(b) == 0.0 )
-   { /* relatively easy case: 0.0 \in rhs, thus check if infeasible or just redundant */
+   {
+      /* relatively easy case: 0.0 \in rhs, thus check if infeasible or just redundant */
       if( SCIPintervalGetInf(rhs) > 0.0 || SCIPintervalGetSup(rhs) < 0.0 )
       {
          SCIPdebugMessage("found <%s> infeasible due to domain propagation for quadratic variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(var));
@@ -9063,8 +9090,10 @@ SCIP_RETCODE propagateBoundsQuadVar(
    /* SCIPdebugMessage("%g x^2 + [%g, %g] x in [%g, %g] -> [%g, %g]\n", a, b.inf, b.sup, rhs.inf, rhs.sup, newrange.inf, newrange.sup); */
 
    if( SCIPisInfinity(scip, SCIPintervalGetInf(newrange)) || SCIPisInfinity(scip, -SCIPintervalGetSup(newrange)) )
-   { /* domain outside [-infty, +infty] -> declare node infeasible */
-      SCIPdebugMessage("found <%s> infeasible because propagated domain of quadratic variable <%s> is outside of (-infty, +infty)\n", SCIPconsGetName(cons), SCIPvarGetName(var));
+   {
+      /* domain outside [-infty, +infty] -> declare node infeasible */
+      SCIPdebugMessage("found <%s> infeasible because propagated domain of quadratic variable <%s> is outside of (-infty, +infty)\n",
+         SCIPconsGetName(cons), SCIPvarGetName(var));
       *result = SCIP_CUTOFF;
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
       return SCIP_OKAY;
@@ -9094,13 +9123,14 @@ SCIP_RETCODE propagateBoundsQuadVar(
    return SCIP_OKAY;
 }
 
-/* the new version below computes potentially tighter bounds, but also always adds a small safety area since it is not implemented roundingsafe,
- * this may be a reason why it gives worse results on one of two instances
- * further, I have only very few instances where one can expect a difference
+/* The new version below computes potentially tighter bounds, but also always adds a small safety area since it is not implemented roundingsafe.
+ * This may be a reason why it gives worse results on one of two instances.
+ * Further, I have only very few instances where one can expect a difference.
  */
 #ifndef PROPBILINNEW
 /** tries to deduce domain reductions for x in xsqrcoef x^2 + xlincoef x + ysqrcoef y^2 + ylincoef y + bilincoef x y \\in rhs
- * NOTE that domain reductions for y are not deduced 
+ *
+ *  @note Domain reductions for y are not deduced.
  */
 static
 SCIP_RETCODE propagateBoundsBilinearTerm(
@@ -9187,7 +9217,8 @@ SCIP_RETCODE propagateBoundsBilinearTerm(
 }
 #else
 /** tries to deduce domain reductions for x in xsqrcoef x^2 + xlincoef x + ysqrcoef y^2 + ylincoef y + bilincoef x y \\in rhs
- * NOTE that domain reductions for y are not deduced
+ *
+ *  @note Domain reductions for y are not deduced.
  */
 static
 SCIP_RETCODE propagateBoundsBilinearTerm(
@@ -9258,9 +9289,10 @@ SCIP_RETCODE propagateBoundsBilinearTerm(
 #endif
 
 /** computes the minimal and maximal activity for the quadratic part in a constraint data
- *  only sums up terms that contribute finite values
- *  gives the number of terms that contribute infinite values
- *  only computes those activities where the corresponding side of the constraint is finite
+ *
+ *  Only sums up terms that contribute finite values.
+ *  Gives the number of terms that contribute infinite values.
+ *  Only computes those activities where the corresponding side of the constraint is finite.
  */
 static
 void propagateBoundsGetQuadActivity(
@@ -9487,7 +9519,8 @@ SCIP_RETCODE propagateBoundsCons(
       +infty2infty(SCIPinfinity(scip), intervalinfty,  consdata->rhs+SCIPepsilon(scip)));
 
    /* check redundancy and infeasibility */
-   SCIPintervalSetBounds(&consactivity, consdata->minlinactivityinf > 0 ? -intervalinfty : consdata->minlinactivity, consdata->maxlinactivityinf > 0 ? intervalinfty : consdata->maxlinactivity);
+   SCIPintervalSetBounds(&consactivity, consdata->minlinactivityinf > 0 ? -intervalinfty : consdata->minlinactivity,
+      consdata->maxlinactivityinf > 0 ? intervalinfty : consdata->maxlinactivity);
    SCIPintervalAdd(intervalinfty, &consactivity, consactivity, consdata->quadactivitybounds);
    if( SCIPintervalIsSubsetEQ(intervalinfty, consactivity, consbounds) )
    {
@@ -9833,7 +9866,6 @@ SCIP_RETCODE propagateBoundsCons(
                         +infty2infty(SCIPinfinity(scip), intervalinfty,  MAX(SCIPvarGetLbLocal(consdata->bilinterms[k].var2), SCIPvarGetUbLocal(consdata->bilinterms[k].var2))));
                      SCIPintervalMulScalar(intervalinfty, &tmp, tmp, consdata->bilinterms[k].coef);
                      SCIPintervalAdd(intervalinfty, &lincoef, lincoef, tmp);
-
                   }
                   else
                   {
@@ -9859,7 +9891,8 @@ SCIP_RETCODE propagateBoundsCons(
                      assert(otherpos >= 0);
                      assert(consdata->quadvarterms[otherpos].var == consdata->bilinterms[k].var1);
 
-                     if( (consdata->quadvarterms[otherpos].sqrcoef != 0.0) || consdata->quadvarterms[otherpos].lincoef != 0.0 || consdata->quadvarterms[otherpos].nadjbilin > 1 )
+                     if( (consdata->quadvarterms[otherpos].sqrcoef != 0.0) || consdata->quadvarterms[otherpos].lincoef != 0.0 ||
+                          consdata->quadvarterms[otherpos].nadjbilin > 1 )
                         continue;
 
                      /* set tmp to bounds of other variable and multiply with bilin coef */
@@ -9998,7 +10031,7 @@ SCIP_RETCODE propagateBounds(
    return SCIP_OKAY;
 }
 
-/* checks for a linear variable that can be increase or decreased without harming feasibility */
+/** checks for a linear variable that can be increase or decreased without harming feasibility */
 static
 void consdataFindUnlockedLinearVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -10060,8 +10093,9 @@ void consdataFindUnlockedLinearVar(
 }
 
 /** Given a solution where every quadratic constraint is either feasible or can be made feasible by
- * moving a linear variable, construct the corresponding feasible solution and pass it to the trysol heuristic.
- * The method assumes that this is always possible and that not all constraints are feasible already.
+ *  moving a linear variable, construct the corresponding feasible solution and pass it to the trysol heuristic.
+ *
+ *  The method assumes that this is always possible and that not all constraints are feasible already.
  */
 static
 SCIP_RETCODE proposeFeasibleSolution(
@@ -10544,7 +10578,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreQuadratic)
 
 /** solving process initialization method of constraint handler (called when branch and bound process is about to begin)
  *
- * NOTE: also called from consEnableQuadratic during solving stage
+ *  @note Also called from consEnableQuadratic during solving stage.
  */
 static
 SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
@@ -10662,7 +10696,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed)
  *
- * NOTE: also called from consDisableQuadratic during solving stage
+ *  @note Also called from consDisableQuadratic during solving stage.
  */
 static
 SCIP_DECL_CONSEXITSOL(consExitsolQuadratic)
@@ -10877,7 +10911,8 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                   x[i] = lambda * lb + (1.0 - lambda) * ub;
             }
 
-            SCIP_CALL( generateCut(scip, conshdlr, conss[c], x, NULL, consdata->isconvex ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, &row, NULL, FALSE, -SCIPinfinity(scip)) );  /*lint !e613 */
+            SCIP_CALL( generateCut(scip, conshdlr, conss[c], x, NULL, consdata->isconvex ? SCIP_SIDETYPE_RIGHT : SCIP_SIDETYPE_LEFT, &row, NULL,
+                  FALSE, -SCIPinfinity(scip)) );  /*lint !e613 */
             if( row != NULL )
             {
                SCIP_Bool infeasible;
@@ -10894,8 +10929,7 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
       }
 
       /* for concave parts, add underestimator w.r.t. at most 2 reference points */
-      if( (!consdata->isconvex && !SCIPisInfinity(scip,  consdata->rhs)) ||
-         (!consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)) )
+      if( (! consdata->isconvex && !SCIPisInfinity(scip,  consdata->rhs)) || (! consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)) )
       {
          SCIP_Bool unbounded;
          SCIP_Bool possquare;
@@ -10910,12 +10944,13 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
          negsquare = FALSE; /* whether there is a negative square term */
          for( k = 0; k < 2; ++k )
          {
-            /* set reference point to 0 projected on bounds for unbounded variables or in between lower and upper bound for bounded variables
-             * in the first round, we set it closer to the best bound for one part of the variables, in the second closer to the best bound for the other part of the variables
-             * additionally, we use slightly different weights for each variable
-             * the reason for the latter is, that for a bilinear term with bounded variables, there are always two linear underestimators
+            /* Set reference point to 0 projected on bounds for unbounded variables or in between lower and upper bound
+             * for bounded variables in the first round, we set it closer to the best bound for one part of the
+             * variables, in the second closer to the best bound for the other part of the variables.
+             * Additionally, we use slightly different weights for each variable.
+             * The reason for the latter is, that for a bilinear term with bounded variables, there are always two linear underestimators
              * if the same weight is used for both variables of a product, then rounding and luck decides which underestimator is chosen
-             * of course, the possible number of cuts is something in the order of 2^nquadvars, and we choose two of them here
+             * of course, the possible number of cuts is something in the order of 2^nquadvars, and we choose two of them here.
              */
             for( i = 0; i < consdata->nquadvars; ++i )
             {
@@ -10951,7 +10986,8 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
 
             if( !consdata->isconvex  && !SCIPisInfinity(scip,  consdata->rhs) )
             {
-               SCIP_CALL( generateCut(scip, conshdlr, conss[c], x, NULL, SCIP_SIDETYPE_RIGHT, &row, NULL, conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
+               SCIP_CALL( generateCut(scip, conshdlr, conss[c], x, NULL, SCIP_SIDETYPE_RIGHT, &row, NULL,
+                     conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
                if( row != NULL )
                {
                   SCIP_Bool infeasible;
@@ -10967,7 +11003,8 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
             }
             if( !consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs) )
             {
-               SCIP_CALL( generateCut(scip, conshdlr, conss[c], x, NULL, SCIP_SIDETYPE_LEFT, &row, NULL, conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
+               SCIP_CALL( generateCut(scip, conshdlr, conss[c], x, NULL, SCIP_SIDETYPE_LEFT, &row, NULL,
+                     conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
                if( row != NULL )
                {
                   SCIP_Bool infeasible;
@@ -11022,7 +11059,8 @@ SCIP_DECL_CONSSEPALP(consSepalpQuadratic)
     * if there is something convex, then linearizing in the solution of the NLP relaxation can be very useful
     */
    if( SCIPgetDepth(scip) == 0 && !conshdlrdata->sepanlp &&
-      (SCIPgetNContVars(scip) >= conshdlrdata->sepanlpmincont * SCIPgetNVars(scip) || (SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY && conshdlrdata->sepanlpmincont <= 1.0)) &&
+      (SCIPgetNContVars(scip) >= conshdlrdata->sepanlpmincont * SCIPgetNVars(scip) ||
+         (SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_UNBOUNDEDRAY && conshdlrdata->sepanlpmincont <= 1.0)) &&
       SCIPisNLPConstructed(scip) && SCIPgetNNlpis(scip) > 0 )
    {
       SCIP_CONSDATA*  consdata;
@@ -12650,10 +12688,10 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
 }
 
 /** Creates and captures a quadratic constraint.
- * 
+ *
  *  The constraint should be given in the form
  *  \f[
- *  \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m a_j y_jz_j \leq u,
+ *  \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m a_j y_j z_j \leq u,
  *  \f]
  *  where \f$x_i = y_j = z_k\f$ is possible.
  *
@@ -12827,7 +12865,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic(
  *
  *  The constraint should be given in the form
  *  \f[
- *  \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m a_j y_jz_j \leq u,
+ *  \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m a_j y_j z_j \leq u,
  *  \f]
  *  where \f$x_i = y_j = z_k\f$ is possible.
  *
@@ -12859,7 +12897,7 @@ SCIP_RETCODE SCIPcreateConsBasicQuadratic(
  * 
  * The constraint should be given in the form
  * \f[
- * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_kv_kw_k \leq u.
+ * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_k v_k w_k \leq u.
  * \f]
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
@@ -12921,7 +12959,7 @@ SCIP_RETCODE SCIPcreateConsQuadratic2(
  *
  * The constraint should be given in the form
  * \f[
- * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_kv_kw_k \leq u.
+ * \ell \leq \sum_{i=1}^n b_i x_i + \sum_{j=1}^m (a_j y_j^2 + b_j y_j) + \sum_{k=1}^p c_k v_k w_k \leq u.
  * \f]
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
@@ -12985,8 +13023,7 @@ void SCIPaddConstantQuadratic(
    }
 }
 
-/** Adds a linear variable with coefficient to a quadratic constraint.
- */
+/** Adds a linear variable with coefficient to a quadratic constraint. */
 SCIP_RETCODE SCIPaddLinearVarQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -13011,8 +13048,7 @@ SCIP_RETCODE SCIPaddLinearVarQuadratic(
    return SCIP_OKAY;
 }
 
-/** Adds a quadratic variable with linear and square coefficient to a quadratic constraint.
- */
+/** Adds a quadratic variable with linear and square coefficient to a quadratic constraint. */
 SCIP_RETCODE SCIPaddQuadVarQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -13041,7 +13077,7 @@ SCIP_RETCODE SCIPaddQuadVarQuadratic(
 
 /** Adds a linear coefficient for a quadratic variable.
  *
- * Variable will be added with square coefficient 0.0 if not existing yet.
+ *  Variable will be added with square coefficient 0.0 if not existing yet.
  */
 SCIP_RETCODE SCIPaddQuadVarLinearCoefQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13094,7 +13130,7 @@ SCIP_RETCODE SCIPaddQuadVarLinearCoefQuadratic(
 
 /** Adds a square coefficient for a quadratic variable.
  *
- * Variable will be added with linear coefficient 0.0 if not existing yet.
+ *  Variable will be added with linear coefficient 0.0 if not existing yet.
  */
 SCIP_RETCODE SCIPaddSquareCoefQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13150,8 +13186,8 @@ SCIP_RETCODE SCIPaddSquareCoefQuadratic(
 
 /** Adds a bilinear term to a quadratic constraint.
  *
- * Variables will be added with linear and square coefficient 0.0 if not existing yet.
- * If variables are equal, only the square coefficient of the variable is updated.
+ *  Variables will be added with linear and square coefficient 0.0 if not existing yet.
+ *  If variables are equal, only the square coefficient of the variable is updated.
  */
 SCIP_RETCODE SCIPaddBilinTermQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13218,8 +13254,7 @@ SCIP_RETCODE SCIPaddBilinTermQuadratic(
    return SCIP_OKAY;
 }
 
-/** Gets the quadratic constraint as a nonlinear row representation.
- */
+/** Gets the quadratic constraint as a nonlinear row representation. */
 SCIP_RETCODE SCIPgetNlRowQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint */
@@ -13244,8 +13279,7 @@ SCIP_RETCODE SCIPgetNlRowQuadratic(
    return SCIP_OKAY;
 }
 
-/** Gets the number of variables in the linear term of a quadratic constraint.
- */
+/** Gets the number of variables in the linear term of a quadratic constraint. */
 int SCIPgetNLinearVarsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -13328,7 +13362,7 @@ SCIP_RETCODE SCIPsortQuadVarTermsQuadratic(
 
 /** Finds the position of a quadratic variable term for a given variable.
  *
- * @note If the quadratic variable terms have not been sorted before, then a search may reorder the current order of the terms.
+ *  @note If the quadratic variable terms have not been sorted before, then a search may reorder the current order of the terms.
  */
 SCIP_RETCODE SCIPfindQuadVarTermQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -13347,8 +13381,7 @@ SCIP_RETCODE SCIPfindQuadVarTermQuadratic(
    return SCIP_OKAY;
 }
 
-/** Gets the number of bilinear terms of a quadratic constraint.
- */
+/** Gets the number of bilinear terms of a quadratic constraint. */
 int SCIPgetNBilinTermsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -13374,8 +13407,7 @@ SCIP_BILINTERM* SCIPgetBilinTermsQuadratic(
    return SCIPconsGetData(cons)->bilinterms;
 }
 
-/** Gets the left hand side of a quadratic constraint.
- */
+/** Gets the left hand side of a quadratic constraint. */
 SCIP_Real SCIPgetLhsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -13387,8 +13419,7 @@ SCIP_Real SCIPgetLhsQuadratic(
    return SCIPconsGetData(cons)->lhs;
 }
 
-/** Gets the right hand side of a quadratic constraint.
- */
+/** Gets the right hand side of a quadratic constraint. */
 SCIP_Real SCIPgetRhsQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -13400,8 +13431,7 @@ SCIP_Real SCIPgetRhsQuadratic(
    return SCIPconsGetData(cons)->rhs;
 }
 
-/** Check the quadratic function of a quadratic constraint for its semi-definiteness, if not done yet.
- */
+/** Check the quadratic function of a quadratic constraint for its semi-definiteness, if not done yet. */
 SCIP_RETCODE SCIPcheckCurvatureQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -13414,8 +13444,7 @@ SCIP_RETCODE SCIPcheckCurvatureQuadratic(
    return SCIP_OKAY;
 }
 
-/** Indicates whether the quadratic function of a quadratic constraint is (known to be) convex.
- */
+/** Indicates whether the quadratic function of a quadratic constraint is (known to be) convex. */
 SCIP_Bool SCIPisConvexQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -13432,8 +13461,7 @@ SCIP_Bool SCIPisConvexQuadratic(
    return (SCIPconsGetData(cons)->isconvex);
 }
 
-/** Indicates whether the quadratic function of a quadratic constraint is (known to be) concave.
- */
+/** Indicates whether the quadratic function of a quadratic constraint is (known to be) concave. */
 SCIP_Bool SCIPisConcaveQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
@@ -13480,12 +13508,12 @@ SCIP_RETCODE SCIPgetViolationQuadratic(
 
 /** Indicates whether the quadratic constraint is local w.r.t. the current local bounds.
  *
- * That is, checks whether each variable with a square term is fixed and for each bilinear term at least one variable is fixed.
+ *  That is, checks whether each variable with a square term is fixed and for each bilinear term at least one variable is fixed.
  */
 SCIP_Bool SCIPisLinearLocalQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
-)
+   )
 {
    SCIP_CONSDATA* consdata;
    SCIP_VAR* var1;
