@@ -158,8 +158,6 @@ struct SCIP_SepaData
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
-
 /** creates and empty edge-concave aggregation (without bilinear terms) */
 static
 SCIP_RETCODE ecaggrCreateEmpty(
@@ -217,7 +215,7 @@ SCIP_RETCODE ecaggrAddQuadvar(
    )
 {
    ecaggr->vars[ ecaggr->nvars++ ] = x;
-  return SCIP_OKAY;
+   return SCIP_OKAY;
 }
 
 /** adds a bilinear term to an edge-concave aggregation */
@@ -448,8 +446,10 @@ SCIP_RETCODE nlrowaggrCreate(
 
    /* count the number of variables in each e.c. aggregation */
    for( i = 0; i < nquadvars; ++i )
+   {
       if( quadvar2aggr[i] >= 0)
          ++aggrnvars[ quadvar2aggr[i] ];
+   }
 
    /* count the number of bilinear terms in each e.c. aggregation */
    for( i = 0; i < nquadelems; ++i )
@@ -1284,15 +1284,16 @@ TERMINATE:
 }
 
 /** computes a partitioning into edge-concave aggregations for a given (quadratic) nonlinear row; each aggregation has
- *  to contain a cycle with an odd number of positive weighted edges (good cycles) in the corresponding graph representation;
- *  for this we use the following algorithm:
+ *  to contain a cycle with an odd number of positive weighted edges (good cycles) in the corresponding graph representation
  *
- *  1) use a MIP model based on binary flow variables to compute good cycles and store the implied subgraphs as an e.c. aggr.
- *    a) if we find a good cycle, store the implied subgraph, delete it from the graph representation and go to 1)
- *    b) if the MIP model is infeasible (there are no good cycles), STOP
- *  2) we compute a large clique C if the MIP model fails (because of working limits, etc)
- *    a) if we find a good cycle in C, store the implied subgraph of C, delete it from the graph representation and go to 1)
- *    b) if C is not large enough, STOP
+ *  For this we use the following algorithm:
+ *
+ *  -# use a MIP model based on binary flow variables to compute good cycles and store the implied subgraphs as an e.c. aggr.
+ *    -# if we find a good cycle, store the implied subgraph, delete it from the graph representation and go to 1)
+ *    -# if the MIP model is infeasible (there are no good cycles), STOP
+ *  -# we compute a large clique C if the MIP model fails (because of working limits, etc)
+ *    -# if we find a good cycle in C, store the implied subgraph of C, delete it from the graph representation and go to 1)
+ *    -# if C is not large enough, STOP
  */
 static
 SCIP_RETCODE searchEcAggr(
@@ -1300,8 +1301,7 @@ SCIP_RETCODE searchEcAggr(
    SCIP_SEPADATA*        sepadata,           /**< separator data */
    SCIP_NLROW*           nlrow,              /**< nonlinear row */
    SCIP_SOL*             sol,                /**< current solution (might be NULL) */
-   SCIP_Bool             rhsaggr,            /**< consider nonlinear row aggregation for g(x) <= rhs (TRUE) or
-                                              *   g(x) >= lhs (FALSE) */
+   SCIP_Bool             rhsaggr,            /**< consider nonlinear row aggregation for g(x) <= rhs (TRUE) or g(x) >= lhs (FALSE) */
    int*                  quadvar2aggr,       /**< array to store for each quadratic variable in which edge-concave
                                               *   aggregation it is stored (< 0: in no aggregation); size has to be at
                                               *   least SCIPnlrowGetNQuadVars(nlrow) */
@@ -1923,24 +1923,26 @@ SCIP_Real transformValue(
    return val;
 }
 
-/** computes a facet of the convex envelope of an edge concave aggregation; the algorithm solves the following LP:
+/** computes a facet of the convex envelope of an edge concave aggregation
  *
- *          min sum{i} lambda_i f(v_i)
- *  s.t.      sum_i lambda_i v_i = x
- *            sum_i lambda_i     = 1
- *            lambda_i >= 0
- *
- *  where f is an edge concave function, x in [l,u] is a solution of the current relaxation, and v_i are the vertices
- *  of [l,u]; the method transforms the problem to the domain [0,1]^n, computes a facet, and transforms this facet to the
+ *  The algorithm solves the following LP:
+ *  \f{eqnarray}{
+ *      min   & \sum_i \lambda_i f(v_i)\\
+ *      s.t.  & \sum_i \lambda_i v_i = x\\
+ *            & \sum_i \lambda_i     = 1\\
+ *            & \lambda_i \geq 0
+ *  \f}
+ *  where f is an edge concave function, \f$x\f$ in \f$[l,u]\f$ is a solution of the current relaxation, and \f$v_i\f$ are the vertices
+ *  of \f$[l,u]\f$; the method transforms the problem to the domain \f$[0,1]^n\f$, computes a facet, and transforms this facet to the
  *  original space; the dual solution of the LP above are the coefficients of the facet
  *
- *  the complete algorithm works as follows:
+ *  The complete algorithm works as follows:
  *
- *  1. compute f(v_i) for each corner v_i of [l,u]
- *  2. set up the described LP for the transformed space
- *  3. solve the LP and store the resulting facet for the transformed space
- *  4. transform the facet to original space
- *  5. adjust and check facet with the algorithm of Rikun et al.
+ *  -# compute f(v_i) for each corner v_i of [l,u]
+ *  -# set up the described LP for the transformed space
+ *  -# solve the LP and store the resulting facet for the transformed space
+ *  -# transform the facet to original space
+ *  -# adjust and check facet with the algorithm of Rikun et al.
  */
 static
 SCIP_RETCODE SCIPcomputeConvexEnvelopeFacet(
@@ -1948,10 +1950,8 @@ SCIP_RETCODE SCIPcomputeConvexEnvelopeFacet(
    SCIP_SEPADATA*        sepadata,           /**< separation data */
    SCIP_SOL*             sol,                /**< solution (might be NULL) */
    SCIP_ECAGGR*          ecaggr,             /**< edge-concave aggregation data */
-   SCIP_Real*            facet,              /**< array to store the coefficients of the resulting facet; size has to
-                                              *   be at least (ecaggr->nvars + 1) */
-   SCIP_Real*            facetval,           /**< pointer to store the value of the facet evaluated at the current
-                                              *   solution */
+   SCIP_Real*            facet,              /**< array to store the coefficients of the resulting facet; size has to be at least (ecaggr->nvars + 1) */
+   SCIP_Real*            facetval,           /**< pointer to store the value of the facet evaluated at the current solution */
    SCIP_Bool*            success             /**< pointer to store if we have found a facet */
    )
 {
@@ -2480,7 +2480,7 @@ SCIP_RETCODE computeCut(
 
       if( !success )
          goto TERMINATE;
-    }
+   }
 
    /* add all linear terms to the cut */
    for( i = 0; i < nlrowaggr->nlinvars; ++i )
