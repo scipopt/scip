@@ -100,7 +100,7 @@
 #define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_MEDIUM
 
 /* adjacency matrix */
-#define DEFAULT_MAXSOSADJACENCY   50000 /**< do not create an adjacency matrix if number of SOS1 variables is larger than predefined value
+#define DEFAULT_MAXSOSADJACENCY   10000 /**< do not create an adjacency matrix if number of SOS1 variables is larger than predefined value
                                          *   (-1: no limit) */
 
 /* presolving */
