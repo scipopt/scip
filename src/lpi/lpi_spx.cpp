@@ -1363,7 +1363,13 @@ struct SCIP_LPiState
    ROWPACKET*            packrstat;          /**< row basis status in compressed form */
 };
 
-
+/** LPi norms to store dual steepest edge */
+struct SCIP_LPiNorms
+{
+   int                   nrows;              /**< number of stored norms corresponding to rows */
+   int                   ncols;              /**< number of stored norms corresponding to cols */
+   SCIP_Real*            norms;              /**< norms to be (re)stored */
+};
 
 
 /*
@@ -4041,22 +4047,28 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    else
    {
       int k = 0;
+      int nrows = spx->nRows();
+      int ncols = spx->nCols();
 
       assert( spx->rep() == SPxSolver::ROW );
 
-      for( int i = 0; i < spx->nRows(); ++i )
+      for( int i = 0; i < nrows; ++i )
       {
          if( !spx->isRowBasic(i) )
+         {
             bind[k++] = -1 - i;
+            if( k >= nrows )
+               break;
+         }
       }
 
-      for( int j = 0; j < spx->nCols(); ++j )
+      for( int j = 0; j < ncols && k < nrows; ++j )
       {
          if( !spx->isColBasic(j) )
             bind[k++] = j;
       }
 
-      assert(k == spx->nRows());
+      assert(k == nrows);
    }
 
    return SCIP_OKAY;
@@ -4781,10 +4793,51 @@ SCIP_RETCODE SCIPlpiGetNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
-{  /*lint --e{715}*/
+{
+#if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 3) || SOPLEX_VERSION > 201)
+   int nrows;
+   int ncols;
+
+   assert(blkmem != NULL);
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
    assert(lpinorms != NULL);
 
-   *lpinorms = NULL;
+   // we only store steepest edge norms and don't want to allocate memory otherwise
+   if( lpi->pricing != SCIP_PRICING_STEEP && lpi->pricing != SCIP_PRICING_STEEPQSTART)
+   {
+      (*lpinorms) = NULL;
+      return SCIP_OKAY;
+   }
+
+   nrows = lpi->spx->nRows();
+   ncols = lpi->spx->rep() == SPxSolver::COLUMN ? 0 : lpi->spx->nCols();
+
+   /* allocate lpinorms data */
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, lpinorms) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*lpinorms)->norms, nrows + ncols) );
+   (*lpinorms)->nrows = 0;
+   (*lpinorms)->ncols = 0;
+
+   SCIPdebugMessage("storing SoPlex LPi pricing norms in %p (%d rows, %d cols)\n", (void *) *lpinorms, nrows, ncols);
+
+   if( !lpi->spx->getDualNorms((*lpinorms)->nrows, (*lpinorms)->ncols, (*lpinorms)->norms) )
+   {
+      SCIPdebugMessage("freeing norms at %p\n", (void *) *lpinorms);
+      BMSfreeBlockMemoryArray(blkmem, &(*lpinorms)->norms, nrows + ncols);
+      BMSfreeBlockMemory(blkmem, lpinorms);
+      assert(*lpinorms == NULL);
+   }
+#ifndef NDEBUG
+   else
+   {
+      assert(nrows == (*lpinorms)->nrows);
+      assert(ncols == (*lpinorms)->ncols);
+   }
+#endif
+#else
+   (*lpinorms) = NULL;
+#endif
 
    return SCIP_OKAY;
 }
@@ -4797,10 +4850,29 @@ SCIP_RETCODE SCIPlpiSetNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS*        lpinorms            /**< LPi pricing norms information */
    )
-{  /*lint --e{715}*/
-   assert(lpinorms == NULL);
+{
+#if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 3) || SOPLEX_VERSION > 201)
+   assert(blkmem != NULL);
+   assert(lpi != NULL);
+   assert(lpi->spx != NULL);
+   assert(lpinorms != NULL);
 
-   /* no work necessary */
+   /* if there was no pricing norms information available, the LPi norms were not stored */
+   if( lpinorms == NULL )
+      return SCIP_OKAY;
+
+   assert(lpinorms->nrows <= lpi->spx->nRows());
+   assert(lpinorms->ncols <= lpi->spx->nCols());
+
+   if( lpinorms->nrows == 0 )
+      return SCIP_OKAY;
+
+   SCIPdebugMessage("loading LPi simplex norms %p (%d rows, %d cols) into SoPlex LP with %d rows and %d cols\n",
+      (void *) lpinorms, lpinorms->nrows, lpinorms->ncols, lpi->spx->nRows(), lpi->spx->nCols());
+
+   lpi->spx->setDualNorms(lpinorms->nrows, lpinorms->ncols, lpinorms->norms);
+#endif
+
    return SCIP_OKAY;
 }
 
@@ -4810,10 +4882,18 @@ SCIP_RETCODE SCIPlpiFreeNorms(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_LPINORMS**       lpinorms            /**< pointer to LPi pricing norms information */
    )
-{  /*lint --e{715}*/
-   assert(lpinorms == NULL);
+{
+#if ((SOPLEX_VERSION == 201 && SOPLEX_SUBVERSION >= 3) || SOPLEX_VERSION > 201)
+   assert(lpi != NULL);
+   assert(lpinorms != NULL);
 
-   /* no work necessary */
+   SCIPdebugMessage("freeing norms at %p\n", (void *) *lpinorms);
+
+   BMSfreeBlockMemoryArray(blkmem, &(*lpinorms)->norms, (*lpinorms)->nrows + (*lpinorms)->ncols);
+   BMSfreeBlockMemory(blkmem, lpinorms);
+   assert(*lpinorms == NULL);
+#endif
+
    return SCIP_OKAY;
 }
 
