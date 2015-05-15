@@ -209,6 +209,7 @@ fixed bugs:
 - fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)
 - try to handle fixings of multi-aggregated variable in cons_sos1 presolving and avoid error
 - fix potential memory leak in method SCIPgetConsCopy()
+- fix potential memory leak in method detectRedundantConstraints() of the knapsack constraint handler
 
 
 SCIP version 3.1.2

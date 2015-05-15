@@ -11421,7 +11421,7 @@ SCIP_RETCODE detectRedundantConstraints(
          if( consdata0->capacity < 0 )
          {
             *cutoff = TRUE;
-            return SCIP_OKAY;
+            goto TERMINATE;
          }
          else
          {
@@ -11490,6 +11490,7 @@ SCIP_RETCODE detectRedundantConstraints(
       }
    }
 
+ TERMINATE:
    /* free hash table */
    SCIPhashtableFree(&hashtable);
 
