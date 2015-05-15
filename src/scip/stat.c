@@ -284,6 +284,11 @@ void SCIPstatReset(
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
 
+   stat->ndivesetlpiterations = 0;
+   stat->ndivesetcalls = 0;
+   stat->ndivesetlps = 0;
+   stat->totaldivesetdepth = 0;
+
    SCIPstatResetImplications(stat);
    SCIPstatResetPresolving(stat);
    SCIPstatResetPrimalDualIntegral(stat, set, FALSE);
@@ -447,7 +452,6 @@ void SCIPstatResetCurrentRun(
    assert(stat != NULL);
 
    stat->nnodes = 0;
-   stat->nreoptnodes = 0;
    stat->ninternalnodes = 0;
    stat->ncreatednodesrun = 0;
    stat->nactivatednodes = 0;
@@ -498,16 +502,6 @@ void SCIPstatEnforceLPUpdates(
    assert(stat != NULL);
 
    stat->lpcount++;
-}
-
-/** increases reoptnodes count */
-void SCIPstatEnforceNReoptnodes(
-   SCIP_STAT*            stat                /**< problem statistics data */
-   )
-{
-   assert(stat != NULL);
-
-   stat->nreoptnodes++;
 }
 
 /** depending on the current memory usage, switches mode flag to standard or memory saving mode */

@@ -1743,6 +1743,12 @@ static
 SCIP_DECL_PROPEXEC(propExecVbounds)
 {  /*lint --e{715}*/
 
+   *result = SCIP_DIDNOTRUN;
+
+   /* do not run if propagation w.r.t. current objective is not allowed  */
+   if( !SCIPallowObjProp(scip) )
+      return SCIP_OKAY;
+
    /* perform variable lower and upper bound propagation */
    SCIP_CALL( propagateVbounds(scip, prop, FALSE, result) );
 

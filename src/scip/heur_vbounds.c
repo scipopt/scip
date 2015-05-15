@@ -366,9 +366,7 @@ SCIP_RETCODE applyVboundsFixings(
    SCIP_Bool*            infeasible,         /**< pointer to store whether problem is infeasible */
    SCIP_VAR**            lastvar,            /**< last fixed variable */
    SCIP_Bool*            fixedtolb,          /**< was last fixed variable fixed to its lower bound? */
-   int*                  nfound,
-   SCIP_Real*            solobj,
-   SCIP_RESULT*          result              /**< pointer to store the result (solution found) */
+   SCIP_Bool*            foundsol            /**< pointer to store whether a new solution was found */
    )
 {
    SCIP_VAR* var;
@@ -452,9 +450,7 @@ SCIP_RETCODE applyVboundsFixings(
             if( success )
             {
                SCIPdebugMessage(" -> solution was feasible and good enough\n");
-               *result = SCIP_FOUNDSOL;
-               (*nfound)++;
-               *solobj = MIN(*solobj, SCIPgetSolOrigObj(scip, sol));
+               *foundsol = TRUE;
 
                if( SCIPisStopped(scip) )
                   break;
@@ -536,14 +532,11 @@ SCIP_RETCODE applyVbounds(
    SCIP_LPSOLSTAT lpstatus;
    SCIP_Bool infeasible;
    SCIP_Bool lastfixedlower = TRUE;
-   SCIP_Bool allfixsolfound;
    SCIP_Bool lperror;
    SCIP_Bool solvelp;
+   SCIP_Bool foundsol = FALSE;
    int oldnpscands;
    int npscands;
-   int nfound = 0;
-   int nrounded = 0;
-   SCIP_Real solobj = SCIPinfinity(scip);
    int nvars;
    SCIPstatistic( int nprevars = nvars; )
 
@@ -616,7 +609,8 @@ SCIP_RETCODE applyVbounds(
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
 
    /* apply the variable fixings */
-   SCIP_CALL( applyVboundsFixings(scip, heurdata, vbvars, nvbvars, forward, tighten, obj, newsol, &infeasible, &lastfixedvar, &lastfixedlower, &nrounded, &solobj, result) );
+   SCIP_CALL( applyVboundsFixings(scip, heurdata, vbvars, nvbvars, forward, tighten, obj, newsol, &infeasible,
+         &lastfixedvar, &lastfixedlower, &foundsol) );
 
    /* try to repair probing */
    if( infeasible )
@@ -634,8 +628,6 @@ SCIP_RETCODE applyVbounds(
 
       SCIPdebugMessage("backtracking ended with %sfeasible problem\n", (infeasible ? "in" : ""));
    }
-
-   allfixsolfound = FALSE;
 
    /* check that we had enough fixings */
    npscands = SCIPgetNPseudoBranchCands(scip);
@@ -657,7 +649,6 @@ SCIP_RETCODE applyVbounds(
    /* solve lp only if the problem is still feasible */
    if( !infeasible && solvelp )
    {
-#if 1
       SCIPdebugMessage("starting solving vbound-lp at time %g\n", SCIPgetSolvingTime(scip));
 
       /* solve LP; errors in the LP solver should not kill the overall solving process, if the LP is just needed for a
@@ -711,13 +702,12 @@ SCIP_RETCODE applyVbounds(
          SCIP_CALL( SCIPtrySol(scip, newsol, FALSE, TRUE, FALSE, FALSE, &stored) );
 #endif
 
-         allfixsolfound = TRUE;
+         foundsol = TRUE;
 
          if( stored )
          {
             SCIPdebugMessage("found feasible solution:\n");
             *result = SCIP_FOUNDSOL;
-            solobj = MIN(solobj, SCIPgetSolOrigObj(scip, newsol));
          }
       }
    }
@@ -725,13 +715,11 @@ SCIP_RETCODE applyVbounds(
    {
       SCIP_CALL( SCIPclearSol(scip, newsol) );
    }
-#endif
 
    /*************************** END Probing LP Solving ***************************/
 
-
-   /* if a solution has been found --> fix all other variables by subscip if necessary */
-   if( !allfixsolfound && lpstatus != SCIP_LPSOLSTAT_INFEASIBLE && lpstatus != SCIP_LPSOLSTAT_OBJLIMIT && !infeasible )
+   /* if no solution has been found --> fix all other variables by subscip if necessary */
+   if( !foundsol && lpstatus != SCIP_LPSOLSTAT_INFEASIBLE && lpstatus != SCIP_LPSOLSTAT_OBJLIMIT && !infeasible )
    {
       SCIP* subscip;
       SCIP_VAR** subvars;
@@ -765,9 +753,6 @@ SCIP_RETCODE applyVbounds(
 
       /* do not abort subproblem on CTRL-C */
       SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-      /* disable reoptimization */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
 
       /* disable output to console */
       SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
@@ -935,12 +920,7 @@ SCIP_RETCODE applyVbounds(
             SCIP_CALL( createNewSol(scip, subscip, subvars, newsol, subsols[i], &success) );
          }
          if( success )
-         {
             *result = SCIP_FOUNDSOL;
-            nfound++;
-            solobj = MIN(solobj, SCIPgetSolOrigObj(scip, newsol));
-
-         }
       }
 
 #ifdef SCIP_DEBUG
@@ -956,9 +936,9 @@ SCIP_RETCODE applyVbounds(
 
 #ifdef SCIP_STATISTIC
    SCIP_CALL( SCIPstopClock(scip, clock) );
-   SCIPstatisticMessage("### vbound: forward=%d tighten=%d obj=%d nvars=%d presolnvars=%d ratio=%.2f infeas=%d rounded=%d lp=%d subscip=%d bestobj=%.2g time=%.2f\n",
+   SCIPstatisticMessage("vbound: forward=%d tighten=%d obj=%d nvars=%d presolnvars=%d ratio=%.2f infeas=%d found=%d time=%.2f\n",
       forward, tighten, obj, nvars, nprevars, (nvars - nprevars) / (SCIP_Real)nvars, infeasible,
-      nrounded, allfixsolfound ? 1 : 0, nfound, solobj, SCIPclockGetTime(clock) );
+      foundsol ? 1 : 0, SCIPclockGetTime(clock) );
 #endif
 
    SCIPstatistic( SCIP_CALL( SCIPfreeClock(scip, &clock) ) );

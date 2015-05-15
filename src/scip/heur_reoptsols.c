@@ -185,12 +185,12 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
       SCIP_CALL( SCIPgetBoolParam(scip, "reoptimization/sepabestsol", &sepabestsol) );
 
       /* allocate a buffer array to store the solutions */
-      allocmem = 100;
+      allocmem = 20;
       SCIP_CALL( SCIPallocBufferArray(scip, &sols, allocmem) );
 
       nsolsadded = 0;
 
-      for(run = SCIPgetNReoptRuns(scip); run > max_run && nchecksols > 0; run--)
+      for( run = SCIPgetNReoptRuns(scip); run > max_run && nchecksols > 0; run-- )
       {
          SCIP_Real sim;
          int nsols;
@@ -221,19 +221,21 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
             assert(nsols <= allocmem);
 
             /* update the solutions
-             * stop, if the maximal number of solutions to be checked is reached */
-            for(s = 0; s < nsols && nchecksols > 0; s++)
+             * stop, if the maximal number of solutions to be checked is reached
+             */
+            for( s = 0; s < nsols && nchecksols > 0; s++ )
             {
                SCIP_SOL* sol;
                SCIP_Real objsol;
 
                sol = sols[s];
 
-               SCIP_CALL( SCIPrecomputeSol(scip, sol) );
+               SCIP_CALL( SCIPrecomputeSolObj(scip, sol) );
                objsol = SCIPgetSolTransObj(scip, sol);
 
                /* we do not want to add solutions with objective value +infinity.
-                * moreover, the solution should improve the current primal bound */
+                * moreover, the solution should improve the current primal bound
+                */
                if( !SCIPisInfinity(scip, objsol) && !SCIPisInfinity(scip, -objsol)
                  && SCIPisFeasLT(scip, objsol, SCIPgetCutoffbound(scip)) )
                {
@@ -269,9 +271,6 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
          printf(">> heuristic <%s> found %d of %d improving solutions from run %d.\n", HEUR_NAME, nsolsaddedrun, nsols, run);
 #endif
       }
-      /* update statistics */
-      SCIPsetReoptNCheckedsols(scip, heurdata->ncheckedsols);
-      SCIPsetReoptNImprovingsols(scip, heurdata->nimprovingsols);
 
       SCIPdebugMessage(">> heuristic <%s> found %d improving solutions.\n", HEUR_NAME, nsolsadded);
 

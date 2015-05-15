@@ -367,9 +367,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       memorylimit -= SCIPgetMemExternEstim(scip)/1048576.0;
    }
 
-   /* disable reoptimization */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
-
    /* abort if no time is left or not enough memory to create a copy of SCIP
     * for rapid learning, this does not include external memory usage, because no LPs are solved
     */

@@ -37,6 +37,7 @@
 #include "scip/type_prob.h"
 #include "scip/type_primal.h"
 #include "scip/type_tree.h"
+#include "scip/type_reopt.h"
 #include "scip/type_branch.h"
 #include "scip/type_cons.h"
 #include "scip/pub_var.h"
@@ -93,6 +94,7 @@ SCIP_RETCODE SCIPdomchgApplyGlobal(
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            cutoff              /**< pointer to store whether an infeasible domain change was detected */
    );
 
@@ -398,9 +400,11 @@ SCIP_RETCODE SCIPvarFix(
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Real             fixedval,           /**< value to fix variable at */
    SCIP_Bool*            infeasible,         /**< pointer to store whether the fixing is infeasible */
    SCIP_Bool*            fixed               /**< pointer to store whether the fixing was performed (variable was unfixed) */
@@ -481,6 +485,7 @@ SCIP_RETCODE SCIPvarTryAggregateVars(
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -506,6 +511,7 @@ SCIP_RETCODE SCIPvarAggregate(
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -528,6 +534,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -588,6 +595,7 @@ extern
 SCIP_RETCODE SCIPvarRemove(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory buffer */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             final               /**< is this the final removal of all problem variables? */
    );
@@ -646,6 +654,7 @@ SCIP_RETCODE SCIPvarAddObj(
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_Real             addobj              /**< additional objective value for variable */
@@ -713,6 +722,7 @@ SCIP_RETCODE SCIPvarChgLbGlobal(
    SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Real             newbound            /**< new bound for variable */
    );
 
@@ -728,6 +738,7 @@ SCIP_RETCODE SCIPvarChgUbGlobal(
    SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Real             newbound            /**< new bound for variable */
    );
 
@@ -743,6 +754,7 @@ SCIP_RETCODE SCIPvarChgBdGlobal(
    SCIP_LP*              lp,                 /**< current LP data, may be NULL for original variables */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage, may be NULL for original variables */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue, may be NULL for original variables */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Real             newbound,           /**< new bound for variable */
    SCIP_BOUNDTYPE        boundtype           /**< type of bound: lower or upper bound */
    );
@@ -935,6 +947,7 @@ SCIP_RETCODE SCIPvarAddVlb(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -960,6 +973,7 @@ SCIP_RETCODE SCIPvarAddVub(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -987,6 +1001,7 @@ SCIP_RETCODE SCIPvarAddImplic(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -1010,9 +1025,11 @@ SCIP_RETCODE SCIPvarFixBinary(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             value,              /**< value to fix variable to */
    SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*                  nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
@@ -1032,9 +1049,11 @@ SCIP_RETCODE SCIPvarAddClique(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             value,              /**< value of the variable in the clique */
    SCIP_CLIQUE*          clique,             /**< clique the variable should be added to */
    SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
@@ -1057,6 +1076,7 @@ extern
 SCIP_RETCODE SCIPvarDelClique(
    SCIP_VAR*             var,                /**< problem variable  */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             value,              /**< value of the variable in the clique */
    SCIP_CLIQUE*          clique              /**< clique the variable should be removed from */
    );

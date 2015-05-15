@@ -26,6 +26,7 @@
 #include <string.h>
 
 #include "scip/branch_relpscost.h"
+#include "scip/cons_and.h"
 
 #define BRANCHRULE_NAME          "relpscost"
 #define BRANCHRULE_DESC          "reliability branching on pseudo cost values"
@@ -38,6 +39,7 @@
 #define DEFAULT_INFERENCEWEIGHT  0.0001 /**< weight in score calculations for inference score */
 #define DEFAULT_CUTOFFWEIGHT     0.0001 /**< weight in score calculations for cutoff score */
 #define DEFAULT_PSCOSTWEIGHT     1.0    /**< weight in score calculations for pseudo cost score */
+#define DEFAULT_NLSCOREWEIGHT    0.1    /**< weight in score calculations for nlcount score */
 #define DEFAULT_MINRELIABLE      1.0    /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
 #define DEFAULT_MAXRELIABLE      5.0    /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
 #define DEFAULT_SBITERQUOT       0.5    /**< maximal fraction of strong branching LP iterations compared to normal iterations */
@@ -60,6 +62,9 @@
 #define DEFAULT_CONFIDENCELEVEL 2       /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
 #define DEFAULT_SKIPBADINITCANDS FALSE  /**< should branching rule skip candidates that have a low probability to be
                                           *  better than the best strong-branching or pseudo-candidate? */
+#define DEFAULT_STARTRANDSEED  12345    /**< start random seed for random number generation */
+#define DEFAULT_RANDINITORDER  FALSE    /**< should candidates be initialized in randomized order? */
+
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -68,6 +73,7 @@ struct SCIP_BranchruleData
    SCIP_Real             inferenceweight;    /**< weight in score calculations for inference score */
    SCIP_Real             cutoffweight;       /**< weight in score calculations for cutoff score */
    SCIP_Real             pscostweight;       /**< weight in score calculations for pseudo cost score */
+   SCIP_Real             nlscoreweight;      /**< weight in score calculations for nlcount score */
    SCIP_Real             minreliable;        /**< minimal value for minimum pseudo cost size to regard pseudo cost value as reliable */
    SCIP_Real             maxreliable;        /**< maximal value for minimum pseudo cost size to regard pseudo cost value as reliable */
    SCIP_Real             sbiterquot;         /**< maximal fraction of strong branching LP iterations compared to normal iterations */
@@ -90,11 +96,204 @@ struct SCIP_BranchruleData
    SCIP_Bool             skipbadinitcands;   /**< should branching rule skip candidates that have a low probability to be
                                                *  better than the best strong-branching or pseudo-candidate? */
    int                   confidencelevel;    /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
+   int*                  nlcount;            /**< array to store nonlinear count values */
+   int                   nlcountsize;        /**< length of nlcount array */
+   int                   nlcountmax;         /**< maximum entry in nlcount array or 1 if NULL */
+   SCIP_Bool             randinitorder;      /**< should init candidates be processed in a random order? */
+   unsigned int          randseed;           /**< random seed for random number generation */
+   int                   startrandseed;      /**< start random seed for random number generation */
 };
 
 /*
  * local methods
  */
+
+/** return probindex of variable or corresponding active variable (if negated or aggregated) or -1 (if
+ *  multiaggregated)
+ */
+static
+SCIP_RETCODE binvarGetActiveProbindex(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< binary variable */
+   int*                  probindex           /**< buffer to store probindex */
+   )
+{
+   assert(scip != NULL);
+   assert(var != NULL);
+   assert(SCIPvarIsBinary(var));
+   assert(probindex != NULL);
+
+   *probindex = SCIPvarGetProbindex(var);
+
+   /* if variable is not active, try to find active representative */
+   if( *probindex == -1 )
+   {
+      SCIP_VAR* repvar;
+      SCIP_Bool negated;
+
+      SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
+      assert(repvar != NULL);
+      assert(SCIPvarGetStatus(repvar) != SCIP_VARSTATUS_FIXED);
+
+      if( SCIPvarIsActive(repvar) )
+         *probindex = SCIPvarGetProbindex(repvar);
+      else if( SCIPvarIsNegated(repvar) )
+         *probindex = SCIPvarGetProbindex(SCIPvarGetNegationVar(repvar));
+   }
+
+   return SCIP_OKAY;
+}
+
+/** counts number of nonlinear constraints in which each variable appears */
+static
+SCIP_RETCODE countNonlinearities(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  nlcount,            /**< pointer to array for storing count values */
+   int                   nlcountsize,        /**< buffer for storing length of nlcount array */
+   int*                  nlcountmax          /**< buffer for storing maximum value in nlcount array */
+   )
+{
+   SCIP_CONSHDLR* andconshdlr;
+   SCIP_VAR** vars;
+   int nvars;
+   int i;
+
+   assert(scip != NULL);
+   assert(nlcount != NULL);
+   assert(nlcountmax != NULL);
+
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   assert(nlcountsize >= nvars);
+
+   /* get nonlinearity for constraints in NLP */
+   if( SCIPisNLPConstructed(scip) )
+   {
+      assert(SCIPgetNNLPVars(scip) == nvars);
+      SCIP_CALL( SCIPgetNLPVarsNonlinearity(scip, nlcount) );
+   }
+   else
+   {
+      BMSclearMemoryArray(nlcount, nvars);
+   }
+
+   /* increase counters for and constraints */
+   andconshdlr = SCIPfindConshdlr(scip, "and");
+   if( andconshdlr != NULL )
+   {
+      int c;
+
+      for( c = 0; c < SCIPconshdlrGetNActiveConss(andconshdlr); c++ )
+      {
+         SCIP_CONS* andcons;
+         SCIP_VAR** andvars;
+         SCIP_VAR* andres;
+         int probindex;
+         int nandvars;
+         int v;
+
+         /* get constraint and variables */
+         andcons = SCIPconshdlrGetConss(andconshdlr)[c];
+         nandvars = SCIPgetNVarsAnd(scip, andcons);
+         andvars = SCIPgetVarsAnd(scip, andcons);
+         andres = SCIPgetResultantAnd(scip, andcons);
+
+         probindex = -1;
+         for( v = 0; v < nandvars; v++ )
+         {
+            SCIP_CALL( binvarGetActiveProbindex(scip, andvars[v], &probindex) );
+            if( probindex >= 0 )
+               nlcount[probindex]++;
+         }
+
+         SCIP_CALL( binvarGetActiveProbindex(scip, andres, &probindex) );
+         if( probindex >= 0 )
+            nlcount[probindex]++;
+      }
+   }
+
+   /* compute maximum count value */
+   *nlcountmax = 1;
+   for( i = 0; i < nvars; i++ )
+   {
+      if( *nlcountmax < nlcount[i] )
+         *nlcountmax = nlcount[i];
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE branchruledataEnsureNlcount(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
+   )
+{
+   int nvars;
+
+   assert(scip != NULL);
+   assert(branchruledata != NULL);
+
+   nvars = SCIPgetNVars(scip);
+
+   /**@todo test whether we want to apply this als if problem has only and constraints */
+   /**@todo update changes in and constraints */
+   if( branchruledata->nlscoreweight > 0.0 ) /*  && SCIPisNLPConstructed(scip) */
+   {
+      if( branchruledata->nlcount == NULL )
+      {
+         SCIP_CALL( SCIPallocBlockMemoryArray(scip, &branchruledata->nlcount, nvars) );
+         branchruledata->nlcountsize = nvars;
+
+         SCIP_CALL( countNonlinearities(scip, branchruledata->nlcount, branchruledata->nlcountsize, &branchruledata->nlcountmax) );
+      }
+      else if( branchruledata->nlcountsize < nvars )
+      {
+         SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &branchruledata->nlcount, branchruledata->nlcountsize, nvars) );
+         /**@todo should we update nlcounts for new variables? */
+         BMSclearMemoryArray(&(branchruledata->nlcount[branchruledata->nlcountsize]), nvars - branchruledata->nlcountsize);
+         branchruledata->nlcountsize = nvars;
+      }
+      assert(branchruledata->nlcount != NULL);
+      assert(branchruledata->nlcountsize == nvars);
+      assert(branchruledata->nlcountmax >= 1);
+   }
+   else
+   {
+      SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->nlcount, branchruledata->nlcountsize);
+      branchruledata->nlcountsize = 0;
+      branchruledata->nlcountmax = 1;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** calculates nlscore value between 0 and 1 */
+static
+SCIP_Real calcNlscore(
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  nlcount,            /**< array to store count values */
+   int                   nlcountmax,         /**< maximum value in nlcount array */
+   int                   probindex           /**< index of branching candidate */
+   )
+{
+   if( nlcountmax >= 1 && nlcount != NULL )
+   {
+      SCIP_Real nlscore;
+
+      assert(scip != NULL);
+      assert(probindex >= 0);
+      assert(probindex < SCIPgetNVars(scip));
+
+      nlscore = nlcount[probindex] / (SCIP_Real)nlcountmax;
+
+      assert(nlscore >= 0.0);
+      assert(nlscore <= 1.0);
+      return nlscore;
+   }
+   else
+      return 0.0;
+}
 
 /** calculates an overall score value for the given individual score values */
 static
@@ -111,6 +310,7 @@ SCIP_Real calcScore(
    SCIP_Real             avgcutoffscore,     /**< average cutoff score */
    SCIP_Real             pscostscore,        /**< pscost score of current variable */
    SCIP_Real             avgpscostscore,     /**< average pscost score */
+   SCIP_Real             nlscore,            /**< nonlinear score of current variable between 0 and 1 */
    SCIP_Real             frac                /**< fractional value of variable in current solution */
    )
 {
@@ -123,7 +323,8 @@ SCIP_Real calcScore(
       + branchruledata->conflengthweight * (1.0 - 1.0/(1.0+conflengthscore/avgconflengthscore))
       + branchruledata->inferenceweight * (1.0 - 1.0/(1.0+inferencescore/avginferencescore))
       + branchruledata->cutoffweight * (1.0 - 1.0/(1.0+cutoffscore/avgcutoffscore))
-      + branchruledata->pscostweight * (1.0 - 1.0/(1.0+pscostscore/avgpscostscore));
+      + branchruledata->pscostweight * (1.0 - 1.0/(1.0+pscostscore/avgpscostscore))
+      + branchruledata->nlscoreweight * nlscore;
 
    /* avoid close to integral variables */
    if( MIN(frac, 1.0 - frac) < 10.0*SCIPfeastol(scip) )
@@ -394,6 +595,9 @@ SCIP_RETCODE execRelpscost(
       avgpscostscore = SCIPgetAvgPseudocostScore(scip);
       avgpscostscore = MAX(avgpscostscore, 0.1);
 
+      /* get nonlinear counts according to parameters */
+      SCIP_CALL( branchruledataEnsureNlcount(scip, branchruledata) );
+
       initstrongbranching = FALSE;
 
       /* check whether propagation should be performed */
@@ -479,12 +683,14 @@ SCIP_RETCODE execRelpscost(
             SCIP_Real inferencescore;
             SCIP_Real cutoffscore;
             SCIP_Real pscostscore;
+            SCIP_Real nlscore;
             SCIP_Real score;
 
             conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
             conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
             inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
             cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
+            nlscore = calcNlscore(scip, branchruledata->nlcount, branchruledata->nlcountmax, SCIPvarGetProbindex(branchcands[c]));
             pscostscore = SCIPgetVarPseudocostScore(scip, branchcands[c], branchcandssol[c]);
 
             /* replace the pseudo cost score with the already calculated one;
@@ -509,7 +715,7 @@ SCIP_RETCODE execRelpscost(
             }
 
             score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-                  inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
+               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c]);
 
             /* check for better score of candidate */
             if( SCIPisSumGE(scip, score, bestpsscore) )
@@ -539,17 +745,19 @@ SCIP_RETCODE execRelpscost(
          SCIP_Real inferencescore;
          SCIP_Real cutoffscore;
          SCIP_Real pscostscore;
+         SCIP_Real nlscore;
          SCIP_Real score;
          SCIP_Bool usesb;
 
          assert(branchcands[c] != NULL);
          assert(!SCIPisFeasIntegral(scip, branchcandssol[c]));
 
-         /* get conflict, inference, cutoff, and pseudo cost scores for candidate */
+         /* get conflict, inference, cutoff, nonlinear, and pseudo cost scores for candidate */
          conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
          conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
          inferencescore = SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
          cutoffscore = SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
+         nlscore = calcNlscore(scip, branchruledata->nlcount, branchruledata->nlcountmax, SCIPvarGetProbindex(branchcands[c]));
          pscostscore = SCIPgetVarPseudocostScore(scip, branchcands[c], branchcandssol[c]);
          usesb = FALSE;
 
@@ -617,13 +825,17 @@ SCIP_RETCODE execRelpscost(
                nuninitcands++;
          }
 
-         /* combine the four score values */
+         /* combine the five score values */
          score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
+            inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c]);
 
          if( usesb )
          {
             int j;
+
+            /* assign a random score to this uninitialized candidate */
+            if( branchruledata->randinitorder )
+               score = SCIPgetRandomReal(0.0, 1.0, &branchruledata->randseed);
 
             /* pseudo cost of variable is not reliable: insert candidate in initcands buffer */
             for( j = ninitcands; j > 0 && score > initcandscores[j-1]; --j )
@@ -752,7 +964,7 @@ SCIP_RETCODE execRelpscost(
                            SCIP_BRANCHDIR_UPWARDS, clevel) )
                   skipsb = TRUE;
             }
-            /* the currently best candidate is also a pseudo-candidate; apply significancy test and skip candidate if it
+            /* the currently best candidate is also a pseudo-candidate; apply significance test and skip candidate if it
              * is significantly worse in at least one direction
              */
             else if( bestpscand != -1 && bestpsscore > bestuninitsbscore )
@@ -999,11 +1211,13 @@ SCIP_RETCODE execRelpscost(
             SCIP_Real inferencescore;
             SCIP_Real cutoffscore;
             SCIP_Real pscostscore;
+            SCIP_Real nlscore;
             SCIP_Real score;
 
             /* check for a better score */
             conflictscore = SCIPgetVarConflictScore(scip, branchcands[c]);
             conflengthscore = SCIPgetVarConflictlengthScore(scip, branchcands[c]);
+            nlscore = calcNlscore(scip, branchruledata->nlcount, branchruledata->nlcountmax, SCIPvarGetProbindex(branchcands[c]));
 
             /* optionally, use only local information obtained via strong branching for this candidate, i.e., local
              * domain reductions and no cutoff score
@@ -1012,8 +1226,9 @@ SCIP_RETCODE execRelpscost(
                   : SCIPgetVarAvgInferenceScore(scip, branchcands[c]);
             cutoffscore = branchruledata->usesblocalinfo ? 0.0 : SCIPgetVarAvgCutoffScore(scip, branchcands[c]);
             pscostscore = SCIPgetBranchScore(scip, branchcands[c], downgain, upgain);
+
             score = calcScore(scip, branchruledata, conflictscore, avgconflictscore, conflengthscore, avgconflengthscore,
-               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, branchcandsfrac[c]);
+               inferencescore, avginferencescore, cutoffscore, avgcutoffscore, pscostscore, avgpscostscore, nlscore, branchcandsfrac[c]);
 
             if( SCIPisSumGE(scip, score, bestsbscore) )
             {
@@ -1217,6 +1432,38 @@ SCIP_DECL_BRANCHFREE(branchFreeRelpscost)
 }
 
 
+/** solving process initialization method of branching rule (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_BRANCHINITSOL(branchInitsolRelpscost)
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* initialize branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   branchruledata->nlcount = NULL;
+   branchruledata->nlcountsize = 0;
+   branchruledata->nlcountmax = 1;
+
+   branchruledata->randseed = (unsigned int)branchruledata->startrandseed;
+
+   return SCIP_OKAY;
+}
+
+
+/** solving process deinitialization method of branching rule (called before branch and bound process data is freed) */
+static
+SCIP_DECL_BRANCHEXITSOL(branchExitsolRelpscost)
+{  /*lint --e{715}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* free memory in branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   SCIPfreeBlockMemoryArrayNull(scip, &branchruledata->nlcount, branchruledata->nlcountsize);
+
+   return SCIP_OKAY;
+}
+
+
 /** branching execution method for fractional LP solutions */
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpRelpscost)
@@ -1282,6 +1529,8 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
    /* set non-fundamental callbacks via specific setter functions*/
    SCIP_CALL( SCIPsetBranchruleCopy(scip, branchrule, branchCopyRelpscost) );
    SCIP_CALL( SCIPsetBranchruleFree(scip, branchrule, branchFreeRelpscost) );
+   SCIP_CALL( SCIPsetBranchruleInitsol(scip, branchrule, branchInitsolRelpscost) );
+   SCIP_CALL( SCIPsetBranchruleExitsol(scip, branchrule, branchExitsolRelpscost) );
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpRelpscost) );
 
    /* relpscost branching rule parameters */
@@ -1305,6 +1554,10 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "branching/relpscost/pscostweight",
          "weight in score calculations for pseudo cost score",
          &branchruledata->pscostweight, TRUE, DEFAULT_PSCOSTWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "branching/relpscost/nlscoreweight",
+         "weight in score calculations for nlcount score",
+         &branchruledata->nlscoreweight, TRUE, DEFAULT_NLSCOREWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "branching/relpscost/minreliable",
          "minimal value for minimum pseudo cost size to regard pseudo cost value as reliable",
@@ -1354,7 +1607,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          &branchruledata->lowerrortol, TRUE, DEFAULT_LOWERRORTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "branching/relpscost/higherrortol", "high relative error tolerance for reliability",
-            &branchruledata->higherrortol, TRUE, DEFAULT_HIGHERRORTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &branchruledata->higherrortol, TRUE, DEFAULT_HIGHERRORTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/storesemiinitcosts",
          "should strong branching result be considered for pseudo costs if the other direction was infeasible?",
@@ -1376,14 +1629,21 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          &branchruledata->usedynamicconfidence, TRUE, DEFAULT_USEDYNAMICCONFIDENCE,
          NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/skipbadinitcands",
-            "should branching rule skip candidates that have a low probability to "
-            "be better than the best strong-branching or pseudo-candidate?",
-            &branchruledata->skipbadinitcands, TRUE, DEFAULT_SKIPBADINITCANDS,
-            NULL, NULL) );
+         "should branching rule skip candidates that have a low probability to "
+         "be better than the best strong-branching or pseudo-candidate?",
+         &branchruledata->skipbadinitcands, TRUE, DEFAULT_SKIPBADINITCANDS,
+         NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-            "branching/relpscost/confidencelevel",
-            "the confidence level for statistical methods, between 0 (Min) and 4 (Max).",
-            &branchruledata->confidencelevel, TRUE, DEFAULT_CONFIDENCELEVEL, 0, 4, NULL, NULL) );
+         "branching/relpscost/confidencelevel",
+         "the confidence level for statistical methods, between 0 (Min) and 4 (Max).",
+         &branchruledata->confidencelevel, TRUE, DEFAULT_CONFIDENCELEVEL, 0, 4, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/randinitorder",
+         "should candidates be initialized in randomized order?",
+         &branchruledata->randinitorder, TRUE, DEFAULT_RANDINITORDER,
+         NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/startrandseed", "start seed for random number generation",
+         &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

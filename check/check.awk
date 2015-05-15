@@ -243,7 +243,7 @@ BEGIN {
 
 # check if reoptimization is enabled
 /^Solving Nodes      :/{
-    if( $6 == "reoptimized)" )
+    if( $6 == "reactivated)" )
       reoptimization = 1;
 }
 
@@ -475,7 +475,7 @@ BEGIN {
 /^  dual LP          :/ { simpiters += $6; }
 /^  barrier LP       :/ { simpiters += $6; }
 /^  nodes \(total\)    :/ {
-   if( reoptimization = 1 ) { bbnodes += $4; }
+   if( reoptimization == 1 ) { bbnodes += $4; }
    else { bbnodes = $4; }
 }
 /^  primal LP        :/ {
@@ -563,7 +563,7 @@ BEGIN {
       tablehead3 = hyphenstr;
 
       # append rest of header
-      if( reoptimization = 0 )
+      if( reoptimization == 0 )
       {
 	 tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+----------------+----------------+------+---------+--------+-------+";
 	 tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time |";
@@ -571,7 +571,7 @@ BEGIN {
       }
       else
       {
-	 tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+-----------+----------------+----------------+---------+--------+-------+";
+         tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+-----------+----------------+----------------+---------+--------+-------+";
 	 tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars | Reopt Its | last Dual Bnd  | last Primal Bnd|  Iters  |  Nodes |  Time |";
 	 tablehead3 = tablehead3"+------+-------+-------+-------+-------+-----------+----------------+----------------+---------+--------+-------+";
       }
@@ -960,7 +960,7 @@ BEGIN {
       #write output to both the tex file and the console depending on whether printsoltimes is activated or not
       if( !onlypresolvereductions || origcons > cons || origvars > vars ) {
          if (TEXFILE != "") {
-	    if( reoptimization = 0 )
+	    if( reoptimization == 0 )
 	    {
                printf("%-*s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
                       namelength, pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime)  >TEXFILE;
@@ -977,7 +977,7 @@ BEGIN {
          }
 
          # note: probtype has length 5, but field width is 6
-         if( reoptimization = 0 )
+         if( reoptimization == 0 )
 	 {
 	    printf("%-*s  %-5s %7d %7d %7d %11d %16.9g %16.9g %6s %9d %8d %7.1f ",
                    namelength, shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);

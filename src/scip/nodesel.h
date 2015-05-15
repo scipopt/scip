@@ -31,6 +31,7 @@
 #include "scip/type_stat.h"
 #include "scip/type_lp.h"
 #include "scip/type_tree.h"
+#include "scip/type_reopt.h"
 #include "scip/pub_nodesel.h"
 
 #ifdef __cplusplus
@@ -165,6 +166,7 @@ SCIP_RETCODE SCIPnodepqBound(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    );

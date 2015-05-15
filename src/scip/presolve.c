@@ -1135,8 +1135,8 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                if( SCIPvarGetLbGlobal(probvar) < 0.5 )
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
-                        scip->transprob, scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, probvar, 1.0,
-                        SCIP_BOUNDTYPE_LOWER, FALSE) );
+                        scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand,
+                        scip->eventqueue, scip->cliquetable, probvar, 1.0, SCIP_BOUNDTYPE_LOWER, FALSE) );
 
                   assert(SCIPvarGetLbGlobal(probvar) > 0.5 || scip->tree->npendingbdchgs > 0);
 
@@ -1153,8 +1153,8 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                if( SCIPisLT(scip, SCIPvarGetLbGlobal(probvar), newbounds[v]) )
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
-                        scip->transprob, scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, probvar,
-                        newbounds[v], SCIP_BOUNDTYPE_LOWER, FALSE) );
+                        scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand,
+                        scip->eventqueue, scip->cliquetable, probvar, newbounds[v], SCIP_BOUNDTYPE_LOWER, FALSE) );
 
                   ++(*nglobalred);
 
@@ -1172,8 +1172,8 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                if( SCIPvarGetUbGlobal(probvar) > 0.5 )
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
-                        scip->transprob, scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, probvar, 0.0,
-                        SCIP_BOUNDTYPE_UPPER, FALSE) );
+                        scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+                        scip->cliquetable, probvar, 0.0, SCIP_BOUNDTYPE_UPPER, FALSE) );
 
                   assert(SCIPvarGetUbGlobal(probvar) < 0.5 || scip->tree->npendingbdchgs > 0);
 
@@ -1192,8 +1192,8 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                if( SCIPisGT(scip, SCIPvarGetUbGlobal(probvar), newbounds[idx]) )
                {
                   SCIP_CALL( SCIPnodeAddBoundchg(scip->tree->root, scip->mem->probmem, scip->set, scip->stat,
-                        scip->transprob, scip->origprob, scip->tree, scip->lp, scip->branchcand, scip->eventqueue, probvar,
-                        newbounds[idx], SCIP_BOUNDTYPE_UPPER, FALSE) );
+                        scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->eventqueue,
+                        scip->cliquetable, probvar, newbounds[idx], SCIP_BOUNDTYPE_UPPER, FALSE) );
 
                   ++(*nglobalred);
 

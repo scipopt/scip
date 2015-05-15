@@ -3711,14 +3711,19 @@ SCIP_RETCODE nlpUpdateObjCoef(
 
    /* get position of variable in NLP and objective coefficient */
    pos  = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, var);
+   assert(nlp->varmap_nlp2nlpi[pos] == -1 || nlp->solver != NULL);
+
+   /* actually we only need to remember flushing the objective if we also have an NLPI */
+   if( nlp->solver == NULL )
+      return SCIP_OKAY;
+
    coef = SCIPvarGetObj(var);
 
    /* if variable not in NLPI yet, then we only need to remember to update the objective after variable additions were flushed */
    if( nlp->varmap_nlp2nlpi[pos] == -1 && coef != 0.0 )
    {
-      /* actually we only need to remember flushing the objective if we also have an NLPI */
-      if( nlp->solver != NULL )
-         nlp->objflushed = FALSE;
+      nlp->objflushed = FALSE;
+
       return SCIP_OKAY;
    }
 

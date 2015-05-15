@@ -296,16 +296,16 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_distribution.o \
 			scip/branch_fullstrong.o \
 			scip/branch_inference.o \
-			scip/branch_interdiction.o \
 			scip/branch_leastinf.o \
 			scip/branch_mostinf.o \
+			scip/branch_multaggr.o \
 			scip/branch_nodereopt.o \
 			scip/branch_pscost.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
+			scip/cons_abspower.o \
 			scip/compr_largestrepr.o \
 			scip/compr_weakcompr.o \
-			scip/cons_abspower.o \
 			scip/cons_and.o \
 			scip/cons_bivariate.o \
 			scip/cons_bounddisjunction.o \
@@ -333,13 +333,13 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_xor.o \
 			scip/dialog_default.o \
 			scip/disp_default.o \
-			scip/event_focusroot.o \
-			scip/event_globalboundchg.o \
 			scip/heur_actconsdiving.o \
+			scip/heur_bound.o \
 			scip/heur_clique.o \
 			scip/heur_coefdiving.o \
 			scip/heur_crossover.o \
 			scip/heur_dins.o \
+			scip/heur_distributiondiving.o \
 			scip/heur_dualval.o \
 			scip/heur_feaspump.o \
 			scip/heur_fixandinfer.o \
@@ -390,6 +390,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_convertinttobin.o \
 			scip/presol_domcol.o\
 			scip/presol_implfree.o\
+			scip/presol_dualagg.o\
 			scip/presol_dualinfer.o\
 			scip/presol_gateextraction.o \
 			scip/presol_implics.o \
@@ -397,6 +398,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_redvub.o \
 			scip/presol_trivial.o \
 			scip/presol_tworowbnd.o \
+			scip/presol_stuffing.o \
 			scip/prop_dualfix.o \
 			scip/prop_genvbounds.o \
 			scip/prop_obbt.o \
@@ -424,7 +426,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_sol.o \
 			scip/reader_wbo.o \
 			scip/reader_zpl.o \
-			scip/relax_reoptsolvelp.o \
 			scip/sepa_cgmip.o \
 			scip/sepa_clique.o \
 			scip/sepa_closecuts.o \
@@ -448,10 +449,11 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/debug.o \
 			scip/dialog.o \
 			scip/disp.o \
+			scip/dive.o \
 			scip/event.o \
 			scip/fileio.o \
 			scip/heur.o \
-			scip/compress.o \
+			scip/compr.o \
 			scip/history.o \
 			scip/implics.o \
 			scip/interrupt.o \
@@ -524,7 +526,7 @@ OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
 			objscip/objdisp.o \
 			objscip/objeventhdlr.o \
 			objscip/objheur.o \
-			objscip/objcompress.o \
+			objscip/objcompr.o \
 			objscip/objmessagehdlr.o \
 			objscip/objnodesel.o \
 			objscip/objpresol.o \
@@ -662,13 +664,13 @@ check:		test
 test:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) false $(OPTCOMMAND) $(SETCUTOFF);
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) false $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS);
 
 .PHONY: testreopt
 testreopt:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) true $(OPTCOMMAND) $(SETCUTOFF);
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) true $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS);
 
 .PHONY: testcount
 testcount:

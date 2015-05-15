@@ -862,7 +862,7 @@ SCIP_RETCODE SCIPapplyProximity(
          /* create the subproblem step by step, adding plugins and variables first, and finally creating
           * linear constraints based on current LP rows */
          SCIP_CALL( SCIPcopyPlugins(scip, subscip, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,
-               FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
+               TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );
          SCIP_CALL( SCIPcreateProbBasic(subscip, "proximitysub") );
 
          SCIP_CALL( SCIPcopyVars(scip, subscip, varmapfw, NULL, TRUE) );
@@ -872,9 +872,6 @@ SCIP_RETCODE SCIPapplyProximity(
          SCIP_CALL( createRows(scip, subscip, subvars) );
       }
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
-
-      /* disable reoptimization */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
 
       /* create event handler for LP events */
       eventhdlr = NULL;

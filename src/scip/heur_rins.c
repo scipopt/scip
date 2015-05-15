@@ -478,9 +478,6 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       }
    }
 
-   /* disable reoptimization */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
-
    for( i = 0; i < nvars; i++ )
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 

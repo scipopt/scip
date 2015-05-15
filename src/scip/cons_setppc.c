@@ -4797,13 +4797,12 @@ SCIP_RETCODE preprocessCliques(
    int** varconsidxs;                        /* array consisting of constraint indices in which the corresponding variable exists */
    int* varnconss;                           /* array consisting of number of constraints the variable occurs */
    int* maxnvarconsidx;                      /* maximal number of occurances of a variable */
-   int* countofoverlapping;                  /* the amount of variables which are in another constraint */
-   SCIP_Bool* cliquevalues;                  /* values of clique-variables, either one if the varibale is active or zero if the variable is negated */
+   int* countofoverlapping = NULL;           /* the amount of variables which are in another constraint */
+   SCIP_Bool* cliquevalues = NULL;           /* values of clique-variables, either one if the varibale is active or zero if the variable is negated */
 
    SCIP_HASHMAP* vartoindex;                 /* mapping of SCIP variables to indices */
    SCIP_CONSDATA* consdata;
 
-   SCIP_Bool useadditionalmem;
    SCIP_Bool chgcons0;
    int nvars;
    int c;
@@ -4865,8 +4864,6 @@ SCIP_RETCODE preprocessCliques(
    nusefulvars = 0;
    nusefulconss = 0;
    maxnvars = 0;
-
-   useadditionalmem = FALSE;
 
    /* @todo: check for round limit for adding extra clique constraints */
    /* adding clique constraints which arises from global clique information */
@@ -4945,7 +4942,6 @@ SCIP_RETCODE preprocessCliques(
    SCIP_CALL( SCIPallocBufferArray(scip, &cliquevalues, maxnvars) );
    /* allocate temporary memory for counting an overlap of variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &countofoverlapping, nusefulconss) );
-   useadditionalmem = TRUE;
 
    /* sort usefulvars after indices of variables, negated and active counterparts will stand side by side */
    SCIPsortDownPtr((void**)usefulvars, SCIPvarCompActiveAndNegated, nusefulvars);
@@ -5178,11 +5174,8 @@ SCIP_RETCODE preprocessCliques(
    }
 
  TERMINATE:
-   if( useadditionalmem )
-   {
-      SCIPfreeBufferArray(scip, &countofoverlapping);
-      SCIPfreeBufferArray(scip, &cliquevalues);
-   }
+   SCIPfreeBufferArrayNull(scip, &countofoverlapping);
+   SCIPfreeBufferArrayNull(scip, &cliquevalues);
 
    /* free temporary memory for constraints, variables and the mapping between them in reverse order as they were
     * allocated
@@ -8025,7 +8018,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       }
 
       /* perform dual reductions */
-      if( conshdlrdata->dualpresolving )
+      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
       {
          SCIP_CALL( dualPresolving(scip, cons, nfixedvars, ndelconss, result) );
 
@@ -8062,9 +8055,12 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    /* determine singleton variables in set-partitioning/-packing constraints, or doubleton variables (active and
     * negated) in any combination of set-partitioning and set-packing constraints
     */
-   if( nconss > 1 && ((conshdlrdata->nsetpart > 0 && !SCIPdoNotMultaggr(scip) && conshdlrdata->conshdlrlinear != NULL) || (conshdlrdata->dualpresolving && conshdlrdata->nsetpart < nconss && !SCIPdoNotAggr(scip))) )
+   if( nconss > 1 && ((conshdlrdata->nsetpart > 0 && !SCIPdoNotMultaggr(scip) && conshdlrdata->conshdlrlinear != NULL)
+         || (conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) && conshdlrdata->nsetpart < nconss && !SCIPdoNotAggr(scip))) )
    {
-      SCIP_CALL( removeDoubleAndSingletonsAndPerformDualpresolve(scip, conss, nconss, conshdlrdata->dualpresolving, conshdlrdata->conshdlrlinear != NULL, nfixedvars, naggrvars, ndelconss, nchgcoefs, nchgsides, &cutoff) );
+      SCIP_CALL( removeDoubleAndSingletonsAndPerformDualpresolve(scip, conss, nconss, conshdlrdata->dualpresolving
+            && SCIPallowDualReds(scip) && SCIPallowObjProp(scip), conshdlrdata->conshdlrlinear != NULL, nfixedvars,
+            naggrvars, ndelconss, nchgcoefs, nchgsides, &cutoff) );
 
       if( cutoff )
       {

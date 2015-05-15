@@ -902,9 +902,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    heurdata->prevbestsol = SCIPgetBestSol(scip);
    heurdata->prevlastsol = sols[heurdata->nusedsols-1];
 
-   /* disable reoptimization */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
-
    /* if creation of sub-SCIP was aborted (e.g. due to number of fixings), free sub-SCIP and abort */
    if( !success )
    {

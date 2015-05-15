@@ -2825,7 +2825,7 @@ SCIP_RETCODE prepareCons(
  *
  *     => c2: x1 + x2 + x4 >= 1
  *
- *  @see "Effective Preprocessing in SAT through Variable and Clause Elimination" by Niklas Eén and Armin Biere
+ *  @see "Effective Preprocessing in SAT through Variable and Clause Elimination" by Niklas En and Armin Biere
  */
 static
 SCIP_RETCODE removeRedundantConssAndNonzeros(
@@ -4405,7 +4405,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       }
 
       /* perform dual reductions */
-      if( conshdlrdata->dualpresolving )
+      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
       {
          SCIP_CALL( dualPresolving(scip, cons, conshdlrdata->eventhdlr, nfixedvars, ndelconss, nchgcoefs, result) );
 

@@ -1187,9 +1187,6 @@ SCIP_RETCODE solveSubMIP(
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-   /* disable reoptimization */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
-
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
@@ -1366,7 +1363,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlpdiving)
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
       /* if cover variable is now fixed */
-      if( SCIPisFeasEQ(scip, newbound, otherbound) )
+      if( SCIPisFeasEQ(scip, newbound, otherbound) && !SCIPisFeasEQ(scip, oldbound, otherbound) )
       {
          assert(!SCIPisEQ(scip, oldbound, otherbound));
          ++(heurdata->nfixedcovervars);
@@ -1375,7 +1372,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlpdiving)
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBRELAXED:
       /* if cover variable is now unfixed */
-      if( SCIPisFeasEQ(scip, oldbound,otherbound) )
+      if( SCIPisFeasEQ(scip, oldbound, otherbound) && !SCIPisFeasEQ(scip, newbound, otherbound) )
       {
          assert(!SCIPisEQ(scip, newbound, otherbound));
          --(heurdata->nfixedcovervars);

@@ -342,13 +342,24 @@ should be the only case of 'duplicate methods'. If you find, however, another on
       Is there a way to visualize the branch and bound tree?    </div>
     <div id="visualizebranchandbound_ans" class="answer">
        <p>
-Yes, there is. SCIP can optionally write tree information to a specified file which can
-be read and visualized via the <a href="http://www.informatik.uni-koeln.de/ls_juenger/research/vbctool">vbctool</a>.
-In order to trigger vbc output, specify a file name via <code>set vbc filename somefilename.vbc</code>.
-the viewer has an option to uncover the nodes one-by-one (each time you
-hit the space key). Besides that, SCIP has a parameter which also solves
-that issue: <code>set vbc realtime FALSE</code>.
-In case of the callable library, the parameter names are "vbc/filename" and "vbc/realtime".
+Yes, currently there are two tree visualizations supported, the <a href="http://www.informatik.uni-koeln.de/ls_juenger/research/vbctool">vbctool</a>,
+and the <a href="https://projects.coin-or.org/CoinBazaar/wiki/Projects/BAK">Branch-and-Bound Analysis Kit</a>.
+The first comes with a viewer that has an option to uncover the nodes one-by-one (each time you
+hit the space key). Additional node information such as its lower bound, depth, and number are accessed through a
+context menu. The BAK is a command line tool written in the Python programming language. It offers several
+noninteractive visualizations of the tree at a user-defined frequency.
+</p>
+<p>
+For using one of these tools, SCIP lets you define file names <code>set visual vbcfilename somefilename.vbc</code> and
+<code>set visual bakfilename somefilename.dat</code>.
+</p>
+<p>
+For those who want to use the step-by-step functionality of vbctool,
+it is necessary to use a time-step counter for the visualization instead of the real time. The corresponding parameter
+is changed via <code>set visual realtime FALSE</code>.
+</p>
+For users of the callable library, the corresponding parameters are called "visual/bakfilename", "visual/vbcfilename", and
+"visual/realtime".
 </p>
     </div>
   </li>
@@ -376,6 +387,25 @@ which heuristic found the new primal bound, a star representing an integral LP-r
 Typing <code>display statistics</code> after finishing or interrupting the solving process gives
 you plenty of extra information about the solving process.<br>
 (Typing <code>display heuristics</code> gives you a list of the heuristics including their letters.)
+</p>
+    </div>
+  </li>
+    <li>
+    <div id="whereareuserparameters" class="reveal">
+      Why does SCIP claim that it could not find the user parameters "scip.set"? Where can I get such a file?    </div>
+    <div id="whereareuserparameters_ans" class="answer">
+       <p>
+SCIP comes with default settings that are automatically active when you start the interactive shell.
+However, you have the possibility to save customized settings via the <code>set save</code> and <code>set diffsave</code> commands.
+Both commands will prompt you to enter a file name and save either all or customized parameters only to the specified file.
+
+A user parameter file that you save as "scip.set" has a special meaning; Whenever you invoke SCIP from a directory containing a file named "scip.set",
+the settings therein overwrite the default settings. For more information about customized settings, see the <a href="./SHELL.shtml">
+Tutorial on the interactive shell</a>.
+
+Settings files can become incompatible with later releases if we decide to rename/delete a parameter.
+Information about this can be found in the CHANGELOG for every release, see also <a href="#versionchange">this related question</a>.
+
 </p>
     </div>
   </li>
@@ -980,21 +1010,25 @@ when entering a new node. How can I do that?    </div>
        <p>
 This can be done by creating a new constraint handler with constraint data that can store the information and
 do/undo changes in the pricer's data structures.
+<p>
+Once you have such a constraint handler, just create constraints of this type and add them to the child nodes of
+your branching by <code>SCIPaddConsNode()</code>. Make sure to set the "stickingatnode" flag to TRUE in order to
+prevent SCIP from moving the constraint around in the tree.
+</p>
 </p>
 In general, all methods of the constraint handler (check, enforcing, separation, ...) should be empty (which means
 that they always return the status SCIP_FEASIBLE for the fundamental callbacks), just as if all constraints of this type
-are always feasible. The important callbacks are the CONSACTIVE and CONSDEACTIVE methods.
+are always feasible. The important callbacks are the CONSACTIVE and CONSDEACTIVE methods for communicating the
+constraints along the active path to your pricer, and the CONSDELETE callback for deleting data of constraints at nodes
+which became obsolete.
 <p>
 The CONSACTIVE method is always called when a node is entered on which the constraint has been added. Here, you
 need to apply the changes to your pricing data structures. The CONSDEACTIVE method will be called if the node is
 left again. Since the CONSACTIVE and CONSDEACTIVE methods of different constraints are always called in a
 stack-like fashion, this should be exactly what you need.
 </p>
-
 <p>
-If you have such a constraint handler, just create constraints of this type and add them to the child nodes of
-your branching by <code>SCIPaddConsNode()</code>. Make sure to set the "stickingatnode" flag to TRUE in order to
-prevent SCIP from moving the constraint around in the tree.
+All data of a constraint need to be freed by implementing an appropriate CONSDELETE callback.
 </p>
 <p>
 If you need to fix variables for enforcing your branching decision, this can be done in the propagation callback
@@ -1153,7 +1187,7 @@ be sufficient for most branch-and-price applications. Note that set covering con
 <p>
 Instead of deleting a variable completely, you can also remove it from the problem by either fixing the variable to zero
 using <code>SCIPfixVar()</code>, which fixes the variable globally or using <code>SCIPchgVarUbNode()</code> and
-<code>SCIPchgVarLBNode()</code>, which changes the bounds only for the current subtree.
+<code>SCIPchgVarLbNode()</code>, which changes the bounds only for the current subtree.
 </p>
     </div>
   </li>

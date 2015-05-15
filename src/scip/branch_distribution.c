@@ -232,8 +232,7 @@ void branchruledataUpdateCurrentBounds(
 
 /** calculate the variable's distribution parameters (mean and variance) for the bounds specified in the arguments.
  *  special treatment of infinite bounds necessary */
-static
-void varCalcDistributionParameters(
+void SCIPvarCalcDistributionParameters(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             varlb,              /**< variable lower bound */
    SCIP_Real             varub,              /**< variable upper bound */
@@ -276,10 +275,9 @@ void varCalcDistributionParameters(
  *  random variable x takes a value between -infinity and parameter \p value.
  *
  *  The distribution is given by the respective mean and deviation. This implementation
- *  uses the error function erf().
+ *  uses the error function SCIPerf().
  */
-static
-SCIP_Real calcCumulativeDistribution(
+SCIP_Real SCIPcalcCumulativeDistribution(
    SCIP*                 scip,               /**< current SCIP */
    SCIP_Real             mean,               /**< the mean value of the distribution */
    SCIP_Real             variance,           /**< the square of the deviation of the distribution */
@@ -306,13 +304,13 @@ SCIP_Real calcCumulativeDistribution(
    }
    assert( std != 0.0 ); /* for lint */
 
-   /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for erf() function */
+   /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for SCIPerf() function */
    normvalue = (value - mean)/(std * SQRTOFTWO);
 
    SCIPdebugMessage(" Normalized value %g = ( %g - %g ) / (%g * 1.4142136)\n", normvalue, value, mean, std);
 
    /* calculate the cumulative distribution function for normvalue. For negative normvalues, we negate
-    * the normvalue and use the oddness of the erf()-function; special treatment for values close to zero.
+    * the normvalue and use the oddness of the SCIPerf()-function; special treatment for values close to zero.
     */
    if( SCIPisFeasZero(scip, normvalue) )
       return .5;
@@ -320,14 +318,14 @@ SCIP_Real calcCumulativeDistribution(
    {
       SCIP_Real erfresult;
 
-      erfresult = erf(normvalue);
+      erfresult = SCIPerf(normvalue);
       return  erfresult / 2.0 + 0.5;
    }
    else
    {
       SCIP_Real erfresult;
 
-      erfresult = erf(-normvalue);
+      erfresult = SCIPerf(-normvalue);
 
       return 0.5 - erfresult / 2.0;
    }
@@ -343,8 +341,7 @@ SCIP_Real calcCumulativeDistribution(
  *  For equations (lhs==rhs), we use the centeredness measure p = min(PHI(lhs'), 1-PHI(lhs'))/max(PHI(lhs'), 1 - PHI(lhs')),
  *  where lhs' = lhs - mu / sqrt(sigma2).
  */
-static
-SCIP_Real rowCalcProbability(
+SCIP_Real SCIProwCalcProbability(
    SCIP*                 scip,               /**< current scip */
    SCIP_ROW*             row,                /**< the row */
    SCIP_Real             mu,                 /**< the mean value of the row distribution */
@@ -367,13 +364,13 @@ SCIP_Real rowCalcProbability(
 
    /* use the cumulative distribution if the row contains no variable to repair every infeasibility */
    if( !SCIPisInfinity(scip, rhs) && rowinfinitiesdown == 0 )
-      rhsprob = calcCumulativeDistribution(scip, mu, sigma2, rhs);
+      rhsprob = SCIPcalcCumulativeDistribution(scip, mu, sigma2, rhs);
 
    /* use the cumulative distribution if the row contains no variable to repair every infeasibility
     * otherwise the row can always be made feasible by increasing activity far enough
     */
    if( !SCIPisInfinity(scip, -lhs) && rowinfinitiesup == 0 )
-      lhsprob = 1.0 - calcCumulativeDistribution(scip, mu, sigma2, lhs);
+      lhsprob = 1.0 - SCIPcalcCumulativeDistribution(scip, mu, sigma2, lhs);
 
    assert(SCIPisFeasLE(scip, lhsprob, 1.0) && SCIPisFeasGE(scip, lhsprob, 0.0));
    assert(SCIPisFeasLE(scip, rhsprob, 1.0) && SCIPisFeasGE(scip, rhsprob, 0.0));
@@ -505,7 +502,7 @@ void rowCalculateGauss(
                ++(*rowinfinitiesup);
          }
       }
-      varCalcDistributionParameters(scip, colvarlb, colvarub, SCIPvarGetType(colvar), &varmean, &varvariance);
+      SCIPvarCalcDistributionParameters(scip, colvarlb, colvarub, SCIPvarGetType(colvar), &varmean, &varvariance);
 
       /* actual values are updated; the contribution of the variable to mu is the arithmetic mean of its bounds */
       *mu += colval * varmean;
@@ -524,8 +521,7 @@ void rowCalculateGauss(
 /** update the up- and downscore of a single variable after calculating the impact of branching on a
  *  particular row, depending on the chosen score parameter
  */
-static
-SCIP_RETCODE getScore(
+SCIP_RETCODE SCIPupdateDistributionScore(
    SCIP*                 scip,               /**< current SCIP pointer */
    SCIP_Real             currentprob,        /**< the current probability */
    SCIP_Real             newprobup,          /**< the new probability if branched upwards */
@@ -645,7 +641,7 @@ SCIP_RETCODE calcBranchScore(
    /* calculate mean and variance of variable uniform distribution before and after branching */
    currentmean = 0.0;
    squaredbounddiff = 0.0;
-   varCalcDistributionParameters(scip, varlb, varub, vartype, &currentmean, &squaredbounddiff);
+   SCIPvarCalcDistributionParameters(scip, varlb, varub, vartype, &currentmean, &squaredbounddiff);
 
    newlb = SCIPfeasCeil(scip, lpsolval);
    newub = SCIPfeasFloor(scip, lpsolval);
@@ -653,12 +649,12 @@ SCIP_RETCODE calcBranchScore(
    /* calculate the variable's uniform distribution after branching up and down, respectively. */
    squaredbounddiffup = 0.0;
    meanup = 0.0;
-   varCalcDistributionParameters(scip, newlb, varub, vartype, &meanup, &squaredbounddiffup);
+   SCIPvarCalcDistributionParameters(scip, newlb, varub, vartype, &meanup, &squaredbounddiffup);
 
    /* calculate the distribution mean and variance for a variable with finite lower bound */
    squaredbounddiffdown = 0.0;
    meandown = 0.0;
-   varCalcDistributionParameters(scip, varlb, newub, vartype, &meandown, &squaredbounddiffdown);
+   SCIPvarCalcDistributionParameters(scip, varlb, newub, vartype, &meandown, &squaredbounddiffdown);
 
    /* initialize the variable's up and down score */
    *upscore = 0.0;
@@ -711,7 +707,7 @@ SCIP_RETCODE calcBranchScore(
       rowinfinitiesup = branchruledata->rowinfinitiesdown[rowpos];
       assert(!SCIPisNegative(scip, rowvariance));
 
-      currentrowprob = rowCalcProbability(scip, row, rowmean, rowvariance,
+      currentrowprob = SCIProwCalcProbability(scip, row, rowmean, rowvariance,
             rowinfinitiesdown, rowinfinitiesup);
 
       /* get variable's current expected contribution to row activity */
@@ -741,7 +737,7 @@ SCIP_RETCODE calcBranchScore(
 
          assert(rowinftiesupafterbranch >= 0);
          assert(rowinftiesdownafterbranch >= 0);
-         newrowprobup = rowCalcProbability(scip, row, changedrowmean, changedrowvariance, rowinftiesdownafterbranch,
+         newrowprobup = SCIProwCalcProbability(scip, row, changedrowmean, changedrowvariance, rowinftiesdownafterbranch,
                rowinftiesupafterbranch);
       }
       else
@@ -768,14 +764,14 @@ SCIP_RETCODE calcBranchScore(
 
          assert(rowinftiesdownafterbranch >= 0);
          assert(rowinftiesupafterbranch >= 0);
-         newrowprobdown = rowCalcProbability(scip, row, changedrowmean, changedrowvariance, rowinftiesdownafterbranch,
+         newrowprobdown = SCIProwCalcProbability(scip, row, changedrowmean, changedrowvariance, rowinftiesdownafterbranch,
                rowinftiesupafterbranch);
       }
       else
          newrowprobdown = currentrowprob;
 
       /* update the up and down score depending on the chosen scoring parameter */
-      SCIP_CALL( getScore(scip, currentrowprob, newrowprobup, newrowprobdown, upscore, downscore, scoreparam) );
+      SCIP_CALL( SCIPupdateDistributionScore(scip, currentrowprob, newrowprobup, newrowprobdown, upscore, downscore, scoreparam) );
 
       SCIPdebugMessage("  Variable %s changes probability of row %s from %g to %g (branch up) or %g;\n",
          SCIPvarGetName(var), SCIProwGetName(row), currentrowprob, newrowprobup, newrowprobdown);
@@ -943,8 +939,8 @@ SCIP_RETCODE varProcessBoundChanges(
    oldmean = 0.0;
    newmean = 0.0;
    vartype = SCIPvarGetType(var);
-   varCalcDistributionParameters(scip, oldlb, oldub, vartype, &oldmean, &oldvariance);
-   varCalcDistributionParameters(scip, newlb, newub, vartype, &newmean, &newvariance);
+   SCIPvarCalcDistributionParameters(scip, oldlb, oldub, vartype, &oldmean, &oldvariance);
+   SCIPvarCalcDistributionParameters(scip, newlb, newub, vartype, &newmean, &newvariance);
 
    /* loop over all rows of this variable and update activity distribution */
    for( r = 0; r < ncolrows; ++r )
@@ -1119,7 +1115,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, &nlpcands, NULL, NULL) );
+   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, NULL, NULL, &nlpcands, NULL) );
 
    if( nlpcands == 0 )
       return SCIP_OKAY;
@@ -1127,8 +1123,6 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
    if( SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
-   /* allocate buffer arrays for row distribution information */
-   /* todo speed this up by means of an event handler */
    branchruledata = SCIPbranchruleGetData(branchrule);
 
    /* if branching rule data arrays were not initialized before (usually the first call of the branching execution),

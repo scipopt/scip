@@ -2,6 +2,8 @@ SCIP version NEXT
 ==================
 
 features:
+- obbt propagator applies now additional separation and propagation in order to learn stronger and more bound tightenings
+- possible to change objective coefficients during probing mode
 - variable histories can be transferred between sub-SCIPs solved by LNS heuristics and the component presolver
   and the main SCIP to reuse this information.
 - tighter reliability notions introduced for reliability branching, based on pseudo-cost relative errors
@@ -26,6 +28,12 @@ features:
   we refer to the SCIP documentation (e.g, SCIPcreateVar; SCIPcreateConsLinear) for their meaning;
   setting them 1 enables the flag (TRUE), setting them to 2 disables the flag (FALSE), not setting them or setting
   them to 0 will use a default value
+- the MPS reader can now handle objective constants given as (the negation of) the RHS of the objective row
+- we can now upgrade quadratic constraints with one bilinear term to SOC constraints
+- new parameter "misc/outputorigsol" to control whether at the end of a command line run the solution should be output in the orignal space
+- new score in hybrid reliability pseudocost branching that prefers nonlinear variables when solving MINLPs
+- new heuristic (heur_bound) which fixes all integer variables to their lower/upper bounds and solves the remaining LP
+- new branching rule multaggr which allows to branch on general disjunctions defined by fractional multi-aggregated variables
 
 parameters:
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
@@ -58,7 +66,8 @@ parameters:
   for ranged rows and equations
 - new advanced parameter "constraints/linear/multaggrremove" to perform multi-aggregations in linear constraint handler
   only if the constraint can be removed afterwards
-
+- at the end of a command line run the best solution can now be output in the orignal space
+- new advanced parameter "branching/relpscost/nlscoreweight" for weight of nonlinear score when branching on MINLPs
 
 performance improvements:
 - adjusted (hard) diving heuristics to solve fewer LPs at shallow depths of the tree; after an LP was solved,
@@ -92,16 +101,31 @@ interface:
 fixed bugs:
 - fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)
 
+SCIP version 3.1.2
+==================
+
+fixed bugs:
+- fixed bug in primal.c and tree.c by using SCIPinfinity() as a cutoffbound to delete child nodes
+- fixed bug in cons_indicator with handling local bounds
+- fixed bug in cons_quadratic.c which leads to an overflow when SCIP allocates memory for a dense matrix
+- fixed bug in lp.c which leads to wrong primal and dual feasibility
+- fixed wrong comparison when executing branching rule for external branching candidates
+- fixed bug in cons_abspower.c: do not generate cuts with infinity right-hand-side anymore
+- fixed wrong handling of infinite activities and primal values in sepastore.c and lp.c
+- fixed assert in cons_soc.c: now soc with 1 lhs variable are allowed
+- fixed bug that led to an erroneous warning about the clock type
+- fixed setting of enforcement flag for constraints created by reformulation in nonlinear constraint handlers
+- fixed bug in heur_nlpdiving.c: wrong counting of fix variables
+- fixed bug in cons_quadratic.c: do not generate linearization cuts for disabled constraints
+
+misc:
+- moved assertions in comparison methods from scip.c to set.c
+- added more checks to SCIP{alloc,realloc,dupliacte}BufferArray() to handle overflows properly
+
 SCIP version 3.1.1
 ==================
 
 fixed bugs:
-- fixed wrong handling of infinite activities and primal values in sepastore.c and lp.c
-- fixed bug in cons_abspower.c, forbid changing of the right hand side to infinity
-- fixed wrong comparison when executing branching rule for external branching candidates
-- fixed bug in lp.c which leads to wrong primal and dual feasibility
-- fixed bug in cons_quadratic.c which leads to an overflow when SCIP allocates memory for a dense matrix
-- fixed bug in primal.c and tree.c by using SCIPinfinity() as a cutoffbound to delete child nodes
 - fixed bug in cons_quadratic which leads to wrong min/max activities
 - fixed wrong conversion of reals representing negative integer values
 - in debug mode, SCIP checks that no NaN's are introduced in SCIPsolSetVal()
@@ -165,8 +189,6 @@ fixed bugs:
   is just disregarded
 - fixed bug when reading indicator constraints for linear constraints (equations/ranged rows) from MPS files
 - fixed LP interface of CPLEX: functions getBInv* return the correct sign of the coefficients.
-- fixed	bug in cons_indicator with handling local bounds
-- fixed assert in cons_soc.c: now soc with 1 lhs variable are allowed
 
 performance improvements:
 - improved solving of LPs in OBBT propagator
@@ -207,9 +229,6 @@ Makefile:
 - allow to turn off block and buffer memory by the makefile parameters NOBLKMEM, NOBUFMEM, NOBLKBUFMEM;
   also remove the now superfluous makefiles for noblkmem, nobufmem, noblkbufmem
 
-misc:
-- moved assertions in comparison methods from scip.c to set.c
-- added more checks to SCIP{alloc,realloc,dupliacte}BufferArray() to handle overflows properly
 
 SCIP version 3.1.0
 ==================

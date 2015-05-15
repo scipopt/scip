@@ -27,6 +27,8 @@
 
 #include "scip/scip.h"
 #include "scip/type_branch.h"
+#include "scip/type_reopt.h"
+#include "scip/type_tree.h"
 
 #ifdef __cplusplus
 extern "C" {

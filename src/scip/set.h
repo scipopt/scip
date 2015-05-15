@@ -39,7 +39,7 @@
 #include "scip/type_cons.h"
 #include "scip/type_disp.h"
 #include "scip/type_heur.h"
-#include "scip/type_compress.h"
+#include "scip/type_compr.h"
 #include "scip/type_nodesel.h"
 #include "scip/type_presol.h"
 #include "scip/type_pricer.h"
@@ -75,7 +75,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copyseparators,     /**< should the separators be copied */
    SCIP_Bool             copypropagators,    /**< should the propagators be copied */
    SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
-   SCIP_Bool             copycompessions,    /**< should the tree compressions be copied */
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */

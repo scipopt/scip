@@ -1483,8 +1483,8 @@ SCIP_RETCODE sortGenVBounds(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->componentsstart), propdata->ncomponents + 1) );
 
    /* allocate memory for strong component arrays */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcomponents, SCIPdigraphGetNNodes(graph)) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcompstartidx, SCIPdigraphGetNNodes(graph)) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcomponents, SCIPdigraphGetNNodes(graph)) ); /*lint !e666*/
+   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcompstartidx, SCIPdigraphGetNNodes(graph)) ); /*lint !e666*/
 
    /* compute sorted genvbounds array, fill componentsstart array */
    sortedindex = 0;
@@ -2282,6 +2282,10 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
 
    *result = SCIP_DIDNOTRUN;
 
+   /* do not run if propagation w.r.t. current objective is not allowed */
+   if( !SCIPallowObjProp(scip) )
+      return SCIP_OKAY;
+
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
@@ -2306,7 +2310,7 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
 
          if( tightened )
          {
-            SCIPdebugMessage("tightened UB of cutoffboundvar to %e (old: %e, infeas: %d, tightened: %d)\n",
+            SCIPdebugMessage("tightened UB of cutoffboundvar to %e (old: %e, infeas: %u, tightened: %u)\n",
                newub, oldub, infeasible, tightened);
          }
 
@@ -2463,8 +2467,8 @@ SCIP_DECL_PROPEXITSOL(propExitsolGenvbounds)
    /* release the cutoffboundvar and undo the locks */
    if( propdata->cutoffboundvar != NULL && SCIPisInRestart(scip) == FALSE )
    {
-      SCIPaddVarLocks(scip, propdata->cutoffboundvar, -1, -1);
-      SCIPreleaseVar(scip, &(propdata->cutoffboundvar));
+      SCIP_CALL( SCIPaddVarLocks(scip, propdata->cutoffboundvar, -1, -1) );
+      SCIP_CALL( SCIPreleaseVar(scip, &(propdata->cutoffboundvar)) );
       propdata->cutoffboundvar = NULL;
       SCIPdebugMessage("release cutoffboundvar!\n");
    }

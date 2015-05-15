@@ -38,7 +38,7 @@
 #include "scip/type_disp.h"
 #include "scip/type_dialog.h"
 #include "scip/type_heur.h"
-#include "scip/type_compress.h"
+#include "scip/type_compr.h"
 #include "scip/type_nodesel.h"
 #include "scip/type_presol.h"
 #include "scip/type_pricer.h"
@@ -224,10 +224,6 @@ struct SCIP_Set
    SCIP_Bool             history_allowmerge; /**< should variable histories be merged from sub-SCIPs whenever possible? */
    SCIP_Bool             history_allowtransfer; /**< should variable histories be transferred to initialize SCIP copies? */
 
-   /* heuristic settings */
-   SCIP_Real             heur_divestartfrac; /**< start percentage of diving candidates that should be fixed before LP resolve */
-   int                   heur_divelpsolvefreq; /**< LP solve frequency for diving heuristics */
-
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */
    SCIP_Real             limit_memory;       /**< maximal memory usage in MB */
@@ -328,6 +324,9 @@ struct SCIP_Set
    SCIP_Bool             misc_calcintegral;  /**< should SCIP calculate the primal dual integral value which may require
                                               *   a large number of additional clock calls (and decrease the performance)? */
    SCIP_Bool             misc_finitesolstore;/**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
+   SCIP_Bool             misc_outputorigsol; /**< should the best solution be transformed to the orignal space and be output in command line run? */
+   SCIP_Bool             misc_allowdualreds; /**< should dual reductions in propagation methods and presolver be allowed? */
+   SCIP_Bool             misc_allowobjprop;  /**< should propagation to the current objective be allowed in propagation methods? */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
@@ -383,6 +382,13 @@ struct SCIP_Set
    SCIP_Real             reopt_objsimsol;    /**< similarity of two objective functions to reuse stored solutions. */
    SCIP_Real             reopt_objsimrootlp; /**< similarity of two sequential objective function to disable solving the root LP. */
    SCIP_Real             reopt_objsimdelay;  /**< minimum similarity for using reoptimization of the search tree. */
+   char                  reopt_varorderinterdiction; /** use the 'd'efault or a 'r'andom variable order for interdiction branching when applying the reoptimization */
+   int                   reopt_maxsavednodes;/**< maximal number of saved nodes */
+   int                   reopt_maxdiffofnodes;/**< maximal number of bound changes between two stored nodes on one path */
+   int                   reopt_solvelp;      /**< strategy for solving the LP at nodes from reoptimization */
+   int                   reopt_solvelpdiff;  /**< maximal number of bound changes at node to skip solving the LP */
+   int                   reopt_savesols;     /**< number of best solutions which should be saved for the following runs. (-1: save all) */
+   int                   reopt_forceheurrestart; /**< force a restart if the last n optimal solutions were found by heuristic reoptsols */
    SCIP_Bool             reopt_enable;       /**< enable reoptimization */
    SCIP_Bool             reopt_sepaglbinfsubtrees;/**< save global constraints to separate infeasible subtrees */
    SCIP_Bool             reopt_sepabestsol;  /**< separate only the best solution, i.e., for constrained shortest path */
@@ -391,12 +397,7 @@ struct SCIP_Set
    SCIP_Bool             reopt_sbinit;       /**< try to fix variables before reoptimizing by probing like strong branching */
    SCIP_Bool             reopt_reducetofrontier; /**< delete stored nodes which were not reoptimized */
    SCIP_Bool             reopt_saveconsprop; /**< save constraint propagations */
-   int                   reopt_maxsavednodes;/**< maximal number of saved nodes */
-   int                   reopt_maxdiffofnodes;/**< maximal number of bound changes between two stored nodes on one path */
-   int                   reopt_solvelp;      /**< strategy for solving the LP at nodes from reoptimization */
-   int                   reopt_solvelpdiff;  /**< maximal number of bound changes at node to skip solving the LP */
-   int                   reopt_savesols;     /**< number of best solutions which should be saved for the following runs. (-1: save all) */
-   int                   reopt_forceheurrestart; /**< force a restart if the last n optimal solutions were found by heuristic reoptsols */
+   SCIP_Bool             reopt_usesplitcons; /**< use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node */
 
    /* separation settings */
    SCIP_Real             sepa_maxbounddist;  /**< maximal relative distance from current node's dual bound to primal bound

@@ -38,7 +38,7 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
-/* default values for RENS-specific plugins */
+/* default values for OFINS-specific plugins */
 #define DEFAULT_MAXNODES      5000LL    /* maximum number of nodes to regard in the subproblem */
 #define DEFAULT_MAXCHGRATE    0.50      /* maximum percentage of changed objective coefficients */
 #define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
@@ -109,11 +109,11 @@ SCIP_RETCODE createSubproblem(
    SCIP*                 scip,                    /**< original SCIP data structure */
    SCIP*                 subscip,                 /**< SCIP data structure for the subproblem */
    SCIP_VAR**            subvars,                 /**< the variables of the subproblem */
-   SCIP_Bool*            chgcoeffs                /**< array if changed coefficients */
+   SCIP_Bool*            chgcoeffs                /**< array indicating which coefficients have changed */
    )
 {
    SCIP_VAR** vars;
-   SCIP_SOL* sol;                            /* optimal solution of the last iteration */
+   SCIP_SOL* sol;
    int nvars;
    int i;
 
@@ -121,8 +121,11 @@ SCIP_RETCODE createSubproblem(
    assert(subscip != NULL);
    assert(subvars != NULL);
 
+   /* get binary variables; all continuous variables remain unfixed */
    vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
+   nvars = SCIPgetNBinVars(scip);
+
+   /* get optimal solution of the last iteration */
    sol = SCIPgetReoptLastOptSol(scip);
    assert(sol != NULL);
 
@@ -198,7 +201,7 @@ SCIP_RETCODE createNewSol(
 
 /** main procedure of the OFINS heuristic, creates and solves a sub-SCIP */
 static
-SCIP_RETCODE SCIPapplyOfins(
+SCIP_RETCODE applyOfins(
    SCIP*                 scip,                    /**< original SCIP data structure */
    SCIP_HEUR*            heur,                    /**< heuristic data structure */
    SCIP_HEURDATA*        heurdata,                /**< euristic's private data structure */
@@ -213,7 +216,6 @@ SCIP_RETCODE SCIPapplyOfins(
    SCIP_VAR** subvars;                            /* subproblem's variables */
    SCIP_EVENTHDLR* eventhdlr;                     /* event handler for LP events */
 
-   SCIP_Real cutoff;                              /* objective cutoff for the subproblem */
    SCIP_Real timelimit;                           /* time limit for OFINS subproblem */
    SCIP_Real memorylimit;                         /* memory limit for OFINS subproblem */
 
@@ -309,9 +311,6 @@ SCIP_RETCODE SCIPapplyOfins(
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
-
-   /* disable reoptimization */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
 
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
@@ -433,15 +432,6 @@ SCIP_RETCODE SCIPapplyOfins(
  * Callback methods of primal heuristic
  */
 
-/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
-#define heurCopyOfins NULL
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#define heurInitsolOfins NULL
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#define heurExitsolOfins NULL
-
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeOfins)
@@ -461,37 +451,6 @@ SCIP_DECL_HEURFREE(heurFreeOfins)
 
    return SCIP_OKAY;
 }
-
-
-/** initialization method of primal heuristic (called after problem was transformed) */
-#if 0
-static
-SCIP_DECL_HEURINIT(heurInitOfins)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ofins primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define heurInitOfins NULL
-#endif
-
-
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-#if 0
-static
-SCIP_DECL_HEUREXIT(heurExitOfins)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of ofins primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define heurExitOfins NULL
-#endif
-
 
 /** execution method of primal heuristic */
 static
@@ -552,75 +511,70 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
 
    /* get variable data and check which coefficient has changed  */
    vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
+   nvars = SCIPgetNBinVars(scip);
    nchgcoefs = 0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &chgcoeffs, nvars) );
 
    for( v = 0; v < nvars; v++ )
    {
+      SCIP_VAR* origvar;
+      SCIP_Real constant;
+      SCIP_Real scalar;
+      SCIP_Real newcoef;
+      SCIP_Real oldcoef;
+      SCIP_Real newcoefabs;
+      SCIP_Real oldcoefabs;
+      SCIP_Real frac;
+
       /* we only want to count variables that are unfixed after the presolving */
       assert(SCIPvarGetStatus(vars[v]) != SCIP_VARSTATUS_ORIGINAL);
+      assert(SCIPvarIsActive(vars[v]));
 
-      if( SCIPvarIsActive(vars[v]) )
+      origvar = vars[v];
+      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+
+      newcoef = SCIPvarGetObj(origvar);
+      oldcoef = SCIPgetReoptOldObjCoef(scip, origvar, SCIPgetNReoptRuns(scip)-1);
+      newcoefabs = fabs(newcoef);
+      oldcoefabs = fabs(oldcoef);
+
+      frac = SCIP_INVALID;
+
+      /* if both coefficients are zero nothing has changed */
+      if( SCIPisZero(scip, newcoef) && SCIPisZero(scip, oldcoef) )
       {
-         SCIP_VAR* origvar;
-         SCIP_Real constant;
-         SCIP_Real scalar;
-         SCIP_Real newcoef;
-         SCIP_Real oldcoef;
-         SCIP_Real newcoefabs;
-         SCIP_Real oldcoefabs;
-         SCIP_Real frac;
-
-         origvar = vars[v];
-         SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
-
-         newcoef = SCIPvarGetObj(origvar);
-         oldcoef = SCIPgetReoptObjCoef(scip, origvar, SCIPgetNReoptRuns(scip)-1);
-         newcoefabs = fabs(newcoef);
-         oldcoefabs = fabs(oldcoef);
-
-         frac = SCIP_INVALID;
-
-         /* if both coefficients are zero nothing has changed */
-         if( SCIPisZero(scip, newcoef) && SCIPisZero(scip, oldcoef) )
-         {
-            frac = 0;
-         }
-         /* if both coefficients have the same sign we calculate the quotient
-          * MIN(newcoefabs, oldcoefabs)/MAX(newcoefabs, oldcoefabs)
-          */
-         else if( (SCIPisPositive(scip, newcoef) && SCIPisPositive(scip, oldcoef))
-          || (SCIPisNegative(scip, newcoef) && SCIPisNegative(scip, oldcoef)) )
-         {
-            frac = MIN(newcoefabs, oldcoefabs)/MAX(newcoefabs, oldcoefabs);
-         }
-         /* if both coefficients have a different sign, we set frac = 1 */
-         else if( (SCIPisPositive(scip, newcoef) && SCIPisNegative(scip, oldcoef))
-               || (SCIPisNegative(scip, newcoef) && SCIPisPositive(scip, oldcoef)) )
-         {
-            frac = 1;
-         }
-         /* if exactly one coefficient is zero, the other need to be closed to zero */
-         else if( SCIPisZero(scip, newcoef) || SCIPisZero(scip, oldcoef) )
-         {
-            assert(SCIPisZero(scip, newcoef) != SCIPisZero(scip, oldcoef));
-            if( !SCIPisZero(scip, newcoef) )
-               frac = MIN(1, newcoefabs);
-            else
-               frac = MIN(1, oldcoefabs);
-         }
+         frac = 0;
+      }
+      /* if exactly one coefficient is zero, the other need to be close to zero */
+      else if( SCIPisZero(scip, newcoef) || SCIPisZero(scip, oldcoef) )
+      {
+         assert(SCIPisZero(scip, newcoef) != SCIPisZero(scip, oldcoef));
+         if( !SCIPisZero(scip, newcoef) )
+            frac = MIN(1, newcoefabs);
          else
-            assert(frac != SCIP_INVALID);
+            frac = MIN(1, oldcoefabs);
+      }
+      /* if both coefficients have the same sign we calculate the quotient
+       * MIN(newcoefabs, oldcoefabs)/MAX(newcoefabs, oldcoefabs)
+       */
+      else if( SCIPisPositive(scip, newcoef) == SCIPisPositive(scip, oldcoef) )
+      {
+         frac = MIN(newcoefabs, oldcoefabs)/MAX(newcoefabs, oldcoefabs);
+      }
+      /* if both coefficients have a different sign, we set frac = 1 */
+      else
+      {
+         assert((SCIPisPositive(scip, newcoef) && SCIPisNegative(scip, oldcoef))
+             || (SCIPisNegative(scip, newcoef) && SCIPisPositive(scip, oldcoef)));
 
-         if( SCIPvarGetType(origvar) != SCIP_VARTYPE_BINARY || frac > heurdata->maxchange )
-         {
-            chgcoeffs[v] = TRUE;
-            nchgcoefs++;
-         }
-         else
-            chgcoeffs[v] = FALSE;
+         frac = 1;
+      }
+
+      if( frac > heurdata->maxchange )
+      {
+         chgcoeffs[v] = TRUE;
+         nchgcoefs++;
       }
       else
          chgcoeffs[v] = FALSE;
@@ -629,17 +583,17 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
    SCIPdebugMessage("%d (rate %.4f) changed coefficients\n", nchgcoefs, nchgcoefs/((SCIP_Real)nvars));
 
    /* we only want to run the heuristic, if there at least 3 changed coefficients.
-    * if the number of changed coefficients the trivialnegation heuristic will construct an
+    * if the number of changed coefficients is 2 the trivialnegation heuristic will construct an
     * optimal solution without solving a MIP.
     */
    if( nchgcoefs < 3 )
       goto TERMINATE;
 
-   /* run the heuristic, we not to much coefficients have changed */
-   if( nchgcoefs/((SCIP_Real)SCIPgetNVars(scip)) > heurdata->maxchangerate )
+   /* run the heuristic, if not too many coefficients have changed */
+   if( nchgcoefs/((SCIP_Real)SCIPgetNBinVars(scip)) > heurdata->maxchangerate )
       goto TERMINATE;
 
-   SCIP_CALL( SCIPapplyOfins(scip, heur, heurdata, result, nstallnodes, chgcoeffs) );
+   SCIP_CALL( applyOfins(scip, heur, heurdata, result, nstallnodes, chgcoeffs) );
 
   TERMINATE:
    SCIPfreeBufferArray(scip, &chgcoeffs);

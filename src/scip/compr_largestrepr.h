@@ -26,8 +26,8 @@
 #ifndef __SCIP_COMPR_LARGESTREPR_H__
 #define __SCIP_COMPR_LARGESTREPR_H__
 
-
 #include "scip/scip.h"
+#include "scip/type_reopt.h"
 
 #ifdef __cplusplus
 extern "C" {

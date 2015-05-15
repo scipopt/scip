@@ -111,8 +111,8 @@ struct SCIP_ReoptTree
    int                   ntotalinfnodes;          /**< number of (LP-)infeasible nodes over all runs */
    int                   nprunednodes;            /**< number of pruned nodes in the current run */
    int                   ntotalprunednodes;       /**< number of pruned nodes over all runs */
-   int                   nrediednodes;            /**< number of pruned reoptimized nodes in the current run */
-   int                   ntotalrediednodes;       /**< number of pruned reoptimized nodes over all runs */
+   int                   ncutoffreoptnodes;       /**< number of cut off reoptimized nodes in the current run */
+   int                   ntotalcutoffreoptnodes;  /**< number of cut off reoptimized nodes over all runs */
    int                   ninfsubtrees;            /**< number of found infeasible subtrees */
 };
 
@@ -122,7 +122,6 @@ struct SCIP_Reopt
    int                   run;                     /**< number of the current reoptimization run */
    int                   runsize;                 /**< allocated memory for runs */
    int                   firstobj;                /**< first non empty objective function */
-   int                   nobjvars;                /**< number of variables */
 
    SCIP_Real**           objs;                    /**< list of objective coefficients */
    SCIP_SOL**            prevbestsols;            /**< list of best solutions of all previous rounds */
@@ -149,10 +148,13 @@ struct SCIP_Reopt
    int                   allocmemglbconss;        /**< allocated memory for global constraints */
 
    /* statistics */
-   int                   nlocalrestarts;          /**< number of local restarts in the current iteration */
    int                   ncheckedsols;            /**< number of updated solutions by reoptsols */
    int                   nimprovingsols;          /**< number of improving solutions found by reoptsols */
-   int                   nrestarts;               /**< number of restarts */
+   int                   nglbrestarts;            /**< number of global restarts */
+   int                   ntotallocrestarts;       /**< number of local restarts over all runs */
+   int                   nlocrestarts;            /**< number of local restarts in the current iteration */
+   int                   firstrestart;            /**< run with the first global restart or -1 of no restart  */
+   int                   lastrestart;             /**< run with the last global restart or -1 if no restart */
 
    /* clocks */
    SCIP_CLOCK*           savingtime;              /**< time needed to store the nodes */

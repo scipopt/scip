@@ -4450,7 +4450,8 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    }
 
    /* perform dual presolving on AND-constraints */
-   if( conshdlrdata->dualpresolving && !cutoff && !SCIPisStopped(scip))
+   if( conshdlrdata->dualpresolving && !cutoff && !SCIPisStopped(scip) && SCIPallowObjProp(scip)
+         && SCIPallowDualReds(scip))
    {
       SCIP_CALL( dualPresolve(scip, conss, nconss, conshdlrdata->eventhdlr, &entries, &nentries, &cutoff, nfixedvars, naggrvars, nchgcoefs, ndelconss, nupgdconss, naddconss) );
    }

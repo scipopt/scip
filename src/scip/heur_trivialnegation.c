@@ -24,11 +24,11 @@
 #include <string.h>
 
 #include "scip/heur_trivialnegation.h"
-#include "scip/reopt.h"
+#include "scip/pub_reopt.h"
 #include "scip/struct_scip.h"
 
 #define HEUR_NAME             "trivialnegation"
-#define HEUR_DESC             "negate solution entries if a objective coefficient changes the sign, enters or leaves the objective."
+#define HEUR_DESC             "negate solution entries if an objective coefficient changes the sign, enters or leaves the objective."
 #define HEUR_DISPCHAR         'j'
 #define HEUR_PRIORITY         30000
 #define HEUR_FREQ             0
@@ -42,12 +42,9 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary primal heuristic data */
-
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_Bool             reopt_enabled;           /**< reoptimization enabled */
 };
 
 
@@ -69,79 +66,34 @@ SCIP_DECL_HEURCOPY(heurCopyTrivialnegation)
    return SCIP_OKAY;
 }
 
-/* free data of the heuristic */
-static
-SCIP_DECL_HEURFREE(heurFreeTrivialnegation)
-{
-   SCIP_HEURDATA* heurdata;
-
-   assert(scip != NULL );
-   assert(heur != NULL );
-
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL );
-
-   SCIPfreeMemory(scip, &heurdata);
-   SCIPheurSetData(heur, NULL);
-
-   return SCIP_OKAY;
-}
-
-/* initialize the heuristic */
-static
-SCIP_DECL_HEURINIT(heurInitTrivialnegation)
-{
-   SCIP_HEURDATA* heurdata;
-
-   assert(scip != NULL );
-   assert(heur != NULL );
-
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL );
-
-   heurdata->reopt_enabled = SCIPisReoptEnabled(scip);
-
-   return SCIP_OKAY;
-}
-
-#define heurExitTrivialnegation NULL
-#define heurInitsolTrivialnegation NULL
-#define heurExitsolTrivialnegation NULL
-
 
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
-{
-   /*lint --e{715}*/
+{  /*lint --e{715}*/
    SCIP_SOL* lastbestsol;         /** best solution from last run */
    SCIP_SOL* allchanged;          /** solution with all entries negated */
    SCIP_SOL* feasiblechanged;     /** solution with all feasible entries negated */
    SCIP_SOL* singlenegatedsol;    /** solution with exactly one negated entry */
-   SCIP_VAR** origvars;
-
-   int norigvars;
+   SCIP_VAR** vars;
+   int nvars;
    int i;
 
    SCIP_Real solval;
-   SCIP_Bool success;
-   SCIP_Bool reopt;
 
-   SCIP_CALL( SCIPgetBoolParam(scip, "reoptimization/enable", &reopt) );
-
-   if( !reopt )
+   if( !SCIPisReoptEnabled(scip) )
    {
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
 
-   origvars = SCIPgetOrigVars(scip);
-   norigvars = SCIPgetNOrigVars(scip);
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
 
    *result = SCIP_DIDNOTFIND;
 
    /* get best solution from the run */
-   lastbestsol = SCIPreoptGetLastBestSol(scip->reopt);
+   lastbestsol = SCIPgetReoptLastOptSol(scip);
 
    if( lastbestsol == NULL )
       return SCIP_OKAY;
@@ -152,12 +104,12 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
    SCIP_CALL( SCIPcreateSol(scip, &singlenegatedsol, heur) );
 
    /* copy the solutions */
-   for(i = 0; i < norigvars; i++)
+   for( i = 0; i < nvars; i++ )
    {
-      solval = SCIPgetSolVal(scip, lastbestsol, origvars[i]);
-      SCIP_CALL( SCIPsetSolVal(scip, allchanged, origvars[i], solval) );
-      SCIP_CALL( SCIPsetSolVal(scip, feasiblechanged, origvars[i], solval) );
-      SCIP_CALL( SCIPsetSolVal(scip, singlenegatedsol, origvars[i], solval) );
+      solval = SCIPgetSolVal(scip, lastbestsol, vars[i]);
+      SCIP_CALL( SCIPsetSolVal(scip, allchanged, vars[i], solval) );
+      SCIP_CALL( SCIPsetSolVal(scip, feasiblechanged, vars[i], solval) );
+      SCIP_CALL( SCIPsetSolVal(scip, singlenegatedsol, vars[i], solval) );
    }
 
    assert(SCIPsolGetHeur(allchanged) == heur);
@@ -165,34 +117,41 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
    assert(SCIPsolGetHeur(singlenegatedsol) == heur);
 
    /* change the entries */
-   for(i = 0; i < norigvars; i++)
+   for( i = 0; i < nvars; i++ )
    {
-      SCIP_VAR* transvar;
-      SCIP_Bool entering;
-      SCIP_Bool leaving;
-      SCIP_Bool negated;
-      SCIP_Real obj;
+      SCIP_VAR* origvar;
+      SCIP_Real constant;
+      SCIP_Real scalar;
 
-      transvar = SCIPvarGetTransVar(origvars[i]);
-      assert(transvar != NULL);
+      assert(SCIPvarIsActive(vars[i]));
 
-      if( SCIPvarGetType(origvars[i]) == SCIP_VARTYPE_BINARY
-       && SCIPvarIsActive(transvar)
-       && SCIPvarGetStatus(transvar) != SCIP_VARSTATUS_FIXED
-       && SCIPvarGetStatus(transvar) != SCIP_VARSTATUS_AGGREGATED
-       && SCIPvarGetStatus(transvar) != SCIP_VARSTATUS_MULTAGGR )
+      origvar = vars[i];
+      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar,&scalar, &constant) );
+      assert(origvar != NULL);
+
+      if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY )
       {
-         /* check the changes of the variable */
-         SCIPgetVarCoefChg(scip, SCIPvarGetIndex(origvars[i]), &negated, &entering, &leaving);
+         SCIP_Real obj;
+         SCIP_Real newcoef;
+         SCIP_Real oldcoef;
+         SCIP_Bool changed;
 
-         if( negated || entering || leaving )
+         newcoef = SCIPvarGetObj(origvar);
+         oldcoef = SCIPgetReoptOldObjCoef(scip, origvar, SCIPgetNReoptRuns(scip)-1);
+
+         changed = SCIPisZero(scip, oldcoef) != SCIPisZero(scip, newcoef); /* enter or leave the objective */
+         changed |= SCIPisPositive(scip, oldcoef) == SCIPisNegative(scip, newcoef); /* changed the sign */
+
+         if( changed )
          {
-            solval = SCIPgetSolVal(scip, lastbestsol, origvars[i]);
+            SCIP_Bool success;
+
+            solval = SCIPgetSolVal(scip, lastbestsol, vars[i]);
 
             /* change solution value */
-            SCIP_CALL( SCIPsetSolVal(scip, allchanged, origvars[i], 1 - solval) );
-            SCIP_CALL( SCIPsetSolVal(scip, feasiblechanged, origvars[i], 1 - solval) );
-            SCIP_CALL( SCIPsetSolVal(scip, singlenegatedsol, origvars[i], 1 - solval) );
+            SCIP_CALL( SCIPsetSolVal(scip, allchanged, vars[i], 1 - solval) );
+            SCIP_CALL( SCIPsetSolVal(scip, feasiblechanged, vars[i], 1 - solval) );
+            SCIP_CALL( SCIPsetSolVal(scip, singlenegatedsol, vars[i], 1 - solval) );
 
             /* try solution with all changes */
             success = FALSE;
@@ -200,7 +159,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             if( SCIPisFeasLT(scip, obj, SCIPgetCutoffbound(scip)) )
             {
                SCIPdebugMessage("try solution with all negations\n");
-               SCIP_CALL( SCIPtrySol(scip, allchanged, FALSE, FALSE, TRUE, TRUE, &success) );
+               SCIP_CALL( SCIPtrySol(scip, allchanged, FALSE, FALSE, FALSE, TRUE, &success) );
 
                if( success )
                {
@@ -217,7 +176,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             if( SCIPisFeasLT(scip, obj, SCIPgetCutoffbound(scip)) )
             {
                SCIPdebugMessage("try solution with feasible negations\n");
-               SCIP_CALL( SCIPtrySol(scip, feasiblechanged, FALSE, FALSE, TRUE, TRUE, &success) );
+               SCIP_CALL( SCIPtrySol(scip, feasiblechanged, FALSE, FALSE, FALSE, TRUE, &success) );
 
                if( success )
                {
@@ -231,7 +190,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             if( !success )
             {
                /* reset solution with feasible changes */
-               SCIP_CALL( SCIPsetSolVal(scip, feasiblechanged, origvars[i], solval) );
+               SCIP_CALL( SCIPsetSolVal(scip, feasiblechanged, vars[i], solval) );
             }
 
             /* try solution with exactly one changed value */
@@ -240,7 +199,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             {
                success = FALSE;
                SCIPdebugMessage("try solution with a single negation\n");
-               SCIP_CALL( SCIPtrySol(scip, singlenegatedsol, FALSE, FALSE, TRUE, TRUE, &success) );
+               SCIP_CALL( SCIPtrySol(scip, singlenegatedsol, FALSE, FALSE, FALSE, TRUE, &success) );
 
                if( success )
                {
@@ -252,7 +211,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             }
 
             /* reset solution with exactly one changed value */
-            SCIP_CALL( SCIPsetSolVal(scip, singlenegatedsol, origvars[i], solval) );
+            SCIP_CALL( SCIPsetSolVal(scip, singlenegatedsol, vars[i], solval) );
          }
       }
    }
@@ -278,12 +237,10 @@ SCIP_RETCODE SCIPincludeHeurTrivialnegation(
    SCIP_HEURDATA* heurdata;
    SCIP_HEUR* heur;
 
-   /* create trivialnegation primal heuristic data */
-   SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   /* no primal heuristic data */
+   heurdata = NULL;
 
-   /* use SCIPincludeHeurBasic() plus setter functions if you want to set callbacks one-by-one and your code should
-    * compile independent of new callbacks being added in future SCIP versions
-    */
+   /* include heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
          HEUR_NAME, HEUR_DESC, HEUR_DISPCHAR, HEUR_PRIORITY, HEUR_FREQ, HEUR_FREQOFS,
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecTrivialnegation, heurdata) );
@@ -292,8 +249,6 @@ SCIP_RETCODE SCIPincludeHeurTrivialnegation(
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyTrivialnegation) );
-   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitTrivialnegation) );
-   SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeTrivialnegation) );
 
 
    return SCIP_OKAY;

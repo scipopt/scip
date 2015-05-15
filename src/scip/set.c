@@ -42,7 +42,7 @@
 #include "scip/disp.h"
 #include "scip/dialog.h"
 #include "scip/heur.h"
-#include "scip/compress.h"
+#include "scip/compr.h"
 #include "scip/nodesel.h"
 #include "scip/presol.h"
 #include "scip/pricer.h"
@@ -77,8 +77,7 @@
 
 /* Tree Compression */
 
-#define SCIP_DEFAULT_COMPR_ENABLE         FALSE /**< should automatic tree compression after presolving be enabled? */
-#define SCIP_DEFAULT_COMPR_TIME              60 /**< maximum time to run */
+#define SCIP_DEFAULT_COMPR_ENABLE         FALSE /**< should automatic tree compression in reoptimization after presolving be enabled? */
 
 
 /* Conflict Analysis */
@@ -149,10 +148,7 @@
 #define SCIP_DEFAULT_HISTORY_VALUEBASED   FALSE /**< should statistics be collected for variable domain value pairs */
 #define SCIP_DEFAULT_HISTORY_ALLOWMERGE   FALSE /**< should variable histories be merged from sub-SCIPs whenever possible? */
 #define SCIP_DEFAULT_HISTORY_ALLOWTRANSFER FALSE /**< should variable histories be transferred to initialize SCIP copies? */
-/* Heuristics */
 
-#define SCIP_DEFAULT_HEUR_DIVESTARTFRAC         0.15 /**< start percentage of diving candidates that should be fixed before LP resolve */
-#define SCIP_DEFAULT_HEUR_DIVELPSOLVEFREQ       1    /**< LP solve frequency for diving heuristics */
 /* Limits */
 
 #define SCIP_DEFAULT_LIMIT_TIME           1e+20 /**< maximal time in seconds to run */
@@ -170,6 +166,7 @@
 #define SCIP_DEFAULT_LIMIT_MAXORIGSOL        10 /**< maximal number of solutions candidates to store in the solution storage of the original problem */
 #define SCIP_DEFAULT_LIMIT_RESTARTS          -1 /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_AUTORESTARTNODES  -1 /**< if solve exceeds this number of nodes, an automatic restart is triggered (-1: no automatic restart)*/
+
 
 /* LP */
 
@@ -212,7 +209,7 @@
 #define SCIP_DEFAULT_LP_ROWREPSWITCH        2.0 /**< simplex algorithm shall use row representation of the basis
                                                  *   if number of rows divided by number of columns exceeds this value */
 #define SCIP_DEFAULT_LP_THREADS               0 /**< number of threads used for solving the LP (0: automatic) */
-#define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit             
+#define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
 
@@ -254,8 +251,10 @@
 #define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
 #define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
-#define SCIP_DEFAULT_MISC_REUSESOLS        TRUE /**< should solutions from orig space used in primal space after transformation */
 #define SCIP_DEFAULT_MISC_FINITESOLSTORE  FALSE /**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
+#define SCIP_DEFAULT_MISC_OUTPUTORIGSOL    TRUE /**< should the best solution be transformed to the orignal space and be output in command line run? */
+#define SCIP_DEFAULT_MISC_ALLOWDUALREDS    TRUE /**< should dual reductions in propagation methods and presolver be allowed? */
+#define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
 
 
 /* Node Selection */
@@ -295,32 +294,28 @@
 
 /* Reoptimization */
 
-#define SCIP_DEFAULT_REOPT_ENABLE         FALSE /**< enable reoptimization */
-#define SCIP_DEFAULT_REOPT_MAXSAVEDNODES INT_MAX/**< maximum number of saved nodes */
-#define SCIP_DEFAULT_REOPT_DYNAMIXDIFF    FALSE /**< should the maximal number of bound changes in two ancestor
-                                                     nodes calculated automaticaly, depending on the number of variables? */
-#define SCIP_DEFAULT_REOPT_MAXDIFFOFNODES INT_MAX/**< maximum number of bound changes of two ancestor nodes
-                                                     such that the path get not shrunk */
-#define SCIP_DEFAULT_REOPT_SAVELPBASIS    FALSE /**< save the LP basis of feasible and branched nodes during reoptimization */
-#define SCIP_DEFAULT_REOPT_SEPAGLBSOLS    FALSE /**< save global constraints to separate solutions found so far */
-#define SCIP_DEFAULT_REOPT_SEPAGLBINFSUBTREES TRUE/**< save global constraints to separate infeasible subtrees */
-#define SCIP_DEFAULT_REOPT_SEPALOCSOLS    FALSE /**< save local constraints to separate solutions found so far */
-#define SCIP_DEFAULT_REOPT_SEPABESTSOL    FALSE /**< separate only the best solution, i.e., for constraint shortest path problems */
-#define SCIP_DEFAULT_REOPT_SOLVELP            1 /**< strategy for solving the LP at nodes from reoptimization */
-#define SCIP_DEFAULT_REOPT_SOLVELPDIFF        1 /**< difference of path length between two ancestor nodes to solve the LP */
-#define SCIP_DEFAULT_REOPT_SAVESOLS      INT_MAX/**< save n best solutions found so far. */
 #define SCIP_DEFAULT_REOPT_OBJSIMSOL       -1.0 /**< reuse stored solutions only if the similarity of the new and the old objective
                                                      function is greater or equal than this value */
 #define SCIP_DEFAULT_REOPT_OBJSIMROOTLP     1.0 /**< similarity of two sequential objective function to disable solving the root LP. */
-#define SCIP_DEFAULT_REOPT_DELAY           -1.0 /**< start reoptimzing the search if the new objective function has similarity of
-                                                     at least SCIP_DEFAULT_REOPT_DELAY w.r.t. the previous objective function. */
+#define SCIP_DEFAULT_REOPT_OBJSIMDELAY     -1.0 /**< start reoptimzing the search if the new objective function has similarity of
+                                                 *   at least SCIP_DEFAULT_REOPT_DELAY w.r.t. the previous objective function. */
+#define SCIP_DEFAULT_REOPT_VARORDERINTERDICTION 'd' /** use the 'd'efault or a 'r'andom variable order for interdiction branching when applying the reoptimization */
+#define SCIP_DEFAULT_REOPT_MAXSAVEDNODES  INT_MAX/**< maximum number of saved nodes */
+#define SCIP_DEFAULT_REOPT_MAXDIFFOFNODES INT_MAX/**< maximum number of bound changes of two ancestor nodes
+                                                  *  such that the path get not shrunk */
+#define SCIP_DEFAULT_REOPT_FORCEHEURRESTART  10 /**< force a restart if the last n optimal solutions are found by reoptssols heuristic */
+#define SCIP_DEFAULT_REOPT_SAVESOLS      INT_MAX/**< save n best solutions found so far. */
+#define SCIP_DEFAULT_REOPT_SOLVELP            1 /**< strategy for solving the LP at nodes from reoptimization */
+#define SCIP_DEFAULT_REOPT_SOLVELPDIFF        1 /**< difference of path length between two ancestor nodes to solve the LP */
+#define SCIP_DEFAULT_REOPT_ENABLE         FALSE /**< enable reoptimization */
+#define SCIP_DEFAULT_REOPT_SEPAGLBINFSUBTREES TRUE/**< save global constraints to separate infeasible subtrees */
+#define SCIP_DEFAULT_REOPT_SEPABESTSOL    FALSE /**< separate the optimal solution, i.e., for constraint shortest path problems */
 #define SCIP_DEFAULT_REOPT_COMMONTIMELIMIT TRUE /**< is the given time limit for all reoptimization round? */
-#define SCIP_DEFAULT_REOPT_SHRINKTRANSIT   TRUE /**< replace branched transit nodes by their child nodes, if the number of bound changes is not to large */
+#define SCIP_DEFAULT_REOPT_SHRINKINNER     TRUE /**< replace branched transit nodes by their child nodes, if the number of bound changes is not to large */
 #define SCIP_DEFAULT_REOPT_STRONGBRANCHINIT FALSE/**< try to fix variables before reoptimizing by probing like strong branching */
 #define SCIP_DEFAULT_REOPT_REDUCETOFRONTIER TRUE/**< delete stored nodes which were not reoptimized */
-#define SCIP_DEFAULT_REOPT_DYNLOCALDELAY    FALSE/**< increase the local delay by 0.5% if no subproblem was restarted. */
 #define SCIP_DEFAULT_REOPT_SAVECONSPROP     FALSE/**< save constraint propagation */
-#define SCIP_DEFAULT_REOPT_FORCEHEURRESTART   3 /**< force a restart if the last n optimal solutions are found by reoptssols heuristic */
+#define SCIP_DEFAULT_REOPT_USESPLITCONS    TRUE /**< use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node */
 
 /* Propagating */
 
@@ -363,6 +358,7 @@
 #define SCIP_DEFAULT_SEPA_MINACTIVITYQUOT   0.8 /**< minimum cut activity quotient to convert cuts into constraints
                                                  *   during a restart (0.0: all cuts are converted) */
 
+
 /* Timing */
 
 #define SCIP_DEFAULT_TIME_CLOCKTYPE  SCIP_CLOCKTYPE_CPU  /**< default clock type for timing */
@@ -370,6 +366,7 @@
 #define SCIP_DEFAULT_TIME_READING         FALSE /**< belongs reading time to solving time? */
 #define SCIP_DEFAULT_TIME_RARECLOCKCHECK  FALSE /**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
 #define SCIP_DEFAULT_TIME_STATISTICTIMING  TRUE /**< should timing for statistic output be enabled? */
+
 
 /* visualization output */
 
@@ -578,8 +575,8 @@ SCIP_DECL_PARAMCHGD(paramChgdStatistictiming)
 
 
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
- *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the 
- *  copied SCIP instance might not represent the same problem semantics as the original. 
+ *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the
+ *  copied SCIP instance might not represent the same problem semantics as the original.
  *  Note that in this case dual reductions might be invalid. */
 SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */
@@ -593,7 +590,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_Bool             copyseparators,     /**< should the separators be copied */
    SCIP_Bool             copypropagators,    /**< should the propagators be copied */
    SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
-   SCIP_Bool             copycompressions,   /**< should the compressions be copied */
    SCIP_Bool             copyeventhdlrs,     /**< should the event handlers be copied */
    SCIP_Bool             copynodeselectors,  /**< should the node selectors be copied */
    SCIP_Bool             copybranchrules,    /**< should the branchrules be copied */
@@ -654,7 +650,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
             SCIP_CALL( SCIPconshdlrCopyInclude(sourceset->conshdlrs_include[p], targetset, &valid) );
             *allvalid = *allvalid && valid;
             SCIPdebugMessage("Copying conshdlr <%s> was%s valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]), valid ? "" : " not");
-         } 
+         }
          else if( !SCIPconshdlrNeedsCons(sourceset->conshdlrs_include[p]) )
          {
             SCIPdebugMessage("Copying Conshdlr <%s> without constraints not valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]));
@@ -719,15 +715,6 @@ SCIP_RETCODE SCIPsetCopyPlugins(
       }
    }
 
-   /* copy all tree compressions plugins */
-   if( copycompressions && sourceset->comprs != NULL )
-   {
-      for( p = sourceset->ncomprs - 1; p >= 0; --p )
-      {
-         SCIP_CALL( SCIPcomprCopyInclude(sourceset->comprs[p], targetset) );
-      }
-   }
-
    /* copy all event handler plugins */
    if( copyeventhdlrs && sourceset->eventhdlrs != NULL )
    {
@@ -773,7 +760,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->ndialogs - 1; p >= 0; --p )
       {
-         /* @todo: the copying process of dialog handlers is currently not checked for consistency */         
+         /* @todo: the copying process of dialog handlers is currently not checked for consistency */
          SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
       }
    }
@@ -976,11 +963,6 @@ SCIP_RETCODE SCIPsetCreate(
          "compression/enable",
          "should automatic tree compression after the presolving be enabled?",
          &(*set)->compr_enable, TRUE, SCIP_DEFAULT_COMPR_ENABLE,
-         NULL, NULL) );
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
-         "compression/time",
-         "maximal time in seconds to run",
-         &(*set)->compr_time, TRUE, SCIP_DEFAULT_COMPR_TIME, 0.0, SCIP_REAL_MAX,
          NULL, NULL) );
 
    /* conflict analysis parameters */
@@ -1201,16 +1183,6 @@ SCIP_RETCODE SCIPsetCreate(
          "history/allowtransfer",
          "should variable histories be transferred to initialize SCIP copies?",
          &(*set)->history_allowtransfer, FALSE, SCIP_DEFAULT_HISTORY_ALLOWTRANSFER,
-         NULL, NULL) );
-
-   /* heuristic parameters */
-   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem, "heuristics/divestartfrac",
-         "start percentage of diving candidates that should be fixed before LP resolve",
-         &(*set)->heur_divestartfrac, FALSE, SCIP_DEFAULT_HEUR_DIVESTARTFRAC,  0.01, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
-         "heuristics/divelpsolvefreq",
-         "LP solve frequency for diving heuristics (0: no LP is solved)",
-         &(*set)->heur_divelpsolvefreq, FALSE, SCIP_DEFAULT_HEUR_DIVELPSOLVEFREQ, 0, INT_MAX,
          NULL, NULL) );
 
    /* limit parameters */
@@ -1581,6 +1553,21 @@ SCIP_RETCODE SCIPsetCreate(
             "should SCIP try to remove infinite fixings from solutions copied to the solution store?",
             &(*set)->misc_finitesolstore, FALSE, SCIP_DEFAULT_MISC_FINITESOLSTORE,
             NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/outputorigsol",
+            "should the best solution be transformed to the orignal space and be output in command line run?",
+            &(*set)->misc_outputorigsol, FALSE, SCIP_DEFAULT_MISC_OUTPUTORIGSOL,
+            NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/allowdualreds",
+            "should dual reductions in propagation methods and presolver be allowed?",
+            &(*set)->misc_allowdualreds, FALSE, SCIP_DEFAULT_MISC_ALLOWDUALREDS,
+            NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/allowobjprop",
+            "should propagation to the current objective be allowed in propagation methods?",
+            &(*set)->misc_allowobjprop, FALSE, SCIP_DEFAULT_MISC_ALLOWOBJPROP,
+            NULL, NULL) );
 
    /* node selection */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
@@ -1766,7 +1753,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/sepabestsol",
-         "separate only the best solution, i.e., for constrained shortest path",
+         "separate the optimal solution, i.e., for constrained shortest path",
          &(*set)->reopt_sepabestsol, TRUE, SCIP_DEFAULT_REOPT_SEPABESTSOL,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
@@ -1797,7 +1784,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/delay",
          "minimum similarity for using reoptimization of the search tree.",
-         &(*set)->reopt_objsimdelay, TRUE, SCIP_DEFAULT_REOPT_DELAY, -1, 1,
+         &(*set)->reopt_objsimdelay, TRUE, SCIP_DEFAULT_REOPT_OBJSIMDELAY, -1, 1,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/commontimelimit",
@@ -1807,7 +1794,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/shrinktransit",
          "replace branched inner nodes by their child nodes, if the number of bound changes is not to large",
-         &(*set)->reopt_shrinkinner, TRUE, SCIP_DEFAULT_REOPT_SHRINKTRANSIT,
+         &(*set)->reopt_shrinkinner, TRUE, SCIP_DEFAULT_REOPT_SHRINKINNER,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/strongbranchinginit",
@@ -1828,6 +1815,14 @@ SCIP_RETCODE SCIPsetCreate(
          "reoptimization/saveconsprop",
          "save constraint propagations",
          &(*set)->reopt_saveconsprop, TRUE, SCIP_DEFAULT_REOPT_SAVECONSPROP,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/usesplitcons", "use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node",
+         &(*set)->reopt_usesplitcons, TRUE, SCIP_DEFAULT_REOPT_USESPLITCONS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
+         "reoptimization/varorderinterdiction", "use the 'd'efault or a 'r'andom variable order for interdiction branching when applying the reoptimization",
+         &(*set)->reopt_varorderinterdiction, TRUE, SCIP_DEFAULT_REOPT_VARORDERINTERDICTION, "dr",
          NULL, NULL) );
 
    /* separation parameters */
@@ -4406,12 +4401,6 @@ SCIP_RETCODE SCIPsetInitsolPlugins(
       SCIP_CALL( SCIPheurInitsol(set->heurs[i], set) );
    }
 
-   /* tree compression */
-   for( i = 0; i < set->ncomprs; ++i )
-   {
-      SCIP_CALL( SCIPcomprInitsol(set->comprs[i], set) );
-   }
-
    /* event handlers */
    for( i = 0; i < set->neventhdlrs; ++i )
    {
@@ -4495,12 +4484,6 @@ SCIP_RETCODE SCIPsetExitsolPlugins(
    for( i = 0; i < set->nheurs; ++i )
    {
       SCIP_CALL( SCIPheurExitsol(set->heurs[i], set) );
-   }
-
-   /* tree compression */
-   for( i = 0; i < set->ncomprs; ++i )
-   {
-      SCIP_CALL( SCIPcomprExitsol(set->comprs[i], set) );
    }
 
    /* event handlers */

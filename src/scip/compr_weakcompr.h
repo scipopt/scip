@@ -28,6 +28,8 @@
 
 
 #include "scip/scip.h"
+#include "scip/type_reopt.h"
+#include "scip/type_retcode.h"
 
 #ifdef __cplusplus
 extern "C" {

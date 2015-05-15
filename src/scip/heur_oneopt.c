@@ -472,9 +472,6 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       SCIPfreeBufferArray(scip, &subsolvals);
       SCIPhashmapFree(&varmapfw);
 
-      /* disable reoptimization */
-      SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
-
       /* disable statistic timing inside sub SCIP */
       SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 

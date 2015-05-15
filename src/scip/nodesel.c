@@ -31,6 +31,8 @@
 #include "scip/visual.h"
 #include "scip/paramset.h"
 #include "scip/tree.h"
+#include "scip/reopt.h"
+#include "scip/lp.h"
 #include "scip/scip.h"
 #include "scip/nodesel.h"
 #include "scip/pub_message.h"
@@ -620,11 +622,13 @@ SCIP_RETCODE SCIPnodepqBound(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
    SCIP_NODE* node;
+   SCIP_Bool reoptenabled;
    int pos;
    SCIP_Bool parentfelldown;
 
@@ -640,8 +644,6 @@ SCIP_RETCODE SCIPnodepqBound(
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF);
       if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(node), cutoffbound) )
       {
-         SCIP_EVENT event;
-
          SCIPdebugMessage("free node in slot %d (len=%d) at depth %d with lowerbound=%g\n",
             pos, nodepq->len, SCIPnodeGetDepth(node), SCIPnodeGetLowerbound(node));
 
@@ -666,10 +668,14 @@ SCIP_RETCODE SCIPnodepqBound(
 
          SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
 
-         /* issue NODEINFEASIBLE event */
-         SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
-         SCIP_CALL( SCIPeventChgNode(&event, node) );
-         SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, set->scip->eventfilter) );
+         SCIPsetGetBoolParam(set, "reoptimization/enable", &reoptenabled);
+         if( reoptenabled )
+         {
+            assert(reopt != NULL);
+            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE,
+                  SCIPlpGetSolstat(lp), SCIPnodeGetDepth(node) == 0, SCIPtreeGetFocusNode(tree) == node,
+                  SCIPnodeGetLowerbound(node), SCIPtreeGetEffectiveRootDepth(tree)));
+         }
 
          /* free memory of the node */
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );

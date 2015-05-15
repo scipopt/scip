@@ -68,13 +68,6 @@ int SCIPsolGetRunnum(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
-/** gets node number, where this solution was found */
-EXTERN
-void SCIPsolSetNodenum(
-   SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Longint          nodenum
-   );
-
 /** gets node number of the specific branch and bound run, where this solution was found */
 EXTERN
 SCIP_Longint SCIPsolGetNodenum(

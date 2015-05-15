@@ -2469,9 +2469,9 @@ SCIP_RETCODE getCover(
     * to a knapsack problem in maximization form by complementing the variables
     *
     * sum_{j in N\(N_0 & N_1)} (1 - x*_j) -
-    *   max sum_{j in N\(N_0 & N_1)} (1 - x*_j) z°_j
-    *       sum_{j in N\(N_0 & N_1)} a_j z°_j <= sum_{j in N\N_0} a_j - (a_0 + 1)
-    *                                    z°_j in {0,1}, j in N\(N_0 & N_1)
+    *   max sum_{j in N\(N_0 & N_1)} (1 - x*_j) z_j
+    *       sum_{j in N\(N_0 & N_1)} a_j z_j <= sum_{j in N\N_0} a_j - (a_0 + 1)
+    *                                    z_j in {0,1}, j in N\(N_0 & N_1)
     */
 
    /* gets weight and profit of variables in transformed knapsack problem */
@@ -2504,9 +2504,9 @@ SCIP_RETCODE getCover(
        * to a knapsack problem in maximization form by complementing the variables
        *
        * sum_{j in N\(N_0 & N_1)} (1 - x*_j) a_j -
-       *   max sum_{j in N\(N_0 & N_1)} (1 - x*_j) a_j z°_j
-       *       sum_{j in N\(N_0 & N_1)} a_j z°_j <= sum_{j in N\N_0} a_j - (a_0 + 1)
-       *                                    z°_j in {0,1}, j in N\(N_0 & N_1)
+       *   max sum_{j in N\(N_0 & N_1)} (1 - x*_j) a_j z_j
+       *       sum_{j in N\(N_0 & N_1)} a_j z_j <= sum_{j in N\N_0} a_j - (a_0 + 1)
+       *                                    z_j in {0,1}, j in N\(N_0 & N_1)
        */
 
       /* gets weight and profit of variables in modified transformed knapsack problem */
@@ -2519,9 +2519,9 @@ SCIP_RETCODE getCover(
 
    /* solves (modified) transformed knapsack problem approximately by solving the LP-relaxation of the (modified)
     * transformed knapsack problem using Dantzig's method and rounding down the solution.
-    * let z°* be the solution, then
-    *   j in C,          if z°*_j = 0 and
-    *   i in N\C,        if z°*_j = 1.
+    * let z* be the solution, then
+    *   j in C,          if z*_j = 0 and
+    *   i in N\C,        if z*_j = 1.
     */
    SCIP_CALL( SCIPsolveKnapsackApproximately(scip, nitems, transweights, transprofits, transcapacity, items,
          noncovervars, covervars, nnoncovervars, ncovervars, NULL) );
@@ -12486,7 +12486,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
 
          if( SCIPconsIsActive(cons) )
          {
-            if( conshdlrdata->dualpresolving )
+            if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
             {
                /* in case the knapsack constraints is independent of everything else, solve the knapsack and apply the
                 * dual reduction

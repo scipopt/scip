@@ -32,6 +32,7 @@
 #include "scip/type_primal.h"
 #include "scip/type_heur.h"
 #include "scip/pub_heur.h"
+#include "scip/stat.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,6 +43,7 @@ extern
 SCIP_RETCODE SCIPdivesetCreate(
    SCIP_DIVESET**        diveset,            /**< pointer to the freshly created diveset */
    SCIP_HEUR*            heur,               /**< the heuristic to which this dive setting belongs */
+   const char*           name,               /**< name for the diveset, or NULL if the name of the heuristic should be used */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
@@ -54,22 +56,13 @@ SCIP_RETCODE SCIPdivesetCreate(
                                               *   where diving is performed (0.0: no limit) */
    SCIP_Real             maxdiveubquotnosol, /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
    SCIP_Real             maxdiveavgquotnosol,/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Real             lpresolvedomchgquot,/**< percentage of immediate domain changes during probing to trigger LP resolve */
+   int                   lpsolvefreq,        /**< LP solve frequency for (0: only if enough domain reductions are found by propagation)*/
    int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
+                                              *   more general constraint handler diving variable selection? */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
-   );
-
-/** get the target depth fraction of the diving settings  */
-extern
-SCIP_Real SCIPdivesetGetTargetdepthfrac(
-   SCIP_DIVESET*         diveset             /**< diving settings */
-   );
-
-/** set the target depth fraction of the diving settings  */
-extern
-void SCIPdivesetSetTargetdepthfrac(
-   SCIP_DIVESET*         diveset,            /**< diving settings */
-   SCIP_Real             newval              /**< new value for target depth frac */
    );
 
 /** resets diving settings counters */
@@ -77,6 +70,16 @@ extern
 void SCIPdivesetReset(
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
    SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** update diveset statistics and global diveset statistics */
+void SCIPdivesetUpdateStats(
+   SCIP_DIVESET*         diveset,            /**< diveset to be reset */
+   SCIP_STAT*            stat,               /**< global SCIP statistics */
+   int                   depth,              /**< the depth reached this time */
+   int                   nprobingnodes,      /**< the number of probing nodes explored this time */
+   int                   nbacktracks,        /**< the number of backtracks during probing this time */
+   SCIP_Bool             solfound            /**< was a solution found at the leaf? */
    );
 
 /** stores the candidate score and preferred rounding direction for a candidate variable */
@@ -90,6 +93,15 @@ SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_Real*            candscore,          /**< pointer to store the candidate score */
    SCIP_Bool*            roundup             /**< pointer to store whether preferred direction for diving is upwards */
    );
+
+/** update diveset LP statistics, should be called after every LP solved by this diving heuristic */
+extern
+void SCIPdivesetUpdateLPStats(
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_STAT*            stat,               /**< global SCIP statistics */
+   SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
+   );
+
 /** copies the given primal heuristic to a new scip */
 extern
 SCIP_RETCODE SCIPheurCopyInclude(

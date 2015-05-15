@@ -32,9 +32,10 @@ CLIENTTMPDIR=${16}
 REOPT=${17}
 OPTCOMMAND=${18}
 SETCUTOFF=${19}
+MAXJOBS=${20}
 
 # check if all variables defined (by checking the last one)
-if test -z $SETCUTOFF
+if test -z $MAXJOBS
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -56,6 +57,7 @@ then
     echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"
+    echo "MAXJOBS       = $MAXJOBS"
     exit 1;
 fi
 
@@ -74,6 +76,16 @@ do
     # loop over settings
     for SETNAME in ${SETTINGSLIST[@]}
     do
+       # waiting while the number of jobs has reached the maximum
+       if [ $MAXJOBS -ne 1 ]
+       then
+            while [ `jobs -r|wc -l` -ge $MAXJOBS ]
+            do
+                sleep 10
+                echo "Waiting for jobs to finish."
+            done
+       fi
+
     # infer the names of all involved files from the arguments
         p=0 # currently, noone uses permutations here
         PERMUTE=0
@@ -83,6 +95,7 @@ do
 
         if test "$INSTANCE" = "DONE"
         then
+            wait
             #echo $EVALFILE
             ./evalcheck_cluster.sh -r $EVALFILE
             continue
@@ -123,7 +136,12 @@ do
         export CLIENTTMPDIR
         export CHECKERPATH=$SCIPPATH/solchecker
         echo Solving instance $SCIP_INSTANCEPATH/$INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT
-        bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh"
+        if [ $MAXJOBS -eq 1 ]
+        then
+            bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh"
+        else
+            bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh" &
+        fi
         #./run.sh
     done
     INIT="false"

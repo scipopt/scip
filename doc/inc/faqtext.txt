@@ -289,13 +289,24 @@ SECTION: General Questions about SCIP
     LABEL:visualizebranchandbound
     ANSWER:
     <p>
-        Yes, there is. SCIP can optionally write tree information to a specified file which can
-        be read and visualized via the <a href="http://www.informatik.uni-koeln.de/ls_juenger/research/vbctool">vbctool</a>.
-        In order to trigger vbc output, specify a file name via <code>set vbc filename somefilename.vbc</code>.
-        the viewer has an option to uncover the nodes one-by-one (each time you
-        hit the space key). Besides that, SCIP has a parameter which also solves
-        that issue: <code>set vbc realtime FALSE</code>.
-        In case of the callable library, the parameter names are "vbc/filename" and "vbc/realtime".
+        Yes, currently there are two tree visualizations supported, the <a href="http://www.informatik.uni-koeln.de/ls_juenger/research/vbctool">vbctool</a>,
+        and the <a href="https://projects.coin-or.org/CoinBazaar/wiki/Projects/BAK">Branch-and-Bound Analysis Kit</a>.
+        The first comes with a viewer that has an option to uncover the nodes one-by-one (each time you
+        hit the space key). Additional node information such as its lower bound, depth, and number are accessed through a
+        context menu. The BAK is a command line tool written in the Python programming language. It offers several
+        noninteractive visualizations of the tree at a user-defined frequency.
+    </p>
+    <p>
+        For using one of these tools, SCIP lets you define file names <code>set visual vbcfilename somefilename.vbc</code> and
+        <code>set visual bakfilename somefilename.dat</code>.
+    </p>
+    <p>
+        For those who want to use the step-by-step functionality of vbctool,
+        it is necessary to use a time-step counter for the visualization instead of the real time. The corresponding parameter
+        is changed via <code>set visual realtime FALSE</code>.
+     </p>
+        For users of the callable library, the corresponding parameters are called "visual/bakfilename", "visual/vbcfilename", and
+        "visual/realtime".
     </p>
 
 SECTION: Using SCIP as a standalone solver
@@ -320,6 +331,23 @@ SECTION: Using SCIP as a standalone solver
         Typing <code>display statistics</code> after finishing or interrupting the solving process gives
         you plenty of extra information about the solving process.<br>
         (Typing <code>display heuristics</code> gives you a list of the heuristics including their letters.)
+    </p>
+
+    QUESTION: Why does SCIP claim that it could not find the user parameters "scip.set"? Where can I get such a file?
+    LABEL:whereareuserparameters
+    ANSWER:
+    <p>
+    SCIP comes with default settings that are automatically active when you start the interactive shell.
+    However, you have the possibility to save customized settings via the <code>set save</code> and <code>set diffsave</code> commands.
+    Both commands will prompt you to enter a file name and save either all or customized parameters only to the specified file.
+
+    A user parameter file that you save as "scip.set" has a special meaning; Whenever you invoke SCIP from a directory containing a file named "scip.set",
+    the settings therein overwrite the default settings. For more information about customized settings, see the <a href="PATHTODOC/SHELL.LINKEXT">
+    Tutorial on the interactive shell</a>.
+
+    Settings files can become incompatible with later releases if we decide to rename/delete a parameter.
+    Information about this can be found in the CHANGELOG for every release, see also <a href="#versionchange">this related question</a>.
+
     </p>
 
     QUESTION: How do I change the behavior of SCIP?
@@ -813,17 +841,17 @@ SECTION: Specific questions about Column Generation and Branch-And-Price with SC
     ANSWER:
     <p>
         If you want to use SCIP as a branch-and-price framework, you normally need to implement a reader to read in your
-	problem data and build the problem, a pricer to generate new columns, and a branching rule to do the branching
-	(see also  <a href="#howtostorebranchingdecisions">this question</a> to see how to store branching decisions, if needed).
-	SCIP takes care about everything else,
-	for example the branch-and-bound tree management and LP solving including storage of warmstart bases. Moreover,
-	many of SCIP's primal heuristics will be used and can help improve your primal bound.
-	However, this also comes with a few restrictions: You are not allowed to change the objective function coefficients
-	of variables during the solving process, because that means that previously computed dual bounds might have to be updated.
-	This prevents the use of dual variable stabilization techniques based on a (more or less strict) bounding box in the dual.
-	We are working on making this possible and recommend to use a weighted sum stabilization approach until then.
-	Another point that SCIP does for you is the dynamic removal of columns from the LP due to aging (see also the next two questions).
-	However, due to the way simplex bases are stored in SCIP, columns can only be removed at the same node where they were created.
+        problem data and build the problem, a pricer to generate new columns, and a branching rule to do the branching
+        (see also  <a href="#howtostorebranchingdecisions">this question</a> to see how to store branching decisions, if needed).
+        SCIP takes care about everything else,
+        for example the branch-and-bound tree management and LP solving including storage of warmstart bases. Moreover,
+        many of SCIP's primal heuristics will be used and can help improve your primal bound.
+        However, this also comes with a few restrictions: You are not allowed to change the objective function coefficients
+        of variables during the solving process, because that means that previously computed dual bounds might have to be updated.
+        This prevents the use of dual variable stabilization techniques based on a (more or less strict) bounding box in the dual.
+        We are working on making this possible and recommend to use a weighted sum stabilization approach until then.
+        Another point that SCIP does for you is the dynamic removal of columns from the LP due to aging (see also the next two questions).
+        However, due to the way simplex bases are stored in SCIP, columns can only be removed at the same node where they were created.
     </p>
 
     QUESTION: Why are not all variables in the LP?
@@ -999,16 +1027,16 @@ SECTION: Specific questions about Column Generation and Branch-And-Price with SC
     </p>
     <p>
         The reduced cost pricing method of a pricer has a result pointer that should be set each time the method is called.
-	In the usual case that the pricer either adds a new variable or ensures that there are no further
-	variables with negative dual feasibility, the result pointer should be set to SCIP_SUCCESS.
-	If the pricer aborts pricing without creating a new variable, but there might exist additional
-	variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN.
-	In this case, the LP solution will not be used as a lower bound.
-	Typically, early branching goes along with the computation of a Lagrangian bound in each pricing iteration.
-	The pricer store store this valid lower bound in the <code>lowerbound pointer</code> in order to update the lower
-	bound of the current node.
-	Since SCIP 3.1, it is even possible to state that pricing should be stopped early even though new variables were created
-	in the last pricing round. For this, the pricer has to set the <code>stopearly</code> pointer to TRUE.
+        In the usual case that the pricer either adds a new variable or ensures that there are no further
+        variables with negative dual feasibility, the result pointer should be set to SCIP_SUCCESS.
+        If the pricer aborts pricing without creating a new variable, but there might exist additional
+        variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN.
+        In this case, the LP solution will not be used as a lower bound.
+        Typically, early branching goes along with the computation of a Lagrangian bound in each pricing iteration.
+        The pricer store store this valid lower bound in the <code>lowerbound pointer</code> in order to update the lower
+        bound of the current node.
+        Since SCIP 3.1, it is even possible to state that pricing should be stopped early even though new variables were created
+        in the last pricing round. For this, the pricer has to set the <code>stopearly</code> pointer to TRUE.
     </p>
 
     QUESTION: How can I delete variables?

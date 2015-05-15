@@ -3995,7 +3995,11 @@ int SCIPparamsetGetNParams(
    return paramset->nparams;
 }
 
-/** copies all parameter values of the source parameter set to the corresponding parameters in the target set */
+/** copies all parameter values of the source parameter set to the corresponding parameters in the target set
+ *
+ *  by default reoptimization is disabled after copying the parameters. if you want to use reoptimization, you have
+ *  to enable it explicitly.
+ */
 SCIP_RETCODE SCIPparamsetCopyParams(
    SCIP_PARAMSET*        sourceparamset,     /**< source parameter set */
    SCIP_PARAMSET*        targetparamset,     /**< target parameter set */
@@ -4074,6 +4078,9 @@ SCIP_RETCODE SCIPparamsetCopyParams(
       /* copy fixing status of parameter */
       SCIPparamSetFixed(targetparam, SCIPparamIsFixed(sourceparam));
    }
+
+   /* disable reoptimization explicitly */
+   SCIPparamsetSetBool(targetparamset, set, messagehdlr, "reoptimization/enable", FALSE);
 
    return SCIP_OKAY;
 }

@@ -29,7 +29,6 @@
 #include "scip/type_misc.h"
 #include "scip/type_tree.h"
 #include "scip/type_reopt.h"
-#include "lpi/type_lpi.h"
 
 #ifdef NDEBUG
 #include "scip/struct_tree.h"
@@ -59,18 +58,6 @@ void SCIPnodeGetParentBranchings(
    int                   branchvarssize      /**< available slots in arrays */
    );
 
-/** specially for reoptimization, returns the set of variable branchings that were performed in the parent node to create this node */
-EXTERN
-void SCIPnodeGetParentBranchingsReopt(
-   SCIP_NODE*            node,               /**< node data */
-   SCIP_VAR**            branchvars,         /**< array of variables on which the branching has been performed in the parent node */
-   SCIP_Real*            branchbounds,       /**< array of bounds which the branching in the parent node set */
-   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branching in the parent node set */
-   int*                  nbranchvars,        /**< number of variables on which branching has been performed in the parent node
-                                              *   if this is larger than the array size, arrays should be reallocated and method should be called again */
-   int                   branchvarssize      /**< available slots in arrays */
-   );
-
 /** returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root) to create this node */
 EXTERN
 void SCIPnodeGetAncestorBranchings(
@@ -83,11 +70,9 @@ void SCIPnodeGetAncestorBranchings(
    int                   branchvarssize      /**< available slots in arrays */
    );
 
-/** returns the set of variable branchings that were performed in all ancestor nodes (nodes on the path to the root)
- *  to create this node sorted by the nodes, starting from the current node going up to the @param parent node.
- */
+/** returns the set of variable branchings that were performed between the given @param node and the given @param parent node. */
 EXTERN
-void SCIPnodeGetAncestorBranchingsReopt(
+void SCIPnodeGetAncestorBranchingsPart(
    SCIP_NODE*            node,               /**< node data */
    SCIP_NODE*            parent,             /**< node data */
    SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
@@ -95,35 +80,6 @@ void SCIPnodeGetAncestorBranchingsReopt(
    SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branchings in all ancestors set */
    int*                  nbranchvars,        /**< number of variables on which branchings have been performed in all ancestors
                                               *   if this is larger than the array size, arrays should be reallocated and method should be called again */
-   int                   branchvarssize      /**< available slots in arrays */
-   );
-
-/** return all bound changes based on constraint propagation; stop saving the bound changes if we reach a branching
- * decision based on a dual information
- */
-EXTERN
-void SCIPnodeGetConsProps(
-   SCIP_NODE*            node,               /**< node */
-   SCIP_VAR**            vars,               /**< array of variables on which constraint propagation triggers a bound change */
-   SCIP_Real*            varbounds,          /**< array of bounds set by constraint propagation */
-   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes set by constraint propagation */
-   int*                  nconspropvars,      /**< number of variables on which constraint propagation triggers a bound change
-                                              *   if this is larger than the array size, arrays should be reallocated and method
-                                              *   should be called again */
-   int                   conspropvarssize    /**< available slots in arrays */
-   );
-
-/** gets all bound changes applied after the first and before second dual reduction */
-EXTERN
-void SCIPnodeGetAfterDualBranchingsReopt(
-   SCIP_NODE*            node,               /**< node */
-   SCIP_VAR**            vars,               /**< array of variables on which the branching has been performed in the parent node */
-   SCIP_Real*            varbounds,          /**< array of bounds which the branching in the parent node set */
-   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes which the branching in the parent node set */
-   int                   start,              /**< first free slot in the arrays */
-   int*                  nbranchvars,        /**< number of variables on which branching has been performed in the parent node
-                                              *   if this is larger than the array size, arrays should be reallocated and method
-                                              *   should be called again */
    int                   branchvarssize      /**< available slots in arrays */
    );
 
@@ -215,18 +171,27 @@ unsigned int SCIPnodeGetReoptID(
    SCIP_NODE*            node                /**< node */
    );
 
-/** gets the reoptimization type of the node */
+/** sets the reoptimization type of the node */
 EXTERN
 void SCIPnodeSetReopttype(
    SCIP_NODE*            node,               /**< node */
    SCIP_REOPTTYPE        type                /**< reoptimization type */
    );
 
-/** set a unique id to identify the node during reoptimization */
+/** sets a unique id to identify the node during reoptimization */
 EXTERN
 void SCIPnodeSetReoptID(
    SCIP_NODE*            node,               /**< node */
    int                   id                  /**< unique id */
+   );
+
+/** counts the number of bound changes due to branching, constraint propagation, and propagation */
+EXTERN
+void SCIPnodeGetNDomchg(
+   SCIP_NODE*            node,               /**< node */
+   int*                  nbranchings,        /**< pointer to store number of branchings (or NULL if not needed) */
+   int*                  nconsprop,          /**< pointer to store number of constraint propagations (or NULL if not needed) */
+   int*                  nprop               /**< pointer to store number of propagations (or NULL if not needed) */
    );
 
 /** gets the domain change information of the node, i.e., the information about the differences in the

@@ -132,20 +132,15 @@ SCIP_RETCODE readSolfile(
             return SCIP_READERROR;
       }
 
-      /* the lines "solution status: ..." and "objective value: ..." may preceed the solution information */
-      if( strncmp(buf, "solution", 8) == 0 || strncmp(buf, "objective", 9) == 0 )
+      /* there are some lines which may preceed the solution information */
+      if( strncasecmp(buf, "solution status:", 16) == 0 || strncasecmp(buf, "objective value:", 16) == 0 ||
+         strncasecmp(buf, "Log started", 11) == 0 || strncasecmp(buf, "Variable Name", 13) == 0 ||
+         strncasecmp(buf, "All other variables", 19) == 0 || strncasecmp(buf, "\n", 1) == 0 ||
+         strncasecmp(buf, "NAME", 4) == 0 || strncasecmp(buf, "ENDATA", 6) == 0 )    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
       {
-         nonvalues++;
+         ++nonvalues;
          continue;
       }
-
-      /* skip empty lines */
-      if( strlen(buf) == 1 )
-      {
-         nonvalues++;
-         continue;
-      }
-
 
       nread = sscanf(buf, "%s %lf %s\n", name, &val, objstring);
       if( nread < 2 )

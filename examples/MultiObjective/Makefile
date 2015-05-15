@@ -14,7 +14,7 @@
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
 #@file    Makefile
-#@brief   Makefile for Özpeynirci-Köksalan Algorithm using SCIP as a callable library 
+#@brief   Makefile for Özpeynirci-Köksalan Algorithm using SCIP as a callable library
 #@author  Timo Strunk
 
 #-----------------------------------------------------------------------------
@@ -61,6 +61,7 @@ TESTFILES       =       data/*.mop
 
 VERBOSE 	= 	false
 MAKELEMONLINKS  = 	true
+
 FLAGS		+=	-I$(LIBDIR)/lemoninc
 LEMONLINKS	=	$(LIBDIR)/lemoninc
 LEMONLINKS	+=	$(LIBDIR)/liblemon.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
@@ -92,7 +93,7 @@ scip:
 		@$(MAKE) -C $(SCIPDIR) libs $^
 
 .PHONY: doc
-doc:		
+doc:
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
@@ -103,7 +104,7 @@ $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
 
-$(OBJDIR):	
+$(OBJDIR):
 		@-mkdir -p $(OBJDIR)
 
 $(BINDIR):
@@ -143,8 +144,8 @@ $(MAINFILE):	$(BINDIR) $(OBJDIR) $(LIBDIR) $(MAINOBJFILES)
 		@echo "-> linking $@"
 		$(LINKCXX) $(MAINOBJFILES) $(OBJS) $(EXTOBJS) \
 		$(LINKCXX_L)$(SCIPDIR)/lib $(LINKCXX_l)$(SCIPLIB)$(LINKLIBSUFFIX) \
-                $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) 	\
-                $(OFLAGS) $(LPSLDFLAGS) \
+		$(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) 	\
+		$(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) -Wno-shadow $(LINKCXX_o) $@ \
 		$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)lemon.$(OSTYPE).$(ARCH).$(COMP)
 
@@ -157,11 +158,10 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 		@echo "-> compiling $@"
 		$(CXX) $(FLAGS) $(OFLAGS) $(BINOFLAGS) $(CXXFLAGS) -Wno-shadow -c $< $(CXX_o)$@
 
-info: 
+info:
 	@echo "$(MAINOBJFILES)"
 
 .PHONY: $(LEMONLINKS)
-$(LEMONLINKS): 
 ifeq ($(MAKELEMONLINKS), true)
 		@$(SHELL) -ec 'if test ! -e $@ ; \
 			then \

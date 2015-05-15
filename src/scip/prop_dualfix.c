@@ -265,8 +265,11 @@ SCIP_DECL_PROPEXEC(propExecDualfix)
 
    *result = SCIP_DIDNOTRUN;
 
-   /** @warning Don't run in probing or in repropagation since this can lead to wrong conclusion */
-   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
+   /** @warning Don't run in probing or in repropagation since this can lead to wrong conclusion
+    *
+    *  do not run if propagation w.r.t. current objective is not allowed
+    */
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) || !SCIPallowObjProp(scip) )
       return SCIP_OKAY;
 
    cutoff = FALSE;

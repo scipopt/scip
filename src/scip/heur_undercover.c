@@ -2215,9 +2215,6 @@ SCIP_RETCODE solveSubproblem(
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-   /* disable reoptimization */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
-
    /* disable output to console in optimized mode, enable in SCIP's debug mode */
 #ifdef SCIP_DEBUG
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );

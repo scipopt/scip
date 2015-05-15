@@ -182,6 +182,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecFree);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecNewstart);
 
+/** dialog execution method for the transform command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecTransform);
+
 /** dialog execution method for the optimize command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecOptimize);

@@ -1296,9 +1296,6 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
-   /* disable reoptimization */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "reoptimization/enable", FALSE) );
-
    /* forbid recursive call of heuristics and separators solving subMIPs
     * todo: really? This method was part of 3.0.1 but not in v31-Bugfix
     */
@@ -1362,6 +1359,7 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
       case SCIP_STATUS_GAPLIMIT:
       case SCIP_STATUS_SOLLIMIT:
       case SCIP_STATUS_BESTSOLLIMIT:
+      case SCIP_STATUS_RESTARTLIMIT:
          SCIPerrorMessage("invalid status code <%d>\n", SCIPgetStatus(subscip));
          return SCIP_INVALIDDATA;
       }
@@ -6520,7 +6518,7 @@ int computeEstOmegaset(
 /** propagates start time using an edge finding algorithm which is based on binary trees (theta lambda trees)
  *
  * @note The algorithm is based on the paper: Petr Vilim, "Edge Finding Filtering Algorithm for Discrete Cumulative
- *       Resources in O(kn log n)".  *I.P. Gent (Ed.): CP 2009, LNCS 5732, pp. 802–816, 2009.
+ *       Resources in O(kn log n)".  *I.P. Gent (Ed.): CP 2009, LNCS 5732, pp. 802-816, 2009.
  */
 static
 SCIP_RETCODE inferboundsEdgeFinding(
