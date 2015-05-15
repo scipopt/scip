@@ -2371,44 +2371,47 @@ SCIP_RETCODE SCIPgetConsCopy(
    else
       localvarmap = varmap;
 
+   *targetcons = NULL;
    if( uselocalconsmap )
    {
-      /* create the constraint mapping hash map */
+      /* create local constraint mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&localconsmap, SCIPblkmem(targetscip), SCIPcalcHashtableSize(HASHTABLESIZE_FACTOR * SCIPgetNConss(sourcescip))) );
    }
    else
    {
+      /* use global map and try to retrieve copied constraint */
       localconsmap = consmap;
-
-      /* try to retrieve copied constraint from hash map */
       *targetcons = (SCIP_CONS*) SCIPhashmapGetImage(localconsmap, sourcecons);
-      if( *targetcons != NULL )
+   }
+
+   if( *targetcons != NULL )
+   {
+      /* if found capture existing copy of the constraint */
+      SCIP_CALL( SCIPcaptureCons(targetscip, *targetcons) );
+      *success = TRUE;
+   }
+   else
+   {
+      /* otherwise create a copy of the constraint */
+      SCIP_CALL( SCIPconsCopy(targetcons, targetscip->set, name, sourcescip, sourceconshdlr, sourcecons, localvarmap, localconsmap,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, success) );
+
+      if( *success && !uselocalconsmap )
       {
-         SCIP_CALL( SCIPcaptureCons(targetscip, *targetcons) );
-         *success = TRUE;
-         return SCIP_OKAY;
+         /* insert constraint into mapping between source SCIP and the target SCIP */
+         SCIP_CALL( SCIPhashmapInsert(consmap, sourcecons, *targetcons) );
       }
    }
 
-   /*  copy the constraint */
-   SCIP_CALL( SCIPconsCopy(targetcons, targetscip->set, name, sourcescip, sourceconshdlr, sourcecons, localvarmap, localconsmap,
-         initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode, global, success) );
-
+   /* free locally allocated hash maps */
    if( uselocalvarmap )
    {
-      /* free hash map */
       SCIPhashmapFree(&localvarmap);
    }
 
    if( uselocalconsmap )
    {
-      /* free hash map */
       SCIPhashmapFree(&localconsmap);
-   }
-   else if( *success )
-   {
-      /* insert constraint into mapping between source SCIP and the target SCIP */
-      SCIP_CALL( SCIPhashmapInsert(consmap, sourcecons, *targetcons) );
    }
 
    return SCIP_OKAY;
