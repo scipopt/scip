@@ -2942,6 +2942,7 @@ SCIP_RETCODE polishSolution(
  *    \left\| \left(\begin{array}{c} x \\ \frac{1}{2}(y - z)\end{array}\right) \right\| \leq \frac{1}{2}(y + z).
  *  \f]
  *
+ * @todo implement hyperbolic upgrade for -x^T x + yz >= 0
  * @todo more general quadratic constraints then sums of squares might allow an upgrade to a SOC
  */
 static
@@ -3003,13 +3004,12 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       if ( SCIPisNegative(scip, SCIPvarGetLbGlobal(bilinvar1)) || SCIPisNegative(scip, SCIPvarGetLbGlobal(bilinvar2)) )
          return SCIP_OKAY;
 
-      /* we need a zero lhs or rhs */
-      if ( ! SCIPisZero(scip, SCIPgetRhsQuadratic(scip, cons)) && ! SCIPisZero(scip, SCIPgetLhsQuadratic(scip, cons)) )
+      /* we need a rhs */
+      if ( ! SCIPisZero(scip, SCIPgetRhsQuadratic(scip, cons)) )
          return SCIP_OKAY;
 
-      /* we need the bilinear term to be the lhs or rhs; thus, the coefficient should be negative/positve depending on the side */
-      if ( ( SCIPisZero(scip, SCIPgetRhsQuadratic(scip, cons)) && SCIPisGT(scip, bilincoef, 0.0) ) ||
-           ( SCIPisZero(scip, SCIPgetLhsQuadratic(scip, cons)) && SCIPisLT(scip, bilincoef, 0.0) ) )
+      /* we need the bilinear term to be the rhs; thus, the coefficient should be negative */
+      if ( SCIPisGT(scip, bilincoef, 0.0) )
          return SCIP_OKAY;
 
       /* check that bilinear terms do not appear in the rest */
