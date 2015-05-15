@@ -2082,6 +2082,8 @@ SCIP_RETCODE eval(
       break;
 
    case SCIP_EXPR_LAST:
+   default:
+      BMSfreeMemoryArrayNull(&buf);
       return SCIP_ERROR;
    }
 
