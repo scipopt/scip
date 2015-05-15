@@ -2942,7 +2942,7 @@ SCIP_RETCODE polishSolution(
  *    \left\| \left(\begin{array}{c} x \\ \frac{1}{2}(y - z)\end{array}\right) \right\| \leq \frac{1}{2}(y + z).
  *  \f]
  *
- * @todo implement hyperbolic upgrade for -x^T x + yz >= 0
+ * @todo implement more general hyperbolic upgrade, e.g., for -x^T x + yz >= 0 or x^T x <= ax + by + yz
  * @todo more general quadratic constraints then sums of squares might allow an upgrade to a SOC
  */
 static
@@ -3017,10 +3017,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       for (i = 0; i < nquadvars; ++i)
       {
          term = &quadterms[i];
-         if ( SCIPisZero(scip, term->sqrcoef) )
-            continue;
 
-         if ( term->var == bilinvar1 || term->var == bilinvar2 )
+         if ( (term->var == bilinvar1 || term->var == bilinvar2) &&
+               (! SCIPisZero(scip, term->sqrcoef) || ! SCIPisZero(scip, term->lincoef)) )
             return SCIP_OKAY;
       }
    }
