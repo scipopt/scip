@@ -80,7 +80,9 @@ void SCIPdivesetUpdateStats(
    int                   depth,              /**< the depth reached this time */
    int                   nprobingnodes,      /**< the number of probing nodes explored this time */
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
-   SCIP_Bool             solfound            /**< was a solution found at the leaf? */
+   int                   nsolsfound,         /**< number of new solutions found this time */
+   int                   nbestsolsfound,     /**< number of new best solutions found this time */
+   SCIP_Bool             leavesol            /**< has the diving heuristic reached a feasible leaf */
    );
 
 /** stores the candidate score and preferred rounding direction for a candidate variable */

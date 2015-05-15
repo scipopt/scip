@@ -230,6 +230,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    int previouscandssize;
    int lpcandsscoressize;
    int nviollpcands;
+   int oldnsolsfound;
+   int oldnbestsolsfound;
 
    SCIP_Bool success;
    SCIP_Bool enfosuccess;
@@ -366,6 +368,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    startndivecands = nlpcands;
    totalnbacktracks = 0;
    totalnprobingnodes = 0;
+   oldnsolsfound = SCIPgetNSolsFound(scip);
+   oldnbestsolsfound = SCIPgetNBestSolsFound(scip);
 
    /* link the working solution to the dive set */
    SCIPdivesetSetWorkSolution(diveset, worksol);
@@ -766,7 +770,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       }
    }
 
-   SCIPupdateDivesetStats(scip, diveset, totalnprobingnodes, totalnbacktracks, success);
+   SCIPupdateDivesetStats(scip, diveset, totalnprobingnodes, totalnbacktracks, SCIPgetNSolsFound(scip) - oldnsolsfound,
+         SCIPgetNBestSolsFound(scip) - oldnbestsolsfound, success);
 
    SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") finished %s heuristic: %d fractionals, dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", objval=%g/%g, lpsolstat=%d, cutoff=%u\n",
       SCIPgetNNodes(scip), SCIPdivesetGetName(diveset), nlpcands, SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,

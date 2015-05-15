@@ -98,8 +98,10 @@ void SCIPdivesetReset(
    diveset->mindepth = INT_MAX;
    diveset->maxdepth = -1;
    diveset->nlps = 0;
-   diveset->nsolcalls = 0;
+   diveset->nsolsfound = 0;
+   diveset->nbestsolsfound = 0;
    diveset->ncalls = 0;
+   diveset->nsolcalls = 0;
 }
 
 /** update diveset statistics and global diveset statistics */
@@ -109,7 +111,9 @@ void SCIPdivesetUpdateStats(
    int                   depth,              /**< the depth reached this time */
    int                   nprobingnodes,      /**< the number of probing nodes explored this time */
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
-   SCIP_Bool             solfound            /**< was a solution found at the leaf? */
+   int                   nsolsfound,         /**< number of new solutions found this time */
+   int                   nbestsolsfound,     /**< number of new best solutions found this time */
+   SCIP_Bool             leavesol            /**< has the diving heuristic reached a feasible leaf */
    )
 {
    assert(diveset != NULL);
@@ -122,13 +126,16 @@ void SCIPdivesetUpdateStats(
    diveset->ncalls++;
 
    /* update solution statistics only if a solution was found */
-   if( solfound )
+   if( leavesol )
    {
       diveset->totalsoldepth += depth;
       diveset->minsoldepth = MIN(diveset->minsoldepth, depth);
       diveset->maxsoldepth = MAX(diveset->maxsoldepth, depth);
       diveset->nsolcalls++;
    }
+
+   diveset->nsolsfound += nsolsfound;
+   diveset->nbestsolsfound += nbestsolsfound;
 
    stat->totaldivesetdepth += depth;
    stat->ndivesetcalls++;
@@ -358,7 +365,7 @@ int SCIPdivesetGetSolSuccess(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
-   return 10 * diveset->nsolcalls;
+   return 10 * diveset->nbestsolsfound + diveset->nsolsfound;
 }
 
 /** get the number of calls to this dive set */

@@ -31021,14 +31021,16 @@ void SCIPupdateDivesetStats(
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
    int                   nprobingnodes,      /**< the number of probing nodes explored this time */
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
-   SCIP_Bool             solfound            /**< was a solution found at the leaf? */
+   int                   nsolsfound,         /**< the number of solutions found */
+   int                   nbestsolsfound,     /**< the number of best solutions found */
+   SCIP_Bool             leavewassol         /**< was a solution found at the leaf? */
    )
 {
    assert(scip != NULL);
    assert(diveset != NULL);
    assert(SCIPinProbing(scip));
 
-   SCIPdivesetUpdateStats(diveset, scip->stat, SCIPgetDepth(scip), nprobingnodes, nbacktracks, solfound);
+   SCIPdivesetUpdateStats(diveset, scip->stat, SCIPgetDepth(scip), nprobingnodes, nbacktracks,nsolsfound, nbestsolsfound, leavewassol);
 }
 
 /** enforces a probing/diving solution by suggesting bound changes that maximize the score w.r.t. the current diving settings

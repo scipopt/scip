@@ -986,10 +986,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers)
    /* display list of presolvers */
    SCIPdialogMessage(scip, NULL, "\n");
    SCIPdialogMessage(scip, NULL, " Legend:\n");
-   SCIPdialogMessage(scip, NULL, "  priority: presolver called before constraint handlers iff priority > 0\n");
-   SCIPdialogMessage(scip, NULL, "  timing:   'f'ast, 'm'edium, 'e'xhaustive\n\n");
-   SCIPdialogMessage(scip, NULL, " presolver            priority  timing  description\n");
-   SCIPdialogMessage(scip, NULL, " ---------            --------  ------  -----------\n");
+   SCIPdialogMessage(scip, NULL, "  priority:  presolver called before constraint handlers iff priority > 0\n");
+   SCIPdialogMessage(scip, NULL, "  timing:    'f'ast, 'm'edium, 'e'xhaustive\n\n");
+   SCIPdialogMessage(scip, NULL, "  maxrounds: -1: no limit, 0: off, >0: limited number of rounds\n\n");
+   SCIPdialogMessage(scip, NULL, " presolver            priority  timing  maxrounds  description\n");
+   SCIPdialogMessage(scip, NULL, " ---------            --------  ------  ---------  -----------\n");
    for( i = 0; i < npresols; ++i )
    {
       SCIPdialogMessage(scip, NULL, " %-20s ", SCIPpresolGetName(presols[i]));
@@ -999,6 +1000,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers)
       SCIPdialogMessage(scip, NULL, "   %c", SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_FAST ? 'f' : ' ');
       SCIPdialogMessage(scip, NULL, "%c", SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_MEDIUM ? 'm' : ' ');
       SCIPdialogMessage(scip, NULL, "%c  ", SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE ? 'e' : ' ');
+      SCIPdialogMessage(scip, NULL, "%9d  ", SCIPpresolGetMaxrounds(presols[i]));
       SCIPdialogMessage(scip, NULL, "%s", SCIPpresolGetDesc(presols[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }

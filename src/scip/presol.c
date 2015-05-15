@@ -568,6 +568,16 @@ int SCIPpresolGetPriority(
    return presol->priority;
 }
 
+/** gets round limit of presolver */
+int SCIPpresolGetMaxrounds(
+   SCIP_PRESOL*          presol              /**< presolver */
+   )
+{
+   assert(presol != NULL);
+
+   return presol->maxrounds;
+}
+
 /** sets priority of presolver */
 void SCIPpresolSetPriority(
    SCIP_PRESOL*          presol,             /**< presolver */
