@@ -769,8 +769,9 @@ void handleEndtag(
             else
                ppos->state = XML_STATE_ERROR;
          }
-         BMSfreeMemoryArray(&name);
       }
+
+      BMSfreeMemoryArray(&name);
    }
 }
 
