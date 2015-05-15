@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -320,7 +320,7 @@ SCIP_RETCODE propagateRedcostVar(
          assert(SCIPisEQ(scip, oldlb, SCIPcolGetLb(col)));
          assert(SCIPisEQ(scip, oldub, SCIPcolGetUb(col)));
 
-        if( SCIPisFeasLT(scip, oldlb, oldub) )
+         if( SCIPisFeasLT(scip, oldlb, oldub) )
          {
             SCIP_Real newub;
             SCIP_Bool strengthen;

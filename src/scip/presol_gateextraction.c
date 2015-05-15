@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,7 +33,7 @@
 #define PRESOL_DESC            "presolver extracting gate(and)-constraints"
 #define PRESOL_PRIORITY         1000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY               TRUE /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define HASHSIZE_LOGICORCONS     131101 /**< minimal size of hash table in logicor constraint tables */
 #define HASHSIZE_SETPPCCONS      131101 /**< minimal size of hash table in setppc constraint tables */
@@ -1798,7 +1798,7 @@ SCIP_RETCODE SCIPincludePresolGateextraction(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
-         PRESOL_DELAY, presolExecGateextraction, presoldata) );
+         PRESOL_TIMING, presolExecGateextraction, presoldata) );
 
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyGateextraction) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeGateextraction) );

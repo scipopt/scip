@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -44,6 +44,12 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
    int                   maxtestdelta,       /**< maximal number of different deltas to try (-1: unlimited) */
    SCIP_Real*            rowweights,         /**< weight of rows in aggregated row */
+   SCIP_Real             maxweight,          /**< largest magnitude of weights; set to -1.0 if sparsity information is
+                                              *   unknown */
+   int*                  weightinds,         /**< sparsity pattern of weights; size nrowinds; NULL if sparsity info is
+                                              *   unknown */
+   int                   nweightinds,        /**< number of nonzeros in weights; -1 if rowinds is NULL */
+   int                   rowlensum,          /**< total number of non-zeros in used rows (row associated with nonzero weight coefficient); -1 if unknown */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */

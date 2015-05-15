@@ -33,8 +33,8 @@
 
 #define HEUR_NAME             "bound"
 #define HEUR_DESC             "heuristic which fixes all integer variables to a bound and solves the remaining LP"
-#define HEUR_DISPCHAR         'u'
-#define HEUR_PRIORITY         -1106000
+#define HEUR_DISPCHAR         'H'
+#define HEUR_PRIORITY         -1107000
 #define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1

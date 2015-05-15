@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -591,8 +591,8 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
          }
       }
       
-      SCIPfreeBufferArray(scip, &sortednodes);
       SCIPfreeBufferArray(scip, &maxstablesetnodes);
+      SCIPfreeBufferArray(scip, &sortednodes);
 
       SCIPdebugMessage("%d vars created via greedy\n", pricerdata->nstablesetsfound);
    } 
@@ -729,7 +729,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
 /** farkas pricing method of variable pricer for infeasible LPs */
 static
 SCIP_DECL_PRICERFARKAS(pricerFarkasColoring)
-{  
+{
    TCLIQUE_GRAPH* graph;
    int nnodes;                  /* number of nodes */
    int* maxstablesetnodes;      /* array containig the nodes of the max stable set */
@@ -791,8 +791,8 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasColoring)
       SCIPsortDownInt(maxstablesetnodes, nmaxstablesetnodes);
       SCIP_CALL( COLORprobAddNewStableSet(scip, maxstablesetnodes, nmaxstablesetnodes, &setnumber) );
       assert(setnumber != -1);
-      
-      /* create variable for the stable set and add it to SCIP*/
+
+      /* create variable for the stable set and add it to SCIP */
       SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
             TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*) (size_t) setnumber) );
       COLORprobAddVarForStableSet(scip, setnumber, var);
@@ -811,8 +811,8 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasColoring)
    /* free memory */
    SCIPfreeBufferArray(scip, &maxstablesetnodes);
    SCIPfreeBufferArray(scip, &colored);
-   return SCIP_OKAY;
 
+   return SCIP_OKAY;
 }
 
 /** method to call, when the maximal number of variables priced in each round is changed */

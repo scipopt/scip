@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -33,14 +33,11 @@ TIMELIMIT=$4     # the time limit in seconds
 TIMEFORMAT=$5    # the format for the time (sec or format)
 MEMLIMIT=$6      # the memory limit in MB
 MEMFORMAT=$7     # the format for hard memory limit (kB or MB)
-
-#optional parameters
-VALGRIND=$8      # should valgrind be used? (OPTIONAL)
+VALGRIND=$8      # should valgrind be used?
+SETCUTOFF=$9     # set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the solver
 
 # get current SCIP path
 SCIPPATH=`pwd`
-# set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the GAMS solver
-SETCUTOFF=0
 
 # check if binary exists
 if test ! -e $SCIPPATH/../$BINNAME
@@ -136,3 +133,12 @@ then
 else
     VALGRINDCMD=""
 fi
+
+#check if additional instance paths are given
+POSSIBLEPATHS=$SCIPPATH
+if test -e paths.txt
+then
+    POSSIBLEPATHS="${POSSIBLEPATHS} `cat paths.txt`"
+fi
+POSSIBLEPATHS="${POSSIBLEPATHS} DONE"
+echo $POSSIBLEPATHS

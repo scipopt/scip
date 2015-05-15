@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1467,8 +1467,8 @@ SCIP_RETCODE SCIPlpiChgBounds(
          CHECK_ZERO( lpi->messagehdlr, CPXgetub(lpi->cpxenv, lpi->cpxlp, &cpxub, ind[i], ind[i]) );
 
          /* Note that CPLEX seems to set bounds below 1e-10 in absolute value to 0.*/
-         assert( EPSZ(cpxlb, CPX_MAGICZEROCONSTANT) || cpxlb == lb[i] );
-         assert( EPSZ(cpxub, CPX_MAGICZEROCONSTANT) || cpxub == ub[i] );
+         assert( EPSZ(cpxlb, CPX_MAGICZEROCONSTANT) || cpxlb == lb[i] );  /*lint !e777*/
+         assert( EPSZ(cpxub, CPX_MAGICZEROCONSTANT) || cpxub == ub[i] );  /*lint !e777*/
       }
    }
 #endif
@@ -1556,7 +1556,7 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 
    invalidateSolution(lpi);
 
-   CPXchgobjsen(lpi->cpxenv, lpi->cpxlp, cpxObjsen(objsen));
+   CHECK_ZERO( lpi->messagehdlr, CPXchgobjsen(lpi->cpxenv, lpi->cpxlp, cpxObjsen(objsen)) );
 
    return SCIP_OKAY;
 }
@@ -2569,7 +2569,8 @@ SCIP_RETCODE lpiStrongbranchIntegral(
 SCIP_RETCODE SCIPlpiStartStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
-{  /* no work necessary */
+{  /*lint --e{715}*/
+   /* no work necessary */
    return SCIP_OKAY;
 }
 
@@ -2577,7 +2578,8 @@ SCIP_RETCODE SCIPlpiStartStrongbranch(
 SCIP_RETCODE SCIPlpiEndStrongbranch(
    SCIP_LPI*             lpi                 /**< LP interface structure */
    )
-{  /* no work necessary */
+{  /*lint --e{715}*/
+   /* no work necessary */
    return SCIP_OKAY;
 }
 
@@ -3054,11 +3056,17 @@ SCIP_Bool SCIPlpiIsStable(
    if( lpi->checkcondition && (SCIPlpiIsOptimal(lpi) || SCIPlpiIsObjlimExc(lpi)) )
    {
       SCIP_Real kappa;
+      SCIP_RETCODE retcode;
 
-      SCIP_CALL_ABORT( SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa) );
+      retcode = SCIPlpiGetRealSolQuality(lpi, SCIP_LPSOLQUALITY_ESTIMCONDITION, &kappa);
+      if ( retcode != SCIP_OKAY )
+      {
+         SCIPABORT();
+         return FALSE; /*lint !e527*/
+      }
 
       /* if the kappa could not be computed (e.g., because we do not have a basis), we cannot check the condition */
-      if( kappa != SCIP_INVALID || kappa > lpi->conditionlimit )
+      if( kappa != SCIP_INVALID || kappa > lpi->conditionlimit ) /*lint !e777*/
          return FALSE;
    }
 
@@ -3331,7 +3339,7 @@ SCIP_RETCODE SCIPlpiGetBase(
       {
          CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &sense, i, i) );
          if ( sense == 'L' )
-            rstat[i] = SCIP_BASESTAT_UPPER;
+            rstat[i] = (int) SCIP_BASESTAT_UPPER;
       }
    }
 
@@ -3375,7 +3383,7 @@ SCIP_RETCODE SCIPlpiSetBase(
    nrows = CPXgetnumrows(lpi->cpxenv, lpi->cpxlp);
    for (i = 0; i < nrows; ++i)
    {
-      if ( rstat[i] == SCIP_BASESTAT_UPPER )
+      if ( rstat[i] == (int) SCIP_BASESTAT_UPPER )
       {
          CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &sense, i, i) );
          if ( sense == 'L' )
@@ -3426,9 +3434,12 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
-{
+{  /*lint --e{715}*/
    int retval;
    int nrows;
 
@@ -3437,6 +3448,10 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    assert(lpi->cpxenv != NULL);
 
    SCIPdebugMessage("getting binv-row %d\n", r);
+
+   /* can only return dense result */
+   if ( ninds != NULL )
+      *ninds = -1;
 
    /* this might be turned off if the user as called SCIPlpiClearState() or set SCIP_LPPAR_FROMSCRATCH to TRUE */
    setIntParam(lpi, CPX_PARAM_ADVIND, CPX_ON);
@@ -3493,7 +3508,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
                                               *   B^-1 column numbers to the row and column numbers of the LP!
                                               *   c must be between 0 and nrows-1, since the basis has the size
                                               *   nrows * nrows */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {
    int retval;
@@ -3505,6 +3523,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    assert(lpi->cpxenv != NULL);
 
    SCIPdebugMessage("getting binv-col %d\n", c);
+
+   /* can only return dense result */
+   if ( ninds != NULL )
+      *ninds = -1;
 
    /* this might be turned off if the user as called SCIPlpiClearState() or set SCIP_LPPAR_FROMSCRATCH to TRUE */
    setIntParam(lpi, CPX_PARAM_ADVIND, CPX_ON);
@@ -3555,7 +3577,10 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef                /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                              *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715}*/
    int retval;
@@ -3566,6 +3591,10 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    assert(lpi->cpxenv != NULL);
 
    SCIPdebugMessage("getting binva-row %d\n", r);
+
+   /* can only return dense result */
+   if ( ninds != NULL )
+      *ninds = -1;
 
    /* this might be turned off if the user as called SCIPlpiClearState() or set SCIP_LPPAR_FROMSCRATCH to TRUE */
    setIntParam(lpi, CPX_PARAM_ADVIND, CPX_ON);
@@ -3618,7 +3647,10 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef                /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715}*/
    int retval;
@@ -3630,6 +3662,10 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    assert(lpi->cpxlp != NULL);
 
    SCIPdebugMessage("getting binva-col %d\n", c);
+
+   /* can only return dense result */
+   if ( ninds != NULL )
+      *ninds = -1;
 
    /* this might be turned off if the user as called SCIPlpiClearState() or set SCIP_LPPAR_FROMSCRATCH to TRUE */
    setIntParam(lpi, CPX_PARAM_ADVIND, CPX_ON);
@@ -3778,15 +3814,15 @@ SCIP_RETCODE SCIPlpiSetState(
          /* if lower bound is +/- infinity -> try upper bound */
          CHECK_ZERO( lpi->messagehdlr, CPXgetub(lpi->cpxenv, lpi->cpxlp, &bnd, i, i) );
          if ( SCIPlpiIsInfinity(lpi, REALABS(bnd)) )
-            lpi->cstat[i] = SCIP_BASESTAT_ZERO;  /* variable is free -> super basic */
+            lpi->cstat[i] = (int) SCIP_BASESTAT_ZERO;  /* variable is free -> super basic */
          else
-            lpi->cstat[i] = SCIP_BASESTAT_UPPER; /* use finite upper bound */
+            lpi->cstat[i] = (int) SCIP_BASESTAT_UPPER; /* use finite upper bound */
       }
       else
-         lpi->cstat[i] = SCIP_BASESTAT_LOWER;    /* use finite lower bound */
+         lpi->cstat[i] = (int) SCIP_BASESTAT_LOWER;    /* use finite lower bound */
    }
    for( i = lpistate->nrows; i < lpnrows; ++i )
-      lpi->rstat[i] = SCIP_BASESTAT_BASIC;
+      lpi->rstat[i] = (int) SCIP_BASESTAT_BASIC;
 
    /* load basis information into CPLEX */
    SCIP_CALL( setBase(lpi) );
@@ -4021,7 +4057,7 @@ SCIP_RETCODE SCIPlpiGetIntpar(
    switch( type )
    {
    case SCIP_LPPAR_FROMSCRATCH:
-      *ival = lpi->fromscratch;
+      *ival = (int) lpi->fromscratch;
       break;
 #if (CPX_VERSION < 12060100)
    case SCIP_LPPAR_FASTMIP:

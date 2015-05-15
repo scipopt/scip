@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1889,10 +1889,10 @@ SCIP_RETCODE SCIPincludePropVbounds(
    SCIP_PROPDATA* propdata;
    SCIP_PROP* prop;
 
-   /* create pseudoobj propagator data */
+   /* create vbounds propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
 
-   /*  reset propagation data */
+   /* reset propagation data */
    resetPropdata(propdata);
 
    /* include propagator */

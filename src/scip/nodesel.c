@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,7 +28,7 @@
 #include "scip/set.h"
 #include "scip/clock.h"
 #include "scip/stat.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/paramset.h"
 #include "scip/tree.h"
 #include "scip/scip.h"
@@ -663,7 +663,7 @@ SCIP_RETCODE SCIPnodepqBound(
          if( !parentfelldown )
             pos--;
 
-         SCIPvbcCutoffNode(stat->vbc, stat, node);
+         SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
 
          /* free memory of the node */
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1067,6 +1067,10 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
 
+   /* merge histories of the subscip-variables to the SCIP variables. */
+   SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
+   SCIPdebugMessage("Transferring variable histories complete\n");
+
    /* check, whether a solution was found */
    if( SCIPgetNSols(subscip) > 0 )
    {
@@ -1115,7 +1119,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
          }
       }
 
-      /* if solution is not better then incumbent or could not be added to problem => run is counted as a failure */
+      /* if solution is not better than incumbent or could not be added to problem => run is counted as a failure */
       if( !success || solindex != SCIPsolGetIndex(SCIPgetBestSol(scip)) )
          updateFailureStatistic(scip, heurdata);
    }

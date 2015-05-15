@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,7 +39,7 @@
                                               *   before solving the LP (-1: no limit, -2: parameter settings) */
 #define DEFAULT_PROBINGBOUNDS    TRUE        /**< should valid bounds be identified in a probing-like fashion during strong
                                               *   branching (only with propagation)? */
-
+#define DEFAULT_FORCESTRONGBRANCH FALSE      /**< should strong branching be applied even if there is just a single candidate? */
 
 
 /** branching rule data */
@@ -51,6 +51,7 @@ struct SCIP_BranchruleData
                                               *   before solving the LP (-1: no limit, -2: parameter settings) */
    SCIP_Bool             probingbounds;      /**< should valid bounds be identified in a probing-like fashion during strong
                                               *   branching (only with propagation)? */
+   SCIP_Bool             forcestrongbranch;  /**< should strong branching be applied even if there is just a single candidate? */
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
    SCIP_Bool*            skipdown;
    SCIP_Bool*            skipup;
@@ -157,6 +158,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
                                               *   branching before solving the LP (-1: no limit, -2: parameter settings) */
    SCIP_Bool             probingbounds,      /**< should valid bounds be identified in a probing-like fashion during
                                               *   strong branching (only with propagation)? */
+   SCIP_Bool             forcestrongbranch,  /**< should strong branching be applied even if there is just a single candidate? */
    int*                  bestcand,           /**< best candidate for branching                        */
    SCIP_Real*            bestdown,           /**< objective value of the down branch for bestcand     */
    SCIP_Real*            bestup,             /**< objective value of the up branch for bestcand       */
@@ -237,7 +239,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
    /* if only one candidate exists, choose this one without applying strong branching; also, when SCIP is about to be
     * stopped, all strongbranching evaluations will be aborted anyway, thus we can return immediately
     */
-   if( nlpcands == 1 || SCIPisStopped(scip) )
+   if( (!forcestrongbranch && nlpcands == 1) || SCIPisStopped(scip) )
       return SCIP_OKAY;
 
    /* this assert may not hold if SCIP is stopped, thus we only check it here */
@@ -320,7 +322,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
          {
             SCIP_CALL( SCIPgetVarStrongbranchWithPropagation(scip, lpcands[c], lpcandssol[c], lpobjval, INT_MAX,
                   maxproprounds, skipdown[i] ? NULL : &down, skipup[i] ? NULL : &up, &downvalid,
-                  &upvalid, &downinf, &upinf, &downconflict, &upconflict, &lperror, newlbs, newubs) );
+                  &upvalid, NULL, NULL, &downinf, &upinf, &downconflict, &upconflict, &lperror, newlbs, newubs) );
 
             SCIPdebugMessage("-> down=%.9g (gain=%.9g, valid=%u, inf=%u, conflict=%u), up=%.9g (gain=%.9g, valid=%u, inf=%u, conflict=%u)\n",
                down, down - lpobjval, downvalid, downinf, downconflict, up, up - lpobjval, upvalid, upinf, upconflict);
@@ -576,8 +578,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
 
    SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcands, lpcandssol, lpcandsfrac, branchruledata->skipdown,
          branchruledata->skipup, nlpcands, npriolpcands, nlpcands, &branchruledata->lastcand, allowaddcons,
-         branchruledata->maxproprounds, branchruledata->probingbounds,
-         &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
+         branchruledata->maxproprounds, branchruledata->probingbounds, branchruledata->forcestrongbranch, &bestcand,
+         &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
@@ -672,6 +674,10 @@ SCIP_RETCODE SCIPincludeBranchruleFullstrong(
          "branching/fullstrong/probingbounds",
          "should valid bounds be identified in a probing-like fashion during strong branching (only with propagation)?",
          &branchruledata->probingbounds, TRUE, DEFAULT_PROBINGBOUNDS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "branching/fullstrong/forcestrongbranch",
+         "should strong branching be applied even if there is just a single candidate?",
+         &branchruledata->forcestrongbranch, TRUE, DEFAULT_FORCESTRONGBRANCH, NULL, NULL) );
 
    return SCIP_OKAY;
 }

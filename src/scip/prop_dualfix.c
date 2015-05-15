@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,7 +36,7 @@
                                              *   reductions? */
 #define PROP_PRESOL_PRIORITY        +8000000 /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
 #define PROP_PRESOL_MAXROUNDS             -1 /**< maximal number of propving rounds the propver participates in (-1: no limit) */
-#define PROP_PRESOL_DELAY              FALSE /**< should propver be delayed, if other propvers found reductions? */
+#define PROP_PRESOLTIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolving method (fast, medium, or exhaustive) */
 
 
 /**@name Local methods
@@ -314,7 +314,7 @@ SCIP_RETCODE SCIPincludePropDualfix(
 
    SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyDualfix) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolDualfix, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS,
-         PROP_PRESOL_DELAY) );
+         PROP_PRESOLTIMING) );
 
    return SCIP_OKAY;
 }

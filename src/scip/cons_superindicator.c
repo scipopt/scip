@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -54,10 +54,10 @@
                                               *   participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA             FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP             FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL           FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS              TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler*/
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define DEFAULT_CHECKSLACKTYPE          TRUE /**< should type of slack constraint be checked when creating superindicator constraint? */
 #define DEFAULT_UPGDPRIOINDICATOR          1 /**< priority for upgrading to an indicator constraint (-1: never) */
@@ -1882,7 +1882,7 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSuperindicator) );
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreSuperindicator) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSuperindicator) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSuperindicator, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSuperindicator, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSuperindicator) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSuperindicator, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropSuperindicator) );

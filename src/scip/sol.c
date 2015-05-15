@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -726,7 +726,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    assert(tree != NULL);
    assert(lp != NULL);
    assert(lp->solved);
-   assert(SCIPlpDiving(lp) || !SCIPlpDivingObjChanged(lp));
+   assert(SCIPlpDiving(lp) || SCIPtreeProbing(tree) || !SCIPlpDivingObjChanged(lp));
 
    SCIPdebugMessage("linking solution to LP\n");
 
@@ -752,7 +752,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
          for( c = 0; c < ncols; ++c )
          {
             var = SCIPcolGetVar(cols[c]);
-            sol->obj += SCIPvarGetObj(var) * cols[c]->primsol;
+            sol->obj += SCIPvarGetUnchangedObj(var) * cols[c]->primsol;
          }
       }
    }
@@ -1030,7 +1030,8 @@ SCIP_RETCODE SCIPsolSetVal(
          SCIP_CALL( solSetArrayVal(sol, set, var, val) );
 
          /* update objective: an unknown solution value does not count towards the objective */
-         obj = SCIPvarGetObj(var);
+         obj = SCIPvarGetUnchangedObj(var);
+
          if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
             sol->obj -= obj * oldval;
          if( val != SCIP_UNKNOWN ) /*lint !e777*/
@@ -1160,7 +1161,7 @@ SCIP_RETCODE SCIPsolIncVal(
    case SCIP_VARSTATUS_COLUMN:
       assert(!SCIPsolIsOriginal(sol));
       SCIP_CALL( solIncArrayVal(sol, set, var, incval) );
-      sol->obj += SCIPvarGetObj(var) * incval;
+      sol->obj += SCIPvarGetUnchangedObj(var) * incval;
       solStamp(sol, stat, tree, FALSE);
       return SCIP_OKAY;
 
@@ -1539,6 +1540,7 @@ SCIP_RETCODE SCIPsolCheck(
 /** try to round given solution */
 SCIP_RETCODE SCIPsolRound(
    SCIP_SOL*             sol,                /**< primal solution */
+   SCIP_LP*              lp,                 /**< LP strucure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */
@@ -1572,16 +1574,9 @@ SCIP_RETCODE SCIPsolRound(
       if( solval == SCIP_UNKNOWN ) /*lint !e777*/
          break;
 
-      /* if solution value is already integral, there is nothing to do */
-      if( SCIPsetIsIntegral(set, solval) )
-         continue;
-
-      /* if solution value is already integral with feastol, round to nearest integral value */
+      /* if solution value is already integral with feastol, continue */
       if( SCIPsetIsFeasIntegral(set, solval) )
-      {
-         SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, var, SCIPsetRound(set, solval)) );
          continue;
-      }
 
       /* get rounding possibilities */
       mayrounddown = SCIPvarMayRoundDown(var);
@@ -1591,7 +1586,7 @@ SCIP_RETCODE SCIPsolRound(
       if( mayrounddown && mayroundup )
       {
          /* we can round in both directions: round in objective function direction */
-         if( SCIPvarGetObj(var) >= 0.0 )
+         if( SCIPvarGetUnchangedObj(var) >= 0.0 )
             solval = SCIPsetFeasFloor(set, solval);
          else
             solval = SCIPsetFeasCeil(set, solval);
@@ -1793,7 +1788,7 @@ void SCIPsolRecomputeObj(
       solval = SCIPsolGetVal(sol, set, stat, vars[v]);
       if( !SCIPsetIsZero(set, solval) && solval != SCIP_UNKNOWN ) /*lint !e777*/
       {
-         sol->obj += SCIPvarGetObj(vars[v]) * solval;
+         sol->obj += SCIPvarGetUnchangedObj(vars[v]) * solval;
       }
    }
 
@@ -1896,7 +1891,7 @@ SCIP_RETCODE SCIPsolPrint(
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
             SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
-         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->fixedvars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->fixedvars[v]));
       }
    }
 
@@ -1915,7 +1910,7 @@ SCIP_RETCODE SCIPsolPrint(
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
             SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
-         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->vars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->vars[v]));
       }
    }
 
@@ -1941,7 +1936,7 @@ SCIP_RETCODE SCIPsolPrint(
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
                SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
-            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->fixedvars[v]));
          }
       }
       for( v = 0; v < transprob->nvars; ++v )
@@ -1962,7 +1957,7 @@ SCIP_RETCODE SCIPsolPrint(
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
                SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
-            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->vars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->vars[v]));
          }
       }
    }
@@ -2005,7 +2000,7 @@ SCIP_RETCODE SCIPsolPrintRay(
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
             SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
-         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->fixedvars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->fixedvars[v]));
       }
    }
    for( v = 0; v < prob->nvars; ++v )
@@ -2023,7 +2018,7 @@ SCIP_RETCODE SCIPsolPrintRay(
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
             SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
-         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->vars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->vars[v]));
       }
    }
 
@@ -2049,7 +2044,7 @@ SCIP_RETCODE SCIPsolPrintRay(
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
                SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
-            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->fixedvars[v]));
          }
       }
       for( v = 0; v < transprob->nvars; ++v )
@@ -2070,7 +2065,7 @@ SCIP_RETCODE SCIPsolPrintRay(
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
                SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
-            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->vars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->vars[v]));
          }
       }
    }

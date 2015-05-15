@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -104,7 +104,6 @@ struct SCIP_HeurData
       int                nremainingviols;    /**< the number of remaining violations */
       int                nprobings;          /**< how many probings has the heuristic executed? */
       int                ncutoffs;           /**< has the probing node been cutoff? */
-      int                nredundantrows;     /**< how many rows were redundant after relaxation? */
       )
 };
 
@@ -369,7 +368,7 @@ void transformVariable(
    SCIP_Real ub;
 
    SCIP_Bool negatecoeffs; /* do the row coefficients need to be negated? */
-   SCIP_Real deltashift;     /* difference from previous transformation */
+   SCIP_Real deltashift;   /* difference from previous transformation */
 
    assert(matrix != NULL);
    assert(0 <= colpos && colpos < heurdata->nlpcols);
@@ -762,6 +761,69 @@ void freeMatrix(
    SCIPfreeBuffer(scip, matrix);
 }
 
+/** updates the information about a row whenever violation status changes */
+static
+void checkRowViolation(
+   SCIP*                 scip,               /**< current SCIP instance */
+   CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object */
+   int                   rowindex,           /**< index of the row */
+   int*                  violatedrows,       /**< contains all violated rows */
+   int*                  violatedrowpos,     /**< positions of rows in the violatedrows array */
+   int*                  nviolatedrows,      /**< pointer to update total number of violated rows */
+   int*                  rowweights,         /**< row weight storage */
+   SCIP_Bool             updateweights       /**< should row weight be increased every time the row is violated? */
+   )
+{
+   int* cols;
+   int ncols;
+   int c;
+   int violadd;
+   assert(matrix != NULL);
+   assert(violatedrows != NULL);
+   assert(violatedrowpos != NULL);
+   assert(nviolatedrows != NULL);
+
+   getRowData(matrix, rowindex, NULL, NULL, NULL, &cols, &ncols);
+   violadd = 0;
+
+   /* row is now violated. Enqueue it in the set of violated rows. */
+   if( violatedrowpos[rowindex] == -1 && (SCIPisFeasGT(scip, matrix->lhs[rowindex], 0.0) || SCIPisFeasLT(scip, matrix->rhs[rowindex], 0.0)) )
+   {
+      assert(*nviolatedrows < matrix->nrows);
+
+      violatedrows[*nviolatedrows] = rowindex;
+      violatedrowpos[rowindex] = *nviolatedrows;
+      ++(*nviolatedrows);
+      if( updateweights )
+         ++rowweights[rowindex];
+
+      violadd = 1;
+   }
+   /* row is now feasible. Remove it from the set of violated rows. */
+   else if( violatedrowpos[rowindex] >= 0 && SCIPisFeasLE(scip, matrix->lhs[rowindex], 0.0) && SCIPisFeasGE(scip, matrix->rhs[rowindex], 0.0) )
+   {
+      /* swap the row with last violated row */
+      if( violatedrowpos[rowindex] != *nviolatedrows - 1  )
+      {
+         assert(*nviolatedrows - 1 >= 0);
+         violatedrows[violatedrowpos[rowindex]] = violatedrows[*nviolatedrows - 1];
+         violatedrowpos[violatedrows[*nviolatedrows - 1]] = violatedrowpos[rowindex];
+      }
+
+      /* unlink the row from its position in the array and decrease number of violated rows */
+      violatedrowpos[rowindex] = -1;
+      --(*nviolatedrows);
+      violadd = -1;
+   }
+
+   /* increase or decrease the column violation counter */
+   for( c = 0; c < ncols; ++c )
+   {
+      matrix->violrows[cols[c]] += violadd;
+      assert(matrix->violrows[cols[c]] >= 0);
+   }
+}
+
 /** collects the necessary information about row violations for the zero-solution. That is,
  *  all solution values in heuristic transformation are zero.
  */
@@ -773,12 +835,10 @@ void checkViolations(
    int*                  violatedrows,       /**< violated rows */
    int*                  violatedrowpos,     /**< row positions of violated rows */
    int*                  nviolatedrows,      /**< pointer to store the number of violated rows */
-   int*                  nredundantrows,     /**< pointer to store the number of redundant rows */
-   int*                  violatedvarrows     /**< reference to number of violated rows for every variable, or NULL */
+   int*                  rowweights,         /**< weight array for every row */
+   SCIP_Bool             updateweights       /**< should row weight be increased every time the row is violated? */
    )
 {
-   SCIP_Real* rhs;
-   SCIP_Real* lhs;
    int nrows;
    int* rowindices;
    int i;
@@ -789,58 +849,41 @@ void checkViolations(
    assert(nviolatedrows != NULL);
    assert(-1 <= colidx && colidx < matrix->ncols);
 
-   /* get RHS, LHS and number of the problem rows */
-   rhs = matrix->rhs;
-   lhs = matrix->lhs;
-   nrows = matrix->nrows;
-   rowindices = NULL;
-
+   /* check if we requested an update for a single variable, or if we want to (re)-initialize the whole violation info */
    if( colidx >= 0 )
       getColumnData(matrix, colidx, NULL, &rowindices, &nrows);
+   else
+   {
+      nrows = matrix->nrows;
+      rowindices = NULL;
+      *nviolatedrows = 0;
 
+      /* reinitialize the violated rows */
+      for( i = 0; i < nrows; ++i )
+         violatedrowpos[i] = -1;
+
+      /* clear the violated row counters for all variables */
+      BMSclearMemoryArray(matrix->violrows, matrix->ndiscvars);
+   }
+
+   assert(colidx < 0 || *nviolatedrows >= 0);
    SCIPdebugMessage("Entering violation check for %d rows! \n", nrows);
-   *nviolatedrows = 0;
-   if( nredundantrows != NULL )
-      *nredundantrows = 0;
-
    /* loop over rows and check if it is violated */
    for( i = 0; i < nrows; ++i )
    {
-      int rowpos = colidx >= 0 ? rowindices[i] : i;
-      /* check, if zero solution violates this row */
-      if( SCIPisFeasLT(scip, rhs[rowpos], 0.0) || SCIPisFeasGT(scip, lhs[rowpos], 0.0) )
+      int rowpos;
+      if( colidx >= 0 )
       {
-         violatedrows[*nviolatedrows] = rowpos;
-        (violatedrowpos)[rowpos] = *nviolatedrows;
-         ++(*nviolatedrows);
-
-         /* if needed, increase the counter for violated rows for every variable column of this row */
-         if( violatedvarrows != NULL )
-         {
-            int* rowcols;
-            int nrowcols;
-            int j;
-
-            rowcols = NULL;
-            nrowcols = 0;
-            getRowData(matrix, rowpos, NULL, NULL, NULL, &rowcols, &nrowcols);
-            assert(nrowcols == 0 || rowcols != NULL);
-
-            for( j = 0; j < nrowcols; ++j )
-            {
-               assert(0 <= rowcols[j] && rowcols[j] < matrix->ndiscvars);
-               ++violatedvarrows[rowcols[j]];
-            }
-         }
+         assert(rowindices != NULL);
+         rowpos = rowindices[i];
       }
       else
-         violatedrowpos[rowpos] = -1;
+         rowpos = i;
+      /* check, if zero solution violates this row */
+      checkRowViolation(scip, matrix, rowpos, violatedrows, violatedrowpos, nviolatedrows, rowweights, updateweights);
 
-      assert((violatedrowpos[rowpos] == -1 && SCIPisFeasGE(scip, rhs[rowpos], 0.0) && SCIPisFeasGE(scip, -lhs[rowpos], 0.0))
-         || (violatedrowpos[rowpos] >= 0 &&(SCIPisFeasLT(scip, rhs[rowpos], 0.0) || SCIPisFeasLT(scip, -lhs[rowpos], 0.0))));
-
-      if( SCIPisInfinity(scip, rhs[rowpos]) && SCIPisInfinity(scip, -lhs[rowpos]) && nredundantrows != NULL)
-         ++(*nredundantrows);
+      assert((violatedrowpos[rowpos] == -1 && SCIPisFeasGE(scip, matrix->rhs[rowpos], 0.0) && SCIPisFeasLE(scip, matrix->lhs[rowpos], 0.0))
+         || (violatedrowpos[rowpos] >= 0 &&(SCIPisFeasLT(scip, matrix->rhs[rowpos], 0.0) || SCIPisFeasGT(scip, matrix->lhs[rowpos], 0.0))));
    }
 }
 
@@ -1054,80 +1097,16 @@ SCIP_RETCODE getOptimalShiftingValue(
    return SCIP_OKAY;
 }
 
-/** updates the information about a row whenever violation status changes */
-static
-void updateViolations(
-   SCIP*                 scip,               /**< current SCIP instance */
-   CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object */
-   int                   rowindex,           /**< index of the row */
-   int*                  violatedrows,       /**< contains all violated rows */
-   int*                  violatedrowpos,     /**< positions of rows in the violatedrows array */
-   int*                  nviolatedrows,      /**< pointer to update total number of violated rows */
-   int*                  rowweights,         /**< row weight storage */
-   SCIP_Bool             updateweights       /**< should row weight be increased every time the row is violated? */
-   )
-{
-   int* cols;
-   int ncols;
-   int c;
-   int violadd;
-   assert(matrix != NULL);
-   assert(violatedrows != NULL);
-   assert(violatedrowpos != NULL);
-   assert(nviolatedrows != NULL);
-
-   getRowData(matrix, rowindex, NULL, NULL, NULL, &cols, &ncols);
-   violadd = 0;
-
-   /* row is now violated. Enqueue it in the set of violated rows. */
-   if( SCIPisFeasLT(scip, -(matrix->lhs[rowindex]), 0.0) || SCIPisFeasLT(scip, matrix->rhs[rowindex], 0.0) )
-   {
-      assert(violatedrowpos[rowindex] == -1);
-      assert(*nviolatedrows < matrix->nrows);
-
-      violatedrows[*nviolatedrows] = rowindex;
-      violatedrowpos[rowindex] = *nviolatedrows;
-      ++(*nviolatedrows);
-      if( updateweights )
-         ++rowweights[rowindex];
-
-      violadd = 1;
-   }
-   /* row is now feasible. Remove it from the set of violated rows. */
-   else
-   {
-      assert(violatedrowpos[rowindex] > -1);
-
-      /* swap the row with last violated row */
-      if( violatedrowpos[rowindex] != *nviolatedrows - 1 )
-      {
-         assert(*nviolatedrows - 1 >= 0);
-         violatedrows[violatedrowpos[rowindex]] = violatedrows[*nviolatedrows - 1];
-         violatedrowpos[violatedrows[*nviolatedrows - 1]] = violatedrowpos[rowindex];
-      }
-
-      /* unlink the row from its position in the array and decrease number of violated rows */
-      violatedrowpos[rowindex] = -1;
-      --(*nviolatedrows);
-      violadd = -1;
-   }
-
-   /* increase or decrease the column violation counter */
-   for( c = 0; c < ncols; ++c )
-      matrix->violrows[cols[c]] += violadd;
-}
-
 /** updates transformation of a given variable by taking into account current local bounds. if the bounds have changed
  *  since last update, updating the heuristic specific upper bound of the variable, its current transformed solution value
  *  and all affected rows is necessary.
  */
 static
-void updateTransformation(
+SCIP_RETCODE updateTransformation(
    SCIP*                 scip,               /**< current scip */
    CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
    int                   varindex,           /**< index of variable in matrix */
-   SCIP_Real*            transformshiftval,  /**< value, by which the variable has been shifted during transformation */
    SCIP_Real             lb,                 /**< local lower bound of the variable */
    SCIP_Real             ub,                 /**< local upper bound of the variable */
    int*                  violatedrows,       /**< violated rows */
@@ -1137,6 +1116,7 @@ void updateTransformation(
 {
    TRANSFORMSTATUS status;
    SCIP_Real deltashift;
+   SCIP_Bool checkviolations;
 
    assert(scip != NULL);
    assert(matrix != NULL);
@@ -1149,39 +1129,42 @@ void updateTransformation(
    SCIPdebugMessage("  Variable <%d> [%g,%g], status %d(%g), ub %g \n", varindex, lb, ub, status,
       matrix->transformshiftvals[varindex], matrix->upperbounds[varindex]);
 
+   checkviolations = FALSE;
    /* depending on the variable status, deltashift is calculated differently. */
-   if( status == TRANSFORMSTATUS_LB )
+   switch( status )
    {
+   case TRANSFORMSTATUS_LB:
       if( SCIPisInfinity(scip, -lb) )
+      {
          transformVariable(scip, matrix, heurdata, varindex);
+         checkviolations = TRUE;
+      }
       else
       {
-         deltashift = lb - (*transformshiftval);
-         *transformshiftval = lb;
+         deltashift = lb - (matrix->transformshiftvals[varindex]);
+         matrix->transformshiftvals[varindex] = lb;
          if( !SCIPisInfinity(scip, ub) )
             matrix->upperbounds[varindex] = ub - lb;
          else
             matrix->upperbounds[varindex] = SCIPinfinity(scip);
       }
-   }
-
-   if( status == TRANSFORMSTATUS_NEG )
-   {
-
+      break;
+   case TRANSFORMSTATUS_NEG:
       if( SCIPisInfinity(scip, ub) )
+      {
          transformVariable(scip, matrix, heurdata, varindex);
+         checkviolations = TRUE;
+      }
       else
       {
-         deltashift = (*transformshiftval) - ub;
-         *transformshiftval = ub;
+         deltashift = (matrix->transformshiftvals[varindex]) - ub;
+         matrix->transformshiftvals[varindex] = ub;
 
          if( !SCIPisInfinity(scip, -lb) )
             matrix->upperbounds[varindex] = ub - lb;
       }
-   }
-
-   if( status == TRANSFORMSTATUS_FREE )
-   {
+      break;
+   case TRANSFORMSTATUS_FREE:
       /* in case of a free transform status, if one of the bounds has become finite, we want
        * to transform this variable to a variable with a lowerbound or a negated transform status */
       if( !SCIPisInfinity(scip, -lb) || !SCIPisInfinity(scip, ub) )
@@ -1189,13 +1172,19 @@ void updateTransformation(
          transformVariable(scip, matrix, heurdata, varindex);
 
          /* violations have to be rechecked for rows in which variable appears */
-         checkViolations(scip, matrix, varindex, violatedrows, violatedrowpos, nviolatedrows, NULL, NULL);
+         checkviolations = TRUE;
 
          assert(matrix->transformstatus[varindex] == TRANSFORMSTATUS_LB || TRANSFORMSTATUS_NEG);
          assert(SCIPisFeasLE(scip, ABS(lb), ABS(ub)) || matrix->transformstatus[varindex] == TRANSFORMSTATUS_NEG);
       }
-   }
+      break;
 
+   case TRANSFORMSTATUS_NONE:
+   default:
+      SCIPerrorMessage("Error: Invalid variable status <%d> in shift and propagagate heuristic, aborting!\n");
+      SCIPABORT();
+      return SCIP_INVALIDDATA;   /*lint !e527*/
+   }
    /* if the bound, by which the variable was shifted, has changed, deltashift is different from zero, which requires
     * an update of all affected rows
     */
@@ -1212,37 +1201,26 @@ void updateTransformation(
       /* go through rows, update the rows w.r.t. the influence of the changed transformation of the variable */
       for( i = 0; i < nrows; ++i )
       {
-         SCIP_Bool updaterow;
-         SCIP_Bool leftviolation;
-         SCIP_Bool rightviolation;
-
          SCIPdebugMessage("  update slacks of row<%d>:  coefficient <%g>, %g <= 0 <= %g \n",
             rows[i], vals[i], matrix->lhs[rows[i]], matrix->rhs[rows[i]]);
-
-         /* the row has to be updated if either lhs or rhs changes its sign. */
-         leftviolation = SCIPisFeasLT(scip, -(matrix->lhs[rows[i]]), 0.0);
 
          if( !SCIPisInfinity(scip, -(matrix->lhs[rows[i]])) )
             matrix->lhs[rows[i]] -= (vals[i]) * deltashift;
 
-         updaterow = leftviolation != SCIPisFeasLT(scip, -(matrix->lhs[rows[i]]), 0.0);
-
-         rightviolation = SCIPisFeasLT(scip,(matrix->rhs[rows[i]]), 0.0);
          if( !SCIPisInfinity(scip, matrix->rhs[rows[i]]) )
             matrix->rhs[rows[i]] -= (vals[i]) * deltashift;
-
-         updaterow = updaterow != (rightviolation != SCIPisFeasLT(scip,(matrix->rhs[rows[i]]), 0.0));
-
-         /* update the row violation */
-         if( updaterow )
-            updateViolations(scip, matrix, rows[i], violatedrows, violatedrowpos, nviolatedrows, heurdata->rowweights, heurdata->updateweights);
-
-         SCIPdebugMessage("             -->                           %g <= 0 <= %g %s\n",
-            matrix->lhs[rows[i]], matrix->rhs[rows[i]], updaterow ? ": row violation updated " : "");
       }
+      checkviolations = TRUE;
    }
+
+   /* check and update information about violated rows, if necessary */
+   if( checkviolations )
+      checkViolations(scip, matrix, varindex, violatedrows, violatedrowpos, nviolatedrows, heurdata->rowweights, heurdata->updateweights);
+
    SCIPdebugMessage("  Variable <%d> [%g,%g], status %d(%g), ub %g \n", varindex, lb, ub, status,
       matrix->transformshiftvals[varindex], matrix->upperbounds[varindex]);
+
+   return SCIP_OKAY;
 }
 
 /** comparison method for columns; binary < integer < implicit < continuous variables */
@@ -1329,10 +1307,10 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
       SCIPstatisticMessage(
          "  DETAILS                    :  %d violations left, %d probing status, %d redundant rows\n",
          heurdata->nremainingviols,
-         heurdata->lpsolstat,
-         heurdata->nredundantrows);
+         heurdata->lpsolstat
+         );
       SCIPstatisticMessage(
-         "  SHIFTANDPROPAGATE PROBING  :  %d probings, %lld domain reductions,  ncutoffs: %d ,  LP iterations: %lld \n ",
+         "  SHIFTANDPROPAGATE PROBING  :  %d probings, %"SCIP_LONGINT_FORMAT" domain reductions,  ncutoffs: %d ,  LP iterations: %"SCIP_LONGINT_FORMAT" \n ",
          heurdata->nprobings,
          heurdata->ntotaldomredsfound,
          heurdata->ncutoffs,
@@ -1364,7 +1342,6 @@ SCIP_DECL_HEURINIT(heurInitShiftandpropagate)
       heurdata->ntotaldomredsfound = 0;
       heurdata->ncutoffs = 0;
       heurdata->nlpiters = 0;
-      heurdata->nredundantrows = 0;
    )
    return SCIP_OKAY;
 }
@@ -1441,7 +1418,6 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    int c;
    int ncutoffs;                  /* counts the number of cutoffs for this execution */
    int nprobings;                 /* counts the number of probings */
-   int nredundantrows;            /* the number of redundant rows */
    int nlprows;                   /* the number LP rows */
    int nmaxrows;                  /* maximum number of LP rows of a variable */
 
@@ -1548,6 +1524,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    else
       SCIPdisableVarHistory(scip);
 
+   /* @todo check if this node is necessary (I don't think so) */
    SCIP_CALL( SCIPnewProbingNode(scip) );
    ncutoffs = 0;
    nprobings = 0;
@@ -1618,18 +1595,17 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    assert(nbinvars >= 0);
    assert(nintvars >= 0);
 
+   /* check rows for infeasibility */
+   checkViolations(scip, matrix, -1, violatedrows, violatedrowpos, &nviolatedrows, heurdata->rowweights, heurdata->updateweights);
+
    /* allocate memory for violatedvarrows array only if variable ordering relies on it */
    if( heurdata->sortvars && (heurdata->sortkey == 't' || heurdata->sortkey == 'v') )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &violatedvarrows, ndiscvars) );
-      BMSclearMemoryArray(violatedvarrows, ndiscvars);
+      BMScopyMemoryArray(violatedvarrows, matrix->violrows, ndiscvars);
    }
    else
       violatedvarrows = NULL;
-
-   /* check rows for infeasibility */
-   nredundantrows = 0;
-   checkViolations(scip, matrix, -1, violatedrows, violatedrowpos, &nviolatedrows, &nredundantrows, matrix->violrows);
 
    /* sort variables w.r.t. the sorting key parameter. Sorting is indirect, all matrix column data
     * stays in place, but permutation array gives access to the sorted order of variables
@@ -1891,10 +1867,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
       /* if propagation is enabled, check if propagation has changed the variables bounds
        * and update the transformed upper bound correspondingly
+       * @todo this should not be necessary
        */
       if( heurdata->probing )
-         updateTransformation(scip, matrix, heurdata, permutedvarindex, &(matrix->transformshiftvals[permutedvarindex]),
-            lb, ub, violatedrows, violatedrowpos, &nviolatedrows);
+         SCIP_CALL( updateTransformation(scip, matrix, heurdata, permutedvarindex,lb, ub, violatedrows, violatedrowpos,
+               &nviolatedrows) );
 
       status = matrix->transformstatus[permutedvarindex];
 
@@ -1988,7 +1965,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
          ++nprobings;
          SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
-         SCIPdebugMessage("Propagation finished! <%lld> domain reductions %s, <%d> probing depth\n", ndomredsfound, cutoff ? "CUTOFF" : "",
+         SCIPdebugMessage("Propagation finished! <%"SCIP_LONGINT_FORMAT"> domain reductions %s, <%d> probing depth\n", ndomredsfound, cutoff ? "CUTOFF" : "",
             SCIPgetProbingDepth(scip));
       }
       assert(!cutoff || probing);
@@ -2099,8 +2076,8 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
          /* update the transformation of the variable, since the bound might have changed after the last update. */
          if( heurdata->probing )
-            updateTransformation(scip, matrix, heurdata, permutedvarindex, &(matrix->transformshiftvals[permutedvarindex]),
-               SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), violatedrows, violatedrowpos, &nviolatedrows);
+            SCIP_CALL( updateTransformation(scip, matrix, heurdata, permutedvarindex, SCIPvarGetLbLocal(var),
+                  SCIPvarGetUbLocal(var), violatedrows, violatedrowpos, &nviolatedrows) );
 
          /* retransform the solution value from the heuristic transformed space, set the solution value accordingly */
          assert(varIsDiscrete(var, impliscontinuous));
@@ -2202,10 +2179,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       SCIPdebugMessage("Solution constructed by heuristic is already known to be infeasible\n");
    }
 
-   SCIPstatistic(
-      heurdata->nremainingviols = nviolatedrows;
-      heurdata->nredundantrows = nredundantrows;
-      );
+   SCIPstatistic( heurdata->nremainingviols = nviolatedrows; );
 
  TERMINATE2:
    /* free allocated memory in reverse order of allocation */
@@ -2292,8 +2266,8 @@ SCIP_DECL_EVENTEXEC(eventExecShiftandpropagate)
    lb = SCIPvarGetLbLocal(var);
    ub = SCIPvarGetUbLocal(var);
 
-   updateTransformation(scip, matrix, eventhdlrdata->heurdata, colpos, &(matrix->transformshiftvals[colpos]),
-      lb, ub, eventhdlrdata->violatedrows, eventhdlrdata->violatedrowpos, eventhdlrdata->nviolatedrows);
+   SCIP_CALL( updateTransformation(scip, matrix, eventhdlrdata->heurdata, colpos, lb, ub, eventhdlrdata->violatedrows,
+         eventhdlrdata->violatedrowpos, eventhdlrdata->nviolatedrows) );
 
    return SCIP_OKAY;
 }

@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -236,6 +236,18 @@ BEGIN {
    pb = $NF;
    absgap = 0.0;
    feasible = 1;
+}
+/^Barrier - Optimal:/ {
+   db = $NF;
+   pb = $NF;
+   absgap = 0.0;
+   feasible = 1;
+}
+/^Dual objective/ {
+   db = $NF;
+}
+/^Duality gap/ {
+   absgap = $NF;
 }
 /^Integer / {
    if ($2 == "infeasible." || $2 == "infeasible") {

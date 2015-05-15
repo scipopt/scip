@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,7 +33,7 @@
 #include "scip/prob.h"
 #include "scip/stat.h"
 #include "scip/clock.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/mem.h"
 #include "scip/history.h"
 
@@ -74,7 +74,7 @@ SCIP_RETCODE SCIPstatCreate(
 
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistory, blkmem) );
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
-   SCIP_CALL( SCIPvbcCreate(&(*stat)->vbc, messagehdlr) );
+   SCIP_CALL( SCIPvisualCreate(&(*stat)->visual, messagehdlr) );
 
    (*stat)->status = SCIP_STATUS_UNKNOWN;
    (*stat)->marked_nvaridx = 0;
@@ -120,7 +120,7 @@ SCIP_RETCODE SCIPstatFree(
 
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
-   SCIPvbcFree(&(*stat)->vbc);
+   SCIPvisualFree(&(*stat)->visual);
 
    BMSfreeMemory(stat);
 
@@ -277,6 +277,11 @@ void SCIPstatReset(
    stat->marked_ncolidx = -1;
    stat->marked_nrowidx = -1;
 
+   stat->ndivesetlpiterations = 0;
+   stat->ndivesetcalls = 0;
+   stat->ndivesetlps = 0;
+   stat->totaldivesetdepth = 0;
+
    SCIPstatResetImplications(stat);
    SCIPstatResetPresolving(stat);
    SCIPstatResetPrimalDualIntegral(stat, set, FALSE);
@@ -300,6 +305,9 @@ void SCIPstatResetPresolving(
    assert(stat != NULL);
 
    stat->npresolrounds = 0;
+   stat->npresolroundsfast = 0;
+   stat->npresolroundsmed = 0;
+   stat->npresolroundsext = 0;
    stat->npresolfixedvars = 0;
    stat->npresolaggrvars = 0;
    stat->npresolchgvartypes = 0;
@@ -539,8 +547,8 @@ void SCIPstatUpdateMemsaveMode(
  *  @see: For completely disabling all timing of SCIP, consider setting the parameter timing/enabled to FALSE
  */
 void SCIPstatEnableOrDisableStatClocks(
-   SCIP_STAT*          stat,             /**< SCIP statistics */
-   SCIP_Bool           enable            /**< should the LP clocks be enabled? */
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   SCIP_Bool             enable              /**< should the LP clocks be enabled? */
    )
 {
    assert(stat != NULL);

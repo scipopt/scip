@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -29,6 +29,20 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** represents different confidence levels for (one-sided) hypothesis testing; in order to obtain two-sided confidence
+ *  levels, calculate 2 * c - 1, i.e., if the one-sided confidence level is 90 %, the two-sided level is 80 %
+ */
+enum SCIP_Confidencelevel
+{
+   SCIP_CONFIDENCELEVEL_MIN = 0,    /**< one-sided confidence level 75 %, two-sided 50 % */
+   SCIP_CONFIDENCELEVEL_LOW = 1,    /**< (one-sided) confidence level 87.5 %, two-sided 75 % */
+   SCIP_CONFIDENCELEVEL_MEDIUM = 2, /**< (one-sided) confidence level 90 %, two-sided 80 % */
+   SCIP_CONFIDENCELEVEL_HIGH = 3,   /**< (one-sided) confidence level 95 %, two-sided 90 % */
+   SCIP_CONFIDENCELEVEL_MAX = 4     /**< (one-sided) confidence level 97.5 %, two-sided 95 % */
+};
+typedef enum SCIP_Confidencelevel SCIP_CONFIDENCELEVEL;
+
 
 /** Sparse solution data structure
  *

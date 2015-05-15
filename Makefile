@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -43,7 +43,7 @@ include $(SCIPDIR)/make/make.project
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		=	3.1.1
+VERSION		=	3.1.1.1
 SCIPGITHASH	=
 SOFTLINKS	=
 MAKESOFTLINKS	=	true
@@ -154,7 +154,7 @@ FLAGS		+=	-I$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/include/coin
 LPILIBOBJ	=	lpi/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
-LPIINSTMSG	=	"  -> \"clp.*\" is a directory containing the Clp installation, i.e., \"clp.*/include/coin/ClpModel.hpp\" should exist.\n"
+LPIINSTMSG	=	"  -> \"clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)\" is the path to the Clp installation directory, i.e., \"<Clp-path>/include/coin/ClpModel.hpp\" should exist.\n"
 endif
 
 LPSOPTIONS	+=	qso
@@ -196,7 +196,7 @@ ALLSRC		+=	$(LPILIBSRC)
 
 
 #-----------------------------------------------------------------------------
-# NLP Solver Interfaces and expression interpreter 
+# NLP Solver Interfaces and expression interpreter
 #-----------------------------------------------------------------------------
 
 NLPILIBCOBJ	= nlpi/nlpi.o \
@@ -293,10 +293,12 @@ SCIPLIBSHORTNAME=	scip
 SCIPLIBNAME	=	$(SCIPLIBSHORTNAME)-$(VERSION)
 SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_cloud.o \
+			scip/branch_distribution.o \
 			scip/branch_fullstrong.o \
 			scip/branch_inference.o \
 			scip/branch_leastinf.o \
 			scip/branch_mostinf.o \
+			scip/branch_multaggr.o \
 			scip/branch_pscost.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
@@ -335,11 +337,13 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_coefdiving.o \
 			scip/heur_crossover.o \
 			scip/heur_dins.o \
+			scip/heur_distributiondiving.o \
 			scip/heur_dualval.o \
 			scip/heur_feaspump.o \
 			scip/heur_fixandinfer.o \
 			scip/heur_fracdiving.o \
 			scip/heur_guideddiving.o \
+			scip/heur_indicator.o \
 			scip/heur_intdiving.o \
 			scip/heur_intshifting.o \
 			scip/heur_linesearchdiving.o \
@@ -380,11 +384,16 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_components.o \
 			scip/presol_convertinttobin.o \
 			scip/presol_domcol.o\
-			scip/presol_dualinfer.o \
+			scip/presol_dualagg.o\
+			scip/presol_dualinfer.o\
 			scip/presol_gateextraction.o \
+			scip/presol_implfree.o\
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
+			scip/presol_redvub.o \
 			scip/presol_trivial.o \
+			scip/presol_tworowbnd.o \
+			scip/presol_stuffing.o \
 			scip/prop_dualfix.o \
 			scip/prop_genvbounds.o \
 			scip/prop_obbt.o \
@@ -415,6 +424,8 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_clique.o \
 			scip/sepa_closecuts.o \
 			scip/sepa_cmir.o \
+			scip/sepa_disjunctive.o \
+			scip/sepa_eccuts.o \
 			scip/sepa_flowcover.o \
 			scip/sepa_gomory.o \
 			scip/sepa_impliedbounds.o \
@@ -426,7 +437,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_zerohalf.o
 
 SCIPLIBOBJ	=	scip/branch.o \
-			scip/buffer.o \
 			scip/clock.o \
 			scip/conflict.o \
 			scip/cons.o \
@@ -434,6 +444,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/debug.o \
 			scip/dialog.o \
 			scip/disp.o \
+			scip/dive.o \
 			scip/event.o \
 			scip/fileio.o \
 			scip/heur.o \
@@ -442,6 +453,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/interrupt.o \
 			scip/intervalarith.o \
 			scip/lp.o \
+			scip/matrix.o \
 			scip/mem.o \
 			scip/misc.o \
 			scip/nlp.o \
@@ -469,7 +481,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/stat.o \
 			scip/tree.o \
 			scip/var.o \
-			scip/vbc.o \
+			scip/visual.o \
 			tclique/tclique_branch.o \
 			tclique/tclique_coloring.o \
 			tclique/tclique_graph.o \
@@ -619,79 +631,93 @@ endif
 splint:		$(SCIPLIBSRC) $(LPILIBSRC)
 		-rm -f splint.out
 ifeq ($(FILES),)
-		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$^) &>> splint.out;'
+		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$^) >> splint.out;'
 else
-		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$(FILES)) &>> splint.out;'
+		$(SHELL) -c '$(SPLINT) -I$(SRCDIR) -I/usr/include/linux $(FLAGS) $(SPLINTFLAGS) $(filter %.c %.h,$(FILES)) >> splint.out;'
 endif
 
 .PHONY: doc
-doc: 		
+doc:
 		cd doc; $(DOXY) $(MAINSHORTNAME).dxy ; $(DOXY) $(MAINSHORTNAME)devel.dxy
 
+.PHONY: docpreview
+docpreview:
+# generates preview for a list of files
+ifneq ($(FILES),)
+		echo "generating doxygen preview for $(FILES)"
+		cd doc; ( cat $(MAINSHORTNAME).dxy && echo 'FILE_PATTERNS = $(FILES)' ) | $(DOXY) -
+else
+		echo "please specify file(s) for which preview should be created"
+endif
 .PHONY: check
 check:		test
 
 .PHONY: test
 test:
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS);
 
 .PHONY: testcount
-testcount:		
+testcount:
 		cd check; \
 		$(SHELL) ./check_count.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS);
 
 .PHONY: testcplex
-testcplex:		
+testcplex:
 		cd check; \
 		$(SHELL) ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
+.PHONY: testxpress
+testxpress:
+		cd check; \
+		$(SHELL) ./check_xpress.sh $(TEST) $(XPRESS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+
 .PHONY: testmosek
-testmosek:		
+testmosek:
 		cd check; \
 		$(SHELL) ./check_mosek.sh $(TEST) $(MOSEK) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testcbc
-testcbc:		
+testcbc:
 		cd check; \
 		$(SHELL) ./check_cbc.sh $(TEST) $(CBC) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(CONTINUE);
 
 .PHONY: testcbcparallel
-testcbcparallel:                
+testcbcparallel:
 		cd check; \
                 $(SHELL) ./check_cbc.sh $(TEST) $(CBCPARALLEL) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(CONTINUE);
 
 .PHONY: testgurobi
-testgurobi:		
+testgurobi:
 		cd check; \
 		$(SHELL) ./check_gurobi.sh $(TEST) $(GUROBI) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testglpk
-testglpk:		
+testglpk:
 		cd check; \
 		$(SHELL) ./check_glpk.sh $(TEST) $(GLPK) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testsymphony
-testsymphony:		
+testsymphony:
 		cd check; \
 		$(SHELL) ./check_symphony.sh $(TEST) $(SYMPHONY) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testblis
-testblis:		
+testblis:
 		cd check; \
 		$(SHELL) ./check_blis.sh $(TEST) $(BLIS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: tags
 tags:
-		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/; 
+		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/; sed 's!\#undef .*!!g' TAGS > tags; mv tags TAGS
 
-# include target to detect the current git hash 
+# include target to detect the current git hash
 -include make/local/make.detectgithash
 
 # this empty target is needed for the SCIP release versions
 githash::      # do not remove the double-colon
 
-# include local targets 
+# include local targets
 -include make/local/make.targets
 
 # include install/uninstall targets
@@ -712,7 +738,7 @@ endif
 .PHONY: testgams
 testgams:
 		cd check; \
-		$(SHELL) ./check_gamscluster.sh $(TEST) $(TESTGAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy "$(CLIENTTMPDIR)" 1 true;
+		$(SHELL) ./check_gamscluster.sh $(TEST) $(TESTGAMS) "$(GAMSSOLVER)" $(SETTINGS) $(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) "$(CONVERTSCIP)" local dummy dummy "$(CLIENTTMPDIR)" 1 true $(SETCUTOFF);
 
 $(LPILIBLINK):	$(LPILIBFILE)
 		@rm -f $@
@@ -760,7 +786,7 @@ $(MAINLINK) $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && $(LN_s) $(notdir $(MAINFILE)) $(notdir $@)
 
-$(OBJDIR):	
+$(OBJDIR):
 		@-mkdir -p $(OBJDIR)
 
 $(BINOBJDIR):	| $(OBJDIR)
@@ -772,10 +798,10 @@ $(LIBOBJDIR):	| $(OBJDIR)
 $(LIBOBJSUBDIRS):	| $(LIBOBJDIR)
 		@-mkdir -p $(LIBOBJSUBDIRS)
 
-$(LIBDIR):	
+$(LIBDIR):
 		@-mkdir -p $(LIBDIR)
 
-$(BINDIR):	
+$(BINDIR):
 		@-mkdir -p $(BINDIR)
 
 .PHONY: clean
@@ -908,7 +934,7 @@ endif
 $(OBJSCIPLIBFILE):	$(OBJSCIPLIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)
 		@echo "-> generating library $@"
 		-rm -f $@
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(OBJSCIPLIBOBJFILES) 
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(OBJSCIPLIBOBJFILES)
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif
@@ -924,7 +950,7 @@ endif
 $(NLPILIBFILE):	$(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)
 		@echo "-> generating library $@"
 		-rm -f $@
-		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES) 
+		$(LIBBUILD) $(LIBBUILDFLAGS) $(LIBBUILD_o)$@ $(NLPILIBOBJFILES) $(NLPILIBSCIPOBJFILES)
 ifneq ($(RANLIB),)
 		$(RANLIB) $@
 endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -603,8 +603,8 @@ SCIP_DECL_HEURFREE(heurFreeOptcumulative)
 
       for( a = 0; a < heurdata->machineassignments[m]->nassignments; ++a )
       {
-         SCIPfreeBlockMemoryArray(scip, &(heurdata->machineassignments[m]->vars[a]), heurdata->machines[m])
-         SCIPfreeBlockMemoryArray(scip, &(heurdata->machineassignments[m]->solvals[a]), heurdata->machines[m])
+         SCIPfreeBlockMemoryArray(scip, &(heurdata->machineassignments[m]->vars[a]), heurdata->machines[m]);
+         SCIPfreeBlockMemoryArray(scip, &(heurdata->machineassignments[m]->solvals[a]), heurdata->machines[m]);
       }
 
       SCIPfreeBlockMemoryArray(scip, &(heurdata->machineassignments[m]->nones), heurdata->machineassignments[m]->sassignments);
@@ -671,7 +671,8 @@ SCIP_DECL_HEUREXEC(heurExecOptcumulative)
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("apply optcumulative heuristic at node %lld\n", SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
+   SCIPdebugMessage("apply optcumulative heuristic at node %"SCIP_LONGINT_FORMAT"\n",
+         SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
 
    *result = SCIP_DIDNOTFIND;
 

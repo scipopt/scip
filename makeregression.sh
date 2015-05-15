@@ -1,67 +1,42 @@
 #!/bin/bash
-# 
+#
 # This script runs a regression test for SCIP
 #
-# As input it optionally expects the path to SCIP. If no path is given the
-# current directory is assumed to be the SCIP path. This optional argument
-# is needed to be able to restart the script via a cron job.
+# As input it optionally expects the parameter LPS - default is LPS=spx
 #
 
-
 SCRIPTNAME="makeregression.sh"
-SCIPDIR=$1
 
-# check if the SCIP directory is given
-if [ -z ${SCIPDIR} ];
+SCIPDIR=`pwd`
+
+LPS=$1
+
+# check which LP solver to use
+if [ -z ${LPS} ];
 then
-    SCIPDIR=`pwd`
+    LPS=spx
 fi
-
-# move into the SCIP directory; this is necessary due the cron job
-cd $SCIPDIR
 
 # email variables
 ADMINEMAIL=miltenberger@zib.de
 LPIPDEVELOPERSEMAIL=lpip-developers@zib.de
+EMAILTO=$LPIPDEVELOPERSEMAIL
 EMAILFROM="Git <git@zib.de>"
 HOSTNAME=`hostname`
 
 # get current time stamp of the script  file
 SCRIPTTIMESTAMP=`stat -c %Y $SCRIPTNAME`
 
-CRONTABFILE="crontabfile"
-
 GITHASHFILE="check/results/githashorder"
 GITHASH=0
 
 # test run variables
-MEM=6544
+MEM=14000
 TIME=3600
 LOCK=false
 CONTINUE=false
 OPTS=(dbg opt)
-TESTS=(short MMM bugs)
-
-# first delete cron jobs if one exists
-crontab -r
-
-# check if the script exists; if not we have to stop
-if [ ! -f $SCRIPTNAME ];
-then
-    SUBJECT="[$HOSTNAME] killed $SCRIPTNAME"
-    echo "kill script due to not existing file $SCRIPTNAME in directory $SCIPDIR"
-    echo "killed" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
-    exit;
-fi
-
-# if file named "kill" exists, stop the regression test
-if [ -f "kill" ];
-then
-    SUBJECT="[$HOSTNAME] killed $SCRIPTNAME"
-    echo "kill script due to exists of file \"kill\" (rm kill)" 
-    echo "killed" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
-    exit;
-fi
+TESTS=(short MMM bugs SAP-MMP)
 
 # find last git hash for which a complete test was performed
 if [ -f $GITHASHFILE ];
@@ -75,165 +50,140 @@ fi
 SUBJECT="[$HOSTNAME] (Re)Start $SCRIPTNAME"
 echo "Time stamp $SCRIPTTIMESTAMP" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
 
-# pull new version form git repository
-git pull
 
-# to clean the local git repository perform a git status (to avoid a dirty hash)
-git status
-
-# get maybe new time stamp for makeregression.sh 
-NEWSCRIPTTIMESTAMP=`stat -c %Y $SCRIPTNAME`
-
-# get current git hash
-GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
+NEWSCRIPTTIMESTAMP=$SCRIPTTIMESTAMP
 
 # continue testing if makeregression.sh did not change
 while [ $NEWSCRIPTTIMESTAMP -eq $SCRIPTTIMESTAMP ]
 do
     # backup current download lists of SCIP and SoPlex
-    YEAR=`date +%Y`
-    MONTH=`date +%m`
-    DAY=`date +%d`
-    cp /www/Abt-Optimization/scip/counter/users.dat ~/download-counter/scip-$YEAR-$MONTH-$DAY-users.dat
-    cp /www/Abt-Optimization/soplex/counter/users.dat ~/download-counter/soplex-$YEAR-$MONTH-$DAY-users.dat
-    echo "created backups of download statistics"
-
-    # if file named "kill" exist, stop the regression test
-    if [ -f "kill" ];
-    then
-	SUBJECT="[$HOSTNAME] killed $SCRIPTNAME"
-	echo "kill script due to exists of file \"kill\" (rm kill)" 
-	echo "killed" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
-	exit;
-    fi
-
-    echo "get current SoPlex version"
-    cd ../soplex
-    git pull
-    make
-    cd ../scip
-
-    echo "run regression test"
+#     YEAR=`date +%Y`
+#     MONTH=`date +%m`
+#     DAY=`date +%d`
+#     cp /www/Abt-Optimization/scip/counter/users.dat ~/download-counter/scip-$YEAR-$MONTH-$DAY-users.dat
+#     cp /www/Abt-Optimization/soplex/counter/users.dat ~/download-counter/soplex-$YEAR-$MONTH-$DAY-users.dat
+#     echo "created backups of download statistics"
 
     for OPT in ${OPTS[@]}
     do
-        # compile SCIP in debug or opt mode
-        make OPT=$OPT VERSION=$GITHASH ZIMPL=true clean
-        make OPT=$OPT VERSION=$GITHASH ZIMPL=true
-	
+
         for TEST in ${TESTS[@]}
         do
+            # pull and compile SoPlex
+            cd ../soplex
+            git pull
+            make
+
+            # pull new version from git repository
+            cd ../scip
+            git pull
+
+            # to clean the local git repository perform a git status (to avoid a dirty hash)
+            git status
+
+            # get current git hash
+            GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
+
+            # compile SCIP in debug or opt mode
+            make OPT=$OPT VERSION=$GITHASH LPS=$LPS ZIMPL=true clean
+            make OPT=$OPT VERSION=$GITHASH LPS=$LPS ZIMPL=true
+
             # run test
-            make OPT=$OPT VERSION=$GITHASH TIME=$TIME LOCK=$LOCK CONTINUE=$CONTINUE TEST=$TEST MEM=$MEM test
+            make OPT=$OPT VERSION=$GITHASH LPS=$LPS TIME=$TIME LOCK=$LOCK CONTINUE=$CONTINUE TEST=$TEST MEM=$MEM test
 
             # remove tex and pav file
             rm -f check/results/check.$TEST.*$GITHASH*tex
             rm -f check/results/check.$TEST.*$GITHASH*pav
 
+            BASEFILE="check/results/check.$TEST.*$GITHASH.*.$OPT.$LPS"
+
             # check if fail occurs
-            NFAILS=`grep -c fail check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
-            NABORTS=`grep -c abort check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
-            NREADERRORS=`grep -c readerror check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
+            NFAILS=`grep -c fail $BASEFILE.*res`
+            NABORTS=`grep -c abort $BASEFILE.*res`
+            NREADERRORS=`grep -c readerror $BASEFILE.*res`
 
-	    # only send fail mail to the group if the occurs on MMM or short
-	    if [ "$TEST" == "bugs" ]
-	    then
-		RECEIVER=$ADMINEMAIL
-	    else
-		EMAILTO=$LPIPDEVELOPERSEMAIL
-	    fi
-
-	    # construct string which shows the destination of the out, err, and res files
-	    ERRORFILE=`ls check/results/check.$TEST.*$GITHASH.*.$OPT.*.err`
-	    OUTFILE=`ls check/results/check.$TEST.*$GITHASH.*.$OPT.*.out`
-	    RESFILE=`ls check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
-	    DESTINATION="$SCIPDIR/$OUTFILE \n$SCIPDIR/$ERRORFILE \n$SCIPDIR/$RESFILE"
+            # construct string which shows the destination of the out, err, and res files
+            ERRORFILE=`ls $BASEFILE.*.err`
+            OUTFILE=`ls $BASEFILE.*.out`
+            RESFILE=`ls $BASEFILE.*.res`
+            DESTINATION="$SCIPDIR/$OUTFILE \n$SCIPDIR/$ERRORFILE \n$SCIPDIR/$RESFILE"
 
             # check read fails
             if [ $NFAILS -gt 0 ];
             then
-                SUBJECT="[FAIL] [$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
-		ERRORINSTANCES=`grep fail check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
+                SUBJECT="[FAIL] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
+                ERRORINSTANCES=`grep fail $BASEFILE.*.res`
                 echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
 
             # check read errors
             if [ $NREADERRORS -gt 0 ];
             then
-                SUBJECT="[READERROR] [$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
-		ERRORINSTANCES=`grep readerror check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
+                SUBJECT="[READERROR] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
+                ERRORINSTANCES=`grep readerror $BASEFILE.*.res`
                 echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
 
             # check aborts
             if [ $NABORTS -gt 0 ];
             then
-                SUBJECT="[ABORT] [$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
-		ERRORINSTANCES=`grep abort check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
-                echo -e "$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+                SUBJECT="[ABORT] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
+                ERRORINSTANCES=`grep abort $BASEFILE.*.res`
+                ASSERTINFO=`grep Assertion $BASEFILE.*.err`
+                echo -e "$ASSERTINFO \n$ERRORINSTANCES \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
             fi
 
             # check performance in opt mode
             if [ "$OPT" == "opt" ];
             then
-                NOK=`grep -c ok check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
-                NSOLVED=`grep -c solved check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
-                NTIMEOUTS=`grep -c timeouts check/results/check.$TEST.*$GITHASH.*.$OPT.*res`
+                NOK=`grep -c ok $BASEFILE.*res`
+                NSOLVED=`grep -c solved $BASEFILE.*res`
+                NTIMEOUTS=`grep -c timeouts $BASEFILE.*res`
 
-		if [ -f "check/results/check.$TEST.*$LASTGITHASH.*.$OPT.*res" ];
-		then
-                    NLASTTIMEOUTS=`grep -c timeouts check/results/check.$TEST.*$LASTGITHASH.*.$OPT.*res`
+                if [ -f "check/results/check.$TEST.*$LASTGITHASH.*.$OPT.*res" ];
+                then
+                    NLASTTIMEOUTS=`grep -c timeouts check/results/check.$TEST.*$LASTGITHASH.*.$OPT.$LPS.*res`
 
                     # check time outs
                     if [ $NTIMEOUTS -gt NLASTTIMEOUTS ];
                     then
-			SUBJECT="[TIMEOUT] [$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
-			grep timeouts check/results/check.$TEST.*$GITHASH.*.$OPT.*.res | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
+                    SUBJECT="[TIMEOUT] [$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
+                    grep timeouts $BASEFILE.*.res | mailx -s "$SUBJECT" -r "$EMAILFROM" $EMAILTO
                     fi
-		fi
+                fi
             fi
 
             # in any case send a mail to admin
-            SUBJECT="[$HOSTNAME] [OPT=$OPT] [GITHASH: $GITHASH] $TEST"
-	    RESULTS=`tail -8 check/results/check.$TEST.*$GITHASH.*.$OPT.*.res`
+            SUBJECT="[$HOSTNAME] [OPT=$OPT] [LPS=$LPS] [GITHASH: $GITHASH] $TEST"
+            RESULTS=`tail -8 $BASEFILE.*.res`
             echo -e "$RESULTS \n$DESTINATION" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL
         done
     done
-    
-    # all test are performed for the current hash
+
+    # last test was performed for the current hash
     echo $GITHASH >> $GITHASHFILE
-    
-    echo $GITHASH
+
     LASTGITHASH=$GITHASH
-    
+
     # wait until new version is available
     while [ "$GITHASH" == "$LASTGITHASH" ]
     do
         echo "wait for new version"
-	sleep 60
+        sleep 60
 
         # pull new version form git repository
         git pull
-	
-        # to clean the local git repository perform a git status (to avoid a dirty hash)
-	git status
 
-	NEWSCRIPTTIMESTAMP=`stat -c %Y $SCRIPTNAME`
-        
+        # to clean the local git repository perform a git status (to avoid a dirty hash)
+        git status
+
+        NEWSCRIPTTIMESTAMP=`stat -c %Y $SCRIPTNAME`
+
         # get current git hash
         GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
     done
 done
 
-# create crontab file for restarting the script
-echo "* * * * * $SCIPDIR/$SCRIPTNAME $SCIPDIR"  > $CRONTABFILE
-
-# set cron job to to restart script
-crontab $CRONTABFILE
-
-# remove cron tab file 
-rm -f $CRONTABFILE
-
 # send email to admin to indicate  that the script stopped
-SUBJECT="[$HOSTNAME] Stop $SCRIPTNAME"
+SUBJECT="[$HOSTNAME] $SCRIPTNAME [LPS=$LPS] has stopped - restart it"
 echo "Time stamp $NEWSCRIPTTIMESTAMP" | mailx -s "$SUBJECT" -r "$EMAILFROM" $ADMINEMAIL

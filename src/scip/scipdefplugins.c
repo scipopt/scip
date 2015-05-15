@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -82,11 +82,16 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolComponents(scip) );
    SCIP_CALL( SCIPincludePresolConvertinttobin(scip) );
    SCIP_CALL( SCIPincludePresolDomcol(scip) );
+   SCIP_CALL( SCIPincludePresolImplfree(scip) );
+   SCIP_CALL( SCIPincludePresolDualagg(scip) );
    SCIP_CALL( SCIPincludePresolDualinfer(scip) );
    /*SCIP_CALL( SCIPincludePresolGateextraction(scip) );*/
    SCIP_CALL( SCIPincludePresolImplics(scip) );
    SCIP_CALL( SCIPincludePresolInttobinary(scip) );
+   SCIP_CALL( SCIPincludePresolRedvub(scip) );
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
+   SCIP_CALL( SCIPincludePresolTworowbnd(scip) );
+   SCIP_CALL( SCIPincludePresolStuffing(scip) );
    SCIP_CALL( SCIPincludeNodeselBfs(scip) );
    SCIP_CALL( SCIPincludeNodeselBreadthfirst(scip) );
    SCIP_CALL( SCIPincludeNodeselDfs(scip) );
@@ -96,10 +101,12 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeNodeselUct(scip) );
    SCIP_CALL( SCIPincludeBranchruleAllfullstrong(scip) );
    SCIP_CALL( SCIPincludeBranchruleCloud(scip) );
+   SCIP_CALL( SCIPincludeBranchruleDistribution(scip) );
    SCIP_CALL( SCIPincludeBranchruleFullstrong(scip) );
    SCIP_CALL( SCIPincludeBranchruleInference(scip) );
    SCIP_CALL( SCIPincludeBranchruleLeastinf(scip) );
    SCIP_CALL( SCIPincludeBranchruleMostinf(scip) );
+   SCIP_CALL( SCIPincludeBranchruleMultAggr(scip) );
    SCIP_CALL( SCIPincludeBranchrulePscost(scip) );
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
@@ -109,12 +116,14 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
    SCIP_CALL( SCIPincludeHeurCrossover(scip) );
    SCIP_CALL( SCIPincludeHeurDins(scip) );
+   SCIP_CALL( SCIPincludeHeurDistributiondiving(scip) );
    SCIP_CALL( SCIPincludeHeurDualval(scip) );
    SCIP_CALL( SCIPincludeHeurFeaspump(scip) );
    SCIP_CALL( SCIPincludeHeurFixandinfer(scip) );
    SCIP_CALL( SCIPincludeHeurFracdiving(scip) );
    SCIP_CALL( SCIPincludeHeurGuideddiving(scip) );
    SCIP_CALL( SCIPincludeHeurZeroobj(scip) );
+   SCIP_CALL( SCIPincludeHeurIndicator(scip) );
    SCIP_CALL( SCIPincludeHeurIntdiving(scip) );
    SCIP_CALL( SCIPincludeHeurIntshifting(scip) );
    SCIP_CALL( SCIPincludeHeurLinesearchdiving(scip) );
@@ -154,6 +163,8 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeSepaClique(scip) );
    SCIP_CALL( SCIPincludeSepaClosecuts(scip) );
    SCIP_CALL( SCIPincludeSepaCmir(scip) );
+   SCIP_CALL( SCIPincludeSepaEccuts(scip) );
+   SCIP_CALL( SCIPincludeSepaDisjunctive(scip) );
    SCIP_CALL( SCIPincludeSepaFlowcover(scip) );
    SCIP_CALL( SCIPincludeSepaGomory(scip) );
    SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );

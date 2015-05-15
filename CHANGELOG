@@ -1,3 +1,243 @@
+SCIP version NEXT
+==================
+
+features:
+- obbt propagator applies now additional separation and propagation in order to learn stronger and more bound tightenings
+- possible to change objective coefficients during probing mode
+- variable histories can be transferred between sub-SCIPs solved by LNS heuristics and the component presolver
+  and the main SCIP to reuse this information.
+- tighter reliability notions introduced for reliability branching, based on pseudo-cost relative errors
+  and comparing candidates with the best pseudo-candidate using a 2-sample student-T test. These methods
+  are used in disjunction with the existing reliability notion that uses a fixed number as reliability
+  threshold for every variable before turning off strong-branching. This means, the classical method
+  must be turned off by setting parameters minreliable and maxreliable to 0. The behavior is
+  controlled through several parameters.
+- new distribution branching rule to base decisions on row activity (normal) distribution over domain space
+- new heuristic heur_indicator that tries to make partial solutions with indicator constraints feasible. It also
+  tries to improve them (or external solutions) by a one-opt local search.
+- can now output information for BAK: Branch-and-bound Analysis Kit
+- added scripts check_xpress.awk, check_xpress.sh, evalcheck_xpress.sh and check_cluster_xpress.sh and target
+  "testclusterxpress" and "testxpress" in Makefile
+- the MPS reader can now read semi-integer variables, they are handled by creating bound disjunction constraints
+- the original problem can now be permuted directly after reading (if misc/permutationseed has value >= 0)
+- added methods to compute strongly connected components with Tarjan's Algorithm
+- improved clique and variable bound heuristics
+- the MPS reader can now handle objective constants given as (the negation of) the RHS of the objective row
+- we can now upgrade quadratic constraints with one bilinear term to SOC constraints
+- new parameter "misc/outputorigsol" to control whether at the end of a command line run the solution should be output
+  in the orignal space
+- new score in hybrid reliability pseudocost branching that prefers nonlinear variables when solving MINLPs
+- new heuristic (heur_bound) which fixes all integer variables to their lower/upper bounds and solves the remaining LP
+- new branching rule multaggr which allows to branch on general disjunctions defined by fractional multi-aggregated variables
+- started support for user-defined operators in expression trees/graphs (see SCIPexprCreateUser()),
+  interface will likely change again in future SCIP versions
+- in the AMPL interface, variable and constraint attributes (flags) can now be set via suffixes, where 0 (unset) stands for the default,
+  1 for TRUE, and other values for FALSE; see SCIPcreateVar() and SCIPcreateCons() for their meaning;
+  for variables, "initial" and "removable" are recognized;
+  for constraints, "initial", "separate", "enforce", "check", "propagate", "dynamic", and "removable" are recognized
+- Improved coordination of presolvers. There are three timings for presolvers now, FAST, MEDIUM, and EXHAUSTIVE.
+  Each presolving callback can specify one or more of these timings in which it will be called later.
+  Within a presolving method, the current timing can be checked and the algorithms to be performed selected based on
+  the timing. In one presolving round, first all presolving methods with timing FAST are called, sorted by priority.
+  If they found enough reductions, a new round is started, otherwise, all presolving methods with timing MEDIUM are
+  called. Again, with enough reductions, a new presolving round is started, too few reductions lead to running
+  the EXHAUSTIVE presolvers. Similar to the delay concept used before, we are not neccessarily running all EXHAUSTIVE
+  presolvers but stop as soon as one of them found enough reductions, starting a new presolving round immediately.
+- new branching rules for SOS1 constraints for branching on a neighborhood or a complete bipartite subgraph of
+  the conflict graph. In addition to variable domain fixings, it is sometimes also possible to add complementarity
+  constraints to the branching nodes. This results in a nonstatic conflict graph, which may change dynamically
+  with every branching node.
+- modified diving heuristics to handle SOS1 constraints
+- improved separation procedure of SOS1 constraint handler, including bound (clique) cuts and implied bound cuts
+- new disjunctive cut separator for SOS1 constraints
+- new presolving components for SOS1 constraints, including bound tightening and clique extension
+- added method to propagate implications of SOS1 variables
+- convex quadratic contraints can now generate gradient cuts which are supporting to the feasible region
+- new edge-concave cut separator for quadratic constraints
+- SoPlex interface can now (re)store dual steepest edge weights
+
+parameters:
+- new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
+  (set to FALSE for static order) (default is FALSE)
+- new parameter "heuristics/shiftandpropagate/maxcutoffquot" to select a maximum percentage of allowed cutoffs before stopping the heuristic
+  (default is 0.0)
+- new parameter "limits/autororestart" for triggering an automatic restart after this many nodes, or -1 for no auto restart [default is -1]
+- new parameter "separating/cutselrestart" for cut selection during restart copy process ('a'ge, activity 'q'uotient) [default is 'a']
+- new parameter "separating/cutselsubscip" for cut selection for sub SCIPs ('a'ge, activity 'q'uotient) [default is 'a']
+- new parameter "branching/relpscost/userelerrorreliability" to enable relative error based reliability
+- new parameter "branching/relpscost/lowerrortol" to define a lower reliability threshold for relative error based reliability
+- new parameter "branching/relpscost/higherrortol" to define the highest reliability threshold for relative error based reliability
+- new parameter "branching/relpscost/usehyptestforreliability" to enable strong branching decisions based on a 2-sample student-T test
+  of all prior pseudo-cost observations   between the best pseudo-candidate and the candidate for which to decide whether strong-branching
+  should be applied
+- new parameter "branching/relpscost/usedynamicconfidence" to use a dynamic confidence level based on the amount of
+  strong-branching simplex-iterations compared to the overall simplex iterations (default is FALSE)
+- new parameter "branching/relpscost/confidencelevel" to set the confidence level to be used by statistical tests
+- new parameter "branching/relpscost/skipbadinitcands" for skipping strong-branching candidates whose estimated gain
+  is significantly worse than the one of the locally best (sb or pseudo) candidate
+- rowrepswitch set to 2.0, so row representation is activated if LP has at least 2 times more rows than columns
+- rename parameter "vbc/filename" to "visual/vbcfilename"
+- rename parameter "vbc/realtime" to "visual/realtime"
+- rename parameter "vbc/dispsols" to "visual/dispsols"
+- added parameter to switch pseudo cost update in diving heuristics (enabled by default)
+- one can now set emphasis parameters at the beginning of a settings file; it should start with "emphasis:" and
+  the contain the emphasis string, e.g., "emphasis: feasibility" or "emphasis: heuristics off".
+- new parameter "heur/indicator/improvesols" that turns on the improvement of external solutions by one-opt
+- new advanced parameter "constraints/linear/rangedrowpropagation" to disabled newly implemented propagtion algorithm
+  for ranged rows and equations
+- new advanced parameter "constraints/linear/multaggrremove" to perform multi-aggregations in linear constraint handler
+  only if the constraint can be removed afterwards
+- at the end of a command line run the best solution can now be output in the orignal space
+- new advanced parameter "branching/relpscost/nlscoreweight" for weight of nonlinear score when branching on MINLPs
+- new parameter "constraints/SOS1/maxextensions" to define maximal number of extensions that will be computed for each SOS1 constraint in
+  presolving
+- new parameter "constraints/SOS1/maxtightenbds" to define the maximal number of bound tightening rounds per presolving round
+- new parameter "constraints/SOS1/updateconflpresol" to update the conflict graph during the presolving procedure
+- new parameter "constraints/SOS1/maxsosadjacency" to define that the adjacency matrix of the conflict graph is not created in presolving if
+  the number of SOS1 variables is too large
+- new parameter "constraints/SOS1/conflictprop" to define whether to use conflict graph propagation
+- new parameter "constraints/SOS1/implprop" to define whether to use implication graph propagation
+- new parameter "constraints/SOS1/sosconsprop" to define whether to use SOS1 constraint propagation
+- new parameter "constraints/SOS1/neighbranch" to branch on a neighborhood of the conflict graph
+- new parameter "constraints/SOS1/bipbranch" to branch on a complete bipartite subgraph of the conflict graph
+- new parameter "constraints/SOS1/sos1branch" to branch on a single SOS1 constraint, i.e., a clique of the conflict graph
+- new parameter "constraints/SOS1/fixnonzero": If neighborhood branching is used, then fix the branching variable (if positive in sign)
+  to the value of the feasibility tolerance
+- new parameter "constraints/SOS1/addcomps" to add local complementarity constraints to the branching nodes (can be used in combination
+  with neighborhood or bipartite branching)
+- new parameter "constraints/SOS1/maxaddcomps" to define the maximal number of complementarity constraints added per branching node
+- new parameter "constraints/SOS1/addcompsdepth" to define the maximal depth for adding complementarity constraints
+- new parameter "constraints/SOS1/addcompsfeas" to define a minimal feasibility value for local complementarity constraints in order to be
+  added to the branching node
+- new parameter "constraints/SOS1/addbdsfeas" to define a minimal feasibility value for local bound (clique) inequalities in order to be
+  added to the branching node
+- new parameter "constraints/SOS1/nstrongrounds" to define the maximal number of strong branching rounds to perform for each node (only
+  available for neighborhood and bipartite branching)
+- new parameter "constraints/SOS1/nstrongiter" to define the maximal number LP iterations to perform for each strong branching round
+- new parameter "constraints/SOS1/boundcutsfromsos1" to define whether to separate bound (clique) inequalities from initial SOS1 constraints
+- new parameter "constraints/SOS1/boundcutsfromgraph" to define whether to separate bound (clique) inequalities from the conflict graph
+- new parameter "constraints/SOS1/boundcutsfreq" to define the frequency for separating bound (clique) cuts
+- new parameter "constraints/SOS1/boundcutsdepth" to define the node depth of separating bound (clique) cuts
+- new parameter "constraints/SOS1/maxboundcuts" to define the maximal number of bound (clique) cuts separated per branching node
+- new parameter "constraints/SOS1/maxboundcutsroot" to define the maximal number of bound (clique) cuts separated per iteration in the root
+  node
+- new parameter "constraints/SOS1/strthenboundcuts" to define whether to strengthen bound (clique) cuts in case bound variables are
+  available
+- new parameter "constraints/SOS1/implcutsfreq" to define the frequency for separating implied bound cuts
+- new parameter "constraints/SOS1/implcutsdepth" to define the node depth of separating implied bound cuts
+- new parameter "constraints/SOS1/maximplcuts" to define the maximal number of implied bound cuts separated per branching node
+- new parameter "constraints/SOS1/maximplcutsroot" to define the maximal number of implied bound cuts separated per iteration in the root
+  node
+- new parameter "separating/disjunctive/maxrank" to define the maximal permissible rank of a disjunctive cut that could not be scaled to
+  integral coefficients
+- new parameter "separating/disjunctive/maxrankintegral" to define the maximal permissible rank of a disjunctive cut that could be scaled
+  to integral coefficients
+- new parameter "separating/disjunctive/maxweightrange" to define the maximal valid range of simplex tableau row weights
+- new parameter "separating/disjunctive/maxdepth" to define the node depth of separating disjunctive cuts
+- new parameter "separating/disjunctive/maxrounds" to define the maximal number of separation rounds of disjunctive cuts in a branching node
+- new parameter "separating/disjunctive/maxinvcuts" to define the maximal number of disjunctive cuts investigated per iteration in a
+  branching node
+- new parameter "separating/disjunctive/maxinvcutsroot" to define the maximal number of disjunctive cuts investigated per iteration in the
+  root node
+- new parameter "separating/disjunctive/maxconsdelay" to delay separation of disjunctive cuts if number of SOS1 constraints is larger than
+  predefined value
+- new parameter "constraints/quadratic/gaugecuts" to enable convex quadratics to generate gradients cuts which are supporting
+- new parameter "constraints/quadratic/advanced/interiorcomputation" to select the way of computing and interior point for gauge cuts
+
+performance improvements:
+- adjusted (hard) diving heuristics to solve fewer LPs at shallow depths of the tree; after an LP was solved,
+  the next depth to perform an LP solve is determined dynamically based on the heuristic success so far
+  and the difference between the depth and the maximum dive depth; if more than one candidate should
+  be rounded, all candidates are sorted w.r.t. the diving score and then attempted in order of their score
+  unless their LP solution has already become infeasible from intermediate propagations.
+- all hard diving heuristics additionally consider indicator variables as candidate variables and try to
+  make indicator constraints feasible before passing a rounded solution to SCIPtrySol()
+- improved vartype upgradability from continuous to implicit variables in cons_linear.c, depending on their objective
+  coefficients
+- using sparsity information of the SoPlex LP
+- new presolving/propagation algorithm using the gcd for ranged rows and equations in cons_linear
+- improved propagation of SOS1 constraint handler using the information from a conflict
+
+interface:
+- new method SCIPwriteParam() to write a single parameter to a file
+- new methods SCIPcheckParam{Bool,Char,...}() to check whether a parameter value is within the feasible domain
+- new methods SCIPchgCoefLinear() and SCIPdelCoefLinear() to modify linear constraint during problem creation
+- new methods SCIPchgLhsQuadratic(), SCIPchgRhsQuadratic(), SCIPchgLinearCoefQuadratic(), SCIPchgSquareCoefQuadratic(),
+  and SCIPchgBilinCoefQuadratic() to modify quadratic constraints during problem creation
+- new methods SCIPgetFeasibilityQuadratic() and SCIPgetActivityQuadratic() to get the feasibility and activity of a quadratic
+  constraint in a given solution
+- new method SCIPcutGetLPActivityQuot() in pub_cutpool.h to get the potion of LP's where this cut was sharp in an optimal basis.
+- methods which support statistical tests in pub_misc.h, SCIPstudentTGetCriticalValue(), SCIPcomputeTwoSampleTTestValue() etc.
+- new enum SCIP_CONFIDENCE_LEVEL for different levels of confidence for statistical tests.
+- new struct SCIP_DIVESET that bundles options for SCIP's diving heuristics; all hard diving heuristics (those
+  without 'obj' at the beginning) create their diveset and store it in their heuristic data.
+- new callback SCIP_DECL_DIVESETGETSCORE to implement scoring function to guide diving
+- new method SCIPperformGenericDivingAlgorithm() that performs diving with periodic LP resolve according to
+  the diveset argument.
+- rename all file "*_vbc.?" to the more generic "*_visual.?"
+- submenu for setting "vbc" settings renamed to "visual"
+- rename SCIPdigraphGetSuccessorsDatas() -> SCIPdigraphGetSuccessorsData()
+- SCIPdigraphSetNSuccessors() sets the number of successors of some digraph node to a given value
+- added new sorting functions SCIPsortRealRealRealBoolBoolPtr(), SCIPsortDownRealRealRealBoolBoolPtr()
+- added new sorting functions SCIPsortIntIntIntReal(), SCIPsortDownIntIntIntReal()
+- added SCIPcomputeArraysIntersection() to compute the set intersection of two ordered arrays
+- added SCIPcomputeArraysSetminus() to compute the set difference of two ordered arrays
+- safe-guarded buffer array (re)allocations to check for negative size or size > INT_MAX
+- moved buffer memory handling to blockmemory/memory.?;
+  remove files type_buffer.h, struct_buffer.h buffer.h buffer.c;
+  removed functions SCIP*buffer*() from scip.? and replaced them by macros;
+  new function SCIPbuffermem() to get buffer memory;
+  redesigned buffer interface to be similar to block memory;
+  added checks for strange sizes
+- new function BMSallocClearBlockMemoryArray()/SCIPallocClearBlockMemoryArray() and
+  BMSallocClearBufferMemoryArray(), SCIPallocClearBufferArray() to allocate arrays that are initialized to 0
+- renamed SCIPconshdlrGetPropTimingmask() to SCIPconshdlrGetPropTiming(), new method SCIPconshdlrSetPropTiming()
+- removed SCIPconshdlrIsPresolvingDelayed() and SCIPconshdlrWasPresolvingDelayed()
+- new methods SCIPpresolGetTiming(), SCIPpresolSetTiming(), SCIP{conshdlr,prop}GetPresolTiming(), and
+  SCIP{conshdlr,prop}SetPresolTiming()
+- removed "delay(presol)" parameter from SCIPinclude{Conshdlr,Presol,Prop}() and added "(presol)timing" parameter
+- new parameter "presoltiming" for method SCIPpresolCons()
+- SCIPvarIsSOS1() returns whether some variable is involved in an SOS1 constraint
+- SCIPgetConflictgraphSOS1() gets conflict graph of SOS1 constraints
+- SCIPvarGetNodeSOS1() returns node of SOS1 variable in the conflict graph
+- SCIPnodeGetVarSOS1() returns SOS1 variable associated to some given node in the conflict graph
+- SCIPmakeSOS1sFeasible() based on solution values, fixes variables to zero to turn all SOS1 constraints feasible
+- SCIPsolveLinearProb() solves a linear problem of the form Ax=b for a regular square matrix A
+- new methods SCIPaddSquareLinearization(), SCIPaddSquareSecant(), SCIPaddBilinLinearization(), and SCIPaddBilinMcCormick()
+  in cons_quadratic.h to compute linear under- and overestimation for bilinear and quadratic terms
+
+fixed bugs:
+- fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)
+- try to handle fixings of multi-aggregated variable in cons_sos1 presolving and avoid error
+- fix potential memory leak in method SCIPgetConsCopy()
+- fix potential memory leak in method detectRedundantConstraints() of the knapsack constraint handler
+- fix potential memory leak in SoPlex LP interfaces when setting invalid basis
+
+
+SCIP version 3.1.2
+==================
+
+fixed bugs:
+- fixed bug in primal.c and tree.c by using SCIPinfinity() as a cutoffbound to delete child nodes
+- fixed bug in cons_indicator with handling local bounds
+- fixed bug in cons_quadratic.c which leads to an overflow when SCIP allocates memory for a dense matrix
+- fixed bug in lp.c which leads to wrong primal and dual feasibility
+- fixed wrong comparison when executing branching rule for external branching candidates
+- fixed bug in cons_abspower.c: do not generate cuts with infinity right-hand-side anymore
+- fixed wrong handling of infinite activities and primal values in sepastore.c and lp.c
+- fixed assert in cons_soc.c: now soc with 1 lhs variable are allowed
+- fixed bug that led to an erroneous warning about the clock type
+- fixed setting of enforcement flag for constraints created by reformulation in nonlinear constraint handlers
+- fixed bug in heur_nlpdiving.c: wrong counting of fix variables
+- fixed bug in cons_quadratic.c: do not generate linearization cuts for disabled constraints
+
+features:
+- extended expression parsing to support power, realpower, and signpower operators
+
+misc:
+- moved assertions in comparison methods from scip.c to set.c
+- added more checks to SCIP{alloc,realloc,duplicate}BufferArray() to handle overflows properly
+
 SCIP version 3.1.1
 ==================
 
@@ -67,6 +307,7 @@ fixed bugs:
 - fixed LP interface of CPLEX: functions getBInv* return the correct sign of the coefficients.
 
 performance improvements:
+- improved solving of LPs in OBBT propagator
 - improved activity-delta computation and thereby propagation for linear constraints
 - improved memory management of proximity heuristic
 - disabled statistic timing in all subscips via new parameter timing/statistictiming
@@ -103,6 +344,7 @@ parameters:
 Makefile:
 - allow to turn off block and buffer memory by the makefile parameters NOBLKMEM, NOBUFMEM, NOBLKBUFMEM;
   also remove the now superfluous makefiles for noblkmem, nobufmem, noblkbufmem
+
 
 SCIP version 3.1.0
 ==================

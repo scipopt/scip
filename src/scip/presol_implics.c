@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,7 +30,7 @@
 #define PRESOL_DESC            "implication graph aggregator"
 #define PRESOL_PRIORITY          -10000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
 
 
 /*
@@ -102,7 +102,6 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
       SCIP_BOUNDTYPE* impltypes[2];
       SCIP_Real* implbounds[2];
       int nimpls[2];
-      int nbinimpls[2];
       int varfixing;
       int i0;
       int i1;
@@ -118,7 +117,6 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
          impltypes[varfixing] = SCIPvarGetImplTypes(vars[v], (SCIP_Bool)varfixing);
          implbounds[varfixing] = SCIPvarGetImplBounds(vars[v], (SCIP_Bool)varfixing);
          nimpls[varfixing] = SCIPvarGetNImpls(vars[v], (SCIP_Bool)varfixing);
-         nbinimpls[varfixing] = SCIPvarGetNBinImpls(vars[v], (SCIP_Bool)varfixing);
       }
 
       /* scan implication arrays for equal variables */
@@ -129,23 +127,13 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
          int index0;
          int index1;
 
-         /* check if we are done with the binaries in one of the implication arrays -> switch to non-binaries */
-         if( (i0 < nbinimpls[0]) != (i1 < nbinimpls[1]) )
-         {
-            assert(i0 == nbinimpls[0] || i1 == nbinimpls[1]);
-            i0 = nbinimpls[0];
-            i1 = nbinimpls[1];
-            if( i0 == nimpls[0] || i1 == nimpls[1] )
-               break;
-         }
-
          /* scan the binary or non-binary part of the implication arrays */
          index0 = SCIPvarGetIndex(implvars[0][i0]);
          index1 = SCIPvarGetIndex(implvars[1][i1]);
          while( index0 < index1 )
          {
             i0++;
-            if( i0 == nbinimpls[0] || i0 == nimpls[0] )
+            if( i0 == nimpls[0] )
             {
                index0 = -1;
                break;
@@ -155,7 +143,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
          while( index1 < index0 )
          {
             i1++;
-            if( i1 == nbinimpls[1] || i1 == nimpls[1] )
+            if( i1 == nimpls[1] )
             {
                index1 = -1;
                break;
@@ -169,7 +157,6 @@ SCIP_DECL_PRESOLEXEC(presolExecImplics)
             assert(index0 >= 0);
             assert(i0 < nimpls[0]);
             assert(i1 < nimpls[1]);
-            assert((i0 < nbinimpls[0]) == (i1 < nbinimpls[1]));
             assert(implvars[0][i0] == implvars[1][i1]);
 
             if( impltypes[0][i0] == impltypes[1][i1] )
@@ -357,7 +344,7 @@ SCIP_RETCODE SCIPincludePresolImplics(
    presoldata = NULL;
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
          presolExecImplics,
          presoldata) );
 

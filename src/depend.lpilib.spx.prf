@@ -6,6 +6,11 @@ $(LIBOBJDIR)/lpi/lpi_spx.o: src/lpi/lpi_spx.cpp  \
     \
    \
     \
+   \
+    \
+    \
+    \
+   \
     \
     \
     \
@@ -15,10 +20,7 @@ $(LIBOBJDIR)/lpi/lpi_spx.o: src/lpi/lpi_spx.cpp  \
     \
     \
     \
-    \
-    \
-    \
-    \
+   \
    \
    \
    \

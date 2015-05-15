@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -549,50 +549,6 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the conflictgraph command */
-SCIP_DECL_DIALOGEXEC(SCIPdialogExecConflictgraph)
-{  /*lint --e{715}*/
-   SCIP_RETCODE retcode;
-   SCIP_Bool endoffile;
-   char* filename;
-
-   assert(nextdialog != NULL);
-
-   *nextdialog = NULL;
-
-   if( !SCIPisTransformed(scip) )
-   {
-      SCIPdialogMessage(scip, NULL, "cannot call method before problem was transformed\n");
-      SCIPdialoghdlrClearBuffer(dialoghdlr);
-   }
-   else
-   {
-      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
-      if( endoffile )
-      {
-         *nextdialog = NULL;
-         return SCIP_OKAY;
-      }
-
-      if( filename[0] != '\0' )
-      {
-         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
-
-         retcode = SCIPwriteImplicationConflictGraph(scip, filename);
-         if( retcode == SCIP_FILECREATEERROR )
-            SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
-         else
-         {
-            SCIP_CALL( retcode );
-         }
-      }
-   }
-
-   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
-
-   return SCIP_OKAY;
-}
-
 /** dialog execution method for the cliquegraph command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecCliquegraph)
 {  /*lint --e{715}*/
@@ -785,8 +741,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
 
    /* display list of constraint handlers */
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIPdialogMessage(scip, NULL, " constraint handler   chckprio enfoprio sepaprio sepaf propf eager  description\n");
-   SCIPdialogMessage(scip, NULL, " ------------------   -------- -------- -------- ----- ----- -----  -----------\n");
+   SCIPdialogMessage(scip, NULL, " Legend:\n");
+   SCIPdialogMessage(scip, NULL, "  prestim (presolve timing): 'f'ast, 'm'edium, 'e'xhaustive\n\n");
+   SCIPdialogMessage(scip, NULL, " constraint handler   chckprio enfoprio sepaprio sepaf propf eager prestim description\n");
+   SCIPdialogMessage(scip, NULL, " ------------------   -------- -------- -------- ----- ----- ----- ------- -----------\n");
    for( i = 0; i < nconshdlrs; ++i )
    {
       SCIPdialogMessage(scip, NULL, " %-20s ", SCIPconshdlrGetName(conshdlrs[i]));
@@ -799,6 +757,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
          SCIPconshdlrGetSepaFreq(conshdlrs[i]),
          SCIPconshdlrGetPropFreq(conshdlrs[i]),
          SCIPconshdlrGetEagerFreq(conshdlrs[i]));
+      SCIPdialogMessage(scip, NULL, "   %c", SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_FAST ? 'f' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c", SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_MEDIUM ? 'm' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c  ", SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE ? 'e' : ' ');
       SCIPdialogMessage(scip, NULL, "%s", SCIPconshdlrGetDesc(conshdlrs[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
@@ -1024,15 +985,22 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers)
 
    /* display list of presolvers */
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIPdialogMessage(scip, NULL, " presolver            priority  description\n");
-   SCIPdialogMessage(scip, NULL, " ---------            --------  -----------\n");
+   SCIPdialogMessage(scip, NULL, " Legend:\n");
+   SCIPdialogMessage(scip, NULL, "  priority:  presolver called before constraint handlers iff priority > 0\n");
+   SCIPdialogMessage(scip, NULL, "  timing:    'f'ast, 'm'edium, 'e'xhaustive\n\n");
+   SCIPdialogMessage(scip, NULL, "  maxrounds: -1: no limit, 0: off, >0: limited number of rounds\n\n");
+   SCIPdialogMessage(scip, NULL, " presolver            priority  timing  maxrounds  description\n");
+   SCIPdialogMessage(scip, NULL, " ---------            --------  ------  ---------  -----------\n");
    for( i = 0; i < npresols; ++i )
    {
       SCIPdialogMessage(scip, NULL, " %-20s ", SCIPpresolGetName(presols[i]));
       if( strlen(SCIPpresolGetName(presols[i])) > 20 )
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
-      SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpresolGetPriority(presols[i]),
-         SCIPpresolIsDelayed(presols[i]) ? 'd' : ' ');
+      SCIPdialogMessage(scip, NULL, "%8d  ", SCIPpresolGetPriority(presols[i]));
+      SCIPdialogMessage(scip, NULL, "   %c", SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_FAST ? 'f' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c", SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_MEDIUM ? 'm' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c  ", SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE ? 'e' : ' ');
+      SCIPdialogMessage(scip, NULL, "%9d  ", SCIPpresolGetMaxrounds(presols[i]));
       SCIPdialogMessage(scip, NULL, "%s", SCIPpresolGetDesc(presols[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
@@ -1110,8 +1078,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators)
 
    /* display list of propagators */
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIPdialogMessage(scip, NULL, " propagator           propprio  freq  presprio  description\n");
-   SCIPdialogMessage(scip, NULL, " ----------           --------  ----  --------  -----------\n");
+   SCIPdialogMessage(scip, NULL, " Legend:\n");
+   SCIPdialogMessage(scip, NULL, "  presprio: propagator presolving called before constraint handlers iff presprio > 0\n");
+   SCIPdialogMessage(scip, NULL, "  prestim (presolve timing): 'f'ast, 'm'edium, 'e'xhaustive\n\n");
+
+   SCIPdialogMessage(scip, NULL, " propagator           propprio  freq  presprio  prestim   description\n");
+   SCIPdialogMessage(scip, NULL, " ----------           --------  ----  --------  -------  -----------\n");
    for( i = 0; i < nprops; ++i )
    {
       SCIPdialogMessage(scip, NULL, " %-20s ", SCIPpropGetName(props[i]));
@@ -1119,7 +1091,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators)
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
       SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpropGetPriority(props[i]), SCIPpropIsDelayed(props[i]) ? 'd' : ' ');
       SCIPdialogMessage(scip, NULL, "%4d  ", SCIPpropGetFreq(props[i]));
-      SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpropGetPresolPriority(props[i]), SCIPpropIsPresolDelayed(props[i]) ? 'd' : ' ');
+      SCIPdialogMessage(scip, NULL, "%8d  ", SCIPpropGetPresolPriority(props[i]));
+      SCIPdialogMessage(scip, NULL, "    %c", SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_FAST ? 'f' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c", SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_MEDIUM ? 'm' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c  ", SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE ? 'e' : ' ');
       SCIPdialogMessage(scip, NULL, "%s", SCIPpropGetDesc(props[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
@@ -1442,6 +1417,48 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecNewstart)
    SCIP_CALL( SCIPfreeSolve(scip, TRUE) );
 
    *nextdialog = SCIPdialogGetParent(dialog);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the transform command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecTransform)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+   switch( SCIPgetStage(scip) )
+   {
+   case SCIP_STAGE_INIT:
+      SCIPdialogMessage(scip, NULL, "no problem exists\n");
+      break;
+
+   case SCIP_STAGE_PROBLEM:
+      SCIP_CALL( SCIPtransformProb(scip) );
+      break;
+
+   case SCIP_STAGE_TRANSFORMED:
+      SCIPdialogMessage(scip, NULL, "problem is already transformed\n");
+      break;
+
+   case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_INITPRESOLVE:
+   case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_PRESOLVED:
+   case SCIP_STAGE_EXITPRESOLVE:
+   case SCIP_STAGE_INITSOLVE:
+   case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_SOLVED:
+   case SCIP_STAGE_EXITSOLVE:
+   case SCIP_STAGE_FREETRANS:
+   case SCIP_STAGE_FREE:
+   default:
+      SCIPerrorMessage("invalid SCIP stage\n");
+      return SCIP_INVALIDCALL;
+   }
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
    return SCIP_OKAY;
 }
@@ -3409,6 +3426,19 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+#ifndef NDEBUG
+   /* transform problem (for debugging) */
+   if( !SCIPdialogHasEntry(root, "transform") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecTransform, NULL, NULL,
+            "transform", "transforms problem from original state", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, root, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+#endif
+
    /* optimize */
    if( !SCIPdialogHasEntry(root, "optimize") )
    {
@@ -3588,19 +3618,6 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             SCIPdialogExecWriteGenTransproblem, NULL, NULL,
             "gentransproblem",
             "write current node transformed problem with generic names to file (format is given by file extension, e.g., trans.{lp,rlp,cip,mps})",
-            FALSE, NULL) );
-      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
-      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
-   }
-
-   /* write conflictgraph */
-   if( !SCIPdialogHasEntry(submenu, "conflictgraph") )
-   {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
-            NULL,
-            SCIPdialogExecConflictgraph, NULL, NULL,
-            "conflictgraph",
-            "write binary variable implications of transformed problem as conflict graph to file",
             FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
@@ -4546,13 +4563,12 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }
 
-   /* set vbc */
-   if( !SCIPdialogHasEntry(setmenu, "vbc") )
+   /* set visualization */
+   if( !SCIPdialogHasEntry(setmenu, "visual") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &submenu,
-            NULL,
-            SCIPdialogExecMenu, NULL, NULL,
-            "vbc", "change parameters for VBC tool output", TRUE, NULL) );
+            NULL, SCIPdialogExecMenu, NULL, NULL,
+            "visual", "change parameters for visualization output", TRUE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, setmenu, submenu) );
       SCIP_CALL( SCIPreleaseDialog(scip, &submenu) );
    }

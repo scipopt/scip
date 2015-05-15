@@ -1,6 +1,8 @@
 # Copyright (C) 2012-2013 Robert Schwarz
 #   see file 'LICENSE' for details.
 
+from os.path import abspath
+
 cimport pyscipopt.scip as scip
 import sys
 
@@ -153,7 +155,7 @@ cdef class Solver:
 
     cdef _releaseVar(self, scip.SCIP_VAR* var):
         PY_SCIP_CALL(scip.SCIPreleaseVar(self._scip, &var))
-        
+
 
     # Setting the objective sense
     def setMinimise(self):
@@ -332,3 +334,7 @@ cdef class Solver:
     def setStringParam(self, name, value):
         name1 = str_conversion(name)
         PY_SCIP_CALL(scip.SCIPsetStringParam(self._scip, name1, value))
+
+    def readParams(self, file):
+        absfile = abspath(file)
+        PY_SCIP_CALL(scip.SCIPreadParams(self._scip, absfile))

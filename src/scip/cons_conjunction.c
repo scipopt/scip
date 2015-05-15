@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,8 +35,9 @@
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                               *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
+
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_FAST
 
 /*
  * Data structures
@@ -746,7 +747,7 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteConjunction) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseConjunction) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolConjunction, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYPRESOL) );
+         CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintConjunction) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransConjunction) );
 

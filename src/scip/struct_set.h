@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -27,7 +27,6 @@
 #include "scip/def.h"
 #include "scip/message.h"
 #include "scip/type_set.h"
-#include "scip/type_buffer.h"
 #include "scip/type_clock.h"
 #include "scip/type_paramset.h"
 #include "scip/type_event.h"
@@ -57,7 +56,8 @@ struct SCIP_Set
    SCIP_STAGE            stage;              /**< SCIP operation stage */
    SCIP*                 scip;               /**< very ugly: pointer to scip main data structure for callback methods */
    SCIP_PARAMSET*        paramset;           /**< set of parameters */
-   SCIP_BUFFER*          buffer;             /**< memory buffers for short living temporary objects */
+   BMS_BUFMEM*           buffer;             /**< memory buffers for short living temporary objects */
+   BMS_BUFMEM*           cleanbuffer;        /**< memory buffers for short living temporary objects init. to all zero */
    SCIP_READER**         readers;            /**< file readers */
    SCIP_PRICER**         pricers;            /**< variable pricers */
    SCIP_CONSHDLR**       conshdlrs;          /**< constraint handlers (sorted by check priority) */
@@ -131,7 +131,6 @@ struct SCIP_Set
    SCIP_Bool             branchrulesnamesorted;/**< are the branching rules sorted by name? */
    SCIP_Bool             nlpissorted;        /**< are the NLPIs sorted by priority? */
    SCIP_Bool             limitchanged;       /**< marks whether any of the limit parameters was changed */
-   SCIP_Bool             nlpenabled;         /**< marks whether an NLP relaxation should be constructed */
 
    /* branching settings */
    char                  branch_scorefunc;   /**< branching score function ('s'um, 'p'roduct, 'q'uotient) */
@@ -142,6 +141,7 @@ struct SCIP_Set
    SCIP_Real             branch_clamp;       /**< minimal fractional distance of branching point to a continuous variable' bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
    char                  branch_lpgainnorm;  /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
    SCIP_Bool             branch_delaypscost; /**< whether to delay pseudo costs updates for continuous variables to after separation */
+   SCIP_Bool             branch_divingpscost;/**< should pseudo costs be updated also in diving and probing mode? */
    SCIP_Bool             branch_forceall;    /**< should all strong branching children be regarded even if
                                               *   one is detected to be infeasible? (only with propagation) */
    SCIP_Bool             branch_checksbsol;  /**< should LP solutions during strong branching with propagation be checked for feasibility? */
@@ -215,6 +215,8 @@ struct SCIP_Set
 
    /* history settings */
    SCIP_Bool             history_valuebased; /**< should statistics be collected for variable domain value pairs? */
+   SCIP_Bool             history_allowmerge; /**< should variable histories be merged from sub-SCIPs whenever possible? */
+   SCIP_Bool             history_allowtransfer; /**< should variable histories be transferred to initialize SCIP copies? */
 
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */
@@ -232,6 +234,7 @@ struct SCIP_Set
    int                   limit_maxsol;       /**< maximal number of solutions to store in the solution storage */
    int                   limit_maxorigsol;   /**< maximal number of solutions candidates to store in the solution storage of the original problem */
    int                   limit_restarts;     /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
+   int                   limit_autorestartnodes;/**< nodes to trigger automatic restart */
 
    SCIP_Bool             istimelimitfinite;  /**< is the time limit finite */
 
@@ -315,6 +318,7 @@ struct SCIP_Set
    SCIP_Bool             misc_calcintegral;  /**< should SCIP calculate the primal dual integral value which may require
                                               *   a large number of additional clock calls (and decrease the performance)? */
    SCIP_Bool             misc_finitesolstore;/**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
+   SCIP_Bool             misc_outputorigsol; /**< should the best solution be transformed to the orignal space and be output in command line run? */
 
    /* node selection settings */
    char                  nodesel_childsel;   /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
@@ -378,9 +382,13 @@ struct SCIP_Set
    SCIP_Real             sepa_orthofac;      /**< factor to scale orthogonality of cut in separation score calculation */
    SCIP_Real             sepa_feastolfac;    /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
    SCIP_Real             sepa_primfeastol;   /**< primal feasibility tolerance derived from cut feasibility (set by sepastore, not a parameter) */
+   SCIP_Real             sepa_minactivityquot; /**< minimum cut activity quotient to convert cuts into constraints
+                                                *   during a restart (0.0: all cuts are converted) */
    char                  sepa_orthofunc;     /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
    char                  sepa_efficacynorm;  /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum, 's'um,
                                               *   'd'iscrete) */
+   char                  sepa_cutselrestart; /**< cut selection during restart ('a'ge, activity 'q'uotient) */
+   char                  sepa_cutselsubscip; /**< cut selection for sub SCIPs  ('a'ge, activity 'q'uotient) */
    int                   sepa_maxruns;       /**< maximal number of runs for which separation is enabled (-1: unlimited) */
    int                   sepa_maxrounds;     /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   sepa_maxroundsroot; /**< maximal number of separation rounds in the root node (-1: unlimited) */
@@ -401,10 +409,12 @@ struct SCIP_Set
    SCIP_Bool             time_rareclockcheck;/**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
    SCIP_Bool             time_statistictiming;  /**< should timing for statistic output be enabled? */
 
-   /* VBC tool settings */
-   char*                 vbc_filename;       /**< name of the VBC Tool output file, or - if no output should be created */
-   SCIP_Bool             vbc_realtime;       /**< should the real solving time be used instead of time step counter in VBC output? */
-   SCIP_Bool             vbc_dispsols;       /**< should the node where solutions are found be visualized? */
+   /* visualization settings */
+   char*                 visual_vbcfilename; /**< name of the VBC tool output file, or - if no VBC output should be created */
+   char*                 visual_bakfilename; /**< name of the BAK tool output file, or - if no BAK output should be created */
+   SCIP_Bool             visual_realtime;    /**< should the real solving time be used instead of time step counter in visualization? */
+   SCIP_Bool             visual_dispsols;    /**< should the node where solutions are found be visualized? */
+   SCIP_Bool             visual_objextern;   /**< should be output the external value of the objective? */
 
    /* Reading */
    SCIP_Bool             read_initialconss;  /**< should model constraints be marked as initial? */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,22 +33,22 @@
 extern "C" {
 #endif
 
-/** creates block memory structures */
+/** creates block and buffer memory structures */
 extern
 SCIP_RETCODE SCIPmemCreate(
-   SCIP_MEM**            mem                 /**< pointer to block memory structure */
+   SCIP_MEM**            mem                 /**< pointer to block and buffer memory structure */
    );
 
-/** frees block memory structures */
+/** frees block and buffer memory structures */
 extern
 SCIP_RETCODE SCIPmemFree(
-   SCIP_MEM**            mem                 /**< pointer to block memory structure */
+   SCIP_MEM**            mem                 /**< pointer to block and buffer memory structure */
    );
 
-/** returns the total number of bytes used in block memory */
+/** returns the total number of bytes used in block and buffer memory */
 extern
 SCIP_Longint SCIPmemGetUsed(
-   SCIP_MEM*             mem                 /**< pointer to block memory structure */
+   SCIP_MEM*             mem                 /**< pointer to block and buffer memory structure */
    );
 
 #ifdef __cplusplus

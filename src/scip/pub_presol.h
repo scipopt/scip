@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -70,6 +70,25 @@ const char* SCIPpresolGetDesc(
 EXTERN
 int SCIPpresolGetPriority(
    SCIP_PRESOL*          presol              /**< presolver */
+   );
+
+/** gets round limit of presolver */
+EXTERN
+int SCIPpresolGetMaxrounds(
+   SCIP_PRESOL*          presol              /**< presolver */
+   );
+
+/** gets the timing mask of the presolver */
+EXTERN
+SCIP_PRESOLTIMING SCIPpresolGetTiming(
+   SCIP_PRESOL*          presol              /**< presolver */
+   );
+
+/** sets the timing mask of the presolver */
+EXTERN
+void SCIPpresolSetTiming(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_PRESOLTIMING     timing              /**< timing mask of the presolver */
    );
 
 /** should presolver be delayed, if other presolvers found reductions? */

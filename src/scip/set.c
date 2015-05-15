@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -66,11 +66,13 @@
                                                  *   bounds; a value of 0.5 leads to branching always in the middle of a bounded domain */
 #define SCIP_DEFAULT_BRANCH_LPGAINNORMALIZE 's' /**< strategy for normalizing LP gain when updating pseudo costs of continuous variables */
 #define SCIP_DEFAULT_BRANCH_DELAYPSCOST    TRUE /**< should updating pseudo costs of continuous variables be delayed to after separation */
+#define SCIP_DEFAULT_BRANCH_DIVINGPSCOST   TRUE /**< should pseudo costs be updated also in diving and probing mode? */
 #define SCIP_DEFAULT_BRANCH_FORCEALL      FALSE /**< should all strong branching children be regarded even if
                                                  *   one is detected to be infeasible? (only with propagation) */
 #define SCIP_DEFAULT_BRANCH_FIRSTSBCHILD    'a' /**< child node to be regarded first during strong branching (only with propagation): 'u'p child, 'd'own child, or 'a'utomatic */
 #define SCIP_DEFAULT_BRANCH_CHECKSBSOL     TRUE /**< should LP solutions during strong branching with propagation be checked for feasibility? */
 #define SCIP_DEFAULT_BRANCH_ROUNDSBSOL     TRUE /**< should LP solutions during strong branching with propagation be rounded? (only when checksbsol=TRUE) */
+
 
 /* Conflict Analysis */
 
@@ -138,6 +140,8 @@
 /* History */
 
 #define SCIP_DEFAULT_HISTORY_VALUEBASED   FALSE /**< should statistics be collected for variable domain value pairs */
+#define SCIP_DEFAULT_HISTORY_ALLOWMERGE   FALSE /**< should variable histories be merged from sub-SCIPs whenever possible? */
+#define SCIP_DEFAULT_HISTORY_ALLOWTRANSFER FALSE /**< should variable histories be transferred to initialize SCIP copies? */
 
 /* Limits */
 
@@ -155,6 +159,7 @@
 #define SCIP_DEFAULT_LIMIT_MAXSOL           100 /**< maximal number of solutions to store in the solution storage */
 #define SCIP_DEFAULT_LIMIT_MAXORIGSOL        10 /**< maximal number of solutions candidates to store in the solution storage of the original problem */
 #define SCIP_DEFAULT_LIMIT_RESTARTS          -1 /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
+#define SCIP_DEFAULT_LIMIT_AUTORESTARTNODES  -1 /**< if solve exceeds this number of nodes, an automatic restart is triggered (-1: no automatic restart)*/
 
 
 /* LP */
@@ -195,25 +200,25 @@
 #define SCIP_DEFAULT_LP_LEXDUALBASIC      FALSE /**< choose fractional basic variables in lexicographic dual algorithm */
 #define SCIP_DEFAULT_LP_LEXDUALSTALLING    TRUE /**< turn on the lex dual algorithm only when stalling? */
 #define SCIP_DEFAULT_LP_DISABLECUTOFF         2 /**< disable the cutoff bound in the LP solver? (0: enabled, 1: disabled, 2: auto) */
-#define SCIP_DEFAULT_LP_ROWREPSWITCH       -1.0 /**< simplex algorithm shall use row representation of the basis
+#define SCIP_DEFAULT_LP_ROWREPSWITCH        2.0 /**< simplex algorithm shall use row representation of the basis
                                                  *   if number of rows divided by number of columns exceeds this value */
 #define SCIP_DEFAULT_LP_THREADS               0 /**< number of threads used for solving the LP (0: automatic) */
-#define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit             
+#define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
+
 
 /* NLP */
 
 #define SCIP_DEFAULT_NLP_SOLVER              "" /**< name of NLP solver to use, or "" if solver should be chosen by priority */
 #define SCIP_DEFAULT_NLP_DISABLE          FALSE /**< should the NLP be always disabled? */
 
+
 /* Memory */
 
 #define SCIP_DEFAULT_MEM_SAVEFAC            0.8 /**< fraction of maximal mem usage when switching to memory saving mode */
-#define SCIP_DEFAULT_MEM_ARRAYGROWFAC       1.2 /**< memory growing factor for dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_TREEGROWFAC        2.0 /**< memory growing factor for tree array */
 #define SCIP_DEFAULT_MEM_PATHGROWFAC        2.0 /**< memory growing factor for path array */
-#define SCIP_DEFAULT_MEM_ARRAYGROWINIT        4 /**< initial size of dynamically allocated arrays */
 #define SCIP_DEFAULT_MEM_TREEGROWINIT     65536 /**< initial size of tree array */
 #define SCIP_DEFAULT_MEM_PATHGROWINIT       256 /**< initial size of path array */
 
@@ -239,11 +244,14 @@
 #define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
 #define SCIP_DEFAULT_MISC_FINITESOLSTORE  FALSE /**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
+#define SCIP_DEFAULT_MISC_OUTPUTORIGSOL    TRUE /**< should the best solution be transformed to the orignal space and be output in command line run? */
 
 
 /* Node Selection */
+
 #define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
                                                  *   'r'oot LP value difference, 'h'brid inference/root LP value difference) */
+
 
 /* Presolving */
 
@@ -261,6 +269,7 @@
                                                  *   for an additional restart */
 #define SCIP_DEFAULT_PRESOL_DONOTMULTAGGR FALSE /**< should multi-aggregation of variables be forbidden? */
 #define SCIP_DEFAULT_PRESOL_DONOTAGGR     FALSE /**< should aggregation of variables be forbidden? */
+
 
 /* Pricing */
 
@@ -296,6 +305,8 @@
 #define SCIP_DEFAULT_SEPA_ORTHOFUNC         'e' /**< function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete) */
 #define SCIP_DEFAULT_SEPA_EFFICACYNORM      'e' /**< row norm to use for efficacy calculation ('e'uclidean, 'm'aximum,
                                                  *   's'um, 'd'iscrete) */
+#define SCIP_DEFAULT_SEPA_CUTSELRESTART     'a' /**< cut selection during restart ('a'ge, activity 'q'uotient) */
+#define SCIP_DEFAULT_SEPA_CUTSELSUBSCIP     'a' /**< cut selection for sub SCIPs  ('a'ge, activity 'q'uotient) */
 #define SCIP_DEFAULT_SEPA_MAXRUNS            -1 /**< maximal number of runs for which separation is enabled (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDS           5 /**< maximal number of separation rounds per node (-1: unlimited) */
 #define SCIP_DEFAULT_SEPA_MAXROUNDSROOT      -1 /**< maximal number of separation rounds in the root node (-1: unlimited) */
@@ -310,6 +321,8 @@
                                                  *   (-1: cuts are never deleted from the global cut pool) */
 #define SCIP_DEFAULT_SEPA_POOLFREQ            0 /**< separation frequency for the global cut pool */
 #define SCIP_DEFAULT_SEPA_FEASTOLFAC      -1.00 /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
+#define SCIP_DEFAULT_SEPA_MINACTIVITYQUOT   0.8 /**< minimum cut activity quotient to convert cuts into constraints
+                                                 *   during a restart (0.0: all cuts are converted) */
 
 
 /* Timing */
@@ -320,14 +333,18 @@
 #define SCIP_DEFAULT_TIME_RARECLOCKCHECK  FALSE /**< should clock checks of solving time be performed less frequently (might exceed time limit slightly) */
 #define SCIP_DEFAULT_TIME_STATISTICTIMING  TRUE /**< should timing for statistic output be enabled? */
 
-/* VBC Tool output */
-#define SCIP_DEFAULT_VBC_FILENAME           "-" /**< name of the VBC Tool output file, or "-" if no output should be
-                                                 *   created */
-#define SCIP_DEFAULT_VBC_REALTIME          TRUE /**< should the real solving time be used instead of a time step counter
-                                                 *   in VBC output? */
-#define SCIP_DEFAULT_VBC_DISPSOLS         FALSE /**< should the node where solutions are found be visualized? */
+
+/* visualization output */
+
+#define SCIP_DEFAULT_VISUAL_VBCFILENAME     "-" /**< name of the VBC tool output file, or "-" if no VBC tool output should be created */
+#define SCIP_DEFAULT_VISUAL_BAKFILENAME     "-" /**< name of the BAK tool output file, or "-" if no BAK tool output should be created */
+#define SCIP_DEFAULT_VISUAL_REALTIME       TRUE /**< should the real solving time be used instead of a time step counter in visualization? */
+#define SCIP_DEFAULT_VISUAL_DISPSOLS      FALSE /**< should the node where solutions are found be visualized? */
+#define SCIP_DEFAULT_VISUAL_OBJEXTERN      TRUE /**< should be output the external value of the objective? */
+
 
 /* Reading */
+
 #define SCIP_DEFAULT_READ_INITIALCONSS     TRUE /**< should model constraints be marked as initial? */
 #define SCIP_DEFAULT_READ_DYNAMICCONSS     TRUE /**< should model constraints be subject to aging? */
 #define SCIP_DEFAULT_READ_DYNAMICCOLS     FALSE /**< should columns be added and removed dynamically to the LP? */
@@ -336,7 +353,9 @@
                                                  *   0; using this parameter we can change the starting index to be
                                                  *   different */
 
+
 /* Writing */
+
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
 
 
@@ -463,10 +482,40 @@ SCIP_DECL_PARAMCHGD(SCIPparamChgdLimit)
    return SCIP_OKAY;
 }
 
+/** information method for a parameter change of mem_arraygrowfac */
+static
+SCIP_DECL_PARAMCHGD(paramChgdArraygrowfac)
+{  /*lint --e{715}*/
+   SCIP_Real newarraygrowfac;
+
+   newarraygrowfac = SCIPparamGetReal(param);
+
+   /* change arraygrowfac */
+   BMSsetBufferMemoryArraygrowfac(SCIPbuffer(scip), newarraygrowfac);
+   BMSsetBufferMemoryArraygrowfac(SCIPcleanbuffer(scip), newarraygrowfac);
+
+   return SCIP_OKAY;
+}
+
+/** information method for a parameter change of mem_arraygrowinit */
+static
+SCIP_DECL_PARAMCHGD(paramChgdArraygrowinit)
+{  /*lint --e{715}*/
+   int newarraygrowinit;
+
+   newarraygrowinit = SCIPparamGetInt(param);
+
+   /* change arraygrowinit */
+   BMSsetBufferMemoryArraygrowinit(SCIPbuffer(scip), newarraygrowinit);
+   BMSsetBufferMemoryArraygrowinit(SCIPcleanbuffer(scip), newarraygrowinit);
+
+   return SCIP_OKAY;
+}
+
 /** enable or disable all plugin timers depending on the value of the flag \p enabled */
 void SCIPsetEnableOrDisablePluginClocks(
-   SCIP_SET*            set,                /**< SCIP settings */
-   SCIP_Bool            enabled             /**< should plugin clocks be enabled? */
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_Bool             enabled             /**< should plugin clocks be enabled? */
    )
 {
    int i;
@@ -522,8 +571,8 @@ SCIP_DECL_PARAMCHGD(paramChgdStatistictiming)
 
 
 /** copies plugins from sourcescip to targetscip; in case that a constraint handler which does not need constraints
- *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the 
- *  copied SCIP instance might not represent the same problem semantics as the original. 
+ *  cannot be copied, valid will return FALSE. All plugins can declare that, if their copy process failed, the
+ *  copied SCIP instance might not represent the same problem semantics as the original.
  *  Note that in this case dual reductions might be invalid. */
 SCIP_RETCODE SCIPsetCopyPlugins(
    SCIP_SET*             sourceset,          /**< source SCIP_SET data structure */
@@ -597,7 +646,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
             SCIP_CALL( SCIPconshdlrCopyInclude(sourceset->conshdlrs_include[p], targetset, &valid) );
             *allvalid = *allvalid && valid;
             SCIPdebugMessage("Copying conshdlr <%s> was%s valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]), valid ? "" : " not");
-         } 
+         }
          else if( !SCIPconshdlrNeedsCons(sourceset->conshdlrs_include[p]) )
          {
             SCIPdebugMessage("Copying Conshdlr <%s> without constraints not valid.\n", SCIPconshdlrGetName(sourceset->conshdlrs_include[p]));
@@ -708,7 +757,7 @@ SCIP_RETCODE SCIPsetCopyPlugins(
    {
       for( p = sourceset->ndialogs - 1; p >= 0; --p )
       {
-         /* @todo: the copying process of dialog handlers is currently not checked for consistency */         
+         /* @todo: the copying process of dialog handlers is currently not checked for consistency */
          SCIP_CALL( SCIPdialogCopyInclude(sourceset->dialogs[p], targetset) );
       }
    }
@@ -760,9 +809,10 @@ SCIP_RETCODE SCIPsetCreate(
 
    (*set)->stage = SCIP_STAGE_INIT;
    (*set)->scip = scip;
+   (*set)->buffer = SCIPbuffer(scip);
+   (*set)->cleanbuffer = SCIPcleanbuffer(scip);
 
    SCIP_CALL( SCIPparamsetCreate(&(*set)->paramset, blkmem) );
-   SCIP_CALL( SCIPbufferCreate(&(*set)->buffer) );
 
    (*set)->readers = NULL;
    (*set)->nreaders = 0;
@@ -833,12 +883,12 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->nlpissize = 0;
    (*set)->nlpissorted = FALSE;
    (*set)->limitchanged = FALSE;
-   (*set)->nlpenabled = FALSE;
    (*set)->extcodenames = NULL;
    (*set)->extcodedescs = NULL;
    (*set)->nextcodes = 0;
    (*set)->extcodessize = 0;
-   (*set)->vbc_filename = NULL;
+   (*set)->visual_vbcfilename = NULL;
+   (*set)->visual_bakfilename = NULL;
    (*set)->nlp_solver = NULL;
    (*set)->nlp_disable = FALSE;
    (*set)->mem_externestim = 0;
@@ -874,6 +924,11 @@ SCIP_RETCODE SCIPsetCreate(
          "branching/delaypscostupdate",
          "should updating pseudo costs for continuous variables be delayed to the time after separation?",
          &(*set)->branch_delaypscost, FALSE, SCIP_DEFAULT_BRANCH_DELAYPSCOST,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "branching/divingpscost",
+         "should pseudo costs be updated also in diving and probing mode?",
+         &(*set)->branch_divingpscost, FALSE, SCIP_DEFAULT_BRANCH_DIVINGPSCOST,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "branching/forceallchildren",
@@ -1105,6 +1160,16 @@ SCIP_RETCODE SCIPsetCreate(
          "should statistics be collected for variable domain value pairs?",
          &(*set)->history_valuebased, FALSE, SCIP_DEFAULT_HISTORY_VALUEBASED,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "history/allowmerge",
+         "should variable histories be merged from sub-SCIPs whenever possible?",
+         &(*set)->history_allowmerge, FALSE, SCIP_DEFAULT_HISTORY_ALLOWMERGE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "history/allowtransfer",
+         "should variable histories be transferred to initialize SCIP copies?",
+         &(*set)->history_allowtransfer, FALSE, SCIP_DEFAULT_HISTORY_ALLOWTRANSFER,
+         NULL, NULL) );
 
    /* limit parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
@@ -1112,7 +1177,6 @@ SCIP_RETCODE SCIPsetCreate(
          "maximal time in seconds to run",
          &(*set)->limit_time, FALSE, SCIP_DEFAULT_LIMIT_TIME, 0.0, SCIP_REAL_MAX,
          SCIPparamChgdLimit, NULL) );
-
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "limits/nodes",
          "maximal number of nodes to process (-1: no limit)",
@@ -1167,6 +1231,12 @@ SCIP_RETCODE SCIPsetCreate(
          "limits/restarts",
          "solving stops, if the given number of restarts was triggered (-1: no limit)",
          &(*set)->limit_restarts, FALSE, SCIP_DEFAULT_LIMIT_RESTARTS, -1, INT_MAX,
+         SCIPparamChgdLimit, NULL) );
+
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "limits/autorestartnodes",
+         "if solve exceeds this number of nodes for the first time, an automatic restart is triggered (-1: no automatic restart)",
+         &(*set)->limit_autorestartnodes, FALSE, SCIP_DEFAULT_LIMIT_AUTORESTARTNODES, -1, INT_MAX,
          SCIPparamChgdLimit, NULL) );
 
    /* LP parameters */
@@ -1358,12 +1428,12 @@ SCIP_RETCODE SCIPsetCreate(
          "memory/arraygrowfac",
          "memory growing factor for dynamically allocated arrays",
          &(*set)->mem_arraygrowfac, TRUE, SCIP_DEFAULT_MEM_ARRAYGROWFAC, 1.0, 10.0,
-         NULL, NULL) );
+         paramChgdArraygrowfac, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "memory/arraygrowinit",
          "initial size of dynamically allocated arrays",
          &(*set)->mem_arraygrowinit, TRUE, SCIP_DEFAULT_MEM_ARRAYGROWINIT, 0, INT_MAX,
-         NULL, NULL) );
+         paramChgdArraygrowinit, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "memory/treegrowfac",
          "memory growing factor for tree array",
@@ -1468,6 +1538,11 @@ SCIP_RETCODE SCIPsetCreate(
             "misc/finitesolutionstore",
             "should SCIP try to remove infinite fixings from solutions copied to the solution store?",
             &(*set)->misc_finitesolstore, FALSE, SCIP_DEFAULT_MISC_FINITESOLSTORE,
+            NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/outputorigsol",
+            "should the best solution be transformed to the orignal space and be output in command line run?",
+            &(*set)->misc_outputorigsol, FALSE, SCIP_DEFAULT_MISC_OUTPUTORIGSOL,
             NULL, NULL) );
 
    /* node selection */
@@ -1667,6 +1742,11 @@ SCIP_RETCODE SCIPsetCreate(
          "factor to scale orthogonality of cut in separation score calculation (0.0 to disable orthogonality calculation)",
          &(*set)->sepa_orthofac, TRUE, SCIP_DEFAULT_SEPA_ORTHOFAC, 0.0, SCIP_INVALID/10.0,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+           "separating/minactivityquot",
+           "minimum cut activity quotient to convert cuts into constraints during a restart (0.0: all cuts are converted)",
+           &(*set)->sepa_minactivityquot, FALSE, SCIP_DEFAULT_SEPA_MINACTIVITYQUOT, 0.0, 1.0,
+           NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "separating/orthofunc",
          "function used for calc. scalar prod. in orthogonality test ('e'uclidean, 'd'iscrete)",
@@ -1676,6 +1756,16 @@ SCIP_RETCODE SCIPsetCreate(
          "separating/efficacynorm",
          "row norm to use for efficacy calculation ('e'uclidean, 'm'aximum, 's'um, 'd'iscrete)",
          &(*set)->sepa_efficacynorm, TRUE, SCIP_DEFAULT_SEPA_EFFICACYNORM, "emsd",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
+         "separating/cutselrestart",
+         "cut selection during restart ('a'ge, activity 'q'uotient)",
+         &(*set)->sepa_cutselrestart, TRUE, SCIP_DEFAULT_SEPA_CUTSELRESTART, "aq",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
+         "separating/cutselsubscip",
+         "cut selection for sub SCIPs  ('a'ge, activity 'q'uotient)",
+         &(*set)->sepa_cutselsubscip, TRUE, SCIP_DEFAULT_SEPA_CUTSELSUBSCIP, "aq",
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "separating/maxruns",
@@ -1761,21 +1851,31 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->time_statistictiming, FALSE, SCIP_DEFAULT_TIME_STATISTICTIMING,
          paramChgdStatistictiming, NULL) );
 
-   /* VBC tool parameters */
+   /* visualization parameters */
    SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
-         "vbc/filename",
-         "name of the VBC Tool output file, or - if no VBC Tool output should be created",
-         &(*set)->vbc_filename, FALSE, SCIP_DEFAULT_VBC_FILENAME,
+         "visual/vbcfilename",
+         "name of the VBC tool output file, or - if no VBC tool output should be created",
+         &(*set)->visual_vbcfilename, FALSE, SCIP_DEFAULT_VISUAL_VBCFILENAME,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddStringParam(*set, messagehdlr, blkmem,
+         "visual/bakfilename",
+         "name of the BAK tool output file, or - if no BAK tool output should be created",
+         &(*set)->visual_bakfilename, FALSE, SCIP_DEFAULT_VISUAL_BAKFILENAME,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "vbc/realtime",
-         "should the real solving time be used instead of a time step counter in VBC output?",
-         &(*set)->vbc_realtime, FALSE, SCIP_DEFAULT_VBC_REALTIME,
+         "visual/realtime",
+         "should the real solving time be used instead of a time step counter in visualization?",
+         &(*set)->visual_realtime, FALSE, SCIP_DEFAULT_VISUAL_REALTIME,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "vbc/dispsols",
+         "visual/dispsols",
          "should the node where solutions are found be visualized?",
-         &(*set)->vbc_dispsols, FALSE, SCIP_DEFAULT_VBC_DISPSOLS,
+         &(*set)->visual_dispsols, FALSE, SCIP_DEFAULT_VISUAL_DISPSOLS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "visual/objextern",
+         "should be output the external value of the objective?",
+         &(*set)->visual_objextern, FALSE, SCIP_DEFAULT_VISUAL_OBJEXTERN,
          NULL, NULL) );
 
    /* Reading parameters */
@@ -1830,9 +1930,6 @@ SCIP_RETCODE SCIPsetFree(
 
    /* free parameter set */
    SCIPparamsetFree(&(*set)->paramset, blkmem);
-
-   /* free memory buffers */
-   SCIPbufferFree(&(*set)->buffer);
 
    /* free file readers */
    for( i = 0; i < (*set)->nreaders; ++i )
@@ -4645,6 +4742,12 @@ SCIP_Bool SCIPsetIsEQ(
 {
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    return EPSEQ(val1, val2, set->num_epsilon);
 }
 
@@ -4656,6 +4759,12 @@ SCIP_Bool SCIPsetIsLT(
    )
 {
    assert(set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return EPSLT(val1, val2, set->num_epsilon);
 }
@@ -4669,6 +4778,12 @@ SCIP_Bool SCIPsetIsLE(
 {
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    return EPSLE(val1, val2, set->num_epsilon);
 }
 
@@ -4681,6 +4796,12 @@ SCIP_Bool SCIPsetIsGT(
 {
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    return EPSGT(val1, val2, set->num_epsilon);
 }
 
@@ -4692,6 +4813,12 @@ SCIP_Bool SCIPsetIsGE(
    )
 {
    assert(set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return EPSGE(val1, val2, set->num_epsilon);
 }
@@ -4824,6 +4951,12 @@ SCIP_Bool SCIPsetIsSumEQ(
 {
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    return EPSEQ(val1, val2, set->num_sumepsilon);
 }
 
@@ -4835,6 +4968,12 @@ SCIP_Bool SCIPsetIsSumLT(
    )
 {
    assert(set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return EPSLT(val1, val2, set->num_sumepsilon);
 }
@@ -4848,6 +4987,12 @@ SCIP_Bool SCIPsetIsSumLE(
 {
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    return EPSLE(val1, val2, set->num_sumepsilon);
 }
 
@@ -4860,6 +5005,12 @@ SCIP_Bool SCIPsetIsSumGT(
 {
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    return EPSGT(val1, val2, set->num_sumepsilon);
 }
 
@@ -4871,6 +5022,12 @@ SCIP_Bool SCIPsetIsSumGE(
    )
 {
    assert(set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    return EPSGE(val1, val2, set->num_sumepsilon);
 }
@@ -4963,6 +5120,12 @@ SCIP_Bool SCIPsetIsFeasEQ(
 
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    diff = SCIPrelDiff(val1, val2);
 
    return EPSZ(diff, set->num_feastol);
@@ -4978,6 +5141,12 @@ SCIP_Bool SCIPsetIsFeasLT(
    SCIP_Real diff;
 
    assert(set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    diff = SCIPrelDiff(val1, val2);
 
@@ -4995,6 +5164,12 @@ SCIP_Bool SCIPsetIsFeasLE(
 
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    diff = SCIPrelDiff(val1, val2);
 
    return !EPSP(diff, set->num_feastol);
@@ -5011,6 +5186,12 @@ SCIP_Bool SCIPsetIsFeasGT(
 
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    diff = SCIPrelDiff(val1, val2);
 
    return EPSP(diff, set->num_feastol);
@@ -5026,6 +5207,12 @@ SCIP_Bool SCIPsetIsFeasGE(
    SCIP_Real diff;
 
    assert(set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    diff = SCIPrelDiff(val1, val2);
 
@@ -5146,6 +5333,12 @@ SCIP_Bool SCIPsetIsDualfeasEQ(
 
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    diff = SCIPrelDiff(val1, val2);
 
    return EPSZ(diff, set->num_dualfeastol);
@@ -5161,6 +5354,12 @@ SCIP_Bool SCIPsetIsDualfeasLT(
    SCIP_Real diff;
 
    assert(set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    diff = SCIPrelDiff(val1, val2);
 
@@ -5178,6 +5377,12 @@ SCIP_Bool SCIPsetIsDualfeasLE(
 
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    diff = SCIPrelDiff(val1, val2);
 
    return !EPSP(diff, set->num_dualfeastol);
@@ -5194,6 +5399,12 @@ SCIP_Bool SCIPsetIsDualfeasGT(
 
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    diff = SCIPrelDiff(val1, val2);
 
    return EPSP(diff, set->num_dualfeastol);
@@ -5209,6 +5420,12 @@ SCIP_Bool SCIPsetIsDualfeasGE(
    SCIP_Real diff;
 
    assert(set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    diff = SCIPrelDiff(val1, val2);
 
@@ -5316,7 +5533,9 @@ SCIP_Real SCIPsetDualfeasFrac(
    return EPSFRAC(val, set->num_dualfeastol);
 }
 
-/** checks, if the given new lower bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks, if the given new lower bound is at least min(oldub - oldlb, |oldlb|) times the bound
+ *  strengthening epsilon better than the old one
+ */
 SCIP_Bool SCIPsetIsLbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             newlb,              /**< new lower bound */
@@ -5334,7 +5553,9 @@ SCIP_Bool SCIPsetIsLbBetter(
    return EPSGT(newlb, oldlb, set->num_boundstreps * MAX(eps, 1e-3));
 }
 
-/** checks, if the given new upper bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks, if the given new upper bound is at least min(oldub - oldlb, |oldub|) times the bound
+ *  strengthening epsilon better than the old one
+ */
 SCIP_Bool SCIPsetIsUbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             newub,              /**< new upper bound */
@@ -5378,6 +5599,12 @@ SCIP_Bool SCIPsetIsRelEQ(
 
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    diff = SCIPrelDiff(val1, val2);
 
    return EPSZ(diff, set->num_epsilon);
@@ -5393,6 +5620,12 @@ SCIP_Bool SCIPsetIsRelLT(
    SCIP_Real diff;
 
    assert(set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    diff = SCIPrelDiff(val1, val2);
 
@@ -5410,6 +5643,12 @@ SCIP_Bool SCIPsetIsRelLE(
 
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    diff = SCIPrelDiff(val1, val2);
 
    return !EPSP(diff, set->num_epsilon);
@@ -5425,6 +5664,12 @@ SCIP_Bool SCIPsetIsRelGT(
    SCIP_Real diff;
 
    assert(set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    diff = SCIPrelDiff(val1, val2);
 
@@ -5442,6 +5687,12 @@ SCIP_Bool SCIPsetIsRelGE(
 
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    diff = SCIPrelDiff(val1, val2);
 
    return !EPSN(diff, set->num_epsilon);
@@ -5457,6 +5708,12 @@ SCIP_Bool SCIPsetIsSumRelEQ(
    SCIP_Real diff;
 
    assert(set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    diff = SCIPrelDiff(val1, val2);
 
@@ -5474,6 +5731,12 @@ SCIP_Bool SCIPsetIsSumRelLT(
 
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    diff = SCIPrelDiff(val1, val2);
 
    return EPSN(diff, set->num_sumepsilon);
@@ -5489,6 +5752,12 @@ SCIP_Bool SCIPsetIsSumRelLE(
    SCIP_Real diff;
 
    assert(set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    diff = SCIPrelDiff(val1, val2);
 
@@ -5506,6 +5775,12 @@ SCIP_Bool SCIPsetIsSumRelGT(
 
    assert(set != NULL);
 
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
+
    diff = SCIPrelDiff(val1, val2);
 
    return EPSP(diff, set->num_sumepsilon);
@@ -5521,6 +5796,12 @@ SCIP_Bool SCIPsetIsSumRelGE(
    SCIP_Real diff;
 
    assert(set != NULL);
+
+   /* avoid to compare two different infinities; the reason for that is
+    * that such a comparison can lead to unexpected results */
+   assert( ((!SCIPsetIsInfinity(set, val1) || !SCIPsetIsInfinity(set, val2))
+         && (!SCIPsetIsInfinity(set, -val1) || !SCIPsetIsInfinity(set, -val2)))
+      || val1 == val2 );    /*lint !e777*/
 
    diff = SCIPrelDiff(val1, val2);
 

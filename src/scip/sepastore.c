@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -232,14 +232,16 @@ SCIP_Bool sepastoreIsCutRedundantOrInfeasible(
    rhs = SCIProwGetRhs(cut);
    minactivity = SCIProwGetMinActivity(cut, set, stat);
    maxactivity = SCIProwGetMaxActivity(cut, set, stat);
-   if( SCIPsetIsLE(set, lhs, minactivity) && SCIPsetIsLE(set, maxactivity, rhs) )
+   if( (SCIPsetIsInfinity(set, -lhs) || SCIPsetIsLE(set, lhs, minactivity))
+      && (SCIPsetIsInfinity(set, rhs) || SCIPsetIsLE(set, maxactivity, rhs)) )
    {
       SCIPdebugMessage("ignoring activity redundant cut <%s> (sides=[%g,%g], act=[%g,%g])\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
       /*SCIPdebug(SCIProwPrint(cut, set->scip->messagehdlr, NULL));*/
       return TRUE;
    }
-   if ( SCIPsetIsFeasGT(set, minactivity, rhs) || SCIPsetIsFeasLT(set, maxactivity, lhs) )
+   if( (!SCIPsetIsInfinity(set, rhs) && SCIPsetIsFeasGT(set, minactivity, rhs))
+      || (!SCIPsetIsInfinity(set, -lhs) &&  SCIPsetIsFeasLT(set, maxactivity, lhs) ))
    {
       SCIPdebugMessage("cut <%s> is infeasible (sides=[%g,%g], act=[%g,%g])\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);
@@ -596,6 +598,7 @@ SCIP_RETCODE sepastoreApplyLb(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             bound,              /**< new lower bound of variable */
    SCIP_Bool             local,              /**< is it a local bound change? (otherwise global) */
@@ -621,7 +624,7 @@ SCIP_RETCODE sepastoreApplyLb(
          if( SCIPsetIsFeasLE(set, bound, SCIPvarGetUbLocal(var)) )
          {
             SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                  eventqueue, var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+                  eventqueue, cliquetable, var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
          }
          else
             *cutoff = TRUE;
@@ -645,7 +648,7 @@ SCIP_RETCODE sepastoreApplyLb(
          if( SCIPsetIsFeasLE(set, bound, SCIPvarGetUbGlobal(var)) )
          {
             SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                  eventqueue, var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
+                  eventqueue, cliquetable, var, bound, SCIP_BOUNDTYPE_LOWER, FALSE) );
          }
          else
          {
@@ -679,6 +682,7 @@ SCIP_RETCODE sepastoreApplyUb(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_Real             bound,              /**< new upper bound of variable */
    SCIP_Bool             local,              /**< is it a local bound change? (otherwise global) */
@@ -704,7 +708,7 @@ SCIP_RETCODE sepastoreApplyUb(
          if( SCIPsetIsFeasGE(set, bound, SCIPvarGetLbLocal(var)) )
          {
             SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetCurrentNode(tree), blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                  eventqueue, var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+                  eventqueue, cliquetable, var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
          }
          else
             *cutoff = TRUE;
@@ -728,7 +732,7 @@ SCIP_RETCODE sepastoreApplyUb(
          if( SCIPsetIsFeasGE(set, bound, SCIPvarGetLbGlobal(var)) )
          {
             SCIP_CALL( SCIPnodeAddBoundchg(SCIPtreeGetRootNode(tree), blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                  eventqueue, var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
+                  eventqueue, cliquetable, var, bound, SCIP_BOUNDTYPE_UPPER, FALSE) );
          }
          else
          {
@@ -762,6 +766,7 @@ SCIP_RETCODE sepastoreApplyBdchg(
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_ROW*             cut,                /**< cut with a single variable */
    SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base feasibility computation on */
    SCIP_Bool*            applied,            /**< pointer to store whether the domain change was applied */
@@ -808,13 +813,13 @@ SCIP_RETCODE sepastoreApplyBdchg(
       {
          /* coefficient is positive -> lhs corresponds to lower bound */
          SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-               var, lhs/vals[0], local, applied, cutoff) );
+               cliquetable, var, lhs/vals[0], local, applied, cutoff) );
       }
       else
       {
          /* coefficient is negative -> lhs corresponds to upper bound */
          SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-               var, lhs/vals[0], local, applied, cutoff) );
+               cliquetable, var, lhs/vals[0], local, applied, cutoff) );
       }
    }
 
@@ -827,13 +832,13 @@ SCIP_RETCODE sepastoreApplyBdchg(
       {
          /* coefficient is positive -> rhs corresponds to upper bound */
          SCIP_CALL( sepastoreApplyUb(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-               var, rhs/vals[0], local, applied, cutoff) );
+               cliquetable, var, rhs/vals[0], local, applied, cutoff) );
       }
       else
       {
          /* coefficient is negative -> rhs corresponds to lower bound */
          SCIP_CALL( sepastoreApplyLb(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-               var, rhs/vals[0], local, applied, cutoff) );
+               cliquetable, var, rhs/vals[0], local, applied, cutoff) );
       }
    }
 
@@ -1116,6 +1121,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool             root,               /**< are we at the root node? */
    SCIP_EFFICIACYCHOICE  efficiacychoice,    /**< type of solution to base efficiacy computation on */
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
@@ -1172,7 +1178,7 @@ SCIP_RETCODE SCIPsepastoreApplyCuts(
       if( !SCIProwIsModifiable(cut) && SCIProwGetNNonz(cut) == 1 )
       {
          SCIPdebugMessage(" -> applying forced cut <%s> as boundchange\n", SCIProwGetName(cut));
-         SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, cut, efficiacychoice, &applied, cutoff) );
+         SCIP_CALL( sepastoreApplyBdchg(sepastore, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, cliquetable, cut, efficiacychoice, &applied, cutoff) );
 
          assert(applied || !sepastoreIsBdchgApplicable(set, cut));
       }
