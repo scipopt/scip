@@ -56,7 +56,7 @@
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
 #define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15 /**< percentage of immediate domain changes during probing to trigger LP resolve */
 #define DEFAULT_LPSOLVEFREQ           1 /**< LP solve frequency for diving heuristics */
-#define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
+#define DEFAULT_ONLYLPBRANCHCANDS  TRUE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
 #define DEFAULT_SPECIFICSOS1SCORE FALSE /**< should SOS1 variables be scored by the diving heuristics specific score function;
                                          *   otherwise use the score function of the SOS1 constraint handler */
