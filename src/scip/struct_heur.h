@@ -59,7 +59,9 @@ struct SCIP_Diveset
    int                   minsoldepth;        /**< the minimum depth at which this dive set found a solution */
    int                   maxsoldepth;        /**< the maximum depth at which this dive set found a solution */
    int                   ncalls;             /**< the total number of calls of this dive set */
-   int                   nsolcalls;          /**< the total number of successful calls with a solution */
+   int                   nsolcalls;          /**< number of calls with a leaf solution */
+   int                   nsolsfound;         /**< the total number of solutions found */
+   int                   nbestsolsfound;     /**< the total number of best solutions found */
    int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
    int                   lpsolvefreq;        /**< LP solve frequency for diving heuristics */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
