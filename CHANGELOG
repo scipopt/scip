@@ -44,8 +44,8 @@ features:
   the EXHAUSTIVE presolvers. Similar to the delay concept used before, we are not neccessarily running all EXHAUSTIVE
   presolvers but stop as soon as one of them found enough reductions, starting a new presolving round immediately.
 - new branching rules for SOS1 constraints for branching on a neighborhood or a complete bipartite subgraph of
-  the conflict graph. In addition to variable domain fixings, it is sometimes also possible to add complementarity 
-  constraints to the branching nodes. This results in a nonstatic conflict graph, which may change dynamically 
+  the conflict graph. In addition to variable domain fixings, it is sometimes also possible to add complementarity
+  constraints to the branching nodes. This results in a nonstatic conflict graph, which may change dynamically
   with every branching node.
 - modified diving heuristics to handle SOS1 constraints
 - improved separation procedure of SOS1 constraint handler, including bound (clique) cuts and implied bound cuts
@@ -54,6 +54,7 @@ features:
 - added method to propagate implications of SOS1 variables
 - convex quadratic contraints can now generate gradient cuts which are supporting to the feasible region
 - new edge-concave cut separator for quadratic constraints
+- SoPlex interface can now (re)store dual steepest edge weights
 
 parameters:
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
@@ -88,29 +89,29 @@ parameters:
   only if the constraint can be removed afterwards
 - at the end of a command line run the best solution can now be output in the orignal space
 - new advanced parameter "branching/relpscost/nlscoreweight" for weight of nonlinear score when branching on MINLPs
-- new parameter "constraints/SOS1/maxextensions" to define maximal number of extensions that will be computed for each SOS1 constraint in 
+- new parameter "constraints/SOS1/maxextensions" to define maximal number of extensions that will be computed for each SOS1 constraint in
   presolving
 - new parameter "constraints/SOS1/maxtightenbds" to define the maximal number of bound tightening rounds per presolving round
 - new parameter "constraints/SOS1/updateconflpresol" to update the conflict graph during the presolving procedure
-- new parameter "constraints/SOS1/maxsosadjacency" to define that the adjacency matrix of the conflict graph is not created in presolving if 
+- new parameter "constraints/SOS1/maxsosadjacency" to define that the adjacency matrix of the conflict graph is not created in presolving if
   the number of SOS1 variables is too large
 - new parameter "constraints/SOS1/conflictprop" to define whether to use conflict graph propagation
 - new parameter "constraints/SOS1/implprop" to define whether to use implication graph propagation
-- new parameter "constraints/SOS1/sosconsprop" to define whether to use SOS1 constraint propagation 
+- new parameter "constraints/SOS1/sosconsprop" to define whether to use SOS1 constraint propagation
 - new parameter "constraints/SOS1/neighbranch" to branch on a neighborhood of the conflict graph
 - new parameter "constraints/SOS1/bipbranch" to branch on a complete bipartite subgraph of the conflict graph
 - new parameter "constraints/SOS1/sos1branch" to branch on a single SOS1 constraint, i.e., a clique of the conflict graph
-- new parameter "constraints/SOS1/fixnonzero": If neighborhood branching is used, then fix the branching variable (if positive in sign) 
+- new parameter "constraints/SOS1/fixnonzero": If neighborhood branching is used, then fix the branching variable (if positive in sign)
   to the value of the feasibility tolerance
-- new parameter "constraints/SOS1/addcomps" to add local complementarity constraints to the branching nodes (can be used in combination 
+- new parameter "constraints/SOS1/addcomps" to add local complementarity constraints to the branching nodes (can be used in combination
   with neighborhood or bipartite branching)
 - new parameter "constraints/SOS1/maxaddcomps" to define the maximal number of complementarity constraints added per branching node
 - new parameter "constraints/SOS1/addcompsdepth" to define the maximal depth for adding complementarity constraints
-- new parameter "constraints/SOS1/addcompsfeas" to define a minimal feasibility value for local complementarity constraints in order to be 
+- new parameter "constraints/SOS1/addcompsfeas" to define a minimal feasibility value for local complementarity constraints in order to be
   added to the branching node
-- new parameter "constraints/SOS1/addbdsfeas" to define a minimal feasibility value for local bound (clique) inequalities in order to be 
+- new parameter "constraints/SOS1/addbdsfeas" to define a minimal feasibility value for local bound (clique) inequalities in order to be
   added to the branching node
-- new parameter "constraints/SOS1/nstrongrounds" to define the maximal number of strong branching rounds to perform for each node (only 
+- new parameter "constraints/SOS1/nstrongrounds" to define the maximal number of strong branching rounds to perform for each node (only
   available for neighborhood and bipartite branching)
 - new parameter "constraints/SOS1/nstrongiter" to define the maximal number LP iterations to perform for each strong branching round
 - new parameter "constraints/SOS1/boundcutsfromsos1" to define whether to separate bound (clique) inequalities from initial SOS1 constraints
@@ -118,27 +119,27 @@ parameters:
 - new parameter "constraints/SOS1/boundcutsfreq" to define the frequency for separating bound (clique) cuts
 - new parameter "constraints/SOS1/boundcutsdepth" to define the node depth of separating bound (clique) cuts
 - new parameter "constraints/SOS1/maxboundcuts" to define the maximal number of bound (clique) cuts separated per branching node
-- new parameter "constraints/SOS1/maxboundcutsroot" to define the maximal number of bound (clique) cuts separated per iteration in the root 
+- new parameter "constraints/SOS1/maxboundcutsroot" to define the maximal number of bound (clique) cuts separated per iteration in the root
   node
-- new parameter "constraints/SOS1/strthenboundcuts" to define whether to strengthen bound (clique) cuts in case bound variables are 
+- new parameter "constraints/SOS1/strthenboundcuts" to define whether to strengthen bound (clique) cuts in case bound variables are
   available
 - new parameter "constraints/SOS1/implcutsfreq" to define the frequency for separating implied bound cuts
 - new parameter "constraints/SOS1/implcutsdepth" to define the node depth of separating implied bound cuts
 - new parameter "constraints/SOS1/maximplcuts" to define the maximal number of implied bound cuts separated per branching node
-- new parameter "constraints/SOS1/maximplcutsroot" to define the maximal number of implied bound cuts separated per iteration in the root 
+- new parameter "constraints/SOS1/maximplcutsroot" to define the maximal number of implied bound cuts separated per iteration in the root
   node
-- new parameter "separating/disjunctive/maxrank" to define the maximal permissible rank of a disjunctive cut that could not be scaled to 
+- new parameter "separating/disjunctive/maxrank" to define the maximal permissible rank of a disjunctive cut that could not be scaled to
   integral coefficients
-- new parameter "separating/disjunctive/maxrankintegral" to define the maximal permissible rank of a disjunctive cut that could be scaled 
+- new parameter "separating/disjunctive/maxrankintegral" to define the maximal permissible rank of a disjunctive cut that could be scaled
   to integral coefficients
 - new parameter "separating/disjunctive/maxweightrange" to define the maximal valid range of simplex tableau row weights
 - new parameter "separating/disjunctive/maxdepth" to define the node depth of separating disjunctive cuts
 - new parameter "separating/disjunctive/maxrounds" to define the maximal number of separation rounds of disjunctive cuts in a branching node
-- new parameter "separating/disjunctive/maxinvcuts" to define the maximal number of disjunctive cuts investigated per iteration in a 
+- new parameter "separating/disjunctive/maxinvcuts" to define the maximal number of disjunctive cuts investigated per iteration in a
   branching node
-- new parameter "separating/disjunctive/maxinvcutsroot" to define the maximal number of disjunctive cuts investigated per iteration in the 
+- new parameter "separating/disjunctive/maxinvcutsroot" to define the maximal number of disjunctive cuts investigated per iteration in the
   root node
-- new parameter "separating/disjunctive/maxconsdelay" to delay separation of disjunctive cuts if number of SOS1 constraints is larger than 
+- new parameter "separating/disjunctive/maxconsdelay" to delay separation of disjunctive cuts if number of SOS1 constraints is larger than
   predefined value
 - new parameter "constraints/quadratic/gaugecuts" to enable convex quadratics to generate gradients cuts which are supporting
 - new parameter "constraints/quadratic/advanced/interiorcomputation" to select the way of computing and interior point for gauge cuts

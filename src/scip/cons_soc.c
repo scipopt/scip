@@ -2942,7 +2942,7 @@ SCIP_RETCODE polishSolution(
  *    \left\| \left(\begin{array}{c} x \\ \frac{1}{2}(y - z)\end{array}\right) \right\| \leq \frac{1}{2}(y + z).
  *  \f]
  *
- * @todo implement more general hyperbolic upgrade, e.g., for -x^T x + yz >= 0 or x^T x <= ax + by + yz
+ * @todo implement more general hyperbolic upgrade, e.g., for -x^T x + yz >= 0 or x^T x <= ax + by + cyz
  * @todo more general quadratic constraints then sums of squares might allow an upgrade to a SOC
  */
 static
@@ -3008,18 +3008,20 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       if ( ! SCIPisZero(scip, SCIPgetRhsQuadratic(scip, cons)) )
          return SCIP_OKAY;
 
-      /* we need the bilinear term to be the rhs; thus, the coefficient should be negative */
-      if ( SCIPisGT(scip, bilincoef, 0.0) )
+      /* we only allow for -1.0 bilincoef */
+      if ( ! SCIPisEQ(scip, bilincoef, -1.0) )
          return SCIP_OKAY;
 
-      /* check that bilinear terms do not appear in the rest */
+      /* check that bilinear terms do not appear in the rest and quadratic terms have postive sqrcoef have no lincoef */
       quadterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
       for (i = 0; i < nquadvars; ++i)
       {
          term = &quadterms[i];
 
-         if ( (term->var == bilinvar1 || term->var == bilinvar2) &&
-               (! SCIPisZero(scip, term->sqrcoef) || ! SCIPisZero(scip, term->lincoef)) )
+         if( ! SCIPisZero(scip, term->lincoef) || SCIPisNegative(scip, term->sqrcoef) )
+            return SCIP_OKAY;
+
+         if ( (term->var == bilinvar1 || term->var == bilinvar2) && ! SCIPisZero(scip, term->sqrcoef) )
             return SCIP_OKAY;
       }
    }
