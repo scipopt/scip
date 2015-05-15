@@ -3047,6 +3047,38 @@ SCIP_RETCODE paramsetSetPresolvingAggressive(
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/convertinttobin/maxrounds", 0, quiet) );
    }
 
+   /* explicitly change parameters of presolver dualagg, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "dualagg") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/dualagg/maxrounds", -1, quiet) );
+   }
+
+   /* explicitly change parameters of presolver tworowbnd, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "tworowbnd") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/tworowbnd/maxrounds", -1, quiet) );
+   }
+
+   /* explicitly change parameters of presolver redvub, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "redvub") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/redvub/maxrounds", -1, quiet) );
+   }
+
+   /* explicitly change parameters of presolver implfree, if included */
+#ifndef NDEBUG
+   if( SCIPsetFindPresol(set, "implfree") != NULL )
+#endif
+   {
+      SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/implfree/maxrounds", -1, quiet) );
+   }
+
    /* explicitly change parameters of probing */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/probing/maxuseless");
    param = (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname);

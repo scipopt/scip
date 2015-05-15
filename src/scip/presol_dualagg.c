@@ -47,7 +47,7 @@
 #define PRESOL_NAME            "dualagg"
 #define PRESOL_DESC            "aggregate variables by dual arguments"
 #define PRESOL_PRIORITY           -12000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
-#define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_MAXROUNDS               0     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
 
 /** type of aggregation */
