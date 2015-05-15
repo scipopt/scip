@@ -1022,8 +1022,9 @@ void procPcdata(
             xmlAppendChild(topPstack(ppos), node);
             ppos->state = XML_STATE_BEFORE;
          }
-         BMSfreeMemoryArray(&data);
       }
+
+      BMSfreeMemoryArray(&data);
    }
 }
 
