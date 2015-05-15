@@ -3965,6 +3965,8 @@ SCIP_RETCODE SCIPlpiSetBase(
          return SCIP_LPERROR; /*lint !e429*/
       default:
          SCIPerrorMessage("invalid basis status\n");
+         BMSfreeMemoryArrayNull(&spxcstat);
+         BMSfreeMemoryArrayNull(&spxrstat);
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
@@ -3989,6 +3991,8 @@ SCIP_RETCODE SCIPlpiSetBase(
          break;
       default:
          SCIPerrorMessage("invalid basis status\n");
+         BMSfreeMemoryArrayNull(&spxcstat);
+         BMSfreeMemoryArrayNull(&spxrstat);
          SCIPABORT();
          return SCIP_INVALIDDATA; /*lint !e527*/
       }
