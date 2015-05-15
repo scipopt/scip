@@ -43,8 +43,7 @@
                                               *   found reductions? */
 #define PROP_PRESOL_PRIORITY        -2000000 /**< priority of the presolving method (>= 0: before, < 0: after
                                               *   constraint handlers); combined with presolvers */
-#define PROP_PRESOL_DELAY              FALSE /**< should presolving be delay, if other presolvers found
-                                              *   reductions? */
+#define PROP_PRESOLTIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolving method (fast, medium, or exhaustive) */
 #define PROP_PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates
                                               *   in (-1: no limit) */
 #define DEFAULT_GLOBAL_PROPAGATION      TRUE /**< apply global propagation? */
@@ -2604,9 +2603,8 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
    SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreGenvbounds) );
    SCIP_CALL( SCIPsetPropExitsol(scip, prop, propExitsolGenvbounds) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolGenvbounds, PROP_PRESOL_PRIORITY,
-         PROP_PRESOL_MAXROUNDS, PROP_PRESOL_DELAY) );
+         PROP_PRESOL_MAXROUNDS, PROP_PRESOLTIMING) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropGenvbounds) );
-
 
    SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/global",
          "apply global propagation?",

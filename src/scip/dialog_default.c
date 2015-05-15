@@ -741,8 +741,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
 
    /* display list of constraint handlers */
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIPdialogMessage(scip, NULL, " constraint handler   chckprio enfoprio sepaprio sepaf propf eager  description\n");
-   SCIPdialogMessage(scip, NULL, " ------------------   -------- -------- -------- ----- ----- -----  -----------\n");
+   SCIPdialogMessage(scip, NULL, " Legend:\n");
+   SCIPdialogMessage(scip, NULL, "  prestim (presolve timing): 'f'ast, 'm'edium, 'e'xhaustive\n\n");
+   SCIPdialogMessage(scip, NULL, " constraint handler   chckprio enfoprio sepaprio sepaf propf eager prestim description\n");
+   SCIPdialogMessage(scip, NULL, " ------------------   -------- -------- -------- ----- ----- ----- ------- -----------\n");
    for( i = 0; i < nconshdlrs; ++i )
    {
       SCIPdialogMessage(scip, NULL, " %-20s ", SCIPconshdlrGetName(conshdlrs[i]));
@@ -755,6 +757,9 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayConshdlrs)
          SCIPconshdlrGetSepaFreq(conshdlrs[i]),
          SCIPconshdlrGetPropFreq(conshdlrs[i]),
          SCIPconshdlrGetEagerFreq(conshdlrs[i]));
+      SCIPdialogMessage(scip, NULL, "   %c", SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_FAST ? 'f' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c", SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_MEDIUM ? 'm' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c  ", SCIPconshdlrGetPresolTiming(conshdlrs[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE ? 'e' : ' ');
       SCIPdialogMessage(scip, NULL, "%s", SCIPconshdlrGetDesc(conshdlrs[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
@@ -980,15 +985,22 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPresolvers)
 
    /* display list of presolvers */
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIPdialogMessage(scip, NULL, " presolver            priority  description\n");
-   SCIPdialogMessage(scip, NULL, " ---------            --------  -----------\n");
+   SCIPdialogMessage(scip, NULL, " Legend:\n");
+   SCIPdialogMessage(scip, NULL, "  priority:  presolver called before constraint handlers iff priority > 0\n");
+   SCIPdialogMessage(scip, NULL, "  timing:    'f'ast, 'm'edium, 'e'xhaustive\n\n");
+   SCIPdialogMessage(scip, NULL, "  maxrounds: -1: no limit, 0: off, >0: limited number of rounds\n\n");
+   SCIPdialogMessage(scip, NULL, " presolver            priority  timing  maxrounds  description\n");
+   SCIPdialogMessage(scip, NULL, " ---------            --------  ------  ---------  -----------\n");
    for( i = 0; i < npresols; ++i )
    {
       SCIPdialogMessage(scip, NULL, " %-20s ", SCIPpresolGetName(presols[i]));
       if( strlen(SCIPpresolGetName(presols[i])) > 20 )
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
-      SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpresolGetPriority(presols[i]),
-         SCIPpresolIsDelayed(presols[i]) ? 'd' : ' ');
+      SCIPdialogMessage(scip, NULL, "%8d  ", SCIPpresolGetPriority(presols[i]));
+      SCIPdialogMessage(scip, NULL, "   %c", SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_FAST ? 'f' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c", SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_MEDIUM ? 'm' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c  ", SCIPpresolGetTiming(presols[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE ? 'e' : ' ');
+      SCIPdialogMessage(scip, NULL, "%9d  ", SCIPpresolGetMaxrounds(presols[i]));
       SCIPdialogMessage(scip, NULL, "%s", SCIPpresolGetDesc(presols[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }
@@ -1066,8 +1078,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators)
 
    /* display list of propagators */
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIPdialogMessage(scip, NULL, " propagator           propprio  freq  presprio  description\n");
-   SCIPdialogMessage(scip, NULL, " ----------           --------  ----  --------  -----------\n");
+   SCIPdialogMessage(scip, NULL, " Legend:\n");
+   SCIPdialogMessage(scip, NULL, "  presprio: propagator presolving called before constraint handlers iff presprio > 0\n");
+   SCIPdialogMessage(scip, NULL, "  prestim (presolve timing): 'f'ast, 'm'edium, 'e'xhaustive\n\n");
+
+   SCIPdialogMessage(scip, NULL, " propagator           propprio  freq  presprio  prestim   description\n");
+   SCIPdialogMessage(scip, NULL, " ----------           --------  ----  --------  -------  -----------\n");
    for( i = 0; i < nprops; ++i )
    {
       SCIPdialogMessage(scip, NULL, " %-20s ", SCIPpropGetName(props[i]));
@@ -1075,7 +1091,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayPropagators)
          SCIPdialogMessage(scip, NULL, "\n %20s ", "-->");
       SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpropGetPriority(props[i]), SCIPpropIsDelayed(props[i]) ? 'd' : ' ');
       SCIPdialogMessage(scip, NULL, "%4d  ", SCIPpropGetFreq(props[i]));
-      SCIPdialogMessage(scip, NULL, "%8d%c ", SCIPpropGetPresolPriority(props[i]), SCIPpropIsPresolDelayed(props[i]) ? 'd' : ' ');
+      SCIPdialogMessage(scip, NULL, "%8d  ", SCIPpropGetPresolPriority(props[i]));
+      SCIPdialogMessage(scip, NULL, "    %c", SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_FAST ? 'f' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c", SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_MEDIUM ? 'm' : ' ');
+      SCIPdialogMessage(scip, NULL, "%c  ", SCIPpropGetPresolTiming(props[i]) & SCIP_PRESOLTIMING_EXHAUSTIVE ? 'e' : ' ');
       SCIPdialogMessage(scip, NULL, "%s", SCIPpropGetDesc(props[i]));
       SCIPdialogMessage(scip, NULL, "\n");
    }

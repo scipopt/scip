@@ -52,10 +52,10 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING  SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_ALWAYS /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define QUADCONSUPGD_PRIORITY     10000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 
@@ -2942,6 +2942,7 @@ SCIP_RETCODE polishSolution(
  *    \left\| \left(\begin{array}{c} x \\ \frac{1}{2}(y - z)\end{array}\right) \right\| \leq \frac{1}{2}(y + z).
  *  \f]
  *
+ * @todo implement more general hyperbolic upgrade, e.g., for -x^T x + yz >= 0 or x^T x <= ax + by + cyz
  * @todo more general quadratic constraints then sums of squares might allow an upgrade to a SOC
  */
 static
@@ -3003,14 +3004,26 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       if ( SCIPisNegative(scip, SCIPvarGetLbGlobal(bilinvar1)) || SCIPisNegative(scip, SCIPvarGetLbGlobal(bilinvar2)) )
          return SCIP_OKAY;
 
-      /* we need a zero lhs or rhs */
-      if ( ! SCIPisZero(scip, SCIPgetRhsQuadratic(scip, cons)) && ! SCIPisZero(scip, SCIPgetLhsQuadratic(scip, cons)) )
+      /* we need a rhs */
+      if ( ! SCIPisZero(scip, SCIPgetRhsQuadratic(scip, cons)) )
          return SCIP_OKAY;
 
-      /* we need the bilinear term to be the lhs or rhs; thus, the coefficient should be negative/positve depending on the side */
-      if ( ( SCIPisZero(scip, SCIPgetRhsQuadratic(scip, cons)) && SCIPisGT(scip, bilincoef, 0.0) ) ||
-           ( SCIPisZero(scip, SCIPgetLhsQuadratic(scip, cons)) && SCIPisLT(scip, bilincoef, 0.0) ) )
+      /* we only allow for -1.0 bilincoef */
+      if ( ! SCIPisEQ(scip, bilincoef, -1.0) )
          return SCIP_OKAY;
+
+      /* check that bilinear terms do not appear in the rest and quadratic terms have postive sqrcoef have no lincoef */
+      quadterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
+      for (i = 0; i < nquadvars; ++i)
+      {
+         term = &quadterms[i];
+
+         if( ! SCIPisZero(scip, term->lincoef) || SCIPisNegative(scip, term->sqrcoef) )
+            return SCIP_OKAY;
+
+         if ( (term->var == bilinvar1 || term->var == bilinvar2) && ! SCIPisZero(scip, term->sqrcoef) )
+            return SCIP_OKAY;
+      }
    }
 
    /* reserve space: nquadvars for orignal constraints + one auxiliary variables for hyberbolic case */
@@ -3080,7 +3093,7 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    }
 
    /* treat hyberbolic case */
-   if ( rhsvar == NULL && nbilinterms == 1 )
+   if ( nbilinterms == 1 )
    {
       char name[SCIP_MAXSTRLEN];
       SCIP_VAR* auxvarsum;
@@ -3088,6 +3101,10 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       SCIP_CONS* couplingcons;
       SCIP_VAR* consvars[3];
       SCIP_Real consvals[3];
+
+      /* can only upgrade if rhs is 0 */
+      if ( rhsvar != NULL )
+         goto cleanup;
 
       SCIPdebugMessage("found hyberbolic quadratic constraint <%s> to be SOC\n", SCIPconsGetName(cons));
 
@@ -4093,28 +4110,27 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
          consdata->isapproxadded = TRUE;
       }
 
-      SCIP_CALL( propagateBounds(scip, conss[c], &propresult, nchgbds) );  /*lint !e613*/
-      switch( propresult )
+      if( (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
       {
-      case SCIP_DIDNOTRUN:
-      case SCIP_DIDNOTFIND:
-         break;
-      case SCIP_REDUCEDDOM:
-         *result = SCIP_SUCCESS;
-         break;
-      case SCIP_CUTOFF:
-         *result = SCIP_CUTOFF;
-         SCIPdebugMessage("infeasible in presolve due to propagation for constraint %s\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
-         return SCIP_OKAY;
-      default:
-         SCIPerrorMessage("unexpected result from propagation: %d\n", propresult);
-         return SCIP_ERROR;
-      } /*lint !e788*/
+         SCIP_CALL( propagateBounds(scip, conss[c], &propresult, nchgbds) );  /*lint !e613*/
+         switch( propresult )
+         {
+            case SCIP_DIDNOTRUN:
+            case SCIP_DIDNOTFIND:
+               break;
+            case SCIP_REDUCEDDOM:
+               *result = SCIP_SUCCESS;
+               break;
+            case SCIP_CUTOFF:
+               *result = SCIP_CUTOFF;
+               SCIPdebugMessage("infeasible in presolve due to propagation for constraint %s\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
+               return SCIP_OKAY;
+            default:
+               SCIPerrorMessage("unexpected result from propagation: %d\n", propresult);
+               return SCIP_ERROR;
+         } /*lint !e788*/
+      }
    }
-
-   /* ensure we are called again if we are about to finish, since another presolver may still fix some variable and we cannot remove these fixations in exitpre anymore */
-   if( !SCIPconshdlrWasPresolvingDelayed(conshdlr) && SCIPisPresolveFinished(scip) )
-      *result = SCIP_DELAYED;
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -4553,7 +4569,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitSOC) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSOC) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSOC) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOC, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOC, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSOC) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSOC, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSOC, consSepasolSOC, CONSHDLR_SEPAFREQ,

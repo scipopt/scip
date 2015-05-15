@@ -662,7 +662,7 @@ SCIP_RETCODE SCIPincludeConshdlrUnittest(
          consActiveUnittest, consDeactiveUnittest,
          consEnableUnittest, consDisableUnittest, consDelvarsUnittest,
          consPrintUnittest, consCopyUnittest, consParseUnittest,
-         consGetVarsUnittest, consGetNVarsUnittest, conshdlrdata) );
+         consGetVarsUnittest, consGetNVarsUnittest, NULL, conshdlrdata) );
 #else
    /* use SCIPincludeConshdlrBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions

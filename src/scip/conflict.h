@@ -685,7 +685,7 @@ SCIP_Longint SCIPconflictGetNPseudoReconvergenceLiterals(
 /** enables or disables all clocks of \p conflict, depending on the value of the flag */
 extern
 void SCIPconflictEnableOrDisableClocks(
-   SCIP_CONFLICT*        conflict,            /**< the conflict analysis data for which all clocks should be enabled or disabled */
+   SCIP_CONFLICT*        conflict,           /**< the conflict analysis data for which all clocks should be enabled or disabled */
    SCIP_Bool             enable              /**< should the clocks of the conflict analysis data be enabled? */
    );
 

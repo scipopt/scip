@@ -151,8 +151,8 @@ void SCIPstatUpdateMemsaveMode(
  */
 extern
 void SCIPstatEnableOrDisableStatClocks(
-   SCIP_STAT*          stat,             /**< SCIP statistics */
-   SCIP_Bool           enable            /**< should the LP clocks be enabled? */
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   SCIP_Bool             enable              /**< should the LP clocks be enabled? */
    );
 
 #ifdef __cplusplus

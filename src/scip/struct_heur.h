@@ -59,12 +59,16 @@ struct SCIP_Diveset
    int                   minsoldepth;        /**< the minimum depth at which this dive set found a solution */
    int                   maxsoldepth;        /**< the maximum depth at which this dive set found a solution */
    int                   ncalls;             /**< the total number of calls of this dive set */
-   int                   nsolcalls;          /**< the total number of successful calls with a solution */
+   int                   nsolcalls;          /**< number of calls with a leaf solution */
+   int                   nsolsfound;         /**< the total number of solutions found */
+   int                   nbestsolsfound;     /**< the total number of best solutions found */
    int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
    int                   lpsolvefreq;        /**< LP solve frequency for diving heuristics */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands;  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
+   SCIP_Bool             specificsos1score;  /**< should SOS1 variables be scored by the diving heuristics specific score function;
+                                              *   otherwise use the score function of the SOS1 constraint handler */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore));  /**< method for candidate score and rounding direction */
 };
 

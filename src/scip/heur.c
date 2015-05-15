@@ -83,8 +83,7 @@ SCIP_DECL_PARAMCHGD(paramChgdHeurPriority)
 
 /* resets diving settings counters */
 void SCIPdivesetReset(
-   SCIP_DIVESET*         diveset,            /**< diveset to be reset */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_DIVESET*         diveset             /**< diveset to be reset */
    )
 {
    assert(diveset != NULL);
@@ -99,8 +98,10 @@ void SCIPdivesetReset(
    diveset->mindepth = INT_MAX;
    diveset->maxdepth = -1;
    diveset->nlps = 0;
-   diveset->nsolcalls = 0;
+   diveset->nsolsfound = 0;
+   diveset->nbestsolsfound = 0;
    diveset->ncalls = 0;
+   diveset->nsolcalls = 0;
 }
 
 /** update diveset statistics and global diveset statistics */
@@ -110,7 +111,9 @@ void SCIPdivesetUpdateStats(
    int                   depth,              /**< the depth reached this time */
    int                   nprobingnodes,      /**< the number of probing nodes explored this time */
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
-   SCIP_Bool             solfound            /**< was a solution found at the leaf? */
+   int                   nsolsfound,         /**< number of new solutions found this time */
+   int                   nbestsolsfound,     /**< number of new best solutions found this time */
+   SCIP_Bool             leavesol            /**< has the diving heuristic reached a feasible leaf */
    )
 {
    assert(diveset != NULL);
@@ -123,13 +126,16 @@ void SCIPdivesetUpdateStats(
    diveset->ncalls++;
 
    /* update solution statistics only if a solution was found */
-   if( solfound )
+   if( leavesol )
    {
       diveset->totalsoldepth += depth;
       diveset->minsoldepth = MIN(diveset->minsoldepth, depth);
       diveset->maxsoldepth = MAX(diveset->maxsoldepth, depth);
       diveset->nsolcalls++;
    }
+
+   diveset->nsolsfound += nsolsfound;
+   diveset->nbestsolsfound += nbestsolsfound;
 
    stat->totaldivesetdepth += depth;
    stat->ndivesetcalls++;
@@ -156,7 +162,7 @@ SCIP_RETCODE heurAddDiveset(
    else
    {
       assert(heur->ndivesets > 0);
-      SCIP_ALLOC( BMSreallocMemoryArray(&heur->divesets, heur->ndivesets + 1) );
+      SCIP_ALLOC( BMSreallocMemoryArray(&heur->divesets, heur->ndivesets + 1) ); /*lint !e776 I expect no overflow here */
    }
 
    /* append diveset to the end of the array */
@@ -189,6 +195,8 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
+   SCIP_Bool             specificsos1score,  /**< should SOS1 variables be scored by the diving heuristics specific score function;
+                                              *   otherwise use the score function of the SOS1 constraint handler */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
    )
 {
@@ -285,14 +293,21 @@ SCIP_RETCODE SCIPdivesetCreate(
             "more general constraint handler diving variable selection?",
             &(*diveset)->onlylpbranchcands, FALSE, onlylpbranchcands, NULL, NULL) );
 
-   SCIPdivesetReset(*diveset, set);
+   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/specificsos1score", (*diveset)->name);
+   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem,
+            paramname,
+            "should SOS1 variables be scored by the diving heuristics specific score function; "
+            "otherwise use the score function of the SOS1 constraint handler",
+            &(*diveset)->specificsos1score, FALSE, specificsos1score, NULL, NULL) );
+
+   SCIPdivesetReset(*diveset);
 
    return SCIP_OKAY;
 }
 
 /** get the heuristic to which this diving setting belongs */
 SCIP_HEUR* SCIPdivesetGetHeur(
-   SCIP_DIVESET*         diveset             /** diving settings */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
    return diveset->heur;
@@ -300,7 +315,7 @@ SCIP_HEUR* SCIPdivesetGetHeur(
 
 /** get the working solution of this dive set */
 SCIP_SOL* SCIPdivesetGetWorkSolution(
-   SCIP_DIVESET*         diveset             /** diving settings */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
    assert(diveset != NULL);
@@ -310,8 +325,8 @@ SCIP_SOL* SCIPdivesetGetWorkSolution(
 
 /** set the working solution for this dive set */
 void SCIPdivesetSetWorkSolution(
-   SCIP_DIVESET*         diveset,            /** diving settings */
-   SCIP_SOL*             sol                 /** new working solution for this dive set, or NULL */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_SOL*             sol                 /**< new working solution for this dive set, or NULL */
    )
 {
    assert(diveset != NULL);
@@ -321,7 +336,7 @@ void SCIPdivesetSetWorkSolution(
 
 /** get the name of the dive set */
 const char* SCIPdivesetGetName(
-   SCIP_DIVESET*         diveset             /** diving settings */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
    assert(diveset != NULL);
@@ -350,7 +365,7 @@ int SCIPdivesetGetSolSuccess(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {
-   return 10 * diveset->nsolcalls;
+   return 10 * diveset->nbestsolsfound + diveset->nsolsfound;
 }
 
 /** get the number of calls to this dive set */
@@ -550,6 +565,18 @@ SCIP_Bool SCIPdivesetUseOnlyLPBranchcands(
    return diveset->onlylpbranchcands;
 }
 
+/** should SOS1 variables be scored by the diving heuristics specific score function;
+ *  otherwise use the score function of the SOS1 constraint handler
+ */
+SCIP_Bool SCIPdivesetUseSpecificSOS1Score(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   )
+{
+   assert(diveset != NULL);
+
+   return diveset->specificsos1score;
+}
+
 /** update diveset LP statistics, should be called after every LP solved by this diving heuristic */
 void SCIPdivesetUpdateLPStats(
    SCIP_DIVESET*         diveset,            /**< diving settings */
@@ -564,7 +591,8 @@ void SCIPdivesetUpdateLPStats(
 }
 
 /** frees memory of a diveset */
-SCIP_RETCODE SCIPdivesetFree(
+static
+void divesetFree(
    SCIP_DIVESET**        diveset             /**< general diving settings */
    )
 {
@@ -573,14 +601,13 @@ SCIP_RETCODE SCIPdivesetFree(
 
    BMSfreeMemoryArray(&(*diveset)->name);
    BMSfreeMemory(diveset);
-
-   return SCIP_OKAY;
 }
 
 /** get the candidate score and preferred rounding direction for a candidate variable */
 SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_DIVESET*         diveset,            /**< general diving settings */
    SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_DIVETYPE         divetype,           /**< represents different methods for a dive set to explore the next children */
    SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
    SCIP_Real             divecandsol,        /**< LP solution value of the candidate */
    SCIP_Real             divecandfrac,       /**< fractionality of the candidate */
@@ -593,7 +620,7 @@ SCIP_RETCODE SCIPdivesetGetScore(
    assert(roundup != NULL);
    assert(divecand != NULL);
 
-   SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, divecand,  divecandsol, divecandfrac, candscore, roundup) );
+   SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, divetype, divecand, divecandsol, divecandfrac, candscore, roundup) );
 
    return SCIP_OKAY;
 }
@@ -726,7 +753,7 @@ SCIP_RETCODE SCIPheurFree(
    for( d = 0; d < (*heur)->ndivesets; ++d )
    {
       assert((*heur)->divesets[d] != NULL);
-      SCIPdivesetFree(&((*heur)->divesets[d]));
+      divesetFree(&((*heur)->divesets[d]));
    }
    BMSfreeMemoryArrayNull(&(*heur)->divesets);
    SCIPclockFree(&(*heur)->heurclock);
@@ -780,7 +807,7 @@ SCIP_RETCODE SCIPheurInit(
    for( d = 0; d < heur->ndivesets; ++d )
    {
       assert(heur->divesets[d] != NULL);
-      SCIPdivesetReset(heur->divesets[d], set);
+      SCIPdivesetReset(heur->divesets[d]);
    }
 
    heur->initialized = TRUE;

@@ -47,9 +47,9 @@
 
 #define PRESOL_NAME            "domcol"
 #define PRESOL_DESC            "dominated column presolver"
-#define PRESOL_PRIORITY         20000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_PRIORITY            -1000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY                TRUE     /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_TIMING           (SCIP_PRESOLTIMING_EXHAUSTIVE) /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_NUMMINPAIRS         1024     /**< minimal number of pair comparisons */
 #define DEFAULT_NUMMAXPAIRS      1048576     /**< maximal number of pair comparisons */
@@ -2067,205 +2067,209 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
       /* init pair comparision control */
       presoldata->numcurrentpairs = presoldata->nummaxpairs;
 
+      varcount = 0;
+
       /* 1.stage: search dominance relations of parallel columns
        *          within equalities and ranged rows
        */
-      SCIP_CALL( detectParallelCols(scip, matrix, pclass, varineq) );
-      SCIPsortIntInt(pclass, colidx, ncols);
-
-      varcount = 0;
-
-      pc = 0;
-      while( pc < ncols )
+      if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
       {
-         int varidx;
+         SCIP_CALL( detectParallelCols(scip, matrix, pclass, varineq) );
+         SCIPsortIntInt(pclass, colidx, ncols);
 
-         varidx = 0;
-         nconfill = 0;
-         nintfill = 0;
-         nbinfill = 0;
-
-         pclassstart = pclass[pc];
-         while( pc < ncols && pclassstart == pclass[pc] )
+         pc = 0;
+         while( pc < ncols )
          {
-            SCIP_VAR* var;
+            int varidx;
 
-            varidx = colidx[pc];
-            var = SCIPmatrixGetVar(matrix, varidx);
+            varidx = 0;
+            nconfill = 0;
+            nintfill = 0;
+            nbinfill = 0;
 
-            /* we only regard variables which were not processed yet and
-               are present within equalities or ranged rows */
-            if( !varsprocessed[varidx] && varineq[varidx] )
+            pclassstart = pclass[pc];
+            while( pc < ncols && pclassstart == pclass[pc] )
             {
-               /* we search only for dominance relations between the same variable type */
-               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               SCIP_VAR* var;
+
+               varidx = colidx[pc];
+               var = SCIPmatrixGetVar(matrix, varidx);
+
+               /* we only regard variables which were not processed yet and
+                  are present within equalities or ranged rows */
+               if( !varsprocessed[varidx] && varineq[varidx] )
                {
-                  consearchcols[nconfill++] = varidx;
+                  /* we search only for dominance relations between the same variable type */
+                  if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+                  {
+                     consearchcols[nconfill++] = varidx;
+                  }
+                  else if( SCIPvarIsBinary(var) )
+                  {
+                     binsearchcols[nbinfill++] = varidx;
+                  }
+                  else
+                  {
+                     assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+                     intsearchcols[nintfill++] = varidx;
+                  }
                }
-               else if( SCIPvarIsBinary(var) )
-               {
-                  binsearchcols[nbinfill++] = varidx;
-               }
-               else
-               {
-                  assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
-                  intsearchcols[nintfill++] = varidx;
-               }
+               ++pc;
             }
-            ++pc;
+
+            /* continuous variables */
+            if( nconfill > 1 )
+            {
+               SCIP_CALL( findDominancePairs(scip, matrix, presoldata, consearchcols, nconfill, FALSE,
+                     varstofix, &nfixings, &ndomrelations, nchgbds) );
+
+               for( v = 0; v < nconfill; ++v )
+                  varsprocessed[consearchcols[v]] = TRUE;
+
+               varcount += nconfill;
+            }
+            else if( nconfill == 1 )
+            {
+               if( varineq[varidx] )
+                  varsprocessed[consearchcols[0]] = TRUE;
+            }
+
+            /* integer and impl-integer variables */
+            if( nintfill > 1 )
+            {
+               SCIP_CALL( findDominancePairs(scip, matrix, presoldata, intsearchcols, nintfill, FALSE,
+                     varstofix, &nfixings, &ndomrelations, nchgbds) );
+
+               for( v = 0; v < nintfill; ++v )
+                  varsprocessed[intsearchcols[v]] = TRUE;
+
+               varcount += nintfill;
+            }
+            else if( nintfill == 1 )
+            {
+               if( varineq[varidx] )
+                  varsprocessed[intsearchcols[0]] = TRUE;
+            }
+
+            /* binary variables */
+            if( nbinfill > 1 )
+            {
+               SCIP_CALL( findDominancePairs(scip, matrix, presoldata, binsearchcols, nbinfill, TRUE,
+                     varstofix, &nfixings, &ndomrelations, nchgbds) );
+
+               for( v = 0; v < nbinfill; ++v )
+                  varsprocessed[binsearchcols[v]] = TRUE;
+
+               varcount += nbinfill;
+            }
+            else if( nbinfill == 1 )
+            {
+               if( varineq[varidx] )
+                  varsprocessed[binsearchcols[0]] = TRUE;
+            }
+
+            if( varcount >= ncols )
+               break;
          }
-
-         /* continuous variables */
-         if( nconfill > 1 )
-         {
-            SCIP_CALL( findDominancePairs(scip, matrix, presoldata, consearchcols, nconfill, FALSE,
-                  varstofix, &nfixings, &ndomrelations, nchgbds) );
-
-            for( v = 0; v < nconfill; ++v )
-               varsprocessed[consearchcols[v]] = TRUE;
-
-            varcount += nconfill;
-         }
-         else if( nconfill == 1 )
-         {
-            if( varineq[varidx] )
-               varsprocessed[consearchcols[0]] = TRUE;
-         }
-
-         /* integer and impl-integer variables */
-         if( nintfill > 1 )
-         {
-            SCIP_CALL( findDominancePairs(scip, matrix, presoldata, intsearchcols, nintfill, FALSE,
-                  varstofix, &nfixings, &ndomrelations, nchgbds) );
-
-            for( v = 0; v < nintfill; ++v )
-               varsprocessed[intsearchcols[v]] = TRUE;
-
-            varcount += nintfill;
-         }
-         else if( nintfill == 1 )
-         {
-            if( varineq[varidx] )
-               varsprocessed[intsearchcols[0]] = TRUE;
-         }
-
-         /* binary variables */
-         if( nbinfill > 1 )
-         {
-            SCIP_CALL( findDominancePairs(scip, matrix, presoldata, binsearchcols, nbinfill, TRUE,
-                  varstofix, &nfixings, &ndomrelations, nchgbds) );
-
-            for( v = 0; v < nbinfill; ++v )
-               varsprocessed[binsearchcols[v]] = TRUE;
-
-            varcount += nbinfill;
-         }
-         else if( nbinfill == 1 )
-         {
-            if( varineq[varidx] )
-               varsprocessed[binsearchcols[0]] = TRUE;
-         }
-
-         if( varcount >= ncols )
-            break;
       }
-
 
       /* 2.stage: search dominance relations for the remaining columns
        *          by increasing row-sparsity
        */
-      SCIPsortIntInt(rowsparsity, rowidxsorted, nrows);
-
-      for( r = 0; r < nrows; ++r )
+      if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
       {
-         int rowidx;
-         int* rowpnt;
-         int* rowend;
+         SCIPsortIntInt(rowsparsity, rowidxsorted, nrows);
 
-         /* break if the time limit was reached; since the check is expensive,
-          * we only check all 1000 constraints
-          */
-         if( (r % 1000 == 0) && SCIPisStopped(scip) )
-            break;
-
-         rowidx = rowidxsorted[r];
-         rowpnt = SCIPmatrixGetRowIdxPtr(matrix, rowidx);
-         rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, rowidx);
-
-         if( SCIPmatrixGetRowNNonzs(matrix, rowidx) == 1 )
-            continue;
-
-         nconfill = 0;
-         nintfill = 0;
-         nbinfill = 0;
-
-         for( ; rowpnt < rowend; rowpnt++ )
+         for( r = 0; r < nrows; ++r )
          {
-            if( !(varsprocessed[*rowpnt]) )
+            int rowidx;
+            int* rowpnt;
+            int* rowend;
+
+            /* break if the time limit was reached; since the check is expensive,
+             * we only check all 1000 constraints
+             */
+            if( (r % 1000 == 0) && SCIPisStopped(scip) )
+               break;
+
+            rowidx = rowidxsorted[r];
+            rowpnt = SCIPmatrixGetRowIdxPtr(matrix, rowidx);
+            rowend = rowpnt + SCIPmatrixGetRowNNonzs(matrix, rowidx);
+
+            if( SCIPmatrixGetRowNNonzs(matrix, rowidx) == 1 )
+               continue;
+
+            nconfill = 0;
+            nintfill = 0;
+            nbinfill = 0;
+
+            for( ; rowpnt < rowend; rowpnt++ )
             {
-               int varidx;
-               SCIP_VAR* var;
+               if( !(varsprocessed[*rowpnt]) )
+               {
+                  int varidx;
+                  SCIP_VAR* var;
 
-               varidx = *rowpnt;
-               var = SCIPmatrixGetVar(matrix, varidx);
+                  varidx = *rowpnt;
+                  var = SCIPmatrixGetVar(matrix, varidx);
 
-               /* we search only for dominance relations between the same variable type */
-               if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
-               {
-                  consearchcols[nconfill++] = varidx;
-               }
-               else if( SCIPvarIsBinary(var) )
-               {
-                  binsearchcols[nbinfill++] = varidx;
-               }
-               else
-               {
-                  assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
-                  intsearchcols[nintfill++] = varidx;
+                  /* we search only for dominance relations between the same variable type */
+                  if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+                  {
+                     consearchcols[nconfill++] = varidx;
+                  }
+                  else if( SCIPvarIsBinary(var) )
+                  {
+                     binsearchcols[nbinfill++] = varidx;
+                  }
+                  else
+                  {
+                     assert(SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT);
+                     intsearchcols[nintfill++] = varidx;
+                  }
                }
             }
+
+            /* continuous variables */
+            if( nconfill > 1 )
+            {
+               SCIP_CALL( findDominancePairs(scip, matrix, presoldata, consearchcols, nconfill, FALSE,
+                     varstofix, &nfixings, &ndomrelations, nchgbds) );
+
+               for( v = 0; v < nconfill; ++v )
+                  varsprocessed[consearchcols[v]] = TRUE;
+
+               varcount += nconfill;
+            }
+
+            /* integer and impl-integer variables */
+            if( nintfill > 1 )
+            {
+               SCIP_CALL( findDominancePairs(scip, matrix, presoldata, intsearchcols, nintfill, FALSE,
+                     varstofix, &nfixings, &ndomrelations, nchgbds) );
+
+               for( v = 0; v < nintfill; ++v )
+                  varsprocessed[intsearchcols[v]] = TRUE;
+
+               varcount += nintfill;
+            }
+
+            /* binary variables */
+            if( nbinfill > 1 )
+            {
+               SCIP_CALL( findDominancePairs(scip, matrix, presoldata, binsearchcols, nbinfill, TRUE,
+                     varstofix, &nfixings, &ndomrelations, nchgbds) );
+
+               for( v = 0; v < nbinfill; ++v )
+                  varsprocessed[binsearchcols[v]] = TRUE;
+
+               varcount += nbinfill;
+            }
+
+            if( varcount >= ncols )
+               break;
          }
-
-         /* continuous variables */
-         if( nconfill > 1 )
-         {
-            SCIP_CALL( findDominancePairs(scip, matrix, presoldata, consearchcols, nconfill, FALSE,
-                  varstofix, &nfixings, &ndomrelations, nchgbds) );
-
-            for( v = 0; v < nconfill; ++v )
-               varsprocessed[consearchcols[v]] = TRUE;
-
-            varcount += nconfill;
-         }
-
-         /* integer and impl-integer variables */
-         if( nintfill > 1 )
-         {
-            SCIP_CALL( findDominancePairs(scip, matrix, presoldata, intsearchcols, nintfill, FALSE,
-                  varstofix, &nfixings, &ndomrelations, nchgbds) );
-
-            for( v = 0; v < nintfill; ++v )
-               varsprocessed[intsearchcols[v]] = TRUE;
-
-            varcount += nintfill;
-         }
-
-         /* binary variables */
-         if( nbinfill > 1 )
-         {
-            SCIP_CALL( findDominancePairs(scip, matrix, presoldata, binsearchcols, nbinfill, TRUE,
-                  varstofix, &nfixings, &ndomrelations, nchgbds) );
-
-            for( v = 0; v < nbinfill; ++v )
-               varsprocessed[binsearchcols[v]] = TRUE;
-
-            varcount += nbinfill;
-         }
-
-         if( varcount >= ncols )
-            break;
       }
-
 
       if( nfixings > 0 )
       {
@@ -2392,7 +2396,7 @@ SCIP_RETCODE SCIPincludePresolDomcol(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
-         PRESOL_DELAY, presolExecDomcol, presoldata) );
+         PRESOL_TIMING, presolExecDomcol, presoldata) );
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyDomcol) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeDomcol) );
 

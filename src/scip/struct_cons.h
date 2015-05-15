@@ -168,7 +168,7 @@ struct SCIP_Conshdlr
    SCIP_DECL_CONSPARSE   ((*consparse));     /**< constraint parsing method */
    SCIP_DECL_CONSGETVARS ((*consgetvars));   /**< constraint get variables method */
    SCIP_DECL_CONSGETNVARS((*consgetnvars));  /**< constraint get number of variable method */
-   SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS((*conshdlrdetermdivebdchgs)); /**< constraint handler diving solution enforcement method */
+   SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)); /**< constraint handler diving solution enforcement method */
    SCIP_CONSHDLRDATA*    conshdlrdata;       /**< constraint handler data */
    SCIP_CONS**           conss;              /**< array with all transformed constraints, active ones preceed inactive
                                               *   ones; a constraint is active if it is global and was not removed
@@ -257,17 +257,15 @@ struct SCIP_Conshdlr
    int                   delayupdatecount;   /**< must the updates of the constraint arrays be delayed until processUpdates()? */
    SCIP_Bool             delaysepa;          /**< should separation method be delayed, if other separators found cuts? */
    SCIP_Bool             delayprop;          /**< should propagation method be delayed, if other propagators found reductions? */
-   SCIP_Bool             delaypresol;        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons;          /**< should the constraint handler be skipped, if no constraints are available? */
    SCIP_Bool             sepalpwasdelayed;   /**< was the LP separation method delayed at the last call? */
    SCIP_Bool             sepasolwasdelayed;  /**< was the SOL separation method delayed at the last call? */
    SCIP_Bool             propwasdelayed;     /**< was the propagation method delayed at the last call? */
-   SCIP_Bool             presolwasdelayed;   /**< was the presolving method delayed at the last call? */
    SCIP_Bool             initialized;        /**< is constraint handler initialized? */
    SCIP_Bool             duringsepa;         /**< is the constraint handler currently performing separation? */
    SCIP_Bool             duringprop;         /**< is the constraint handler currently performing propagation? */
-   SCIP_PROPTIMING       timingmask;         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
-
+   SCIP_PROPTIMING       proptiming;         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
+   SCIP_PRESOLTIMING     presoltiming;       /**< timing mask of the constraint handler's presolving method */
    SCIP_QUEUE*           pendingconss;       /**< queue of pending constraints */
 };
 

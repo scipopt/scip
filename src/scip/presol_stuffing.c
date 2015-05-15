@@ -36,7 +36,7 @@
 #define PRESOL_DESC            "fix redundant singleton continuous variables"
 #define PRESOL_PRIORITY           120000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY               FALSE     /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
 
 /** type of fixing direction */
 enum Fixingdirection
@@ -408,7 +408,7 @@ SCIP_RETCODE SCIPincludePresolStuffing(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
-         PRESOL_DELAY, presolExecStuffing, NULL) );
+         PRESOL_TIMING, presolExecStuffing, NULL) );
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyStuffing) );
 
    return SCIP_OKAY;

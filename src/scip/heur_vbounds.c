@@ -100,9 +100,7 @@ struct SCIP_HeurData
 #define getVarIndex(idx) ((idx)/2)
 #define getBoundtype(idx) (((idx) % 2 == 0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER)
 #define isIndexLowerbound(idx) ((idx) % 2 == 0)
-#define getBoundString(lower) ((lower) ? "lb" : "ub")
 #define getBoundtypeString(type) ((type) == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper")
-#define indexGetBoundString(idx) (getBoundString(isIndexLowerbound(idx)))
 
 
 /*
@@ -184,8 +182,6 @@ SCIP_RETCODE dfs(
       startvar = vars[getVarIndex(curridx)];
       lower = isIndexLowerbound(curridx);
 
-      /*SCIPdebugMessage("stack[%d]: %s(%s)\n", stacksize - 1, getBoundString(lower), SCIPvarGetName(startvar));*/
-
       /* go over edges corresponding to varbounds */
       if( lower )
       {
@@ -219,9 +215,6 @@ SCIP_RETCODE dfs(
       {
          assert(!visited[idx]);
 
-         /*SCIPdebugMessage("vbound: %s(%s) <- %s(%s)\n", getBoundString(lower), SCIPvarGetName(startvar),
-           indexGetBoundString(idx), SCIPvarGetName(vars[getVarIndex(idx)]));*/
-
          /* put the adjacent node onto the stack */
          dfsstack[stacksize] = idx;
          stacknextedge[stacksize] = 0;
@@ -238,8 +231,6 @@ SCIP_RETCODE dfs(
 
       if( (stacksize > 0 || nvbvars > 0) && SCIPvarGetType(startvar) != SCIP_VARTYPE_CONTINUOUS )
       {
-         /*SCIPdebugMessage("topoorder[%d] = %s(%s)\n", *ndfsnodes, getBoundString(lower), SCIPvarGetName(startvar));*/
-
          /* store node in the sorted nodes array */
          dfsnodes[(*ndfsnodes)] = curridx;
          (*ndfsnodes)++;
@@ -362,11 +353,9 @@ SCIP_RETCODE applyVboundsFixings(
    SCIP_Bool             forward,            /**< should fixings be done forward w.r.t. the vbound graph? */
    SCIP_Bool             tighten,            /**< should variables be fixed to cause other fixings? */
    SCIP_Bool             obj,                /**< should the objective be taken into account? */
-   SCIP_SOL*             sol,                /**< working solution */
    SCIP_Bool*            infeasible,         /**< pointer to store whether problem is infeasible */
    SCIP_VAR**            lastvar,            /**< last fixed variable */
-   SCIP_Bool*            fixedtolb,          /**< was last fixed variable fixed to its lower bound? */
-   SCIP_Bool*            foundsol            /**< pointer to store whether a new solution was found */
+   SCIP_Bool*            fixedtolb           /**< was last fixed variable fixed to its lower bound? */
    )
 {
    SCIP_VAR* var;
@@ -430,34 +419,6 @@ SCIP_RETCODE applyVboundsFixings(
 
       /* check if problem is already infeasible */
       SCIP_CALL( SCIPpropagateProbing(scip, heurdata->maxproprounds, infeasible, NULL) );
-#if 0
-      if( !(*infeasible) )
-      {
-         SCIP_Bool success;
-
-         /* create solution from probing run and try to round it */
-         SCIP_CALL( SCIPlinkCurrentSol(scip, sol) );
-         SCIP_CALL( SCIProundSol(scip, sol, &success) );
-
-         if( success )
-         {
-            SCIPdebugMessage("vbound heuristic found roundable primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, sol));
-
-            /* try to add solution to SCIP */
-            SCIP_CALL( SCIPtrySol(scip, sol, FALSE, FALSE, FALSE, TRUE, &success) );
-
-            /* check, if solution was feasible and good enough */
-            if( success )
-            {
-               SCIPdebugMessage(" -> solution was feasible and good enough\n");
-               *foundsol = TRUE;
-
-               if( SCIPisStopped(scip) )
-                  break;
-            }
-         }
-      }
-#endif
    }
 
    SCIPdebugMessage("probing ended with %sfeasible problem\n", (*infeasible) ? "in" : "");
@@ -609,8 +570,8 @@ SCIP_RETCODE applyVbounds(
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
 
    /* apply the variable fixings */
-   SCIP_CALL( applyVboundsFixings(scip, heurdata, vbvars, nvbvars, forward, tighten, obj, newsol, &infeasible,
-         &lastfixedvar, &lastfixedlower, &foundsol) );
+   SCIP_CALL( applyVboundsFixings(scip, heurdata, vbvars, nvbvars, forward, tighten, obj, &infeasible,
+         &lastfixedvar, &lastfixedlower) );
 
    /* try to repair probing */
    if( infeasible )

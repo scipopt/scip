@@ -47,7 +47,7 @@
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
 
-#define DEFAULT_REEVALAGE           0        /**< number of intermediate LPs solved to trigger reevaluation of strong branching
+#define DEFAULT_REEVALAGE         0LL        /**< number of intermediate LPs solved to trigger reevaluation of strong branching
                                               *   value for a variable that was already evaluated at the current node */
 #define DEFAULT_MAXPROPROUNDS       0        /**< maximum number of propagation rounds to be performed during multaggr branching
                                               *   before solving the LP (-1: no limit, -2: parameter settings) */
@@ -148,11 +148,13 @@ SCIP_RETCODE selectVarMultAggrBranching(
    SCIP_Real*            provedbound,        /**< proved dual bound for the current subtree */
    SCIP_Real*            estimatedown,       /**< pointer to store the down child node´s estimate */
    SCIP_Real*            estimateup,         /**< pointer to store the up child node´s estimate */
+#ifdef SCIP_STATISTIC
    SCIP_Real*            bestmultaggrscore,  /**< pointer to store the multi aggregated score */
+#endif
    SCIP_RESULT*          result              /**< pointer to store results of branching */
    )
 {
-   SCIP_VAR** fixvars = NULL;
+   SCIP_VAR** fixvars;
    SCIP_CONS* probingconsdown;
    SCIP_CONS* probingconsup;
    SCIP_NODE* node;
@@ -164,7 +166,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
    SCIP_Bool downnodeinf = FALSE;
    SCIP_Bool startprobing = TRUE;
    SCIP_Bool endprobing = FALSE;
-   int nfixvars = 0;
+   int nfixvars;
    int i;
    int j;
    int k;
@@ -244,7 +246,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
 	       /* start the probing mode if this is the first entrance */
                if( startprobing )
                {
-                  SCIPstartProbing(scip);
+                  SCIP_CALL( SCIPstartProbing(scip) );
                   startprobing = FALSE;
                   endprobing = TRUE;
 
@@ -263,7 +265,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                assert(probingconsdown != NULL);
 
                /* create the down child probing node */
-               SCIPnewProbingNode(scip);
+               SCIP_CALL( SCIPnewProbingNode(scip) );
                node = SCIPgetCurrentNode(scip);
                assert(node != NULL);
 
@@ -327,7 +329,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                assert(probingconsup != NULL);
 
                /* create the up child probing node */
-               SCIPnewProbingNode(scip);
+               SCIP_CALL( SCIPnewProbingNode(scip) );
                node = SCIPgetCurrentNode(scip);
 
                SCIP_CALL( SCIPaddConsNode(scip, node, probingconsup, NULL) );
@@ -488,7 +490,9 @@ SCIP_RETCODE selectVarMultAggrBranching(
 
       /* end probing mode */
       if( endprobing )
-         SCIPendProbing(scip);
+      {
+         SCIP_CALL( SCIPendProbing(scip) );
+      }
 
       SCIPdebugMessage("\n");
 
@@ -820,8 +824,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
       SCIP_VAR* bestcand = lpcands[bestcandpos];
-      SCIP_Real bestmultaggrscore = -SCIPinfinity(scip);
       SCIP_Real bestsol = lpcandssol[bestcandpos];
+      SCIPstatistic( SCIP_Real bestmultaggrscore = -SCIPinfinity(scip); )
 
       SCIPstatistic(
          SCIP_Real fdowngain = 0.0;
@@ -850,9 +854,13 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
       )
 
       /* compute strong branching among the multi-aggregated variables and the best fractional variable */
+#ifdef SCIP_STATISTIC
       SCIP_CALL( selectVarMultAggrBranching(scip, &bestcand, &bestscore, &bestsol, &bestdown, &bestup, &bestdownvalid, &bestupvalid, &provedbound,
             &estimatedown, &estimateup, &bestmultaggrscore, result) );
-
+#else
+      SCIP_CALL( selectVarMultAggrBranching(scip, &bestcand, &bestscore, &bestsol, &bestdown, &bestup, &bestdownvalid, &bestupvalid, &provedbound,
+            &estimatedown, &estimateup, result) );
+#endif
       SCIPstatistic(
          SCIP_CALL( SCIPstopClock(scip, branchruledata->clckmultaggrbr) );
          branchruledata->nmultaggrbrcall += 1;

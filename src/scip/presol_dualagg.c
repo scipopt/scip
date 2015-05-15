@@ -47,8 +47,8 @@
 #define PRESOL_NAME            "dualagg"
 #define PRESOL_DESC            "aggregate variables by dual arguments"
 #define PRESOL_PRIORITY           -12000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
-#define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY               FALSE     /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_MAXROUNDS               0     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
 
 /** type of aggregation */
 enum AggrType
@@ -214,7 +214,10 @@ void getBinVarIdxInUplockRow(
 
       var = SCIPmatrixGetVar(matrix, *rowpnt);
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      /* avoid cases where the binary variable has lb=ub=1 or lb=ub=0 */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY &&
+          SCIPmatrixGetColLb(matrix, *rowpnt) < 0.5 &&
+          SCIPmatrixGetColUb(matrix, *rowpnt) > 0.5 )
       {
          SCIP_Real bincoef;
          bincoef = *valpnt;
@@ -309,9 +312,13 @@ void getBinVarIdxInDownlockRow(
 
       var = SCIPmatrixGetVar(matrix, *rowpnt);
 
-      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY )
+      /* avoid cases where the binary variable has lb=ub=1 or lb=ub=0 */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_BINARY &&
+          SCIPmatrixGetColLb(matrix, *rowpnt) < 0.5 &&
+          SCIPmatrixGetColUb(matrix, *rowpnt) > 0.5 )
       {
          SCIP_Real bincoef;
+
          bincoef = *valpnt;
 
          if( bincoef < 0 )
@@ -588,7 +595,7 @@ SCIP_RETCODE SCIPincludePresolDualagg(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
-         PRESOL_DELAY, presolExecDualagg, NULL) );
+         PRESOL_TIMING, presolExecDualagg, NULL) );
 
    return SCIP_OKAY;
 }

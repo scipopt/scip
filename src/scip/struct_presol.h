@@ -70,9 +70,8 @@ struct SCIP_Presol
    int                   nchgcoefs;          /**< total number of changed coefficients by this presolver */
    int                   nchgsides;          /**< total number of changed left or right hand sides by this presolver */
    int                   ncalls;             /**< number of times the presolver was called and tried to find reductions */
-   SCIP_Bool             delay;              /**< should presolver be delayed, if other presolvers found reductions? */
-   SCIP_Bool             wasdelayed;         /**< was the presolver delayed at the last call? */
    SCIP_Bool             initialized;        /**< is presolver initialized? */
+   SCIP_PRESOLTIMING     timing;             /**< timing of the presolver */
 };
 
 #ifdef __cplusplus

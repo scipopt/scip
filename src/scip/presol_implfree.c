@@ -36,8 +36,8 @@
 #define PRESOL_NAME            "implfree"
 #define PRESOL_DESC            "exploit implied free variables for multi-aggregation"
 #define PRESOL_PRIORITY          1000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
-#define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY               FALSE     /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_MAXROUNDS               0     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define MAXABSRATIO     ((double)1000.0)     /**< max abs coefficients ratio */
 #define SIDECHANGERATIO   ((double)10.0)     /**< max side change ratio */
@@ -1282,7 +1282,7 @@ SCIP_RETCODE SCIPincludePresolImplfree(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
-         PRESOL_DELAY, presolExecImplfree, NULL) );
+         PRESOL_TIMING, presolExecImplfree, NULL) );
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyImplfree) );
 
    return SCIP_OKAY;

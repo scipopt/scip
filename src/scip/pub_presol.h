@@ -72,6 +72,25 @@ int SCIPpresolGetPriority(
    SCIP_PRESOL*          presol              /**< presolver */
    );
 
+/** gets round limit of presolver */
+EXTERN
+int SCIPpresolGetMaxrounds(
+   SCIP_PRESOL*          presol              /**< presolver */
+   );
+
+/** gets the timing mask of the presolver */
+EXTERN
+SCIP_PRESOLTIMING SCIPpresolGetTiming(
+   SCIP_PRESOL*          presol              /**< presolver */
+   );
+
+/** sets the timing mask of the presolver */
+EXTERN
+void SCIPpresolSetTiming(
+   SCIP_PRESOL*          presol,             /**< presolver */
+   SCIP_PRESOLTIMING     timing              /**< timing mask of the presolver */
+   );
+
 /** should presolver be delayed, if other presolvers found reductions? */
 EXTERN
 SCIP_Bool SCIPpresolIsDelayed(

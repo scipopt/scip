@@ -1521,6 +1521,17 @@ SCIP_RETCODE SCIPsetBoolParam(
    SCIP_Bool             value               /**< new value of the parameter */
    );
 
+/** checks the value of an existing SCIP_Bool parameter; issues a warning message if value was invalid
+ *
+ *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
+ */
+EXTERN
+SCIP_RETCODE SCIPcheckBoolParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Bool             value               /**< value to check */
+   );
+
 /** changes the value of an existing int parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1567,6 +1578,17 @@ SCIP_RETCODE SCIPsetLongintParam(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           name,               /**< name of the parameter */
    SCIP_Longint          value               /**< new value of the parameter */
+   );
+
+/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
+ *
+ *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
+ */
+EXTERN
+SCIP_RETCODE SCIPcheckLongintParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_Longint          value               /**< value to check */
    );
 
 /** changes the value of an existing SCIP_Real parameter
@@ -1617,6 +1639,17 @@ SCIP_RETCODE SCIPsetCharParam(
    char                  value               /**< new value of the parameter */
    );
 
+/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
+ *
+ *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
+ */
+EXTERN
+SCIP_RETCODE SCIPcheckCharParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   const char            value               /**< value to check */
+   );
+
 /** changes the value of an existing string(char*) parameter
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1641,6 +1674,17 @@ SCIP_RETCODE SCIPsetStringParam(
    const char*           value               /**< new value of the parameter */
    );
 
+/** checks parameter value according to the given feasible domain; issues a warning message if value was invalid
+ *
+ *  @return \ref SCIP_OKAY is returned if value is valid. Otherwise \ref SCIP_PARAMETERWRONGVAL is returned.
+ */
+EXTERN
+SCIP_RETCODE SCIPcheckStringParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   const char*           value               /**< value to check */
+   );
+
 /** reads parameters from a file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -1650,6 +1694,22 @@ EXTERN
 SCIP_RETCODE SCIPreadParams(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename            /**< file name */
+   );
+
+/** writes a single parameter to a file
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ */
+EXTERN
+SCIP_RETCODE SCIPwriteParam(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PARAM*           param,              /**< parameter */
+   const char*           filename,           /**< file name, or NULL for stdout */
+   SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
+   SCIP_Bool             onlychanged         /**< should only those parameters be written that are changed from their
+                                              *   default value?
+                                              */
    );
 
 /** writes all parameters in the parameter set to a file
@@ -1662,7 +1722,9 @@ SCIP_RETCODE SCIPwriteParams(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< file name, or NULL for stdout */
    SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
-   SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */
+   SCIP_Bool             onlychanged         /**< should only those parameters be written that are changed from their
+                                              *   default value?
+                                              */
    );
 
 /** resets a single parameter to its default value
@@ -2192,9 +2254,9 @@ SCIP_RETCODE SCIPincludeConshdlr(
    int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
    SCIP_Bool             delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
-   SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
-   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
+   SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
+   SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the constraint handler's presolving method */
    SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
@@ -2225,6 +2287,7 @@ SCIP_RETCODE SCIPincludeConshdlr(
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
    SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
    SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
+   SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)), /**< constraint handler diving solution enforcement method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
@@ -2234,7 +2297,8 @@ SCIP_RETCODE SCIPincludeConshdlr(
  *  SCIPsetConshdlrInitpre(), SCIPsetConshdlrExitpre(), SCIPsetConshdlrPresol(), SCIPsetConshdlrDelete(),
  *  SCIPsetConshdlrDelvars(), SCIPsetConshdlrInitlp(), SCIPsetConshdlrActive(), SCIPsetConshdlrDeactive(),
  *  SCIPsetConshdlrEnable(), SCIPsetConshdlrDisable(), SCIPsetConshdlrResprop(), SCIPsetConshdlrTrans(),
- *  SCIPsetConshdlrPrint(), and SCIPsetConshdlrParse().
+ *  SCIPsetConshdlrPrint(), SCIPsetConshdlrParse(), SCIPsetConshdlrGetVars(), SCIPsetConshdlrGetNVars(), and
+ *  SCIPsetConshdlrGetDiveBdChgs().
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -2299,7 +2363,7 @@ SCIP_RETCODE SCIPsetConshdlrProp(
    SCIP_DECL_CONSPROP    ((*consprop)),      /**< propagate variable domains */
    int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
-   SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
+   SCIP_PROPTIMING       proptiming          /**< positions in the node solving loop where propagation should be executed */
    );
 
 /** sets copy method of both the constraint handler and each associated constraint
@@ -2667,10 +2731,10 @@ SCIP_RETCODE SCIPsetConshdlrGetNVars(
  *       - \ref SCIP_STAGE_PROBLEM
  */
 EXTERN
-SCIP_RETCODE SCIPsetConshdlrDetermDiveBdChgs(
+SCIP_RETCODE SCIPsetConshdlrGetDiveBdChgs(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS((*conshdlrdetermdivebdchgs)) /**< constraint handler diving solution enforcement method */
+   SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)) /**< constraint handler diving solution enforcement method */
    );
 
 /** returns the constraint handler of the given name, or NULL if not existing */
@@ -2823,7 +2887,7 @@ SCIP_RETCODE SCIPincludePresol(
    const char*           desc,               /**< description of presolver */
    int                   priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int                   maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-   SCIP_Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
+   SCIP_PRESOLTIMING     timing,             /**< timing mask of the presolver */
    SCIP_DECL_PRESOLCOPY  ((*presolcopy)),    /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PRESOLFREE  ((*presolfree)),    /**< destructor of presolver to free user data (called when SCIP is exiting) */
    SCIP_DECL_PRESOLINIT  ((*presolinit)),    /**< initialization method of presolver (called after problem was transformed) */
@@ -3177,8 +3241,7 @@ SCIP_RETCODE SCIPsetSepaPriority(
 /** creates a propagator and includes it in SCIP.
  *
  *  @note method has all propagator callbacks as arguments and is thus changed every time a new
- *        callback is added
- *        in future releases; consider using SCIPincludePropBasic() and setter functions
+ *        callback is added in future releases; consider using SCIPincludePropBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
  */
 EXTERN
@@ -3192,7 +3255,7 @@ SCIP_RETCODE SCIPincludeProp(
    SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
    int                   presolpriority,     /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
-   SCIP_Bool             presoldelay,        /**< should presolving be delayed, if other presolvers found reductions? */
+   SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the propagator's presolving method */
    SCIP_DECL_PROPCOPY    ((*propcopy)),      /**< copy method of propagator or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PROPFREE    ((*propfree)),      /**< destructor of propagator */
    SCIP_DECL_PROPINIT    ((*propinit)),      /**< initialize propagator */
@@ -3619,6 +3682,8 @@ SCIP_RETCODE SCIPcreateDiveset(
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
+   SCIP_Bool             specificsos1score,  /**< should SOS1 variables be scored by the diving heuristics specific score function;
+                                              *   otherwise use the score function of the SOS1 constraint handler */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
 
    );
@@ -10978,6 +11043,7 @@ SCIP_RETCODE SCIPpresolCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to presolve */
    int                   nrounds,            /**< number of presolving rounds already done */
+   SCIP_PRESOLTIMING     presoltiming,       /**< presolving timing(s) to be performed */
    int                   nnewfixedvars,      /**< number of variables fixed since the last call to the presolving method */
    int                   nnewaggrvars,       /**< number of variables aggregated since the last call to the presolving method */
    int                   nnewchgvartypes,    /**< number of variable type changes since the last call to the presolving method */
@@ -14829,18 +14895,12 @@ SCIP_RETCODE SCIPapplyCutsProbing(
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    );
 
-/** resets diving settings by both resetting counters and discarding adapted values through search */
-EXTERN
-void SCIPresetDiveset(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_DIVESET*         diveset             /**< diving settings */
-   );
-
 /** stores the candidate score and preferred rounding direction for a candidate variable */
 EXTERN
 SCIP_RETCODE SCIPgetDivesetScore(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< general diving settings */
+   SCIP_DIVETYPE         divetype,           /**< represents different methods for a dive set to explore the next children */
    SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
    SCIP_Real             divecandsol,        /**< LP solution value of the candidate */
    SCIP_Real             divecandfrac,       /**< fractionality of the candidate */
@@ -14863,7 +14923,9 @@ void SCIPupdateDivesetStats(
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
    int                   nprobingnodes,      /**< the number of probing nodes explored this time */
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
-   SCIP_Bool             solfound            /**< was a solution found at the leaf? */
+   int                   nsolsfound,         /**< the number of solutions found */
+   int                   nbestsolsfound,     /**< the number of best solutions found */
+   SCIP_Bool             leavewassol         /**< was a solution found at the leaf? */
    );
 
 /** enforces a probing/diving solution by suggesting bound changes that maximize the score w.r.t. the current diving settings
@@ -14890,7 +14952,7 @@ void SCIPupdateDivesetStats(
  *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
  */
 EXTERN
-SCIP_RETCODE SCIPdetermineDiveBoundChanges(
+SCIP_RETCODE SCIPgetDiveBoundChanges(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIVESET*         diveset,            /**< diving settings to control scoring */
    SCIP_SOL*             sol,                /**< current solution of diving mode */
@@ -20138,7 +20200,7 @@ void SCIPprintReal(
  * memory management
  */
 
-/**@name Memory Management */
+/**@name Standard Memory Management Macros */
 /**@{ */
 
 #define SCIPallocMemory(scip,ptr)               ( (BMSallocMemory((ptr)) == NULL) \
@@ -20155,8 +20217,7 @@ void SCIPprintReal(
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPduplicateMemory(scip, ptr, source)  ( (BMSduplicateMemory((ptr), (source)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPduplicateMemoryArray(scip, ptr, source, num) \
-                                                     ( (BMSduplicateMemoryArray((ptr), (source), (num)) == NULL) \
+#define SCIPduplicateMemoryArray(scip, ptr, source, num) ( (BMSduplicateMemoryArray((ptr), (source), (num)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPfreeMemory(scip,ptr)                BMSfreeMemory(ptr)
 #define SCIPfreeMemoryNull(scip,ptr)            BMSfreeMemoryNull(ptr)
@@ -20164,6 +20225,11 @@ void SCIPprintReal(
 #define SCIPfreeMemoryArrayNull(scip,ptr)       BMSfreeMemoryArrayNull(ptr)
 #define SCIPfreeMemorySize(scip,ptr)            BMSfreeMemorySize(ptr)
 #define SCIPfreeMemorySizeNull(scip,ptr)        BMSfreeMemorySizeNull(ptr)
+/**@} */
+
+
+/**@name Block Memory Management Macros */
+/**@{ */
 
 #define SCIPallocBlockMemory(scip,ptr)          ( (BMSallocBlockMemory(SCIPblkmem(scip), (ptr)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
@@ -20171,40 +20237,61 @@ void SCIPprintReal(
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPallocBlockMemorySize(scip,ptr,size) ( (BMSallocBlockMemorySize(SCIPblkmem(scip), (ptr), (size)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPreallocBlockMemoryArray(scip,ptr,oldnum,newnum) \
-                                                     ( (BMSreallocBlockMemoryArray(SCIPblkmem(scip), (ptr), (oldnum), (newnum)) \
-                                                       == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPreallocBlockMemorySize(scip,ptr,oldsize,newsize) \
-                                                     ( (BMSreallocBlockMemorySize(SCIPblkmem(scip), (ptr), (oldsize), (newsize)) \
-                                                       == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPduplicateBlockMemory(scip, ptr, source) \
-                                                     ( (BMSduplicateBlockMemory(SCIPblkmem(scip), (ptr), (source)) == NULL) \
+#define SCIPallocClearBlockMemoryArray(scip,ptr,num) ( (BMSallocClearBlockMemoryArray(SCIPblkmem(scip), (ptr), (num)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPduplicateBlockMemoryArray(scip, ptr, source, num) \
-                                                     ( (BMSduplicateBlockMemoryArray(SCIPblkmem(scip), (ptr), (source), (num)) \
-                                                       == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
-#define SCIPensureBlockMemoryArray(scip,ptr,arraysizeptr,minsize) \
-                                                     ( (SCIPensureBlockMemoryArray_call((scip), (void**)(ptr), sizeof(**(ptr)), \
-                                                        (arraysizeptr), (minsize))) )
+#define SCIPreallocBlockMemoryArray(scip,ptr,oldnum,newnum) ( (BMSreallocBlockMemoryArray(SCIPblkmem(scip), (ptr), (oldnum), (newnum)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPreallocBlockMemorySize(scip,ptr,oldsize,newsize) ( (BMSreallocBlockMemorySize(SCIPblkmem(scip), (ptr), (oldsize), (newsize)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPduplicateBlockMemory(scip, ptr, source) ( (BMSduplicateBlockMemory(SCIPblkmem(scip), (ptr), (source)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPduplicateBlockMemoryArray(scip, ptr, source, num) ( (BMSduplicateBlockMemoryArray(SCIPblkmem(scip), (ptr), (source), (num)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPensureBlockMemoryArray(scip,ptr,arraysizeptr,minsize) ( (SCIPensureBlockMemoryArray_call((scip), (void**)(ptr), sizeof(**(ptr)), (arraysizeptr), (minsize))) )
 #define SCIPfreeBlockMemory(scip,ptr)           BMSfreeBlockMemory(SCIPblkmem(scip), (ptr))
 #define SCIPfreeBlockMemoryNull(scip,ptr)       BMSfreeBlockMemoryNull(SCIPblkmem(scip), (ptr))
 #define SCIPfreeBlockMemoryArray(scip,ptr,num)  BMSfreeBlockMemoryArray(SCIPblkmem(scip), (ptr), (num))
-#define SCIPfreeBlockMemoryArrayNull(scip,ptr,num) \
-                                                     BMSfreeBlockMemoryArrayNull(SCIPblkmem(scip), (ptr), (num))
+#define SCIPfreeBlockMemoryArrayNull(scip,ptr,num) BMSfreeBlockMemoryArrayNull(SCIPblkmem(scip), (ptr), (num))
 #define SCIPfreeBlockMemorySize(scip,ptr,size)  BMSfreeBlockMemorySize(SCIPblkmem(scip), (ptr), (size))
-#define SCIPfreeBlockMemorySizeNull(scip,ptr,size) \
-                                                     BMSfreeBlockMemorySizeNull(SCIPblkmem(scip), (ptr), (size))
+#define SCIPfreeBlockMemorySizeNull(scip,ptr,size) BMSfreeBlockMemorySizeNull(SCIPblkmem(scip), (ptr), (size))
+/**@} */
 
-#define SCIPallocBuffer(scip,ptr)               SCIPallocBufferSize(scip, (void**)(ptr), (int)sizeof(**(ptr)))
-#define SCIPallocBufferArray(scip,ptr,num)      SCIPallocBufferArraySafe(scip, (void**)(ptr), (num), sizeof(**(ptr)))
-#define SCIPreallocBufferArray(scip,ptr,num)    SCIPreallocBufferArraySafe(scip, (void**)(ptr), (num), sizeof(**(ptr)))
-#define SCIPduplicateBuffer(scip,ptr,source)    SCIPduplicateBufferSize(scip, (void**)(ptr), source, (int)sizeof(**(ptr)))
-#define SCIPduplicateBufferArray(scip,ptr,source,num) SCIPduplicateBufferArraySafe(scip, (void**)(ptr), source, (num), sizeof(**(ptr)))
-#define SCIPfreeBuffer(scip,ptr)                SCIPfreeBufferSize(scip, (void**)(ptr), 0)
-#define SCIPfreeBufferNull(scip,ptr)            { if( *(ptr) != NULL ) SCIPfreeBuffer(scip, ptr); }
-#define SCIPfreeBufferArray(scip,ptr)           SCIPfreeBufferSize(scip, (void**)(ptr), 0)
-#define SCIPfreeBufferArrayNull(scip,ptr)       { if( *(ptr) != NULL ) SCIPfreeBufferArray(scip, ptr); }
 
+/**@name Buffer Memory Management Macros */
+/**@{ */
+
+#define SCIPallocBuffer(scip,ptr)               ( (BMSallocBufferMemory(SCIPbuffer(scip), (ptr)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPallocBufferArray(scip,ptr,num)      ( (BMSallocBufferMemoryArray(SCIPbuffer(scip), (ptr), (num)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPallocClearBufferArray(scip,ptr,num) ( (BMSallocClearBufferMemoryArray(SCIPbuffer(scip), (ptr), (num)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPreallocBufferArray(scip,ptr,num)    ( (BMSreallocBufferMemoryArray(SCIPbuffer(scip), (ptr), (num)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPduplicateBuffer(scip,ptr,source)    ( (BMSduplicateBufferMemory(SCIPbuffer(scip), (ptr), (source), (size_t)sizeof(**(ptr))) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPduplicateBufferArray(scip,ptr,source,num) ( (BMSduplicateBufferMemoryArray(SCIPbuffer(scip), (ptr), (source), (num)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPfreeBuffer(scip,ptr)                BMSfreeBufferMemorySize(SCIPbuffer(scip), (ptr))
+#define SCIPfreeBufferNull(scip,ptr)            BMSfreeBufferMemoryNull(SCIPbuffer(scip), (ptr))
+#define SCIPfreeBufferArray(scip,ptr)           BMSfreeBufferMemoryArray(SCIPbuffer(scip), (ptr))
+#define SCIPfreeBufferArrayNull(scip,ptr)       BMSfreeBufferMemoryArrayNull(SCIPbuffer(scip), (ptr))
+
+
+#define SCIPallocCleanBuffer(scip,ptr)          ( (BMSallocBufferMemory(SCIPcleanbuffer(scip), (ptr)) == NULL) \
+                                                  ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPallocCleanBufferArray(scip,ptr,num) ( (BMSallocBufferMemoryArray(SCIPcleanbuffer(scip), (ptr), (num)) == NULL) \
+                                                  ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPfreeCleanBuffer(scip,ptr)           BMSfreeBufferMemorySize(SCIPcleanbuffer(scip), (ptr))
+#define SCIPfreeCleanBufferNull(scip,ptr)       BMSfreeBufferMemoryNull(SCIPcleanbuffer(scip), (ptr))
+#define SCIPfreeCleanBufferArray(scip,ptr)      BMSfreeBufferMemoryArray(SCIPcleanbuffer(scip), (ptr))
+#define SCIPfreeCleanBufferArrayNull(scip,ptr)  BMSfreeBufferMemoryArrayNull(SCIPcleanbuffer(scip), (ptr))
+
+/**@} */
+
+
+/**@name Memory Management Functions */
+/**@{ */
 
 /** returns block memory to use at the current time
  *
@@ -20215,9 +20302,27 @@ BMS_BLKMEM* SCIPblkmem(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the total number of bytes used in block memory
+/** returns buffer memory for short living temporary objects
  *
- *  @return the total number of bytes used in block memory.
+ *  @return the buffer memory for short living temporary objects
+ */
+EXTERN
+BMS_BUFMEM* SCIPbuffer(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns clean buffer memory for short living temporary objects initialized to all zero
+ *
+ *  @return the buffer memory for short living temporary objects initialized to all zero
+ */
+EXTERN
+BMS_BUFMEM* SCIPcleanbuffer(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** returns the total number of bytes used in block and buffer memory
+ *
+ *  @return the total number of bytes used in block and buffer memory.
  */
 EXTERN
 SCIP_Longint SCIPgetMemUsed(
@@ -20256,98 +20361,6 @@ SCIP_RETCODE SCIPensureBlockMemoryArray_call(
    size_t                elemsize,           /**< size in bytes of each element in array */
    int*                  arraysize,          /**< pointer to current array size */
    int                   minsize             /**< required minimal array size */
-   );
-
-/** gets a memory buffer with at least the given size
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-EXTERN
-SCIP_RETCODE SCIPallocBufferSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to store the buffer */
-   int                   size                /**< required size in bytes of buffer */
-   );
-
-/** allocates a memory buffer with at least the given size and copies the given memory into the buffer
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-EXTERN
-SCIP_RETCODE SCIPduplicateBufferSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to store the buffer */
-   const void*           source,             /**< memory block to copy into the buffer */
-   int                   size                /**< required size in bytes of buffer */
-   );
-
-/** reallocates a memory buffer to at least the given size
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-EXTERN
-SCIP_RETCODE SCIPreallocBufferSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to the buffer */
-   int                   size                /**< required size in bytes of buffer */
-   );
-
-/** gets a memory buffer with at least size for num elements of size elemsize
- *
- *  checks for overflow of required size or negative number of elements
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-EXTERN
-SCIP_RETCODE SCIPallocBufferArraySafe(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to store the buffer */
-   int                   num,                /**< number of entries to allocate */
-   size_t                elemsize            /**< size of one element in the array */
-   );
-
-/** reallocates a memory buffer to have size for at least num elements of size elemsize
- *
- *  checks for overflow of required size or negative number of elements
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-EXTERN
-SCIP_RETCODE SCIPreallocBufferArraySafe(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to the buffer */
-   int                   num,                /**< number of entries to reallocate */
-   size_t                elemsize            /**< size of one element in the array */
-   );
-
-/** allocates a memory buffer with at least size for num elements of size elemsize and copies
- *  the given memory into the buffer
- *
- *  checks for overflow of required size or negative number of elements
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-EXTERN
-SCIP_RETCODE SCIPduplicateBufferArraySafe(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to the buffer */
-   const void*           source,             /**< memory block to copy into the buffer */
-   int                   num,                /**< number of entries to duplicate */
-   size_t                elemsize            /**< size of one element in the array */
-   );
-
-/** frees a memory buffer */
-EXTERN
-void SCIPfreeBufferSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   void**                ptr,                /**< pointer to the buffer */
-   int                   dummysize           /**< used to get a safer define for SCIPfreeBuffer() and SCIPfreeBufferArray() */
    );
 
 /** prints output about used memory */

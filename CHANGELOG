@@ -34,6 +34,11 @@ features:
 - new score in hybrid reliability pseudocost branching that prefers nonlinear variables when solving MINLPs
 - new heuristic (heur_bound) which fixes all integer variables to their lower/upper bounds and solves the remaining LP
 - new branching rule multaggr which allows to branch on general disjunctions defined by fractional multi-aggregated variables
+- new plugin for reoptimizing a sequence of optimization problem that differ in the objective function, e.g., sequences arising from column generation
+- new branching rule nodereopt to reconstruct the tree after changing the objective function
+- new primal heuristic for reoptimization: ofins - objective function induced neighborhood heuristic
+- new heuristic for reoptimization which constructs solutions based in the changes between the objective function and the optimal solution befor changing the objective function
+- new plugin "compr" for rearranging the search tree, currently this only works on the reoptimization tree
 
 parameters:
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
@@ -68,6 +73,8 @@ parameters:
   only if the constraint can be removed afterwards
 - at the end of a command line run the best solution can now be output in the orignal space
 - new advanced parameter "branching/relpscost/nlscoreweight" for weight of nonlinear score when branching on MINLPs
+- new paramter "misc/allowobjprop" to allow objective function propagation
+- new paramter "misc/allowdualreds" to allow dual reductions
 
 performance improvements:
 - adjusted (hard) diving heuristics to solve fewer LPs at shallow depths of the tree; after an LP was solved,

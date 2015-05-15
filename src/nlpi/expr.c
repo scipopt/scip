@@ -1140,7 +1140,7 @@ SCIP_RETCODE polynomialdataPower(
 static
 void polynomialdataApplyChildmap(
    SCIP_EXPRDATA_POLYNOMIAL* polynomialdata, /**< polynomial data */
-   int*                   childmap           /**< mapping of child indices */
+   int*                  childmap            /**< mapping of child indices */
    )
 {
    SCIP_EXPRDATA_MONOMIAL* monomial;
@@ -5013,6 +5013,43 @@ SCIP_RETCODE exprparseFindClosingParenthesis(
    return SCIP_OKAY;
 }
 
+/** this function sets endptr to point to the next separating comma in str
+ *
+ *  That is, for a given string like "x+f(x,y),z", endptr will point to the comma before "z"
+ *
+ *  Searches for at most length characters.
+ */
+static
+SCIP_RETCODE exprparseFindSeparatingComma(
+   const char*           str,                /**< pointer to the string to be parsed */
+   const char**          endptr,             /**< pointer to point to the comma */
+   int                   length              /**< length of the string to be parsed */
+   )
+{
+   int nopenbrackets;
+
+   *endptr = str;
+
+   /* find a comma without open brackets */
+   nopenbrackets = 0;
+   while( (*endptr - str ) < length && !(nopenbrackets == 0 && *endptr[0] == ',') )
+   {
+      if( *endptr[0] == '(')
+         ++nopenbrackets;
+      if( *endptr[0] == ')')
+         --nopenbrackets;
+      ++*endptr;
+   }
+
+   if( *endptr[0] != ',' )
+   {
+      SCIPerrorMessage("unable to find separating comma in unbalanced expression %.*s\n", length, str);
+      return SCIP_READERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
 /** parses an expression from a string */
 static
 SCIP_RETCODE exprParse(
@@ -5209,11 +5246,81 @@ SCIP_RETCODE exprParse(
          SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_TAN, arg1) );
       }
    }
-   /* Unsupported single argument operands */
-   else if( strncmp(str, "realpower", 9) == 0 || strncmp(str, "intpower", 8) == 0  || strncmp(str, "signpower", 9) == 0 )
+   else if( strncmp(str, "power", 5) == 0 )
    {
-      SCIPerrorMessage("parsing of expression %.*s is unsupported yet.\n", (int) (lastchar - str + 1), str);
-      return SCIP_READERROR;
+      /* we have a string of the form "power(...,integer)" (thus, intpower)
+       * first find the closing parenthesis, then the comma
+       */
+      const char* comma;
+      int exponent;
+
+      str += 5;
+      SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
+
+      SCIP_CALL( exprparseFindSeparatingComma(str+1, &comma, endptr - str - 1) );
+
+      /* parse first argument [str+1..comma-1] */
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, comma - str - 1, comma - 1, nvars, varnames, vartable, recursiondepth + 1) );
+
+      ++comma;
+      /* parse second argument [comma, endptr-1]: it needs to be an integer */
+      while( comma < endptr && *comma == ' ' )
+         ++comma;
+      if( !isdigit((unsigned char)comma[0]) && !((comma[0] == '-' || comma[0] == '+') && isdigit((unsigned char)comma[1])) )
+      {
+         SCIPerrorMessage("error parsing integer exponent from <%s>\n", comma);
+      }
+      if( !SCIPstrToIntValue(comma, &exponent, &nonconstendptr) )
+      {
+         SCIPerrorMessage("error parsing integer from <%s>\n", comma);
+         return SCIP_READERROR;
+      }
+
+      SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_INTPOWER, arg1, exponent) );
+
+      str = endptr + 1;
+   }
+   else if( strncmp(str, "realpower", 9) == 0 || strncmp(str, "signpower", 9) == 0 )
+   {
+      /* we have a string of the form "realpower(...,double)" or "signpower(...,double)"
+       * first find the closing parenthesis, then the comma
+       */
+      const char* opname = str;
+      const char* comma;
+
+      str += 9;
+      SCIP_CALL( exprparseFindClosingParenthesis(str, &endptr, length) );
+
+      SCIP_CALL( exprparseFindSeparatingComma(str+1, &comma, endptr - str - 1) );
+
+      /* parse first argument [str+1..comma-1] */
+      SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str + 1, comma - str - 1, comma - 1, nvars, varnames, vartable, recursiondepth + 1) );
+
+      ++comma;
+      /* parse second argument [comma, endptr-1]: it needs to be an number */
+      while( comma < endptr && *comma == ' ' )
+         ++comma;
+      if( !isdigit((unsigned char)comma[0]) && !((comma[0] == '-' || comma[0] == '+') && isdigit((unsigned char)comma[1])) )
+      {
+         SCIPerrorMessage("error parsing number exponent from <%s>\n", comma);
+      }
+      if( !SCIPstrToRealValue(comma, &number, &nonconstendptr) )
+      {
+         SCIPerrorMessage("error parsing number from <%s>\n", comma);
+         return SCIP_READERROR;
+      }
+
+      if( strncmp(opname, "realpower", 9) == 0 )
+      {
+         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_REALPOWER, arg1, number) );
+      }
+      else
+      {
+         assert(strncmp(opname, "signpower", 9) == 0);
+         SCIP_CALL( SCIPexprCreate(blkmem, expr, SCIP_EXPR_SIGNPOWER, arg1, number) );
+      }
+
+      str = endptr + 1;
    }
    else if( isalpha(*str) || *str == '_' || *str == '#' )
    {
@@ -5457,6 +5564,7 @@ SCIP_RETCODE exprParse(
 #undef SCIPexprGetMonomialExponents
 #undef SCIPexprGetUserData
 #undef SCIPexprHasUserEstimator
+#undef SCIPexprGetUserEvalCapability
 
 /** gives operator of expression */
 SCIP_EXPROP SCIPexprGetOperator(
@@ -5501,7 +5609,7 @@ int SCIPexprGetOpIndex(
 
 /** gives real belonging to a SCIP_EXPR_CONST operand */
 SCIP_Real SCIPexprGetOpReal(
-   SCIP_EXPR* expr                           /**< expression */
+   SCIP_EXPR*            expr                /**< expression */
    )
 {
    assert(expr != NULL);
@@ -5725,6 +5833,17 @@ SCIP_Bool SCIPexprHasUserEstimator(
    assert(expr->data.data != NULL);
 
    return ((SCIP_EXPRDATA_USER*)expr->data.data)->estimate != NULL;
+}
+
+/** gives the evaluation capability of a user expression */
+SCIP_EXPRINTCAPABILITY SCIPexprGetUserEvalCapability(
+   SCIP_EXPR*              expr
+   )
+{
+   assert(expr != NULL);
+   assert(expr->data.data != NULL);
+
+   return ((SCIP_EXPRDATA_USER*)expr->data.data)->evalcapability;
 }
 
 /** creates a simple expression */
@@ -6912,6 +7031,7 @@ SCIP_RETCODE SCIPexprCreateUser(
    int                   nchildren,          /**< number of children */
    SCIP_EXPR**           children,           /**< children of expression */
    SCIP_USEREXPRDATA*    data,               /**< user data for expression, expression assumes ownership */
+   SCIP_EXPRINTCAPABILITY evalcapability,    /**< capability of evaluation functions (partially redundant, currently) */
    SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
    SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function, or NULL if not implemented */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
@@ -6929,6 +7049,8 @@ SCIP_RETCODE SCIPexprCreateUser(
    assert(expr != NULL);
    assert(children != NULL || nchildren == 0);
    assert(eval != NULL);
+   assert((evalcapability & SCIP_EXPRINTCAPABILITY_FUNCVALUE) != 0);  /* the function evaluation is not optional */
+   assert(((evalcapability & SCIP_EXPRINTCAPABILITY_INTFUNCVALUE) == 0) || inteval != NULL);  /* if capability says it can do interval evaluation, then the corresponding callback needs to be provided */
    assert(curv != NULL);
    assert(copydata != NULL || data == NULL);
    assert(freedata != NULL || data == NULL);
@@ -6936,6 +7058,7 @@ SCIP_RETCODE SCIPexprCreateUser(
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &userexprdata) );
 
    userexprdata->userdata = data;
+   userexprdata->evalcapability = evalcapability;
    userexprdata->eval = eval;
    userexprdata->inteval = inteval;
    userexprdata->curv = curv;
@@ -8792,9 +8915,9 @@ SCIP_RETCODE SCIPexprtreeSubstituteVars(
 /** quicksort an array of quadratic elements; pivot is the medial element (taken from scip/sorttpl.c) */
 static
 void quadelemsQuickSort(
-   SCIP_QUADELEM*       elems,               /**< array to be sorted */
-   int                  start,               /**< starting index */
-   int                  end                  /**< ending index */
+   SCIP_QUADELEM*        elems,              /**< array to be sorted */
+   int                   start,              /**< starting index */
+   int                   end                 /**< ending index */
    )
 {
    assert(start <= end);
@@ -11593,7 +11716,7 @@ SCIP_RETCODE exprgraphNodeCreateExpr(
          userdata = exprdata->userdata;
 
       SCIP_CALL( SCIPexprCreateUser(exprgraph->blkmem, expr, node->nchildren, childexprs,
-         userdata, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata) );
+         userdata, exprdata->evalcapability, exprdata->eval, exprdata->inteval, exprdata->curv, exprdata->prop, exprdata->estimate, exprdata->copydata, exprdata->freedata) );
 
       break;
    }
@@ -13151,6 +13274,7 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EXPRGRAPHNODE**  node,               /**< buffer to store expression graph node */
    SCIP_USEREXPRDATA*    data,               /**< user data for expression, node assumes ownership */
+   SCIP_EXPRINTCAPABILITY evalcapability,    /**< evaluation capability */
    SCIP_DECL_USEREXPREVAL    ((*eval)),      /**< evaluation function */
    SCIP_DECL_USEREXPRINTEVAL ((*inteval)),   /**< interval evaluation function */
    SCIP_DECL_USEREXPRCURV    ((*curv)),      /**< curvature check function */
@@ -13166,12 +13290,15 @@ SCIP_RETCODE SCIPexprgraphCreateNodeUser(
    assert(blkmem != NULL);
    assert(node   != NULL);
    assert(eval != NULL);
+   assert((evalcapability & SCIP_EXPRINTCAPABILITY_FUNCVALUE) != 0);  /* the function evaluation is not optional */
+   assert(((evalcapability & SCIP_EXPRINTCAPABILITY_INTFUNCVALUE) == 0) || inteval != NULL);  /* if capability says it can do interval evaluation, then the corresponding callback needs to be provided */
    assert(copydata != NULL || data == NULL);
    assert(freedata != NULL || data == NULL);
 
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &exprdata) );
 
    exprdata->userdata = data;
+   exprdata->evalcapability = evalcapability;
    exprdata->eval = eval;
    exprdata->estimate = estimate;
    exprdata->inteval = inteval;

@@ -196,7 +196,7 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasObj)
    assert(pricerdata->objpricer != NULL);
 
    /* call virtual method of pricer object */
-   SCIP_CALL( pricerdata->objpricer->scip_farkas(scip, pricer) );
+   SCIP_CALL( pricerdata->objpricer->scip_farkas(scip, pricer, result) );
 
    return SCIP_OKAY;
 }

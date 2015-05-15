@@ -312,6 +312,9 @@ void SCIPstatResetPresolving(
    assert(stat != NULL);
 
    stat->npresolrounds = 0;
+   stat->npresolroundsfast = 0;
+   stat->npresolroundsmed = 0;
+   stat->npresolroundsext = 0;
    stat->npresolfixedvars = 0;
    stat->npresolaggrvars = 0;
    stat->npresolchgvartypes = 0;
@@ -551,8 +554,8 @@ void SCIPstatUpdateMemsaveMode(
  *  @see: For completely disabling all timing of SCIP, consider setting the parameter timing/enabled to FALSE
  */
 void SCIPstatEnableOrDisableStatClocks(
-   SCIP_STAT*          stat,             /**< SCIP statistics */
-   SCIP_Bool           enable            /**< should the LP clocks be enabled? */
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   SCIP_Bool             enable              /**< should the LP clocks be enabled? */
    )
 {
    assert(stat != NULL);

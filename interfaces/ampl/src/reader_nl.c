@@ -130,7 +130,7 @@ SCIP_DECL_USEREXPREVAL( SCIPuserexprEvalAmpl )
       }
    }
 
-   /* FIXME implement Hessian, or a way to communicate that we don't have Hessians */
+   /* TODO implement Hessian */
    assert(hessian == NULL);
 
    return SCIP_OKAY;
@@ -1196,6 +1196,7 @@ SCIP_RETCODE setupConstraints(
          userexprdata->curvature = (suf_curvature->u.i[c] == 1 ? SCIP_EXPRCURV_CONVEX : SCIP_EXPRCURV_CONCAVE);
 
          SCIP_CALL( SCIPexprCreateUser(SCIPblkmem(scip), &consexpr, nexprvars, childexprs, userexprdata,
+            SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_INTFUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_INTGRADIENT,
             SCIPuserexprEvalAmpl, SCIPuserexprIntEvalAmpl,
             SCIPuserexprCurvAmpl, NULL, NULL,
             SCIPuserexprCopyAmpl, SCIPuserexprFreeAmpl) );

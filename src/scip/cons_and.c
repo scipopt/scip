@@ -58,9 +58,9 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PRESOLTIMING            (SCIP_PRESOLTIMING_FAST | SCIP_PRESOLTIMING_EXHAUSTIVE)
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 #define EVENTHDLR_NAME         "and"
@@ -4328,7 +4328,6 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    SCIP_CONSDATA* consdata;
    unsigned char* entries;
    SCIP_Bool cutoff;
-   SCIP_Bool delay;
    int oldnfixedvars;
    int oldnaggrvars;
    int oldnchgbds;
@@ -4354,7 +4353,6 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
 
    /* process constraints */
    cutoff = FALSE;
-   delay = FALSE;
    firstchange = INT_MAX;
    for( c = 0; c < nconss && !cutoff && (c % 1000 != 0 || !SCIPisStopped(scip)); ++c )
    {
@@ -4456,8 +4454,8 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
       SCIP_CALL( dualPresolve(scip, conss, nconss, conshdlrdata->eventhdlr, &entries, &nentries, &cutoff, nfixedvars, naggrvars, nchgcoefs, ndelconss, nupgdconss, naddconss) );
    }
 
-   /* check for cliques inside the AND-constraint */
-   if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
+   /* check for cliques inside the AND constraint */
+   if( (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
       for( c = 0; c < nconss && !cutoff && !SCIPisStopped(scip); ++c )
       {
@@ -4468,14 +4466,12 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
 	 }
       }
    }
-   else
-      delay = TRUE;
 
    /* process pairs of constraints: check them for equal operands in order to aggregate resultants;
     * only apply this expensive procedure, if the single constraint preprocessing did not find any reductions
     * (otherwise, we delay the presolving to be called again next time)
     */
-   if( !cutoff && conshdlrdata->presolusehashing )
+   if( !cutoff && conshdlrdata->presolusehashing && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
@@ -4486,11 +4482,9 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
             oldnaggrvars = *naggrvars;
          }
       }
-      else
-         delay = TRUE;
    }
 
-   if( !cutoff && conshdlrdata->presolpairwise )
+   if( !cutoff && conshdlrdata->presolpairwise && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
       if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars )
       {
@@ -4520,8 +4514,6 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
             }
          }
       }
-      else
-         delay = TRUE;
    }
 
    SCIPfreeBufferArray(scip, &entries);
@@ -4529,8 +4521,6 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    /* return the correct result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( delay )
-      *result = SCIP_DELAYED;
    else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
             || *ndelconss > oldndelconss || *nupgdconss > oldnupgdconss )
       *result = SCIP_SUCCESS;
@@ -4860,7 +4850,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreAnd) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpAnd) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseAnd) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolAnd, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolAnd, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintAnd) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropAnd, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

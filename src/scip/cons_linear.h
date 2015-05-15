@@ -202,6 +202,34 @@ SCIP_RETCODE SCIPaddCoefLinear(
    SCIP_Real             val                 /**< coefficient of constraint entry */
    );
 
+/** changes coefficient of variable in linear constraint; deletes the variable if coefficient is zero; adds variable if
+ *  not yet contained in the constraint
+ *
+ *  @note This method may only be called during problem creation stage for an original constraint and variable.
+ *
+ *  @note This method requires linear time to search for occurences of the variable in the constraint data.
+ */
+EXTERN
+SCIP_RETCODE SCIPchgCoefLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< variable of constraint entry */
+   SCIP_Real             val                 /**< new coefficient of constraint entry */
+   );
+
+/** deletes variable from linear constraint
+ *
+ *  @note This method may only be called during problem creation stage for an original constraint and variable.
+ *
+ *  @note This method requires linear time to search for occurences of the variable in the constraint data.
+ */
+EXTERN
+SCIP_RETCODE SCIPdelCoefLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var                 /**< variable of constraint entry */
+   );
+
 /** gets left hand side of linear constraint */
 EXTERN
 SCIP_Real SCIPgetLhsLinear(
@@ -303,6 +331,7 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP_CONS*            cons,               /**< source constraint to try to convert */
    SCIP_CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
    );
+
 
 #ifdef __cplusplus
 }

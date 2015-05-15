@@ -179,20 +179,20 @@ SCIP_HEUR* SCIPdivesetGetHeur(
 /** get the working solution of this dive set */
 EXTERN
 SCIP_SOL* SCIPdivesetGetWorkSolution(
-   SCIP_DIVESET*         diveset             /** diving settings */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** set the working solution for this dive set */
 EXTERN
 void SCIPdivesetSetWorkSolution(
-   SCIP_DIVESET*         diveset,            /** diving settings */
-   SCIP_SOL*             sol                 /** new working solution for this dive set, or NULL */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_SOL*             sol                 /**< new working solution for this dive set, or NULL */
    );
 
 /** get the name of the dive set */
 EXTERN
 const char* SCIPdivesetGetName(
-   SCIP_DIVESET*         diveset             /** diving settings */
+   SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
 /** get the minimum relative depth of the diving settings */
@@ -338,6 +338,14 @@ SCIP_Real SCIPdivesetGetLPResolveDomChgQuot(
  */
 EXTERN
 SCIP_Bool SCIPdivesetUseOnlyLPBranchcands(
+   SCIP_DIVESET*         diveset             /**< diving settings */
+   );
+
+/** should SOS1 variables be scored by the diving heuristics specific score function;
+ *  otherwise use the score function of the SOS1 constraint handler
+ */
+EXTERN
+SCIP_Bool SCIPdivesetUseSpecificSOS1Score(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 

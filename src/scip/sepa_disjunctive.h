@@ -13,21 +13,30 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   type_buffer.h
- * @brief  type definitions for memory buffers for temporary objects
- * @author Tobias Achterberg
+/**@file   sepa_disjunctive.h
+ * @ingroup SEPARATORS
+ * @brief  disjunctive cut separator
+ * @author Tobias Fischer
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_TYPE_BUFFER_H__
-#define __SCIP_TYPE_BUFFER_H__
+#ifndef __SCIP_SEPA_DISJUNCTIVE_H__
+#define __SCIP_SEPA_DISJUNCTIVE_H__
+
+
+#include "scip/scip.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef struct SCIP_Buffer SCIP_BUFFER;
+/** creates the disjunctive cut separator and includes it in SCIP */
+EXTERN
+SCIP_RETCODE SCIPincludeSepaDisjunctive(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 #ifdef __cplusplus
 }

@@ -428,6 +428,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conss           : array of constraints to process
  *  - nconss          : number of constraints to process
  *  - nrounds         : number of presolving rounds already done
+ *  - presoltiming    : current presolving timing
  *  - nnewfixedvars   : number of variables fixed since the last call to the presolving method
  *  - nnewaggrvars    : number of variables aggregated since the last call to the presolving method
  *  - nnewchgvartypes : number of variable type changes since the last call to the presolving method
@@ -469,7 +470,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_DELAYED    : the presolving method was skipped, but should be called again
  */
 #define SCIP_DECL_CONSPRESOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nrounds, \
-      int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
+      SCIP_PRESOLTIMING presoltiming, int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
       int nnewdelconss, int nnewaddconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides, \
       int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes, \
       int* ndelconss, int* naddconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, SCIP_RESULT* result)
@@ -792,18 +793,18 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
 
 /** constraint handler method to suggest dive bound changes during the generic diving algorithm
  *
- *  this callback is used inside the various diving heuristics of SCIP and does not affect the normal branching
+ *  This callback is used inside the various diving heuristics of SCIP and does not affect the normal branching
  *  of the actual search.
  *  The constraint handler can provide this callback to render the current solution infeasible. The solution is
  *  rendered infeasible by determining bound changes that should be applied to the next explored search node.
  *  An alternative in case that the preferred bound change(s) were detected infeasible must be provided.
  *
- *  The success pointer must be used to indicate
- *  whether the constraint handler succeeded in selecting dive bound changes. The infeasible pointer should be set to TRUE if
- *  the constraint handler found a local infeasibility.  If the constraint handler needs to select between several
- *  candidates, it may use the scoring mechanism of the diveset argument to control its choice.
+ *  The success pointer must be used to indicate whether the constraint handler succeeded in selecting diving bound
+ *  changes. The infeasible pointer should be set to TRUE if the constraint handler found a local infeasibility.  If the
+ *  constraint handler needs to select between several candidates, it may use the scoring mechanism of the diveset
+ *  argument to control its choice.
  *
- *  This callback is optional
+ *  This callback is optional.
  *
  *  @note: @p sol is usually the LP relaxation solution unless the caller of the method, usually a diving heuristic,
  *         does not solve LP relaxations at every depth
@@ -818,7 +819,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - success         : pointer to store whether the constraint handler succeeded to determine dive bound changes
  *  - infeasible      : pointer to store whether the constraint handler detected an infeasibility in the local node
  */
-#define SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_DIVESET* diveset, \
+#define SCIP_DECL_CONSGETDIVEBDCHGS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_DIVESET* diveset, \
       SCIP_SOL* sol, SCIP_Bool* success, SCIP_Bool* infeasible)
 
 #ifdef __cplusplus

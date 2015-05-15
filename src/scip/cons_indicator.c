@@ -219,9 +219,9 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< Should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< Should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< Should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< Should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PRESOLTIMING      SCIP_PRESOLTIMING_FAST
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 
 
@@ -4006,7 +4006,7 @@ SCIP_RETCODE separateIISRounding(
    int                   maxsepacuts,        /**< maximal number of cuts to be generated */
    int*                  nGen                /**< number of domain changes */
    )
-{
+{ /*lint --e{850}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_LPI* lp;
    int rounds;
@@ -4104,8 +4104,7 @@ SCIP_RETCODE separateIISRounding(
          assert( conshdlrdata->binvarhash != NULL );
          if ( SCIPhashmapExists(conshdlrdata->binvarhash, (void*) binvarneg) )
          {
-            SCIP_Real binvarnegval;
-            binvarnegval = SCIPgetVarSol(scip, binvarneg);
+            SCIP_Real binvarnegval = SCIPgetVarSol(scip, binvarneg);
 
             /* take larger one */
             if ( binvarval > binvarnegval )
@@ -6461,13 +6460,13 @@ SCIP_DECL_CONSGETNVARS(consGetNVarsIndicator)
 
 /** constraint handler method to suggest dive bound changes during the generic diving algorithm */
 static
-SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIndicator)
+SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
 {
    SCIP_CONS** indconss;
    int nindconss;
    int c;
-   SCIP_VAR* bestvar;
-   SCIP_Bool bestvarroundup;
+   SCIP_VAR* bestvar = NULL;
+   SCIP_Bool bestvarroundup = FALSE;
    SCIP_Real bestscore = SCIP_REAL_MIN;
 
    assert(scip != NULL);
@@ -6475,14 +6474,16 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIndicator)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(diveset != NULL);
    assert(success != NULL);
+   assert(infeasible != NULL);
+
+   *success = FALSE;
+   *infeasible = FALSE;
 
    indconss = SCIPconshdlrGetConss(conshdlr);
    nindconss = SCIPconshdlrGetNConss(conshdlr);
 
-   bestvar = FALSE;
-   bestvarroundup = FALSE;
    /* loop over indicator constraints and score indicator variables with already integral solution value  */
-   for( c = 0; c < nindconss; ++c )
+   for (c = 0; c < nindconss; ++c)
    {
       /* check whether constraint is violated */
       if( SCIPisViolatedIndicator(scip, indconss[c], sol) )
@@ -6499,7 +6500,7 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIndicator)
             SCIP_Real score;
             SCIP_Bool roundup;
 
-            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, binvar, solval, 0.0, &score, &roundup) );
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, binvar, solval, 0.0, &score, &roundup) );
 
             /* best candidate maximizes the score */
             if( score > bestscore )
@@ -6582,7 +6583,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteIndicator) );
    SCIP_CALL( SCIPsetConshdlrDisable(scip, conshdlr, consDisableIndicator) );
    SCIP_CALL( SCIPsetConshdlrEnable(scip, conshdlr, consEnableIndicator) );
-   SCIP_CALL( SCIPsetConshdlrDetermDiveBdChgs(scip, conshdlr, conshdlrDetermDiveBdChgsIndicator) );
+   SCIP_CALL( SCIPsetConshdlrGetDiveBdChgs(scip, conshdlr, consGetDiveBdChgsIndicator) );
    SCIP_CALL( SCIPsetConshdlrExit(scip, conshdlr, consExitIndicator) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolIndicator) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeIndicator) );
@@ -6593,7 +6594,7 @@ SCIP_RETCODE SCIPincludeConshdlrIndicator(
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolIndicator) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpIndicator) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseIndicator) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolIndicator, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolIndicator, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintIndicator) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropIndicator, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

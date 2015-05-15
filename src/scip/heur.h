@@ -62,14 +62,15 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
+   SCIP_Bool             specificsos1score,  /**< should SOS1 variables be scored by the diving heuristics specific score function;
+                                              *   otherwise use the score function of the SOS1 constraint handler */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
    );
 
 /** resets diving settings counters */
 extern
 void SCIPdivesetReset(
-   SCIP_DIVESET*         diveset,            /**< diveset to be reset */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_DIVESET*         diveset             /**< diveset to be reset */
    );
 
 /** update diveset statistics and global diveset statistics */
@@ -79,7 +80,9 @@ void SCIPdivesetUpdateStats(
    int                   depth,              /**< the depth reached this time */
    int                   nprobingnodes,      /**< the number of probing nodes explored this time */
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
-   SCIP_Bool             solfound            /**< was a solution found at the leaf? */
+   int                   nsolsfound,         /**< number of new solutions found this time */
+   int                   nbestsolsfound,     /**< number of new best solutions found this time */
+   SCIP_Bool             leavesol            /**< has the diving heuristic reached a feasible leaf */
    );
 
 /** stores the candidate score and preferred rounding direction for a candidate variable */
@@ -87,6 +90,7 @@ extern
 SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_DIVESET*         diveset,            /**< general diving settings */
    SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_DIVETYPE         divetype,           /**< represents different methods for a dive set to explore the next children */
    SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
    SCIP_Real             divecandsol,        /**< LP solution value of the candidate */
    SCIP_Real             divecandfrac,       /**< fractionality of the candidate */

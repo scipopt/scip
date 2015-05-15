@@ -178,8 +178,8 @@ SCIP_DECL_CONSLOCK(consLockIntegral)
 
 /** constraint handler method to suggest dive bound changes during the generic diving algorithm */
 static
-SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIntegral)
-{
+SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
+{  /*lint --e{715}*/
    SCIP_VAR** vars;
    SCIP_Real solval;
    SCIP_Real score;
@@ -200,13 +200,15 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIntegral)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
 
-   SCIPdebugMessage("Integral Constraint handler Diving Solution Enforcement\n");
+   SCIPdebugMessage("integral constraint handler: determine diving bound changes\n");
 
    SCIP_CALL( SCIPgetSolVarsData(scip, sol, &vars, NULL, &nbin, &nint, &nimpl, NULL) );
 
    ninteger = nbin + nint + nimpl;
    bestscore = SCIP_REAL_MIN;
    bestcandidx = -1;
+   *success = FALSE;
+
    /* loop over solution values and get score of fractional variables */
    for( v = 0; v < ninteger; ++v )
    {
@@ -215,7 +217,7 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIntegral)
       /* skip variable if solution value disagrees with the local bounds */
       if( ! SCIPisFeasIntegral(scip, solval) && SCIPisGE(scip, solval, SCIPvarGetLbLocal(vars[v])) && SCIPisLE(scip, solval, SCIPvarGetUbLocal(vars[v])) )
       {
-         SCIP_CALL( SCIPgetDivesetScore(scip, diveset, vars[v], solval, solval - SCIPfloor(scip, solval), &score, &roundup) );
+         SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_INTEGRALITY, vars[v], solval, solval - SCIPfloor(scip, solval), &score, &roundup) );
 
          /* we search for candidates with maximum score */
          if( score > bestscore )
@@ -227,7 +229,7 @@ SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS(conshdlrDetermDiveBdChgsIntegral)
       }
    }
 
-   assert(! *success || bestcandidx >= 0);
+   assert(!(*success) || bestcandidx >= 0);
 
    if( *success )
    {
@@ -269,7 +271,7 @@ SCIP_RETCODE SCIPincludeConshdlrIntegral(
 
    /* set non-fundamental callbacks via specific setter functions */
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyIntegral, consCopyIntegral) );
-   SCIP_CALL( SCIPsetConshdlrDetermDiveBdChgs(scip, conshdlr, conshdlrDetermDiveBdChgsIntegral) );
+   SCIP_CALL( SCIPsetConshdlrGetDiveBdChgs(scip, conshdlr, consGetDiveBdChgsIntegral) );
 
    return SCIP_OKAY;
 }

@@ -769,8 +769,9 @@ void handleEndtag(
             else
                ppos->state = XML_STATE_ERROR;
          }
-         BMSfreeMemoryArray(&name);
       }
+
+      BMSfreeMemoryArray(&name);
    }
 }
 
@@ -1021,8 +1022,9 @@ void procPcdata(
             xmlAppendChild(topPstack(ppos), node);
             ppos->state = XML_STATE_BEFORE;
          }
-         BMSfreeMemoryArray(&data);
       }
+
+      BMSfreeMemoryArray(&data);
    }
 }
 

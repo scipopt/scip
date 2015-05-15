@@ -45,7 +45,7 @@
 #define DEFAULT_NODESQUOT     0.05      /* subproblem nodes in relation to nodes of the original problem       */
 #define DEFAULT_LPLIMFAC      1.5       /* factor by which the limit on the number of LP depends on the node limit  */
 #define DEFAULT_MINFIXINGRATE 0.3       /* minimum percentage of integer variables that have to be fixed       */
-#define DEFAULT_NWAITINGNODES 0LL       /* number of nodes without incumbent change that heuristic should wait */
+#define DEFAULT_NWAITINGNODES 200LL       /* number of nodes without incumbent change that heuristic should wait */
 #define DEFAULT_NEIGHBORHOODSIZE  18    /* radius of the incumbents neighborhood to be searched                */
 #define DEFAULT_SOLNUM        5         /* number of pool-solutions to be checked for flag array update        */
 #define DEFAULT_USELPROWS     FALSE     /* should subproblem be created out of the rows in the LP rows,
@@ -384,7 +384,7 @@ SCIP_RETCODE createNewSol(
  * we interrupt the solution process
  */
 static
-SCIP_DECL_EVENTEXEC(eventExecRins)
+SCIP_DECL_EVENTEXEC(eventExecDins)
 {
    SCIP_HEURDATA* heurdata;
 
@@ -647,7 +647,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
       }
 
       /* create event handler for LP events */
-      SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecRins, NULL) );
+      SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecDins, NULL) );
       if( eventhdlr == NULL )
       {
          SCIPerrorMessage("event handler for "HEUR_NAME" heuristic not found.\n");
@@ -700,8 +700,13 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
 
+   /* disable statistic timing inside sub SCIP unless we are in debug mode and print the statistic timing */
+#ifdef SCIP_DEBUG
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", TRUE) );
+#else
    /* disable statistic timing inside sub SCIP */
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+#endif
 
    /* set limits for the subproblem */
    heurdata->nodelimit = nsubnodes;

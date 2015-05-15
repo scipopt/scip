@@ -154,7 +154,7 @@ FLAGS		+=	-I$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)/include/coin
 LPILIBOBJ	=	lpi/lpi_clp.o scip/bitencode.o blockmemshell/memory.o scip/message.o
 LPILIBSRC	=	$(SRCDIR)/lpi/lpi_clp.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
-LPIINSTMSG	=	"  -> \"clp.*\" is a directory containing the Clp installation, i.e., \"clp.*/include/coin/ClpModel.hpp\" should exist.\n"
+LPIINSTMSG	=	"  -> \"clp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)\" is the path to the Clp installation directory, i.e., \"<Clp-path>/include/coin/ClpModel.hpp\" should exist.\n"
 endif
 
 LPSOPTIONS	+=	qso
@@ -430,6 +430,8 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_clique.o \
 			scip/sepa_closecuts.o \
 			scip/sepa_cmir.o \
+			scip/sepa_disjunctive.o \
+			scip/sepa_eccuts.o \
 			scip/sepa_flowcover.o \
 			scip/sepa_gomory.o \
 			scip/sepa_impliedbounds.o \
@@ -441,7 +443,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/sepa_zerohalf.o
 
 SCIPLIBOBJ	=	scip/branch.o \
-			scip/buffer.o \
 			scip/clock.o \
 			scip/conflict.o \
 			scip/cons.o \
@@ -724,7 +725,7 @@ testblis:
 
 .PHONY: tags
 tags:
-		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/;
+		rm -f TAGS; ctags -e -R -h ".c.cpp.h" --exclude=".*" src/; sed 's!\#undef .*!!g' TAGS > tags; mv tags TAGS
 
 # include target to detect the current git hash
 -include make/local/make.detectgithash

@@ -1456,7 +1456,7 @@ SCIP_RETCODE hashtableResize(
 
          for( l = 0; l < hashtable->nlists; ++l )
          {
-            hashtablelist = hashtable->lists[i];
+            hashtablelist = hashtable->lists[l];
             while( hashtablelist != NULL )
             {
                sumslotsize++;
@@ -5819,6 +5819,22 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
    return SCIP_OKAY;
 }
 
+/** sets the number of successors to a given value */
+SCIP_RETCODE SCIPdigraphSetNSuccessors(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node,               /**< node for which the number of successors has to be changed */
+   int                   nsuccessors         /**< new number of successors */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+
+   digraph->nsuccessors[node] = nsuccessors;
+
+   return SCIP_OKAY;
+}
+
 /** returns the number of nodes of the given digraph */
 int SCIPdigraphGetNNodes(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
@@ -5940,8 +5956,7 @@ void depthFirstSearch(
    int*                  ndfsnodes           /**< pointer to store number of nodes that can be reached starting at startnode */
    )
 {
-   int stacksize;
-   int currnode;
+   int stackidx;
 
    assert(digraph != NULL);
    assert(startnode >= 0);
@@ -5955,44 +5970,48 @@ void depthFirstSearch(
    /* put start node on the stack */
    dfsstack[0] = startnode;
    stackadjvisited[0] = 0;
-   stacksize = 1;
+   stackidx = 0;
 
-   while( stacksize > 0 )
+   while( stackidx >= 0 )
    {
+      int currnode;
+      int sadv;
+
       /* get next node from stack */
-      currnode = dfsstack[stacksize - 1];
+      currnode = dfsstack[stackidx];
+
+      sadv = stackadjvisited[stackidx];
+      assert( 0 <= sadv && sadv <= digraph->nsuccessors[currnode] );
 
       /* mark current node as visited */
-      assert(visited[currnode] == (stackadjvisited[stacksize - 1] > 0));
+      assert( visited[currnode] == (sadv > 0) );
       visited[currnode] = TRUE;
 
       /* iterate through the successor list until we reach unhandled node */
-      while( stackadjvisited[stacksize - 1] < digraph->nsuccessors[currnode]
-         && visited[digraph->successors[currnode][stackadjvisited[stacksize - 1]]] )
-      {
-         stackadjvisited[stacksize - 1]++;
-      }
+      while( sadv < digraph->nsuccessors[currnode] && visited[digraph->successors[currnode][sadv]] )
+         ++sadv;
 
       /* the current node was completely handled, remove it from stack */
-      if( stackadjvisited[stacksize - 1] == digraph->nsuccessors[currnode] )
+      if( sadv == digraph->nsuccessors[currnode] )
       {
-         stacksize--;
+         --stackidx;
 
          /* store node in the sorted nodes array */
-         dfsnodes[(*ndfsnodes)] = currnode;
-         (*ndfsnodes)++;
+         dfsnodes[(*ndfsnodes)++] = currnode;
       }
       /* handle next unhandled successor node */
       else
       {
-         assert(!visited[digraph->successors[currnode][stackadjvisited[stacksize - 1]]]);
+         assert( ! visited[digraph->successors[currnode][sadv]] );
+
+         /* store current stackadjvisted index */
+         stackadjvisited[stackidx] = sadv + 1;
 
          /* put the successor node onto the stack */
-         dfsstack[stacksize] = digraph->successors[currnode][stackadjvisited[stacksize - 1]];
-         stackadjvisited[stacksize] = 0;
-         stackadjvisited[stacksize - 1]++;
-         stacksize++;
-         assert(stacksize <= digraph->nnodes);
+         ++stackidx;
+         dfsstack[stackidx] = digraph->successors[currnode][sadv];
+         stackadjvisited[stackidx] = 0;
+         assert( stackidx < digraph->nnodes );
       }
    }
 }
@@ -7884,6 +7903,113 @@ SCIP_RETCODE SCIPgetRandomSubset(
    return SCIP_OKAY;
 }
 
+
+/*
+ * Arrays
+ */
+
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
+SCIP_RETCODE SCIPcomputeArraysIntersection(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   )
+{
+   int cnt = 0;
+   int k = 0;
+   int v1;
+   int v2;
+
+   assert( array1 != NULL );
+   assert( array2 != NULL );
+   assert( intersectarray != NULL );
+   assert( nintersectarray != NULL );
+
+   /* determine intersection of array1 and array2 */
+   for (v1 = 0; v1 < narray1; ++v1)
+   {
+      assert( v1 == 0 || array1[v1] >= array1[v1-1] );
+
+      /* skip duplicate entries */
+      if ( v1+1 < narray1 && array1[v1] == array1[v1+1])
+         continue;
+
+      for (v2 = k; v2 < narray2; ++v2)
+      {
+         assert( v2 == 0 || array2[v2] >= array2[v2-1] );
+
+         if ( array2[v2] > array1[v1] )
+         {
+            k = v2;
+            break;
+         }
+         else if ( array2[v2] == array1[v1] )
+         {
+            intersectarray[cnt++] = array2[v2];
+            k = v2 + 1;
+            break;
+         }
+      }
+   }
+
+   /* store size of intersection array */
+   *nintersectarray = cnt;
+
+   return SCIP_OKAY;
+}
+
+
+/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
+SCIP_RETCODE SCIPcomputeArraysSetminus(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   )
+{
+   int cnt = 0;
+   int v1 = 0;
+   int v2 = 0;
+
+   assert( array1 != NULL );
+   assert( array2 != NULL );
+   assert( setminusarray != NULL );
+   assert( nsetminusarray != NULL );
+
+   while ( v1 < narray1 )
+   {
+      int entry1;
+
+      assert( v1 == 0 || array1[v1] >= array1[v1-1] );
+
+      /* skip duplicate entries */
+      while ( v1 + 1 < narray1 && array1[v1] == array1[v1 + 1] )
+         ++v1;
+
+      entry1 = array1[v1];
+
+      while ( v2 < narray2 && array2[v2] < entry1 )
+         ++v2;
+
+      if ( v2 >= narray2 || entry1 < array2[v2] )
+         setminusarray[cnt++] = entry1;
+      ++v1;
+   }
+
+   /* store size of setminus array */
+   *nsetminusarray = cnt;
+
+   return SCIP_OKAY;
+}
 
 
 /*

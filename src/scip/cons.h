@@ -81,9 +81,9 @@ SCIP_RETCODE SCIPconshdlrCreate(
    int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
    SCIP_Bool             delaysepa,          /**< should separation method be delayed, if other separators found cuts? */
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
-   SCIP_Bool             delaypresol,        /**< should presolving method be delayed, if other presolvers found reductions? */
    SCIP_Bool             needscons,          /**< should the constraint handler be skipped, if no constraints are available? */
-   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
+   SCIP_PROPTIMING       proptiming,         /**< positions in the node solving loop where propagation method of constraint handlers should be executed */
+   SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the constraint handler's presolving method */
    SCIP_DECL_CONSHDLRCOPY((*conshdlrcopy)),  /**< copy method of constraint handler or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_CONSFREE    ((*consfree)),      /**< destructor of constraint handler */
    SCIP_DECL_CONSINIT    ((*consinit)),      /**< initialize constraint handler */
@@ -114,6 +114,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    SCIP_DECL_CONSPARSE   ((*consparse)),     /**< constraint parsing method */
    SCIP_DECL_CONSGETVARS ((*consgetvars)),   /**< constraint get variables method */
    SCIP_DECL_CONSGETNVARS((*consgetnvars)),  /**< constraint get number of variable method */
+   SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)), /**< constraint handler diving solution enforcement method */
    SCIP_CONSHDLRDATA*    conshdlrdata        /**< constraint handler data */
    );
 
@@ -236,7 +237,7 @@ SCIP_RETCODE SCIPconshdlrEnforceLPSol(
 
 /** calls diving solution enforcement callback of constraint handler, if it exists */
 extern
-SCIP_RETCODE SCIPconshdlrDetermineDiveBoundChanges(
+SCIP_RETCODE SCIPconshdlrGetDiveBoundChanges(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_DIVESET*         diveset,            /**< diving settings to control scoring */
@@ -298,7 +299,7 @@ SCIP_RETCODE SCIPconshdlrPresolve(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_Bool             execdelayed,        /**< execute presolving method even if it is marked to be delayed */
+   SCIP_PRESOLTIMING     timing,             /**< current presolving timing */
    int                   nrounds,            /**< number of presolving rounds already done */
    int*                  nfixedvars,         /**< pointer to total number of variables fixed of all presolvers */
    int*                  naggrvars,          /**< pointer to total number of variables aggregated of all presolvers */
@@ -506,9 +507,9 @@ void SCIPconshdlrSetGetNVars(
 
 /** sets diving enforcement method of constraint handler */
 extern
-void SCIPconshdlrSetDetermDiveBdChgs(
+void SCIPconshdlrSetGetDiveBdChgs(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_DECL_CONSHDLRDETERMDIVEBDCHGS((*conshdlrdetermdivebdchgs)) /**< constraint handler diving solution enforcement method */
+   SCIP_DECL_CONSGETDIVEBDCHGS((*consgetdivebdchgs)) /**< constraint handler diving solution enforcement method */
    );
 
 /*
@@ -836,6 +837,7 @@ SCIP_RETCODE SCIPconsPresol(
    SCIP_CONS*            cons,               /**< constraint to presolve */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   nrounds,            /**< number of presolving rounds already done */
+   SCIP_PRESOLTIMING     timing,             /**< current presolving timing */
    int                   nnewfixedvars,      /**< number of variables fixed since the last call to the presolving method */
    int                   nnewaggrvars,       /**< number of variables aggregated since the last call to the presolving method */
    int                   nnewchgvartypes,    /**< number of variable type changes since the last call to the presolving method */

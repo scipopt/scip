@@ -79,10 +79,10 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM
 
 /**@} */
 
@@ -2757,7 +2757,7 @@ SCIP_RETCODE propagateCons(
       BMSclearMemoryArray(explanation, nfixedones);
 
       /* propagate cumulative condition */
-      SCIP_CALL( SCIPpropCumulativeCondition(scip, nfixedones, vars,
+      SCIP_CALL( SCIPpropCumulativeCondition(scip, SCIP_PRESOLTIMING_ALWAYS, nfixedones, vars,
             durations, demands, consdata->capacity, consdata->hmin, consdata->hmax, cons, nchgbds, &initialized, explanation, cutoff) );
 
       /* in case of a conflict we have to extend the initial reason before the conflict analysis starts */
@@ -4004,8 +4004,8 @@ SCIP_RETCODE SCIPincludeConshdlrOptcumulative(
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
+         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING, CONSHDLR_PRESOLTIMING,
          conshdlrCopyOptcumulative,
          consFreeOptcumulative, consInitOptcumulative, consExitOptcumulative,
          consInitpreOptcumulative, consExitpreOptcumulative, consInitsolOptcumulative, consExitsolOptcumulative,
@@ -4015,7 +4015,7 @@ SCIP_RETCODE SCIPincludeConshdlrOptcumulative(
          consActiveOptcumulative, consDeactiveOptcumulative,
          consEnableOptcumulative, consDisableOptcumulative,
          consDelvarsOptcumulative, consPrintOptcumulative, consCopyOptcumulative, consParseOptcumulative,
-         NULL, NULL,
+         NULL, NULL, NULL,
          conshdlrdata) );
 
    /* add optcumulative constraint handler parameters */

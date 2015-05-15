@@ -37,8 +37,8 @@
 #define PRESOL_DESC            "converts integer variables to binaries"
 #define PRESOL_PRIORITY        +6000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              0 /**< maximal number of presolving rounds the presolver participates in (-1: no
-                                          *   limit) */
-#define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
+					 *   limit) */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_MAXDOMAINSIZE  SCIP_LONGINT_MAX   /**< absolute value of maximum domain size which will be converted */
 #define DEFAULT_ONLYPOWERSOFTWO           FALSE   /**< should only integer variables with a domain size of 2^p - 1 be
@@ -306,7 +306,7 @@ SCIP_RETCODE SCIPincludePresolConvertinttobin(
    presoldata->onlypoweroftwo = DEFAULT_ONLYPOWERSOFTWO;
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
          presolExecConvertinttobin,
          presoldata) );
    assert(presolptr != NULL);
