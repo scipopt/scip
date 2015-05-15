@@ -125,6 +125,7 @@
 #define DEFAULT_ADDCOMPSDEPTH        30 /**< only add complementarity constraints to branching nodes for predefined depth (-1: no limit) */
 #define DEFAULT_ADDCOMPSFEAS       -0.6 /**< minimal feasibility value for complementarity constraints in order to be added to the branching node */
 #define DEFAULT_ADDBDSFEAS          1.0 /**< minimal feasibility value for bound inequalities in order to be added to the branching node */
+#define DEFAULT_ADDEXTENDEDBDS     TRUE /**< should added complementarity constraints be extended to SOS1 constraints to get tighter bound inequalities */
 
 /* selection rules */
 #define DEFAULT_NSTRONGROUNDS         0 /**< maximal number of strong branching rounds to perform for each node (-1: auto)
@@ -251,7 +252,7 @@ struct SCIP_ConshdlrData
    int                   addcompsdepth;      /**< only add complementarity constraints to branching nodes for predefined depth (-1: no limit) */
    SCIP_Real             addcompsfeas;       /**< minimal feasibility value for complementarity constraints in order to be added to the branching node */
    SCIP_Real             addbdsfeas;         /**< minimal feasibility value for bound inequalities in order to be added to the branching node */
-   SCIP_Bool             addextendedbds;     /**< tighten bound inequalities by extending the complementarity constraint to a clique of larger size */
+   SCIP_Bool             addextendedbds;     /**< should added complementarity constraints be extended to SOS1 constraints to get tighter bound inequalities */
    SCIP_Bool             branchsos;          /**< Branch on SOS condition in enforcing? */
    SCIP_Bool             branchnonzeros;     /**< Branch on SOS cons. with most number of nonzeros? */
    SCIP_Bool             branchweight;       /**< Branch on SOS cons. with highest nonzero-variable weight for branching - needs branchnonzeros to be false */
@@ -9275,6 +9276,10 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/addbdsfeas",
          "minimal feasibility value for bound inequalities in order to be added to the branching node",
          &conshdlrdata->addbdsfeas, TRUE, DEFAULT_ADDBDSFEAS, -SCIP_REAL_MAX, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/addextendedbds",
+         "should added complementarity constraints be extended to SOS1 constraints to get tighter bound inequalities",
+         &conshdlrdata->addextendedbds, TRUE, DEFAULT_ADDEXTENDEDBDS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchsos",
          "Use SOS1 branching in enforcing (otherwise leave decision to branching rules)?",
