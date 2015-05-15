@@ -338,7 +338,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       searchbound = SCIPceil(scip, searchbound);
 
    /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth} */
-   maxdivedepth = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNSOS1Vars(sos1conshdlr);
+   maxdivedepth = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+   if ( sos1conshdlr != NULL )
+      maxdivedepth += SCIPgetNSOS1Vars(sos1conshdlr);
    maxdivedepth = MIN(maxdivedepth, maxdepth);
    maxdivedepth *= 10;
 
