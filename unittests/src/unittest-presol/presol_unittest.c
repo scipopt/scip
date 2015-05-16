@@ -29,7 +29,7 @@
 #define PRESOL_DESC            "presolver template"
 #define PRESOL_PRIORITY        20010001 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
 #define PRESOL_MAXROUNDS             20 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_ALWAYS /* timing of the presolver (fast, medium, or exhaustive) */
 
 
 /*
@@ -225,7 +225,7 @@ SCIP_RETCODE SCIPincludePresolUnittest(
    /* use SCIPincludePresolBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
     */
-   SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
          presolExecUnittest,
          presoldata) );
 

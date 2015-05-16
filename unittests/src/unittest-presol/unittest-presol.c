@@ -91,7 +91,6 @@ DONE:
 SCIPpresolGetName
 SCIPpresolGetDesc
 SCIPpresolGetPriority
-SCIPpresolIsDelayed
 SCIPpresolIsInitialized
 
 TODO:
@@ -110,6 +109,9 @@ SCIPpresolGetNUpgdConss
 SCIPpresolGetNChgCoefs
 SCIPpresolGetNChgSides
 SCIPpresolGetNCalls
+SCIPpresolGetMaxrounds
+SCIPpresolGetTiming
+SCIPpresolSetTiming
 */
 
 
@@ -144,15 +146,6 @@ static
 SCIP_RETCODE checkPresolGetPriority(SCIP_PRESOL* presol)
 {
    if( SCIPpresolGetPriority(presol) !=  20010001 )
-      return SCIP_ERROR;
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_RETCODE checkPresolIsDelayed(SCIP_PRESOL* presol)
-{
-   if( SCIPpresolIsDelayed(presol) != FALSE )
       return SCIP_ERROR;
 
    return SCIP_OKAY;
@@ -214,7 +207,6 @@ int main(
    /* tests before solving */
    CHECK_TEST( checkPresolGetName(presol) );
    CHECK_TEST( checkPresolGetDesc(presol) );
-   CHECK_TEST( checkPresolIsDelayed(presol) );
    CHECK_TEST( checkPresolGetPriority(presol) );
    CHECK_TEST( checkPresolIsInitialized(presol, FALSE) );
 
