@@ -125,9 +125,7 @@ struct SCIP_ConshdlrData
    char                  nlpform;            /**< formulation of SOC constraint in NLP */
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
-#ifdef QUADCONSUPGD_PRIORITY
    SCIP_Bool             generalsocupg;      /**< try to upgrade more general quadratics to soc? */
-#endif
 
    SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
    int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
