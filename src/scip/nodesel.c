@@ -668,7 +668,7 @@ SCIP_RETCODE SCIPnodepqBound(
 
          SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
 
-         SCIPsetGetBoolParam(set, "reoptimization/enable", &reoptenabled);
+         SCIP_CALL( SCIPsetGetBoolParam(set, "reoptimization/enable", &reoptenabled) );
          if( reoptenabled )
          {
             assert(reopt != NULL);

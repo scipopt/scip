@@ -1224,7 +1224,7 @@ void SCIPwarningMessage(
 
    assert(scip != NULL);
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintWarning(scip->messagehdlr, formatstr, ap);
    va_end(ap);
 }
@@ -1241,7 +1241,7 @@ void SCIPdialogMessage(
 
    assert(scip != NULL);
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintDialog(scip->messagehdlr, file, formatstr, ap);
    va_end(ap);
 }
@@ -1258,7 +1258,7 @@ void SCIPinfoMessage(
 
    assert(scip != NULL);
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintInfo(scip->messagehdlr, file, formatstr, ap);
    va_end(ap);
 }
@@ -1277,7 +1277,7 @@ void SCIPverbMessage(
    assert(scip != NULL);
    assert(scip->set != NULL);
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, msgverblevel, file, formatstr, ap);
    va_end(ap);
 }
@@ -1365,7 +1365,7 @@ SCIP_RETCODE copyCuts(
       SCIP_ROW* row;
       SCIP_Bool takecut;
 
-      assert( cuts[c] != NULL );
+      assert( cuts[c] != NULL ); /*lint !e613*/
       row = SCIPcutGetRow(cuts[c]); /*lint !e613*/
       assert(!SCIProwIsLocal(row));
       assert(!SCIProwIsModifiable(row));
@@ -1376,10 +1376,10 @@ SCIP_RETCODE copyCuts(
       if( sourcescip == targetscip )
       {
          assert( SCIPisInRestart(sourcescip) );
-         takecut = takeCut(sourcescip, cuts[c], sourcescip->set->sepa_cutselrestart);
+         takecut = takeCut(sourcescip, cuts[c], sourcescip->set->sepa_cutselrestart); /*lint !e613*/
       }
       else
-         takecut = takeCut(sourcescip, cuts[c], sourcescip->set->sepa_cutselsubscip);
+         takecut = takeCut(sourcescip, cuts[c], sourcescip->set->sepa_cutselsubscip); /*lint !e613*/
 
       /* create a linear constraint out of the cut */
       if( takecut )
@@ -2272,7 +2272,7 @@ SCIP_RETCODE SCIPmergeVariableStatistics(
          default:
             /* other variable status are currently not supported for the merging */
          break;
-      }
+      }  /*lint !e788*/
    }
 
    return SCIP_OKAY;
@@ -13294,7 +13294,6 @@ SCIP_RETCODE presolveRound(
             *propstart = j + 1;
          }
          *consstart = k;
-         aborted = TRUE;
 
          break;
       }
@@ -14153,13 +14152,11 @@ SCIP_RETCODE compressReoptTree(
    int nnewnodes;
 
    result = SCIP_DIDNOTFIND;
-   noldnodes = 0;
 
    noldnodes = SCIPreoptGetNNodes(scip->reopt, scip->tree->root);
 
    if( noldnodes <= 1 )
    {
-      result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
 
@@ -14493,9 +14490,9 @@ SCIP_RETCODE SCIPsolve(
             {
                if( SCIPisParamFixed(scip, "reoptimization/enable") )
                {
-                  SCIPunfixParam(scip, "reoptimization/enable");
+                  SCIP_CALL( SCIPunfixParam(scip, "reoptimization/enable") );
                }
-               SCIPsetBoolParam(scip, "reoptimization/enable", FALSE);
+               SCIP_CALL( SCIPsetBoolParam(scip, "reoptimization/enable", FALSE) );
 
                SCIPwarningMessage(scip, "reoptimization needs to be disabled because the problem contains %d general integer variables.\n",
                      scip->transprob->nintvars);
@@ -15401,7 +15398,7 @@ SCIP_RETCODE SCIPresetReoptnodeDualcons(
 
    SCIP_CALL( checkStage(scip, "SCIPnodeReoptResetDualcons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIPreoptResetDualBndchgs(scip->reopt, node, scip->mem->probmem);
+   SCIP_CALL( SCIPreoptResetDualBndchgs(scip->reopt, node, scip->mem->probmem) );
 
    return SCIP_OKAY;
 }
@@ -33476,7 +33473,7 @@ SCIP_RETCODE SCIPcreateSolCopyOrig(
          break;
       default:
          assert(FALSE);
-      }
+      }  /*lint !e788*/
    }
 
    return SCIP_OKAY;

@@ -1803,17 +1803,17 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/objsimrootLP",
          "similarity of two sequential objective function to disable solving the root LP.",
-         &(*set)->reopt_objsimrootlp, TRUE, SCIP_DEFAULT_REOPT_OBJSIMROOTLP, -1, 1,
+         &(*set)->reopt_objsimrootlp, TRUE, SCIP_DEFAULT_REOPT_OBJSIMROOTLP, -1.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/objsimsol",
          "similarity of two objective functions to reuse stored solutions",
-         &(*set)->reopt_objsimsol, TRUE, SCIP_DEFAULT_REOPT_OBJSIMSOL, -1, 1,
+         &(*set)->reopt_objsimsol, TRUE, SCIP_DEFAULT_REOPT_OBJSIMSOL, -1.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "reoptimization/delay",
          "minimum similarity for using reoptimization of the search tree.",
-         &(*set)->reopt_objsimdelay, TRUE, SCIP_DEFAULT_REOPT_OBJSIMDELAY, -1, 1,
+         &(*set)->reopt_objsimdelay, TRUE, SCIP_DEFAULT_REOPT_OBJSIMDELAY, -1.0, 1.0,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/commontimelimit",

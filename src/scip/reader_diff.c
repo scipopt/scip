@@ -901,7 +901,7 @@ SCIP_RETCODE readObjective(
       oldvars = SCIPgetVars(scip);
       for( i = 0; i < SCIPgetNVars(scip); i++ )
       {
-         SCIP_CALL( SCIPchgVarObj(scip, oldvars[i], 0) );
+         SCIP_CALL( SCIPchgVarObj(scip, oldvars[i], 0.0) );
       }
 
       /* set the linear objective values */
@@ -991,7 +991,7 @@ SCIP_DECL_READERCOPY(readerCopyDiff)
 /** destructor of reader to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_READERFREE(readerFreeDiff)
-{
+{  /*lint --e{715}*/
    return SCIP_OKAY;
 }
 

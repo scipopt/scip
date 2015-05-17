@@ -416,7 +416,7 @@ void SCIPmessagePrintWarning(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintWarning(messagehdlr, formatstr, ap);
    va_end(ap);
 }
@@ -440,7 +440,7 @@ void SCIPmessageFPrintWarning(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintWarning(messagehdlr, formatstr, ap);
    va_end(ap);
 }
@@ -456,7 +456,7 @@ void SCIPmessageVFPrintWarning(
    int n;
    va_list aq;
 
-   va_copy(aq, ap);
+   va_copy(aq, ap); /*lint !e838*/
 
    n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    if( n < 0 )
@@ -499,7 +499,7 @@ void SCIPmessagePrintDialog(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintDialog(messagehdlr, NULL, formatstr, ap);
    va_end(ap);
 }
@@ -524,7 +524,7 @@ void SCIPmessageFPrintDialog(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintDialog(messagehdlr, file, formatstr, ap);
    va_end(ap);
 }
@@ -541,7 +541,7 @@ void SCIPmessageVFPrintDialog(
    int n;
    va_list aq;
 
-   va_copy(aq, ap);
+   va_copy(aq, ap); /*lint !e838*/
 
    n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    if( n < 0 )
@@ -583,7 +583,7 @@ void SCIPmessagePrintInfo(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintInfo(messagehdlr, NULL, formatstr, ap);
    va_end(ap);
 }
@@ -608,7 +608,7 @@ void SCIPmessageFPrintInfo(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintInfo(messagehdlr, file, formatstr, ap);
    va_end(ap);
 }
@@ -625,7 +625,7 @@ void SCIPmessageVFPrintInfo(
    int n;
    va_list aq;
 
-   va_copy(aq, ap);
+   va_copy(aq, ap); /*lint !e838*/
 
    n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    if( n < 0 )
@@ -669,7 +669,7 @@ void SCIPmessagePrintVerbInfo(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintVerbInfo(messagehdlr, verblevel, msgverblevel, NULL, formatstr, ap);
    va_end(ap);
 }
@@ -698,7 +698,7 @@ void SCIPmessageFPrintVerbInfo(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVFPrintVerbInfo(messagehdlr, verblevel, msgverblevel, file, formatstr, ap);
    va_end(ap);
 }
@@ -723,7 +723,7 @@ void SCIPmessageVFPrintVerbInfo(
       int n;
       va_list aq;
 
-      va_copy(aq, ap);
+      va_copy(aq, ap); /*lint !e838*/
 
       n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
       if( n < 0 )
@@ -779,7 +779,7 @@ void SCIPmessagePrintError(
 {
    va_list ap;
 
-   va_start(ap, formatstr); /*lint !e826*/
+   va_start(ap, formatstr); /*lint !e838*/
    SCIPmessageVPrintError(formatstr, ap);
    va_end(ap);
 }
@@ -794,7 +794,7 @@ void SCIPmessageVPrintError(
    int n;
    va_list aq;
 
-   va_copy(aq, ap);
+   va_copy(aq, ap); /*lint !e838*/
 
    n = vsnprintf(msg, SCIP_MAXSTRLEN, formatstr, ap);
    if( n < 0 )

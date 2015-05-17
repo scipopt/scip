@@ -3994,7 +3994,7 @@ SCIP_RETCODE conflictAnalyze(
    /* allocate temporary memory for storing first UIPs (in each depth level, at most two bound changes can be flagged
     * as UIP, namely a binary and a non-binary bound change)
     */
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &firstuips, 2*(currentdepth+1)) );
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &firstuips, 2*(currentdepth+1)) ); /*lint !e647*/
 
    /* process all bound changes in the conflict candidate queue */
    nresolutions = 0;

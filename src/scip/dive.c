@@ -607,7 +607,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                   default:
                      SCIPerrorMessage("Error: Unsupported bound change direction <%d> specified for diving, aborting\n",bdchgdirs[d]);
                      SCIPABORT();
-                     return SCIP_INVALIDDATA;
+                     return SCIP_INVALIDDATA; /*lint !e527*/
                }
 
                SCIPdebugMessage("newbounds=[%g,%g]\n",
