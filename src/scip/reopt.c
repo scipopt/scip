@@ -3135,8 +3135,6 @@ SCIP_RETCODE fixInterdiction(
    int                   negbndchg                /**< index of the variable that should negated */
    )
 {
-   SCIP_REOPTTREE* reopttree;
-   SCIP_REOPTNODE* reoptnode;
    SCIP_VAR* var;
    SCIP_Real val;
    SCIP_BOUNDTYPE boundtype;
@@ -3159,13 +3157,20 @@ SCIP_RETCODE fixInterdiction(
    assert(nvars >= 0);
    assert(blkmem != NULL);
 
-   reopttree = reopt->reopttree;
-   assert(reopttree != NULL);
-   assert(0 < id && id < reopttree->reoptnodessize);
+#ifndef NDEBUG
+   {
+      SCIP_REOPTTREE* reopttree;
+      SCIP_REOPTNODE* reoptnode;
 
-   reoptnode = reopttree->reoptnodes[id];
-   assert(reoptnode != NULL);
-   assert(reoptnode->dualfixing);
+      reopttree = reopt->reopttree;
+      assert(reopttree != NULL);
+      assert(0 < id && id < reopttree->reoptnodessize);
+
+      reoptnode = reopttree->reoptnodes[id];
+      assert(reoptnode != NULL);
+      assert(reoptnode->dualfixing);
+   }
+#endif
 
    nbndchgs = MIN(negbndchg, nvars);
 
