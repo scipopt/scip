@@ -10954,9 +10954,6 @@ SCIP_RETCODE createDisjuctiveCons(
             vars[nvars] = consdata->vars[v];
             nvars++;
 
-            /* adjust minimum demand of collected jobs */
-            mindemand = MIN(mindemand, consdata->demands[v]);
-
             /* @todo create one cumulative constraint and look for another small demand */
             break;
          }
