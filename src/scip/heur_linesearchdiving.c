@@ -205,9 +205,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreLinesearchdiving)
          default:
             SCIPerrorMessage("Error: Unsupported diving type\n");
             SCIPABORT();
-            return SCIP_INVALIDDATA;
-            break;
-      }
+            return SCIP_INVALIDDATA; /*lint !e527*/
+      } /*lint !e788*/
 
       /* avoid roundable candidates */
       if( SCIPvarMayRoundDown(cand) )
@@ -230,9 +229,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreLinesearchdiving)
          default:
             SCIPerrorMessage("Error: Unsupported diving type\n");
             SCIPABORT();
-            return SCIP_INVALIDDATA;
-            break;
-      }
+            return SCIP_INVALIDDATA; /*lint !e527*/
+      } /*lint !e788*/
 
       /* avoid roundable candidates */
       if( SCIPvarMayRoundUp(cand) )

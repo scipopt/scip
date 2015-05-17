@@ -139,8 +139,9 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
          newcoef = SCIPvarGetObj(origvar);
          oldcoef = SCIPgetReoptOldObjCoef(scip, origvar, SCIPgetNReoptRuns(scip)-1);
 
-         changed = SCIPisZero(scip, oldcoef) != SCIPisZero(scip, newcoef); /* enter or leave the objective */
-         changed |= SCIPisPositive(scip, oldcoef) == SCIPisNegative(scip, newcoef); /* changed the sign */
+         /* check if variable entered or left the objective, or if its objective coefficient changed sign */
+         changed = SCIPisZero(scip, oldcoef) != SCIPisZero(scip, newcoef);
+         changed |= SCIPisPositive(scip, oldcoef) == SCIPisNegative(scip, newcoef); /*lint !e514*/
 
          if( changed )
          {

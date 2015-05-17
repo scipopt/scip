@@ -178,7 +178,7 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
       int run;
       int max_run;
 
-      max_run = heurdata->maxruns == -1 ? 0 : MAX(0, SCIPgetNReoptRuns(scip)-1-heurdata->maxruns);
+      max_run = heurdata->maxruns == -1 ? 0 : MAX(0, SCIPgetNReoptRuns(scip)-1-heurdata->maxruns); /*lint !e666*/
       nchecksols = heurdata->maxsols == -1 ? INT_MAX : heurdata->maxsols;
 
       SCIP_CALL( SCIPgetRealParam(scip, "reoptimization/objsimsol", &objsimsol) );
@@ -252,7 +252,7 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
                   if( feasible)
                   {
                      /* create a new solution */
-                     createNewSol(scip, heur, sol, &stored);
+                     SCIP_CALL( createNewSol(scip, heur, sol, &stored) );
 
                      if( stored )
                      {

@@ -100,7 +100,6 @@ struct SCIP_HeurData
 #define getVarIndex(idx) ((idx)/2)
 #define getBoundtype(idx) (((idx) % 2 == 0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER)
 #define isIndexLowerbound(idx) ((idx) % 2 == 0)
-#define getBoundtypeString(type) ((type) == SCIP_BOUNDTYPE_LOWER ? "lower" : "upper")
 
 
 /*

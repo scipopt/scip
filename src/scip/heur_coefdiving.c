@@ -217,9 +217,8 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreCoefdiving)
          default:
             SCIPerrorMessage("Error: Unsupported diving type\n");
             SCIPABORT();
-            return SCIP_INVALIDDATA;
-            break;
-      }
+            return SCIP_INVALIDDATA; /*lint !e527*/
+      } /*lint !e788*/
       *score = SCIPvarGetNLocksUp(cand);
    }
    else

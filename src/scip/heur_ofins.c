@@ -640,11 +640,11 @@ SCIP_RETCODE SCIPincludeHeurOfins(
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/maxchangerate",
          "maximal rate of changed coefficients",
-         &heurdata->maxchangerate, FALSE, DEFAULT_MAXCHGRATE, 0, 1, NULL, NULL) );
+         &heurdata->maxchangerate, FALSE, DEFAULT_MAXCHGRATE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/maxchange",
          "maximal rate of change per coefficient to get fixed",
-         &heurdata->maxchange, FALSE, DEFAULT_MAXCHANGE, 0, 1, NULL, NULL) );
+         &heurdata->maxchange, FALSE, DEFAULT_MAXCHANGE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
