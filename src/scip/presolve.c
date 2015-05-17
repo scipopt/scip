@@ -1036,8 +1036,8 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
     *       too expensive, might also consider other data structures like hashmaps for issetvar and counts
     */
    /* allocate temporary memory */
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &issetvar, 2*nprobvars) );
-   SCIP_CALL( SCIPallocCleanBufferArray(scip, &counts, 2*nprobvars) );
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &issetvar, 2*nprobvars) ); /*lint !e647*/
+   SCIP_CALL( SCIPallocCleanBufferArray(scip, &counts, 2*nprobvars) ); /*lint !e647*/
    SCIP_CALL( SCIPallocBufferArray(scip, &newbounds, 2*nprobvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &lastbounds, 2*nprobvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &implidx, 2*nprobvars) );

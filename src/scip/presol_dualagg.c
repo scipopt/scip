@@ -390,8 +390,8 @@ SCIP_RETCODE findUplockAggregations(
 
          lb = SCIPmatrixGetColLb(matrix, i);
          ub = SCIPmatrixGetColUb(matrix, i);
-         assert(lb == SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, i)));
-         assert(ub == SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, i)));
+         assert(lb == SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, i))); /*lint !e777*/
+         assert(ub == SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, i))); /*lint !e777*/
 
          /* the variable needs to have finite bounds to allow an agregation */
          if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )
@@ -449,8 +449,8 @@ SCIP_RETCODE findDownlockAggregations(
 
          lb = SCIPmatrixGetColLb(matrix, i);
          ub = SCIPmatrixGetColUb(matrix, i);
-         assert(lb == SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, i)));
-         assert(ub == SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, i)));
+         assert(lb == SCIPvarGetLbGlobal(SCIPmatrixGetVar(matrix, i))); /*lint !e777*/
+         assert(ub == SCIPvarGetUbGlobal(SCIPmatrixGetVar(matrix, i))); /*lint !e777*/
 
          /* the variable needs to have finite bounds to allow an agregation */
          if( !SCIPisInfinity(scip, -lb) && !SCIPisInfinity(scip, ub) )

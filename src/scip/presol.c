@@ -147,7 +147,7 @@ SCIP_RETCODE SCIPpresolCreate(
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing mask of presolver <%s> (%u:FAST, %u:MEDIUM, %u:EXHAUSTIVE)",
       name, SCIP_PRESOLTIMING_FAST, SCIP_PRESOLTIMING_MEDIUM, SCIP_PRESOLTIMING_EXHAUSTIVE);
    SCIP_CALL( SCIPsetAddIntParam(set, messagehdlr, blkmem, paramname, paramdesc,
-         (int*)&(*presol)->timing, TRUE, timing, (int) SCIP_PRESOLTIMING_FAST, (int) SCIP_PRESOLTIMING_ALWAYS, NULL, NULL) ); /*lint !e740*/
+         (int*)&(*presol)->timing, TRUE, (int)timing, (int) SCIP_PRESOLTIMING_FAST, (int) SCIP_PRESOLTIMING_ALWAYS, NULL, NULL) ); /*lint !e740*/
 
    return SCIP_OKAY;
 }
