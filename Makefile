@@ -527,7 +527,6 @@ OBJSCIPLIBOBJ	=	objscip/objbranchrule.o \
 			objscip/objdisp.o \
 			objscip/objeventhdlr.o \
 			objscip/objheur.o \
-			objscip/objcompr.o \
 			objscip/objmessagehdlr.o \
 			objscip/objnodesel.o \
 			objscip/objpresol.o \

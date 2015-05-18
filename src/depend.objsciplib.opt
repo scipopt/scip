@@ -209,7 +209,6 @@ $(LIBOBJDIR)/objscip/objheur.o: src/objscip/objheur.cpp src/objscip/objheur.h sr
  src/scip/struct_set.h src/scip/message.h src/scip/tree.h src/scip/misc.h \
  src/scip/var.h src/scip/event.h src/scip/struct_event.h \
  src/objscip/objcloneable.h src/objscip/type_objcloneable.h
-$(LIBOBJDIR)/objscip/objcompr.o: src/objscip/objcompr.cpp
 $(LIBOBJDIR)/objscip/objmessagehdlr.o: src/objscip/objmessagehdlr.cpp \
  src/objscip/objmessagehdlr.h src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \

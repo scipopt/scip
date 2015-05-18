@@ -160,7 +160,6 @@ $(LIBOBJDIR)/objscip/objheur.o: src/objscip/objheur.cpp src/objscip/objheur.h sr
  src/nlpi/pub_expr.h src/scip/intervalarith.h \
  src/nlpi/type_exprinterpret.h src/scip/presolve.h \
  src/objscip/objcloneable.h src/objscip/type_objcloneable.h
-$(LIBOBJDIR)/objscip/objcompr.o: src/objscip/objcompr.cpp
 $(LIBOBJDIR)/objscip/objmessagehdlr.o: src/objscip/objmessagehdlr.cpp \
  src/objscip/objmessagehdlr.h src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \
