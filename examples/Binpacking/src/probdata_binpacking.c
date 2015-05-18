@@ -229,6 +229,8 @@ SCIP_RETCODE createInitialColumns(
    /* create start solution each item in exactly one bin */
    for( i = 0; i < nitems; ++i )
    {
+      int a;
+
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "item_%d", ids[i]);
 
       SCIPdebugMessage("create variable for item %d with weight = %"SCIP_LONGINT_FORMAT"\n", ids[i], weights[i]);
@@ -247,7 +249,8 @@ SCIP_RETCODE createInitialColumns(
 
       /* create the variable data for the variable; the variable data contains the information in which constraints the
        * variable appears */
-      SCIP_CALL( SCIPvardataCreateBinpacking(scip, &vardata, &i, 1) );
+      a = i;
+      SCIP_CALL( SCIPvardataCreateBinpacking(scip, &vardata, &a, 1) );
 
       /* add the variable data to the variable */
       SCIPvarSetData(var, vardata);
@@ -346,7 +349,7 @@ SCIP_DECL_PROBEXITSOL(probexitsolBinpacking)
 
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 /**@} */
 
