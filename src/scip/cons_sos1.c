@@ -8395,14 +8395,14 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOS1)
       return SCIP_PARAMETERWRONGVAL;
    }
 
+   if ( conshdlrdata->sos1branch && conshdlrdata->nstrongrounds != 0 )
+   {
+      SCIPerrorMessage("Strong branching is not available for SOS1 branching.\n");
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
    if ( conshdlrdata->sos1branch || conshdlrdata->switchsos1branch )
    {
-      if ( conshdlrdata->nstrongrounds != 0 )
-      {
-         SCIPerrorMessage("Strong branching not available for SOS1 branching.\n");
-         return SCIP_PARAMETERWRONGVAL;
-      }
-
       /* enforce SOS1 constraints */
       SCIP_CALL( enforceConssSOS1(scip, conshdlr, nconss, conss, result) );
    }
@@ -8450,14 +8450,14 @@ SCIP_DECL_CONSENFOPS(consEnfopsSOS1)
       return SCIP_PARAMETERWRONGVAL;
    }
 
+   if ( conshdlrdata->sos1branch && conshdlrdata->nstrongrounds != 0 )
+   {
+      SCIPerrorMessage("Strong branching is not available for SOS1 branching.\n");
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
    if ( conshdlrdata->sos1branch || conshdlrdata->switchsos1branch )
    {
-      if ( conshdlrdata->nstrongrounds != 0 )
-      {
-         SCIPerrorMessage("Strong branching not available for SOS1 branching.\n");
-         return SCIP_PARAMETERWRONGVAL;
-      }
-
       /* enforce SOS1 constraints */
       SCIP_CALL( enforceConssSOS1(scip, conshdlr, nconss, conss, result) );
    }
