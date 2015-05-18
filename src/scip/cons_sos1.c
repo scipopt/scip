@@ -1947,7 +1947,7 @@ SCIP_RETCODE presolRoundConssSOS1(
                continue;
             }
 
-            if ( conshdlrdata->maxextensions != 0 && adjacencymatrix != NULL )
+            if ( conshdlrdata->maxextensions != 0 && adjacencymatrix != NULL && 1==2 )//
             {
                int maxextensions;
                ncomsucc = 0;
@@ -1978,7 +1978,7 @@ SCIP_RETCODE presolRoundConssSOS1(
                cliqueind = nsos1vars + ncliques; /* index of clique in vertex-clique graph */
 
                /* add directed edges to the vertex-clique graph */
-               assert( cliquesize >= 0 && cliquesize < nsos1vars );
+               assert( cliquesize >= 0 && cliquesize <= nsos1vars );
                assert( ncliques < csize );
                SCIP_CALL( SCIPallocBufferArray(scip, &cliques[ncliques], cliquesize) );/*lint !e866*/
                for (j = 0; j < cliquesize; ++j)
@@ -8543,10 +8543,9 @@ SCIP_DECL_CONSPROP(consPropSOS1)
          SCIP_VAR* var;
 
          var = fixnonzerovars[j];
-         assert( var != NULL );
 
          /* if variable is involved in an SOS1 constraint */
-         if ( varGetNodeSOS1(conshdlrdata, var) >= 0 )
+         if ( var != NULL && varGetNodeSOS1(conshdlrdata, var) >= 0 )
          {
             assert( varGetNodeSOS1(conshdlrdata, var) < conshdlrdata->nsos1vars );
             SCIPdebugMessage("Propagating SOS1 variable <%s>.\n", SCIPvarGetName(var) );
@@ -8971,7 +8970,10 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
          assert( 0 <= conshdlrdata->nfixnonzerovars );
          assert( conshdlrdata->fixnonzerovars != NULL );
          if ( conshdlrdata->nfixnonzerovars < conshdlrdata->maxnfixnonzerovars )
+         {
+            assert( SCIPeventGetVar(event) != NULL );
             conshdlrdata->fixnonzerovars[conshdlrdata->nfixnonzerovars++] = SCIPeventGetVar(event);
+         }
 
          ++(consdata->nfixednonzeros);
       }
@@ -8990,7 +8992,10 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
          assert( 0 <= conshdlrdata->nfixnonzerovars );
          assert( conshdlrdata->fixnonzerovars != NULL );
          if ( conshdlrdata->nfixnonzerovars < conshdlrdata->maxnfixnonzerovars )
+         {
+            assert( SCIPeventGetVar(event) != NULL );
             conshdlrdata->fixnonzerovars[conshdlrdata->nfixnonzerovars++] = SCIPeventGetVar(event);
+         }
 
          ++(consdata->nfixednonzeros);
       }
