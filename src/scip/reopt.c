@@ -1025,7 +1025,7 @@ SCIP_RETCODE checkMemDualCons(
       reopt->dualcons->varssize = size;
       reopt->dualcons->nvars = 0;
    }
-   else if( size > reopt->dualcons->varssize )
+   else
    {
       if( reopt->dualcons->varssize > 0 )
       {
