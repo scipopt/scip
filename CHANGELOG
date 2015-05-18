@@ -22,23 +22,18 @@ features:
 - the original problem can now be permuted directly after reading (if misc/permutationseed has value >= 0)
 - added methods to compute strongly connected components with Tarjan's Algorithm
 - improved clique and variable bound heuristics
-- extended AMPL interface to allow for setting of constraint and variable properties via AMPL suffixes:
-  the following suffixes for constraints are recognized by interface: initial, separate, enforce, check, propagate,
-  dynamic, removable; additionally, for variables the suffixes initial and removable are recognized;
-  we refer to the SCIP documentation (e.g, SCIPcreateVar; SCIPcreateConsLinear) for their meaning;
-  setting them 1 enables the flag (TRUE), setting them to 2 disables the flag (FALSE), not setting them or setting
-  them to 0 will use a default value
 - the MPS reader can now handle objective constants given as (the negation of) the RHS of the objective row
 - we can now upgrade quadratic constraints with one bilinear term to SOC constraints
 - we can also upgrade general quadratic constraints with a single negative eigenvalue to SOC constraints
-- new parameter "misc/outputorigsol" to control whether at the end of a command line run the solution should be output in the orignal space
+- new parameter "misc/outputorigsol" to control whether at the end of a command line run the solution should be output
+  in the orignal space
 - new score in hybrid reliability pseudocost branching that prefers nonlinear variables when solving MINLPs
 - new heuristic (heur_bound) which fixes all integer variables to their lower/upper bounds and solves the remaining LP
 - new branching rule multaggr which allows to branch on general disjunctions defined by fractional multi-aggregated variables
 - started support for user-defined operators in expression trees/graphs (see SCIPexprCreateUser()),
   interface will likely change again in future SCIP versions
-- in the AMPL interface, variable and constraint attributes (flags) can now be set via suffixes, where 0 (unset) stands for the default,
-  1 for TRUE, and other values for FALSE; see SCIPcreateVar() and SCIPcreateCons() for their meaning;
+- in the AMPL interface, variable and constraint attributes (flags) can now be set via suffixes, where 0 (unset) stands
+  for the default, 1 for TRUE, and other values for FALSE; see SCIPcreateVar() and SCIPcreateCons() for their meaning;
   for variables, "initial" and "removable" are recognized;
   for constraints, "initial", "separate", "enforce", "check", "propagate", "dynamic", and "removable" are recognized
 - Improved coordination of presolvers. There are three timings for presolvers now, FAST, MEDIUM, and EXHAUSTIVE.
@@ -66,6 +61,7 @@ features:
 - new primal heuristic for reoptimization: ofins - objective function induced neighborhood heuristic
 - new heuristic for reoptimization which constructs solutions based in the changes between the objective function and the optimal solution befor changing the objective function
 - new plugin "compr" for rearranging the search tree, currently this only works on the reoptimization tree
+- extended expression parsing to support power, realpower, and signpower operators
 
 parameters:
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
@@ -170,8 +166,16 @@ performance improvements:
   coefficients
 - using sparsity information of the SoPlex LP
 - new presolving/propagation algorithm using the gcd for ranged rows and equations in cons_linear
+- improved propagation of SOS1 constraint handler using the information from a conflict
 
 interface:
+- new method SCIPwriteParam() to write a single parameter to a file
+- new methods SCIPcheckParam{Bool,Char,...}() to check whether a parameter value is within the feasible domain
+- new methods SCIPchgCoefLinear() and SCIPdelCoefLinear() to modify linear constraint during problem creation
+- new methods SCIPchgLhsQuadratic(), SCIPchgRhsQuadratic(), SCIPchgLinearCoefQuadratic(), SCIPchgSquareCoefQuadratic(),
+  and SCIPchgBilinCoefQuadratic() to modify quadratic constraints during problem creation
+- new methods SCIPgetFeasibilityQuadratic() and SCIPgetActivityQuadratic() to get the feasibility and activity of a quadratic
+  constraint in a given solution
 - new method SCIPcutGetLPActivityQuot() in pub_cutpool.h to get the potion of LP's where this cut was sharp in an optimal basis.
 - methods which support statistical tests in pub_misc.h, SCIPstudentTGetCriticalValue(), SCIPcomputeTwoSampleTTestValue() etc.
 - new enum SCIP_CONFIDENCE_LEVEL for different levels of confidence for statistical tests.
@@ -183,12 +187,40 @@ interface:
 - rename all file "*_vbc.?" to the more generic "*_visual.?"
 - submenu for setting "vbc" settings renamed to "visual"
 - rename SCIPdigraphGetSuccessorsDatas() -> SCIPdigraphGetSuccessorsData()
+- SCIPdigraphSetNSuccessors() sets the number of successors of some digraph node to a given value
 - added new sorting functions SCIPsortRealRealRealBoolBoolPtr(), SCIPsortDownRealRealRealBoolBoolPtr()
 - added new sorting functions SCIPsortIntIntIntReal(), SCIPsortDownIntIntIntReal()
-- safe-guarded buffer array (re)allocations to check for negative size or size > SIZE_MAX/2
+- added SCIPcomputeArraysIntersection() to compute the set intersection of two ordered arrays
+- added SCIPcomputeArraysSetminus() to compute the set difference of two ordered arrays
+- moved buffer memory handling to blockmemory/memory.?;
+  remove files type_buffer.h, struct_buffer.h buffer.h buffer.c;
+  removed functions SCIP*buffer*() from scip.? and replaced them by macros;
+  new function SCIPbuffermem() to get buffer memory;
+  redesigned buffer interface to be similar to block memory;
+  added checks for strange sizes
+- new function BMSallocClearBlockMemoryArray()/SCIPallocClearBlockMemoryArray() and
+  BMSallocClearBufferMemoryArray(), SCIPallocClearBufferArray() to allocate arrays that are initialized to 0
+- renamed SCIPconshdlrGetPropTimingmask() to SCIPconshdlrGetPropTiming(), new method SCIPconshdlrSetPropTiming()
+- removed SCIPconshdlrIsPresolvingDelayed() and SCIPconshdlrWasPresolvingDelayed()
+- new methods SCIPpresolGetTiming(), SCIPpresolSetTiming(), SCIP{conshdlr,prop}GetPresolTiming(), and
+  SCIP{conshdlr,prop}SetPresolTiming()
+- removed "delay(presol)" parameter from SCIPinclude{Conshdlr,Presol,Prop}() and added "(presol)timing" parameter
+- new parameter "presoltiming" for method SCIPpresolCons()
+- SCIPvarIsSOS1() returns whether some variable is involved in an SOS1 constraint
+- SCIPgetConflictgraphSOS1() gets conflict graph of SOS1 constraints
+- SCIPvarGetNodeSOS1() returns node of SOS1 variable in the conflict graph
+- SCIPnodeGetVarSOS1() returns SOS1 variable associated to some given node in the conflict graph
+- SCIPmakeSOS1sFeasible() based on solution values, fixes variables to zero to turn all SOS1 constraints feasible
+- SCIPsolveLinearProb() solves a linear problem of the form Ax=b for a regular square matrix A
+- new methods SCIPaddSquareLinearization(), SCIPaddSquareSecant(), SCIPaddBilinLinearization(), and SCIPaddBilinMcCormick()
+  in cons_quadratic.h to compute linear under- and overestimation for bilinear and quadratic terms
 
 fixed bugs:
 - fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)
+- try to handle fixings of multi-aggregated variable in cons_sos1 presolving and avoid error
+- fix potential memory leak in method SCIPgetConsCopy()
+- fix potential memory leak in method detectRedundantConstraints() of the knapsack constraint handler
+- fix potential memory leak in SoPlex LP interfaces when setting invalid basis
 
 SCIP version 3.1.2
 ==================
@@ -209,7 +241,7 @@ fixed bugs:
 
 misc:
 - moved assertions in comparison methods from scip.c to set.c
-- added more checks to SCIP{alloc,realloc,dupliacte}BufferArray() to handle overflows properly
+- added more checks to SCIP{alloc,realloc,duplicate}BufferArray() to handle overflows properly
 
 SCIP version 3.1.1
 ==================
