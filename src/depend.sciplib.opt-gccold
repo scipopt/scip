@@ -1304,7 +1304,8 @@ $(LIBOBJDIR)/scip/cons_soc.o: src/scip/cons_soc.c src/scip/cons_soc.h src/scip/s
  src/scip/struct_set.h src/scip/message.h src/scip/tree.h src/scip/misc.h \
  src/scip/var.h src/scip/event.h src/scip/struct_event.h \
  src/scip/cons_quadratic.h src/scip/cons_linear.h src/scip/heur_subnlp.h \
- src/scip/heur_trysol.h src/nlpi/nlpi.h src/nlpi/exprinterpret.h
+ src/scip/heur_trysol.h src/nlpi/nlpi.h src/nlpi/exprinterpret.h \
+ src/nlpi/nlpi_ipopt.h
 $(LIBOBJDIR)/scip/cons_sos1.o: src/scip/cons_sos1.c src/scip/cons_sos1.h src/scip/scip.h \
  src/scip/def.h src/scip/type_retcode.h src/scip/pub_message.h \
  src/scip/type_message.h src/scip/struct_message.h \
