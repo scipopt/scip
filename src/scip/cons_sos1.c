@@ -1403,9 +1403,9 @@ SCIP_RETCODE cliqueGetCommonSuccessorsSOS1(
    /* determine the common successors of the vertices from the considered clique */
 
    /* determine successors of variable var[0] that are not in the clique */
+   assert(vars[0] != NULL );
    ind =  varGetNodeSOS1(conshdlrdata, vars[0]);
-   assert( ind != -1 );
-
+   assert( ind >= 0 && ind < SCIPdigraphGetNNodes(conflictgraph) );
    nsucc = SCIPdigraphGetNSuccessors(conflictgraph, ind);
    succ = SCIPdigraphGetSuccessors(conflictgraph, ind);
 
@@ -1434,7 +1434,9 @@ SCIP_RETCODE cliqueGetCommonSuccessorsSOS1(
       int ncomsuccsave = 0;
       k = 0;
 
+      assert(vars[v] != NULL );
       ind =  varGetNodeSOS1(conshdlrdata, vars[v]);
+      assert( ind >= 0 && ind < SCIPdigraphGetNNodes(conflictgraph) );
       nsucc = SCIPdigraphGetNSuccessors(conflictgraph, ind);
       succ = SCIPdigraphGetSuccessors(conflictgraph, ind);
 
@@ -1536,6 +1538,7 @@ SCIP_RETCODE presolRoundConsSOS1(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_Bool*            substituted,        /**< whether a variable was substituted */
    SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
    SCIP_Bool*            success,            /**< whether we performed a successful reduction */
    int*                  ndelconss,          /**< number of deleted constraints */
@@ -1562,6 +1565,7 @@ SCIP_RETCODE presolRoundConsSOS1(
    assert( nfixedvars != NULL );
    assert( nremovedvars != NULL );
 
+   *substituted = FALSE;
    *cutoff = FALSE;
    *success = FALSE;
 
@@ -1603,6 +1607,7 @@ SCIP_RETCODE presolRoundConsSOS1(
          SCIP_CALL( lockVariableSOS1(scip, cons, var) );
 
          vars[j] = var;
+         *substituted = TRUE;
       }
 
       /* check whether the variable appears again later */
@@ -1827,8 +1832,10 @@ SCIP_RETCODE presolRoundConssSOS1(
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS* cons;
+      SCIP_Bool substituted;
       SCIP_Bool success;
       SCIP_Bool cutoff;
+      int savennupgdconss;
       int savendelconss;
 
       SCIP_VAR** vars;
@@ -1848,9 +1855,10 @@ SCIP_RETCODE presolRoundConssSOS1(
       assert( ncliques < csize );
 
       savendelconss = *ndelconss;
+      savennupgdconss = *nupgdconss;
 
       /* perform one presolving round for SOS1 constraint */
-      SCIP_CALL( presolRoundConsSOS1(scip, cons, consdata, eventhdlr, &cutoff, &success, ndelconss, nupgdconss, nfixedvars, nremovedvars) );
+      SCIP_CALL( presolRoundConsSOS1(scip, cons, consdata, eventhdlr, &substituted, &cutoff, &success, ndelconss, nupgdconss, nfixedvars, nremovedvars) );
 
       if ( cutoff )
       {
@@ -1858,7 +1866,7 @@ SCIP_RETCODE presolRoundConssSOS1(
          break;
       }
 
-      if ( *ndelconss > savendelconss )
+      if ( *ndelconss > savendelconss || *nupgdconss > savennupgdconss || substituted )
       {
          *result = SCIP_SUCCESS;
          continue;
