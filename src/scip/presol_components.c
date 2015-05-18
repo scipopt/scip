@@ -419,6 +419,10 @@ SCIP_RETCODE copyAndSolveComponent(
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d.cip", SCIPgetProbName(scip), compnr);
       SCIPdebugMessage("write problem to file %s\n", name);
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, NULL, FALSE) );
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s_comp_%d.set", SCIPgetProbName(scip), compnr);
+      SCIPdebugMessage("write settings to file %s\n", name);
+      SCIP_CALL( SCIPwriteParams(subscip, name, TRUE, TRUE) );
    }
 
    /* the following asserts are not true, because some aggregations in the original scip instance could not get resolved
@@ -981,6 +985,7 @@ SCIP_RETCODE splitProblem(
    int comp;
    int compvarsstart;
    int compconssstart;
+   int nfreevars = 0;
    int v;
    int c;
 
@@ -1054,8 +1059,11 @@ SCIP_RETCODE splitProblem(
       /* the dual fixing presolver will take care of the case ncompconss == 0 */
       assert(ncompconss > 0 || ncompvars == 1);
 
+      if( ncompconss == 0 )
+         nfreevars += ncompvars;
+
       /* we do not want to solve the component, if it is the last unsolved one */
-      if( ncompconss > 0 && ncompvars < SCIPgetNVars(scip) )
+      if( ncompconss > 0 && ncompvars + nfreevars < SCIPgetNVars(scip) )
       {
          SCIP_RESULT subscipresult;
 
