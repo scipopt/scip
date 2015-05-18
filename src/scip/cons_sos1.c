@@ -1210,7 +1210,7 @@ SCIP_RETCODE extensionOperatorSOS1(
          cliqueind = nsos1vars + *ncliques; /* index of clique in the vertex-clique graph */
 
          /* save new clique */
-         assert( cliquesizes[*ncliques] >= 0 && cliquesizes[*ncliques] < nsos1vars );
+         assert( cliquesizes[*ncliques] >= 0 && cliquesizes[*ncliques] <= nsos1vars );
          assert( *ncliques < MAX(1, conshdlrdata->maxextensions) * nconss );
          SCIP_CALL( SCIPallocBufferArray(scip, &(cliques[*ncliques]), cliquesizes[*ncliques]) );/*lint !e866*/
          for (j = 0 ; j < cliquesizes[*ncliques]; ++j)
