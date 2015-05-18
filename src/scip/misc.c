@@ -7086,7 +7086,7 @@ SCIP_Longint SCIPcalcGreComDiv(
       {
          /* we can stop if one value reached one */
          if( val2 == 1 )
-            return (1 << t);  /*lint !e647 !e701*/
+            return (val2 << t);  /*lint !e647 !e701*/
 
          /* if ((val1 xor val2) and 2) = 2, then gcd(val1, val2) = gcd((val1 + val2)/4, val2),
           * and otherwise                        gcd(val1, val2) = gcd((val1 − val2)/4, val2)
@@ -7107,7 +7107,7 @@ SCIP_Longint SCIPcalcGreComDiv(
       {
          /* we can stop if one value reached one */
          if( val1 == 1 )
-            return (1 << t);  /*lint !e647 !e701*/
+            return (val1 << t);  /*lint !e647 !e701*/
 
          /* if ((val2 xor val1) and 2) = 2, then gcd(val2, val1) = gcd((val2 + val1)/4, val1),
           * and otherwise                        gcd(val2, val1) = gcd((val2 − val1)/4, val1)
@@ -7614,7 +7614,7 @@ int getRand(
 
    assert(seedp != NULL);
 
-   nextseed = (*seedp) * 1103515245 + 12345;
+   nextseed = (*seedp) * (SCIP_Longint)1103515245 + 12345;
    *seedp = (unsigned int)nextseed;
 
    return (int)((unsigned int)(nextseed/(2*(SCIP_RAND_MAX+1))) % (SCIP_RAND_MAX+1));
@@ -7705,9 +7705,9 @@ SCIP_Longint SCIPcalcBinomCoef(
    if( m == 2 )
    {
       if( ((SCIP_Real)SCIP_LONGINT_MAX) / n >= (n-1) * 2 ) /*lint !e790*/
-	 return (n*(n-1)/2); /*lint !e647*/
+         return ((SCIP_Longint)n*(n-1)/2); /*lint !e647*/
       else
-	 return -1;
+         return -1;
    }
 
    /* abort on to big numbers */

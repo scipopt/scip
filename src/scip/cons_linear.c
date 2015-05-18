@@ -98,6 +98,8 @@
                                            *   to 1.0 (FALSE) or to the maximum absolute value in the activity (TRUE)? */
 #define DEFAULT_MAXAGGRNORMSCALE      0.0 /**< maximal allowed relative gain in maximum norm for constraint aggregation
                                            *   (0.0: disable constraint aggregation) */
+#define DEFAULT_MAXEASYACTIVITYDELTA  1e6 /**< maximum activity delta to run easy propagation on linear constraint
+                                           *   (faster, but numerically less stable) */
 #define DEFAULT_MAXCARDBOUNDDIST      0.0 /**< maximal relative distance from current node's dual bound to primal bound compared
                                            *   to best node's dual bound for separating knapsack cardinality cuts */
 #define DEFAULT_SEPARATEALL         FALSE /**< should all constraints be subject to cardinality cut generation instead of only
@@ -253,6 +255,8 @@ struct SCIP_ConshdlrData
    SCIP_Real             maxcardbounddist;   /**< maximal relative distance from current node's dual bound to primal bound compared
                                               *   to best node's dual bound for separating knapsack cardinality cuts */
    SCIP_Real             mingainpernmincomp; /**< minimal gain per minimal pairwise presolving comparisons to repeat pairwise comparison round */
+   SCIP_Real             maxeasyactivitydelta;/**< maximum activity delta to run easy propagation on linear constraint
+                                               *   (faster, but numerically less stable) */
    int                   linconsupgradessize;/**< size of linconsupgrade array */
    int                   nlinconsupgrades;   /**< number of linear constraint upgrade methods */
    int                   tightenboundsfreq;  /**< multiplier on propagation frequency, how often the bounds are tightened */
@@ -6778,13 +6782,13 @@ SCIP_RETCODE tightenVarBounds(
 }
 
 #define MAXTIGHTENROUNDS 10
-#define MAXACTIVITYDELTATHR 1e6
 
 /** tightens bounds of variables in constraint due to activity bounds */
 static
 SCIP_RETCODE tightenBounds(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_Real             maxeasyactivitydelta,/**< maximum activity delta to run easy propagation on linear constraint */
    SCIP_Bool             sortvars,           /**< should variables be used in sorted order? */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    int*                  nchgbds             /**< pointer to count the total number of tightened bounds */
@@ -6870,7 +6874,7 @@ SCIP_RETCODE tightenBounds(
    }
 
    /* check if we can use fast implementation for easy and numerically well behaved cases */
-   easycase = SCIPisLT(scip, consdata->maxactdelta, MAXACTIVITYDELTATHR);
+   easycase = SCIPisLT(scip, consdata->maxactdelta, maxeasyactivitydelta);
 
    /* as long as the bounds might be tightened again, try to tighten them; abort after a maximal number of rounds */
    lastchange = -1;
@@ -7305,6 +7309,7 @@ SCIP_RETCODE propagateCons(
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_Bool             tightenbounds,      /**< should the variable's bounds be tightened? */
    SCIP_Bool             rangedrowpropagation,/**< should ranged row propagation be performed? */
+   SCIP_Real             maxeasyactivitydelta,/**< maximum activity delta to run easy propagation on linear constraint */
    SCIP_Bool             sortvars,           /**< should variable sorting for faster propagation be used? */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    int*                  nchgbds             /**< pointer to count the total number of tightened bounds */
@@ -7351,7 +7356,7 @@ SCIP_RETCODE propagateCons(
 
          oldnchgbds = *nchgbds;
 
-         SCIP_CALL( tightenBounds(scip, cons, sortvars, cutoff, nchgbds) );
+         SCIP_CALL( tightenBounds(scip, cons, maxeasyactivitydelta, sortvars, cutoff, nchgbds) );
 
          if( *nchgbds > oldnchgbds )
          {
@@ -7569,6 +7574,7 @@ static
 SCIP_RETCODE extractCliques(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
+   SCIP_Real             maxeasyactivitydelta,/**< maximum activity delta to run easy propagation on linear constraint */
    SCIP_Bool             sortvars,           /**< should variables be used in sorted order? */
    int*                  nfixedvars,         /**< pointer to count number of fixed variables */
    int*                  nchgbds,            /**< pointer to count the total number of tightened bounds */
@@ -7808,7 +7814,7 @@ SCIP_RETCODE extractCliques(
                      return SCIP_OKAY;
 
                   /* tighten variable's bounds */
-                  SCIP_CALL( tightenBounds(scip, cons, sortvars, cutoff, nchgbds) );
+                  SCIP_CALL( tightenBounds(scip, cons, maxeasyactivitydelta, sortvars, cutoff, nchgbds) );
                   if( *cutoff )
                      return SCIP_OKAY;
 
@@ -8016,7 +8022,7 @@ SCIP_RETCODE extractCliques(
             if( !*cutoff )
             {
                /* tighten variable's bounds */
-               SCIP_CALL( tightenBounds(scip, cons, sortvars, cutoff, nchgbds) );
+               SCIP_CALL( tightenBounds(scip, cons, maxeasyactivitydelta, sortvars, cutoff, nchgbds) );
 
                if( !*cutoff )
                {
@@ -8169,7 +8175,7 @@ SCIP_RETCODE extractCliques(
             if( !*cutoff )
             {
                /* tighten variable's bounds */
-               SCIP_CALL( tightenBounds(scip, cons, sortvars, cutoff, nchgbds) );
+               SCIP_CALL( tightenBounds(scip, cons, maxeasyactivitydelta, sortvars, cutoff, nchgbds) );
 
                if( !*cutoff )
                {
@@ -8331,7 +8337,7 @@ SCIP_RETCODE extractCliques(
             if( !*cutoff )
             {
                /* tighten variable's bounds */
-               SCIP_CALL( tightenBounds(scip, cons, sortvars, cutoff, nchgbds) );
+               SCIP_CALL( tightenBounds(scip, cons, maxeasyactivitydelta, sortvars, cutoff, nchgbds) );
 
                if( !*cutoff )
                {
@@ -14278,6 +14284,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
 {  /*lint --e{715}*/
    int c;
 #ifdef SCIP_STATISTIC
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int ngoodconss;
    int nallconss;
 #endif
@@ -14289,6 +14296,8 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
 
 #ifdef SCIP_STATISTIC
    /* count number of well behaved linear constraints */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    ngoodconss = 0;
    nallconss = 0;
@@ -14310,7 +14319,7 @@ SCIP_DECL_CONSEXITPRE(consExitpreLinear)
 
       consdataRecomputeMaxActivityDelta(scip, consdata);
 
-      if( SCIPisLT(scip, consdata->maxactdelta, MAXACTIVITYDELTATHR) )
+      if( SCIPisLT(scip, consdata->maxactdelta, conshdlrdata->maxeasyactivitydelta) )
          ngoodconss++;
    }
    if( nallconss )
@@ -14835,7 +14844,8 @@ SCIP_DECL_CONSPROP(consPropLinear)
    for( i = 0; i < nmarkedconss && !cutoff; i++ )
    {
       SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
-      SCIP_CALL( propagateCons(scip, conss[i], tightenbounds, conshdlrdata->rangedrowpropagation, conshdlrdata->sortvars, &cutoff, &nchgbds) );
+      SCIP_CALL( propagateCons(scip, conss[i], tightenbounds, conshdlrdata->rangedrowpropagation,
+            conshdlrdata->maxeasyactivitydelta, conshdlrdata->sortvars, &cutoff, &nchgbds) );
    }
 
    /* adjust result code */
@@ -14978,7 +14988,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          }
 
          /* tighten variable's bounds */
-         SCIP_CALL( tightenBounds(scip, cons, conshdlrdata->sortvars, &cutoff, nchgbds) );
+         SCIP_CALL( tightenBounds(scip, cons, conshdlrdata->maxeasyactivitydelta, conshdlrdata->sortvars, &cutoff, nchgbds) );
          if( cutoff )
             break;
 
@@ -15083,7 +15093,8 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
          /* extract cliques from constraint */
 	 if( !cutoff && SCIPconsIsActive(cons) )
 	 {
-            SCIP_CALL( extractCliques(scip, cons, conshdlrdata->sortvars, nfixedvars, nchgbds, &cutoff) );
+            SCIP_CALL( extractCliques(scip, cons, conshdlrdata->maxeasyactivitydelta, conshdlrdata->sortvars,
+                  nfixedvars, nchgbds, &cutoff) );
 
             /* check if the constraint got redundant or infeasible */
             if( !cutoff && SCIPconsIsActive(cons) && consdata->nvars == 0 )
@@ -16064,6 +16075,10 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          "constraints/"CONSHDLR_NAME"/maxaggrnormscale",
          "maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)",
          &conshdlrdata->maxaggrnormscale, TRUE, DEFAULT_MAXAGGRNORMSCALE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddRealParam(scip,
+         "constraints/"CONSHDLR_NAME"/maxeasyactivitydelta",
+         "maximum activity delta to run easy propagation on linear constraint (faster, but numerically less stable)",
+         &conshdlrdata->maxeasyactivitydelta, TRUE, DEFAULT_MAXEASYACTIVITYDELTA, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
          "constraints/"CONSHDLR_NAME"/maxcardbounddist",
          "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cardinality cuts",

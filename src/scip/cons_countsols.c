@@ -170,7 +170,7 @@ void setPowerOfTwo(
    mpz_ui_pow_ui(*value, 2UL, (unsigned long) exponent);
 #else
    assert(exponent < 64);
-   (*value) = 1 << exponent;
+   (*value) = (SCIP_Longint)1 << exponent;
 #endif
 }
 
