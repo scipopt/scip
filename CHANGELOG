@@ -109,6 +109,7 @@ parameters:
 - new parameter "constraints/SOS1/neighbranch" to branch on a neighborhood of the conflict graph
 - new parameter "constraints/SOS1/bipbranch" to branch on a complete bipartite subgraph of the conflict graph
 - new parameter "constraints/SOS1/sos1branch" to branch on a single SOS1 constraint, i.e., a clique of the conflict graph
+- new parameter "constraints/SOS1/autosos1branch" to switch to SOS1 branching if the SOS1 constraints do not overlap
 - new parameter "constraints/SOS1/fixnonzero": If neighborhood branching is used, then fix the branching variable (if positive in sign)
   to the value of the feasibility tolerance
 - new parameter "constraints/SOS1/addcomps" to add local complementarity constraints to the branching nodes (can be used in combination
