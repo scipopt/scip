@@ -47,12 +47,6 @@
 #define LP_PRINTLEN          100
 
 
-/** DIFF reading data */
-struct SCIP_ReaderData
-{
-};
-
-
 /** Section in LP File */
 enum LpSection
 {

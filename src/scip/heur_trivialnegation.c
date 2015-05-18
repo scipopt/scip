@@ -37,17 +37,6 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
-
-/*
- * Data structures
- */
-
-/** primal heuristic data */
-struct SCIP_HeurData
-{
-};
-
-
 /*
  * Local methods
  */
