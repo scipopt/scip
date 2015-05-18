@@ -38,8 +38,3 @@ unittests/check/results
 unittests/check/locks
 unittests/check/evalcheck.sh
 unittests/check/getlastprob.awk
-*.list
-*.out
-*.py
-*.sh
-src/objscip/*
