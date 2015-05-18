@@ -702,7 +702,7 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasBinpacking)
    SCIPwarningMessage(scip, "Current master LP is infeasible, but Farkas pricing was not implemented\n");
    SCIPABORT();
 
-   return SCIP_OKAY;
+   return SCIP_OKAY; /*lint !e527*/
 }
 
 /**@} */

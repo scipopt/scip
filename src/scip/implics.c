@@ -1841,6 +1841,7 @@ SCIP_RETCODE mergeClique(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -1959,7 +1960,7 @@ SCIP_RETCODE mergeClique(
          fixvalue = nones >= 2 ? FALSE : TRUE;
 
          /* a variable multiple times in one clique forces this variable to be zero */
-         SCIP_CALL( SCIPvarFixBinary(var, blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
+         SCIP_CALL( SCIPvarFixBinary(var, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
                cliquetable, fixvalue, infeasible, &nlocalbdchgs) );
 
          SCIPdebugMessage("same var %s twice in a clique with value %d fixed to %d (was %s)\n", SCIPvarGetName(var), fixvalue ? 0 : 1,
@@ -1994,8 +1995,8 @@ SCIP_RETCODE mergeClique(
                {
                   SCIP_CALL( SCIPvarDelCliqueFromList(clqvars[w], blkmem, clqvalues[w], clique) );
                }
-               SCIP_CALL( SCIPvarFixBinary(clqvars[w], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                     eventqueue, cliquetable, !clqvalues[w], infeasible, &nlocalbdchgs) );
+               SCIP_CALL( SCIPvarFixBinary(clqvars[w], blkmem, set, stat, transprob, origprob, tree, reopt, lp,
+                     branchcand, eventqueue, cliquetable, !clqvalues[w], infeasible, &nlocalbdchgs) );
 
                SCIPdebugMessage("fixed var %s with value %u to %d (was %s)\n", SCIPvarGetName(clqvars[w]), clqvalues[w], clqvalues[w] ? 0 : 1, *infeasible ? "infeasible" : "feasible");
 
@@ -2117,8 +2118,8 @@ SCIP_RETCODE mergeClique(
                      clqvalues[startidx] ? 0 : 1);
 
                /* note that the variable status will remain unchanged */
-               SCIP_CALL( SCIPvarFixBinary(clqvars[startidx], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                     eventqueue, cliquetable, !clqvalues[startidx], infeasible, &nlocalbdchgs) );
+               SCIP_CALL( SCIPvarFixBinary(clqvars[startidx], blkmem, set, stat, transprob, origprob, tree, reopt, lp,
+                     branchcand, eventqueue, cliquetable, !clqvalues[startidx], infeasible, &nlocalbdchgs) );
 
                if( *infeasible )
                   return SCIP_OKAY;
@@ -2155,8 +2156,8 @@ SCIP_RETCODE mergeClique(
          {
             SCIP_CALL( SCIPvarDelCliqueFromList(clqvars[0], blkmem, clqvalues[0], clique) );
          }
-         SCIP_CALL( SCIPvarFixBinary(clqvars[0], blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue,
-               cliquetable, clqvalues[0], infeasible, &nlocalbdchgs) );
+         SCIP_CALL( SCIPvarFixBinary(clqvars[0], blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
+               eventqueue, cliquetable, clqvalues[0], infeasible, &nlocalbdchgs) );
 
          SCIPdebugMessage("fixed last clique var %s with value %u to %d (was %s)\n", SCIPvarGetName(clqvars[0]), clqvalues[0], clqvalues[0] ? 1 : 0, *infeasible ? "infeasible" : "feasible");
 
@@ -2182,6 +2183,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -2251,8 +2253,8 @@ SCIP_RETCODE SCIPcliquetableAdd(
          {
             if( clqvars[w] != var )
             {
-               SCIP_CALL( SCIPvarFixBinary(clqvars[w], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                     eventqueue, cliquetable, !clqvalues[w], infeasible, &nlocalbdchgs) );
+               SCIP_CALL( SCIPvarFixBinary(clqvars[w], blkmem, set, stat, transprob, origprob, tree, reopt, lp,
+                     branchcand, eventqueue, cliquetable, !clqvalues[w], infeasible, &nlocalbdchgs) );
 
                SCIPdebugMessage("fixed var %s with value %u to %d (was %s)\n", SCIPvarGetName(clqvars[w]), clqvalues[w], clqvalues[w] ? 0 : 1, *infeasible ? "infeasible" : "feasible");
 
@@ -2297,8 +2299,8 @@ SCIP_RETCODE SCIPcliquetableAdd(
          {
             nlocalbdchgs = 0;
 
-            SCIP_CALL( SCIPvarFixBinary(clqvars[0], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                  eventqueue, cliquetable, clqvalues[0], infeasible, &nlocalbdchgs) );
+            SCIP_CALL( SCIPvarFixBinary(clqvars[0], blkmem, set, stat, transprob, origprob, tree, reopt, lp,
+                  branchcand, eventqueue, cliquetable, clqvalues[0], infeasible, &nlocalbdchgs) );
 
             SCIPdebugMessage("fixed last clique var %s with value %u to %d (was %s)\n", SCIPvarGetName(clqvars[0]), clqvalues[0], clqvalues[0] ? 1 : 0, *infeasible ? "infeasible" : "feasible");
 
@@ -2325,8 +2327,8 @@ SCIP_RETCODE SCIPcliquetableAdd(
    SCIPsortPtrBool((void**) clqvars, clqvalues, SCIPvarComp, nvars);
 
    /* remove multiple entries of the same variable */
-   SCIP_CALL( mergeClique(clqvars, clqvalues, &nvars, &isequation, NULL, blkmem, set, stat, transprob, origprob, tree, lp,
-         branchcand, eventqueue, cliquetable, &nlocalbdchgs, infeasible) );
+   SCIP_CALL( mergeClique(clqvars, clqvalues, &nvars, &isequation, NULL, blkmem, set, stat, transprob, origprob, tree,
+         reopt, lp, branchcand, eventqueue, cliquetable, &nlocalbdchgs, infeasible) );
 
    if( nbdchgs != NULL )
       *nbdchgs += nlocalbdchgs;
@@ -2410,6 +2412,7 @@ SCIP_RETCODE cliqueCleanup(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -2536,7 +2539,7 @@ SCIP_RETCODE cliqueCleanup(
                SCIPdebugMessage("fixing variable %s in clique %u to %d\n", SCIPvarGetName(clqvar), clique->id,
                   clique->values[v] ? 0 : 1);
 
-               SCIP_CALL( SCIPvarFixBinary(clqvar, blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
+               SCIP_CALL( SCIPvarFixBinary(clqvar, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
                      eventqueue, cliquetable, !clique->values[v], infeasible, &nlocalbdchgs) );
 
                if( *infeasible )
@@ -2576,8 +2579,8 @@ SCIP_RETCODE cliqueCleanup(
             SCIPdebugMessage("fixing last variable %s in clique %u to %d\n", SCIPvarGetName(clique->vars[0]), clique->id,
                clique->values[0] ? 1 : 0);
 
-            SCIP_CALL( SCIPvarFixBinary(clique->vars[0], blkmem, set, stat, transprob, origprob, tree, lp, branchcand,
-                  eventqueue, cliquetable, clique->values[0], infeasible, &nlocalbdchgs) );
+            SCIP_CALL( SCIPvarFixBinary(clique->vars[0], blkmem, set, stat, transprob, origprob, tree, reopt, lp,
+                  branchcand, eventqueue, cliquetable, clique->values[0], infeasible, &nlocalbdchgs) );
 
             *nchgbds += nlocalbdchgs;
 
@@ -2597,7 +2600,7 @@ SCIP_RETCODE cliqueCleanup(
 
          /* remove multiple entries of the same variable */
          SCIP_CALL( mergeClique(clique->vars, clique->values, &(clique->nvars), &isequation, clique, blkmem, set, stat,
-               transprob, origprob, tree, lp, branchcand, eventqueue, cliquetable, &nlocalbdchgs, infeasible) );
+               transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cliquetable, &nlocalbdchgs, infeasible) );
 
          *nchgbds += nlocalbdchgs;
          clique->equation = isequation;
@@ -2647,6 +2650,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -2685,8 +2689,8 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       cliquetable->nentries -= clique->nvars;
       assert(cliquetable->nentries >= 0);
 
-      SCIP_CALL( cliqueCleanup(clique, blkmem, set, stat, transprob, origprob, tree, lp,
-                  branchcand, eventqueue, cliquetable, nchgbds, infeasible) );
+      SCIP_CALL( cliqueCleanup(clique, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
+            cliquetable, nchgbds, infeasible) );
 
       if( *infeasible )
          break;

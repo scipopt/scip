@@ -11639,6 +11639,9 @@ SCIP_RETCODE simplifyInequalities(
                      newcoef = vals[candpos] - restcoef + gcd;
                }
 
+
+               /* done */
+
                /* new coeffcient must not be zero if we would loose the implication that a variable needs to be 0 if
                 * another with the big coefficient was set to 1
                 */
@@ -15183,7 +15186,8 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 	 }
 
 	 /* apply dual presolving for variables that appear in only one constraint */
-	 if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving )
+	 if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving
+	  && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
 	 {
 	    SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
 	 }
@@ -15287,7 +15291,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
       )
    {
-      if( conshdlrdata->dualpresolving && !SCIPisStopped(scip) )
+      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) && !SCIPisStopped(scip) )
       {
          SCIP_CALL( fullDualPresolve(scip, conss, nconss, &cutoff, nchgbds) );
       }

@@ -5027,7 +5027,7 @@ SCIP_RETCODE SCIProwCreate(
    SCIP_CALL( SCIPeventfilterCreate(&(*row)->eventfilter, blkmem) );
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** frees an LP row */
 SCIP_RETCODE SCIProwFree(

@@ -8037,7 +8037,7 @@ int SCIPmemccpy(
 
       while( cnt-- && (*destination++ = *src++) != stop ); /*lint !e722*/
 
-      return (destination - dest);
+      return (int)(destination - dest);
    }
 }
 

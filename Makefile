@@ -299,10 +299,13 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/branch_leastinf.o \
 			scip/branch_mostinf.o \
 			scip/branch_multaggr.o \
+			scip/branch_nodereopt.o \
 			scip/branch_pscost.o \
 			scip/branch_random.o \
 			scip/branch_relpscost.o \
 			scip/cons_abspower.o \
+			scip/compr_largestrepr.o \
+			scip/compr_weakcompr.o \
 			scip/cons_and.o \
 			scip/cons_bivariate.o \
 			scip/cons_bounddisjunction.o \
@@ -352,9 +355,11 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_nlpdiving.o \
 			scip/heur_objpscostdiving.o \
 			scip/heur_octane.o \
+			scip/heur_ofins.o \
 			scip/heur_oneopt.o \
 			scip/heur_proximity.o \
 			scip/heur_pscostdiving.o \
+			scip/heur_reoptsols.o \
 			scip/heur_randrounding.o \
 			scip/heur_rens.o \
 			scip/heur_rins.o \
@@ -365,6 +370,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_simplerounding.o \
 			scip/heur_subnlp.o \
 			scip/heur_trivial.o \
+			scip/heur_trivialnegation.o \
 			scip/heur_trysol.o \
 			scip/heur_twoopt.o \
 			scip/heur_undercover.o \
@@ -406,6 +412,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/reader_ccg.o \
 			scip/reader_cip.o \
 			scip/reader_cnf.o \
+			scip/reader_diff.o \
 			scip/reader_fix.o \
 			scip/reader_fzn.o \
 			scip/reader_gms.o \
@@ -448,6 +455,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/event.o \
 			scip/fileio.o \
 			scip/heur.o \
+			scip/compr.o \
 			scip/history.o \
 			scip/implics.o \
 			scip/interrupt.o \
@@ -468,6 +476,7 @@ SCIPLIBOBJ	=	scip/branch.o \
 			scip/prop.o \
 			scip/reader.o \
 			scip/relax.o \
+			scip/reopt.o \
 			scip/retcode.o \
 			scip/scip.o \
 			scip/scipdefplugins.o \
@@ -655,7 +664,14 @@ check:		test
 .PHONY: test
 test:
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) false $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS);
+
+.PHONY: testreopt
+testreopt:
+		cd check; \
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) true $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS);
 
 .PHONY: testcount
 testcount:

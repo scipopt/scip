@@ -53,7 +53,9 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_ALLOC( BMSallocMemory(stat) );
 
    SCIP_CALL( SCIPclockCreate(&(*stat)->solvingtime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->solvingtimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->presolvingtime, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->presolvingtimeoverall, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->primallptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->duallptime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->lexduallptime, SCIP_CLOCKTYPE_DEFAULT) );
@@ -68,6 +70,7 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPclockCreate(&(*stat)->nlpsoltime, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->copyclock, SCIP_CLOCKTYPE_DEFAULT) );
    SCIP_CALL( SCIPclockCreate(&(*stat)->strongpropclock, SCIP_CLOCKTYPE_DEFAULT) );
+   SCIP_CALL( SCIPclockCreate(&(*stat)->reoptupdatetime, SCIP_CLOCKTYPE_DEFAULT) );
 
    /* turn statistic timing on or off, depending on the user parameter */
    SCIPstatEnableOrDisableStatClocks(*stat, set->time_statistictiming);
@@ -86,6 +89,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->collectvarhistory = TRUE;
    (*stat)->performpresol = FALSE;
    (*stat)->subscipdepth = 0;
+   (*stat)->nreoptruns = 0;
 
    SCIPstatReset(*stat, set);
 
@@ -102,7 +106,9 @@ SCIP_RETCODE SCIPstatFree(
    assert(*stat != NULL);
 
    SCIPclockFree(&(*stat)->solvingtime);
+   SCIPclockFree(&(*stat)->solvingtimeoverall);
    SCIPclockFree(&(*stat)->presolvingtime);
+   SCIPclockFree(&(*stat)->presolvingtimeoverall);
    SCIPclockFree(&(*stat)->primallptime);
    SCIPclockFree(&(*stat)->duallptime);
    SCIPclockFree(&(*stat)->lexduallptime);
@@ -117,6 +123,7 @@ SCIP_RETCODE SCIPstatFree(
    SCIPclockFree(&(*stat)->nlpsoltime);
    SCIPclockFree(&(*stat)->copyclock);
    SCIPclockFree(&(*stat)->strongpropclock);
+   SCIPclockFree(&(*stat)->reoptupdatetime);
 
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
@@ -259,7 +266,7 @@ void SCIPstatReset(
    stat->nnodesbeforefirst = -1;
    stat->ninitconssadded = 0;
    stat->nrunsbeforefirst = -1;
-   stat->firstprimalheur = NULL; 
+   stat->firstprimalheur = NULL;
    stat->firstprimaltime = SCIP_DEFAULT_INFINITY;
    stat->firstprimalbound = SCIP_DEFAULT_INFINITY;
    stat->firstsolgap = SCIP_DEFAULT_INFINITY;

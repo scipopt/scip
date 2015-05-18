@@ -3536,6 +3536,10 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
    if( !propdata->force && SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
+   /* do not run if propagation w.r.t. objective is not allowed */
+   if( !SCIPallowObjProp(scip) )
+      return SCIP_OKAY;
+
    /* check if enough new variable are added (due to column generatition to reinitialized the propgator data) */
    if( !propdata->initialized || propdata->nnewvars > propdata->maxnewvars )
    {

@@ -136,7 +136,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpRyanFoster)
    SCIP_CALL( SCIPallocBufferArray(scip, &pairweights, nitems) );
    for( i = 0; i < nitems; ++i )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &pairweights[i], nitems) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &pairweights[i], nitems) ); /*lint !e866 */
 
       for( j = 0; j < nitems; ++j )
          pairweights[i][j] = 0.0;

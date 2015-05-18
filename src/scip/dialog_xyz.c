@@ -110,7 +110,7 @@ static
 SCIP_DECL_DIALOGEXEC(dialogExecXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz dialog not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{827}*/
 
    /* add your dialog to history of dialogs that have been executed */
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );

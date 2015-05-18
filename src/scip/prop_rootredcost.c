@@ -562,6 +562,10 @@ SCIP_DECL_PROPEXEC(propExecRootredcost)
    if( SCIPinProbing(scip) )
       return SCIP_OKAY;
 
+   /* do not run if propagation w.r.t. objective is not allowed */
+   if( !SCIPallowObjProp(scip) )
+      return SCIP_OKAY;
+
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);

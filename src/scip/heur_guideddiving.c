@@ -61,6 +61,8 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
+   SCIP_Bool             specificsos1score;  /**< should SOS1 variables be scored by the diving heuristics specific score function;
+                                              *   otherwise use the score function of the SOS1 constraint handler */
 };
 
 /*
@@ -162,10 +164,6 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
 
-   /* if there are no integer variables (note that, e.g., SOS1 variables may be present) */
-   if ( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) < 1 && ! DEFAULT_SPECIFICSOS1SCORE )
-      return SCIP_OKAY;
-
   /* don't dive, if no feasible solutions exist */
    if( SCIPgetNSols(scip) == 0 )
       return SCIP_OKAY;
@@ -179,6 +177,11 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
+
+   /* if there are no integer variables (note that, e.g., SOS1 variables may be present) */
+   if ( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) < 1 && ! heurdata->specificsos1score )
+      return SCIP_OKAY;
+
    assert(SCIPheurGetNDivesets(heur) > 0);
    assert(SCIPheurGetDivesets(heur) != NULL);
    diveset = SCIPheurGetDivesets(heur)[0];
@@ -265,6 +268,7 @@ SCIP_RETCODE SCIPincludeHeurGuideddiving(
 
    /* create Guideddiving primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
+   heurdata->specificsos1score = DEFAULT_SPECIFICSOS1SCORE;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

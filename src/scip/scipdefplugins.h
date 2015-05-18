@@ -24,7 +24,6 @@
 #ifndef __SCIP_SCIPDEFPLUGINS_H__
 #define __SCIP_SCIPDEFPLUGINS_H__
 
-
 #include "scip/scip.h"
 
 /* include header files here, such that the user only has to include
@@ -41,6 +40,8 @@
 #include "scip/branch_pscost.h"
 #include "scip/branch_random.h"
 #include "scip/branch_relpscost.h"
+#include "scip/compr_largestrepr.h"
+#include "scip/compr_weakcompr.h"
 #include "scip/cons_abspower.h"
 #include "scip/cons_and.h"
 #include "scip/cons_bivariate.h"
@@ -91,11 +92,13 @@
 #include "scip/heur_nlpdiving.h"
 #include "scip/heur_objpscostdiving.h"
 #include "scip/heur_octane.h"
+#include "scip/heur_ofins.h"
 #include "scip/heur_oneopt.h"
 #include "scip/heur_pscostdiving.h"
 #include "scip/heur_proximity.h"
 #include "scip/heur_randrounding.h"
 #include "scip/heur_rens.h"
+#include "scip/heur_reoptsols.h"
 #include "scip/heur_rins.h"
 #include "scip/heur_rootsoldiving.h"
 #include "scip/heur_rounding.h"
@@ -104,6 +107,7 @@
 #include "scip/heur_simplerounding.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trivial.h"
+#include "scip/heur_trivialnegation.h"
 #include "scip/heur_trysol.h"
 #include "scip/heur_twoopt.h"
 #include "scip/heur_undercover.h"
@@ -146,6 +150,7 @@
 #include "scip/reader_cip.h"
 #ifndef __SAP_NO_READERS__
 #include "scip/reader_cnf.h"
+#include "scip/reader_diff.h"
 #include "scip/reader_fix.h"
 #include "scip/reader_fzn.h"
 #include "scip/reader_gms.h"

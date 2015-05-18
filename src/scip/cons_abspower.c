@@ -48,7 +48,6 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PRESOLTIMING  SCIP_PRESOLTIMING_FAST | SCIP_PRESOLTIMING_MEDIUM
@@ -6363,7 +6362,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
          continue;
       }
 
-      if( conshdlrdata->dualpresolve )
+      if( conshdlrdata->dualpresolve && SCIPallowObjProp(scip) && SCIPallowDualReds(scip) )
       {
          /* check if a variable can be fixed because it appears in no other constraint */
          SCIP_CALL( presolveDual(scip, conss[c], &infeas, ndelconss, nfixedvars) );  /*lint !e613*/
@@ -6381,7 +6380,7 @@ SCIP_DECL_CONSPRESOL(consPresolAbspower)
       }
 
       /* propagate variable bound constraints */
-      if( !consdata->propvarbounds )
+      if( !consdata->propvarbounds && SCIPallowObjProp(scip) )
       {
          SCIP_CALL( propagateVarbounds(scip, conshdlr, conss[c], &infeas, nchgbds, naddconss) );  /*lint !e613*/
 

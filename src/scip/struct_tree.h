@@ -144,6 +144,8 @@ struct SCIP_Node
    unsigned int          cutoff:1;           /**< should the node and all sub nodes be cut off from the tree? */
    unsigned int          reprop:1;           /**< should propagation be applied again, if the node is on the active path? */
    unsigned int          repropsubtreemark:9;/**< subtree repropagation marker for subtree repropagation */
+   unsigned int          reoptid:29;         /**< unique id to identify the node during reoptimization */
+   unsigned int          reopttype:3;        /**< node type during reoptimization */
 };
 
 /** bound change information for pending bound changes */
@@ -187,6 +189,7 @@ struct SCIP_Tree
    int*                  pathnlprows;        /**< array with number of LP rows for each problem in active path (except
                                               *   newly added rows of the focus node and the current probing node) */
    SCIP_LPISTATE*        probinglpistate;    /**< LP state information before probing started */
+   SCIP_LPISTATE*        focuslpistate;      /**< LP state information of focus node */
    SCIP_LPINORMS*        probinglpinorms;    /**< LP pricing norms information before probing started */
    SCIP_PENDINGBDCHG*    pendingbdchgs;      /**< array of pending bound changes, or NULL */
    SCIP_Longint          focuslpstateforklpcount; /**< LP number of last solved LP in current LP state fork, or -1 if unknown */

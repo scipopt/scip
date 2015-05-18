@@ -1297,6 +1297,11 @@ SCIP_DECL_SOLVECUMULATIVE(solveCumulativeViaScipCp)
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
+   /* forbid recursive call of heuristics and separators solving subMIPs
+    * todo: really? This method was part of 3.0.1 but not in v31-Bugfix
+    */
+   SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
+
    /* solve single cumulative constraint by branch and bound */
    retcode = SCIPsolve(subscip);
 
@@ -6514,7 +6519,7 @@ int computeEstOmegaset(
 /** propagates start time using an edge finding algorithm which is based on binary trees (theta lambda trees)
  *
  * @note The algorithm is based on the paper: Petr Vilim, "Edge Finding Filtering Algorithm for Discrete Cumulative
- *       Resources in O(kn log n)".  *I.P. Gent (Ed.): CP 2009, LNCS 5732, pp. 802–816, 2009.
+ *       Resources in O(kn log n)".  *I.P. Gent (Ed.): CP 2009, LNCS 5732, pp. 802-816, 2009.
  */
 static
 SCIP_RETCODE inferboundsEdgeFinding(
@@ -10948,9 +10953,6 @@ SCIP_RETCODE createDisjuctiveCons(
             durations[nvars] = consdata->durations[v];
             vars[nvars] = consdata->vars[v];
             nvars++;
-
-            /* adjust minimum demand of collected jobs */
-            mindemand = MIN(mindemand, consdata->demands[v]);
 
             /* @todo create one cumulative constraint and look for another small demand */
             break;

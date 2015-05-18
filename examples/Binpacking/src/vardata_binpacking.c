@@ -89,7 +89,7 @@ SCIP_DECL_VARDELTRANS(vardataDelTrans)
    SCIP_CALL( vardataDelete(scip, vardata) );
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 /**@} */
 

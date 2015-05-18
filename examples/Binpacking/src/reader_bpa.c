@@ -135,12 +135,13 @@ SCIP_DECL_READERREAD(readerReadBpa)
    }
 
    lineno = 0;
+   sprintf(name, "++ uninitialized ++");
 
    /* read problem name */
    if( !SCIPfeof(file) )
    {
       /* get next line */
-      if( SCIPfgets(buffer, sizeof(buffer), file) == NULL )
+      if( SCIPfgets(buffer, (int)sizeof(buffer), file) == NULL )
          return SCIP_READERROR;
       lineno++;
 
@@ -156,11 +157,14 @@ SCIP_DECL_READERREAD(readerReadBpa)
       SCIPdebugMessage("problem name <%s>\n", name);
    }
 
+   capacity = 0;
+   nitems = 0;
+
    /* read problem dimension */
    if( !SCIPfeof(file) )
    {
       /* get next line */
-      if( SCIPfgets(buffer, sizeof(buffer), file) == NULL )
+      if( SCIPfgets(buffer, (int)sizeof(buffer), file) == NULL )
          return SCIP_READERROR;
       lineno++;
 
@@ -187,7 +191,7 @@ SCIP_DECL_READERREAD(readerReadBpa)
    while( !SCIPfeof(file) && !error )
    {
       /* get next line */
-      if( SCIPfgets(buffer, sizeof(buffer), file) == NULL )
+      if( SCIPfgets(buffer, (int)sizeof(buffer), file) == NULL )
          break;
       lineno++;
 

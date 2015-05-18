@@ -3816,7 +3816,7 @@ SCIP_RETCODE freeSubscip(
       SCIP_CALL( SCIPfree(&(mipdata->subscip)) );
    }
 
-   SCIPfreeBlockMemoryArray(scip, &(mipdata->z), 2*mipdata->ncols);
+   SCIPfreeBlockMemoryArray(scip, &(mipdata->z), 2*mipdata->ncols); /*lint !e647*/
    SCIPfreeBlockMemoryArray(scip, &(mipdata->yrhs), mipdata->ntotalrows);
    SCIPfreeBlockMemoryArray(scip, &(mipdata->ylhs), mipdata->ntotalrows);
    SCIPfreeBlockMemoryArray(scip, &(mipdata->isshifted), mipdata->ncols);

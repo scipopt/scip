@@ -29,9 +29,10 @@ VERSION=${13}
 LPS=${14}
 VALGRIND=${15}
 CLIENTTMPDIR=${16}
-OPTCOMMAND=${17}
-SETCUTOFF=${18}
-MAXJOBS=${19}
+REOPT=${17}
+OPTCOMMAND=${18}
+SETCUTOFF=${19}
+MAXJOBS=${20}
 
 # check if all variables defined (by checking the last one)
 if test -z $MAXJOBS
@@ -53,6 +54,7 @@ then
     echo "LPS           = $LPS"
     echo "VALGRIND      = $VALGRIND"
     echo "CLIENTTMPDIR  = $CLIENTTMPDIR"
+    echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"
     echo "MAXJOBS       = $MAXJOBS"
@@ -123,7 +125,7 @@ do
         # overwrite the tmp file now
         # call tmp file configuration for SCIP
         . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $SCIP_INSTANCEPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
-            $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $SOLUFILE
+        	$FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ  $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $SOLUFILE
 
         # additional environment variables needed by run.sh
         export SOLVERPATH=$SCIPPATH

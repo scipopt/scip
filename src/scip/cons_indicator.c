@@ -3226,7 +3226,7 @@ SCIP_RETCODE presolRoundIndicator(
    if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(consdata->slackvar)) )
    {
       /* perform dual reductions - if required */
-      if ( dualreductions )
+      if ( dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
       {
          SCIP_VAR* binvar;
          SCIP_Real obj;
@@ -3618,7 +3618,7 @@ SCIP_RETCODE propIndicator(
       if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(consdata->slackvar)) )
       {
          /* perform dual reduction - if required */
-         if ( dualreductions )
+         if ( dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
          {
             SCIP_VAR* binvar;
             SCIP_Real obj;
@@ -3874,7 +3874,9 @@ SCIP_RETCODE enforceIndicators(
       }
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
-      SCIP_CALL( propIndicator(scip, conss[c], consdata, conshdlrdata->dualreductions, conshdlrdata->addopposite, &cutoff, &cnt) );
+      SCIP_CALL( propIndicator(scip, conss[c], consdata,
+            conshdlrdata->dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip), conshdlrdata->addopposite,
+            &cutoff, &cnt) );
       if ( cutoff )
       {
          SCIPdebugMessage("Propagation in enforcing <%s> detected cutoff.\n", SCIPconsGetName(conss[c]));
@@ -5410,7 +5412,9 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
          }
 
          /* perform one presolving round */
-         SCIP_CALL( presolRoundIndicator(scip, conshdlrdata, cons, consdata, conshdlrdata->dualreductions, &cutoff, &success, ndelconss, nfixedvars) );
+         SCIP_CALL( presolRoundIndicator(scip, conshdlrdata, cons, consdata,
+               conshdlrdata->dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip), &cutoff, &success,
+               ndelconss, nfixedvars) );
 
          if ( cutoff )
          {
@@ -5881,7 +5885,10 @@ SCIP_DECL_CONSPROP(consPropIndicator)
 
       *result = SCIP_DIDNOTFIND;
 
-      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions, conshdlrdata->addopposite, &cutoff, &cnt) );
+      SCIP_CALL( propIndicator(scip, cons, consdata,
+            conshdlrdata->dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip), conshdlrdata->addopposite,
+            &cutoff, &cnt) );
+
       if ( cutoff )
       {
          *result = SCIP_CUTOFF;
@@ -5944,7 +5951,7 @@ SCIP_DECL_CONSRESPROP(consRespropIndicator)
    {
       assert( inferinfo == 2 );
       assert( SCIPisFeasZero(scip, SCIPvarGetUbAtIndex(consdata->slackvar, bdchgidx, FALSE)) );
-      assert( SCIPconshdlrGetData(conshdlr)->dualreductions );
+      assert( SCIPconshdlrGetData(conshdlr)->dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) );
       SCIP_CALL( SCIPaddConflictUb(scip, consdata->slackvar, bdchgidx) );
    }
    *result = SCIP_SUCCESS;

@@ -2733,6 +2733,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
 
    *result = SCIP_DIDNOTRUN;
 
+   /* check min- and maximal aggregation size */
+   if( sepadata->maxaggrsize < sepadata->minaggrsize )
+      return SCIP_PARAMETERWRONGVAL;
+
    /* only call separator, if we are not close to terminating */
     if ( SCIPisStopped(scip) )
        return SCIP_OKAY;
@@ -2848,12 +2852,12 @@ SCIP_RETCODE SCIPincludeSepaEccuts(
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/"SEPA_NAME"/minaggrsize",
          "search for edge-concave aggregations of at least this size",
-         &sepadata->minaggrsize, TRUE, DEFAULT_MINAGGRSIZE, 3, 10, NULL, NULL) );
+         &sepadata->minaggrsize, TRUE, DEFAULT_MINAGGRSIZE, 3, 5, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/"SEPA_NAME"/maxaggrsize",
          "search for edge-concave aggregations of at most this size",
-         &sepadata->maxaggrsize, TRUE, DEFAULT_MAXAGGRSIZE, 3, 10, NULL, NULL) );
+         &sepadata->maxaggrsize, TRUE, DEFAULT_MAXAGGRSIZE, 3, 5, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "separating/"SEPA_NAME"/maxbilinterms",

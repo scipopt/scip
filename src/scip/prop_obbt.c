@@ -780,7 +780,7 @@ SCIP_RETCODE filterExistingLP(
          }
 
          /* exchange bound i with propdata->bounds[propdata->lastidx] */
-         if( propdata->lastidx != -1 )
+         if( propdata->lastidx >= 0 )
             exchangeBounds(propdata, i);
 
          /* increase number of filtered variables */
@@ -2309,8 +2309,8 @@ SCIP_DECL_PROPEXEC(propExecObbt)
 
    *result = SCIP_DIDNOTRUN;
 
-   /* do not run in: presolving, repropagation, probing mode */
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip) || SCIPinProbing(scip) )
+   /* do not run in: presolving, repropagation, probing mode, if no objective propagation is allowed  */
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING || SCIPinRepropagation(scip) || SCIPinProbing(scip) || !SCIPallowObjProp(scip) )
       return SCIP_OKAY;
 
    /* only run for nonlinear problems, i.e., if NLP is constructed */

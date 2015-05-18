@@ -339,6 +339,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
    /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth} */
    maxdivedepth = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+   if ( sos1conshdlr != NULL )
+      maxdivedepth += SCIPgetNSOS1Vars(sos1conshdlr);
    maxdivedepth = MIN(maxdivedepth, maxdepth);
    maxdivedepth *= 10;
 
@@ -605,7 +607,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                   default:
                      SCIPerrorMessage("Error: Unsupported bound change direction <%d> specified for diving, aborting\n",bdchgdirs[d]);
                      SCIPABORT();
-                     return SCIP_INVALIDDATA;
+                     return SCIP_INVALIDDATA; /*lint !e527*/
                }
 
                SCIPdebugMessage("newbounds=[%g,%g]\n",

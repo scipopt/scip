@@ -31,14 +31,15 @@
 #include "scip/visual.h"
 #include "scip/paramset.h"
 #include "scip/tree.h"
+#include "scip/reopt.h"
+#include "scip/lp.h"
 #include "scip/scip.h"
 #include "scip/nodesel.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 
 #include "scip/struct_nodesel.h"
-
-
+#include "scip/struct_scip.h"
 
 /* 
  * node priority queue methods
@@ -621,11 +622,13 @@ SCIP_RETCODE SCIPnodepqBound(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
    SCIP_NODE* node;
+   SCIP_Bool reoptenabled;
    int pos;
    SCIP_Bool parentfelldown;
 
@@ -664,6 +667,15 @@ SCIP_RETCODE SCIPnodepqBound(
             pos--;
 
          SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
+
+         SCIP_CALL( SCIPsetGetBoolParam(set, "reoptimization/enable", &reoptenabled) );
+         if( reoptenabled )
+         {
+            assert(reopt != NULL);
+            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE,
+                  SCIPlpGetSolstat(lp), SCIPnodeGetDepth(node) == 0, SCIPtreeGetFocusNode(tree) == node,
+                  SCIPnodeGetLowerbound(node), SCIPtreeGetEffectiveRootDepth(tree)));
+         }
 
          /* free memory of the node */
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );

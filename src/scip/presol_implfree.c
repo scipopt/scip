@@ -483,7 +483,7 @@ SCIP_Real sideChangeNumericalStable(
    SCIP_Real denominator;
 
    enumerator = REALABS( -(val * aggrconst) - oldside );
-   denominator = MAX(1.0,REALABS(oldside));
+   denominator = MAX(1.0,REALABS(oldside)); /*lint !e666*/
 
    return enumerator/denominator <= SIDECHANGERATIO;
 }
@@ -973,6 +973,8 @@ void getMultiaggVars(
 
          bestfillin = 1.0;
          bestvaridx = -1;
+         bestimpllbrowidx = -1; /* only for lint */
+         bestimplubrowidx = -1; /* only for lint */
          bestconsredundant = FALSE;
 
          for( ; rowpnt < rowend; rowpnt++, valpnt++ )
@@ -1203,9 +1205,9 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
 
                /* we have to distinguished two cases */
                if( !SCIPisInfinity(scip, rhs) )
-                  aggrconst = rhs / multiaggcoef;
+                  aggrconst = rhs / multiaggcoef; /*lint !e414*/
                else
-                  aggrconst = rhs / multiaggcoef;
+                  aggrconst = rhs / multiaggcoef; /*lint !e414*/
 
                /* calculate scalars */
                rowpnt = SCIPmatrixGetRowIdxPtr(matrix, row);
@@ -1218,7 +1220,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
                   if( *rowpnt == v )
                      continue;
 
-                  scalars[cnt] = -(*valpnt) / multiaggcoef;
+                  scalars[cnt] = -(*valpnt) / multiaggcoef; /*lint !e414*/
                   SCIPdebugPrintf(" %+.15g<%s>", scalars[cnt], SCIPvarGetName(SCIPmatrixGetVar(matrix, *rowpnt)));
 
                   cnt++;

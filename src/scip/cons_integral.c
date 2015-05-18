@@ -208,6 +208,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIntegral)
    bestscore = SCIP_REAL_MIN;
    bestcandidx = -1;
    *success = FALSE;
+   roundup = FALSE; /* only for lint */
 
    /* loop over solution values and get score of fractional variables */
    for( v = 0; v < ninteger; ++v )

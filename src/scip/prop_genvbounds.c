@@ -2281,6 +2281,10 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
 
    *result = SCIP_DIDNOTRUN;
 
+   /* do not run if propagation w.r.t. current objective is not allowed */
+   if( !SCIPallowObjProp(scip) )
+      return SCIP_OKAY;
+
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
