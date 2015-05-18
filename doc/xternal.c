@@ -5912,7 +5912,7 @@
  *  \n
  *  All test problems can be listed in the <code>test</code>-file by a relative path,
  *  e.g., <code>../../problems/instance1.lp</code> or absolute path, e.g., <code>/home/problems/instance2.mps</code>
- *  in this file. Only one problem should be listed each on line (since the command <code>cat</code> is used to parse this file).
+ *  in this file. Only one problem should be listed on every line (since the command <code>cat</code> is used to parse this file).
  *  Note that these problems have to be readable for SCIP in order to solve them.
  *  However, you can use different file formats.
  *
@@ -5992,7 +5992,8 @@
  *
  *  \arg abort: solver broke before returning solution
  *  \arg fail: solver cut off a known feasible solution (value of the <code>solu</code>-file is beyond the dual bound;
- *  especially of problem is claimed to be solved but solution is not the optimal solution)
+ *  especially if problem is claimed to be solved but solution is not the optimal solution)
+ *   <b>or</b> if a final solution check revealed a violation of one of the original constraints.
  *  \arg ok: solver solved problem with the value in solu-file
  *  \arg solved: solver solved problem which has no (optimal) value in solu-file (since we here cannot detect the direction
  *  of optimization, it is possible that a solver claims an optimal solution which contradicts a known feasible solution)
@@ -6023,7 +6024,7 @@
  *  \endcode
  *
  *  \arg <<code>test name</code>> indicates the name of the the test file, e.g., <code>testrun</code>
- *  \arg <<code>binary</code>> defines the used binary, e.g., <code>scip-1.1.0.linux.x86.gnu.opt.spx</code>
+ *  \arg <<code>binary</code>> defines the used binary, e.g., <code>scip-3.2.0.linux.x86_64.gnu.opt.spx</code>
  *  \arg <<code>machine name</code>> tells the name of the machine, e.g., <code>mycomputer</code>
  *  \arg <<code>setting name</code>> denotes the name of the used settings, e.g., <code>default</code>
  *    means the (SCIP) default settings were used
@@ -6040,7 +6041,12 @@
  *  It is possible to use customized settings files for the test run instead of testing SCIP with default settings.
  *  These have to be placed in the directory <code>scip/settings/</code>.
  *
- *  @b Note: Accessing setting files in subfolders of the @c settings directory is currently not supported.
+ *  @b Note: Several common user parameters such as, e.g., the time limit and node limit parameters,
+ *           <b>cannot</b> be controlled by the settings file, whose specifications would be overwritten
+ *           by optional command line arguments to the <code>make test</code> command, see @ref ADVANCED
+ *           for a list of available advanced testing options that have to be specified from the command line.
+ *
+ *  @b Note: Accessing settings files in subfolders of the @c settings directory is currently not supported.
  *
  *  To run SCIP with a custom settings file, say for example <code>fast.set</code>, we call
  *
@@ -6048,20 +6054,28 @@
  *  make TEST=testrun SETTINGS=fast test
  *  \endcode
  *
- *  in the SCIP root directory.
+ *  in the SCIP root directory. It is possible to enter a list of settings files as a double-quoted,
+ *  comma-separated list of settings names as <code>fast</code> above, i.e. <code>SETTINGS="fast,medium,slow"</code>
+ *  will invoke the solution process for every instance with the three settings <code>fast.set, medium.set, slow.set</code>
+ *  before continuing with the next instance from the <code>.test</code>-file. This may come in handy if the
+ *  whole test runs for a longer time and partial results are already available.
  *
  *
  *  @section ADVANCED Advanced options
  *
  *  We can further customize the test run by specifying the following options in the <code>make</code> call:
  *
- *  \arg <code>TIME</code>  - time limit for each test instance in seconds [default: 3600]
- *  \arg <code>NODES</code> - node limit [default: 2100000000]
- *  \arg <code>MEM</code>   -  memory limit in MB [default: 1536]
+ *  \arg <code>CONTINUE</code> - continue the test run if it was previously aborted [default: "false"]
  *  \arg <code>DISPFREQ</code> - display frequency of the output [default: 10000]
  *  \arg <code>FEASTOL</code> - LP feasibility tolerance for constraints [default: "default"]
  *  \arg <code>LOCK</code> - should the test run be locked to prevent other machines from performing the same test run [default: "false"]
- *  \arg <code>CONTINUE</code> - continue the test run if it was previously aborted [default: "false"]
+ *  \arg <code>MAXJOBS=n</code> - run tests on 'n' cores in parallel. Note that several instances are solved in parallel, but
+ *                                    only one thread is used per job (parallelization is not that easy) [default: 1]
+ *  \arg <code>MEM</code>   -  memory limit in MB [default: 6144]
+ *  \arg <code>NODES</code> - node limit [default: 2100000000]
+ *  \arg <code>TIME</code>  - time limit for each test instance in seconds [default: 3600]
+ *  \arg <code>SETCUTOFF</code> - if set to '1', an optimal solution value (from the <code>.solu</code>-file) is used as objective limit [default: 0]
+ *  \arg <code>THREADS</code> - the number of threads used for solving LPs, if the linked LP solver supports multithreading [default: 1]
  *  \arg <code>VALGRIND</code> - run valgrind on the SCIP binary; errors and memory leaks found by valgrind are reported as fails [default: "false"]
  *
  *
@@ -6076,15 +6090,15 @@
  *  we may have the following <code>res</code>-files in the directory <code>scip/check/results/</code>
  *
  *  \code
- *  check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.fast.res
- *  check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.slow.res
+ *  check.testrun.scip-3.2.0.linux.x86_64.gnu.opt.spx.mycomputer.fast.res
+ *  check.testrun.scip-3.2.0.linux.x86_64.gnu.opt.spx.mycomputer.slow.res
  *  \endcode
  *
  *  For a comparison of both computations, we simply call
  *
  *  \code
- *  allcmpres.sh results/check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.fast.res \
- *               results/check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.slow.res
+ *  allcmpres.sh results/check.testrun.scip-3.2.0.linux.x86_64.gnu.opt.spx.mycomputer.fast.res \
+ *               results/check.testrun.scip-3.2.0.linux.x86_64.gnu.opt.spx.mycomputer.slow.res
  *  \endcode
  *
  *  in the @c check directory. This produces an ASCII table on the console that provide a detailed
