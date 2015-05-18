@@ -780,7 +780,7 @@ SCIP_RETCODE filterExistingLP(
          }
 
          /* exchange bound i with propdata->bounds[propdata->lastidx] */
-         if( propdata->lastidx != -1 )
+         if( propdata->lastidx >= 0 )
             exchangeBounds(propdata, i);
 
          /* increase number of filtered variables */
