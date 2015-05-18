@@ -168,7 +168,7 @@ SCIP_Bool readArguments(
       }
    }
 
-   if ( *filename == NULL )
+   if ( *filename == NULL ) /*lint !e850*/
    {
       SCIPinfoMessage(scip, NULL, "No filename supplied.\n");
       SCIPinfoMessage(scip, NULL, "%s\n", usage);

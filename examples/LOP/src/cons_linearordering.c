@@ -196,7 +196,7 @@ SCIP_DECL_CONSDELETE(consDeleteLinearOrdering)
 
    n = (*consdata)->n;
    for (i = 0; i < n; ++i)
-      SCIPfreeBlockMemoryArray(scip, &((*consdata)->vars[i]), n);
+      SCIPfreeBlockMemoryArray(scip, &((*consdata)->vars[i]), n); /*lint !e866*/
    SCIPfreeBlockMemoryArray(scip, &((*consdata)->vars), n);
    SCIPfreeBlockMemory(scip, consdata);
 
@@ -236,7 +236,7 @@ SCIP_DECL_CONSTRANS(consTransLinearOrdering)
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars, n) );
    for (i = 0; i < n; ++i)
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->vars[i]), n) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->vars[i]), n) ); /*lint !e866*/
       for (j = 0; j < n; ++j)
       {
 	 if (j != i)
@@ -1042,7 +1042,7 @@ SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
 
    for (i = 0; i < n; ++i)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), n) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), n) ); /*lint !e866*/
 
       for (j = 0; j < n && *valid; ++j)
       {
@@ -1140,7 +1140,7 @@ SCIP_RETCODE SCIPcreateConsLinearOrdering(
    SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars, n) );
    for (i = 0; i < n; ++i)
    {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->vars[i]), n) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->vars[i]), n) ); /*lint !e866*/
       for (j = 0; j < n; ++j)
       {
 	 if (j != i)
