@@ -69,6 +69,7 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_xor.h"
 #include "scip/disp_default.h"
+#include "scip/event_softtimelimit.h"
 #include "scip/heur_actconsdiving.h"
 #include "scip/heur_bound.h"
 #include "scip/heur_clique.h"

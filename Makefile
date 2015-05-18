@@ -332,6 +332,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_varbound.o \
 			scip/cons_xor.o \
 			scip/dialog_default.o \
+			scip/event_softtimelimit.o \
 			scip/disp_default.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_bound.o \
@@ -389,10 +390,10 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_components.o \
 			scip/presol_convertinttobin.o \
 			scip/presol_domcol.o\
-			scip/presol_implfree.o\
 			scip/presol_dualagg.o\
 			scip/presol_dualinfer.o\
 			scip/presol_gateextraction.o \
+			scip/presol_implfree.o\
 			scip/presol_implics.o \
 			scip/presol_inttobinary.o \
 			scip/presol_redvub.o \

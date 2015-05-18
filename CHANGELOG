@@ -62,6 +62,7 @@ features:
 - new heuristic for reoptimization which constructs solutions based in the changes between the objective function and the optimal solution befor changing the objective function
 - new plugin "compr" for rearranging the search tree, currently this only works on the reoptimization tree
 - extended expression parsing to support power, realpower, and signpower operators
+- possibility to set a soft time limit which becomes active only after the first primal solution was found
 
 parameters:
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
@@ -153,6 +154,7 @@ parameters:
 - new paramter "misc/allowobjprop" to allow objective function propagation
 - new paramter "misc/allowdualreds" to allow dual reductions
 - new advance parameter "constraints/soc/generalsocupgrade" to allow general quadratics to be upgraded to soc
+- new parameter "limits/softtime" to set a soft time limit (active only after first primal solution was found)
 
 performance improvements:
 - adjusted (hard) diving heuristics to solve fewer LPs at shallow depths of the tree; after an LP was solved,
