@@ -63,7 +63,7 @@ lint:		$(MAINSRC)
 		$(SHELL) -ec 'for i in $^; \
 			do \
 			echo $$i; \
-			$(LINT) -I(SCIPDIR) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
+			$(LINT) -I$(SCIPDIR) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
 
