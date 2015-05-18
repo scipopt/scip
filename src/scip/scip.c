@@ -14757,7 +14757,7 @@ SCIP_Real SCIPgetReoptOldObjCoef(
 SCIP_RETCODE SCIPgetReoptChildIDs(
    SCIP*                 scip,                    /**< SCIP data structure */
    SCIP_NODE*            node,                    /**< node of the search tree */
-   int*                  ids,                     /**< array of ids */
+   unsigned int*         ids,                     /**< array of ids */
    int                   idssize,                 /**< allocated memory */
    int*                  nids                     /**< number of child nodes */
    )
@@ -14789,7 +14789,7 @@ SCIP_RETCODE SCIPgetReoptChildIDs(
 SCIP_RETCODE SCIPgetReoptLeaveIDs(
    SCIP*                 scip,                    /**< SCIP data structure */
    SCIP_NODE*            node,                    /**< node of the search tree */
-   int*                  ids,                     /**< array of ids */
+   unsigned int*         ids,                     /**< array of ids */
    int                   idssize,                 /**< size of ids array */
    int*                  nids                     /**< number of child nodes */
 )
@@ -14841,7 +14841,7 @@ int SCIPgetNReoptLeaves(
 /** gets the node of the reoptimization tree corresponding to the unique @param id */
 SCIP_REOPTNODE* SCIPgetReoptnode(
    SCIP*                 scip,                    /**< SCIP data structure */
-   int                   id                       /**< unique id */
+   unsigned int          id                       /**< unique id */
    )
 {
    assert(scip != NULL);

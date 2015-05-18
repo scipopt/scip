@@ -83,9 +83,9 @@ void calcSignature(
    for( v = nvars - 1; v >= 0; --v )
    {
       if( vals[v] == 0 )
-         (*signature0) |= ((unsigned int)1 << ((unsigned int)SCIPvarGetProbindex(vars[v]) % 64));
+         (*signature0) |= ((unsigned int)1 << ((unsigned int)SCIPvarGetProbindex(vars[v]) % 64)); /*lint !e647*/
       else
-         (*signature1) |= ((unsigned int)1 << ((unsigned int)SCIPvarGetProbindex(vars[v]) % 64));
+         (*signature1) |= ((unsigned int)1 << ((unsigned int)SCIPvarGetProbindex(vars[v]) % 64)); /*lint !e647*/
    }
 
    return;
@@ -118,15 +118,14 @@ SCIP_RETCODE constructCompression(
    SCIP_BOUNDTYPE** bounds;
    SCIP_Bool* covered;
    const char** varnames;
-   int loi;
+   SCIP_Real loi;
    int nreps;
    SCIP_Longint* signature0;
    SCIP_Longint* signature1;
    int* common_vars;
-   int* leaveids;
+   unsigned int* leaveids;
    int* nvars;
    int nids;
-   int niter;
    int nleaveids;
    int k;
    int current_id;
@@ -182,9 +181,9 @@ SCIP_RETCODE constructCompression(
       mem_vars = SCIPgetNBinVars(scip);
 
       /* allocate memory */
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars[k], mem_vars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &vals[k], mem_vars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &bounds[k], mem_vars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars[k], mem_vars) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &vals[k], mem_vars) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &bounds[k], mem_vars) ); /*lint !e866*/
 
       /* get the branching path */
       reoptnode = SCIPgetReoptnode(scip, leaveids[k]);
@@ -199,8 +198,7 @@ SCIP_RETCODE constructCompression(
    for( start_id = 0; start_id < nleaveids; start_id++ )
    {
       nreps = 0;
-      loi = 0;
-      niter = 1;
+      loi = 0.0;
 
       /* initialize the covered-array with FALSE */
       SCIP_CALL( SCIPallocBufferArray(scip, &covered, nleaveids) );
@@ -270,11 +268,11 @@ SCIP_RETCODE constructCompression(
           *   vars[i] = 2 -> variable with idx i is fixed to one */
          for( v = 0; v < nvars[current_id]; v++ )
          {
-            if( SCIPisFeasEQ(scip, vals[current_id][v], 0) )
+            if( SCIPisFeasEQ(scip, vals[current_id][v], 0.0) )
                common_vars[SCIPvarGetProbindex(vars[current_id][v])] = 1;
             else
             {
-               assert(SCIPisFeasEQ(scip, vals[current_id][v], 1));
+               assert(SCIPisFeasEQ(scip, vals[current_id][v], 1.0));
                common_vars[SCIPvarGetProbindex(vars[current_id][v])] = 2;
             }
 
@@ -284,7 +282,7 @@ SCIP_RETCODE constructCompression(
             nnon_zero_vars++;
          }
 
-         SCIPdebugMessage("start with ID %d, %d non zeros\n", leaveids[current_id], nnon_zero_vars);
+         SCIPdebugMessage("start with ID %u, %d non zeros\n", leaveids[current_id], nnon_zero_vars);
 
          covered_ids[ncovered] = current_id;
          ncovered++;
@@ -358,7 +356,7 @@ SCIP_RETCODE constructCompression(
                covered[next_id] = TRUE;
                nnemptyinters++;
 
-               SCIPdebugMessage("-> found intersection with ID %d, %d non zeros\n", leaveids[next_id], nnon_zero_vars);
+               SCIPdebugMessage("-> found intersection with ID %u, %d non zeros\n", leaveids[next_id], nnon_zero_vars);
 
                covered_ids[ncovered] = next_id;
                ncovered++;
@@ -379,8 +377,8 @@ SCIP_RETCODE constructCompression(
             else
                nreps++;
 
-            SCIP_CALL( SCIPallocBufferArray(scip, &repvars[nreps-2], nnon_zero_vars) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &repvals[nreps-2], nnon_zero_vars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &repvars[nreps-2], nnon_zero_vars) ); /*lint !e866*/
+            SCIP_CALL( SCIPallocBufferArray(scip, &repvals[nreps-2], nnon_zero_vars) ); /*lint !e866*/
             nrepvars[nreps-2] = nnon_zero_vars;
 
             /* set the common variables and bounds (use non-zero idx)*/
@@ -403,10 +401,9 @@ SCIP_RETCODE constructCompression(
             loi += nvars[covered_ids[v]] - nnon_zero_vars;
          }
 
-         SCIPdebugMessage("-> current representation is of size %d with loi = %d\n", nreps, loi);
+         SCIPdebugMessage("-> current representation is of size %d with loi = %.1f\n", nreps, loi);
 
          current_id = (current_id + 1) % nleaveids;
-         niter++;
 
          /* free memory */
          SCIPfreeMemoryArray(scip, &common_vars);
@@ -425,7 +422,7 @@ SCIP_RETCODE constructCompression(
             loi += nvars[k];
       }
 
-      SCIPdebugMessage("-> final representation is of size %d with loi = %d\n", nreps, loi);
+      SCIPdebugMessage("-> final representation is of size %d with loi = %.1f\n", nreps, loi);
 
       /* we found a better representation, i.e., with less loss of information */
       if( SCIPisFeasLT(scip, loi, comprdata->loi) )
@@ -590,9 +587,6 @@ SCIP_RETCODE applyCompression(
  * Callback methods of tree compression
  */
 
-/** copy method for tree compression plugins (called when SCIP copies plugins) */
-#define comprCopyLargestrepr NULL
-
 /** destructor of tree compression to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_COMPRFREE(comprFreeLargestrepr)
@@ -645,12 +639,6 @@ SCIP_DECL_COMPREXIT(comprExitLargestrepr)
 
    return SCIP_OKAY;
 }
-
-/** solving process initialization method of tree compression (called when branch and bound process is about to begin) */
-#define comprInitsolLargestrepr NULL
-
-/** solving process deinitialization method of tree compression (called before branch and bound process data is freed) */
-#define comprExitsolLargestrepr NULL
 
 /** execution method of tree compression */
 static

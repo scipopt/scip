@@ -102,7 +102,7 @@ void SCIPreoptnodeGetConss(
 EXTERN
 void SCIPreoptnodeSetParentID(
    SCIP_REOPTNODE*       reoptnode,               /**< node of the reopttree */
-   int                   parentid                 /**< id of the parent node */
+   unsigned int          parentid                 /**< id of the parent node */
    );
 
 /*

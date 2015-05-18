@@ -155,7 +155,7 @@ static SCIP_DECL_HEURINIT(heurInitReoptsols)
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecReoptsols)
-{
+{/*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
    assert(heur != NULL);
@@ -174,7 +174,9 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
       int allocmem;
       int nchecksols;
       int nsolsadded;
+#ifdef SCIP_MORE_DEBUG
       int nsolsaddedrun;
+#endif
       int run;
       int max_run;
 
@@ -195,7 +197,9 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
          SCIP_Real sim;
          int nsols;
 
+#ifdef SCIP_MORE_DEBUG
          nsolsaddedrun = 0;
+#endif
          nsols = 0;
 
          if( objsimsol == -1 )
@@ -257,7 +261,9 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
                      if( stored )
                      {
                         nsolsadded++;
+#ifdef SCIP_MORE_DEBUG
                         nsolsaddedrun++;
+#endif
                         heurdata->nimprovingsols++;
                      }
                   }
