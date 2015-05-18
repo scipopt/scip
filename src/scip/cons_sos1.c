@@ -117,7 +117,7 @@
 #define DEFAULT_NEIGHBRANCH        TRUE /**< if TRUE turn neighborhood branching method on (note: an automatic switching to SOS1 branching is possible) */
 #define DEFAULT_BIPBRANCH         FALSE /**< if TRUE turn bipartite branching method on (note: an automatic switching to SOS1 branching is possible) */
 #define DEFAULT_SOS1BRANCH        FALSE /**< if TRUE turn SOS1 branching method on */
-#define DEFAULT_AUTOSOS1BRANCH     TRUE /**< automatically switch to SOS1 branching if the SOS1 constraints do not overlap */
+#define DEFAULT_AUTOSOS1BRANCH     TRUE /**< if TRUE then automatically switch to SOS1 branching if the SOS1 constraints do not overlap */
 #define DEFAULT_FIXNONZERO        FALSE /**< if neighborhood branching is used, then fix the branching variable (if positive in sign) to the value of the
                                          *   feasibility tolerance */
 #define DEFAULT_ADDCOMPS          FALSE /**< if TRUE then add complementarity constraints to the branching nodes (can be used in combination with
@@ -245,7 +245,7 @@ struct SCIP_ConshdlrData
    SCIP_Bool             neighbranch;        /**< if TRUE turn neighborhood branching method on (note: an automatic switching to SOS1 branching is possible) */
    SCIP_Bool             bipbranch;          /**< if TRUE turn bipartite branching method on (note: an automatic switching to SOS1 branching is possible) */
    SCIP_Bool             sos1branch;         /**< if TRUE turn SOS1 branching method on */
-   SCIP_Bool             autosos1branch;     /**< automatically switch to SOS1 branching if the SOS1 constraints do not overlap */
+   SCIP_Bool             autosos1branch;     /**< if TRUE then automatically switch to SOS1 branching if the SOS1 constraints do not overlap */
    SCIP_Bool             fixnonzero;         /**< if neighborhood branching is used, then fix the branching variable (if positive in sign) to the value of the
                                               *   feasibility tolerance */
    SCIP_Bool             addcomps;           /**< if TRUE then add complementarity constraints to the branching nodes additionally to domain fixings
@@ -7604,7 +7604,10 @@ SCIP_RETCODE checkSwitchSOS1Branch(
    }
 
    if ( switchsos1branch )
+   {
+      SCIPdebugMessage("Switched to SOS1 branching, since the SOS1 constraints do not overlap\n");
       conshdlrdata->switchsos1branch = TRUE;
+   }
 
    return SCIP_OKAY;
 }
@@ -9337,7 +9340,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
          &conshdlrdata->sos1branch, TRUE, DEFAULT_SOS1BRANCH, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/autosos1branch",
-         "automatically switch to SOS1 branching if the SOS1 constraints do not overlap",
+         "if TRUE then automatically switch to SOS1 branching if the SOS1 constraints do not overlap",
          &conshdlrdata->autosos1branch, TRUE, DEFAULT_AUTOSOS1BRANCH, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/fixnonzero",
