@@ -1947,7 +1947,7 @@ SCIP_RETCODE presolRoundConssSOS1(
                continue;
             }
 
-            if ( conshdlrdata->maxextensions != 0 && adjacencymatrix != NULL && 1==2 )//
+            if ( conshdlrdata->maxextensions != 0 && adjacencymatrix != NULL )
             {
                int maxextensions;
                ncomsucc = 0;
