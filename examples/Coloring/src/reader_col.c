@@ -71,7 +71,6 @@ SCIP_RETCODE readCol(
    char buf[COL_MAX_LINELEN];   /* maximal length of line */
    int nedges;
    int nnodes;
-   int line_nr;
    char* char_p;
    char* probname;
    int** edges;
@@ -94,7 +93,9 @@ SCIP_RETCODE readCol(
    }
    
    /* Get problem name from filename and save it */
-   SCIPfgets(buf, sizeof(buf), fp);
+   if( SCIPfgets(buf, (int) sizeof(buf), fp) == NULL)
+      return SCIP_READERROR;
+
    i = 1;
    while ( (filename[i] != '/') && (filename[i] != '\0') )
    {
@@ -122,17 +123,18 @@ SCIP_RETCODE readCol(
          }
       }
    }
-   
-   SCIPallocMemoryArray(scip, &probname, j-i-4);
-   strncpy(probname, &filename[i+1], j-i-5);
+
+   if( j-i-4 <= 0 )
+      return SCIP_READERROR;
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &probname, (j-i-4)) );
+   strncpy(probname, &filename[i+1], (j-i-5)); /*lint !e732 !e776*/
    probname[j-i-5]= '\0';
 
    /* Read until information about graph starts */
-   line_nr = 0;
    while( !SCIPfeof(fp) && (buf[0] != 'p') )
    {
-      SCIPfgets(buf, sizeof(buf), fp);
-      line_nr++;
+      SCIPfgets(buf, (int) sizeof(buf), fp); /*lint !e534*/
    } 
    /* no graph information in file! */
    if ( SCIPfeof(fp) )
@@ -153,8 +155,8 @@ SCIP_RETCODE readCol(
 
    /* read out number of nodes and edges, the pointer char_p will be changed */
    nduplicateedges = 0;
-   nnodes = getNextNumber(&char_p);
-   nedges = getNextNumber(&char_p);
+   nnodes = (int) getNextNumber(&char_p);
+   nedges = (int) getNextNumber(&char_p);
    if ( nnodes <= 0 )
    {
       SCIPerrorMessage("Number of vertices must be positive!\n");
@@ -169,21 +171,20 @@ SCIP_RETCODE readCol(
    SCIP_CALL( SCIPallocMemoryArray(scip, &edges, nedges) );
    for( i = 0; i < nedges; i++)
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(edges[i]), 2) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(edges[i]), 2) ); /*lint !e866*/
    }
    /* fill array for edges */
    i = 0;
    while ( !SCIPfeof(fp) )
    {
-      SCIPfgets(buf, sizeof(buf), fp);
-      line_nr++;
+      SCIPfgets(buf, (int) sizeof(buf), fp); /*lint !e534*/
       if ( buf[0] == 'e')
       {
          duplicateedge = FALSE;
          char_p = &buf[2];
          
-         begin = getNextNumber(&char_p);
-         end = getNextNumber(&char_p);
+         begin = (int) getNextNumber(&char_p);
+         end = (int) getNextNumber(&char_p);
          for ( j = 0; j < i; j++)
          {
             if ( ((edges[j][0] == begin) && (edges[j][1] == end))
@@ -222,7 +223,7 @@ SCIP_RETCODE readCol(
 
    /* create LP */
    SCIPdebugMessage("Erstelle LP...\n");
-   COLORprobSetUpArrayOfCons(scip);
+   SCIP_CALL( COLORprobSetUpArrayOfCons(scip) );
 
    
    /* activate the pricer */

@@ -56,8 +56,6 @@
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
-#define EPS 0.0000001
-
 /* default values for parameters */
 #define DEFAULT_BRANCHINGMODE 2 
 #define DEFAULT_FIXINGSSCOREMODE 3
@@ -100,8 +98,7 @@ struct SCIP_BranchruleData
 static
 double computeScore(
    SCIP_Real             val1,               /**< the first value */ 
-   SCIP_Real             val2,               /**< the second value */
-   SCIP_BRANCHRULEDATA*  branchruledata      /**< branching rule data */
+   SCIP_Real             val2                /**< the second value */
    )
 {
       return 0.2 * MAX( val1, val2 ) + 0.8 * MIN( val1, val2 );
@@ -307,12 +304,13 @@ SCIP_RETCODE computeBranchingPriorities(
 
 /** computes the lower bound that would a child node with the given branching decision would have */
 static 
-SCIP_Real executeStrongBranching(
+SCIP_RETCODE executeStrongBranching(
    SCIP*                 scip,               /**< SCIP data structure */
    COLOR_CONSTYPE        constype,           /**< the type of the contraint: SAME or DIFFER */
    int                   node1,              /**< the first node for the branching constraint */
    int                   node2,              /**< the second node for the branching constraint */
-   SCIP_BRANCHRULEDATA*  branchruledata      /**< the data of the branching rule */
+   SCIP_BRANCHRULEDATA*  branchruledata,     /**< the data of the branching rule */
+   SCIP_Real*            newlb               /**< pointer to store the resulting value */
    )
 {
    SCIP_NODE* newnode;
@@ -320,18 +318,18 @@ SCIP_Real executeStrongBranching(
    SCIP_CONS* cons;
    SCIP_Bool cutoff;
    SCIP_Bool lperror;
-   SCIP_Real newLb;
 
    assert(scip != NULL);
+   assert(newlb != NULL);
 
    /* get the constraint of the current Node in the B&B-Tree */
    currentcons = COLORconsGetActiveStoreGraphCons(scip);
 
    /* start Probing */
-   SCIPstartProbing(scip);
+   SCIP_CALL( SCIPstartProbing(scip) );
  
   /* create new probing node and add store graph cons to it with same(node1, node2) */
-   SCIPnewProbingNode(scip);
+   SCIP_CALL( SCIPnewProbingNode(scip) );
    newnode = SCIPgetCurrentNode(scip);
    SCIP_CALL( COLORcreateConsStoreGraph(scip, &cons, "probingcons", currentcons, constype, node1, node2, newnode) );
    SCIP_CALL( SCIPaddConsNode(scip, newnode, cons, NULL) ); 
@@ -342,13 +340,13 @@ SCIP_Real executeStrongBranching(
    assert(!lperror);
    assert(!cutoff);
    /* get the changed objective value */
-   newLb = SCIPgetLPObjval(scip);
+   *newlb = SCIPgetLPObjval(scip);
 
    SCIP_CALL( SCIPdelCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-   SCIPendProbing(scip);
+   SCIP_CALL( SCIPendProbing(scip) );
 
-   return newLb;
+   return SCIP_OKAY;
 }
 
 
@@ -467,20 +465,20 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
          currLb = SCIPgetLPObjval(scip);
 
          /* SAME */
-         sameLb = executeStrongBranching(scip, COLOR_CONSTYPE_SAME, node1, node2, branchruledata);
+         SCIP_CALL( executeStrongBranching(scip, COLOR_CONSTYPE_SAME, node1, node2, branchruledata, &sameLb) );
          if ( sameLb-currLb > 1000 )
          {
             sameLb = currLb + 1000;
          }
          
          /* DIFFER */
-         differLb = executeStrongBranching(scip, COLOR_CONSTYPE_DIFFER, node1, node2, branchruledata);
+         SCIP_CALL( executeStrongBranching(scip, COLOR_CONSTYPE_DIFFER, node1, node2, branchruledata, &differLb) );
          if ( differLb-currLb > 1000 )
          {
             differLb = currLb + 1000;
          }
 
-         score = computeScore( sameLb-currLb, differLb-currLb, branchruledata );
+         score = computeScore( sameLb - currLb, differLb-currLb );
          assert( !SCIPisFeasZero(scip, score) || (SCIPisFeasZero(scip, 0.2 * (sameLb-currLb)) && SCIPisFeasZero(scip, 0.2 * (differLb-currLb))
                && (SCIPisFeasZero(scip, sameLb-currLb) || SCIPisFeasZero(scip, differLb-currLb))) );
 
@@ -513,7 +511,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
       bestdiffer = -1;
       bestsame = -1;
 
-      SCIPsetBoolParam(scip, "pricers/coloring/usetclique", branchruledata->usetclique);
+      SCIP_CALL( SCIPsetBoolParam(scip, "pricers/coloring/usetclique", branchruledata->usetclique) );
 #ifndef NDEBUG
       node = SCIPgetCurrentNode(scip);
 #endif
@@ -556,20 +554,20 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
                /* compute lower bounds for possible branchings */
 
                /* SAME */
-               sameLb = executeStrongBranching(scip, COLOR_CONSTYPE_SAME, node1, node2, branchruledata);
+               SCIP_CALL( executeStrongBranching(scip, COLOR_CONSTYPE_SAME, node1, node2, branchruledata, &sameLb) );
                if ( sameLb-currLb > 1000 )
                {
                   sameLb = currLb + 1000;
                }
 
                /* DIFFER */
-               differLb = executeStrongBranching(scip, COLOR_CONSTYPE_DIFFER, node1, node2, branchruledata);
+               SCIP_CALL( executeStrongBranching(scip, COLOR_CONSTYPE_DIFFER, node1, node2, branchruledata, &differLb) );
                if ( differLb-currLb > 1000 )
                {
                   differLb = currLb + 1000;
                }
 
-               score = computeScore( sameLb-currLb, differLb-currLb, branchruledata );
+               score = computeScore( sameLb-currLb, differLb-currLb );
                if ( score > bestscore )
                {
                   bestscore = score;
@@ -591,7 +589,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
          }
       }
    
-      SCIPsetBoolParam(scip, "pricers/coloring/usetclique", TRUE);
+      SCIP_CALL( SCIPsetBoolParam(scip, "pricers/coloring/usetclique", TRUE) );
       assert(node == SCIPgetCurrentNode(scip));
       assert(currentcons == COLORconsGetActiveStoreGraphCons(scip));
 
@@ -669,7 +667,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStrongcoloring)
    }
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 
 /** destructor of branching rule to free user data (called when SCIP is exiting) */

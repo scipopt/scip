@@ -128,14 +128,16 @@ SCIP_DECL_READERREAD(readerReadCsol)
    }
    
    /* Read out the name of the problem belonging to this solution*/
-   SCIPfgets(buf, sizeof(buf), fp);
+   if( SCIPfgets(buf, (int) sizeof(buf), fp) == NULL )
+      return SCIP_READERROR;
+
    i = 1;
    while ( !isspace(buf[i]) )
    {
       i++;
    }
-   SCIPallocMemoryArray(scip, &solprobname, i+2);
-   strncpy(solprobname, &buf[0], i);
+   SCIP_CALL( SCIPallocMemoryArray(scip, &solprobname, i+2) );
+   strncpy(solprobname, &buf[0], (unsigned int) i);
    solprobname[i]= '\0';
 
    printf("Reading solution for %s...\n", solprobname);
@@ -164,7 +166,7 @@ SCIP_DECL_READERREAD(readerReadCsol)
 
    /* read out number of colors */
    char_p = &buf[i];
-   nsets = getNextNumber(&char_p);
+   nsets = (int) getNextNumber(&char_p);
    assert(nsets > 0);
 
    /* allocate memory for the stable sets */
@@ -172,16 +174,19 @@ SCIP_DECL_READERREAD(readerReadCsol)
    SCIP_CALL( SCIPallocBufferArray(scip, &setlengths, nsets) );
    for ( i = 0; i < nsets; i++ )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &(sets[i]), COLORprobGetOriginalNNodes(scip)+1) );
+      int size;
+
+      size = COLORprobGetOriginalNNodes(scip) + 1;
+      SCIP_CALL( SCIPallocBufferArray(scip, &(sets[i]), size) ); /*lint !e866*/
       setlengths[i] = 0;
    }
 
    /* read out the colors for the nodes */
-   SCIPfgets(buf, sizeof(buf), fp);
+   SCIPfgets(buf, (int) sizeof(buf), fp); /*lint !e534*/
    char_p = &buf[0];
    for ( i = 0; i < COLORprobGetOriginalNNodes(scip); i++ )
    {
-      color = getNextNumber(&char_p);
+      color = (int) getNextNumber(&char_p);
       sets[color][setlengths[color]] = i;
       sets[color][setlengths[color]+1] = -1;
       setlengths[color]++;
@@ -264,11 +269,11 @@ SCIP_DECL_READERREAD(readerReadCsol)
    for ( i = 0; i < nsets; i++ )
    {
       SCIPsortDownInt(sets[i], setlengths[i]);
-      COLORprobAddNewStableSet(scip, sets[i], setlengths[i], &setindex);
+      SCIP_CALL( COLORprobAddNewStableSet(scip, sets[i], setlengths[i], &setindex) );
       assert(setindex == i);
 
-      SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
-            TRUE, FALSE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setindex) );
+      SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
+            TRUE, FALSE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setindex) ); /*lint !e571*/
 
       SCIP_CALL( COLORprobAddVarForStableSet(scip, setindex, var) );
       SCIP_CALL( SCIPaddVar(scip, var) );
@@ -412,7 +417,7 @@ SCIP_DECL_READERWRITE(readerWriteCsol)
    *result = SCIP_SUCCESS;
    
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 
 /*

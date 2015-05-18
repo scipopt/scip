@@ -163,7 +163,6 @@ SCIP_RETCODE greedyStableSet(
 
    /* get number of nodes */
    nnodes = tcliqueGetNNodes(graph);
-   nstablesetnodes = 0;
 
    /* get the  degrees and weights for the nodes in the graph */
    degrees = tcliqueGetDegrees(graph);
@@ -250,7 +249,7 @@ SCIP_RETCODE greedyInitialColoring(
    /* create stable sets until all Nodes are covered */
    while( hasUncoloredNode(nnodes, colors) )
    {
-      greedyStableSet(scip, graph, colors, color);
+      SCIP_CALL( greedyStableSet(scip, graph, colors, color) );
       color++;
    }
    *ncolors = color;
@@ -300,12 +299,13 @@ int getNViolatedEdges(
  *  forbidding the old color for a couple of iterations
  */
 static
-SCIP_Bool runTabuCol(
+SCIP_RETCODE runTabuCol(
    TCLIQUE_GRAPH*        graph,              /**< the graph, that should be colored */
    int                   seed,               /**< seed for the first random coloring */
    int                   maxcolors,          /**< number of colors, which are allowed */
    int*                  colors,             /**< output: the computed coloring */
-   SCIP_HEURDATA*        heurdata            /**< data of the heuristic */
+   SCIP_HEURDATA*        heurdata,           /**< data of the heuristic */
+   SCIP_Bool*            success             /**< pointer to store if something went wrong */
    )
 {
    int nnodes;
@@ -333,6 +333,7 @@ SCIP_Bool runTabuCol(
 
    assert(graph != NULL);
    assert(heurdata != NULL);
+   assert(success != NULL);
 
    if( heurdata->output >= 1 )
       printf("Running tabu coloring with maxcolors = %d...\n", maxcolors);
@@ -340,7 +341,7 @@ SCIP_Bool runTabuCol(
    /* get size */
    nnodes = tcliqueGetNNodes(graph);
 
-   srand( seed );
+   srand( seed ); /*lint !e732*/
 
    /* init random coloring */
    for( i = 0; i < nnodes; i++ )
@@ -356,8 +357,8 @@ SCIP_Bool runTabuCol(
 
    for( i = 0; i < nnodes; i++ )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(tabu[i]), maxcolors) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(adj[i]), maxcolors) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(tabu[i]), maxcolors) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(adj[i]), maxcolors) ); /*lint !e866*/
       for( j = 0; j < maxcolors; j++ )
       {
 	 tabu[i][j] = 0;
@@ -510,9 +511,9 @@ SCIP_Bool runTabuCol(
    SCIPfreeMemoryArray(scip, &adj);
 
    /* check whether valid coloring has been found */
-   if( obj == 0 )
-      return TRUE;
-   return FALSE;
+   *success = (obj == 0);
+
+   return SCIP_OKAY;
 }
 
 
@@ -595,7 +596,8 @@ SCIP_DECL_HEUREXEC(heurExecInit)
          while( success )
          {
             ncolors--;
-            success = runTabuCol(graph, 0, ncolors, colors, heurdata);
+            SCIP_CALL( runTabuCol(graph, 0, ncolors, colors, heurdata, &success) );
+
             if( success )
             {
                for( i = 0; i < nnodes; i++ )
@@ -644,8 +646,8 @@ SCIP_DECL_HEUREXEC(heurExecInit)
          assert(setnumber != -1);
 
          /* create variable for the stable set and add it to SCIP */
-         SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY,
-               TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
+         SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
+               TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) ); /*lint !e571*/
 
          SCIP_CALL( COLORprobAddVarForStableSet(scip, setnumber, var) );
          SCIP_CALL( SCIPaddVar(scip, var) );
@@ -676,12 +678,13 @@ SCIP_DECL_HEUREXEC(heurExecInit)
    assert(stored);
 
    /* set maximal number of variables to be priced in each round */
-   SCIPsetIntParam(scip, "pricers/coloring/maxvarsround", COLORprobGetNStableSets(scip)*COLORprobGetNNodes(scip)/50);
+   SCIP_CALL( SCIPsetIntParam(scip, "pricers/coloring/maxvarsround",
+         COLORprobGetNStableSets(scip)*COLORprobGetNNodes(scip)/50) );
 
    *result = SCIP_FOUNDSOL;
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 /*
  * primal heuristic specific interface methods
@@ -726,7 +729,7 @@ SCIP_RETCODE SCIPincludeHeurInit(
    SCIP_CALL( SCIPaddRealParam(scip,
          "heuristics/initcol/tabugamma",
          "factor for the linear part of the tabu-duration",
-         &heurdata->tabugamma, TRUE, DEFAULT_TABUGAMMA, -100, 100, NULL, NULL) );
+         &heurdata->tabugamma, TRUE, DEFAULT_TABUGAMMA, -100.0, 100.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "heuristics/initcol/output",
