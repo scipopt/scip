@@ -14738,6 +14738,8 @@ SCIP_Real SCIPgetReoptOldObjCoef(
       SCIP_Real scalar;
 
       origvar = var;
+      constant = 0.0;
+      scalar = 1.0;
       SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
 
       return SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetIndex(origvar));
