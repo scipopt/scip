@@ -134,8 +134,9 @@
 #define DEFAULT_NSTRONGITER       10000 /**< maximal number LP iterations to perform for each strong branching round (-2: auto, -1: no limit) */
 
 /* separation */
-#define DEFAULT_BOUNDCUTSFROMSOS1 FALSE /**< if TRUE separate bound inequalities from initial SOS1 constraints */
+#define DEFAULT_BOUNDCUTSFROMSOS1 FALSE /**< if TRUE separate bound inequalities from SOS1 constraints */
 #define DEFAULT_BOUNDCUTSFROMGRAPH TRUE /**< if TRUE separate bound inequalities from the conflict graph */
+#define DEFAULT_AUTOCUTSFROMSOS1   TRUE /**< if TRUE then automatically switch to separating from SOS1 constraints if the SOS1 constraints do not overlap */
 #define DEFAULT_BOUNDCUTSFREQ        10 /**< frequency for separating bound cuts; zero means to separate only in the root node */
 #define DEFAULT_BOUNDCUTSDEPTH       40 /**< node depth of separating bound cuts (-1: no limit) */
 #define DEFAULT_MAXBOUNDCUTS         50 /**< maximal number of bound cuts separated per branching node */
@@ -223,7 +224,7 @@ struct SCIP_ConshdlrData
                                               *   value (-1: no limit) */
    /* implication graph */
    SCIP_DIGRAPH*         implgraph;          /**< implication graph (@p j is successor of @p i if and only if \f$ x_i\not = 0 \Rightarrow x_j\not = 0\f$) */
-   int                   nimplnodes;          /**< number of nodes in the implication graph */
+   int                   nimplnodes;         /**< number of nodes in the implication graph */
    /* tclique graph */
    TCLIQUE_GRAPH*        tcliquegraph;       /**< tclique graph data structure */
    TCLIQUE_DATA*         tcliquedata;        /**< tclique data */
@@ -264,8 +265,10 @@ struct SCIP_ConshdlrData
                                               *   (only available for neighborhood and bipartite branching) */
    int                   nstrongiter;        /**< maximal number LP iterations to perform for each strong branching round (-2: auto, -1: no limit) */
    /* separation */
-   SCIP_Bool             boundcutsfromsos1;  /**< if TRUE separate bound inequalities from initial SOS1 constraints */
+   SCIP_Bool             boundcutsfromsos1;  /**< if TRUE separate bound inequalities from SOS1 constraints */
    SCIP_Bool             boundcutsfromgraph; /**< if TRUE separate bound inequalities from the conflict graph */
+   SCIP_Bool             autocutsfromsos1;   /**< if TRUE then automatically switch to separating SOS1 constraints if the SOS1 constraints do not overlap */
+   SCIP_Bool             switchcutsfromsos1; /**< whether to switch to separate bound inequalities from SOS1 constraints */
    int                   boundcutsfreq;      /**< frequency for separating bound cuts; zero means to separate only in the root node */
    int                   boundcutsdepth;     /**< node depth of separating bound cuts (-1: no limit) */
    int                   maxboundcuts;       /**< maximal number of bound cuts separated per branching node */
@@ -6865,7 +6868,7 @@ SCIP_RETCODE separateSOS1(
       if ( maxboundcuts >= 1 )
       {
          /* separate bound inequalities from SOS1 constraints */
-         if( conshdlrdata->boundcutsfromsos1 )
+         if( conshdlrdata->boundcutsfromsos1 || conshdlrdata->switchcutsfromsos1 )
          {
             SCIP_Bool cutoff;
             SCIP_CALL( initsepaBoundInequalityFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, sol, TRUE, maxboundcuts, &ngen, &cutoff) );
@@ -6877,7 +6880,7 @@ SCIP_RETCODE separateSOS1(
          }
 
          /* separate bound inequalities from the conflict graph */
-         if( conshdlrdata->boundcutsfromgraph )
+         if( conshdlrdata->boundcutsfromgraph && ! conshdlrdata->switchcutsfromsos1 )
          {
             SCIP_Bool cutoff;
             SCIP_CALL( sepaBoundInequalitiesFromGraph(scip, conshdlr, conshdlrdata, sol, maxboundcuts, &ngen, &cutoff) );
@@ -7553,9 +7556,9 @@ SCIP_RETCODE checkLinearConssVarboundSOS1(
 }
 
 
-/** switch to SOS1 branching if the SOS1 constraints do not overlap */
+/** switch to SOS1 branching and separating bound iniqualities from SOS1 constraints if the SOS1 constraints do not overlap */
 static
-SCIP_RETCODE checkSwitchSOS1Branch(
+SCIP_RETCODE checkSwitchNonoverlappingSOS1Methods(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< SOS1 constraint handler data */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
@@ -7563,11 +7566,11 @@ SCIP_RETCODE checkSwitchSOS1Branch(
    int                   nconss              /**< number of SOS1 constraints */
    )
 {
-   SCIP_Bool switchsos1branch = TRUE;
+   SCIP_Bool nonoverlap = TRUE;
    int c;
 
    /* loop through all SOS1 constraints */
-   for (c = 0; c < nconss && switchsos1branch; ++c)
+   for (c = 0; c < nconss && nonoverlap; ++c)
    {
       SCIP_CONSDATA* consdata;
       SCIP_VAR** vars;
@@ -7597,16 +7600,26 @@ SCIP_RETCODE checkSwitchSOS1Branch(
          assert( SCIPdigraphGetNSuccessors(conflictgraph, node) >= nvars-1 );
          if ( SCIPdigraphGetNSuccessors(conflictgraph, node) > nvars-1 )
          {
-            switchsos1branch = FALSE;
+            nonoverlap = FALSE;
             break;
          }
       }
    }
 
-   if ( switchsos1branch )
+   /* if the SOS1 constraints xdo not overlap */
+   if ( nonoverlap )
    {
-      SCIPdebugMessage("Switched to SOS1 branching, since the SOS1 constraints do not overlap\n");
-      conshdlrdata->switchsos1branch = TRUE;
+      if ( conshdlrdata->autosos1branch )
+      {
+         conshdlrdata->switchsos1branch = TRUE;
+         SCIPdebugMessage("Switched to SOS1 branching, since the SOS1 constraints do not overlap\n");
+      }
+
+      if ( conshdlrdata->autocutsfromsos1 )
+      {
+         conshdlrdata->switchcutsfromsos1 = TRUE;
+         SCIPdebugMessage("Switched to separating bound cuts from SOS1 constraints (and not from the conflict graph), since the SOS1 constraints do not overlap\n");
+      }
    }
 
    return SCIP_OKAY;
@@ -7941,10 +7954,13 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
        /* add data to conflict graph nodes */
        SCIP_CALL( computeNodeDataSOS1(scip, conshdlrdata, conshdlrdata->nsos1vars) );
 
-       if ( ! conshdlrdata->sos1branch && conshdlrdata->autosos1branch && ! conshdlrdata->switchsos1branch )
+       if ( (! conshdlrdata->sos1branch || ! conshdlrdata->boundcutsfromsos1 )
+          && ( conshdlrdata->autosos1branch || conshdlrdata->autocutsfromsos1 )
+          && ( ! conshdlrdata->switchsos1branch || ! conshdlrdata->switchcutsfromsos1 )
+          )
        {
-          /* switch to SOS1 branching if the SOS1 constraints do not overlap */
-          SCIP_CALL( checkSwitchSOS1Branch(scip, conshdlrdata, conshdlrdata->conflictgraph, conss, nconss) );
+          /* switch to nonoverlapping methods if the SOS1 constraints do not overlap */
+          SCIP_CALL( checkSwitchNonoverlappingSOS1Methods(scip, conshdlrdata, conshdlrdata->conflictgraph, conss, nconss) );
        }
 
        /* initialize tclique graph */
@@ -8318,7 +8334,7 @@ SCIP_DECL_CONSINITLP(consInitlpSOS1)
    assert( conshdlrdata != NULL );
 
    /* checking for initial rows for SOS1 constraints */
-   if( conshdlrdata->boundcutsfromsos1 )
+   if( conshdlrdata->boundcutsfromsos1 || conshdlrdata->switchcutsfromsos1 )
    {
       SCIP_Bool cutoff;
       SCIP_CALL( initsepaBoundInequalityFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, NULL, FALSE, -1, NULL, &cutoff) );
@@ -9246,6 +9262,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
    conshdlrdata->branchsos = TRUE;
    conshdlrdata->switchsos1branch = FALSE;
+   conshdlrdata->switchcutsfromsos1 = FALSE;
    conshdlrdata->eventhdlr = NULL;
    conshdlrdata->fixnonzerovars = NULL;
    conshdlrdata->maxnfixnonzerovars = 0;
@@ -9400,6 +9417,10 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/boundcutsfromgraph",
          "if TRUE separate bound inequalities from the conflict graph",
          &conshdlrdata->boundcutsfromgraph, TRUE, DEFAULT_BOUNDCUTSFROMGRAPH, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/autocutsfromsos1",
+         "if TRUE then automatically switch to separating initial SOS1 constraints if the SOS1 constraints do not overlap",
+         &conshdlrdata->autocutsfromsos1, TRUE, DEFAULT_AUTOCUTSFROMSOS1, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/boundcutsfreq",
          "frequency for separating bound cuts; zero means to separate only in the root node",

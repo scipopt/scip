@@ -56,7 +56,7 @@
                                          *   viola(t)ed rows increasing, or (r)andom */
 #define DEFAULT_NOZEROFIXING      FALSE /**< should variables with a zero shifting value be delayed instead of being fixed? */
 #define DEFAULT_FIXBINLOCKS       TRUE  /**< should binary variables with no locks in one direction be fixed to that direction? */
-#define DEFAULT_BINLOCKSFIRST     TRUE  /**< should binary variables with no locks be preferred in the ordering? */
+#define DEFAULT_BINLOCKSFIRST     FALSE  /**< should binary variables with no locks be preferred in the ordering? */
 #define DEFAULT_NORMALIZE         TRUE  /**< should coefficients and left/right hand sides be normalized by max row coeff? */
 #define DEFAULT_UPDATEWEIGHTS     FALSE /**< should row weight be increased every time the row is violated? */
 #define DEFAULT_IMPLISCONTINUOUS   TRUE /**< should implicit integer variables be treated as continuous variables? */
@@ -1699,7 +1699,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       }
    }
 
-   /* if binary variables without locks should be fixed, we want to treat them first, so we put them to the front */
+   /* should binary variables without locks be treated first? */
    if( heurdata->binlocksfirst )
    {
       SCIP_VAR* var;

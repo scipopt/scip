@@ -29,7 +29,7 @@ ARCH			=	x86
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION			=	3.1.1.1
+VERSION			=	3.2.0
 VERBOSE			=	false
 OPT				=	opt
 COMP			=	msvc
@@ -370,7 +370,7 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\sepa_rapidlearning.obj \
 					$(LIBOBJDIR)\scip\sepa_strongcg.obj \
 					$(LIBOBJDIR)\scip\sepa_zerohalf.obj \
-      				$(LIBOBJDIR)\scip\branch.obj \
+					$(LIBOBJDIR)\scip\branch.obj \
 					$(LIBOBJDIR)\scip\buffer.obj \
 					$(LIBOBJDIR)\scip\clock.obj \
 					$(LIBOBJDIR)\scip\conflict.obj \
