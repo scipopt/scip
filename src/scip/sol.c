@@ -1462,7 +1462,14 @@ SCIP_RETCODE SCIPsolCheck(
 
             lb = SCIPvarGetLbGlobal(var);
             ub = SCIPvarGetUbGlobal(var);
-            *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb) && SCIPsetIsFeasLE(set, solval, ub);
+
+            /* check finite lower bound */
+            if( !SCIPsetIsInfinity(set, -lb) )
+               *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb);
+
+            /* check finite upper bound */
+            if( !SCIPsetIsInfinity(set, ub) )
+               *feasible = *feasible && SCIPsetIsFeasLE(set, solval, ub);
 
             if( printreason && (SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub)) )
             {

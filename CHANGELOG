@@ -222,6 +222,7 @@ interface:
   in cons_quadratic.h to compute linear under- and overestimation for bilinear and quadratic terms
 
 fixed bugs:
+- fix wrong comparisons of values larger/less than +/- SCIPinfinity() in branch.c, lp.c, and sol.c
 - fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)
 - try to handle fixings of multi-aggregated variable in cons_sos1 presolving and avoid error
 - fix potential memory leak in method SCIPgetConsCopy()

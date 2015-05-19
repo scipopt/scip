@@ -14185,7 +14185,7 @@ SCIP_RETCODE lpSolve(
       assert(lp->dualfeasible);
       lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
-      if( SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) )
+      if( !SCIPsetIsInfinity(set, lp->lpiuobjlim) && SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) )
       {
          /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
          SCIPdebugMessage("optimal solution %.15g exceeds objective limit %.15g\n", lp->lpobjval, lp->lpiuobjlim);

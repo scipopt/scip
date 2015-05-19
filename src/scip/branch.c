@@ -1461,10 +1461,21 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;
+      SCIP_Bool runbranchrule;
 
       loclowerbound = SCIPnodeGetLowerbound(tree->focusnode);
       glblowerbound = SCIPtreeGetLowerbound(tree, set);
-      if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound)) )
+
+      /* we distinguish between finite and infinite global lower bounds to avoid comparisons between different values > SCIPinfinity() */
+      if( SCIPsetIsInfinity(set, -glblowerbound) )
+         runbranchrule = SCIPsetIsInfinity(set, -loclowerbound) || SCIPsetIsGE(set, branchrule->maxbounddist, 1.0);
+      else
+      {
+         assert(!SCIPsetIsInfinity(set, -loclowerbound));
+         runbranchrule = SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound));
+      }
+
+      if( runbranchrule )
       {
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
@@ -1662,10 +1673,21 @@ SCIP_RETCODE SCIPbranchruleExecPseudoSol(
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;
+      SCIP_Bool runbranchrule;
 
       loclowerbound = SCIPnodeGetLowerbound(tree->focusnode);
       glblowerbound = SCIPtreeGetLowerbound(tree, set);
-      if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound)) )
+
+      /* we distinguish between finite and infinite global lower bounds to avoid comparisons between different values > SCIPinfinity() */
+      if( SCIPsetIsInfinity(set, -glblowerbound) )
+         runbranchrule = SCIPsetIsInfinity(set, -loclowerbound) || SCIPsetIsGE(set, branchrule->maxbounddist, 1.0);
+      else
+      {
+         assert(!SCIPsetIsInfinity(set, -loclowerbound));
+         runbranchrule = SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound));
+      }
+
+      if( runbranchrule )
       {
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
