@@ -1991,6 +1991,23 @@ SCIP_RETCODE mergeClique(
                }
                assert(clqvars[w] != var);
 
+               /* if one of the other variables occurs multiple times, we can
+                * 1) deduce infeasibility if it occurs with different values
+                * 2) wait for the last occurence to fix it
+                */
+               while( w > 0 && clqvars[w-1] == clqvars[w] )
+               {
+                  if( clqvalues[w-1] != clqvalues[w] )
+                  {
+                     *infeasible = TRUE;
+                     break;
+                  }
+                  --w;
+               }
+
+               if( *infeasible )
+                  break;
+
                if( clique != NULL )
                {
                   SCIP_CALL( SCIPvarDelCliqueFromList(clqvars[w], blkmem, clqvalues[w], clique) );
