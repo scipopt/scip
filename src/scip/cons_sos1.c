@@ -3601,7 +3601,7 @@ SCIP_RETCODE propVariableNonzero(
 }
 
 
-/** initialize implication
+/** initialize implication graph
  *
  *  @p j is successor of @p i if and only if \f$ x_i\not = 0 \Rightarrow x_j\not = 0\f$
  *
@@ -7574,6 +7574,7 @@ SCIP_RETCODE checkSwitchNonoverlappingSOS1Methods(
    {
       SCIP_CONSDATA* consdata;
       SCIP_VAR** vars;
+      int notfixed = 0;
       int nvars;
       int i;
 
@@ -7587,6 +7588,13 @@ SCIP_RETCODE checkSwitchNonoverlappingSOS1Methods(
       nvars = consdata->nvars;
       vars = consdata->vars;
 
+      /* get number of variables of SOS1 constraint that are not fixed to zero */
+      for (i = 0; i < nvars; ++i)
+      {
+         if ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(vars[i])) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(vars[i])) )
+            ++notfixed;
+      }
+
       /* check variables of SOS1 constraint */
       for (i = 0; i < nvars; ++i)
       {
@@ -7595,10 +7603,10 @@ SCIP_RETCODE checkSwitchNonoverlappingSOS1Methods(
          assert( vars[i] != NULL );
 
          node = varGetNodeSOS1(conshdlrdata, vars[i]);
-         assert( node >= 0 );
+         assert( node >= 0 || ( SCIPisFeasZero(scip, SCIPvarGetLbLocal(vars[i])) && SCIPisFeasZero(scip, SCIPvarGetUbLocal(vars[i]))) );
          assert( node < conshdlrdata->nsos1vars );
-         assert( SCIPdigraphGetNSuccessors(conflictgraph, node) >= nvars-1 );
-         if ( SCIPdigraphGetNSuccessors(conflictgraph, node) > nvars-1 )
+         assert( node < 0 || SCIPdigraphGetNSuccessors(conflictgraph, node) >= notfixed-1 );
+         if ( node >= 0 && SCIPdigraphGetNSuccessors(conflictgraph, node) > notfixed-1 )
          {
             nonoverlap = FALSE;
             break;
@@ -7606,7 +7614,7 @@ SCIP_RETCODE checkSwitchNonoverlappingSOS1Methods(
       }
    }
 
-   /* if the SOS1 constraints xdo not overlap */
+   /* if the SOS1 constraints do not overlap */
    if ( nonoverlap )
    {
       if ( conshdlrdata->autosos1branch )
@@ -7624,7 +7632,6 @@ SCIP_RETCODE checkSwitchNonoverlappingSOS1Methods(
 
    return SCIP_OKAY;
 }
-
 
 
 /** sets node data of conflict graph nodes */
@@ -7719,7 +7726,8 @@ SCIP_RETCODE initConflictgraph(
 
          var = vars[i];
 
-         if ( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
+         /* if the variable is not fixed to zero */
+         if ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
          {
             int ind;
 
@@ -7778,7 +7786,8 @@ SCIP_RETCODE initConflictgraph(
 
          var = vars[i];
 
-         if ( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
+         /* if the variable is not fixed to zero */
+         if ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
          {
             int indi;
 
@@ -7817,7 +7826,8 @@ SCIP_RETCODE initConflictgraph(
             {
                var = vars[j];
 
-               if ( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
+               /* if the variable is not fixed to zero */
+               if ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) )
                {
                   int indj;
 
