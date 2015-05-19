@@ -37,7 +37,7 @@
 
 #define   DEFAULT_COMPCENTRAL  1
 #define   DEFAULT_EMITGRAPH    FALSE
-#define   DEFAULT_REDUCTION    4
+#define   DEFAULT_REDUCTION    1
 
 #define CENTER_OK    0
 #define CENTER_DEG   1

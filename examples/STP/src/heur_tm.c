@@ -40,9 +40,9 @@
 #define HEUR_TIMING           (SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_EVALRUNS 10 /*10*/
+#define DEFAULT_EVALRUNS 15 /*10*/
 #define DEFAULT_INITRUNS 100 /*100*/
-#define DEFAULT_LEAFRUNS 10 /*10*/
+#define DEFAULT_LEAFRUNS 15 /*10*/
 #define DEFAULT_ROOTRUNS 50
 #define DEFAULT_DURINGLPFREQ 10
 #define DEFAULT_TYPE  0
@@ -56,8 +56,8 @@
 
 
 #ifdef WITH_UG
-extern
-int getUgRank();
+   extern
+   int getUgRank();
 #endif
 
 /*
@@ -787,11 +787,13 @@ SCIP_RETCODE do_tmX(
    int    i;
    int    j;
    int    l;
+   int    z;
    int    old;
+   int    root;
    int    csize;
    int    newval;
    int    nnodes;
-   int z;
+
    assert(scip      != NULL);
    assert(g         != NULL);
    assert(result    != NULL);
@@ -803,55 +805,48 @@ SCIP_RETCODE do_tmX(
    assert(cluster != NULL);
    assert(perm != NULL);
 
-   nnodes = g->knots;
    csize = 0;
-   assert(start < nnodes);
+   root = g->source[0];
+   nnodes = g->knots;
+   assert(0 <= start && start < nnodes);
+
    SCIPdebugMessage("Heuristic: Start=%5d ", start);
 
    cluster[csize++] = start;
 
+   /* initialize arrays */
    for( i = 0; i < nnodes; i++ )
    {
       g->mark[i]   = (g->grad[i] > 0);
       connected[i] = FALSE;
       perm[i] = i;
    }
-   connected[start] = TRUE;
 
+   connected[start] = TRUE;
    SCIPpermuteIntArray(perm, 0, nnodes - 1, randseed);
 
    /* CONSTCOND */
    for( ;; )
    {
-      /* Find a terminal with minimal distance to the current ST */
+      /* Find a terminal with minimal distance to current ST */
       min = FARAWAY;
       old = -1;
       newval = -1;
 
-      /* time limit exceeded?*/
+      /* time limit exceeded? */
       if( SCIPisStopped(scip) )
          return SCIP_OKAY;
 
+      /* find shortest path from current tree to unconnected terminal */
       for( l = 0; l < nnodes; l++ )
       {
 	 i = perm[l];
-         if( !Is_term(g->term[i]) || connected[i] || g->grad[i] == 0 )
+         if( !Is_term(g->term[i]) || connected[i] || !g->mark[i] ||
+            ((g->stp_type == STP_DIRECTED || g->stp_type == STP_HOP_CONS) && !connected[root] && i != root) )
             continue;
+
          z = SCIPgetRandomInt(0, nnodes - 1, randseed);
-#if 0
-         if( pathdist[i] == NULL )
-         {
-            assert(pathedge[i] == NULL);
-            SCIP_CALL( SCIPallocBufferArray(scip, &(pathdist[i]), nnodes) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &(pathedge[i]), nnodes) );
-            assert(pathedge[i] != NULL);
-            assert(pathdist[i] != NULL);
-            if( g->source[0] == i )
-               graph_path_execX(scip, g, i, cost,  pathdist[i], pathedge[i]);
-            else
-               graph_path_execX(scip, g, i, costrev, pathdist[i], pathedge[i]);
-         }
-#endif
+
          for( k = 0; k < csize; k++ )
          {
             j = cluster[(k + z) % csize];
@@ -866,13 +861,12 @@ SCIP_RETCODE do_tmX(
             }
          }
       }
-      /* Nichts mehr gefunden, also fertig
-       */
+
+      /* no new path found? */
       if( newval == -1 )
          break;
 
-      /* Weg setzten
-       */
+      /* mark the new path */
       assert(old > -1);
       assert(newval > -1);
       assert(pathdist[newval] != NULL);
@@ -884,13 +878,11 @@ SCIP_RETCODE do_tmX(
       SCIPdebug(fputc('R', stdout));
       SCIPdebug(fflush(stdout));
 
-      /*    printf("Connecting Knot %d-%d dist=%d\n", newval, old, path[newval][old].dist);
-       */
-      /* Gegen den Strom schwimmend alles markieren
-       */
+      /*    printf("Connecting Knot %d-%d dist=%d\n", newval, old, path[newval][old].dist); */
+      /* start from current tree */
       k = old;
       /*printf("connect from %d\n", old);*/
-      while(k != newval)
+      while( k != newval )
       {
          e = pathedge[newval][k];
          k = g->tail[e];
@@ -903,9 +895,7 @@ SCIP_RETCODE do_tmX(
       }
    }
 
-   SCIPdebug(fputc('M', stdout));
-   SCIPdebug(fflush(stdout));
-
+   /* prune the tree */
    SCIP_CALL( prune(scip, g, cost, costrev, result, connected) );
 
    return SCIP_OKAY;
@@ -1662,19 +1652,20 @@ SCIP_RETCODE do_layer(
       assert(SCIPisGE(scip, cost[e], 0));
       assert(SCIPisGE(scip, costrev[e], 0));
    }
+
+   assert(runs > 0);
    assert(scip != NULL);
-   assert(graph != NULL);
-   assert(best_result != NULL);
    assert(cost != NULL);
+   assert(graph != NULL);
    assert(costrev != NULL);
    assert(heurdata != NULL);
-   assert(runs > 0);
+   assert(best_result != NULL);
 
-   nexecs = heurdata->nexecs;
+   root = graph->source[0];
    nnodes = graph->knots;
    nedges = graph->edges;
    nterms = graph->terms;
-   root = graph->source[0];
+   nexecs = heurdata->nexecs;
    (*success) = FALSE;
 
    if( SCIPisStopped(scip) )
@@ -1710,7 +1701,6 @@ SCIP_RETCODE do_layer(
    else if( graph->stp_type == STP_HOP_CONS )
    {
       mode = TM_SP;
-      runs = MIN(runs, nterms);
    }
    else if( graph->stp_type == STP_DEG_CONS )
    {
@@ -1718,6 +1708,7 @@ SCIP_RETCODE do_layer(
    }
    else
    {
+      /* graph very large? */
       if( nterms > 800 && nedges > 40000 && 3 * nterms < nnodes )
       {
          mode = TM_DIJKSTRA;
@@ -1950,6 +1941,10 @@ SCIP_RETCODE do_layer(
       else if( runs < nzterms )
          SCIPpermuteIntArray(terminalperm, 0, nterms - 1, &(heurdata->randseed));
 
+
+      if( best >= 0 && best < nterms && SCIPgetRandomInt(0, 1, &(heurdata->randseed)) == 1 )
+	 terminalperm[runs - 1] = best;
+
       z = 0;
       firstrun = TRUE;
       for( r = 0; r < runs; r++ )
@@ -1958,6 +1953,8 @@ SCIP_RETCODE do_layer(
             z++;
          assert(z <= nterms - 2);
 
+         /* if( r == runs -1 )
+            printf("%d best: %d\n",terminalperm[runs - 1], best );*/
          /* if the edge has been fixed, continue*/
          if( edges_tz[terminalperm[z]] == UNKNOWN )
             continue;
@@ -1965,6 +1962,7 @@ SCIP_RETCODE do_layer(
 	 /* the selected arc from the artificial root */
          rootedge = rootedges_z[terminalperm[z]];
 
+	 /* set cost to zero, so that this edge will be selected by SPH */
          costrev[rootedge] = 0.0;
          cost[flipedge(rootedge)] = 0.0;
 
@@ -1987,7 +1985,6 @@ SCIP_RETCODE do_layer(
                   path[graph->tail[e]][root].edge = e;
 #endif
                }
-               assert(edges_tz[terminalperm[z]] != UNKNOWN);
                k = graph->tail[edges_tz[terminalperm[z]]];
                pathdist[k][root] = 0.0;
                pathedge[k][root] = rootedge;
@@ -2026,23 +2023,21 @@ SCIP_RETCODE do_layer(
          if( SCIPisStopped(scip) )
             break;
 
-
-
          /* compute objective value (wrt original costs) */
 	 obj = 0.0;
          for( e = 0; e < nedges; e++)
             if( result[e] == CONNECT )
                obj += graph->cost[e];
 
+         printf(" Obj(run: %d, ncall: %d)=%.12e\n", r, (int) nexecs, obj);
          if( SCIPisLT(scip, obj, min) )
          {
+	    *bestnewstart = terminalperm[z];
             min = obj;
             if( printfs )
                printf(" Obj(run: %d, ncall: %d)=%.12e\n", r, (int) nexecs, obj);
             for( e = 0; e < nedges; e++ )
-            {
                best_result[e] = result[e];
-            }
             (*success) = TRUE;
          }
          cost[flipedge(rootedge)] = FARAWAY;
@@ -2056,6 +2051,7 @@ SCIP_RETCODE do_layer(
          rootedge = rootedges_z[r];
          if( rootedge != UNKNOWN )
          {
+	    //printf("rootedge: %d %d \n", graph->tail[rootedge],graph->head[rootedge] );
             assert(costrev[rootedge] == FARAWAY);
             costrev[rootedge] = 0.0;
             cost[flipedge(rootedge)] = 0.0;

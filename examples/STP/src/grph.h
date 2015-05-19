@@ -71,7 +71,7 @@ typedef struct
    IDX**   ancestors; /* list of ancestor edges to each edge (required to keep track of reductions) */
    int     norgmodeledges;
    int     hoplimit;  /* maximal number of edges allowed for a solution to be feasible
-                      (only for problem type STP_HOP_CONS) */
+                         (only for problem type STP_HOP_CONS) */
    int     esize;  /* Count of allocated edge slots               */
    int     edges;  /* Count of edges in the graph                 */
    int     orgedges;
@@ -185,6 +185,8 @@ typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 /* grphbase.c
  */
 extern GRAPH* graph_init(int, int, int, int);
+extern SCIP_RETCODE   pcgraphorg(SCIP*, GRAPH*);
+extern SCIP_RETCODE   pcgraphtrans(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*, int**,int**, IDX***);
 extern void   graph_resize(GRAPH*, int, int, int);
 extern void   graph_free(SCIP*, GRAPH*, char);
@@ -201,11 +203,15 @@ extern void   graph_ident(const GRAPH*);
 extern void   graph_knot_add(GRAPH*, int);
 extern void   graph_knot_chg(GRAPH*, int, int);
 extern SCIP_RETCODE   graph_knot_contract(SCIP*, GRAPH*, int, int);
+extern SCIP_RETCODE   graph_knot_contractpc(SCIP*, GRAPH*, int, int, int);
 extern void   graph_knot_contract_dir(GRAPH*, int, int);
 extern void   graph_edge_add(GRAPH*, int, int, double, double);
-extern void   graph_edge_del(GRAPH*, int);
+extern void   graph_edge_del(SCIP*, GRAPH*, int, SCIP_Bool);
 extern void   graph_edge_hide(GRAPH*, int);
+extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real);
+extern SCIP_RETCODE   graph_edge_reinsert(SCIP*, GRAPH*, int, int, int, SCIP_Real, IDX*, IDX*, IDX*, IDX*);
 extern void   graph_uncover(GRAPH*);
+extern void   prize_subtract(SCIP*, GRAPH*, SCIP_Real, int);
 extern GRAPH* graph_pack(SCIP*, GRAPH*, SCIP_Bool);
 extern void   graph_trail(const GRAPH*, int);
 extern int    graph_valid(const GRAPH*);
@@ -221,8 +227,11 @@ extern void   graph_path_execX(SCIP*, const GRAPH*, int, SCIP_Real*, SCIP_Real*,
 extern void   graph_path_st(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, int*, int, char*);
 extern void   calculate_distances(const GRAPH*, PATH**, double*, int);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
+extern void   get2next(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, PATH*, int*, int*, int*);
+extern void   get3next(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, PATH*, int*, int*, int*);
+extern void   getnext3terms(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, PATH*, int*, int*, int*);
 extern void   voronoi_terms(SCIP*, const GRAPH*, SCIP_Real*, PATH*, int*, int*, int*);
-extern void   voronoi_dist(const GRAPH*, SCIP_Real*, double*, int*, int*, int*, int*, PATH*);
+extern SCIP_RETCODE   voronoi_dist(SCIP*, const GRAPH*, SCIP_Real*, double*, int*, int*, int*, int*, int*, PATH*);
 extern SCIP_RETCODE   voronoi_radius(SCIP* scip, const GRAPH*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*);
 extern void   voronoi_inout(const GRAPH*);
 extern void   voronoi_term(const GRAPH*, double*, double*, double*, PATH*, int*, int*, int*, int*, int);
@@ -230,9 +239,11 @@ extern void   voronoi_hop(const GRAPH*, double*, double*, double*, PATH*, int*, 
 extern void   heap_add(int*, int*, int*, int, PATH*);
 extern void   voronoi_repair(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, PATH*, int*, int, UF*);
 extern void   voronoi_repair_mult(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, int*, int*, char*, UF*, PATH*);
+extern void   voronoi_slrepair(SCIP*, const GRAPH*, SCIP_Real*, PATH*, int*, int*, int*, int, int);
 extern SCIP_RETCODE voronoi_extend(SCIP*, const GRAPH*, SCIP_Real*, PATH*, VLIST**, char*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE voronoi_extend2(SCIP*, const GRAPH*, SCIP_Real*, PATH*, SCIP_Real**, int**, int**, char*, int*, int*, int*, int, int, int);
-
+extern void   sdtail(SCIP*, const GRAPH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int, int, int);
+extern SCIP_Real   sdhead(SCIP*, const GRAPH*, PATH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int*, int, int, int);
 extern void   graph_path_length(const GRAPH*, const PATH*);
 
 /* grphmcut.c
@@ -258,10 +269,11 @@ extern void graph_boxcoord(GRAPH* g);
 
 /* reduce.c
  */
+extern void level0(SCIP*, GRAPH*);
 extern SCIP_RETCODE reduce(SCIP*, GRAPH**, SCIP_Real*, int, int);
 extern SCIP_RETCODE bound_reduce(SCIP*, GRAPH*, PATH*, double*, double*, double*, double*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE hopbound_reduce(SCIP*, GRAPH*, PATH*, double*, double*, double*, int*, int*, int*, int*, int);
-extern SCIP_RETCODE level4X(SCIP*, GRAPH**,SCIP_Real*, double*, int);
+extern SCIP_RETCODE sdsp_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*);
 
 /* sdtest.c
  */
@@ -273,10 +285,14 @@ extern SCIP_RETCODE    nv_reduction_optimal(SCIP*, GRAPH*, double*, int*, int);
 extern SCIP_RETCODE    nv_reduction(SCIP*, GRAPH*, PATH*,double*, int*, int*, int*, int*);
 extern SCIP_RETCODE    sl_reduction(SCIP*, GRAPH*, PATH*, double*, int*, int*, int*, int*);
 extern SCIP_RETCODE    ledge_reduction(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*);
+extern SCIP_RETCODE    sd2_reduction(SCIP*, GRAPH*, SCIP_Real*, int*, int*);
+extern SCIP_RETCODE    getSD(SCIP*, GRAPH*, SCIP_Real*, SCIP_Real*, int*, int, int);
+extern SCIP_RETCODE    sdpc_reduction(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*);
 
 /* dirreduce.c
  */
 extern SCIP_RETCODE degree_test_dir(SCIP*, GRAPH*, double*, int*);
+extern SCIP_RETCODE degree_test_pc(SCIP*, GRAPH*, double*, int*);
 
 /* bndtest.c
  */

@@ -46,7 +46,7 @@
 #define   DEFAULT_COMPCENTRAL  1
 #define   DEFAULT_EMITGRAPH    FALSE
 #define   DEFAULT_COUNTPRESOLTIME  TRUE
-#define   DEFAULT_REDUCTION    4
+#define   DEFAULT_REDUCTION    1
 #define   DEFAULT_MINELIMS     5
 #define   DEFAULT_PRETIMELIMIT -1
 
@@ -165,8 +165,8 @@ SCIP_RETCODE SCIPincludeReaderStp(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "stp/reduction",
-         "Reduction: 0 disable, 5 maximum",
-         NULL, FALSE, DEFAULT_REDUCTION, 0, 5, NULL, NULL) );
+         "Reduction: 0 disable, 1 default, 2 maximum",
+         NULL, FALSE, DEFAULT_REDUCTION, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "stp/minelims",
