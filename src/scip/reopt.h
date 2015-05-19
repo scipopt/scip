@@ -299,7 +299,7 @@ SCIP_RETCODE SCIPreoptGetChildIDs(
    SCIP_SET*             set,                     /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,                  /**< block memory */
    SCIP_NODE*            node,                    /**< node of the search tree */
-   int*                  childs,                  /**< array to store the child ids */
+   unsigned int*         childs,                  /**< array to store the child ids */
    int                   childssize,              /**< size of the childs array */
    int*                  nchilds                  /**< pointer to store the number of child nodes */
    );
@@ -309,7 +309,7 @@ extern
 SCIP_RETCODE SCIPreoptGetLeaves(
    SCIP_REOPT*           reopt,                   /**< reoptimization data */
    SCIP_NODE*            node,                    /**< node of the search tree */
-   int*                  leaves,                  /**< array to the the ids */
+   unsigned int*         leaves,                  /**< array to the the ids */
    int                   leavessize,              /**< size of leaves array */
    int*                  nleaves                  /**< pointer to store the number of leav node */
    );
@@ -379,16 +379,8 @@ SCIP_RETCODE SCIPreoptApply(
 extern
 SCIP_RETCODE SCIPreoptDeleteNode(
    SCIP_REOPT*           reopt,                   /**< reoptimization data */
-   int                   id,                      /**< id of the node */
+   unsigned int          id,                      /**< id of the node */
    BMS_BLKMEM*           blkmem                   /**< block memory */
-   );
-
-/** replace the node stored at ID id by its child nodes */
-extern
-SCIP_RETCODE SCIPreoptShrinkNode(
-   SCIP_REOPT*           reopt,                   /**< reoptimization data */
-   BMS_BLKMEM*           blkmem,                  /**< block memory */
-   int                   id                       /**< id of the node */
    );
 
 /** reset the stored information abound bound changes based on dual information */

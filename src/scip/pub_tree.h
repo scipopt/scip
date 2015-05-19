@@ -182,7 +182,7 @@ void SCIPnodeSetReopttype(
 EXTERN
 void SCIPnodeSetReoptID(
    SCIP_NODE*            node,               /**< node */
-   int                   id                  /**< unique id */
+   unsigned int          id                  /**< unique id */
    );
 
 /** counts the number of bound changes due to branching, constraint propagation, and propagation */

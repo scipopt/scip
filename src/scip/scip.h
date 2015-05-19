@@ -17397,7 +17397,7 @@ EXTERN
 SCIP_RETCODE SCIPgetReoptChildIDs(
    SCIP*                 scip,                    /**< SCIP data structure */
    SCIP_NODE*            node,                    /**< node of the search tree */
-   int*                  ids,                     /**< array to store the ids of child nodes */
+   unsigned int*         ids,                     /**< array to store the ids of child nodes */
    int                   mem,                     /**< allocated memory */
    int*                  nids                     /**< number of child nodes */
    );
@@ -17407,7 +17407,7 @@ EXTERN
 SCIP_RETCODE SCIPgetReoptLeaveIDs(
    SCIP*                 scip,                    /**< SCIP data strcuture */
    SCIP_NODE*            node,                    /**< node of the search tree */
-   int*                  ids,                     /**< array of ids */
+   unsigned int*         ids,                     /**< array of ids */
    int                   mem,                     /**< allocated memory */
    int*                  nids                     /**< number of child nodes */
    );
@@ -17433,7 +17433,7 @@ int SCIPgetNReoptLeaves(
 /** gets the node of the reoptimization tree corresponding to the unique @param id */
 SCIP_REOPTNODE* SCIPgetReoptnode(
    SCIP*                 scip,                    /**< SCIP data structure */
-   int                   id                       /**< unique id */
+   unsigned int          id                       /**< unique id */
    );
 
 /** add a variable bound change to a given reoptnode

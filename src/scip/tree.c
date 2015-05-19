@@ -7088,7 +7088,6 @@ unsigned int SCIPnodeGetReoptID(
    )
 {
    assert(node != NULL);
-   assert(node->reoptid >= 0);
    assert(node->reoptid < 536870912); /* id has only 29 bits and needs to be smaller than 2^29 */
 
    return node->reoptid;
@@ -7097,11 +7096,10 @@ unsigned int SCIPnodeGetReoptID(
 /** set a unique id to identify the node during reoptimization */
 void SCIPnodeSetReoptID(
    SCIP_NODE*            node,               /**< node */
-   int                   id                  /**< unique id */
+   unsigned int          id                  /**< unique id */
    )
 {
    assert(node != NULL);
-   assert(id >= 0);
    assert(id < 536870912); /* id has only 29 bits and needs to be smaller than 2^29 */
 
    node->reoptid = id;

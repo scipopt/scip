@@ -455,7 +455,7 @@ SCIP_DECL_HEURFREE(heurFreeOfins)
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecOfins)
-{
+{/*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_VAR** vars;
    SCIP_Bool* chgcoeffs;

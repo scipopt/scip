@@ -95,7 +95,6 @@
 /** separator data */
 struct SCIP_SepaData
 {
-   SCIP_Real             maxweightrange;     /**< maximal valid range max(|weights|)/min(|weights|) of row weights */
    int                   maxrounds;          /**< maximal number of gomory separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of gomory separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of gomory cuts separated per separation round */
@@ -241,8 +240,8 @@ SCIP_Bool checkNumerics(
 
    for( i = 0; i < *cutnz; ++i )
    {
-      mincoef = MIN(mincoef, REALABS(cutcoefs[i]));
-      maxcoef = MAX(maxcoef, REALABS(cutcoefs[i]));
+      mincoef = MIN(mincoef, REALABS(cutcoefs[i])); /*lint !e666*/
+      maxcoef = MAX(maxcoef, REALABS(cutcoefs[i])); /*lint !e666*/
       *cutact += cutcoefs[i] * SCIPcolGetPrimsol(cols[cutind[i]]);
    }
 
@@ -338,6 +337,7 @@ SCIP_Bool getGMIFromRow(
       case SCIP_BASESTAT_ZERO:
          /* Nonbasic free variable at zero: cut coefficient is zero, skip */
          continue;
+      case SCIP_BASESTAT_BASIC:
       default:
          /* Basic variable: skip */
          continue;
@@ -414,6 +414,7 @@ SCIP_Bool getGMIFromRow(
          /* Nonbasic free variable at zero: cut coefficient is zero, skip */
          SCIPdebugMessage("Free nonbasic slack variable, this should not happen!\n");
          continue;
+      case SCIP_BASESTAT_BASIC:
       default:
          /* Basic variable: skip */
          continue;
@@ -657,6 +658,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGMI)
 
       tryrow = FALSE;
       c = basisind[i];
+      primsol = SCIP_INVALID;
 
       SCIPdebugMessage("Row %d basic variable %d with value %f\n", i, basisind[i], (c >= 0) ? SCIPcolGetPrimsol(cols[c]) : SCIPgetRowActivity(scip, rows[-c-1]));
       if( c >= 0 )
@@ -892,7 +894,7 @@ SCIP_RETCODE SCIPincludeSepaGMI(
    SCIP_CALL( SCIPaddRealParam(scip,
          "separating/gmi/maxsupprel",
          "maximum cut support - relative value in the formula",
-         &sepadata->maxsupprel, FALSE, MAX_SUPP_REL, 0, SCIP_REAL_MAX, NULL, NULL) );
+         &sepadata->maxsupprel, FALSE, MAX_SUPP_REL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

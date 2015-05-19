@@ -260,7 +260,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpColoring)
    *result = SCIP_BRANCHED;
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 
 /** branching execution method for not completely fixed pseudo solutions */
@@ -330,7 +330,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsColoring)
    *result = SCIP_BRANCHED;
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 /*
  * branching rule specific interface methods

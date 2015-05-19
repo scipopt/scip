@@ -114,9 +114,10 @@
 #define DEFAULT_SOSCONSPROP      FALSE /**< whether to use SOS1 constraint propagation */
 
 /* branching rules */
-#define DEFAULT_NEIGHBRANCH        TRUE /**< if TRUE turn neighborhood branching method on */
-#define DEFAULT_BIPBRANCH         FALSE /**< if TRUE turn bipartite branching method on */
+#define DEFAULT_NEIGHBRANCH        TRUE /**< if TRUE turn neighborhood branching method on (note: an automatic switching to SOS1 branching is possible) */
+#define DEFAULT_BIPBRANCH         FALSE /**< if TRUE turn bipartite branching method on (note: an automatic switching to SOS1 branching is possible) */
 #define DEFAULT_SOS1BRANCH        FALSE /**< if TRUE turn SOS1 branching method on */
+#define DEFAULT_AUTOSOS1BRANCH     TRUE /**< if TRUE then automatically switch to SOS1 branching if the SOS1 constraints do not overlap */
 #define DEFAULT_FIXNONZERO        FALSE /**< if neighborhood branching is used, then fix the branching variable (if positive in sign) to the value of the
                                          *   feasibility tolerance */
 #define DEFAULT_ADDCOMPS          FALSE /**< if TRUE then add complementarity constraints to the branching nodes (can be used in combination with
@@ -241,9 +242,10 @@ struct SCIP_ConshdlrData
    SCIP_Bool             implprop;           /**< whether to use implication graph propagation */
    SCIP_Bool             sosconsprop;        /**< whether to use SOS1 constraint propagation */
    /* branching */
-   SCIP_Bool             neighbranch;        /**< if TRUE turn neighborhood branching method on */
-   SCIP_Bool             bipbranch;          /**< if TRUE turn bipartite branching method on */
+   SCIP_Bool             neighbranch;        /**< if TRUE turn neighborhood branching method on (note: an automatic switching to SOS1 branching is possible) */
+   SCIP_Bool             bipbranch;          /**< if TRUE turn bipartite branching method on (note: an automatic switching to SOS1 branching is possible) */
    SCIP_Bool             sos1branch;         /**< if TRUE turn SOS1 branching method on */
+   SCIP_Bool             autosos1branch;     /**< if TRUE then automatically switch to SOS1 branching if the SOS1 constraints do not overlap */
    SCIP_Bool             fixnonzero;         /**< if neighborhood branching is used, then fix the branching variable (if positive in sign) to the value of the
                                               *   feasibility tolerance */
    SCIP_Bool             addcomps;           /**< if TRUE then add complementarity constraints to the branching nodes additionally to domain fixings
@@ -1403,9 +1405,9 @@ SCIP_RETCODE cliqueGetCommonSuccessorsSOS1(
    /* determine the common successors of the vertices from the considered clique */
 
    /* determine successors of variable var[0] that are not in the clique */
+   assert(vars[0] != NULL );
    ind =  varGetNodeSOS1(conshdlrdata, vars[0]);
-   assert( ind != -1 );
-
+   assert( ind >= 0 && ind < SCIPdigraphGetNNodes(conflictgraph) );
    nsucc = SCIPdigraphGetNSuccessors(conflictgraph, ind);
    succ = SCIPdigraphGetSuccessors(conflictgraph, ind);
 
@@ -1434,7 +1436,9 @@ SCIP_RETCODE cliqueGetCommonSuccessorsSOS1(
       int ncomsuccsave = 0;
       k = 0;
 
+      assert(vars[v] != NULL );
       ind =  varGetNodeSOS1(conshdlrdata, vars[v]);
+      assert( ind >= 0 && ind < SCIPdigraphGetNNodes(conflictgraph) );
       nsucc = SCIPdigraphGetNSuccessors(conflictgraph, ind);
       succ = SCIPdigraphGetSuccessors(conflictgraph, ind);
 
@@ -1536,6 +1540,7 @@ SCIP_RETCODE presolRoundConsSOS1(
    SCIP_CONS*            cons,               /**< constraint */
    SCIP_CONSDATA*        consdata,           /**< constraint data */
    SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_Bool*            substituted,        /**< whether a variable was substituted */
    SCIP_Bool*            cutoff,             /**< whether a cutoff happened */
    SCIP_Bool*            success,            /**< whether we performed a successful reduction */
    int*                  ndelconss,          /**< number of deleted constraints */
@@ -1562,6 +1567,7 @@ SCIP_RETCODE presolRoundConsSOS1(
    assert( nfixedvars != NULL );
    assert( nremovedvars != NULL );
 
+   *substituted = FALSE;
    *cutoff = FALSE;
    *success = FALSE;
 
@@ -1603,6 +1609,7 @@ SCIP_RETCODE presolRoundConsSOS1(
          SCIP_CALL( lockVariableSOS1(scip, cons, var) );
 
          vars[j] = var;
+         *substituted = TRUE;
       }
 
       /* check whether the variable appears again later */
@@ -1827,8 +1834,10 @@ SCIP_RETCODE presolRoundConssSOS1(
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS* cons;
+      SCIP_Bool substituted;
       SCIP_Bool success;
       SCIP_Bool cutoff;
+      int savennupgdconss;
       int savendelconss;
 
       SCIP_VAR** vars;
@@ -1848,9 +1857,10 @@ SCIP_RETCODE presolRoundConssSOS1(
       assert( ncliques < csize );
 
       savendelconss = *ndelconss;
+      savennupgdconss = *nupgdconss;
 
       /* perform one presolving round for SOS1 constraint */
-      SCIP_CALL( presolRoundConsSOS1(scip, cons, consdata, eventhdlr, &cutoff, &success, ndelconss, nupgdconss, nfixedvars, nremovedvars) );
+      SCIP_CALL( presolRoundConsSOS1(scip, cons, consdata, eventhdlr, &substituted, &cutoff, &success, ndelconss, nupgdconss, nfixedvars, nremovedvars) );
 
       if ( cutoff )
       {
@@ -1858,7 +1868,7 @@ SCIP_RETCODE presolRoundConssSOS1(
          break;
       }
 
-      if ( *ndelconss > savendelconss )
+      if ( *ndelconss > savendelconss || *nupgdconss > savennupgdconss || substituted )
       {
          *result = SCIP_SUCCESS;
          continue;
@@ -7543,6 +7553,67 @@ SCIP_RETCODE checkLinearConssVarboundSOS1(
 }
 
 
+/** switch to SOS1 branching if the SOS1 constraints do not overlap */
+static
+SCIP_RETCODE checkSwitchSOS1Branch(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< SOS1 constraint handler data */
+   SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
+   SCIP_CONS**           conss,              /**< SOS1 constraints */
+   int                   nconss              /**< number of SOS1 constraints */
+   )
+{
+   SCIP_Bool switchsos1branch = TRUE;
+   int c;
+
+   /* loop through all SOS1 constraints */
+   for (c = 0; c < nconss && switchsos1branch; ++c)
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_VAR** vars;
+      int nvars;
+      int i;
+
+      assert( conss[c] != NULL );
+
+      /* get constraint data field of the constraint */
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      /* get variables and number of variables of constraint */
+      nvars = consdata->nvars;
+      vars = consdata->vars;
+
+      /* check variables of SOS1 constraint */
+      for (i = 0; i < nvars; ++i)
+      {
+         int node;
+
+         assert( vars[i] != NULL );
+
+         node = varGetNodeSOS1(conshdlrdata, vars[i]);
+         assert( node >= 0 );
+         assert( node < conshdlrdata->nsos1vars );
+         assert( SCIPdigraphGetNSuccessors(conflictgraph, node) >= nvars-1 );
+         if ( SCIPdigraphGetNSuccessors(conflictgraph, node) > nvars-1 )
+         {
+            switchsos1branch = FALSE;
+            break;
+         }
+      }
+   }
+
+   if ( switchsos1branch )
+   {
+      SCIPdebugMessage("Switched to SOS1 branching, since the SOS1 constraints do not overlap\n");
+      conshdlrdata->switchsos1branch = TRUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+
+
 /** sets node data of conflict graph nodes */
 static
 SCIP_RETCODE computeNodeDataSOS1(
@@ -7869,6 +7940,12 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
 
        /* add data to conflict graph nodes */
        SCIP_CALL( computeNodeDataSOS1(scip, conshdlrdata, conshdlrdata->nsos1vars) );
+
+       if ( ! conshdlrdata->sos1branch && conshdlrdata->autosos1branch && ! conshdlrdata->switchsos1branch )
+       {
+          /* switch to SOS1 branching if the SOS1 constraints do not overlap */
+          SCIP_CALL( checkSwitchSOS1Branch(scip, conshdlrdata, conshdlrdata->conflictgraph, conss, nconss) );
+       }
 
        /* initialize tclique graph */
        SCIP_CALL( initTCliquegraph(scip, conshdlr, conshdlrdata, conshdlrdata->conflictgraph, conshdlrdata->nsos1vars) );
@@ -8318,14 +8395,14 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOS1)
       return SCIP_PARAMETERWRONGVAL;
    }
 
+   if ( conshdlrdata->sos1branch && conshdlrdata->nstrongrounds != 0 )
+   {
+      SCIPerrorMessage("Strong branching is not available for SOS1 branching.\n");
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
    if ( conshdlrdata->sos1branch || conshdlrdata->switchsos1branch )
    {
-      if ( conshdlrdata->nstrongrounds != 0 )
-      {
-         SCIPerrorMessage("Strong branching not available for SOS1 branching.\n");
-         return SCIP_PARAMETERWRONGVAL;
-      }
-
       /* enforce SOS1 constraints */
       SCIP_CALL( enforceConssSOS1(scip, conshdlr, nconss, conss, result) );
    }
@@ -8373,14 +8450,14 @@ SCIP_DECL_CONSENFOPS(consEnfopsSOS1)
       return SCIP_PARAMETERWRONGVAL;
    }
 
+   if ( conshdlrdata->sos1branch && conshdlrdata->nstrongrounds != 0 )
+   {
+      SCIPerrorMessage("Strong branching is not available for SOS1 branching.\n");
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
    if ( conshdlrdata->sos1branch || conshdlrdata->switchsos1branch )
    {
-      if ( conshdlrdata->nstrongrounds != 0 )
-      {
-         SCIPerrorMessage("Strong branching not available for SOS1 branching.\n");
-         return SCIP_PARAMETERWRONGVAL;
-      }
-
       /* enforce SOS1 constraints */
       SCIP_CALL( enforceConssSOS1(scip, conshdlr, nconss, conss, result) );
    }
@@ -9251,16 +9328,20 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
 
    /* branching parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/neighbranch",
-         "if TRUE turn neighborhood branching method on",
+         "if TRUE turn neighborhood branching method on (note: an automatic switching to SOS1 branching is possible)",
          &conshdlrdata->neighbranch, TRUE, DEFAULT_NEIGHBRANCH, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/bipbranch",
-         "if TRUE turn bipartite branching method on",
+         "if TRUE turn bipartite branching method on (note: an automatic switching to SOS1 branching is possible)",
          &conshdlrdata->bipbranch, TRUE, DEFAULT_BIPBRANCH, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sos1branch",
          "if TRUE turn SOS1 branching method on",
          &conshdlrdata->sos1branch, TRUE, DEFAULT_SOS1BRANCH, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/autosos1branch",
+         "if TRUE then automatically switch to SOS1 branching if the SOS1 constraints do not overlap",
+         &conshdlrdata->autosos1branch, TRUE, DEFAULT_AUTOSOS1BRANCH, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/fixnonzero",
          "if neighborhood branching is used, then fix the branching variable (if positive in sign) to the value of the feasibility tolerance",

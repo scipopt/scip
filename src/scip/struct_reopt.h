@@ -81,14 +81,14 @@ struct SCIP_ReoptNode
    SCIP_Real             lowerbound;              /**< the last lowerbound of this node in the previous iteration */
 
    /* other information: child nodes, added constraints, ... */
-   int*                  childids;                /**< array of child nodes that need to be reoptimized */
-   int                   nchilds;                 /**< number of child nodes */
-   int                   allocchildmem;           /**< allocated memory for child nodes */
    LOGICORDATA**         conss;                   /**< array of constraints added to the node, i.e., logic-or constraints */
-   int                   nconss;                  /**< number of added constraints */
-   int                   consssize;               /**< allocated memory for constraints */
    LOGICORDATA*          dualconscur;             /**< dual constraint that need to be added the current round */
    LOGICORDATA*          dualconsnex;             /**< dual constraint that need to be added the next round */
+   int                   nchilds;                 /**< number of child nodes */
+   int                   allocchildmem;           /**< allocated memory for child nodes */
+   int                   nconss;                  /**< number of added constraints */
+   int                   consssize;               /**< allocated memory for constraints */
+   unsigned int*         childids;                /**< array of child nodes that need to be reoptimized */
 
    unsigned int          parentID:29;             /**< id of the stored parent node */
    unsigned int          reopttype:3;             /**< reason for storing the node */
@@ -101,7 +101,7 @@ struct SCIP_ReoptTree
 
    SCIP_REOPTNODE**      reoptnodes;              /**< array of SCIP_REOPTNODE */
    SCIP_QUEUE*           openids;                 /**< queue of open positions in the reoptnodes array */
-   int                   reoptnodessize;          /**< size of allocated memory for the reoptnodes array and the openid queue */
+   unsigned int          reoptnodessize;          /**< size of allocated memory for the reoptnodes array and the openid queue */
    int                   nreoptnodes;             /**< number of saved nodes */
 
    /* statistics */

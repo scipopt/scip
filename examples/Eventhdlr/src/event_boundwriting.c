@@ -477,7 +477,7 @@ SCIP_DECL_EVENTINIT(eventInitBoundwriting)
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
-   eventhdlrdata->lastpb = SCIPinfinity(scip) * SCIPgetObjsense(scip);
+   eventhdlrdata->lastpb = SCIPinfinity(scip) * (SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE ? 1.0 : -1.0);
 
    return SCIP_OKAY;
 }
@@ -589,10 +589,10 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
       {
          int len;
 
-         if( pch-(eventhdlrdata->filename) > (SCIP_MAXSTRLEN - n) )
+         if( (pch-(eventhdlrdata->filename)) > (SCIP_MAXSTRLEN - n) ) /*lint !e776*/
             len = SCIP_MAXSTRLEN - n;
          else
-            len = pch-(eventhdlrdata->filename);
+            len = (int) (pch-(eventhdlrdata->filename));
 
          (void)strncpy(name, eventhdlrdata->filename, (unsigned int)len);
          name[len] = '\0';
@@ -600,7 +600,7 @@ SCIP_DECL_EVENTEXEC(eventExecBoundwriting)
 	 assert(len+n < SCIP_MAXSTRLEN);
          name[len+n] = '\0';
 
-         if( len + n + strlen(&(eventhdlrdata->filename[len])) < SCIP_MAXSTRLEN )
+         if( len + n + strlen(&(eventhdlrdata->filename[len])) < SCIP_MAXSTRLEN ) /*lint !e776*/
          {
             strncat(name, &(eventhdlrdata->filename[len]), strlen(&(eventhdlrdata->filename[len])));
             name[strlen(eventhdlrdata->filename)+n] = '\0';

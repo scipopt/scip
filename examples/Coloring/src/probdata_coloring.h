@@ -187,7 +187,7 @@ TCLIQUE_GRAPH* COLORprobGetOriginalGraph(
 
 /** computes the complementary graph for a given graph and stores it in the given pointer */
 extern
-void COLORprobGetComplementaryGraph(
+SCIP_RETCODE COLORprobGetComplementaryGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    TCLIQUE_GRAPH*        graph,              /**< the given graph */
    TCLIQUE_GRAPH*        cgraph              /**< the complementary graph is saved in here */

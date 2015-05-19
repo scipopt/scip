@@ -558,15 +558,16 @@ $(OBJDIR)/main.o: src/main.c src/reader_col.h ../../src/scip/scip.h \
  ../../src/scip/cons_soc.h ../../src/scip/cons_sos1.h \
  ../../src/scip/cons_sos2.h ../../src/scip/cons_superindicator.h \
  ../../src/scip/cons_varbound.h ../../src/scip/cons_xor.h \
- ../../src/scip/disp_default.h ../../src/scip/heur_actconsdiving.h \
- ../../src/scip/heur_bound.h ../../src/scip/heur_clique.h \
- ../../src/scip/heur_coefdiving.h ../../src/scip/heur_crossover.h \
- ../../src/scip/heur_dins.h ../../src/scip/heur_distributiondiving.h \
- ../../src/scip/heur_dualval.h ../../src/scip/heur_feaspump.h \
- ../../src/scip/heur_fixandinfer.h ../../src/scip/heur_fracdiving.h \
- ../../src/scip/heur_guideddiving.h ../../src/scip/heur_zeroobj.h \
- ../../src/scip/heur_indicator.h ../../src/scip/heur_intdiving.h \
- ../../src/scip/heur_intshifting.h ../../src/scip/heur_linesearchdiving.h \
+ ../../src/scip/disp_default.h ../../src/scip/event_softtimelimit.h \
+ ../../src/scip/heur_actconsdiving.h ../../src/scip/heur_bound.h \
+ ../../src/scip/heur_clique.h ../../src/scip/heur_coefdiving.h \
+ ../../src/scip/heur_crossover.h ../../src/scip/heur_dins.h \
+ ../../src/scip/heur_distributiondiving.h ../../src/scip/heur_dualval.h \
+ ../../src/scip/heur_feaspump.h ../../src/scip/heur_fixandinfer.h \
+ ../../src/scip/heur_fracdiving.h ../../src/scip/heur_guideddiving.h \
+ ../../src/scip/heur_zeroobj.h ../../src/scip/heur_indicator.h \
+ ../../src/scip/heur_intdiving.h ../../src/scip/heur_intshifting.h \
+ ../../src/scip/heur_linesearchdiving.h \
  ../../src/scip/heur_localbranching.h ../../src/scip/heur_mutation.h \
  ../../src/scip/heur_nlpdiving.h ../../src/scip/heur_objpscostdiving.h \
  ../../src/scip/heur_octane.h ../../src/scip/heur_ofins.h \
