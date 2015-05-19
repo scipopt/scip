@@ -245,7 +245,7 @@ void getActivities(
    SCIP_Real*            minact,             /**< calculated overlap minimal activity w.r.t. to the other row */
    SCIP_Real*            maxact              /**< calculated overlap maximal activity w.r.t. to the other row */
    )
-{
+{/*lint --e{715}*/
    SCIP_Real val;
    int nothernonoverlap;
    SCIP_Real lhs;
@@ -331,7 +331,7 @@ void getActivities(
 
          if( tmplowerbds[i] < minlowerbnd )
          {
-            if( tmplowerbds[i] == -SCIPinfinity(scip) )
+            if( SCIPisInfinity(scip, -tmplowerbds[i]) )
             {
                /* lower bounds have to be finite for later boundshift */
                *minact = -SCIPinfinity(scip);
@@ -643,7 +643,7 @@ void getActivities(
       retcode = SCIPfree(&subscip);
    }
 #endif
-}
+}/*lint !e438*/
 
 /** calculate min activity */
 static

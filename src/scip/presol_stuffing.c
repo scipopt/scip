@@ -413,3 +413,5 @@ SCIP_RETCODE SCIPincludePresolStuffing(
 
    return SCIP_OKAY;
 }
+
+/*lint --e{749}*/
