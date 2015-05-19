@@ -3088,6 +3088,8 @@ SCIP_RETCODE fixBounds(
          pos = reoptnode->nvars;
 
          reoptnode->vars[pos] = var;
+         scalar = 1.0;
+         constant = 0.0;
          SCIP_CALL( SCIPvarGetOrigvarSum(&reoptnode->vars[pos], &scalar, &constant) );
          assert(SCIPvarIsOriginal(reoptnode->vars[pos]));
 

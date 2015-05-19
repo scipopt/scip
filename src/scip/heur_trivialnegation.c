@@ -115,6 +115,8 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
       assert(SCIPvarIsActive(vars[i]));
 
       origvar = vars[i];
+      scalar = 1.0;
+      constant = 0.0;
       SCIP_CALL( SCIPvarGetOrigvarSum(&origvar,&scalar, &constant) );
       assert(origvar != NULL);
 
