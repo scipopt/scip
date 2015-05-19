@@ -252,17 +252,12 @@ void getActivities(
    SCIP_Real minlhs;
    SCIP_Real maxlhs;
    SCIP_Bool consred;
-   SCIP_Real objoffset;
    int nminratios;
    int nmaxratios;
    int i;
-   SCIP_Bool mininfpresent;
-   SCIP_Bool maxinfpresent;
 
    *minact = 0;
    *maxact = 0;
-   nminratios = 0;
-   nmaxratios = 0;
 
 #ifdef DEBUG_WRITE_CHECK_LPS
    SCIPmatrixPrintRow(scip,matrix,baserow);
@@ -311,6 +306,9 @@ void getActivities(
 
    if( !consred )
    {
+      SCIP_Real minlowerbnd;
+      minlowerbnd = SCIPinfinity(scip);
+
       /* we want that every coefficient in the single constraint
          has a negative sign and hence we need to multiply
          some columns by -1 */
@@ -321,7 +319,8 @@ void getActivities(
 
          if( coefotheroverlap[i] > 0.0 )
          {
-            SCIP_Real tmp;
+            /* multiply column by -1 and swap bounds */
+            double tmp;
             tmp = tmplowerbds[i];
             tmplowerbds[i] = -tmpupperbds[i];
             tmpupperbds[i] = -tmp;
@@ -329,8 +328,52 @@ void getActivities(
             coefotheroverlap[i] = -coefotheroverlap[i];
             coefbaseoverlap[i] = -coefbaseoverlap[i];
          }
+
+         if( tmplowerbds[i] < minlowerbnd )
+         {
+            if( tmplowerbds[i] == -SCIPinfinity(scip) )
+            {
+               /* lower bounds have to be finite for later boundshift */
+               *minact = -SCIPinfinity(scip);
+               *maxact = SCIPinfinity(scip);
+               return;
+            }
+            minlowerbnd = tmplowerbds[i];
+         }
       }
 
+      /* init left hand side values and consider non-overlapping contribution */
+      minlhs = lhs - val;
+      nminratios = 0;
+      maxlhs = lhs - val;
+      nmaxratios = 0;
+
+      if( minlowerbnd < 0.0 )
+      {
+         double bndshift = -minlowerbnd;
+         if( bndshift > (double)SCIP_LONGINT_MAX )
+         {
+            /* shift value is too large */
+            *minact = -SCIPinfinity(scip);
+            *maxact = SCIPinfinity(scip);
+            return;
+         }
+
+         /* shift polyhedra into the positive orthant */
+         for( i = 0; i < numoverlap; i++ )
+         {
+            minlhs += coefotheroverlap[i] * bndshift;
+            *minact -= coefbaseoverlap[i] * bndshift;
+
+            maxlhs += coefotheroverlap[i] * bndshift;
+            *maxact -= coefbaseoverlap[i] * bndshift;
+
+            tmplowerbds[i] += bndshift;
+            tmpupperbds[i] += bndshift;
+
+            assert(tmplowerbds[i] >= 0.0);
+         }
+      }
 
       /*
        * solve minimization LP
@@ -341,79 +384,65 @@ void getActivities(
        * min  -       min  +
        * s.t. -       s.t. -
        */
-      minlhs = lhs - val;
-      objoffset = 0;
-      mininfpresent = FALSE;
 
       for( i = 0; i < numoverlap; i++ )
       {
          if( coefbaseoverlap[i] > 0.0 )
          {
-            /* b) */
-            if( SCIPisInfinity(scip, -tmplowerbds[i]) || SCIPisInfinity(scip, tmplowerbds[i]) )
-            {
-               *minact = -SCIPinfinity(scip);
-               mininfpresent = TRUE;
-               break;
-            }
-            else
-            {
-               minlhs -= coefotheroverlap[i] * tmplowerbds[i];
-               objoffset += coefbaseoverlap[i] * tmplowerbds[i];
-            }
+            /* b): fix variable to its lower bound */
+            minlhs -= coefotheroverlap[i] * tmplowerbds[i];
+            *minact += coefbaseoverlap[i] * tmplowerbds[i];
          }
          else
          {
-            /* a) */
+            /* a): save coefficient ratios for later sorting */
             minratios[nminratios] = coefbaseoverlap[i] / coefotheroverlap[i];
             minsortedidx[nminratios] = i;
             nminratios++;
+
+            /* consider lower bounds for left hand side and obj value */
+            minlhs -= coefotheroverlap[i] * tmplowerbds[i];
+            *minact += coefbaseoverlap[i] * tmplowerbds[i];
          }
       }
 
-      if( !mininfpresent )
+      /* sort the ratios for case a) */
+      if( nminratios > 1 )
+         SCIPsortRealInt(minratios, minsortedidx, nminratios);
+
+      /* pack every variable on the highest possible value as long as we are feasible */
+      for( i = nminratios-1; 0 <= i; i-- )
       {
-         /* sort the ratios for case a) */
-         if( nminratios > 1 )
-            SCIPsortRealInt(minratios, minsortedidx, nminratios);
+         double tmpval;
 
-         /* pack every variable on their upper bound until we are feasible */
-         for( i = nminratios-1; 0 <= i; i-- )
+         /* consider contribution from lower bounds */
+         if( tmplowerbds[minsortedidx[i]] > 0 )
          {
-            SCIP_Real tmpval;
-
-            if( SCIPisInfinity(scip, tmpupperbds[minsortedidx[i]]) )
-            {
-               tmpval = minlhs / coefotheroverlap[minsortedidx[i]];
-               assert(tmpval <= tmpupperbds[minsortedidx[i]]);
-               *minact += coefbaseoverlap[minsortedidx[i]] * tmpval;
-               break;
-            }
-            else
-            {
-               tmpval = coefotheroverlap[minsortedidx[i]] * tmpupperbds[minsortedidx[i]];
-               if( SCIPisGE(scip, tmpval, minlhs) )
-               {
-                  *minact += coefbaseoverlap[minsortedidx[i]] * tmpupperbds[minsortedidx[i]];
-                  minlhs -= tmpval;
-
-                  if( SCIPisEQ(scip, minlhs, 0.0) )
-                     break;
-               }
-               else
-               {
-                  tmpval = minlhs / coefotheroverlap[minsortedidx[i]];
-                  assert(tmpval <= tmpupperbds[minsortedidx[i]]);
-                  *minact += coefbaseoverlap[minsortedidx[i]] * tmpval;
-                  break;
-               }
-            }
+            *minact -= coefbaseoverlap[minsortedidx[i]] * tmplowerbds[minsortedidx[i]];
+            minlhs += coefotheroverlap[minsortedidx[i]] * tmplowerbds[minsortedidx[i]];
          }
 
-         /* consider contribution from case b) */
-         if( !mininfpresent )
+         /* calculate highest possible variable value */
+         tmpval = minlhs / coefotheroverlap[minsortedidx[i]];
+         if( tmpval < tmplowerbds[minsortedidx[i]] )
          {
-            *minact += objoffset;
+            /* infeasible */
+            *minact = -SCIPinfinity(scip);
+            break;
+         }
+
+         /* if the upper bound is large enough we are ready
+            otherwise we set the variable to its upper bound and iterate */
+         if( tmpval <= tmpupperbds[minsortedidx[i]] )
+         {
+            *minact += coefbaseoverlap[minsortedidx[i]] * tmpval;
+            minlhs -= coefotheroverlap[minsortedidx[i]] * tmpval;
+            break;
+         }
+         else
+         {
+            *minact += coefbaseoverlap[minsortedidx[i]] * tmpupperbds[minsortedidx[i]];
+            minlhs -= coefotheroverlap[minsortedidx[i]] * tmpupperbds[minsortedidx[i]];
          }
       }
 
@@ -427,81 +456,65 @@ void getActivities(
        * max  +       max  -
        * s.t. -       s.t. -
        */
-      maxlhs = lhs - val;
-      objoffset = 0;
-      maxinfpresent = FALSE;
-
       for( i = 0; i < numoverlap; i++ )
       {
          if( coefbaseoverlap[i] < 0.0 )
          {
-            /* d) */
-            if( SCIPisInfinity(scip, -tmplowerbds[i]) || SCIPisInfinity(scip, tmplowerbds[i]) )
-            {
-               *maxact = SCIPinfinity(scip);
-               maxinfpresent = TRUE;
-               break;
-            }
-            else
-            {
-               maxlhs -= coefotheroverlap[i] * tmplowerbds[i];
-               objoffset += coefbaseoverlap[i] * tmplowerbds[i];
-            }
+            /* d): fix variable to its lower bound */
+            maxlhs -= coefotheroverlap[i] * tmplowerbds[i];
+            *maxact += coefbaseoverlap[i] * tmplowerbds[i];
          }
          else
          {
-            /* c) */
+            /* c): save coefficient ratios for later sorting */
             maxratios[nmaxratios] = coefbaseoverlap[i] / coefotheroverlap[i];
             maxsortedidx[nmaxratios] = i;
             nmaxratios++;
+
+            /* consider lower bounds for left hand side and obj value */
+            maxlhs -= coefotheroverlap[i] * tmplowerbds[i];
+            *maxact += coefbaseoverlap[i] * tmplowerbds[i];
          }
       }
 
-      if( !maxinfpresent )
+      /* sort the ratios for case a) */
+      if( nmaxratios > 1 )
+         SCIPsortRealInt(maxratios, maxsortedidx, nmaxratios);
+
+      /* pack every variable on the highest possible value as long as we are feasible */
+      for( i = 0; i < nmaxratios; i++ )
       {
-         /* sort the ratios for case c) */
-         if( nmaxratios > 1 )
-            SCIPsortRealInt(maxratios, maxsortedidx, nmaxratios);
+         double tmpval;
 
-         /* pack every variable on their upper bound until we are feasible */
-         for( i = 0; i < nmaxratios; i++ )
+         /* consider contribution from lower bounds */
+         if( tmplowerbds[maxsortedidx[i]] > 0 )
          {
-            SCIP_Real tmpval;
-
-            if( SCIPisInfinity(scip, tmpupperbds[maxsortedidx[i]]) )
-            {
-               tmpval = maxlhs / coefotheroverlap[maxsortedidx[i]];
-               assert(tmpval <= tmpupperbds[maxsortedidx[i]]);
-               *maxact += coefbaseoverlap[maxsortedidx[i]] * tmpval;
-               break;
-            }
-            else
-            {
-               tmpval = coefotheroverlap[maxsortedidx[i]] * tmpupperbds[maxsortedidx[i]];
-               if( SCIPisGE(scip, tmpval, maxlhs) )
-               {
-                  *maxact += coefbaseoverlap[maxsortedidx[i]] * tmpupperbds[maxsortedidx[i]];
-                  maxlhs -= tmpval;
-
-                  if( SCIPisEQ(scip, maxlhs, 0.0) )
-                     break;
-               }
-               else
-               {
-                  tmpval = maxlhs / coefotheroverlap[maxsortedidx[i]];
-                  assert(tmpval <= tmpupperbds[maxsortedidx[i]]);
-                  *maxact += coefbaseoverlap[maxsortedidx[i]] * tmpval;
-                  break;
-               }
-            }
+            *maxact -= coefbaseoverlap[maxsortedidx[i]] * tmplowerbds[maxsortedidx[i]];
+            maxlhs += coefotheroverlap[maxsortedidx[i]] * tmplowerbds[maxsortedidx[i]];
          }
 
-         /* consider contribution from case d) */
-         if( !maxinfpresent )
+         /* calculate highest possible variable value */
+         tmpval = maxlhs / coefotheroverlap[maxsortedidx[i]];
+         if( tmpval < tmplowerbds[maxsortedidx[i]] )
          {
-            *maxact += objoffset;
+            /* infeasible */
+            *maxact = SCIPinfinity(scip);
+            break;
          }
 
+         /* if the upper bound is large enough we are ready
+            otherwise we set the variable to its upper bound and iterate */
+         if( tmpval <= tmpupperbds[maxsortedidx[i]] )
+         {
+            *maxact += coefbaseoverlap[maxsortedidx[i]] * tmpval;
+            maxlhs -= coefotheroverlap[maxsortedidx[i]] * tmpval;
+            break;
+         }
+         else
+         {
+            *maxact += coefbaseoverlap[maxsortedidx[i]] * tmpupperbds[maxsortedidx[i]];
+            maxlhs -= coefotheroverlap[maxsortedidx[i]] * tmpupperbds[maxsortedidx[i]];
+         }
       }
    }
    else
