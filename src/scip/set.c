@@ -930,6 +930,9 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->mem_externestim = 0;
    (*set)->sepa_primfeastol = SCIP_INVALID;
 
+   /* the default time limit is infinite */
+   (*set)->istimelimitfinite = FALSE;
+
    /* branching parameters */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "branching/scorefunc",
@@ -1218,7 +1221,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/time",
          "maximal time in seconds to run",
-         &(*set)->limit_time, FALSE, SCIP_DEFAULT_LIMIT_TIME, 0.0, SCIP_REAL_MAX,
+         &(*set)->limit_time, FALSE, SCIP_DEFAULT_LIMIT_TIME, 0.0, SCIP_DEFAULT_LIMIT_TIME,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "limits/nodes",
@@ -2059,9 +2062,6 @@ SCIP_RETCODE SCIPsetCreate(
          "when writing a generic problem the index for the first variable should start with?",
          &(*set)->write_genoffset, FALSE, SCIP_DEFAULT_WRITE_GENNAMES_OFFSET, 0, INT_MAX/2,
          NULL, NULL) );
-
-   /* check if default time limit is finite; if the time limit is changed later, this flag is set accordingly */
-   (*set)->istimelimitfinite = !SCIPsetIsInfinity(*set, SCIP_DEFAULT_LIMIT_TIME);
 
    return SCIP_OKAY;
 }
@@ -4686,7 +4686,7 @@ void SCIPsetSetLimitChanged(
 {
    set->limitchanged = TRUE;
 
-   set->istimelimitfinite = !SCIPsetIsInfinity(set, set->limit_time);
+   set->istimelimitfinite = (set->limit_time < SCIP_DEFAULT_LIMIT_TIME);
 }
 
 /** returns the maximal number of variables priced into the LP per round */

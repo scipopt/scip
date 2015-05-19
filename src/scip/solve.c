@@ -74,7 +74,6 @@ SCIP_Bool SCIPsolveIsStopped(
 {
    assert(set != NULL);
    assert(stat != NULL);
-   assert(set->istimelimitfinite || SCIPsetIsInfinity(set, set->limit_time));
 
    /* increase the number of calls to this method */
    ++stat->nisstoppedcalls;
