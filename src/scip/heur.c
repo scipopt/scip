@@ -111,8 +111,8 @@ void SCIPdivesetUpdateStats(
    int                   depth,              /**< the depth reached this time */
    int                   nprobingnodes,      /**< the number of probing nodes explored this time */
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
-   int                   nsolsfound,         /**< number of new solutions found this time */
-   int                   nbestsolsfound,     /**< number of new best solutions found this time */
+   SCIP_Longint          nsolsfound,         /**< number of new solutions found this time */
+   SCIP_Longint          nbestsolsfound,     /**< number of new best solutions found this time */
    SCIP_Bool             leavesol            /**< has the diving heuristic reached a feasible leaf */
    )
 {
@@ -361,7 +361,7 @@ SCIP_Real SCIPdivesetGetMaxRelDepth(
 }
 
 /** get the number of successful runs of the diving settings */
-int SCIPdivesetGetSolSuccess(
+SCIP_Longint SCIPdivesetGetSolSuccess(
    SCIP_DIVESET*         diveset             /**< diving settings */
    )
 {

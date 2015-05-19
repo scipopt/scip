@@ -209,7 +209,7 @@ SCIP_Real SCIPdivesetGetMaxRelDepth(
 
 /** get the number of successful runs of the diving settings */
 EXTERN
-int SCIPdivesetGetSolSuccess(
+SCIP_Longint SCIPdivesetGetSolSuccess(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
