@@ -225,8 +225,8 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    int previouscandssize;
    int lpcandsscoressize;
    int nviollpcands;
-   int oldnsolsfound;
-   int oldnbestsolsfound;
+   SCIP_Longint oldnsolsfound;
+   SCIP_Longint oldnbestsolsfound;
 
    SCIP_Bool success;
    SCIP_Bool enfosuccess;
@@ -293,8 +293,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    if( SCIPdivesetGetNLPIterations(diveset) + MINLPITER > maxnlpiterations )
       maxnlpiterations = SCIPdivesetGetNLPIterations(diveset) + MINLPITER;
 
-   /* if indicator or SOS1 variables are present, add them to the set of diving candidates */
-   /* todo maybe store those constraints once and not every time */
+   /* these constraint handlers are required for polishing an LP relaxation solution beyond rounding */
    indconshdlr = SCIPfindConshdlr(scip, "indicator");
    sos1conshdlr = SCIPfindConshdlr(scip, "SOS1");
 

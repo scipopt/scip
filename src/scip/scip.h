@@ -14937,8 +14937,8 @@ void SCIPupdateDivesetStats(
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
    int                   nprobingnodes,      /**< the number of probing nodes explored this time */
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
-   int                   nsolsfound,         /**< the number of solutions found */
-   int                   nbestsolsfound,     /**< the number of best solutions found */
+   SCIP_Longint          nsolsfound,         /**< the number of solutions found */
+   SCIP_Longint          nbestsolsfound,     /**< the number of best solutions found */
    SCIP_Bool             leavewassol         /**< was a solution found at the leaf? */
    );
 

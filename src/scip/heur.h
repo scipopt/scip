@@ -74,14 +74,15 @@ void SCIPdivesetReset(
    );
 
 /** update diveset statistics and global diveset statistics */
+extern
 void SCIPdivesetUpdateStats(
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
    SCIP_STAT*            stat,               /**< global SCIP statistics */
    int                   depth,              /**< the depth reached this time */
    int                   nprobingnodes,      /**< the number of probing nodes explored this time */
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
-   int                   nsolsfound,         /**< number of new solutions found this time */
-   int                   nbestsolsfound,     /**< number of new best solutions found this time */
+   SCIP_Longint          nsolsfound,         /**< number of new solutions found this time */
+   SCIP_Longint          nbestsolsfound,     /**< number of new best solutions found this time */
    SCIP_Bool             leavesol            /**< has the diving heuristic reached a feasible leaf */
    );
 
