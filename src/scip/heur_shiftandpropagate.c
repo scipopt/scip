@@ -56,6 +56,7 @@
                                          *   viola(t)ed rows increasing, or (r)andom */
 #define DEFAULT_NOZEROFIXING      FALSE /**< should variables with a zero shifting value be delayed instead of being fixed? */
 #define DEFAULT_FIXBINLOCKS       TRUE  /**< should binary variables with no locks in one direction be fixed to that direction? */
+#define DEFAULT_BINLOCKSFIRST     FALSE  /**< should binary variables with no locks be preferred in the ordering? */
 #define DEFAULT_NORMALIZE         TRUE  /**< should coefficients and left/right hand sides be normalized by max row coeff? */
 #define DEFAULT_UPDATEWEIGHTS     FALSE /**< should row weight be increased every time the row is violated? */
 #define DEFAULT_IMPLISCONTINUOUS   TRUE /**< should implicit integer variables be treated as continuous variables? */
@@ -91,6 +92,7 @@ struct SCIP_HeurData
    SCIP_Bool             preferbinaries;     /**< Should binary variables be shifted first? */
    SCIP_Bool             nozerofixing;       /**< should variables with a zero shifting value be delayed instead of being fixed? */
    SCIP_Bool             fixbinlocks;        /**< should binary variables with no locks in one direction be fixed to that direction? */
+   SCIP_Bool             binlocksfirst;      /**< should binary variables with no locks be preferred in the ordering? */
    SCIP_Bool             normalize;          /**< should coefficients and left/right hand sides be normalized by max row coeff? */
    SCIP_Bool             updateweights;      /**< should row weight be increased every time the row is violated? */
    SCIP_Bool             impliscontinuous;   /**< should implicit integer variables be treated as continuous variables? */
@@ -1604,6 +1606,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    }
    else
       violatedvarrows = NULL;
+
    /* sort variables w.r.t. the sorting key parameter. Sorting is indirect, all matrix column data
     * stays in place, but permutation array gives access to the sorted order of variables
     */
@@ -1696,6 +1699,96 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       }
    }
 
+   /* should binary variables without locks be treated first? */
+   if( heurdata->binlocksfirst )
+   {
+      SCIP_VAR* var;
+      int nbinwithoutlocks = 0;
+
+      /* count number of binaries without locks */
+      if( heurdata->preferbinaries )
+      {
+         for( c = 0; c < nbinvars; ++c )
+         {
+            var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
+            if( SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0 )
+               ++nbinwithoutlocks;
+         }
+      }
+      else
+      {
+         for( c = 0; c < ndiscvars; ++c )
+         {
+            var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
+            if( SCIPvarIsBinary(var) )
+            {
+               if( SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0 )
+                  ++nbinwithoutlocks;
+            }
+         }
+      }
+
+      if( nbinwithoutlocks > 0 )
+      {
+         SCIP_VAR* binvar;
+         int b = 1;
+         int tmp;
+         c = 0;
+
+         /* if c reaches nbinwithoutlocks, then all binary variables without locks were sorted to the beginning of the array */
+         while( c < nbinwithoutlocks && b < ndiscvars )
+         {
+            assert(c < b);
+            assert(c < ndiscvars);
+            assert(b < ndiscvars);
+            var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
+            binvar = SCIPcolGetVar(heurdata->lpcols[permutation[b]]);
+
+            /* search for next variable which is not a binary variable without locks */
+            while( SCIPvarIsBinary(var) && (SCIPvarGetNLocksUp(var) == 0 || SCIPvarGetNLocksDown(var) == 0) )
+            {
+               ++c;
+               if( c >= nbinwithoutlocks )
+                  break;
+               var = SCIPcolGetVar(heurdata->lpcols[permutation[c]]);
+            }
+            if( c >= nbinwithoutlocks )
+               break;
+
+            /* search for next binary variable without locks (with position > c) */
+            if( b <= c )
+            {
+               b = c + 1;
+               binvar = SCIPcolGetVar(heurdata->lpcols[permutation[b]]);
+            }
+            while( !SCIPvarIsBinary(binvar) || (SCIPvarGetNLocksUp(binvar) > 0 && SCIPvarGetNLocksDown(binvar) > 0) )
+            {
+               ++b;
+               assert(b < ndiscvars);
+               binvar = SCIPcolGetVar(heurdata->lpcols[permutation[b]]);
+            }
+
+            /* swap the two variables */
+            tmp = permutation[b];
+            permutation[b] = permutation[c];
+            permutation[c] = tmp;
+
+            /* increase counters */
+            ++c;
+            ++b;
+         }
+      }
+
+#ifndef NDEBUG
+      for( c = 0; c < ndiscvars; ++c )
+      {
+         assert((c < nbinwithoutlocks) == (SCIPvarIsBinary(SCIPcolGetVar(heurdata->lpcols[permutation[c]]))
+               && (SCIPvarGetNLocksUp(SCIPcolGetVar(heurdata->lpcols[permutation[c]])) == 0
+                  || SCIPvarGetNLocksDown(SCIPcolGetVar(heurdata->lpcols[permutation[c]])) == 0)));
+      }
+#endif
+   }
+
    SCIP_CALL( SCIPallocBufferArray(scip, &eventdatas, matrix->ndiscvars) );
    BMSclearMemoryArray(eventdatas, matrix->ndiscvars);
 
@@ -1785,7 +1878,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       SCIPdebugMessage("Variable %s with local bounds [%g,%g], status <%d>, matrix bound <%g>\n",
          SCIPvarGetName(var), lb, ub, status, matrix->upperbounds[permutedvarindex]);
 
-      /* ignore variable if propagation fixed it(lb and ub will be zero) */
+      /* ignore variable if propagation fixed it (lb and ub will be zero) */
       if( SCIPisFeasZero(scip, matrix->upperbounds[permutedvarindex]) )
       {
          assert(!SCIPisInfinity(scip, ub));
@@ -2247,6 +2340,8 @@ SCIP_RETCODE SCIPincludeHeurShiftandpropagate(
          &heurdata->nozerofixing, TRUE, DEFAULT_NOZEROFIXING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/fixbinlocks", "should binary variables with no locks in one direction be fixed to that direction?",
          &heurdata->fixbinlocks, TRUE, DEFAULT_FIXBINLOCKS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/binlocksfirst", "should binary variables with no locks be preferred in the ordering?",
+         &heurdata->binlocksfirst, TRUE, DEFAULT_BINLOCKSFIRST, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/normalize", "should coefficients and left/right hand sides be normalized by max row coeff?",
          &heurdata->normalize, TRUE, DEFAULT_NORMALIZE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/shiftandpropagate/updateweights", "should row weight be increased every time the row is violated?",

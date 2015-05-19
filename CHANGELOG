@@ -158,6 +158,7 @@ parameters:
 - new paramter "misc/allowdualreds" to allow dual reductions
 - new advance parameter "constraints/soc/generalsocupgrade" to allow general quadratics to be upgraded to soc
 - new parameter "limits/softtime" to set a soft time limit (active only after first primal solution was found)
+- new parameter "heuristics/shiftandpropagate/binlocksfirst" to set if binaries without locks should be preferred in ordering
 
 performance improvements:
 - adjusted (hard) diving heuristics to solve fewer LPs at shallow depths of the tree; after an LP was solved,
