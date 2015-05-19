@@ -349,7 +349,7 @@ SCIP_Bool isConnectedSOS1(
 
 /** checks whether a variable violates an SOS1 constraint w.r.t. sol together with at least one other variable */
 static
-SCIP_Bool SCIPisViolatedSOS1(
+SCIP_Bool isViolatedSOS1(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph (or NULL if an adjacencymatrix is at hand) */
    int                   node,               /**< node of variable in the conflict graph */
@@ -394,7 +394,7 @@ SCIP_Bool SCIPisViolatedSOS1(
 
 /** returns solution value of imaginary binary big-M variable of a given node from the conflict graph */
 static
-SCIP_Real SCIPnodeGetSolvalBinaryBigMSOS1(
+SCIP_Real nodeGetSolvalBinaryBigMSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
    SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -444,7 +444,7 @@ SCIP_Real SCIPnodeGetSolvalBinaryBigMSOS1(
 
 /** gets (variable) lower bound value of current LP relaxation solution for a given node from the conflict graph */
 static
-SCIP_Real SCIPnodeGetSolvalVarboundLbSOS1(
+SCIP_Real nodeGetSolvalVarboundLbSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
    SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -471,7 +471,7 @@ SCIP_Real SCIPnodeGetSolvalVarboundLbSOS1(
 
 /** gets (variable) upper bound value of current LP relaxation solution for a given node from the conflict graph */
 static
-SCIP_Real SCIPnodeGetSolvalVarboundUbSOS1(
+SCIP_Real nodeGetSolvalVarboundUbSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
    SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
@@ -2487,7 +2487,7 @@ SCIP_RETCODE computeVarsCoverSOS1(
             /* search for the extension with the largest absolute value of its LP relaxation solution value */
             for (s = 0; s < nextensions; ++s)
             {
-               bigMval = SCIPnodeGetSolvalBinaryBigMSOS1(scip, conflictgraphroot, NULL, extensions[s]);
+               bigMval = nodeGetSolvalBinaryBigMSOS1(scip, conflictgraphroot, NULL, extensions[s]);
                if ( SCIPisFeasLT(scip, bestbigMval, bigMval) )
                {
                   bestbigMval = bigMval;
@@ -4615,7 +4615,7 @@ SCIP_RETCODE getBoundConsFromVertices(
          for (s = 0; s < nextensions; ++s)
          {
             ext = extensions[s];
-            bigMval = SCIPnodeGetSolvalBinaryBigMSOS1(scip, conflictgraph, NULL, ext);
+            bigMval = nodeGetSolvalBinaryBigMSOS1(scip, conflictgraph, NULL, ext);
             if ( SCIPisFeasLT(scip, bestbigMval, bigMval) )
             {
                bestbigMval = bigMval;
@@ -5880,14 +5880,14 @@ SCIP_RETCODE updateWeightsTCliquegraph(
       if ( SCIPisFeasPositive(scip, solval) )
       {
          if ( conshdlrdata->strthenboundcuts )
-            bound = REALABS( SCIPnodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, j) );
+            bound = REALABS( nodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, j) );
          else
             bound = REALABS( SCIPvarGetUbLocal(var) );
       }
       else if ( SCIPisFeasNegative(scip, solval) )
       {
          if ( conshdlrdata->strthenboundcuts )
-            bound = REALABS( SCIPnodeGetSolvalVarboundLbSOS1(scip, conflictgraph, sol, j) );
+            bound = REALABS( nodeGetSolvalVarboundLbSOS1(scip, conflictgraph, sol, j) );
          else
             bound = REALABS( SCIPvarGetLbLocal(var) );
       }
@@ -6290,14 +6290,14 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
          if ( SCIPisFeasPositive(scip, solval) )
          {
             if ( tcliquedata->strthenboundcuts )
-               bound = REALABS( SCIPnodeGetSolvalVarboundUbSOS1(scip, tcliquedata->conflictgraph, sol, node) );
+               bound = REALABS( nodeGetSolvalVarboundUbSOS1(scip, tcliquedata->conflictgraph, sol, node) );
             else
                bound = REALABS( SCIPvarGetUbLocal(var) );
          }
          else if ( SCIPisFeasNegative(scip, solval) )
          {
             if ( tcliquedata->strthenboundcuts )
-               bound = REALABS( SCIPnodeGetSolvalVarboundLbSOS1(scip, tcliquedata->conflictgraph, sol, node) );
+               bound = REALABS( nodeGetSolvalVarboundLbSOS1(scip, tcliquedata->conflictgraph, sol, node) );
             else
                bound = REALABS( SCIPvarGetLbLocal(var) );
          }
@@ -7570,46 +7570,49 @@ SCIP_RETCODE checkSwitchNonoverlappingSOS1Methods(
    int c;
 
    /* loop through all SOS1 constraints */
-   for (c = 0; c < nconss && nonoverlap; ++c)
+   if ( conshdlrdata->nsos1vars > 0 )
    {
-      SCIP_CONSDATA* consdata;
-      SCIP_VAR** vars;
-      int notfixed = 0;
-      int nvars;
-      int i;
-
-      assert( conss[c] != NULL );
-
-      /* get constraint data field of the constraint */
-      consdata = SCIPconsGetData(conss[c]);
-      assert( consdata != NULL );
-
-      /* get variables and number of variables of constraint */
-      nvars = consdata->nvars;
-      vars = consdata->vars;
-
-      /* get number of variables of SOS1 constraint that are not fixed to zero */
-      for (i = 0; i < nvars; ++i)
+      for (c = 0; c < nconss && nonoverlap; ++c)
       {
-         if ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(vars[i])) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(vars[i])) )
-            ++notfixed;
-      }
+         SCIP_CONSDATA* consdata;
+         SCIP_VAR** vars;
+         int notfixed = 0;
+         int nvars;
+         int i;
 
-      /* check variables of SOS1 constraint */
-      for (i = 0; i < nvars; ++i)
-      {
-         int node;
+         assert( conss[c] != NULL );
 
-         assert( vars[i] != NULL );
+         /* get constraint data field of the constraint */
+         consdata = SCIPconsGetData(conss[c]);
+         assert( consdata != NULL );
 
-         node = varGetNodeSOS1(conshdlrdata, vars[i]);
-         assert( node >= 0 || ( SCIPisFeasZero(scip, SCIPvarGetLbLocal(vars[i])) && SCIPisFeasZero(scip, SCIPvarGetUbLocal(vars[i]))) );
-         assert( node < conshdlrdata->nsos1vars );
-         assert( node < 0 || SCIPdigraphGetNSuccessors(conflictgraph, node) >= notfixed-1 );
-         if ( node >= 0 && SCIPdigraphGetNSuccessors(conflictgraph, node) > notfixed-1 )
+         /* get variables and number of variables of constraint */
+         nvars = consdata->nvars;
+         vars = consdata->vars;
+
+         /* get number of variables of SOS1 constraint that are not fixed to zero */
+         for (i = 0; i < nvars; ++i)
          {
-            nonoverlap = FALSE;
-            break;
+            if ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(vars[i])) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(vars[i])) )
+               ++notfixed;
+         }
+
+         /* check variables of SOS1 constraint */
+         for (i = 0; i < nvars; ++i)
+         {
+            int node;
+
+            assert( vars[i] != NULL );
+
+            node = varGetNodeSOS1(conshdlrdata, vars[i]);
+            assert( node >= 0 || ( SCIPisFeasZero(scip, SCIPvarGetLbLocal(vars[i])) && SCIPisFeasZero(scip, SCIPvarGetUbLocal(vars[i]))) );
+            assert( node < conshdlrdata->nsos1vars );
+            assert( node < 0 || SCIPdigraphGetNSuccessors(conflictgraph, node) >= notfixed-1 );
+            if ( node >= 0 && SCIPdigraphGetNSuccessors(conflictgraph, node) > notfixed-1 )
+            {
+               nonoverlap = FALSE;
+               break;
+            }
          }
       }
    }
@@ -9161,7 +9164,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
    for (v = 0; v < nsos1vars; ++v)
    {
       /* check whether the variable violates an SOS1 constraint together with at least one other variable */
-      if ( SCIPisViolatedSOS1(scip, conflictgraph, v, sol) )
+      if ( isViolatedSOS1(scip, conflictgraph, v, sol) )
       {
          SCIP_VAR* var;
          SCIP_Real solval;
@@ -9175,9 +9178,9 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
 
          /* compute (variable) bound of candidate */
          if ( SCIPisFeasNegative(scip, solval) )
-            bound = SCIPnodeGetSolvalVarboundLbSOS1(scip, conflictgraph, sol, v);
+            bound = nodeGetSolvalVarboundLbSOS1(scip, conflictgraph, sol, v);
          else
-            bound = SCIPnodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, v);
+            bound = nodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, v);
 
          /* ensure finiteness */
          bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound));/*lint !e666*/
