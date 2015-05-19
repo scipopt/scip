@@ -2765,7 +2765,7 @@ SCIP_RETCODE prepareCons(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->nvars > 1);
+   assert(consdata->nvars > 0);
 
    *redundant = FALSE;
 
