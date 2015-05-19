@@ -37,8 +37,6 @@
                                               *   strong branching phase, which however seems to mostly increase strong
                                               *   branching time and iterations */
 
-#define WITH_BOUNDFLIPPING                   /**< enable bound flipping ratio test */
-
 /* in this case the SoPlex results are double checked using CPLEX */
 #ifdef WITH_LPSCHECK
 #include <cplex.h>
@@ -269,7 +267,6 @@ public:
       setPricer(&m_price_steep); /*lint !e1506*/
 #if ((SOPLEX_VERSION == 170 && SOPLEX_SUBVERSION >= 2) || SOPLEX_VERSION > 170)
       SPxSolver::setMaxUpdates(500);
-      SPxSolver::hyperPricing(true);
 #endif
       /* no starter */
 
