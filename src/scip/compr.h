@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   compress.h
+/**@file   compr.h
  * @brief  internal methods for tree compressions
  * @author Jakob Witzig
  */

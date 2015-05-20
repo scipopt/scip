@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   compress.c
+/**@file   compr.c
  * @brief  methods for tree compressions
  * @author Jakob Witzig
  */

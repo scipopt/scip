@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   type_compress.h
+/**@file   type_compr.h
  * @ingroup TYPEDEFINITIONS
  * @brief  type definitions for tree compression
  * @author Jakob Witzig

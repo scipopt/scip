@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   struct_heur.h
+/**@file   struct_compr.h
  * @brief  datastructures for tree compression techniques
  * @author Jakob Witzig
  */
