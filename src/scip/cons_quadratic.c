@@ -1625,6 +1625,7 @@ SCIP_RETCODE consdataSortBilinTerms(
          consdata->quadvarterms[v].adjbilin[i] = invperm[consdata->quadvarterms[v].adjbilin[i]];
 
    consdata->bilinsorted = TRUE;
+   assert(consdataCheckBilinTermsSort(consdata));
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &perm);
@@ -1632,6 +1633,30 @@ SCIP_RETCODE consdataSortBilinTerms(
 
    return SCIP_OKAY;
 }
+
+#ifndef NDEBUG
+/** checks if all bilinear terms are sorted correctly */
+static
+SCIP_Bool consdataCheckBilinTermsSort(
+   SCIP_CONSDATA* consdata
+   )
+{
+   int i;
+
+   assert(consdata != NULL);
+
+   /* nothing to check if the bilinear terms have not been sorted yet */
+   if( !consdata->bilinsorted )
+      return TRUE;
+
+   for( i = 0; i < consdata->nbilinterms - 1; ++i )
+   {
+      if( bilinTermComp(consdata, i, i+1) > 0 )
+         return FALSE;
+   }
+   return TRUE;
+}
+#endif
 
 /** moves a linear variable from one position to another */
 static
@@ -2310,6 +2335,9 @@ SCIP_RETCODE addBilinearTerm(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   /* check if the bilinear terms are sorted */
+   assert(consdataCheckBilinTermsSort(consdata));
+
    assert(var1pos >= 0);
    assert(var1pos < consdata->nquadvars);
    assert(var2pos >= 0);
@@ -2372,6 +2400,9 @@ SCIP_RETCODE addBilinearTerm(
    }
 
    consdata->iscurvchecked = FALSE;
+
+   /* check if the bilinear terms are sorted */
+   assert(consdataCheckBilinTermsSort(consdata));
 
    return SCIP_OKAY;
 }
@@ -2666,6 +2697,9 @@ SCIP_RETCODE mergeAndCleanBilinearTerms(
 
    consdata = SCIPconsGetData(cons);
 
+   /* check if the bilinear terms are sorted */
+   assert(consdataCheckBilinTermsSort(consdata));
+
    if( consdata->bilinmerged )
       return SCIP_OKAY;
 
@@ -2710,6 +2744,9 @@ SCIP_RETCODE mergeAndCleanBilinearTerms(
    SCIPfreeBufferArray(scip, &todelete);
 
    consdata->bilinmerged = TRUE;
+
+   /* check if the bilinear terms are sorted */
+   assert(consdataCheckBilinTermsSort(consdata));
 
    return SCIP_OKAY;
 }
