@@ -3537,6 +3537,9 @@ GENERALUPG:
    rhsvarfound = FALSE;
    for( i = 0; i < nquadvars; ++i )
    {
+      if( SCIPisZero(scip, eigvals[i]) )
+         continue;
+
       term = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
 
       if( eigvals[i] > 0.0 )
@@ -3617,7 +3620,7 @@ GENERALUPG:
          }
          else
          {
-            SCIPdebugMessage("Fail because rhsvar [%g, %g] changes sign.\n", rhsvarlb, rhsvarub);
+            SCIPdebugMessage("Failed because rhsvar [%g, %g] changes sign.\n", rhsvarlb, rhsvarub);
             rhsvarfound = FALSE;
             break;
          }
@@ -3732,6 +3735,19 @@ GENERALUPG:
                   SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
       }
    }
+#ifdef SCIP_DEBUG
+   else
+   {
+      if( lhscount < 2 )
+      {
+         SCIPdebugMessage("Failed because there are not enough lhsvars (%d)\n", lhscount);
+      }
+      if( SCIPisNegative(scip, lhsconstant) )
+      {
+         SCIPdebugMessage("Failed because lhsconstant is negative (%g)\n", lhsconstant);
+      }
+   }
+#endif
 
  cleanup:
    SCIPfreeBufferArray(scip, &lhsvars);
