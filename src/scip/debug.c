@@ -1480,7 +1480,7 @@ SCIP_RETCODE SCIPdebugIncludeProp(
 
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, "debug", "debugging propagator", 99999999, -1, FALSE,
-         SCIP_PROPTIMING_ALWAYS, 99999999, 0, FALSE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+         SCIP_PROPTIMING_ALWAYS, 99999999, 0, SCIP_PRESOLTIMING_FAST, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
          NULL, propExecDebug, NULL, NULL) );
 
    return SCIP_OKAY;
