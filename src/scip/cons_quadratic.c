@@ -13778,16 +13778,18 @@ SCIP_RETCODE SCIPchgRhsQuadratic(
 }
 
 /** gets the feasibility of the quadratic constraint in the given solution */
-SCIP_Real SCIPgetFeasibilityQuadratic(
+SCIP_RETCODE SCIPgetFeasibilityQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
+   SCIP_Real*            feasibility         /**< pointer to store the feasibility */
    )
 {
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(feasibility != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13801,29 +13803,34 @@ SCIP_Real SCIPgetFeasibilityQuadratic(
    assert(consdata != NULL);
 
    if( SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, -consdata->lhs) )
-      return SCIPinfinity(scip);
+      *feasibility = SCIPinfinity(scip);
    else if( SCIPisInfinity(scip, -consdata->lhs) )
-      return (consdata->rhs - consdata->activity);
+      *feasibility = (consdata->rhs - consdata->activity);
    else if( SCIPisInfinity(scip, consdata->rhs) )
-      return (consdata->activity - consdata->lhs);
+      *feasibility = (consdata->activity - consdata->lhs);
+   else
+   {
+      assert(!SCIPisInfinity(scip, -consdata->rhs));
+      assert(!SCIPisInfinity(scip, consdata->lhs));
+      *feasibility = MIN( consdata->rhs - consdata->activity, consdata->activity - consdata->lhs );
+   }
 
-   assert(!SCIPisInfinity(scip, -consdata->rhs));
-   assert(!SCIPisInfinity(scip, consdata->lhs));
-
-   return MIN( consdata->rhs - consdata->activity, consdata->activity - consdata->lhs );
+   return SCIP_OKAY;
 }
 
 /** gets the activity of the quadratic constraint in the given solution */
-SCIP_Real SCIPgetActivityQuadratic(
+SCIP_RETCODE SCIPgetActivityQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
+   SCIP_Real*            activity            /**< pointer to store the activity */
    )
 {
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(activity != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13836,8 +13843,9 @@ SCIP_Real SCIPgetActivityQuadratic(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   return consdata->activity;
+   *activity = consdata->activity;
 
+   return SCIP_OKAY;
 }
 
 /** changes the linear coefficient value for a given quadratic variable in a quadratic constraint data; if not

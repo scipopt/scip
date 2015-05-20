@@ -175,6 +175,8 @@ performance improvements:
 - improved propagation of SOS1 constraint handler using the information from a conflict
 
 interface:
+- SCIPgetFeasibilityQuadratic() and SCIPgetActivityQuadratic() returns now a SCIP_RETCODE and needs an additional SCIP_Real* to
+  store the result
 - new method SCIPwriteParam() to write a single parameter to a file
 - new methods SCIPcheckParam{Bool,Char,...}() to check whether a parameter value is within the feasible domain
 - new methods SCIPchgCoefLinear() and SCIPdelCoefLinear() to modify linear constraint during problem creation
