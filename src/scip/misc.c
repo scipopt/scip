@@ -7601,7 +7601,7 @@ SCIP_Real SCIPselectSimpleValue(
  * Random Numbers
  */
 
-#ifdef NO_RAND_R
+#if defined(NO_RAND_R) || defined(_WIN32) || defined(_WIN64)
 
 #define SCIP_RAND_MAX 32767
 /** returns a random number between 0 and SCIP_RAND_MAX */

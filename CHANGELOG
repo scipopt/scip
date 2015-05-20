@@ -231,6 +231,7 @@ fixed bugs:
 - fix potential memory leak in method SCIPgetConsCopy()
 - fix potential memory leak in method detectRedundantConstraints() of the knapsack constraint handler
 - fix potential memory leak in SoPlex LP interfaces when setting invalid basis
+- fix call to random generator for Windows operating systems in misc.c
 
 SCIP version 3.1.2
 ==================
