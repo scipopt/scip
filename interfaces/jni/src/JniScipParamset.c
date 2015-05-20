@@ -34,7 +34,7 @@ JNIEXPORT
 jint JNISCIPPARAMSET(paramGetType)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
    SCIP_PARAM* param;
@@ -62,7 +62,7 @@ JNIEXPORT
 jstring JNISCIPPARAMSET(paramGetName)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong						 jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -87,7 +87,7 @@ JNIEXPORT
 jstring JNISCIPPARAMSET(paramGetDesc)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -112,7 +112,7 @@ JNIEXPORT
 jlong JNISCIPPARAMSET(paramGetData)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -129,7 +129,7 @@ JNIEXPORT
 jboolean JNISCIPPARAMSET(paramIsAdvanced)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -149,7 +149,7 @@ JNIEXPORT
 jboolean JNISCIPPARAMSET(paramIsFixed)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -169,7 +169,7 @@ JNIEXPORT
 void JNISCIPPARAMSET(paramSetFixed)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                jparam,             /**< parameter */
+   jlong                 jparam,             /**< parameter */
    jboolean              jfixed              /**< new fixing status of the parameter */
    )
 {
@@ -187,7 +187,7 @@ JNIEXPORT
 jboolean JNISCIPPARAMSET(paramGetBool)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -208,7 +208,7 @@ JNIEXPORT
 jboolean JNISCIPPARAMSET(paramGetBoolDefault)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -229,7 +229,7 @@ JNIEXPORT
 jint JNISCIPPARAMSET(paramGetInt)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -250,7 +250,7 @@ JNIEXPORT
 jint JNISCIPPARAMSET(paramGetIntMin)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -271,7 +271,7 @@ JNIEXPORT
 jint JNISCIPPARAMSET(paramGetIntMax)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -292,7 +292,7 @@ JNIEXPORT
 jint JNISCIPPARAMSET(paramGetIntDefault)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong               jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -313,7 +313,7 @@ JNIEXPORT
 jlong JNISCIPPARAMSET(paramGetLongint)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong               jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -334,7 +334,7 @@ JNIEXPORT
 jlong JNISCIPPARAMSET(paramGetLongintMin)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong               jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -355,7 +355,7 @@ JNIEXPORT
 jlong JNISCIPPARAMSET(paramGetLongintMax)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong               jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -376,7 +376,7 @@ JNIEXPORT
 jlong JNISCIPPARAMSET(paramGetLongintDefault)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong               jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -397,7 +397,7 @@ JNIEXPORT
 jdouble JNISCIPPARAMSET(paramGetReal)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong               jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -418,7 +418,7 @@ JNIEXPORT
 jdouble JNISCIPPARAMSET(paramGetRealMin)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong               jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -439,7 +439,7 @@ JNIEXPORT
 jdouble JNISCIPPARAMSET(paramGetRealMax)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong               jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -460,7 +460,7 @@ JNIEXPORT
 jdouble JNISCIPPARAMSET(paramGetRealDefault)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong               jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -481,7 +481,7 @@ JNIEXPORT
 jchar JNISCIPPARAMSET(paramGetChar)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong               jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -502,7 +502,7 @@ JNIEXPORT
 jchar JNISCIPPARAMSET(paramGetCharDefault)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong               jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -523,12 +523,12 @@ JNIEXPORT
 jstring JNISCIPPARAMSET(paramGetString)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong               jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
 	const char* value;
-	jstring jvalue;
+	jstring jval;
 
 	/* convert JNI pointer into C pointer */
 	param = (SCIP_PARAM*) (size_t) jparam;
@@ -538,9 +538,9 @@ jstring JNISCIPPARAMSET(paramGetString)(
 	value=SCIPparamGetString(param);
 
 	/* convert char* into jstring */
-	jvalue=(*env)->NewStringUTF(env, value);
+	jval=(*env)->NewStringUTF(env, value);
 
-	return jvalue;
+	return jval;
 }
 
 /** returns default value of String parameter */
@@ -548,7 +548,7 @@ JNIEXPORT
 jstring JNISCIPPARAMSET(paramGetStringDefault)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong               jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
@@ -573,7 +573,7 @@ JNIEXPORT
 jboolean JNISCIPPARAMSET(paramIsDefault)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
-   jlong                jparam              /**< parameter */
+   jlong                 jparam              /**< parameter */
    )
 {
 	SCIP_PARAM* param;
