@@ -1556,6 +1556,30 @@ SCIP_DECL_SORTINDCOMP(bilinTermComp)
    return SCIPvarCompare(consdata->bilinterms[ind1].var2, consdata->bilinterms[ind2].var2);
 }
 
+#ifndef NDEBUG
+/** checks if all bilinear terms are sorted correctly */
+static
+SCIP_Bool consdataCheckBilinTermsSort(
+   SCIP_CONSDATA* consdata
+   )
+{
+   int i;
+
+   assert(consdata != NULL);
+
+   /* nothing to check if the bilinear terms have not been sorted yet */
+   if( !consdata->bilinsorted )
+      return TRUE;
+
+   for( i = 0; i < consdata->nbilinterms - 1; ++i )
+   {
+      if( bilinTermComp(consdata, i, i+1) > 0 )
+         return FALSE;
+   }
+   return TRUE;
+}
+#endif
+
 /** sorting of bilinear terms */
 static
 SCIP_RETCODE consdataSortBilinTerms(
@@ -1633,30 +1657,6 @@ SCIP_RETCODE consdataSortBilinTerms(
 
    return SCIP_OKAY;
 }
-
-#ifndef NDEBUG
-/** checks if all bilinear terms are sorted correctly */
-static
-SCIP_Bool consdataCheckBilinTermsSort(
-   SCIP_CONSDATA* consdata
-   )
-{
-   int i;
-
-   assert(consdata != NULL);
-
-   /* nothing to check if the bilinear terms have not been sorted yet */
-   if( !consdata->bilinsorted )
-      return TRUE;
-
-   for( i = 0; i < consdata->nbilinterms - 1; ++i )
-   {
-      if( bilinTermComp(consdata, i, i+1) > 0 )
-         return FALSE;
-   }
-   return TRUE;
-}
-#endif
 
 /** moves a linear variable from one position to another */
 static
