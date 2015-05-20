@@ -2367,7 +2367,7 @@ SCIP_RETCODE addBilinearTerm(
    else
    {
       consdata->bilinsorted = consdata->bilinsorted
-         && (bilinTermComp(consdata, consdata->nbilinterms-2, consdata->nbilinterms-1) >= 0);
+         && (bilinTermComp(consdata, consdata->nbilinterms-2, consdata->nbilinterms-1) <= 0);
       consdata->bilinmerged = FALSE;
    }
 
