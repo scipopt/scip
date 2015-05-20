@@ -537,7 +537,7 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
       SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
 
       newcoef = SCIPvarGetObj(origvar);
-      oldcoef = SCIPgetReoptOldObjCoef(scip, origvar, SCIPgetNReoptRuns(scip)-1);
+      SCIP_CALL( SCIPgetReoptOldObjCoef(scip, origvar, SCIPgetNReoptRuns(scip)-1, &oldcoef) );
       newcoefabs = fabs(newcoef);
       oldcoefabs = fabs(oldcoef);
 

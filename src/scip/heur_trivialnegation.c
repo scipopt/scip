@@ -128,7 +128,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
          SCIP_Bool changed;
 
          newcoef = SCIPvarGetObj(origvar);
-         oldcoef = SCIPgetReoptOldObjCoef(scip, origvar, SCIPgetNReoptRuns(scip)-1);
+         SCIP_CALL( SCIPgetReoptOldObjCoef(scip, origvar, SCIPgetNReoptRuns(scip)-1, &oldcoef) );
 
          /* check if variable entered or left the objective, or if its objective coefficient changed sign */
          changed = SCIPisZero(scip, oldcoef) != SCIPisZero(scip, newcoef);

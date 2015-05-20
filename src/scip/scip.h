@@ -6285,10 +6285,11 @@ SCIP_SOL* SCIPgetReoptLastOptSol(
 
 /* returns the objective coefficent of a given variable in a previous iteration */
 EXTERN
-SCIP_Real SCIPgetReoptOldObjCoef(
+SCIP_RETCODE SCIPgetReoptOldObjCoef(
    SCIP*                 scip,                    /**< SCIP data structure */
    SCIP_VAR*             var,                     /**< variable */
-   int                   run                      /**< number of the run */
+   int                   run,                     /**< number of the run */
+   SCIP_Real*            objcoef                  /**< pointer to store the objective coefficient */
    );
 
 /** returns whether we are in the restarting phase

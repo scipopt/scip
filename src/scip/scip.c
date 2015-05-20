@@ -14717,10 +14717,11 @@ SCIP_SOL* SCIPgetReoptLastOptSol(
 }
 
 /* returns the objective coefficent of a given variable in a previous iteration */
-SCIP_Real SCIPgetReoptOldObjCoef(
+SCIP_RETCODE SCIPgetReoptOldObjCoef(
    SCIP*                 scip,                    /**< SCIP data structure */
    SCIP_VAR*             var,                     /**< variable */
-   int                   run                      /**< number of the run */
+   int                   run,                     /**< number of the run */
+   SCIP_Real*            objcoef                  /**< pointer to store the objective coefficient */
    )
 {
    assert(scip != NULL);
@@ -14729,7 +14730,8 @@ SCIP_Real SCIPgetReoptOldObjCoef(
 
    if( SCIPvarIsOriginal(var) )
    {
-      return SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetIndex(var));
+      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetIndex(var));
+      return SCIP_OKAY;
    }
    else
    {
@@ -14742,7 +14744,8 @@ SCIP_Real SCIPgetReoptOldObjCoef(
       scalar = 1.0;
       SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
 
-      return SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetIndex(origvar));
+      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetIndex(origvar));
+      return SCIP_OKAY;
    }
 }
 
