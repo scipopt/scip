@@ -2738,48 +2738,48 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
       return SCIP_PARAMETERWRONGVAL;
 
    /* only call separator, if we are not close to terminating */
-    if ( SCIPisStopped(scip) )
-       return SCIP_OKAY;
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
 
-    /* skip if the LP is not constructed yet */
-    if( !SCIPisNLPConstructed(scip) )
-    {
-       SCIPdebugMessage("Skip since NLP is not constructed yet.\n");
-       return SCIP_OKAY;
-    }
+   /* skip if the LP is not constructed yet */
+   if( !SCIPisNLPConstructed(scip) )
+   {
+      SCIPdebugMessage("Skip since NLP is not constructed yet.\n");
+      return SCIP_OKAY;
+   }
 
-    depth = SCIPgetDepth(scip);
+   depth = SCIPgetDepth(scip);
 
-    /* only call separator up to a maximum depth */
-    if ( sepadata->maxdepth >= 0 && depth > sepadata->maxdepth )
-       return SCIP_OKAY;
+   /* only call separator up to a maximum depth */
+   if ( sepadata->maxdepth >= 0 && depth > sepadata->maxdepth )
+      return SCIP_OKAY;
 
-    /* only call separator a given number of times at each node */
-    ncalls = SCIPsepaGetNCallsAtNode(sepa);
-    if ( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
-       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
-       return SCIP_OKAY;
+   /* only call separator a given number of times at each node */
+   ncalls = SCIPsepaGetNCallsAtNode(sepa);
+   if ( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
+      || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
+      return SCIP_OKAY;
 
-    /* search for nonlinear row aggregations */
-    if( !sepadata->searchedforaggr )
-    {
-       int i;
+   /* search for nonlinear row aggregations */
+   if( !sepadata->searchedforaggr )
+   {
+      int i;
 
-       SCIPstatistic( sepadata->aggrsearchtime -= SCIPgetTotalTime(scip) );
+      SCIPstatistic( sepadata->aggrsearchtime -= SCIPgetTotalTime(scip) );
 
-       SCIPdebugMessage("search for nonlinear row aggregations\n");
-       for( i = 0; i < SCIPgetNNLPNlRows(scip); ++i )
-       {
-          SCIP_NLROW* nlrow = SCIPgetNLPNlRows(scip)[i];
-          SCIP_CALL( findAndStoreEcAggregations(scip, sepadata, nlrow, NULL) );
-       }
-       sepadata->searchedforaggr = TRUE;
+      SCIPdebugMessage("search for nonlinear row aggregations\n");
+      for( i = 0; i < SCIPgetNNLPNlRows(scip); ++i )
+      {
+         SCIP_NLROW* nlrow = SCIPgetNLPNlRows(scip)[i];
+         SCIP_CALL( findAndStoreEcAggregations(scip, sepadata, nlrow, NULL) );
+      }
+      sepadata->searchedforaggr = TRUE;
 
-       SCIPstatistic( sepadata->aggrsearchtime += SCIPgetTotalTime(scip) );
-    }
+      SCIPstatistic( sepadata->aggrsearchtime += SCIPgetTotalTime(scip) );
+   }
 
-    /* search for edge-concave cuts */
-    SCIP_CALL( separateCuts(scip, sepa, sepadata, NULL, result) );
+   /* search for edge-concave cuts */
+   SCIP_CALL( separateCuts(scip, sepa, sepadata, NULL, result) );
 
    return SCIP_OKAY;
 }
