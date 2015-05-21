@@ -224,6 +224,7 @@ interface:
   in cons_quadratic.h to compute linear under- and overestimation for bilinear and quadratic terms
 
 fixed bugs:
+- fixed bug in intervalarith.c: bivariate quadratic equations may have been solved wrongly if second variable is unbounded
 - fix wrong sorting of bilinear terms in cons_quadratic
 - fix wrong comparisons of values larger/less than +/- SCIPinfinity() in branch.c, lp.c, and sol.c
 - fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)

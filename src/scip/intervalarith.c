@@ -3409,17 +3409,24 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          /* check limit of +/-sqrt(r(rhs,y))-b(y) for y -> -infty */
          if( !EPSZ(ay, 1e-9) && axy * axy >= 4.0 * ax * ay )
          {
-            if( axy < 0.0 || ay < 0.0 )
+            if( axy < 0.0 )
+            {
                minvalleft = -infinity;
 
-            if( axy < 0.0 && ay > 0.0 )
-               maxvalleft =  infinity;
-
-            if( axy > 0.0 && ay > 0.0 )
-               minvalleft = -infinity;
-
-            if( axy > 0.0 || ay < 0.0 )
+               if( ay > 0.0 )
+                  minvalright = -infinity;
+               else
+                  maxvalright = infinity;
+            }
+            else
+            {
                maxvalright = infinity;
+
+               if( ay > 0.0 )
+                  maxvalleft = infinity;
+               else
+                  minvalleft = -infinity;
+            }
          }
          else if( !EPSZ(ay, 1e-9) )
          {
@@ -3476,17 +3483,24 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          /* check limit of +/-sqrt(r(rhs,y))-b(y) for y -> +infty */
          if( !EPSZ(ay, 1e-9) && axy * axy >= 4.0 * ax * ay )
          {
-            if( axy > 0.0 || ay < 0.0 )
-               minvalleft  = -infinity;
+            if( axy > 0.0 )
+            {
+               minvalleft = -infinity;
 
-            if( axy < 0.0 && ay > 0.0 )
-               maxvalleft  =  infinity;
+               if( ay > 0.0 )
+                  minvalright = -infinity;
+               else
+                  maxvalright = infinity;
+            }
+            else
+            {
+               maxvalright = infinity;
 
-            if( axy > 0.0 && ay > 0.0 )
-               minvalright = -infinity;
-
-            if( axy < 0.0 || ay < 0.0 )
-               maxvalright =  infinity;
+               if( ay > 0.0 )
+                  maxvalleft = infinity;
+               else
+                  minvalleft = -infinity;
+            }
          }
          else if( !EPSZ(ay, 1e-9) )
          {
