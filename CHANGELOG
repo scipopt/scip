@@ -175,6 +175,8 @@ performance improvements:
 - improved propagation of SOS1 constraint handler using the information from a conflict
 
 interface:
+- SCIPintervalSign(),  SCIPintervalAbs(), SCIPintervalMax(), SCIPintervalMin(), SCIPexprgraphGetNodePolynomialMonomialCurvature(),
+  and SCIPexprgraphTightenNodeBounds() need an infinity value to decide whether an interval is empty or not
 - SCIPgetFeasibilityQuadratic() and SCIPgetActivityQuadratic() returns now a SCIP_RETCODE and needs an additional SCIP_Real* to
   store the result
 - new method SCIPwriteParam() to write a single parameter to a file
@@ -224,6 +226,7 @@ interface:
   in cons_quadratic.h to compute linear under- and overestimation for bilinear and quadratic terms
 
 fixed bugs:
+- fix handling of infinite intervals in SCIPintervalIsEmpty()
 - fix potentially tightening of LB/UB of a variable to +/- infinity in cons_quadratic
 - fix spatial branching on implicit integer variables
 - fixed bug in intervalarith.c: bivariate quadratic equations may have been solved wrongly if second variable is unbounded

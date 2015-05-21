@@ -132,6 +132,7 @@ void SCIPintervalSetEmpty(
 /** indicates whether interval is empty, i.e., whether inf > sup */
 extern
 SCIP_Bool SCIPintervalIsEmpty(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
@@ -537,6 +538,7 @@ void SCIPintervalLog(
 /** stores minimum of operands in resultant */
 extern
 void SCIPintervalMin(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
@@ -545,6 +547,7 @@ void SCIPintervalMin(
 /** stores maximum of operands in resultant */
 extern
 void SCIPintervalMax(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
@@ -553,6 +556,7 @@ void SCIPintervalMax(
 /** stores absolute value of operand in resultant */
 extern
 void SCIPintervalAbs(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
@@ -560,6 +564,7 @@ void SCIPintervalAbs(
 /** stores sign of operand in resultant */
 extern
 void SCIPintervalSign(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand             /**< operand of operation */
    );

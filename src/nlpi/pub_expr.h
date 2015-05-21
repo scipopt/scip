@@ -1172,6 +1172,7 @@ EXTERN
 SCIP_RETCODE SCIPexprgraphGetNodePolynomialMonomialCurvature(
    SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node */
    int                   monomialidx,        /**< index of monomial */
+   SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
    SCIP_EXPRCURV*        curv                /**< buffer to store monomial curvature */
    );
 
@@ -1413,6 +1414,7 @@ void SCIPexprgraphTightenNodeBounds(
    SCIP_EXPRGRAPHNODE*   node,               /**< node in expression graph with no parents */
    SCIP_INTERVAL         nodebounds,         /**< new bounds for node */
    SCIP_Real             minstrength,        /**< minimal required relative bound strengthening in a node to trigger a propagation into children nodes (set to negative value if propagation should always be triggered) */
+   SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
    SCIP_Bool*            cutoff              /**< buffer to store whether a node's bounds were propagated to an empty interval */
    );
 

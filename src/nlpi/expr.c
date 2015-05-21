@@ -2157,7 +2157,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntMin )
    assert(result  != NULL);
    assert(argvals != NULL);
 
-   SCIPintervalMin(result, argvals[0], argvals[1]);
+   SCIPintervalMin(infinity, result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
 }
@@ -2200,7 +2200,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntMax )
    assert(result  != NULL);
    assert(argvals != NULL);
 
-   SCIPintervalMax(result, argvals[0], argvals[1]);
+   SCIPintervalMax(infinity, result, argvals[0], argvals[1]);
 
    return SCIP_OKAY;
 }
@@ -2242,7 +2242,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntAbs )
    assert(result  != NULL);
    assert(argvals != NULL);
 
-   SCIPintervalAbs(result, argvals[0]);
+   SCIPintervalAbs(infinity, result, argvals[0]);
 
    return SCIP_OKAY;
 }
@@ -2291,7 +2291,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntSign )
    assert(result  != NULL);
    assert(argvals != NULL);
 
-   SCIPintervalSign(result, argvals[0]);
+   SCIPintervalSign(infinity, result, argvals[0]);
 
    return SCIP_OKAY;
 }
@@ -2954,7 +2954,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntPolynomial )
          if( exponent == 0.5 )
          {
             SCIPintervalSquareRoot(infinity, &childval, childval);
-            if( SCIPintervalIsEmpty(childval) )
+            if( SCIPintervalIsEmpty(infinity, childval) )
             {
                SCIPintervalSetEmpty(result);
                break;
@@ -2974,7 +2974,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntPolynomial )
          else
          {
             SCIPintervalPowerScalar(infinity, &childval, childval, exponent);
-            if( SCIPintervalIsEmpty(childval) )
+            if( SCIPintervalIsEmpty(infinity, childval) )
             {
                SCIPintervalSetEmpty(result);
                return SCIP_OKAY;
@@ -2983,7 +2983,7 @@ SCIP_DECL_EXPRINTEVAL( exprevalIntPolynomial )
          }
 
          /* the cases in which monomialval gets empty should have been catched */
-         assert(!SCIPintervalIsEmpty(monomialval));
+         assert(!SCIPintervalIsEmpty(infinity, monomialval));
       }
 
       SCIPintervalAdd(infinity, result, *result, monomialval);
@@ -9980,7 +9980,7 @@ SCIP_RETCODE exprgraphNodeUpdateBounds(
    {
       /* child should have valid and non-empty bounds */
       assert(!(node->children[i]->boundstatus & SCIP_EXPRBOUNDSTATUS_CHILDRELAXED));
-      assert(!SCIPintervalIsEmpty(node->children[i]->bounds));
+      assert(!SCIPintervalIsEmpty(infinity, node->children[i]->bounds));
 
       childbounds[i] = node->children[i]->bounds;  /*lint !e644*/
    }
@@ -10052,7 +10052,7 @@ void exprgraphNodePropagateBounds(
    assert(node->pos >= 0);   /* node should be in graph */
    assert(minstrength >= 0.0);
    assert(cutoff != NULL);
-   assert(!SCIPintervalIsEmpty(node->bounds)); /* should not call backward prop. for a node that yield a cutoff already */
+   assert(!SCIPintervalIsEmpty(infinity, node->bounds)); /* should not call backward prop. for a node that yield a cutoff already */
    assert(!node->enabled || !(node->boundstatus & SCIP_EXPRBOUNDSTATUS_CHILDRELAXED)); /* there should be no unprocessed relaxations of children bounds, if node is enabled */
 
    /* if we have no recent bound tightening from a parent, then no use in reverse-propagating our bounds */
@@ -10091,13 +10091,13 @@ void exprgraphNodePropagateBounds(
       /* f = c0 + c1 -> c0 = f - c1, c1 = f - c0 */
 
       SCIPintervalSub(infinity, &childbounds, node->bounds, node->children[1]->bounds);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       if( *cutoff )
          break;
 
       SCIPintervalSub(infinity, &childbounds, node->bounds, node->children[0]->bounds);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, infinity, cutoff);
 
       break;
    }
@@ -10108,13 +10108,13 @@ void exprgraphNodePropagateBounds(
       /* f = c0 - c1 -> c0 = f + c1, c1 = c0 - f */
 
       SCIPintervalAdd(infinity, &childbounds, node->bounds, node->children[1]->bounds);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       if( *cutoff )
          break;
 
       SCIPintervalSub(infinity, &childbounds, node->children[0]->bounds, node->bounds);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, infinity, cutoff);
 
       break;
    }
@@ -10125,13 +10125,13 @@ void exprgraphNodePropagateBounds(
       /* f = c0 * c1 -> c0 = f / c1, c1 = f / c0 */
 
       SCIPintervalDiv(infinity, &childbounds, node->bounds, node->children[1]->bounds);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       if( *cutoff )
          break;
 
       SCIPintervalDiv(infinity, &childbounds, node->bounds, node->children[0]->bounds);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, infinity, cutoff);
 
       break;
    }
@@ -10142,13 +10142,13 @@ void exprgraphNodePropagateBounds(
       /* f = c0 / c1 -> c0 = f * c1, c1 = c0 / f */
 
       SCIPintervalMul(infinity, &childbounds, node->bounds, node->children[1]->bounds);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       if( *cutoff )
          break;
 
       SCIPintervalDiv(infinity, &childbounds, node->children[0]->bounds, node->bounds);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, infinity, cutoff);
 
       break;
    }
@@ -10167,7 +10167,7 @@ void exprgraphNodePropagateBounds(
       SCIPintervalSquareRoot(infinity, &childbounds, node->bounds);
       if( node->children[0]->bounds.inf <= -childbounds.inf )
          SCIPintervalSetBounds(&childbounds, -childbounds.sup, childbounds.sup);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       break;
    }
@@ -10178,7 +10178,7 @@ void exprgraphNodePropagateBounds(
       /* f = sqrt(c0) -> c0 = f^2 */
 
       SCIPintervalSquare(infinity, &childbounds, node->bounds);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       break;
    }
@@ -10189,12 +10189,12 @@ void exprgraphNodePropagateBounds(
 
       SCIPintervalPowerScalarInverse(infinity, &childbounds, node->children[0]->bounds, node->data.dbl, node->bounds);
 
-      if( SCIPintervalIsEmpty(childbounds) )
+      if( SCIPintervalIsEmpty(infinity, childbounds) )
       {
          *cutoff = TRUE;
          break;
       }
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       break;
    }
@@ -10215,7 +10215,7 @@ void exprgraphNodePropagateBounds(
             (node->bounds.inf <=  1.0 && node->bounds.sup >=  1.0) ?  infinity : 0.0);
       }
 
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       break;
    }
@@ -10226,12 +10226,12 @@ void exprgraphNodePropagateBounds(
 
       SCIPintervalPowerScalarInverse(infinity, &childbounds, node->children[0]->bounds, (SCIP_Real)node->data.intval, node->bounds);
 
-      if( SCIPintervalIsEmpty(childbounds) )
+      if( SCIPintervalIsEmpty(infinity, childbounds) )
       {
          *cutoff = TRUE;
          break;
       }
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       break;
    }
@@ -10248,7 +10248,7 @@ void exprgraphNodePropagateBounds(
       }
 
       SCIPintervalLog(infinity, &childbounds, node->bounds);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       break;
    }
@@ -10259,7 +10259,7 @@ void exprgraphNodePropagateBounds(
       /* f = log(c0) -> c0 = exp(f) */
 
       SCIPintervalExp(infinity, &childbounds, node->bounds);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       break;
    }
@@ -10283,7 +10283,7 @@ void exprgraphNodePropagateBounds(
       /* f = |c0| -> c0 = -f union f = [-f.sup, f.sup] */
 
       SCIPintervalSetBounds(&childbounds, -node->bounds.sup, node->bounds.sup);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       break;
    }
@@ -10296,7 +10296,7 @@ void exprgraphNodePropagateBounds(
       SCIPintervalSetBounds(&childbounds,
          (node->bounds.inf <= -1.0 && node->bounds.sup >= -1.0) ? -infinity : 0.0,
          (node->bounds.inf <=  1.0 && node->bounds.sup >=  1.0) ?  infinity : 0.0);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       break;
    }
@@ -10311,14 +10311,14 @@ void exprgraphNodePropagateBounds(
 
       SCIPintervalSetBounds(&childbounds, node->bounds.inf,
          node->children[1]->bounds.inf > node->bounds.sup ? node->bounds.sup : infinity);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       if( *cutoff )
          break;
 
       SCIPintervalSetBounds(&childbounds, node->bounds.inf,
          node->children[0]->bounds.inf > node->bounds.sup ? node->bounds.sup : infinity);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, infinity, cutoff);
 
       break;
    }
@@ -10334,12 +10334,12 @@ void exprgraphNodePropagateBounds(
       SCIPintervalSetBounds(&childbounds,
          node->children[1]->bounds.sup < node->bounds.inf ? node->bounds.inf : -infinity,
          node->bounds.sup);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
       SCIPintervalSetBounds(&childbounds,
          node->children[0]->bounds.sup < node->bounds.inf ? node->bounds.inf : -infinity,
          node->bounds.sup);
-      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, cutoff);
+      SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, infinity, cutoff);
 
       break;
    }
@@ -10371,7 +10371,7 @@ void exprgraphNodePropagateBounds(
 
       for( i = 0; i < node->nchildren; ++i )
       {
-         assert(!SCIPintervalIsEmpty(node->children[i]->bounds));
+         assert(!SCIPintervalIsEmpty(infinity, node->children[i]->bounds));
 
          /* minimal activity is only useful if node has a finite upper bound */
          if( node->bounds.sup < infinity )
@@ -10452,7 +10452,7 @@ void exprgraphNodePropagateBounds(
             }
          }
 
-         SCIPexprgraphTightenNodeBounds(exprgraph, node->children[i], childbounds, minstrength, cutoff);
+         SCIPexprgraphTightenNodeBounds(exprgraph, node->children[i], childbounds, minstrength, infinity, cutoff);
       }
 
       SCIPintervalSetRoundingMode(prevroundmode);
@@ -10491,7 +10491,7 @@ void exprgraphNodePropagateBounds(
          if( j == node->nchildren )
          {
             SCIPintervalDiv(infinity, &childbounds, node->bounds, childbounds); /* f / prod_{j:j!=i} c_j */
-            SCIPexprgraphTightenNodeBounds(exprgraph, node->children[i], childbounds, minstrength, cutoff);
+            SCIPexprgraphTightenNodeBounds(exprgraph, node->children[i], childbounds, minstrength, infinity, cutoff);
          }
       }
 
@@ -10528,7 +10528,7 @@ void exprgraphNodePropagateBounds(
 
       for( i = 0; i < node->nchildren; ++i )
       {
-         assert(!SCIPintervalIsEmpty(node->children[i]->bounds));
+         assert(!SCIPintervalIsEmpty(infinity, node->children[i]->bounds));
 
          /* minimal activity is only useful if node has a finite upper bound */
          if( node->bounds.sup < infinity )
@@ -10706,7 +10706,7 @@ void exprgraphNodePropagateBounds(
             }
          }
 
-         SCIPexprgraphTightenNodeBounds(exprgraph, node->children[i], childbounds, minstrength, cutoff);
+         SCIPexprgraphTightenNodeBounds(exprgraph, node->children[i], childbounds, minstrength, infinity, cutoff);
       }
 
       SCIPintervalSetRoundingMode(prevroundmode);
@@ -10774,14 +10774,14 @@ void exprgraphNodePropagateBounds(
             SCIPdebugMessage("%g x^2 + %g y^2 + %g xy + %g x + %g y in [%g,%g], x = [%g,%g], y = [%g,%g] -> x in [%g,%g], cutoff = %d\n",
                ax, ay, axy, lincoefs != NULL ? lincoefs[0] : 0.0, lincoefs != NULL ? lincoefs[1] : 0.0,
                c.inf, c.sup, node->children[0]->bounds.inf, node->children[0]->bounds.sup,
-               node->children[1]->bounds.inf, node->children[1]->bounds.sup, childbounds.inf, childbounds.sup, (int)SCIPintervalIsEmpty(childbounds)
+               node->children[1]->bounds.inf, node->children[1]->bounds.sup, childbounds.inf, childbounds.sup, (int)SCIPintervalIsEmpty(infinity, childbounds)
                );
          }
 
-         if( SCIPintervalIsEmpty(childbounds) )
+         if( SCIPintervalIsEmpty(infinity, childbounds) )
             *cutoff = TRUE;
          else
-            SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+            SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
          if( *cutoff )
             break;
 
@@ -10797,14 +10797,14 @@ void exprgraphNodePropagateBounds(
             SCIPdebugMessage("%g x^2 + %g y^2 + %g xy + %g x + %g y in [%g,%g], x = [%g,%g], y = [%g,%g] -> y in [%g,%g], cutoff = %d\n",
                ax, ay, axy, lincoefs != NULL ? lincoefs[0] : 0.0, lincoefs != NULL ? lincoefs[1] : 0.0,
                c.inf, c.sup, node->children[0]->bounds.inf, node->children[0]->bounds.sup,
-               node->children[1]->bounds.inf, node->children[1]->bounds.sup, childbounds.inf, childbounds.sup, (int)SCIPintervalIsEmpty(childbounds)
+               node->children[1]->bounds.inf, node->children[1]->bounds.sup, childbounds.inf, childbounds.sup, (int)SCIPintervalIsEmpty(infinity, childbounds)
                );
          }
 
-         if( SCIPintervalIsEmpty(childbounds) )
+         if( SCIPintervalIsEmpty(infinity, childbounds) )
             *cutoff = TRUE;
          else
-            SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, cutoff);
+            SCIPexprgraphTightenNodeBounds(exprgraph, node->children[1], childbounds, minstrength, infinity, cutoff);
          if( *cutoff )
             break;
 
@@ -10862,10 +10862,10 @@ void exprgraphNodePropagateBounds(
          SCIPdebugMessage("solve %gc%d^2 + [%10g,%10g]c%d = [%10g,%10g]\n",
             a.inf, i, b.inf, b.sup, i, c.inf, c.sup);
          SCIPintervalSolveUnivariateQuadExpression(infinity, &childbounds, a, b, c);
-         if( SCIPintervalIsEmpty(childbounds) )
+         if( SCIPintervalIsEmpty(infinity, childbounds) )
             *cutoff = TRUE;
          else
-            SCIPexprgraphTightenNodeBounds(exprgraph, node->children[i], childbounds, minstrength, cutoff);
+            SCIPexprgraphTightenNodeBounds(exprgraph, node->children[i], childbounds, minstrength, infinity, cutoff);
       }
 
       break;
@@ -11032,7 +11032,7 @@ void exprgraphNodePropagateBounds(
          SCIPintervalSolveUnivariateQuadExpression(infinity, &tmp, a, b, c);
          SCIPdebugPrintf(" -> c%d^%g = [%10g, %10g]", i, n, tmp.inf, tmp.sup);
 
-         if( SCIPintervalIsEmpty(tmp) )
+         if( SCIPintervalIsEmpty(infinity, tmp) )
          {
             *cutoff = TRUE;
             break;
@@ -11040,14 +11040,14 @@ void exprgraphNodePropagateBounds(
 
          SCIPintervalPowerScalarInverse(infinity, &childbounds, node->children[i]->bounds, n, tmp);
          SCIPdebugPrintf(" -> c%d = [%10g, %10g]\n", i, childbounds.inf, childbounds.sup);
-         if( SCIPintervalIsEmpty(childbounds) )
+         if( SCIPintervalIsEmpty(infinity, childbounds) )
          {
             SCIPdebugMessage(" -> cutoff\n");
             *cutoff = TRUE;
             break;
          }
 
-         SCIPexprgraphTightenNodeBounds(exprgraph, node->children[i], childbounds, minstrength, cutoff);
+         SCIPexprgraphTightenNodeBounds(exprgraph, node->children[i], childbounds, minstrength, infinity, cutoff);
 
          /* SCIPdebugMessage("-> node %p (%d,%d): [%10g,%10g] = ", (void*)node, node->depth, node->pos, node->bounds.inf, node->bounds.sup);
             SCIPdebug( exprgraphPrintNodeExpression(node, messagehdlr, NULL, NULL, TRUE) );
@@ -11076,7 +11076,7 @@ void exprgraphNodePropagateBounds(
          SCIP_CALL_ABORT( exprdata->prop(infinity, exprdata->userdata, 1, &childbounds, node->bounds, cutoff) );
 
          if( !*cutoff )
-            SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, cutoff);
+            SCIPexprgraphTightenNodeBounds(exprgraph, node->children[0], childbounds, minstrength, infinity, cutoff);
 
          break;
       }
@@ -11089,7 +11089,7 @@ void exprgraphNodePropagateBounds(
 
       for( c = 0; !*cutoff && c < node->nchildren; ++c )
       {
-         SCIPexprgraphTightenNodeBounds(exprgraph, node->children[c], childrenbounds[c], minstrength, cutoff);
+         SCIPexprgraphTightenNodeBounds(exprgraph, node->children[c], childrenbounds[c], minstrength, infinity, cutoff);
       }
 
       BMSfreeBlockMemoryArray(exprgraph->blkmem, &childrenbounds, node->nchildren);
@@ -12963,6 +12963,7 @@ SCIP_Real SCIPexprgraphGetNodePolynomialConstant(
 SCIP_RETCODE SCIPexprgraphGetNodePolynomialMonomialCurvature(
    SCIP_EXPRGRAPHNODE*   node,               /**< expression graph node */
    int                   monomialidx,        /**< index of monomial */
+   SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
    SCIP_EXPRCURV*        curv                /**< buffer to store monomial curvature */
    )
 {
@@ -12985,7 +12986,7 @@ SCIP_RETCODE SCIPexprgraphGetNodePolynomialMonomialCurvature(
    assert(monomialidx < ((SCIP_EXPRDATA_POLYNOMIAL*)node->data.data)->nmonomials);
    assert(curv != NULL);
 
-   if( SCIPintervalIsEmpty(node->bounds) )
+   if( SCIPintervalIsEmpty(infinity, node->bounds) )
    {
       *curv = SCIP_EXPRCURV_LINEAR;
       return SCIP_OKAY;
@@ -13014,7 +13015,7 @@ SCIP_RETCODE SCIPexprgraphGetNodePolynomialMonomialCurvature(
 
       /* child should have valid and non-empty bounds */
       assert(!(child->boundstatus & SCIP_EXPRBOUNDSTATUS_CHILDRELAXED));
-      assert(!SCIPintervalIsEmpty(child->bounds));
+      assert(!SCIPintervalIsEmpty(infinity, child->bounds));
       /* nodes at depth 0 are always linear */
       assert(child->depth > 0 || child->curv == SCIP_EXPRCURV_LINEAR);
 
@@ -14432,6 +14433,7 @@ void SCIPexprgraphTightenNodeBounds(
    SCIP_EXPRGRAPHNODE*   node,               /**< node in expression graph with no parents */
    SCIP_INTERVAL         nodebounds,         /**< new bounds for node */
    SCIP_Real             minstrength,        /**< minimal required relative bound strengthening in a node to trigger a propagation into children nodes (set to negative value if propagation should always be triggered) */
+   SCIP_Real             infinity,           /**< value for infinity in interval arithmetics */
    SCIP_Bool*            cutoff              /**< buffer to store whether a node's bounds were propagated to an empty interval */
    )
 {
@@ -14439,7 +14441,7 @@ void SCIPexprgraphTightenNodeBounds(
    assert(node != NULL);
    assert(node->depth >= 0);
    assert(node->pos >= 0);
-   assert(!SCIPintervalIsEmpty(nodebounds));
+   assert(!SCIPintervalIsEmpty(infinity, nodebounds));
    assert(cutoff != NULL);
 
    *cutoff = FALSE;
@@ -14533,7 +14535,7 @@ SCIP_RETCODE SCIPexprgraphUpdateNodeBoundsCurvature(
    {
       /* child should have valid and non-empty bounds */
       assert(!(node->children[i]->boundstatus & SCIP_EXPRBOUNDSTATUS_CHILDRELAXED));
-      assert(!SCIPintervalIsEmpty(node->children[i]->bounds));
+      assert(!SCIPintervalIsEmpty(infinity, node->children[i]->bounds));
       /* nodes at depth 0 are always linear */
       assert(node->children[i]->depth > 0 || node->children[i]->curv == SCIP_EXPRCURV_LINEAR);
 
@@ -14586,7 +14588,7 @@ SCIP_RETCODE SCIPexprgraphUpdateNodeBoundsCurvature(
    }
 
    /* update curvature */
-   if( SCIPintervalIsEmpty(node->bounds) )
+   if( SCIPintervalIsEmpty(infinity, node->bounds) )
    {
       node->curv = SCIP_EXPRCURV_LINEAR;
 
@@ -15593,7 +15595,7 @@ SCIP_RETCODE SCIPexprgraphPropagateVarBounds(
       {
          node = exprgraph->nodes[d][i];
          SCIP_CALL( exprgraphNodeUpdateBounds(node, infinity, 1e-9, clearreverseprop) );
-         if( SCIPintervalIsEmpty(node->bounds) )
+         if( SCIPintervalIsEmpty(infinity, node->bounds) )
          {
             SCIPdebugMessage("bounds of node %p(%d,%d) empty, stop bounds propagation\n", (void*)node, node->depth, node->pos);
             /* we keep exprgraph->needvarboundprop at TRUE, since we interrupt propagation */
@@ -15674,7 +15676,7 @@ SCIP_RETCODE SCIPexprgraphCheckCurvature(
 
          SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(node, infinity, 1e-9, clearreverseprop) );
 
-         if( SCIPintervalIsEmpty(node->bounds) )
+         if( SCIPintervalIsEmpty(infinity, node->bounds) )
          {
             SCIPerrorMessage("SCIPexprgraphCheckCurvature gets domain error while propagating variables bounds, ignoring...\n");
             return SCIP_OKAY;

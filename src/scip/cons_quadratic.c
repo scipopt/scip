@@ -3440,7 +3440,7 @@ SCIP_RETCODE getImpliedBounds(
       ++pos;
    }
 
-   assert(!SCIPintervalIsEmpty(*resultant));
+   assert(resultant->sup >= resultant->inf);
 
    return SCIP_OKAY;
 }
@@ -9116,7 +9116,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
       SCIPintervalSet(&a_, a);
       SCIPintervalSetBounds(&tmp, -SCIPintervalGetSup(b), -SCIPintervalGetInf(b));
       SCIPintervalSolveUnivariateQuadExpressionPositive(intervalinfty, &tmp, a_, tmp, rhs);
-      if( SCIPintervalIsEmpty(tmp) )
+      if( SCIPintervalIsEmpty(intervalinfty, tmp) )
       {
          SCIPdebugMessage("found <%s> infeasible due to domain propagation for quadratic variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(var));
          *result = SCIP_CUTOFF;
@@ -9145,7 +9145,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
       return SCIP_OKAY;
    }
 
-   if( SCIPintervalIsEmpty(newrange) )
+   if( SCIPintervalIsEmpty(intervalinfty, newrange) )
    {
       SCIPdebugMessage("found <%s> infeasible due to domain propagation for quadratic variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(var));
       *result = SCIP_CUTOFF;
@@ -9309,7 +9309,7 @@ SCIP_RETCODE propagateBoundsBilinearTerm(
    /* try to find domain reductions for x */
    SCIPintervalSolveBivariateQuadExpressionAllScalar(intervalinfty, &xbnds, xsqrcoef, ysqrcoef, bilincoef, xlincoef, ylincoef, rhs, xbnds, ybnds);
 
-   if( SCIPintervalIsEmpty(xbnds) )
+   if( SCIPintervalIsEmpty(intervalinfty, xbnds) )
    {
       SCIPdebugMessage("found <%s> infeasible due to domain propagation for quadratic variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(x));
       *result = SCIP_CUTOFF;
@@ -9471,7 +9471,7 @@ void propagateBoundsGetQuadActivity(
    SCIPintervalSetBounds(&consdata->quadactivitybounds,
       (*minactivityinf > 0 ? -intervalinfty : *minquadactivity),
       (*maxactivityinf > 0 ?  intervalinfty : *maxquadactivity));
-   assert(!SCIPintervalIsEmpty(consdata->quadactivitybounds));
+   assert(!SCIPintervalIsEmpty(intervalinfty, consdata->quadactivitybounds));
 }
 
 /** propagates bounds on a quadratic constraint */
@@ -9547,11 +9547,11 @@ SCIP_RETCODE propagateBoundsCons(
 
    /* compute activity of quad term part, if not up to date
     * in that case, we also collect the contribution of each quad var term for later */
-   if( SCIPintervalIsEmpty(consdata->quadactivitybounds) )
+   if( SCIPintervalIsEmpty(intervalinfty, consdata->quadactivitybounds) )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &quadactcontr, consdata->nquadvars) );
       propagateBoundsGetQuadActivity(scip, consdata, intervalinfty, &minquadactivity, &maxquadactivity, &quadminactinf, &quadmaxactinf, quadactcontr);
-      assert(!SCIPintervalIsEmpty(consdata->quadactivitybounds));
+      assert(!SCIPintervalIsEmpty(intervalinfty, consdata->quadactivitybounds));
    }
 
    SCIPdebugMessage("linear activity: [%g, %g]   quadratic activity: [%g, %g]\n",
@@ -9892,7 +9892,7 @@ SCIP_RETCODE propagateBoundsCons(
                {
                   rhs2.inf = -intervalinfty;
                }
-               assert(!SCIPintervalIsEmpty(rhs2));
+               assert(!SCIPintervalIsEmpty(intervalinfty, rhs2));
 
                /* if rhs2 is entire, then there is nothing we could propagate */
                if( SCIPintervalIsEntire(intervalinfty, rhs2) )

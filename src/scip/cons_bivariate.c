@@ -5083,7 +5083,7 @@ SCIP_RETCODE enforceViolatedFixedNonlinear(
 
       /* get activity for f(x,y) */
       SCIP_CALL( SCIPevalExprtreeLocalBounds(scip, consdata->f, SCIPinfinity(scip), &nonlinact) );
-      assert(!SCIPintervalIsEmpty(nonlinact));
+      assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), nonlinact));
 
       /* if all variables are fixed (at least up to epsilson), then the activity of the nonlinear part should be bounded */
       assert(!SCIPisInfinity(scip, -SCIPintervalGetInf(nonlinact)));
@@ -5198,7 +5198,7 @@ SCIP_RETCODE propagateBoundsTightenVar(
 
    if( SCIPintervalIsPositiveInfinity(SCIPinfinity(scip), bounds) ||
       SCIPintervalIsNegativeInfinity(SCIPinfinity(scip), bounds) ||
-      SCIPintervalIsEmpty(bounds) )
+      SCIPintervalIsEmpty(SCIPinfinity(scip), bounds) )
    {
       /* domain outside [-infty, +infty] or empty -> declare node infeasible */
       SCIPdebugMessage("found <%s> infeasible due to domain propagation for variable <%s>\n", cons != NULL ? SCIPconsGetName(cons) : "???", SCIPvarGetName(var));  /*lint !e585*/
@@ -5290,7 +5290,7 @@ SCIP_RETCODE propagateBoundsCons(
 
    /* get activity for f(x,y) */
    ftermactivity = SCIPexprgraphGetNodeBounds(consdata->exprgraphnode);
-   assert(!SCIPintervalIsEmpty(ftermactivity) );
+   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), ftermactivity) );
 
    /* get activity for c*z */
    if( consdata->z != NULL )
@@ -5352,7 +5352,7 @@ SCIP_RETCODE propagateBoundsCons(
 
    /* set bounds for exprgraphnode = [lhs,rhs] - c*z */
    SCIPintervalSub(INTERVALINFTY, &tmp, consbounds, ztermactivity);
-   SCIPexprgraphTightenNodeBounds(conshdlrdata->exprgraph, consdata->exprgraphnode, tmp, 0.05, &cutoff);
+   SCIPexprgraphTightenNodeBounds(conshdlrdata->exprgraph, consdata->exprgraphnode, tmp, 0.05, INTERVALINFTY, &cutoff);
    if( cutoff )
    {
       SCIPdebugMessage("found constraint <%s> infeasible%s\n", SCIPconsGetName(cons), SCIPinProbing(scip) ? " in probing" : "");

@@ -1547,7 +1547,7 @@ void computeBoundsZ(
    assert(scip  != NULL);
    assert(cons  != NULL);
    assert(zbnds != NULL);
-   assert(!SCIPintervalIsEmpty(xbnds));
+   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), xbnds));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1581,7 +1581,7 @@ void computeBoundsZ(
    SCIPdebugMessage("given x = [%.20g, %.20g], computed z = [%.20g, %.20g] via", xbnds.inf, xbnds.sup, zbnds->inf, zbnds->sup);
    SCIPdebugPrintCons(scip, cons, NULL);
 
-   assert(!SCIPintervalIsEmpty(*zbnds));
+   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), *zbnds));
 }
 
 /** computes bounds on x in a absolute power constraints for given bounds on z */
@@ -1600,7 +1600,7 @@ void computeBoundsX(
    assert(scip  != NULL);
    assert(cons  != NULL);
    assert(xbnds != NULL);
-   assert(!SCIPintervalIsEmpty(zbnds));
+   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), zbnds));
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -1634,7 +1634,7 @@ void computeBoundsX(
    SCIPdebugMessage("given z = [%.20g, %.20g], computed x = [%.20g, %.20g] via", zbnds.inf, zbnds.sup, xbnds->inf, xbnds->sup);
    SCIPdebugPrintCons(scip, cons, NULL);
 
-   assert(!SCIPintervalIsEmpty(*xbnds));
+   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), *xbnds));
 }
 
 /** checks if x or z is fixed and replaces them or deletes constraint */
