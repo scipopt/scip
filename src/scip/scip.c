@@ -23182,6 +23182,12 @@ SCIP_Real SCIPgetVarVSIDS(
 
    assert( var->scip == scip );
 
+   if( dir != SCIP_BRANCHDIR_DOWNWARDS && dir != SCIP_BRANCHDIR_UPWARDS )
+   {
+      SCIPerrorMessage("invalid branching direction %d when asking for VSIDS value\n", dir);
+      return SCIP_INVALIDDATA;
+   }
+
    return SCIPvarGetVSIDS(var, scip->stat, dir);
 }
 
@@ -23207,6 +23213,12 @@ SCIP_Real SCIPgetVarVSIDSCurrentRun(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarVSIDSCurrentRun", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    assert( var->scip == scip );
+
+   if( dir != SCIP_BRANCHDIR_DOWNWARDS && dir != SCIP_BRANCHDIR_UPWARDS )
+   {
+      SCIPerrorMessage("invalid branching direction %d when asking for VSIDS value\n", dir);
+      return SCIP_INVALIDDATA;
+   }
 
    return SCIPvarGetVSIDSCurrentRun(var, scip->stat, dir);
 }
