@@ -8870,6 +8870,15 @@ SCIP_RETCODE replaceByLinearConstraints(
          }
          SCIPdebugMessage("Linear constraint is a bound: %g <= <%s> <= %g\n", lhs, SCIPvarGetName(*consdata->linvars), rhs);
 
+         if( SCIPisInfinity(scip, -rhs) || SCIPisInfinity(scip, lhs) )
+         {
+            SCIPdebugMessage("node will marked as infeasible since lb/ub of %s is +/-infinity\n",
+               SCIPvarGetName(consdata->linvars[0]));
+
+            *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
+
          if ( ! SCIPisInfinity(scip, -lhs) )
          {
             SCIP_CALL( SCIPtightenVarLb(scip, *consdata->linvars, lhs, TRUE, infeasible, &tightened) );
