@@ -114,7 +114,7 @@
                                            *   function defining a lower bound and prevent these constraints from
                                            *   entering the LP */
 #define DEFAULT_DETECTPARTIALOBJECTIVE TRUE/**< should presolving try to detect subsets of constraints parallel to the
-                                           *   objective function */
+                                            *   objective function */
 #define DEFAULT_RANGEDROWPROPAGATION TRUE /**< should we perform ranged row propagation */
 #define DEFAULT_MULTAGGRREMOVE      FALSE /**< should multi-aggregations only be performed if the constraint can be
                                            *   removed afterwards? */
@@ -7131,7 +7131,7 @@ SCIP_RETCODE checkCons(
    }
    else
    {
-     /* only increase constraint age if we are in enforcement */
+      /* only increase constraint age if we are in enforcement */
       if( sol == NULL )
       {
          SCIP_CALL( SCIPincConsAge(scip, cons) );
@@ -15128,7 +15128,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
 
 	 /* apply dual presolving for variables that appear in only one constraint */
 	 if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving
-	  && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
+            && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
 	 {
 	    SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
 	 }

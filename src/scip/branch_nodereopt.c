@@ -95,12 +95,12 @@ SCIP_RETCODE Exec(
    reopttype = SCIPreoptnodeGetType(reoptnode);
 
 
-   /** The current node is equal to the root and dual reductions were performed. Since the root has a special role
-    *  within the reoptimiziation we have to split the root node into several nodes and move all stored child nodes to
-    *  the one representing the root node including all dual reductions as before.
+   /* The current node is equal to the root and dual reductions were performed. Since the root has a special role
+    * within the reoptimiziation we have to split the root node into several nodes and move all stored child nodes to
+    * the one representing the root node including all dual reductions as before.
     *
-    *  @note If the type is infsubtree, there cannot exist a child node and the method SCIPapplyReopt adds a global valid
-    *  constraint only.
+    * @note If the type is infsubtree, there cannot exist a child node and the method SCIPapplyReopt adds a global valid
+    * constraint only.
     */
    if( curid == 0 )
    {
@@ -176,7 +176,7 @@ SCIP_RETCODE Exec(
       reopttype = SCIPreoptnodeGetType(reoptnode);
       ncreatedchilds = 0;
 
-      /** check whether node need to be split */
+      /* check whether node need to be split */
       if( reopttype == SCIP_REOPTTYPE_STRBRANCHED || reopttype == SCIP_REOPTTYPE_INFSUBTREE )
       {
          /* by default we assume the node get split into two node (because using a constraint to split the node is
@@ -328,7 +328,7 @@ static SCIP_DECL_BRANCHEXECPS(branchExecpsnodereopt)
 
 /** creates the nodereopt branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleNodereopt(
-   SCIP*                 scip                     /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
 )
 {
    SCIP_BRANCHRULE* branchrule;
