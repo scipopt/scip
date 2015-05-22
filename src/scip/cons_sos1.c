@@ -8660,12 +8660,17 @@ SCIP_DECL_CONSPROP(consPropSOS1)
             if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
             {
                SCIP_Bool cutoff;
+               int node;
 
-               SCIP_CALL( propVariableNonzero(scip, conflictgraph, implgraph, conss[0], varGetNodeSOS1(conshdlrdata, var), conshdlrdata->implprop, &cutoff, &ngen) );
-               if ( cutoff )
+               node = varGetNodeSOS1(conshdlrdata, var);
+               if( node >= 0 )
                {
-                  *result = SCIP_CUTOFF;
-                  return SCIP_OKAY;
+                  SCIP_CALL( propVariableNonzero(scip, conflictgraph, implgraph, conss[0], node, conshdlrdata->implprop, &cutoff, &ngen) );
+                  if ( cutoff )
+                  {
+                     *result = SCIP_CUTOFF;
+                     return SCIP_OKAY;
+                  }
                }
             }
          }
