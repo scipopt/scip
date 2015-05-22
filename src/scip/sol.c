@@ -1547,7 +1547,6 @@ SCIP_RETCODE SCIPsolCheck(
 /** try to round given solution */
 SCIP_RETCODE SCIPsolRound(
    SCIP_SOL*             sol,                /**< primal solution */
-   SCIP_LP*              lp,                 /**< LP strucure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */

@@ -4337,6 +4337,7 @@ SCIP_RETCODE SCIPsolveCIP(
    /* switch status to UNKNOWN */
    stat->status = SCIP_STATUS_UNKNOWN;
 
+   focusnode = NULL;
    nextnode = NULL;
    unbounded = FALSE;
 

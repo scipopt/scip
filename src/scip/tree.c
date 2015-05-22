@@ -7124,7 +7124,7 @@ void SCIPnodeGetNDomchg(
    int*                  nconsprop,          /**< pointer to store number of constraint propagations (or NULL if not needed) */
    int*                  nprop               /**< pointer to store number of propagations (or NULL if not needed) */
    )
-{
+{  /*lint --e{641}*/
    SCIP_Bool count_branchings;
    SCIP_Bool count_consprop;
    SCIP_Bool count_prop;
@@ -7173,7 +7173,7 @@ void SCIPnodeGetNDomchg(
 int SCIPnodeGetNDualBndchgs(
    SCIP_NODE*            node                /**< node */
    )
-{
+{  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int i;
    int nboundchgs;
@@ -7201,7 +7201,7 @@ int SCIPnodeGetNDualBndchgs(
        && ((boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
             && boundchgs[i].data.inferencedata.reason.cons == NULL)
         || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-            && boundchgs[i].data.inferencedata.reason.prop == NULL)) ) /*lint !e641*/
+            && boundchgs[i].data.inferencedata.reason.prop == NULL)) )
          npseudobranchvars++;
       else if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
          break;
@@ -7220,7 +7220,7 @@ void SCIPnodeGetDualBoundchgs(
                                               *   should be called again */
    int                   varssize            /**< available slots in arrays */
 )
-{
+{  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;
    int i;
@@ -7252,7 +7252,7 @@ void SCIPnodeGetDualBoundchgs(
          if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
                && boundchgs[i].data.inferencedata.reason.cons == NULL)
           || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-                && boundchgs[i].data.inferencedata.reason.prop == NULL) ) /*lint !e641*/
+                && boundchgs[i].data.inferencedata.reason.prop == NULL) )
             (*nvars)++;
          else if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
             break;
@@ -7266,7 +7266,7 @@ void SCIPnodeGetDualBoundchgs(
       j = 0;
       for( i = i+1; i < nboundchgs; i++)
       {
-         assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING ); /*lint !e641*/
+         assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING );
          if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
          {
             if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
@@ -7446,7 +7446,7 @@ void SCIPnodeGetConsProps(
                                               *   should be called again */
    int                   conspropvarssize    /**< available slots in arrays */
    )
-{
+{  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;
    int first_dual;
@@ -7535,7 +7535,7 @@ void SCIPnodeGetBdChgsAfterDual(
                                               *   should be called again */
    int                   branchvarssize      /**< available slots in arrays */
    )
-{
+{  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;
    int first_dual;
