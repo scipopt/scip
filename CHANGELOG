@@ -2,6 +2,7 @@ SCIP version NEXT
 ==================
 
 features:
+- new heuristic distribution diving that bases its score function on the changes regarding solution density
 - extended variable branching statistics in the interactive shell by sample variance of unit gains
 - extended statistic output of interactive shell by more information on diving heuristic behavior
 - obbt propagator applies now additional separation and propagation in order to learn stronger and more bound tightenings
@@ -67,6 +68,11 @@ features:
 - possibility to set a soft time limit which becomes active only after the first primal solution was found
 
 parameters:
+- new parameter heuristics/*diving/lpresolvedomchgquot to determine the percentage of changed domains since previous LP to trigger
+  an LP resolve [default: 0.15] (* stands for eight diving heuristics to support this feature)
+- new parameter heuristics/*diving/lpsolvefreq to determine the frequency for resolving LP's during the execution of
+  this heuristic [default: 1, use 0 for a dynamic setting based on the number of domain reductions]
+  (* stands for eight diving heuristics to support this feature)
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
   (set to FALSE for static order) (default is FALSE)
 - new parameter "heuristics/shiftandpropagate/maxcutoffquot" to select a maximum percentage of allowed cutoffs before stopping the heuristic
