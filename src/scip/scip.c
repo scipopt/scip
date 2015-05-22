@@ -32222,18 +32222,18 @@ SCIP_RETCODE SCIPgetDiveBoundChanges(
 
    }
 #ifndef NDEBUG
-      /* check if the constraint handler correctly assigned values to the dive set */
-      if( *success )
-      {
-         SCIP_VAR** bdchgvars;
-         SCIP_BRANCHDIR* bdchgdirs;
-         SCIP_Real* values;
-         int nbdchanges;
-         SCIPtreeGetDiveBoundChangeData(scip->tree, &bdchgvars, &bdchgdirs, &values, &nbdchanges, TRUE);
-         assert(nbdchanges > 0);
-         SCIPtreeGetDiveBoundChangeData(scip->tree, &bdchgvars, &bdchgdirs, &values, &nbdchanges, FALSE);
-         assert(nbdchanges > 0);
-      }
+   /* check if the constraint handler correctly assigned values to the dive set */
+   if( *success )
+   {
+      SCIP_VAR** bdchgvars;
+      SCIP_BRANCHDIR* bdchgdirs;
+      SCIP_Real* values;
+      int nbdchanges;
+      SCIPtreeGetDiveBoundChangeData(scip->tree, &bdchgvars, &bdchgdirs, &values, &nbdchanges, TRUE);
+      assert(nbdchanges > 0);
+      SCIPtreeGetDiveBoundChangeData(scip->tree, &bdchgvars, &bdchgdirs, &values, &nbdchanges, FALSE);
+      assert(nbdchanges > 0);
+   }
 #endif
 
    return SCIP_OKAY;
