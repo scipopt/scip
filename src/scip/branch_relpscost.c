@@ -250,7 +250,7 @@ SCIP_RETCODE branchruledataEnsureNlcount(
       {
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &branchruledata->nlcount, branchruledata->nlcountsize, nvars) );
          /**@todo should we update nlcounts for new variables? */
-         BMSclearMemoryArray(&(branchruledata->nlcount[branchruledata->nlcountsize]), nvars - branchruledata->nlcountsize);
+         BMSclearMemoryArray(&(branchruledata->nlcount[branchruledata->nlcountsize]), nvars - branchruledata->nlcountsize); /*lint !e866*/
          branchruledata->nlcountsize = nvars;
       }
       assert(branchruledata->nlcount != NULL);

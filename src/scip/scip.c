@@ -14988,7 +14988,7 @@ SCIP_RETCODE SCIPinitilizeRepresentation(
 
    for( r = 0; r < nrepresentatives; r++ )
    {
-      SCIP_CALL( SCIPallocBlockMemory(scip, &representatives[r]) );
+      SCIP_CALL( SCIPallocBlockMemory(scip, &representatives[r]) ); /*lint !e866*/
       SCIPreoptnodeInit(representatives[r]);
    }
 
