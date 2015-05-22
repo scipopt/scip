@@ -17421,7 +17421,7 @@ SCIP_RETCODE SCIPgetReoptLeaveIDs(
    int*                  nids                /**< number of child nodes */
    );
 
-/** returns the number of nodes in the reoptimization tree induced by @param node. if @param node == NULL, the method
+/** returns the number of nodes in the reoptimization tree induced by @p node. if @p node == NULL, the method
  *  method returns the number of nodes of the whole reoptimization tree.
  */
 EXTERN
@@ -17430,7 +17430,7 @@ int SCIPgetNReoptnodes(
    SCIP_NODE*            node                /**< node of the search tree */
    );
 
-/** returns the number of leave nodes of the subtree induced by @param node. if @param node == NULL, the method
+/** returns the number of leave nodes of the subtree induced by @p node. if @p node == NULL, the method
  *  method returns the number of leaf nodes of the whole reoptimization tree.
  */
 EXTERN
@@ -17439,7 +17439,7 @@ int SCIPgetNReoptLeaves(
    SCIP_NODE*            node                /**< node of the search tree */
    );
 
-/** gets the node of the reoptimization tree corresponding to the unique @param id */
+/** gets the node of the reoptimization tree corresponding to the unique @p id */
 SCIP_REOPTNODE* SCIPgetReoptnode(
    SCIP*                 scip,               /**< SCIP data structure */
    unsigned int          id                  /**< unique id */
@@ -17464,7 +17464,7 @@ SCIP_RETCODE SCIPaddReoptnodeBndchg(
    SCIP_BOUNDTYPE        boundtype           /**< bound type of the variable value */
    );
 
-/** set the @param representation as the new search frontier
+/** set the @p representation as the new search frontier
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
