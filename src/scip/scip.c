@@ -15385,7 +15385,7 @@ SCIP_Bool SCIPreoptimizeNode(
    if( scip->set->reopt_enable )
    {
       SCIP_REOPTNODE* reoptnode;
-      int id;
+      unsigned int id;
 
       assert(scip->reopt != NULL);
 
