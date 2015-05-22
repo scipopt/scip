@@ -56,10 +56,10 @@ main(
       // display the solution on stdout
       solver.disp();
 
-   } catch(SCIPException& exc)
+   } catch(const SCIPException& exc)
    {
       cerr << exc.what() << endl;
-      exit(exc.getRetcode());
+      exit((int) exc.getRetcode());
    }
    return EXIT_SUCCESS;
 }
