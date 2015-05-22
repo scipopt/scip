@@ -6485,7 +6485,8 @@ void SCIPaddBilinMcCormick(
       cand3 = ubx * lby;
       cand4 = ubx * uby;
 
-      if( bilincoef > 0.0 )
+      /* take most conservative value for underestimator */
+      if( bilincoef < 0.0 )
          constant = bilincoef * MAX( MAX(cand1, cand2), MAX(cand3, cand4) );
       else
          constant = bilincoef * MIN( MIN(cand1, cand2), MIN(cand3, cand4) );
