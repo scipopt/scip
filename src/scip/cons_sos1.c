@@ -1442,28 +1442,32 @@ SCIP_RETCODE cliqueGetCommonSuccessorsSOS1(
       assert(vars[v] != NULL );
       ind =  varGetNodeSOS1(conshdlrdata, vars[v]);
       assert( ind >= 0 && ind < SCIPdigraphGetNNodes(conflictgraph) );
-      nsucc = SCIPdigraphGetNSuccessors(conflictgraph, ind);
-      succ = SCIPdigraphGetSuccessors(conflictgraph, ind);
 
-      /* determine successors that are in comsucc */
-      for (j = 0; j < *ncomsucc; ++j)
+      if ( ind >= 0 )
       {
-         for (i = k; i < nsucc; ++i)
+         nsucc = SCIPdigraphGetNSuccessors(conflictgraph, ind);
+         succ = SCIPdigraphGetSuccessors(conflictgraph, ind);
+
+         /* determine successors that are in comsucc */
+         for (j = 0; j < *ncomsucc; ++j)
          {
-            if ( succ[i] > comsucc[j] )
+            for (i = k; i < nsucc; ++i)
             {
-               k = i;
-               break;
-            }
-            else if ( succ[i] == comsucc[j] )
-            {
-               comsucc[ncomsuccsave++] = succ[i];
-               k = i + 1;
-               break;
+               if ( succ[i] > comsucc[j] )
+               {
+                  k = i;
+                  break;
+               }
+               else if ( succ[i] == comsucc[j] )
+               {
+                  comsucc[ncomsuccsave++] = succ[i];
+                  k = i + 1;
+                  break;
+               }
             }
          }
+         *ncomsucc = ncomsuccsave;
       }
-      *ncomsucc = ncomsuccsave;
    }
 
    return SCIP_OKAY;
