@@ -7202,9 +7202,11 @@ SCIP_RETCODE addRelaxation(
 #ifndef NDEBUG
       else
       {
-         int r;
-         SCIP_CALL( SCIPgetIntParam(scip, "constraints/linear/maxprerounds", &r) );
-         assert( r == 0 );
+         int pr;
+         int cr;
+         SCIP_CALL( SCIPgetIntParam(scip, "presolving/maxrounds", &pr) );
+         SCIP_CALL( SCIPgetIntParam(scip, "constraints/linear/maxprerounds", &cr) );
+         assert( pr == 0 || cr == 0 );
       }
 #endif
    }
