@@ -2233,7 +2233,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
          (int*)&(*conshdlr)->presoltiming, TRUE, presoltiming, (int) SCIP_PRESOLTIMING_FAST, (int) SCIP_PRESOLTIMING_ALWAYS, NULL, NULL) ); /*lint !e740 !e713*/
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** calls destructor and frees memory of constraint handler */
 SCIP_RETCODE SCIPconshdlrFree(
