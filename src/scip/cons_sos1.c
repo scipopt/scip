@@ -5265,15 +5265,18 @@ SCIP_RETCODE enforceConflictgraph(
                   indj = varGetNodeSOS1(conshdlrdata, var);
                   assert( indj >= 0 );
 
-                  if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
+                  if ( indj >= 0 )
                   {
-                     SCIP_CALL( SCIPdigraphAddArcSafe(conflictgraph, indi, indj, NULL) );
-                     SCIP_CALL( SCIPdigraphAddArcSafe(conflictgraph, indj, indi, NULL) );
+                     if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
+                     {
+                        SCIP_CALL( SCIPdigraphAddArcSafe(conflictgraph, indi, indj, NULL) );
+                        SCIP_CALL( SCIPdigraphAddArcSafe(conflictgraph, indj, indi, NULL) );
 
-                     SCIP_CALL( SCIPdigraphAddArcSafe(conshdlrdata->localconflicts, indi, indj, NULL) );
-                     SCIP_CALL( SCIPdigraphAddArcSafe(conshdlrdata->localconflicts, indj, indi, NULL) );
+                        SCIP_CALL( SCIPdigraphAddArcSafe(conshdlrdata->localconflicts, indi, indj, NULL) );
+                        SCIP_CALL( SCIPdigraphAddArcSafe(conshdlrdata->localconflicts, indj, indi, NULL) );
 
-                     conshdlrdata->isconflocal = TRUE;
+                        conshdlrdata->isconflocal = TRUE;
+                     }
                   }
                }
             }
@@ -8663,6 +8666,8 @@ SCIP_DECL_CONSPROP(consPropSOS1)
                int node;
 
                node = varGetNodeSOS1(conshdlrdata, var);
+               assert(node >= 0);
+
                if( node >= 0 )
                {
                   SCIP_CALL( propVariableNonzero(scip, conflictgraph, implgraph, conss[0], node, conshdlrdata->implprop, &cutoff, &ngen) );
