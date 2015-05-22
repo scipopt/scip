@@ -6531,6 +6531,7 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
    SCIP_Bool*            cutoff              /**< pointer to store whether a cutoff occurred */
    )
 {
+   int cnt = 0;
    int c;
 
    assert( scip != NULL );
@@ -6573,10 +6574,9 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
 
          if ( solvedinitlp )
          {
-            assert( ngen != NULL );
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-            ++(*ngen);
          }
+         ++cnt;
       }
 
       row = consdata->rowlb;
@@ -6591,15 +6591,18 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
 
          if ( solvedinitlp )
          {
-            assert( ngen != NULL );
             SCIP_CALL( SCIPresetConsAge(scip, conss[c]) );
-            ++(*ngen);
          }
+         ++cnt;
       }
 
-      if ( ngen != NULL && maxboundcuts >= 0 && *ngen >= maxboundcuts )
+      if ( maxboundcuts >= 0 && cnt >= maxboundcuts )
          break;
    }
+
+   /* store number of generated cuts */
+   if ( ngen != NULL )
+      *ngen = cnt;
 
    return SCIP_OKAY;
 }
