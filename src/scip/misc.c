@@ -6246,9 +6246,9 @@ void tarjan(
    int*                  strongcomponents,   /**< array to store for each node the strongly connected
                                               *   component to which it belongs (components are
                                               *   numbered 0 to nstrongcomponents - 1); */
-   int*                  nstrongcomponents,   /**< pointer to store the number of computed components so far */
-   int*                  strongcompstartidx,  /**< array to store the start index of the computed components */
-   int*                  nstorednodes         /**< pointer to store the number of already stored nodes */
+   int*                  nstrongcomponents,  /**< pointer to store the number of computed components so far */
+   int*                  strongcompstartidx, /**< array to store the start index of the computed components */
+   int*                  nstorednodes        /**< pointer to store the number of already stored nodes */
    )
 {
    int i;

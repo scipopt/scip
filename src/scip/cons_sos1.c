@@ -397,7 +397,7 @@ static
 SCIP_Real nodeGetSolvalBinaryBigMSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
-   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    int                   node                /**< node of the conflict graph */
    )
 {
@@ -447,7 +447,7 @@ static
 SCIP_Real nodeGetSolvalVarboundLbSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
-   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    int                   node                /**< node of the conflict graph */
    )
 {
@@ -474,7 +474,7 @@ static
 SCIP_Real nodeGetSolvalVarboundUbSOS1(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
-   SCIP_SOL*         	 sol,                /**< primal solution, or NULL for current LP/pseudo solution */
+   SCIP_SOL*             sol,                /**< primal solution, or NULL for current LP/pseudo solution */
    int                   node                /**< node of the conflict graph */
    )
 {
@@ -9850,8 +9850,8 @@ SCIP_Bool SCIPvarIsSOS1(
 
 /** returns SOS1 index of variable or -1 if variable is part of the SOS1 conflict graph */
 int SCIPvarGetNodeSOS1(
-   SCIP_CONSHDLR*        conshdlr,            /**< SOS1 constraint handler */
-   SCIP_VAR*             var                  /**< variable */
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_VAR*             var                 /**< variable */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;

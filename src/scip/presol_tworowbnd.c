@@ -734,7 +734,7 @@ SCIP_Real getMaxActivity(
    return supremum;
 }
 
-/**< get max activity without one column */
+/** get max activity without one column */
 static
 SCIP_Real getMaxResActivity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -782,10 +782,10 @@ void applyTightening(
    int*                  overlapidx,         /**< overlap column indexes */
    int*                  othernonoverlapidx, /**< other row non overlap indexes */
    int*                  basenonoverlapidx,  /**< base row non overlap indexes */
-   SCIP_Real*            coefbaseoverlap,     /**< base row overlap coefficients */
-   SCIP_Real*            coefotheroverlap,    /**< other row overlap coefficients */
-   SCIP_Real*            coefbasenonoverlap,  /**< base row non overlap coefficients */
-   SCIP_Real*            coefothernonoverlap, /**< other row non overlap coefficients */
+   SCIP_Real*            coefbaseoverlap,    /**< base row overlap coefficients */
+   SCIP_Real*            coefotheroverlap,   /**< other row overlap coefficients */
+   SCIP_Real*            coefbasenonoverlap, /**< base row non overlap coefficients */
+   SCIP_Real*            coefothernonoverlap,/**< other row non overlap coefficients */
    SCIP_Real*            lowerbds,           /**< lower bounds */
    SCIP_Real*            upperbds,           /**< upper bounds */
    SCIP_Real*            tmplowerbds,        /**< tmp lower bounds */

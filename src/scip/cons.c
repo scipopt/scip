@@ -4856,8 +4856,8 @@ SCIP_PROPTIMING SCIPconshdlrGetPropTiming(
 
 /** sets the timing mask of the propagation method of the constraint handler */
 void SCIPconshdlrSetPropTiming(
-   SCIP_CONSHDLR*        conshdlr,            /**< constraint handler */
-   SCIP_PROPTIMING       proptiming           /** timing mask to be set */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_PROPTIMING       proptiming          /**< timing mask to be set */
    )
 {
    assert(conshdlr != NULL);
@@ -4878,8 +4878,8 @@ SCIP_PRESOLTIMING SCIPconshdlrGetPresolTiming(
 
 /** sets the timing mask of the presolving method of the constraint handler */
 void SCIPconshdlrSetPresolTiming(
-   SCIP_CONSHDLR*        conshdlr,            /**< constraint handler */
-   SCIP_PRESOLTIMING     presoltiming         /** timing mask to be set */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
    )
 {
    assert(conshdlr != NULL);

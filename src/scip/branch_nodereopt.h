@@ -37,13 +37,13 @@ extern "C" {
 /** creates the nodereopt branching rule and includes it in SCIP */
 extern
 SCIP_RETCODE SCIPincludeBranchruleNodereopt(
-   SCIP*                   scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 extern
 SCIP_RETCODE SCIPbranchruleNodereoptInfNode(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_NODE*              cnode            /**< current node */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            cnode               /**< current node */
    );
 
 /*

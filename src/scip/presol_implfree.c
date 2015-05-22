@@ -491,12 +491,12 @@ SCIP_Real sideChangeNumericalStable(
 /** calculate the huge contribution counters */
 static
 void getNumHugeActivities(
-    SCIP*                 scip,              /**< current scip instance */
-    SCIPMILPMATRIX*       matrix,            /**< constraint matrix */
-    int*                  maxactposhuge,     /**< max activity positive contribution counter */
-    int*                  maxactneghuge,     /**< max activity negative contribution counter */
-    int*                  minactposhuge,     /**< min activity positive contribution counter */
-    int*                  minactneghuge      /**< min activity negative contribution counter */
+   SCIP*                 scip,               /**< current scip instance */
+   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   int*                  maxactposhuge,      /**< max activity positive contribution counter */
+   int*                  maxactneghuge,      /**< max activity negative contribution counter */
+   int*                  minactposhuge,      /**< min activity positive contribution counter */
+   int*                  minactneghuge       /**< min activity negative contribution counter */
    )
 {
    SCIP_Real val;

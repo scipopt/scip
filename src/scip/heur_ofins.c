@@ -106,10 +106,10 @@ SCIP_DECL_EVENTEXEC(eventExecOfins)
 /** creates a subproblem by fixing a number of variables */
 static
 SCIP_RETCODE createSubproblem(
-   SCIP*                 scip,                    /**< original SCIP data structure */
-   SCIP*                 subscip,                 /**< SCIP data structure for the subproblem */
-   SCIP_VAR**            subvars,                 /**< the variables of the subproblem */
-   SCIP_Bool*            chgcoeffs                /**< array indicating which coefficients have changed */
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
+   SCIP_Bool*            chgcoeffs           /**< array indicating which coefficients have changed */
    )
 {
    SCIP_VAR** vars;
@@ -202,12 +202,12 @@ SCIP_RETCODE createNewSol(
 /** main procedure of the OFINS heuristic, creates and solves a sub-SCIP */
 static
 SCIP_RETCODE applyOfins(
-   SCIP*                 scip,                    /**< original SCIP data structure */
-   SCIP_HEUR*            heur,                    /**< heuristic data structure */
-   SCIP_HEURDATA*        heurdata,                /**< euristic's private data structure */
-   SCIP_RESULT*          result,                  /**< result data structure */
-   SCIP_Longint          nstallnodes,             /**< number of stalling nodes for the subproblem */
-   SCIP_Bool*            chgcoeffs                /**< array of changed coefficients */
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP_HEUR*            heur,               /**< heuristic data structure */
+   SCIP_HEURDATA*        heurdata,           /**< euristic's private data structure */
+   SCIP_RESULT*          result,             /**< result data structure */
+   SCIP_Longint          nstallnodes,        /**< number of stalling nodes for the subproblem */
+   SCIP_Bool*            chgcoeffs           /**< array of changed coefficients */
    )
 {
    SCIP* subscip;                                 /* the subproblem created by OFINS */

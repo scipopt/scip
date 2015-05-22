@@ -41,13 +41,13 @@
 struct SCIP_ComprData
 {
    /* representative data */
-   SCIP_REOPTNODE**      representatives;         /**< list of representatives */
-   int                   nrepresentatives;        /**< number of representatives */
-   int                   representativessize;     /**< size of array representatives */
-   SCIP_Bool             initialized;             /**< was compressor data initialized? */
+   SCIP_REOPTNODE**      representatives;    /**< list of representatives */
+   int                   nrepresentatives;   /**< number of representatives */
+   int                   representativessize;/**< size of array representatives */
+   SCIP_Bool             initialized;        /**< was compressor data initialized? */
 
    /* parameter */
-   SCIP_Bool             convertconss;            /**< convert added logic-or constraints of size k into k nodes */
+   SCIP_Bool             convertconss;       /**< convert added logic-or constraints of size k into k nodes */
 };
 
 
@@ -55,15 +55,13 @@ struct SCIP_ComprData
  * Local methods
  */
 
-/**
- * subroutine for quicksort.
- */
+/** subroutine for quicksort */
 static
 int partition(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   unsigned int*         childids,                /**< array of child ids */
-   int                   left,                    /**< first position */
-   int                   right                    /**< last position */
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int*         childids,           /**< array of child ids */
+   int                   left,               /**< first position */
+   int                   right               /**< last position */
    )
 {
    SCIP_REOPTNODE* reoptnodepivot;
@@ -105,16 +103,16 @@ int partition(
    return j;
 }
 
-/**
- * quicksort implementation.
- * sort the ids of child nodes by their dual bound of the last iteration
+/** quicksort implementation
+ *
+ *  sort the ids of child nodes by their dual bound of the last iteration
  */
 static
 void sortIDs(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   unsigned int*         childids,                /**< array of child ids */
-   int                   left,                    /**< first position */
-   int                   right                    /**< last position */
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int*         childids,           /**< array of child ids */
+   int                   left,               /**< first position */
+   int                   right               /**< last position */
    )
 {
    int j;
@@ -127,14 +125,12 @@ void sortIDs(
    }
 }
 
-/**
- * check of enough memory is allocated and reallocate of necessary.
- */
+/** check of enough memory is allocated and reallocate of necessary. */
 static
 SCIP_RETCODE checkMemSize(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_COMPRDATA*       comprdata,               /**< compression data */
-   int                   nrepresentatives         /**< number of representatives */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COMPRDATA*       comprdata,          /**< compression data */
+   int                   nrepresentatives    /**< number of representatives */
    )
 {
    assert(scip != NULL);
@@ -150,16 +146,17 @@ SCIP_RETCODE checkMemSize(
 }
 
 /** try to find a good representation
+ *
  *  @todo implement:
  *      1) using k nodes without added constraint;
  *      2) resolve the added nods via some kind of interdiction branching
  */
 static
 SCIP_RETCODE constructCompression(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_COMPR*           compr,                   /**< compression method */
-   SCIP_COMPRDATA*       comprdata,               /**< compression data */
-   SCIP_RESULT*          result                   /**< result pointer */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COMPR*           compr,              /**< compression method */
+   SCIP_COMPRDATA*       comprdata,          /**< compression data */
+   SCIP_RESULT*          result              /**< result pointer */
    )
 {
    SCIP_NODE* currentnode;
@@ -400,15 +397,13 @@ SCIP_RETCODE constructCompression(
    return SCIP_OKAY;
 }
 
-/**
- * apply the stored representation to the reopttree
- */
+/** apply the stored representation to the reopttree */
 static
 SCIP_RETCODE applyCompression(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_COMPR*           compr,                   /**< compression method */
-   SCIP_COMPRDATA*       comprdata,               /**< compression data */
-   SCIP_RESULT*          result                   /**< result pointer */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COMPR*           compr,              /**< compression method */
+   SCIP_COMPRDATA*       comprdata,          /**< compression data */
+   SCIP_RESULT*          result              /**< result pointer */
    )
 {
    SCIP_Bool success;

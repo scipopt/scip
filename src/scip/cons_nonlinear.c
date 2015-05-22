@@ -4826,11 +4826,11 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
  */
 static
 SCIP_RETCODE getCoeffsAndConstantFromLinearExpr(
-   SCIP_EXPR*           expr,           /**< the linear expression */
-   SCIP_Real            scalar,         /**< the scalar value, i.e. the coeff of the given expression */
-   SCIP_Real*           varcoeffs,      /**< buffer array to store the computed coefficients */
-   SCIP_Real*           constant        /**< buffer to hold the constant value of the given expression */
-)
+   SCIP_EXPR*            expr,               /**< the linear expression */
+   SCIP_Real             scalar,             /**< the scalar value, i.e. the coeff of the given expression */
+   SCIP_Real*            varcoeffs,          /**< buffer array to store the computed coefficients */
+   SCIP_Real*            constant            /**< buffer to hold the constant value of the given expression */
+   )
 {
    switch( SCIPexprGetOperator( expr ) )
    {

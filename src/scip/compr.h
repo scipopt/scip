@@ -46,7 +46,7 @@ SCIP_RETCODE SCIPcomprCopyInclude(
 /** creates a tree compression */
 extern
 SCIP_RETCODE SCIPcomprCreate(
-   SCIP_COMPR**          compr,               /**< pointer to tree compression data structure */
+   SCIP_COMPR**          compr,              /**< pointer to tree compression data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
@@ -95,7 +95,7 @@ SCIP_RETCODE SCIPcomprInitsol(
 /** informs tree compression that the branch and bound process data is being freed */
 extern
 SCIP_RETCODE SCIPcomprExitsol(
-   SCIP_COMPR*           compr,               /**< tree compression */
+   SCIP_COMPR*           compr,              /**< tree compression */
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
@@ -119,43 +119,43 @@ void SCIPcomprSetPriority(
 /** sets copy callback of tree compression */
 extern
 void SCIPcomprSetCopy(
-   SCIP_COMPR*           compr,               /**< tree compression */
-   SCIP_DECL_COMPRCOPY   ((*comprcopy))       /**< copy callback of tree compression or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPRCOPY   ((*comprcopy))      /**< copy callback of tree compression or NULL if you don't want to copy your plugin into sub-SCIPs */
    );
 
 /** sets destructor callback of tree compression */
 extern
 void SCIPcomprSetFree(
-   SCIP_COMPR*           compr,               /**< tree compression */
-   SCIP_DECL_COMPRFREE   ((*comprfree))       /**< destructor of tree compression */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPRFREE   ((*comprfree))      /**< destructor of tree compression */
    );
 
 /** sets initialization callback of tree compression */
 extern
 void SCIPcomprSetInit(
-   SCIP_COMPR*           compr,               /**< tree compression */
-   SCIP_DECL_COMPRINIT   ((*comprinit))       /**< initialize tree compression */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPRINIT   ((*comprinit))      /**< initialize tree compression */
    );
 
 /** sets deinitialization callback of tree compression */
 extern
 void SCIPcomprSetExit(
-   SCIP_COMPR*           compr,               /**< tree compression */
-   SCIP_DECL_COMPREXIT   ((*comprexit))       /**< deinitialize tree compression */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPREXIT   ((*comprexit))      /**< deinitialize tree compression */
    );
 
 /** sets solving process initialization callback of tree compression */
 extern
 void SCIPcomprSetInitsol(
-   SCIP_COMPR*           compr,               /**< tree compression */
-   SCIP_DECL_COMPRINITSOL ((*comprinitsol))   /**< solving process initialization callback of tree compression */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPRINITSOL ((*comprinitsol))  /**< solving process initialization callback of tree compression */
    );
 
 /** sets solving process deinitialization callback of tree compression */
 extern
 void SCIPcomprSetExitsol(
-   SCIP_COMPR*           compr,               /**< tree compression */
-   SCIP_DECL_COMPREXITSOL ((*comprexitsol))   /**< solving process deinitialization callback of tree compression */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPREXITSOL ((*comprexitsol))  /**< solving process deinitialization callback of tree compression */
    );
 
 /** should the compression be executed at the given depth, frequency, timing, ... */
@@ -163,7 +163,7 @@ EXTERN
 SCIP_Bool SCIPcomprShouldBeExecuted(
    SCIP_COMPR*           compr,              /**< tree compression */
    int                   depth,              /**< depth of current node */
-   int                   nnodes             /**< number of open nodes */
+   int                   nnodes              /**< number of open nodes */
    );
 
 #ifdef __cplusplus

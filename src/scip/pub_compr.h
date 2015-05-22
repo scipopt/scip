@@ -57,7 +57,7 @@ void SCIPcomprSetData(
 /** gets name of tree compression */
 EXTERN
 const char* SCIPcomprGetName(
-   SCIP_COMPR*            heur               /**< tree compression */
+   SCIP_COMPR*           heur                /**< tree compression */
    );
 
 /** gets description of tree compression */
@@ -75,7 +75,7 @@ int SCIPcomprGetPriority(
 /** gets minimal number of nodes for calling tree compression (returns -1, if no node threshold exists) */
 EXTERN
 int SCIPcomprGetMinNodes(
-   SCIP_COMPR*          compr               /**< tree compression */
+   SCIP_COMPR*           compr               /**< tree compression */
    );
 
 /** gets the number of times, the compression was called and tried to find a compression */
@@ -93,7 +93,7 @@ SCIP_Longint SCIPcomprGetNFound(
 /** is tree compression initialized? */
 EXTERN
 SCIP_Bool SCIPcomprIsInitialized(
-   SCIP_COMPR*           compr                /**< tree compression */
+   SCIP_COMPR*           compr               /**< tree compression */
    );
 
 /** gets time in seconds used in this compression for setting up for next stages */
@@ -105,7 +105,7 @@ SCIP_Real SCIPcomprGetSetupTime(
 /** gets time in seconds used in this compression */
 EXTERN
 SCIP_Real SCIPcomprGetTime(
-   SCIP_COMPR*           compr                /**< tree compression */
+   SCIP_COMPR*           compr               /**< tree compression */
    );
 
 #ifdef __cplusplus

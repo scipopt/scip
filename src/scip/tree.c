@@ -1593,10 +1593,10 @@ SCIP_RETCODE SCIPnodeDelCons(
 
 /** returns all constraints added to a given node */
 void SCIPnodeGetAddedConss(
-   SCIP_NODE*          node,                      /**< node */
-   SCIP_CONS**         addedconss,                /**< array to store the constraints */
-   int*                naddedconss,               /**< number of added constraints */
-   int                 addedconsssize             /**< size of the constraint array */
+   SCIP_NODE*            node,               /**< node */
+   SCIP_CONS**           addedconss,         /**< array to store the constraints */
+   int*                  naddedconss,        /**< number of added constraints */
+   int                   addedconsssize      /**< size of the constraint array */
    )
 {
    int cons;
@@ -1623,7 +1623,7 @@ void SCIPnodeGetAddedConss(
 
 /** returns the number of added constraints to the given node */
 int SCIPnodeGetNAddedConss(
-   SCIP_NODE*           node                      /**< node */
+   SCIP_NODE*            node                /**< node */
    )
 {
    assert(node != NULL);
@@ -6052,7 +6052,7 @@ SCIP_RETCODE SCIPtreeAddDiveBoundChange(
    return SCIP_OKAY;
 }
 
-/**< get the dive bound change data for the preferred or the alternative direction */
+/** get the dive bound change data for the preferred or the alternative direction */
 void SCIPtreeGetDiveBoundChangeData(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_VAR***           variables,          /**< pointer to store variables for the specified direction */
@@ -7053,7 +7053,7 @@ SCIP_Real SCIPnodeGetEstimate(
 
 /** gets the reoptimization type of this node */
 SCIP_REOPTTYPE SCIPnodeGetReopttype(
-   SCIP_NODE*           node                 /**< node **/
+   SCIP_NODE*            node                /**< node **/
    )
 {
    assert(node != NULL);
@@ -7084,7 +7084,7 @@ void SCIPnodeSetReopttype(
  * the reoptimization tree
  */
 unsigned int SCIPnodeGetReoptID(
-   SCIP_NODE*           node                 /**< node */
+   SCIP_NODE*            node                /**< node */
    )
 {
    assert(node != NULL);

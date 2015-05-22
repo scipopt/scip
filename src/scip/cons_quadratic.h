@@ -572,11 +572,11 @@ SCIP_RETCODE SCIPchgLinearCoefQuadratic(
  */
 EXTERN
 SCIP_RETCODE SCIPchgSquareCoefQuadratic(
-	SCIP*                 scip,               /**< SCIP data structure */
-	SCIP_CONS*            cons,               /**< constraint data */
-	SCIP_VAR*             var,                /**< quadratic variable */
-	SCIP_Real             coef                /**< new coefficient */
-	);
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< quadratic variable */
+   SCIP_Real             coef                /**< new coefficient */
+   );
 
 /** changes the bilinear coefficient value for a given quadratic variable in a quadratic constraint data; if not
  *  available, it adds it

@@ -38,7 +38,6 @@
 
 
 /** compares two compression methods w. r. to their delay positions and their priority */
-
 SCIP_DECL_SORTPTRCOMP(SCIPcomprComp)
 {  /*lint --e{715}*/
    SCIP_COMPR* compr1 = (SCIP_COMPR*)elem1;
@@ -49,7 +48,6 @@ SCIP_DECL_SORTPTRCOMP(SCIPcomprComp)
 
    return compr2->priority - compr1->priority; /* prefer higher priorities */
 }
-
 
 /** comparison method for sorting heuristics w.r.t. to their name */
 SCIP_DECL_SORTPTRCOMP(SCIPcomprCompName)
@@ -101,14 +99,14 @@ SCIP_RETCODE SCIPcomprCreate(
    const char*           desc,               /**< description of tree compression */
    int                   priority,           /**< priority of the tree compression */
    int                   minnnodes,          /**< minimal number of nodes for calling compression */
-   SCIP_DECL_COMPRCOPY    ((*comprcopy)),    /**< copy method of tree compression or NULL if you don't want to copy your plugin into sub-SCIPs */
-   SCIP_DECL_COMPRFREE    ((*comprfree)),    /**< destructor of tree compression */
-   SCIP_DECL_COMPRINIT    ((*comprinit)),    /**< initialize tree compression */
-   SCIP_DECL_COMPREXIT    ((*comprexit)),    /**< deinitialize tree compression */
+   SCIP_DECL_COMPRCOPY   ((*comprcopy)),     /**< copy method of tree compression or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_COMPRFREE   ((*comprfree)),     /**< destructor of tree compression */
+   SCIP_DECL_COMPRINIT   ((*comprinit)),     /**< initialize tree compression */
+   SCIP_DECL_COMPREXIT   ((*comprexit)),     /**< deinitialize tree compression */
    SCIP_DECL_COMPRINITSOL ((*comprinitsol)), /**< solving process initialization method of tree compression */
    SCIP_DECL_COMPREXITSOL ((*comprexitsol)), /**< solving process deinitialization method of tree compression */
-   SCIP_DECL_COMPREXEC    ((*comprexec)),    /**< execution method of tree compression */
-   SCIP_COMPRDATA*        comprdata          /**< tree compression data */
+   SCIP_DECL_COMPREXEC   ((*comprexec)),     /**< execution method of tree compression */
+   SCIP_COMPRDATA*       comprdata           /**< tree compression data */
    )
 {
    char paramname[SCIP_MAXSTRLEN];
@@ -306,7 +304,7 @@ SCIP_RETCODE SCIPcomprExec(
 
 /** gets user data of tree compression */
 SCIP_COMPRDATA* SCIPcomprGetData(
-   SCIP_COMPR*            compr               /**< tree compression */
+   SCIP_COMPR*           compr               /**< tree compression */
    )
 {
    assert(compr != NULL);
@@ -316,8 +314,8 @@ SCIP_COMPRDATA* SCIPcomprGetData(
 
 /** sets user data of tree compression; user has to free old data in advance! */
 void SCIPcomprSetData(
-   SCIP_COMPR*            compr,              /**< tree compression */
-   SCIP_COMPRDATA*        comprdata           /**< new tree compression user data */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_COMPRDATA*       comprdata           /**< new tree compression user data */
    )
 {
    assert(compr != NULL);
@@ -329,8 +327,8 @@ void SCIPcomprSetData(
 
 /** sets copy callback of tree compression */
 void SCIPcomprSetCopy(
-   SCIP_COMPR*            compr,              /**< tree compression */
-   SCIP_DECL_COMPRCOPY    ((*comprcopy))      /**< copy callback of tree compression or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPRCOPY   ((*comprcopy))      /**< copy callback of tree compression or NULL if you don't want to copy your plugin into sub-SCIPs */
    )
 {
    assert(compr != NULL);
@@ -340,8 +338,8 @@ void SCIPcomprSetCopy(
 
 /** sets destructor callback of tree compression */
 void SCIPcomprSetFree(
-   SCIP_COMPR*            compr,              /**< tree compression */
-   SCIP_DECL_COMPRFREE    ((*comprfree))      /**< destructor of tree compression */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPRFREE   ((*comprfree))      /**< destructor of tree compression */
    )
 {
    assert(compr != NULL);
@@ -351,8 +349,8 @@ void SCIPcomprSetFree(
 
 /** sets initialization callback of tree compression */
 void SCIPcomprSetInit(
-   SCIP_COMPR*            compr,              /**< tree compression */
-   SCIP_DECL_COMPRINIT    ((*comprinit))      /**< initialize tree compression */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPRINIT   ((*comprinit))      /**< initialize tree compression */
    )
 {
    assert(compr != NULL);
@@ -362,8 +360,8 @@ void SCIPcomprSetInit(
 
 /** sets deinitialization callback of tree compression */
 void SCIPcomprSetExit(
-   SCIP_COMPR*            compr,              /**< tree compression */
-   SCIP_DECL_COMPREXIT    ((*comprexit))      /**< deinitialize tree compression */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPREXIT   ((*comprexit))      /**< deinitialize tree compression */
    )
 {
    assert(compr != NULL);
@@ -373,8 +371,8 @@ void SCIPcomprSetExit(
 
 /** sets solving process initialization callback of tree compression */
 void SCIPcomprSetInitsol(
-   SCIP_COMPR*            compr,              /**< tree compression */
-   SCIP_DECL_COMPRINITSOL ((*comprinitsol))   /**< solving process initialization callback of tree compression */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPRINITSOL ((*comprinitsol))  /**< solving process initialization callback of tree compression */
    )
 {
    assert(compr != NULL);
@@ -384,8 +382,8 @@ void SCIPcomprSetInitsol(
 
 /** sets solving process deinitialization callback of tree compression */
 void SCIPcomprSetExitsol(
-   SCIP_COMPR*            compr,              /**< tree compression */
-   SCIP_DECL_COMPREXITSOL ((*comprexitsol))   /**< solving process deinitialization callback of tree compression */
+   SCIP_COMPR*           compr,              /**< tree compression */
+   SCIP_DECL_COMPREXITSOL ((*comprexitsol))  /**< solving process deinitialization callback of tree compression */
    )
 {
    assert(compr != NULL);
@@ -453,7 +451,7 @@ void SCIPcomprSetPriority(
 
 /** gets minimal number of nodes for calling tree compression (returns -1, if no node threshold exists) */
 int SCIPcomprGetMinNodes(
-   SCIP_COMPR*          compr               /**< tree compression */
+   SCIP_COMPR*           compr               /**< tree compression */
    )
 {
    assert(compr != NULL);
@@ -483,7 +481,7 @@ SCIP_Longint SCIPcomprGetNFound(
 
 /** is tree compression initialized? */
 SCIP_Bool SCIPcomprIsInitialized(
-   SCIP_COMPR*          compr               /**< tree compression */
+   SCIP_COMPR*           compr               /**< tree compression */
    )
 {
    assert(compr != NULL);
@@ -493,7 +491,7 @@ SCIP_Bool SCIPcomprIsInitialized(
 
 /** gets time in seconds used in this heuristic for setting up for next stages */
 SCIP_Real SCIPcomprGetSetupTime(
-   SCIP_COMPR*           compr              /**< tree compression */
+   SCIP_COMPR*           compr               /**< tree compression */
    )
 {
    assert(compr != NULL);

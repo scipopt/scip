@@ -3567,7 +3567,7 @@ SCIP_RETCODE SCIPincludeCompr(
    SCIP_DECL_COMPRINITSOL ((*comprinitsol)), /**< solving process initialization method of tree compression */
    SCIP_DECL_COMPREXITSOL ((*comprexitsol)), /**< solving process deinitialization method of tree compression */
    SCIP_DECL_COMPREXEC   ((*comprexec)),     /**< execution method of tree compression */
-   SCIP_COMPRDATA*        comprdata          /**< tree compression data */
+   SCIP_COMPRDATA*       comprdata           /**< tree compression data */
    );
 
 /** creates a tree compression and includes it in SCIP with its most fundamental callbacks.
@@ -3603,7 +3603,7 @@ EXTERN
 SCIP_RETCODE SCIPsetComprFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COMPR*           compr,              /**< tree compression */
-   SCIP_DECL_COMPRFREE    ((*comprfree))     /**< destructor of tree compression */
+   SCIP_DECL_COMPRFREE   ((*comprfree))      /**< destructor of tree compression */
    );
 
 /** sets initialization method of tree compression */
@@ -6246,31 +6246,31 @@ SCIP_RETCODE SCIPrestartSolve(
 /** returns whether reoptimization is enabledor not */
 EXTERN
 SCIP_Bool SCIPisReoptEnabled(
-   SCIP*                 scip                     /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* returns the stored solutions corresponding to a given run */
+/** returns the stored solutions corresponding to a given run */
 EXTERN
 SCIP_RETCODE SCIPgetReopSolsRun(
-   SCIP*                 scip,                    /**< SCIP data structue */
-   int                   run,                     /**< number of the run */
-   SCIP_SOL**            sols,                    /**< array to store solutions */
-   int                   allocmem,                /**< allocated size of the array */
-   int*                  nsols                    /**< number of solutions */
+   SCIP*                 scip,               /**< SCIP data structue */
+   int                   run,                /**< number of the run */
+   SCIP_SOL**            sols,               /**< array to store solutions */
+   int                   allocmem,           /**< allocated size of the array */
+   int*                  nsols               /**< number of solutions */
    );
 
-/* mark all stored solutions as not updated */
+/** mark all stored solutions as not updated */
 EXTERN
 void SCIPresetReoptSolMarks(
-   SCIP*                 scip                     /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** check if the reoptimization process should be restarted */
 EXTERN
 SCIP_RETCODE SCIPcheckReoptRestart(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node,                    /**< current node of the branch and bound tree (or NULL) */
-   SCIP_Bool*            restart                  /**< pointer to store of the reoptimitation process should be restarted */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< current node of the branch and bound tree (or NULL) */
+   SCIP_Bool*            restart             /**< pointer to store of the reoptimitation process should be restarted */
    );
 
 /** save bound change based on dual information in the reoptimization tree
@@ -6284,26 +6284,26 @@ SCIP_RETCODE SCIPcheckReoptRestart(
  */
 EXTERN
 SCIP_RETCODE SCIPaddReoptDualBndchg(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node,                    /**< node of the search tree */
-   SCIP_VAR*             var,                     /**< variable whose bound changed */
-   SCIP_Real             newbound,                /**< new bound of the variable */
-   SCIP_Real             oldbound                 /**< old bound of the variable */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< node of the search tree */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             newbound,           /**< new bound of the variable */
+   SCIP_Real             oldbound            /**< old bound of the variable */
    );
 
-/* returns the optimal solution of the last iteration or NULL of none exists */
+/** returns the optimal solution of the last iteration or NULL of none exists */
 EXTERN
 SCIP_SOL* SCIPgetReoptLastOptSol(
-   SCIP*                 scip                     /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* returns the objective coefficent of a given variable in a previous iteration */
+/** returns the objective coefficent of a given variable in a previous iteration */
 EXTERN
 SCIP_RETCODE SCIPgetReoptOldObjCoef(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_VAR*             var,                     /**< variable */
-   int                   run,                     /**< number of the run */
-   SCIP_Real*            objcoef                  /**< pointer to store the objective coefficient */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable */
+   int                   run,                /**< number of the run */
+   SCIP_Real*            objcoef             /**< pointer to store the objective coefficient */
    );
 
 /** returns whether we are in the restarting phase
@@ -17102,7 +17102,7 @@ SCIP_NODE* SCIPgetRootNode(
  */
 EXTERN
 int SCIPgetEffectiveRootDepth(
-   SCIP*                scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns whether the current node is already solved and only propagated again
@@ -17404,21 +17404,21 @@ void SCIPsetFocusnodeLP(
  */
 EXTERN
 SCIP_RETCODE SCIPgetReoptChildIDs(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node,                    /**< node of the search tree */
-   unsigned int*         ids,                     /**< array to store the ids of child nodes */
-   int                   mem,                     /**< allocated memory */
-   int*                  nids                     /**< number of child nodes */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< node of the search tree */
+   unsigned int*         ids,                /**< array to store the ids of child nodes */
+   int                   mem,                /**< allocated memory */
+   int*                  nids                /**< number of child nodes */
    );
 
 /** eturn the ids of leaf nodes store in the reoptimization tree induced by the given node */
 EXTERN
 SCIP_RETCODE SCIPgetReoptLeaveIDs(
-   SCIP*                 scip,                    /**< SCIP data strcuture */
-   SCIP_NODE*            node,                    /**< node of the search tree */
-   unsigned int*         ids,                     /**< array of ids */
-   int                   mem,                     /**< allocated memory */
-   int*                  nids                     /**< number of child nodes */
+   SCIP*                 scip,               /**< SCIP data strcuture */
+   SCIP_NODE*            node,               /**< node of the search tree */
+   unsigned int*         ids,                /**< array of ids */
+   int                   mem,                /**< allocated memory */
+   int*                  nids                /**< number of child nodes */
    );
 
 /** returns the number of nodes in the reoptimization tree induced by @param node. if @param node == NULL, the method
@@ -17426,8 +17426,8 @@ SCIP_RETCODE SCIPgetReoptLeaveIDs(
  */
 EXTERN
 int SCIPgetNReoptnodes(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node                     /**< node of the search tree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node                /**< node of the search tree */
    );
 
 /** returns the number of leave nodes of the subtree induced by @param node. if @param node == NULL, the method
@@ -17435,14 +17435,14 @@ int SCIPgetNReoptnodes(
  */
 EXTERN
 int SCIPgetNReoptLeaves(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node                     /**< node of the search tree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node                /**< node of the search tree */
    );
 
 /** gets the node of the reoptimization tree corresponding to the unique @param id */
 SCIP_REOPTNODE* SCIPgetReoptnode(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   unsigned int          id                       /**< unique id */
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int          id                  /**< unique id */
    );
 
 /** add a variable bound change to a given reoptnode
@@ -17457,11 +17457,11 @@ SCIP_REOPTNODE* SCIPgetReoptnode(
  */
 EXTERN
 SCIP_RETCODE SCIPaddReoptnodeBndchg(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE*       reoptnode,               /**< node of the reoptimization tree */
-   SCIP_VAR*             var,                     /**< variable pointer */
-   SCIP_Real             val,                     /**< value of the variable */
-   SCIP_BOUNDTYPE        boundtype                /**< bound type of the variable value */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
+   SCIP_VAR*             var,                /**< variable pointer */
+   SCIP_Real             val,                /**< value of the variable */
+   SCIP_BOUNDTYPE        boundtype           /**< bound type of the variable value */
    );
 
 /** set the @param representation as the new search frontier
@@ -17474,10 +17474,10 @@ SCIP_RETCODE SCIPaddReoptnodeBndchg(
  */
 EXTERN
 SCIP_RETCODE SCIPsetReoptCompression(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE**      representation,          /**< array of representatives */
-   int                   nrepresentatives,        /**< number of representatives */
-   SCIP_Bool*            success                  /**< pointer to store the result */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE**      representation,     /**< array of representatives */
+   int                   nrepresentatives,   /**< number of representatives */
+   SCIP_Bool*            success             /**< pointer to store the result */
    );
 
 /** add stored constraint to a reoptimization node
@@ -17490,33 +17490,33 @@ SCIP_RETCODE SCIPsetReoptCompression(
  */
 EXTERN
 SCIP_RETCODE SCIPaddReoptnodeCons(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE*       reoptnode,               /**< node of the reoptimization tree */
-   SCIP_VAR**            vars,                    /**< array of variables */
-   SCIP_Real*            vals,                    /**< array of variable bounds */
-   int                   nvars,                   /**< number of variables */
-   REOPT_CONSTYPE        constype                 /**< type of the constraint */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_Real*            vals,               /**< array of variable bounds */
+   int                   nvars,              /**< number of variables */
+   REOPT_CONSTYPE        constype            /**< type of the constraint */
    );
 
-/* return the branching path stored in the reoptree at ID id */
+/** return the branching path stored in the reoptree at ID id */
 EXTERN
 void SCIPgetReoptnodePath(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE*       reoptnode,               /**< node of the reoptimization tree */
-   SCIP_VAR**            vars,                    /**< array of variables */
-   SCIP_Real*            vals,                    /**< array of variable bounds */
-   SCIP_BOUNDTYPE*       boundtypes,              /**< array of bound types */
-   int                   mem,                     /**< allocated memory */
-   int*                  nvars,                   /**< number of variables */
-   int*                  nafterdualvars           /**< number of variables directly after the first based on dual information */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_Real*            vals,               /**< array of variable bounds */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of bound types */
+   int                   mem,                /**< allocated memory */
+   int*                  nvars,              /**< number of variables */
+   int*                  nafterdualvars      /**< number of variables directly after the first based on dual information */
    );
 
-/* initialite an empty reoptnode */
+/** initialite an empty reoptnode */
 EXTERN
 SCIP_RETCODE SCIPinitilizeRepresentation(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE**      representatives,         /**< array of representatives */
-   int                   nrepresentatives         /**< number of represenatived */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE**      representatives,    /**< array of representatives */
+   int                   nrepresentatives    /**< number of represenatived */
    );
 
 /** reactivate the given @p reoptnode and split them into several nodes if necessary
@@ -17529,16 +17529,16 @@ SCIP_RETCODE SCIPinitilizeRepresentation(
  *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPapplyReopt(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE*       reoptnode,               /**< node to reactivate */
-   unsigned int          id,                      /**< unique id of the reoptimization node */
-   SCIP_Real             estimate,                /**< estimate of the child nodes that should be created */
-   SCIP_Real             lowerbound,              /**< lowerbound of the current focusnode */
-   SCIP_NODE**           childnodes,              /**< array to store the created child nodes */
-   int*                  ncreatedchilds,          /**< pointer to store number of created child nodes */
-   int*                  naddedconss,             /**< pointer to store number of generated constraints */
-   int                   childnodessize,          /**< available size of childnodes array */
-   SCIP_Bool*            success                  /**< pointer store the result*/
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE*       reoptnode,          /**< node to reactivate */
+   unsigned int          id,                 /**< unique id of the reoptimization node */
+   SCIP_Real             estimate,           /**< estimate of the child nodes that should be created */
+   SCIP_Real             lowerbound,         /**< lowerbound of the current focusnode */
+   SCIP_NODE**           childnodes,         /**< array to store the created child nodes */
+   int*                  ncreatedchilds,     /**< pointer to store number of created child nodes */
+   int*                  naddedconss,        /**< pointer to store number of generated constraints */
+   int                   childnodessize,     /**< available size of childnodes array */
+   SCIP_Bool*            success             /**< pointer store the result*/
    );
 
 /** remove the stored information about bound changes based in dual information
@@ -17552,8 +17552,8 @@ SCIP_RETCODE SCIPapplyReopt(
  */
 EXTERN
 SCIP_RETCODE SCIPresetReoptnodeDualcons(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node                     /**< node of the search tree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node                /**< node of the search tree */
    );
 
 /** splits the root into several nodes and moves the child nodes of the root to one of the created nodes
@@ -17565,41 +17565,41 @@ SCIP_RETCODE SCIPresetReoptnodeDualcons(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPsplitReoptRoot(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   int*                  ncreatedchilds,          /**< pointer to store the number of created nodes */
-   int*                  naddedconss              /**< pointer to store the number added constraints */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  ncreatedchilds,     /**< pointer to store the number of created nodes */
+   int*                  naddedconss         /**< pointer to store the number added constraints */
    );
 
 /** returns if a node should be reoptimized */
 EXTERN
 SCIP_Bool SCIPreoptimizeNode(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node                     /**< node of the search tree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node                /**< node of the search tree */
    );
 
 /** deletes the given reoptimization node */
 EXTERN
 SCIP_RETCODE SCIPdeleteReoptnode(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE**      reoptnode                /**< node of the reoptimization tree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE**      reoptnode           /**< node of the reoptimization tree */
    );
 
 /** return the similarity between two objective functions */
 EXTERN
 SCIP_Real SCIPgetReoptSimilarity(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   int                   run1,                    /**< number of run */
-   int                   run2                     /**< number of run */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   run1,               /**< number of run */
+   int                   run2                /**< number of run */
    );
 
-/* check the changes of teh variable coefficient in the objective function */
+/** check the changes of teh variable coefficient in the objective function */
 EXTERN
 void SCIPgetVarCoefChg(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   int                   varidx,                  /**< index of variable */
-   SCIP_Bool*            negated,                 /**< coefficient changed the sign */
-   SCIP_Bool*            entering,                /**< coefficient gets non-zero coefficient */
-   SCIP_Bool*            leaving                  /**< coefficient gets zero coefficient */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   varidx,             /**< index of variable */
+   SCIP_Bool*            negated,            /**< coefficient changed the sign */
+   SCIP_Bool*            entering,           /**< coefficient gets non-zero coefficient */
+   SCIP_Bool*            leaving             /**< coefficient gets zero coefficient */
    );
 
 /*

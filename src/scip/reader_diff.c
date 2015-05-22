@@ -639,7 +639,7 @@ static
 SCIP_RETCODE getVariable(
    SCIP*                 scip,               /**< SCIP data structure */
    char*                 name,               /**< name of the variable */
-   SCIP_VAR**            var                /**< pointer to store the variable */
+   SCIP_VAR**            var                 /**< pointer to store the variable */
    )
 {
    assert(name != NULL);

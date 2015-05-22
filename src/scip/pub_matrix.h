@@ -78,14 +78,14 @@ SCIP_Real SCIPmatrixGetColUb(
 /** get lower bound of column */
 EXTERN
 SCIP_Real SCIPmatrixGetColLb(
-   SCIPMILPMATRIX*     matrix,             /**< matrix instance */
+   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    );
 
 /** get number of uplocks of column */
 EXTERN
 int SCIPmatrixGetColNUplocks(
-   SCIPMILPMATRIX*     matrix,             /**< matrix instance */
+   SCIPMILPMATRIX*       matrix,             /**< matrix instance */
    int                   col                 /**< column index */
    );
 
