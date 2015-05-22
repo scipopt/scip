@@ -72,7 +72,8 @@ SCIP_DECL_EVENTEXEC(eventExecReopt)
    assert( eventnode != NULL );
 
    /* skip if the node is not the focus nodes */
-   if( SCIPnodeGetType(eventnode) != SCIP_NODETYPE_FOCUSNODE )
+   if( SCIPnodeGetType(eventnode) != SCIP_NODETYPE_FOCUSNODE
+    || SCIPnodeGetDepth(eventnode) != SCIPgetEffectiveRootDepth(scip) )
       return SCIP_OKAY;
 
    SCIPdebugMessage("catch event for node %lld: <%s>: %g -> %g\n", SCIPnodeGetNumber(eventnode),
@@ -1907,8 +1908,8 @@ SCIP_RETCODE collectDualInformation(
       /* transform the variables into the original space */
       for(v = 0; v < nbndchgs; v++)
       {
-         constant = 0;
-         scalar = 1;
+         constant = 0.0;
+         scalar = 1.0;
 
          SCIP_CALL( SCIPvarGetOrigvarSum(&reopt->dualcons->vars[v], &scalar, &constant) );
          reopt->dualcons->vals[v] = (reopt->dualcons->vals[v] - constant) / scalar;
@@ -1949,7 +1950,7 @@ SCIP_RETCODE collectDualInformation(
       reopt->reopttree->reoptnodes[id]->dualconscur->varssize = nbndchgs;
       reopt->reopttree->reoptnodes[id]->dualconscur->constype = reopttype == SCIP_REOPTTYPE_STRBRANCHED ? REOPT_CONSTYPE_STRBRANCHED : REOPT_CONSTYPE_INFSUBTREE;
 
-      SCIPdebugMessage(" -> save dual information: node %lld, nvars %d, constype %d\n",
+      SCIPdebugMessage(" -> save dual information of type 1: node %lld, nvars %d, constype %d\n",
             SCIPnodeGetNumber(node), reopt->reopttree->reoptnodes[id]->dualconscur->nvars,
             reopt->reopttree->reoptnodes[id]->dualconscur->constype);
    }
@@ -1966,7 +1967,7 @@ SCIP_RETCODE collectDualInformation(
       reopt->reopttree->reoptnodes[id]->dualconsnex->varssize = nbndchgs;
       reopt->reopttree->reoptnodes[id]->dualconsnex->constype = reopttype == SCIP_REOPTTYPE_STRBRANCHED ? REOPT_CONSTYPE_STRBRANCHED : REOPT_CONSTYPE_INFSUBTREE;
 
-      SCIPdebugMessage(" -> save dual information: node %lld, nvars %d, constype %d\n",
+      SCIPdebugMessage(" -> save dual information of type 2: node %lld, nvars %d, constype %d\n",
             SCIPnodeGetNumber(node), reopt->reopttree->reoptnodes[id]->dualconsnex->nvars,
             reopt->reopttree->reoptnodes[id]->dualconsnex->constype);
    }
@@ -2973,7 +2974,7 @@ SCIP_RETCODE addSplitcons(
       SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, name, reopt->reopttree->reoptnodes[id]->dualconscur->nvars, consvars,
             FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
 
-      SCIPdebugMessage(" -> added constraint in node #%lld\n", SCIPnodeGetNumber(node));
+      SCIPdebugMessage(" -> add constraint in node #%lld:\n", SCIPnodeGetNumber(node));
       SCIPdebugPrintCons(scip, cons, NULL);
 
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, NULL) );
@@ -3244,6 +3245,8 @@ SCIP_RETCODE addLocalConss(
    if( reopt->reopttree->reoptnodes[id]->nconss == 0 )
       return SCIP_OKAY;
 
+   SCIPdebugMessage(" -> add %d constraint(s) to node #%lld:\n", reopt->reopttree->reoptnodes[id]->nconss, SCIPnodeGetNumber(node));
+
    for( c = 0; c < reopt->reopttree->reoptnodes[id]->nconss; c++ )
    {
       SCIP_CONS* cons;
@@ -3292,14 +3295,14 @@ SCIP_RETCODE addLocalConss(
       SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, name, consdata->nvars, consvars,
             FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
 
+      SCIPdebugPrintCons(scip, cons, NULL);
+
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, NULL) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
       /* free buffer */
       SCIPfreeBufferArray(scip, &consvars);
    }
-
-   SCIPdebugMessage(" -> added %d constraint(s) to node #%lld\n", c, SCIPnodeGetNumber(node));
 
    return SCIP_OKAY;
 }
@@ -3451,7 +3454,7 @@ SCIP_RETCODE dryBranch(
       }
 
       /* the node is redundant because all bound changes were redundant */
-      if( child->nvars > 0 && child->nvars == nredundantvars )
+      if( child->nvars == 0 && nredundantvars > 0 && redundant )
       {
          redundant = TRUE;
          SCIPdebugMessage(" -> redundant node found.\n");
@@ -3736,6 +3739,7 @@ SCIP_RETCODE reoptSaveNewObj(
 
       idx = SCIPvarGetProbindex(transvars[v]);
       assert(idx < ntransvars);
+      assert(0 <= idx);
 
       reopt->objs[reopt->run-1][idx] = SCIPvarGetObj(transvars[v]);
 
@@ -3761,7 +3765,7 @@ SCIP_RETCODE reoptSaveNewObj(
    if( reopt->run-1 > 1 )
    {
       /* calculate similarity to first objective */
-      if( reopt->run-1 > 1 && reopt->firstobj < reopt->run-1 )
+      if( reopt->run-1 > 1 && reopt->firstobj < reopt->run-1 && reopt->firstobj >= 0 )
          reopt->simtofirstobj = reoptSimilarity(reopt, set, reopt->run-1, reopt->firstobj, transvars, ntransvars);
 
       /* calculate similarity to last objective */
@@ -4557,12 +4561,12 @@ SCIP_REOPTNODE* SCIPreoptGetReoptnode(
 /** returns the coefficient of variable with index @p idx in run @p run */
 SCIP_Real SCIPreoptGetOldObjCoef(
    SCIP_REOPT*           reopt,                   /**< reoptimization data structure */
-   int                   run,                     /**< number of the run */
+   int                   run,                     /**< number of the run (1,2,...) */
    int                   idx                      /**< index of variable */
    )
 {
    assert(reopt != NULL);
-   assert(0 <= run-1 && run < reopt->runsize);
+   assert(0 < run && run <= reopt->runsize);
 
    return reopt->objs[run-1][idx];
 }
@@ -5081,7 +5085,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
             {
                SCIPdebugMessage(" -> new reopttype   : %d\n", SCIP_REOPTTYPE_STRBRANCHED);
                SCIPdebugMessage(" -> new constype    : %d\n", REOPT_CONSTYPE_STRBRANCHED);
-               SCIP_CALL( SCIPreoptAddDualBndchg(reopt, set, blkmem, node, NULL, 0.0, 1.1) );
+               SCIP_CALL( SCIPreoptAddDualBndchg(reopt, set, blkmem, node, NULL, 0.0, 1.0) );
                SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_STRBRANCHED, TRUE, isrootnode, lowerbound) );
             }
             else if( SCIPreoptGetNAddedConss(reopt, node) > 0 )
@@ -5124,8 +5128,8 @@ SCIP_RETCODE SCIPreoptAddDualBndchg(
    assert(reopt != NULL);
    assert(node != NULL);
 
-   constant = 0;
-   scalar = 1;
+   constant = 0.0;
+   scalar = 1.0;
 
    /**
     * If var == NULL, we save all information by calling SCIPreoptNodeFinished().
@@ -6257,6 +6261,8 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
       /* create the logic-or constraint and add them to the problem */
       SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, "glblogicor", reopt->glbconss[c]->nvars,
             consvars, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+
+      SCIPdebugPrintCons(scip, cons, NULL);
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );

@@ -98,9 +98,12 @@
  */
 #include "scip/cons_linear.h"
 
-/* We need to include the branching for reoptimization after creating the reoptimization because we do not want to build
- * this branching rule by default of reoptimization is disabled. */
+/* We need to include the branching and the heurtistics for reoptimization after creating the reoptimization because we
+ * do not want to build this plugins by default if reoptimization is disabled. */
 #include "scip/branch_nodereopt.h"
+#include "scip/heur_reoptsols.h"
+#include "scip/heur_trivialnegation.h"
+#include "scip/heur_ofins.h"
 
 /* In debug mode, we include the SCIP's structure in scip.c, such that no one can access
  * this structure except the interface methods in scip.c.
@@ -8948,7 +8951,36 @@ SCIP_RETCODE SCIPstartInteraction(
    return SCIP_OKAY;
 }
 
+/** set parameters for reoptimization */
+static
+SCIP_RETCODE setReoptimizationParams(
+   SCIP*                 scip                     /**< SCIP data structure */
+)
+{
+   assert(scip != NULL);
+   assert(scip->set != NULL);
+   assert(scip->messagehdlr != NULL);
 
+   /* set size of original solution storage to 0 because we use the solution tree for reoptimization */
+   if( SCIPisParamFixed(scip, "limits/maxorigsol") )
+   {
+      SCIP_CALL( SCIPunfixParam(scip, "limits/maxorigsol") );
+   }
+   SCIP_CALL( SCIPsetSetIntParam(scip->set, scip->messagehdlr, "limits/maxorigsol", 0) );
+
+   /* disable conflict analysis */
+   if( SCIPisParamFixed(scip, "conflict/enable") )
+   {
+      SCIP_CALL( SCIPunfixParam(scip, "conflict/enable") );
+   }
+   SCIP_CALL( SCIPsetSetBoolParam(scip->set, scip->messagehdlr, "conflict/enable", FALSE) );
+
+   /* fix paramters */
+   SCIP_CALL( SCIPfixParam(scip, "limits/maxorigsol") );
+   SCIP_CALL( SCIPfixParam(scip, "conflict/enable") );
+
+   return SCIP_OKAY;
+}
 
 
 /*
@@ -9010,10 +9042,15 @@ SCIP_RETCODE SCIPcreateProb(
    if( scip->set->reopt_enable )
    {
       SCIP_CALL( SCIPreoptCreate(&scip->reopt, scip->set, scip->messagehdlr, scip->mem->probmem) );
-      SCIP_CALL( SCIPdisableAllDualTechniques(scip) );
+      SCIP_CALL( setReoptimizationParams(scip) );
 
       /* include special branching rule for reoptimization */
       SCIP_CALL( SCIPincludeBranchruleNodereopt(scip) );
+
+      /* include heuristics */
+      SCIP_CALL( SCIPincludeHeurReoptsols(scip) );
+      SCIP_CALL( SCIPincludeHeurTrivialnegation(scip) );
+      SCIP_CALL( SCIPincludeHeurOfins(scip) );
    }
 
    return SCIP_OKAY;
@@ -12618,6 +12655,20 @@ SCIP_RETCODE SCIPtransformProb(
    ncandsols = scip->origprimal->nsols;
    oldnsolsfound = 0;
 
+   /* set varlocks to ensure that no dual reduction can be performed */
+   if( !scip->set->misc_allowdualreds )
+   {
+      int v;
+
+      for( v = 0; v < scip->origprob->nvars; v++ )
+      {
+         SCIP_VAR* transvar;
+         transvar =  SCIPvarGetTransVar(scip->origprob->vars[v]);
+         SCIP_CALL( SCIPcaptureVar(scip, transvar) );
+         SCIP_CALL( SCIPaddVarLocks(scip, transvar, 1, 1) );
+      }
+   }
+
    if( !scip->set->reopt_enable )
    {
       oldnsolsfound = scip->primal->nsolsfound;
@@ -14008,6 +14059,21 @@ SCIP_RETCODE freeTransform(
    /* switch stage to FREETRANS */
    scip->set->stage = SCIP_STAGE_FREETRANS;
 
+   /* remove var locks set to avoid dual reductions */
+   if( !scip->set->misc_allowdualreds )
+   {
+      int v;
+
+      /* release and unlock all variables */
+      for(v = 0; v < scip->origprob->nvars; v++)
+      {
+         SCIP_VAR* transvar;
+         transvar =  SCIPvarGetTransVar(scip->origprob->vars[v]);
+         SCIP_CALL( SCIPaddVarLocks(scip, transvar, -1, -1) );
+         SCIP_CALL( SCIPreleaseVar(scip, &transvar) );
+      }
+   }
+
    /* free transformed problem data structures */
    SCIP_CALL( SCIPprobFree(&scip->transprob, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
@@ -14192,21 +14258,6 @@ SCIP_RETCODE compressReoptTree(
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
             "  search tree could not be compressed.\n");
    }
-
-   return SCIP_OKAY;
-}
-
-/* disable all techniques performing dual reductions */
-SCIP_RETCODE SCIPdisableAllDualTechniques(
-   SCIP*                 scip                     /**< SCIP data structure */
-)
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-   assert(scip->messagehdlr != NULL);
-
-   /* disable conflict analysis */
-   SCIP_CALL( SCIPsetSetBoolParam(scip->set, scip->messagehdlr, "conflict/enable", FALSE) );
 
    return SCIP_OKAY;
 }
@@ -14474,13 +14525,6 @@ SCIP_RETCODE SCIPsolve(
          if( scip->set->stage == SCIP_STAGE_SOLVED )
             statsprinted = TRUE;
 
-         if( scip->set->stage == SCIP_STAGE_SOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING )
-            break;
-         assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
-
-         /*lint -fallthrough*/
-
-      case SCIP_STAGE_PRESOLVED:
          if( scip->set->reopt_enable )
          {
             /* currently reoptimization works for (mixed) binary problems only. hence, we have to disable reoptimization
@@ -14506,6 +14550,13 @@ SCIP_RETCODE SCIPsolve(
                   scip->transprob->nvars, scip->set->limit_maxsol) );
          }
 
+         if( scip->set->stage == SCIP_STAGE_SOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING )
+            break;
+         assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
+
+         /*lint -fallthrough*/
+
+      case SCIP_STAGE_PRESOLVED:
          /* check if reoptimization is enabled and global constraints are saved */
          if( scip->stat->nreoptruns > 1 && scip->set->reopt_enable )
          {
@@ -14728,23 +14779,22 @@ SCIP_RETCODE SCIPgetReoptOldObjCoef(
    assert(var != NULL);
    assert(0 < run && run <= scip->stat->nreoptruns);
 
-   if( SCIPvarIsOriginal(var) )
+   if( !SCIPvarIsOriginal(var) )
    {
-      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetIndex(var));
+      assert(SCIPvarIsTransformed(var));
+      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetProbindex(var));
       return SCIP_OKAY;
    }
    else
    {
-      SCIP_VAR* origvar;
-      SCIP_Real constant;
-      SCIP_Real scalar;
+      SCIP_VAR* transvar;
 
-      origvar = var;
-      constant = 0.0;
-      scalar = 1.0;
-      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+      assert(SCIPvarIsOriginal(var) || SCIPvarIsNegated(var));
+      SCIP_CALL( SCIPvarGetTransformed(var, scip->mem->probmem, scip->set, scip->stat, &transvar) );
+      assert(transvar != NULL);
+      assert(SCIPvarIsActive(transvar));
 
-      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetIndex(origvar));
+      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetProbindex(transvar));
       return SCIP_OKAY;
    }
 }

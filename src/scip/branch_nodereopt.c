@@ -61,6 +61,7 @@ SCIP_RETCODE Exec(
    unsigned int curid;
    int naddedconss;
    int nchilds;
+   int childnodessize;
    int ncreatednodes;
    int c;
 
@@ -143,9 +144,17 @@ SCIP_RETCODE Exec(
   REVIVE:
 
    /* get the IDs of all child nodes */
-   SCIP_CALL( SCIPallocBufferArray(scip, &childids, SCIPreoptnodeGetNChildren(reoptnode)) );
-   SCIP_CALL( SCIPgetReoptChildIDs(scip, curnode, childids, SCIPreoptnodeGetNChildren(reoptnode), &nchilds) );
-   assert(SCIPreoptnodeGetNChildren(reoptnode) == nchilds);
+   childnodessize = SCIPreoptnodeGetNChildren(reoptnode);
+   SCIP_CALL( SCIPallocBufferArray(scip, &childids, childnodessize) );
+   SCIP_CALL( SCIPgetReoptChildIDs(scip, curnode, childids, childnodessize, &nchilds) );
+
+   if( childnodessize < nchilds )
+   {
+      childnodessize = SCIPreoptnodeGetNChildren(reoptnode);
+      SCIP_CALL( SCIPreallocBufferArray(scip, &childids, childnodessize) );
+      SCIP_CALL( SCIPgetReoptChildIDs(scip, curnode, childids, childnodessize, &nchilds) );
+   }
+   assert(nchilds <= childnodessize);
 
    naddedconss = 0;
 
@@ -153,7 +162,6 @@ SCIP_RETCODE Exec(
    {
       SCIP_NODE** childnodes;
       SCIP_Bool success;
-      int childnodessize;
       unsigned int childid;
       int ncreatedchilds;
 

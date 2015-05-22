@@ -17378,12 +17378,6 @@ void SCIPsetFocusnodeLP(
 /**@name Reoptimization Methods */
 /**@{ */
 
-/* disable all techniques performing dual reductions */
-EXTERN
-SCIP_RETCODE SCIPdisableAllDualTechniques(
-   SCIP*                 scip                     /**< SCIP data structure */
-   );
-
 /** return the ids of child nodes stored in the reoptimization tree
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
