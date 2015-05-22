@@ -3374,7 +3374,8 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    assert(binv != NULL);
 
    /* mark sparsity pattern as invalid */
-   *ninds = -1;
+   if( ninds != NULL )
+      *ninds = -1;
 
    // @todo exploit sparsity in binv by looping over nrows
    /* calculate the scalar product of the row in B^-1 and A */
@@ -3418,7 +3419,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 
    /* @todo implement this with sparse vectors */
    /* mark sparsity pattern as invalid */
-   *ninds = -1;
+   if( ninds != NULL )
+      *ninds = -1;
 
    /* col needs to be cleared because copying colVectorReal only regards nonzeros */
    col.clear();
