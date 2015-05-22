@@ -14118,7 +14118,7 @@ void adjustLPobjval(
    assert(set != NULL);
    assert(messagehdlr != NULL);
 
-   if( SCIPsetIsInfinity(set, lp->lpobjval) && lp->lpobjval != SCIPsetInfinity(set) )
+   if( SCIPsetIsInfinity(set, lp->lpobjval) && lp->lpobjval != SCIPsetInfinity(set) ) /*lint !e777*/
    {
       if( !lp->adjustlpval )
       {
@@ -14127,7 +14127,7 @@ void adjustLPobjval(
       }
       lp->lpobjval = SCIPsetInfinity(set);
    }
-   else if( SCIPsetIsInfinity(set, -lp->lpobjval) && lp->lpobjval != -SCIPsetInfinity(set) )
+   else if( SCIPsetIsInfinity(set, -lp->lpobjval) && lp->lpobjval != -SCIPsetInfinity(set) ) /*lint !e777*/
    {
       if( !lp->adjustlpval )
       {
@@ -16434,7 +16434,7 @@ SCIP_RETCODE SCIPlpGetSol(
       else
       {
          /* if dual feasibility check is disabled, set reduced costs of basic variables to 0 */
-         if( dualfeasible == NULL && lpicols[c]->basisstatus == SCIP_BASESTAT_BASIC )
+         if( dualfeasible == NULL && lpicols[c]->basisstatus == (unsigned int) SCIP_BASESTAT_BASIC )
          {
             lpicols[c]->redcost = 0.0;
          }
