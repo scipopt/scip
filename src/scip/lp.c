@@ -16552,10 +16552,12 @@ SCIP_RETCODE SCIPlpGetSol(
    }
 
    /* if the objective value returned by the LP solver is smaller than the internally computed primal bound, then we
-    * declare the solution primal infeasible
+    * declare the solution primal infeasible; we assume primalbound and lp->lpobjval to be equal if they are both +/-
+    * infinity
     */
    /**@todo alternatively, if otherwise the LP solution is feasible, we could simply update the objective value */
-   if( stillprimalfeasible )
+   if( stillprimalfeasible && !(SCIPsetIsInfinity(set, primalbound) && SCIPsetIsInfinity(set, lp->lpobjval))
+      && !(SCIPsetIsInfinity(set, -primalbound) && SCIPsetIsInfinity(set, -lp->lpobjval)) )
    {
       stillprimalfeasible = SCIPsetIsFeasLE(set, primalbound, lp->lpobjval);
       SCIPdebugMessage(" primalbound=%.9f, lpbound=%.9g, pfeas=%u(%u)\n", primalbound, lp->lpobjval,
@@ -16563,10 +16565,11 @@ SCIP_RETCODE SCIPlpGetSol(
    }
 
    /* if the objective value returned by the LP solver is smaller than the internally computed dual bound, we declare
-    * the solution dual infeasible
+    * the solution dual infeasible; we assume dualbound and lp->lpobjval to be equal if they are both +/- infinity
     */
    /**@todo alternatively, if otherwise the LP solution is feasible, we could simply update the objective value */
-   if( stilldualfeasible )
+   if( stilldualfeasible && !(SCIPsetIsInfinity(set, dualbound) && SCIPsetIsInfinity(set, lp->lpobjval))
+      && !(SCIPsetIsInfinity(set, -dualbound) && SCIPsetIsInfinity(set, -lp->lpobjval)) )
    {
       stilldualfeasible =  SCIPsetIsFeasGE(set, dualbound, lp->lpobjval);
       SCIPdebugMessage(" dualbound=%.9f, lpbound=%.9g, dfeas=%u(%u)\n", dualbound, lp->lpobjval,
