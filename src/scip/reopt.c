@@ -3453,13 +3453,6 @@ SCIP_RETCODE dryBranch(
          SCIPdebugMessage(" -> redundant node found.\n");
       }
 
-      /* the node is redundant because all bound changes were redundant */
-      if( child->nvars == 0 && nredundantvars > 0 && redundant )
-      {
-         redundant = TRUE;
-         SCIPdebugMessage(" -> redundant node found.\n");
-      }
-
       if( cutoff )
       {
          cutoffchilds[ncutoffchilds] = childid;
