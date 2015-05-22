@@ -3147,7 +3147,6 @@ SCIP_RETCODE respropCumulativeCondition(
 
          /* make sure that the relaxed peak is part of the effective horizon */
          relaxedpeak = MIN(relaxedpeak, hmax-1);
-         assert(relaxedpeak >= hmin);
 
          /* make sure that relaxed peak is not larger than the infer peak
           *
@@ -3155,6 +3154,7 @@ SCIP_RETCODE respropCumulativeCondition(
           */
          relaxedpeak = MAX(relaxedpeak, inferpeak);
          assert(relaxedpeak >= inferpeak);
+         assert(relaxedpeak >= hmin);
       }
       else
       {
@@ -3174,13 +3174,13 @@ SCIP_RETCODE respropCumulativeCondition(
 
          /* make sure that the relaxed peak is part of the effective horizon */
          relaxedpeak = MAX(relaxedpeak, hmin);
-         assert(relaxedpeak < hmax);
 
          /* make sure that relaxed peak is not larger than the infer peak
           *
           * This can happen in case the variable is not an active variable!
           */
          relaxedpeak = MIN(relaxedpeak, inferpeak);
+         assert(relaxedpeak < hmax);
       }
 
       /* resolves the propagation of the core time algorithm */
