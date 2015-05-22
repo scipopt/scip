@@ -6342,7 +6342,7 @@ void tarjan(
  *
  *  @note In general a topological sort of the strongly connected components is not unique.
  */
-void SCIPdigraphComputeDirectedComponents(
+SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   compidx,            /**< number of the undirected connected component */
    int*                  strongcomponents,   /**< array to store the strongly connected components
@@ -6370,11 +6370,11 @@ void SCIPdigraphComputeDirectedComponents(
    assert(strongcompstartidx != NULL);
    assert(nstrongcomponents != NULL);
 
-   BMSallocMemoryArray(&lowlink, digraph->nnodes);
-   BMSallocMemoryArray(&dfsidx, digraph->nnodes);
-   BMSallocMemoryArray(&stack, digraph->nnodes);
-   BMSallocMemoryArray(&unprocessed, digraph->nnodes);
-   BMSallocMemoryArray(&nodeinstack, digraph->nnodes);
+   SCIP_ALLOC( BMSallocMemoryArray(&lowlink, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsidx, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&stack, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&unprocessed, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&nodeinstack, digraph->nnodes) );
 
    for( i = 0; i < digraph->nnodes; ++i )
    {
@@ -6418,6 +6418,8 @@ void SCIPdigraphComputeDirectedComponents(
    BMSfreeMemoryArray(&stack);
    BMSfreeMemoryArray(&unprocessed);
    BMSfreeMemoryArray(&nodeinstack);
+
+   return SCIP_OKAY;
 }
 
 /** frees the component information for the given directed graph */

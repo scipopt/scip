@@ -1010,7 +1010,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
  *  @note In general a topological sort of the strongly connected components is not unique.
  */
 EXTERN
-void SCIPdigraphComputeDirectedComponents(
+SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   compidx,            /**< number of the undirected connected component */
    int*                  strongcomponents,   /**< array to store the strongly connected components

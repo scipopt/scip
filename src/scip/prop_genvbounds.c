@@ -1501,7 +1501,8 @@ SCIP_RETCODE sortGenVBounds(
       /* compute the strong components of the i-th undirected component */
       if( nnodes > 2 )
       {
-         SCIPdigraphComputeDirectedComponents(graph, i, strongcomponents, strongcompstartidx, &nstrongcomponents);
+         SCIP_CALL( SCIPdigraphComputeDirectedComponents(graph, i, strongcomponents, strongcompstartidx,
+               &nstrongcomponents) );
 
          for( j = 0; j < nnodes; ++j )
          {
