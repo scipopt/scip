@@ -1684,7 +1684,7 @@ SCIP_RETCODE separateCons(
    /* test rows for feasibility and add it, if it is infeasible */
    for( r = 0; r < NROWS; ++r )
    {
-      if( consdata->rows[r] != NULL && ((sol == NULL && !SCIProwIsInLP(consdata->rows[r])) || sol != NULL) )
+      if( consdata->rows[r] != NULL && !SCIProwIsInLP(consdata->rows[r]) )
       {
          feasibility = SCIPgetRowSolFeasibility(scip, consdata->rows[r], sol);
          if( SCIPisFeasNegative(scip, feasibility) )
