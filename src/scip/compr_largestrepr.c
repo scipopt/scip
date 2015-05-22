@@ -42,19 +42,19 @@
 struct SCIP_ComprData
 {
    /* representative data */
-   SCIP_REOPTNODE**      representatives;         /**< list of representatives */
-   int                   nrepresentatives;        /**< number of representatives */
-   int                   representativessize;            /**< allocated memory for representatives */
-   SCIP_Bool             initialized;             /**< was compressor data initialized? */
+   SCIP_REOPTNODE**      representatives;    /**< list of representatives */
+   int                   nrepresentatives;   /**< number of representatives */
+   int                   representativessize;/**< allocated memory for representatives */
+   SCIP_Bool             initialized;        /**< was compressor data initialized? */
 
    /* statictics */
-   SCIP_Real             rate;                    /**< rate of compression */
-   SCIP_Real             loi;                     /**< loss of information */
-   int                   nnodes;                  /**< number of nodes after compressing */
+   SCIP_Real             rate;               /**< rate of compression */
+   SCIP_Real             loi;                /**< loss of information */
+   int                   nnodes;             /**< number of nodes after compressing */
 
    /* parameters */
-   int                   mincomvars;              /**< minimal number of common variables */
-   int                   niters;                  /**< number of runs in the constrained part */
+   int                   mincomvars;         /**< minimal number of common variables */
+   int                   niters;             /**< number of runs in the constrained part */
 };
 
 
@@ -62,17 +62,16 @@ struct SCIP_ComprData
  * Local methods
  */
 
-/**
- * calculate a signature of variables fixed to 0 and 1 by using binary shift
- * and or operations. we calculate the signature on the basis of SCIPvarGetProbindex() % 64
+/** calculate a signature of variables fixed to 0 and 1 by using binary shift
+ *  and or operations. we calculate the signature on the basis of SCIPvarGetProbindex() % 64
  */
 static
 void calcSignature(
-   SCIP_VAR**            vars,                    /**< variable array */
-   SCIP_Real*            vals,                    /**< value array */
-   int                   nvars,                   /**< number of variables */
-   SCIP_Longint*         signature0,              /**< pointer to store the signatures of variables fixed to 0 */
-   SCIP_Longint*         signature1               /**< pointer to store the signatures of variables fixed to 1 */
+   SCIP_VAR**            vars,               /**< variable array */
+   SCIP_Real*            vals,               /**< value array */
+   int                   nvars,              /**< number of variables */
+   SCIP_Longint*         signature0,         /**< pointer to store the signatures of variables fixed to 0 */
+   SCIP_Longint*         signature1          /**< pointer to store the signatures of variables fixed to 1 */
    )
 {
    int v;
@@ -91,22 +90,21 @@ void calcSignature(
    return;
 }
 
-/**
- * try to find a representation of the current search frontier.
+/** try to find a representation of the current search frontier.
  *
- * we use the signatures of variables fixed to 0 and 1 to decide if there is
- * definitely no intersection or if the intersection is potentially non-empty.
+ *  We use the signatures of variables fixed to 0 and 1 to decide if there is
+ *  definitely no intersection or if the intersection is potentially non-empty.
  *
- * to find a good representation we start the procedure with a node and choose the best one.
- * the heuristic tries to find a representation of size 2 in each iteration, i.e., runs in the
- * constrained part.
+ *  To find a good representation we start the procedure with a node and choose the best one.
+ *  the heuristic tries to find a representation of size 2 in each iteration, i.e., runs in the
+ *  constrained part.
  */
 static
 SCIP_RETCODE constructCompression(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_COMPR*           compr,                   /**< compression method */
-   SCIP_COMPRDATA*       comprdata,               /**< compression data */
-   SCIP_RESULT*          result                   /**< result pointer */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COMPR*           compr,              /**< compression method */
+   SCIP_COMPRDATA*       comprdata,          /**< compression data */
+   SCIP_RESULT*          result              /**< result pointer */
    )
 {
    SCIP_NODE* currentnode;
@@ -415,7 +413,7 @@ SCIP_RETCODE constructCompression(
 
      TERMINATE:
 
-      /** add the number of variables of uncovered nodes to the loss of information */
+      /* add the number of variables of uncovered nodes to the loss of information */
       for( k = 0; k < nleaveids; k++ )
       {
          if( !covered[k] )
@@ -547,15 +545,13 @@ SCIP_RETCODE constructCompression(
    return SCIP_OKAY;
 }
 
-/**
- * apply the found representation to the reopttree.
- */
+/** apply the found representation to the reopttree. */
 static
 SCIP_RETCODE applyCompression(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_COMPR*           compr,                   /**< compression method */
-   SCIP_COMPRDATA*       comprdata,               /**< compression data */
-   SCIP_RESULT*          result                   /**< result pointer */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COMPR*           compr,              /**< compression method */
+   SCIP_COMPRDATA*       comprdata,          /**< compression data */
+   SCIP_RESULT*          result              /**< result pointer */
    )
 {
    SCIP_Bool success;

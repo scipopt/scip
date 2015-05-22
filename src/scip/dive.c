@@ -71,7 +71,7 @@ SCIP_RETCODE solveLP(
    return SCIP_OKAY;
 }
 
-/**< select the next variable and type of diving */
+/** select the next variable and type of diving */
 static
 SCIP_RETCODE selectNextDiving(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -40,7 +40,7 @@
 extern "C" {
 #endif
 
-/**< represents different methods for a dive set to explore the next children */
+/** represents different methods for a dive set to explore the next children */
 enum SCIP_DiveType
 {
    SCIP_DIVETYPE_NONE        = 0,                /**< no method specified */

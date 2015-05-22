@@ -69,7 +69,7 @@
 #define ADJUSTFACETTOL             1e-6 /**< adjust resulting facets in checkRikun() up to a violation of this value */
 #define USEDUALSIMPLEX             TRUE /**< use dual or primal simplex algorithm? */
 
-/**< first values for 2^n */
+/** first values for 2^n */
 static const int poweroftwo[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
 
 /*
@@ -1167,16 +1167,16 @@ SCIP_RETCODE createTcliqueGraph(
  */
 static
 SCIP_RETCODE searchEcAggrWithCliques(
-    SCIP*                 scip,               /**< SCIP data structure */
-    TCLIQUE_GRAPH*        graph,              /**< TCLIQUE graph structure */
-    SCIP_SEPADATA*        sepadata,           /**< separator data */
-    SCIP_NLROW*           nlrow,              /**< nonlinear row */
-    int*                  quadvar2aggr,       /**< mapping of quadvars to e.c. aggr. index (< 0: in no aggr.) */
-    int                   nfoundsofar,        /**< number of e.c. aggregation found so far */
-    SCIP_Bool             rhsaggr,            /**< consider nonlinear row aggregation for g(x) <= rhs (TRUE) or
-                                               *   lhs <= g(x) (FALSE) */
-    SCIP_Bool*            foundaggr,          /**< pointer to store if we have found an aggregation */
-    SCIP_Bool*            foundclique         /**< pointer to store if we have found a clique */
+   SCIP*                 scip,               /**< SCIP data structure */
+   TCLIQUE_GRAPH*        graph,              /**< TCLIQUE graph structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   int*                  quadvar2aggr,       /**< mapping of quadvars to e.c. aggr. index (< 0: in no aggr.) */
+   int                   nfoundsofar,        /**< number of e.c. aggregation found so far */
+   SCIP_Bool             rhsaggr,            /**< consider nonlinear row aggregation for g(x) <= rhs (TRUE) or
+                                              *   lhs <= g(x) (FALSE) */
+   SCIP_Bool*            foundaggr,          /**< pointer to store if we have found an aggregation */
+   SCIP_Bool*            foundclique         /**< pointer to store if we have found a clique */
    )
 {
    SCIP_HASHMAP* cliquemap;

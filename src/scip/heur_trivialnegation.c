@@ -60,10 +60,10 @@ SCIP_DECL_HEURCOPY(heurCopyTrivialnegation)
 static
 SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
 {  /*lint --e{715}*/
-   SCIP_SOL* lastbestsol;         /** best solution from last run */
-   SCIP_SOL* allchanged;          /** solution with all entries negated */
-   SCIP_SOL* feasiblechanged;     /** solution with all feasible entries negated */
-   SCIP_SOL* singlenegatedsol;    /** solution with exactly one negated entry */
+   SCIP_SOL* lastbestsol;         /* best solution from last run */
+   SCIP_SOL* allchanged;          /* solution with all entries negated */
+   SCIP_SOL* feasiblechanged;     /* solution with all feasible entries negated */
+   SCIP_SOL* singlenegatedsol;    /* solution with exactly one negated entry */
    SCIP_VAR** vars;
    int nvars;
    int i;
