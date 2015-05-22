@@ -6850,6 +6850,7 @@ SCIP_RETCODE createNormalizedSetppc(
    return SCIP_OKAY;
 }
 
+/** check, if linear constraint can be upgraded to set partitioning, packing, or covering constraint */
 static
 SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
 {  /*lint --e{715}*/
