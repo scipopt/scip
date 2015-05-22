@@ -23,6 +23,7 @@
 #include <assert.h>
 
 #include "scip/mem.h"
+#include "scip/misc.h"
 #include "scip/compr_weakcompr.h"
 #include "scip/compr.h"
 #include "scip/pub_reopt.h"
@@ -55,74 +56,28 @@ struct SCIP_ComprData
  * Local methods
  */
 
-/** subroutine for quicksort */
+/** sort the ids of child nodes by their dual bound of the last iteration */
 static
-int partition(
+SCIP_RETCODE sortIDs(
    SCIP*                 scip,               /**< SCIP data structure */
    unsigned int*         childids,           /**< array of child ids */
-   int                   left,               /**< first position */
-   int                   right               /**< last position */
+   int                   nchildids           /**< first position */
    )
 {
-   SCIP_REOPTNODE* reoptnodepivot;
-   int pivot;
+   SCIP_Real* lowerbounds;
    int i;
-   int j;
-   unsigned int t;
 
-   pivot = left;
-   i = left;
-   j = right+1;
-   reoptnodepivot = SCIPgetReoptnode(scip, childids[pivot]);
-   assert(reoptnodepivot != NULL);
+   SCIP_CALL( SCIPallocBufferArray(scip, &lowerbounds, nchildids) );
 
-   while( i < j )
+   for( i = 0; i < nchildids; i++ )
    {
-      do
-      {
-         ++i;
-      } while( i <= right && SCIPisGT(scip, SCIPreoptnodeGetLowerbound(SCIPgetReoptnode(scip, childids[i])), SCIPreoptnodeGetLowerbound(reoptnodepivot)) );
-
-      do
-      {
-         --j;
-      } while( j > 0 && SCIPisLT(scip, SCIPreoptnodeGetLowerbound(SCIPgetReoptnode(scip, childids[j])), SCIPreoptnodeGetLowerbound(reoptnodepivot)) );
-
-      if( i >= j )
-         break;
-
-      t = childids[i];
-      childids[i] = childids[j];
-      childids[j] = t;
+      lowerbounds[i] = SCIPreoptnodeGetLowerbound(SCIPgetReoptnode(scip, childids[i]));
    }
 
-   t = childids[left];
-   childids[left] = childids[j];
-   childids[j] = t;
+   /* sort the ids in decreasing order */
+   SCIPsortDownRealPtr(lowerbounds, (void*) childids, nchildids);
 
-   return j;
-}
-
-/** quicksort implementation
- *
- *  sort the ids of child nodes by their dual bound of the last iteration
- */
-static
-void sortIDs(
-   SCIP*                 scip,               /**< SCIP data structure */
-   unsigned int*         childids,           /**< array of child ids */
-   int                   left,               /**< first position */
-   int                   right               /**< last position */
-   )
-{
-   int j;
-
-   if( left < right )
-   {
-      j = partition(scip, childids, left, right);
-      sortIDs(scip, childids, left, j-1);
-      sortIDs(scip, childids, j+1, right);
-   }
+   return SCIP_OKAY;
 }
 
 /** check of enough memory is allocated and reallocate of necessary. */
@@ -222,7 +177,7 @@ SCIP_RETCODE constructCompression(
    assert(nids == nleaveids);
 
    /* sort the ids */
-   sortIDs(scip, leaveids, 0, nleaveids-1);
+   SCIP_CALL( sortIDs(scip, leaveids, nleaveids) );
 
    /* allocate memory to store the old tree */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
