@@ -2,6 +2,8 @@ SCIP version NEXT
 ==================
 
 features:
+- extended variable branching statistics in the interactive shell by sample variance of unit gains
+- extended statistic output of interactive shell by more information on diving heuristic behavior
 - obbt propagator applies now additional separation and propagation in order to learn stronger and more bound tightenings
 - possible to change objective coefficients during probing mode
 - variable histories can be transferred between sub-SCIPs solved by LNS heuristics and the component presolver
@@ -76,7 +78,7 @@ parameters:
 - new parameter "branching/relpscost/lowerrortol" to define a lower reliability threshold for relative error based reliability
 - new parameter "branching/relpscost/higherrortol" to define the highest reliability threshold for relative error based reliability
 - new parameter "branching/relpscost/usehyptestforreliability" to enable strong branching decisions based on a 2-sample student-T test
-  of all prior pseudo-cost observations   between the best pseudo-candidate and the candidate for which to decide whether strong-branching
+  of all prior pseudo-cost observations between the best pseudo-candidate and the candidate for which to decide whether strong-branching
   should be applied
 - new parameter "branching/relpscost/usedynamicconfidence" to use a dynamic confidence level based on the amount of
   strong-branching simplex-iterations compared to the overall simplex iterations (default is FALSE)
@@ -161,11 +163,8 @@ parameters:
 - new parameter "heuristics/shiftandpropagate/binlocksfirst" to set if binaries without locks should be preferred in ordering
 
 performance improvements:
-- adjusted (hard) diving heuristics to solve fewer LPs at shallow depths of the tree; after an LP was solved,
-  the next depth to perform an LP solve is determined dynamically based on the heuristic success so far
-  and the difference between the depth and the maximum dive depth; if more than one candidate should
-  be rounded, all candidates are sorted w.r.t. the diving score and then attempted in order of their score
-  unless their LP solution has already become infeasible from intermediate propagations.
+- adjusted (hard) diving heuristics to solve fewer LPs. LP's are resolved only if a parameter-defined
+  percentage of the variable bounds changed through domain propagation or at a predefined frequency.
 - all hard diving heuristics additionally consider indicator variables as candidate variables and try to
   make indicator constraints feasible before passing a rounded solution to SCIPtrySol()
 - improved vartype upgradability from continuous to implicit variables in cons_linear.c, depending on their objective
@@ -176,6 +175,12 @@ performance improvements:
 
 interface:
 - avoid potential comparisons of different infinity values by adjusting the LP solution value
+- new callback function SCIP_DECL_CONSGETDIVEBDCHGS to provide
+  constraint handler method to suggest dive bound changes during the generic diving algorithm, see type_cons.h for details
+- SCIPincludeConshdlr has a new argument to provide a divebdchg-callback for the constraint handler to include
+- new method SCIPaddDiveBoundChange() to add a diving bound change to the diving bound change storage of SCIP together with the information if this is a
+  bound change for the preferred direction or not, to be used by constraint handlers inside the getDiveBdChgs-callback
+- new setter function SCIPsetConshdlrGetDiveBdChgs() in scip.h to set dive bound change callback for this constraint handler
 - SCIPintervalSign(),  SCIPintervalAbs(), SCIPintervalMax(), SCIPintervalMin(), SCIPexprgraphGetNodePolynomialMonomialCurvature(),
   and SCIPexprgraphTightenNodeBounds() need an infinity value to decide whether an interval is empty or not
 - SCIPgetFeasibilityQuadratic() and SCIPgetActivityQuadratic() returns now a SCIP_RETCODE and needs an additional SCIP_Real* to
@@ -191,7 +196,9 @@ interface:
 - methods which support statistical tests in pub_misc.h, SCIPstudentTGetCriticalValue(), SCIPcomputeTwoSampleTTestValue() etc.
 - new enum SCIP_CONFIDENCE_LEVEL for different levels of confidence for statistical tests.
 - new struct SCIP_DIVESET that bundles options for SCIP's diving heuristics; all hard diving heuristics (those
-  without 'obj' at the beginning) create their diveset and store it in their heuristic data.
+  without 'obj' at the beginning) include diveset and implement only the scoring callback.
+- new method SCIPcreateDiveset() to add a diveset to a heuristic. Heuristics may have multiple divesets
+  under different names
 - new callback SCIP_DECL_DIVESETGETSCORE to implement scoring function to guide diving
 - new method SCIPperformGenericDivingAlgorithm() that performs diving with periodic LP resolve according to
   the diveset argument.
