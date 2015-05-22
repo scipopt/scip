@@ -83,6 +83,12 @@
 /* epsilon for differentiating between a boundary and interior point */
 #define INTERIOR_EPS 1e-1
 
+/* enable assert on feasibility of cuts added in INITLP (see also 82ec3324)
+ * off by default, as I (SV) believe we cannot ensure that infeasibility
+ * can always be ensured by other means (propagation)
+ */
+#define ASSERT_INITLP_FEASCUT
+
 /*
  * Data structures
  */
@@ -10917,7 +10923,9 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613 */
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
          SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+#ifdef ASSERT_INITLP_FEASCUT
          assert( ! infeasible );
+#endif
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
          continue;
       }
@@ -10970,7 +10978,9 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
                SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+#ifdef ASSERT_INITLP_FEASCUT
                assert( ! infeasible );
+#endif
 
                SCIP_CALL( SCIPreleaseRow (scip, &row) );
             }
@@ -11045,7 +11055,9 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
                   SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+#ifdef ASSERT_INITLP_FEASCUT
                   assert( ! infeasible );
+#endif
 
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
                }
@@ -11062,7 +11074,9 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
                   SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+#ifdef ASSERT_INITLP_FEASCUT
                   assert( ! infeasible );
+#endif
 
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
                }
