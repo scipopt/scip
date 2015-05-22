@@ -8753,6 +8753,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->ndivingrows = 0;
    (*lp)->divinglpiitlim = INT_MAX;
    (*lp)->resolvelperror = FALSE;
+   (*lp)->adjustlpval = FALSE;
    (*lp)->lpiuobjlim = SCIPlpiInfinity((*lp)->lpi);
    (*lp)->lpifeastol = SCIPsetLpfeastol(set);
    (*lp)->lpidualfeastol = SCIPsetDualfeastol(set);
@@ -14105,6 +14106,38 @@ SCIP_RETCODE lpSolveStable(
    return SCIP_OKAY;
 }
 
+/** adjust the LP objective value if its greater/less than +/- SCIPsetInfinity() */
+static
+void adjustLPobjval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   )
+{
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(messagehdlr != NULL);
+
+   if( SCIPsetIsInfinity(set, lp->lpobjval) && lp->lpobjval != SCIPsetInfinity(set) )
+   {
+      if( !lp->adjustlpval )
+      {
+         SCIPmessagePrintWarning(messagehdlr, "LP solution value is above SCIP's infinity value\n");
+         lp->adjustlpval = TRUE;
+      }
+      lp->lpobjval = SCIPsetInfinity(set);
+   }
+   else if( SCIPsetIsInfinity(set, -lp->lpobjval) && lp->lpobjval != -SCIPsetInfinity(set) )
+   {
+      if( !lp->adjustlpval )
+      {
+         SCIPmessagePrintWarning(messagehdlr, "LP solution value is below SCIP's -infinity value\n");
+         lp->adjustlpval = TRUE;
+      }
+      lp->lpobjval = -SCIPsetInfinity(set);
+   }
+}
+
 /** solves the LP with the given algorithm and evaluates return status */
 static
 SCIP_RETCODE lpSolve(
@@ -14185,6 +14218,8 @@ SCIP_RETCODE lpSolve(
       assert(lp->dualfeasible);
       lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
+      adjustLPobjval(lp, set, messagehdlr);
+
       if( !SCIPsetIsInfinity(set, lp->lpiuobjlim) && SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) )
       {
          /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
@@ -14231,6 +14266,7 @@ SCIP_RETCODE lpSolve(
    else if( SCIPlpiIsIterlimExc(lp->lpi) )
    {
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
+      adjustLPobjval(lp, set, messagehdlr);
       lp->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
    }
    else if( SCIPlpiIsTimelimExc(lp->lpi) )

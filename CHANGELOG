@@ -175,6 +175,7 @@ performance improvements:
 - improved propagation of SOS1 constraint handler using the information from a conflict
 
 interface:
+- avoid potential comparisons of different infinity values by adjusting the LP solution value
 - SCIPintervalSign(),  SCIPintervalAbs(), SCIPintervalMax(), SCIPintervalMin(), SCIPexprgraphGetNodePolynomialMonomialCurvature(),
   and SCIPexprgraphTightenNodeBounds() need an infinity value to decide whether an interval is empty or not
 - SCIPgetFeasibilityQuadratic() and SCIPgetActivityQuadratic() returns now a SCIP_RETCODE and needs an additional SCIP_Real* to
