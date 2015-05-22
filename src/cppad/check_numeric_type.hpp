@@ -70,6 +70,7 @@ $end
 ---------------------------------------------------------------------------
 */
 
+# include <cstddef>
 # include <cppad/thread_alloc.hpp>
 
 namespace CppAD {

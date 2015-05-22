@@ -139,6 +139,7 @@ $end
 -----------------------------------------------------------------------
 */
 
+# include <cstddef>
 # include <cmath>
 # include <cppad/elapsed_seconds.hpp>
 # include <cppad/local/define.hpp>

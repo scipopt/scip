@@ -104,6 +104,7 @@ $end
 ---------------------------------------------------------------------------
 */
 
+# include <cstddef>
 # include <cppad/local/cppad_assert.hpp>
 # include <cppad/local/define.hpp>
 # include <cppad/thread_alloc.hpp>
