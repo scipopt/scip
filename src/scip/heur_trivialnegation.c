@@ -108,17 +108,11 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
    /* change the entries */
    for( i = 0; i < nvars; i++ )
    {
-      SCIP_VAR* origvar;
-      SCIP_Real constant;
-      SCIP_Real scalar;
+      SCIP_VAR* transvar;
 
       assert(SCIPvarIsActive(vars[i]));
 
-      origvar = vars[i];
-//      scalar = 1.0;
-//      constant = 0.0;
-//      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar,&scalar, &constant) );
-//      assert(origvar != NULL);
+      transvar = vars[i];
 
       if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY )
       {
@@ -127,8 +121,8 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
          SCIP_Real oldcoef;
          SCIP_Bool changed;
 
-         newcoef = SCIPgetReoptOldObjCoef(scip, origvar, SCIPgetNReoptRuns(scip));
-         oldcoef = SCIPgetReoptOldObjCoef(scip, origvar, SCIPgetNReoptRuns(scip)-1);
+         newcoef = SCIPgetReoptOldObjCoef(scip, transvar, SCIPgetNReoptRuns(scip));
+         oldcoef = SCIPgetReoptOldObjCoef(scip, transvar, SCIPgetNReoptRuns(scip)-1);
 
          /* check if variable entered or left the objective, or if its objective coefficient changed sign */
          changed = FALSE;
@@ -138,7 +132,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
             changed |= SCIPisPositive(scip, oldcoef) == SCIPisNegative(scip, newcoef); /*lint !e514*/
          }
 
-         SCIPdebugMessage("check variable <%s> which has %schanged from %g to %g\n", SCIPvarGetName(origvar), changed ? "" : "not ", oldcoef, newcoef);
+         SCIPdebugMessage("check variable <%s> which has %schanged from %g to %g\n", SCIPvarGetName(transvar), changed ? "" : "not ", oldcoef, newcoef);
 
          if( changed )
          {
