@@ -209,7 +209,7 @@ SCIP_SOL* SCIPreoptGetLastBestSol(
 extern
 SCIP_REOPTNODE* SCIPreoptGetReoptnode(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   int                   id                  /**< unique id */
+   unsigned int          id                  /**< unique id */
    );
 
 /** returns the coefficent of variable with index @param idx in run @param run */

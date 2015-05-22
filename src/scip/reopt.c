@@ -4535,7 +4535,7 @@ SCIP_SOL* SCIPreoptGetLastBestSol(
 /** returns the node of the reoptimization tree corresponding to the unique @p id */
 SCIP_REOPTNODE* SCIPreoptGetReoptnode(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
-   int                   id                  /**< unique id */
+   unsigned int          id                  /**< unique id */
    )
 {
    assert(reopt != NULL);
