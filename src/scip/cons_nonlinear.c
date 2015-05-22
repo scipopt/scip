@@ -4654,10 +4654,15 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
       ref[j] = MIN(SCIPvarGetUbLocal(vars[j]), MAX(SCIPvarGetLbLocal(vars[j]), ref[j]));  /*lint !e666*/
    }
 
+   /* create empty auxiliary LP and decide its objective sense */
    assert(consdata->curvatures[exprtreeidx] == SCIP_EXPRCURV_CONVEX || consdata->curvatures[exprtreeidx] == SCIP_EXPRCURV_CONCAVE);
    doupper = (consdata->curvatures[exprtreeidx] & SCIP_EXPRCURV_CONVEX);  /*lint !e641*/
-
-   lpi = NULL;
+   SCIP_CALL( SCIPlpiCreate(&lpi, SCIPgetMessagehdlr(scip), "concaveunderest", doupper ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE) );
+   if( lpi == NULL )
+   {
+      SCIPerrorMessage("failed to create auxiliary LP\n");
+      return SCIP_ERROR;
+   }
 
    /* columns are cut coefficients plus constant */
    ncols = nvars + 1;
@@ -4739,7 +4744,6 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    SCIP_CALL( SCIPexprtreeEval(exprtree, ref, &funcval) );
    funcval *= treecoef;
 
-   SCIP_CALL( SCIPlpiCreate(&lpi, SCIPgetMessagehdlr(scip), "concaveunderest", doupper ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE) );
    SCIP_CALL( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
    SCIP_CALL( SCIPlpiAddRows(lpi, nrows, lhs, rhs, NULL, nnonz, beg, ind, val) );
 
