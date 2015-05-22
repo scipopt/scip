@@ -23,8 +23,6 @@
 
 #include "scip/pub_dive.h"
 #include "pub_heur.h"
-#include "scip/struct_heur.h"
-#include "scip/struct_stat.h"
 
 /* the indicator and SOS1 constraint handlers are included for the diving algorithm SCIPperformGenericDivingAlgorithm() */
 #include "scip/cons_indicator.h"
