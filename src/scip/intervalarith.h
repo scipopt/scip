@@ -179,7 +179,7 @@ SCIP_Bool SCIPintervalIsNegativeInfinity(
 #define SCIPintervalSetBounds(resultant, i, s)     do { SCIP_Real scipintervaltemp; scipintervaltemp = (s); (resultant)->inf = (i); (resultant)->sup = scipintervaltemp; } while( FALSE )
 #define SCIPintervalSetEmpty(resultant)            do { (resultant)->inf = 1.0; (resultant)->sup = -1.0; } while( FALSE )
 #define SCIPintervalSetEntire(infinity, resultant) do { (resultant)->inf = -(infinity); (resultant)->sup =  (infinity); } while( FALSE )
-#define SCIPintervalIsEmpty(operand)               ( (operand).sup < (operand).inf )
+#define SCIPintervalIsEmpty(infinity, operand)     ( (operand).inf > -(infinity) && (operand).sup < (infinity) && (operand).sup < (operand).inf )
 #define SCIPintervalIsEntire(infinity, operand)    ( (operand).inf <= -(infinity) && (operand).sup >= (infinity) )
 #define SCIPintervalIsPositiveInfinity(infinity, operand) ( (operand).inf >=  (infinity) && (operand).sup >= (operand).inf )
 #define SCIPintervalIsNegativeInfinity(infinity, operand) ( (operand).sup <= -(infinity) && (operand).sup >= (operand).inf )
