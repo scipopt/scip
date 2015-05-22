@@ -122,7 +122,7 @@ struct SCIP_ConsData
    unsigned int          quadvarssorted:1;   /**< are the quadratic variables already sorted? */
    unsigned int          quadvarsmerged:1;   /**< are equal quadratic variables already merged? */
    unsigned int          bilinsorted:1;      /**< are the bilinear terms already sorted? */
-   unsigned int          bilinmerged:1;      /**< are equal bilinear terms already merged? */
+   unsigned int          bilinmerged:1;      /**< are equal bilinear terms (and bilinear terms with zero coefficient) already merged? */
 
    unsigned int          isconvex:1;         /**< is quadratic function is convex ? */
    unsigned int          isconcave:1;        /**< is quadratic function is concave ? */
@@ -2390,7 +2390,9 @@ SCIP_RETCODE addBilinearTerm(
    if( consdata->nbilinterms == 1 )
    {
       consdata->bilinsorted = TRUE;
-      consdata->bilinmerged = TRUE;
+
+      /* we have to take care of the bilinear term in mergeAndCleanBilinearTerms() if the coefficient is zero */
+      consdata->bilinmerged = !SCIPisZero(scip, consdata->bilinterms[0].coef);
    }
    else
    {
