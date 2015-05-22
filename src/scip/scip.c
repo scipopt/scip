@@ -5839,7 +5839,7 @@ SCIP_RETCODE SCIPsetConshdlrGetDiveBdChgs(
    )
 {
    assert(scip != NULL);
-   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrEnfoDive", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPsetConshdlrGetDiveBdChgs", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIPconshdlrSetGetDiveBdChgs(conshdlr, consgetdivebdchgs);
 
@@ -7433,7 +7433,7 @@ SCIP_RETCODE SCIPincludeCompr(
    SCIP_DECL_COMPRINITSOL ((*comprinitsol)), /**< solving process initialization method of tree compression */
    SCIP_DECL_COMPREXITSOL ((*comprexitsol)), /**< solving process deinitialization method of tree compression */
    SCIP_DECL_COMPREXEC   ((*comprexec)),     /**< execution method of tree compression */
-   SCIP_COMPRDATA*        comprdata          /**< tree compression data */
+   SCIP_COMPRDATA*       comprdata           /**< tree compression data */
    )
 {
    SCIP_COMPR* compr;
@@ -7520,7 +7520,7 @@ SCIP_RETCODE SCIPsetComprCopy(
 SCIP_RETCODE SCIPsetComprFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COMPR*           compr,              /**< tree compression */
-   SCIP_DECL_COMPRFREE    ((*comprfree))     /**< destructor of tree compression */
+   SCIP_DECL_COMPRFREE   ((*comprfree))      /**< destructor of tree compression */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetComprFree", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -8968,8 +8968,8 @@ SCIP_RETCODE SCIPstartInteraction(
 /** set parameters for reoptimization */
 static
 SCIP_RETCODE setReoptimizationParams(
-   SCIP*                 scip                     /**< SCIP data structure */
-)
+   SCIP*                 scip                /**< SCIP data structure */
+   )
 {
    assert(scip != NULL);
    assert(scip->set != NULL);
@@ -14223,7 +14223,7 @@ SCIP_RETCODE displayRelevantStats(
 /** calls compression based on the reoptimization structure after the presolving */
 static
 SCIP_RETCODE compressReoptTree(
-   SCIP*                 scip                 /**< global SCIP settings */
+   SCIP*                 scip                /**< global SCIP settings */
    )
 {
    SCIP_RESULT result;
@@ -14746,14 +14746,14 @@ SCIP_RETCODE SCIPsolve(
  *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPaddReoptDualBndchg(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node,                    /**< node of the search tree */
-   SCIP_VAR*             var,                     /**< variable whose bound changed */
-   SCIP_Real             newbound,                /**< new bound of the variable */
-   SCIP_Real             oldbound                 /**< old bound of the variable */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< node of the search tree */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             newbound,           /**< new bound of the variable */
+   SCIP_Real             oldbound            /**< old bound of the variable */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPaddDualBndchg", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPaddReoptDualBndchg", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    assert(SCIPsetIsFeasLT(scip->set, newbound, oldbound) || SCIPsetIsFeasGT(scip->set, newbound, oldbound));
 
@@ -14762,9 +14762,9 @@ SCIP_RETCODE SCIPaddReoptDualBndchg(
    return SCIP_OKAY;
 }
 
-/* returns the optimal solution of the last iteration or NULL of none exists */
+/** returns the optimal solution of the last iteration or NULL of none exists */
 SCIP_SOL* SCIPgetReoptLastOptSol(
-   SCIP*                 scip                     /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_SOL* sol;
@@ -14781,12 +14781,12 @@ SCIP_SOL* SCIPgetReoptLastOptSol(
    return sol;
 }
 
-/* returns the objective coefficent of a given variable in a previous iteration */
+/** returns the objective coefficent of a given variable in a previous iteration */
 SCIP_RETCODE SCIPgetReoptOldObjCoef(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_VAR*             var,                     /**< variable */
-   int                   run,                     /**< number of the run */
-   SCIP_Real*            objcoef                  /**< pointer to store the objective coefficient */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable */
+   int                   run,                /**< number of the run */
+   SCIP_Real*            objcoef             /**< pointer to store the objective coefficient */
    )
 {
    assert(scip != NULL);
@@ -14824,11 +14824,11 @@ SCIP_RETCODE SCIPgetReoptOldObjCoef(
  *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPgetReoptChildIDs(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node,                    /**< node of the search tree */
-   unsigned int*         ids,                     /**< array of ids */
-   int                   idssize,                 /**< allocated memory */
-   int*                  nids                     /**< number of child nodes */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< node of the search tree */
+   unsigned int*         ids,                /**< array of ids */
+   int                   idssize,            /**< allocated memory */
+   int*                  nids                /**< number of child nodes */
    )
 {
    assert(scip != NULL);
@@ -14856,11 +14856,11 @@ SCIP_RETCODE SCIPgetReoptChildIDs(
  *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPgetReoptLeaveIDs(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node,                    /**< node of the search tree */
-   unsigned int*         ids,                     /**< array of ids */
-   int                   idssize,                 /**< size of ids array */
-   int*                  nids                     /**< number of child nodes */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< node of the search tree */
+   unsigned int*         ids,                /**< array of ids */
+   int                   idssize,            /**< size of ids array */
+   int*                  nids                /**< number of child nodes */
 )
 {
    assert(scip != NULL);
@@ -14877,12 +14877,12 @@ SCIP_RETCODE SCIPgetReoptLeaveIDs(
    return SCIP_OKAY;
 }
 
-/* returns the number of nodes in the reoptimization tree induced by @param node. if @param node == NULL the method
+/** returns the number of nodes in the reoptimization tree induced by @param node. if @param node == NULL the method
  * returns the number of nodes of the whole reoptimization tree.
  */
 int SCIPgetNReoptnodes(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node                     /**< node of the search tree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node                /**< node of the search tree */
    )
 {
    assert(scip != NULL);
@@ -14896,8 +14896,8 @@ int SCIPgetNReoptnodes(
  *  returns the number of leaf nodes of the whole reoptimization tree.
  */
 int SCIPgetNReoptLeaves(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node                     /**< node of the search tree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node                /**< node of the search tree */
    )
 {
    assert(scip != NULL);
@@ -14909,8 +14909,8 @@ int SCIPgetNReoptLeaves(
 
 /** gets the node of the reoptimization tree corresponding to the unique @param id */
 SCIP_REOPTNODE* SCIPgetReoptnode(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   unsigned int          id                       /**< unique id */
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int          id                  /**< unique id */
    )
 {
    assert(scip != NULL);
@@ -14931,11 +14931,11 @@ SCIP_REOPTNODE* SCIPgetReoptnode(
  *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPaddReoptnodeBndchg(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE*       reoptnode,               /**< node of the reoptimization tree */
-   SCIP_VAR*             var,                     /**< variable pointer */
-   SCIP_Real             val,                     /**< value of the variable */
-   SCIP_BOUNDTYPE        boundtype                /**< bound type of the variable value */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
+   SCIP_VAR*             var,                /**< variable pointer */
+   SCIP_Real             val,                /**< value of the variable */
+   SCIP_BOUNDTYPE        boundtype           /**< bound type of the variable value */
    )
 {
    assert(scip != NULL);
@@ -14959,10 +14959,10 @@ SCIP_RETCODE SCIPaddReoptnodeBndchg(
  *       - \ref SCIP_STAGE_PRESOLVED
  */
 SCIP_RETCODE SCIPsetReoptCompression(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE**      representation,          /**< array of representatives */
-   int                   nrepresentatives,        /**< number of representatives */
-   SCIP_Bool*            success                  /**< pointer to store the result */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE**      representation,     /**< array of representatives */
+   int                   nrepresentatives,   /**< number of representatives */
+   SCIP_Bool*            success             /**< pointer to store the result */
    )
 {
    assert(scip != NULL);
@@ -14987,12 +14987,12 @@ SCIP_RETCODE SCIPsetReoptCompression(
  *       - \ref SCIP_STAGE_PRESOLVED
  */
 SCIP_RETCODE SCIPaddReoptnodeCons(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE*       reoptnode,               /**< node of the reoptimization tree */
-   SCIP_VAR**            vars,                    /**< array of variables */
-   SCIP_Real*            vals,                    /**< array of variable bounds */
-   int                   nvars,                   /**< number of variables */
-   REOPT_CONSTYPE        constype                 /**< type of the constraint */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_Real*            vals,               /**< array of variable bounds */
+   int                   nvars,              /**< number of variables */
+   REOPT_CONSTYPE        constype            /**< type of the constraint */
    )
 {
    assert(scip != NULL);
@@ -15008,16 +15008,16 @@ SCIP_RETCODE SCIPaddReoptnodeCons(
    return SCIP_OKAY;
 }
 
-/* return the branching path stored in the reoptree at ID id */
+/** return the branching path stored in the reoptree at ID id */
 void SCIPgetReoptnodePath(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE*       reoptnode,               /**< node of the reoptimization tree */
-   SCIP_VAR**            vars,                    /**< array of variables */
-   SCIP_Real*            vals,                    /**< array of variable bounds */
-   SCIP_BOUNDTYPE*       boundtypes,              /**< array of bound types */
-   int                   mem,                     /**< allocated memory */
-   int*                  nvars,                   /**< number of variables */
-   int*                  nafterdualvars           /**< number of variables directly after the first based on dual information */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_Real*            vals,               /**< array of variable bounds */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of bound types */
+   int                   mem,                /**< allocated memory */
+   int*                  nvars,              /**< number of variables */
+   int*                  nafterdualvars      /**< number of variables directly after the first based on dual information */
    )
 {
    assert(scip != NULL);
@@ -15030,7 +15030,7 @@ void SCIPgetReoptnodePath(
    SCIPreoptnodeGetPath(scip->reopt, reoptnode, vars, vals, boundtypes, mem, nvars, nafterdualvars);
 }
 
-/* initialize a set of empty reoptimization nodes
+/** initialize a set of empty reoptimization nodes
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -15039,9 +15039,9 @@ void SCIPgetReoptnodePath(
  *       - \ref SCIP_STAGE_PRESOLVED
  */
 SCIP_RETCODE SCIPinitilizeRepresentation(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE**      representatives,         /**< array of representatives */
-   int                   nrepresentatives         /**< number of representatives */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE**      representatives,    /**< array of representatives */
+   int                   nrepresentatives    /**< number of representatives */
    )
 {
    int r;
@@ -15069,16 +15069,16 @@ SCIP_RETCODE SCIPinitilizeRepresentation(
  *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPapplyReopt(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE*       reoptnode,               /**< node to reactivate */
-   unsigned int          id,                      /**< unique id of the reoptimization node */
-   SCIP_Real             estimate,                /**< estimate of the child nodes that should be created */
-   SCIP_Real             lowerbound,              /**< lowerbound of the current focusnode */
-   SCIP_NODE**           childnodes,              /**< array to store the created child nodes */
-   int*                  ncreatedchilds,          /**< pointer to store number of created child nodes */
-   int*                  naddedconss,             /**< pointer to store number of generated constraints */
-   int                   childnodessize,          /**< available size of childnodes array */
-   SCIP_Bool*            success                  /**< pointer store the result*/
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE*       reoptnode,          /**< node to reactivate */
+   unsigned int          id,                 /**< unique id of the reoptimization node */
+   SCIP_Real             estimate,           /**< estimate of the child nodes that should be created */
+   SCIP_Real             lowerbound,         /**< lowerbound of the current focusnode */
+   SCIP_NODE**           childnodes,         /**< array to store the created child nodes */
+   int*                  ncreatedchilds,     /**< pointer to store number of created child nodes */
+   int*                  naddedconss,        /**< pointer to store number of generated constraints */
+   int                   childnodessize,     /**< available size of childnodes array */
+   SCIP_Bool*            success             /**< pointer store the result*/
    )
 {
    assert(scip != NULL);
@@ -15290,7 +15290,7 @@ SCIP_RETCODE SCIPrestartSolve(
 
 /** returns whether reoptimization is enabledor not */
 SCIP_Bool SCIPisReoptEnabled(
-   SCIP*                 scip                     /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
@@ -15298,13 +15298,13 @@ SCIP_Bool SCIPisReoptEnabled(
    return scip->set->reopt_enable;
 }
 
-/* returns the stored solutions corresponding to a given run */
+/** returns the stored solutions corresponding to a given run */
 SCIP_RETCODE SCIPgetReopSolsRun(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   int                   run,                     /**< number of the run */
-   SCIP_SOL**            sols,                    /**< array to store solutions */
-   int                   solssize,                /**< size of the array */
-   int*                  nsols                    /**< pointer to store number of solutions */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   run,                /**< number of the run */
+   SCIP_SOL**            sols,               /**< array to store solutions */
+   int                   solssize,           /**< size of the array */
+   int*                  nsols               /**< pointer to store number of solutions */
    )
 {
    assert(scip != NULL);
@@ -15326,7 +15326,7 @@ SCIP_RETCODE SCIPgetReopSolsRun(
 
 /** mark all stored solutions as not updated */
 void SCIPresetReoptSolMarks(
-   SCIP*                 scip                     /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
@@ -15342,16 +15342,16 @@ void SCIPresetReoptSolMarks(
 
 /** check if the reoptimization process should be restarted */
 SCIP_RETCODE SCIPcheckReoptRestart(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node,                    /**< current node of the branch and bound tree (or NULL) */
-   SCIP_Bool*            restart                  /**< pointer to store of the reoptimitation process should be restarted */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< current node of the branch and bound tree (or NULL) */
+   SCIP_Bool*            restart             /**< pointer to store of the reoptimitation process should be restarted */
    )
 {
    assert(scip != NULL);
    assert(scip->set->reopt_enable);
    assert(scip->reopt != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPcheckRestartReopt", FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPcheckReoptRestart", FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPreoptCheckRestart(scip->reopt, scip->set, scip->mem->probmem, node, scip->transprob->vars,
          scip->transprob->nvars, restart) );
@@ -15361,9 +15361,9 @@ SCIP_RETCODE SCIPcheckReoptRestart(
 
 /** return the similarity between two objective functions */
 SCIP_Real SCIPgetReoptSimilarity(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   int                   run1,                    /**< number of run */
-   int                   run2                     /**< number of run */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   run1,               /**< number of run */
+   int                   run2                /**< number of run */
    )
 {
    assert(scip != NULL);
@@ -15375,8 +15375,8 @@ SCIP_Real SCIPgetReoptSimilarity(
 
 /** returns if a node should be reoptimized */
 SCIP_Bool SCIPreoptimizeNode(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node                     /**< node of the search tree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node                /**< node of the search tree */
    )
 {
    assert(scip != NULL);
@@ -15407,8 +15407,8 @@ SCIP_Bool SCIPreoptimizeNode(
 
 /** deletes the given reoptimization node */
 SCIP_RETCODE SCIPdeleteReoptnode(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE**      reoptnode                /**< node of the reoptimization tree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE**      reoptnode           /**< node of the reoptimization tree */
    )
 {
    assert(scip != NULL);
@@ -15430,9 +15430,9 @@ SCIP_RETCODE SCIPdeleteReoptnode(
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPsplitReoptRoot(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   int*                  ncreatedchilds,          /**< pointer to store the number of created nodes */
-   int*                  naddedconss              /**< pointer to store the number added constraints */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  ncreatedchilds,     /**< pointer to store the number of created nodes */
+   int*                  naddedconss         /**< pointer to store the number added constraints */
    )
 {
    assert(scip != NULL);
@@ -15457,15 +15457,15 @@ SCIP_RETCODE SCIPsplitReoptRoot(
  *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPresetReoptnodeDualcons(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node                     /**< node of the search tree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node                /**< node of the search tree */
    )
 {
    assert(scip != NULL);
    assert(scip->set->reopt_enable);
    assert(node != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPnodeReoptResetDualcons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPresetReoptnodeDualcons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPreoptResetDualBndchgs(scip->reopt, node, scip->mem->probmem) );
 
@@ -23099,7 +23099,7 @@ SCIP_Bool SCIPsignificantVarPscostDifference(
    SCIP_Bool             onesided            /**< should a one-sided hypothesis y >= x be tested? */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPSignificantVarPscostDifference", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPsignificantVarPscostDifference", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return SCIPvarSignificantPscostDifference(scip->set, scip->stat, varx, fracx, vary, fracy, dir, clevel, onesided);
 }
@@ -31606,7 +31606,7 @@ SCIP_Real SCIPgetVarObjProbing(
    assert(scip != NULL);
    assert(var != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarObj", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetVarObjProbing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtreeProbing(scip->tree) )
    {
@@ -32096,7 +32096,7 @@ SCIP_RETCODE SCIPapplyCutsProbing(
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
    )
 {
-   SCIP_CALL( checkStage(scip, "SCIPapplyCuts", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPapplyCutsProbing", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPtreeProbing(scip->tree) )
    {
@@ -32205,7 +32205,7 @@ SCIP_RETCODE SCIPgetDiveBoundChanges(
    assert(infeasible != NULL);
    assert(success != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPdetermineDiveBoundChanges", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetDiveBoundChanges", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    *success = FALSE;
    *infeasible = FALSE;
@@ -36027,7 +36027,7 @@ SCIP_NODE* SCIPgetRootNode(
  *       - \ref SCIP_STAGE_SOLVING
  */
 int SCIPgetEffectiveRootDepth(
-   SCIP*                scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetEffectiveRootDepth", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
