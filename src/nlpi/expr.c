@@ -10573,7 +10573,7 @@ void exprgraphNodePropagateBounds(
                else
                {
                   assert(node->children[i]->bounds.sup > -infinity);
-                  maxlinactivity -= coefs[i] * node->children[i]->bounds.sup;
+                  maxlinactivity += SCIPintervalNegateReal(coefs[i]) * node->children[i]->bounds.sup;
                }
             }
             else
@@ -10585,14 +10585,14 @@ void exprgraphNodePropagateBounds(
                else
                {
                   assert(node->children[i]->bounds.inf < infinity);
-                  maxlinactivity -= coefs[i] * node->children[i]->bounds.inf;
+                  maxlinactivity += SCIPintervalNegateReal(coefs[i]) * node->children[i]->bounds.inf;
                }
             }
          }
       }
-      maxlinactivity = -maxlinactivity; /* correct sign */
+      maxlinactivity = SCIPintervalNegateReal(maxlinactivity); /* correct sign */
 
-      SCIPdebugMessage("activity = [%10g,%10g] ninf = [%d,%d]\n", minlinactivity, maxlinactivity, minlinactivityinf, maxlinactivityinf);
+      /* SCIPdebugMessage("activity = [%10g,%10g] ninf = [%d,%d]; bounds = [%10g,%10g]\n", minlinactivity, maxlinactivity, minlinactivityinf, maxlinactivityinf, node->bounds.inf, node->bounds.sup); */
 
       /* if there are too many unbounded bounds, then could only compute infinite bounds for children, so give up */
       if( (minlinactivityinf >= 2 || node->bounds.sup >=  infinity) &&
