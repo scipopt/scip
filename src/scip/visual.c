@@ -418,7 +418,7 @@ SCIP_RETCODE SCIPvisualUpdateChild(
       default:
          SCIPerrorMessage("Error: Unexpected node type <%d> in Update Child Method", SCIPnodeGetType(node));
          return SCIP_INVALIDDATA;
-      }
+      } /*lint !e788*/
       /* append new status line with updated node information to the bakfile */
       printTime(visual, stat, FALSE);
       SCIPmessageFPrintInfo(visual->messagehdlr, visual->bakfile, "%s %d %d %c %f %f %d\n", nodeinfo, (int)nodenum, (int)parentnodenum, t,
