@@ -297,7 +297,7 @@ SCIP_RETCODE pricing(
       for( i = 0; i < graph->knots; i++ )
          graph->mark[i] = 1;
 
-      graph_path_exec(graph, FSP_MODE, pricerdata->root, edgecosts, path);
+      graph_path_exec(scip, graph, FSP_MODE, pricerdata->root, edgecosts, path);
 
       /* compute reduced cost of shortest path to terminal t */
       redcost = 0.0;

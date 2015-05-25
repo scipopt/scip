@@ -156,7 +156,6 @@ inline static void correct(
 
    path[l].dist = (mode == MST_MODE) ? cost : (path[k].dist + cost);
    path[l].edge = e;
-   path[l].hops = path[k].hops + 1;
 
    /* new node? */
    if( state[l] == UNKNOWN )
@@ -279,7 +278,6 @@ inline static void resetX(
    int    c;
    int    j;
 
-   //assert(state[node] == CONNECT);
    pathdist[node] = 0.0;
 
    heap[++(*count)] = node;
@@ -354,6 +352,7 @@ void graph_path_exit(
 /*---            .dist Feld die Entfernung zum naechsten Knoten.          ---*/
 /*---------------------------------------------------------------------------*/
 void graph_path_exec(
+   SCIP*         scip,
    const GRAPH*  p,
    int           mode,
    int           start,
@@ -365,10 +364,9 @@ void graph_path_exec(
    int   i;
    int* heap;
    int* state;
-   double pathdist;
-   double pathhops;
    int count;
 
+   assert(scip      != NULL);
    assert(p      != NULL);
    assert(start  >= 0);
    assert(start  <  p->knots);
@@ -378,8 +376,7 @@ void graph_path_exec(
    assert(path   != NULL);
    assert(cost   != NULL);
 
-   /* Kein Baum ohne Knoten
-    */
+   /* no nodes?, return*/
    if (p->knots == 0)
       return;
 
@@ -393,7 +390,6 @@ void graph_path_exec(
       state[i]     = UNKNOWN;
       path[i].dist = FARAWAY + 1;
       path[i].edge = -1;
-      path[i].hops = 0;
    }
    /* Startknoten in den Heap
     */
@@ -427,26 +423,15 @@ void graph_path_exec(
           * Wenn ein Knoten noch nicht erledigt ist
           * werden wir dann auf diesem Wege besser ?
           */
-         for(i = p->outbeg[k]; i != EAT_LAST; i = p->oeat[i])
+         for( i = p->outbeg[k]; i != EAT_LAST; i = p->oeat[i] )
          {
-
             m = p->head[i];
-            /* 1. Ist der Knoten noch nicht festgelegt ?
-             *    Ist der wohlmoeglich tabu ?
-             */
-            if ((state[m]) && (p->mark[m]))
+            /* node not scanned and valid? */
+            if( (state[m]) && (p->mark[m]) )
             {
-               /* 2. Ist es ueberhaupt eine Verbesserung diesen Weg zu nehmen ?
-                *    Wenn ja, dann muss die Entferung kuerzer sein.
-                */
-               pathdist = ((mode == MST_MODE) ? cost[i] : (mode == FSP_MODE) ? (path[k].dist + cost[i]) :
-                  (path[k].dist + cost[Edge_anti(i)]));
-               pathhops = path[k].hops + 1;
-               if( GT(path[m].dist, pathdist) ||
-                  (mode != MST_MODE && EQ(path[m].dist, pathdist) && GT(path[m].hops, pathhops)) )
-	       {
-                  correct(heap, state, &count, path, m, k, i, (mode == BSP_MODE) ? cost[Edge_anti(i)] : cost[i], mode);
-	       }
+	       /* closer than previously? */
+               if( SCIPisGT(scip, path[m].dist, (mode == MST_MODE) ? cost[i] : (path[k].dist + cost[i])) )
+                  correct(heap, state, &count, path, m, k, i, cost[i], mode);
             }
          }
       }
@@ -454,7 +439,7 @@ void graph_path_exec(
 }
 
 /* limited dijkstra, stoping at terminals */
-void sdtail(
+void sdpaths(
    SCIP* scip,
    const GRAPH*  g,
    PATH*         path,
@@ -470,46 +455,39 @@ void sdtail(
 {
    int   k;
    int   m;
-   int   i;
+   int   e;
+   int   limit1;
    int count;
-
-   int   nnodes;
    int   nchecks;
 
    assert(g      != NULL);
+   assert(heap   != NULL);
    assert(path   != NULL);
    assert(cost   != NULL);
+   assert(nlbl   != NULL);
+   assert(memlbl != NULL);
 
+   limit1 = limit - limit / 3;
    *nlbl = 0;
    nchecks = 0;
-   nnodes = g->knots;
-
-   assert(nnodes > 1);
-
-   /* TODO: outsource */
-   for( i = 0; i < nnodes; i++ )
-   {
-      state[i]     = UNKNOWN;
-      path[i].dist = FARAWAY;
-      path[i].edge = -1;
-   }
 
    path[tail].dist = 0.0;
    state[tail] = CONNECT;
    memlbl[(*nlbl)++] = tail;
    count       = 0;
    g->mark[head] = FALSE;
-   for( i = g->outbeg[tail]; i != EAT_LAST; i = g->oeat[i] )
+   for( e = g->outbeg[tail]; e != EAT_LAST; e = g->oeat[e] )
    {
-      m = g->head[i];
-      if( nchecks++ > limit / 2 )
-         break;
-      if( g->mark[m] && SCIPisGT(scip, path[m].dist, path[k].dist + cost[i]) )
+      m = g->head[e];
+      if( g->mark[m] )
       {
+	 assert(SCIPisGT(scip, path[m].dist, path[tail].dist + cost[e]));
          /* m labelled the first time */
          memlbl[(*nlbl)++] = m;
-         correct(heap, state, &count, path, m, k, i, cost[i], FSP_MODE);
+         correct(heap, state, &count, path, m, tail, e, cost[e], FSP_MODE);
       }
+      if( nchecks++ > limit1 )
+         break;
    }
    g->mark[head] = TRUE;
 
@@ -522,37 +500,37 @@ void sdtail(
       state[k] = CONNECT;
 
       /* stop at terminals */
-      if( Is_term(g->term[k]) )
+      if( Is_term(g->term[k]) || k == head )
          continue;
 
       /* correct incident nodes */
-      for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
+      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
       {
-         m = g->head[i];
-         if( nchecks++ > limit )
-            break;
-         if( state[m] && g->mark[m] && SCIPisGT(scip, path[m].dist, path[k].dist + cost[i]) )
+         m = g->head[e];
+         if( state[m] && g->mark[m] && SCIPisGT(scip, path[m].dist, path[k].dist + cost[e]) )
          {
             /* m labelled for the first time? */
             if( state[m] == UNKNOWN )
 	       memlbl[(*nlbl)++] = m;
-            correct(heap, state, &count, path, m, k, i, cost[i], FSP_MODE);
+            correct(heap, state, &count, path, m, k, e, cost[e], FSP_MODE);
          }
+         if( nchecks++ > limit )
+            break;
       }
    }
 }
 
 
 /* limited dijkstra, stoping at terminals */
-SCIP_Real sdhead(
+void sdhead(
    SCIP* scip,
    const GRAPH*  g,
-   PATH*         path,
    PATH*         pathtail,
+   PATH*         path,
    SCIP_Real*    cost,
    int*          heap,
-   int*          state,
    int*          statetail,
+   int*          state,
    int*          memlbl,
    int*          nlbl,
    int           tail,
@@ -560,13 +538,11 @@ SCIP_Real sdhead(
    int           limit
    )
 {
-   SCIP_Real    dist;
-   SCIP_Real    sdist;
    int   k;
    int   m;
-   int   i;
+   int   e;
+   int   limit1;
    int count;
-   int   nnodes;
    int   nchecks;
 
    assert(scip      != NULL);
@@ -580,31 +556,27 @@ SCIP_Real sdhead(
    assert(cost   != NULL);
 
    (*nlbl) = 0;
+   limit1 = limit - limit / 4;
    nchecks = 0;
-   nnodes = g->knots;
-   if( statetail[head] != UNKNOWN )
-   {
-      sdist = pathtail[head].dist;
-      assert(SCIPisGT(scip, FARAWAY, sdist));
-   }
-   else
-      sdist = FARAWAY;
 
-   /* TODO: outsource */
-   for( i = 0; i < nnodes; i++ )
-   {
-      state[i]     = UNKNOWN;
-      path[i].dist = FARAWAY;
-      path[i].edge = UNKNOWN;
-   }
-
-   k            = head;
-   path[k].dist = 0.0;
+   path[head].dist = 0.0;
+   state[head] = CONNECT;
    memlbl[(*nlbl)++] = head;
-
-   count       = 1;
-   heap[count] = k;
-   state[k]    = count;
+   count       = 0;
+   g->mark[tail] = FALSE;
+   for( e = g->outbeg[head]; e != EAT_LAST; e = g->oeat[e] )
+   {
+      m = g->head[e];
+      if( g->mark[m] )
+      {
+	 assert(SCIPisGT(scip, path[m].dist, path[head].dist + cost[e]));
+         memlbl[(*nlbl)++] = m;
+         correct(heap, state, &count, path, m, head, e, cost[e], FSP_MODE);
+      }
+      if( nchecks++ > limit1 )
+         break;
+   }
+   g->mark[tail] = TRUE;
 
    while( count > 0 && nchecks <= limit )
    {
@@ -615,47 +587,25 @@ SCIP_Real sdhead(
       state[k] = CONNECT;
 
       /* stop at terminals */
-      if( Is_term(g->term[k]) )
+      if( Is_term(g->term[k]) || tail == k )
          continue;
 
       /* correct incident nodes */
-      for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
+      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
       {
-         m = g->head[i];
-         if( nchecks++ > limit )
-            break;
-         if( state[m] && g->mark[m] && SCIPisGT(scip, path[m].dist, path[k].dist + cost[i]) )
+         m = g->head[e];
+
+         if( state[m] && g->mark[m] && SCIPisGT(scip, path[m].dist, path[k].dist + cost[e]) )
          {
             /* m labelled for the first time? */
             if( state[m] == UNKNOWN )
 	       memlbl[(*nlbl)++] = m;
-            correct(heap, state, &count, path, m, k, i, cost[i], FSP_MODE);
-
-            if( statetail[m] != UNKNOWN )
-            {
-	       assert(SCIPisGT(scip, FARAWAY, pathtail[m].dist));
-	       assert(SCIPisGT(scip, FARAWAY, path[m].dist));
-               if( Is_term(g->term[m]) )
-               {
-		  dist = 0.0;
-		  if( SCIPisLT(scip, dist, path[m].dist) )
-		     dist = path[m].dist;
-                  if( SCIPisLT(scip, dist, pathtail[m].dist) )
-		     dist = pathtail[m].dist;
-		  if( SCIPisGT(scip, sdist, dist) )
-		     sdist = dist;
-		  /* PC*/
-               }
-               else
-               {
-                  if( SCIPisGT(scip, sdist, path[m].dist + pathtail[m].dist) )
-		     sdist = dist;
-               }
-            }
+            correct(heap, state, &count, path, m, k, e, cost[e], FSP_MODE);
          }
+         if( nchecks++ > limit )
+            break;
       }
    }
-   return sdist;
 }
 
 
@@ -821,6 +771,7 @@ void graph_path_st(
 
 /* computes the shortest path from each terminal to every other vertex */
 void calculate_distances(
+   SCIP* scip,
    const GRAPH* g,
    PATH** path,
    double* cost,
@@ -842,7 +793,7 @@ void calculate_distances(
 
          assert(path[i] != NULL);
 
-         graph_path_exec(g, mode, i, cost, path[i]);
+         graph_path_exec(scip, g, mode, i, cost, path[i]);
       }
       else
       {
@@ -855,9 +806,6 @@ void calculate_distances(
       }
    }
 }
-
-
-
 
 /* extend a voronoi region until all neighbouring terminals are spanned */
 SCIP_RETCODE voronoi_extend(
@@ -1403,7 +1351,7 @@ void get3next(
 	    jc = j + dnnodes;
             /* check whether the path (to j) including k is shorter than the so far best known */
             if( vbase[j] != vbase[k] && vbase[j + nnodes] != vbase[k]
-               && SCIPisGT(scip, path[jc].dist, path[k].dist + ((root == vbase[k])? cost[e] : costrev[e])) ) //(state[jc])??
+               && SCIPisGT(scip, path[jc].dist, path[k].dist + ((root == vbase[k])? cost[e] : costrev[e])) ) /*TODO(state[jc])??*/
             {
                correct(heap, state, &count, path, jc, k, e, (root == vbase[k])? cost[e] : costrev[e], FSP_MODE);
                vbase[jc] = vbase[k];
@@ -1473,7 +1421,7 @@ void voronoi_terms(
    for( i = 0; i < g->knots; i++ )
    {
       /* set the base of vertex i */
-      if( Is_term(g->term[i]) && g->mark[i] ) // g->grad[i] > 0
+      if( Is_term(g->term[i]) && g->mark[i] )
       {
          nbases++;
          if( g->knots > 1 )
@@ -1604,7 +1552,6 @@ SCIP_RETCODE voronoi_dist(
 
          /* mark vertex k as scanned */
          state[k] = CONNECT;
-         // printf("edge: %d \n", path[k].edge);
 	 if( path[k].edge != UNKNOWN )
 	 {
             assert(g->head[path[k].edge] == k);
@@ -1619,13 +1566,11 @@ SCIP_RETCODE voronoi_dist(
             }
 	 }
 
-         //printf("get node %d \n ", k);
          /* iterate over all outgoing edges of vertex k */
          for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
          {
             m = g->head[i];
 
-            //    printf("m: %d\n", m);
             if( state[m] == CONNECT && vbase[m] != vbase[k] && g->mark[m] )
             {
                if( minedgepred[i] || (path[k].edge != UNKNOWN && minedgepred[path[k].edge] ) )
@@ -1915,6 +1860,7 @@ void voronoi_inout(
 }
 #endif
 
+#if 0
 /*** build a voronoi region, w.r.t. shortest paths, for all terminals ***/
 void voronoi_term(
    const GRAPH*   g,
@@ -2085,10 +2031,9 @@ void voronoi_term(
       }
    }
 }
+#endif
 
-
-
-
+#if 0
 /*** build a voronoi region for hop constrained problem, w.r.t. shortest paths, for all terminals ***/
 /* The voronoi region surronding the root is an outward region and the voronoi region surronding each of the terminals
  * is an inward region. */
@@ -2291,8 +2236,7 @@ void voronoi_hop(
          }
       }
    }
-}
-
+#endif
 /*** repair the voronoi diagram for SL reduction ***/
 void voronoi_slrepair(
    SCIP* scip,

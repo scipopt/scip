@@ -578,7 +578,7 @@ int sep_2cut(
       for(i = 0; i < g->knots; i++)
          g->mark[i] = TRUE;
 
-      graph_path_exec(g, FSP_MODE, g->source[layer], cost, path);
+      graph_path_exec(scip, g, FSP_MODE, g->source[layer], cost, path);
 
       for(i = 0, count = 0; i < g->knots; i++)
       {

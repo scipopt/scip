@@ -89,7 +89,6 @@ SCIP_RETCODE SCIPindexListNodeAppendCopy(
    curr2 = node2;
    while( curr2 != NULL )
    {
-      //printf("%d curr2 index: %d\n ", i++, curr2->index);
       if( curr1 != NULL )
       {
 	 curr3 = *node1;
@@ -103,14 +102,12 @@ SCIP_RETCODE SCIPindexListNodeAppendCopy(
 	 {
 	    curr3 = NULL;
             new = malloc((size_t)sizeof(IDX));
-            //SCIP_CALL( SCIPallocMemory(scip, &new) );
             curr1->parent = new;
 	 }
       }
       else
       {
 	 curr3 = NULL;
-	 //SCIP_CALL( SCIPallocMemory(scip, node1) );
 	 *node1 = malloc((size_t)sizeof(IDX));
 	 new = *node1;
 	 last = *node1;
@@ -139,11 +136,8 @@ void SCIPindexListNodeFree(
 
    while( curr != NULL )
    {
-      //SCIPfreeMemory(scip, node);
       *node = curr->parent;
       free(curr);
-      //printf("delete \n");
-      //SCIPfreeMemory(scip, &curr);
       curr = *node;
    }
    assert(*node == NULL);

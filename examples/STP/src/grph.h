@@ -31,8 +31,7 @@
 #define STP_MAX_NODE_WEIGHT          9
 #define STP_HOP_CONS                 10
 #define GSTP                         11
-#define PRIZE                        11
-
+#define PRIZE                        12
 
 #include "scip/scip.h"
 #include "misc_stp.h"
@@ -75,8 +74,8 @@ typedef struct
    int     esize;  /* Count of allocated edge slots               */
    int     edges;  /* Count of edges in the graph                 */
    int     orgedges;
-   SCIP_Real* cost;   /* Array [0..edges-1] of positiv edge costs  TODO: const */
-   SCIP_Real* prize;   /* Array [0..edges-1] of positiv node costs TODO: const */
+   SCIP_Real* cost;   /* Array [0..edges-1] of positiv edge costs  */
+   SCIP_Real* prize;   /* Array [0..edges-1] of positiv node costs */
    int*    tail;   /* Array [0..edges-1] of knot-number of tail   */
                    /* of edge [i]                                 */
    int*    head;   /* Array [0..edges-1] of knot-number of head   */
@@ -89,20 +88,7 @@ typedef struct
                    /* allocation table                            */
    int*    oeat;   /* Array [0..edges-1], outgoing edge           */
                    /* allocation table                            */
-#if 0
-   int*    xpos;   /* Array [0..knots-1] with X Coordinates of    */
-                   /* Knot [i]                                    */
-   int*    ypos;   /* Array [0..knots-1] with Y Coordinates of    */
-                   /* Knot [i]                                    */
 
-   /* Bound-based reductions
-    */
-   SCIP_Real greatestlb;/* The largest lower bound found using the bound test */
-   int*    elimknots;   /* Array [0..knots-1] to indicate whether the knot is eliminated,
-                           i if included, -1 if eliminated  */
-   int*    elimedges;   /* Array [0..edges-1] to indicate whether the edge is eliminated
-                           i if included, -1 if eliminated  */
-#endif
    /* data for min cut computation
     */
    int*    mincut_dist;    /* dist[i] : Distance-label of Knot i          */
@@ -125,7 +111,7 @@ typedef struct
    int*      grid_ncoords;
    int**     grid_coordinates;
 
-   /* type of Steiner Tree Problem  */
+   /* type of Steiner problem  */
    int stp_type;
 
 } GRAPH;
@@ -144,9 +130,8 @@ typedef struct shortest_path
 {
    double       dist;         /* Distance to the end of the path             */
    signed int   edge;         /* First edge to go                            */
-   int          hops;         /* First edge to go                            */
 } PATH;
-
+#if 0
 /* ONE segment of a voronoi path
  */
 typedef struct voronoi_path
@@ -155,6 +140,7 @@ typedef struct voronoi_path
    signed int   edge;         /* First edge to go                            */
    signed int   base;         /* Voronoi base                            */
 } VNOI;
+#endif
 
 #define flipedge(edge) (((edge % 2) == 0) ? edge + 1 : edge - 1)
 
@@ -184,19 +170,25 @@ typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 
 /* grphbase.c
  */
-extern GRAPH* graph_init(int, int, int, int);
+
+extern SCIP_RETCODE graph_init(SCIP*, GRAPH**, int, int, int, int);
 extern SCIP_RETCODE   pcgraphorg(SCIP*, GRAPH*);
 extern SCIP_RETCODE   pcgraphtrans(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*, int**,int**, IDX***);
-extern void   graph_resize(GRAPH*, int, int, int);
-extern void   graph_free(SCIP*, GRAPH*, char);
-extern void   graph_prize_transform(GRAPH*);
-extern void   graph_rootprize_transform(GRAPH*);
-extern void   graph_maxweight_transform(GRAPH*, SCIP_Real*);
-extern GRAPH* graph_grid_create(int**, int, int, int);
-extern GRAPH* graph_obstgrid_create(SCIP*, int**, int**, int, int, int, int);
+extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
+extern void   graph_free(SCIP*, GRAPH*, SCIP_Bool);
+extern SCIP_RETCODE   graph_prize_transform(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_rootprize_transform(SCIP*, GRAPH*);
+extern SCIP_RETCODE   graph_maxweight_transform(SCIP*, GRAPH*, SCIP_Real*);
+extern SCIP_RETCODE graph_grid_create(SCIP*, GRAPH**, int**, int, int, int);
+extern SCIP_RETCODE graph_obstgrid_create(SCIP*, GRAPH**, int**, int**, int, int, int, int);
 extern void   graph_grid_coordinates(int**, int**, int*, int, int);
+#if 0
 extern GRAPH* graph_copy(const GRAPH*);
+extern GRAPH* graph_init2(int, int, int, int);
+extern GRAPH* graph_pack2(SCIP*, GRAPH*, SCIP_Bool);
+#endif
+extern SCIP_RETCODE graph_copy(SCIP*, GRAPH*, GRAPH**);
 extern void   graph_flags(GRAPH*, int);
 extern void   graph_show(const GRAPH*);
 extern void   graph_ident(const GRAPH*);
@@ -212,7 +204,7 @@ extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real);
 extern SCIP_RETCODE   graph_edge_reinsert(SCIP*, GRAPH*, int, int, int, SCIP_Real, IDX*, IDX*, IDX*, IDX*);
 extern void   graph_uncover(GRAPH*);
 extern void   prize_subtract(SCIP*, GRAPH*, SCIP_Real, int);
-extern GRAPH* graph_pack(SCIP*, GRAPH*, SCIP_Bool);
+extern SCIP_RETCODE  graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Bool);
 extern void   graph_trail(const GRAPH*, int);
 extern int    graph_valid(const GRAPH*);
 extern char    graph_valid2(SCIP*, const GRAPH*, SCIP_Real*);
@@ -222,10 +214,10 @@ extern char    graph_sol_valid(const GRAPH*, int*);
  */
 extern void   graph_path_init(GRAPH*);
 extern void   graph_path_exit(GRAPH*);
-extern void   graph_path_exec(const GRAPH*, int, int, SCIP_Real*, PATH*);
+extern void   graph_path_exec(SCIP*, const GRAPH*, int, int, SCIP_Real*, PATH*);
 extern void   graph_path_execX(SCIP*, const GRAPH*, int, SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_st(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, int*, int, char*);
-extern void   calculate_distances(const GRAPH*, PATH**, double*, int);
+extern void   calculate_distances(SCIP*, const GRAPH*, PATH**, double*, int);
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
 extern void   get2next(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, PATH*, int*, int*, int*);
 extern void   get3next(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, PATH*, int*, int*, int*);
@@ -242,8 +234,8 @@ extern void   voronoi_repair_mult(SCIP*, const GRAPH*, SCIP_Real*, int*, int*, i
 extern void   voronoi_slrepair(SCIP*, const GRAPH*, SCIP_Real*, PATH*, int*, int*, int*, int, int);
 extern SCIP_RETCODE voronoi_extend(SCIP*, const GRAPH*, SCIP_Real*, PATH*, VLIST**, char*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE voronoi_extend2(SCIP*, const GRAPH*, SCIP_Real*, PATH*, SCIP_Real**, int**, int**, char*, int*, int*, int*, int, int, int);
-extern void   sdtail(SCIP*, const GRAPH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int, int, int);
-extern SCIP_Real   sdhead(SCIP*, const GRAPH*, PATH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int*, int, int, int);
+extern void   sdpaths(SCIP*, const GRAPH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int, int, int);
+extern void   sdhead(SCIP*, const GRAPH*, PATH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int*, int, int, int);
 extern void   graph_path_length(const GRAPH*, const PATH*);
 
 /* grphmcut.c
@@ -254,7 +246,7 @@ extern void   graph_mincut_exec(GRAPH*, int, int, const int*, int*, int);
 
 /* grphload.c
  */
-extern GRAPH* graph_load(SCIP*, const char*, PRESOL*);
+extern SCIP_RETCODE graph_load(SCIP*, GRAPH**, const char*, PRESOL*);
 
 /* grphsave.c
  */
@@ -272,22 +264,28 @@ extern void graph_boxcoord(GRAPH* g);
 extern void level0(SCIP*, GRAPH*);
 extern SCIP_RETCODE reduce(SCIP*, GRAPH**, SCIP_Real*, int, int);
 extern SCIP_RETCODE bound_reduce(SCIP*, GRAPH*, PATH*, double*, double*, double*, double*, int*, int*, int*, int*, int);
-extern SCIP_RETCODE hopbound_reduce(SCIP*, GRAPH*, PATH*, double*, double*, double*, int*, int*, int*, int*, int);
-extern SCIP_RETCODE sdsp_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*);
+extern SCIP_RETCODE hopbound_reduce(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*);
+extern SCIP_RETCODE hcrbound_reduce(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*);
+extern SCIP_RETCODE hcrcbound_reduce(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*);
 
 /* sdtest.c
  */
 extern SCIP_RETCODE    sd_reduction(SCIP*, GRAPH*, double*, double*, double*, double*, double*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    sd_reduction_dir(SCIP*, GRAPH*, double**, double**, double**, double**, double*, int*, int*, int*, int*);
-extern SCIP_RETCODE    bd3_reduction(SCIP*, GRAPH*, double*, double*, int*, int*, int*);
-extern SCIP_RETCODE    nsv_reduction(SCIP*, GRAPH*, SCIP_Real*, SCIP_Real*, int*);
-extern SCIP_RETCODE    nv_reduction_optimal(SCIP*, GRAPH*, double*, int*, int);
+extern SCIP_RETCODE    sdsp_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
+extern SCIP_RETCODE    sd_red(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int*);
+extern SCIP_RETCODE    sdpc_reduction(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*);
+extern SCIP_RETCODE    sd2_reduction(SCIP*, GRAPH*, SCIP_Real*, int*, int*);
+extern SCIP_RETCODE    getSD(SCIP*, GRAPH*, PATH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int*, int, int, int, SCIP_Bool);
+extern SCIP_RETCODE    bd3_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    nv_reduction(SCIP*, GRAPH*, PATH*,double*, int*, int*, int*, int*);
 extern SCIP_RETCODE    sl_reduction(SCIP*, GRAPH*, PATH*, double*, int*, int*, int*, int*);
 extern SCIP_RETCODE    ledge_reduction(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*);
-extern SCIP_RETCODE    sd2_reduction(SCIP*, GRAPH*, SCIP_Real*, int*, int*);
-extern SCIP_RETCODE    getSD(SCIP*, GRAPH*, SCIP_Real*, SCIP_Real*, int*, int, int);
-extern SCIP_RETCODE    sdpc_reduction(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*);
+extern SCIP_RETCODE    nsv_reduction(SCIP*, GRAPH*, SCIP_Real*, SCIP_Real*, int*);
+
+#if 0
+extern SCIP_RETCODE    nv_reduction_optimal(SCIP*, GRAPH*, double*, int*, int);
+#endif
 
 /* dirreduce.c
  */

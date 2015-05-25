@@ -670,20 +670,8 @@ void init_coordinates(
    (*termcount)++;
 }
 
-#if 0
 static int get_scale_order(
-   double number
-   )
-{
-   int order = 0;
-   double i;
-   for( i = number; GT(fabs(i), floor(fabs(i))); i = i * 10.0 )
-      order++;
-   return order;
-}
-#endif
-static int get_scale_order(
-   double number
+   SCIP_Real number
    )
 {
    int order = 0;
@@ -761,22 +749,19 @@ static void scale_coords(
       for( j = 0; j < nnodes; j++ )
 	 (*scaled_coords)[i][j] = coordinates[i][j] * scale_factor;
    }
-
-
-
-
 }
 
 /*---------------------------------------------------------------------------*/
 /*--- Name     : Steiner Tree Problem Load                                ---*/
 /*--- Function : Reads a file in STP format and parses it.                ---*/
 /*--- Parameter: Pointer to filename, Pointer to presolve struct          ---*/
-/*--- Returns  : 0 for success, < 0 for failure                           ---*/
 /*---------------------------------------------------------------------------*/
-GRAPH* graph_load(
-   SCIP*        scip,
-   const char*  file,
-   PRESOL*      presol)
+SCIP_RETCODE graph_load(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH**               graph,              /**< pointer to store the graph */
+   const char*           file,               /**< file to load */
+   PRESOL*               presol              /**< presolving struct */
+   )
 {
    const char*  err_unknown_s   = "Unknown keyword [%s]";
    const char*  err_include_v   = "Include in included file";
@@ -832,6 +817,7 @@ GRAPH* graph_load(
    int**        scaled_coordinates = NULL;
    int**        obstacle_coords = NULL;
    int          transformed = 0;
+
    assert(file != NULL);
 
    /* No section loaded so far.
@@ -1089,29 +1075,15 @@ GRAPH* graph_load(
                   if( g == NULL )
                   {
 		     if( stp_type == GSTP )
-                        g = graph_init(nodes * 2, edges * 2 + nodes * nodes, 1, 0);
+                        SCIP_CALL( graph_init(scip, graph, nodes * 2, edges * 2 + nodes * nodes, 1, 0) );
                      else
-                        g = graph_init(nodes, edges * 2, 1, 0);
+                        SCIP_CALL( graph_init(scip, graph, nodes, edges * 2, 1, 0) );
+		     g = *graph;
                      assert(g != NULL);
                      assert(g->source[0] == UNKNOWN);
                      for( i = 0; i < nodes; i++ )
                         graph_knot_add(g, -1);
 
-		     /*
-                       if( stp_type == -1 )
-                       {
-                       if( p->sw_code == KEY_GRAPH_E )
-                       {
-                       stp_type = STP_UNDIRECTED;
-                       //g->stp_type = STP_UNDIRECTED;
-                       }
-                       else
-                       {
-                       stp_type = STP_DIRECTED;
-                       //g->stp_type = STP_DIRECTED;
-                       }
-                       }
-		     */
 		     if( stp_type == STP_HOP_CONS )
 		     {
 		        assert(hoplimit != UNKNOWN);
@@ -1135,9 +1107,7 @@ GRAPH* graph_load(
 		  }
                   else if( stp_type == STP_DIRECTED )
                   {
-
                      graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1, (double)para[2].n, (double)para[3].n);
-                     //printf("cost: %f revcost: %f\n", (double)para[2].n, (double)para[3].n);
                   }
                   else if( stp_type == STP_MAX_NODE_WEIGHT )
 		  {
@@ -1155,7 +1125,6 @@ GRAPH* graph_load(
 
                   break;
 	       case KEY_MAXDEGS_MD :
-                  //printf("MAX DEGS number  %d : ", degcount);
 		  assert(g != NULL);
 		  assert((int)para[0].n >= 0);
 
@@ -1164,12 +1133,9 @@ GRAPH* graph_load(
                      if( g->maxdeg == NULL )
                      {
                         g->maxdeg = malloc((size_t)nodes * sizeof(int));
-                        printf("mode: DEG CONS \n");
 			stp_type = STP_DEG_CONS;
                      }
                      g->maxdeg[degcount++] = (int)para[0].n;
-
-                     //printf(", deg:  %d : \n", g->maxdeg[degcount - 1]);
                      break;
 		  }
 		  else
@@ -1228,16 +1194,9 @@ GRAPH* graph_load(
                      ret = FAILURE;
 		     break;
 		  }
-                  /* int f;
-                     for( f = 0; f < nobstacles; f++ )
-                     {
-                     for( i = 0; i < 4; i++ )
-		     printf("%d ", obstacle_coords[i][f]);
-		     printf("\n");
-
-                     }*/
                   assert(g == NULL);
-                  g = graph_obstgrid_create(scip, scaled_coordinates, obstacle_coords, nodes, grid_dim, nobstacles, scale_order);
+                  SCIP_CALL( graph_obstgrid_create(scip, graph, scaled_coordinates, obstacle_coords, nodes, grid_dim, nobstacles, scale_order) );
+		  g = *graph;
                   for( i = 0; i < 4; i++ )
                      free(obstacle_coords[i]);
 		  free(obstacle_coords);
@@ -1248,20 +1207,18 @@ GRAPH* graph_load(
                      if( stp_type == STP_MAX_NODE_WEIGHT )
                      {
                         assert(nodes == termcount);
-                        graph_maxweight_transform(g, g->prize);
+                        SCIP_CALL( graph_maxweight_transform(scip, g, g->prize) );
                         //free(maxnodeweights);
                      }
                      else if( stp_type == STP_PRIZE_COLLECTING )
                      {
                         assert(g->prize != NULL);
-                        g->stp_type = STP_PRIZE_COLLECTING;
-                        graph_prize_transform(g);
+                        SCIP_CALL( graph_prize_transform(scip, g) );
                      }
                      else if( stp_type == STP_ROOTED_PRIZE_COLLECTING )
                      {
                         assert(g->prize != NULL);
-                        g->stp_type = STP_ROOTED_PRIZE_COLLECTING;
-                        graph_rootprize_transform(g);
+                        SCIP_CALL( graph_rootprize_transform(scip, g) );
                      }
                   }
                   curf.section = &section_table[0];
@@ -1274,7 +1231,7 @@ GRAPH* graph_load(
 		  {
                      assert(terms == nodes);
 		     if( g->prize == NULL )
-                        g->prize = malloc((size_t)terms * sizeof(SCIP_Real));
+                        SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), terms) );
 		  }
                   break;
 	       case KEY_TERMINALS_GROUPS :
@@ -1302,9 +1259,6 @@ GRAPH* graph_load(
                         (int)para[0].n, nodes);
                      ret = FAILURE;
                   }
-
-                  /*stp_type = STP_ROOT_KNOWN;*/
-
                   break;
 	       case KEY_TERMINALS_ROOTP :
 		  assert(g != NULL);
@@ -1312,9 +1266,8 @@ GRAPH* graph_load(
 		  g->source[0] = (int)para[0].n - 1;
 		  graph_knot_chg(g, (int)para[0].n - 1, 0);
 		  stp_type = STP_ROOTED_PRIZE_COLLECTING;
-                  printf("initit prize nodes: %d \n", nodes) ;
                   if( g->prize == NULL )
-		     g->prize = malloc((size_t)nodes * sizeof(SCIP_Real));
+		     SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), nodes) );
 		  g->prize[(int)para[0].n - 1] = 0;
                   break;
                case KEY_TERMINALS_T :
@@ -1341,7 +1294,7 @@ GRAPH* graph_load(
 		  {
 		     assert(stp_type != STP_ROOTED_PRIZE_COLLECTING);
 		     stp_type = STP_PRIZE_COLLECTING;
-		     g->prize = malloc((size_t)nodes * sizeof(SCIP_Real));
+		     SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), nodes) );
 		  }
 		  g->prize[(int)para[0].n - 1] = (double)para[1].n;
 		  //printf("prize: x: %d , %f \n", (int)para[0].n - 1, g->prize[(int)para[0].n - 1] );
@@ -1397,7 +1350,10 @@ GRAPH* graph_load(
 		  free(coordinates);
 
 		  if( stp_type != STP_OBSTACLES_GRID )
-		     g = graph_grid_create(scaled_coordinates, nodes, grid_dim, scale_order);
+		  {
+		     SCIP_CALL( graph_grid_create(scip, graph, scaled_coordinates, nodes, grid_dim, scale_order) );
+		     g = *graph;
+                  }
 
 		  break;
                case KEY_COORDINATES_GRID :
@@ -1452,7 +1408,7 @@ GRAPH* graph_load(
    if (curf.fp != NULL)
       (void)fclose(curf.fp);
 
-   if (ret == SUCCESS)
+   if( ret == SUCCESS )
    {
       assert(g != NULL);
 
@@ -1478,6 +1434,11 @@ GRAPH* graph_load(
          g->knots, g->edges, g->terms, g->source[0]);
 
       assert(graph_valid(g));
+      return SCIP_OKAY;
    }
-   return((ret == SUCCESS) ? g : NULL);
+   else
+   {
+      return SCIP_READERROR;
+   }
+
 }

@@ -139,6 +139,40 @@ SCIP_RETCODE printGraph(
 
 #endif
 
+static int getcloseterms(
+   SCIP* scip,
+   PATH* vnoi,
+   SCIP_Real* termdist,
+   SCIP_Real ecost,
+   int* vbase,
+   int* neighbterms,
+   int i,
+   int nnodes,
+   int dnnodes
+   )
+{
+   int nnterms = 0;
+
+   if( SCIPisLT(scip, vnoi[i].dist, ecost) )
+   {
+      neighbterms[nnterms] = vbase[i];
+      termdist[nnterms++] = vnoi[i].dist;
+      if( SCIPisLT(scip, vnoi[i + nnodes].dist, ecost) )
+      {
+         neighbterms[nnterms] = vbase[i + nnodes];
+         termdist[nnterms++] = vnoi[i + nnodes].dist;
+         if( SCIPisLT(scip, vnoi[i + dnnodes].dist, ecost) )
+         {
+            neighbterms[nnterms] = vbase[i + dnnodes];
+            termdist[nnterms++] = vnoi[i + dnnodes].dist;
+         }
+      }
+   }
+
+   return nnterms;
+}
+
+
 static int issmaller(
    const double* pathdist,
    const double* pathtran,
@@ -393,6 +427,7 @@ static void compute_sd(
    }
 }
 
+#if 0
 /* Function to compute the inward or outward special distance for directed graphs */
 static void compute_sd_dir(
    const GRAPH*  p,
@@ -508,6 +543,306 @@ static void compute_sd_dir(
       }
    }
 }
+#endif
+
+
+/* SD test */
+SCIP_RETCODE sd_red(
+   SCIP* scip,
+   GRAPH* g,
+   PATH*   vnoi,
+   int* heap,
+   int* state,
+   int* vbase,
+   int* nodesid,
+   int* nelims
+   )
+{
+   GRAPH* netgraph;
+   PATH* mst;
+   SCIP_Real* mstsdist;
+   SCIP_Real* termdist1;
+   SCIP_Real* termdist2;
+   SCIP_Real ecost;
+   SCIP_Real dist;
+   int* nodesorg;
+   int* neighbterms1;
+   int* neighbterms2;
+   int e;
+   int i;
+   int i2;
+   int j;
+   int k;
+   int l;
+   int tj;
+   int tk;
+   int ne;
+   int nj;
+   int nk;
+
+   int enext;
+   int nnodes;
+   int nterms;
+   int nedges;
+   int dnnodes;
+   int nnterms1;
+   int nnterms2;
+   int maxnedges;
+
+   assert(g != NULL);
+   assert(scip  != NULL);
+   assert(nelims != NULL);
+   assert(heap != NULL);
+   assert(vnoi != NULL);
+   assert(state != NULL);
+   assert(vbase != NULL);
+   assert(nodesid != NULL);
+
+   *nelims = 0;
+   nnodes = g->knots;
+   nterms = g->terms;
+   nedges = g->edges;
+   dnnodes = 2 * nnodes;
+   maxnedges = MAX(nedges, (nterms - 1) * nterms);
+
+   /* only one terminal left? */
+   if( nterms == 1 )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &mstsdist, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodesorg, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termdist1, 3) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &termdist2, 3) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &neighbterms1, 3) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &neighbterms2, 3) );
+
+   /* compute nearest three terminals to all non-terminals */
+   getnext3terms(scip, g, g->cost, g->cost, vnoi, vbase, heap, state);
+
+   /* construct auxiliary graph to compute paths between terminals */
+
+   /* initialize the new graph */
+   SCIP_CALL( graph_init(scip, &netgraph, nterms, maxnedges, 1, 0) );
+
+   j = 0;
+   for( k = 0; k < nnodes; k++ )
+   {
+      if( Is_term(g->term[k]) && g->grad[k] > 0 )
+      {
+         graph_knot_add(netgraph, -1);
+         nodesid[k] = j;
+         mstsdist[j] = UNKNOWN;
+         nodesorg[j++] = k;
+      }
+      else
+      {
+         nodesid[k] = UNKNOWN;
+      }
+   }
+
+   assert(netgraph->knots == j);
+   assert(netgraph->knots == nterms);
+
+   for( k = 0; k < nnodes; k++ )
+   {
+      for( e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e] )
+      {
+         i = vbase[k];
+
+         if( i != vbase[g->head[e]] )
+         {
+            i2 = vbase[g->head[e]];
+            assert(Is_term(g->term[i]));
+            assert(Is_term(g->term[i2]));
+            assert(nodesid[i] >= 0);
+            assert(nodesid[i2] >= 0);
+            for( ne = netgraph->outbeg[nodesid[i]]; ne != EAT_LAST; ne = netgraph->oeat[ne] )
+               if( netgraph->head[ne] == nodesid[i2] )
+                  break;
+
+            ecost = g->cost[e] + vnoi[g->head[e]].dist + vnoi[g->tail[e]].dist;
+            /* edge exists? */
+            if( ne != EAT_LAST )
+            {
+               assert(ne >= 0);
+               assert(netgraph->head[ne] == nodesid[i2]);
+               assert(netgraph->tail[ne] == nodesid[i]);
+               if( SCIPisGT(scip, netgraph->cost[ne], ecost) )
+               {
+                  netgraph->cost[ne]            = ecost;
+                  netgraph->cost[Edge_anti(ne)] = ecost;
+                  assert(ne <= maxnedges);
+               }
+            }
+            else
+            {
+               graph_edge_add(netgraph, nodesid[i], nodesid[i2], ecost, ecost);
+               assert(netgraph->edges <= maxnedges);
+            }
+         }
+      }
+   }
+
+   /* compute MST on netgraph */
+   graph_knot_chg(netgraph, 0, 0);
+   netgraph->source[0] = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &mst, nterms) );
+   graph_path_init(netgraph);
+   graph_path_exec(scip, netgraph, MST_MODE, 0, netgraph->cost, mst);
+
+   /* traverse all edges */
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( !g->mark[i] )
+         continue;
+
+      nnterms1 = 1;
+      if( Is_term(g->term[i]) )
+      {
+         termdist1[0] = 0.0;
+         neighbterms1[0] = i;
+      }
+
+      enext = g->outbeg[i];
+      while( enext != EAT_LAST )
+      {
+         e = enext;
+         enext = g->oeat[e];
+         i2 = g->head[e];
+         if( i2 < i || Is_term(g->term[i2]) || !g->mark[i2] )
+            continue;
+         ecost = g->cost[e];
+
+         /* is i a terminal? If not, get three closest terminals of distance smaller ecost */
+         if( !Is_term(g->term[i]) )
+         {
+            nnterms1 = getcloseterms(scip, vnoi, termdist1, ecost, vbase, neighbterms1, i, nnodes, dnnodes);
+            if( nnterms1 == 0 )
+               continue;
+         }
+
+         nnterms2 = 0;
+
+         if( Is_term(g->term[i2]) )
+         {
+            /* get three shortest terms */
+            nnterms2 = 1;
+            termdist2[0] = 0.0;
+            neighbterms2[0] = i2;
+         }
+         else
+         {
+            /* get three closest terminals of distance smaller ecost */
+            nnterms2 = getcloseterms(scip, vnoi, termdist2, ecost, vbase, neighbterms2, i2, nnodes, dnnodes);
+            if( nnterms2 == 0 )
+               continue;
+         }
+
+         for( j = 0; j < nnterms1; j++ )
+         {
+            /* has edge already been deleted? */
+            if( g->oeat[e] == EAT_FREE )
+               break;
+            tj = neighbterms1[j];
+            assert(tj >= 0);
+            for( k = 0; k < nnterms2; k++ )
+            {
+               tk = neighbterms2[k];
+               assert(tk >= 0);
+               if( tj == tk )
+               {
+                  printf("SDSP__1 del; %d %d (%d)\n", g->tail[e], g->head[e], e);
+                  graph_edge_del(scip, g, e, TRUE);
+                  (*nelims)++;
+                  break;
+
+               }
+               else
+               {
+                  /* get sd between (terminals) tj and tk */
+                  /* TODO start from t far away*/
+                  nj = nodesid[tj];
+                  nk = nodesid[tk];
+                  l = nj;
+                  dist = 0.0;
+                  mstsdist[l] = 0;
+                  while( l != 0 )
+                  {
+                     ne = mst[l].edge;
+                     l = netgraph->tail[ne];
+                     if( SCIPisGT(scip, netgraph->cost[ne], dist) )
+                        dist = netgraph->cost[ne];
+
+                     mstsdist[l] = dist;
+                     if( l == nk )
+                        break;
+                  }
+
+                  if( l == nk )
+                  {
+                     l = 0;
+                  }
+                  else
+                  {
+                     l = nk;
+                     dist = 0.0;
+                  }
+                  while( l != 0 )
+                  {
+                     ne = mst[l].edge;
+                     l = netgraph->tail[ne];
+                     if( SCIPisGT(scip, netgraph->cost[ne], dist) )
+                        dist = netgraph->cost[ne];
+                     if( !SCIPisEQ(scip, mstsdist[l], UNKNOWN) )
+                     {
+                        if( SCIPisGT(scip, mstsdist[l], dist) )
+                           dist = mstsdist[l];
+                        break;
+                     }
+
+                  }
+
+                  /* restore */
+                  l = nj;
+                  mstsdist[l] = UNKNOWN;
+                  while( l != 0 )
+                  {
+                     ne = mst[l].edge;
+                     l = netgraph->tail[ne];
+                     mstsdist[l] = UNKNOWN;
+                     if( l == nk )
+                        break;
+                  }
+
+                  if( SCIPisGT(scip, ecost, dist) )
+                  {
+                     printf("SDSP2 del; %d %d (%d)\n", g->tail[e], g->head[e], e);
+                     graph_edge_del(scip, g, e, TRUE);
+                     (*nelims)++;
+                     break;
+                  }
+               }
+            }
+         }
+
+      }
+   }
+
+   /* free memory*/
+   graph_path_exit(netgraph);
+   graph_free(scip, netgraph, TRUE);
+   SCIPfreeBufferArray(scip, &mst);
+   SCIPfreeBufferArray(scip, &neighbterms2);
+   SCIPfreeBufferArray(scip, &neighbterms1);
+   SCIPfreeBufferArray(scip, &termdist2);
+   SCIPfreeBufferArray(scip, &termdist1);
+   SCIPfreeBufferArray(scip, &nodesorg);
+   SCIPfreeBufferArray(scip, &mstsdist);
+
+   return SCIP_OKAY;
+}
+
 
 /* SD test for PC */
 SCIP_RETCODE sdpc_reduction(
@@ -545,7 +880,6 @@ SCIP_RETCODE sdpc_reduction(
    int dnnodes;
    int nnterms1;
    int nnterms2;
-   int netnnodes;
    int maxnedges;
 
    assert(g != NULL);
@@ -577,7 +911,7 @@ SCIP_RETCODE sdpc_reduction(
    /* construct auxiliary graph to compute paths between terminals */
 
    /* initialize the new graph */
-   netgraph = graph_init(nterms, maxnedges, 1, 0);
+   SCIP_CALL( graph_init(scip, &netgraph, nterms, maxnedges, 1, 0) );
 
    j = 0;
    for( k = 0; k < nnodes; k++ )
@@ -594,9 +928,8 @@ SCIP_RETCODE sdpc_reduction(
       }
    }
 
-   netnnodes = netgraph->knots;
-   assert(netnnodes == j);
-   assert(netnnodes == nterms);
+   assert(netgraph->knots == j);
+   assert(netgraph->knots == nterms);
 
    for( k = 0; k < nnodes; k++ )
    {
@@ -653,10 +986,11 @@ SCIP_RETCODE sdpc_reduction(
 	 if( i2 < i || Is_term(g->term[i2]) || !g->mark[i2] )
             continue;
 	 ecost = g->cost[e];
-         nnterms1 = 0;
+
 
 	 if( Is_term(g->term[i]) )
 	 {
+	    nnterms1 = 0;
 	    /* get three nearest terms */
 	    for( ne = netgraph->outbeg[nodesid[i]]; ne != EAT_LAST; ne = netgraph->oeat[ne] )
 	    {
@@ -674,29 +1008,15 @@ SCIP_RETCODE sdpc_reduction(
 	 }
 	 else
 	 {
-            if( SCIPisLT(scip, vnoi[i].dist, ecost) )
-            {
-               neighbterms1[nnterms1] = vbase[i];
-               termdist1[nnterms1++] = vnoi[i].dist;
-               if( SCIPisLT(scip, vnoi[i + nnodes].dist, ecost) )
-               {
-                  neighbterms1[nnterms1] = vbase[i + nnodes];
-                  termdist1[nnterms1++] = vnoi[i + nnodes].dist;
-                  if( SCIPisLT(scip, vnoi[i + dnnodes].dist, ecost) )
-                  {
-                     neighbterms1[nnterms1] = vbase[i + dnnodes];
-                     termdist1[nnterms1++] = vnoi[i + dnnodes].dist;
-                  }
-               }
-            }
-            else
-               continue;
+            nnterms1 = getcloseterms(scip, vnoi, termdist1, ecost, vbase, neighbterms1, i, nnodes, dnnodes);
 	 }
+         if( nnterms1 == 0 )
+	    continue;
 
-         nnterms2 = 0;
 
 	 if( Is_term(g->term[i2]) )
 	 {
+            nnterms2 = 0;
 	    /* get three shortest terms */
 	    for( ne = netgraph->outbeg[nodesid[i2]]; ne != EAT_LAST; ne = netgraph->oeat[ne] )
 	    {
@@ -714,25 +1034,11 @@ SCIP_RETCODE sdpc_reduction(
 	 }
 	 else
 	 {
-            if( SCIPisLT(scip, vnoi[i2].dist, ecost) )
-            {
-               neighbterms2[nnterms2] = vbase[i2];
-               termdist2[nnterms2++] = vnoi[i2].dist;
-               if( SCIPisLT(scip, vnoi[i2 + nnodes].dist, ecost) )
-               {
-                  neighbterms2[nnterms2] = vbase[i2 + nnodes];
-                  termdist2[nnterms2++] = vnoi[i2 + nnodes].dist;
-                  if( SCIPisLT(scip, vnoi[i2 + dnnodes].dist, ecost) )
-                  {
-                     neighbterms2[nnterms2] = vbase[i2 + dnnodes];
-                     termdist2[nnterms2++] = vnoi[i2 + dnnodes].dist;
-                  }
-               }
-            }
-            else
-               continue;
-	 }
+            nnterms2 = getcloseterms(scip, vnoi, termdist2, ecost, vbase, neighbterms2, i2, nnodes, dnnodes);
 
+	 }
+         if( nnterms2 == 0 )
+	    continue;
          for( j = 0; j < nnterms1; j++ )
 	 {
 	    /* has edge already been deleted? */
@@ -748,7 +1054,6 @@ SCIP_RETCODE sdpc_reduction(
 	       {
                   if( SCIPisGT(scip, ecost, termdist1[j] + termdist2[k] - g->prize[tj]) || tj == root )
                   {
-                     assert(tj >= 0 && tk >= 0);
                      //printf("SDSP del; %d %d (%d)\n", g->tail[e], g->head[e], e);
                      graph_edge_del(scip, g, e, TRUE);
                      (*nelims)++;
@@ -760,7 +1065,7 @@ SCIP_RETCODE sdpc_reduction(
 		  for( e2 = netgraph->outbeg[nodesid[tj]]; e2 != EAT_LAST; e2 = netgraph->oeat[e2] )
                      if( netgraph->head[e2] == nodesid[tk] )
                         break;
-                  if( 0 && e2 != EAT_LAST && SCIPisGT(scip, ecost, g->cost[e2])
+                  if( e2 != EAT_LAST && SCIPisGT(scip, ecost, g->cost[e2])
                      && SCIPisGT(scip, ecost, g->cost[e2] + termdist1[j] - g->prize[tj])
                      && SCIPisGT(scip, ecost, g->cost[e2] + termdist2[k] - g->prize[tk])
                      && SCIPisGT(scip, ecost, g->cost[e2] + termdist1[j] + termdist2[k] - g->prize[tj] - g->prize[tk]) )
@@ -775,6 +1080,8 @@ SCIP_RETCODE sdpc_reduction(
 	 }
       }
    }
+
+
    SCIPfreeBufferArray(scip, &neighbterms2);
    SCIPfreeBufferArray(scip, &neighbterms1);
    SCIPfreeBufferArray(scip, &termdist2);
@@ -789,82 +1096,117 @@ SCIP_RETCODE sdpc_reduction(
 SCIP_RETCODE getSD(
    SCIP* scip,
    GRAPH* g,
-   SCIP_Real* nodecost,
-   SCIP_Real* sdist,
-   int* adjacent,
-   int i,
-   int i2
+   PATH*  pathtail,
+   PATH*  pathhead,
+   SCIP_Real*    sdist,
+   int*    heap,
+   int*    statetail,
+   int*    statehead,
+   int*    memlbltail,
+   int*    memlblhead,
+   int     i,
+   int     i2,
+   int     limit,
+   SCIP_Bool pc
    )
 {
    SCIP_Real sd;
    SCIP_Real dist;
-   int j;
+   int k;
+   int l;
    int e;
-   int i3;
    int nnodes;
-   SCIP_Bool pc;
+   int nlbltail;
+   int nlblhead;
 
    assert(g != NULL);
    assert(scip  != NULL);
-   assert(adjacent != NULL);
-   assert(nodecost != NULL);
+   assert(pathtail != NULL);
+   assert(pathhead != NULL);
+   assert(heap != NULL);
+   assert(statetail != NULL);
+   assert(statehead != NULL);
+   assert(memlbltail != NULL);
+   assert(memlblhead != NULL);
+   assert(sdist != NULL);
 
    nnodes = g->knots;
-   pc = g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING;
-   /* TODO: earlier */
-   if( !pc )
-      for( i = 0; i < nnodes; i++ )
-         g->mark[i] = (g->grad[i] > 0);
 
-   for( i = 0; i < nnodes; i++ )
-      adjacent[i] = FALSE;
+   /* start from tail */
+   sdpaths(scip, g, pathtail, g->cost, heap, statetail, memlbltail, &nlbltail, i, i2, limit);
+
+   /* test whether edge e can be eliminated */
+   sdpaths(scip, g, pathhead, g->cost, heap, statehead, memlblhead, &nlblhead, i2, i, limit);
 
    sd = FARAWAY;
-   /* mark neighbours */
-   for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+   if( statetail[i2] != UNKNOWN )
    {
-      j = g->head[e];
-      if( g->mark[j] )
-      {
-	 if( j == i2 )
-            sd = g->cost[e];
-         adjacent[j] = TRUE;
-         nodecost[j] = g->cost[e];
-      }
+      sd = pathtail[i2].dist;
+      assert(SCIPisGT(scip, FARAWAY, sd));
+   }
+   if( statehead[i] != UNKNOWN && SCIPisGT(scip, sd, pathhead[i].dist) )
+   {
+      sd = pathhead[i].dist;
+      assert(SCIPisGT(scip, FARAWAY, sd));
    }
 
-   /* start from head */
-   for( e = g->outbeg[i2]; e != EAT_LAST; e = g->oeat[e] )
+   /* get restore state and path of tail and head */
+   for( k = 0; k < nlbltail; k++ )
    {
-      i3 = g->head[e];
-      if( !adjacent[i3] )
-         continue;
-
-      assert(g->mark[i3]);
-
-      if( Is_term(g->term[i3]) )
+      l = memlbltail[k];
+      assert(statetail[l]     != UNKNOWN);
+      if( statehead[l] != UNKNOWN )
       {
-         dist = 0;
-         if( SCIPisGT(scip, g->cost[e], dist) )
-            dist = g->cost[e];
-         if( SCIPisGT(scip, nodecost[i3], dist) )
-            dist = nodecost[i3];
-         if( pc && SCIPisGT(scip, g->cost[e] + nodecost[i3] - g->prize[i3], dist) )
-            dist = g->cost[e] + nodecost[i3] - g->prize[i3];
+         assert(SCIPisGT(scip, FARAWAY, pathtail[l].dist));
+         assert(SCIPisGT(scip, FARAWAY, pathhead[l].dist));
+         if( Is_term(g->term[l]) )
+         {
+            dist = 0.0;
+            if( SCIPisLT(scip, dist, pathhead[l].dist) )
+               dist = pathhead[l].dist;
+            if( SCIPisLT(scip, dist, pathtail[l].dist) )
+               dist = pathtail[l].dist;
+            if( pc && SCIPisLT(scip, dist, pathhead[l].dist + pathtail[l].dist - g->prize[l]) )
+               dist = pathhead[l].dist + pathtail[l].dist - g->prize[l];
+            if( SCIPisGT(scip, sd, dist) )
+               sd = dist;
+         }
+         else
+         {
+            if( SCIPisGT(scip, sd, pathhead[l].dist + pathtail[l].dist) )
+               sd = pathhead[l].dist + pathtail[l].dist;
+         }
+      }
 
-         if( SCIPisGT(scip, sd, dist) )
-            sd = dist;
-      }
-      else
-      {
-         if( SCIPisGT(scip, sd, g->cost[e] + nodecost[i3]) )
-            sd = g->cost[e] + nodecost[i3];
-      }
+      statetail[l]     = UNKNOWN;
+      pathtail[l].dist = FARAWAY;
+      pathtail[l].edge = UNKNOWN;
+   }
+   /* restore state and path of tail and head */
+   for( k = 0; k < nlblhead; k++ )
+   {
+      l = memlblhead[k];
+      statehead[l]     = UNKNOWN;
+      pathhead[l].dist = FARAWAY;
+      pathhead[l].edge = UNKNOWN;
    }
 
-   /* restore neigbour adjacency array */
+
+   for( k = 0; k < nnodes; k++ )
+   {
+      assert(statetail[k]     == UNKNOWN);
+      assert(pathtail[k].dist == FARAWAY);
+      assert(pathtail[k].edge == UNKNOWN);
+      assert(statehead[k]     == UNKNOWN);
+      assert(pathhead[k].dist == FARAWAY);
+      assert(pathhead[k].edge == UNKNOWN);
+   }
+
+
+   /* compare restriced sd with edge cost (if existing) */
    for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-      adjacent[g->head[e]] = FALSE;
+      if( g->head[e] == i2 && SCIPisGT(scip, sd, g->cost[e]) )
+         sd = g->cost[e];
 
    *sdist = sd;
    return SCIP_OKAY;
@@ -967,7 +1309,7 @@ SCIP_RETCODE sd2_reduction(
       for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
          adjacent[g->head[e]] = FALSE;
    }
-   printf("nSD2 elims; %d \n", *nelims);
+   //printf("nSD2 elims; %d \n", *nelims);
    return SCIP_OKAY;
 }
 
@@ -982,21 +1324,23 @@ SCIP_RETCODE sdsp_reduction(
    int*    heap,
    int*    statetail,
    int*    statehead,
-   int*    nelims
+   int*    memlbltail,
+   int*    memlblhead,
+   int*    nelims,
+   int limit
    )
 {
-   //   SCIP_Real cost;
+   SCIP_Real dist;
+   SCIP_Real sdist;
    int i;
+   int k;
+   int l;
    int e;
    int i2;
-   /*
-     int i3;
-     int e2;
-
-     int nlbl;
-   */
    int enext;
    int nnodes;
+   int nlbltail;
+   int nlblhead;
    SCIP_Bool pc;
 
    assert(g != NULL);
@@ -1006,6 +1350,8 @@ SCIP_RETCODE sdsp_reduction(
    assert(heap != NULL);
    assert(statetail != NULL);
    assert(statehead != NULL);
+   assert(memlbltail != NULL);
+   assert(memlblhead != NULL);
    assert(nelims != NULL);
 
    nnodes = g->knots;
@@ -1025,13 +1371,12 @@ SCIP_RETCODE sdsp_reduction(
       pathhead[i].edge = UNKNOWN;
    }
 
+   /* iterate through all nodes */
    for( i = 0; i < nnodes; i++ )
    {
       //printf("nSD2 knot %d\n", i);
       if( !g->mark[i] )
          continue;
-
-      /* start limited diskstra from i, marking all reached vertices */
 
       /* traverse neighbours */
       e = g->outbeg[i];
@@ -1039,24 +1384,97 @@ SCIP_RETCODE sdsp_reduction(
       {
 	 enext = g->oeat[e];
          i2 = g->head[e];
-	 /* avoid double check */
+	 /* avoid double checking */
 	 if( i2 < i || !g->mark[i2] )
 	 {
             e = enext;
             continue;
          }
+         //printf("check: %d %d\n", i, i2);
+         /* start limited diskstra from i, marking all reached vertices */
+         sdpaths(scip, g, pathtail, g->cost, heap, statetail, memlbltail, &nlbltail, i, i2, limit);
 
-         /* test whether edge e can be eliminated */
+         /* start limited diskstra from i2, marking all reached vertices */
+	 sdpaths(scip, g, pathhead, g->cost, heap, statehead, memlblhead, &nlblhead, i2, i, limit);
 
-	 /* restore state and path of head*/
+         //sdhead(scip, g, pathtail, pathhead, g->cost, heap, statetail, statehead, memlblhead, &nlblhead ,i, i2, limit);
+
+	 sdist = FARAWAY;
+         if( statetail[i2] != UNKNOWN )
+         {
+            sdist = pathtail[i2].dist;
+            assert(SCIPisGT(scip, FARAWAY, sdist));
+         }
+         if( statehead[i] != UNKNOWN && SCIPisGT(scip, sdist, pathhead[i].dist) )
+         {
+            sdist = pathhead[i].dist;
+            assert(SCIPisGT(scip, FARAWAY, sdist));
+         }
+
+
+	 /* get restore state and path of tail and head */
+         for( k = 0; k < nlbltail; k++ )
+         {
+	    l = memlbltail[k];
+	    assert(statetail[l]     != UNKNOWN);
+	    if( statehead[l] != UNKNOWN )
+            {
+	       assert(SCIPisGT(scip, FARAWAY, pathtail[l].dist));
+	       assert(SCIPisGT(scip, FARAWAY, pathhead[l].dist));
+               if( Is_term(g->term[l]) )
+               {
+		  dist = 0.0;
+		  if( SCIPisLT(scip, dist, pathhead[l].dist) )
+		     dist = pathhead[l].dist;
+                  if( SCIPisLT(scip, dist, pathtail[l].dist) )
+		     dist = pathtail[l].dist;
+		  if( pc && SCIPisLT(scip, dist, pathhead[l].dist + pathtail[l].dist - g->prize[l]) )
+                     dist = pathhead[l].dist + pathtail[l].dist - g->prize[l];
+		  if( SCIPisGT(scip, sdist, dist) )
+		     sdist = dist;
+               }
+               else
+               {
+                  if( SCIPisGT(scip, sdist, pathhead[l].dist + pathtail[l].dist) )
+		     sdist = pathhead[l].dist + pathtail[l].dist;
+               }
+            }
+
+            statetail[l]     = UNKNOWN;
+            pathtail[l].dist = FARAWAY;
+            pathtail[l].edge = UNKNOWN;
+         }
+         /* restore state and path of tail and head */
+         for( k = 0; k < nlblhead; k++ )
+         {
+	    l = memlblhead[k];
+            statehead[l]     = UNKNOWN;
+            pathhead[l].dist = FARAWAY;
+            pathhead[l].edge = UNKNOWN;
+         }
+
+
+         for( k = 0; k < nnodes; k++ )
+         {
+            assert(statetail[k]     == UNKNOWN);
+            assert(pathtail[k].dist == FARAWAY);
+            assert(pathtail[k].edge == UNKNOWN);
+	    assert(statehead[k]     == UNKNOWN);
+            assert(pathhead[k].dist == FARAWAY);
+            assert(pathhead[k].edge == UNKNOWN);
+         }
+
+         /* TODO GE*/
+         if( SCIPisGE(scip, g->cost[e], sdist) )
+	 {
+            graph_edge_del(scip, g, e, TRUE);
+            (*nelims)++;
+	 }
+
+
          e = enext;
       }
-
-
-
-      /* restore state and path of tail*/
    }
-   printf("nSD2 elims; %d \n", *nelims);
    return SCIP_OKAY;
 }
 
@@ -1095,20 +1513,10 @@ SCIP_RETCODE sd_reduction(
    SCIPdebugMessage("SD-Reduktion: ");
    fflush(stdout);
 
-   /*
-     heap  = malloc((size_t)g->knots * sizeof(int));
-     state = malloc((size_t)g->knots * sizeof(int));
-   */
    assert(heap  != NULL);
    assert(state != NULL);
-   /*
-     sd = malloc((size_t)g->knots * sizeof(SDPTH));
-   */
    assert(sddist != NULL);
    assert(sdtrans != NULL);
-   /*
-     cost  = malloc((size_t)g->edges * sizeof(double));
-   */
    assert(cost != NULL);
 
    assert(knotexamined != NULL);
@@ -1147,11 +1555,6 @@ SCIP_RETCODE sd_reduction(
       if( i % 100 == 0 && *elimins == 0 && SCIPgetTotalTime(scip) - redstarttime > stalltime)
          break;
 
-      if (!(i % 100))
-      {
-         SCIPdebug(fputc('.', stdout));
-         SCIPdebug(fflush(stdout));
-      }
       if (g->grad[i] == 0)
          continue;
 
@@ -1196,23 +1599,14 @@ SCIP_RETCODE sd_reduction(
          }
       }
    }
-#if 0
-   free(heap);
-   free(state);
 
-   heap  = NULL;
-   state = NULL;
-
-   free(sd);
-   free(cost);
-#endif
    assert(graph_valid(g));
 
    SCIPdebugMessage("%d Edges deleted\n", *elimins * 2);
-   /*printf("%d SD: Edges deleted\n", elimins * 2);*/
    return SCIP_OKAY;
 }
 
+#if 0
 /* C. W. Duin and A. Volganant
  *
  * "An Edge Elimination Test for the Steiner Problem in Graphs"
@@ -1400,69 +1794,8 @@ SCIP_RETCODE sd_reduction_dir(
 
    return SCIP_OKAY;
 }
-#if 0
-static int graph_edge_redirect(
-   GRAPH* g,
-   int    eki,
-   int    k,
-   int    j,
-   double cost)
-{
-   int e;
-
-   graph_edge_del(NULL, g, eki, FALSE);
-
-   for(e = g->outbeg[k]; e != EAT_LAST; e = g->oeat[e])
-      if ((g->tail[e] == k) && (g->head[e] == j))
-         break;
-
-   /* Gibt es die Kante schon ?
-    */
-   if (e != EAT_LAST)
-   {
-      /* Ja, dann nur Kosten korrigieren.
-       */
-      if (GT(g->cost[e], cost))
-      {
-         g->cost[e]            = cost;
-         g->cost[Edge_anti(e)] = cost;
-      }
-      else
-      {
-	 e = -1;
-      }
-   }
-   else
-   {
-      assert(g->oeat[eki] == EAT_FREE);
-
-      e = eki;
-
-      g->grad[k]++;
-      g->grad[j]++;
-
-      g->cost[e]   = cost;
-      g->head[e]   = j;
-      g->tail[e]   = k;
-      g->ieat[e]   = g->inpbeg[j];
-      g->oeat[e]   = g->outbeg[k];
-      g->inpbeg[j] = e;
-      g->outbeg[k] = e;
-
-      e = Edge_anti(eki);
-
-      g->cost[e]   = cost;
-      g->head[e]   = k;
-      g->tail[e]   = j;
-      g->ieat[e]   = g->inpbeg[k];
-      g->oeat[e]   = g->outbeg[j];
-      g->inpbeg[k] = e;
-      g->outbeg[j] = e;
-      return eki;
-   }
-   return e;
-}
 #endif
+
 /* C. W. Duin and A. Volganant
  *
  * "Reduction Tests for the Steiner Problem in Graphs"
@@ -1474,18 +1807,19 @@ static int graph_edge_redirect(
 SCIP_RETCODE bd3_reduction(
    SCIP* scip,
    GRAPH* g,
-   double* pathdist1,
-   double* pathtran1,
-   int* heap,
-   int*  state,
-   int*  nelims
+   PATH*  pathtail,
+   PATH*  pathhead,
+   int*    heap,
+   int*    statetail,
+   int*    statehead,
+   int*    memlbltail,
+   int*    memlblhead,
+   int*    nelims,
+   int     limit
    )
 {
    IDX** ancestors;
    IDX** revancestors;
-   SCIP_Real* pathdist2;
-   SCIP_Real* pathtran2;
-   SCIP_Real* pathrand;
    SCIP_Real c1;
    SCIP_Real c2;
    SCIP_Real c3;
@@ -1501,31 +1835,42 @@ SCIP_RETCODE bd3_reduction(
    int    e1;
    int    e2;
    int    e3;
-   /*int    count = 0;*/
+   int    nnodes;
+
+   SCIP_Bool pc;
 
    SCIPdebugMessage("BD3-Reduction: ");
 
+   assert(g != NULL);
    assert(heap  != NULL);
-   assert(state != NULL);
    assert(nelims != NULL);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &ancestors, 3) );
    SCIP_CALL( SCIPallocBufferArray(scip, &revancestors, 3) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &pathdist2, g->knots) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &pathtran2, g->knots) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &pathrand, g->knots) );
 
    *nelims = 0;
+   nnodes = g->knots;
+   pc = g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING;
 
    for( i = 0; i < 3; i++ )
    {
       ancestors[i] = NULL;
       revancestors[i] = NULL;
    }
-   for( i = 0; i < g->knots; i++ )
-      g->mark[i] = (g->grad[i] > 0);
+   if( !pc )
+      for( i = 0; i < nnodes; i++ )
+         g->mark[i] = (g->grad[i] > 0);
+   for( i = 0; i < nnodes; i++ )
+   {
+      statetail[i]     = UNKNOWN;
+      pathtail[i].dist = FARAWAY;
+      pathtail[i].edge = UNKNOWN;
+      statehead[i]     = UNKNOWN;
+      pathhead[i].dist = FARAWAY;
+      pathhead[i].edge = UNKNOWN;
+   }
 
-   for( i = 0; i < g->knots; i++ )
+   for( i = 0; i < nnodes; i++ )
    {
       if( g->grad[i] != 3 || Is_term(g->term[i]) )
          continue;
@@ -1547,6 +1892,19 @@ SCIP_RETCODE bd3_reduction(
       c3 = g->cost[e3];
       assert(g->oeat[e3] == EAT_LAST);
 
+      c123 = c1 + c2 + c3;
+
+      SCIP_CALL( getSD(scip, g, pathtail, pathhead, &s1, heap, statetail, statehead, memlbltail, memlblhead, k1, k2, limit, pc) );
+      SCIP_CALL( getSD(scip, g, pathtail, pathhead, &s2, heap, statetail, statehead, memlbltail, memlblhead, k2, k3, limit, pc) );
+      SCIP_CALL( getSD(scip, g, pathtail, pathhead, &s3, heap, statetail, statehead, memlbltail, memlblhead, k3, k1, limit, pc) );
+
+      //printf("sd: %f %f %f, cost: %f \n", s1, s2, s3, c123);
+      if( SCIPisGT(scip, s1 + s2, c123)
+         &&  SCIPisGT(scip, s1 + s3, c123)
+         &&  SCIPisGT(scip, s2 + s3, c123) )
+         continue;
+
+      /* save ancestors */
       for( k = 0; k < 3; k++ )
       {
 	 SCIPindexListNodeFree(scip, &(ancestors[k]));
@@ -1561,27 +1919,7 @@ SCIP_RETCODE bd3_reduction(
 
       SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(ancestors[2]), g->ancestors[e3]) );
       SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(revancestors[2]), g->ancestors[Edge_anti(e3)]) );
-      /*
-        compute_sd(g, k1, g->cost, g->cost, heap, state, &count, pathdist1, pathtran1, pathrand);
-        compute_sd(g, k2, g->cost, g->cost, heap, state, &count, pathdist2, pathtran2, pathrand);
-      */
-      c123 = c1 + c2 + c3;
 
-      SCIP_CALL( getSD(scip, g, pathdist1, &s1, heap, k1, k2) );
-      SCIP_CALL( getSD(scip, g, pathdist1, &s2, heap, k2, k3) );
-      SCIP_CALL( getSD(scip, g, pathdist1, &s3, heap, k3, k1) );
-      printf("sd: %f %f %f, cost: %f \n", s1, s2, s3, c123);
-      if( SCIPisGT(scip, s1 + s2, c123)
-         &&  SCIPisGT(scip, s1 + s3, c123)
-         &&  SCIPisGT(scip, s2 + s3, c123) )
-         continue;
-
-      /*
-        if (GT(pathdist1[k2] + pathdist1[k3], c123)
-        && GT(pathdist1[k2] + pathdist2[k3], c123)
-        && GT(pathdist1[k3] + pathdist2[k3], c123))
-        continue;
-      */
       (*nelims)++;
 
       if( SCIPisLT(scip, s1, c1 + c2) ) //pathdist1[k2]
@@ -1636,16 +1974,12 @@ SCIP_RETCODE bd3_reduction(
       SCIPindexListNodeFree(scip, &(revancestors[k]));
    }
 
-   SCIPfreeBufferArray(scip, &pathrand);
-   SCIPfreeBufferArray(scip, &pathtran2);
-   SCIPfreeBufferArray(scip, &pathdist2);
    SCIPfreeBufferArray(scip, &revancestors);
    SCIPfreeBufferArray(scip, &ancestors);
 
-   assert(graph_valid(g));
-   /*
-     printf(" Knots deleted %d\n", nelims);
-   */
+   if( !pc )
+      assert(graph_valid(g));
+
    SCIPdebugMessage("bd3: %d Knots deleted\n", *nelims);
 
    return SCIP_OKAY;
@@ -1666,7 +2000,7 @@ inline static double mst_cost(
 
    return(cost);
 }
-
+#if 1
 /* C. W. Duin and A. Volganant
  *
  * "Reduction Tests for the Steiner Problem in Graphs"
@@ -1731,7 +2065,7 @@ SCIP_RETCODE nsv_reduction(
       path[i] = NULL;
    }
 
-   calculate_distances(g, path, g->cost, FSP_MODE);
+   calculate_distances(scip, g, path, g->cost, FSP_MODE);
 
    for(i = 0; i < g->knots; i++)
    {
@@ -1749,7 +2083,7 @@ SCIP_RETCODE nsv_reduction(
       if (g->grad[i] < 3)
          continue;
 
-      graph_path_exec(g, MST_MODE, i, g->cost, mst1);
+      graph_path_exec(scip, g, MST_MODE, i, g->cost, mst1);
 
       cost1 = mst_cost(g, mst1);
 
@@ -1765,7 +2099,7 @@ SCIP_RETCODE nsv_reduction(
       cost[e]            = FARAWAY - 1.0;
       cost[Edge_anti(e)] = FARAWAY - 1.0;
 
-      graph_path_exec(g, MST_MODE, i, cost, mst2);
+      graph_path_exec(scip, g, MST_MODE, i, cost, mst2);
 
       cost2 = mst_cost(g, mst2);
 
@@ -1819,7 +2153,7 @@ SCIP_RETCODE nsv_reduction(
 
          (*nelims)++;
 
-         calculate_distances(g, path, g->cost, FSP_MODE);
+         calculate_distances(scip, g, path, g->cost, FSP_MODE);
 
          for(j = 0; j < g->edges; j++)
             cost[j] = g->cost[j];
@@ -1845,8 +2179,10 @@ SCIP_RETCODE nsv_reduction(
 
    return SCIP_OKAY;
 }
+#endif
 
 
+#if 0
 /* C. W. Duin and A. Volganant
  *
  * "Reduction Tests for the Steiner Problem in Graphs"
@@ -1986,10 +2322,10 @@ SCIP_RETCODE nv_reduction_optimal(
    voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
 
    /* computing the shortest paths from the source node */
-   graph_path_exec(g, FSP_MODE, g->source[0], g->cost, pathfromsource);
+   graph_path_exec(scip, g, FSP_MODE, g->source[0], g->cost, pathfromsource);
 
    /* computing the shortest hops paths from the source node */
-   graph_path_exec(g, FSP_MODE, g->source[0], hopscost, pathhops);
+   graph_path_exec(scip, g, FSP_MODE, g->source[0], hopscost, pathhops);
 
    /* this is the offset used to minimise the number of knots to examine in large graphs. */
    srand(runnum*100);
@@ -2098,7 +2434,7 @@ SCIP_RETCODE nv_reduction_optimal(
             }
 
             /* computing the shortest paths from the source node */
-            graph_path_exec(g, FSP_MODE, g->source[0], g->cost, pathfromsource);
+            graph_path_exec(scip, g, FSP_MODE, g->source[0], g->cost, pathfromsource);
          }
       }
       /* The knot is not a terminal so we can perform the short link test */
@@ -2173,7 +2509,7 @@ SCIP_RETCODE nv_reduction_optimal(
    return SCIP_OKAY;
 }
 
-
+#endif
 /* shortest link reduction */
 SCIP_RETCODE sl_reduction(
    SCIP*   scip,
@@ -2535,7 +2871,7 @@ SCIP_RETCODE nv_reduction(
    SCIPfreeBufferArray(scip, &distance);
    SCIPfreeBufferArray(scip, &minedge1);
    SCIPfreeBufferArray(scip, &term);
-   printf("nelims in NV: %d \n ", (*nelims));
+
    //assert(graph_valid(g));
    return SCIP_OKAY;
 }
@@ -2604,7 +2940,7 @@ SCIP_RETCODE ledge_reduction(
    SCIP_CALL( SCIPallocBufferArray(scip, &nodesid, nnodes) );
 
    /* initialize the new graph */
-   netgraph = graph_init(nterms, maxnedges, 1, 0);
+   SCIP_CALL( graph_init(scip, &netgraph, nterms, maxnedges, 1, 0) );
 
    e = 0;
    for( k = 0; k < nnodes; k++ )
@@ -2684,7 +3020,7 @@ SCIP_RETCODE ledge_reduction(
    /* compute a MST on netgraph */
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, netnnodes) );
    graph_path_init(netgraph);
-   graph_path_exec(netgraph, MST_MODE, 0, netgraph->cost, mst);
+   graph_path_exec(scip, netgraph, MST_MODE, 0, netgraph->cost, mst);
 
    maxcost = -1;
    assert(mst[0].edge == -1);
@@ -2839,7 +3175,7 @@ int nv_reduction(
    voronoi_term(g, g->cost, distance, radius, pathfromterm, vregion, heap, state, pred, 1);
 
    /* computing the shortest paths from each terminal to every other node */
-   calculate_distances(g, path, g->cost, FSP_MODE);
+   calculate_distances(scip, g, path, g->cost, FSP_MODE);
 
    for(i = 0; i < g->knots; i++)
    {

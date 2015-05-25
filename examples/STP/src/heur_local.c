@@ -1128,7 +1128,7 @@ SCIP_RETCODE do_local(
                voronoi_repair_mult(scip, graph, graph->cost, &count, vbase, boundedges, &nboundedges, nodesmark, &uf, vnoi);
 
                /* create a supergraph, having the endpoints of the key-paths incident to the current crucial node as (super-) vertices */
-               supergraph = graph_init(nsupernodes, nboundedges * 2, 1, 0);
+               SCIP_CALL( graph_init(scip, &supergraph, nsupernodes, nboundedges * 2, 1, 0) );
                supergraph->stp_type = STP_UNDIRECTED;
 
                /* add vertices to the supergraph */
@@ -1166,7 +1166,7 @@ SCIP_RETCODE do_local(
                /* compute a MST on the supergraph */
                SCIP_CALL( SCIPallocBufferArray(scip, &mst, nsupernodes) );
                graph_path_init(supergraph);
-               graph_path_exec(supergraph, MST_MODE, nsupernodes - 1, supergraph->cost, mst);
+               graph_path_exec(scip, supergraph, MST_MODE, nsupernodes - 1, supergraph->cost, mst);
 
                /* compute the cost of the MST */
                mstcost = 0.0;

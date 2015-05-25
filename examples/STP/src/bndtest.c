@@ -17,6 +17,7 @@
 #include "scip/scip.h"
 #include "probdata_stp.h"
 
+#if 0
 void get_close_terms(
       PATH**   path,
       double*  closetermsdist,
@@ -72,7 +73,7 @@ void get_close_terms(
    }
    //printf("\n");
 }
-
+#endif
 double compute_node_lb(
       double*  radius,
       double*  closetermsdist,
@@ -86,7 +87,9 @@ double compute_node_lb(
       int*     hopsbound
       )
 {
-   double lowerbound;
+
+   double lowerbound = 0;
+    #if 0
    int j;
 
    assert(radius           != NULL);
@@ -106,7 +109,7 @@ double compute_node_lb(
    if( probtype == STP_HOP_CONS )
       return lowerbound;
 
-#if 1
+
    if( nodegrad >= 3 )
    {
       lowerbound += closetermsdist[2];

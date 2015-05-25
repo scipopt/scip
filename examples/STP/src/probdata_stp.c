@@ -112,6 +112,7 @@ struct SCIP_ProbData
  */
 static
 int central_terminal(
+   SCIP*  scip,
    GRAPH* g,
    int    what)
 {
@@ -171,7 +172,7 @@ int central_terminal(
       if (!Is_term(g->term[i]))
          continue;
 
-      graph_path_exec(g, FSP_MODE, i, cost, path);
+      graph_path_exec(scip, g, FSP_MODE, i, cost, path);
 
       sum = 0.0;
       max = 0.0;
@@ -563,6 +564,21 @@ SCIP_RETCODE createPrizeConstraints(
 
 #if PRIZEA
    r = 0;
+   ro2 = 0;
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->prizeimplpcons), graph->edges / 2 - 3 * realnterms) );
+   for( r = 0; r < graph->edges / 2; r++ )
+   {
+      if( Is_term(graph->term[graph->tail[2 * r]]) || Is_term(graph->term[graph->head[2 * r]]) )
+	 continue;
+      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeLPConstraint%d", ro2);
+      SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizeimplpcons[ro2]), consname, 0, NULL, NULL,
+            -SCIPinfinity(scip), 0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCons(scip, probdata->prizeimplpcons[ro2++]) );
+   }
+   //printf("r: %d, terms: %d \n", r, realnterms);
+
+#if 0
+   r = 0;
    SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->prizeimplpcons), realnterms) );
    for( r = 0; r < realnterms; r++ )
    {
@@ -573,6 +589,7 @@ SCIP_RETCODE createPrizeConstraints(
    }
    printf("r: %d, terms: %d \n", r, realnterms);
    assert(r == realnterms);
+#endif
 #endif
 
    return SCIP_OKAY;
@@ -857,6 +874,7 @@ SCIP_RETCODE createVariables(
 		  }
 #endif
 #if PRIZEA
+#if 0
 		  if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
 		  {
 		     for( a = graph->inpbeg[head]; a != EAT_LAST; a = graph->ieat[a] )
@@ -875,6 +893,7 @@ SCIP_RETCODE createVariables(
                         SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizeimplpcons[r], probdata->edgevars[flipedge(a)], -1.0) );
 		  }
 		  r++;
+#endif
 #endif
                }
             }
@@ -923,16 +942,12 @@ SCIP_RETCODE createVariables(
          SCIP_CALL( SCIPallocMemoryArray(scip, &path, graph->knots) );
          SCIP_CALL( SCIPallocMemoryArray(scip, &edgecost, nedges) );
          for( e = 0; e < nedges; ++e )
-	 {
             edgecost[e] = graph->cost[e];
-	 }
 
 	 for( e = 0; e < graph->knots; e++ )
-	 {
             graph->mark[e] = 1;
-	 }
 
-         graph_path_exec(graph, FSP_MODE, root, edgecost, path);
+         graph_path_exec(scip, graph, FSP_MODE, root, edgecost, path);
 
          /* create and add initial path variables (one for each real terminal) */
          for( t = 0; t < realnterms; ++t )
@@ -1049,7 +1064,7 @@ SCIP_DECL_PROBCOPY(probcopyStp)
 
    SCIPdebugPrintf("########################## probcopy ###########################\n");
 
-   graphcopy = graph_copy(sourcedata->graph);
+   SCIP_CALL( graph_copy(scip, sourcedata->graph, &graphcopy) );
 
    graph_path_init(graphcopy);
 
@@ -1749,6 +1764,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_Real presoltimelimit;
    PRESOL presolinfo;
    GRAPH* graph;
+   GRAPH* packedgraph;
    SCIP_Bool print;
    int nedges;
    int nnodes;
@@ -1771,11 +1787,10 @@ SCIP_RETCODE SCIPprobdataCreate(
    presolinfo.fixed = 0;
 
    /* create graph */
-   graph = graph_load(scip, filename, &presolinfo);
+   SCIP_CALL( graph_load(scip, &graph, filename, &presolinfo) );
+
    if( printfs )
       printf("load type :: %d \n\n", graph->stp_type);
-   if( graph == NULL )
-      return SCIP_READERROR;
    if( printfs )
       printf("fixed: %f \n\n", presolinfo.fixed );
 
@@ -1910,7 +1925,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* select a root node */
    if( !(graph->stp_type == STP_DIRECTED) && compcentral != CENTER_DEG && graph->stp_type != STP_PRIZE_COLLECTING
       && graph->stp_type != STP_ROOTED_PRIZE_COLLECTING && graph->stp_type != STP_HOP_CONS )
-      graph->source[0] = central_terminal(graph, compcentral);
+      graph->source[0] = central_terminal(scip, graph, compcentral);
 
    /* print the graph */
    if( print )
@@ -1930,7 +1945,8 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* presolving */
    SCIP_CALL( reduce(scip, &graph, &offset, reduction, probdata->minelims) );
 
-   graph = graph_pack(scip, graph, TRUE);
+   SCIP_CALL( graph_pack(scip, graph, &packedgraph, TRUE) );
+   graph = packedgraph;
 
    SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
 
@@ -2804,8 +2820,8 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
       }
 
       for( e = 0; e < graph->knots; e++ )
-         graph->mark[e] = 1; /* @todo mark only terminals? */
-      graph_path_exec(graph, FSP_MODE, graph->source[0], edgecost, path);
+         graph->mark[e] = 1;
+      graph_path_exec(scip, graph, FSP_MODE, graph->source[0], edgecost, path);
 
       /* create and add path variables (Price mode) or set the flow variables (Flow mode) */
       for( t = 0; t < realnterms; ++t )
