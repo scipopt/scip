@@ -76,15 +76,39 @@ SCIP_RETCODE applyBoundHeur(
    SCIP_VAR* var;
    SCIP_Bool infeasible = FALSE;
    int maxproprounds;
+   int nbinvars;
+   int nintvars;
    int nvars;
    int v;
 
    /* get variable data of original problem */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
 
    maxproprounds = heurdata->maxproprounds;
    if( maxproprounds == -2 )
       maxproprounds = 0;
+
+
+   /* only look at binary and integer variables */
+   nvars = nbinvars + nintvars;
+
+   /* stop if we would have infinite fixings */
+   if( lower )
+   {
+      for( v = 0; v < nvars; ++v )
+      {
+         if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(vars[v])) )
+            return SCIP_OKAY;
+      }
+   }
+   else
+   {
+      for( v = 0; v < nvars; ++v )
+      {
+         if( SCIPisInfinity(scip, SCIPvarGetUbLocal(vars[v])) )
+            return SCIP_OKAY;
+      }
+   }
 
    /* start probing */
    SCIP_CALL( SCIPstartProbing(scip) );
@@ -93,9 +117,7 @@ SCIP_RETCODE applyBoundHeur(
    {
       var = vars[v];
 
-      /* only check integer or binary variables */
-      if( SCIPvarGetType(var) >= SCIP_VARTYPE_IMPLINT )
-         continue;
+      assert(SCIPvarGetType(var) < SCIP_VARTYPE_IMPLINT);
 
       /* skip variables which are already fixed */
       if( SCIPvarGetLbLocal(var) + 0.5 > SCIPvarGetUbLocal(var) )
