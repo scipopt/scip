@@ -39,18 +39,12 @@
  * Data structures
  */
 
-/*
- *  static methods
- */
 
-
-/*
- * Execute the branching of nodes with additional constraints.
- */
+/** Execute the branching of nodes with additional constraints. */
 static
 SCIP_RETCODE Exec(
-   SCIP*                 scip,
-   SCIP_RESULT*          result
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RESULT*          result              /**< pointer to store the result */
 )
 {
    SCIP_REOPTNODE* reoptnode;
