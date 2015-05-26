@@ -9197,15 +9197,18 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
          else
             bound = nodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, v);
 
+         /* bound may have changed in propagation; ensure that fracval <= 1 */
+         bound = MAX(REALABS(solval), REALABS(bound));
+
          /* ensure finiteness */
          bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound));/*lint !e666*/
          fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval));/*lint !e666*/
          assert( ! SCIPisInfinity(scip, bound) );
          assert( ! SCIPisInfinity(scip, fracval) );
-         assert( SCIPisFeasPositive(scip, bound + SCIPepsilon(scip)) );
+         assert( SCIPisFeasPositive(scip, bound + SCIPsumepsilon(scip)) );
 
          /* get fractionality of candidate */
-         fracval /= (bound + SCIPepsilon(scip));
+         fracval /= (bound + SCIPsumepsilon(scip));
 
          /* should SOS1 variables be scored by the diving heuristics specific score function;
           *  otherwise use the score function of the SOS1 constraint handler */
