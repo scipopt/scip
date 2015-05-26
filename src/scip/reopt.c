@@ -1305,7 +1305,7 @@ SCIP_RETCODE getLastSavedNode(
       {
          assert(SCIPnodeGetReoptID((*parent)) < reopt->reopttree->reoptnodessize);
          (*parentid) = SCIPnodeGetReoptID((*parent));
-         assert(parentid && parentid < reopt->reopttree->reoptnodessize);
+         assert((*parentid) && (*parentid) < reopt->reopttree->reoptnodessize);
          break;
       }
    }
@@ -1373,7 +1373,7 @@ SCIP_RETCODE moveChildrenUp(
 
       nchilds = reopt->reopttree->reoptnodes[nodeid]->nchilds;
       childid = reopt->reopttree->reoptnodes[nodeid]->childids[nchilds-1];
-      assert(0 = childid && childid < reopt->reopttree->reoptnodessize);
+      assert(0 < childid && childid < reopt->reopttree->reoptnodessize);
 
       /* check the memory */
       SCIP_CALL( reoptnodeCheckMemory(reopt->reopttree->reoptnodes[childid], blkmem, reopt->reopttree->reoptnodes[childid]->nvars + reopt->reopttree->reoptnodes[nodeid]->nvars, 0, 0) );
