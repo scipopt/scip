@@ -4855,7 +4855,6 @@ SCIP_RETCODE SCIPlpiSetNorms(
    assert(blkmem != NULL);
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(lpinorms != NULL);
 
    /* if there was no pricing norms information available, the LPi norms were not stored */
    if( lpinorms == NULL )
@@ -4870,7 +4869,8 @@ SCIP_RETCODE SCIPlpiSetNorms(
    SCIPdebugMessage("loading LPi simplex norms %p (%d rows, %d cols) into SoPlex LP with %d rows and %d cols\n",
       (void *) lpinorms, lpinorms->nrows, lpinorms->ncols, lpi->spx->nRows(), lpi->spx->nCols());
 
-   lpi->spx->setDualNorms(lpinorms->nrows, lpinorms->ncols, lpinorms->norms);
+   if( !lpi->spx->setDualNorms(lpinorms->nrows, lpinorms->ncols, lpinorms->norms) )
+      SCIPdebugMessage("loading of LPi norms failed\n");
 #endif
 
    return SCIP_OKAY;

@@ -61,8 +61,6 @@
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_Bool             specificsos1score;  /**< should SOS1 variables be scored by the diving heuristics specific score function;
-                                              *   otherwise use the score function of the SOS1 constraint handler */
 };
 
 /*
@@ -179,7 +177,7 @@ SCIP_DECL_HEUREXEC(heurExecGuideddiving) /*lint --e{715}*/
    assert(heurdata != NULL);
 
    /* if there are no integer variables (note that, e.g., SOS1 variables may be present) */
-   if ( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) < 1 && ! heurdata->specificsos1score )
+   if ( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) < 1 && ! DEFAULT_SPECIFICSOS1SCORE )/*lint !e506 !e774 !e845*/
       return SCIP_OKAY;
 
    assert(SCIPheurGetNDivesets(heur) > 0);
@@ -268,7 +266,6 @@ SCIP_RETCODE SCIPincludeHeurGuideddiving(
 
    /* create Guideddiving primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
-   heurdata->specificsos1score = DEFAULT_SPECIFICSOS1SCORE;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,

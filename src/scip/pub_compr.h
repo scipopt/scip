@@ -87,7 +87,7 @@ SCIP_Longint SCIPcomprGetNCalls(
 /** gets the number of tree compressions found by this compression */
 EXTERN
 SCIP_Longint SCIPcomprGetNFound(
-   SCIP_COMPR*            compr              /**< tree compression */
+   SCIP_COMPR*           compr               /**< tree compression */
    );
 
 /** is tree compression initialized? */

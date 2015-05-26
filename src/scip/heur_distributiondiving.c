@@ -90,8 +90,6 @@ struct SCIP_HeurData
    char                  scoreparam;         /**< score user parameter */
    char                  score;              /**< score to be used depending on user parameter to use fixed score or revolve */
    SCIP_Bool             usescipscore;       /**< should the SCIP branching score be used for weighing up and down score? */
-   SCIP_Bool             specificsos1score;  /**< should SOS1 variables be scored by the diving heuristics specific score function;
-                                              *   otherwise use the score function of the SOS1 constraint handler */
 };
 
 struct SCIP_EventhdlrData
@@ -974,7 +972,7 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
       return SCIP_OKAY;
 
    /* if there are no integer variables (note that, e.g., SOS1 variables may be present) */
-   if ( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) < 1 && ! heurdata->specificsos1score )
+   if ( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) < 1 && ! DEFAULT_SPECIFICSOS1SCORE )/*lint !e506 !e774 !e845*/
       return SCIP_OKAY;
 
    /* select and store the scoring parameter for this call of the heuristic */
@@ -1044,7 +1042,6 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
    heurdata->currentubs = NULL;
 
    heurdata->usescipscore = TRUE;
-   heurdata->specificsos1score = DEFAULT_SPECIFICSOS1SCORE;
 
    /* create event handler first to finish branch rule data */
    eventhdlrdata = NULL;

@@ -471,7 +471,7 @@ SCIP_RETCODE conshdlrMarkConsObsolete(
       /* in case the constraint is marked to be propagated, we do not move it in the propconss array since the first
        * part of the array contains all marked constraints independently of their age
        */
-      assert(!cons->markpropagate == (cons->propconsspos < conshdlr->nmarkedpropconss));
+      assert((!cons->markpropagate) == (cons->propconsspos < conshdlr->nmarkedpropconss));
       if( cons->propagate && cons->propenabled && !cons->markpropagate )
       {
          assert(0 <= cons->propconsspos && cons->propconsspos < conshdlr->nusefulpropconss);
@@ -574,7 +574,7 @@ SCIP_RETCODE conshdlrMarkConsUseful(
       /* in case the constraint is marked to be propagated, we do not move it in the propconss array since the first
        * part of the array contains all marked constraints independently of their age
        */
-      assert(!cons->markpropagate == (cons->propconsspos < conshdlr->nmarkedpropconss));
+      assert((!cons->markpropagate) == (cons->propconsspos < conshdlr->nmarkedpropconss));
       if( cons->propagate && cons->propenabled && !cons->markpropagate)
       {
          assert(conshdlr->nusefulpropconss <= cons->propconsspos && cons->propconsspos < conshdlr->npropconss);

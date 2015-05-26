@@ -254,6 +254,7 @@ fixed bugs:
 - fix potential memory leak in SoPlex LP interfaces when setting invalid basis
 - fix call to random generator for Windows operating systems in misc.c
 - fix late creation of auxiliary LP in cons_nonlinear.c, which lead to a segmentation fault with lpi_spx2.cpp
+- fixed again a bug in backward propagation of linear expressions in expression graph
 
 SCIP version 3.1.2
 ==================

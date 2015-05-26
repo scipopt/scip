@@ -8659,24 +8659,22 @@ SCIP_DECL_CONSPROP(consPropSOS1)
          SCIP_VAR* var;
 
          var = fixnonzerovars[j];
-
-         /* if variable is involved in an SOS1 constraint */
-         if ( var != NULL && varGetNodeSOS1(conshdlrdata, var) >= 0 )
+         if ( var != NULL )
          {
-            assert( varGetNodeSOS1(conshdlrdata, var) < conshdlrdata->nsos1vars );
-            SCIPdebugMessage("Propagating SOS1 variable <%s>.\n", SCIPvarGetName(var) );
+            int node;
+            node = varGetNodeSOS1(conshdlrdata, var);
 
-            /* if zero is outside the domain of variable */
-            if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
+            /* if variable is involved in an SOS1 constraint */
+            if ( node >= 0 )
             {
-               SCIP_Bool cutoff;
-               int node;
+               assert( varGetNodeSOS1(conshdlrdata, var) < conshdlrdata->nsos1vars );
+               SCIPdebugMessage("Propagating SOS1 variable <%s>.\n", SCIPvarGetName(var) );
 
-               node = varGetNodeSOS1(conshdlrdata, var);
-               assert(node >= 0);
-
-               if( node >= 0 )
+               /* if zero is outside the domain of variable */
+               if ( SCIPisFeasPositive(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasNegative(scip, SCIPvarGetUbLocal(var)) )
                {
+                  SCIP_Bool cutoff;
+
                   SCIP_CALL( propVariableNonzero(scip, conflictgraph, implgraph, conss[0], node, conshdlrdata->implprop, &cutoff, &ngen) );
                   if ( cutoff )
                   {
@@ -9199,15 +9197,18 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
          else
             bound = nodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, v);
 
+         /* bound may have changed in propagation; ensure that fracval <= 1 */
+         bound = MAX(REALABS(solval), REALABS(bound));
+
          /* ensure finiteness */
          bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound));/*lint !e666*/
          fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval));/*lint !e666*/
          assert( ! SCIPisInfinity(scip, bound) );
          assert( ! SCIPisInfinity(scip, fracval) );
-         assert( SCIPisFeasPositive(scip, bound + SCIPepsilon(scip)) );
+         assert( SCIPisFeasPositive(scip, bound + SCIPsumepsilon(scip)) );
 
          /* get fractionality of candidate */
-         fracval /= (bound + SCIPepsilon(scip));
+         fracval /= (bound + SCIPsumepsilon(scip));
 
          /* should SOS1 variables be scored by the diving heuristics specific score function;
           *  otherwise use the score function of the SOS1 constraint handler */

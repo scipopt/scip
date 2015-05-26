@@ -2750,7 +2750,11 @@ SCIP_RETCODE collectCliqueConss(
          return SCIP_OKAY;
 
       if( SCIPconsIsDeleted(cons) )
+      {
+         /* reset nlocaladdconss and continue */
+         nlocaladdconss = 0;
          continue;
+      }
       assert(nlocaladdconss == 0);
 
       SCIP_CALL( processFixings(scip, cons, cutoff, nfixedvars, &addcut, &mustcheck) );

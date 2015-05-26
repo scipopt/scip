@@ -4921,7 +4921,7 @@ SCIP_RETCODE exprparseReadVariable(
          ++varnameendptr;
    }
 
-   namelength = varnameendptr - *str;
+   namelength = varnameendptr - *str; /*lint !e712*/
    if( namelength >= SCIP_MAXSTRLEN )
    {
       SCIPerrorMessage("Variable name %.*s is too long for buffer in exprparseReadVariable.\n", namelength, str);
@@ -5064,7 +5064,7 @@ SCIP_RETCODE exprParse(
    SCIP_HASHTABLE*       vartable,           /**< hash table for variable names and corresponding expression index */
    int                   recursiondepth      /**< current recursion depth */
    )
-{
+{   /*lint --e{712,747}*/
    SCIP_EXPR* arg1;
    SCIP_EXPR* arg2;
    const char* subexpptr;
@@ -5866,7 +5866,7 @@ SCIP_RETCODE SCIPexprCreate(
    case SCIP_EXPR_VARIDX:
    case SCIP_EXPR_PARAM:
    {
-      va_start( ap, op );  /*lint !e826*/
+      va_start( ap, op );  /*lint !e838*/
       opdata.intval = va_arg( ap, int );  /*lint !e416 !e826*/
       va_end( ap );  /*lint !e826*/
 
@@ -5878,7 +5878,7 @@ SCIP_RETCODE SCIPexprCreate(
 
    case SCIP_EXPR_CONST:
    {
-      va_start(ap, op );  /*lint !e826*/
+      va_start(ap, op );  /*lint !e838*/
       opdata.dbl = va_arg( ap, SCIP_Real );  /*lint !e416 !e826*/
       va_end( ap );  /*lint !e826*/
 
@@ -5896,7 +5896,7 @@ SCIP_RETCODE SCIPexprCreate(
    {
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 2) );  /*lint !e506*/
 
-      va_start(ap, op );  /*lint !e826*/
+      va_start(ap, op );  /*lint !e838*/
       children[0] = va_arg( ap, SCIP_EXPR* );  /*lint !e416 !e826*/
       children[1] = va_arg( ap, SCIP_EXPR* );  /*lint !e416 !e826*/
       assert(children[0] != NULL);
@@ -5923,7 +5923,7 @@ SCIP_RETCODE SCIPexprCreate(
    {
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 1) );  /*lint !e506*/
 
-      va_start(ap, op );  /*lint !e826*/
+      va_start(ap, op );  /*lint !e838*/
       children[0] = va_arg( ap, SCIP_EXPR* );  /*lint !e416 !e826*/
       assert(children[0] != NULL);
       va_end( ap );  /*lint !e826*/
@@ -5938,7 +5938,7 @@ SCIP_RETCODE SCIPexprCreate(
    {
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 1) );  /*lint !e506*/
 
-      va_start(ap, op );  /*lint !e826*/
+      va_start(ap, op );  /*lint !e838*/
       children[0] = va_arg( ap, SCIP_EXPR* );  /*lint !e416 !e826*/
       assert(children[0] != NULL);
       opdata.dbl = va_arg( ap, SCIP_Real);  /*lint !e416 !e826*/
@@ -5952,7 +5952,7 @@ SCIP_RETCODE SCIPexprCreate(
    {
       SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &children, 1) );  /*lint !e506*/
 
-      va_start(ap, op );  /*lint !e826*/
+      va_start(ap, op );  /*lint !e838*/
       children[0] = va_arg( ap, SCIP_EXPR* );  /*lint !e416 !e826*/
       assert(children[0] != NULL);
       opdata.intval = va_arg( ap, int);  /*lint !e416 !e826*/
@@ -5971,7 +5971,7 @@ SCIP_RETCODE SCIPexprCreate(
 
       opdata.data = NULL; /* to avoid compiler warning about use of uninitialised value */
 
-      va_start(ap, op );  /*lint !e826*/
+      va_start(ap, op );  /*lint !e838*/
       /* first argument should be number of children */
       nchildren = va_arg( ap, int );  /*lint !e416 !e826*/
       assert(nchildren >= 0);
@@ -7878,7 +7878,7 @@ SCIP_RETCODE SCIPexprEvalIntUser(
       int i;
 
       for( i = 0; i < expr->nchildren; ++i )
-         SCIPintervalSetEntire(infinity, &argvals[i]);
+         SCIPintervalSetEntire(infinity, &argvals[i]); /*lint !e613*/
    }
    else
    {
@@ -9830,7 +9830,7 @@ void exprgraphPrintNodeExpression(
    default:
       SCIPmessageFPrintInfo(messagehdlr, file, SCIPexpropGetName(node->op));
       break;
-   }
+   } /*lint !e788*/
 }
 
 /** prints a node of an expression graph */
@@ -10573,7 +10573,7 @@ void exprgraphNodePropagateBounds(
                else
                {
                   assert(node->children[i]->bounds.sup > -infinity);
-                  maxlinactivity -= coefs[i] * node->children[i]->bounds.sup;
+                  maxlinactivity += SCIPintervalNegateReal(coefs[i]) * node->children[i]->bounds.sup;
                }
             }
             else
@@ -10585,14 +10585,14 @@ void exprgraphNodePropagateBounds(
                else
                {
                   assert(node->children[i]->bounds.inf < infinity);
-                  maxlinactivity -= coefs[i] * node->children[i]->bounds.inf;
+                  maxlinactivity += SCIPintervalNegateReal(coefs[i]) * node->children[i]->bounds.inf;
                }
             }
          }
       }
-      maxlinactivity = -maxlinactivity; /* correct sign */
+      maxlinactivity = SCIPintervalNegateReal(maxlinactivity); /* correct sign */
 
-      SCIPdebugMessage("activity = [%10g,%10g] ninf = [%d,%d]\n", minlinactivity, maxlinactivity, minlinactivityinf, maxlinactivityinf);
+      /* SCIPdebugMessage("activity = [%10g,%10g] ninf = [%d,%d]; bounds = [%10g,%10g]\n", minlinactivity, maxlinactivity, minlinactivityinf, maxlinactivityinf, node->bounds.inf, node->bounds.sup); */
 
       /* if there are too many unbounded bounds, then could only compute infinite bounds for children, so give up */
       if( (minlinactivityinf >= 2 || node->bounds.sup >=  infinity) &&
@@ -13148,7 +13148,7 @@ SCIP_RETCODE SCIPexprgraphCreateNode(
    case SCIP_EXPR_REALPOWER:
    case SCIP_EXPR_SIGNPOWER:
    {
-      va_start(ap, op );  /*lint !e826*/
+      va_start(ap, op );  /*lint !e838*/
       opdata.dbl = va_arg( ap, SCIP_Real);  /*lint !e416 !e826*/
       va_end( ap );  /*lint !e826*/
 
@@ -13157,7 +13157,7 @@ SCIP_RETCODE SCIPexprgraphCreateNode(
 
    case SCIP_EXPR_INTPOWER:
    {
-      va_start(ap, op );  /*lint !e826*/
+      va_start(ap, op );  /*lint !e838*/
       opdata.intval = va_arg( ap, int);  /*lint !e416 !e826*/
       va_end( ap );  /*lint !e826*/
 
@@ -13169,7 +13169,7 @@ SCIP_RETCODE SCIPexprgraphCreateNode(
       return SCIP_INVALIDDATA; /*lint !e527*/
    }
 
-   SCIP_CALL( exprgraphCreateNode(blkmem, node, op, opdata) );
+   SCIP_CALL( exprgraphCreateNode(blkmem, node, op, opdata) ); /*lint !e644*/
 
    return SCIP_OKAY;
 }

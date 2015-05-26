@@ -32,7 +32,6 @@
 #include "reader_sch.h"
 #include "reader_sm.h"
 #include "reader_rcp.h"
-#include "cpoptimizer.h"
 
 /** runs the shell */
 static

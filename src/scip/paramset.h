@@ -460,7 +460,7 @@ extern
 SCIP_RETCODE SCIPparamCheckLongint(
    SCIP_PARAM*           param,              /**< parameter */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-   SCIP_Longint	         value               /**< value to check */
+   SCIP_Longint          value               /**< value to check */
    );
 
 /** sets value of SCIP_Bool parameter */

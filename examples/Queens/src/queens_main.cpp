@@ -44,7 +44,8 @@ main(
    }
 
    // get the number of queens for commandline
-   int n = abs(atoi(argv[1]));
+   size_t n = abs(atoi(argv[1])); /*lint !e732*/
+
    try
    {
       // initialize the queens solver

@@ -87,7 +87,7 @@
  * off by default, as I (SV) believe we cannot ensure that infeasibility
  * can always be ensured by other means (propagation)
  */
-#define ASSERT_INITLP_FEASCUT
+/* #define ASSERT_INITLP_FEASCUT */
 
 /*
  * Data structures
