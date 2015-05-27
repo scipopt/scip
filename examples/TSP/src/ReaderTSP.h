@@ -44,9 +44,9 @@ public:
       : scip::ObjReader(scip, "tspreader", "file reader for TSP files", "tsp")
    {
       /* add TSP reader parameters */
-      SCIPaddBoolParam(scip,
+      (void) SCIPaddBoolParam(scip,
          "reading/tspreader/round_lengths", "should lenghts of edges be rounded to nearest integer?",
-         &round_lengths_, FALSE, TRUE, NULL, NULL);
+            &round_lengths_, FALSE, TRUE, NULL, NULL);
    }
 
    /** destructor */
@@ -106,7 +106,7 @@ private:
       SCIP_VAR*             var                 /**< variable corresponding to that edge */
       );
 
-};
+};/*lint !e1712*/
 
 } /* namespace tsp */
 

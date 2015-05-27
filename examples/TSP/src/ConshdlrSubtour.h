@@ -280,7 +280,7 @@ public:
    }
 
    /** clone method which will be used to copy a objective plugin */
-   virtual SCIP_DECL_CONSHDLRCLONE(scip::ObjProbCloneable* clone);
+   virtual SCIP_DECL_CONSHDLRCLONE(scip::ObjProbCloneable* clone); /*lint !e665*/
 
    /** constraint copying method of constraint handler
     *
@@ -288,7 +288,7 @@ public:
     *  SCIP data structure.
     */
    virtual SCIP_DECL_CONSCOPY(scip_copy);
-};
+}; /*lint !e1712*/
 
 /** creates and captures a TSP subtour constraint */
 SCIP_RETCODE SCIPcreateConsSubtour(
