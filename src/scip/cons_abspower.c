@@ -2535,11 +2535,11 @@ SCIP_RETCODE propagateCons(
             /* if z is fixed, first compute new lower bound on x without tolerances
              * if that is feasible, project new lower bound onto current bounds
              *   otherwise, recompute with tolerances and continue as usual
+             * do this only if variable is not essentially fixed to value of infinity
              */
-            if( SCIPisFeasEQ(scip, zlb, zub) )
+            if( SCIPisFeasEQ(scip, zlb, zub) && !SCIPisInfinity(scip, zub) )
             {
                assert(!SCIPisInfinity(scip, -zlb));
-               assert(!SCIPisInfinity(scip,  zub));
 
                newlb = consdata->lhs - consdata->zcoef * (consdata->zcoef > 0.0 ? zub : zlb);
 
@@ -2773,11 +2773,11 @@ SCIP_RETCODE propagateCons(
             /* if z is fixed, first compute new upper bound on x without tolerances
              * if that is feasible, project new upper bound onto current bounds
              *   otherwise, recompute with tolerances and continue as usual
+             * do this only if variable is not essentially fixed to value of infinity
              */
-            if( SCIPisFeasEQ(scip, zlb, zub) )
+            if( SCIPisFeasEQ(scip, zlb, zub) && !SCIPisInfinity(scip, zub) )
             {
                assert(!SCIPisInfinity(scip, -zlb));
-               assert(!SCIPisInfinity(scip,  zub));
 
                newub = consdata->rhs - consdata->zcoef * (consdata->zcoef > 0.0 ? zlb : zub);
 
