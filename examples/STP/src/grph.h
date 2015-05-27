@@ -174,7 +174,7 @@ typedef enum { FF_BEA, FF_STP, FF_PRB, FF_GRD } FILETYPE;
 extern SCIP_RETCODE graph_init(SCIP*, GRAPH**, int, int, int, int);
 extern SCIP_RETCODE   pcgraphorg(SCIP*, GRAPH*);
 extern SCIP_RETCODE   pcgraphtrans(SCIP*, GRAPH*);
-extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*, int**,int**, IDX***);
+extern SCIP_RETCODE   graph_init_history(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_resize(SCIP*, GRAPH*, int, int, int);
 extern void   graph_free(SCIP*, GRAPH*, SCIP_Bool);
 extern SCIP_RETCODE   graph_prize_transform(SCIP*, GRAPH*);
@@ -182,7 +182,7 @@ extern SCIP_RETCODE   graph_rootprize_transform(SCIP*, GRAPH*);
 extern SCIP_RETCODE   graph_maxweight_transform(SCIP*, GRAPH*, SCIP_Real*);
 extern SCIP_RETCODE graph_grid_create(SCIP*, GRAPH**, int**, int, int, int);
 extern SCIP_RETCODE graph_obstgrid_create(SCIP*, GRAPH**, int**, int**, int, int, int, int);
-extern void   graph_grid_coordinates(int**, int**, int*, int, int);
+extern SCIP_RETCODE   graph_grid_coordinates(SCIP*, int**, int**, int*, int, int);
 #if 0
 extern GRAPH* graph_copy(const GRAPH*);
 extern GRAPH* graph_init2(int, int, int, int);
@@ -208,7 +208,7 @@ extern SCIP_RETCODE  graph_pack(SCIP*, GRAPH*, GRAPH**, SCIP_Bool);
 extern void   graph_trail(const GRAPH*, int);
 extern int    graph_valid(const GRAPH*);
 extern char    graph_valid2(SCIP*, const GRAPH*, SCIP_Real*);
-extern char    graph_sol_valid(const GRAPH*, int*);
+extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, int*);
 
 /* grphpath.c
  */
@@ -235,7 +235,6 @@ extern void   voronoi_slrepair(SCIP*, const GRAPH*, SCIP_Real*, PATH*, int*, int
 extern SCIP_RETCODE voronoi_extend(SCIP*, const GRAPH*, SCIP_Real*, PATH*, VLIST**, char*, int*, int*, int*, int, int, int);
 extern SCIP_RETCODE voronoi_extend2(SCIP*, const GRAPH*, SCIP_Real*, PATH*, SCIP_Real**, int**, int**, char*, int*, int*, int*, int, int, int);
 extern void   sdpaths(SCIP*, const GRAPH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int, int, int);
-extern void   sdhead(SCIP*, const GRAPH*, PATH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int*, int, int, int);
 extern void   graph_path_length(const GRAPH*, const PATH*);
 
 /* grphmcut.c

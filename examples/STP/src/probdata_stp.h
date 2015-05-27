@@ -50,12 +50,13 @@ GRAPH* SCIPprobdataGetGraph(
    SCIP_PROBDATA*        probdata            /**< problem data */
    );
 
-/** sets the offset given by the fixed edges */
+/** sets the offset */
 extern
 void SCIPprobdataSetOffset(
    SCIP_PROBDATA*        probdata,           /**< problem data */
    SCIP_Real             offset              /**< the offset value */
    );
+
 
 /** returns the array with all variables */
 extern

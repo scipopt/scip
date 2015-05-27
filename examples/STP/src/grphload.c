@@ -36,7 +36,7 @@
 /* Try to get the maximum length of a path.
  *
  * WARNING: if a path found or build during the scanning process is
- *          longer than defined blow the programm will probably
+ *          longer than defined below, the programm will probably
  *          crash, because scanf() will overwrite some memory.
  */
 #if defined(PATH_MAX)                     /* Found this on SCO UNIX */
@@ -60,9 +60,9 @@
 
 struct key
 {
-   const char* keyword;
-   int         sw_code;
-   const char* format;
+   const char*           keyword;
+   int                   sw_code;
+   const char*           format;
 };
 
 #define KEY_SECTION              0001
@@ -215,10 +215,10 @@ static const struct key keyword_table[] =
 
 struct section
 {
-   const char* name;
-   const char* extension;
-   const int   flag;
-   int         mark;
+   const char*           name;
+   const char*           extension;
+   const int             flag;
+   int                   mark;
 };
 
 #define FLAG_OPTIONAL     1
@@ -249,16 +249,16 @@ static struct section section_table[] =
 
 typedef struct current_file
 {
-   char   filename[MAX_PATH_LEN];
-   int    line;
-   FILE*  fp;
-   struct section* section;
+   char                  filename[MAX_PATH_LEN];
+   int                   line;
+   FILE*                 fp;
+   struct                section* section;
 } CURF;
 
 typedef union parameter
 {
-   double n;  /* Could be long long */
-   char   s[MAX_STRING_LEN];
+   double                n;  /* Could be long long */
+   char                  s[MAX_STRING_LEN];
 } PARA;
 
 /*---------------------------------------------------------------------------*/

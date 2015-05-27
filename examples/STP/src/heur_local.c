@@ -28,7 +28,7 @@
 #include "probdata_stp.h"
 
 
-/* @note if heuristic runs in root node timing is change there to (SCIP_HEURTIMING_DURINGLPLOOP |
+/* @note if heuristic is running in root node timing is changed there to (SCIP_HEURTIMING_DURINGLPLOOP |
  *       SCIP_HEURTIMING_BEFORENODE), see SCIP_DECL_HEURINITSOL callback
  */
 
@@ -39,7 +39,7 @@
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           (SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)//(SCIP_HEURTIMING_AFTERNODE | SCIP_HEURTIMING_AFTERLPLOOP )
+#define HEUR_TIMING           (SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_DURINGROOT    TRUE
@@ -52,7 +52,7 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   int                   bestnsols;
+   int                   bestnsols;          /**< number of best solutions found */
    int*                  lastsolindices;     /**< indices of a number of best solutions already tried */
    SCIP_Bool             duringroot;         /**< should the heuristic be called during the root node? */
 };
@@ -89,7 +89,7 @@ void dfsorder(
 
 
 /** computes lowest common ancestors for all pairs {vbase(v), vbase(u)} such that {u,w} is a boundary edge,
- * first call should be with u := root TODO only steineredges needed? */
+ * first call should be with u := root */
 static
 SCIP_RETCODE lca(
    SCIP* scip,
@@ -184,39 +184,7 @@ char nodeIsCrucial(
 
    return TRUE;
 }
-#if 0
-/** node degree (w.r.t. the steinertree) */
-static
-int stdeg(
-   const GRAPH* graph,
-   int* steineredges,
-   char* steinernodes,
-   int node
-   )
-{
 
-   int counter = 0;
-   int e;
-
-   assert(graph != NULL);
-   assert(steineredges != NULL);
-
-   e = graph->outbeg[node];
-
-   while( e >= 0 )
-   {
-      /* check whether edge 'e' is in the ST */
-      if( steineredges[e] > -1 && steinernodes[graph->head[e]] )
-      {
-         counter++;
-      }
-      e = graph->oeat[e];
-   }
-
-   return counter;
-}
-
-#endif
 /** for debug purposes only */
 static
 SCIP_RETCODE printGraph(
@@ -296,7 +264,7 @@ SCIP_RETCODE printGraph(
 
    return SCIP_OKAY;
 }
-static int SS=0;
+
 
 SCIP_RETCODE do_local(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -339,23 +307,11 @@ SCIP_RETCODE do_local(
             break;
       if( e == EAT_LAST )
       {
-	 printf("return trivial \n");
+	 SCIPdebugMessage("Local heuristic: return trivial \n");
          return SCIP_OKAY;
       }
    }
-   if(0)
-   {
-      int* ne;
-      const char base[] = "X/Agraphbeflocal";
-      char filename [ FILENAME_MAX ];
-      SCIP_CALL( SCIPallocBufferArray(scip, &ne, nedges) );
-      for( e = 0; e < nedges; e++ )
-         ne[e] = CONNECT;
-      sprintf(filename, "%s%d_%d.gml", base, SS, 0);
-      SCIP_CALL( printGraph(scip, graph, filename, ne) );
-      printf("ssa: %d\n", SS);
-      SCIPfreeBufferArray(scip, &ne);
-   }
+
    assert(graph_valid(graph));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes, nnodes) );
@@ -385,7 +341,7 @@ SCIP_RETCODE do_local(
 
    /** VERTEX  INSERTION */
    newnverts = 0;
-   if( graph->stp_type == STP_UNDIRECTED || graph->stp_type == STP_GRID || graph->stp_type == STP_OBSTACLES_GRID || graph->stp_type == GSTP )  /* TODO adapt function to directed graph */
+   if( graph->stp_type == STP_UNDIRECTED || graph->stp_type == STP_GRID || graph->stp_type == STP_OBSTACLES_GRID || graph->stp_type == GSTP )
    {
       int newnode = 0;
       int oedge;
@@ -476,7 +432,7 @@ SCIP_RETCODE do_local(
                   newnode = i;
                   steinertree[i] = TRUE;
                   newnverts++;
-                  //printf("ADDED VERTEX \n");
+
 #if 0
                   /* check if a fixed edge has been added */
                   for( k = 0; k <= counter; k++ )
@@ -520,7 +476,6 @@ SCIP_RETCODE do_local(
                      printf("ADDED VERTEX \n");
                   }
 #endif
-                  /* TODO adjust tree st we only have to adjust best_result for the new edges*/
 
                }
             }
@@ -533,33 +488,17 @@ SCIP_RETCODE do_local(
 
          if( newnode == i )
             break;
-         /*
-           if( i == 0 )
-           printf("VertInsert newrun \n");
-         */
       }
-#if 0
-      if( graph->stp_type == STP_PRIZE_COLLECTING && newnverts > 0  )
-      {
-         for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
-            if( !Is_term(graph->term[graph->head[e]]) && best_result[e] == CONNECT )
-               artroot = graph->head[e];
-         assert(artroot != root);
-      }
-#endif
+
       for( e = 0; e < nedges; e++ )
          best_result[e] = -1;
 
       if( newnverts > 0  )
       {
          if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
-         {
             do_pcprune(scip, graph, graph->cost, best_result, steinertree);
-         }
          else
-         {
             do_prune(scip, graph, graph->cost, 0, best_result, steinertree);
-         }
 
          for( i = 0; i < nnodes; i++ )
             SCIPlinkcuttreeInit(&nodes[i]);
@@ -595,14 +534,13 @@ SCIP_RETCODE do_local(
          for( e = 0; e < nedges; e++)
             obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
 
-      //printf(" ObjAfterVertexInsertion=%.12e\n", obj);
+      SCIPdebugMessage("ObjAfterVertexInsertion=%.12e\n", obj);
    }
 
 
    /* Key-Vertex Elimination & Key-Path Exchange */
    if( 1 )
    {
-      /* TODO declare variable needed only once, seperately*/
       IDX* blists_curr;
       IDX** blists_start;  /* array [1,..,nnodes],
                             * if node i is in the current ST, blists_start[i] points to a linked list of all nodes having i as their base */
@@ -651,7 +589,7 @@ SCIP_RETCODE do_local(
       char* pinned;
       char* scanned;
       int localmoves = 2;
-      char debg = !TRUE;
+      char debg = FALSE;
       int nruns;
       int newpathend = -1;
       SCIP_Real kpathcost;
@@ -664,7 +602,7 @@ SCIP_RETCODE do_local(
 
       for( k = 0; k < nnodes; k++ )
          graphmark[k] = TRUE;
-      //assert(graph_sol_valid(graph, best_result));
+
       if( debg )
          printf(" ObjBEFKEYVertexELimination=%.12e\n", obj);
 
@@ -697,19 +635,6 @@ SCIP_RETCODE do_local(
       {
          localmoves = 0;
 
-         if(0)
-         {
-            const char base[] = "X/graphbeflocal";
-            char filename [ FILENAME_MAX ];
-            for( k = 0; k < nedges; k+=2 )
-            {
-               newedges[k] = CONNECT;
-               newedges[k+1] = CONNECT;
-            }
-            sprintf(filename, "%s%d_%d.gml", base, SS++, nruns);
-            SCIP_CALL( printGraph(scip, graph, filename, newedges) );
-            printf("ss: %d\n", SS-1);
-         }
          /* initialize data structures */
          SCIPunionfindInit(scip, &uf, nnodes);
 
@@ -723,8 +648,6 @@ SCIP_RETCODE do_local(
          SCIP_CALL( SCIPallocBufferArray(scip, &supernodes, nstnodes) );
          SCIP_CALL( SCIPallocBufferArray(scip, &kpnodes, nstnodes) );
          SCIP_CALL( SCIPallocBufferArray(scip, &kpedges, nstnodes) );
-         //printf("newrun term7: %d\n", graph->term[7] );
-         //printf("newrun root: %d\n", graph->source[0] );
 
          /* compute a voronoi diagram with the ST nodes as bases */
          voronoi(scip, graph, graph->cost, graph->cost, steinertree, vbase, vnoi);
@@ -748,7 +671,7 @@ SCIP_RETCODE do_local(
             lvledges_start[k] = NULL;
 
             /* link all nodes to their (respective) voronoi base */
-            SCIP_CALL( SCIPallocMemory(scip, &blists_curr) ); /* TODO extra method (inline) block memory? */
+            SCIP_CALL( SCIPallocMemory(scip, &blists_curr) );
             blists_curr->index = k;
             blists_curr->parent = blists_start[vbase[k]];
             blists_start[vbase[k]] = blists_curr;
@@ -761,7 +684,6 @@ SCIP_RETCODE do_local(
                k = graph->head[e];
                if( Is_term(graph->term[k]) )
                {
-                  //printf("term: %d \n", k);
                   graphmark[k] = FALSE;
                   for( l = graph->outbeg[k]; l != EAT_LAST; l = graph->oeat[l] )
                   {
@@ -769,7 +691,6 @@ SCIP_RETCODE do_local(
                      {
                         assert(graph->head[l] != root);
                         pinned[graph->head[l]] = TRUE;
-                        //	printf("dummy term: %d \n", graph->head[l]);
                      }
                   }
                }
@@ -791,8 +712,6 @@ SCIP_RETCODE do_local(
             if( vbase[node] != vbase[adjnode] && graphmark[node] && graphmark[adjnode] )
             {
                edgecost = vnoi[node].dist + graph->cost[e] + vnoi[adjnode].dist;
-               //printf("put in pairheap[%d]: %d_%d cost : %f bases: %d %d \n ", vbase[node], node, adjnode, edgecost, vbase[graph->tail[e]], vbase[graph->head[e]] );
-               //printf("put in pairheap[%d]: %d_%d cost : %f bases: %d %d \n ", vbase[adjnode], graph->tail[flipedge(e)], graph->head[flipedge(e)], edgecost, vbase[graph->tail[flipedge(e)]], vbase[graph->head[flipedge(e)]] );
 
                /* add the boundary-edge 'e' and its reversed to the corresponding heaps */
                SCIPpairheapInsert(scip, &boundpaths[vbase[node]], e, edgecost, &(heapsize[vbase[node]]));
@@ -831,7 +750,7 @@ SCIP_RETCODE do_local(
             /* is node 'crucnode' a removable crucial node? (i.e. not pinned or a terminal) */
             if( !pinned[crucnode] && !Is_term(graph->term[crucnode]) && nodeIsCrucial(graph, best_result, crucnode) )
             {
-               if (debg)
+               if( debg )
                   printf("Elimination: %d \n", crucnode);
 
                /* debug, TODO delete*/
@@ -887,61 +806,6 @@ SCIP_RETCODE do_local(
 
                            /* assert that each leaf of the ST is a terminal */
                            assert( e != EAT_LAST );
-#if 0
-                           if( e != EAT_LAST )
-                           {
-                              for( k = 0; k < nnodes; k++ )
-                              {
-                                 if( boundpaths[k] != NULL )
-                                    SCIPpairheapFree(scip, &boundpaths[k]);
-
-                                 blists_curr = blists_start[k];
-                                 lvledges_curr = lvledges_start[k];
-                                 while( lvledges_curr != NULL )
-                                 {
-                                    lvledges_start[k] = lvledges_curr->parent;
-                                    SCIPfreeMemory(scip, &lvledges_curr);
-                                    lvledges_curr = lvledges_start[k];
-                                 }
-
-                                 while( blists_curr != NULL )
-                                 {
-                                    blists_start[k] = blists_curr->parent;
-                                    SCIPfreeMemory(scip, &blists_curr);
-                                    blists_curr = blists_start[k];
-                                 }
-                              }
-
-                              SCIPunionfindFree(scip, &uf);
-                              SCIPfreeBufferArray(scip, &kpedges);
-                              SCIPfreeBufferArray(scip, &kpnodes);
-                              SCIPfreeBufferArray(scip, &supernodes);
-
-                              SCIPfreeBufferArray(scip, &vnoi);
-                              SCIPfreeBufferArray(scip, &dfstree);
-                              SCIPfreeBufferArray(scip, &supernodesid);
-                              SCIPfreeBufferArray(scip, &scanned);
-                              SCIPfreeBufferArray(scip, &heapsize);
-                              SCIPfreeBufferArray(scip, &boundedges);
-                              SCIPfreeBufferArray(scip, &newedges);
-
-                              SCIPfreeBufferArray(scip, &vbase);
-                              SCIPfreeBufferArray(scip, &memvbase);
-                              SCIPfreeBufferArray(scip, &memdist);
-                              SCIPfreeBufferArray(scip, &meminedges);
-                              SCIPfreeBufferArray(scip, &nodesmark);
-                              SCIPfreeBufferArray(scip, &pinned);
-
-                              SCIPfreeBufferArray(scip, &lvledges_start);
-                              SCIPfreeBufferArray(scip, &boundpaths);
-                              SCIPfreeBufferArray(scip, &blists_start);
-                              SCIPfreeBufferArray(scip, &nodes);
-                              SCIPfreeBufferArray(scip, &steinertree);
-
-
-                              return SCIP_OKAY;
-                           }
-#endif
                            adjnode = graph->head[e];
                         }
                         /* does the last node on the path belong to a removed component? */
@@ -987,7 +851,6 @@ SCIP_RETCODE do_local(
                         {
                            assert(steinertree[graph->tail[e]]);
                            kpcost += graph->cost[e];
-                           //printf(" kpcost %f \n", graph->cost[e]);
                            kpedges[nkpedges++] = e;
                            break;
                         }
@@ -1016,7 +879,7 @@ SCIP_RETCODE do_local(
                   {
                      node = blists_curr->index;
                      assert(graphmark[node]);
-                     //printf("C-node %d \n", blists_curr->index);
+
                      /* store all relevant data */
                      memvbase[nresnodes] = vbase[node];
                      memdist[nresnodes] =  vnoi[node].dist;
@@ -1044,14 +907,9 @@ SCIP_RETCODE do_local(
 
                      node = (vbase[graph->head[edge]] == UNKNOWN)? UNKNOWN : SCIPunionfindFind(&uf, vbase[graph->head[edge]]);
                      assert( (vbase[graph->tail[edge]] == UNKNOWN)? UNKNOWN : SCIPunionfindFind(&uf, vbase[graph->tail[edge]]) == l );
-                     /*                    if ( edge != UNKNOWN )
-                                           {
-                                           printf("min edge from heap[%d]: %d_%d  |  ", l, graph->head[edge], graph->tail[edge]);
-                                           printf("vorbases %d_%d  |  ", vbase[graph->head[edge]], vbase[graph->tail[edge]]);
-                                           printf("basenodes:  %d_%d\n ", node, adjnode);
-                                           }        */
+
                      /* check whether edge 'edge' represents a boundary-path having an endpoint in the kth-component and in the root-component respectively */
-                     if( node != UNKNOWN && !nodesmark[node] && graphmark[node] )//&& !pinned[vbase[graph->tail[edge]]] && !pinned[vbase[graph->tail[edge]]] )
+                     if( node != UNKNOWN && !nodesmark[node] && graphmark[node] )
                      {
                         boundedges[nboundedges++] = edge;
                         if( debg )
@@ -1077,12 +935,6 @@ SCIP_RETCODE do_local(
                   {
                      assert(graphmark[node]);
                      assert(graphmark[adjnode]);
-                     /*   if( debg )
-                          {
-                          printf("ADD horizontal edge: %d_%d  \n ", graph->tail[edge], graph->head[edge]);
-                          printf("ADD horizontal edge vbases: %d_%d  \n ", vbase[graph->tail[edge]], vbase[graph->head[edge]]);
-                          printf("ADD horizontal edge ident: %d_%d  \n ", node, adjnode);
-                          }*/
                      boundedges[nboundedges++] = edge;
                   }
                   lvledges_curr = lvledges_curr->parent;
@@ -1142,13 +994,13 @@ SCIP_RETCODE do_local(
 
                /* the (super-) vertex representing the current root-component of the ST */
                k = supernodes[nsupernodes - 1];
-               //printf("root: %d\n", root);
+
                /* add edges to the supergraph */
                for( l = 0; l < nboundedges; l++ )
                {
                   edge = boundedges[l];
-                  /* if( debg )
-                     printf("boundedgeALL: %d_%d  vbases: %d_%d \n ", graph->tail[edge], graph->head[edge],  vbase[graph->tail[edge]], vbase[graph->head[edge]]);*/
+                  if( debg )
+                     printf("boundedgeALL: %d_%d  vbases: %d_%d \n ", graph->tail[edge], graph->head[edge],  vbase[graph->tail[edge]], vbase[graph->head[edge]]);
                   node = SCIPunionfindFind(&uf, vbase[graph->tail[edge]]);
                   adjnode = SCIPunionfindFind(&uf, vbase[graph->head[edge]]);
 
@@ -1170,10 +1022,7 @@ SCIP_RETCODE do_local(
 
                /* compute the cost of the MST */
                mstcost = 0.0;
-               /*
-                 for( l = 0; l < nsupernodes - 1; l++ )
-                 printf(" SUPERGRAPH edge: : %d -> %d \n", supergraph->tail[mst[l].edge], supergraph->head[mst[l].edge] );
-               */
+
                /* compute the cost of the MST */
                for( l = 0; l < nsupernodes - 1; l++ )
                {
@@ -1184,8 +1033,6 @@ SCIP_RETCODE do_local(
                      edge = flipedge(boundedges[mst[l].edge / 2 ]);
 
                   mstcost += graph->cost[edge];
-                  //   printf("crucnode: %d \n", crucnode);
-                  //  printf("edge: %d %d \n", graph->tail[edge], graph->head[edge] );
                   assert( newedges[edge] != crucnode && newedges[flipedge(edge)] != crucnode );
 
                   /* mark the edge (in the original graph) as visited */
@@ -1206,7 +1053,6 @@ SCIP_RETCODE do_local(
                   for( node = graph->head[edge]; node != vbase[node]; node = graph->tail[vnoi[node].edge] )
                   {
                      e = flipedge(vnoi[node].edge);
-                     //printf(" edge: : %d -> %d \n", graph->tail[e], graph->head[e]);
 
                      /* if edge 'e' and its reversed have not been visited yet */
                      if( newedges[vnoi[node].edge] != crucnode && newedges[e] != crucnode )
@@ -1296,10 +1142,10 @@ SCIP_RETCODE do_local(
                      {
                         if( debg )
                            printf(" FINAL ADD root edgee: : %d -> %d \n", graph->tail[edge], graph->head[edge]);
-                        //                     assert( best_result[edge] != 0 && best_result[flipedge(edge)] != 0 );
+
                         best_result[edge] = CONNECT;
                         added += graph->cost[edge];
-
+#if 0
                         if ( !graphmark[vbase[graph->tail[edge]]])
                         {
                            const char base[] = "X/debug";
@@ -1312,9 +1158,9 @@ SCIP_RETCODE do_local(
                               printf("vbase pinned \n");
                            else
                               printf("vbase not pinned \n");
-                           assert(0);
-                        }
 
+                        }
+#endif
                         for( node = graph->tail[edge], adjnode = graph->head[edge]; node != vbase[node]; adjnode = node, node = graph->tail[vnoi[node].edge] )
                         {
                            graphmark[node] = FALSE;
@@ -1322,8 +1168,6 @@ SCIP_RETCODE do_local(
                               printf("ungraphmark %d \n", node);
                            if( best_result[flipedge(vnoi[node].edge)] == CONNECT )
                            {
-                              assert(0); /* should never happen (?) */
-
                               best_result[flipedge(vnoi[node].edge)] = UNKNOWN;
                               removed += graph->cost[flipedge(vnoi[node].edge)];
                               if( debg )
@@ -1336,19 +1180,13 @@ SCIP_RETCODE do_local(
                         }
 
                         assert(!nodesmark[node] && vbase[node] == node);
-                        /*printf("node: %d \n", node);
-                          printf("adjnode: %d \n", adjnode);
-                          assert( graph->tail[(vnoi[adjnode].edge)] == node );*/
                         assert( graphmark[node] == TRUE );
 
                         /* is the pinned node its own component identifier? */
                         if( !Is_term(graph->term[node]) && scanned[node] && !pinned[node] && SCIPunionfindFind(&uf, node) == node )
                         {
-                           //TODO PROBLEM!!  assert(graphmark[graph->head[edge]] = FALSE);
                            graphmark[graph->head[edge]] = FALSE;
                            oldedge = edge;
-                           if( debg )
-                              printf("A DAY IN THE LIFE ELIMINATE\n");
 
                            for( edge = graph->outbeg[node]; edge != EAT_LAST; edge = graph->oeat[edge] )
                            {
@@ -1376,7 +1214,6 @@ SCIP_RETCODE do_local(
                                     }
 
                                     /* assert that each leaf of the ST is a terminal */
-                                    /* TODO mustn be true after vertex insertion!!) */
                                     assert( e != EAT_LAST );
                                     adjnode = graph->head[e];
                                     if( !steinertree[adjnode]  )
@@ -1404,7 +1241,6 @@ SCIP_RETCODE do_local(
 
                         for( node = graph->head[edge]; node != vbase[node]; node = graph->tail[vnoi[node].edge] )
                         {
-                           //printf("ungraphmark %d \n", node);
                            graphmark[node] = FALSE;
                            if( best_result[vnoi[node].edge] == CONNECT )
                            {
@@ -1426,7 +1262,6 @@ SCIP_RETCODE do_local(
                         if( debg )
                            printf(" FINAL ADD egde: : %d -> %d \n", graph->tail[edge], graph->head[edge]);
 
-                        //                     assert( best_result[edge] != 0 && best_result[flipedge(edge)] != 0 );
                         best_result[edge] = CONNECT;
                         added += graph->cost[edge];
                         for( node = graph->tail[edge]; node != vbase[node]; node = graph->tail[vnoi[node].edge] )
@@ -1444,7 +1279,7 @@ SCIP_RETCODE do_local(
                         for( node = graph->head[edge]; node != vbase[node]; node = graph->tail[vnoi[node].edge] )
                         {
                            graphmark[node] = FALSE;
-                           if( 1 )//if( best_result[vnoi[node].edge] != CONNECT && best_result[flipedge(vnoi[node].edge)] != CONNECT )
+                           if( 1 )/*if( best_result[vnoi[node].edge] != CONNECT && best_result[flipedge(vnoi[node].edge)] != CONNECT )*/
                            {
                               if( debg )
                                  printf("FINAL ADD edge: : %d -> %d \n", graph->tail[flipedge(vnoi[node].edge)], graph->head[flipedge(vnoi[node].edge)]);
@@ -1459,31 +1294,9 @@ SCIP_RETCODE do_local(
                   for( k = 0; k < nkpnodes; k++ )
                   {
                      assert(graphmark[kpnodes[k]] == FALSE);
-                     if (0 && graphmark[kpnodes[k]] != FALSE)
-                     {
-
-                        const char base[] = "X/debugMark";
-                        char filename [ FILENAME_MAX ];
-                        sprintf(filename, "%s%d.gml", base, i);
-                        SCIP_CALL( printGraph(scip, graph, filename, best_result) );
-                        printf(" node: %d \n", kpnodes[k]);
-                        assert(0);
-                     }
                      assert(steinertree[kpnodes[k]] == FALSE);
-                     //printf("ungraphmark %d \n", kpnodes[k]);
                   }
                   assert(!graphmark[crucnode]);
-                  //printf(" added : %d \n", added);
-                  //printf("deleted %d \n", removed);
-                  if(0)
-                  {
-                     const char base[] = "X/removed";
-                     char filename [ FILENAME_MAX ];
-                     sprintf(filename, "%smove_:%d.gml", base, localmoves);
-                     SCIP_CALL( printGraph(scip, graph, filename, best_result) );
-                     //assert(++SS<10);
-                     assert(graph_sol_valid(graph, best_result));
-                  }
                }
                else
                {
@@ -1530,10 +1343,6 @@ SCIP_RETCODE do_local(
                   while( blists_curr != NULL )
                   {
                      node = blists_curr->index;
-                     /*if( !graphmark[node] )
-                       {
-                       TODO? dont reset then?
-                       }*/
                      vbase[node] = memvbase[l];
                      vnoi[node].dist = memdist[l];
                      vnoi[node].edge = meminedges[l];
@@ -1542,15 +1351,12 @@ SCIP_RETCODE do_local(
                   }
                }
 
-               /* debug TODO delete*/
                assert(l == nresnodes);
             }
 
             /** Key-Path Exchange */
             if( 1 )
             {
-
-               //printf("ST NODE: %d\n", crucnode);
                /* if the node has just been eliminated, skip Key-Path Exchange */
                if( !graphmark[crucnode] )
                {
@@ -1667,13 +1473,7 @@ SCIP_RETCODE do_local(
                   assert( e != UNKNOWN );
                   k = vbase[graph->tail[e]];
                   l = vbase[graph->head[e]];
-                  if( !graphmark[k] )
-                  {
-                     assert(graphmark[graph->tail[e]]);
-                     //printf(" unmarked: %d \n", graph->tail[e]);
-                     //printf(" unmarkedhead: %d \n", graph->head[e]);
-                     //printf(" vbase unmarked: %d \n", k);
-                  }
+
                   assert(graphmark[k]);
                   node = (l == UNKNOWN || !graphmark[l] )? UNKNOWN : SCIPunionfindFind(&uf, l);
                   adjnode = (k == UNKNOWN)? UNKNOWN : SCIPunionfindFind(&uf, k);
@@ -1701,7 +1501,7 @@ SCIP_RETCODE do_local(
                   assert( graphmark[adjnode] );
 
                   /* does the boundary-path end in the root component? */
-                  if( node != UNKNOWN && node != crucnode && graphmark[l] ) //&& !pinned[k] && !pinned[l] )
+                  if( node != UNKNOWN && node != crucnode && graphmark[l] )
                   {
                      if( debg )
                      {
@@ -1749,7 +1549,6 @@ SCIP_RETCODE do_local(
                      }
                      if( vbase[node] != UNKNOWN )
                      {
-                        //printf("add to heap %d \n", node );
                         heap_add(graph->path_heap, state, &count, node, vnoi);
                      }
                      blists_curr = blists_curr->parent;
@@ -1779,9 +1578,6 @@ SCIP_RETCODE do_local(
                if( oldedge != UNKNOWN && newedge == UNKNOWN )
                   newedge = oldedge;
 
-               //   printf("KOSTENVERGLEICH old/new: %f_ %f \n ", kpathcost,  vnoi[graph->tail[newedge]].dist + graph->cost[newedge]
-               //    + vnoi[graph->head[newedge]].dist );
-               //printf("final edge %d_%d \n ", graph->tail[newedge], graph->head[newedge]);
                if( debg )
                   printf("final edge vronoi  %d_%d \n ", vbase[graph->tail[newedge]], vbase[graph->head[newedge]]);
                assert( newedge != UNKNOWN );
@@ -1829,7 +1625,6 @@ SCIP_RETCODE do_local(
                      printf("vbases newedge %d %d \n", vbase[graph->tail[newedge]], vbase[graph->head[newedge]] );
                   for( node = graph->tail[newedge]; node != vbase[node]; node = graph->tail[vnoi[node].edge] )
                   {
-                     //printf("ungraphmark %d \n", node);
                      if( debg )
                         printf("unmarknew %d \n", node);
                      graphmark[node] = FALSE;
@@ -1844,7 +1639,6 @@ SCIP_RETCODE do_local(
 
                   for( node = graph->head[newedge]; node != vbase[node]; node = graph->tail[vnoi[node].edge] )
                   {
-                     //printf("ungraphmark %d \n", node);
                      if( debg )
                         printf("unmarknew %d \n", node);
                      graphmark[node] = FALSE;
@@ -1857,25 +1651,16 @@ SCIP_RETCODE do_local(
                   if( debg )
                      printf("add %d->%d \n", graph->tail[ (node == crucnode)? newedge : flipedge(newedge) ], graph->head[ (node == crucnode)? newedge : flipedge(newedge) ]);
                   best_result[flipedge(newedge)] = CONNECT;
-                  //printf("bestpathI: %d->%d \n " , graph->tail[newpath_curr->index], graph->head[newpath_curr->index]);
 
                   newpathend = vbase[graph->tail[newedge]];
                   assert(node == vbase[graph->head[newedge]] );
 
-
-
                   /* flip all edges on the ST path between the endnode of the new key-path and the current crucial node */
                   k = newpathend;
-                  //printf(" root: %d \n ", graph->source[0]);
-                  if( SCIPunionfindFind(&uf, newpathend) != crucnode )
-                  {
-                     printf(" newpath: %d crucnode: %d \n ", newpathend, crucnode);
-                     //TODO
-                     assert(0);
-                  }
+                  assert(SCIPunionfindFind(&uf, newpathend) == crucnode);
+
                   while( k != crucnode )
                   {
-                     //printf("k %d, \n", k);
                      assert(graphmark[k]);
                      assert( best_result[flipedge(nodes[k].edge)] != -1);
                      best_result[flipedge(nodes[k].edge)] = UNKNOWN;
@@ -1951,52 +1736,7 @@ SCIP_RETCODE do_local(
 
                   if( debg )
                      printf("pinned node: %d \n", node);
-#if 0
-                  TODO
-                     /* flip all edges on the ST path between the endnode of the new key-path and the current crucial node */
-                     k = newpathend;
-                  //printf(" root: %d \n ", graph->source[0]);
-                  if( SCIPunionfindFind(&uf, newpathend) != crucnode )
-                  {
-                     printf(" newpath: %d crucnode: %d \n ", newpathend, crucnode);
-                     //TODO
-                     // assert(0);
-                  }
-                  while( k != crucnode )
-                  {
-                     //printf("k %d, \n", k);
-                     assert(graphmark[k]);
-                     assert( best_result[flipedge(nodes[k].edge)] != -1);
-                     best_result[flipedge(nodes[k].edge)] = UNKNOWN;
 
-                     best_result[nodes[k].edge] = CONNECT;
-                     if( debg )
-                        printf("flipedge:  %d->%d \n", graph->tail[nodes[k].edge ], graph->head[nodes[k].edge ]);
-                     k = graph->head[nodes[k].edge];
-                  }
-
-
-                  for( k = 0; k < i; k++ )
-                  {
-                     if( crucnode == SCIPunionfindFind(&uf, dfstree[k]) )
-                     {
-                        graphmark[dfstree[k]] = FALSE;
-                        steinertree[dfstree[k]] = FALSE;
-                        if( debg )
-                           printf("unmarkEx %d \n", dfstree[k]);
-                     }
-                  }
-#endif
-                  if(0)
-                  {
-                     const char base[] = "X/exchange";
-                     char filename [ FILENAME_MAX ];
-                     sprintf(filename, "%smove_:%d.gml", base, localmoves);
-                     SCIP_CALL( printGraph(scip, graph, filename, best_result) );
-                     // assert(++SS<10);
-                     assert(graph_sol_valid(graph, best_result));
-
-                  }
                }
                else
                {
@@ -2218,23 +1958,17 @@ SCIP_RETCODE do_local(
       for( e = 0; e < nedges; e++)
          obj += (best_result[e] > -1) ? graph->cost[e] : 0.0;
 
-   //printf(" ObjLocalAFTPRUNE=%.12e\n", obj);
-
    if( printfs )
       printf(" ObjAfterHeurLocal=%.12e\n", obj);
 
-   if(0)
-   {
+
+#if 0
       const char base[] = "X/graphafterlocal";
       char filename [ FILENAME_MAX ];
       sprintf(filename, "%s%d.gml", base, SS++);
       SCIP_CALL( printGraph(scip, graph, filename, best_result) );
-      assert(graph_sol_valid(graph, best_result));
-      //assert(0);
-      //assert(SS < 4);
-   }
-   if( 0 && graph->stp_type == STP_UNDIRECTED )
-      assert(graph_sol_valid(graph, best_result));
+      assert(graph_sol_valid(scip, graph, best_result));
+#endif
 
    SCIPfreeBufferArray(scip, &steinertree);
    SCIPfreeBufferArray(scip, &nodes);
@@ -2323,7 +2057,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    SCIP_HEURDATA* heurdata;
    SCIP_PROBDATA* probdata;
    GRAPH* graph;                             /* graph structure */
-   SCIP_SOL* bestsol;                        /* incumbent solution */
+   SCIP_SOL* newsol;                         /* new (good) solution */
    SCIP_SOL* sol;                            /* new solution */
    SCIP_SOL** sols;                          /* solutions */
    SCIP_VAR** vars;                          /* SCIP variables */
@@ -2370,10 +2104,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( SCIPgetSubscipDepth(scip) > 0 )
       return SCIP_OKAY;
 
-
-   /* only process each solution once */
-   bestsol = SCIPgetBestSol(scip);
-   if( bestsol == NULL )
+   if( SCIPgetBestSol(scip) == NULL )
       return SCIP_OKAY;
 
    nsols = SCIPgetNSols(scip);
@@ -2383,9 +2114,9 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    assert(heurdata->bestnsols >= 0);
    min = MIN(heurdata->bestnsols, nsols);
 
+   /* only process each solution once */
    for( v = 0; v < min; v++ )
    {
-      /* TODO: more than one new sol!! */
       if( SCIPsolGetIndex(sols[v]) != lastsolindices[v] )
       {
 	 /* shift all solution indices right of the new solution index */
@@ -2399,14 +2130,12 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( v == min )
       return SCIP_OKAY;
 
-   bestsol = sols[v];
-   lastsolindices[v] = SCIPsolGetIndex(bestsol);
+   newsol = sols[v];
+   lastsolindices[v] = SCIPsolGetIndex(newsol);
 
    /* has the new solution been found by this very heuristic? */
-   if( SCIPsolGetHeur(bestsol) != NULL && strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "local") == 0 )
+   if( SCIPsolGetHeur(newsol) != NULL && strcmp(SCIPheurGetName(SCIPsolGetHeur(newsol)), "local") == 0 )
       return SCIP_OKAY;
-
-   //printf("solution in local: %d, found by: %s \n", v, SCIPheurGetName(SCIPsolGetHeur(sols[v])));
 
    /* reset the timing mask to its default value, unless the heuristic is called at the root node */
    if( SCIPgetNNodes(scip) > 1 )
@@ -2417,7 +2146,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    nvars = SCIPprobdataGetNVars(scip);
    vars = SCIPprobdataGetVars(scip);
 
-   xval = SCIPprobdataGetXval(scip, bestsol);
+   xval = SCIPprobdataGetXval(scip, newsol);
 
    if( vars == NULL )
      return SCIP_OKAY;
@@ -2474,23 +2203,13 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    }
 
    /* pruning necessary? */
-   if( SCIPsolGetHeur(bestsol) == NULL ||
-      !(strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "rec") == 0 ||
-         strcmp(SCIPheurGetName(SCIPsolGetHeur(bestsol)), "TM") == 0) )
+   if( SCIPsolGetHeur(newsol) == NULL ||
+      !(strcmp(SCIPheurGetName(SCIPsolGetHeur(newsol)), "rec") == 0 ||
+         strcmp(SCIPheurGetName(SCIPsolGetHeur(newsol)), "TM") == 0) )
    {
-
       char* steinertree;
-      printf("heur: %s \n", SCIPsolGetHeur(bestsol) != NULL ? SCIPheurGetName(SCIPsolGetHeur(bestsol)) : "LP");
       SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, graph->knots) );
-#if 0
-      if( graph->stp_type == STP_PRIZE_COLLECTING  )
-      {
-         for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
-            if( !Is_term(graph->term[graph->head[e]]) && results[e] == CONNECT )
-               artroot = graph->head[e];
-         assert(artroot != root);
-      }
-#endif
+
       for( e = 0; e < nedges; e++ )
       {
          if( results[e] == CONNECT )
@@ -2522,14 +2241,10 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       for( v = 0; v < nvars; v++ )
          pobj += graph->cost[v % nedges] * nval[v];
 
-      /*if( SCIPisLT(scip, pobj, SCIPgetPrimalbound(scip)) )*/
-      if( SCIPisGT(scip, SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip), pobj) )
+      /* has solution been improved? */
+      if( SCIPisGT(scip, SCIPgetSolOrigObj(scip, newsol) - SCIPprobdataGetOffset(scip), pobj) )
       {
          SCIP_Bool success;
-         /*
-           SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
-           SCIPfreeSol(scip, &sol);
-         */
          sol = NULL;
          SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
 

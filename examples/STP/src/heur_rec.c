@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rec.c
- * @brief  rec primal heuristic
+ * @brief  primal recombination heuristic for Steiner problems
  * @author Daniel Rehfeldt
  */
 
@@ -1145,14 +1145,14 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 	    }
 
 	    assert(graph_valid(solgraph));
-	    assert(graph_sol_valid(solgraph, results));
+	    assert(graph_sol_valid(scip, solgraph, results));
 
             /* run local heuristic */
             if( solgraph->stp_type != STP_HOP_CONS && solgraph->stp_type != STP_MAX_NODE_WEIGHT && graph->stp_type != STP_DEG_CONS )
                SCIP_CALL( do_local(scip, solgraph, cost, costrev, results) );
 
 	    if( graph->stp_type == STP_UNDIRECTED )
-               assert(graph_sol_valid(solgraph, results));
+               assert(graph_sol_valid(scip, solgraph, results));
 
             graph_path_exit(solgraph);
          }
@@ -1246,7 +1246,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                   if( SCIPisGT(scip, SCIPgetSolTime(scip, sols[i]), SCIPgetSolTime(scip, sols[index])) )
                      index = i;
                newsol = sols[index];
-	       assert(graph_sol_valid(graph, orgresults));
+	       assert(graph_sol_valid(scip, graph, orgresults));
             }
             else
             {

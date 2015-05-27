@@ -94,7 +94,7 @@ struct SCIP_ProbData
    FILE**                origintlogfile;     /**< pointer to original problem data intlogfile pointer */
 
    /** for FiberSCIP **/
-   SCIP_Bool             ug;                 /**< inidicat if this ug dual bound is set or not */
+   SCIP_Bool             ug;                 /**< indicates if this ug dual bound is set or not */
    int                   nSolvers;           /**< the number of solvers */
    SCIP_Real             ugDual;             /**< dual bound set by ug */
 };
@@ -111,10 +111,12 @@ struct SCIP_ProbData
  *      = CENTER_ALL : find the minimum distance sum to all knots
  */
 static
-int central_terminal(
+SCIP_RETCODE central_terminal(
    SCIP*  scip,
    GRAPH* g,
-   int    what)
+   int*   central_term,
+   int    what
+   )
 {
    PATH*   path;
    double* cost;
@@ -131,43 +133,44 @@ int central_terminal(
    assert(g         != NULL);
    assert(g->layers == 1);
 
-   if (what == CENTER_OK)
-      return g->source[0];
+   *central_term = g->source[0];
 
-   /* Find knot with maximum degree.
+   if( what == CENTER_OK )
+      return SCIP_OKAY;
+
+   /* Find knot of maximum degree.
     */
-   if (what == CENTER_DEG)
+   if( what == CENTER_DEG )
    {
       degree = 0;
 
-      for(i = 0; i < g->knots; i++)
+      for( i = 0; i < g->knots; i++ )
       {
-         if (Is_term(g->term[i]) && (g->grad[i] > degree))
+         if( Is_term(g->term[i]) && (g->grad[i] > degree) )
          {
             degree = g->grad[i];
             center = i;
          }
       }
       assert(degree > 0);
-
-      return center;
+      *central_term = center;
+      return SCIP_OKAY;
    }
 
-   /* For the other medthods we need the shortest paths.
-    */
-   path = malloc((size_t)g->knots * sizeof(*path));
-   cost = malloc((size_t)g->edges * sizeof(*cost));
+   /* For the other methods we need the shortest paths */
+   SCIP_CALL( SCIPallocBufferArray(scip, &path, g->knots) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, g->edges) );
 
    assert(path != NULL);
    assert(cost != NULL);
 
-   for(i = 0; i < g->knots; i++)
+   for( i = 0; i < g->knots; i++ )
       g->mark[i] = TRUE;
 
-   for(i = 0; i < g->edges; i++)
+   for( i = 0; i < g->edges; i++ )
       cost[i] = 1.0;
 
-   for(i = 0; i < g->knots; i++)
+   for( i = 0; i < g->knots; i++ )
    {
       if (!Is_term(g->term[i]))
          continue;
@@ -177,31 +180,31 @@ int central_terminal(
       sum = 0.0;
       max = 0.0;
 
-      for(k = 0; k < g->knots; k++)
+      for( k = 0; k < g->knots; k++ )
       {
          assert((path[k].edge >= 0) || (k == i));
          assert((path[k].edge >= 0) || (path[k].dist == 0));
 
-         if (Is_term(g->term[k]) || (what == CENTER_ALL))
+         if( Is_term(g->term[k]) || (what == CENTER_ALL) )
          {
             sum += path[k].dist;
 
-            if (path[k].dist > max)
+            if( path[k].dist > max )
                max = path[k].dist;
          }
       }
 
-      if ((what == CENTER_SUM) || (what == CENTER_ALL))
+      if( (what == CENTER_SUM) || (what == CENTER_ALL) )
       {
-         if (sum < minimum)
+         if( sum < minimum )
          {
             minimum = sum;
             center  = i;
          }
-         if (sum > maximum)
+         if( sum > maximum )
             maximum = sum;
 
-         if (i == g->source[0])
+         if( i == g->source[0] )
             oldval = sum;
       }
       else
@@ -212,29 +215,30 @@ int central_terminal(
           * it is of the same length but the degree of the knot is
           * higher, we change the center.
           */
-         if (LT(max, minimum) || (EQ(max, minimum) && (g->grad[i] > degree)))
+         if( SCIPisLT(scip, max, minimum) || (SCIPisEQ(scip, max, minimum) && (g->grad[i] > degree)) )
          {
             minimum = max;
             center  = i;
             degree  = g->grad[i];
          }
-         if (max > maximum)
+         if( max > maximum )
             maximum = max;
 
-         if (i == g->source[0])
+         if( i == g->source[0] )
             oldval = max;
       }
    }
    assert(center >= 0);
    assert(Is_term(g->term[center]));
 
-   free(cost);
-   free(path);
+   SCIPfreeBufferArray(scip, &cost);
+   SCIPfreeBufferArray(scip, &path);
 
    printf("Central Terminal is %d (min=%g, max=%g, old=%g)\n",
       center, minimum, maximum, oldval);
 
-   return center;
+   *central_term = center;
+   return SCIP_OKAY;
 }
 
 /** creates problem data */
@@ -471,9 +475,8 @@ SCIP_RETCODE createHopConstraint(
    graph = probdata->graph;
    assert(graph != NULL);
    rhs = graph->hoplimit;
-   printf("Hop limit: %f \n ", rhs);
-   /* TODO: when presolving is enabled: set rhs = rhs - (number of fixed edges) */
-
+   SCIPdebugPrintf("Hop limit: %f \n ", rhs);
+   /* TODO with presolving contractions enabled one might set: set rhs = rhs - (number of fixed edges) */
    SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->hopcons), "HopConstraint", 0, NULL, NULL,
          -SCIPinfinity(scip), rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -481,6 +484,7 @@ SCIP_RETCODE createHopConstraint(
 
    return SCIP_OKAY;
 }
+
 
 /** create (node-) degree constraints (Cut Mode only) */
 static
@@ -515,8 +519,6 @@ SCIP_RETCODE createDegreeConstraints(
 
    return SCIP_OKAY;
 }
-
-
 
 
 /** create Prize constraints (Cut Mode only) */
@@ -557,8 +559,7 @@ SCIP_RETCODE createPrizeConstraints(
    {
       (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeConstraint");
       SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizecons), consname, 0, NULL, NULL,
-            -SCIPinfinity(scip), 1, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-      // TODO SET TO 1 DISABLE WARNING OUTPUT FOR
+            1, 1, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, probdata->prizecons) );
    }
 
@@ -575,7 +576,6 @@ SCIP_RETCODE createPrizeConstraints(
             -SCIPinfinity(scip), 0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, probdata->prizeimplpcons[ro2++]) );
    }
-   //printf("r: %d, terms: %d \n", r, realnterms);
 
 #if 0
    r = 0;
@@ -869,12 +869,10 @@ SCIP_RETCODE createVariables(
                         SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizesymcons[k2], probdata->edgevars[e], 1.0) );
                         k2++;
                      }
-                     //printf("constraint for edge: %d %d \n", graph->tail[e], graph->head[e] );
                      t++;
 		  }
 #endif
 #if PRIZEA
-#if 0
 		  if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
 		  {
 		     for( a = graph->inpbeg[head]; a != EAT_LAST; a = graph->ieat[a] )
@@ -893,7 +891,6 @@ SCIP_RETCODE createVariables(
                         SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizeimplpcons[r], probdata->edgevars[flipedge(a)], -1.0) );
 		  }
 		  r++;
-#endif
 #endif
                }
             }
@@ -1573,100 +1570,6 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
 
    assert(scip != NULL);
    probd = SCIPgetProbData(scip);
-#if  0
-   GRAPH* graph;
-   graph = probd->graph;
-   assert(graph != NULL);
-
-
-   SCIP_SOL* sol;
-   SCIP_VAR** edgevars;
-   GRAPH* graph;
-   graph = probd->graph;
-   if( graph != NULL && graph->stp_type == STP_GRID )
-   {
-      sol = SCIPgetBestSol(scip);
-
-      /* print the coordinates of the best solution */
-      if( sol != NULL &&  !(SCIPgetSubscipDepth(scip) > 0) )
-      {
-	 SCIP_QUEUE* queue;
-         int**  coords;
-         int*  ncoords;
-         int*  nodecoords;
-         int e;
-         int i;
-	 int* pnode;
-	 int root;
-	 int size = 0;
-         int grid_dim;
-
-	 coords = graph->grid_coordinates;
-	 assert(coords != NULL);
-	 ncoords = graph->grid_ncoords;
-	 nodecoords = NULL;
-	 root = graph->source[0];
-	 assert(root >= 0);
-	 grid_dim = graph->grid_dim;
-	 assert(grid_dim > 1);
-         edgevars = probd->edgevars;
-	 assert(ncoords != NULL);
-
-	 /* BFS until all terminals are reached */
-	 SCIP_CALL( SCIPqueueCreate(&queue, size, 2) );
-         for( e = 0; e < graph->edges; e++ )
-            if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
-               size++;
-	 assert(size > 0);
-
-	 SCIP_CALL( SCIPqueueInsert(queue, &root) );
-
-	 printf("Coordinates of the best found solution: \n");
-	 while( !SCIPqueueIsEmpty(queue) )
-	 {
-            pnode = (SCIPqueueRemove(queue));
-            for( e = graph->outbeg[*pnode]; e != EAT_LAST; e = graph->oeat[e] )
-            {
-	       if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
-	       {
-	          graph_grid_coordinates(coords, &nodecoords, ncoords, graph->tail[e], grid_dim);
-                  printf("(%d", nodecoords[0]);
-                  for( i = 1; i < grid_dim; i++ )
-                     printf(", %d", nodecoords[i]);
-                  printf(") --> ");
-                  graph_grid_coordinates(coords, &nodecoords, ncoords, graph->head[e], grid_dim);
-                  printf("(%d", nodecoords[0]);
-                  for( i = 1; i < grid_dim; i++ )
-                     printf(", %d", nodecoords[i]);
-                  printf(") \n");
-
-		  SCIP_CALL( SCIPqueueInsert(queue, &(graph->head[e])) );
-	       }
-	    }
-	 }
-
-	 SCIPqueueFree(&queue);
-
-         /*
-           for( e = 0; e < graph->edges; e++ )
-           if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
-           {
-           graph_grid_coordinates(coords, &nodecoords, ncoords, graph->tail[e], grid_dim);
-           printf("(%d", nodecoords[0]);
-           for( i = 1; i < grid_dim; i++ )
-           printf(", %d", nodecoords[i]);
-           printf(") --> ");
-           graph_grid_coordinates(coords, &nodecoords, ncoords, graph->head[e], grid_dim);
-           printf("(%d", nodecoords[0]);
-           for( i = 1; i < grid_dim; i++ )
-           printf(", %d", nodecoords[i]);
-           printf(") \n");
-           }
-         */
-         free(nodecoords);
-      }
-   }
-#endif
 
    if( probd->logfile != NULL )
    {
@@ -1798,7 +1701,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( probdataCreate(scip, &probdata, graph) );
 
    /* get parameters */
-
    SCIP_CALL( SCIPgetCharParam(scip, "stp/mode", &mode) );
    SCIP_CALL( SCIPgetIntParam(scip, "stp/compcentral", &compcentral) );
    SCIP_CALL( SCIPgetIntParam(scip, "stp/reduction", &reduction) );
@@ -1925,7 +1827,7 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* select a root node */
    if( !(graph->stp_type == STP_DIRECTED) && compcentral != CENTER_DEG && graph->stp_type != STP_PRIZE_COLLECTING
       && graph->stp_type != STP_ROOTED_PRIZE_COLLECTING && graph->stp_type != STP_HOP_CONS )
-      graph->source[0] = central_terminal(scip, graph, compcentral);
+      SCIP_CALL( central_terminal(scip, graph, &(graph->source[0]), compcentral) );
 
    /* print the graph */
    if( print )
@@ -2068,7 +1970,7 @@ GRAPH* SCIPprobdataGetGraph(
 }
 
 
-/** sets the offset given by the fixed edges */
+/** sets the offset */
 void SCIPprobdataSetOffset(
    SCIP_PROBDATA*        probdata,           /**< problem data */
    SCIP_Real             offset              /**< the offset value */
@@ -2236,14 +2138,11 @@ SCIP_Real* SCIPprobdataGetXval(
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
    vals = probdata->xval;
-   //assert(vals != NULL);
+
    nedges = probdata->nedges;
    assert(nedges >= 0);
-   /*if( probdata->lastlpiters < SCIPgetNLPIterations(scip) )*/
-   {
-      SCIP_CALL_ABORT( SCIPgetSolVals(scip, sol, nedges, probdata->edgevars, vals) );
-      /*probdata->lastlpiters = SCIPgetNLPIterations(scip);*/
-   }
+
+   SCIP_CALL_ABORT( SCIPgetSolVals(scip, sol, nedges, probdata->edgevars, vals) );
 
    for( e = 0; e < nedges; e++ )
       vals[e] = fmax(0.0, fmin(vals[e], 1.0));
@@ -2396,12 +2295,6 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    FILE*                 file                /**< file to write best solution to; or NULL, to write to stdout */
    )
 {
-
-   /*
-     SCIP_PROBDATA* probd;
-     probd = SCIPgetProbData(scip);
-     graph = probd->graph;
-   */
    SCIP_SOL* sol;
    SCIP_VAR** edgevars;
    GRAPH* graph;
@@ -2419,7 +2312,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    assert(scip != NULL);
 
    probdata = SCIPgetProbData(scip);
-   graph = probdata->graph;//SCIPprobdataGetGraph(probdata);
+   graph = probdata->graph;
 
    edgevars = probdata->edgevars;
 
@@ -2443,24 +2336,20 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    if( graph->stp_type == STP_UNDIRECTED || graph->stp_type == STP_DIRECTED ||graph->stp_type == STP_DEG_CONS
       || graph->stp_type == STP_NODE_WEIGHTS || graph->stp_type == STP_HOP_CONS || graph->stp_type == GSTP )
    {
-      //printf("in: %d \n", norgnodes);
       curr = graph->fixedges;
       while( curr != NULL )
       {
-	 //printf("index: %d max: %d \n", curr->index, norgedges);
 	 if( orgedges[curr->index] == FALSE )
 	 {
 	    orgedges[curr->index] = TRUE;
 	    nsoledges++;
 	 }
 
-	 //printf("indexorgtail: %d max: %d \n", graph->orgtail[curr->index], norgnodes);
 	 if( orgnodes[graph->orgtail[curr->index]] == FALSE )
 	 {
             orgnodes[graph->orgtail[curr->index]] = TRUE;
 	    nsolnodes++;
 	 }
-         // printf("indexorghead: %d max: %d \n", graph->orghead[curr->index], norgnodes);
 	 if( orgnodes[graph->orghead[curr->index]] == FALSE )
 	 {
 	    orgnodes[graph->orghead[curr->index]] = TRUE;
@@ -2468,7 +2357,6 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 	 }
          curr = curr->parent;
       }
-      //printf("in2: %d \n", norgnodes);
       for( e = 0; e < graph->edges; e++ )
       {
 	 if( !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
@@ -2505,8 +2393,6 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
          assert(nsolnodes >= 0);
          assert(nsoledges >= 1);
       }
-      // printf("norgnodes: %d \n", norgnodes);
-      //printf("norgedges: %d \n", norgedges);
 
       SCIPprobdataWriteLogLine(scip, "Vertices %d\n", nsolnodes);
 
@@ -2589,7 +2475,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
          {
 	    nodenumber[e] = nodecount++;
             SCIPprobdataWriteLogLine(scip, "%s ", strdim);
-            graph_grid_coordinates(coords, &nodecoords, ncoords, e, grid_dim);
+            SCIP_CALL( graph_grid_coordinates(scip, coords, &nodecoords, ncoords, e, grid_dim) );
             for( i = 0; i < grid_dim; i++ )
             {
                SCIPprobdataWriteLogLine(scip, "%d ", nodecoords[i]);
@@ -2612,24 +2498,6 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       root = graph->source[0];
       assert(root >= 0);
 
-      /* switch the terminal property (back to its original state), and mark the old terminals */
-      /*
-        for( k = 0; k < graph->knots; k++ )
-        {
-        if( Is_term(graph->term[k]) && k != root )
-        {
-        for( e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
-        if( graph->tail[e] != root )
-        break;
-        assert(e != EAT_LAST);
-        graph->term[graph->tail[e]] = 0;
-        graph->term[k] = -2;
-        }
-        }
-
-        printf("norgmodeledges: %d \n", graph->norgmodeledges);
-        printf("norgmodelknots: %d \n", graph->norgmodelknots);
-      */
       for( e = 0; e <= graph->edges; e++ )
       {
 	 if( e == graph->edges || !SCIPisZero(scip, SCIPgetSolVal(scip, sol, edgevars[e])) )
@@ -2650,14 +2518,8 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
                   }
                }
 
-               //	       assert(graph->head[curr->index] != root);
-               //     if( curr->index] == root )
-               //	  printf("rootedge: %d->%d \n",
-
-	       if( curr->index < graph->norgmodeledges ) //if( graph->term[graph->head[curr->index]] != -2 )
+	       if( curr->index < graph->norgmodeledges )
 	       {
-                  // if( (graph->stp_type == STP_ROOTED_PRIZE_COLLECTING)? 1 : graph->tail[curr->index] != root )
-                  //{
                   if( orgedges[curr->index] == FALSE )
                   {
                      orgedges[curr->index] = TRUE;
@@ -2673,25 +2535,11 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
                      orgnodes[graph->orghead[curr->index]] = TRUE;
                      nsolnodes++;
                   }
-                  /*   }
-                       else
-                       {
-                       assert(graph->tail[curr->index] == root);
-                       if( orgnodes[graph->orghead[curr->index]] == FALSE )
-                       {
-                       orgnodes[graph->orghead[curr->index]] = TRUE;
-                       nsolnodes++;
-                       }
-                       } */
 	       }
 	       else if( graph->orghead[curr->index] < graph->norgmodelknots )
 	       {
                   if( orgnodes[graph->orghead[curr->index]] == FALSE )
                   {
-		     if( graph->orghead[curr->index] == 2901 )
-		     {
-                        // printf("head: %d %d d\n", graph->orgtail[curr->index], graph->orghead[curr->index]);
-		     }
                      orgnodes[graph->orghead[curr->index]] = TRUE;
                      nsolnodes++;
                   }
@@ -2896,13 +2744,11 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
       int fails = 0;
       /* check whether the new solution is valid with respect to the original bounds */
 #if  1
-      // if( SCIPgetDepth(scip) != -1 )
 
       for( e = 0; e < nvars; e++ )
       {
          if( SCIPisGT(scip, nval[e], SCIPvarGetUbGlobal(edgevars[e])) ||  SCIPisGT(scip, SCIPvarGetLbGlobal(edgevars[e]), nval[e]) )
          {
-            //  printf("XXXXXXXXXXXXXXXXx  \n solution violates orginal bounds (%d %f bounds: %f %f) \n  XXXXXXXXXXXX \n", e ,nval[e], SCIPvarGetLbGlobal(edgevars[e]), SCIPvarGetUbGlobal(edgevars[e]) );
             *success = FALSE;
             fails++;
             SCIP_CALL( SCIPfreeSol(scip, &sol) );
@@ -2949,7 +2795,6 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
                {
                   if( nval[e] > 0.5 )
                   {
-                     //printf("two edges to one terminal\n");
                      nval[edge1] = 0;
                      nval[edge2] = 1;
                      break;
@@ -2959,38 +2804,6 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
          }
       }
 
-#if  0
-      if( fails > 0 )
-      {
-         int v;
-         SCIP_Bool* edgemark;
-         printf("solution violates orginal bounds ");
-
-
-         SCIP_CALL( SCIPfreeSol(scip, &sol) );
-
-         printf("nfails: %d       \n", fails);
-
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &edgemark, probdata->nedges) );
-         for( v = 0; v < nvars; v++ )
-            if(  SCIPisEQ(scip, SCIPvarGetUbGlobal(edgevars[v]), 0.0) )
-            {
-	       edgemark[v/2] = FALSE;
-
-            }
-            else
-            {
-
-	       edgemark[v/2] = TRUE;
-            }
-         SCIP_CALL( SCIPprobdataPrintGraph2(probdata->graph, "GraphSub.gml", edgemark) );
-	 SCIPfreeBufferArray(scip, &edgemark);
-
-         return SCIP_OKAY;
-      }
-
-#endif
       /* store the new solution value */
       SCIP_CALL( SCIPsetSolVals(scip, sol, nvars, edgevars, nval) );
 
@@ -3001,14 +2814,13 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
 
       SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, TRUE, TRUE, TRUE, &feasible) );
 
-      /* printf("checked sol: feasible=%d\n", feasible); */
+      SCIPdebugPrintf("checked sol: feasible=%d\n", feasible);
 
       /* check solution for feasibility in original problem space */
       if( !feasible )
       {
          SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
-
-         /* printf("checked sol org: feasible=%d\n", feasible); */
+         SCIPdebugPrintf("checked sol org: feasible=%d\n", feasible);
 
          if( feasible )
          {
@@ -3110,8 +2922,6 @@ SCIP_RETCODE SCIPprobdataPrintGraph2(
       (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%8.2f", graph->cost[e]);
       if( edgemark != NULL && edgemark[e / 2] == TRUE )
 	 SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, "#ff0000");
-      //else
-      // SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, NULL);
    }
 
    /* write GML format closing */

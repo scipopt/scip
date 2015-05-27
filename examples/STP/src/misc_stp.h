@@ -29,13 +29,11 @@
 extern "C" {
 #endif
 
-
    typedef struct Graph_Node
    {
       int number;
       SCIP_Real dist;
    }GNODE;
-
 
    /* a  weighted-quick-union-path-compression union find structure */
    typedef struct UnionFind_Structure
@@ -45,7 +43,7 @@ extern "C" {
       int count;      /* number of components */
    }UF;
 
-
+#if 1
    typedef struct Vnoi_List_Node
    {
       double       dist;         /* Distance to the end of the path             */
@@ -53,7 +51,7 @@ extern "C" {
       signed int   base;         /* Voronoi base                            */
       struct Vnoi_List_Node *next;
    } VLIST;
-
+#endif
    typedef struct ST_Node
    {
       int edge;
@@ -97,16 +95,12 @@ extern "C" {
       IDX** node
 	);
 
-
-
    /***  ***/
    extern
    int GNODECmpByDist(
       void *first_arg,
       void *second_arg
       );
-
-
 
    /**
     * Linear Link Cut Tree
@@ -185,7 +179,6 @@ extern "C" {
       int* size
       );
 
-
    /** links nodes 'root1' and 'root2' together, roots the resulting tree at root1 and sets root2 to NULL */
    extern
    void SCIPpairheapMeldheaps(
@@ -196,16 +189,12 @@ extern "C" {
       int* sizeroot2
       );
 
-
    /** frees the paring heap with root 'p' */
    extern
    void SCIPpairheapFree(
       SCIP* scip,
       PHNODE** root
       );
-
-
-
 
    /** stores all elements of the pairing heap in an array */
    extern
@@ -215,8 +204,6 @@ extern "C" {
       int size,
       int** elements
       );
-
-
 
    /*
     * Union-Find data structure
@@ -229,7 +216,6 @@ extern "C" {
       UF* uf,
       int length
       );
-
 
    /** finds and returns the component identifier */
    extern
@@ -253,8 +239,6 @@ extern "C" {
       SCIP* scip,
       UF* uf
       );
-
-
 
 
 #ifdef __cplusplus

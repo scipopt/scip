@@ -16,6 +16,7 @@
 /**@file   cmain.c
  * @brief  Main file for SCIP-Jack
  * @author Gerald Gamrath
+ * @author Daniel Rehfeldt
  *
  *  This the file contains the \ref main() main function of the projects. This includes all the default plugins of
  *  \SCIP and the once which belong to that projects. After that is starts the interactive shell of \SCIP or processes
@@ -37,15 +38,16 @@
 #include "event_bestsol.h"
 #include "probdata_stp.h"
 #include "dialog_stp.h"
+#include "prop_stp.h"
 
 /** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
  *  and frees the SCIP instance
  */
 static
 SCIP_RETCODE runShell(
-   int                        argc,               /**< number of shell parameters */
-   char**                     argv,               /**< array with shell parameters */
-   const char*                defaultsetname      /**< name of default settings file */
+   int                   argc,               /**< number of shell parameters */
+   char**                argv,               /**< array containing shell parameters */
+   const char*           defaultsetname      /**< name of default settings file */
    )
 {
    SCIP* scip = NULL;
@@ -74,11 +76,6 @@ SCIP_RETCODE runShell(
 
    /* include Takahashi Matsuyama heuristic */
    SCIP_CALL( SCIPincludeHeurTM(scip) );
-#if 0
-
-   /* include Rayward-Smith heuristic */
-   SCIP_CALL( SCIPincludeHeurRS(scip) );
-#endif
 
    /* include local heuristics */
    SCIP_CALL( SCIPincludeHeurLocal(scip) );
@@ -88,6 +85,9 @@ SCIP_RETCODE runShell(
 
    /* include event handler for printing primal solution development */
    SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
+
+   /* include propagator */
+   SCIP_CALL( SCIPincludePropStp(scip) );
 
    /* for column generation instances, disable restarts */
    SCIP_CALL( SCIPsetIntParam(scip,"presolving/maxrestarts",0) );
@@ -110,8 +110,8 @@ SCIP_RETCODE runShell(
 
 int
 main(
-   int                        argc,
-   char**                     argv
+   int                   argc,               /**< number of shell parameters */
+   char**                argv                /**< array containing shell parameters */
    )
 {
    SCIP_RETCODE retcode;

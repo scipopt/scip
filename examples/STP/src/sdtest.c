@@ -139,7 +139,8 @@ SCIP_RETCODE printGraph(
 
 #endif
 
-static int getcloseterms(
+static
+int getcloseterms(
    SCIP* scip,
    PATH* vnoi,
    SCIP_Real* termdist,
@@ -297,7 +298,8 @@ inline static void correct(
 /*---            dem man zum Knoten gekommen ist. Im MST Modus steht im   ---*/
 /*---            .dist Feld die Entfernung zum naechsten Knoten.          ---*/
 /*---------------------------------------------------------------------------*/
-static void compute_sd(
+static
+void compute_sd(
    const GRAPH*  p,
    int           start,
    const double* cost,
@@ -1397,8 +1399,6 @@ SCIP_RETCODE sdsp_reduction(
          /* start limited diskstra from i2, marking all reached vertices */
 	 sdpaths(scip, g, pathhead, g->cost, heap, statehead, memlblhead, &nlblhead, i2, i, limit);
 
-         //sdhead(scip, g, pathtail, pathhead, g->cost, heap, statetail, statehead, memlblhead, &nlblhead ,i, i2, limit);
-
 	 sdist = FARAWAY;
          if( statetail[i2] != UNKNOWN )
          {
@@ -1410,7 +1410,6 @@ SCIP_RETCODE sdsp_reduction(
             sdist = pathhead[i].dist;
             assert(SCIPisGT(scip, FARAWAY, sdist));
          }
-
 
 	 /* get restore state and path of tail and head */
          for( k = 0; k < nlbltail; k++ )

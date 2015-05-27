@@ -147,7 +147,6 @@ SCIP_RETCODE graph_init(
    assert(layers > 0);
    assert(layers < SHRT_MAX);
 
-   //(*g) = malloc(sizeof(GRAPH));
    SCIP_CALL( SCIPallocMemory(scip, g) );
    p = *g;
    assert(p != NULL);
@@ -169,16 +168,7 @@ SCIP_RETCODE graph_init(
    p->flags  = flags;
    p->layers = layers;
    p->hoplimit = UNKNOWN;
-   /*
-     p->locals = malloc((size_t)layers * sizeof(int));
-     p->source = malloc((size_t)layers * sizeof(int));
 
-     p->term   = malloc((size_t)ksize * sizeof(int));
-     p->mark   = malloc((size_t)ksize * sizeof(int));
-     p->grad   = malloc((size_t)ksize * sizeof(int));
-     p->inpbeg = malloc((size_t)ksize * sizeof(int));
-     p->outbeg = malloc((size_t)ksize * sizeof(int));
-   */
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->locals), layers) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->source), layers) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->term), ksize) );
@@ -187,31 +177,16 @@ SCIP_RETCODE graph_init(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->inpbeg), ksize) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->outbeg), ksize) );
 
-   if( p->stp_type == STP_ROOTED_PRIZE_COLLECTING || p->stp_type == STP_PRIZE_COLLECTING || p->stp_type == STP_MAX_NODE_WEIGHT )
-      //p->prize = malloc((size_t)ksize * sizeof(SCIP_Real));
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(p->prize), ksize) );
-   else
-      p->prize  = NULL;
-
    p->esize = esize;
    p->edges = 0;
 
-   //p->cost  = malloc((size_t)esize * sizeof(SCIP_Real));
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->cost), esize) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->tail), esize) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->head), esize) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->ieat), esize) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(p->oeat), esize) );
-   /*
-     p->tail  = malloc((size_t)esize * sizeof(int));
 
-     p->head  = malloc((size_t)esize * sizeof(int));
-   */
-
-   /*
-     p->ieat  = malloc((size_t)esize * sizeof(int));
-     p->oeat  = malloc((size_t)esize * sizeof(int));
-   */
+   p->prize  = NULL;
    p->maxdeg = NULL;
    p->grid_coordinates = NULL;
    p->grid_ncoords = NULL;
@@ -227,19 +202,6 @@ SCIP_RETCODE graph_init(
    p->path_heap = NULL;
    p->path_state = NULL;
 
-   assert(p->locals != NULL);
-   assert(p->source != NULL);
-   assert(p->term   != NULL);
-   assert(p->mark   != NULL);
-   assert(p->grad   != NULL);
-   assert(p->inpbeg != NULL);
-   assert(p->outbeg != NULL);
-   assert(p->cost   != NULL);
-   assert(p->tail   != NULL);
-   assert(p->head   != NULL);
-   assert(p->ieat   != NULL);
-   assert(p->oeat   != NULL);
-
    for( i = 0; i < p->layers; i++ )
    {
       p->source[i] = -1;
@@ -251,34 +213,40 @@ SCIP_RETCODE graph_init(
 /* initialize data structures required to keep track of reductions */
 SCIP_RETCODE graph_init_history(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                graph,              /**< graph */
-   int**                 orgtail,            /**< (original) tail of all orginal edges */
-   int**                 orghead,            /**< (original) head of all orginal edges  */
-   IDX***                ancestors           /**< pointer to ancestor list array (on all edges) */
+   GRAPH*                graph               /**< graph */
    )
 {
+   IDX** ancestors;          /* ancestor lists array (over all edges) */
+   int* orgtail;             /* (original) tail of all orginal edges  */
+   int* orghead;             /* (original) head of all orginal edges  */
    int e;
    int nedges;
+
+   assert(scip != NULL);
    assert(graph != NULL);
 
    nedges = graph->edges;
 
-   (*orgtail) = malloc((size_t)nedges * sizeof(int));
-   (*orghead) = malloc((size_t)nedges * sizeof(int));
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->orgtail), nedges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->orghead), nedges) );
+
+   orgtail = graph->orgtail;
+   orghead = graph->orghead;
 
    for( e = 0; e < nedges; e++ )
    {
-      (*orgtail)[e] = graph->tail[e];
-      (*orghead)[e] = graph->head[e];
+      orgtail[e] = graph->tail[e];
+      orghead[e] = graph->head[e];
    }
 
-   *ancestors = malloc((size_t)(nedges) * sizeof(IDX*));
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->ancestors), nedges) );
+   ancestors = graph->ancestors;
+
    for( e = 0; e < nedges; e++ )
    {
-      //SCIP_CALL( SCIPallocMemory(scip, &(*ancestors)[e]) );
-      (*ancestors)[e] = malloc((size_t)sizeof(IDX));
-      (*ancestors)[e]->index = e;
-      (*ancestors)[e]->parent = NULL;
+      SCIP_CALL( SCIPallocMemory(scip, &((ancestors)[e])) );
+      (ancestors)[e]->index = e;
+      (ancestors)[e]->parent = NULL;
 
    }
    return SCIP_OKAY;
@@ -290,7 +258,7 @@ SCIP_RETCODE graph_resize(
    GRAPH*                g,                  /**< graph to be resized */
    int                   ksize,              /**< new node slots */
    int                   esize,              /**< new edge slots */
-   int                   layers              /**< layers (set to 1 by default) */
+   int                   layers              /**< layers (set to -1 by default) */
    )
 {
    int i;
@@ -302,8 +270,6 @@ SCIP_RETCODE graph_resize(
 
    if( (layers > 0) && (layers != g->layers) )
    {
-      //g->locals = realloc(g->locals, (size_t)layers * sizeof(int));
-      //g->source = realloc(g->source, (size_t)layers * sizeof(int));
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->locals), layers) );
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->source), layers) );
       for( i = g->layers; i < layers; i++ )
@@ -316,13 +282,6 @@ SCIP_RETCODE graph_resize(
    if( (ksize > 0) && (ksize != g->ksize) )
    {
       g->ksize  = ksize;
-      /*
-        g->term   = realloc(g->term,   (size_t)ksize * sizeof(int));
-        g->mark   = realloc(g->mark,   (size_t)ksize * sizeof(int));
-        g->grad   = realloc(g->grad,   (size_t)ksize * sizeof(int));
-        g->inpbeg = realloc(g->inpbeg, (size_t)ksize * sizeof(int));
-        g->outbeg = realloc(g->outbeg, (size_t)ksize * sizeof(int));
-      */
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->term), ksize) );
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->mark), ksize) );
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->grad), ksize) );
@@ -332,13 +291,6 @@ SCIP_RETCODE graph_resize(
    if( (esize > 0) && (esize != g->esize) )
    {
       g->esize = esize;
-      /*
-        g->cost  = realloc(g->cost, (size_t)esize * sizeof(SCIP_Real));
-        g->tail  = realloc(g->tail, (size_t)esize * sizeof(int));
-        g->head  = realloc(g->head, (size_t)esize * sizeof(int));
-        g->ieat  = realloc(g->ieat, (size_t)esize * sizeof(int));
-        g->oeat  = realloc(g->oeat, (size_t)esize * sizeof(int));
-      */
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->cost), esize) );
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->tail), esize) );
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->head), esize) );
@@ -350,20 +302,7 @@ SCIP_RETCODE graph_resize(
       g->grid_ncoords = realloc(g->grid_ncoords, (size_t)g->grid_dim * sizeof(int));
       assert(g->grid_ncoords != NULL);
    }
-   /*
-     assert(g->locals != NULL);
-     assert(g->source != NULL);
-     assert(g->term   != NULL);
-     assert(g->mark   != NULL);
-     assert(g->grad   != NULL);
-     assert(g->inpbeg != NULL);
-     assert(g->outbeg != NULL);
-     assert(g->cost   != NULL);
-     assert(g->tail   != NULL);
-     assert(g->head   != NULL);
-     assert(g->ieat   != NULL);
-     assert(g->oeat   != NULL);
-   */
+
    return SCIP_OKAY;
 }
 
@@ -421,7 +360,7 @@ void compEdgesObst(
    int y;
    int node;
    i = 0;
-   while( i < ncoords[coord] ) //for( i = 0; i < ncoords[coord]; i++ )
+   while( i < ncoords[coord] )
    {
       currcoord[coord] = i;
       if( coord < grid_dim - 1 )
@@ -430,7 +369,6 @@ void compEdgesObst(
       {
          x = coords[0][currcoord[0]];
          y = coords[1][currcoord[1]];
-         // printf("curr cord (%d,%d)  \n ", x, y);
          inobst = FALSE;
          node = getNodeNumber(grid_dim, -1, ncoords, currcoord);
          for( z = 0; z < nobstacles; z++ )
@@ -445,7 +383,6 @@ void compEdgesObst(
                y > obst_coords[1][z] && y < obst_coords[3][z] )
             {
                inobst = TRUE;
-               //printf("obst node found %d, %d inobst:%d \n", x, y, node);
                inobstacle[node-1] = TRUE;
                break;
             }
@@ -460,7 +397,6 @@ void compEdgesObst(
                   gridedges[1][*gridedgecount] = getNodeNumber(grid_dim, j, ncoords, currcoord);
                   edgecosts[*gridedgecount] = coords[j][currcoord[j] + 1] - coords[j][currcoord[j]];
                   (*gridedgecount)++;
-                  //  printf("edgeXXX %d_%d %d \n ", coords[j][currcoord[j] + 1],  coords[j][currcoord[j]], *gridedgecount );
                }
                /*   printf("edge %d_%d \n ", getNodeNumber(-1), getNodeNumber(j) );*/
             }
@@ -603,7 +539,7 @@ SCIP_RETCODE graph_obstgrid_create(
    SCIP_CALL( graph_init(scip, gridgraph, nnodes, 2 * nedges, 1, 0) );
 
    g = *gridgraph;
-   g->grid_ncoords = (int*) malloc(grid_dim * sizeof(int));
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g->grid_ncoords), grid_dim) );
    for( i = 0; i < grid_dim; i++ )
       g->grid_ncoords[i] = ncoords[i];
 
@@ -760,7 +696,7 @@ SCIP_RETCODE graph_grid_create(
 
    g = *gridgraph;
 
-   g->grid_ncoords = (int*) malloc(grid_dim * sizeof(int));
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(g->grid_ncoords), grid_dim) );
    for( i = 0; i < grid_dim; i++ )
       g->grid_ncoords[i] = ncoords[i];
 
@@ -828,9 +764,10 @@ SCIP_RETCODE graph_grid_create(
 
 
 /** computes coordinates of node 'node' */
-void graph_grid_coordinates(
+SCIP_RETCODE graph_grid_coordinates(
+   SCIP*                 scip,               /**< SCIP data structure */
    int**                 coords,             /**< coordinates */
-   int**                 nodecoords,         /**<  coordinates of the node (to be computed) */
+   int**                 nodecoords,         /**< coordinates of the node (to be computed) */
    int*                  ncoords,            /**< array with number of coordinate */
    int                   node,               /**< the node */
    int                   grid_dim            /**< problem dimension */
@@ -845,7 +782,7 @@ void graph_grid_coordinates(
    assert(coords != NULL);
    assert(ncoords != NULL);
    if( *nodecoords == NULL )
-      *nodecoords = (int*) malloc(grid_dim * sizeof(int));
+     SCIP_CALL( SCIPallocMemoryArray(scip, nodecoords, grid_dim) );
 
    for( i = 0; i < grid_dim; i++ )
    {
@@ -858,6 +795,7 @@ void graph_grid_coordinates(
       coord = coord / tmp;
       (*nodecoords)[i] = coords[i][coord];
    }
+   return SCIP_OKAY;
 }
 
 /** alters the graph for prize collecting problems */
@@ -1001,7 +939,6 @@ SCIP_RETCODE graph_maxweight_transform(
    SCIP_Real*            maxweights
    )
 {
-   //double* prize;
    int e;
    int i;
    int nnodes;
@@ -1022,12 +959,10 @@ SCIP_RETCODE graph_maxweight_transform(
          for( e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
          {
             graph->cost[e] -= maxweights[i];
-            //printf("edgecost2:  %d-%d  %.12f  \n", graph->tail[e], graph->head[e], graph->cost[e]);
          }
       }
       else
       {
-         //printf("term:  %d \n", i);
          graph_knot_chg(graph, i, 0);
          nterms++;
       }
@@ -1037,9 +972,8 @@ SCIP_RETCODE graph_maxweight_transform(
    {
       if( Is_term(graph->term[i]) )
       {
-         assert(!SCIPisLT(scip, maxweights[i], 0.0));
+         assert(SCIPisGE(scip, maxweights[i], 0.0));
          graph->prize[i] = maxweights[i];
-         //printf("termcost/prize2:  %.12f \n", maxweights[i]);
          nterms++;
       }
       else
@@ -1193,17 +1127,10 @@ void graph_free(
 {
    IDX* curr;
    int e;
+
+   assert(scip != NULL);
    assert(p != NULL);
-   /*
-     free(p->locals);
-     free(p->source);
-     free(p->term);
-     free(p->mark);
-     free(p->grad);
-     free(p->inpbeg);
-     free(p->outbeg);
-     free(p->cost);
-   */
+
    SCIPfreeMemoryArray(scip, &(p->locals));
    SCIPfreeMemoryArray(scip, &(p->source));
    SCIPfreeMemoryArray(scip, &(p->term));
@@ -1218,7 +1145,6 @@ void graph_free(
    SCIPfreeMemoryArray(scip, &(p->oeat));
 
    if( p->prize != NULL )
-      //free(p->prize);
       SCIPfreeMemoryArray(scip, &(p->prize));
    if( p->ancestors != NULL )
    {
@@ -1228,11 +1154,11 @@ void graph_free(
          while( curr != NULL )
          {
             p->ancestors[e] = curr->parent;
-            free(curr);
+	    SCIPfreeMemory(scip, &(curr));
             curr = p->ancestors[e];
          }
       }
-      free(p->ancestors);
+      SCIPfreeMemoryArray(scip, &(p->ancestors));
    }
 
    if( final )
@@ -1240,29 +1166,31 @@ void graph_free(
       if( p->orgtail != NULL )
       {
          assert(p->orghead != NULL);
-         free(p->orgtail);
-         free(p->orghead);
+ SCIPfreeMemoryArray(scip, &(p->orgtail));
+ SCIPfreeMemoryArray(scip, &(p->orghead));
       }
       curr = p->fixedges;
       while( curr != NULL )
       {
          p->fixedges = curr->parent;
-         free(curr);
+         SCIPfreeMemory(scip, &(curr));
          curr = p->fixedges;
       }
    }
 
    if( p->stp_type == STP_DEG_CONS )
-      free(p->maxdeg);
-   else if(p->stp_type == STP_GRID )
+   {
+       SCIPfreeMemoryArray(scip, &(p->maxdeg));
+   }
+   else if( p->stp_type == STP_GRID )
    {
       int i;
       for( i = 0; i < p->grid_dim; i++ )
-         free(p->grid_coordinates[i]);
-      free(p->grid_coordinates);
-      free(p->grid_ncoords);
+        SCIPfreeMemoryArray(scip, &(p->grid_coordinates[i]));
+
+      SCIPfreeMemoryArray(scip, &(p->grid_coordinates));
+      SCIPfreeMemoryArray(scip, &(p->grid_ncoords));
    }
-   //free(p);
    SCIPfreeMemory(scip, &(p));
 }
 
@@ -1323,14 +1251,14 @@ SCIP_RETCODE graph_copy(
    if( g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING
       || g->stp_type == STP_MAX_NODE_WEIGHT )
    {
-      //memcpy(g->prize,   p->prize,   p->ksize  * sizeof(*p->prize));
-      BMScopyMemoryArray(g->prize, p->prize, p->ksize);
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), g->knots) );
+      BMScopyMemoryArray(g->prize, p->prize, g->knots);
    }
    else if( g->stp_type == STP_DEG_CONS )
    {
       assert(p->maxdeg != NULL);
-      g->maxdeg = malloc((size_t)(g->knots) * sizeof(int));
-      memcpy(g->maxdeg,   p->maxdeg,   p->knots  * sizeof(*p->maxdeg));
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(g->maxdeg), g->knots) );
+      BMScopyMemoryArray(&(g->maxdeg), p->maxdeg, g->knots);
    }
    else if( p->stp_type == STP_GRID )
    {
@@ -1338,15 +1266,15 @@ SCIP_RETCODE graph_copy(
       assert(p->grid_ncoords != NULL);
       assert(p->grid_coordinates != NULL);
 
-      g->grid_coordinates = malloc((size_t)(p->grid_dim) * sizeof(int*));
-      memcpy(g->grid_coordinates,   p->grid_coordinates,   p->grid_dim * sizeof(*p->grid_coordinates));
-      for( i = 0; i < p->grid_dim; i++)
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(g->grid_coordinates), p->grid_dim) );
+      BMScopyMemoryArray(g->grid_coordinates, p->grid_coordinates, p->grid_dim);
+      for( i = 0; i < p->grid_dim; i++ )
       {
-         g->grid_coordinates[i] = malloc((size_t)(p->terms) * sizeof(int));
-         memcpy(g->grid_coordinates[i],   p->grid_coordinates[i],   p->terms * sizeof(*(p->grid_coordinates[i])));
+	 SCIP_CALL( SCIPallocMemoryArray(scip, &(g->grid_coordinates[i]), p->terms) );
+	 BMScopyMemoryArray(g->grid_coordinates[i], p->grid_coordinates[i], p->terms);
       }
-      g->grid_ncoords = malloc((size_t)(p->grid_dim) * sizeof(int));
-      memcpy(g->grid_ncoords,   p->grid_ncoords,   p->grid_dim * sizeof(*p->grid_ncoords));
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(g->grid_ncoords), p->grid_dim) );
+      BMScopyMemoryArray(g->grid_ncoords, p->grid_ncoords, p->grid_dim);
    }
    assert(graph_valid(g));
 
@@ -1518,10 +1446,9 @@ SCIP_RETCODE graph_knot_contract(
    sgrad =  p->grad[s];
    if( sgrad >= 2 )
    {
-      slp = malloc((size_t)(sgrad - 1) * sizeof(SLIST));
-      ancestors = malloc((size_t)(sgrad - 1) * sizeof(IDX*));
-      revancestors = malloc((size_t)(sgrad - 1) * sizeof(IDX*));
-      assert(slp != NULL);
+      SCIP_CALL( SCIPallocBufferArray(scip, &slp, sgrad - 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &ancestors, sgrad - 1) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &revancestors, sgrad - 1) );
    }
 
    /* Liste mit Kanten des aufzuloesenden Knotens merken
@@ -1670,9 +1597,9 @@ SCIP_RETCODE graph_knot_contract(
          SCIPindexListNodeFree(scip, &(ancestors[i]));
          SCIPindexListNodeFree(scip, &(revancestors[i]));
       }
-      free(ancestors);
-      free(revancestors);
-      free(slp);
+      SCIPfreeBufferArray(scip, &revancestors);
+      SCIPfreeBufferArray(scip, &ancestors);
+      SCIPfreeBufferArray(scip, &slp);
    }
    assert(p->grad[s]   == 0);
    assert(p->outbeg[s] == EAT_LAST);
@@ -2213,7 +2140,6 @@ GRAPH *graph_pack2(
    if( knots == 1 )
       assert(edges == 0);
    rcode = graph_init(scip, &q, knots, edges, p->layers, p->flags);
-   //q = graph_init(knots, edges, p->layers, p->flags);
    q->norgmodelknots = p->norgmodelknots;
    q->norgmodeledges = p->norgmodeledges;
    q->orgtail = p->orgtail;
@@ -2290,8 +2216,7 @@ GRAPH *graph_pack2(
       graph_edge_add(q, new[p->tail[i]], new[p->head[i]],
          p->cost[i], p->cost[Edge_anti(i)]);
 
-      // SCIPindexListNodeFree(scip, &(p->ancestors[i]));
-      // SCIPindexListNodeFree(scip, &(p->ancestors[i + 1]));
+
    }
 
    /* Wurzeln umladen
@@ -2386,7 +2311,6 @@ SCIP_RETCODE graph_pack(
    assert(nnodes > 1 || nedges == 0);
    SCIP_CALL( graph_init(scip, newgraph, nnodes, nedges, g->layers, g->flags) );
    q = *newgraph;
-   //q = graph_init(knots, edges, g->layers, g->flags);
    q->norgmodelknots = g->norgmodelknots;
    q->norgmodeledges = g->norgmodeledges;
    q->orgtail = g->orgtail;
@@ -2410,7 +2334,7 @@ SCIP_RETCODE graph_pack(
       return SCIP_OKAY;
    }
 
-   q->ancestors = malloc((size_t)(nedges) * sizeof(IDX*));
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(q->ancestors), nedges) );
    for( i = 0; i < nedges; i++ )
       q->ancestors[i] = NULL;
 
@@ -2496,30 +2420,33 @@ int graph_valid(
    const char* fehler5  = "*** Graph Validation Error: Anti invalid, Edge %d/%d, Tail=%d/%d, Head=%d/%d\n";
    const char* fehler6  = "*** Graph Validation Error: Knot %d with Grad 0 has Edges\n";
    const char* fehler7  = "*** Graph Validation Error: Knot %d not connected\n";
+#if 0
    const char* fehler8  = "*** Graph Validation Error: Wrong locals count, Layer %d, count is %d, should be %d\n";
+#endif
    const char* fehler9  = "*** Graph Validation Error: Wrong Terminal count, count is %d, should be %d\n";
 
    int    k;
    int    l;
    int    e;
    int    terms;
+#if 0
    int*   locals;
-
+   locals = malloc((size_t)p->layers * sizeof(int));
+   assert(locals != NULL);
+   for( l = 0; l < p->layers; l++ )
+      locals[l] = p->locals[l];
+#endif
    assert(p      != NULL);
 
    terms  = p->terms;
-   locals = malloc((size_t)p->layers * sizeof(int));
-
-   assert(locals != NULL);
-
-   for( l = 0; l < p->layers; l++ )
-      locals[l] = p->locals[l];
 
    for( k = 0; k < p->knots; k++ )
    {
       if( Is_term(p->term[k]) )
       {
+#if 0
          locals[p->term[k]]--;
+#endif
          terms--;
       }
       for( e = p->inpbeg[k]; e != EAT_LAST; e = p->ieat[e] )
@@ -2541,18 +2468,20 @@ int graph_valid(
 
    for( l = 0; l < p->layers; l++ )
    {
+#if 0
       if( locals[l] != 0 )
          return((void)fprintf(stderr, fehler8,
                l, p->locals[l], p->locals[l] - locals[l]), FALSE);
-
+#endif
       if( (p->source[l] < 0 )
          || (p->source[l] >= p->knots)
          || (p->term[p->source[l]] != l))
          return((void)fprintf(stderr, fehler3,
                l, p->source[l], p->term[p->source[l]]), FALSE);
    }
+#if 0
    free(locals);
-
+#endif
    for( e = 0; e < p->edges; e += 2 )
    {
       if( (p->ieat[e    ] == EAT_FREE) && (p->oeat[e    ] == EAT_FREE)
@@ -2586,8 +2515,9 @@ int graph_valid(
    return TRUE;
 }
 
-char graph_sol_valid(
-   const GRAPH*          graph,                  /**< the new graph */
+SCIP_Bool graph_sol_valid(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< the new graph */
    int*                  result
    )
 {
@@ -2606,7 +2536,7 @@ char graph_sol_valid(
    root = graph->source[0];
    assert(root >= 0);
 
-   terminal = malloc((size_t)nnodes * sizeof(char));
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &terminal, nnodes) );
    for( i = 0; i < nnodes; i++ )
       terminal[i] = FALSE;
    /* BFS until all terminals are reached */
@@ -2637,7 +2567,7 @@ char graph_sol_valid(
 
    }
 
-   if (termcount != graph->terms)
+   if( termcount != graph->terms )
    {
       for( i = 0; i < nnodes; i++ )
          if( Is_term(graph->term[i]) && !terminal[i] )
@@ -2645,7 +2575,7 @@ char graph_sol_valid(
       printf("a: %d, b: %d: \n", termcount, graph->terms);
    }
 
-   free(terminal);
+   SCIPfreeBufferArray(scip, &terminal);
    SCIPqueueFree(&queue);
 
    return (termcount == graph->terms);
@@ -2675,8 +2605,8 @@ char graph_valid2(
    root = graph->source[0];
    assert(root >= 0);
 
-   terminal = malloc((size_t)nnodes * sizeof(char));
-   reached = malloc((size_t)nnodes * sizeof(char));
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &terminal, nnodes) );
+   SCIP_CALL_ABORT( SCIPallocBufferArray(scip, &reached, nnodes) );
    for( i = 0; i < nnodes; i++ )
    {
       terminal[i] = FALSE;
@@ -2695,7 +2625,7 @@ char graph_valid2(
       for( e = graph->outbeg[*pnode]; e != EAT_LAST; e = graph->oeat[e] )
       {
 
-         if( SCIPisLT(scip, cost[e], 1e+10 - 10 ) && !reached[graph->head[e]] )
+         if( SCIPisLT(scip, cost[e], BLOCKED) && !reached[graph->head[e]] )
          {
             i = graph->head[e];
             reached[i] = TRUE;
@@ -2711,16 +2641,15 @@ char graph_valid2(
       }
 
    }
-   free(terminal);
-   free(reached);
+   SCIPfreeBufferArray(scip, &reached);
+   SCIPfreeBufferArray(scip, &terminal);
    SCIPqueueFree(&queue);
    if (termcount != graph->terms)
    {
       for( i = 0; i < nnodes; i++ )
          if( Is_term(graph->term[i]) && !terminal[i] )
             printf("not reached, node: %d\n", i);
-      printf("a: %d, b: %d: \n", termcount, graph->terms);
-      assert(0);
+      return FALSE;
    }
 
    return (termcount == graph->terms);

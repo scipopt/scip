@@ -67,19 +67,19 @@ int getUgRank();
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_Longint nlpiterations;
-   SCIP_Longint ncalls;
-   SCIP_Longint nexecs;
-   SCIP_Real hopfactor;
-   int stp_type;
-   int evalruns;
-   int initruns;
-   int leafruns;
-   int rootruns;
-   int duringlpfreq;
-   int beststartnode;
-   unsigned int          randseed;           /**< seed value for random number generator                              */
-   unsigned int          timing;
+   SCIP_Longint          nlpiterations;      /**< number of total LP iterations*/
+   SCIP_Longint          ncalls;             /**< number of total calls (of TM) */
+   SCIP_Longint          nexecs;             /**< number of total executions (of TM) */
+   SCIP_Real             hopfactor;          /**< edge multplication factor for hop constrained problems */
+   int                   stp_type;           /**< problem type */
+   int                   evalruns;           /**< number of runs */
+   int                   initruns;           /**< number of initial runs */
+   int                   leafruns;           /**< number of runs at leafs */
+   int                   rootruns;           /**< number of runs at the root */
+   int                   duringlpfreq;       /**< frequency during LP solving */
+   int                   beststartnode;      /**< start node of the so far best found solution */
+   unsigned int          randseed;           /**< seed value for random number generator */
+   unsigned int          timing;             /**< timing for timing mask */
 };
 
 /*
@@ -232,8 +232,8 @@ SCIP_RETCODE do_pcprune(
          if( !Is_term(g->term[i]) && connected[i] )
             break;
       }
-      //printf("edge: %d %d \n", g->tail[a],g->head[a]);
-      /* trivial solution? TODO delete??? */
+
+      /* trivial solution? @todo delete? */
       if( a == EAT_LAST )
       {
          for( a = g->outbeg[g->source[0]]; a != EAT_LAST; a = g->oeat[a] )
@@ -251,7 +251,6 @@ SCIP_RETCODE do_pcprune(
       assert(g->mark[i]);
       root = i;
    }
-   //printf("root: %d, \n", root);
    assert(root >= 0);
    assert(root < nnodes);
 
@@ -319,7 +318,7 @@ SCIP_RETCODE do_pcprune(
    }
 #if 0
    char varname[SCIP_MAXSTRLEN];
-   (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "AA%d.gml", 0);
+   (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "A%d.gml", 0);
    SCIP_CALL( printGraph(scip, g, varname, result) );
 #endif
 
@@ -355,7 +354,6 @@ SCIP_RETCODE do_pcprune(
                {
                   result[j]    = -1;
                   g->mark[i]   = FALSE;
-                  /*printf("disconned %d (term %d)\n", i, g->term[i] );*/
                   connected[i] = FALSE;
                   count++;
                   break;
@@ -366,7 +364,7 @@ SCIP_RETCODE do_pcprune(
       }
    }
    while( count > 0 );
-   assert(graph_sol_valid(g, result));
+   assert(graph_sol_valid(scip, g, result));
    SCIPfreeBufferArray(scip, &mst);
 
    return SCIP_OKAY;
@@ -378,7 +376,7 @@ SCIP_RETCODE do_prune(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    SCIP_Real*            cost,               /**< edge costs */
-   int                   layer,
+   int                   layer,              /**< number of layers (usually 1) */
    int*                  result,             /**< ST edges */
    char*                 connected           /**< ST nodes */
    )
@@ -473,7 +471,7 @@ SCIP_RETCODE prune(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    SCIP_Real*            cost,               /**< edge costs */
-   SCIP_Real*            costrev,               /**< reversed edge costs */
+   SCIP_Real*            costrev,            /**< reversed edge costs */
    int*                  result,             /**< ST edges */
    char*                 connected           /**< ST nodes */
    )
@@ -729,15 +727,15 @@ SCIP_RETCODE do_tm(
 
 static
 SCIP_RETCODE do_tm_dijkstra(
-   SCIP* scip,          /**< SCIP data structure */
-   const GRAPH*  g,         /**< graph structure */
-   SCIP_Real* cost,
-   SCIP_Real* costrev,
-   SCIP_Real*   dijkdist,
-   int*           result,
-   int*          dijkedge,
-   int           start,
-   char*         connected
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   SCIP_Real*            cost,               /**< edge costs */
+   SCIP_Real*            costrev,            /**< reversed edge costs */
+   SCIP_Real*            dijkdist,           /**< distance array */
+   int*                  result,             /**< solution array (on edges) */
+   int*                  dijkedge,           /**< predecessor edge array */
+   int                   start,              /**< start vertex*/
+   char*                 connected           /**< array marking all solution vertices*/
    )
 {
    int k;
@@ -757,16 +755,16 @@ static
 SCIP_RETCODE do_tmX(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
-   SCIP_Real*            cost,
-   SCIP_Real*            costrev,
-   SCIP_Real**           pathdist,
-   int                   start,
-   int*                  perm,
-   int*                  result,
-   int*                  cluster,
-   int**                 pathedge,
-   char*                 connected,
-   unsigned int* randseed
+   SCIP_Real*            cost,               /**< edge costs */
+   SCIP_Real*            costrev,            /**< reversed edge costs */
+   SCIP_Real**           pathdist,           /**< distance array */
+   int                   start,              /**< start vertex */
+   int*                  perm,               /**< permutation array (on nodes) */
+   int*                  result,             /**< solution array (on edges) */
+   int*                  cluster,            /**< array used to store current vertices of each subtree during construction */
+   int**                 pathedge,           /**< predecessor edge array */
+   char*                 connected,          /**< array marking all solution vertices */
+   unsigned int*         randseed            /**< random seed */
    )
 {
    SCIP_Real min;
@@ -898,8 +896,8 @@ static
 SCIP_RETCODE do_tm_degcons(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
-   SCIP_Real*            cost,
-   SCIP_Real*            costrev,
+   SCIP_Real*            cost,               /**< edge costs */
+   SCIP_Real*            costrev,            /**< reversed edge costs */
    SCIP_Real**           pathdist,
    int                   start,
    int*                  perm,
@@ -1154,7 +1152,7 @@ SCIP_RETCODE do_tm_degcons(
       /* prune the solution */
       do_degprune(scip, g, result, connected);
 
-      /*assert(graph_sol_valid(g, result));*/
+      /*assert(graph_sol_valid(scip, g, result));*/
       for( t = 0; t < nnodes; t++ )
          if( degs[t] > maxdegs[t] )
          {
@@ -1588,18 +1586,18 @@ void do_prizecoll_trivial(
 
 SCIP_RETCODE do_layer(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata,
-   const GRAPH*          graph,
-   int*          starts,
-   int*          bestnewstart,
-   int*          best_result,
-   int           runs,
-   int           bestincstart,
-   SCIP_Real*    cost,
-   SCIP_Real*    costrev,
-   SCIP_Real*    hopfactor,
-   SCIP_Real     maxcost,
-   SCIP_Bool*    success
+   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   int*                  starts,
+   int*                  bestnewstart,
+   int*                  best_result,
+   int                   runs,
+   int                   bestincstart,
+   SCIP_Real*            cost,
+   SCIP_Real*            costrev,
+   SCIP_Real*            hopfactor,
+   SCIP_Real             maxcost,
+   SCIP_Bool*            success
    )
 {
 #if 0
@@ -1996,7 +1994,6 @@ SCIP_RETCODE do_layer(
          else
          {
             assert(mode == TM_DIJKSTRA);
-            //printf("rootedge: %d, %d \n",graph->tail[rootedge], graph->head[rootedge] );
             do_tm_dijkstra(scip, graph, cost, costrev, dijkdist, result, dijkedge, root, connected);
          }
          if( SCIPisStopped(scip) )
@@ -2442,7 +2439,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    int runs;
    int e;
    int v;
-   int pctrivialbound = 200000;
+   SCIP_Real pctrivialbound = FARAWAY;
    SCIP_Bool success;
    assert(scip != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -2511,7 +2508,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    vars = SCIPprobdataGetVars(scip);
    if( vars == NULL )
       return SCIP_OKAY;
-   assert(vars != NULL);
+
    assert(vars[0] != NULL);
 
    /* allocate memory */
@@ -2760,11 +2757,9 @@ SCIP_DECL_HEUREXEC(heurExecTM)
             if( results[e] == CONNECT )
                pobj += graph->cost[e];
 
-         //printf("tm: %f (%d)\n ", pobj, (int) SCIPgetNLPIterations(scip));
          if( SCIPisLE(scip, pobj, SCIPgetPrimalbound(scip)) )
          {
             heurdata->beststartnode = best_start;
-            //printf(" tm: bestnewstart:  %d\n", best_start);
          }
          SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
 

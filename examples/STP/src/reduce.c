@@ -53,12 +53,13 @@ static int degree_test(
    nnodes = g->knots;
 
    SCIPdebugMessage("Degree Test: ");
-
+   if( 1 )
+return 0;
    while(rerun)
    {
       rerun = FALSE;
 
-      for(i = 0; i < nnodes; i++)
+      for( i = 0; i < nnodes; i++ )
       {
          assert(g->grad[i] >= 0);
 
@@ -84,12 +85,12 @@ static int degree_test(
             assert(g->grad[i] == 0);
 
             /* the last node in the graph? */
-            if (g->grad[i1] == 0)
+            if( g->grad[i1] == 0 )
             {
                rerun = FALSE;
                break;
             }
-            if ((i1 < i) && (g->grad[i1] < 3))
+            if( (i1 < i) && (g->grad[i1] < 3) )
                rerun = TRUE;
 
             continue;
@@ -121,9 +122,9 @@ static int degree_test(
                }
                assert(Is_term(g->term[i]));
 
-               if (Is_term(g->term[i1]) && Is_term(g->term[i2]))
+               if( Is_term(g->term[i1]) && Is_term(g->term[i2]) )
                {
-                  if (SCIPisLT(scip, g->cost[e1], g->cost[e2]))
+                  if( SCIPisLT(scip, g->cost[e1], g->cost[e2]) )
                   {
                      *fixed += g->cost[e1];
                      SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e1]) );
@@ -622,7 +623,7 @@ SCIP_RETCODE bound_reduce(
       cost[e] = graph->cost[e];
       costrev[e] = graph->cost[flipedge(e)];
 
-      if( graph->stp_type == STP_HOP_CONS && SCIPisLT(scip, graph->cost[e], FARAWAY) && SCIPisGT(scip, graph->cost[e], maxcost) )
+      if( graph->stp_type == STP_HOP_CONS && SCIPisLT(scip, graph->cost[e], BLOCKED) && SCIPisGT(scip, graph->cost[e], maxcost) )
          maxcost = graph->cost[e];
    }
 
@@ -736,7 +737,7 @@ SCIP_RETCODE bound_reduce(
       SCIPfreeBufferArray(scip, &stnode);
       return SCIP_OKAY;
    }
-   obj = fixed;
+   obj = 0;
    for( e = 0; e < nedges; e++ )
    {
       if( result[e] == CONNECT )
@@ -1171,17 +1172,7 @@ SCIP_RETCODE hcrbound_reduce(
    {
       graph->mark[k] = (graph->grad[k] > 0);
       if( graph->mark[k] && Is_term(graph->term[k]) )
-      {
-         /*
-           min = FARAWAY;
-           if( k != root )
-
-	   for( e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
-           if( SCIPisLT(scip, graph->cost[e], min) )
-           min = graph->cost[e];
-         */
          nterms++;
-      }
    }
    bound = nterms - 2;
    for( e = 0; e < nedges; e++ )
@@ -1251,8 +1242,6 @@ SCIP_RETCODE hcrbound_reduce(
    }
 
    printf("eliminated (edges) in hcr bound reduce: %d,\n", *nelims);
-   /* free adjgraph */
-
 
    assert(graph_valid(graph));
 
@@ -1366,7 +1355,7 @@ SCIP_RETCODE hcrcbound_reduce(
       result[e] = UNKNOWN;
       cost[e] = graph->cost[e];
       costrev[e] = graph->cost[flipedge(e)];
-      if( SCIPisLT(scip, graph->cost[e], FARAWAY) && SCIPisGT(scip, graph->cost[e], maxcost) )
+      if( SCIPisLT(scip, graph->cost[e], BLOCKED) && SCIPisGT(scip, graph->cost[e], maxcost) )
          maxcost = graph->cost[e];
    }
 
@@ -1387,11 +1376,10 @@ SCIP_RETCODE hcrcbound_reduce(
    /* compute UB */
    SCIP_CALL( do_layer(scip, tmheurdata, graph, NULL, &best_start, result, 50, root, cost, costrev, &obj, maxcost, &success) );
 
-   obj = fixed;
+   obj = 0;
    for( e = 0; e < nedges; e++ )
       if( result[e] == CONNECT )
          obj += graph->cost[e];
-
 
    printf("CCC obj: %f \n\n ", obj);
    /* traverse all node, try to eliminate first the node and then all incident edges */
@@ -2494,13 +2482,14 @@ SCIP_RETCODE level1(
    int     degtnelims;
    int     reductbound;
 
-   char    le = TRUE;
-   char    sd = TRUE;
-   char    sd2 = TRUE;
-   char    bd3 = TRUE;
-   char    nvsl = TRUE;
-   char    bred = FALSE;
-   char    rerun = TRUE;
+   SCIP_Bool    le = TRUE;
+   SCIP_Bool    sd = TRUE;
+   SCIP_Bool    sd2 = TRUE;
+   SCIP_Bool    bd3 = TRUE;
+   SCIP_Bool    nvsl = TRUE;
+   SCIP_Bool    bred = FALSE;
+   SCIP_Bool    rerun = TRUE;
+   SCIP_Bool    advanced = TRUE;
 
    assert(scip != NULL);
    assert(g != NULL);
@@ -2589,11 +2578,7 @@ SCIP_RETCODE level1(
          SCIP_CALL( sdsp_reduction(scip, g, vnoi, path, heap, state, vbase, nodearrint, nodearrint2, &sd2nelims, 200) );
 
          printf("sdspnelims: %d ", sd2nelims);
-#if 0
-         sd2_reduction(scip, g, sddist, &sd2nelims, nodearrint);
-         printf("sd2nelims: %d,  ", sd2nelims);
 
-#endif
          if( sd2nelims <= reductbound )
             sd2 = FALSE;
 
@@ -2627,23 +2612,37 @@ SCIP_RETCODE level1(
 
       degtnelims += degree_test(scip, g, fixed);
       printf("trivial: %d \n", degtnelims);
-      if( (sdnelims + bd3nelims + nvslnelims + degtnelims + lenelims) <= reductbound )
+      if( (sdnelims + bd3nelims + nvslnelims + degtnelims + lenelims) <= reductbound  )
+      {
          rerun = FALSE;
+         if( advanced )
+	 {
+	    advanced = FALSE;
+	    sdnelims = 0;
+	    for( i = 0; i < nnodes; i++ )
+               nodearrint[i] = -1;
+            for( i = 0; i < 5; i++ )
+            {
+               SCIP_CALL( sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state, nodearrint, &nelims, runnum) );
+               runnum++;
+               sdnelims += nelims;
+               if( nelims <= 2 * reductbound )
+                  break;
+	       (void) degree_test(scip, g, fixed);
+            }
+              printf("final sdnelims: %d, \n", sdnelims);
+            if( sdnelims > 5 * reductbound )
+            {
+               rerun = !TRUE;
+               le = TRUE;
+               sd = TRUE;
+               sd2 = TRUE;
+               bd3 = TRUE;
+               nvsl = TRUE;
+            }
+	 }
+      }
    }
-
-   for( i = 0; i < nnodes; i++ )
-      nodearrint[i] = -1;
-   for( i = 0; i < 6; i++ )
-   {
-      SCIP_CALL( sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, random, heap, state, nodearrint, &nelims, runnum) );
-      (void) degree_test(scip, g, fixed);
-      runnum++;
-      if( nelims <= 2 * reductbound )
-	 break;
-      sdnelims += nelims;
-   }
-
-   printf("final sdnelims: %d, \n", sdnelims);
 
    SCIPdebugMessage("Reduction Level 1: Fixed Cost = %.12e\n", *fixed);
 
@@ -3291,7 +3290,7 @@ SCIP_RETCODE reduce(
    stp_type = (*graph)->stp_type;
 
    /* initialise ancestor list for each edge */
-   graph_init_history(scip, (*graph), &((*graph)->orgtail), &((*graph)->orghead), &((*graph)->ancestors));
+   graph_init_history(scip, (*graph));
 #if 0
    for( i = 0; i < (*graph)->edges; i++ )
    {
@@ -3331,6 +3330,7 @@ SCIP_RETCODE reduce(
 
    }
    printf("reduced: %d \n", level);
+   printf("offset : %f \n", *offset );
    graph_path_exit((*graph));
 
    return SCIP_OKAY;

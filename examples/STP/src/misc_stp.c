@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   misc_stp.c
- * @brief  miscellaneous methods
+ * @brief  miscellaneous methods for STP
  * @author Daniel Rehfeldt
  */
 
@@ -27,9 +27,11 @@
 #include "portab.h"
 #include "scip/misc.h"
 
-
 /* compares distances of two GNODE structures */
-int GNODECmpByDist(void *first_arg, void *second_arg )
+int GNODECmpByDist(
+   void                  *first_arg,         /**< first argument */
+   void                  *second_arg         /**< second argument */
+)
 {
    SCIP_Real first = ((GNODE*)first_arg)->dist;
    SCIP_Real second = ((GNODE*)second_arg)->dist;
@@ -47,29 +49,28 @@ int GNODECmpByDist(void *first_arg, void *second_arg )
    }
 }
 
-
+/** insert a new node */
 SCIP_RETCODE SCIPindexListNodeInsert(
-   SCIP* scip,
-   IDX** node,
-   int   index
+   SCIP*                 scip,               /**< SCIP data structure */
+   IDX**                 node,               /**< pointer to the last list node */
+   int                   index               /**< data of the new node */
    )
 {
    IDX* curr;
    curr = *node;
 
-   //SCIP_CALL( SCIPallocMemory(scip, node) );
-   *node = malloc((size_t)sizeof(IDX));
+   SCIP_CALL( SCIPallocMemory(scip, node) );
    (*node)->index = index;
    (*node)->parent = (curr);
 
    return SCIP_OKAY;
 }
 
-
+/** append copy of list pertaining to node2 to node1 */
 SCIP_RETCODE SCIPindexListNodeAppendCopy(
-   SCIP* scip,
-   IDX** node1,
-   IDX* node2
+   SCIP*                 scip,               /**< SCIP data structure */
+   IDX**                 node1,              /**< pointer to the last node of list to be enlarged */
+   IDX*                  node2               /**< pointer to the last node of source list */
    )
 {
    IDX* curr1;
@@ -91,26 +92,26 @@ SCIP_RETCODE SCIPindexListNodeAppendCopy(
    {
       if( curr1 != NULL )
       {
-	 curr3 = *node1;
-	 while( curr3 != last )
-	 {
-	    if( curr3->index == curr2->index )
-	       break;
-	    curr3 = curr3->parent;
-	 }
-	 if( curr3 == last && curr3->index != curr2->index  )
-	 {
-	    curr3 = NULL;
-            new = malloc((size_t)sizeof(IDX));
+         curr3 = *node1;
+         while( curr3 != last )
+         {
+            if( curr3->index == curr2->index )
+               break;
+            curr3 = curr3->parent;
+         }
+         if( curr3 == last && curr3->index != curr2->index  )
+         {
+            curr3 = NULL;
+            SCIP_CALL( SCIPallocMemory(scip, &new) );
             curr1->parent = new;
-	 }
+         }
       }
       else
       {
-	 curr3 = NULL;
-	 *node1 = malloc((size_t)sizeof(IDX));
-	 new = *node1;
-	 last = *node1;
+         curr3 = NULL;
+         SCIP_CALL( SCIPallocMemory(scip, node1) );
+         new = *node1;
+         last = *node1;
       }
       if( curr3 == NULL )
       {
@@ -125,10 +126,10 @@ SCIP_RETCODE SCIPindexListNodeAppendCopy(
    return SCIP_OKAY;
 }
 
-
+/** free list */
 void SCIPindexListNodeFree(
-   SCIP* scip,
-   IDX** node
+   SCIP*                 scip,               /**< SCIP data structure */
+   IDX**                 node                /**< pointer to the last list node */
    )
 {
    IDX* curr;
@@ -137,7 +138,7 @@ void SCIPindexListNodeFree(
    while( curr != NULL )
    {
       *node = curr->parent;
-      free(curr);
+      SCIPfreeMemory(scip, &curr);
       curr = *node;
    }
    assert(*node == NULL);
@@ -149,7 +150,7 @@ void SCIPindexListNodeFree(
 
 /** inits a node, setting 'parent' and 'edge' to its default values */
 void SCIPlinkcuttreeInit(
-   NODE* v
+   NODE*                 v                   /**< pointer to node representing the tree */
    )
 {
    v->parent = NULL;
@@ -158,9 +159,9 @@ void SCIPlinkcuttreeInit(
 
 /** renders w a child of v; v has to be the root of its tree */
 void SCIPlinkcuttreeLink(
-   NODE* v,
-   NODE* w,
-   int edge
+   NODE*                 v,                  /**< pointer to node representing the tree */
+   NODE*                 w,                  /**< pointer to the child */
+   int                   edge                /**< link edge */
    )
 {
    assert(v->parent == NULL);
@@ -170,7 +171,7 @@ void SCIPlinkcuttreeLink(
 }
 
 void SCIPlinkcuttreeCut(
-   NODE* v
+   NODE*                 v                   /**< node to cut at */
    )
 {
    v->edge = -1;
@@ -179,9 +180,9 @@ void SCIPlinkcuttreeCut(
 
 /** finds the max value between node 'v' and the root of the tree **/
 NODE* SCIPlinkcuttreeFindMax(
-   SCIP* scip,
-   const SCIP_Real* cost,
-   NODE* v
+   SCIP*                 scip,               /**< SCIP data structure */
+   const SCIP_Real*      cost,               /**< edge cost array */
+   NODE*                 v                   /**< the node */
    )
 {
    NODE* p = v;
@@ -203,7 +204,7 @@ NODE* SCIPlinkcuttreeFindMax(
 
 /** makes vertex v the root of the link cut tree */
 void SCIPlinkcuttreeEvert(
-   NODE* v
+   NODE*                 v                   /**< the vertex to become the root */
    )
 {
    NODE* p = NULL;
@@ -219,7 +220,7 @@ void SCIPlinkcuttreeEvert(
       r = q->parent;
       tmpval =  q->edge;
       if( val != -1 )
-	 q->edge = flipedge(val);
+         q->edge = flipedge(val);
       else
          q->edge = -1;
       val = tmpval;
@@ -237,9 +238,9 @@ void SCIPlinkcuttreeEvert(
 
 /** links nodes 'root1' and 'root2' together */
 PHNODE* SCIPpairheapMergeheaps(
-   SCIP* scip,
-   PHNODE *root1,
-   PHNODE *root2
+   SCIP*                 scip,               /**< SCIP data structure */
+   PHNODE                *root1,
+   PHNODE                *root2
    )
 {
    if( root2 == NULL )
@@ -279,9 +280,9 @@ PHNODE* SCIPpairheapMergeheaps(
 }
 
 PHNODE* SCIPpairheapAddtoheap(
-   SCIP* scip,
-   PHNODE *root1,
-   PHNODE *root2
+   SCIP*                 scip,               /**< SCIP data structure */
+   PHNODE                *root1,
+   PHNODE                *root2
    )
 {
    assert(root2 != NULL);
@@ -295,7 +296,7 @@ PHNODE* SCIPpairheapAddtoheap(
       if( root1->sibling != NULL )
       {
          root1->sibling->prev = root1;
-	 assert(0);
+         assert(0);
       }
 
       root2->sibling = root1->child;
@@ -324,9 +325,9 @@ PHNODE* SCIPpairheapAddtoheap(
 /** internal method for combining the siblings after the root has been deleted */
 static
 SCIP_RETCODE pairheapCombineSiblings(
-   SCIP*                 scip,              /**< SCIP data structure */
+   SCIP*                 scip,               /**< SCIP data structure */
    PHNODE**              p,                  /**< the first sibling */
-   int                   size                 /**< the size of the heap */
+   int                   size                /**< the size of the heap */
    )
 {
    PHNODE** treearray;
@@ -395,11 +396,11 @@ SCIP_RETCODE pairheapCombineSiblings(
 
 /** inserts a new node into the pairing heap */
 SCIP_RETCODE SCIPpairheapInsert(
-   SCIP* scip,
-   PHNODE** root,
-   int element,
-   SCIP_Real key,
-   int* size
+   SCIP*                 scip,               /**< SCIP data structure */
+   PHNODE**              root,
+   int                   element,
+   SCIP_Real             key,
+   int*                  size
    )
 {
    if( (*root) == NULL )
@@ -429,11 +430,11 @@ SCIP_RETCODE SCIPpairheapInsert(
 
 /** deletes the root of the paring heap, concomitantly storing its data and key in '*element' and '*key' respectively */
 void SCIPpairheapDeletemin(
-   SCIP* scip,
-   int* element,
-   SCIP_Real *key,
-   PHNODE** root,
-   int* size
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  element,
+   SCIP_Real*            key,
+   PHNODE**              root,
+   int*                  size
    )
 {
 
@@ -449,7 +450,7 @@ void SCIPpairheapDeletemin(
       *key = (*root)->key;
       if( (*root)->child != NULL )
       {
-	 newroot = (*root)->child;
+         newroot = (*root)->child;
          pairheapCombineSiblings(scip, &newroot, (*size)--);
       }
 
@@ -461,11 +462,11 @@ void SCIPpairheapDeletemin(
 
 /** links nodes 'root1' and 'root2' together, roots the resulting tree at root1 and sets root2 to NULL */
 void SCIPpairheapMeldheaps(
-   SCIP* scip,
-   PHNODE** root1,
-   PHNODE** root2,
-   int* sizeroot1,
-   int* sizeroot2
+   SCIP*                 scip,               /**< SCIP data structure */
+   PHNODE**              root1,
+   PHNODE**              root2,
+   int*                  sizeroot1,
+   int*                  sizeroot2
    )
 {
    if( root1 == NULL && root2 == NULL )
@@ -481,7 +482,10 @@ void SCIPpairheapMeldheaps(
 
 
 /** frees the paring heap with root 'p' */
-void SCIPpairheapFree(SCIP* scip, PHNODE** root)
+void SCIPpairheapFree(
+  SCIP*                 scip,               /**< SCIP data structure */
+  PHNODE**              root                /**< root of heap to be freed */
+)
 {
    if( (*root) == NULL )
    {
@@ -504,7 +508,11 @@ void SCIPpairheapFree(SCIP* scip, PHNODE** root)
 
 /** internal method used by 'pairheap_buffarr' */
 static
-void pairheapRec(PHNODE* p, int** arr, int* n)
+void pairheapRec(
+   PHNODE* p,
+   int** arr,
+   int* n
+)
 {
    if( p == NULL )
    {
@@ -517,7 +525,12 @@ void pairheapRec(PHNODE* p, int** arr, int* n)
 
 
 /** stores all elements of the pairing heap in an array */
-SCIP_RETCODE SCIPpairheapBuffarr(SCIP* scip, PHNODE* root, int size, int** elements)
+SCIP_RETCODE SCIPpairheapBuffarr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   PHNODE*               root,               /**< root of the heap */
+   int                   size,               /**< size of the array */
+   int**                 elements            /**< pointer to array */
+)
 {
    int n = 0;
    SCIP_CALL( SCIPallocBufferArray(scip, elements, size) );
@@ -532,9 +545,9 @@ SCIP_RETCODE SCIPpairheapBuffarr(SCIP* scip, PHNODE* root, int size, int** eleme
 
 /** initializes the union-find structure 'uf' with 'length' many components (of size one) */
 SCIP_RETCODE SCIPunionfindInit(
-   SCIP* scip,
-   UF* uf,
-   int length
+   SCIP*                 scip,               /**< SCIP data structure */
+   UF*                   uf,                 /**< union find data structure */
+   int                   length              /**< number of components */
    )
 {
    int i;
@@ -552,8 +565,8 @@ SCIP_RETCODE SCIPunionfindInit(
 
 /** finds and returns the component identifier */
 int SCIPunionfindFind(
-   UF* uf,
-   int element
+   UF*                   uf,                 /**< union find data structure */
+   int                   element             /**< element to be found */
    )
 {
    int newelement;
@@ -576,10 +589,10 @@ int SCIPunionfindFind(
 
 /** merges the components containing p and q respectively */
 void SCIPunionfindUnion(
-   UF* uf,
-   int p,
-   int q,
-   SCIP_Bool compress
+   UF*                   uf,                 /**< union find data structure */
+   int                   p,                  /**< first component */
+   int                   q,                  /**< second component*/
+   SCIP_Bool             compress            /**< compress union find structure? */
    )
 {
    int idp;
@@ -619,8 +632,8 @@ void SCIPunionfindUnion(
 
 /** frees the data fields of the union-find structure */
 void SCIPunionfindFree(
-   SCIP* scip,
-   UF* uf
+   SCIP*                 scip,               /**< SCIP data structure */
+   UF*                   uf                  /**< union find data structure */
    )
 {
    SCIPfreeMemoryArray(scip, &uf->parent);

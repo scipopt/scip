@@ -14,9 +14,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_stp.c
- * @brief  Constraint handler stores the local branching decision data
- * @author Timo Berthold
- * @author Stefan Heinz
+ * @brief  Constraint handler for Steiner problems
+ * @author Gerald Gamrath
+ * @author Daniel Rehfeldt
  *
  */
 
