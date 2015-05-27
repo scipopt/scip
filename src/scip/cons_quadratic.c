@@ -7498,11 +7498,22 @@ TERMINATE:
 
    if( *success )
    {
-      printf("Computation successfull, NLP soltat: %d, termstat: %d\nPoint found:\n",
-               SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
-      for( i = 0; i < nquadvars; i++ )
+      if( nlpi == NULL )
       {
-         printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[i].var), consdata->interiorpoint[i]);
+         printf("Computation successfull, 0 is interior point.\n");
+         for( i = 0; i < nquadvars; i++ )
+         {
+            assert(consdata->interiorpoint[i] == 0.0);
+         }
+      }
+      else
+      {
+         printf("Computation successfull, NLP soltat: %d, termstat: %d\nPoint found:\n",
+               SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
+         for( i = 0; i < nquadvars; i++ )
+         {
+            printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[i].var), consdata->interiorpoint[i]);
+         }
       }
    }
    else
