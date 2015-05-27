@@ -10717,7 +10717,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       }
 
       /* compute gauge function using interior points per constraint, only when there are quadratic variables */
-      if( conshdlrdata->gaugecuts && consdata->nquadvars > 0 )
+      if( conshdlrdata->gaugecuts && SCIPgetSubscipDepth(scip) == 0 && consdata->nquadvars > 0 )
       {
          SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
          if( (consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)) ||
