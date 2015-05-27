@@ -305,7 +305,10 @@ SCIP_RETCODE generateDisjCutSOS1(
 
             /* if column is not in LP, then return without generating cut */
             if ( ind < 0 )
+            {
+               *row = NULL;
                return SCIP_OKAY;
+            }
 
             cutcoefs[ind] -= cutcoef * rowvals[c];
          }
