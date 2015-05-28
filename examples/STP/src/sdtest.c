@@ -754,7 +754,7 @@ SCIP_RETCODE sd_red(
                assert(tk >= 0);
                if( tj == tk )
                {
-                  printf("SDSP__1 del; %d %d (%d)\n", g->tail[e], g->head[e], e);
+                  //printf("SDSP__1 del; %d %d (%d)\n", g->tail[e], g->head[e], e);
                   graph_edge_del(scip, g, e, TRUE);
                   (*nelims)++;
                   break;
@@ -819,7 +819,7 @@ SCIP_RETCODE sd_red(
 
                   if( SCIPisGT(scip, ecost, dist) )
                   {
-                     printf("SDSP2 del; %d %d (%d)\n", g->tail[e], g->head[e], e);
+                     //printf("SDSP2 del; %d %d (%d)\n", g->tail[e], g->head[e], e);
                      graph_edge_del(scip, g, e, TRUE);
                      (*nelims)++;
                      break;
@@ -2622,7 +2622,7 @@ SCIP_RETCODE sl_reduction(
 	 tail = g->tail[e];
 	 head = g->head[e];
 	 //printf("SL se: %d-%d, bases: %d, %d \n", tail, head, vbase[tail], vbase[head]);
-         assert(vbase[tail] == i);
+         assert(vbase[tail] == i); //TODO error in I053
 	 /* check whether minedge can be removed */
          if( SCIPisGE(scip, mincost2, vnoi[tail].dist + g->cost[e] + vnoi[head].dist) )
          {
@@ -2632,7 +2632,7 @@ SCIP_RETCODE sl_reduction(
                   continue;
                if( g->source[0] != i && !SCIPisLE(scip, vnoi[tail].dist + g->cost[e], g->prize[i]) )
                   continue;
-               if( Is_term(g->term[head]) )
+               if( Is_term(g->term[head]) && Is_term(g->term[tail]) )
                   continue;
 	    }
             (*nelims)++;
@@ -2640,39 +2640,29 @@ SCIP_RETCODE sl_reduction(
             assert(g->mark[tail] && g->mark[head]);
             assert(!Is_pterm(g->term[tail]) && !Is_pterm(g->term[head]));
             //printf("contrSL: %d-%d \n", tail, head);
-            /*
+	    // voronoi_slrepair(scip, g, g->cost, vnoi, vbase, heap, state, head, tail);
+            if( Is_term(g->term[head]) )
+            {
+               j = head;
+               k = tail;
+            }
+            else
+            {
+               j = tail;
+               k = head;
+            }
 
-              {
-              j = head;
-              k = tail;
-              }
-              else
-              {
-              j = tail;
-              k = head;
-              }
-            */
             if( pc )
 	    {
-	       if( Is_term(g->term[tail]) )
-	       {
-                  SCIP_CALL( graph_knot_contractpc(scip, g, tail, head, i) );
-                  voronoi_slrepair(scip, g, g->cost, vnoi, vbase, heap, state, tail, head);
-	       }
-	       else
-	       {
-		  SCIP_CALL( graph_knot_contractpc(scip, g, head, tail, i) );
-                  voronoi_slrepair(scip, g, g->cost, vnoi, vbase, heap, state, head, tail);
-	       }
+               SCIP_CALL( graph_knot_contractpc(scip, g, j, k, i) );
 	    }
             else
 	    {
 	       SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e]) );
-               SCIP_CALL( graph_knot_contract(scip, g, tail, head) );
-	       voronoi_slrepair(scip, g, g->cost, vnoi, vbase, heap, state, tail, head);
+               SCIP_CALL( graph_knot_contract(scip, g, j, k) );
 	    }
-            forbidden[tail] = TRUE;
-	    forbidden[head] = TRUE;
+            forbidden[vbase[j]] = TRUE;
+	    forbidden[vbase[k]] = TRUE;
          }
       }
    }
@@ -2857,10 +2847,10 @@ SCIP_RETCODE nv_reduction(
          if( pc )
          {
             SCIP_CALL( graph_knot_contractpc(scip, g, i, k, i) );
-            SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[edge1]) );
          }
          else
          {
+	    SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[edge1]) );
             SCIP_CALL( graph_knot_contract(scip, g, i, k) );
          }
       }

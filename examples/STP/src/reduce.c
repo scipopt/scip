@@ -53,7 +53,7 @@ static int degree_test(
    nnodes = g->knots;
 
    SCIPdebugMessage("Degree Test: ");
-   if( 1 )
+   if( 0 )
 return 0;
    while(rerun)
    {
@@ -561,7 +561,8 @@ SCIP_RETCODE bound_reduce(
             nterms++;
       }
    }
-   assert(nterms == graph->terms);
+
+   assert(nterms == graph->terms - (graph->stp_type == STP_PRIZE_COLLECTING)? 1: 0);
    /* not more than two terminals? */
    if( nterms <= 2 )
    {
@@ -2694,7 +2695,7 @@ SCIP_RETCODE levelPC1(
    int     brednelims;
    int     degnelims;
    int     reductbound;
-   char    sd = !TRUE;
+   char    sd = TRUE;
    char    sd2 = TRUE;
    char    bd3 = TRUE;
    char    nvsl = TRUE;
@@ -2722,7 +2723,7 @@ SCIP_RETCODE levelPC1(
    SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint2, nnodes) );
-   if( 0 && SCIPisLE(scip, (double) g->terms / (double) nnodes, 0.03 ) )
+   if( SCIPisLE(scip, (double) g->terms / (double) nnodes, 0.03) )
       bred = TRUE;
 
 
@@ -2730,15 +2731,14 @@ SCIP_RETCODE levelPC1(
    reductbound = MAX(nnodes / 500, minelims);
 
    SCIP_CALL( pcgraphorg(scip, g) );
-
-   if( 0 && g->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+#if 0
+   if(g->stp_type == STP_ROOTED_PRIZE_COLLECTING )
    {
       rerun = FALSE;
       SCIP_CALL( bound_reduce(scip, g, vnoi, cost, g->prize, sddist, random,  heap, state, vbase, &brednelims, *fixed) );
    }
-
+#endif
    SCIP_CALL( degree_test_pc(scip, g, fixed, &degnelims) );
-
 
    while( rerun && !SCIPisStopped(scip) )
    {
@@ -2778,7 +2778,7 @@ SCIP_RETCODE levelPC1(
             break;
       }
 
-      if( bred )
+      if( 0 && bred )
       {
          SCIP_CALL( bound_reduce(scip, g, vnoi, cost, g->prize, sddist, random,  heap, state, vbase, &brednelims, *fixed) );
          bred = FALSE;
@@ -2817,7 +2817,7 @@ SCIP_RETCODE levelPC1(
       }
    }
 
-   if( 0 || g->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+   if( 1 || g->stp_type == STP_ROOTED_PRIZE_COLLECTING )
    {
       SCIP_CALL( bound_reduce(scip, g, vnoi, cost, g->prize, sddist, random,  heap, state, vbase, &brednelims, *fixed) );
    }
@@ -2905,7 +2905,7 @@ SCIP_RETCODE levelHC1(
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, 3 * nnodes) );
 
 
-   while( (bred || hbred || rbred) && !SCIPisStopped(scip) )
+   while( (bred || hbred || rbred || rcbred) && !SCIPisStopped(scip) )
    {
       if( SCIPgetTotalTime(scip) > timelimit )
          break;

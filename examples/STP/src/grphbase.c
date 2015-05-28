@@ -1440,7 +1440,7 @@ SCIP_RETCODE graph_knot_contract(
    }
 
    /* retain root */
-   if (p->source[0] == s)
+   if( p->source[0] == s )
       p->source[0] = t;
 
    sgrad =  p->grad[s];

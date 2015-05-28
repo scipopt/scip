@@ -32,7 +32,7 @@
 #define HEUR_NAME             "TM"
 #define HEUR_DESC             "takahashi matsuyama primal heuristic for steiner trees"
 #define HEUR_DISPCHAR         '+'
-#define HEUR_PRIORITY         1000 /* TODO 0 */
+#define HEUR_PRIORITY         1000
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1

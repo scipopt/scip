@@ -1,13 +1,28 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*   Type....: Function                                                      */
-/*   File....: dirreduce.c                                                   */
-/*   Name....: Steiner Tree Reduction                                        */
-/*   Author..: Thorsten Koch                                                 */
-/*   Copyright by Author, All rights reserved                                */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h)           */
+
+/**@file   dirreduce.c
+ * @brief  several simple reductions for Steiner problems
+ * @author Stephen Maher
+ * @author Daniel Rehfeldt
+ *
+ *
+ *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #define DIRREDUCE_C
 
@@ -107,7 +122,7 @@ int trydg1edgepc(
    assert(Is_term(g->term[i]));
    if( SCIPisLE(scip, g->prize[i], g->cost[iout]) )
    {
-      printf("DEL (1 edge) terminal %d \n", i);
+      //printf("DEL (1 edge) terminal %d \n", i);
       i1 = g->head[iout];
       if( (i1 < i) && (Is_term(g->term[i1]) || g->grad[i1] == 2) )
          (*rerun) = TRUE;
@@ -119,23 +134,19 @@ int trydg1edgepc(
       }
       else
       {
-	 int e;
-         for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-            if( g->mark[g->head[e]] )
-               break;
-         assert(e != EAT_LAST && g->head[e] != g->source[0]);
+         assert(iout != EAT_LAST && g->head[iout] != g->source[0]);
          count++;
-         graph_edge_del(scip, g, e, TRUE);
+         graph_edge_del(scip, g, iout, TRUE);
       }
    }
    return count;
 }
 
 SCIP_RETCODE degree_test_dir(
-   SCIP* scip,
-   GRAPH*  g,
-   double* fixed,
-   int*    count
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            fixed,              /**< pointer to offfset value */
+   int*                  count               /**< pointer to number of reductions */
    )
 {
    int i;
@@ -247,10 +258,10 @@ SCIP_RETCODE degree_test_dir(
 
 
 SCIP_RETCODE degree_test_pc(
-   SCIP* scip,
-   GRAPH*  g,
-   double* fixed,
-   int*    count
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            fixed,              /**< pointer to offfset value */
+   int*                  count               /**< pointer to number of reductions */
    )
 {
    int* edges2;
@@ -376,7 +387,7 @@ SCIP_RETCODE degree_test_pc(
             (*count) += trydg1edgepc(scip, g, fixed, i, e, &rerun);
 	 }
 	 /* terminal of (real) degree 2? */
-         else if( (g->grad[i] == 4 && pc) || (g->grad[i] == 3 && !pc)  )
+         else if( (g->grad[i] == 4 && pc) || (g->grad[i] == 3 && !pc) )
          {
 	    if( 1 && !maxprize(scip, g, i) )
 	    {

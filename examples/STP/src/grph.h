@@ -288,8 +288,8 @@ extern SCIP_RETCODE    nv_reduction_optimal(SCIP*, GRAPH*, double*, int*, int);
 
 /* dirreduce.c
  */
-extern SCIP_RETCODE degree_test_dir(SCIP*, GRAPH*, double*, int*);
-extern SCIP_RETCODE degree_test_pc(SCIP*, GRAPH*, double*, int*);
+extern SCIP_RETCODE degree_test_dir(SCIP*, GRAPH*, SCIP_Real*, int*);
+extern SCIP_RETCODE degree_test_pc(SCIP*, GRAPH*, SCIP_Real*, int*);
 
 /* bndtest.c
  */
