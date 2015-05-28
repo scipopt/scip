@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -187,7 +187,7 @@ TCLIQUE_GRAPH* COLORprobGetOriginalGraph(
 
 /** computes the complementary graph for a given graph and stores it in the given pointer */
 extern
-void COLORprobGetComplementaryGraph(
+SCIP_RETCODE COLORprobGetComplementaryGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    TCLIQUE_GRAPH*        graph,              /**< the given graph */
    TCLIQUE_GRAPH*        cgraph              /**< the complementary graph is saved in here */

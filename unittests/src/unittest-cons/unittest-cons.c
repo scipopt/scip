@@ -96,7 +96,6 @@ SCIPconshdlrNeedsCons
 SCIPconshdlrDoesPresolve
 SCIPconshdlrIsSeparationDelayed
 SCIPconshdlrIsPropagationDelayed
-SCIPconshdlrIsPresolvingDelayed
 SCIPconshdlrGetNEnfoLPCalls
 SCIPconshdlrIsInitialized
 SCIPconshdlrGetNCheckCalls
@@ -146,9 +145,10 @@ SCIPconshdlrGetNChgSides
 SCIPconshdlrWasLPSeparationDelayed
 SCIPconshdlrWasSolSeparationDelayed
 SCIPconshdlrWasPropagationDelayed
-SCIPconshdlrWasPresolvingDelayed
 SCIPconshdlrIsClonable
-SCIPconshdlrGetPropTimingmask
+SCIPconshdlrSetPropTiming
+SCIPconshdlrGetPresolTiming
+SCIPconshdlrSetPresolTiming
 */
 
 static
@@ -257,14 +257,6 @@ SCIP_RETCODE consCheckIsPropagationDelayed(SCIP_CONSHDLR* conshdlr)
    return SCIP_OKAY;
 }
 
-static
-SCIP_RETCODE consCheckIsPresolvingDelayed(SCIP_CONSHDLR* conshdlr)
-{
-   CHECK_GET( SCIPconshdlrIsPresolvingDelayed(conshdlr), FALSE );
-
-   return SCIP_OKAY;
-}
-
 /*
 static
 SCIP_RETCODE consCheckWasLPSparationDelayed(SCIP* scip, SCIP_CONSHDLR* conshdlr)
@@ -284,13 +276,6 @@ static
 SCIP_RETCODE consCheckWasPropagationDelayed(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrWasPropagationDelayed(conshdlr),  );
-   return SCIP_OKAY;
-}
-
-static
-SCIP_RETCODE consCheckWasPresolvingDelayed(SCIP* scip, SCIP_CONSHDLR* conshdlr)
-{
-   CHECK_GET( SCIPconshdlrWasPresolvingDelayed(conshdlr),  );
    return SCIP_OKAY;
 }
 
@@ -314,9 +299,9 @@ SCIP_RETCODE consCheckIsInitialized(SCIP_CONSHDLR* conshdlr, SCIP_Bool initializ
 }
 
 static
-SCIP_RETCODE consCheckGetPropTimingmask(SCIP_CONSHDLR* conshdlr)
+SCIP_RETCODE consCheckGetPropTiming(SCIP_CONSHDLR* conshdlr)
 {
-   CHECK_GET( SCIPconshdlrGetPropTimingmask(conshdlr), SCIP_PROPTIMING_BEFORELP );
+   CHECK_GET( SCIPconshdlrGetPropTiming(conshdlr), SCIP_PROPTIMING_BEFORELP );
 
    return SCIP_OKAY;
 }
@@ -465,14 +450,14 @@ SCIP_RETCODE consCheckNEnfoLPCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
    return SCIP_OKAY;
 }
 
-/*
+#if 0
 SCIP_RETCODE consCheckNCheckCalls(SCIP* scip, SCIP_CONSHDLR* conshdlr)
 {
    CHECK_GET( SCIPconshdlrGetNCheckCalls(conshdlr), SCIPgetNcheckUnittest(scip) );
 
    return SCIP_OKAY;
 }
-*/
+#endif
 
 /** main function */
 int
@@ -538,8 +523,7 @@ main(
    CHECK_TEST( consCheckNeedsCons(conshdlr) );
    CHECK_TEST( consCheckIsSparationDelayed(conshdlr) );
    CHECK_TEST( consCheckIsPropagationDelayed(conshdlr) );
-   CHECK_TEST( consCheckIsPresolvingDelayed(conshdlr) );
-   CHECK_TEST( consCheckGetPropTimingmask(conshdlr) );
+   CHECK_TEST( consCheckGetPropTiming(conshdlr) );
    CHECK_TEST( consCheckIsInitialized(conshdlr, FALSE) );
    CHECK_TEST( consCheckDoesPresolve(conshdlr) );
    CHECK_TEST( consCheckPropFreq(conshdlr) );

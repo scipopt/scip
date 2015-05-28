@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -625,9 +625,10 @@ SCIP_RETCODE createCoveringProblem(
 
          /* calculate size of hash map */
          conshdlr = SCIPfindConshdlr(scip, "quadratic");
-         mapsize = SCIPconshdlrGetNActiveConss(conshdlr);
+         mapsize = (conshdlr == NULL) ? 0 : SCIPconshdlrGetNActiveConss(conshdlr);
          conshdlr = SCIPfindConshdlr(scip, "soc");
-         mapsize += SCIPconshdlrGetNActiveConss(conshdlr);
+         if( conshdlr != NULL )
+            mapsize += SCIPconshdlrGetNActiveConss(conshdlr);
          mapsize = MAX(mapsize, nnlprows);
          mapsize = SCIPcalcHashtableSize(2*mapsize);
          assert(mapsize > 0);
@@ -638,7 +639,7 @@ SCIP_RETCODE createCoveringProblem(
       }
    }
 
-   /* go through all and constraints in the original problem */
+   /* go through all AND constraints in the original problem */
    conshdlr = SCIPfindConshdlr(scip, "and");
    if( conshdlr != NULL )
    {
@@ -2202,6 +2203,9 @@ SCIP_RETCODE solveSubproblem(
 
    SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %"SCIP_LONGINT_FORMAT", nstallnodes = %"SCIP_LONGINT_FORMAT"\n", timelimit, memorylimit, nodelimit, nstallnodes);
 
+   /* disable statistic timing inside sub SCIP */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+
    /* set time, memory and node limits */
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
@@ -2307,6 +2311,11 @@ SCIP_RETCODE solveSubproblem(
       *validsolved = *validsolved && i == 1;
    }
 
+   if( *validsolved )
+   {
+      SCIP_CALL( SCIPmergeVariableStatistics(subscip, scip, subvars, vars, nvars) );
+   }
+
    /* free variable mapping hash map, array of subproblem variables, and subproblem */
    SCIPhashmapFree(&varmap);
    SCIPfreeBufferArray(scip, &subvars);
@@ -2376,7 +2385,7 @@ SCIP_RETCODE performFixing(
 
       /* propagate the bound change; conflict analysis is performed automatically */
       SCIP_CALL( SCIPpropagateProbing(scip, 0, infeas, &ndomredsfound) );
-      SCIPdebugMessage("  --> propagation reduced %lld further domains\n", ndomredsfound);
+      SCIPdebugMessage("  --> propagation reduced %"SCIP_LONGINT_FORMAT" further domains\n", ndomredsfound);
 
       /* if propagation led to a cutoff, we backtrack immediately */
       if( *infeas )
@@ -2416,7 +2425,7 @@ SCIP_RETCODE performFixing(
 
       /* propagate the bound change */
       SCIP_CALL( SCIPpropagateProbing(scip, 0, infeas, &ndomredsfound) );
-      SCIPdebugMessage("  --> propagation reduced %lld further domains\n", ndomredsfound);
+      SCIPdebugMessage("  --> propagation reduced %"SCIP_LONGINT_FORMAT" further domains\n", ndomredsfound);
 
       /* if propagation led to a cutoff, we backtrack immediately */
       if( *infeas )

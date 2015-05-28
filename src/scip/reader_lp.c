@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1086,26 +1086,26 @@ SCIP_RETCODE readCoefficients(
             /* quadratic part in objective has to end with '/2' */
             if( !getNextToken(scip, lpinput) )
             {
-               syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective.");
+               syntaxError(scip, lpinput, "expected '/2' or '/ 2' after end of quadratic part in objective.");
                return SCIP_OKAY;
             }
             if( strcmp(lpinput->token, "/2") == 0 )
             {
-               SCIPdebugMessage("(line %d) saw '/2' after quadratic part in objective\n", lpinput->linenumber);
+               SCIPdebugMessage("(line %d) saw '/2' or '/ 2' after quadratic part in objective\n", lpinput->linenumber);
             }
             else if( *lpinput->token == '/' )
             {
                /* maybe it says '/ 2' */
-               if( !getNextToken(scip, lpinput) || *lpinput->token == '2' )
+               if( !getNextToken(scip, lpinput) || *lpinput->token != '2' )
                {
-                  syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective.");
+                  syntaxError(scip, lpinput, "expected '/2' or '/ 2' after end of quadratic part in objective.");
                   return SCIP_OKAY;
                }
                SCIPdebugMessage("(line %d) saw '/ 2' after quadratic part in objective\n", lpinput->linenumber);
             }
             else
             {
-               syntaxError(scip, lpinput, "expected '/2' after end of quadratic part in objective.");
+               syntaxError(scip, lpinput, "expected '/2' or '/ 2' after end of quadratic part in objective.");
                return SCIP_OKAY;
             }
          }
@@ -1327,20 +1327,16 @@ SCIP_RETCODE createIndicatorConstraint(
    char name2[LP_MAX_LINELEN];
    SCIP_VAR** linvars;
    SCIP_Real* lincoefs;
-   int nlincoefs;
    SCIP_VAR** quadvars1;
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
-   int nquadcoefs;
-   SCIP_Bool newsection;
+   SCIP_CONS* cons;
+   SCIP_RETCODE retcode;
    LPSENSE linsense;
    SCIP_Real linsidevalue;
-   int linsidesign;
-   SCIP_CONS* cons;
    SCIP_Real linrhs;
-   int j;
+   SCIP_Bool newsection;
    SCIP_Bool linConsEQ;
-
    SCIP_Bool initial;
    SCIP_Bool separate;
    SCIP_Bool enforce;
@@ -1349,9 +1345,15 @@ SCIP_RETCODE createIndicatorConstraint(
    SCIP_Bool local;
    SCIP_Bool dynamic;
    SCIP_Bool removable;
+   int nlincoefs;
+   int nquadcoefs;
+   int linsidesign;
+   int j;
 
    assert( lpinput != NULL );
    assert( binvar != NULL );
+
+   retcode = SCIP_OKAY;
 
    /* check that binvalue is 0 or 1 */
    if( !SCIPisFeasEQ(scip, binvalue, 0.0) && !SCIPisFeasEQ(scip, binvalue, 1.0) )
@@ -1408,6 +1410,7 @@ SCIP_RETCODE createIndicatorConstraint(
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
    }
+   assert(linsense == LP_SENSE_GE || linsense == LP_SENSE_LE || linsense == LP_SENSE_EQ);
 
    /* read the right hand side */
    linsidesign = +1;
@@ -1436,7 +1439,7 @@ SCIP_RETCODE createIndicatorConstraint(
    switch( linsense )
    {
    case LP_SENSE_GE:
-      linrhs = linsidevalue;
+      linrhs = -linsidevalue;
       for( j = 0; j < nlincoefs; ++j )
          lincoefs[j] *= -1;
       break;
@@ -1449,6 +1452,7 @@ SCIP_RETCODE createIndicatorConstraint(
       break;
    case LP_SENSE_NOTHING:
    default:
+      /* this case cannot occur because it is caught by the syntax check method isSense() above */
       SCIPerrorMessage("invalid constraint sense <%d>\n", linsense);
       return SCIP_INVALIDDATA;
    }
@@ -1463,8 +1467,12 @@ SCIP_RETCODE createIndicatorConstraint(
    dynamic = lpinput->dynamicconss;
    removable = lpinput->dynamicrows || lpinput->inusercuts;
 
-   SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlincoefs, linvars, lincoefs, linrhs,
-         initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+   retcode = SCIPcreateConsIndicator(scip, &cons, name, binvar, nlincoefs, linvars, lincoefs, linrhs,
+      initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE);
+
+   if( retcode != SCIP_OKAY )
+      goto TERMINATE;
+
    SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
       lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
@@ -1474,11 +1482,19 @@ SCIP_RETCODE createIndicatorConstraint(
    /* create second constraint if it was an equation */
    if( linConsEQ )
    {
+      char newname[SCIP_MAXSTRLEN];
+
+      (void) SCIPsnprintf(newname, SCIP_MAXSTRLEN, "%s_eqneg", name);
+
       for( j = 0; j < nlincoefs; ++j )
          lincoefs[j] *= -1;
       linrhs *= -1;
-      SCIP_CALL( SCIPcreateConsIndicator(scip, &cons, name, binvar, nlincoefs, linvars, lincoefs, linrhs,
-            initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE) );
+      retcode = SCIPcreateConsIndicator(scip, &cons, newname, binvar, nlincoefs, linvars, lincoefs, linrhs,
+         initial, separate, enforce, check, propagate, local, dynamic, removable, FALSE);
+
+      if( retcode != SCIP_OKAY )
+         goto TERMINATE;
+
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
          lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
@@ -1493,6 +1509,8 @@ SCIP_RETCODE createIndicatorConstraint(
    SCIPfreeMemoryArrayNull(scip, &quadvars1);
    SCIPfreeMemoryArrayNull(scip, &quadvars2);
    SCIPfreeMemoryArrayNull(scip, &quadcoefs);
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -1520,11 +1538,12 @@ SCIP_RETCODE readConstraints(
    SCIP_VAR** quadvars1;
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
-   SCIP_Bool newsection;
    LPSENSE sense;
+   SCIP_RETCODE retcode;
    SCIP_Real sidevalue;
    SCIP_Real lhs;
    SCIP_Real rhs;
+   SCIP_Bool newsection;
    SCIP_Bool initial;
    SCIP_Bool separate;
    SCIP_Bool enforce;
@@ -1540,6 +1559,8 @@ SCIP_RETCODE readConstraints(
    SCIP_Bool isIndicatorCons;
 
    assert(lpinput != NULL);
+
+   retcode = SCIP_OKAY;
 
    /* read coefficients */
    SCIP_CALL( readCoefficients(scip, lpinput, FALSE, name, &vars, &coefs, &ncoefs, &quadvars1, &quadvars2, &quadcoefs, &nquadcoefs, &newsection) );
@@ -1558,6 +1579,7 @@ SCIP_RETCODE readConstraints(
       syntaxError(scip, lpinput, "expected constraint sense '<=', '=', or '>='.");
       goto TERMINATE;
    }
+   assert(sense == LP_SENSE_GE || sense == LP_SENSE_LE || sense == LP_SENSE_EQ);
 
    /* read the right hand side */
    sidesign = +1;
@@ -1598,6 +1620,7 @@ SCIP_RETCODE readConstraints(
       break;
    case LP_SENSE_NOTHING:
    default:
+      /* this case cannot occur because it is caught by the syntax check method isSense() above */
       SCIPerrorMessage("invalid constraint sense <%d>.\n", sense);
       return SCIP_INVALIDDATA;
    }
@@ -1682,15 +1705,19 @@ SCIP_RETCODE readConstraints(
       removable = lpinput->dynamicrows || lpinput->inusercuts;
       if( nquadcoefs == 0 )
       {
-         SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE) );
+         retcode = SCIPcreateConsLinear(scip, &cons, name, ncoefs, vars, coefs, lhs, rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, FALSE);
       }
       else
       {
-         SCIP_CALL( SCIPcreateConsQuadratic(scip, &cons, name, ncoefs, vars, coefs,
-               nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
-               initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable) );
+         retcode = SCIPcreateConsQuadratic(scip, &cons, name, ncoefs, vars, coefs,
+            nquadcoefs, quadvars1, quadvars2, quadcoefs, lhs, rhs,
+            initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable);
       }
+
+      if( retcode != SCIP_OKAY )
+         goto TERMINATE;
+
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIPdebugMessage("(line %d) created constraint%s: ", lpinput->linenumber,
          lpinput->inlazyconstraints ? " (lazy)" : (lpinput->inusercuts ? " (user cut)" : ""));
@@ -1716,7 +1743,7 @@ SCIP_RETCODE readConstraints(
          goto TERMINATE;
       }
 
-      SCIP_CALL( createIndicatorConstraint(scip, lpinput, name, vars[0], lhs) );
+      retcode = createIndicatorConstraint(scip, lpinput, name, vars[0], lhs);
    }
 
  TERMINATE:
@@ -1726,6 +1753,8 @@ SCIP_RETCODE readConstraints(
    SCIPfreeMemoryArrayNull(scip, &quadvars1);
    SCIPfreeMemoryArrayNull(scip, &quadvars2);
    SCIPfreeMemoryArrayNull(scip, &quadcoefs);
+
+   SCIP_CALL( retcode );
 
    return SCIP_OKAY;
 }
@@ -2114,7 +2143,7 @@ SCIP_RETCODE readSos(
 
    /* standard settings for SOS constraints: */
    initial = lpinput->initialconss;
-   separate = FALSE;
+   separate = TRUE;
    enforce = TRUE;
    check = TRUE;
    propagate = TRUE;
@@ -3233,6 +3262,9 @@ void checkConsnames(
 
    for( c = 0; c < nconss; ++c )
    {
+      int len;
+
+      assert(conss != NULL); /* for lint */
       cons = conss[c];
       assert(cons != NULL );
 
@@ -3245,23 +3277,22 @@ void checkConsnames(
       conshdlrname = SCIPconshdlrGetName(conshdlr);
       assert( transformed == SCIPconsIsTransformed(cons) );
 
+      len = (int) strlen(SCIPconsGetName(cons));
+
       if( strcmp(conshdlrname, "linear") == 0 )
       {
          SCIP_Real lhs = SCIPgetLhsLinear(scip, cons);
          SCIP_Real rhs = SCIPgetLhsLinear(scip, cons);
 
-         if( (SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > LP_MAX_NAMELEN)
-            || ( !SCIPisEQ(scip, lhs, rhs) && strlen(SCIPconsGetName(conss[c])) > LP_MAX_NAMELEN -  4) )
+         if( (SCIPisEQ(scip, lhs, rhs) && len > LP_MAX_NAMELEN) || ( !SCIPisEQ(scip, lhs, rhs) && len > LP_MAX_NAMELEN - 4) )
          {
-            SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
-               LP_MAX_NAMELEN  - 1);
+            SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n", LP_MAX_NAMELEN - 1);
             return;
          }
       }
-      else if( strlen(SCIPconsGetName(conss[c])) > LP_MAX_NAMELEN )
+      else if( len > LP_MAX_NAMELEN )
       {
-         SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n",
-            LP_MAX_NAMELEN  - 1);
+         SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n", LP_MAX_NAMELEN - 1);
          return;
       }
    }
@@ -3413,6 +3444,9 @@ SCIP_RETCODE SCIPreadLp(
    {
       SCIPfreeMemoryArray(scip, &lpinput.pushedtokens[i]);
    }
+
+   if( retcode == SCIP_PLUGINNOTFOUND )
+      retcode = SCIP_READERROR;
 
    /* check for correct return value */
    SCIP_CALL( retcode );

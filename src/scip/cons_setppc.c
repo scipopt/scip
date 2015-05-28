@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -45,9 +45,9 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_ALWAYS
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 #define LINCONSUPGD_PRIORITY    +700000 /**< priority of the constraint handler for upgrading of linear constraints */
@@ -255,7 +255,9 @@ int setppcCompare2(
       return 0;
    else
    {
-      assert(consdata1->setppctype > consdata2->setppctype || (consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->setppctype == consdata2->setppctype && consdata1->nvars > consdata2->nvars) || (consdata1->setppctype == SCIP_SETPPCTYPE_PACKING && consdata1->setppctype == consdata2->setppctype && consdata1->nvars < consdata2->nvars)); /*lint !e641*/
+      assert(consdata1->setppctype > consdata2->setppctype || ((consdata1->setppctype == consdata2->setppctype) &&
+            ((consdata1->setppctype == SCIP_SETPPCTYPE_PARTITIONING && consdata1->nvars > consdata2->nvars)
+               || (consdata1->setppctype == SCIP_SETPPCTYPE_PACKING && consdata1->nvars < consdata2->nvars)))); /*lint !e641*/
       return +1;
    }
 }
@@ -1310,7 +1312,6 @@ SCIP_RETCODE dualPresolving(
    assert(idx >= 0 && idx < nvars);
    assert(bestobjval < SCIPinfinity(scip));
 
-   *result = SCIP_SUCCESS;
    noldfixed = *nfixedvars;
 
    /* in case of set packing and set partitioning we fix the dominated variables to zero */
@@ -1441,6 +1442,13 @@ SCIP_RETCODE dualPresolving(
       SCIP_CALL( SCIPdelCons(scip, cons) );
       ++(*ndelconss);
    }
+
+   assert(*nfixedvars >= noldfixed);
+
+   /* set result pointer to SCIP_SUCCESS, if variables could be fixed */
+   if( *nfixedvars != noldfixed )
+      *result = SCIP_SUCCESS;
+
 
    return SCIP_OKAY;
 }
@@ -1781,7 +1789,7 @@ SCIP_RETCODE applyFixings(
                   SCIP_CALL( addCoef(scip, cons, consvars[v2]) );
                }
             }
-            /* we need to degrade this setppc constraint to a linear constraint*/
+            /* we need to degrade this setppc constraint to a linear constraint */
             else if( (ndelconss != NULL && naddconss != NULL) || SCIPconsIsAdded(cons) )
             {
                char name[SCIP_MAXSTRLEN];
@@ -1791,7 +1799,9 @@ SCIP_RETCODE applyFixings(
                int size;
                int k;
 
-               /* it might happen that there are more than one multi-aggregated variable, so we need to get the whole probvar sum over all variables */
+               /* it might happen that there are more than one multi-aggregated variable, so we need to get the whole
+                * probvar sum over all variables
+                */
 
                size = MAX(nconsvars, 1) + consdata->nvars - 1;
 
@@ -1813,7 +1823,7 @@ SCIP_RETCODE applyFixings(
                /* get active variables for new constraint */
                SCIP_CALL( SCIPgetProbvarLinearSum(scip, consvars, consvals, &nconsvars, size, &constant, &requiredsize, TRUE) );
 
-               /* if space was not enough(we found another multi-aggregation), we need to resize the buffers */
+               /* if space was not enough (we found another multi-aggregation), we need to resize the buffers */
                if( requiredsize > nconsvars )
                {
                   SCIP_CALL( SCIPreallocBufferArray(scip, &consvars, requiredsize) );
@@ -1870,7 +1880,7 @@ SCIP_RETCODE applyFixings(
 
                return SCIP_OKAY;
             }
-            /* we need to degrade this logicor constraint to a linear constraint*/
+            /* we need to degrade this setppc constraint to a linear constraint*/
             else
             {
                /* check, if the variable should be replaced with the representative */
@@ -1895,21 +1905,11 @@ SCIP_RETCODE applyFixings(
             /* check, if the variable should be replaced with the representative */
             if( repvar != var )
             {
-#if 0
-#ifndef NDEBUG
-               int oldnfixedzeros = consdata->nfixedzeros;
-               int oldnfixedones = consdata->nfixedones;
-#endif
-#endif
                /* delete old (aggregated) variable */
                SCIP_CALL( delCoefPos(scip, cons, v) );
 
                /* add representative instead */
                SCIP_CALL( addCoef(scip, cons, repvar) );
-#if 0 /* if variable 'var' was multiaggregated to repvar, than repvar could have been fixed already */
-               assert(consdata->nfixedzeros == oldnfixedzeros);
-               assert(consdata->nfixedones == oldnfixedones);
-#endif
             }
             else
                ++v;
@@ -2750,7 +2750,11 @@ SCIP_RETCODE collectCliqueConss(
          return SCIP_OKAY;
 
       if( SCIPconsIsDeleted(cons) )
+      {
+         /* reset nlocaladdconss and continue */
+         nlocaladdconss = 0;
          continue;
+      }
       assert(nlocaladdconss == 0);
 
       SCIP_CALL( processFixings(scip, cons, cutoff, nfixedvars, &addcut, &mustcheck) );
@@ -4797,13 +4801,12 @@ SCIP_RETCODE preprocessCliques(
    int** varconsidxs;                        /* array consisting of constraint indices in which the corresponding variable exists */
    int* varnconss;                           /* array consisting of number of constraints the variable occurs */
    int* maxnvarconsidx;                      /* maximal number of occurances of a variable */
-   int* countofoverlapping;                  /* the amount of variables which are in another constraint */
-   SCIP_Bool* cliquevalues;                  /* values of clique-variables, either one if the varibale is active or zero if the variable is negated */
+   int* countofoverlapping = NULL;           /* the amount of variables which are in another constraint */
+   SCIP_Bool* cliquevalues = NULL;           /* values of clique-variables, either one if the varibale is active or zero if the variable is negated */
 
    SCIP_HASHMAP* vartoindex;                 /* mapping of SCIP variables to indices */
    SCIP_CONSDATA* consdata;
 
-   SCIP_Bool useadditionalmem;
    SCIP_Bool chgcons0;
    int nvars;
    int c;
@@ -4865,8 +4868,6 @@ SCIP_RETCODE preprocessCliques(
    nusefulvars = 0;
    nusefulconss = 0;
    maxnvars = 0;
-
-   useadditionalmem = FALSE;
 
    /* @todo: check for round limit for adding extra clique constraints */
    /* adding clique constraints which arises from global clique information */
@@ -4945,7 +4946,6 @@ SCIP_RETCODE preprocessCliques(
    SCIP_CALL( SCIPallocBufferArray(scip, &cliquevalues, maxnvars) );
    /* allocate temporary memory for counting an overlap of variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &countofoverlapping, nusefulconss) );
-   useadditionalmem = TRUE;
 
    /* sort usefulvars after indices of variables, negated and active counterparts will stand side by side */
    SCIPsortDownPtr((void**)usefulvars, SCIPvarCompActiveAndNegated, nusefulvars);
@@ -5178,11 +5178,8 @@ SCIP_RETCODE preprocessCliques(
    }
 
  TERMINATE:
-   if( useadditionalmem )
-   {
-      SCIPfreeBufferArray(scip, &countofoverlapping);
-      SCIPfreeBufferArray(scip, &cliquevalues);
-   }
+   SCIPfreeBufferArrayNull(scip, &countofoverlapping);
+   SCIPfreeBufferArrayNull(scip, &cliquevalues);
 
    /* free temporary memory for constraints, variables and the mapping between them in reverse order as they were
     * allocated
@@ -5275,7 +5272,8 @@ SCIP_RETCODE addCliques(
          /* add a set partitioning / packing constraint as clique */
          if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING || (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
          {
-            SCIP_CALL( SCIPaddClique(scip, consdata->vars, NULL, consdata->nvars, &infeasible, &nlocalbdchgs) );
+            SCIP_CALL( SCIPaddClique(scip, consdata->vars, NULL, consdata->nvars,
+                  ((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING), &infeasible, &nlocalbdchgs) );
             *nchgbds += nlocalbdchgs;
 
             if( infeasible )
@@ -5499,7 +5497,6 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
    /* sort constraints */
    SCIPsortPtr((void**)usefulconss, setppcConssSort2, nconss);
 
-   nlocaladdconss = 0;
    posreplacements = 0;
    nhashmapentries = 0;
    ndecs = 0;
@@ -5518,6 +5515,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
       SCIP_CONS* cons;
       SCIP_CONSDATA* consdata;
       int oldnfixedvars;
+      nlocaladdconss = 0;
 
       cons = usefulconss[c];
       assert(cons != NULL);
@@ -5626,7 +5624,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
          }
       }
 
-      /* perform dualpresolve on set-packing constraints with exaclty two variables */
+      /* perform dualpresolve on set-packing constraints with exactly two variables */
       if( !donotaggr && consdata->nvars == 2 && dualpresolvingenabled && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
       {
          SCIP_VAR* var;
@@ -5694,7 +5692,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             }
          }
       }
-      else if( !donotaggr && consdata->nvars == 2 )
+      else if( !donotaggr && consdata->nvars == 2 && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
       {
          SCIP_Bool redundant;
 
@@ -5742,14 +5740,14 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
          aggregated = FALSE;
          nuplocks = SCIPvarGetNLocksUp(var);
          ndownlocks = SCIPvarGetNLocksDown(var);
-         assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED && nuplocks >= 0 && ndownlocks >= 1) || (nuplocks >= 1 && ndownlocks >= 0));
+         assert(nuplocks >= 1 && ndownlocks >= 0); /* we are only treating set partitioning and set packing constraints, so every variable in there should have an uplock */
 
-         if( dualpresolvingenabled && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING && (nuplocks == 1 || ndownlocks == 1) && nuplocks + ndownlocks <= 2 )
+         if( dualpresolvingenabled && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING && nuplocks <= 1 && nuplocks + ndownlocks <= 2 )
          {
-            assert((SCIPvarGetStatus(var) == SCIP_VARSTATUS_NEGATED && nuplocks <= 1 && ndownlocks == 1) || (nuplocks == 1 && ndownlocks <= 1));
+            assert(nuplocks == 1 && ndownlocks <= 1);
 
             /* we found a redundant variable in a set-partitioning constraint */
-            if( nuplocks == 0 || ndownlocks == 0 )
+            if( ndownlocks == 0 )
             {
                SCIP_Real objval;
 
@@ -5936,14 +5934,14 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             ++ndecs;
          }
          /* we might have found a redundant variable */
-         else if( nuplocks <= 2 && nuplocks <= 2 && SCIPvarGetNegatedVar(var) != NULL )
+         else if( ndownlocks <= 2 && nuplocks <= 2 && SCIPvarGetNegatedVar(var) != NULL )
          {
             SCIP_CONSDATA* aggrconsdata;
             int image;
             int consindex;
             int varindex;
 
-            /* if we have two times the same variable in a set-partitioning constraint, so we cannot aggregate this */
+            /* if we have two times the same variable in a set-partitioning constraint, we cannot aggregate this */
             if( SCIPhashmapExists(vartoindex, (void*) var) )
             {
                image = (int) (size_t) SCIPhashmapGetImage(vartoindex, (void*) var);
@@ -5983,7 +5981,9 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             {
                assert((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING);
 
-               /* if we have two times the same variable in a set-partitioning constraint, so we cannot aggregate this */
+               /* the negated variable did not occur in a set partitioning constraint (those will be iterated over
+                * first), so we cannot aggregate this variable
+                */
                if( !SCIPhashmapExists(vartoindex, (void*) SCIPvarGetNegatedVar(var)) )
                   continue;
             }
@@ -6019,13 +6019,16 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
             /* must not multi-aggregate variables that are locked more then twice by all setppc constraints */
             if( (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING &&
-               (SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PACKING && nuplocks + ndownlocks > 2 )
+               (SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PACKING )
+            {
+               assert(!dualpresolvingenabled || nuplocks + ndownlocks > 2);
                continue;
+            }
 
             assert((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING ||
                (SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING);
 
-            /* we already remove a variable before, so our positioning information might be wrong, so we need to walk
+            /* we already removed a variable before, so our positioning information might be wrong, so we need to walk
              * over all variables again
              */
             if( chgtype[consindex] )
@@ -6043,6 +6046,8 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
                }
                assert(v2 >= 0);
 #endif
+               assert((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING);
+
                SCIPdebugMessage("multi-aggregating in one set-partitioning or one set-packing constraint\n");
 
                /* perform aggregation on variables resulting from a set-partitioning constraint */
@@ -6059,7 +6064,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
             {
                /* @note it might have happened that we have a variable at hand which exists actually in a set-packing
                 *       constraint and due to some other aggregation we increased the number of locks and reached this
-                *       part of the code, where we would expect only set-partitioning constraint in generally, so in
+                *       part of the code, where we would expect only set-partitioning constraints in general, so in
                 *       such a strange case we cannot aggregate anything
                 */
                if( (SCIP_SETPPCTYPE)aggrconsdata->setppctype != SCIP_SETPPCTYPE_PARTITIONING )
@@ -6067,6 +6072,7 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
                assert(0 <= varindex && varindex < aggrconsdata->nvars);
                assert(aggrconsdata->vars[varindex] == SCIPvarGetNegatedVar(var));
+               assert((SCIP_SETPPCTYPE)aggrconsdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING);
 
                SCIPdebugMessage("multi-aggregating in two set-partitioning or one set-partitioning and -packing constraint\n");
 
@@ -6087,15 +6093,20 @@ SCIP_RETCODE removeDoubleAndSingletonsAndPerformDualpresolve(
 
          if( aggregated )
          {
+            assert(nuplocks >= 1 && ndownlocks >= 0); /* repeated from above */
             ++(*naggrvars);
 
-            if( ((nuplocks == 1 && ndownlocks == 0) || (nuplocks == 0 && ndownlocks == 1)) && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
+            if( nuplocks == 1 && ndownlocks == 0 && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PACKING )
             {
+               assert(deleteconsindex < 0);
+
                SCIP_CALL( delCoefPos(scip, cons, v) );
                ++(*nchgcoefs);
             }
             else if( nuplocks == 1 && ndownlocks == 1 && (SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_PARTITIONING )
             {
+               assert(deleteconsindex < 0);
+
                SCIP_CALL( delCoefPos(scip, cons, v) );
                ++(*nchgcoefs);
 
@@ -6843,6 +6854,7 @@ SCIP_RETCODE createNormalizedSetppc(
    return SCIP_OKAY;
 }
 
+/** check, if linear constraint can be upgraded to set partitioning, packing, or covering constraint */
 static
 SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
 {  /*lint --e{715}*/
@@ -7883,14 +7895,12 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    int startdelconss;
    int c;
    SCIP_Bool cutoff;
-   SCIP_Bool delay;
 
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
-   delay = FALSE;
    *result = SCIP_DIDNOTFIND;
    oldnfixedvars = *nfixedvars;
    oldndelconss = *ndelconss;
@@ -8011,7 +8021,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       }
 
       /* perform dual reductions */
-      if( conshdlrdata->dualpresolving )
+      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
       {
          SCIP_CALL( dualPresolving(scip, cons, nfixedvars, ndelconss, result) );
 
@@ -8048,9 +8058,14 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    /* determine singleton variables in set-partitioning/-packing constraints, or doubleton variables (active and
     * negated) in any combination of set-partitioning and set-packing constraints
     */
-   if( nconss > 1 && ((conshdlrdata->nsetpart > 0 && !SCIPdoNotMultaggr(scip) && conshdlrdata->conshdlrlinear != NULL) || (conshdlrdata->dualpresolving && conshdlrdata->nsetpart < nconss && !SCIPdoNotAggr(scip))) )
+   if( nconss > 1 && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0
+      && ((conshdlrdata->nsetpart > 0 && !SCIPdoNotMultaggr(scip) && conshdlrdata->conshdlrlinear != NULL)
+         || (conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && SCIPallowObjProp(scip)
+               && conshdlrdata->nsetpart < nconss && !SCIPdoNotAggr(scip))) )
    {
-      SCIP_CALL( removeDoubleAndSingletonsAndPerformDualpresolve(scip, conss, nconss, conshdlrdata->dualpresolving, conshdlrdata->conshdlrlinear != NULL, nfixedvars, naggrvars, ndelconss, nchgcoefs, nchgsides, &cutoff) );
+      SCIP_CALL( removeDoubleAndSingletonsAndPerformDualpresolve(scip, conss, nconss, conshdlrdata->dualpresolving
+            && SCIPallowDualReds(scip) && SCIPallowObjProp(scip), conshdlrdata->conshdlrlinear != NULL, nfixedvars,
+            naggrvars, ndelconss, nchgcoefs, nchgsides, &cutoff) );
 
       if( cutoff )
       {
@@ -8062,44 +8077,38 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
    }
 
    /* clique lifting */
-   if( conshdlrdata->cliquelifting && conshdlrdata->enablecliquelifting )
+   if( conshdlrdata->cliquelifting && conshdlrdata->enablecliquelifting && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
-      if( *nfixedvars == oldnfixedvars && *naggrvars == oldnaggrvars && *ndelconss == oldndelconss &&
-         *nchgcoefs == oldnchgcoefs && SCIPisPresolveFinished(scip) )
+      /* add cliques first before lifting variables */
+      SCIP_CALL( addCliques(scip, conss, nconss, firstclique, lastclique, naddconss, ndelconss, nchgbds, &cutoff) );
+
+      if( cutoff )
       {
-         /* add cliques first before lifting variables */
-         SCIP_CALL( addCliques(scip, conss, nconss, firstclique, lastclique, naddconss, ndelconss, nchgbds, &cutoff) );
-
-	 if( cutoff )
-	 {
-	    *result = SCIP_CUTOFF;
-	    return SCIP_OKAY;
-	 }
-
-         firstclique = nconss;
-         lastclique = -1;
-
-         /* lift variables and check for fixings due to clique infomation */
-	 SCIP_CALL( preprocessCliques(scip, conshdlrdata, conss, nconss, nrounds, &firstchange, &firstclique,
-               &lastclique, nfixedvars, naggrvars, ndelconss, nchgcoefs, &cutoff) );
-	 ++(conshdlrdata->nclqpresolve);
-
-	 if( cutoff )
-	 {
-	    *result = SCIP_CUTOFF;
-	    return SCIP_OKAY;
-	 }
-	 else if( oldnfixedvars < *nfixedvars || oldnaggrvars < *naggrvars || oldndelconss < *ndelconss || oldnchgcoefs < *nchgcoefs )
-	    *result = SCIP_SUCCESS;
-
-	 /* remember the number of fixings */
-	 conshdlrdata->noldfixedvars = *nfixedvars + *naggrvars;
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
       }
-      else
-         delay = TRUE;
+
+      firstclique = nconss;
+      lastclique = -1;
+
+      /* lift variables and check for fixings due to clique infomation */
+      SCIP_CALL( preprocessCliques(scip, conshdlrdata, conss, nconss, nrounds, &firstchange, &firstclique,
+            &lastclique, nfixedvars, naggrvars, ndelconss, nchgcoefs, &cutoff) );
+      ++(conshdlrdata->nclqpresolve);
+
+      if( cutoff )
+      {
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+      else if( oldnfixedvars < *nfixedvars || oldnaggrvars < *naggrvars || oldndelconss < *ndelconss || oldnchgcoefs < *nchgcoefs )
+         *result = SCIP_SUCCESS;
+
+      /* remember the number of fixings */
+      conshdlrdata->noldfixedvars = *nfixedvars + *naggrvars;
    }
 
-   if( oldndelconss == *ndelconss )
+   if( oldndelconss == *ndelconss && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
    {
       /* check constraints for redundancy */
       if( conshdlrdata->presolpairwise )
@@ -8147,10 +8156,6 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
 
    conshdlrdata->enablecliquelifting = FALSE;
    conshdlrdata->noldupgrs = nconss - (*ndelconss - startdelconss);
-
-   /* return the correct result code */
-   if( *result != SCIP_CUTOFF && delay )
-      *result = SCIP_DELAYED;
 
    return SCIP_OKAY;
 }
@@ -8700,7 +8705,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
          SCIP_Bool infeasible;
          int ncliquebdchgs;
 
-         SCIP_CALL( SCIPaddClique(scip, twovars, NULL, 2, &infeasible, &ncliquebdchgs) );
+         SCIP_CALL( SCIPaddClique(scip, twovars, NULL, 2, FALSE, &infeasible, &ncliquebdchgs) );
 
          SCIPdebugMessage("new clique of conflict constraint %s led to %d fixings\n", consname, ncliquebdchgs);
 
@@ -8806,7 +8811,7 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitSetppc) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSetppc) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSetppc) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSetppc, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSetppc, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSetppc) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSetppc, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

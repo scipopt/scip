@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -40,6 +40,7 @@ BEGIN {
    writesolufile = 0;   # should a solution file be created from the results
    NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
+   namelength = 18;             # maximal length of instance names (can be increased)
    headerprinted = 0;
 
    nprobs   = 0;
@@ -91,6 +92,8 @@ BEGIN {
       pprob = pprob "\\_" a[i];
 
    # rest variables
+   origvars   = 0;
+   origcons   = 0;
    vars       = 0;
    cons       = 0;
    timeout    = 0;
@@ -116,68 +119,40 @@ BEGIN {
 
 /@03/ { starttime = $2; }
 /@04/ { endtime = $2; }
-/^@05 TIMELIMIT:/ {
-   timelimit = $3;
-}
-/^@05 THREADS:/ {
-   threads = $3;
-}
 
 /^MOSEK Version/ { version = $3; }
 
+/^Reading par file/ {
+   n = split ($5, a, ".");
+   settings = a[n-1];
+}
 #
 # problem size
 #
-/^MOSEK      - constraints/ { cons = $5; vars = $8; }
+/^  Constraints            :/ { origcons = $3; }
+/^  Scalar variables       :/ { origvars = $4; }
+
+/^Optimizer  - threads/ { threads = $5; }
+
 #
 # solution process
 #
-/^An optimal solution/ { logging = 0; }
-/^Maximum amount/ { logging = 0; }
-/^[0-9]/ {
-   if( logging == 1 ) {
-      if( NF == 7 ) {
-         if( $4 != "NA" )
-            pb = $4;
-         if( $5 != "NA" )
-            db = $5;
-      }
-   }
-}
-/^BRANCHES/ { logging = 1; }
-#
-# problem status
-#
-/Problem status  :/ {
-   logging = 0;
-   if( $4 == "PRIMAL_FEASIBLE" )
-      feasible = 1;
-   else if( $4 == "PRIMAL_INFEASIBLE" ) {
-      pb = infty; 
-      db = infty; 
-      feasible = 0; 
-   }
-}
+/^Optimizer  - Constraints            :/ { cons = $5; }
+/^Optimizer  - Scalar variables       :/ { vars = $6; }
 #
 # solution status
-# 
-/^Objective of best integer solution/ { 
-   if( $7 != "Not" )
-      pb = $7;
-   logging = 0; 
-}
-/Solution status : INTEGER_OPTIMAL/ { optimal = 1; }
-/^    Primal - objective:/ { 
-   if( feasible) 
-      pb = $4; 
-   if( optimal )
-      db = $4;
-}
-/^Mixed integer optimizer terminated. Time:/ {
-   tottime   = $6;
-   aborted   = 0;
-}
-/^Number of simplex iterations/ { iters = $6;}
+#
+/^Optimizer terminated. Time:/ { tottime = $4; }
+
+/^  Solution status : OPTIMAL/ { optimal = 1; aborted = 0;}
+/^  Primal.  obj:/ { pb = $3; }
+/^  Dual.    obj:/ { db = $3; }
+
+/^    Interior-point          - iterations/ { iters = $5; }
+/^      Primal simplex        - iterations/ { iters += $6; }
+/^      Dual simplex          - iterations/ { iters += $6; }
+/^      Primal-dual simplex   - iterations/ { iters += $6; }
+/^    Mixed integer           - relaxations/ { iters += $5; }
 
 /^Number of relaxations solved/ { bbnodes = $6;}
 
@@ -187,12 +162,12 @@ BEGIN {
    else if( $5 == "[MSK_RES_OK]" )
       timeout = 0;
    else
-      abort = 1;
+      aborted = 1;
 }
 #
 # evaluation
 #
-# solver status overview (in order of priority): 
+# solver status overview (in order of priority):
 # 1) solver broke before returning solution => abort
 # 2) solver cut off the optimal solution (solu-file-value is not between primal and dual bound) => fail
 #    (especially of problem is claimed to be solved but solution is not the optimal solution)
@@ -203,8 +178,7 @@ BEGIN {
 # 7) otherwise => unknown
 #
 /^=ready=/ {
-   logging = 0;
-   
+
    #since the header depends on the parameter settings it is no longer possible to print it in the BEGIN section
    if( !headerprinted ) {
       printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
@@ -223,26 +197,47 @@ BEGIN {
       printf("\\multicolumn{%d}{r} \\; continue next page \\\\\n", ntexcolumns) >TEXFILE;
       printf("\\bottomrule\n}\n")                                      >TEXFILE;
       printf("\\tablelasttail{\\bottomrule}\n")                        >TEXFILE;
-      printf("\\tablecaption{Mosek with %s settings}\n",settings)       >TEXFILE;
+      printf("\\tablecaption{CPLEX with %s settings}\n",settings)      >TEXFILE;
       printf("\\begin{supertabular*}{\\textwidth}{@{\\extracolsep{\\fill}}lrrrrrrr@{}}\n") >TEXFILE;
 
-      printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
-      printf("Name              | Conss | Vars |   Dual Bound   |  Primal Bound  | Gap% |   Iters |  Nodes |  Time |       \n");
-      printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
+      # prepare header
+      hyphenstr = "";
+      for (i = 0; i < namelength; ++i)
+         hyphenstr = sprintf("%s-", hyphenstr);
+
+      # first part: name of given length
+      tablehead1 = hyphenstr;
+      tablehead2 = sprintf("Name%*s", namelength-4, " ");
+      tablehead3 = hyphenstr;
+
+      # append rest of header
+      tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+----------------+----------------+------+---------+--------+-------+";
+      tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time |";
+      tablehead3 = tablehead3"+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+";
+
+      tablehead1 = tablehead1"--------\n";
+      tablehead2 = tablehead2"       \n";
+      tablehead3 = tablehead3"--------\n";
+
+      printf(tablehead1);
+      printf(tablehead2);
+      printf(tablehead3);
 
       headerprinted = 1;
    }
 
    if( !onlyinsolufile || solstatus[prob] != "" ) {
+
+      #avoid problems when comparing floats and integer (make everything float)
       temp = pb;
       pb = 1.0*temp;
       temp = db;
       db = 1.0*temp;
 
-      bbnodes = max(bbnodes, 1); # in case solver reports 0 nodes if the primal heuristics find the optimal solution in the root node
+      bbnodes = max(bbnodes, 1);  # in case solver reports 0 nodes if the primal heuristics find the optimal solution in the root node
 
       nprobs++;
-    
+
       optimal = 0;
       markersym = "\\g";
       if( abs(pb - db) < 1e-06 && pb < infty ) {
@@ -269,6 +264,23 @@ BEGIN {
       else
          gapstr = " Large";
 
+      if( vars == 0 )
+         probtype = "--";
+      else if( binvars == 0 && intvars == 0 )
+         probtype = "   LP";
+      else if( contvars == 0 ) {
+         if( intvars == 0 && implvars == 0 )
+            probtype = "   BP";
+         else
+            probtype = "   IP";
+      }
+      else {
+         if( intvars == 0 )
+            probtype = "  MBP";
+         else
+            probtype = "  MIP";
+      }
+
       if( aborted && endtime - starttime > timelimit && timelimit > 0.0 ) {
          timeout = 1;
          aborted = 0;
@@ -279,11 +291,11 @@ BEGIN {
       if( timelimit > 0.0 )
          tottime = min(tottime, timelimit);
 
-      printf("%-19s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
-         pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
+      printf("%-*s & %6d & %6d & %14.9g & %14.9g & %6s &%s%8d &%s%7.1f \\\\\n",
+	     namelength, pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime) >TEXFILE;
 
-      printf("%-19s %6d %6d %16.9g %16.9g %6s %9d %8d %7.1f ",
-         shortprob, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
+      printf("%-*s  %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %8d %7d %7.1f ",
+	     namelength, shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, iters, bbnodes, tottime);
 
       if( aborted ) {
          printf("abort\n");
@@ -302,6 +314,16 @@ BEGIN {
          else {
             if (timeout) {
                printf("timeout\n");
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else if (memout) {
+               printf("memlimit\n");
+               timeouttime += tottime;
+               timeouts++;
+            }
+            else if (nodeout) {
+               printf("nodelimit\n");
                timeouttime += tottime;
                timeouts++;
             }
@@ -328,12 +350,22 @@ BEGIN {
             fail++;
          }
          else {
-            if (timeout) {
+            if (timeout || memout || nodeout) {
                if( (pb-db > max(abstol,reltol) && sol[prob]-pb > reltol) || (db-pb > max(abstol,reltol) && pb-sol[prob] > reltol) ) {
                   printf("better\n");
                   timeouttime += tottime;
                   timeouts++;
                }
+	       else if (memout) {
+		  printf("memlimit\n");
+		  timeouttime += tottime;
+		  timeouts++;
+	       }
+	       else if (nodeout) {
+		  printf("nodelimit\n");
+		  timeouttime += tottime;
+		  timeouts++;
+	       }
                else {
                   printf("timeout\n");
                   timeouttime += tottime;
@@ -342,7 +374,7 @@ BEGIN {
             }
             else {
                if( abs(pb - db) <= max(abstol, reltol) ) {
-                  printf("solved\n");
+                  printf("solved not verified\n");
                   pass++;
                }
                else {
@@ -357,11 +389,15 @@ BEGIN {
          reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
          abstol = max(absmipgap, 1e-4);
 
-         if( timeout ) {
+         if( timeout || memout || nodeout ) {
             if( abs(pb) < infty )
                printf("better\n");
-            else
+            else if( timeout )
 	       printf("timeout\n");
+	    else if (memout)
+	       printf("memlimit\n");
+	    else if (nodeout)
+	       printf("nodelimit\n");
 	    timeouttime += tottime;
 	    timeouts++;
          }
@@ -373,8 +409,13 @@ BEGIN {
 	    printf("unknown\n");
       }
       else if( solstatus[prob] == "inf" ) {
-	 if( timeout ) {
-	    printf("timeout\n");
+	 if( timeout || memout || nodeout ) {
+            if( timeout )
+               printf("timeout\n");
+	    else if (memout)
+               printf("memlimit\n");
+            else if (nodeout)
+               printf("nodelimit\n");
 	    timeouttime += tottime;
 	    timeouts++;
 	 }
@@ -392,8 +433,13 @@ BEGIN {
          reltol = max(mipgap, 1e-5) * max(abs(pb),1.0);
          abstol = max(absmipgap, 1e-4);
 
-         if( timeout ) {
-	    printf("timeout\n");
+         if( timeout || memout || nodeout ) {
+            if( timeout )
+	       printf("timeout\n");
+	    else if (memout)
+	       printf("memlimit\n");
+	    else if (nodeout)
+	       printf("nodelimit\n");
 	    timeouttime += tottime;
 	    timeouts++;
          }
@@ -404,7 +450,7 @@ BEGIN {
 	 else
 	    printf("unknown\n");
       }
-   
+
       if( writesolufile ) {
          if( pb == +infty && db == +infty )
             printf("=inf= %-18s\n",prob)>NEWSOLUFILE;
@@ -415,7 +461,7 @@ BEGIN {
          else
             printf("=unkn= %-18s\n",prob)>NEWSOLUFILE;
       }
-   
+
       sbab     += bbnodes;
       scut     += cuts;
       stottime += tottime;
@@ -431,30 +477,30 @@ END {
 
    printf("\\midrule\n")                                                 >TEXFILE;
    printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f \\\\\n",
-      "Total", nprobs, sbab, stottime) >TEXFILE;
+	  "Total", nprobs, sbab, stottime) >TEXFILE;
    printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
-      "Geom. Mean", nodegeom, timegeom) >TEXFILE;
+	  "Geom. Mean", nodegeom, timegeom) >TEXFILE;
    printf("%-14s      &        &        &                &                &        & %9d & %8.1f \\\\\n",
-      "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
+	  "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
    printf("\\bottomrule\n")                                              >TEXFILE;
    printf("\\noalign{\\vspace{6pt}}\n")                                  >TEXFILE;
    printf("\\end{supertabular*}\n")                                      >TEXFILE;
    printf("\\end{center}\n")                                             >TEXFILE;
    printf("\\end{document}\n")                                           >TEXFILE;
 
-   printf("------------------+-------+------+----------------+----------------+------+---------+--------+-------+-------\n");
+   printf("------------------+------+-------+-------+-------+-------+----------------+----------------+------+--------+-------+-------+-------\n");
 
    printf("\n");
    printf("------------------------------[Nodes]---------------[Time]------\n");
    printf("  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom. \n");
    printf("----------------------------------------------------------------\n");
    printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f\n",
-      nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
+	  nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
    printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f\n",
-      nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
+	  nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
    printf("----------------------------------------------------------------\n");
 
-   printf("@02 threads: %g\n", threads);  #threads are only used for interior point method, not in b&b tree (version 6)
+   printf("@02 threads: %g\n", threads);
    printf("@02 timelimit: %g\n", timelimit);
    printf("@01 MOSEK(%s):%s\n", version, settings);
 }

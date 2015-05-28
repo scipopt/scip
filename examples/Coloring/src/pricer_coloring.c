@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -246,8 +246,8 @@ SCIP_Bool isIntegralScalar(
    assert(maxdelta >= 0.0);
 
    sval = val * scalar;
-   downval = EPSFLOOR(sval, 0.0);
-   upval = EPSCEIL(sval, 0.0);
+   downval = EPSFLOOR(sval, 0.0); /*lint !e835*/
+   upval = EPSCEIL(sval, 0.0); /*lint !e835*/
 
    return (SCIPrelDiff(sval, downval) <= maxdelta || SCIPrelDiff(sval, upval) >= mindelta);
 }
@@ -272,8 +272,8 @@ SCIP_Longint getIntegralVal(
    assert(maxdelta >= 0.0);
 
    sval = val * scalar;
-   downval = EPSFLOOR(sval, 0.0);
-   upval = EPSCEIL(sval, 0.0);
+   downval = EPSFLOOR(sval, 0.0); /*lint !e835*/
+   upval = EPSCEIL(sval, 0.0); /*lint !e835*/
 
    if( SCIPrelDiff(sval, upval) >= mindelta )
       intval = (SCIP_Longint) upval;
@@ -341,7 +341,7 @@ TCLIQUE_NEWSOL(tcliqueNewsolPricer)
    /* accept the solution as new incumbent */
    *acceptsol = TRUE;
    
-}
+}/*lint !e715*/
 
 
 /*
@@ -396,7 +396,8 @@ SCIP_DECL_PRICERINITSOL(pricerInitsolColoring)
    assert(pricerdata != NULL);
    
    /* set maximal number of variables to be priced in each round */
-   SCIPsetIntParam(scip, "pricers/coloring/maxvarsround", MAX(5,COLORprobGetNStableSets(scip))*MAX(50,COLORprobGetNNodes(scip))/50);
+   SCIP_CALL( SCIPsetIntParam(scip, "pricers/coloring/maxvarsround",
+         MAX(5,COLORprobGetNStableSets(scip))*MAX(50,COLORprobGetNNodes(scip))/50) ); /*lint !e666*/
 
    pricerdata->bbnode = NULL;
 
@@ -575,10 +576,10 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
          pricerdata->nstablesetsfound += 1;
          
          /* create variable for the stable set and add it to SCIP */
-         SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
-               TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
+         SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
+               TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) ); /*lint !e571*/
 
-         COLORprobAddVarForStableSet(scip, setnumber, var);
+         SCIP_CALL( COLORprobAddVarForStableSet(scip, setnumber, var) );
          SCIPvarMarkDeletable(var);
          SCIP_CALL( SCIPaddPricedVar(scip, var, 1.0) );
          SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
@@ -591,8 +592,8 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
          }
       }
       
-      SCIPfreeBufferArray(scip, &sortednodes);
       SCIPfreeBufferArray(scip, &maxstablesetnodes);
+      SCIPfreeBufferArray(scip, &sortednodes);
 
       SCIPdebugMessage("%d vars created via greedy\n", pricerdata->nstablesetsfound);
    } 
@@ -628,14 +629,14 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
       {
          /* compute factor, which makes the weights integral */
          scalesuccess = FALSE;
-         SCIP_CALL( SCIPcalcIntegralScalar(pricerdata->pi, nnodes, -MINDELTA, MAXDELTA, MAXDNOM, MAXSCALE, 
+         SCIP_CALL( SCIPcalcIntegralScalar(pricerdata->pi, nnodes, -MINDELTA, MAXDELTA, MAXDNOM, MAXSCALE,
                &(pricerdata->scalefactor), &scalesuccess) );
       }
       assert(scalesuccess);
       /* change the weights for the nodes in the graph to the dual solution value * scalefactor */
       for ( i = 0; i < nnodes; i++ )
       {
-         tcliqueChangeWeight(cgraph, i, getIntegralVal(pricerdata->pi[i], pricerdata->scalefactor, -MINDELTA, MAXDELTA));
+         tcliqueChangeWeight(cgraph, i, getIntegralVal(pricerdata->pi[i], pricerdata->scalefactor, -MINDELTA, MAXDELTA)); /*lint !e712 !e747*/
       }
       /* clear the improvingstablesets array */
       pricerdata->actindex = -1;
@@ -692,10 +693,10 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
                if ( setnumber >= 0  )
                {
                   /* create variable for the stable set and add it to SCIP */
-                  SCIP_CALL( SCIPcreateVar(pricerdata->scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
-                        TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) );
+                  SCIP_CALL( SCIPcreateVar(pricerdata->scip, &var, NULL, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
+                        TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*)(size_t)setnumber) ); /*lint !e571*/
 
-                  COLORprobAddVarForStableSet(pricerdata->scip, setnumber, var);
+                  SCIP_CALL( COLORprobAddVarForStableSet(pricerdata->scip, setnumber, var) );
                   SCIPvarMarkDeletable(var);
                   SCIP_CALL( SCIPaddPricedVar(pricerdata->scip, var, 1.0) );
                   SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
@@ -716,20 +717,20 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostColoring)
       {
          if ( SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
          {
-            pricerdata->lowerbound = MAX( pricerdata->lowerbound, (SCIPgetLPObjval(scip) + ((1.0 - maxredcost) * SCIPgetPrimalbound(scip))) );
+            pricerdata->lowerbound = MAX( pricerdata->lowerbound,
+               (SCIPgetLPObjval(scip) + ((1.0 - maxredcost) * SCIPgetPrimalbound(scip))) ); /*lint !e666*/
          }
       }
    }
 
-   
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 
 /** farkas pricing method of variable pricer for infeasible LPs */
 static
 SCIP_DECL_PRICERFARKAS(pricerFarkasColoring)
-{  
+{
    TCLIQUE_GRAPH* graph;
    int nnodes;                  /* number of nodes */
    int* maxstablesetnodes;      /* array containig the nodes of the max stable set */
@@ -787,15 +788,15 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasColoring)
    /* create maximal Stable Sets until all Nodes are covered */
    while ( hasUncoloredNode(graph, colored) )
    {
-      greedyStableSet(scip, graph, colored, maxstablesetnodes, &nmaxstablesetnodes);
+      SCIP_CALL( greedyStableSet(scip, graph, colored, maxstablesetnodes, &nmaxstablesetnodes) );
       SCIPsortDownInt(maxstablesetnodes, nmaxstablesetnodes);
       SCIP_CALL( COLORprobAddNewStableSet(scip, maxstablesetnodes, nmaxstablesetnodes, &setnumber) );
       assert(setnumber != -1);
-      
-      /* create variable for the stable set and add it to SCIP*/
-      SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0, 1, 1, SCIP_VARTYPE_BINARY, 
-            TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*) (size_t) setnumber) );
-      COLORprobAddVarForStableSet(scip, setnumber, var);
+
+      /* create variable for the stable set and add it to SCIP */
+      SCIP_CALL( SCIPcreateVar(scip, &var, NULL, 0.0, 1.0, 1.0, SCIP_VARTYPE_BINARY,
+            TRUE, TRUE, NULL, NULL, NULL, NULL, (SCIP_VARDATA*) (size_t) setnumber) ); /*lint !e571*/
+      SCIP_CALL( COLORprobAddVarForStableSet(scip, setnumber, var) );
       SCIPvarMarkDeletable(var);
       SCIP_CALL( SCIPaddPricedVar(scip, var, 1.0) );
       SCIP_CALL( SCIPchgVarUbLazy(scip, var, 1.0) );
@@ -811,9 +812,9 @@ SCIP_DECL_PRICERFARKAS(pricerFarkasColoring)
    /* free memory */
    SCIPfreeBufferArray(scip, &maxstablesetnodes);
    SCIPfreeBufferArray(scip, &colored);
-   return SCIP_OKAY;
 
-}
+   return SCIP_OKAY;
+}/*lint !e715*/
 
 /** method to call, when the maximal number of variables priced in each round is changed */
 static
@@ -853,7 +854,7 @@ SCIP_DECL_PARAMCHGD(paramChgdMaxvarsround)
    SCIP_CALL( SCIPallocMemoryArray(scip, &(pricerdata->improvingstablesets), pricerdata->maxvarsround) );
    for ( i = 0; i < pricerdata->maxvarsround; i++ )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(pricerdata->improvingstablesets[i]), COLORprobGetNNodes(scip)) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(pricerdata->improvingstablesets[i]), COLORprobGetNNodes(scip)) ); /*lint !e866*/
    }
 
    SCIPdebugMessage("maxvarsround changed from %d to %d\n", pricerdata->oldmaxvarsround, pricerdata->maxvarsround);

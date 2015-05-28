@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -140,6 +140,19 @@ void SCIPstatUpdateMemsaveMode(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_MEM*             mem                 /**< block memory pools */
+   );
+
+/** enables or disables all statistic clocks of \p stat concerning LP execution time, strong branching time, etc.
+ *
+ *  @note: The (pre-)solving time clocks which are relevant for the output during (pre-)solving
+ *         are not affected by this method
+ *
+ *  @see: For completely disabling all timing of SCIP, consider setting the parameter timing/enabled to FALSE
+ */
+extern
+void SCIPstatEnableOrDisableStatClocks(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   SCIP_Bool             enable              /**< should the LP clocks be enabled? */
    );
 
 #ifdef __cplusplus

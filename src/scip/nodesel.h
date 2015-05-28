@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,6 +31,7 @@
 #include "scip/type_stat.h"
 #include "scip/type_lp.h"
 #include "scip/type_tree.h"
+#include "scip/type_reopt.h"
 #include "scip/pub_nodesel.h"
 
 #ifdef __cplusplus
@@ -165,6 +166,7 @@ SCIP_RETCODE SCIPnodepqBound(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    );
@@ -315,6 +317,12 @@ void SCIPnodeselSetExitsol(
    SCIP_DECL_NODESELEXITSOL ((*nodeselexitsol))/**< solving process deinitialization method of node selector */
    );
 
+/** enables or disables all clocks of \p nodesel, depending on the value of the flag */
+extern
+void SCIPnodeselEnableOrDisableClocks(
+   SCIP_NODESEL*         nodesel,            /**< the node selector for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the node selector be enabled? */
+   );
 
 #ifdef __cplusplus
 }

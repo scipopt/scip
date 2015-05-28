@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -55,8 +55,9 @@
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                               *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
+
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define DEFAULT_DECOMPOSENORMALPBCONS FALSE /**< decompose all normal pseudo boolean constraint into a "linear" constraint "and" constrainst */
 #define DEFAULT_DECOMPOSEINDICATORPBCONS TRUE /**< decompose all indicator pseudo boolean constraint into a "linear" constraint "and" constrainst */
@@ -915,10 +916,14 @@ SCIP_RETCODE transformToOrig(
          assert(SCIPgetVarsAnd(scip, consanddata->origcons) != NULL);
          consanddata->nvars = SCIPgetNVarsAnd(scip, consanddata->origcons);
          consanddata->svars = consanddata->nvars;
-         SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(consanddata->vars), SCIPgetVarsAnd(scip, consanddata->origcons), consanddata->nvars) );
 
-         /* sort variables */
-         SCIPsortPtr((void**)(consanddata->vars), SCIPvarComp, consanddata->nvars);
+         if( consanddata->nvars > 0 )
+         {
+            SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(consanddata->vars), SCIPgetVarsAnd(scip, consanddata->origcons), consanddata->nvars) );
+
+            /* sort variables */
+            SCIPsortPtr((void**)(consanddata->vars), SCIPvarComp, consanddata->nvars);
+         }
 
          /* check that the hash map and tabkle are still having all information */
          if( conshdlrdata->inithashmapandtable )
@@ -3759,13 +3764,17 @@ SCIP_RETCODE computeConsAndDataChanges(
       nnewvars = SCIPgetNVarsAnd(scip, consanddata->cons);
       newvars = SCIPgetVarsAnd(scip, consanddata->cons);
 
+      /* stop if the constraint has no variables or there was an error (coverity issue) */
+      if( nnewvars <= 0 )
+         continue;
+
 #ifndef NDEBUG
       /* check that old variables are sorted */
       for( v = nvars - 1; v > 0; --v )
-         assert(SCIPvarGetIndex(vars[v]) > SCIPvarGetIndex(vars[v - 1]));
+         assert(SCIPvarGetIndex(vars[v]) >= SCIPvarGetIndex(vars[v - 1]));
       /* check that new variables are sorted */
       for( v = nnewvars - 1; v > 0; --v )
-         assert(SCIPvarGetIndex(newvars[v]) > SCIPvarGetIndex(newvars[v - 1]));
+         assert(SCIPvarGetIndex(newvars[v]) >= SCIPvarGetIndex(newvars[v - 1]));
 #endif
 
       /* check for changings, if and-constraint did not change we do not need to copy all variables */
@@ -3950,7 +3959,7 @@ SCIP_RETCODE correctLocksAndCaptures(
       res2 = SCIPgetResultantAnd(scip, consanddatas[c - 1]->cons);
       assert(res2 != NULL);
 
-      assert(SCIPvarGetIndex(res1) > SCIPvarGetIndex(res2));
+      assert(SCIPvarGetIndex(res1) >= SCIPvarGetIndex(res2));
    }
 #endif
 
@@ -4384,7 +4393,7 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, FALSE, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
 
@@ -4427,7 +4436,7 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, FALSE, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
 
@@ -4553,7 +4562,7 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, FALSE, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
 
@@ -4597,7 +4606,7 @@ SCIP_RETCODE addCliques(
                /* @todo: check whether it is better to only add the clique or to add the setppc constraint or do both */
 
                /* add clique */
-               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, cutoff, &nchgbdslocal) );
+               SCIP_CALL( SCIPaddClique(scip, clqvars, NULL, 2, FALSE, cutoff, &nchgbdslocal) );
                if( *cutoff )
                   goto TERMINATE;
 
@@ -8525,7 +8534,7 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitPseudoboolean) );
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitprePseudoboolean) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolPseudoboolean, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYPRESOL) );
+         CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintPseudoboolean) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransPseudoboolean) );
 
@@ -8650,6 +8659,10 @@ SCIP_RETCODE SCIPcreateConsPseudobooleanWithConss(
       nvars = SCIPgetNVarsAnd(scip, andconss[c]);
       assert(vars != NULL && nvars > 0);
       assert(res != NULL);
+
+      /* stop if the constraint has 0 variables or an error occurred (coverity issue) */
+      if( nvars <= 0 )
+         continue;
 
       /* if allocated memory in this for loop was already used, allocate a new block, otherwise we only need to copy the variables */
       if( memisinvalid )

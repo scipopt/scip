@@ -3,19 +3,21 @@
 /*                  This file is part of the library                         */
 /*          BMS --- Block Memory Shell                                       */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  BMS is distributed under the terms of the ZIB Academic License.          */
 /*                                                                           */
 /*  You should have received a copy of the ZIB Academic License              */
-/*  along with BMS; see the file COPYING. If not email to achterberg@zib.de. */
+/*  along with BMS; see the file COPYING. If not email to scip@zib.de.       */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   memory.c
  * @brief  memory allocation routines
  * @author Tobias Achterberg
+ * @author Gerald Gamrath
+ * @author Marc Pfetsch
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -28,6 +30,8 @@
 #ifdef WITH_SCIPDEF
 #include "scip/def.h"
 #include "scip/pub_message.h"
+#else
+#include <stdint.h>
 #endif
 
 #include "blockmemshell/memory.h"
@@ -59,6 +63,32 @@
 #define MIN(x,y) ((x) <= (y) ? (x) : (y))
 #endif
 
+#ifndef SCIP_LONGINT_FORMAT
+#if defined(_WIN32) || defined(_WIN64)
+#define LONGINT_FORMAT           "I64d"
+#else
+#define LONGINT_FORMAT           "lld"
+#endif
+#else
+#define LONGINT_FORMAT SCIP_LONGINT_FORMAT
+#endif
+
+#ifndef SCIP_SIZET_FORMAT
+#if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
+#define SIZET_FORMAT           "lu"
+#else
+#define SIZET_FORMAT           "zu"
+#endif
+#else
+#define SIZET_FORMAT SCIP_SIZET_FORMAT
+#endif
+
+#ifndef SCIP_MAXMEMSIZE
+/* we take SIZE_MAX / 2 to detect negative sizes which got a very large value when casting to (unsigned) size_t */
+#define MAXMEMSIZE SIZE_MAX / 2
+#else
+#define MAXMEMSIZE SCIP_MAXMEMSIZE
+#endif
 
 
 
@@ -84,7 +114,7 @@ struct Memlist
 };
 
 static MEMLIST*          memlist = NULL;     /**< global memory list for debugging purposes */
-static long long         memused = 0;        /**< number of allocated bytes */
+static size_t            memused = 0;        /**< number of allocated bytes */
 
 #ifdef CHECKMEM
 /** checks, whether the number of allocated bytes match the entries in the memory list */
@@ -94,7 +124,7 @@ void checkMemlist(
    )
 {
    MEMLIST* list = memlist;
-   long long used = 0;
+   size_t used = 0;
 
    while( list != NULL )
    {
@@ -130,7 +160,7 @@ void addMemlistEntry(
    list->line = line;
    list->next = memlist;
    memlist = list;
-   memused += (long long)size;
+   memused += size;
    checkMemlist();
 }
 
@@ -159,14 +189,15 @@ void removeMemlistEntry(
       assert(ptr == list->ptr);
 
       *listptr = list->next;
-      memused -= (long long)list->size;
+      assert( list->size <= memused );
+      memused -= list->size;
       free(list->filename);
       free(list);
    }
    else
    {
       printErrorHeader(filename, line);
-      printError("Tried to free unknown pointer <%p>\n", ptr);
+      printError("Tried to free unknown pointer <%p>.\n", ptr);
    }
    checkMemlist();
 }
@@ -193,21 +224,20 @@ void BMSdisplayMemory_call(
    )
 {
    MEMLIST* list;
-   long long used;
+   size_t used = 0;
 
    printInfo("Allocated memory:\n");
    list = memlist;
-   used = 0;
    while( list != NULL )
    {
-      printInfo("%12p %8lld %s:%d\n", list->ptr, (long long)(list->size), list->filename, list->line);
-      used += (long long)list->size;
+      printInfo("%12p %8"SIZET_FORMAT" %s:%d\n", list->ptr, list->size, list->filename, list->line);
+      used += list->size;
       list = list->next;
    }
-   printInfo("Total:    %8lld\n", memused);
+   printInfo("Total:    %8"SIZET_FORMAT"\n", memused);
    if( used != memused )
    {
-      errorMessage("Used memory in list sums up to %lld instead of %lld\n", used, memused);
+      errorMessage("Used memory in list sums up to %"SIZET_FORMAT" instead of %"SIZET_FORMAT"\n", used, memused);
    }
    checkMemlist();
 }
@@ -229,7 +259,7 @@ long long BMSgetMemoryUsed_call(
    void
    )
 {
-   return memused;
+   return (long long) memused;
 }
 
 #else
@@ -252,7 +282,7 @@ void BMSdisplayMemory_call(
    )
 {
 #ifdef NPARASCIP
-   printInfo("optimized version of memory shell linked - no memory diagnostics available\n");
+   printInfo("Optimized version of memory shell linked - no memory diagnostics available.\n");
 #endif
 }
 
@@ -262,7 +292,7 @@ void BMScheckEmptyMemory_call(
    )
 {
 #ifdef NPARASCIP
-   printInfo("optimized version of memory shell linked - no memory leakage check available\n");
+   printInfo("Optimized version of memory shell linked - no memory leakage check available.\n");
 #endif
 }
 
@@ -276,30 +306,39 @@ long long BMSgetMemoryUsed_call(
 
 #endif
 
-/** allocates memory and initializes it with 0; returns NULL if memory allocation failed */
+/** allocates array and initializes it with 0; returns NULL if memory allocation failed */
 void* BMSallocClearMemory_call(
    size_t                num,                /**< number of memory element to allocate */
-   size_t                size,               /**< size of one memory element to allocate */
+   size_t                typesize,           /**< size of one memory element to allocate */
    const char*           filename,           /**< source file where the allocation is performed */
    int                   line                /**< line number in source file where the allocation is performed */
    )
 {
    void* ptr;
 
-   debugMessage("calloc %lld elements of %lld bytes [%s:%d]\n", (long long) num, (long long)size, filename, line);
+   debugMessage("calloc %"SIZET_FORMAT" elements of %"SIZET_FORMAT" bytes [%s:%d]\n", num, typesize, filename, line);
+
+#ifndef NDEBUG
+   if ( num > (MAXMEMSIZE / typesize) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
+      return NULL;
+   }
+#endif
 
    num = MAX(num, 1);
-   size = MAX(size, 1);
-   ptr = calloc(num, size);
+   typesize = MAX(typesize, 1);
+   ptr = calloc(num, typesize);
 
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for allocation of %lld bytes\n", ((long long) num) * ((long long) size));
+      printError("Insufficient memory for allocation of %"SIZET_FORMAT" bytes.\n", num * typesize);
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
-      addMemlistEntry(ptr, num*size, filename, line);
+      addMemlistEntry(ptr, num*typesize, filename, line);
 #endif
 
    return ptr;
@@ -314,7 +353,16 @@ void* BMSallocMemory_call(
 {
    void* ptr;
 
-   debugMessage("malloc %lld bytes [%s:%d]\n", (long long)size, filename, line);
+   debugMessage("malloc %"SIZET_FORMAT" bytes [%s:%d]\n", size, filename, line);
+
+#ifndef NDEBUG
+   if ( size > MAXMEMSIZE )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
+      return NULL;
+   }
+#endif
 
    size = MAX(size, 1);
    ptr = malloc(size);
@@ -322,7 +370,46 @@ void* BMSallocMemory_call(
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for allocation of %lld bytes\n", (long long) size);
+      printError("Insufficient memory for allocation of %"SIZET_FORMAT" bytes.\n", size);
+   }
+#if !defined(NDEBUG) && defined(NPARASCIP)
+   else
+      addMemlistEntry(ptr, size, filename, line);
+#endif
+
+   return ptr;
+}
+
+/** allocates array; returns NULL if memory allocation failed */
+void* BMSallocMemoryArray_call(
+   size_t                num,                /**< number of components of array to allocate */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file where the allocation is performed */
+   int                   line                /**< line number in source file where the allocation is performed */
+   )
+{
+   void* ptr;
+   size_t size;
+
+   debugMessage("malloc %"SIZET_FORMAT" elements of %"SIZET_FORMAT" bytes [%s:%d]\n", num, typesize, filename, line);
+
+#ifndef NDEBUG
+   if ( num > (MAXMEMSIZE / typesize) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
+      return NULL;
+   }
+#endif
+
+   size = num * typesize;
+   size = MAX(size, 1);
+   ptr = malloc(size);
+
+   if( ptr == NULL )
+   {
+      printErrorHeader(filename, line);
+      printError("Insufficient memory for allocation of %"SIZET_FORMAT" bytes.\n", size);
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
@@ -347,20 +434,70 @@ void* BMSreallocMemory_call(
       removeMemlistEntry(ptr, filename, line);
 #endif
 
+#ifndef NDEBUG
+   if ( size > MAXMEMSIZE )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
+      return NULL;
+   }
+#endif
+
    size = MAX(size, 1);
    newptr = realloc(ptr, size);
 
    if( newptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for reallocation of %lld bytes\n", (long long) size);
+      printError("Insufficient memory for reallocation of %"SIZET_FORMAT" bytes.\n", size);
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
       addMemlistEntry(newptr, size, filename, line);
 #endif
 
-   /*   fprintf(stderr, "mem: %p %d\n", newptr, (int)size); */
+   return newptr;
+}
+
+/** reallocates array; returns NULL if memory allocation failed */
+void* BMSreallocMemoryArray_call(
+   void*                 ptr,                /**< pointer to memory to reallocate */
+   size_t                num,                /**< number of components of array to allocate */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file where the reallocation is performed */
+   int                   line                /**< line number in source file where the reallocation is performed */
+   )
+{
+   void* newptr;
+   size_t size;
+
+#if !defined(NDEBUG) && defined(NPARASCIP)
+   if( ptr != NULL )
+      removeMemlistEntry(ptr, filename, line);
+#endif
+
+#ifndef NDEBUG
+   if ( num > (MAXMEMSIZE / typesize) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
+      return NULL;
+   }
+#endif
+
+   size = num * typesize;
+   size = MAX(size, 1);
+   newptr = realloc(ptr, size);
+
+   if( newptr == NULL )
+   {
+      printErrorHeader(filename, line);
+      printError("Insufficient memory for reallocation of %"SIZET_FORMAT" bytes.\n", size);
+   }
+#if !defined(NDEBUG) && defined(NPARASCIP)
+   else
+      addMemlistEntry(newptr, size, filename, line);
+#endif
 
    return newptr;
 }
@@ -429,24 +566,64 @@ void* BMSduplicateMemory_call(
    return ptr;
 }
 
-/** frees an allocated memory element */
+/** allocates array and copies the contents of the given source array into the new array */
+void* BMSduplicateMemoryArray_call(
+   const void*           source,             /**< pointer to source memory element */
+   size_t                num,                /**< number of components of array to allocate */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file where the duplication is performed */
+   int                   line                /**< line number in source file where the duplication is performed */
+   )
+{
+   void* ptr;
+
+   assert(source != NULL || num == 0);
+
+   ptr = BMSallocMemoryArray_call(num, typesize, filename, line);
+   if( ptr != NULL )
+      BMScopyMemory_call(ptr, source, num * typesize);
+
+   return ptr;
+}
+
+/** frees an allocated memory element and sets pointer to NULL */
 void BMSfreeMemory_call(
-   void*                 ptr,                /**< pointer to memory element */
+   void**                ptr,                /**< pointer to pointer to memory element */
    const char*           filename,           /**< source file where the deallocation is performed */
    int                   line                /**< line number in source file where the deallocation is performed */
    )
 {
-   if( ptr != NULL )
+   assert( ptr != NULL );
+   if( *ptr != NULL )
    {
 #if !defined(NDEBUG) && defined(NPARASCIP)
-      removeMemlistEntry(ptr, filename, line);
+      removeMemlistEntry(*ptr, filename, line);
 #endif
-      free(ptr);
+      free(*ptr);
+      *ptr = NULL;
    }
    else
    {
       printErrorHeader(filename, line);
-      printError("Tried to free null pointer\n");
+      printError("Tried to free null pointer.\n");
+   }
+}
+
+/** frees an allocated memory element if pointer is not NULL and sets pointer to NULL */
+void BMSfreeMemoryNull_call(
+   void**                ptr,                /**< pointer to pointer to memory element */
+   const char*           filename,           /**< source file where the deallocation is performed */
+   int                   line                /**< line number in source file where the deallocation is performed */
+   )
+{
+   assert( ptr != NULL );
+   if ( *ptr != NULL )
+   {
+#if !defined(NDEBUG) && defined(NPARASCIP)
+      removeMemlistEntry(*ptr, filename, line);
+#endif
+      free(*ptr);
+      *ptr = NULL;
    }
 }
 
@@ -901,7 +1078,7 @@ int createChunk(
    /* create new chunk */
    assert(BMSisAligned(sizeof(CHUNK)));
    assert( chkmem->elemsize < INT_MAX / storesize );
-   assert( sizeof(CHUNK) < UINT_MAX - (size_t)(storesize * chkmem->elemsize) );
+   assert( sizeof(CHUNK) < MAXMEMSIZE - (size_t)(storesize * chkmem->elemsize) ); /*lint !e571 !e647*/
    BMSallocMemorySize(&newchunk, sizeof(CHUNK) + storesize * chkmem->elemsize);
    if( newchunk == NULL )
       return FALSE;
@@ -918,8 +1095,7 @@ int createChunk(
    newchunk->eagerfreesize = 0;
    newchunk->arraypos = -1;
 
-   debugMessage("allocated new chunk %p: %d elements with size %lld\n", 
-      (void*)newchunk, newchunk->storesize, (long long)(newchunk->elemsize));
+   debugMessage("allocated new chunk %p: %d elements with size %d\n", (void*)newchunk, newchunk->storesize, newchunk->elemsize);
 
    /* add new memory to the lazy free list */
    for( i = 0; i < newchunk->storesize - 1; ++i )
@@ -1062,7 +1238,8 @@ BMS_CHKMEM* createChkmem(
 {
    BMS_CHKMEM* chkmem;
 
-   assert(BMSisAligned((size_t)size));
+   assert(size >= 0);
+   assert(BMSisAligned((size_t)size)); /*lint !e571*/
 
    BMSallocMemory(&chkmem);
    if( chkmem == NULL )
@@ -1258,8 +1435,7 @@ void freeChkmemElement(
       BMS_CHKMEM* correctchkmem;
 
       printErrorHeader(filename, line);
-      printError("pointer %p does not belong to chunk block %p (size: %lld)\n", 
-         ptr, chkmem, (long long)(chkmem->elemsize));
+      printError("Pointer %p does not belong to chunk block %p (size: %d).\n", ptr, chkmem, chkmem->elemsize);
    }
 #endif
 
@@ -1296,7 +1472,7 @@ BMS_CHKMEM* BMScreateChunkMemory_call(
    if( chkmem == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for chunk block\n");
+      printError("Insufficient memory for chunk block.\n");
    }
    debugMessage("created chunk memory %p [elemsize: %d]\n", (void*)chkmem, (int)size);
 
@@ -1317,7 +1493,7 @@ void BMSclearChunkMemory_call(
    else
    {
       printErrorHeader(filename, line);
-      printError("Tried to clear null chunk block\n");
+      printError("Tried to clear null chunk block.\n");
    }
 }
 
@@ -1337,7 +1513,7 @@ void BMSdestroyChunkMemory_call(
    else
    {
       printErrorHeader(filename, line);
-      printError("Tried to destroy null chunk block\n");
+      printError("Tried to destroy null chunk block.\n");
    }
 }
 
@@ -1359,9 +1535,9 @@ void* BMSallocChunkMemory_call(
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for new chunk\n");
+      printError("Insufficient memory for new chunk.\n");
    }
-   debugMessage("alloced %8lld bytes in %p [%s:%d]\n", (long long)size, (void*)ptr, filename, line);
+   debugMessage("alloced %8"SIZET_FORMAT" bytes in %p [%s:%d]\n", size, (void*)ptr, filename, line);
 
    checkChkmem(chkmem);
 
@@ -1390,10 +1566,10 @@ void* BMSduplicateChunkMemory_call(
    return ptr;
 }
 
-/** frees a memory element of the given chunk block */
+/** frees a memory element of the given chunk block and sets pointer to NULL */
 void BMSfreeChunkMemory_call(
    BMS_CHKMEM*           chkmem,             /**< chunk block */
-   void*                 ptr,                /**< memory element to free */
+   void**                ptr,                /**< pointer to pointer to memory element to free */
    size_t                size,               /**< size of memory element to allocate (only needed for sanity check) */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
@@ -1401,20 +1577,46 @@ void BMSfreeChunkMemory_call(
 {
    assert(chkmem != NULL);
    assert((int)size == chkmem->elemsize);
+   assert( ptr != NULL );
 
-   debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)chkmem->elemsize, ptr, filename, line);
+   if ( *ptr != NULL )
+   {
+      debugMessage("free    %8d bytes in %p [%s:%d]\n", chkmem->elemsize, *ptr, filename, line);
 
-   if( ptr == NULL )
+      /* free memory in chunk block */
+      freeChkmemElement(chkmem, *ptr, filename, line);
+      checkChkmem(chkmem);
+      *ptr = NULL;
+   }
+   else
    {
       printErrorHeader(filename, line);
-      printError("Tried to free null block pointer\n");
-      return;
+      printError("Tried to free null chunk pointer.\n");
    }
+}
 
-   /* free memory in chunk block */
-   freeChkmemElement(chkmem, ptr, filename, line);
+/** frees a memory element of the given chunk block if pointer is not NULL and sets pointer to NULL */
+void BMSfreeChunkMemoryNull_call(
+   BMS_CHKMEM*           chkmem,             /**< chunk block */
+   void**                ptr,                /**< pointer to pointer to memory element to free */
+   size_t                size,               /**< size of memory element to allocate (only needed for sanity check) */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   assert(chkmem != NULL);
+   assert((int)size == chkmem->elemsize);
+   assert( ptr != NULL );
 
-   checkChkmem(chkmem);
+   if ( *ptr != NULL )
+   {
+      debugMessage("free    %8d bytes in %p [%s:%d]\n", chkmem->elemsize, *ptr, filename, line);
+
+      /* free memory in chunk block */
+      freeChkmemElement(chkmem, *ptr, filename, line);
+      checkChkmem(chkmem);
+      *ptr = NULL;
+   }
 }
 
 /** calls garbage collection of chunk block and frees chunks without allocated memory elements */
@@ -1498,9 +1700,10 @@ void checkBlkmem(
 #endif
 
 
-/** finds the chunk block, to whick the given pointer belongs to;
- *  this could be done by selecting the chunk block of the corresponding element size, but in a case of an
- *  error (free gives an incorrect element size), we want to identify and output the correct element size
+/** finds the chunk block, to whick the given pointer belongs to
+ *
+ *  This could be done by selecting the chunk block of the corresponding element size, but in a case of an
+ *  error (free gives an incorrect element size), we want to identify and output the correct element size.
  */
 static
 BMS_CHKMEM* findChkmem(
@@ -1530,7 +1733,8 @@ int getHashNumber(
    int                   size                /**< element size */
    )
 {
-   assert(BMSisAligned((size_t)size));
+   assert(size >= 0);
+   assert(BMSisAligned((size_t)size)); /*lint !e571*/
 
    return (size % CHKHASH_SIZE);
 }
@@ -1559,7 +1763,7 @@ BMS_BLKMEM* BMScreateBlockMemory_call(
    else
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for block memory header\n");
+      printError("Insufficient memory for block memory header.\n");
    }
 
    return blkmem;
@@ -1594,7 +1798,7 @@ void BMSclearBlockMemory_call(
    else
    {
       printErrorHeader(filename, line);
-      printError("Tried to clear null block memory\n");
+      printError("Tried to clear null block memory.\n");
    }
 }
 
@@ -1616,12 +1820,13 @@ void BMSdestroyBlockMemory_call(
    else
    {
       printErrorHeader(filename, line);
-      printError("Tried to destroy null block memory\n");
+      printError("Tried to destroy null block memory.\n");
    }
 }
 
-/** allocates memory in the block memory pool */
-void* BMSallocBlockMemory_call(
+/** work for allocating memory in the block memory pool */
+inline static
+void* BMSallocBlockMemory_work(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    size_t                size,               /**< size of memory element to allocate */
    const char*           filename,           /**< source file of the function call */
@@ -1650,7 +1855,7 @@ void* BMSallocBlockMemory_call(
       if( *chkmemptr == NULL )
       {
 	 printErrorHeader(filename, line);
-         printError("Insufficient memory for chunk block\n");
+         printError("Insufficient memory for chunk block.\n");
 	 return NULL;
       }
 #ifndef NDEBUG
@@ -1664,18 +1869,77 @@ void* BMSallocBlockMemory_call(
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for new chunk\n");
+      printError("Insufficient memory for new chunk.\n");
    }
-   debugMessage("alloced %8lld bytes in %p [%s:%d]\n", (long long)size, ptr, filename, line);
+   debugMessage("alloced %8"SIZET_FORMAT" bytes in %p [%s:%d]\n", size, ptr, filename, line);
 
-   blkmem->memused += size;
+   blkmem->memused += (long long) size;
 
    checkBlkmem(blkmem);
 
    return ptr;
 }
 
-/** resizes memory element in the block memory pool, and copies the data */
+/** allocates memory in the block memory pool */
+void* BMSallocBlockMemory_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   size_t                size,               /**< size of memory element to allocate */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+#ifndef NDEBUG
+   if ( size > MAXMEMSIZE )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate block of size exceeding %u.\n", MAXMEMSIZE);
+      return NULL;
+   }
+#endif
+
+   return BMSallocBlockMemory_work(blkmem, size, filename, line);
+}
+
+/** allocates array in the block memory pool */
+void* BMSallocBlockMemoryArray_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   size_t                num,                /**< size of array to be allocated */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+#ifndef NDEBUG
+   if ( num > (MAXMEMSIZE / typesize) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate block of size exceeding %u.\n", MAXMEMSIZE);
+      return NULL;
+   }
+#endif
+
+   return BMSallocBlockMemory_work(blkmem, num * typesize, filename, line);
+}
+
+/** allocates array in the block memory pool and clears it */
+void* BMSallocClearBlockMemoryArray_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   size_t                num,                /**< size of array to be allocated */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr;
+
+   ptr = BMSallocBlockMemoryArray_call(blkmem, num, typesize, filename, line);
+   if ( ptr != NULL )
+      BMSclearMemorySize(ptr, num * typesize);
+
+   return ptr;
+}
+
+/** resizes memory element in the block memory pool and copies the data */
 void* BMSreallocBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    void*                 ptr,                /**< memory element to reallocated */
@@ -1693,6 +1957,15 @@ void* BMSreallocBlockMemory_call(
       return BMSallocBlockMemory_call(blkmem, newsize, filename, line);
    }
 
+#ifndef NDEBUG
+   if ( newsize > MAXMEMSIZE )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate block of size exceeding %u.\n", MAXMEMSIZE);
+      return NULL;
+   }
+#endif
+
    alignSize(&oldsize);
    alignSize(&newsize);
    if( oldsize == newsize )
@@ -1701,12 +1974,51 @@ void* BMSreallocBlockMemory_call(
    newptr = BMSallocBlockMemory_call(blkmem, newsize, filename, line);
    if( newptr != NULL )
       BMScopyMemorySize(newptr, ptr, MIN(oldsize, newsize));
-   BMSfreeBlockMemory_call(blkmem, ptr, oldsize, filename, line);
+   BMSfreeBlockMemory_call(blkmem, &ptr, oldsize, filename, line);
 
    return newptr;
 }
 
-/** duplicates memory element in the block memory pool, and copies the data */
+/** resizes array in the block memory pool and copies the data */
+void* BMSreallocBlockMemoryArray_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void*                 ptr,                /**< memory element to reallocated */
+   size_t                oldnum,             /**< old size of array */
+   size_t                newnum,             /**< new size of array */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* newptr;
+
+   if( ptr == NULL )
+   {
+      assert(oldnum == 0);
+      return BMSallocBlockMemoryArray_call(blkmem, newnum, typesize, filename, line);
+   }
+
+#ifndef NDEBUG
+   if ( newnum > (MAXMEMSIZE / typesize) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate array of size exceeding %u.\n", MAXMEMSIZE);
+      return NULL;
+   }
+#endif
+
+   if ( oldnum == newnum )
+      return ptr;
+
+   newptr = BMSallocBlockMemoryArray_call(blkmem, newnum, typesize, filename, line);
+   if ( newptr != NULL )
+      BMScopyMemorySize(newptr, ptr, MIN(oldnum, newnum) * typesize);
+   BMSfreeBlockMemory_call(blkmem, &ptr, oldnum * typesize, filename, line);
+
+   return newptr;
+}
+
+/** duplicates memory element in the block memory pool and copies the data */
 void* BMSduplicateBlockMemory_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    const void*           source,             /**< memory element to duplicate */
@@ -1726,10 +2038,32 @@ void* BMSduplicateBlockMemory_call(
    return ptr;
 }
 
-/** frees memory element in the block memory pool */
-void BMSfreeBlockMemory_call(
+/** duplicates array in the block memory pool and copies the data */
+void* BMSduplicateBlockMemoryArray_call(
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   void*                 ptr,                /**< memory element to free */
+   const void*           source,             /**< memory element to duplicate */
+   size_t                num,                /**< size of array to be duplicated */
+   size_t                typesize,           /**< size of each component */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr;
+
+   assert(source != NULL);
+
+   ptr = BMSallocBlockMemoryArray_call(blkmem, num, typesize, filename, line);
+   if( ptr != NULL )
+      BMScopyMemorySize(ptr, source, num * typesize);
+
+   return ptr;
+}
+
+/** common work for freeing block memory */
+inline static
+void BMSfreeBlockMemory_work(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void**                ptr,                /**< pointer to pointer to memory element to free */
    size_t                size,               /**< size of memory element */
    const char*           filename,           /**< source file of the function call */
    int                   line                /**< line number in source file of the function call */
@@ -1738,43 +2072,76 @@ void BMSfreeBlockMemory_call(
    BMS_CHKMEM* chkmem;
    int hashnumber;
 
-   assert( blkmem != NULL );
+   assert(ptr != NULL);
+   assert(*ptr != NULL);
 
-   if( ptr != NULL )
+   /* calculate hash number of given size */
+   alignSize(&size);
+   hashnumber = getHashNumber((int)size);
+
+   debugMessage("free    %8"SIZET_FORMAT" bytes in %p [%s:%d]\n", size, *ptr, filename, line);
+
+   /* find correspoding chunk block */
+   assert( blkmem->chkmemhash != NULL );
+   chkmem = blkmem->chkmemhash[hashnumber];
+   while( chkmem != NULL && chkmem->elemsize != (int)size )
+      chkmem = chkmem->nextchkmem;
+   if( chkmem == NULL )
    {
-      /* calculate hash number of given size */
-      alignSize(&size);
-      hashnumber = getHashNumber((int)size);
-
-      debugMessage("free    %8lld bytes in %p [%s:%d]\n", (long long)size, ptr, filename, line);
-
-      /* find correspoding chunk block */
-      assert( blkmem->chkmemhash != NULL );
-      chkmem = blkmem->chkmemhash[hashnumber];
-      while( chkmem != NULL && chkmem->elemsize != (int)size )
-	 chkmem = chkmem->nextchkmem;
-      if( chkmem == NULL )
-      {
-	 printErrorHeader(filename, line);
-         printError("Tried to free pointer <%p> in block memory <%p> of unknown size %lld\n",
-            ptr, (void*)blkmem, (long long) size);
-	 return;
-      }
-      assert(chkmem->elemsize == (int)size);
-
-      /* free memory in chunk block */
-      freeChkmemElement(chkmem, ptr, filename, line);
-
-      blkmem->memused -= size;
-      assert(blkmem->memused >= 0);
+      printErrorHeader(filename, line);
+      printError("Tried to free pointer <%p> in block memory <%p> of unknown size %"SIZET_FORMAT".\n", *ptr, (void*)blkmem, size);
+      return;
    }
+   assert(chkmem->elemsize == (int)size);
+
+   /* free memory in chunk block */
+   freeChkmemElement(chkmem, *ptr, filename, line);
+
+   blkmem->memused -= (long long) size;
+   assert(blkmem->memused >= 0);
+
+   *ptr = NULL;
+}
+
+/** frees memory element in the block memory pool and sets pointer to NULL */
+void BMSfreeBlockMemory_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void**                ptr,                /**< pointer to pointer to memory element to free */
+   size_t                size,               /**< size of memory element */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   assert( blkmem != NULL );
+   assert( ptr != NULL );
+
+   if( *ptr != NULL )
+      BMSfreeBlockMemory_work(blkmem, ptr, size, filename, line);
    else if( size != 0 )
    {
       printErrorHeader(filename, line);
-      printError("Tried to free null block pointer\n");
+      printError("Tried to free null block pointer.\n");
    }
-
    checkBlkmem(blkmem);
+}
+
+/** frees memory element in the block memory pool if pointer is not NULL and sets pointer to NULL */
+void BMSfreeBlockMemoryNull_call(
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   void**                ptr,                /**< pointer to pointer to memory element to free */
+   size_t                size,               /**< size of memory element */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   assert( blkmem != NULL );
+   assert( ptr != NULL );
+
+   if( *ptr != NULL )
+   {
+      BMSfreeBlockMemory_work(blkmem, ptr, size, filename, line);
+      checkBlkmem(blkmem);
+   }
 }
 
 /** calls garbage collection of block memory, frees chunks without allocated memory elements, and frees
@@ -1815,7 +2182,7 @@ long long BMSgetBlockMemoryUsed_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    )
 {
-   assert(blkmem != NULL);
+   assert( blkmem != NULL );
 
    return blkmem->memused;
 }
@@ -1837,7 +2204,7 @@ size_t BMSgetBlockPointerSize_call(
    if( chkmem == NULL )
       return 0;
 
-   return (size_t)(chkmem->elemsize);
+   return (size_t)(chkmem->elemsize); /*lint !e571*/
 }
 
 /** outputs allocation diagnostics of block memory */
@@ -1907,15 +2274,15 @@ void BMSdisplayBlockMemory_call(
 	    freemem += (long long)chkmem->elemsize * ((long long)neagerelems + (long long)chkmem->lazyfreesize);
 
 #ifndef NDEBUG
-	    printInfo("%7lld %6d %4d %7d %7d %7d %5d %4d %5.1f%% %6.1f %s:%d\n",
-	       (long long)(chkmem->elemsize), nchunks, neagerchunks, nelems,
+	    printInfo("%7d %6d %4d %7d %7d %7d %5d %4d %5.1f%% %6.1f %s:%d\n",
+	       chkmem->elemsize, nchunks, neagerchunks, nelems,
 	       neagerelems, chkmem->lazyfreesize, chkmem->ngarbagecalls, chkmem->ngarbagefrees,
 	       100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems), 
                (double)chkmem->elemsize * nelems / (1024.0*1024.0),
                chkmem->filename, chkmem->line);
 #else
-	    printInfo("%7lld %6d %4d %7d %7d %7d %5.1f%% %6.1f\n",
-	       (long long)(chkmem->elemsize), nchunks, neagerchunks, nelems,
+	    printInfo("%7d %6d %4d %7d %7d %7d %5.1f%% %6.1f\n",
+	       chkmem->elemsize, nchunks, neagerchunks, nelems,
 	       neagerelems, chkmem->lazyfreesize,
 	       100.0 * (double) (neagerelems + chkmem->lazyfreesize) / (double) (nelems),
                (double)chkmem->elemsize * nelems / (1024.0*1024.0));
@@ -1924,11 +2291,11 @@ void BMSdisplayBlockMemory_call(
 	 else
 	 {
 #ifndef NDEBUG
-	    printInfo("%7lld <unused>                            %5d %4d        %s:%d\n",
-	       (long long)(chkmem->elemsize), chkmem->ngarbagecalls, chkmem->ngarbagefrees, 
+	    printInfo("%7d <unused>                            %5d %4d        %s:%d\n",
+	       chkmem->elemsize, chkmem->ngarbagecalls, chkmem->ngarbagefrees,
                chkmem->filename, chkmem->line);
 #else
-	    printInfo("%7lld <unused>\n", (long long)(chkmem->elemsize));
+	    printInfo("%7d <unused>\n", chkmem->elemsize);
 #endif
 	    nunusedblocks++;
 	 }
@@ -1956,7 +2323,7 @@ void BMSdisplayBlockMemory_call(
       totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0,
       (double)allocedmem/(1024.0*1024.0));
 #endif
-   printInfo("%d blocks (%d unused), %lld bytes allocated, %lld bytes free",
+   printInfo("%d blocks (%d unused), %"LONGINT_FORMAT" bytes allocated, %"LONGINT_FORMAT" bytes free",
       nblocks + nunusedblocks, nunusedblocks, allocedmem, freemem);
    if( allocedmem > 0 )
       printInfo(" (%.1f%%)", 100.0 * (double) freemem / (double) allocedmem);
@@ -2010,13 +2377,13 @@ void BMScheckEmptyBlockMemory_call(
             if( nelems != neagerelems + chkmem->lazyfreesize )
             {
 #ifndef NDEBUG
-               printInfo("%lld bytes (%d elements of size %lld) not freed. First Allocator: %s:%d\n",
+               printInfo("%"LONGINT_FORMAT" bytes (%d elements of size %"LONGINT_FORMAT") not freed. First Allocator: %s:%d\n",
                   (((long long)nelems - (long long)neagerelems) - (long long)chkmem->lazyfreesize)
                   * (long long)(chkmem->elemsize),
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize),
                   chkmem->filename, chkmem->line);
 #else
-               printInfo("%lld bytes (%d elements of size %lld) not freed.\n",
+               printInfo("%"LONGINT_FORMAT" bytes (%d elements of size %"LONGINT_FORMAT") not freed.\n",
                   ((nelems - neagerelems) - chkmem->lazyfreesize) * (long long)(chkmem->elemsize),
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize));
 #endif
@@ -2027,5 +2394,671 @@ void BMScheckEmptyBlockMemory_call(
    }
 
    if( allocedmem != freemem )
-      printInfo("%lld bytes not freed in total.\n", allocedmem - freemem);
+      printInfo("%"LONGINT_FORMAT" bytes not freed in total.\n", allocedmem - freemem);
+}
+
+
+
+
+
+
+/***********************************************************
+ * Buffer Memory Management
+ *
+ * Efficient memory management for temporary objects
+ ***********************************************************/
+
+/** memory buffer storage for temporary objects */
+struct BMS_BufMem
+{
+   void**                data;               /**< allocated memory chunks for arbitrary data */
+   size_t*               size;               /**< sizes of buffers in bytes */
+   unsigned int*         used;               /**< 1 iff corresponding buffer is in use */
+   size_t                totalmem;           /**< total memory consumption of buffer */
+   unsigned int          clean;              /**< 1 iff the memory blocks in the buffer should be initialized to zero? */
+   size_t                ndata;              /**< number of memory chunks */
+   size_t                firstfree;          /**< first unused memory chunk */
+   double                arraygrowfac;       /**< memory growing factor for dynamically allocated arrays */
+   unsigned int          arraygrowinit;      /**< initial size of dynamically allocated arrays */
+};
+
+
+/** creates memory buffer storage */
+BMS_BUFMEM* BMScreateBufferMemory_call(
+   double                arraygrowfac,       /**< memory growing factor for dynamically allocated arrays */
+   int                   arraygrowinit,      /**< initial size of dynamically allocated arrays */
+   unsigned int          clean,              /**< should the memory blocks in the buffer be initialized to zero? */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   BMS_BUFMEM* buffer;
+
+   assert( arraygrowinit > 0 );
+   assert( arraygrowfac > 0.0 );
+
+   BMSallocMemory(&buffer);
+   if ( buffer != NULL )
+   {
+      buffer->data = NULL;
+      buffer->size = NULL;
+      buffer->used = NULL;
+      buffer->totalmem = 0UL;
+      buffer->clean = clean;
+      buffer->ndata = 0;
+      buffer->firstfree = 0;
+      buffer->arraygrowinit = (unsigned) arraygrowinit;
+      buffer->arraygrowfac = arraygrowfac;
+   }
+   else
+   {
+      printErrorHeader(filename, line);
+      printError("Insufficient memory for buffer memory header.\n");
+   }
+
+   return buffer;
+}
+
+/** destroys buffer memory */
+void BMSdestroyBufferMemory_call(
+   BMS_BUFMEM**          buffer,             /**< pointer to memory buffer storage */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   size_t i;
+
+   if ( *buffer != NULL )
+   {
+      for (i = 0; i < (*buffer)->ndata; ++i)
+      {
+         assert( ! (*buffer)->used[i] );
+         BMSfreeMemoryArrayNull(&(*buffer)->data[i]);
+      }
+      BMSfreeMemoryArrayNull(&(*buffer)->data);
+      BMSfreeMemoryArrayNull(&(*buffer)->size);
+      BMSfreeMemoryArrayNull(&(*buffer)->used);
+      BMSfreeMemory(buffer);
+   }
+   else
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to free null buffer memory.\n");
+   }
+}
+
+/** set arraygrowfac */
+void BMSsetBufferMemoryArraygrowfac(
+   BMS_BUFMEM*           buffer,             /**< pointer to memory buffer storage */
+   double                arraygrowfac        /**< memory growing factor for dynamically allocated arrays */
+   )
+{
+   assert( buffer != NULL );
+   assert( arraygrowfac > 0.0 );
+
+   buffer->arraygrowfac = arraygrowfac;
+}
+
+/** set arraygrowinit */
+void BMSsetBufferMemoryArraygrowinit(
+   BMS_BUFMEM*           buffer,             /**< pointer to memory buffer storage */
+   int                   arraygrowinit       /**< initial size of dynamically allocated arrays */
+   )
+{
+   assert( buffer != NULL );
+   assert( arraygrowinit > 0 );
+
+   buffer->arraygrowinit = (unsigned) arraygrowinit;
+}
+
+#ifndef SCIP_NOBUFFERMEM
+/** calculate memory size for dynamically allocated arrays
+ *
+ *  This function is a copy of the function in set.c in order to be able to use memory.? separately.
+ */
+static
+size_t calcMemoryGrowSize(
+   size_t                initsize,           /**< initial size of array */
+   SCIP_Real             growfac,            /**< growing factor of array */
+   size_t                num                 /**< minimum number of entries to store */
+   )
+{
+   size_t size;
+
+   assert( growfac >= 1.0 );
+
+   if ( growfac == 1.0 )
+      size = MAX(initsize, num);
+   else
+   {
+      size_t oldsize;
+
+      /* calculate the size with this loop, such that the resulting numbers are always the same */
+      initsize = MAX(initsize, 4);
+      size = initsize;
+      oldsize = size - 1;
+
+      /* second condition checks against overflow */
+      while ( size < num && size > oldsize )
+      {
+         oldsize = size;
+         size = (size_t)(growfac * size + initsize);
+      }
+
+      /* if an overflow happened, set the correct value */
+      if ( size <= oldsize )
+         size = num;
+   }
+
+   assert( size >= initsize );
+   assert( size >= num );
+
+   return size;
+}
+#endif
+
+/** work for allocating the next unused buffer */
+inline static
+void* BMSallocBufferMemory_work(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   size_t                size,               /**< minimal required size of the buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr;
+#ifndef SCIP_NOBUFFERMEM
+   size_t bufnum;
+#endif
+
+#ifndef SCIP_NOBUFFERMEM
+   assert( buffer != NULL );
+   assert( buffer->firstfree <= buffer->ndata );
+
+   /* allocate a minimum of 1 byte */
+   if ( size == 0 )
+      size = 1;
+
+   /* check, if we need additional buffers */
+   if ( buffer->firstfree == buffer->ndata )
+   {
+      size_t newsize;
+      size_t i;
+
+      /* create additional buffers */
+      newsize = calcMemoryGrowSize((size_t)buffer->arraygrowinit, buffer->arraygrowfac, buffer->firstfree + 1);
+      BMSreallocMemoryArray(&buffer->data, newsize);
+      if ( buffer->data == NULL )
+      {
+         printErrorHeader(filename, line);
+         printError("Insufficient memory for reallocating buffer data storage.\n");
+         return NULL;
+      }
+      BMSreallocMemoryArray(&buffer->size, newsize);
+      if ( buffer->size == NULL )
+      {
+         printErrorHeader(filename, line);
+         printError("Insufficient memory for reallocating buffer size storage.\n");
+         return NULL;
+      }
+      BMSreallocMemoryArray(&buffer->used, newsize);
+      if ( buffer->used == NULL )
+      {
+         printErrorHeader(filename, line);
+         printError("Insufficient memory for reallocating buffer used storage.\n");
+         return NULL;
+      }
+
+      /* init data */
+      for (i = buffer->ndata; i < newsize; ++i)
+      {
+         buffer->data[i] = NULL;
+         buffer->size[i] = 0;
+         buffer->used[i] = FALSE;
+      }
+      buffer->ndata = newsize;
+   }
+   assert(buffer->firstfree < buffer->ndata);
+
+   /* check, if the current buffer is large enough */
+   bufnum = buffer->firstfree;
+   assert( ! buffer->used[bufnum] );
+   if ( buffer->size[bufnum] < size )
+   {
+      size_t newsize;
+
+      /* enlarge buffer */
+      newsize = calcMemoryGrowSize((size_t)buffer->arraygrowinit, buffer->arraygrowfac, size);
+      BMSreallocMemorySize(&buffer->data[bufnum], newsize);
+
+      /* clear new memory */
+      if( buffer->clean )
+      {
+         char* tmpptr = (char*)(buffer->data[bufnum]);
+         size_t inc = buffer->size[bufnum] / sizeof(*tmpptr);
+         tmpptr += inc;
+
+         BMSclearMemorySize(tmpptr, newsize - buffer->size[bufnum]);
+      }
+      assert( newsize > buffer->size[bufnum] );
+      buffer->totalmem += newsize - buffer->size[bufnum];
+      buffer->size[bufnum] = newsize;
+
+      if ( buffer->data[bufnum] == NULL )
+      {
+         printErrorHeader(filename, line);
+         printError("Insufficient memory for reallocating buffer storage.\n");
+         return NULL;
+      }
+   }
+   assert( buffer->size[bufnum] >= size );
+
+#ifdef CHECKMEM
+   /* check that the memory is cleared */
+   if( buffer->clean )
+   {
+      char* tmpptr = (char*)(buffer->data[bufnum]);
+      unsigned int inc = buffer->size[bufnum] / sizeof(*tmpptr);
+      tmpptr += inc;
+
+      while( --tmpptr >= (char*)(buffer->data[bufnum]) )
+         assert(*tmpptr == '\0');
+   }
+#endif
+
+   ptr = buffer->data[bufnum];
+   buffer->used[bufnum] = TRUE;
+   buffer->firstfree++;
+
+   debugMessage("Allocated buffer %"SIZET_FORMAT"/%"SIZET_FORMAT" at %p of size %"SIZET_FORMAT" (required size: %lu) for pointer %p.\n",
+      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
+
+#else
+   if( buffer->clean )
+   {
+      BMSallocClearMemorySize(&ptr, size);
+   }
+   else
+   {
+      BMSallocMemorySize(&ptr, size);
+   }
+#endif
+
+   return ptr;
+}
+
+/** allocates the next unused buffer */
+void* BMSallocBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   size_t                size,               /**< minimal required size of the buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+#ifndef NDEBUG
+   if ( size > MAXMEMSIZE )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate buffer of size exceeding %u.\n", MAXMEMSIZE);
+      return NULL;
+   }
+#endif
+
+   return BMSallocBufferMemory_work(buffer, size, filename, line);
+}
+
+/** allocates the next unused buffer array */
+void* BMSallocBufferMemoryArray_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   size_t                num,                /**< size of array to be allocated */
+   size_t                typesize,           /**< size of components */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+#ifndef NDEBUG
+   if ( num > (MAXMEMSIZE / typesize) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate buffer of size exceeding %u.\n", MAXMEMSIZE);
+      return NULL;
+   }
+#endif
+
+   return BMSallocBufferMemory_work(buffer, num * typesize, filename, line);
+}
+
+/** allocates the next unused buffer and clears it */
+void* BMSallocClearBufferMemoryArray_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   size_t                num,                /**< size of array to be allocated */
+   size_t                typesize,           /**< size of components */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr;
+
+   ptr = BMSallocBufferMemoryArray_call(buffer, num, typesize, filename, line);
+   if ( ptr != NULL )
+      BMSclearMemorySize(ptr, num * typesize);
+
+   return ptr;
+}
+
+/** work for reallocating the buffer to at least the given size */
+inline static
+void* BMSreallocBufferMemory_work(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   void*                 ptr,                /**< pointer to the allocated memory buffer */
+   size_t                size,               /**< minimal required size of the buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* newptr;
+#ifndef SCIP_NOBUFFERMEM
+   size_t bufnum;
+#endif
+
+#ifndef SCIP_NOBUFFERMEM
+   assert( buffer != NULL );
+   assert( buffer->firstfree <= buffer->ndata );
+   assert(!buffer->clean); /* reallocating clean buffer elements is not supported */
+
+   /* if the pointer doesn't exist yet, allocate it */
+   if ( ptr == NULL )
+      return BMSallocBufferMemory_call(buffer, size, filename, line);
+
+   assert( buffer->firstfree >= 1 );
+
+   /* Search the pointer in the buffer list:
+    * Usually, buffers are allocated and freed like a stack, such that the currently used pointer is
+    * most likely at the end of the buffer list.
+    */
+   bufnum = buffer->firstfree - 1;
+   while ( bufnum > 0 && buffer->data[bufnum] != ptr )
+      --bufnum;
+
+   newptr = ptr;
+   assert( buffer->data[bufnum] == newptr );
+   assert( buffer->used[bufnum] );
+   assert( buffer->size[bufnum] >= 1 );
+
+   /* check if the buffer has to be enlarged */
+   if ( size > buffer->size[bufnum] )
+   {
+      size_t newsize;
+
+      /* enlarge buffer */
+      newsize = calcMemoryGrowSize((size_t)buffer->arraygrowinit, buffer->arraygrowfac, size);
+      BMSreallocMemorySize(&buffer->data[bufnum], newsize);
+      assert( newsize > buffer->size[bufnum] );
+      buffer->totalmem += newsize - buffer->size[bufnum];
+      buffer->size[bufnum] = newsize;
+      if ( buffer->data[bufnum] == NULL )
+      {
+         printErrorHeader(filename, line);
+         printError("Insufficient memory for reallocating buffer storage.\n");
+         return NULL;
+      }
+      newptr = buffer->data[bufnum];
+   }
+   assert( buffer->size[bufnum] >= size );
+   assert( newptr == buffer->data[bufnum] );
+
+   debugMessage("Reallocated buffer %"SIZET_FORMAT"/%"SIZET_FORMAT" at %p to size %"SIZET_FORMAT" (required size: %lu) for pointer %p.\n",
+      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, newptr);
+
+#else
+   newptr = ptr;
+   BMSreallocMemorySize(&newptr, size);
+#endif
+
+   return newptr;
+}
+
+/** reallocates the buffer to at least the given size */
+void* BMSreallocBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   void*                 ptr,                /**< pointer to the allocated memory buffer */
+   size_t                size,               /**< minimal required size of the buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+#ifndef NDEBUG
+   if ( size > MAXMEMSIZE )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate buffer of size exceeding %u.\n", MAXMEMSIZE);
+      return NULL;
+   }
+#endif
+
+   return BMSreallocBufferMemory_work(buffer, ptr, size, filename, line);
+}
+
+/** reallocates an array in the buffer to at least the given size */
+void* BMSreallocBufferMemoryArray_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   void*                 ptr,                /**< pointer to the allocated memory buffer */
+   size_t                num,                /**< size of array to be allocated */
+   size_t                typesize,           /**< size of components */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+#ifndef NDEBUG
+   if ( num > (MAXMEMSIZE / typesize) )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to allocate array of size exceeding %u.\n", MAXMEMSIZE);
+      return NULL;
+   }
+#endif
+
+   return BMSreallocBufferMemory_work(buffer, ptr, num * typesize, filename, line);
+}
+
+/** allocates the next unused buffer and copies the given memory into the buffer */
+void* BMSduplicateBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   const void*           source,             /**< memory block to copy into the buffer */
+   size_t                size,               /**< minimal required size of the buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr;
+
+   assert( source != NULL );
+
+   /* allocate a buffer of the given size */
+   ptr = BMSallocBufferMemory_call(buffer, size, filename, line);
+
+   /* copy the source memory into the buffer */
+   if ( ptr != NULL )
+      BMScopyMemorySize(ptr, source, size);
+
+   return ptr;
+}
+
+/** allocates an array in the next unused buffer and copies the given memory into the buffer */
+void* BMSduplicateBufferMemoryArray_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   const void*           source,             /**< memory block to copy into the buffer */
+   size_t                num,                /**< size of array to be allocated */
+   size_t                typesize,           /**< size of components */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{
+   void* ptr;
+
+   assert( source != NULL );
+
+   /* allocate a buffer of the given size */
+   ptr = BMSallocBufferMemoryArray_call(buffer, num, typesize, filename, line);
+
+   /* copy the source memory into the buffer */
+   if ( ptr != NULL )
+      BMScopyMemorySize(ptr, source, num * typesize);
+
+   return ptr;
+}
+
+/** work for freeing a buffer */
+inline static
+void BMSfreeBufferMemory_work(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   void**                ptr,                /**< pointer to pointer to the allocated memory buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{  /*lint --e{715}*/
+   size_t bufnum;
+
+   assert( buffer != NULL );
+   assert( buffer->firstfree <= buffer->ndata );
+   assert( buffer->firstfree >= 1 );
+   assert( ptr != NULL );
+   assert( *ptr != NULL );
+
+   /* Search the pointer in the buffer list:
+    * Usually, buffers are allocated and freed like a stack, such that the freed pointer is
+    * most likely at the end of the buffer list.
+    */
+   bufnum = buffer->firstfree-1;
+   while ( bufnum > 0 && buffer->data[bufnum] != *ptr )
+      --bufnum;
+
+#ifndef NDEBUG
+   if ( bufnum == 0 && buffer->data[bufnum] != *ptr )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to free unkown buffer pointer.\n");
+      return;
+   }
+   if ( ! buffer->used[bufnum] )
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to free buffer pointer already freed.\n");
+      return;
+   }
+#endif
+
+#ifdef CHECKMEM
+   /* check that the memory is cleared */
+   if( buffer->clean )
+   {
+      char* tmpptr = (char*)(buffer->data[bufnum]);
+      unsigned int inc = buffer->size[bufnum] / sizeof(*tmpptr);
+      tmpptr += inc;
+
+      while( --tmpptr >= (char*)(buffer->data[bufnum]) )
+         assert(*tmpptr == '\0');
+   }
+#endif
+
+   assert( buffer->data[bufnum] == *ptr );
+   buffer->used[bufnum] = FALSE;
+
+   while ( buffer->firstfree > 0 && !buffer->used[buffer->firstfree-1] )
+      --buffer->firstfree;
+
+   debugMessage("Freed buffer %"SIZET_FORMAT"/%"SIZET_FORMAT" at %p of size %"SIZET_FORMAT" for pointer %p, first free is %"SIZET_FORMAT".\n",
+      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], *ptr, buffer->firstfree);
+
+   *ptr = NULL;
+}
+
+/** frees a buffer and sets pointer to NULL */
+void BMSfreeBufferMemory_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   void**                ptr,                /**< pointer to pointer to the allocated memory buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{  /*lint --e{715}*/
+   assert( ptr != NULL );
+
+#ifndef SCIP_NOBUFFERMEM
+   if ( *ptr != NULL )
+      BMSfreeBufferMemory_work(buffer, ptr, filename, line);
+   else
+   {
+      printErrorHeader(filename, line);
+      printError("Tried to free null buffer pointer.\n");
+   }
+#else
+   BMSfreeMemory(ptr);
+#endif
+}
+
+/** frees a buffer if pointer is not NULL and sets pointer to NULL */
+void BMSfreeBufferMemoryNull_call(
+   BMS_BUFMEM*           buffer,             /**< memory buffer storage */
+   void**                ptr,                /**< pointer to pointer to the allocated memory buffer */
+   const char*           filename,           /**< source file of the function call */
+   int                   line                /**< line number in source file of the function call */
+   )
+{  /*lint --e{715}*/
+   assert( ptr != NULL );
+
+   if ( *ptr != NULL )
+   {
+#ifndef SCIP_NOBUFFERMEM
+      BMSfreeBufferMemory_work(buffer, ptr, filename, line);
+#else
+      BMSfreeMemory(ptr);
+#endif
+   }
+}
+
+/** gets number of used buffers */
+size_t BMSgetNUsedBufferMemory(
+   BMS_BUFMEM*           buffer              /**< memory buffer storage */
+   )
+{
+   assert( buffer != NULL );
+
+   return buffer->firstfree;
+}
+
+/** returns the number of allocated bytes in the buffer memory */
+long long BMSgetBufferMemoryUsed(
+   const BMS_BUFMEM*     buffer              /**< buffer memory */
+   )
+{
+#ifdef CHECKMEM
+   size_t totalmem = 0UL;
+   int i;
+
+   assert( buffer != NULL );
+   for (i = 0; i < buffer->ndata; ++i)
+      totalmem += buffer->size[i];
+   assert( totalmem == buffer->totalmem );
+#endif
+
+   return (long long) buffer->totalmem;
+}
+
+/** outputs statistics about currently allocated buffers to the screen */
+void BMSprintBufferMemory(
+   BMS_BUFMEM*           buffer              /**< memory buffer storage */
+   )
+{
+   size_t totalmem;
+   size_t i;
+
+   assert( buffer != NULL );
+
+   totalmem = 0UL;
+   for (i = 0; i < buffer->ndata; ++i)
+   {
+      printf("[%c] %8"SIZET_FORMAT" bytes at %p\n", buffer->used[i] ? '*' : ' ', buffer->size[i], buffer->data[i]);
+      totalmem += buffer->size[i];
+   }
+   printf("    %8"SIZET_FORMAT" bytes total in %"SIZET_FORMAT" buffers\n", totalmem, buffer->ndata);
 }

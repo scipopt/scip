@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -254,8 +254,8 @@ SCIP_RETCODE branchcandCalcLPCands(
 
          primsol = SCIPcolGetPrimsol(col);
          assert(primsol < SCIP_INVALID);
-         assert(SCIPsetIsFeasGE(set, primsol, col->lb));
-         assert(SCIPsetIsFeasLE(set, primsol, col->ub));
+         assert(SCIPsetIsInfinity(set, -col->lb) || SCIPsetIsFeasGE(set, primsol, col->lb));
+         assert(SCIPsetIsInfinity(set, col->ub) || SCIPsetIsFeasLE(set, primsol, col->ub));
 
          var = col->var;
          assert(var != NULL);
@@ -1461,10 +1461,21 @@ SCIP_RETCODE SCIPbranchruleExecLPSol(
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;
+      SCIP_Bool runbranchrule;
 
       loclowerbound = SCIPnodeGetLowerbound(tree->focusnode);
       glblowerbound = SCIPtreeGetLowerbound(tree, set);
-      if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound)) )
+
+      /* we distinguish between finite and infinite global lower bounds to avoid comparisons between different values > SCIPinfinity() */
+      if( SCIPsetIsInfinity(set, -glblowerbound) )
+         runbranchrule = SCIPsetIsInfinity(set, -loclowerbound) || SCIPsetIsGE(set, branchrule->maxbounddist, 1.0);
+      else
+      {
+         assert(!SCIPsetIsInfinity(set, -loclowerbound));
+         runbranchrule = SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound));
+      }
+
+      if( runbranchrule )
       {
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
@@ -1557,10 +1568,22 @@ SCIP_RETCODE SCIPbranchruleExecExternSol(
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;
+      SCIP_Bool runbranchrule;
 
       loclowerbound = SCIPnodeGetLowerbound(tree->focusnode);
       glblowerbound = SCIPtreeGetLowerbound(tree, set);
-      if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound)) )
+      assert(!SCIPsetIsInfinity(set, loclowerbound));
+
+      /* we distinguish between finite and infinite global lower bounds to avoid comparisons between different values > SCIPinfinity() */
+      if( SCIPsetIsInfinity(set, -glblowerbound) )
+         runbranchrule = SCIPsetIsInfinity(set, -loclowerbound) || SCIPsetIsGE(set, branchrule->maxbounddist, 1.0);
+      else
+      {
+         assert(!SCIPsetIsInfinity(set, -loclowerbound));
+         runbranchrule = SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound));
+      }
+
+      if( runbranchrule )
       {
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
@@ -1650,10 +1673,21 @@ SCIP_RETCODE SCIPbranchruleExecPseudoSol(
    {
       SCIP_Real loclowerbound;
       SCIP_Real glblowerbound;
+      SCIP_Bool runbranchrule;
 
       loclowerbound = SCIPnodeGetLowerbound(tree->focusnode);
       glblowerbound = SCIPtreeGetLowerbound(tree, set);
-      if( SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound)) )
+
+      /* we distinguish between finite and infinite global lower bounds to avoid comparisons between different values > SCIPinfinity() */
+      if( SCIPsetIsInfinity(set, -glblowerbound) )
+         runbranchrule = SCIPsetIsInfinity(set, -loclowerbound) || SCIPsetIsGE(set, branchrule->maxbounddist, 1.0);
+      else
+      {
+         assert(!SCIPsetIsInfinity(set, -loclowerbound));
+         runbranchrule = SCIPsetIsLE(set, loclowerbound - glblowerbound, branchrule->maxbounddist * (cutoffbound - glblowerbound));
+      }
+
+      if( runbranchrule )
       {
          SCIP_Longint oldndomchgs;
          SCIP_Longint oldnprobdomchgs;
@@ -1925,6 +1959,18 @@ void SCIPbranchruleSetMaxbounddist(
    assert(maxbounddist >= -1);
 
    branchrule->maxbounddist = maxbounddist;
+}
+
+/** enables or disables all clocks of \p branchrule, depending on the value of the flag */
+void SCIPbranchruleEnableOrDisableClocks(
+   SCIP_BRANCHRULE*      branchrule,         /**< the branching rule for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the branching rule be enabled? */
+   )
+{
+   assert(branchrule != NULL);
+
+   SCIPclockEnableOrDisable(branchrule->setuptime, enable);
+   SCIPclockEnableOrDisable(branchrule->branchclock, enable);
 }
 
 /** gets time in seconds used in this branching rule for setting up for next stages */
@@ -2223,7 +2269,7 @@ SCIP_Real SCIPbranchGetBranchingPoint(
    assert(SCIPsetIsInfinity(set,  ub) || SCIPsetIsLE(set, branchpoint, ub));
    assert(SCIPsetIsInfinity(set, -lb) || SCIPsetIsGE(set, branchpoint, lb));
 
-   if( SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+   if( SCIPvarGetType(var) >= SCIP_VARTYPE_IMPLINT )
    {
       if( !SCIPsetIsInfinity(set, -lb) || !SCIPsetIsInfinity(set, ub) )
       {
@@ -2253,11 +2299,11 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             /* if one bound is missing, we are temporarily guessing the other one, so we can apply the clamp below */
             if( SCIPsetIsInfinity(set, ub) )
             {
-               ub = lb + MIN(MAX(0.5 * REALABS(lb), 1000), 0.9 * (SCIPsetInfinity(set) - lb));
+               ub = lb + MIN(MAX(0.5 * REALABS(lb), 1000), 0.9 * (SCIPsetInfinity(set) - lb)); /*lint !e666*/
             }
             else if( SCIPsetIsInfinity(set, -lb) )
             {
-               lb = ub - MIN(MAX(0.5 * REALABS(ub), 1000), 0.9 * (SCIPsetInfinity(set) + ub));
+               lb = ub - MIN(MAX(0.5 * REALABS(ub), 1000), 0.9 * (SCIPsetInfinity(set) + ub)); /*lint !e666*/
             }
 
             lbabs = REALABS(lb);
@@ -2290,6 +2336,19 @@ SCIP_Real SCIPbranchGetBranchingPoint(
             assert(SCIPsetIsRelLT(set, branchpoint, SCIPvarGetUbLocal(var)));
          }
       }
+
+      /* ensure fractional branching point for implicit integer variables */
+      if( SCIPvarGetType(var) == SCIP_VARTYPE_IMPLINT && SCIPsetIsIntegral(set, branchpoint) )
+      {
+         /* if branchpoint is integral but not on bounds, then it should be one of the value {lb+1, ..., ub-1} */
+         assert(SCIPsetIsGE(set, SCIPsetRound(set, branchpoint), lb + 1.0));
+         assert(SCIPsetIsLE(set, SCIPsetRound(set, branchpoint), ub - 1.0));
+         /* if branchpoint is integral, create one branch with x <= x'-1 and one with x >= x'
+          * @todo could in the same way be x <= x' and x >= x'+1; is there some easy way to know which is better?
+          */
+         return branchpoint - 0.5;
+      }
+
       return branchpoint;
    }
    else
@@ -2337,6 +2396,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -2372,7 +2432,7 @@ SCIP_RETCODE SCIPbranchExecLP(
     */
    if( branchcand->pseudomaxpriority > branchcand->lpmaxpriority )
    {
-      SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, cutoffbound,
+      SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cutoffbound,
             allowaddcons, result) );
       assert(*result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND);
       return SCIP_OKAY;
@@ -2421,7 +2481,7 @@ SCIP_RETCODE SCIPbranchExecLP(
 
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, SCIP_INVALID,
+      SCIP_CALL( SCIPtreeBranchVar(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, SCIP_INVALID,
             NULL, NULL, NULL) );
 
       *result = SCIP_BRANCHED;
@@ -2438,6 +2498,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -2471,7 +2532,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
       /* @todo: adjust this, that also LP branching might be called, if lpmaxpriority != externmaxpriority.
        * Therefor, it has to be clear which of both has the higher priority
        */
-      SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, lp, branchcand, eventqueue, cutoffbound,
+      SCIP_CALL( SCIPbranchExecPseudo(blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue, cutoffbound,
             allowaddcons, result) );
       assert(*result != SCIP_DIDNOTRUN && *result != SCIP_DIDNOTFIND);
       return SCIP_OKAY;
@@ -2542,7 +2603,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
       SCIPdebugMessage("no branching method succeeded; fallback selected to branch on variable <%s> with bounds [%g, %g] on value %g\n",
          SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), val);
 
-      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, val,
+      SCIP_CALL( SCIPtreeBranchVar(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, val,
             NULL, NULL, NULL) );
 
       *result = SCIP_BRANCHED;
@@ -2559,6 +2620,7 @@ SCIP_RETCODE SCIPbranchExecPseudo(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
@@ -2621,7 +2683,7 @@ SCIP_RETCODE SCIPbranchExecPseudo(
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
       assert(!SCIPsetIsEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
-      SCIP_CALL( SCIPtreeBranchVar(tree, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, SCIP_INVALID,
+      SCIP_CALL( SCIPtreeBranchVar(tree, reopt, blkmem, set, stat, transprob, origprob, lp, branchcand, eventqueue, var, SCIP_INVALID,
             NULL, NULL, NULL) );
 
       *result = SCIP_BRANCHED;

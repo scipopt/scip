@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -564,6 +564,17 @@ SCIP_Real SCIPreaderGetReadingTime(
    assert(reader != NULL);
 
    return SCIPclockGetTime(reader->readingtime);
+}
+
+/** enables or disables all clocks of \p reader, depending on the value of the flag */
+void SCIPreaderEnableOrDisableClocks(
+   SCIP_READER*          reader,             /**< the reader for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks be enabled? */
+   )
+{
+   assert(reader != NULL);
+
+   SCIPclockEnableOrDisable(reader->readingtime, enable);
 }
 
 /** resets reading time of reader */

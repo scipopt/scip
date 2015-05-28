@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -61,10 +61,10 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 
 #define HASHSIZE_BINVARSCONS     131101 /**< minimal size of hash table in linking constraint handler */
@@ -111,7 +111,7 @@ void* getHashmapKey(
    )
 {
    /* return the unique variable index + 1 */
-   return (void*)(size_t)(SCIPvarGetIndex(var) + 1);
+   return (void*)(size_t)(SCIPvarGetIndex(var) + 1); /*lint !e571 !e776*/
 }
 
 /* sort binary variable in non-decreasing order w.r.t. coefficients */
@@ -423,8 +423,8 @@ SCIP_RETCODE consdataCreateBinvars(
    SCIPdebugMessage("create binary variables for integer variable <%s>\n", SCIPvarGetName(consdata->intvar));
 
    intvar = consdata->intvar;
-   lb = (int)(SCIPvarGetLbGlobal(intvar) + 0.5);
-   ub = (int)(SCIPvarGetUbGlobal(intvar) + 0.5);
+   lb = SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(intvar));
+   ub = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(intvar));
    nbinvars = ub-lb+1;
    assert(nbinvars > 0);
 
@@ -772,8 +772,8 @@ SCIP_RETCODE processIntegerBoundChg(
    binvars = consdata->binvars;
    vals = consdata->vals;
 
-   lblocal = (int)(SCIPvarGetLbLocal(intvar) + 0.5);
-   ublocal = (int)(SCIPvarGetUbLocal(intvar) + 0.5);
+   lblocal = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(intvar));
+   ublocal = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(intvar));
    assert(lblocal <= ublocal);
 
 #ifndef NDEBUG
@@ -1517,7 +1517,7 @@ SCIP_RETCODE aggregateVariables(
                 * integral
                 */
                assert(SCIPisIntegral(scip, aggrconst));
-               shift = (int)(aggrconst + 0.5);
+               shift = SCIPconvertRealToInt(scip, aggrconst);
 
                offset = consdata->offset;
                binvars = consdata->binvars;
@@ -2618,7 +2618,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
          /* add set partitioning condition as clique */
          int ncliquebdchgs;
 
-         SCIP_CALL( SCIPaddClique(scip, consdata->binvars, NULL, consdata->nbinvars, &infeasible, &ncliquebdchgs) );
+         SCIP_CALL( SCIPaddClique(scip, consdata->binvars, NULL, consdata->nbinvars, TRUE, &infeasible, &ncliquebdchgs) );
          *nchgbds += ncliquebdchgs;
 
          if( infeasible )
@@ -2748,7 +2748,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       vals = consdata->vals;
 
       /* get propagated lower bound */
-      lb = (int)(SCIPvarGetLbAtIndex(intvar, bdchgidx, TRUE) + 0.5);
+      lb = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(intvar, bdchgidx, TRUE));
 
       for( b = 0;  b < nbinvars; ++b )
       {
@@ -2777,7 +2777,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       vals = consdata->vals;
 
       /* get old and new upper bound */
-      ub = (int)(SCIPvarGetUbAtIndex(intvar, bdchgidx, TRUE) + 0.5);
+      ub = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(intvar, bdchgidx, TRUE));
 
       /* resolve tightening of upper bound of the integer variable by binary variables */
       for( b = nbinvars - 1; b >= 0; --b )
@@ -2810,8 +2810,8 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       assert(infervar == intvar);
       assert(inferinfo >= 0);
       assert(inferinfo < consdata->nbinvars);
-      assert(consdata->vals[inferinfo] == (int)(SCIPvarGetUbAtIndex(consdata->intvar, bdchgidx, TRUE) + 0.5)
-         || consdata->vals[inferinfo] == (int)(SCIPvarGetLbAtIndex(consdata->intvar, bdchgidx, TRUE) + 0.5));
+      assert(consdata->vals[inferinfo] == SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(consdata->intvar, bdchgidx, TRUE))
+         || consdata->vals[inferinfo] == SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(consdata->intvar, bdchgidx, TRUE)));
 
       assert(SCIPvarGetLbAtIndex(consdata->binvars[inferinfo], bdchgidx, FALSE) > 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[inferinfo]) );
@@ -3044,10 +3044,7 @@ SCIP_DECL_CONSPARSE(consParseLinking)
             /* check that the coefficients is integral */
             *success = *success && SCIPisIntegral(scip, vals[v]);
 
-            if( vals[v] < 0 )
-               intvals[v] = (int)(vals[v] - 0.5);
-            else
-               intvals[v] = (int)(vals[v] + 0.5);
+            intvals[v] = SCIPconvertRealToInt(scip, vals[v]);
          }
       }
 
@@ -3194,7 +3191,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreLinking) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpLinking) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseLinking) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolLinking, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolLinking, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintLinking) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropLinking, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -48,9 +48,10 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
-#define CONSHDLR_PROP_TIMING SCIP_PROPTIMING_BEFORELP
+
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_FAST
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 #define INTERVALINFTY             1E+43 /**< value for infinity in interval operations */
 #define NEWTONMAXITER              1000 /**< maximal number of iterations in newton method */
@@ -544,7 +545,7 @@ SCIP_RETCODE removeFixedVariables(
          {
             /* replace var_i by constant in expression tree */
             SCIP_CALL( SCIPexprCreate(SCIPblkmem(scip), &substexpr[i], SCIP_EXPR_CONST, constant) );
-            vars[0] = NULL;
+            vars[i] = NULL;
          }
          else if( coef == 1.0 && constant == 0.0 )
          {
@@ -595,6 +596,7 @@ SCIP_RETCODE removeFixedVariables(
             SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
             SCIPconsIsStickingAtNode(cons)) );  /*lint !e826*/
       SCIP_CALL( SCIPaddCons(scip, nlcons) );
+      SCIPdebugMessage("upgraded to"); SCIPdebugPrintCons(scip, nlcons, NULL);
       SCIP_CALL( SCIPreleaseCons(scip, &nlcons) );
 
       *isupgraded = TRUE;
@@ -701,24 +703,20 @@ SCIP_RETCODE removeFixedNonlinearVariables(
          continue;
       }
 
-      do
+      vars[0]  = var;
+      coefs[0] = 1.0;
+      constant = 0.0;
+      nvars = 1;
+      SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
+
+      if( requsize > varssize )
       {
-         vars[0]  = var;
-         coefs[0] = 1.0;
-         constant = 0.0;
-         nvars = 1;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  requsize) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requsize) );
+         varssize = requsize;
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, coefs, &nvars, varssize, &constant, &requsize, TRUE) );
-
-         if( requsize > varssize )
-         {
-            SCIP_CALL( SCIPreallocBufferArray(scip, &vars,  requsize) );
-            SCIP_CALL( SCIPreallocBufferArray(scip, &coefs, requsize) );
-            varssize = requsize;
-            continue;
-         }
-
+         assert(requsize <= varssize);
       }
-      while( FALSE );
 
 #ifdef SCIP_DEBUG
       SCIPdebugMessage("replace fixed variable <%s> by %g", SCIPvarGetName(var), constant);
@@ -4783,7 +4781,7 @@ SCIP_RETCODE separatePoint(
          }
          else
          {
-            SCIPdebugMessage("abandon cut since efficacy %g is too small\n", efficacy);
+            SCIPdebugMessage("abandon cut since efficacy %g is too small or not applicable\n", efficacy);
          }
 
          SCIP_CALL( SCIPreleaseRow(scip, &row) );
@@ -5085,7 +5083,7 @@ SCIP_RETCODE enforceViolatedFixedNonlinear(
 
       /* get activity for f(x,y) */
       SCIP_CALL( SCIPevalExprtreeLocalBounds(scip, consdata->f, SCIPinfinity(scip), &nonlinact) );
-      assert(!SCIPintervalIsEmpty(nonlinact));
+      assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), nonlinact));
 
       /* if all variables are fixed (at least up to epsilson), then the activity of the nonlinear part should be bounded */
       assert(!SCIPisInfinity(scip, -SCIPintervalGetInf(nonlinact)));
@@ -5200,7 +5198,7 @@ SCIP_RETCODE propagateBoundsTightenVar(
 
    if( SCIPintervalIsPositiveInfinity(SCIPinfinity(scip), bounds) ||
       SCIPintervalIsNegativeInfinity(SCIPinfinity(scip), bounds) ||
-      SCIPintervalIsEmpty(bounds) )
+      SCIPintervalIsEmpty(SCIPinfinity(scip), bounds) )
    {
       /* domain outside [-infty, +infty] or empty -> declare node infeasible */
       SCIPdebugMessage("found <%s> infeasible due to domain propagation for variable <%s>\n", cons != NULL ? SCIPconsGetName(cons) : "???", SCIPvarGetName(var));  /*lint !e585*/
@@ -5292,7 +5290,7 @@ SCIP_RETCODE propagateBoundsCons(
 
    /* get activity for f(x,y) */
    ftermactivity = SCIPexprgraphGetNodeBounds(consdata->exprgraphnode);
-   assert(!SCIPintervalIsEmpty(ftermactivity) );
+   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), ftermactivity) );
 
    /* get activity for c*z */
    if( consdata->z != NULL )
@@ -5354,7 +5352,7 @@ SCIP_RETCODE propagateBoundsCons(
 
    /* set bounds for exprgraphnode = [lhs,rhs] - c*z */
    SCIPintervalSub(INTERVALINFTY, &tmp, consbounds, ztermactivity);
-   SCIPexprgraphTightenNodeBounds(conshdlrdata->exprgraph, consdata->exprgraphnode, tmp, 0.05, &cutoff);
+   SCIPexprgraphTightenNodeBounds(conshdlrdata->exprgraph, consdata->exprgraphnode, tmp, 0.05, INTERVALINFTY, &cutoff);
    if( cutoff )
    {
       SCIPdebugMessage("found constraint <%s> infeasible%s\n", SCIPconsGetName(cons), SCIPinProbing(scip) ? " in probing" : "");
@@ -6301,8 +6299,6 @@ SCIP_DECL_CONSINITSOL(consInitsolBivariate)
          SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "%4d left and %4d right bivariate constraints of type [%s]\n", nconvextypeslhs[c], nconvextypesrhs[c], typename);
       }
 #endif
-
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "NOTE: the constraint handler for bivariate constraints is still experimental!\n");
    }
 
    /* reset counter */
@@ -7115,10 +7111,6 @@ SCIP_DECL_CONSPRESOL(consPresolBivariate)
       assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
    }  /*lint !e788*/
 
-   /* ensure we are called again if we are about to finish, since another presolver may still fix some variable and we cannot remove these fixations in exitpre anymore */
-   if( !SCIPconshdlrWasPresolvingDelayed(conshdlr) && SCIPisPresolveFinished(scip) )
-      *result = SCIP_DELAYED;
-
    return SCIP_OKAY;
 }
 
@@ -7566,6 +7558,12 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdBivariate)
       int pos;
       int i;
 
+      /* needs to check curvature, which might be expensive */
+      if( (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 && nquadvarterms > 10 )
+         return SCIP_OKAY;
+      if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 && nquadvarterms > 50 )
+         return SCIP_OKAY;
+
       /* check if we find at least one bilinear term for which we would create a bivariate constraint
        * thus, we search for a variable that has a square term and is involved in at least one bivariate term */
       for( i = 0; i < nquadvarterms; ++i )
@@ -7687,6 +7685,9 @@ SCIP_DECL_QUADCONSUPGD(quadconsUpgdBivariate)
                x, y, auxvar, coefxx, coefx, coefyy, coefy, coefxy, -1.0,
                SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) ? -SCIPinfinity(scip) : 0.0,
                SCIPisInfinity(scip,  SCIPgetRhsQuadratic(scip, cons)) ?  SCIPinfinity(scip) : 0.0) );
+         /* need to enforce new constraints, as relation auxvar = f(x,y) is not redundant, even if original constraint is */
+         SCIP_CALL( SCIPsetConsEnforced(scip, upgdconss[*nupgdconss], TRUE) );
+         SCIP_CALL( SCIPsetConsChecked(scip, upgdconss[*nupgdconss], TRUE) );
          ++*nupgdconss;
 
          /* compute value of auxvar in debug solution */
@@ -7922,7 +7923,7 @@ SCIP_RETCODE SCIPincludeConshdlrBivariate(
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreBivariate) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolBivariate) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpBivariate) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBivariate, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolBivariate, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintBivariate) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropBivariate, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

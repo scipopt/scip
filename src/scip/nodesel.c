@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,17 +28,18 @@
 #include "scip/set.h"
 #include "scip/clock.h"
 #include "scip/stat.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/paramset.h"
 #include "scip/tree.h"
+#include "scip/reopt.h"
+#include "scip/lp.h"
 #include "scip/scip.h"
 #include "scip/nodesel.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
 
 #include "scip/struct_nodesel.h"
-
-
+#include "scip/struct_scip.h"
 
 /* 
  * node priority queue methods
@@ -621,11 +622,13 @@ SCIP_RETCODE SCIPnodepqBound(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
    SCIP_NODE* node;
+   SCIP_Bool reoptenabled;
    int pos;
    SCIP_Bool parentfelldown;
 
@@ -663,7 +666,16 @@ SCIP_RETCODE SCIPnodepqBound(
          if( !parentfelldown )
             pos--;
 
-         SCIPvbcCutoffNode(stat->vbc, stat, node);
+         SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
+
+         SCIP_CALL( SCIPsetGetBoolParam(set, "reoptimization/enable", &reoptenabled) );
+         if( reoptenabled )
+         {
+            assert(reopt != NULL);
+            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE,
+                  SCIPlpGetSolstat(lp), SCIPnodeGetDepth(node) == 0, SCIPtreeGetFocusNode(tree) == node,
+                  SCIPnodeGetLowerbound(node), SCIPtreeGetEffectiveRootDepth(tree)));
+         }
 
          /* free memory of the node */
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );
@@ -1143,6 +1155,18 @@ SCIP_Bool SCIPnodeselIsInitialized(
    assert(nodesel != NULL);
 
    return nodesel->initialized;
+}
+
+/** enables or disables all clocks of \p nodesel, depending on the value of the flag */
+void SCIPnodeselEnableOrDisableClocks(
+   SCIP_NODESEL*         nodesel,            /**< the node selector for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the node selector be enabled? */
+   )
+{
+   assert(nodesel != NULL);
+
+   SCIPclockEnableOrDisable(nodesel->setuptime, enable);
+   SCIPclockEnableOrDisable(nodesel->nodeseltime, enable);
 }
 
 /** gets time in seconds used in this node selector for setting up for next stages */

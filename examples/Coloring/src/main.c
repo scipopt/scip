@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,7 +25,6 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/scipshell.h"
-#include "pricer_coloring.h"
 #include "branch_coloring.h"
 #include "coloringplugins.h"
 

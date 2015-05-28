@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -149,7 +149,7 @@ SCIP_RETCODE COLORcreateConsStoreGraph(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    SCIP_CONS*            fatherconstraint,   /**< constraint in B&B-father */
-   int                   type,               /**< type of the constraint: ROOT for root-constraint, else SAME or DIFFER */
+   COLOR_CONSTYPE        type,               /**< type of the constraint: ROOT for root-constraint, else SAME or DIFFER */
    int                   node1,              /**< the first node of the constraint or -1 if root-constraint */
    int                   node2,              /**< the second node of the constraint or -1 if root-constraint */
    SCIP_NODE*            stickingnode        /**< the B&B-tree node at which the constraint will be sticking */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -132,6 +132,7 @@ void SCIPintervalSetEmpty(
 /** indicates whether interval is empty, i.e., whether inf > sup */
 extern
 SCIP_Bool SCIPintervalIsEmpty(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
@@ -178,7 +179,7 @@ SCIP_Bool SCIPintervalIsNegativeInfinity(
 #define SCIPintervalSetBounds(resultant, i, s)     do { SCIP_Real scipintervaltemp; scipintervaltemp = (s); (resultant)->inf = (i); (resultant)->sup = scipintervaltemp; } while( FALSE )
 #define SCIPintervalSetEmpty(resultant)            do { (resultant)->inf = 1.0; (resultant)->sup = -1.0; } while( FALSE )
 #define SCIPintervalSetEntire(infinity, resultant) do { (resultant)->inf = -(infinity); (resultant)->sup =  (infinity); } while( FALSE )
-#define SCIPintervalIsEmpty(operand)               ( (operand).sup < (operand).inf )
+#define SCIPintervalIsEmpty(infinity, operand)     ( (operand).inf > -(infinity) && (operand).sup < (infinity) && (operand).sup < (operand).inf )
 #define SCIPintervalIsEntire(infinity, operand)    ( (operand).inf <= -(infinity) && (operand).sup >= (infinity) )
 #define SCIPintervalIsPositiveInfinity(infinity, operand) ( (operand).inf >=  (infinity) && (operand).sup >= (operand).inf )
 #define SCIPintervalIsNegativeInfinity(infinity, operand) ( (operand).sup <= -(infinity) && (operand).sup >= (operand).inf )
@@ -537,6 +538,7 @@ void SCIPintervalLog(
 /** stores minimum of operands in resultant */
 extern
 void SCIPintervalMin(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
@@ -545,6 +547,7 @@ void SCIPintervalMin(
 /** stores maximum of operands in resultant */
 extern
 void SCIPintervalMax(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand1,           /**< first operand of operation */
    SCIP_INTERVAL         operand2            /**< second operand of operation */
@@ -553,6 +556,7 @@ void SCIPintervalMax(
 /** stores absolute value of operand in resultant */
 extern
 void SCIPintervalAbs(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
@@ -560,6 +564,7 @@ void SCIPintervalAbs(
 /** stores sign of operand in resultant */
 extern
 void SCIPintervalSign(
+   SCIP_Real             infinity,           /**< value for infinity */
    SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
    SCIP_INTERVAL         operand             /**< operand of operation */
    );

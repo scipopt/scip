@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,6 +37,7 @@
 #include "scip/intervalarith.h"
 #include "nlpi/nlpi.h"
 #include "nlpi/exprinterpret.h"
+#include "nlpi/nlpi_ipopt.h"
 
 
 /* constraint handler properties */
@@ -52,16 +53,18 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING  SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PROP_TIMING      SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
+#define CONSHDLR_PRESOLTIMING     SCIP_PRESOLTIMING_ALWAYS /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define QUADCONSUPGD_PRIORITY     10000 /**< priority of the constraint handler for upgrading of quadratic constraints */
 
 #ifndef M_PI
 #define M_PI           3.141592653589793238462643
 #endif
+
+#define UPGSCALE 10 /* scale factor used in general upgrades of quadratic cons to soc */
 
 /*
  * Data structures
@@ -122,6 +125,7 @@ struct SCIP_ConshdlrData
    char                  nlpform;            /**< formulation of SOC constraint in NLP */
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
+   SCIP_Bool             generalsocupg;      /**< try to upgrade more general quadratics to soc? */
 
    SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
    int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
@@ -550,7 +554,7 @@ SCIP_RETCODE createNlRow(
          sqrterm.coef = consdata->coefs[i] * consdata->coefs[i];
          SCIP_CALL( SCIPaddQuadElementToNlRow(scip, consdata->nlrow, sqrterm) );
 
-         if( consdata->offsets[i] != 0.0 )
+         if( ! SCIPisZero(scip, consdata->offsets[i]) )
          {
             rhs -= consdata->offsets[i] * consdata->offsets[i];
             SCIP_CALL( SCIPaddLinearCoefToNlRow(scip, consdata->nlrow, consdata->vars[i], 2.0 * consdata->coefs[i] * consdata->offsets[i]) );
@@ -2549,7 +2553,7 @@ SCIP_RETCODE presolveCreateOuterApprox(
 
    assert(scip     != NULL);
    assert(lhsvars  != NULL);
-   assert(nlhsvars >= 2);
+   assert(nlhsvars >= 1);
    assert(lhscoefs != NULL);
    assert(lhsoffsets != NULL);
    assert(rhsvar   != NULL);
@@ -2933,22 +2937,56 @@ SCIP_RETCODE polishSolution(
 
 #ifdef QUADCONSUPGD_PRIORITY
 /** tries to upgrade a quadratic constraint to a SOC constraint
- * @todo more general quadratic constraints then sums of squares might allow an upgrade to a SOC
+ *
+ *  We treat as special cases, quadratic with no bilinear terms and hyperbolic quadratic
+ *  constraints with exactly on bilinear component containing nonnegative variables. For this we use the formula:
+ *  \f[
+ *    x^T x \leq yz,\; y \geq 0,\; z \geq 0
+ *    \qquad\Leftrightarrow\qquad
+ *    \left\| \left(\begin{array}{c} x \\ \frac{1}{2}(y - z)\end{array}\right) \right\| \leq \frac{1}{2}(y + z).
+ *  \f]
+ *
+ * @todo implement more general hyperbolic upgrade, e.g., for -x^T x + yz >= 0 or x^T x <= ax + by + cyz
  */
 static
 SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 {
    int            nquadvars;
+   int            nbilinterms;
    SCIP_QUADVARTERM* term;
+   SCIP_QUADVARTERM* quadterms;
+   SCIP_BILINTERM* bilinterm;
+   SCIP_VAR**     quadvars;
    SCIP_VAR**     lhsvars;
    SCIP_Real*     lhscoefs;
    SCIP_Real*     lhsoffsets;
    SCIP_Real      lhsconstant;
    int            lhscount;
+   int            lhsnvars;
    SCIP_VAR*      rhsvar; 
    SCIP_Real      rhscoef;
    SCIP_Real      rhsoffset;
+   SCIP_VAR*      bilinvar1;
+   SCIP_VAR*      bilinvar2;
+   SCIP_Real      bilincoef;
    int            i;
+   int            j;
+   int            negeigpos;
+   SCIP_Real*     a;
+   SCIP_Real*     bp;
+   SCIP_Real*     eigvals;
+   SCIP_Bool      infeas;
+   SCIP_Bool      success;
+   SCIP_Bool      trygeneralupg;
+   int            nneg;
+   int            npos;
+   SCIP_Bool      rhsvarfound;
+   SCIP_Bool      rhsissoc;
+   SCIP_Bool      lhsissoc;
+   SCIP_Real      rhsvarlb;
+   SCIP_Real      rhsvarub;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -2961,40 +2999,108 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
    SCIPdebugPrintCons(scip, cons, NULL);
 
    /* currently do not support linear parts in upgrading of SOC constraints */
-   if( SCIPgetNLinearVarsQuadratic(scip, cons) )
+   if( SCIPgetNLinearVarsQuadratic(scip, cons) > 0 )
       return SCIP_OKAY;
 
-   /* currently do not support bilinear parts in upgrading of SOC constraints */
-   if( SCIPgetNBilinTermsQuadratic(scip, cons) )
-      return SCIP_OKAY;
-
+   nbilinterms = SCIPgetNBilinTermsQuadratic(scip, cons);
    nquadvars = SCIPgetNQuadVarTermsQuadratic(scip, cons);
 
    /* currently, a proper SOC constraint needs at least 3 variables */
    if( nquadvars < 3 )
       return SCIP_OKAY;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &lhsvars,    nquadvars-1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lhscoefs,   nquadvars-1) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &lhsoffsets, nquadvars-1) );
+   /* reserve space */
+   SCIP_CALL( SCIPallocBufferArray(scip, &lhsvars,    nquadvars - 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lhscoefs,   nquadvars - 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &lhsoffsets, nquadvars - 1) );
 
+   /* initialize data */
+   a = NULL;
+   bp = NULL;
+   eigvals = NULL;
+   quadvars = NULL;
+   bilinvar1 = NULL;
+   bilinvar2 = NULL;
    lhsconstant = 0.0;
    lhscount = 0;
-   rhsvar = NULL; 
+   rhsvar = NULL;
    rhscoef = 0.0;
    rhsoffset = 0.0;
 
-   if( !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, cons)) )
-   { /* try whether constraint on right hand side is SOC */
+   trygeneralupg = FALSE;
+
+   /* if more than one bilinear term is present, we are in the general case */
+   if( nbilinterms > 1 )
+   {
+      trygeneralupg = TRUE;
+      goto GENERALUPG;
+   }
+
+   /* check hyperbolic part */
+   if ( nbilinterms == 1 )
+   {
+      bilinterm = SCIPgetBilinTermsQuadratic(scip, cons);
+      bilinvar1 = bilinterm->var1;
+      bilinvar2 = bilinterm->var2;
+      bilincoef = bilinterm->coef;
+
+      /* the variables in the bilinear term need to be nonnegative */
+      if ( SCIPisNegative(scip, SCIPvarGetLbGlobal(bilinvar1)) || SCIPisNegative(scip, SCIPvarGetLbGlobal(bilinvar2)) )
+      {
+         trygeneralupg = TRUE;
+         goto GENERALUPG;
+      }
+
+      /* we need a rhs */
+      if ( ! SCIPisZero(scip, SCIPgetRhsQuadratic(scip, cons)) )
+      {
+         trygeneralupg = TRUE;
+         goto GENERALUPG;
+      }
+
+      /* we only allow for -1.0 bilincoef */
+      if ( ! SCIPisEQ(scip, bilincoef, -1.0) )
+      {
+         trygeneralupg = TRUE;
+         goto GENERALUPG;
+      }
+
+      /* check that bilinear terms do not appear in the rest and quadratic terms have postive sqrcoef have no lincoef */
+      quadterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
+      for (i = 0; i < nquadvars; ++i)
+      {
+         term = &quadterms[i];
+
+         if( ! SCIPisZero(scip, term->lincoef) || SCIPisNegative(scip, term->sqrcoef) )
+         {
+            trygeneralupg = TRUE;
+            goto GENERALUPG;
+         }
+
+         if ( (term->var == bilinvar1 || term->var == bilinvar2) && ! SCIPisZero(scip, term->sqrcoef) )
+         {
+            trygeneralupg = TRUE;
+            goto GENERALUPG;
+         }
+      }
+   }
+
+
+   quadterms = SCIPgetQuadVarTermsQuadratic(scip, cons);
+   assert( quadterms != NULL );
+
+   if( ! SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, cons)) )
+   {
+      /* try whether constraint on right hand side is SOC */
       lhsconstant = -SCIPgetRhsQuadratic(scip, cons);
 
       for( i = 0; i < nquadvars; ++i )
       {
-         term = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
+         term = &quadterms[i];
 
-         /* if there is a linear variable that is still considered as quadratic (constraint probably not presolved yet), then give up */
-         if( term->sqrcoef == 0.0 )
-            goto cleanup;
+         /* skip terms with 0 coefficients */
+         if ( SCIPisZero(scip, term->sqrcoef) )
+            continue;
 
          if( term->sqrcoef > 0.0 )
          {
@@ -3019,20 +3125,134 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
             ++lhscount;
          }
-         else if( rhsvar != NULL || SCIPisLT(scip, SCIPcomputeVarLbGlobal(scip, term->var), term->lincoef / (2*term->sqrcoef)) )
+         else if( rhsvar != NULL ||
+               (SCIPisLT(scip, SCIPcomputeVarLbGlobal(scip, term->var), -term->lincoef / (2 * term->sqrcoef))
+                && SCIPisGT(scip, SCIPcomputeVarUbGlobal(scip, term->var), -term->lincoef / (2 * term->sqrcoef))) )
          { /* second variable with negative coefficient -> cannot be SOC */
-            /* or lower bound of variable does not ensure positivity of right hand side */
+            /* or rhs side changes sign */
             rhsvar = NULL;
             break;
          }
          else
          {
             rhsvar       = term->var;
-            rhscoef      = sqrt(-term->sqrcoef);
             rhsoffset    = term->lincoef / (2 * term->sqrcoef);
             lhsconstant -= term->lincoef * term->lincoef / (4 * term->sqrcoef);
+
+            if( SCIPisGE(scip, SCIPcomputeVarLbGlobal(scip, term->var), -term->lincoef / (2*term->sqrcoef)) )
+               rhscoef = sqrt(-term->sqrcoef);
+            else
+               rhscoef = -sqrt(-term->sqrcoef);
          }
       }
+   }
+
+   /* treat hyberbolic case */
+   if ( nbilinterms == 1 )
+   {
+      char name[SCIP_MAXSTRLEN];
+      SCIP_VAR* auxvarsum;
+      SCIP_VAR* auxvardiff;
+      SCIP_CONS* couplingcons;
+      SCIP_VAR* consvars[3];
+      SCIP_Real consvals[3];
+
+      /* can only upgrade if rhs is 0 */
+      if ( rhsvar != NULL )
+         goto cleanup;
+
+      SCIPdebugMessage("found hyberbolic quadratic constraint <%s> to be SOC\n", SCIPconsGetName(cons));
+
+      /* check if upgdconss is long enough to store upgrade constraints: we need two if we will have a quadratic
+       * constraint for the left hand side left */
+      *nupgdconss = SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) ? 1 : 2;
+      if ( *nupgdconss > upgdconsssize )
+      {
+         /* signal that we need more memory and return */
+         *nupgdconss = -*nupgdconss;
+         goto cleanup;
+      }
+
+      /* create auxiliary variable for sum (nonnegative) */
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soc#%s_s", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateVar(scip, &auxvarsum, name, 0.0, SCIPinfinity(scip), 0.0,
+            SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), FALSE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, auxvarsum) );
+
+      /* create auxiliary variable for difference (free) */
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soc#%s_d", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateVar(scip, &auxvardiff, name, -SCIPinfinity(scip), SCIPinfinity(scip), 0.0,
+            SCIP_VARTYPE_CONTINUOUS, SCIPconsIsInitial(cons), FALSE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, auxvardiff) );
+
+      /* add coupling constraint for sum */
+      consvars[0] = bilinvar1;
+      consvars[1] = bilinvar2;
+      consvars[2] = auxvarsum;
+      consvals[0] = 1.0;
+      consvals[1] = 1.0;
+      consvals[2] = -1.0;
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soc#%s_cs", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateConsLinear(scip, &couplingcons, name, 3, consvars, consvals, 0.0, 0.0,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), TRUE,
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+            SCIPconsIsStickingAtNode(cons)) );
+      SCIP_CALL( SCIPaddCons(scip, couplingcons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &couplingcons) );
+
+      /* add coupling constraint for difference */
+      consvars[0] = bilinvar1;
+      consvars[1] = bilinvar2;
+      consvars[2] = auxvardiff;
+      consvals[0] = 1.0;
+      consvals[1] = -1.0;
+      consvals[2] = -1.0;
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "soc#%s_cd", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateConsLinear(scip, &couplingcons, name, 3, consvars, consvals, 0.0, 0.0,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), TRUE,
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+            SCIPconsIsStickingAtNode(cons)) );
+      SCIP_CALL( SCIPaddCons(scip, couplingcons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &couplingcons) );
+
+      /* add difference variable to constraint */
+      lhsvars[lhscount] = auxvardiff;
+      lhscoefs[lhscount] = 0.5;
+      lhsoffsets[lhscount] = 0.0;
+
+      SCIP_CALL( SCIPcreateConsSOC(scip, &upgdconss[0], SCIPconsGetName(cons),
+            lhscount + 1, lhsvars, lhscoefs, lhsoffsets, MAX(lhsconstant, 0.0),
+            auxvarsum, 0.5, 0.0,
+            SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+            SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+            SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+      SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+
+      /* create constraint that is equal to cons except that rhs is now infinity */
+      if( ! SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) )
+      {
+         SCIP_CALL( SCIPcreateConsQuadratic2(scip, &upgdconss[1], SCIPconsGetName(cons),
+               SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
+               SCIPgetNQuadVarTermsQuadratic(scip, cons), SCIPgetQuadVarTermsQuadratic(scip, cons),
+               SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetBilinTermsQuadratic(scip, cons),
+               SCIPgetLhsQuadratic(scip, cons), SCIPinfinity(scip),
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+      }
+      SCIP_CALL( SCIPreleaseVar(scip, &auxvardiff) );
+      SCIP_CALL( SCIPreleaseVar(scip, &auxvarsum) );
+
+      for (i = 0; i < lhscount; ++i)
+      {
+         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, lhsvars[i]) );
+      }
+
+      goto cleanup;
    }
 
    if( rhsvar != NULL && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
@@ -3081,7 +3301,9 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       {
          term = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
 
-         /* if there is a linear variable that is still considered as quadratic (constraint probably not presolved yet), then give up */
+         /* if there is a linear variable that is still considered as quadratic (constraint probably not presolved yet),
+          * then give up
+          */
          if( term->sqrcoef == 0.0 )
             goto cleanup;
 
@@ -3108,18 +3330,24 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
 
             ++lhscount;
          }
-         else if( rhsvar || SCIPisLT(scip, SCIPcomputeVarLbGlobal(scip, term->var), -term->lincoef / (2*term->sqrcoef)) )
+         else if( rhsvar != NULL ||
+               (SCIPisLT(scip, SCIPcomputeVarLbGlobal(scip, term->var), -term->lincoef / (2 * term->sqrcoef))
+                && SCIPisGT(scip, SCIPcomputeVarUbGlobal(scip, term->var), -term->lincoef / (2 * term->sqrcoef))) )
          { /* second variable with positive coefficient -> cannot be SOC */
-            /* or lower bound of variable does not ensure positivity of right hand side */
+            /* or rhs side changes sign */
             rhsvar = NULL;
             break;
          }
          else
          {
             rhsvar       = term->var;
-            rhscoef      = sqrt(term->sqrcoef);
             rhsoffset    = term->lincoef / (2 * term->sqrcoef);
             lhsconstant += term->lincoef * term->lincoef / (4 * term->sqrcoef);
+
+            if( SCIPisGE(scip, SCIPcomputeVarLbGlobal(scip, term->var), -term->lincoef / (2*term->sqrcoef)) )
+               rhscoef = sqrt(term->sqrcoef);
+            else
+               rhscoef = -sqrt(term->sqrcoef);
          }
       }
 
@@ -3160,10 +3388,375 @@ SCIP_DECL_QUADCONSUPGD(upgradeConsQuadratic)
       }
    }
 
+GENERALUPG:
+   if( !trygeneralupg )
+      goto cleanup;
+
+   /* find the soc constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   if( !conshdlrdata->generalsocupg )
+      goto cleanup;
+
+   SCIPdebugMessage("Trying general method of upgrade to a soc const\n");
+
+   rhsvarlb = 1.0;
+   rhsvarub = 0.0;
+
+#ifndef SCIP_STATISTIC
+   /* skip large matrices (needs to compute eigenvalues/vectors) according to presolve timing */
+   if( (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 && nquadvars > 10 )
+      goto cleanup;
+   if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 && nquadvars > 50 )
+      goto cleanup;
+#endif
+
+   /* need routine to compute eigenvalues/eigenvectors */
+   if( !SCIPisIpoptAvailableIpopt() )
+      goto cleanup;
+
+   /* build lower triangular part the A matrix */
+   SCIP_CALL( SCIPallocBufferArray(scip, &a, nquadvars*nquadvars) );
+   BMSclearMemoryArray(a, nquadvars*nquadvars);
+   SCIP_CALL( SCIPallocBufferArray(scip, &bp, nquadvars) );
+   BMSclearMemoryArray(bp, nquadvars);
+   SCIP_CALL( SCIPallocBufferArray(scip, &quadvars, nquadvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &eigvals, nquadvars) );
+
+   /* make sure quadratic variables terms are sorted */
+   SCIP_CALL( SCIPsortQuadVarTermsQuadratic(scip, cons) );
+
+   /* set lower triangular entries of A corresponding to square terms */
+   for( i = 0; i < nquadvars; ++i )
+   {
+      term = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
+      a[i*nquadvars + i] = term->sqrcoef;
+      quadvars[i] = term->var;
+   }
+
+   /* set lower triangular entries of A corresponding to bilinear terms */
+   for( i = 0; i < nbilinterms; ++i )
+   {
+      int idx1;
+      int idx2;
+
+      bilinterm = &SCIPgetBilinTermsQuadratic(scip, cons)[i];
+
+      SCIP_CALL( SCIPfindQuadVarTermQuadratic(scip, cons, bilinterm->var1, &idx1) );
+      SCIP_CALL( SCIPfindQuadVarTermQuadratic(scip, cons, bilinterm->var2, &idx2) );
+
+      assert(idx1 >= 0);
+      assert(idx2 >= 0);
+      assert(idx1 != idx2);
+
+      a[MIN(idx1,idx2) * nquadvars + MAX(idx1,idx2)] = bilinterm->coef / 2.0;
+   }
+
+   /* compute eigenvalues and vectors, A = PDP^t
+    * note: a stores P^t
+    */
+   if( LapackDsyev(TRUE, nquadvars, a, eigvals) != SCIP_OKAY )
+   {
+      SCIPdebugMessage("Failed to compute eigenvalues and eigenvectors for constraint <%s>.\n", SCIPconsGetName(cons));
+      goto cleanup;
+   }
+
+   /* set small eigenvalues to 0 and compute b*P */
+   nneg = 0;
+   npos = 0;
+   for( i = 0; i < nquadvars; ++i )
+   {
+      for( j = 0; j < nquadvars; ++j )
+      {
+         term = &SCIPgetQuadVarTermsQuadratic(scip, cons)[j];
+         bp[i] += term->lincoef * a[i * nquadvars + j];
+      }
+
+      if( SCIPisZero(scip, eigvals[i]) )
+      {
+         /* if there is a purely linear variable, the constraint can't be written as a SOC */
+         if( !SCIPisZero(scip, bp[i]) )
+         {
+            goto cleanup;
+         }
+
+         bp[i] = 0.0;
+         eigvals[i] = 0.0;
+      }
+      else if( eigvals[i] > 0.0 )
+         npos++;
+      else
+         nneg++;
+   }
+
+   /* currently, a proper SOC constraint needs at least 3 variables */
+   if( npos + nneg < 3 )
+      goto cleanup;
+
+   /* determine whether rhs or lhs of cons is potentially SOC, if any */
+   rhsissoc = FALSE;
+   if( nneg == 1 && !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, cons)) )
+   {
+      rhsissoc = TRUE;
+   }
+
+   lhsissoc = FALSE;
+   if( npos == 1 && !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) )
+   {
+      lhsissoc = TRUE;
+   }
+
+   /* if non is potentailly SOC, stop */
+   if( !rhsissoc && !lhsissoc )
+      goto cleanup;
+
+   assert(rhsissoc != lhsissoc);
+
+
+   if( lhsissoc )
+   {
+      /* lhs is potentailly SOC, change signs */
+      lhsconstant = SCIPgetLhsQuadratic(scip, cons);
+
+      for( i = 0; i < nquadvars; ++i )
+      {
+         eigvals[i] = -eigvals[i];
+         bp[i] = -bp[i];
+      }
+   }
+   else
+   {
+      lhsconstant = -SCIPgetRhsQuadratic(scip, cons);
+   }
+
+   /* we have lhsconstant + x^t A x + b x <= 0 and A has a single negative eigenvalue; try to build soc */
+   negeigpos = -1;
+   rhsvarfound = FALSE;
+   for( i = 0; i < nquadvars; ++i )
+   {
+      if( SCIPisZero(scip, eigvals[i]) )
+         continue;
+
+      term = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
+
+      if( eigvals[i] > 0.0 )
+      {
+         lhscoefs[lhscount] = sqrt(eigvals[i]) * UPGSCALE;
+         lhsoffsets[lhscount] = bp[i] / (2 * eigvals[i]);
+         lhsconstant -= bp[i] * bp[i] / (4 * eigvals[i]);
+
+         ++lhscount;
+      }
+      else
+      {
+         /* should enter here only once */
+         assert(rhsvarfound == FALSE);
+
+         rhsoffset = bp[i] / (2 * eigvals[i]);
+
+         /* rhs var is going to be a multiaggregated variable, compute rhsvar bounds */
+         rhsvarlb = 0.0;
+         rhsvarub = 0.0;
+         for( j = 0; j < nquadvars; ++j )
+         {
+            SCIP_Real aux;
+
+            if( a[i * nquadvars + j] > 0.0 )
+            {
+               aux = SCIPcomputeVarLbGlobal(scip, quadvars[j]);
+               assert(!SCIPisInfinity(scip, aux));
+            }
+            else
+            {
+               aux = SCIPcomputeVarUbGlobal(scip, quadvars[j]);
+               assert(!SCIPisInfinity(scip, -aux));
+            }
+
+            if( SCIPisInfinity(scip, aux) || SCIPisInfinity(scip, -aux) )
+            {
+               rhsvarlb = -SCIPinfinity(scip);
+               break;
+            }
+            else
+               rhsvarlb += a[i * nquadvars + j] * aux;
+         }
+         rhsvarlb += rhsoffset;
+
+         for( j = 0; j < nquadvars; ++j )
+         {
+            SCIP_Real aux;
+
+            if( a[i * nquadvars + j] > 0.0 )
+            {
+               aux = SCIPcomputeVarUbGlobal(scip, quadvars[j]);
+               assert(!SCIPisInfinity(scip, -aux));
+            }
+            else
+            {
+               aux = SCIPcomputeVarLbGlobal(scip, quadvars[j]);
+               assert(!SCIPisInfinity(scip, aux));
+            }
+
+            if( SCIPisInfinity(scip, aux) || SCIPisInfinity(scip, -aux) )
+            {
+               rhsvarub = SCIPinfinity(scip);
+               break;
+            }
+            else
+               rhsvarub += a[i * nquadvars + j] * aux;
+         }
+         rhsvarub += rhsoffset;
+
+         /* check whether rhsvar changes sign */
+         if( SCIPisGE(scip, rhsvarlb, 0.0) || SCIPisLE(scip, rhsvarub, 0.0) )
+         {
+            rhsvarfound  = TRUE;
+            negeigpos    = i;
+            lhsconstant -= rhsoffset * rhsoffset * eigvals[i];
+            rhscoef      = SCIPisLE(scip, rhsvarub, 0.0) ? -sqrt(-eigvals[i]) : sqrt(-eigvals[i]);
+         }
+         else
+         {
+            SCIPdebugMessage("Failed because rhsvar [%g, %g] changes sign.\n", rhsvarlb, rhsvarub);
+            rhsvarfound = FALSE;
+            break;
+         }
+      }
+   }
+
+   if( rhsvarfound && lhscount >= 2 && !SCIPisNegative(scip, lhsconstant) )
+   {
+      /* found SOC constraint, so upgrade to SOC constraint(s) (below) and relax right hand side */
+      SCIPdebugMessage("found right hand side of constraint <%s> to be SOC\n", SCIPconsGetName(cons));
+
+      /* check if upgdconss is long enough to store upgrade constraints:
+       * we need two if we will have a quadratic constraint for the left hand side left */
+      if( rhsissoc )
+         *nupgdconss = SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) ? 1 : 2;
+      else
+         *nupgdconss = SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, cons)) ? 1 : 2;
+      if( *nupgdconss > upgdconsssize )
+      {
+         /* signal that we need more memory and return */
+         *nupgdconss = -*nupgdconss;
+         goto cleanup;
+      }
+
+      /* create lhs and rhs vars */
+      lhsnvars = 0;
+      for( i = 0; i < nquadvars; ++i )
+      {
+         if( eigvals[i] <= 0.0 )
+            continue;
+
+         SCIP_CALL( SCIPcreateVarBasic(scip, &lhsvars[lhsnvars], NULL,
+                  -SCIPinfinity(scip), SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS) );
+         SCIP_CALL( SCIPaddVar(scip, lhsvars[lhsnvars]) );
+
+         SCIP_CALL( SCIPmultiaggregateVar(scip, lhsvars[lhsnvars], nquadvars, quadvars, &(a[i * nquadvars]),
+                  lhsoffsets[lhsnvars], &infeas, &success) );
+
+         if( infeas || !success )
+         {
+            SCIPdebugMessage("Problem with aggregation while trying to upgrade <%s>.\n", SCIPconsGetName(cons) );
+
+            /* release all created vars so far */
+            for( j = 0; j <= lhsnvars; ++j )
+               SCIP_CALL( SCIPreleaseVar(scip, &lhsvars[j]) );
+
+            goto cleanup;
+         }
+         lhsnvars++;
+      }
+      assert(lhsnvars == lhscount);
+      assert(negeigpos >= 0);
+
+      SCIP_CALL( SCIPcreateVarBasic(scip, &rhsvar, NULL,
+               rhsvarlb, rhsvarub, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+      SCIP_CALL( SCIPaddVar(scip, rhsvar) );
+      SCIP_CALL( SCIPmultiaggregateVar(scip, rhsvar, nquadvars, quadvars, &(a[negeigpos * nquadvars]),
+               rhsoffset, &infeas, &success) );
+
+      if( infeas || !success )
+      {
+         SCIPdebugMessage("Problem with aggregation while trying to upgrade <%s>.\n", SCIPconsGetName(cons) );
+
+         /* release all created vars */
+         SCIP_CALL( SCIPreleaseVar(scip, &rhsvar) );
+         for( j = 0; j < lhsnvars; ++j )
+         {
+            SCIP_CALL( SCIPreleaseVar(scip, &lhsvars[j]) );
+         }
+
+         goto cleanup;
+      }
+
+      SCIP_CALL( SCIPcreateConsSOC(scip, &upgdconss[0], SCIPconsGetName(cons),
+               lhscount, lhsvars, lhscoefs, NULL, MAX(lhsconstant, 0.0) * UPGSCALE * UPGSCALE,
+               rhsvar, rhscoef * UPGSCALE, 0.0,
+               SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+               SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+               SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+      SCIPdebugPrintCons(scip, upgdconss[0], NULL);
+
+      /* release created variables */
+      SCIP_CALL( SCIPreleaseVar(scip, &rhsvar) );
+      for( i = 0; i < lhsnvars; ++i )
+      {
+         SCIP_CALL( SCIPreleaseVar(scip, &lhsvars[i]) );
+      }
+
+      /* create constraint that is equal to cons except that rhs/lhs is now +/-infinity */
+      if( rhsissoc && !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) )
+      {
+         SCIPdebugMessage("rhs is soc, keep quadratic\n");
+         SCIP_CALL( SCIPcreateConsQuadratic2(scip, &upgdconss[1], SCIPconsGetName(cons),
+                  SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
+                  SCIPgetNQuadVarTermsQuadratic(scip, cons), SCIPgetQuadVarTermsQuadratic(scip, cons),
+                  SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetBilinTermsQuadratic(scip, cons),
+                  SCIPgetLhsQuadratic(scip, cons), SCIPinfinity(scip),
+                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+                  SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+                  SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+      }
+      else if( lhsissoc && !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip,cons)) )
+      {
+         SCIPdebugMessage("lhs is soc, keep quadratic\n");
+         SCIP_CALL( SCIPcreateConsQuadratic2(scip, &upgdconss[1], SCIPconsGetName(cons),
+                  SCIPgetNLinearVarsQuadratic(scip, cons), SCIPgetLinearVarsQuadratic(scip, cons), SCIPgetCoefsLinearVarsQuadratic(scip, cons),
+                  SCIPgetNQuadVarTermsQuadratic(scip, cons), SCIPgetQuadVarTermsQuadratic(scip, cons),
+                  SCIPgetNBilinTermsQuadratic(scip, cons), SCIPgetBilinTermsQuadratic(scip, cons),
+                  -SCIPinfinity(scip), SCIPgetRhsQuadratic(scip, cons),
+                  SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+                  SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+                  SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
+      }
+   }
+#ifdef SCIP_DEBUG
+   else
+   {
+      if( lhscount < 2 )
+      {
+         SCIPdebugMessage("Failed because there are not enough lhsvars (%d)\n", lhscount);
+      }
+      if( SCIPisNegative(scip, lhsconstant) )
+      {
+         SCIPdebugMessage("Failed because lhsconstant is negative (%g)\n", lhsconstant);
+      }
+   }
+#endif
+
  cleanup:
    SCIPfreeBufferArray(scip, &lhsvars);
    SCIPfreeBufferArray(scip, &lhscoefs);
    SCIPfreeBufferArray(scip, &lhsoffsets);
+   SCIPfreeBufferArrayNull(scip, &a);
+   SCIPfreeBufferArrayNull(scip, &bp);
+   SCIPfreeBufferArrayNull(scip, &quadvars);
+   SCIPfreeBufferArrayNull(scip, &eigvals);
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -3939,34 +4532,33 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
          continue;
       }
 
-      if( conshdlrdata->nauxvars > 0 && !consdata->isapproxadded )
+      if( conshdlrdata->nauxvars > 0 && !consdata->isapproxadded && consdata->nvars > 1 )
       {
          SCIP_CALL( presolveCreateOuterApprox(scip, consdata->nvars, consdata->vars, consdata->coefs, consdata->offsets, consdata->rhsvar, consdata->rhscoeff, consdata->rhscoeff, consdata->constant, SCIPconsGetName(conss[c]), conss[c], conshdlrdata->nauxvars, conshdlrdata->glineur, naddconss) );  /*lint !e613*/
          consdata->isapproxadded = TRUE;
       }
 
-      SCIP_CALL( propagateBounds(scip, conss[c], &propresult, nchgbds) );  /*lint !e613*/
-      switch( propresult )
+      if( (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
       {
-      case SCIP_DIDNOTRUN:
-      case SCIP_DIDNOTFIND:
-         break;
-      case SCIP_REDUCEDDOM:
-         *result = SCIP_SUCCESS;
-         break;
-      case SCIP_CUTOFF:
-         *result = SCIP_CUTOFF;
-         SCIPdebugMessage("infeasible in presolve due to propagation for constraint %s\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
-         return SCIP_OKAY;
-      default:
-         SCIPerrorMessage("unexpected result from propagation: %d\n", propresult);
-         return SCIP_ERROR;
-      } /*lint !e788*/
+         SCIP_CALL( propagateBounds(scip, conss[c], &propresult, nchgbds) );  /*lint !e613*/
+         switch( propresult )
+         {
+            case SCIP_DIDNOTRUN:
+            case SCIP_DIDNOTFIND:
+               break;
+            case SCIP_REDUCEDDOM:
+               *result = SCIP_SUCCESS;
+               break;
+            case SCIP_CUTOFF:
+               *result = SCIP_CUTOFF;
+               SCIPdebugMessage("infeasible in presolve due to propagation for constraint %s\n", SCIPconsGetName(conss[c]));  /*lint !e613*/
+               return SCIP_OKAY;
+            default:
+               SCIPerrorMessage("unexpected result from propagation: %d\n", propresult);
+               return SCIP_ERROR;
+         } /*lint !e788*/
+      }
    }
-
-   /* ensure we are called again if we are about to finish, since another presolver may still fix some variable and we cannot remove these fixations in exitpre anymore */
-   if( !SCIPconshdlrWasPresolvingDelayed(conshdlr) && SCIPisPresolveFinished(scip) )
-      *result = SCIP_DELAYED;
 
    return SCIP_OKAY;
 } /*lint !e715*/
@@ -4405,7 +4997,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitSOC) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolSOC) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSOC) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOC, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSOC, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSOC) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSOC, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpSOC, consSepasolSOC, CONSHDLR_SEPAFREQ,
@@ -4467,6 +5059,10 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
          "are cuts added during enforcement removable from the LP in the same node?",
          &conshdlrdata->enfocutsremovable, TRUE, FALSE, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/generalsocupgrade",
+         "try to upgrade more general quadratics to soc?",
+         &conshdlrdata->generalsocupg, TRUE, TRUE, NULL, NULL) );
+
    return SCIP_OKAY;
 }
 
@@ -4525,7 +5121,7 @@ SCIP_RETCODE SCIPcreateConsSOC(
    }
 
    assert(vars     != NULL);
-   assert(nvars    >= 2);
+   assert(nvars    >= 1);
    assert(constant >= 0.0);
    assert(!SCIPisInfinity(scip, ABS(rhsoffset)));
    assert(!SCIPisInfinity(scip, constant));

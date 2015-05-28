@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -420,12 +420,6 @@ SCIP_Bool SCIPconshdlrIsPropagationDelayed(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** should presolving method be delayed, if other presolvers found reductions? */
-EXTERN
-SCIP_Bool SCIPconshdlrIsPresolvingDelayed(
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-   );
-
 /** was LP separation method delayed at the last call? */
 EXTERN
 SCIP_Bool SCIPconshdlrWasLPSeparationDelayed(
@@ -444,12 +438,6 @@ SCIP_Bool SCIPconshdlrWasPropagationDelayed(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** was presolving method delayed at the last call? */
-EXTERN
-SCIP_Bool SCIPconshdlrWasPresolvingDelayed(
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-   );
-
 /** is constraint handler initialized? */
 EXTERN
 SCIP_Bool SCIPconshdlrIsInitialized(
@@ -464,10 +452,30 @@ SCIP_Bool SCIPconshdlrIsClonable(
 
 /** returns the timing mask of the propagation method of the constraint handler */
 EXTERN
-SCIP_PROPTIMING SCIPconshdlrGetPropTimingmask(
+SCIP_PROPTIMING SCIPconshdlrGetPropTiming(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/** sets the timing mask of the propagation method of the constraint handler */
+EXTERN
+void SCIPconshdlrSetPropTiming(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_PROPTIMING       proptiming          /** timing mask to be set */
+   );
+
+
+/** returns the timing mask of the presolving method of the constraint handler */
+EXTERN
+SCIP_PRESOLTIMING SCIPconshdlrGetPresolTiming(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** sets the timing mask of the presolving method of the constraint handler */
+EXTERN
+void SCIPconshdlrSetPresolTiming(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
+   );
 
 
 /*

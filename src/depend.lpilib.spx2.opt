@@ -3,12 +3,14 @@ $(LIBOBJDIR)/lpi/lpi_spx2.o: src/lpi/lpi_spx2.cpp  \
     \
     \
     \
-    \
-    \
-    \
-    \
-    \
    \
+   \
+    \
+    \
+    \
+    \
+    \
+    \
     \
     \
     \

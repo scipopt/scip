@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,9 +39,9 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in
                                          *   (-1: no limit) */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_FAST
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 
@@ -1009,7 +1009,7 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpDisjunction) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseDisjunction) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolDisjunction, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYPRESOL) );
+         CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintDisjunction) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropDisjunction, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

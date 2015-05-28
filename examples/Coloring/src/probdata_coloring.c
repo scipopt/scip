@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -117,9 +117,20 @@ SCIP_RETCODE preprocessGraph(
    printf("\npreprocessing...\n");
 
    /* copy the old graph */
-   tcliqueCreate(&currgraph);
+   if( !tcliqueCreate(&currgraph) )
+   {
+      SCIPerrorMessage("could not flush the clique graph\n");
+      return SCIP_ERROR;
+   }
+
    assert(currgraph != NULL);
-   tcliqueAddNode(currgraph, tcliqueGetNNodes(probdata->oldgraph)-1, 0);
+
+   if( !tcliqueAddNode(currgraph, tcliqueGetNNodes(probdata->oldgraph)-1, 0) )
+   {
+      SCIPerrorMessage("could not add a node to the clique graph\n");
+      return SCIP_ERROR;
+   }
+
    for ( i = 0; i < tcliqueGetNNodes(probdata->oldgraph); i++ )
    {
       /* get adjacent nodes for node i */
@@ -129,12 +140,22 @@ SCIP_RETCODE preprocessGraph(
       {
          if ( *firstedge > i )
          {
-            tcliqueAddEdge(currgraph, i, *firstedge);
+            if( !tcliqueAddEdge(currgraph, i, *firstedge) )
+            {
+               SCIPerrorMessage("could not add an edge to the clique graph\n");
+               return SCIP_ERROR;
+            }
          }
          firstedge++;
       }
    }
-   tcliqueFlush(currgraph);
+
+   if( !tcliqueFlush(currgraph) )
+   {
+      SCIPerrorMessage("could not flush the clique graph\n");
+      return SCIP_ERROR;
+   }
+
    currnnodes = tcliqueGetNNodes(probdata->oldgraph);
 
    /* get memory for array of deletednodes */  
@@ -204,9 +225,21 @@ SCIP_RETCODE preprocessGraph(
             assert(actnewnode+ndeletednodes == COLORprobGetOriginalNNodes(scip));
             /* create new current graph */
             tcliqueFree(&currgraph);
-            tcliqueCreate(&currgraph);
+
+            if( !tcliqueCreate(&currgraph) )
+            {
+               SCIPerrorMessage("could not create the clique graph\n");
+               return SCIP_ERROR;
+            }
+
             assert(currgraph != NULL);
-            tcliqueAddNode(currgraph, actnewnode-1, 0);
+
+            if( !tcliqueAddNode(currgraph, actnewnode-1, 0) )
+            {
+               SCIPerrorMessage("could not add a node to the clique graph\n");
+               return SCIP_ERROR;
+            }
+
             for ( i = 0; i < actnewnode; i++ )
             {
                /* get adjacent nodes for node newnodes[i] */
@@ -220,14 +253,25 @@ SCIP_RETCODE preprocessGraph(
                   {
                      if ( *firstedge == newnodes[j] )
                      {
-                        tcliqueAddEdge(currgraph, i, j);
+                        if( !tcliqueAddEdge(currgraph, i, j) )
+                        {
+                           SCIPerrorMessage("could not add an edge to the clique graph\n");
+                           return SCIP_ERROR;
+                        }
+
                         break;
                      }
                   }
                   firstedge++;
                }
             }
-            tcliqueFlush(currgraph);
+
+            if( !tcliqueFlush(currgraph) )
+            {
+               SCIPerrorMessage("could not flush the clique graph\n");
+               return SCIP_ERROR;
+            }
+
             /* update currnnodes */
             currnnodes = tcliqueGetNNodes(currgraph);
             /* update new2oldnodes */
@@ -316,9 +360,21 @@ SCIP_RETCODE preprocessGraph(
             assert(actnewnode+ndeletednodes == COLORprobGetOriginalNNodes(scip));
             /* create new current graph */
             tcliqueFree(&currgraph);
-            tcliqueCreate(&currgraph);
+
+            if( !tcliqueCreate(&currgraph) )
+            {
+               SCIPerrorMessage("could not create the clique graph\n");
+               return SCIP_ERROR;
+            }
+
             assert(currgraph != NULL);
-            tcliqueAddNode(currgraph, actnewnode-1, 0);
+
+            if( !tcliqueAddNode(currgraph, actnewnode-1, 0) )
+            {
+               SCIPerrorMessage("could not add a node to the clique graph\n");
+               return SCIP_ERROR;
+            }
+
             for ( i = 0; i < actnewnode; i++ )
             {
                /* get adjacent nodes for node newnodes[i] */
@@ -332,14 +388,24 @@ SCIP_RETCODE preprocessGraph(
                   {
                      if ( *firstedge == newnodes[j] )
                      {
-                        tcliqueAddEdge(currgraph, i, j);
+
+                        if( !tcliqueAddEdge(currgraph, i, j) )
+                        {
+                           SCIPerrorMessage("could not add an edge to the clique graph\n");
+                           return SCIP_ERROR;
+                        }
                         break;
                      }
                   }
                   firstedge++;
                }
             }
-            tcliqueFlush(currgraph);
+
+            if( !tcliqueFlush(currgraph) )
+            {
+               SCIPerrorMessage("could not flush the clique graph\n");
+               return SCIP_ERROR;
+            }
 
             /* update currnnodes */
             currnnodes = tcliqueGetNNodes(currgraph);
@@ -401,7 +467,12 @@ SCIP_DECL_PROBTRANS(probtransColoring)
 
    /* allocate memory */
    SCIP_CALL( SCIPallocMemory(scip, targetdata) );
-   tcliqueCreate(&((*targetdata)->graph));              /* create the transformed graph */
+
+   if( !tcliqueCreate(&((*targetdata)->graph)) ) /* create the transformed graph */
+   {
+      SCIPerrorMessage("could not create the clique graph\n");
+      return SCIP_ERROR;
+   }
 
    (*targetdata)->maxstablesets = sourcedata->maxstablesets;        /* copy length of array sets */
    (*targetdata)->nstablesets = sourcedata->nstablesets;            /* copy number of sets saved in array sets */
@@ -426,7 +497,7 @@ SCIP_DECL_PROBTRANS(probtransColoring)
       assert(sourcedata->stablesetvars[i] != NULL);
       (*targetdata)->stablesetlengths[i] = sourcedata->stablesetlengths[i];
       SCIP_CALL( SCIPtransformVar(scip, sourcedata->stablesetvars[i], &((*targetdata)->stablesetvars[i])) );
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*targetdata)->stablesets[i]),  sourcedata->stablesetlengths[i]) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &((*targetdata)->stablesets[i]),  sourcedata->stablesetlengths[i]) ); /*lint !e866*/
       for ( j = 0; j <sourcedata->stablesetlengths[i]; j++ )
       {
          (*targetdata)->stablesets[i][j] =  sourcedata->stablesets[i][j];
@@ -439,7 +510,12 @@ SCIP_DECL_PROBTRANS(probtransColoring)
    SCIP_CALL( SCIPtransformConss(scip, tcliqueGetNNodes(sourcedata->graph), sourcedata->constraints,
          (*targetdata)->constraints) );
    /* copy the graph */
-   tcliqueAddNode((*targetdata)->graph, tcliqueGetNNodes(sourcedata->graph)-1, 0);
+   if( !tcliqueAddNode((*targetdata)->graph, tcliqueGetNNodes(sourcedata->graph)-1, 0) )
+   {
+      SCIPerrorMessage("could not add a node to the clique graph\n");
+      return SCIP_ERROR;
+   }
+
    for ( i = 0; i < tcliqueGetNNodes(sourcedata->graph); i++ )
    {
       /* get adjacent nodes for node i */
@@ -449,12 +525,21 @@ SCIP_DECL_PROBTRANS(probtransColoring)
       {
          if ( *firstedge > i )
          {
-            tcliqueAddEdge((*targetdata)->graph, i, *firstedge);
+            if( !tcliqueAddEdge((*targetdata)->graph, i, *firstedge) )
+            {
+               SCIPerrorMessage("could not add an edge to the clique graph\n");
+               return SCIP_ERROR;
+            }
          }
          firstedge++;
       }
    }
-   tcliqueFlush((*targetdata)->graph);
+
+   if( !tcliqueFlush((*targetdata)->graph) )
+   {
+      SCIPerrorMessage("could not flush the clique graph\n");
+      return SCIP_ERROR;
+   }
 
    return SCIP_OKAY;
 }
@@ -479,7 +564,7 @@ SCIP_DECL_PROBDELTRANS(probdeltransColoring)
    /* free the arrays for the stable sets and relese the related variables */
    for ( i = (*probdata)->nstablesets-1; i >= 0; i-- )
    {
-      SCIPfreeBlockMemoryArray(scip, &((*probdata)->stablesets[i]), (*probdata)->stablesetlengths[i]);
+      SCIPfreeBlockMemoryArray(scip, &((*probdata)->stablesets[i]), (*probdata)->stablesetlengths[i]); /*lint !e866*/
       SCIP_CALL( SCIPreleaseVar(scip, &((*probdata)->stablesetvars[i])) );
    }
 
@@ -507,7 +592,7 @@ SCIP_DECL_PROBDELORIG(probdelorigColoring)
 
    for ( i = (*probdata)->nstablesets-1; i >= 0; i-- )
    {
-      SCIPfreeBlockMemoryArray(scip, &((*probdata)->stablesets[i]), (*probdata)->stablesetlengths[i]);
+      SCIPfreeBlockMemoryArray(scip, &((*probdata)->stablesets[i]), (*probdata)->stablesetlengths[i]); /*lint !e866*/
       SCIP_CALL( SCIPreleaseVar(scip, &((*probdata)->stablesetvars[i])) );
    }
    SCIPfreeMemoryArray(scip, &((*probdata)->stablesetvars));
@@ -559,7 +644,7 @@ SCIP_DECL_EVENTEXEC(eventExecProbdatavardeleted)
    assert(probdata->stablesetvars[idx] == var);
 
    /* remove variable from stablesets array and release it */
-   SCIPfreeBlockMemoryArray(scip, &(probdata->stablesets[idx]), probdata->stablesetlengths[idx]);
+   SCIPfreeBlockMemoryArray(scip, &(probdata->stablesets[idx]), probdata->stablesetlengths[idx]); /*lint !e866*/
    SCIP_CALL( SCIPreleaseVar(scip, &(probdata->stablesetvars[idx])) );
 
    /* move all subsequent variables to the front */
@@ -568,13 +653,13 @@ SCIP_DECL_EVENTEXEC(eventExecProbdatavardeleted)
       probdata->stablesets[idx] = probdata->stablesets[idx + 1];
       probdata->stablesetlengths[idx] = probdata->stablesetlengths[idx + 1];
       probdata->stablesetvars[idx] = probdata->stablesetvars[idx + 1];
-      SCIPvarSetData(probdata->stablesetvars[idx], (SCIP_VARDATA*) (size_t) idx);
+      SCIPvarSetData(probdata->stablesetvars[idx], (SCIP_VARDATA*) (size_t) idx); /*lint !e571*/
    }
 
    probdata->nstablesets--;
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 
 
@@ -593,9 +678,6 @@ SCIP_RETCODE SCIPcreateProbColoring(
 {
    int i;
    SCIP_PROBDATA* probdata = NULL;
-#ifndef NDEBUG
-   TCLIQUE_Bool graphcreated;
-#endif
 
    assert(nnodes > 0);  /* at least one node */
    assert(nedges >= 0); /* no negative number of edges */
@@ -606,15 +688,19 @@ SCIP_RETCODE SCIPcreateProbColoring(
    SCIP_CALL( SCIPallocMemory(scip, &probdata) );
 
    /* create graph */
-#ifndef NDEBUG
-   graphcreated = tcliqueCreate(&((probdata)->oldgraph));
-   assert(graphcreated);
-#else
-   tcliqueCreate(&((probdata)->oldgraph));
-#endif
-   
+   if( !tcliqueCreate(&((probdata)->oldgraph)) )
+   {
+      SCIPerrorMessage("could not create the clique graph\n");
+      return SCIP_ERROR;
+   }
+
    /* add all nodes from 0 to nnodes-1 */
-   tcliqueAddNode((probdata)->oldgraph, nnodes-1, 0);
+   if( !tcliqueAddNode((probdata)->oldgraph, nnodes-1, 0) )
+   {
+      SCIPerrorMessage("could not add a node to the clique graph\n");
+      return SCIP_ERROR;
+   }
+
 
    /* add all edges, first into cache, then flush to add all of them to the graph */
    for ( i = 0; i < nedges; i++ )
@@ -622,9 +708,18 @@ SCIP_RETCODE SCIPcreateProbColoring(
       assert((edges[i][0] > 0) && (edges[i][0] <= nnodes));
       assert((edges[i][1] > 0) && (edges[i][1] <= nnodes));
 
-      tcliqueAddEdge((probdata)->oldgraph, edges[i][0]-1, edges[i][1]-1);
+      if( !tcliqueAddEdge((probdata)->oldgraph, edges[i][0]-1, edges[i][1]-1) )
+      {
+         SCIPerrorMessage("could not add an edge to the clique graph\n");
+         return SCIP_ERROR;
+      }
    }
-   tcliqueFlush((probdata)->oldgraph);
+
+   if( !tcliqueFlush((probdata)->oldgraph) )
+   {
+      SCIPerrorMessage("could not flush the clique graph\n");
+      return SCIP_ERROR;
+   }
 
    /* create constraints */
    SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->constraints), nnodes) );
@@ -689,7 +784,7 @@ void COLORprobPrintStableSets(
          printf("%d, ", probdata->stablesets[i][j]+1);
       }
       printf("ub = %f", SCIPvarGetUbLocal(probdata->stablesetvars[i]));
-      printf(", inLP = %d", SCIPvarIsInLP(probdata->stablesetvars[i]));
+      printf(", inLP = %u", SCIPvarIsInLP(probdata->stablesetvars[i]));
       printf("\n");
    }
 }
@@ -907,7 +1002,7 @@ SCIP_RETCODE COLORprobAddNewStableSet(
    }
 
    /* alloc memory for the new stable set */
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(probdata->stablesets[probdata->nstablesets]), nstablesetnodes) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(probdata->stablesets[probdata->nstablesets]), nstablesetnodes) ); /*lint !e866*/
    probdata->stablesetlengths[probdata->nstablesets] = nstablesetnodes;
    probdata->stablesetvars[probdata->nstablesets] = NULL;
    for ( i = 0; i < nstablesetnodes; i++ )
@@ -1114,7 +1209,7 @@ SCIP_CONS* COLORprobGetConstraint(
 
 
 /** computes the complementary graph for a given graph and stores it in the given pointer */
-void COLORprobGetComplementaryGraph(
+SCIP_RETCODE COLORprobGetComplementaryGraph(
    SCIP*                 scip,                /**< SCIP data structure */
    TCLIQUE_GRAPH*        graph,               /**< the given graph */
    TCLIQUE_GRAPH*        cgraph               /**< the complementary graph is saved in here */
@@ -1135,7 +1230,12 @@ void COLORprobGetComplementaryGraph(
    assert(nnodes > 0);
 
    /* add all nodes from 0 to nnodes-1 */
-   tcliqueAddNode(cgraph, nnodes-1, 0);
+   if( !tcliqueAddNode(cgraph, nnodes-1, 0) )
+   {
+      SCIPerrorMessage("could not add a node to the clique graph\n");
+      return SCIP_ERROR;
+   }
+
    /* add edge between i and j iff there is no edge between i and j in old graph */
    /* assumption: all edges are undirected, (i,j) exists --> (j,i) exists */
    for ( i = 0; i < nnodes; i++ )
@@ -1144,22 +1244,40 @@ void COLORprobGetComplementaryGraph(
       lastedge = tcliqueGetLastAdjedge(graph, i);
       for ( j = 0; j < *firstedge && j < i; j++ )
       {
-         tcliqueAddEdge(cgraph, i, j);
+         if( !tcliqueAddEdge(cgraph, i, j) )
+         {
+            SCIPerrorMessage("could not add an edge to the clique graph\n");
+            return SCIP_ERROR;
+         }
       }
       while ( firstedge < lastedge )
       {
          for ( j = *firstedge+1; j < *(firstedge+1) && j < i; j++ )
          {
-            tcliqueAddEdge(cgraph, i, j);
+            if( !tcliqueAddEdge(cgraph, i, j) )
+            {
+               SCIPerrorMessage("could not add an edge to the clique graph\n");
+               return SCIP_ERROR;
+            }
          }
          firstedge++;
       }
       for ( j = (*lastedge)+1; j < COLORprobGetNNodes(scip) && j < i; j++ )
       {
-         tcliqueAddEdge(cgraph, i, j);
+         if( !tcliqueAddEdge(cgraph, i, j) )
+         {
+            SCIPerrorMessage("could not add an edge to the clique graph\n");
+            return SCIP_ERROR;
+         }
       }
    }
-   tcliqueFlush(cgraph);
+
+   if( !tcliqueFlush(cgraph) )
+   {
+      SCIPerrorMessage("could not flush the clique graph\n");
+      return SCIP_ERROR;
+   }
+
    for ( i = 0; i < COLORprobGetNNodes(scip); i++ )
    {
       for ( j = i+1; j < COLORprobGetNNodes(scip); j++ )
@@ -1168,6 +1286,8 @@ void COLORprobGetComplementaryGraph(
             || (!tcliqueIsEdge(graph, i, j) && tcliqueIsEdge(cgraph, i, j)));
       }
    }
+
+   return SCIP_OKAY;
 }
 
 

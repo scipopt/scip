@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -65,6 +65,7 @@ SCIP_RETCODE SCIPexecRelpscostBranching(
    SCIP_Real*            branchcandssol,     /**< solution value for the branching candidates */
    SCIP_Real*            branchcandsfrac,    /**< fractional part of the branching candidates */
    int                   nbranchcands,       /**< number of branching candidates */
+   SCIP_Bool             executebranching,   /**< perform a branching step after probing */
    SCIP_RESULT*          result              /**< pointer to the result of the execution */
    );
 

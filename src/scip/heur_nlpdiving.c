@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1209,6 +1209,9 @@ SCIP_RETCODE solveSubMIP(
    if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
 
+   /* disable statistic timing inside sub SCIP */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", (SCIP_Longint)100) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", (SCIP_Longint)500) );
@@ -1360,7 +1363,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlpdiving)
    case SCIP_EVENTTYPE_LBTIGHTENED:
    case SCIP_EVENTTYPE_UBTIGHTENED:
       /* if cover variable is now fixed */
-      if( SCIPisFeasEQ(scip, newbound, otherbound) )
+      if( SCIPisFeasEQ(scip, newbound, otherbound) && !SCIPisFeasEQ(scip, oldbound, otherbound) )
       {
          assert(!SCIPisEQ(scip, oldbound, otherbound));
          ++(heurdata->nfixedcovervars);
@@ -1369,7 +1372,7 @@ SCIP_DECL_EVENTEXEC(eventExecNlpdiving)
    case SCIP_EVENTTYPE_LBRELAXED:
    case SCIP_EVENTTYPE_UBRELAXED:
       /* if cover variable is now unfixed */
-      if( SCIPisFeasEQ(scip, oldbound,otherbound) )
+      if( SCIPisFeasEQ(scip, oldbound, otherbound) && !SCIPisFeasEQ(scip, newbound, otherbound) )
       {
          assert(!SCIPisEQ(scip, newbound, otherbound));
          --(heurdata->nfixedcovervars);

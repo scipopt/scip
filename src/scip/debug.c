@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -132,20 +132,15 @@ SCIP_RETCODE readSolfile(
             return SCIP_READERROR;
       }
 
-      /* the lines "solution status: ..." and "objective value: ..." may preceed the solution information */
-      if( strncmp(buf, "solution", 8) == 0 || strncmp(buf, "objective", 9) == 0 )
+      /* there are some lines which may preceed the solution information */
+      if( strncasecmp(buf, "solution status:", 16) == 0 || strncasecmp(buf, "objective value:", 16) == 0 ||
+         strncasecmp(buf, "Log started", 11) == 0 || strncasecmp(buf, "Variable Name", 13) == 0 ||
+         strncasecmp(buf, "All other variables", 19) == 0 || strncasecmp(buf, "\n", 1) == 0 ||
+         strncasecmp(buf, "NAME", 4) == 0 || strncasecmp(buf, "ENDATA", 6) == 0 )    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
       {
-         nonvalues++;
+         ++nonvalues;
          continue;
       }
-
-      /* skip empty lines */
-      if( strlen(buf) == 1 )
-      {
-         nonvalues++;
-         continue;
-      }
-
 
       nread = sscanf(buf, "%s %lf %s\n", name, &val, objstring);
       if( nread < 2 )
@@ -207,14 +202,15 @@ SCIP_RETCODE readSolfile(
    }
 #endif
 
-   assert(debugsol == NULL);
+   if( debugsol == NULL )
+   {
+      /* create SCIP solution */
+      SCIP_CALL( SCIPcreateOrigSol(set->scip, &debugsol, NULL) );
+      debugsolstage = SCIPgetStage(set->scip);
 
-   /* create SCIP solution */
-   SCIP_CALL( SCIPcreateOrigSol(set->scip, &debugsol, NULL) );
-   debugsolstage = SCIPgetStage(set->scip);
-
-   /* set SCIP solution values */
-   SCIP_CALL( SCIPsetSolVals(set->scip, debugsol, nfound, vars, solvalues ) );
+      /* set SCIP solution values */
+      SCIP_CALL( SCIPsetSolVals(set->scip, debugsol, nfound, vars, solvalues ) );
+   }
 
    BMSfreeMemoryArray(&vars);
    BMSfreeMemoryArray(&solvalues);
@@ -1484,7 +1480,7 @@ SCIP_RETCODE SCIPdebugIncludeProp(
 
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, "debug", "debugging propagator", 99999999, -1, FALSE,
-         SCIP_PROPTIMING_ALWAYS, 99999999, 0, FALSE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+         SCIP_PROPTIMING_ALWAYS, 99999999, 0, SCIP_PRESOLTIMING_FAST, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
          NULL, propExecDebug, NULL, NULL) );
 
    return SCIP_OKAY;

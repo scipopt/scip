@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -473,8 +473,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       counter = MAX(counter,1);
 
    /* the second counter should maybe be replaced at some point */
-   SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcandscopy, lpcandssolcopy, lpcandsfraccopy, branchruledata->skipdown, branchruledata->skipup, counter, counter,
-         ncomplete, &branchruledata->lastcand, allowaddcons, 0, FALSE,
+   SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcandscopy, lpcandssolcopy, lpcandsfraccopy, branchruledata->skipdown,
+         branchruledata->skipup, counter, counter, ncomplete, &branchruledata->lastcand, allowaddcons, 0, FALSE, FALSE,
          &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
    if( branchruledata->lastcand <= ncomplete )

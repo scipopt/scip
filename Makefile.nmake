@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -29,7 +29,7 @@ ARCH			=	x86
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION			=	3.1.0.1
+VERSION			=	3.2.0
 VERBOSE			=	false
 OPT				=	opt
 COMP			=	msvc
@@ -235,6 +235,7 @@ SCIPLIBNAME		=	$(SCIPLIBSHORTNAME)-$(VERSION)
 SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\branch_allfullstrong.obj \
 					$(LIBOBJDIR)\scip\branch_cloud.obj \
+					$(LIBOBJDIR)\scip\branch_distribution.obj \
 					$(LIBOBJDIR)\scip\branch_fullstrong.obj \
 					$(LIBOBJDIR)\scip\branch_inference.obj \
 					$(LIBOBJDIR)\scip\branch_mostinf.obj \
@@ -280,7 +281,7 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\heur_fixandinfer.obj \
 					$(LIBOBJDIR)\scip\heur_fracdiving.obj \
 					$(LIBOBJDIR)\scip\heur_guideddiving.obj \
-					$(LIBOBJDIR)\scip\heur_zeroobj.obj \
+					$(LIBOBJDIR)\scip\heur_indicator.obj \
 					$(LIBOBJDIR)\scip\heur_intdiving.obj \
 					$(LIBOBJDIR)\scip\heur_intshifting.obj \
 					$(LIBOBJDIR)\scip\heur_linesearchdiving.obj \
@@ -292,8 +293,8 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\heur_oneopt.obj \
 					$(LIBOBJDIR)\scip\heur_proximity.obj \
 					$(LIBOBJDIR)\scip\heur_pscostdiving.obj \
-					$(LIBOBJDIR)\scip\heur_rens.obj \
 					$(LIBOBJDIR)\scip\heur_randrounding.obj \
+					$(LIBOBJDIR)\scip\heur_rens.obj \
 					$(LIBOBJDIR)\scip\heur_rins.obj \
 					$(LIBOBJDIR)\scip\heur_rootsoldiving.obj \
 					$(LIBOBJDIR)\scip\heur_rounding.obj \
@@ -307,6 +308,7 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\heur_undercover.obj \
 					$(LIBOBJDIR)\scip\heur_vbounds.obj \
 					$(LIBOBJDIR)\scip\heur_veclendiving.obj \
+					$(LIBOBJDIR)\scip\heur_zeroobj.obj \
 					$(LIBOBJDIR)\scip\heur_zirounding.obj \
 					$(LIBOBJDIR)\scip\message_default.obj \
 					$(LIBOBJDIR)\scip\nodesel_bfs.obj \
@@ -322,9 +324,13 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\presol_domcol.obj\
 					$(LIBOBJDIR)\scip\presol_dualinfer.obj \
 					$(LIBOBJDIR)\scip\presol_gateextraction.obj \
+					$(LIBOBJDIR)\scip\presol_implfree.obj \
 					$(LIBOBJDIR)\scip\presol_implics.obj \
 					$(LIBOBJDIR)\scip\presol_inttobinary.obj \
+					$(LIBOBJDIR)\scip\presol_redvub.obj \
+					$(LIBOBJDIR)\scip\presol_stuffing.obj \
 					$(LIBOBJDIR)\scip\presol_trivial.obj \
+					$(LIBOBJDIR)\scip\presol_tworowbnd.obj \
 					$(LIBOBJDIR)\scip\prop_dualfix.obj \
 					$(LIBOBJDIR)\scip\prop_genvbounds.obj \
 					$(LIBOBJDIR)\scip\prop_obbt.obj \
@@ -345,8 +351,8 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\reader_opb.obj \
 					$(LIBOBJDIR)\scip\reader_osil.obj \
 					$(LIBOBJDIR)\scip\reader_pip.obj \
-					$(LIBOBJDIR)\scip\reader_ppm.obj \
 					$(LIBOBJDIR)\scip\reader_pbm.obj \
+					$(LIBOBJDIR)\scip\reader_ppm.obj \
 					$(LIBOBJDIR)\scip\reader_rlp.obj \
 					$(LIBOBJDIR)\scip\reader_sol.obj \
 					$(LIBOBJDIR)\scip\reader_wbo.obj \
@@ -364,7 +370,7 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\sepa_rapidlearning.obj \
 					$(LIBOBJDIR)\scip\sepa_strongcg.obj \
 					$(LIBOBJDIR)\scip\sepa_zerohalf.obj \
-      				$(LIBOBJDIR)\scip\branch.obj \
+					$(LIBOBJDIR)\scip\branch.obj \
 					$(LIBOBJDIR)\scip\buffer.obj \
 					$(LIBOBJDIR)\scip\clock.obj \
 					$(LIBOBJDIR)\scip\conflict.obj \
@@ -381,6 +387,7 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\interrupt.obj \
 					$(LIBOBJDIR)\scip\intervalarith.obj \
 					$(LIBOBJDIR)\scip\lp.obj \
+					$(LIBOBJDIR)\scip\matrix.obj \
 					$(LIBOBJDIR)\scip\mem.obj \
 					$(LIBOBJDIR)\scip\misc.obj \
 					$(LIBOBJDIR)\scip\nlp.obj \
@@ -408,7 +415,7 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\stat.obj \
 					$(LIBOBJDIR)\scip\tree.obj \
 					$(LIBOBJDIR)\scip\var.obj \
-					$(LIBOBJDIR)\scip\vbc.obj \
+					$(LIBOBJDIR)\scip\visual.obj \
 					$(LIBOBJDIR)\tclique\tclique_branch.obj \
 					$(LIBOBJDIR)\tclique\tclique_coloring.obj \
 					$(LIBOBJDIR)\tclique\tclique_graph.obj \

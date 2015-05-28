@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,6 +32,10 @@
  * one of their bounds in one LP solve. Third, we inspect all solutions of the auxiliary LPs solved along the way.
  *
  * By default, OBBT is only applied for nonbinary variables that occur in nonlinear constraints.
+ *
+ * After we learned a better variable bound the propagator tries to separate the solution of the current OBBT LP with
+ * the refined outer approximation in order to strengthen the learned bound. Additionally, we trigger a
+ * propagation round of SCIP after a fixed number of learned bound tightenings.
  *
  * Additionally, the propagator uses the dual solution of the auxiliary LPs to construct globally valid generalized
  * variable bounds which may be propagated during the branch-and-bound search.

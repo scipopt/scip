@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,6 +43,7 @@
 #include "scip/type_branch.h"
 #include "scip/type_conflict.h"
 #include "scip/type_dialog.h"
+#include "scip/type_reopt.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -63,6 +64,9 @@ struct Scip
    SCIP_STAT*            stat;               /**< dynamic problem statistics */
    SCIP_PROB*            origprob;           /**< original problem data */
    SCIP_PRIMAL*          origprimal;         /**< primal data and solution storage for solution candidates */
+
+   /* REOPTIMIZATION */
+   SCIP_REOPT*           reopt;              /**< reoptimization data */
 
    /* TRANSFORMED */
    SCIP_EVENTFILTER*     eventfilter;        /**< event filter for global (not variable dependent) events */

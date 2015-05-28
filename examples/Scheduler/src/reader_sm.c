@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -27,7 +27,6 @@
 
 #include <assert.h>
 #include <string.h>
-#include <errno.h>
 #include <ctype.h>
 
 
@@ -267,7 +266,6 @@ SCIP_RETCODE getNJobs(
 static
 SCIP_RETCODE getResourcesNames(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   lineno,             /**< current line number of input file */
    char*                 linestr,            /**< current line */
    STATE*                state,              /**< pointer to current reading state */
    SCIP_RCPSPDATA*       rcpspdata           /**< pointer to resources constrained project scheduling data */
@@ -292,7 +290,7 @@ SCIP_RETCODE getResourcesNames(
       while(isspace(*name))
          name++;
 
-      SCIP_CALL( SCIPduplicateBufferArray(scip, &rcpspdata->resourcenames[r], name, strlen(name) + 1) );
+      SCIP_CALL( SCIPduplicateBufferArray(scip, &rcpspdata->resourcenames[r], name, strlen(name) + 1) ); /*lint !e866*/
       r++;
    }
    while( (name = SCIPstrtok(NULL, "R", &endptr)) != NULL );
@@ -306,7 +304,6 @@ SCIP_RETCODE getResourcesNames(
 static
 SCIP_RETCODE getResourcesCapacities(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   lineno,             /**< current line number of input file */
    char*                 linestr,            /**< current line */
    STATE*                state,              /**< pointer to current reading state */
    SCIP_RCPSPDATA*       rcpspdata           /**< pointer to resources constrained project scheduling data */
@@ -334,7 +331,6 @@ SCIP_RETCODE getResourcesCapacities(
 static
 SCIP_RETCODE getJobs(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   lineno,             /**< current line number of input file */
    char*                 linestr,            /**< current line */
    STATE*                state,              /**< pointer to current reading state */
    SCIP_RCPSPDATA*       rcpspdata           /**< pointer to resources constrained project scheduling data */
@@ -356,33 +352,40 @@ SCIP_RETCODE getJobs(
    }
 
    /* parse job id */
-   SCIPstrToIntValue(linestr, &value, &linestr);
+   if( !SCIPstrToIntValue(linestr, &value, &linestr) )
+      return SCIP_READERROR;
+
    jobid = value - 1;
 
    /* construct job name */
    (void)SCIPsnprintf(jobname, SCIP_MAXSTRLEN, "%d" , jobid) ;
 
    /* copy job name */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &rcpspdata->jobnames[jobid], jobname, strlen(jobname) + 1) );
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &rcpspdata->jobnames[jobid], jobname, strlen(jobname) + 1) ); /*lint !e866*/
 
    /* skip next value */
-   SCIPstrToIntValue(linestr, &value, &linestr);
+   if( !SCIPstrToIntValue(linestr, &value, &linestr) )
+      return SCIP_READERROR;
 
    /* parse duration */
-   SCIPstrToIntValue(linestr, &value, &linestr);
+   if( !SCIPstrToIntValue(linestr, &value, &linestr) )
+      return SCIP_READERROR;
+
    rcpspdata->durations[jobid] = value;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &rcpspdata->demands[jobid], rcpspdata->nresources) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &rcpspdata->demands[jobid], rcpspdata->nresources) ); /*lint !e866*/
 
    /* parse demands */
    for( r = 0; r < rcpspdata->nresources; ++r )
    {
-      SCIPstrToIntValue(linestr, &value, &linestr);
+      if( !SCIPstrToIntValue(linestr, &value, &linestr) )
+         return SCIP_READERROR;
+
       rcpspdata->demands[jobid][r] = value;
    }
 
    /* check if we paresed the last job */
-   if(jobid == rcpspdata->njobs - 1)
+   if( jobid == rcpspdata->njobs - 1 )
       *state = NEXT;
 
    return SCIP_OKAY;
@@ -392,7 +395,6 @@ SCIP_RETCODE getJobs(
 static
 SCIP_RETCODE getPrecedence(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   lineno,             /**< current line number of input file */
    char*                 s,                  /**< current line */
    STATE*                state,              /**< pointer to current reading state */
    SCIP_RCPSPDATA*       rcpspdata           /**< pointer to resources constrained project scheduling data */
@@ -419,21 +421,27 @@ SCIP_RETCODE getPrecedence(
    }
 
    /* parse predecessor */
-   SCIPstrToIntValue(s, &value, &s);
+   if( !SCIPstrToIntValue(s, &value, &s) )
+      return SCIP_READERROR;
+
    pred = value - 1;
 
    /* skip integer value */
-   SCIPstrToIntValue(s, &value, &s);
+   if( !SCIPstrToIntValue(s, &value, &s) )
+      return SCIP_READERROR;
 
    /* parse number of successors */
-   SCIPstrToIntValue(s, &nsuccessors, &s);
+   if( !SCIPstrToIntValue(s, &nsuccessors, &s) )
+      return SCIP_READERROR;
 
    /* parse successors */
    for( p = 0; p < nsuccessors; ++p )
    {
       int succ;
 
-      SCIPstrToIntValue(s, &value, &s);
+      if( !SCIPstrToIntValue(s, &value, &s) )
+         return SCIP_READERROR;
+
       succ = value - 1;
 
       /* add precedence to digraph */
@@ -467,7 +475,7 @@ int computeUbmakespan(
       int i;
 
       nsuccessors = SCIPdigraphGetNSuccessors(precedencegraph, j);
-      distances = SCIPdigraphGetSuccessorsDatas(precedencegraph, j);
+      distances = SCIPdigraphGetSuccessorsData(precedencegraph, j);
 
       duration = durations[j];
 
@@ -510,7 +518,7 @@ SCIP_RETCODE readFile(
    }
 
    /* parse file line by line */
-   while( state != END && state != ERROR && (NULL != SCIPfgets(buf, sizeof(buf), fp)) )
+   while( state != END && state != ERROR && (NULL != SCIPfgets(buf, (int) sizeof(buf), fp)) )
    {
       /* count line number */
       lineno++;
@@ -551,7 +559,7 @@ SCIP_RETCODE readFile(
          break;
 
       case JOBS:
-         SCIP_CALL( getJobs(scip, lineno, s, &state, rcpspdata) );
+         SCIP_CALL( getJobs(scip, s, &state, rcpspdata) );
          break;
 
 
@@ -560,15 +568,15 @@ SCIP_RETCODE readFile(
          break;
 
       case RESOURCENAMES:
-         SCIP_CALL( getResourcesNames(scip, lineno, s, &state, rcpspdata) );
+         SCIP_CALL( getResourcesNames(scip, s, &state, rcpspdata) );
          break;
 
       case RESOURCECAPACITIES:
-         SCIP_CALL( getResourcesCapacities(scip, lineno, s, &state, rcpspdata) );
+         SCIP_CALL( getResourcesCapacities(scip, s, &state, rcpspdata) );
          break;
 
       case PRECEDENCES:
-         SCIP_CALL( getPrecedence(scip, lineno, s, &state, rcpspdata) );
+         SCIP_CALL( getPrecedence(scip, s, &state, rcpspdata) );
          break;
 
       case END:
@@ -608,10 +616,6 @@ SCIP_DECL_READERCOPY(readerCopySm)
 
    return SCIP_OKAY;
 }
-
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeSm NULL
-
 
 /** problem reading method of reader */
 static
@@ -694,11 +698,6 @@ SCIP_DECL_READERREAD(readerReadSm)
 
    return SCIP_OKAY;
 }
-
-
-/** problem writing method of reader */
-#define readerWriteSm NULL
-
 
 /*
  * reader specific interface methods
@@ -827,7 +826,7 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
          void** distances;
 
          successors = SCIPdigraphGetSuccessors(precedencegraph, j);
-         distances = SCIPdigraphGetSuccessorsDatas(precedencegraph, j);
+         distances = SCIPdigraphGetSuccessorsData(precedencegraph, j);
 
          for( i = 0; i < nsuccessors; ++i )
          {
@@ -845,7 +844,7 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
                distance = durations[j];
 
             SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, predvar, succvar, -1.0,
-                  -SCIPinfinity(scip), -distance,
+                  -SCIPinfinity(scip), (SCIP_Real) -distance,
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPaddCons(scip, cons) );
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
@@ -857,7 +856,7 @@ SCIP_RETCODE SCIPcreateSchedulingProblem(
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "precedences_(%d,%d)", j, njobs);
 
          SCIP_CALL( SCIPcreateConsVarbound(scip, &cons, name, predvar, jobs[njobs-1], -1.0,
-               -SCIPinfinity(scip), -durations[j],
+               -SCIPinfinity(scip), (SCIP_Real) -durations[j],
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, cons) );
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );

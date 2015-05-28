@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -202,6 +202,34 @@ SCIP_RETCODE SCIPaddCoefLinear(
    SCIP_Real             val                 /**< coefficient of constraint entry */
    );
 
+/** changes coefficient of variable in linear constraint; deletes the variable if coefficient is zero; adds variable if
+ *  not yet contained in the constraint
+ *
+ *  @note This method may only be called during problem creation stage for an original constraint and variable.
+ *
+ *  @note This method requires linear time to search for occurences of the variable in the constraint data.
+ */
+EXTERN
+SCIP_RETCODE SCIPchgCoefLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< variable of constraint entry */
+   SCIP_Real             val                 /**< new coefficient of constraint entry */
+   );
+
+/** deletes variable from linear constraint
+ *
+ *  @note This method may only be called during problem creation stage for an original constraint and variable.
+ *
+ *  @note This method requires linear time to search for occurences of the variable in the constraint data.
+ */
+EXTERN
+SCIP_RETCODE SCIPdelCoefLinear(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var                 /**< variable of constraint entry */
+   );
+
 /** gets left hand side of linear constraint */
 EXTERN
 SCIP_Real SCIPgetLhsLinear(
@@ -253,7 +281,11 @@ SCIP_Real* SCIPgetValsLinear(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
-/** gets the activity of the linear constraint in the given solution */
+/** gets the activity of the linear constraint in the given solution
+ *
+ *  @note if the solution contains values at infinity, this method will return SCIP_INVALID in case the activity
+ *        comprises positive and negative infinity contributions
+ */
 EXTERN
 SCIP_Real SCIPgetActivityLinear(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -299,6 +331,7 @@ SCIP_RETCODE SCIPupgradeConsLinear(
    SCIP_CONS*            cons,               /**< source constraint to try to convert */
    SCIP_CONS**           upgdcons            /**< pointer to store upgraded constraint, or NULL if not successful */
    );
+
 
 #ifdef __cplusplus
 }

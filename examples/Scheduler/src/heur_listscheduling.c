@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -135,7 +135,7 @@ SCIP_RETCODE heurdataInit(
       SCIP_CALL( SCIPallocMemoryArray(scip, &heurdata->resourcedemands, njobs) );
       for( j = 0; j < njobs; ++j )
       {
-         SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->resourcedemands[j], resourcedemands[j], nresources) );
+         SCIP_CALL( SCIPduplicateMemoryArray(scip, &heurdata->resourcedemands[j], resourcedemands[j], nresources) );/*lint !e866*/
       }
 
       heurdata->initialized = TRUE;
@@ -209,7 +209,7 @@ SCIP_RETCODE constructSolution(
 
 /** insert given job into the profiles */
 static
-void profilesInsertJob(
+SCIP_RETCODE profilesInsertJob(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROFILE**        profiles,           /**< array of resource profiles */
    int                   nprofiles,          /**< number of profiles */
@@ -226,8 +226,10 @@ void profilesInsertJob(
    for( p = 0; p < nprofiles && !(*infeasible); ++p )
    {
       /* add job to resource profile */
-      SCIPprofileInsertCore(profiles[p], starttime, starttime + duration, demands[p], &pos, infeasible);
+      SCIP_CALL( SCIPprofileInsertCore(profiles[p], starttime, starttime + duration, demands[p], &pos, infeasible) );
    }
+
+   return SCIP_OKAY;
 }
 
 
@@ -482,7 +484,7 @@ SCIP_RETCODE performForwardScheduling(
          (*makespan) = MAX(*makespan, starttimes[idx] + duration);
 
          /* insert the job into the profiles */
-         profilesInsertJob(scip, profiles, nresources, starttimes[idx], duration, demands, infeasible);
+         SCIP_CALL( profilesInsertJob(scip, profiles, nresources, starttimes[idx], duration, demands, infeasible) );
          if( *infeasible )
             break;
 
@@ -560,7 +562,7 @@ SCIP_RETCODE performBackwardScheduling(
             break;
 
          /* insert the job into the profiles */
-         profilesInsertJob(scip, profiles, nresources, starttimes[idx], duration, demands, infeasible);
+         SCIP_CALL( profilesInsertJob(scip, profiles, nresources, starttimes[idx], duration, demands, infeasible) );
          if( *infeasible )
             break;
       }
@@ -585,7 +587,6 @@ SCIP_RETCODE getEstPermutation(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  starttimes,         /**< array of start times for each job */
    int*                  ests,               /**< earliest start times */
-   int*                  durations,          /**< array of durations */
    int*                  perm,               /**< array to store the permutation w.r.t. earliest start time */
    int                   njobs               /**< number of jobs */
    )
@@ -641,7 +642,7 @@ static
 SCIP_RETCODE executeHeuristic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< Heuristic data structure */
-   SCIP_Bool*            result              /**< pointer to store whether solution is found or not */
+   SCIP_RESULT*          result              /**< pointer to store whether solution is found or not */
    )
 {
    SCIP_HEURDATA* heurdata;
@@ -714,12 +715,12 @@ SCIP_RETCODE executeHeuristic(
       SCIP_CALL( getLctPermuataion(scip, starttimes, heurdata->durations, perm, njobs) );
 
       /* backward scheduling w.r.t. latest completion time */
-      performBackwardScheduling(scip, heurdata, starttimes, perm, &infeasible);
+      SCIP_CALL( performBackwardScheduling(scip, heurdata, starttimes, perm, &infeasible) );
 
       if( !infeasible )
       {
          /* get permutation w.r.t. earliest start time given by the starttimes and reset the start time to the earliest start time */
-         SCIP_CALL( getEstPermutation(scip, starttimes, ests, heurdata->durations, perm, njobs) );
+         SCIP_CALL( getEstPermutation(scip, starttimes, ests, perm, njobs) );
 
          SCIP_CALL( performForwardScheduling(scip, heurdata, starttimes, lsts, perm, &makespan, &infeasible) );
 
@@ -749,10 +750,6 @@ SCIP_RETCODE executeHeuristic(
  *
  */
 
-/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
-#define heurCopyListScheduling NULL
-
-
 /** destructor of primal heuristic to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_HEURFREE(heurFreeListScheduling)
@@ -775,6 +772,10 @@ SCIP_DECL_HEURFREE(heurFreeListScheduling)
    return SCIP_OKAY;
 }
 
+#ifdef SCIP_DISABLED_CODE
+/** copy method for primal heuristic plugins (called when SCIP copies plugins) */
+#define heurCopyListScheduling NULL
+
 /** initialization method of primal heuristic (called after problem was transformed) */
 #define heurInitListScheduling NULL
 
@@ -786,6 +787,7 @@ SCIP_DECL_HEURFREE(heurFreeListScheduling)
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 #define heurExitsolListScheduling NULL
+#endif
 
 /** execution method of primal heuristic */
 static

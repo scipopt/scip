@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -97,7 +97,7 @@ SCIP_Bool getNextLine(
    /* clear the line */
    BMSclearMemoryArray(cmininput->linebuf, SCIP_MAXSTRLEN);
 
-   if( SCIPfgets(cmininput->linebuf, sizeof(cmininput->linebuf), cmininput->file) == NULL )
+   if( SCIPfgets(cmininput->linebuf, (int) sizeof(cmininput->linebuf), cmininput->file) == NULL )
       return FALSE;
 
    cmininput->linenumber++;
@@ -216,7 +216,7 @@ SCIP_RETCODE findBestObjectiveValue(
    found = FALSE;
 
    /* parse file line by line */
-   while( SCIPfgets(buffer, sizeof(buffer), file) != NULL )
+   while( SCIPfgets(buffer, (int) sizeof(buffer), file) != NULL )
    {
       char status[SCIP_MAXSTRLEN];
 
@@ -344,7 +344,7 @@ SCIP_Longint computeMaxEnergy(
    {
       /* collect jobs which run between the start and end time */
       if( deadlinedates[v] <= endtime && releasedates[v] >= starttime)
-         maxenergy += (SCIP_Longint)(durations[v] * demands[v]);
+         maxenergy += (SCIP_Longint)(durations[v] * demands[v]); /*lint !e647*/
    }
 
    return maxenergy;
@@ -420,8 +420,8 @@ SCIP_RETCODE createIntervalRelaxation(
    SCIP_CALL( SCIPallocBufferArray(scip, &startidxs, njobs) );
    for( j = 0; j < njobs; ++j )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &rowtightness[j], njobs) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &startidxs[j], njobs) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &rowtightness[j], njobs) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &startidxs[j], njobs) ); /*lint !e866*/
    }
 
    createSortedEventpoints(scip, releasedates, deadlinedates, starttimes, endtimes, startindices, endindices, njobs);
@@ -463,7 +463,7 @@ SCIP_RETCODE createIntervalRelaxation(
 
          maxenergy = computeMaxEnergy(njobs, durations, demands, releasedates, deadlinedates, starttime, endtime);
 
-         energy = (endtime - starttime) * capacity;
+         energy = (endtime - starttime) * capacity; /*lint !e647*/
          tightness = maxenergy - energy;
 
          /* check if the linear constraint is not trivially redundant */
@@ -495,7 +495,7 @@ SCIP_RETCODE createIntervalRelaxation(
          starttime = starttimes[startidxs[j][i]];
          endtime = endtimes[j];
 
-         energy = (endtime - starttime) * capacity;
+         energy = (endtime - starttime) * capacity; /*lint !e647*/
 
          SCIPdebugMessage("create linear relaxation for time interval [%d,%d] <= %"SCIP_LONGINT_FORMAT" (tightness %"SCIP_LONGINT_FORMAT")\n",
             starttime, endtime, energy, rowtightness[j][i]);
@@ -517,12 +517,12 @@ SCIP_RETCODE createIntervalRelaxation(
             if( relaxation == 2 &&  releasedates[v] >= starttime && deadlinedates[v] <= endtime )
             {
                assert(duration == overlap);
-               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[v], (SCIP_Longint)(duration * demands[v])) );
+               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[v], (SCIP_Longint)(duration * demands[v])) ); /*lint !e647*/
             }
             else if( relaxation == 3 && overlap > 0 )
             {
                assert(overlap <= duration);
-               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[v], (SCIP_Longint)(overlap * demands[v])) );
+               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[v], (SCIP_Longint)(overlap * demands[v])) ); /*lint !e647*/
             }
          }
 
@@ -594,7 +594,7 @@ SCIP_RETCODE createMipFormulation(
    /* create master problem  */
    for( i = 0; i < nmachines; ++i )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars[i], njobs) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars[i], njobs) ); /*lint !e866*/
 
       for( j = 0; j < njobs; ++j )
       {
@@ -640,7 +640,7 @@ SCIP_RETCODE createMipFormulation(
    /* create for each machines and time point a knapsack constraint */
    for( i = 0; i < nmachines; ++i )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &conss[i], maxtime) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &conss[i], maxtime) ); /*lint !e866*/
 
       for( t = 0; t < maxtime; ++t )
       {
@@ -735,7 +735,7 @@ SCIP_RETCODE createMipFormulation(
          /* construct constraint name */
          (void)SCIPsnprintf(name, SCIP_MAXSTRLEN, "relax_%d", i);
 
-         capacity = capacities[i] * (lct - est);
+         capacity = capacities[i] * (lct - est); /*lint !e647*/
 
          SCIP_CALL( SCIPcreateConsBasicKnapsack(scip, &cons, name, 0, NULL, NULL, capacity) );
 
@@ -743,7 +743,7 @@ SCIP_RETCODE createMipFormulation(
          {
             if( demands[i][j] > 0 )
             {
-               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[i][j], (SCIP_Longint)(durations[i][j] * demands[i][j]) ) );
+               SCIP_CALL( SCIPaddCoefKnapsack(scip, cons, vars[i][j], (SCIP_Longint)(durations[i][j] * demands[i][j]) ) ); /*lint !e647*/
             }
          }
 
@@ -819,7 +819,7 @@ SCIP_RETCODE createMipCpFormulation(
    /* create for each machines and time point a knapsack constraint */
    for( i = 0; i < nmachines; ++i )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &conss[i], maxtime) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &conss[i], maxtime) ); /*lint !e866*/
 
       for( t = 0; t < maxtime; ++t )
       {
@@ -835,10 +835,10 @@ SCIP_RETCODE createMipCpFormulation(
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &binvars[i], njobs) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars[i], njobs) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &localdemands[i], njobs) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &localdurations[i], njobs) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &binvars[i], njobs) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars[i], njobs) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &localdemands[i], njobs) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &localdurations[i], njobs) ); /*lint !e866*/
    }
 
    for( j = 0; j < njobs; ++j )
@@ -1041,11 +1041,11 @@ SCIP_RETCODE createCipFormulation(
 
       nvars = 0;
 
-      SCIP_CALL( SCIPallocBufferArray(scip, &binvars[i], njobs) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &vars[i], njobs) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &binvars[i], njobs) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &vars[i], njobs) ); /*lint !e866*/
 
-      BMSclearMemoryArray(binvars[i], njobs);
-      BMSclearMemoryArray(vars[i], njobs);
+      BMSclearMemoryArray(binvars[i], njobs); /*lint !e866*/
+      BMSclearMemoryArray(vars[i], njobs); /*lint !e866*/
 
       for( j = 0; j < njobs; ++j )
       {
@@ -1181,9 +1181,9 @@ SCIP_RETCODE readFile(
    SCIP_CALL( SCIPallocBufferArray(scip, &costs, nmachines) );
    for( i = 0; i < nmachines; ++i )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &durations[i], njobs) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &demands[i], njobs) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &costs[i], njobs) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &durations[i], njobs) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &demands[i], njobs) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &costs[i], njobs) ); /*lint !e866*/
    }
    SCIP_CALL( SCIPallocBufferArray(scip, &capacities, nmachines) );
    SCIP_CALL( SCIPallocBufferArray(scip, &releasedates, njobs) );

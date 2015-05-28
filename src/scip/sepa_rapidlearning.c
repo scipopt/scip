@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -373,6 +373,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    if( timelimit <= 0.0 || memorylimit <= SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
 
+   /* disable statistic timing inside sub SCIP */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit/5) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
@@ -455,7 +458,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    /* abort solving, if limit of applied conflicts is reached */
    else if( SCIPgetNConflictConssApplied(subscip) >= restartnum )
    {
-      SCIPdebugMessage("finish after %lld successful conflict calls.\n", SCIPgetNConflictConssApplied(subscip)); 
+      SCIPdebugMessage("finish after %"SCIP_LONGINT_FORMAT" successful conflict calls.\n", SCIPgetNConflictConssApplied(subscip));
    }
    /* if the first 20% of the solution process were successful, proceed */
    else if( (sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 && SCIPisFeasLT(scip, SCIPgetUpperbound(subscip), SCIPgetUpperbound(scip) ) )
@@ -474,7 +477,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       }
       if( SCIPgetNConflictConssFound(subscip) > 0 )
       {
-         SCIPdebugMessage("   - there were %lld conflict constraints created\n", SCIPgetNConflictConssApplied(subscip));
+         SCIPdebugMessage("   - there were %"SCIP_LONGINT_FORMAT" conflict constraints created\n", SCIPgetNConflictConssApplied(subscip));
       }
 
       /* set node limit to 100% */

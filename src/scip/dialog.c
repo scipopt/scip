@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -150,20 +150,16 @@ SCIP_RETCODE readLine(
       *endoffile = TRUE;
    else
    {
-#ifndef NDEBUG
       char* result;
-#endif
 
       /* display prompt */
       printf("%s", prompt);
 
       /* read line from stdin */
-#ifndef NDEBUG
       result = fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);
       assert(result != NULL);
-#else
-      (void) fgets(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->buffersize - dialoghdlr->bufferpos, stdin);
-#endif
+      (void) result; /* disable compiler warning [-Wunused-result] */
+
       /* replace newline with \0 */
       s = strchr(&dialoghdlr->buffer[dialoghdlr->bufferpos], '\n');
       if( s != NULL )
@@ -262,7 +258,7 @@ SCIP_RETCODE readInputLine(
 
       /* copy the next input line into the input buffer */
       (void)strncpy(&dialoghdlr->buffer[dialoghdlr->bufferpos], dialoghdlr->inputlist->inputline,
-         (size_t)(dialoghdlr->buffersize - dialoghdlr->bufferpos));
+         (size_t)(dialoghdlr->buffersize - dialoghdlr->bufferpos)); /*lint !e571 !e776*/
       dialoghdlr->buffer[dialoghdlr->buffersize-1] = '\0';
 
       /* free the input line */

@@ -18,6 +18,7 @@
 =opt= vpm2                          13.75
 =opt= mcf64-4-1                        10
 =opt= mcf128-4-1                       14
+=opt= tpesc              54027.1672208127
 =opt= sparse2                        26.0
 =opt= findRoot                        1.0
 =opt= pcu_0.01                0.167527525

@@ -1,0 +1,5 @@
+doc/html*
+solutions/
+*.py
+*~
+multiopt_backlog

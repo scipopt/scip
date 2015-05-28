@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -27,7 +27,6 @@
 
 #include <assert.h>
 #include <string.h>
-#include <errno.h>
 #include <ctype.h>
 
 #include "reader_sch.h"
@@ -98,10 +97,12 @@ SCIP_RETCODE getJobId(
    int mode;
 
    /* get job id */
-   SCIPstrToIntValue(str, job, endptr);
+   if( !SCIPstrToIntValue(str, job, endptr) )
+      return SCIP_READERROR;
 
    /* get job mode */
-   SCIPstrToIntValue(*endptr, &mode, endptr);
+   if( !SCIPstrToIntValue(*endptr, &mode, endptr) )
+      return SCIP_READERROR;
 
    if( mode != 1 )
    {
@@ -133,7 +134,7 @@ SCIP_RETCODE parseDetails(
    /* get data for each job including a dummy job at the beginning and a dummy job at the end */
    for( j = 0; j < njobs; ++j )
    {
-      if( NULL != SCIPfgets(buf, sizeof(buf), file) )
+      if( NULL != SCIPfgets(buf, (int) sizeof(buf), file) )
       {
          int* successors;
          int distance;
@@ -147,7 +148,8 @@ SCIP_RETCODE parseDetails(
          SCIPdebugMessage("job %d -> ", j);
 
          /* get number of direct successors */
-         SCIPstrToIntValue(endptr, &nsuccessors, &endptr);
+         if( !SCIPstrToIntValue(endptr, &nsuccessors, &endptr) )
+            return SCIP_READERROR;
 
          /* allocate buffer to temporarily collect the successors */
          SCIP_CALL( SCIPallocBufferArray(scip, &successors, nsuccessors) );
@@ -169,7 +171,7 @@ SCIP_RETCODE parseDetails(
 
             if( SCIPstrToIntValue(token, &distance, &tmpptr) )
             {
-               SCIP_CALL( SCIPdigraphAddArc(precedencegraph, job, successors[s], (void*)(size_t)distance) );
+               SCIP_CALL( SCIPdigraphAddArc(precedencegraph, job, successors[s], (void*)(size_t)distance) ); /*lint !e571*/
 
                SCIPdebugPrintf(" %d[%d] ", successors[s], distance);
             }
@@ -191,7 +193,7 @@ SCIP_RETCODE parseDetails(
    /* get data for each job including a dummy job at the beginning and a dummy job at the end */
    for( j = 0; j < njobs; ++j )
    {
-      if( NULL != SCIPfgets(buf, sizeof(buf), file) )
+      if( NULL != SCIPfgets(buf, (int) sizeof(buf), file) )
       {
          int job;
          int r;
@@ -200,13 +202,15 @@ SCIP_RETCODE parseDetails(
          SCIP_CALL( getJobId(scip, buf, &job, &endptr) );
 
          /* get processing time */
-         SCIPstrToIntValue(endptr, &durations[job], &endptr);
+         if( !SCIPstrToIntValue(endptr, &durations[job], &endptr) )
+            return SCIP_READERROR;
 
          SCIPdebugMessage("job %d has a processing times: %d\n", job, durations[job]);
 
          for( r = 0; r < nresources; ++r )
          {
-            SCIPstrToIntValue(endptr, &demands[job][r], &endptr);
+            if( !SCIPstrToIntValue(endptr, &demands[job][r], &endptr) )
+               return SCIP_READERROR;
          }
       }
       else
@@ -216,19 +220,21 @@ SCIP_RETCODE parseDetails(
    }
 
    /* get resources capacities */
-   if( nresources > 0 && NULL != SCIPfgets(buf, sizeof(buf), file) )
+   if( nresources > 0 && NULL != SCIPfgets(buf, (int) sizeof(buf), file) )
    {
       int r;
 
       SCIPdebugMessage("line %d %s", *lineno, buf);
 
-      SCIPstrToIntValue(buf, &capacities[0], &endptr);
+      if( !SCIPstrToIntValue(buf, &capacities[0], &endptr) )
+         return SCIP_READERROR;
 
       SCIPdebugMessage("paresed capacities: <%d>", capacities[0]);
 
       for( r = 1; r < nresources; ++r )
       {
-         SCIPstrToIntValue(endptr, &capacities[r], &endptr);
+         if( !SCIPstrToIntValue(endptr, &capacities[r], &endptr) )
+            return SCIP_READERROR;
 
          SCIPdebugPrintf(", <%d>", capacities[r]);
       }
@@ -269,20 +275,22 @@ SCIP_RETCODE readFile(
    lineno = 0;
 
    /* get number of jobs and resources */
-   if( NULL != SCIPfgets(buf, sizeof(buf), file) )
+   if( NULL != SCIPfgets(buf, (int) sizeof(buf), file) )
    {
       char* endptr;
       int value;
 
       lineno++;
 
-      SCIPstrToIntValue(buf, &value, &endptr);
+      if( !SCIPstrToIntValue(buf, &value, &endptr) )
+         return SCIP_READERROR;
 
       /* note that this format includes two dummy jobs */
       njobs = value + 2;
 
       /* get number of resources */
-      SCIPstrToIntValue(endptr, &nresources, &endptr);
+      if( !SCIPstrToIntValue(endptr, &nresources, &endptr) )
+         return SCIP_READERROR;
    }
    else
       return SCIP_READERROR;
@@ -293,8 +301,8 @@ SCIP_RETCODE readFile(
 
    for( j = 0; j < njobs; ++j )
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &demands[j], nresources) );
-      BMSclearMemoryArray(demands[j], nresources);
+      SCIP_CALL( SCIPallocBufferArray(scip, &demands[j], nresources) ); /*lint !e866*/
+      BMSclearMemoryArray(demands[j], nresources); /*lint !e866*/
    }
 
    SCIP_CALL( SCIPdigraphCreate(&precedencegraph, njobs) );
@@ -346,11 +354,7 @@ SCIP_DECL_READERCOPY(readerCopySch)
    SCIP_CALL( SCIPincludeReaderSch(scip) );
 
    return SCIP_OKAY;
-}
-
-/** destructor of reader to free user data (called when SCIP is exiting) */
-#define readerFreeSch NULL
-
+}/*lint !e830*/
 
 /** problem reading method of reader */
 static
@@ -378,12 +382,15 @@ SCIP_DECL_READERREAD(readerReadSch)
    (*result) = SCIP_SUCCESS;
 
    return SCIP_OKAY;
-}
+}/*lint !e830*/
 
+#ifdef SCIP_DISABLED_CODE
+/** destructor of reader to free user data (called when SCIP is exiting) */
+#define readerFreeSch NULL
 
 /** problem writing method of reader */
 #define readerWriteSch NULL
-
+#endif
 
 /*
  * reader specific interface methods

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -390,6 +390,18 @@ SCIP_Bool SCIPeventhdlrIsInitialized(
    assert(eventhdlr != NULL);
 
    return eventhdlr->initialized;
+}
+
+/** enables or disables all clocks of \p eventhdlr, depending on the value of the flag */
+void SCIPeventhdlrEnableOrDisableClocks(
+   SCIP_EVENTHDLR*       eventhdlr,          /**< the event handler for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the event handler be enabled? */
+   )
+{
+   assert(eventhdlr != NULL);
+
+   SCIPclockEnableOrDisable(eventhdlr->setuptime, enable);
+   SCIPclockEnableOrDisable(eventhdlr->eventtime, enable);
 }
 
 /** gets time in seconds used in this event handler for setting up for next stages */

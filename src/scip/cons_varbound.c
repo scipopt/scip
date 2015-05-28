@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -62,9 +62,9 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PRESOLTIMING            (SCIP_PRESOLTIMING_FAST | SCIP_PRESOLTIMING_MEDIUM)
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 #define EVENTHDLR_NAME         "varbound"
@@ -3989,7 +3989,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
    oldnchgsides = *nchgsides;
    oldnaggrvars = *naggrvars;
 
-   for( i = 0; i < nconss && !SCIPisStopped(scip); i++ )
+   for( i = 0; i < nconss; i++ )
    {
       cons = conss[i];
       assert(cons != NULL);
@@ -3998,6 +3998,9 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
 
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
+
+      if( i % 1000 == 0 && SCIPisStopped(scip) )
+         break;
 
       /* force presolving the constraint in the initial round */
       if( nrounds == 0 )
@@ -4087,7 +4090,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       /* check if we can upgrade to a set-packing constraint */
       SCIP_CALL( upgradeConss(scip, conshdlrdata, conss, nconss, &cutoff, naggrvars, nchgbds, nchgcoefs, nchgsides, ndelconss, naddconss) );
 
-      if( !cutoff && conshdlrdata->presolpairwise )
+      if( !cutoff && conshdlrdata->presolpairwise && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
       {
 	 /* preprocess pairs of variable bound constraints */
 	 SCIP_CALL( preprocessConstraintPairs(scip, conss, nconss, &cutoff, nchgbds, ndelconss, nchgcoefs, nchgsides) );
@@ -4471,7 +4474,7 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsVarbound) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpVarbound) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseVarbound) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolVarbound, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolVarbound, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintVarbound) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropVarbound, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

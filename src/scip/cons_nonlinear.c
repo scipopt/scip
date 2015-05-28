@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,8 +17,6 @@
  * @brief  constraint handler for nonlinear constraints \f$\textrm{lhs} \leq \sum_{i=1}^n a_ix_i + \sum_{j=1}^m c_jf_j(x) \leq \textrm{rhs}\f$
  * @author Stefan Vigerske
  * @author Ingmar Vierhaus (consparse)
- *
- * @todo implement CONSPARSE callback
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -48,9 +46,10 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
-#define CONSHDLR_PROP_TIMING SCIP_PROPTIMING_BEFORELP
+
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_ALWAYS /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define INTERVALINFTY             1E+43 /**< value for infinity in interval operations */
 #define BOUNDTIGHTENING_MINSTRENGTH 0.05/**< minimal required bound tightening strength in expression graph domain tightening for propagating bound change */
@@ -2178,7 +2177,7 @@ SCIP_RETCODE reformNode2Var(
    /* set also bounds of auxvarnode to bounds, so it is available for new parent nodes (currently node->parents)
     * when updating their curvature information; avoid having to run domain propagation through exprgraph
     */
-   SCIPexprgraphTightenNodeBounds(exprgraph, auxvarnode, bounds, BOUNDTIGHTENING_MINSTRENGTH, &cutoff);
+   SCIPexprgraphTightenNodeBounds(exprgraph, auxvarnode, bounds, BOUNDTIGHTENING_MINSTRENGTH, INTERVALINFTY, &cutoff);
    assert(!cutoff); /* we tightenend bounds from [-inf,+inf] to bounds, this should not be infeasible */
 
    /* add new constraint auxvar == node */
@@ -2248,7 +2247,7 @@ SCIP_RETCODE reformEnsureChildrenMinCurvature(
    if( needupdate )
    {
       SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(node, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-      assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(node)));
+      assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(node)));
    }
 
    return SCIP_OKAY;
@@ -2373,7 +2372,7 @@ SCIP_RETCODE reformMonomial(
 
          SCIP_CALL( SCIPexprgraphAddNode(exprgraph, expnode, -1, 1, &factors[0]) );
          SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(expnode, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-         assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(expnode)));
+         assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(expnode)));
       }
 
       if( createauxcons )
@@ -2532,7 +2531,7 @@ SCIP_RETCODE reformMonomial(
          SCIP_CALL( SCIPexprgraphCreateNode(SCIPblkmem(scip), &productnode, SCIP_EXPR_MUL, NULL) );
          SCIP_CALL( SCIPexprgraphAddNode(exprgraph, productnode, -1, 2, leftright) );
          SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(productnode, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-         assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(productnode)));
+         assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(productnode)));
       }
 
       if( createauxcons )
@@ -2659,7 +2658,7 @@ SCIP_RETCODE reformulate(
 
          /* make sure bounds and curvature of node are uptodate */
          SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(node, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-         assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(node)));
+         assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(node)));
 
          /* try external reformulation methods */
          for( u = 0; u < conshdlrdata->nnlconsupgrades; ++u )
@@ -2675,7 +2674,7 @@ SCIP_RETCODE reformulate(
 
                SCIP_CALL( reformReplaceNode(exprgraph, &node, reformnode, conss, nconss) );
                SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(reformnode, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-               assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(reformnode)));
+               assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(reformnode)));
 
                break;
             }
@@ -2915,7 +2914,7 @@ SCIP_RETCODE reformulate(
 
             /* update curvature of node */
             SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(node, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-            assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(node)));
+            assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(node)));
 
             if( SCIPexprgraphGetNodeCurvature(node) == SCIP_EXPRCURV_UNKNOWN )
             {
@@ -2972,6 +2971,7 @@ SCIP_RETCODE reformulate(
             /* do not increase i, since node was removed and not necessarily replaced here */
             break;
          }
+
          case SCIP_EXPR_POLYNOMIAL:
          {
             /* if polynomial has several monomials, replace by a sum of nodes each having a single monomial and one that has all linear and quadratic monomials
@@ -3302,7 +3302,7 @@ SCIP_RETCODE reformulate(
             {
                /* refresh curvature information in node, since we changed children, it should be convex or concave now */
                SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(node, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-               assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(node)));
+               assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(node)));
                assert(SCIPexprgraphGetNodeCurvature(node) != SCIP_EXPRCURV_UNKNOWN);
 
                /* we are done and can proceed with the next node */
@@ -3362,7 +3362,7 @@ SCIP_RETCODE reformulate(
                /* replace node by auxnode and refresh its curvature */
                SCIP_CALL( reformReplaceNode(exprgraph, &node, auxnode, conss, nconss) );
                SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(auxnode, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-               assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(auxnode)));
+               assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(auxnode)));
 
                break;
             }
@@ -3375,9 +3375,27 @@ SCIP_RETCODE reformulate(
             break;
          }
 
+         case SCIP_EXPR_USER:
+         {
+            /* ensure all children are linear */
+            SCIP_CALL( reformEnsureChildrenMinCurvature( scip, exprgraph, node, SCIP_EXPRCURV_LINEAR, conss, nconss, naddcons ) );
+
+            /* unknown curvature can be handled by user estimator callback or interval gradient */
+            /*
+            if( SCIPexprgraphGetNodeCurvature( node ) == SCIP_EXPRCURV_UNKNOWN )
+            {
+               SCIPerrorMessage("user expression with unknown curvature not supported\n");
+               return SCIP_ERROR;
+            }
+            */
+
+            ++i;
+            break;
+         }
+
          case SCIP_EXPR_LAST:
-         default:
-            SCIPerrorMessage("got expression with invalid operand\n");
+            SCIPABORT();
+            break;
          }
       }
    }
@@ -3412,7 +3430,7 @@ SCIP_RETCODE reformulate(
 
          for( m = 0; m < SCIPexprgraphGetNodePolynomialNMonomials(consdata->exprgraphnode); ++m )
          {
-            SCIP_CALL( SCIPexprgraphGetNodePolynomialMonomialCurvature(consdata->exprgraphnode, m, &curv) );
+            SCIP_CALL( SCIPexprgraphGetNodePolynomialMonomialCurvature(consdata->exprgraphnode, m, INTERVALINFTY, &curv) );
 
             monomial = SCIPexprgraphGetNodePolynomialMonomials(consdata->exprgraphnode)[m];
             assert(monomial != NULL);
@@ -4121,9 +4139,8 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
 
    if( SCIPisEQ(scip, xlb, xub) )
    {
-      assert(SCIPisFeasEQ(scip, vallb, valub));
       slope = 0.0;
-      /* choose most conservative value, so cut is also valid if above assert does not hold */
+      /* choose most conservative value for the cut */
       if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
          constant = MAX(vallb, valub);
       else
@@ -4637,10 +4654,15 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
       ref[j] = MIN(SCIPvarGetUbLocal(vars[j]), MAX(SCIPvarGetLbLocal(vars[j]), ref[j]));  /*lint !e666*/
    }
 
+   /* create empty auxiliary LP and decide its objective sense */
    assert(consdata->curvatures[exprtreeidx] == SCIP_EXPRCURV_CONVEX || consdata->curvatures[exprtreeidx] == SCIP_EXPRCURV_CONCAVE);
    doupper = (consdata->curvatures[exprtreeidx] & SCIP_EXPRCURV_CONVEX);  /*lint !e641*/
-
-   lpi = NULL;
+   SCIP_CALL( SCIPlpiCreate(&lpi, SCIPgetMessagehdlr(scip), "concaveunderest", doupper ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE) );
+   if( lpi == NULL )
+   {
+      SCIPerrorMessage("failed to create auxiliary LP\n");
+      return SCIP_ERROR;
+   }
 
    /* columns are cut coefficients plus constant */
    ncols = nvars + 1;
@@ -4722,7 +4744,6 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    SCIP_CALL( SCIPexprtreeEval(exprtree, ref, &funcval) );
    funcval *= treecoef;
 
-   SCIP_CALL( SCIPlpiCreate(&lpi, SCIPgetMessagehdlr(scip), "concaveunderest", doupper ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE) );
    SCIP_CALL( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
    SCIP_CALL( SCIPlpiAddRows(lpi, nrows, lhs, rhs, NULL, nnonz, beg, ind, val) );
 
@@ -4792,6 +4813,226 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    {
       SCIP_CALL( SCIPlpiFree(&lpi) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** Computes the linear coeffs and the constant in a linear expression
+ * both scaled by a given scalar value.
+ * The coeffs of the variables will be stored in the given array at
+ * their variable index.
+ * The constant of the given linear expression will be added to the given
+ * buffer.
+ */
+static
+SCIP_RETCODE getCoeffsAndConstantFromLinearExpr(
+   SCIP_EXPR*            expr,               /**< the linear expression */
+   SCIP_Real             scalar,             /**< the scalar value, i.e. the coeff of the given expression */
+   SCIP_Real*            varcoeffs,          /**< buffer array to store the computed coefficients */
+   SCIP_Real*            constant            /**< buffer to hold the constant value of the given expression */
+   )
+{
+   switch( SCIPexprGetOperator( expr ) )
+   {
+   case SCIP_EXPR_VARIDX: /* set coeff for this variable to current scalar */
+   {
+      /* TODO: can a linear expression contain the same variable twice?
+       * if yes varcoeffs need to be initialized to zero before calling this function
+       * and coeff must not be overridden but summed up instead. */
+      varcoeffs[SCIPexprGetOpIndex( expr )] = scalar;
+      return SCIP_OKAY;
+   }
+
+   case SCIP_EXPR_CONST:
+   {
+      /* constant value increases */
+      *constant += scalar * SCIPexprGetOpReal( expr );
+      return SCIP_OKAY;
+   }
+
+   case SCIP_EXPR_MUL: /* need to find the constant part of the muliplication and then recurse  */
+   {
+      SCIP_EXPR** children;
+      children = SCIPexprGetChildren( expr );
+
+      /* first part is constant */
+      if( SCIPexprGetOperator( children[0] ) == SCIP_EXPR_CONST )
+      {
+         SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[1], scalar * SCIPexprGetOpReal( children[0] ), varcoeffs, constant ) );
+         return SCIP_OKAY;
+      }
+
+      /* second part is constant */
+      if( SCIPexprGetOperator( children[1] ) == SCIP_EXPR_CONST )
+      {
+         SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[0], scalar * SCIPexprGetOpReal( children[1] ), varcoeffs, constant ) );
+         return SCIP_OKAY;
+      }
+
+      /* nonlinear -> break out to error case  */
+      break;
+   }
+
+   case SCIP_EXPR_PLUS: /* just recurse */
+   {
+      SCIP_EXPR** children;
+      children = SCIPexprGetChildren( expr );
+      SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[0], scalar, varcoeffs, constant ) );
+      SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[1], scalar, varcoeffs, constant ) );
+      return SCIP_OKAY;
+   }
+
+   case SCIP_EXPR_MINUS: /* recursion on second child is called with negated scalar */
+   {
+      SCIP_EXPR** children;
+      children = SCIPexprGetChildren( expr );
+      SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[0], scalar, varcoeffs, constant ) );
+      SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[1], -scalar, varcoeffs, constant ) );
+      return SCIP_OKAY;
+   }
+
+   case SCIP_EXPR_LINEAR: /* add scaled constant and recurse on children with their coeff multiplied into scalar */
+   {
+      SCIP_Real* childCoeffs;
+      SCIP_EXPR** children;
+      int i;
+
+      *constant += scalar * SCIPexprGetLinearConstant( expr );
+
+      children = SCIPexprGetChildren( expr );
+      childCoeffs = SCIPexprGetLinearCoefs( expr );
+
+      for( i = 0; i < SCIPexprGetNChildren( expr ); ++i )
+      {
+         SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[i], scalar * childCoeffs[i], varcoeffs, constant ) );
+      }
+
+      return SCIP_OKAY;
+   }
+
+   default:
+      break;
+   } /*lint !e788*/
+
+   SCIPerrorMessage( "Cannot extract linear coefficients from expressions with operator %d\n", SCIPexprGetOperator( expr ) );
+   SCIPABORT();
+   return SCIP_ERROR; /*lint !e527*/
+}
+
+/** adds estimator from user callback of a constraints user expression tree to a row
+ */
+static
+SCIP_RETCODE addUserEstimator(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   int                   exprtreeidx,        /**< for which tree an estimator should be added */
+   SCIP_Real*            x,                  /**< value of expression tree variables where to generate cut */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_ROW*             row,                /**< row where to add cut */
+   SCIP_Bool*            success             /**< buffer to store whether a cut was succefully added to the row */
+)
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_EXPRTREE* exprtree;
+   SCIP_EXPR** children;
+   SCIP_VAR** vars;
+   SCIP_Real* params;
+   SCIP_INTERVAL* varbounds;
+
+   SCIP_INTERVAL* childbounds;
+   SCIP_Real* childvals;
+   SCIP_Real* childcoeffs;
+
+   SCIP_Real constant;
+   SCIP_Real treecoef;
+   int nvars;
+   int nchildren;
+   int i;
+
+   consdata = SCIPconsGetData( cons );
+   assert( consdata != NULL );
+   assert( exprtreeidx >= 0 );
+   assert( exprtreeidx < consdata->nexprtrees );
+   assert( consdata->exprtrees != NULL );
+   assert( success != NULL );
+
+   exprtree = consdata->exprtrees[exprtreeidx];
+   assert( exprtree != NULL );
+   assert( SCIPexprGetOperator(SCIPexprtreeGetRoot(exprtree)) == SCIP_EXPR_USER );
+
+   /* if user did not implement estimator callback, then we cannot do anything */
+   if( !SCIPexprHasUserEstimator(SCIPexprtreeGetRoot(exprtree)) )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
+   params = SCIPexprtreeGetParamVals( exprtree );
+   nvars = SCIPexprtreeGetNVars( exprtree );
+   vars = SCIPexprtreeGetVars( exprtree );
+   nchildren = SCIPexprGetNChildren( SCIPexprtreeGetRoot( exprtree ) );
+   children = SCIPexprGetChildren( SCIPexprtreeGetRoot( exprtree ) );
+
+   /* Get bounds of variables */
+   SCIP_CALL( SCIPallocBufferArray( scip, &varbounds, nchildren ) );
+
+   for( i = 0; i < nvars; ++i )
+   {
+      double lb = SCIPvarGetLbLocal( vars[i] );
+      double ub = SCIPvarGetUbLocal( vars[i] );
+      SCIPintervalSetBounds( &varbounds[i],
+                             -infty2infty( SCIPinfinity( scip ), INTERVALINFTY, -MIN( lb, ub ) ),
+                             +infty2infty( SCIPinfinity( scip ), INTERVALINFTY,  MAX( lb, ub ) ) );
+   }
+
+   /* Compute bounds and solution value for the user expressions children */
+   SCIP_CALL( SCIPallocBufferArray( scip, &childcoeffs, nchildren ) );
+   SCIP_CALL( SCIPallocBufferArray( scip, &childbounds, nchildren ) );
+   SCIP_CALL( SCIPallocBufferArray( scip, &childvals, nchildren ) );
+
+   for( i = 0; i < nchildren; ++i )
+   {
+      SCIP_CALL( SCIPexprEval( children[i], x, params, &childvals[i] ) );
+      SCIP_CALL( SCIPexprEvalInt( children[i], INTERVALINFTY, varbounds, params, &childbounds[i] ) );
+   }
+
+   /* varbounds not needed any longer */
+   SCIPfreeBufferArray( scip, &varbounds );
+
+   /* call estimator for user expressions to compute coeffs and constant for the user expressions children */
+   SCIP_CALL( SCIPexprEstimateUser( SCIPexprtreeGetRoot( exprtree ), INTERVALINFTY, childvals, childbounds, overestimate, childcoeffs, &constant, success ) );
+
+   if( *success )
+   {
+      SCIP_Real* varcoeffs;
+      SCIP_CALL( SCIPallocBufferArray( scip, &varcoeffs, nvars ) );
+
+      treecoef = consdata->nonlincoefs[exprtreeidx];
+      constant *= treecoef;
+
+      for( i = 0; i < nchildren; ++i )
+      {
+         SCIP_CALL( getCoeffsAndConstantFromLinearExpr( children[i], childcoeffs[i]*treecoef, varcoeffs, &constant ) );
+      }
+
+      if( !SCIPisInfinity( scip, -SCIProwGetLhs( row ) ) )
+      {
+         SCIP_CALL( SCIPchgRowLhs( scip, row, SCIProwGetLhs( row ) - constant ) );
+      }
+
+      if( !SCIPisInfinity( scip,  SCIProwGetRhs( row ) ) )
+      {
+         SCIP_CALL( SCIPchgRowRhs( scip, row, SCIProwGetRhs( row ) - constant ) );
+      }
+
+      SCIP_CALL( SCIPaddVarsToRow( scip, row, nvars, vars, varcoeffs ) );
+
+      SCIPfreeBufferArray( scip, &varcoeffs );
+   }
+
+   SCIPfreeBufferArray( scip, &childcoeffs );
+   SCIPfreeBufferArray( scip, &childbounds );
+   SCIPfreeBufferArray( scip, &childvals );
 
    return SCIP_OKAY;
 }
@@ -5021,7 +5262,7 @@ SCIP_RETCODE generateCut(
    {
       if( ref == NULL )
       {
-         SCIP_CALL( SCIPreallocBufferArray(scip, &x, SCIPexprtreeGetNVars(consdata->exprtrees[i])) );
+         SCIP_CALL( SCIPreallocBufferArray(scip, &x, SCIPexprtreeGetNVars(consdata->exprtrees[i])) );  /*lint !e644*/
          SCIP_CALL( SCIPgetSolVals(scip, sol, SCIPexprtreeGetNVars(consdata->exprtrees[i]), SCIPexprtreeGetVars(consdata->exprtrees[i]), x) );
       }
       else
@@ -5054,6 +5295,14 @@ SCIP_RETCODE generateCut(
          if( !success )
          {
             SCIPdebugMessage("failed to generate polyhedral estimator for %d-dim concave function in exprtree %d, fall back to intervalgradient cut\n", SCIPexprtreeGetNVars(consdata->exprtrees[i]), i);
+            SCIP_CALL( addIntervalGradientEstimator(scip, exprint, cons, i, x, newsol, side == SCIP_SIDETYPE_LEFT, *row, &success) );
+         }
+      }
+      else if( SCIPexprGetOperator( SCIPexprtreeGetRoot( consdata->exprtrees[i] ) ) == SCIP_EXPR_USER )
+      {
+         SCIP_CALL( addUserEstimator( scip, cons, i, x, side == SCIP_SIDETYPE_LEFT, *row, &success ) );
+         if( !success ) /* the user estimation may not be implemented -> try interval estimator */
+         {
             SCIP_CALL( addIntervalGradientEstimator(scip, exprint, cons, i, x, newsol, side == SCIP_SIDETYPE_LEFT, *row, &success) );
          }
       }
@@ -5776,7 +6025,7 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
 
          SCIP_CALL( SCIPcheckCons(scip, cons, NULL, FALSE, FALSE, FALSE, &checkresult) );
 
-         if( checkresult != SCIP_INFEASIBLE )
+         if( checkresult != SCIP_INFEASIBLE && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
          {
             SCIPdebugMessage("linear constraint is feasible, thus do not add\n");
          }
@@ -5974,7 +6223,7 @@ SCIP_RETCODE propagateBoundsCons(
    {
       SCIPintervalSet(&nonlinactivity, 0.0);
    }
-   assert(!SCIPintervalIsEmpty(nonlinactivity) );
+   assert(!SCIPintervalIsEmpty(INTERVALINFTY, nonlinactivity) );
 
    /* @todo adding SCIPepsilon may be sufficient? */
    SCIPintervalSetBounds(&consbounds,
@@ -6254,7 +6503,7 @@ SCIP_RETCODE propagateConstraintSides(
 
       /* if we want the expression graph to propagate the bounds in any case, we set minstrength to a negative value */
       SCIPexprgraphTightenNodeBounds(conshdlrdata->exprgraph, consdata->exprgraphnode, bounds,
-         consdata->forcebackprop ? -1.0 : BOUNDTIGHTENING_MINSTRENGTH, &cutoff);
+         consdata->forcebackprop ? -1.0 : BOUNDTIGHTENING_MINSTRENGTH, INTERVALINFTY, &cutoff);
       consdata->forcebackprop = FALSE; /* do this only once */
 
       if( cutoff )
@@ -6315,6 +6564,7 @@ SCIP_RETCODE propagateBounds(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to process */
    int                   nconss,             /**< number of constraints */
+   SCIP_Bool             needclear,          /**< whether we may need to clear remainings from a previous backward propagation */
    SCIP_RESULT*          result,             /**< pointer to store the result of the propagation calls */
    int*                  nchgbds,            /**< buffer where to add the the number of changed bounds */
    int*                  ndelconss           /**< buffer where to increase if a constraint was deleted (locally) due to redundancy */
@@ -6363,7 +6613,7 @@ SCIP_RETCODE propagateBounds(
        * roundnr == 0 clears remainings from a previous backward propagation
        * @todo could give FALSE if no linear variable in the constraints had been relaxed since last time
        */
-      SCIP_CALL( SCIPexprgraphPropagateVarBounds(conshdlrdata->exprgraph, INTERVALINFTY, roundnr == 0, &domainerror) );
+      SCIP_CALL( SCIPexprgraphPropagateVarBounds(conshdlrdata->exprgraph, INTERVALINFTY, (roundnr == 0) && needclear, &domainerror) );
 
 #ifdef SCIP_OUTPUT
       {
@@ -6395,7 +6645,7 @@ SCIP_RETCODE propagateBounds(
 #ifndef NDEBUG
          consdata = SCIPconsGetData(conss[c]);
          assert(consdata != NULL);
-         assert(consdata->exprgraphnode == NULL || !SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(consdata->exprgraphnode)));
+         assert(consdata->exprgraphnode == NULL || !SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(consdata->exprgraphnode)));
 #endif
 
          SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );
@@ -7439,7 +7689,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpNonlinear)
 
    /* run domain propagation */
    dummy = 0;
-   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, &propresult, &dummy, &dummy) );
+   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, TRUE, &propresult, &dummy, &dummy) );
    if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
    {
       *result = propresult;
@@ -7569,7 +7819,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsNonlinear)
 
    /* run domain propagation */
    dummy = 0;
-   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, &propresult, &dummy, &dummy) );
+   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, TRUE, &propresult, &dummy, &dummy) );
    if( propresult == SCIP_CUTOFF || propresult == SCIP_REDUCEDDOM )
    {
       *result = propresult;
@@ -7762,7 +8012,7 @@ SCIP_DECL_CONSPROP(consPropNonlinear)
    assert(result != NULL);
 
    dummy = 0;
-   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, result, &dummy, &dummy) );
+   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, TRUE, result, &dummy, &dummy) );
 
    return SCIP_OKAY;
 }  /*lint !e715*/
@@ -7777,6 +8027,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
    SCIP_Bool          havechange;
    SCIP_Bool          domainerror;
    SCIP_Bool          havegraphchange;
+   SCIP_Bool          tryupgrades;
    int                c;
 
    assert(scip     != NULL);
@@ -7802,7 +8053,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
 
    SCIP_CALL( SCIPexprgraphSimplify(conshdlrdata->exprgraph, SCIPgetMessagehdlr(scip), SCIPepsilon(scip), conshdlrdata->maxexpansionexponent, &havechange, &domainerror) );
    SCIPdebugMessage("expression graph simplifier found %schange, domain error = %u\n", havechange ? "" : "no ", domainerror);
-   havegraphchange |= havechange;
 
    /* if simplifier found some undefined expression, then declare problem as infeasible
     * usually, this should be discovered during domain propagation already, but since that is using interval arithmetics,
@@ -7813,18 +8063,10 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
       return SCIP_OKAY;
    }
 
-   if( nrounds == 0 )
-   {
-      /* upgrade methods may look at expression graph bounds, which are not present in the first presolving round yet */
-      SCIP_CALL( SCIPexprgraphPropagateVarBounds(conshdlrdata->exprgraph, INTERVALINFTY, TRUE, &domainerror) );
+   havegraphchange |= havechange;
 
-      if( domainerror )
-      {
-         SCIPdebugMessage("propagating variable bounds through expression graph found that some expressions cannot be evaluated w.r.t. current bounds, thus cutoff\n");
-         *result = SCIP_CUTOFF;
-         return SCIP_OKAY;
-      }
-   }
+   /* if graph has changed, then we will try upgrades, otherwise we only do for changing or not-yet-presolved constraints */
+   tryupgrades = havegraphchange;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -7877,36 +8119,66 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
          }
       }
 
-      /* call upgrade methods if constraint was not presolved, has been changed, or the expression graph has changed */
-      if( !consdata->ispresolved || havechange || havegraphchange )
-      {
-         SCIP_Bool upgraded;
+      /* remember that we want to call upgrade methods for the current constraint */
+      if( havechange )
+         consdata->ispresolved = FALSE;
 
-         SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );
-         if( upgraded )
-         {
-            *result = SCIP_SUCCESS;
-            continue;
-         }
-      }
-
-      consdata->ispresolved = TRUE;
+      /* if a constraint is not finished presolving yet, then we will try upgrade methods */
+      if( !consdata->ispresolved )
+         tryupgrades = TRUE;
    }
 
-   /* run domain propagation */
-   SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, &propresult, nchgbds, ndelconss) );
-   switch( propresult )
+   if( tryupgrades )
    {
-   case SCIP_REDUCEDDOM:
-      *result = SCIP_SUCCESS;
-      break;
-   case SCIP_CUTOFF:
-      SCIPdebugMessage("propagation says problem is infeasible in presolve\n");
-      *result = SCIP_CUTOFF;
-      return SCIP_OKAY;
-   default:
-      assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
-   }  /*lint !e788*/
+      /* upgrade methods may look at expression graph bounds, which are not present in the first presolving round yet and may be invalid in later rounds (e.g., due to probing) */
+      SCIP_CALL( SCIPexprgraphPropagateVarBounds(conshdlrdata->exprgraph, INTERVALINFTY, TRUE, &domainerror) );
+
+      if( domainerror )
+      {
+         SCIPdebugMessage("propagating variable bounds through expression graph found that some expressions cannot be evaluated w.r.t. current bounds, thus cutoff\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+
+      for( c = 0; c < nconss; ++c )
+      {
+         consdata = SCIPconsGetData(conss[c]);  /*lint !e794*/
+         assert(consdata != NULL);
+
+         /* call upgrade methods if constraint was not presolved, has been changed, or the expression graph has changed */
+         if( !consdata->ispresolved || havegraphchange )
+         {
+            SCIP_Bool upgraded;
+
+            SCIP_CALL( presolveUpgrade(scip, conshdlr, conss[c], &upgraded, nupgdconss, naddconss) );  /*lint !e794*/
+            if( upgraded )
+            {
+               *result = SCIP_SUCCESS;
+               continue;
+            }
+         }
+
+         consdata->ispresolved = TRUE;
+      }
+   }
+
+   /* run domain propagation (if updated bounds in graph above, then can skip cleanup) */
+   if( (presoltiming & SCIP_PRESOLTIMING_FAST) != 0 )
+   {
+      SCIP_CALL( propagateBounds(scip, conshdlr, conss, nconss, !tryupgrades, &propresult, nchgbds, ndelconss) );
+      switch( propresult )
+      {
+      case SCIP_REDUCEDDOM:
+         *result = SCIP_SUCCESS;
+         break;
+      case SCIP_CUTOFF:
+         SCIPdebugMessage("propagation says problem is infeasible in presolve\n");
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      default:
+         assert(propresult == SCIP_DIDNOTFIND || propresult == SCIP_DIDNOTRUN);
+      }  /*lint !e788*/
+   }
 
    if( conshdlrdata->reformulate && !conshdlrdata->assumeconvex )
    {
@@ -7914,7 +8186,7 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
        * then try the reformulations (replacing products with binaries, disaggregation, setting default variable bounds)
        * otherwise, we wait with these
        */
-      if( SCIPisPresolveFinished(scip) )
+      if( SCIPisPresolveFinished(scip) || (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
       {
          int naddconssbefore;
 
@@ -7939,13 +8211,6 @@ SCIP_DECL_CONSPRESOL(consPresolNonlinear)
                consdata->ispresolved = FALSE;
             }
          }
-      }
-      else
-      {
-         SCIPdebugMessage("presolving will wait with reformulation\n");
-
-         /* if we did not try reformulations, ensure that presolving is called again even if there were only a few changes (< abortfac) */
-         *result = SCIP_DELAYED;
       }
    }
 
@@ -8748,7 +9013,7 @@ SCIP_RETCODE SCIPincludeConshdlrNonlinear(
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreNonlinear) );
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolNonlinear) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpNonlinear) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolNonlinear, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolNonlinear, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintNonlinear) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropNonlinear, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

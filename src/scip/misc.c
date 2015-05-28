@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,6 +40,194 @@
 #ifndef NDEBUG
 #include "scip/struct_misc.h"
 #endif
+
+#define SQRTOFTWO                  1.4142136 /**< the square root of 2 with sufficient precision */
+
+/**< contains all critical values for a one-sided two sample t-test up to 15 degrees of freedom
+ *   a critical value represents a threshold for rejecting the null-hypothesis in hypothesis testing at
+ *   a certain confidence level;
+ *
+ *   access through method SCIPstudentTGetCriticalValue()
+ *
+ *  source: German Wikipedia
+ *
+ *  for confidence levels
+ *  c =
+ *  0.75    0.875     0.90      0.95      0.975 (one-sided)
+ *  0.50    0.750     0.80      0.90      0.950 (two-sided)
+ *
+ */
+static const SCIP_Real studentt_quartiles[] = {      /* df:*/
+   1.000,    2.414,    3.078,    6.314,    12.706,   /*  1 */
+   0.816,    1.604,    1.886,    2.920,    4.303,    /*  2 */
+   0.765,    1.423,    1.638,    2.353,    3.182,    /*  3 */
+   0.741,    1.344,    1.533,    2.132,    2.776,    /*  4 */
+   0.727,    1.301,    1.476,    2.015,    2.571,    /*  5 */
+   0.718,    1.273,    1.440,    1.943,    2.447,    /*  6 */
+   0.711,    1.254,    1.415,    1.895,    2.365,    /*  7 */
+   0.706,    1.240,    1.397,    1.860,    2.306,    /*  8 */
+   0.703,    1.230,    1.383,    1.833,    2.262,    /*  9 */
+   0.700,    1.221,    1.372,    1.812,    2.228,    /* 10 */
+   0.697,    1.214,    1.363,    1.796,    2.201,    /* 11 */
+   0.695,    1.209,    1.356,    1.782,    2.179,    /* 12 */
+   0.694,    1.204,    1.350,    1.771,    2.160,    /* 13 */
+   0.692,    1.200,    1.345,    1.761,    2.145,    /* 14 */
+   0.691,    1.197,    1.341,    1.753,    2.131     /* 15 */
+};
+
+/**< critical values for higher degrees of freedom of Student-T distribution for the same error probabilities; infact,
+ *   these are critical values of the standard normal distribution with mean 0 and variance 1
+ */
+static const SCIP_Real studentt_quartilesabove[] = {
+   0.674,    1.150,    1.282,    1.645,    1.960
+};
+
+/** the maximum degrees of freedom represented before switching to normal approximation */
+static const int studentt_maxdf = sizeof(studentt_quartiles)/(5 * sizeof(SCIP_Real));
+
+/** get critical value of a Student-T distribution for a given number of degrees of freedom at a confidence level */
+SCIP_Real SCIPstudentTGetCriticalValue(
+   SCIP_CONFIDENCELEVEL  clevel,             /**< (one-sided) confidence level */
+   int                   df                  /**< degrees of freedom */
+   )
+{
+   if( df > studentt_maxdf )
+      return studentt_quartilesabove[(int)clevel];
+   else
+      return studentt_quartiles[(int)clevel + 5 * (df - 1)];
+}
+
+/** compute a t-value for the hypothesis that x and y are from the same population; Assuming that
+ *  x and y represent normally distributed random samples with equal variance, the returned value
+ *  comes from a Student-T distribution with countx + county - 2 degrees of freedom; this
+ *  value can be compared with a critical value (see also SCIPstudentTGetCriticalValue()) at
+ *  a predefined confidence level for checking if x and y significantly differ in location
+ */
+SCIP_Real SCIPcomputeTwoSampleTTestValue(
+   SCIP_Real             meanx,              /**< the mean of the first distribution */
+   SCIP_Real             meany,              /**< the mean of the second distribution */
+   SCIP_Real             variancex,          /**< the variance of the x-distribution */
+   SCIP_Real             variancey,          /**< the variance of the y-distribution */
+   SCIP_Real             countx,             /**< number of samples of x */
+   SCIP_Real             county              /**< number of samples of y */
+   )
+{
+   SCIP_Real pooledvariance;
+   SCIP_Real tresult;
+
+   /* too few samples */
+   if( countx < 1.9 || county < 1.9 )
+      return SCIP_INVALID;
+
+   /* pooled variance is the weighted average of the two variances */
+   pooledvariance = (countx - 1) * variancex + (county - 1) * variancey;
+   pooledvariance /= (countx + county - 2);
+
+   /* a variance close to zero means the distributions are basically constant */
+   pooledvariance = MAX(pooledvariance, 1e-9);
+
+   /* tresult can be understood as realization of a Student-T distributed variable with
+    * countx + county - 2 degrees of freedom
+    */
+   tresult = (meanx - meany) / pooledvariance;
+   tresult *= SQRT(countx * county / (countx + county));
+
+   return tresult;
+}
+
+/** returns the value of the Gauss error function evaluated at a given point */
+SCIP_Real SCIPerf(
+   SCIP_Real             x                   /**< value to evaluate */
+   )
+{
+#if defined(_WIN32) || defined(_WIN64)
+   SCIP_Real a1, a2, a3, a4, a5, p, t, y;
+   int sign;
+
+   a1 =  0.254829592;
+   a2 = -0.284496736;
+   a3 =  1.421413741;
+   a4 = -1.453152027;
+   a5 =  1.061405429;
+   p  =  0.3275911;
+
+   sign = (x >= 0) ? 1 : -1;
+   x = REALABS(x);
+
+   t = 1.0/(1.0 + p*x);
+   y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*exp(-x*x);
+   return sign * y;
+#else
+   return erf(x);
+#endif
+}
+
+/** get critical value of a standard normal distribution  at a given confidence level */
+SCIP_Real SCIPnormalGetCriticalValue(
+   SCIP_CONFIDENCELEVEL  clevel              /**< (one-sided) confidence level */
+   )
+{
+   return studentt_quartilesabove[(int)clevel];
+}
+
+/** calculates the cumulative distribution P(-infinity <= x <= value) that a normally distributed
+ *  random variable x takes a value between -infinity and parameter \p value.
+ *
+ *  The distribution is given by the respective mean and deviation. This implementation
+ *  uses the error function SCIPerf().
+ */
+SCIP_Real SCIPnormalCDF(
+   SCIP_Real             mean,               /**< the mean value of the distribution */
+   SCIP_Real             variance,           /**< the square of the deviation of the distribution */
+   SCIP_Real             value               /**< the upper limit of the calculated distribution integral */
+   )
+{
+   SCIP_Real normvalue;
+   SCIP_Real std;
+
+   /* we need to calculate the standard deviation from the variance */
+   assert(variance >= -1e-9);
+   if( variance < 1e-9 )
+      std = 0.0;
+   else
+      std = sqrt(variance);
+
+   /* special treatment for zero variance */
+   if( std < 1e-9 )
+   {
+      if( value < mean + 1e-9 )
+         return 1.0;
+      else
+         return 0.0;
+   }
+   assert( std != 0.0 ); /* for lint */
+
+   /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for SCIPerf() function */
+   normvalue = (value - mean)/(std * SQRTOFTWO);
+
+   SCIPdebugMessage(" Normalized value %g = ( %g - %g ) / (%g * 1.4142136)\n", normvalue, value, mean, std);
+
+   /* calculate the cumulative distribution function for normvalue. For negative normvalues, we negate the normvalue and
+    * use the oddness of the SCIPerf()-function; special treatment for values close to zero.
+    */
+   if( normvalue < 1e-9 && normvalue > -1e-9 )
+      return .5;
+   else if( normvalue > 0 )
+   {
+      SCIP_Real erfresult;
+
+      erfresult = SCIPerf(normvalue);
+      return  erfresult / 2.0 + 0.5;
+   }
+   else
+   {
+      SCIP_Real erfresult;
+
+      erfresult = SCIPerf(-normvalue);
+
+      return 0.5 - erfresult / 2.0;
+   }
+}
 
 /** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */
 static
@@ -1268,7 +1456,7 @@ SCIP_RETCODE hashtableResize(
 
          for( l = 0; l < hashtable->nlists; ++l )
          {
-            hashtablelist = hashtable->lists[i];
+            hashtablelist = hashtable->lists[l];
             while( hashtablelist != NULL )
             {
                sumslotsize++;
@@ -2277,7 +2465,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
 
          BMScopyMemoryArray(&newvals[realarray->minusedidx - newfirstidx],
             &(realarray->vals[realarray->minusedidx - realarray->firstidx]),
-            realarray->maxusedidx - realarray->minusedidx + 1); /*lint !e866*/
+            realarray->maxusedidx - realarray->minusedidx + 1); /*lint !e866 !e776*/
          for( i = realarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = 0.0;
       }
@@ -2648,7 +2836,7 @@ SCIP_RETCODE SCIPintarrayExtend(
 
          BMScopyMemoryArray(&newvals[intarray->minusedidx - newfirstidx],
             &intarray->vals[intarray->minusedidx - intarray->firstidx],
-            intarray->maxusedidx - intarray->minusedidx + 1); /*lint !e866*/
+            intarray->maxusedidx - intarray->minusedidx + 1); /*lint !e866 !e776*/
          for( i = intarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = 0;
       }
@@ -3014,7 +3202,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
 
          BMScopyMemoryArray(&newvals[boolarray->minusedidx - newfirstidx],
             &boolarray->vals[boolarray->minusedidx - boolarray->firstidx],
-            boolarray->maxusedidx - boolarray->minusedidx + 1); /*lint !e866*/
+            boolarray->maxusedidx - boolarray->minusedidx + 1); /*lint !e866 !e776*/
          for( i = boolarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = FALSE;
       }
@@ -3369,7 +3557,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
 
          BMScopyMemoryArray(&newvals[ptrarray->minusedidx - newfirstidx],
             &(ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx]),
-            ptrarray->maxusedidx - ptrarray->minusedidx + 1); /*lint !e866*/
+            ptrarray->maxusedidx - ptrarray->minusedidx + 1); /*lint !e866 !e776*/
          for( i = ptrarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = NULL;
       }
@@ -3909,6 +4097,17 @@ void SCIPsort(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortRealRealRealBoolBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealRealRealBoolBoolPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
+#define SORTTPL_FIELD5TYPE  void*
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     Int
 #define SORTTPL_KEYTYPE     int
@@ -3984,6 +4183,13 @@ void SCIPsort(
 #define SORTTPL_FIELD3TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortIntIntIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntIntIntReal
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  SCIP_Real
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortIntPtrIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     IntPtrIntReal
@@ -4402,6 +4608,17 @@ void SCIPsortDown(
 #define SORTTPL_FIELD3TYPE  SCIP_Bool
 #define SORTTPL_FIELD4TYPE  void*
 #define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownRealRealRealBoolBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealRealRealBoolBoolPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
+#define SORTTPL_FIELD5TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
@@ -5441,7 +5658,7 @@ SCIP_RETCODE SCIPdigraphCopy(
       SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->components, sourcedigraph->components,
             sourcedigraph->componentstarts[ncomponents]) );
       SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->componentstarts,
-            sourcedigraph->componentstarts,ncomponents + 1) );
+            sourcedigraph->componentstarts,ncomponents + 1) ); /*lint !e776*/
       (*targetdigraph)->componentstartsize = ncomponents + 1;
    }
    else
@@ -5610,6 +5827,22 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
    return SCIP_OKAY;
 }
 
+/** sets the number of successors to a given value */
+SCIP_RETCODE SCIPdigraphSetNSuccessors(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node,               /**< node for which the number of successors has to be changed */
+   int                   nsuccessors         /**< new number of successors */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+
+   digraph->nsuccessors[node] = nsuccessors;
+
+   return SCIP_OKAY;
+}
+
 /** returns the number of nodes of the given digraph */
 int SCIPdigraphGetNNodes(
    SCIP_DIGRAPH*         digraph             /**< directed graph */
@@ -5702,7 +5935,7 @@ int* SCIPdigraphGetSuccessors(
 /** returns the array of data corresponding to the arcs originating at the given node, or NULL if no data exist; this
  *  array must not be changed from outside
  */
-void** SCIPdigraphGetSuccessorsDatas(
+void** SCIPdigraphGetSuccessorsData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the data corresponding to the outgoing arcs is returned */
    )
@@ -5731,8 +5964,7 @@ void depthFirstSearch(
    int*                  ndfsnodes           /**< pointer to store number of nodes that can be reached starting at startnode */
    )
 {
-   int stacksize;
-   int currnode;
+   int stackidx;
 
    assert(digraph != NULL);
    assert(startnode >= 0);
@@ -5746,44 +5978,48 @@ void depthFirstSearch(
    /* put start node on the stack */
    dfsstack[0] = startnode;
    stackadjvisited[0] = 0;
-   stacksize = 1;
+   stackidx = 0;
 
-   while( stacksize > 0 )
+   while( stackidx >= 0 )
    {
+      int currnode;
+      int sadv;
+
       /* get next node from stack */
-      currnode = dfsstack[stacksize - 1];
+      currnode = dfsstack[stackidx];
+
+      sadv = stackadjvisited[stackidx];
+      assert( 0 <= sadv && sadv <= digraph->nsuccessors[currnode] );
 
       /* mark current node as visited */
-      assert(visited[currnode] == (stackadjvisited[stacksize - 1] > 0));
+      assert( visited[currnode] == (sadv > 0) );
       visited[currnode] = TRUE;
 
       /* iterate through the successor list until we reach unhandled node */
-      while( stackadjvisited[stacksize - 1] < digraph->nsuccessors[currnode]
-         && visited[digraph->successors[currnode][stackadjvisited[stacksize - 1]]] )
-      {
-         stackadjvisited[stacksize - 1]++;
-      }
+      while( sadv < digraph->nsuccessors[currnode] && visited[digraph->successors[currnode][sadv]] )
+         ++sadv;
 
       /* the current node was completely handled, remove it from stack */
-      if( stackadjvisited[stacksize - 1] == digraph->nsuccessors[currnode] )
+      if( sadv == digraph->nsuccessors[currnode] )
       {
-         stacksize--;
+         --stackidx;
 
          /* store node in the sorted nodes array */
-         dfsnodes[(*ndfsnodes)] = currnode;
-         (*ndfsnodes)++;
+         dfsnodes[(*ndfsnodes)++] = currnode;
       }
       /* handle next unhandled successor node */
       else
       {
-         assert(!visited[digraph->successors[currnode][stackadjvisited[stacksize - 1]]]);
+         assert( ! visited[digraph->successors[currnode][sadv]] );
+
+         /* store current stackadjvisted index */
+         stackadjvisited[stackidx] = sadv + 1;
 
          /* put the successor node onto the stack */
-         dfsstack[stacksize] = digraph->successors[currnode][stackadjvisited[stacksize - 1]];
-         stackadjvisited[stacksize] = 0;
-         stackadjvisited[stacksize - 1]++;
-         stacksize++;
-         assert(stacksize <= digraph->nnodes);
+         ++stackidx;
+         dfsstack[stackidx] = digraph->successors[currnode][sadv];
+         stackadjvisited[stackidx] = 0;
+         assert( stackidx < digraph->nnodes );
       }
    }
 }
@@ -5999,6 +6235,199 @@ void SCIPdigraphGetComponent(
       (*nodes) = &(digraph->components[digraph->componentstarts[compidx]]);
    if( nnodes != NULL )
       (*nnodes) = digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx];
+}
+
+/* Performs Tarjan's algorithm for a given directed graph to obtain the strongly connected components
+ * which are reachable from a given node.
+ */
+static
+void tarjan(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   v,                  /**< node to start the algorithm */
+   int*                  lowlink,            /**< array to store lowlink values */
+   int*                  dfsidx,             /**< array to store dfs indices */
+   int*                  stack,              /**< array to store a stack */
+   int*                  stacksize,          /**< pointer to store the size of the stack */
+   SCIP_Bool*            unprocessed,        /**< array to store which node is unprocessed yet */
+   SCIP_Bool*            nodeinstack,        /**< array to store which nodes are in the stack */
+   int*                  maxdfs,             /**< pointer to store index for DFS */
+   int*                  strongcomponents,   /**< array to store for each node the strongly connected
+                                              *   component to which it belongs (components are
+                                              *   numbered 0 to nstrongcomponents - 1); */
+   int*                  nstrongcomponents,  /**< pointer to store the number of computed components so far */
+   int*                  strongcompstartidx, /**< array to store the start index of the computed components */
+   int*                  nstorednodes        /**< pointer to store the number of already stored nodes */
+   )
+{
+   int i;
+
+   assert(digraph != NULL);
+   assert(v >= 0);
+   assert(v < digraph->nnodes);
+   assert(lowlink != NULL);
+   assert(dfsidx != NULL);
+   assert(stack != NULL);
+   assert(stacksize != NULL);
+   assert(*stacksize >= 0);
+   assert(*stacksize < digraph->nnodes);
+   assert(unprocessed != NULL);
+   assert(nodeinstack != NULL);
+   assert(maxdfs != NULL);
+   assert(strongcomponents != NULL);
+   assert(nstrongcomponents != NULL);
+   assert(strongcompstartidx != NULL);
+   assert(nstorednodes != NULL);
+   assert(*nstorednodes >= 0 && *nstorednodes < digraph->nnodes);
+
+   dfsidx[v] = *maxdfs;
+   lowlink[v] = *maxdfs;
+   *maxdfs += 1;
+
+   /* add v to the stack */
+   stack[*stacksize] = v;
+   *stacksize += 1;
+   nodeinstack[v] = TRUE;
+
+   /* mark v as processed */
+   unprocessed[v] = FALSE;
+
+   for( i = 0; i < digraph->nsuccessors[v]; ++i )
+   {
+      int w;
+
+      /* edge (v,w) */
+      w = digraph->successors[v][i];
+
+      if( unprocessed[w] )
+      {
+         tarjan(digraph, w, lowlink, dfsidx, stack, stacksize, unprocessed, nodeinstack, maxdfs, strongcomponents,
+               nstrongcomponents, strongcompstartidx, nstorednodes);
+
+         assert(lowlink[v] >= 0 && lowlink[v] < digraph->nnodes);
+         assert(lowlink[w] >= 0 && lowlink[w] < digraph->nnodes);
+
+         /* update lowlink */
+         lowlink[v] = MIN(lowlink[v], lowlink[w]);
+      }
+      else if( nodeinstack[w] )
+      {
+         assert(lowlink[v] >= 0 && lowlink[v] < digraph->nnodes);
+         assert(dfsidx[w] >= 0 && dfsidx[w] < digraph->nnodes);
+
+         /* update lowlink */
+         lowlink[v] = MIN(lowlink[v], dfsidx[w]);
+      }
+   }
+
+   /* found a root of a strong component */
+   if( lowlink[v] == dfsidx[v] )
+   {
+      int w;
+
+      strongcompstartidx[*nstrongcomponents] = *nstorednodes;
+      *nstrongcomponents += 1;
+
+      do
+      {
+         assert(*stacksize > 0);
+
+         /* stack.pop() */
+         w = stack[*stacksize - 1];
+         *stacksize -= 1;
+         nodeinstack[w] = FALSE;
+
+         /* store the node in the corresponding component */
+         strongcomponents[*nstorednodes] = w;
+         *nstorednodes += 1;
+      }
+      while( v != w );
+   }
+}
+
+/** Computes all strongly connected components of an undirected connected component with Tarjan's Algorithm.
+ *  The resulting strongly connected components are sorted topologically (starting from the end of the
+ *  strongcomponents array).
+ *
+ *  @note In general a topological sort of the strongly connected components is not unique.
+ */
+SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   compidx,            /**< number of the undirected connected component */
+   int*                  strongcomponents,   /**< array to store the strongly connected components
+                                              *   (length >= size of the component) */
+   int*                  strongcompstartidx, /**< array to store the start indices of the strongly connected
+                                              *   components (length >= size of the component) */
+   int*                  nstrongcomponents   /**< pointer to store the number of strongly connected
+                                              *   components */
+   )
+{
+   int* lowlink;
+   int* dfsidx;
+   int* stack;
+   int stacksize;
+   SCIP_Bool* unprocessed;
+   SCIP_Bool* nodeinstack;
+   int maxdfs;
+   int nstorednodes;
+   int i;
+
+   assert(digraph != NULL);
+   assert(compidx >= 0);
+   assert(compidx < digraph->ncomponents);
+   assert(strongcomponents != NULL);
+   assert(strongcompstartidx != NULL);
+   assert(nstrongcomponents != NULL);
+
+   SCIP_ALLOC( BMSallocMemoryArray(&lowlink, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsidx, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&stack, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&unprocessed, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&nodeinstack, digraph->nnodes) );
+
+   for( i = 0; i < digraph->nnodes; ++i )
+   {
+      lowlink[i] = -1;
+      dfsidx[i] = -1;
+      stack[i] = -1;
+      unprocessed[i] = TRUE;
+      nodeinstack[i] = FALSE;
+   }
+
+   nstorednodes = 0;
+   stacksize = 0;
+   maxdfs = 0;
+   *nstrongcomponents = 0;
+
+   /* iterate over all nodes in the undirected connected component */
+   for( i = digraph->componentstarts[compidx]; i < digraph->componentstarts[compidx + 1]; ++i )
+   {
+      int v;
+
+      v = digraph->components[i];
+      assert(v >= 0 && v < digraph->nnodes);
+
+      /* call Tarjan's algorithm for unprocessed nodes */
+      if( unprocessed[v] )
+      {
+         SCIPdebugMessage("apply Tarjan's algorithm for node %d\n", v);
+         tarjan(digraph, v, lowlink, dfsidx, stack, &stacksize, unprocessed, nodeinstack, &maxdfs,
+               strongcomponents, nstrongcomponents, strongcompstartidx, &nstorednodes);
+      }
+   }
+
+   /* we should have stored as many nodes as in the undirected connected component */
+   assert(nstorednodes == digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx]);
+
+   /* to simplify the iteration over all strongly connected components */
+   strongcompstartidx[*nstrongcomponents] = nstorednodes;
+
+   BMSfreeMemoryArray(&lowlink);
+   BMSfreeMemoryArray(&dfsidx);
+   BMSfreeMemoryArray(&stack);
+   BMSfreeMemoryArray(&unprocessed);
+   BMSfreeMemoryArray(&nodeinstack);
+
+   return SCIP_OKAY;
 }
 
 /** frees the component information for the given directed graph */
@@ -6667,7 +7096,7 @@ SCIP_Longint SCIPcalcGreComDiv(
       {
          /* we can stop if one value reached one */
          if( val2 == 1 )
-            return (1 << t);  /*lint !e647 !e701*/
+            return (val2 << t);  /*lint !e647 !e703*/
 
          /* if ((val1 xor val2) and 2) = 2, then gcd(val1, val2) = gcd((val1 + val2)/4, val2),
           * and otherwise                        gcd(val1, val2) = gcd((val1 − val2)/4, val2)
@@ -6688,7 +7117,7 @@ SCIP_Longint SCIPcalcGreComDiv(
       {
          /* we can stop if one value reached one */
          if( val1 == 1 )
-            return (1 << t);  /*lint !e647 !e701*/
+            return (val1 << t);  /*lint !e647 !e703*/
 
          /* if ((val2 xor val1) and 2) = 2, then gcd(val2, val1) = gcd((val2 + val1)/4, val1),
           * and otherwise                        gcd(val2, val1) = gcd((val2 − val1)/4, val1)
@@ -6943,7 +7372,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
       }
    }
 
-   if( minval == SCIP_REAL_MAX )
+   if( minval == SCIP_REAL_MAX ) /*lint !e777*/
    {
       /* all coefficients are zero (inside tolerances) */
       if( intscalar != NULL )
@@ -7182,7 +7611,7 @@ SCIP_Real SCIPselectSimpleValue(
  * Random Numbers
  */
 
-#ifdef NO_RAND_R
+#if defined(NO_RAND_R) || defined(_WIN32) || defined(_WIN64)
 
 #define SCIP_RAND_MAX 32767
 /** returns a random number between 0 and SCIP_RAND_MAX */
@@ -7195,7 +7624,7 @@ int getRand(
 
    assert(seedp != NULL);
 
-   nextseed = (*seedp) * 1103515245 + 12345;
+   nextseed = (*seedp) * (SCIP_Longint)1103515245 + 12345;
    *seedp = (unsigned int)nextseed;
 
    return (int)((unsigned int)(nextseed/(2*(SCIP_RAND_MAX+1))) % (SCIP_RAND_MAX+1));
@@ -7286,9 +7715,9 @@ SCIP_Longint SCIPcalcBinomCoef(
    if( m == 2 )
    {
       if( ((SCIP_Real)SCIP_LONGINT_MAX) / n >= (n-1) * 2 ) /*lint !e790*/
-	 return (n*(n-1)/2); /*lint !e647*/
+         return ((SCIP_Longint)n*(n-1)/2); /*lint !e647*/
       else
-	 return -1;
+         return -1;
    }
 
    /* abort on to big numbers */
@@ -7485,6 +7914,113 @@ SCIP_RETCODE SCIPgetRandomSubset(
 }
 
 
+/*
+ * Arrays
+ */
+
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
+SCIP_RETCODE SCIPcomputeArraysIntersection(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   )
+{
+   int cnt = 0;
+   int k = 0;
+   int v1;
+   int v2;
+
+   assert( array1 != NULL );
+   assert( array2 != NULL );
+   assert( intersectarray != NULL );
+   assert( nintersectarray != NULL );
+
+   /* determine intersection of array1 and array2 */
+   for (v1 = 0; v1 < narray1; ++v1)
+   {
+      assert( v1 == 0 || array1[v1] >= array1[v1-1] );
+
+      /* skip duplicate entries */
+      if ( v1+1 < narray1 && array1[v1] == array1[v1+1])
+         continue;
+
+      for (v2 = k; v2 < narray2; ++v2)
+      {
+         assert( v2 == 0 || array2[v2] >= array2[v2-1] );
+
+         if ( array2[v2] > array1[v1] )
+         {
+            k = v2;
+            break;
+         }
+         else if ( array2[v2] == array1[v1] )
+         {
+            intersectarray[cnt++] = array2[v2];
+            k = v2 + 1;
+            break;
+         }
+      }
+   }
+
+   /* store size of intersection array */
+   *nintersectarray = cnt;
+
+   return SCIP_OKAY;
+}
+
+
+/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
+SCIP_RETCODE SCIPcomputeArraysSetminus(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   )
+{
+   int cnt = 0;
+   int v1 = 0;
+   int v2 = 0;
+
+   assert( array1 != NULL );
+   assert( array2 != NULL );
+   assert( setminusarray != NULL );
+   assert( nsetminusarray != NULL );
+
+   while ( v1 < narray1 )
+   {
+      int entry1;
+
+      assert( v1 == 0 || array1[v1] >= array1[v1-1] );
+
+      /* skip duplicate entries */
+      while ( v1 + 1 < narray1 && array1[v1] == array1[v1 + 1] )
+         ++v1;
+
+      entry1 = array1[v1];
+
+      while ( v2 < narray2 && array2[v2] < entry1 )
+         ++v2;
+
+      if ( v2 >= narray2 || entry1 < array2[v2] )
+         setminusarray[cnt++] = entry1;
+      ++v1;
+   }
+
+   /* store size of setminus array */
+   *nsetminusarray = cnt;
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Strings
@@ -7511,7 +8047,7 @@ int SCIPmemccpy(
 
       while( cnt-- && (*destination++ = *src++) != stop ); /*lint !e722*/
 
-      return (destination - dest);
+      return (int)(destination - dest);
    }
 }
 
@@ -7602,7 +8138,7 @@ int SCIPsnprintf(
 #if defined(_WIN32) || defined(_WIN64)
    n = _vsnprintf(t, (size_t) len, s, ap);
 #else
-   n = vsnprintf(t, (size_t) len, s, ap);
+   n = vsnprintf(t, (size_t) len, s, ap); /*lint !e571*/
 #endif
    va_end(ap);
 

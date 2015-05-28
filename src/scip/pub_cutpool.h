@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -41,6 +41,16 @@ SCIP_ROW* SCIPcutGetRow(
 /** gets the age of the cut: the number of consecutive cut pool separation rounds where the cut was neither in the LP nor violated */
 EXTERN
 int SCIPcutGetAge(
+   SCIP_CUT*             cut                 /**< cut */
+   );
+
+/** returns the ratio of LPs where the row belonging to this cut was active in an LP solution, i.e.
+ *  where the age of its row has not been increased
+ *
+ *  @see SCIPcutGetAge() to get the age of a cut
+ */
+EXTERN
+SCIP_Real SCIPcutGetLPActivityQuot(
    SCIP_CUT*             cut                 /**< cut */
    );
 

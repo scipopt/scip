@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -68,9 +68,6 @@ SCIP_RETCODE SCIPincludeColoringPlugins(
    SCIP_CALL( SCIPincludeHeurCoefdiving(scip) );
    SCIP_CALL( SCIPincludeHeurCrossover(scip) );
    SCIP_CALL( SCIPincludeHeurDins(scip) );
-#if 0
-   SCIP_CALL( SCIPincludeHeurFeaspump(scip) );
-#endif
    SCIP_CALL( SCIPincludeHeurFixandinfer(scip) );
    SCIP_CALL( SCIPincludeHeurFracdiving(scip) );
    SCIP_CALL( SCIPincludeHeurGuideddiving(scip) );
@@ -97,16 +94,8 @@ SCIP_RETCODE SCIPincludeColoringPlugins(
    SCIP_CALL( SCIPincludeHeurZirounding(scip) );
 #endif
 
-#if 0
-   SCIP_CALL( SCIPincludePropPseudoobj(scip) );
-   SCIP_CALL( SCIPincludePropRootredcost(scip) );
-#endif
-
    SCIP_CALL( SCIPincludeDispDefault(scip) );
    SCIP_CALL( SCIPincludeDialogDefault(scip) );
-#if 0
-   SCIP_CALL( SCIPdebugIncludeProp(scip) ); 
-#endif
 
    return SCIP_OKAY;
 }

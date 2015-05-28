@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3185,14 +3185,14 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
       /* generate cut for delta = 1.0 */
       SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
             BOUNDSFORTRANS, BOUNDTYPESFORTRANS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
-            weights, NULL, 1.0, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
+            weights, -1.0, NULL, -1, -1, NULL, 1.0, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
             &(cutdata->success), &(cutdata->islocal), &(cutdata->cutrank)) );
 
       if( sepadata->trynegscaling )
       {
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
                BOUNDSFORTRANS, BOUNDTYPESFORTRANS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
-               weights, NULL, -1.0, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
+               weights, -1.0, NULL, -1, -1, NULL, -1.0, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
                &(cutdata->success), &(cutdata->islocal), &(cutdata->cutrank)) );
       }
    }
@@ -3225,9 +3225,9 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
       assert(*varsolvals != NULL);
 
       /* find best value of delta */
-      SCIP_CALL( SCIPcutGenerationHeuristicCmir(scip, sepa, NULL, *varsolvals, sepadata->maxtestdelta, weights, BOUNDSWITCH,
-            USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
-            sepadata->trynegscaling, TRUE, "zerohalf", cutoff, &ncuts, &bestdelta, &bestdeltavalid) );
+      SCIP_CALL( SCIPcutGenerationHeuristicCmir(scip, sepa, NULL, *varsolvals, sepadata->maxtestdelta, weights,
+            -1.0, NULL, -1, -1, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, sepadata->maxnnonz, MAXWEIGHTRANGE,
+            MINFRAC, MAXFRAC, sepadata->trynegscaling, TRUE, "zerohalf", cutoff, &ncuts, &bestdelta, &bestdeltavalid) );
       assert(ncuts == 0);
 
       /* best delta corresponds to an efficient cut */
@@ -3235,7 +3235,7 @@ SCIP_RETCODE createZerohalfCutFromZerohalfWeightvector(
       {  
          SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS,
                BOUNDSFORTRANS, BOUNDTYPESFORTRANS, sepadata->maxnnonz, MAXWEIGHTRANGE, MINFRAC, MAXFRAC,
-               weights, NULL, bestdelta, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
+               weights, -1.0, NULL, -1, -1, NULL, bestdelta, NULL, NULL, cutcoefs, &(cutdata->rhs), &(cutdata->activity),
                &(cutdata->success), &(cutdata->islocal), &(cutdata->cutrank)) );
       }
    }
@@ -3375,7 +3375,7 @@ SCIP_RETCODE preprocessTrivialZerohalfCuts(
          if( SCIPisLE(scip, mod2data->slacks[mod2data->rowsind[firstrowsind + r]], maxslack ))
          {
             if( BITARRAYSAREEQUAL(mod2data->rows[mod2data->rowsind[firstrowsind + r]],
-                  zerorow, mod2data->rowsbitarraysize) ) /* check if row is (0 ... 0 , 1) */
+                  zerorow, mod2data->rowsbitarraysize) ) /*lint !e647 check if row is (0 ... 0 , 1) */
             {
                /* a violated zerohalf cut has been found */
                weights = NULL;
@@ -3453,7 +3453,7 @@ SCIP_RETCODE preprocessRows(
    SCIP_Bool             removelargeslackrows, /**< should rows with slack > maxslack be removed? */
    SCIP_Bool             removeidenticalrows /**< should identical rows be removed? */
    )
-{
+{ /*lint --e{647}*/
    int                   r1;
    int                   r2;
    SCIP_Bool*            rowisprocessed;
@@ -4983,7 +4983,7 @@ SCIP_RETCODE createSubscip(
 
    /* create and initialize framework */
 
-   SCIP_CALL( SCIPcreate(&(auxipdata->subscip)) ); 
+   SCIP_CALL( SCIPcreate(&(auxipdata->subscip)) );
    success = FALSE;
 #ifndef NDEBUG
    SCIP_CALL( SCIPcopyPlugins(scip, auxipdata->subscip, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE,

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,7 +24,7 @@
 #include <string.h>
 
 #include "scip/heur_rootsoldiving.h"
-
+#include "scip/pub_dive.h"
 
 #define HEUR_NAME         "rootsoldiving"
 #define HEUR_DESC         "LP diving heuristic that changes variable's objective values using root LP solution as guide"

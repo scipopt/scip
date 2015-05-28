@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,22 +36,25 @@ namespace SCIPInterval_NAMESPACE {
 #endif
 
 /** an interval that extends the SCIP_INTERVAL struct
- * by various methods to allow calculating with intervals as with ordinary numbers */
+ *
+ *  Used by various methods to allow calculating with intervals as with ordinary numbers.
+ */
 class SCIPInterval : public SCIP_INTERVAL
 {
 public:
    /** value to use for infinity
-    * currently a global variable, thus use with care!
+    *
+    *  Currently a global variable, thus use with care!
     */
    static SCIP_Real infinity;
 
    /** default constructor -> gives entire interval */
    SCIPInterval()
    {
-      SCIPintervalSetBounds(this, -infinity, infinity);
+      SCIPintervalSetBounds(this, -SCIPInterval::infinity,SCIPInterval::infinity);
    }
 
-   /* constructor for an SCIP_INTERVAL struct */
+   /** constructor for an SCIP_INTERVAL struct */
    SCIPInterval(
       const SCIP_INTERVAL& x                 /**< interval to copy */
       )
@@ -90,11 +93,11 @@ public:
       const SCIP_INTERVAL& y                 /**< interval to compare with */
       ) const
    {
-      if( SCIPintervalIsEmpty(*this) && !SCIPintervalIsEmpty(y) )
+      if( SCIPintervalIsEmpty(SCIPInterval::infinity, *this) && !SCIPintervalIsEmpty(SCIPInterval::infinity, y) )
          return false;
-      if( this->inf <= -infinity && y.inf > -infinity )
+      if( this->inf <= -SCIPInterval::infinity && y.inf > -SCIPInterval::infinity )
          return false;
-      if( this->sup >=  infinity && y.sup <  infinity )
+      if( this->sup >= SCIPInterval::infinity && y.sup < SCIPInterval::infinity )
          return false;
       return (this->inf == y.inf) && (this->sup == y.sup);
    }
@@ -113,8 +116,8 @@ public:
       ) const
    {
       return ( (inf == y) && (sup == y) ) ||
-             ( sup <= -infinity && y <= -infinity ) ||
-             ( inf >=  infinity && y >=  infinity );
+             ( sup <= -SCIPInterval::infinity && y <= -SCIPInterval::infinity ) ||
+             ( inf >= SCIPInterval::infinity && y >= SCIPInterval::infinity );
    }
 
    /** adds another interval to this one */
@@ -242,14 +245,14 @@ SCIPInterval operator/(
    return resultant;
 }
 
-/** cosinus of an interval */
+/** cosine of an interval */
 inline
 SCIPInterval cos(
    const SCIPInterval&   x                   /**< operand */
    )
 {
-   /* @todo implement cosinus for intervals */
-   SCIPerrorMessage("Cosinus of interval not implemented. Returning trivial interval [-1,1].\n");
+   /* @todo implement cosine for intervals */
+   SCIPerrorMessage("Cosine of interval not implemented. Returning trivial interval [-1,1].\n");
 
    return SCIPInterval(-1.0, 1.0);
 }
@@ -322,14 +325,14 @@ SCIPInterval signpow(
    return resultant;
 }
 
-/** sinus of an interval */
+/** sine of an interval */
 inline
 SCIPInterval sin(
    const SCIPInterval&   x                   /**< operand */
    )
 {
-   /* @todo implement sinus for intervals */
-   SCIPerrorMessage("Sinus of interval not implemented. Returning trivial interval [-1,1].\n");
+   /* @todo implement sine for intervals */
+   SCIPerrorMessage("Sine of interval not implemented. Returning trivial interval [-1,1].\n");
 
    return SCIPInterval(-1.0, 1.0);
 }
@@ -368,7 +371,7 @@ SCIPInterval abs(
 {
    SCIPInterval resultant;
 
-   SCIPintervalAbs(&resultant, x);
+   SCIPintervalAbs(SCIPInterval::infinity, &resultant, x);
 
    return resultant;
 }
@@ -381,12 +384,12 @@ SCIPInterval sign(
 {
    SCIPInterval resultant;
 
-   SCIPintervalSign(&resultant, x);
+   SCIPintervalSign(SCIPInterval::infinity, &resultant, x);
 
    return resultant;
 }
 
-/** macro to easy definition of so far unimplemented interval functions */
+/** macro for easy definition of not implemented interval functions */
 #define SCIP_INTERVALARITH_UNDEFFUNC(function)                                  \
 inline                                                                          \
 SCIPInterval function(                                                          \

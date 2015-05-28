@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -70,17 +70,12 @@
 /* constraint handler properties */
 #define CONSHDLR_NAME          "storeGraph"
 #define CONSHDLR_DESC          "storing graph at nodes of the tree constraint handler"
-#define CONSHDLR_SEPAPRIORITY         0 /**< priority of the constraint handler for separation */
 #define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY  2000000 /**< priority of the constraint handler for checking feasibility */
-#define CONSHDLR_SEPAFREQ            -1 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                               * propagation and enforcement, -1 for no eager evaluations, 0 for first only */
-#define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-#define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
@@ -97,14 +92,13 @@ struct SCIP_ConsData
    int*               nnodesinunion;         /* value at position i = #elements in unionofnode[i] */
    int                node1;                 /* first node for DIFFER / SAME */
    int                node2;                 /* second node for DIFFER / SAME */
-   int                type;                  /* type of the branching operation: COLOR_CONSTYPE_DIFFER oder COLOR_CONSTYPE_SAME */
+   COLOR_CONSTYPE     type;                  /* type of the branching operation: COLOR_CONSTYPE_DIFFER oder COLOR_CONSTYPE_SAME */
    int                propagatedvars;        /* number of Vars that existed, the last time, the related node was propagated,
                                                 used to determine whether the constraint should be repropagated*/
    SCIP_Bool          created;               /* flag for saving the creation status of the graph saved in the cons,
                                                 at the beginning false, after the first activation set to true */
    SCIP_NODE*         stickingatnode;        /* the node in the B&B-tree at which the cons is sticking */
 };
-
 
 
 /** constraint handler data */
@@ -166,15 +160,20 @@ SCIP_RETCODE createConsStoreGraphAtRoot(
    {
       consdata->representativeofnode[i] = i;
       consdata->nnodesinunion[i] = 1;
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->unionofnode[i]), 1) );
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->unionofnode[i]), 1) ); /*lint !e866*/
       consdata->unionofnode[i][0] = i;
    }
 
    /* create the complementary graph */
-   tcliqueCreate(&(consdata->cgraph));
+   if( !tcliqueCreate(&(consdata->cgraph)) )
+   {
+      SCIPerrorMessage("could not flush the clique graph\n");
+      return SCIP_ERROR;
+   }
+
    assert(consdata->cgraph != NULL);
 
-   COLORprobGetComplementaryGraph(scip, graph, consdata->cgraph);
+   SCIP_CALL( COLORprobGetComplementaryGraph(scip, graph, consdata->cgraph) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, FALSE, FALSE, FALSE, FALSE, FALSE,
@@ -188,12 +187,14 @@ SCIP_RETCODE createConsStoreGraphAtRoot(
  * Callback methods
  */
 
+#ifdef SCIP_DISABLED_CODE
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 /** We do not want to copy store graph constraints into subSCIPs since they just store information about
  *  branching decisions and are used to enforce those.
  *  However, in subSCIPs, we only want to solve the current MIP with a branch-and-cut approach.
  */
 #define conshdlrCopyStoreGraph NULL
+#endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
@@ -240,7 +241,7 @@ SCIP_DECL_CONSINITSOL(consInitsolStoreGraph)
    conshdlrData->nstack = 1;
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 
 /** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
@@ -264,7 +265,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolStoreGraph)
    SCIPfreeMemoryArray(scip, &conshdlrData->stack);
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 
 /** frees specific constraint data */
@@ -287,7 +288,7 @@ SCIP_DECL_CONSDELETE(consDeleteStoreGraph)
    {
       for ( i = tcliqueGetNNodes((*consdata)->graph)-1; i >= 0; i-- )
       {
-         SCIPfreeBlockMemoryArray(scip, &((*consdata)->unionofnode[i]), (*consdata)->nnodesinunion[i]);
+         SCIPfreeBlockMemoryArray(scip, &((*consdata)->unionofnode[i]), (*consdata)->nnodesinunion[i]); /*lint !e866*/
          assert((*consdata)->nnodesinunion[i] == 1);
       }
       SCIPfreeBlockMemoryArray(scip, &((*consdata)->unionofnode), tcliqueGetNNodes((*consdata)->graph));
@@ -303,7 +304,7 @@ SCIP_DECL_CONSDELETE(consDeleteStoreGraph)
          {
             if ( (*consdata)->nnodesinunion[i] > 0 )
             {
-               SCIPfreeBlockMemoryArray(scip, &((*consdata)->unionofnode[i]), (*consdata)->nnodesinunion[i]);
+               SCIPfreeBlockMemoryArray(scip, &((*consdata)->unionofnode[i]), (*consdata)->nnodesinunion[i]); /*lint !e866*/
                (*consdata)->unionofnode[i] = NULL;
             }
          }
@@ -344,7 +345,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpStoreGraph)
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 
 /** constraint enforcing method of constraint handler for pseudo solutions */
@@ -360,7 +361,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsStoreGraph)
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 
 /** feasibility check method of constraint handler for integral solutions */
@@ -376,7 +377,7 @@ SCIP_DECL_CONSCHECK(consCheckStoreGraph)
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 
 /** variable rounding lock method of constraint handler */
@@ -391,7 +392,7 @@ SCIP_DECL_CONSLOCK(consLockStoreGraph)
    SCIPdebugMessage("Locking method for store graph constraint: <%s>.\n", SCIPconsGetName(cons));
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 
 /** constraint activation notification method of constraint handler */
@@ -427,7 +428,7 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
    /* put constraint on the stack */
    if ( conshdlrData->nstack >= conshdlrData->maxstacksize )
    {
-      SCIPreallocMemoryArray(scip, &(conshdlrData->stack), 2*(conshdlrData->maxstacksize));
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &(conshdlrData->stack), (2 * conshdlrData->maxstacksize)) ); /*lint !e715 !e647*/
       conshdlrData->maxstacksize = 2*(conshdlrData->maxstacksize);
       SCIPdebugMessage("reallocating Memory for stack! %d --> %d\n", conshdlrData->maxstacksize/2, conshdlrData->maxstacksize);
    }
@@ -455,7 +456,7 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
          consdata->nnodesinunion[i] = olddata->nnodesinunion[i];
          if ( consdata->nnodesinunion[i] > 0 )
          {
-            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->unionofnode[i]), consdata->nnodesinunion[i]) );
+            SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->unionofnode[i]), consdata->nnodesinunion[i]) ); /*lint !e866*/
             for ( j = 0; j < consdata->nnodesinunion[i]; j++ )
             {
                consdata->unionofnode[i][j] = olddata->unionofnode[i][j];
@@ -464,8 +465,18 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
       }
 
       /* copy the graph */
-      tcliqueCreate(&(consdata->graph));
-      tcliqueAddNode((consdata)->graph, nnodes-1, 0);
+      if( !tcliqueCreate(&(consdata->graph)) )
+      {
+         SCIPerrorMessage("could not flush the clique graph\n");
+         return SCIP_ERROR;
+      }
+
+      if( !tcliqueAddNode((consdata)->graph, nnodes-1, 0) )
+      {
+         SCIPerrorMessage("could not add a node to the clique graph\n");
+         return SCIP_ERROR;
+      }
+
       for ( i = 0; i < nnodes; i++ )
       {
          /* get adjacent nodes for node i and add them to new graph*/
@@ -475,12 +486,22 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
          {
             if ( *firstedge > i )
             {
-               tcliqueAddEdge(consdata->graph, i, *firstedge);
+               if( !tcliqueAddEdge(consdata->graph, i, *firstedge) )
+               {
+                  SCIPerrorMessage("could not add an edge to the clique graph\n");
+                  return SCIP_ERROR;
+               }
             }
             firstedge++;
          }
       }
-      tcliqueFlush(consdata->graph);
+
+      if( !tcliqueFlush(consdata->graph) )
+      {
+         SCIPerrorMessage("could not flush the clique graph\n");
+         return SCIP_ERROR;
+      }
+
       assert(consdata->representativeofnode[consdata->node2] == consdata->node2);
       assert(consdata->representativeofnode[consdata->node1] == consdata->node1);
 
@@ -491,11 +512,21 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
          {
             for ( j = 0; j < consdata->nnodesinunion[consdata->representativeofnode[consdata->node1]]; j++ )
             {
-               tcliqueAddEdge(consdata->graph, consdata->unionofnode[consdata->representativeofnode[consdata->node1]][j],
-                  consdata->unionofnode[consdata->representativeofnode[consdata->node2]][i]);
+               if( !tcliqueAddEdge(consdata->graph, consdata->unionofnode[consdata->representativeofnode[consdata->node1]][j],
+                     consdata->unionofnode[consdata->representativeofnode[consdata->node2]][i])
+                  )
+               {
+                  SCIPerrorMessage("could not add an edge to the clique graph\n");
+                  return SCIP_ERROR;
+               }
             }
          }
-         tcliqueFlush(consdata->graph);
+
+         if( !tcliqueFlush(consdata->graph) )
+         {
+            SCIPerrorMessage("could not flush the clique graph\n");
+            return SCIP_ERROR;
+         }
       }
       /* type == COLOR_CONSTYPE_SAME --> insert edge (node2, i) - if not yet existing - if there exists an edge (node1, i) and vice versa */
       else
@@ -516,8 +547,12 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
             {
                if ( !tcliqueIsEdge(fathergraph, *firstedge, consdata->node2) )
                {
+                  if( !tcliqueAddEdge(consdata->graph, consdata->unionofnode[consdata->node2][i], *firstedge) )
+                  {
+                     SCIPerrorMessage("could not add an edge to the clique graph\n");
+                     return SCIP_ERROR;
+                  }
                   inserted++;
-                  tcliqueAddEdge(consdata->graph, consdata->unionofnode[consdata->node2][i], *firstedge);
                }
                firstedge++;
             }
@@ -532,28 +567,36 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
             {
                if ( !tcliqueIsEdge(fathergraph, *firstedge, consdata->node1) )
                {
+                  if( ! tcliqueAddEdge(consdata->graph, consdata->unionofnode[consdata->node1][i], *firstedge) )
+                  {
+                     SCIPerrorMessage("could not add an edge to the clique graph\n");
+                     return SCIP_ERROR;
+                  }
                   inserted++;
-                  tcliqueAddEdge(consdata->graph, consdata->unionofnode[consdata->node1][i], *firstedge);
                }
                firstedge++;
             }
          }
          if ( inserted > 0 )
          {
-            tcliqueFlush(consdata->graph);
+            if( !tcliqueFlush(consdata->graph) )
+            {
+               SCIPerrorMessage("could not flush the clique graph\n");
+               return SCIP_ERROR;
+            }
          }
 
          /* update union represented by node1 */
          SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(consdata->unionofnode[consdata->node1]),
                consdata->nnodesinunion[consdata->node1],
-               (consdata->nnodesinunion[consdata->node1]) + (consdata->nnodesinunion[consdata->node2])) );
+               (consdata->nnodesinunion[consdata->node1]) + (consdata->nnodesinunion[consdata->node2])) ); /*lint !e866*/
          for ( i = 0; i < consdata->nnodesinunion[consdata->node2]; i ++ )
          {
             consdata->unionofnode[consdata->node1][consdata->nnodesinunion[consdata->node1]+i]
                = consdata->unionofnode[consdata->node2][i];
          }
          SCIPfreeBlockMemoryArray(scip, &(consdata->unionofnode[consdata->node2]),
-            consdata->nnodesinunion[consdata->node2]);
+            consdata->nnodesinunion[consdata->node2]); /*lint !e866*/
          consdata->nnodesinunion[consdata->node1] =
             (consdata->nnodesinunion[consdata->node1]) + (consdata->nnodesinunion[consdata->node2]);
          consdata->nnodesinunion[consdata->node2] = 0;
@@ -561,16 +604,20 @@ SCIP_DECL_CONSACTIVE(consActiveStoreGraph)
       }
 
       /* create the complementary graph */
-      tcliqueCreate(&(consdata->cgraph));
+      if( !tcliqueCreate(&(consdata->cgraph)) )
+      {
+         SCIPerrorMessage("could not flush the clique graph\n");
+         return SCIP_ERROR;
+      }
       assert(consdata->cgraph != NULL);
-      COLORprobGetComplementaryGraph(scip, consdata->graph, consdata->cgraph);
+      SCIP_CALL( COLORprobGetComplementaryGraph(scip, consdata->graph, consdata->cgraph) );
    }
    /* if new variables where created after the last propagation of this cons, repropagate it */
    else
    {
       if ( (consdata->type != COLOR_CONSTYPE_ROOT) && (consdata->propagatedvars < SCIPgetNTotalVars(scip)) )
       {
-         SCIPrepropagateNode(scip, consdata->stickingatnode);
+         SCIP_CALL( SCIPrepropagateNode(scip, consdata->stickingatnode) );
       }
    }
 
@@ -653,7 +700,7 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
             if ( COLORprobIsNodeInStableSet(scip, i, consdata->node1) && COLORprobIsNodeInStableSet(scip, i, consdata->node2) )
             {
                var = COLORprobGetVarForStableSet(scip, i);
-               SCIP_CALL( SCIPchgVarUb(scip, var, 0) );
+               SCIP_CALL( SCIPchgVarUb(scip, var, 0.0) );
                propcount++;
             }
          }
@@ -684,7 +731,7 @@ SCIP_DECL_CONSPROP(consPropStoreGraph)
    consdata->propagatedvars = SCIPgetNTotalVars(scip);
 
    return SCIP_OKAY;
-}
+}/*lint !e715*/
 
 /*
  * interface methods
@@ -732,7 +779,7 @@ SCIP_RETCODE COLORcreateConsStoreGraph(
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
    SCIP_CONS*            fatherconstraint,   /**< constraint in B&B-father */
-   int                   type,               /**< type of the constraint: COLOR_CONSTYPE_SAME or COLOR_CONSTYPE_DIFFER */
+   COLOR_CONSTYPE        type,               /**< type of the constraint: COLOR_CONSTYPE_SAME or COLOR_CONSTYPE_DIFFER */
    int                   node1,              /**< the first node of the constraint */
    int                   node2,              /**< the second node of the constraint */
    SCIP_NODE*            stickingnode        /**< the B&B-tree node at which the constraint will be sticking */

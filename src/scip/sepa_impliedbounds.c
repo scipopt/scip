@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,7 +43,7 @@
  * Local methods
  */
 
-/* adds given cut with two variables, if it is violated */
+/** adds given cut with two variables, if it is violated */
 static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */

@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -75,7 +75,6 @@ then
   else
     GAMSOPTS="$GAMSOPTS optdir=$OPTDIR optfile=1"
   fi
-  #echo "traceStyle 1" >> $OPTDIR/examiner2.opt
   echo   "scaled yes" >> $OPTDIR/examiner2.opt
   echo "unscaled yes" >> $OPTDIR/examiner2.opt
   echo "examinesolupoint yes" >> $OPTDIR/examiner2.opt

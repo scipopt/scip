@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1109,25 +1109,6 @@ jboolean JNISCIPCONS(conshdlrIsPropagationDelayed)(
    return (jboolean) propdelayed;
 }
 
-/** should presolving method be delayed, if other presolvers found reductions? */
-jboolean JNISCIPCONS(conshdlrIsPresolvingDelayed)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jconshdlr           /**< constraint handler */
-   )
-{
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_Bool predelayed;
-
-   /* convert JNI pointer into C pointer */
-   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
-   assert(conshdlr != NULL);
-
-   predelayed = SCIPconshdlrIsPresolvingDelayed(conshdlr);
-
-   return (jboolean) predelayed;
-}
-
 /** was LP separation method delayed at the last call? */
 jboolean JNISCIPCONS(conshdlrWasLPSeparationDelayed)(
    JNIEnv*               env,                /**< JNI environment variable */
@@ -1185,25 +1166,6 @@ jboolean JNISCIPCONS(conshdlrWasPropagationDelayed)(
    return (jboolean) propdelayed;
 }
 
-/** was presolving method delayed at the last call? */
-jboolean JNISCIPCONS(conshdlrWasPresolvingDelayed)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jconshdlr           /**< constraint handler */
-   )
-{
-   SCIP_CONSHDLR* conshdlr;
-   SCIP_Bool predelayed;
-
-   /* convert JNI pointer into C pointer */
-   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
-   assert(conshdlr != NULL);
-
-   predelayed = SCIPconshdlrWasPresolvingDelayed(conshdlr);
-
-   return (jboolean) predelayed;
-}
-
 /** is constraint handler initialized? */
 jboolean JNISCIPCONS(conshdlrIsInitialized)(
    JNIEnv*               env,                /**< JNI environment variable */
@@ -1243,7 +1205,7 @@ jboolean JNISCIPCONS(conshdlrIsClonable)(
 }
 
 /** returns the timing mask of the propagation method of the constraint handler */
-jint JNISCIPCONS(conshdlrGetPropTimingmask)(
+jint JNISCIPCONS(conshdlrGetPropTiming)(
    JNIEnv*               env,                /**< JNI environment variable */
    jobject               jobj,               /**< JNI class pointer */
    jlong                 jconshdlr           /**< constraint handler */
@@ -1256,7 +1218,26 @@ jint JNISCIPCONS(conshdlrGetPropTimingmask)(
    conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
    assert(conshdlr != NULL);
 
-   timing = SCIPconshdlrGetPropTimingmask(conshdlr);
+   timing = SCIPconshdlrGetPropTiming(conshdlr);
+
+   return (jint) timing;
+}
+
+/** returns the timing mask of the presolving method of the constraint handler */
+jint JNISCIPCONS(conshdlrGetPresolTiming)(
+   JNIEnv*               env,                /**< JNI environment variable */
+   jobject               jobj,               /**< JNI class pointer */
+   jlong                 jconshdlr           /**< constraint handler */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_PRESOLTIMING timing;
+
+   /* convert JNI pointer into C pointer */
+   conshdlr = (SCIP_CONSHDLR*) (size_t) jconshdlr;
+   assert(conshdlr != NULL);
+
+   timing = SCIPconshdlrGetPresolTiming(conshdlr);
 
    return (jint) timing;
 }

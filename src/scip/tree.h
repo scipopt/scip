@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,8 +35,10 @@
 #include "scip/type_prob.h"
 #include "scip/type_primal.h"
 #include "scip/type_tree.h"
+#include "scip/type_reopt.h"
 #include "scip/type_branch.h"
 #include "scip/type_prop.h"
+#include "scip/type_implics.h"
 #include "scip/pub_tree.h"
 
 #ifndef NDEBUG
@@ -104,22 +106,27 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the given node can be cut off */
    SCIP_Bool             exitsolve           /**< are we in exitsolve stage, so we only need to loose the children */
    );
 
 /** cuts off node and whole sub tree from branch and bound tree */
 extern
-void SCIPnodeCutoff(
+SCIP_RETCODE SCIPnodeCutoff(
    SCIP_NODE*            node,               /**< node that should be cut off */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
-   SCIP_TREE*            tree                /**< branch and bound tree */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** marks node, that propagation should be applied again the next time, a node of its subtree is focused */
@@ -164,6 +171,53 @@ SCIP_RETCODE SCIPnodeDelCons(
    SCIP_CONS*            cons                /**< constraint to locally delete */
    );
 
+/** returns all constraints added to a given node */
+extern
+void SCIPnodeGetAddedConss(
+   SCIP_NODE*            node,               /**< node */
+   SCIP_CONS**           addedconss,         /**< array to store the constraints */
+   int*                  naddedconss,        /**< number of added constraints */
+   int                   addedconsssize      /**< size of the constraint array */
+   );
+
+/** return all bound changes based on constraint propagation; stop saving the bound changes if we reach a branching
+ *  decision based on a dual information
+ */
+extern
+void SCIPnodeGetConsProps(
+   SCIP_NODE*            node,               /**< node */
+   SCIP_VAR**            vars,               /**< array of variables on which constraint propagation triggers a bound change */
+   SCIP_Real*            varbounds,          /**< array of bounds set by constraint propagation */
+   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes set by constraint propagation */
+   int*                  nconspropvars,      /**< number of variables on which constraint propagation triggers a bound change
+                                              *   if this is larger than the array size, arrays should be reallocated and method
+                                              *   should be called again */
+   int                   conspropvarssize    /**< available slots in arrays */
+   );
+
+/** gets all bound changes applied after the first bound change based on dual information.
+ *
+ *  @note: currently, we can only detect bound changes based in dual information if they arise from strong branching.
+ */
+extern
+void SCIPnodeGetBdChgsAfterDual(
+   SCIP_NODE*            node,               /**< node */
+   SCIP_VAR**            vars,               /**< array of variables on which the branching has been performed in the parent node */
+   SCIP_Real*            varbounds,          /**< array of bounds which the branching in the parent node set */
+   SCIP_BOUNDTYPE*       varboundtypes,      /**< array of boundtypes which the branching in the parent node set */
+   int                   start,              /**< first free slot in the arrays */
+   int*                  nbranchvars,        /**< number of variables on which branching has been performed in the parent node
+                                              *   if this is larger than the array size, arrays should be reallocated and method
+                                              *   should be called again */
+   int                   branchvarssize      /**< available slots in arrays */
+   );
+
+/** returns the number of added constraints to the given node */
+extern
+int SCIPnodeGetNAddedConss(
+   SCIP_NODE*           node
+   );
+
 /** adds bound change with inference information to focus node, child of focus node, or probing node;
  *  if possible, adjusts bound to integral value;
  *  at most one of infercons and inferprop may be non-NULL
@@ -177,9 +231,11 @@ SCIP_RETCODE SCIPnodeAddBoundinfer(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
    SCIP_Real             newbound,           /**< new value for bound */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
@@ -201,9 +257,11 @@ SCIP_RETCODE SCIPnodeAddBoundchg(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to change the bounds for */
    SCIP_Real             newbound,           /**< new value for bound */
    SCIP_BOUNDTYPE        boundtype,          /**< type of bound: lower or upper bound */
@@ -298,14 +356,53 @@ SCIP_RETCODE SCIPnodePropagateImplics(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            cutoff              /**< pointer to store whether the node can be cut off */
    );
 
+/** returns all bound changes based on dual information.
+ *
+ *  currently, this methods works only for bound changes made by strong branching on binary variables. we need this
+ *  method to ensure optimality within reoptimization.
+ *
+ *  since the bound changes made by strong branching are stored as SCIP_BOUNDCHGTYPE_CONSINFER or SCIP_BOUNDCHGTYPE_PROPINFER
+ *  with no constraint or propagator, resp., we are are interested in bound changes with these attributes.
+ *
+ *  all bound changes of type SCIP_BOUNDCHGTYPE_BRANCHING are stored in the beginning of the bound change array, afterwards,
+ *  we can find the other two types. thus, we start the search at the end of the list and stop when reaching the first
+ *  bound change of type SCIP_BOUNDCHGTYPE_BRANCHING.
+ */
+extern
+void SCIPnodeGetDualBoundchgs(
+   SCIP_NODE*            node,               /**< node data */
+   SCIP_VAR**            vars,               /**< array of variables on which the bound change is based on dual information */
+   SCIP_Real*            bounds,             /**< array of bounds which are based on dual information */
+   int*                  nvars,              /**< number of variables on which the bound change is based on dual information
+                                              *   if this is larger than the array size, arrays should be reallocated and method
+                                              *   should be called again */
+   int                   varssize            /**< available slots in arrays */
+   );
 
-
+/** returns the number of bound changes based on dual information.
+ *
+ *  currently, this methods works only for bound changes made by strong branching on binary variables. we need this
+ *  method to ensure optimality within reoptimization.
+ *
+ *  since the bound changes made by strong branching are stored as SCIP_BOUNDCHGTYPE_CONSINFER or SCIP_BOUNDCHGTYPE_PROPINFER
+ *  with no constraint or propagator, resp., we are are interested in bound changes with these attributes.
+ *
+ *  all bound changes of type SCIP_BOUNDCHGTYPE_BRANCHING are stored in the beginning of the bound change array, afterwards,
+ *  we can find the other two types. thus, we start the search at the end of the list and stop when reaching the first
+ *  bound change of type SCIP_BOUNDCHGTYPE_BRANCHING.
+ */
+extern
+int SCIPnodeGetNDualBndchgs(
+   SCIP_NODE*            node
+   );
 
 /*
  * Tree methods
@@ -315,6 +412,7 @@ SCIP_RETCODE SCIPnodePropagateImplics(
 extern
 SCIP_RETCODE SCIPtreeCreate(
    SCIP_TREE**           tree,               /**< pointer to tree data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_NODESEL*         nodesel             /**< node selector to use for sorting leaves in the priority queue */
    );
@@ -345,6 +443,7 @@ SCIP_RETCODE SCIPtreeClear(
 extern
 SCIP_RETCODE SCIPtreeCreateRoot(
    SCIP_TREE*            tree,               /**< tree data structure */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
@@ -356,6 +455,7 @@ SCIP_RETCODE SCIPtreeCreateRoot(
 extern
 SCIP_RETCODE SCIPtreeCreatePresolvingRoot(
    SCIP_TREE*            tree,               /**< tree data structure */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -367,13 +467,15 @@ SCIP_RETCODE SCIPtreeCreatePresolvingRoot(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
 /** frees the temporary presolving root and resets tree data structure */
 extern
 SCIP_RETCODE SCIPtreeFreePresolvingRoot(
    SCIP_TREE*            tree,               /**< tree data structure */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -385,7 +487,8 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
-   SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
 /** returns the node selector associated with the given node priority queue */
@@ -408,6 +511,7 @@ SCIP_RETCODE SCIPtreeSetNodesel(
 extern
 SCIP_RETCODE SCIPtreeCutoff(
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
@@ -486,6 +590,7 @@ SCIP_Real SCIPtreeCalcChildEstimate(
 extern
 SCIP_RETCODE SCIPtreeBranchVar(
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -505,6 +610,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
 extern
 SCIP_RETCODE SCIPtreeBranchVarHole(
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -540,6 +646,7 @@ SCIP_RETCODE SCIPtreeBranchVarHole(
 extern
 SCIP_RETCODE SCIPtreeBranchVarNary(
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
@@ -555,6 +662,36 @@ SCIP_RETCODE SCIPtreeBranchVarNary(
    SCIP_Real             minwidth,           /**< minimal domain width in children */
    SCIP_Real             widthfactor,        /**< multiplier for children domain width with increasing distance from val, must be >= 1.0 */
    int*                  nchildren           /**< buffer to store number of created children, or NULL */
+   );
+
+/** adds a diving bound change to the tree together with the information if this is a bound change
+ *  for the preferred direction or not
+ */
+extern
+SCIP_RETCODE SCIPtreeAddDiveBoundChange(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_VAR*             var,                /**< variable to apply the bound change to */
+   SCIP_BRANCHDIR        dir,                /**< direction of the bound change */
+   SCIP_Real             value,              /**< value to adjust this variable bound to */
+   SCIP_Bool             preferred           /**< is this a bound change for the preferred child? */
+   );
+
+/** get the dive bound change data for the preferred or the alternative direction */
+extern
+void SCIPtreeGetDiveBoundChangeData(
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_VAR***           variables,          /**< pointer to store variables for the specified direction */
+   SCIP_BRANCHDIR**      directions,         /**< pointer to store the branching directions */
+   SCIP_Real**           values,             /**< pointer to store bound change values */
+   int*                  ndivebdchgs,        /**< pointer to store the number of dive bound changes */
+   SCIP_Bool             preferred           /**< should the dive bound changes for the preferred child be output? */
+   );
+
+/** clear the tree dive bound change data structure */
+extern
+void SCIPtreeClearDiveBoundChanges(
+   SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
 /** switches to probing mode and creates a probing root */
@@ -601,15 +738,18 @@ SCIP_RETCODE SCIPtreeMarkProbingNodeHasLP(
 extern
 SCIP_RETCODE SCIPtreeBacktrackProbing(
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_PRIMAL*          primal,             /**< primal data structure */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    int                   probingdepth        /**< probing depth of the node in the probing path that should be reactivated */
    );
 
@@ -619,6 +759,7 @@ SCIP_RETCODE SCIPtreeBacktrackProbing(
 extern
 SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    BMS_BLKMEM*           blkmem,             /**< block memory buffers */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
@@ -626,9 +767,11 @@ SCIP_RETCODE SCIPtreeEndProbing(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_PRIMAL*          primal,             /**< primal LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_EVENTFILTER*     eventfilter         /**< global event filter */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
 
@@ -747,6 +890,18 @@ SCIP_NODE* SCIPtreeGetRootNode(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
+/** returns whether we are in probing and the objective value of at least one column was changed */
+extern
+SCIP_Bool SCIPtreeProbingObjChanged(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
+/** marks the current probing node to have a changed objective function */
+extern
+void SCIPtreeMarkProbingObjChanged(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -774,6 +929,8 @@ SCIP_NODE* SCIPtreeGetRootNode(
 #define SCIPtreeHasCurrentNodeLP(tree)  (SCIPtreeProbing(tree) ? (tree)->probingnodehaslp : SCIPtreeHasFocusNodeLP(tree))
 #define SCIPtreeGetEffectiveRootDepth(tree) ((tree)->effectiverootdepth)
 #define SCIPtreeGetRootNode(tree)       ((tree)->root)
+#define SCIPtreeProbingObjChanged(tree) ((tree)->probingobjchanged)
+#define SCIPtreeMarkProbingObjChanged(tree) ((tree)->probingobjchanged = TRUE)
 
 #endif
 

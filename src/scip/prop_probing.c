@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,7 +36,7 @@
 #define PROP_DELAY                 TRUE /**< should propagation method be delayed, if other propagators found
                                          *   reductions? */
 #define PROP_PRESOL_PRIORITY    -100000 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
-#define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
+#define PROP_PRESOLTIMING       SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolving method (fast, medium, or exhaustive) */
 #define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
                                          *   limit) */
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
@@ -830,12 +830,6 @@ SCIP_DECL_PROPINITSOL(propInitsolProbing)
    propdata->nuseless = 0;
    propdata->ntotaluseless = 0;
    propdata->nsumuseless = 0;
-#if 0
-   propdata->nfixings = 0;
-   propdata->naggregations = 0;
-   propdata->nimplications = 0;
-   propdata->nbdchgs = 0;
-#endif
 
    return SCIP_OKAY;
 }
@@ -956,15 +950,18 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
    /* adjust result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( delay )
+   else
    {
-      *result = SCIP_DELAYED;
-      /* probing was interrupted because it reached the maximal fixings parameter, so we want to rerun it at the next call */
-      propdata->lastnode = -2;
+      if( delay )
+      {
+         /* probing was interrupted because it reached the maximal fixings parameter, so we want to rerun it at the next call */
+         propdata->lastnode = -2;
+      }
+
+      if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
+         || propdata->nimplications > oldnimplications )
+         *result = SCIP_SUCCESS;
    }
-   else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
-      || propdata->nimplications > oldnimplications )
-      *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
@@ -1137,7 +1134,7 @@ SCIP_RETCODE SCIPincludePropProbing(
    SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreProbing) );
    SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreProbing) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolProbing, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS,
-         PROP_PRESOL_DELAY) );
+         PROP_PRESOLTIMING) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropProbing) );
 
    /* add probing propagator parameters */

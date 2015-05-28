@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1876,29 +1876,6 @@ jint JNISCIPVAR(varGetNImpls)(
    return (jint) num;
 }
 
-/** gets number of implications  y <= 0 or y >= 1 for x == 0 or x == 1 of given active problem variable x with binary y,
- *  there are no implications for nonbinary variable x
- */
-JNIEXPORT
-jint JNISCIPVAR(varGetNBinImpls)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jvar,               /**< JNI problem variable */
-   jboolean              jvarfixing          /**< FALSE for implications for x == 0, TRUE for x == 1 */
-   )
-{
-   SCIP_VAR* var;
-   int num;
-
-   /* convert JNI pointer into C pointer */
-   var = (SCIP_VAR*) (size_t) jvar;
-   assert(var != NULL);
-
-   num = SCIPvarGetNBinImpls(var, (SCIP_Bool) jvarfixing);
-
-   return (jint) num;
-}
-
 /** gets array with implication variables y of implications  y <= b or y >= b for x == 0 or x == 1 of given active
  *  problem variable x, there are no implications for nonbinary variable x;
  *  the implications are sorted such that implications with binary implied variables precede the ones with non-binary
@@ -1923,7 +1900,7 @@ jlongArray JNISCIPVAR(varGetImplVars)(
    assert(var != NULL);
 
    vars = SCIPvarGetImplVars(var, (SCIP_Bool) jvarfixing);
-   nvars = SCIPvarGetNBinImpls(var, (SCIP_Bool) jvarfixing);
+   nvars = SCIPvarGetNImpls(var, (SCIP_Bool) jvarfixing);
 
 
    jvars = (*env)->NewLongArray(env, nvars);
@@ -1956,7 +1933,7 @@ jintArray JNISCIPVAR(varGetImplTypes)(
    assert(var != NULL);
 
    type = SCIPvarGetImplTypes(var, (SCIP_Bool) jvarfixing);
-   ntype = SCIPvarGetNBinImpls(var, (SCIP_Bool) jvarfixing);
+   ntype = SCIPvarGetNImpls(var, (SCIP_Bool) jvarfixing);
 
    /* create jlongArray */
    jtype = (*env)->NewIntArray(env, ntype);
@@ -1988,7 +1965,7 @@ jdoubleArray JNISCIPVAR(varGetImplBounds)(
    assert(var != NULL);
 
    bounds = SCIPvarGetImplBounds(var, (SCIP_Bool) jvarfixing);
-   nbounds = SCIPvarGetNBinImpls(var, (SCIP_Bool) jvarfixing);
+   nbounds = SCIPvarGetNImpls(var, (SCIP_Bool) jvarfixing);
 
    /* create jdoublerray */
    jbounds = (*env)->NewDoubleArray(env, nbounds);
@@ -2020,7 +1997,7 @@ jintArray JNISCIPVAR(varGetImplIds)(
    assert(var != NULL);
 
    ids = SCIPvarGetImplIds(var, (SCIP_Bool) jvarfixing);
-   nids = SCIPvarGetNBinImpls(var, (SCIP_Bool) jvarfixing);
+   nids = SCIPvarGetNImpls(var, (SCIP_Bool) jvarfixing);
 
    /* create jintArray */
    jids = (*env)->NewIntArray(env, nids);

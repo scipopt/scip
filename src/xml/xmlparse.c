@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -242,7 +242,7 @@ int mygetc(
       if ( NULL == FGETS(ppos->buf, sizeof(ppos->buf), ppos->fp) )
          return EOF;
 #else
-      size_t len = (size_t) FREAD(ppos->buf, sizeof(ppos->buf) - 1, ppos->fp);
+      size_t len = (size_t) FREAD(ppos->buf, sizeof(ppos->buf) - 1, ppos->fp); /*lint !e571 !e747*/
 
       if( len == 0 || len > sizeof(ppos->buf) - 1 )
          return EOF;
@@ -769,8 +769,9 @@ void handleEndtag(
             else
                ppos->state = XML_STATE_ERROR;
          }
-         BMSfreeMemoryArray(&name);
       }
+
+      BMSfreeMemoryArray(&name);
    }
 }
 
@@ -1021,8 +1022,9 @@ void procPcdata(
             xmlAppendChild(topPstack(ppos), node);
             ppos->state = XML_STATE_BEFORE;
          }
-         BMSfreeMemoryArray(&data);
       }
+
+      BMSfreeMemoryArray(&data);
    }
 }
 

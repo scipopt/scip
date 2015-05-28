@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -135,6 +135,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  - scip            : SCIP main data structure
  *  - prop            : the propagator itself
  *  - nrounds         : number of presolving rounds already done
+ *  - presoltiming    : current presolving timing
  *  - nnewfixedvars   : number of variables fixed since the last call to the presolving method
  *  - nnewaggrvars    : number of variables aggregated since the last call to the presolving method
  *  - nnewchgvartypes : number of variable type changes since the last call to the presolving method
@@ -172,7 +173,7 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  - SCIP_DIDNOTRUN  : the presolving method was skipped
  *  - SCIP_DELAYED    : the presolving method was skipped, but should be called again
  */
-#define SCIP_DECL_PROPPRESOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, int nrounds, \
+#define SCIP_DECL_PROPPRESOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_PROP* prop, int nrounds, SCIP_PRESOLTIMING presoltiming,  \
       int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
       int nnewdelconss, int nnewaddconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides, \
       int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes, \

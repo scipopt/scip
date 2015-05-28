@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -55,6 +55,9 @@ LOCK		=	false
 VALGRIND	=	false
 CLIENTTMPDIR    =       /tmp
 OPTCOMMAND	=	optimize
+SETCUTOFF	=	0
+MAXJOBS         =       1
+
 
 #compiling and linking parameters
 VERBOSE		=	false
@@ -66,6 +69,9 @@ SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
 LINKER  	=	C
 SHARED		=	false
+NOBLKMEM	=	false
+NOBUFMEM	=	false
+NOBLKBUFMEM	=	false
 
 #will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
 PARASCIP	=	false
@@ -82,7 +88,7 @@ ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
 LPSCHECK        =       false
 GAMS		=	false
-SPX_LEGACY  = false
+SPX_LEGACY  	= 	false
 
 #compiler and linker parameters
 CC		=	gcc
@@ -124,6 +130,7 @@ CBC		=	cbc
 CBCPARALLEL	=	cbc-parallel
 MOSEK           =       mosek
 GUROBI          =       gurobi_cl
+XPRESS		=	xpress
 GLPK            =       glpsol
 SYMPHONY        =       symphony
 BLIS            =       blis
@@ -179,7 +186,7 @@ ALLSRC		=
 #-----------------------------------------------------------------------------
 # include additional make files
 #-----------------------------------------------------------------------------
-include $(SCIPREALPATH)/make/make.$(BASE)
+-include $(SCIPREALPATH)/make/make.$(BASE)
 -include $(SCIPREALPATH)/make/local/make.$(HOSTNAME)
 -include $(SCIPREALPATH)/make/local/make.$(HOSTNAME).$(COMP)
 -include $(SCIPREALPATH)/make/local/make.$(HOSTNAME).$(COMP).$(OPT)
@@ -202,8 +209,16 @@ DFLAGS		+=	$(USRDFLAGS)
 # Memory Management
 #-----------------------------------------------------------------------------
 
-#FLAGS		+=	-DBMS_NOBLOCKMEM
-
+ifeq ($(NOBLKBUFMEM),true)
+     FLAGS		+=	-DBMS_NOBLOCKMEM -DSCIP_NOBUFFERMEM
+else
+  ifeq ($(NOBLKMEM),true)
+       FLAGS		+=	-DBMS_NOBLOCKMEM
+  endif
+  ifeq ($(NOBUFMEM),true)
+       FLAGS		+=	-DSCIP_NOBUFFERMEM
+  endif
+endif
 
 #-----------------------------------------------------------------------------
 # PARASCIP
@@ -308,6 +323,11 @@ endif
 
 ifeq ($(ZIMPL),auto)
 ZIMPL		=	$(GMP)
+ifeq ($(ZIMPL),false)
+ifeq ($(MAKELEVEL),0)
+$(warning ZIMPL was deactived because of missing GMP support.)
+endif
+endif
 endif
 
 ifeq ($(GMP_LDFLAGS),)

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -404,6 +404,9 @@ SCIP_RETCODE SCIPapplyZeroobj(
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 
+   /* disable statistic timing inside sub SCIP */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+
    /* set limits for the subproblem */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nnodes) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
@@ -425,14 +428,14 @@ SCIP_RETCODE SCIPapplyZeroobj(
       SCIP_CALL( SCIPsetIntParam(subscip, "presolving/maxrounds", 50) );
    }
 
-   /* use best dfs node selection */
-   if( SCIPfindNodesel(subscip, "dfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/dfs/stdpriority") )
+   /* use dfs node selection */
+   if( SCIPfindNodesel(subscip, "restartdfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/restartdfs/stdpriority") )
    {
-      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/restartdfs/stdpriority", INT_MAX/4) );
    }
 
-   /* use inference branching */
-   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
+   /* use least infeasible branching */
+   if( SCIPfindBranchrule(subscip, "leastinf") != NULL && !SCIPisParamFixed(subscip, "branching/leastinf/priority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "branching/leastinf/priority", INT_MAX/4) );
    }

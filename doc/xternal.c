@@ -3,7 +3,7 @@
 /*                  this file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*                  2002-2014 Konrad-Zuse-Zentrum                            */
+/*                  2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -77,6 +77,7 @@
  *
  *   - \ref CODE    "Coding style guidelines"
  *   - \ref OBJ     "Creating, capturing, releasing, and adding data objects"
+ *   - \ref MEMORY  "Using the memory functions of SCIP"
  *   - \ref DEBUG   "Debugging"
  *
  * @subsection HOWTOADD How to add ...
@@ -115,7 +116,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  3.1.0.1
+ * @version  3.2.0
  *
  * \image html scippy.png
  *
@@ -582,9 +583,11 @@
  *
  * There are additional parameters for Linux/Gnu compilers:
  *
- * - <code>OPT=noblkmem</code> turns off the internal SCIP memory.  This way the code can be checked by valgrind or
- *   similar tools.
- * - <code>OPT=opt-shared</code> generates a shared object of the SCIP libraries.  (The binary uses these shared
+ * - <code>NOBLKBUFMEM=\<true\></code> turns off the internal SCIP block and buffer memory.  This way the code can be checked by valgrind or
+ *   similar tools. (The individual options <code>NOBLKMEM=\<true\></code> and <code>NOBUFMEM=\<true\></code> to turn off the SCIP block and
+ *   buffer memory, respectively, exist as well).
+ *
+ * - <code>SHARED=\<true\></code> generates a shared object of the SCIP libraries.  (The binary uses these shared
  *   libraries as well.)
  * - <code>OPT=prf</code> generates a profiling version of SCIP providing a detailed statistic of the time usage of
  *   every method of SCIP.
@@ -838,11 +841,11 @@
  * for these kinds of projects.
  * Below, you find some hints of how to start such a project.
  *
- * The example should be chosen
- *     depending on the programming language (<b>C</b> or <b>C++</b>) and the purpose
+ * - The example should be chosen
+ *   depending on the programming language (<b>C</b> or <b>C++</b>) and the purpose
  *   (<b>branch-and-cut</b> or <b>branch-and-cut-and-price</b>) of your project.
- *
- *    We suggest the use one of the following examples:
+ *   <br>
+ *   We suggest the use one of the following examples:
  *     - The <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
  *     - The <a href="http://scip.zib.de/doc/examples/Coloring"><b>Coloring</b></a>
@@ -852,28 +855,25 @@
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
  *     - The <a href="http://scip.zib.de/doc/examples/LOP"><b>LOP</b></a>-example
  *       is a <b>branch-and-cut</b>-code in <b>C</b>.
- *
+ *     .
  * - Copy one of the examples in the <code>examples</code> directory (in the SCIP root
  *   directory). For instance, type
  *   \verbatim
  > cp -r examples/Coloring/ ../SCIPProject/ ; cd ../SCIPProject
      \endverbatim
- *
  *   from the SCIP root directory for copying the content of the <code>Coloring</code>-example into a fresh
  *   directory named SCIPProject in the parent directory of the SCIP root directory and jumping to
  *   the new SCIPProject directory rightafter.
- *
- *  - Open the <code>Makefile</code>  via
+ * - Open the <code>Makefile</code>  via
  *    \verbatim
  > kate Makefile
      \endverbatim
- *
  *    and edit the following variables at the top to have a compilable code:
  *
  *    - specify a correct path to the SCIP root (<code>SCIPDIR</code>)
  *    - rename the targets name (<code>MAINNAME</code>)
  *    - adjust the source file names (<code>MAINOBJ</code>).
- *
+ *    .
  * - Once you have edited the makefile, you can use all the flags that can be used in SCIP to
  *   compile your code, see \ref MAKE.
  *   Note that you need to update the dependency files before compiling your project via <code>make depend</code>.
@@ -888,6 +888,8 @@
  *
  * If are using SCIP as a black box solver, here you will find some tips and tricks what you can do.
  *
+ * @section TUTORIAL_OPTIMIZE Read and optimize a problem instance
+ *
  * First of all, we need a SCIP binary and an example problem file to work with.  Therefore, you can either download the
  * SCIP standard distribution (which includes problem files) and compile it on your own or you can download a
  * precompiled binary and an example problem separately. SCIP can read files in LP, MPS, ZPL, WBO, FZN, PIP, OSiL, and other formats (see \ref FILEREADERS).
@@ -899,7 +901,8 @@
  * scipoptsuite-[version]/scip-[version]/check/instances/MIP/stein27.mps.
  *
  * If you want to download a precompiled binary, go to the <a href="http://scip.zib.de/#download">SCIP download
- * section</a> and download an appropriate binary for your operating system. To follow this tutorial, we recommend downloading the instance
+ * section</a> and download an appropriate binary for your operating system. The SCIP source code distribution already comes with
+ * the example problem instance used throughout this tutorial. To follow this tutorial with a precompiled binary, we recommend downloading the instance
  * <a href="http://miplib.zib.de/miplib3/miplib3/stein27.mps.gz">stein27</a> from
  * the <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> homepage.
  *
@@ -907,7 +910,7 @@
  *
  * \code
  * SCIP version 2.0.1 [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 1.5.0]
- * Copyright (c) 2002-2014 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * External codes:
  *   SoPlex 1.5.0         Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)
@@ -932,7 +935,7 @@
  * solution" to show the nonzero variables of the best found solution.
 
  * \code
- * SCIP> read check/instances/MIP/stein27.mps
+ * SCIP> read check/instances/MIP/stein27.fzn
  * original problem has 27 variables (27 bin, 0 int, 0 impl, 0 cont) and 118 constraints
  * SCIP> optimize
  *
@@ -999,6 +1002,40 @@
  * solutions. The optimal objective value always has to be 18, but the solution vector may differ. If you are interested
  * in this behavior, which is called "performance variability", you may have a look at the MIPLIB2010 paper.
  *
+ * @section TUTORIAL_FILEIO Writing problems and solutions to a file
+
+ * SCIP can also write information to files. E.g., we could store the incumbent solution to a file, or output the
+ * problem instance in another file format (the LP format is much more human readable than the MPS format, for example).
+ *
+ * \code
+ * SCIP> write solution stein27.sol
+ *
+ * written solution information to file <stein27.sol>
+ *
+ * SCIP> write problem stein27.lp
+ * written original problem to file <stein27.lp>
+ *
+ * SCIP> q
+ * ...
+ * \endcode
+ *
+ * Passing starting solutions can increase the solving performance so that SCIP does not need to construct an initial feasible solution
+ * by itself. After reading the problem instance, use the "read" command again, this time with a file containing solution information.
+ * Solutions can be specified in a raw or xml-format and must have the file extension ".sol", see the documentation of the
+ * <a href="http://scip.zib.de/doc/html/reader__sol_8h.php">solution reader of SCIP</a> for further information.
+ *
+ * Customized settings are not written or read with the "write" and "read" commands, but with the three commands
+ *
+ * \code
+ * SCIP> set save _settingsfilename_
+ * SCIP> set diffsave _settingsfilename_
+ * SCIP> set load _settingsfilename_
+ * \endcode
+ *
+ * See the section on parameters \ref TUTORIAL_PARAMETERS for more information.
+ *
+ * @section TUTORIAL_STATISTICS Displaying detailed solving statistics
+ *
  * We might want to have some more information now. Which were the heuristics that found the solutions? What plugins
  *  were called during the solutions process and how much time did they spend? How did the instance that we were solving
  *  look?  Information on certain plugin types (e.g., heuristics, branching rules, separators) we get by
@@ -1035,6 +1072,8 @@
  * several hundred cuts (of which only a few entered the LP). The oneopt heuristic found one solution in 4 calls,
  * whereas coefdiving failed all 57 times it was called. All the LPs have been solved with the dual simplex algorithm, which
  * took about 0.2 seconds of the 0.7 seconds overall solving time.
+ *
+ * @section TUTORIAL_PARAMETERS Changing parameters from the interactive shell
  *
  * Now, we can start playing around with parameters. Rounding and shifting seem to be quite successful on this instance,
  * wondering what happens if we disable them? Or what happens, if we are even more rigorous and disable all heuristics?
@@ -1142,20 +1181,31 @@
  * solution, change parameters and so on. Entering "optimize" we continue the solving process from the point on at which
  * it has been interrupted.
  *
- * SCIP can also write information to files. E.g., we could store the incumbent solution to a file, or output the
- * problem instance in another file format (the LP format is much more human readable than the MPS format, for example).
+ * Once you found a non-default parameter setting that you wish to save and use in the future, use either the command
+ * \code
+ * SCIP> set save settingsfile.set
+ * \endcode
+ * to save <b>all</b> parameter values to the specified file, or
+ * \code
+ * SCIP> set diffsave settingsfile.set
+ * \endcode
+ * in order to save only the nondefault parameters. The latter has several advantages, you can, e.g., combine parameter
+ * settings from multiple settings files stored by the latter command, as long as they only affect mutually exclusive
+ * parameter values.
+ *
+ * For loading a previously stored settings file, use the "load" command:
  *
  * \code
- * SCIP> write solution stein27.sol
- *
- * written solution information to file <stein27.sol>
- *
- * SCIP> write problem stein27.lp
- * written original problem to file <stein27.lp>
- *
- * SCIP> q
- * ...
+ * SCIP> set load settingsfile.set
  * \endcode
+ *
+ * Special attention should be drawn to the reserved settings file name "scip.set"; whenever the SCIP interactive shell
+ * is started from a working directory that contains a settings file with the name "scip.set", it will be automatically
+ * replace the default settings.
+ *
+ * For using special settings for automated tests as described in \ref TEST, save your custom settings in a subdirectory
+ * "SCIP_HOME/settings".
+ *
  *
  * We hope this tutorial gave you an overview of what is possible using the SCIP interactive shell. Please also read our
  * \ref FAQ, in particular the section <a href="http://scip.zib.de/#faq">Using SCIP as a standalone MIP/MINLP-Solver</a>.
@@ -5616,6 +5666,85 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page MEMORY Using the memory functions of SCIP
+ *
+ *  SCIP provides three ways for allocating memory.
+ *
+ *  @section STDMEM Standard memory
+ *
+ *  SCIP provides an access to the standard C functions @c malloc and @c free with the additional feature of tracking
+ *  memory in debug mode. In this way, memory leaks can be easily detected. This feature is automatically activated in
+ *  debug mode.
+ *
+ *  The most important functions are
+ *  - SCIPallocMemory(), SCIPallocMemoryArray() to allocate memory
+ *  - SCIPfreeMemory(), SCIPfreeMemoryArray() to free memory
+ *
+ *  @section BLKMEM Block memory
+ *
+ *  SCIP offers its own block memory handling, which allows efficient handling of smaller blocks of memory in cases in
+ *  which many blocks of the same (small) size appear. This is adaquate for branch-and-cut codes in which small blocks
+ *  of the same size are allocated and freed very often (for data structures used to store rows or branch-and-bound
+ *  nodes). Actually, most blocks allocated within SCIP have small sizes like 8, 16, 30, 32, 64.  The idea is simple:
+ *  There is a separate list of memory blocks for each interesting small size. When allocating memory, the list is
+ *  checked for a free spot in the list; if no such spot exists the list is enlarged. Freeing just sets the block to be
+ *  available. Very large blocks are handled separatedly. See the dissertation of Tobias Achterberg for more details.
+ *
+ *  One important comment is that freeing block memory requires the size of the block in order to find the right list.
+ *
+ *  The most important functions are
+ *  - SCIPallocBlockMemory(), SCIPallocBlockMemoryArray() to allocate memory
+ *  - SCIPfreeBlockMemory(), SCIPfreeBlockMemoryArray() to free memory
+ *
+ *  An example code is:
+ *  \code
+ *  SCIP_RETCODE dosomething(
+ *     SCIP*                 scip
+ *     )
+ *  {
+ *     int nvars;
+ *     int* array;
+ *
+ *     nvars = SCIPgetNVars(scip);
+ *     SCIP_CALL( SCIPallocBlockMemoryArray(scip, &array, nvars) );
+ *
+ *     do something ...
+ *
+ *     SCIPfreeBlockMemoryArray(scip, &array, nvars);
+ *  }
+ *  \endcode
+ *
+ *  @section BUFMEM Buffer memory
+ *
+ *  In addition to block memory, SCIP offers buffer memory. This should be used if memory is locally
+ *  used within a function and freed within the same function. For this purpose, SCIP has a list of memory buffers
+ *  that are reused for this purpose. In this way, a very efficient allocation/freeing is possible.
+ *
+ *  The most important functions are
+ *  - SCIPallocBufferMemory(), SCIPallocBufferArray() to allocate memory
+ *  - SCIPfreeBufferMemory(), SCIPfreeBufferArray() to free memory
+ *
+ *  SCIP 3.2 introduced a new type of buffer memory, the clean buffer. It provides memory which is initialized to zero
+ *  and requires the user to reset the memory to zero before freeing it. This can be used at performance-critical
+ *  places where only few nonzeros are added to a dense array and removing these nonzeros individually is much faster
+ *  than clearing the whole array. Same as the normal buffer array, the clean buffer should be used for temporary memory
+ *  allocated and freed within the same function.
+ *
+ *  The most important functions are
+ *  - SCIPallocCleanBufferArray() to allocate memory
+ *  - SCIPfreeCleanBufferArray() to free memory
+ *
+ *  @section GENMEM General notes
+ *
+ *  The following holds for all three types of memory functions:
+ *  - In debug mode the arguments are checked for overly large allocations (negative sizes are converted into very large values of type @c size_t).
+ *  - The functions always allocate at least one byte, so that freeing is always possible.
+ *  - The freeing methods set the pointer to the memory to NULL.
+ *  - For maximum speed you should free memory in the reverse order in which it was allocated.
+ *    For block and buffer memory this @b significantly speeds up the code.
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page DEBUG Debugging
  *
  *  If you need to debug your own code that uses SCIP, here are some tips and tricks:
@@ -5625,10 +5754,10 @@
  *    following example, taken from the file src/scip/cons_linear.c:
  *    \code
  *    SCIP_RETCODE consdataCatchEvent(
- *       SCIP*                 scip,               /**< SCIP data structure *\/
- *       SCIP_CONSDATA*        consdata,           /**< linear constraint data *\/
- *       SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing *\/
- *       int                   pos                 /**< array position of variable to catch bound change events for *\/
+ *       SCIP*                 scip,               /**< SCIP data structure */
+ *       SCIP_CONSDATA*        consdata,           /**< linear constraint data */
+ *       SCIP_EVENTHDLR*       eventhdlr,          /**< event handler to call for the event processing */
+ *       int                   pos                 /**< array position of variable to catch bound change events for */
  *       )
  *       {
  *          assert(scip != NULL);
@@ -5669,6 +5798,9 @@
  *  - For checking the usage of SCIP memory, you can use
  *    <code>SCIPprintMemoryDiagnostic()</code>. This outputs memory that is currently in use,
  *    which can be useful after a <code>SCIPfree()</code> call.
+ *  - If there are memory leaks for which you cannot detect the origin, you can remake your code with the option NOBLKBUFMEM=true
+ *    (do not forget to clean your code before with <code>make OPT=... LPS=... clean</code>). After that valgrind (or similar) helps
+ *    to detect leaked memory.
  *  - If your code cuts off a feasible solution, but you do not know which component is responsible,
  *    you can define <code>SCIP_DEBUG_SOLUTION</code> in the file <code>debug.h</code> to be a filename
  *    containing a solution in SCIP format (see \ref EXAMPLE_2).
@@ -5680,7 +5812,7 @@
  *     <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
  * \code
  * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
- * Copyright (c) 2002-2014 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * user parameter file <scip.set> not found - using default parameters
  *
@@ -5780,7 +5912,7 @@
  *  \n
  *  All test problems can be listed in the <code>test</code>-file by a relative path,
  *  e.g., <code>../../problems/instance1.lp</code> or absolute path, e.g., <code>/home/problems/instance2.mps</code>
- *  in this file. Only one problem should be listed each on line (since the command <code>cat</code> is used to parse this file).
+ *  in this file. Only one problem should be listed on every line (since the command <code>cat</code> is used to parse this file).
  *  Note that these problems have to be readable for SCIP in order to solve them.
  *  However, you can use different file formats.
  *
@@ -5860,7 +5992,8 @@
  *
  *  \arg abort: solver broke before returning solution
  *  \arg fail: solver cut off a known feasible solution (value of the <code>solu</code>-file is beyond the dual bound;
- *  especially of problem is claimed to be solved but solution is not the optimal solution)
+ *  especially if problem is claimed to be solved but solution is not the optimal solution)
+ *   <b>or</b> if a final solution check revealed a violation of one of the original constraints.
  *  \arg ok: solver solved problem with the value in solu-file
  *  \arg solved: solver solved problem which has no (optimal) value in solu-file (since we here cannot detect the direction
  *  of optimization, it is possible that a solver claims an optimal solution which contradicts a known feasible solution)
@@ -5891,7 +6024,7 @@
  *  \endcode
  *
  *  \arg <<code>test name</code>> indicates the name of the the test file, e.g., <code>testrun</code>
- *  \arg <<code>binary</code>> defines the used binary, e.g., <code>scip-1.1.0.linux.x86.gnu.opt.spx</code>
+ *  \arg <<code>binary</code>> defines the used binary, e.g., <code>scip-3.2.0.linux.x86_64.gnu.opt.spx</code>
  *  \arg <<code>machine name</code>> tells the name of the machine, e.g., <code>mycomputer</code>
  *  \arg <<code>setting name</code>> denotes the name of the used settings, e.g., <code>default</code>
  *    means the (SCIP) default settings were used
@@ -5908,7 +6041,12 @@
  *  It is possible to use customized settings files for the test run instead of testing SCIP with default settings.
  *  These have to be placed in the directory <code>scip/settings/</code>.
  *
- *  @b Note: Accessing setting files in subfolders of the @c settings directory is currently not supported.
+ *  @b Note: Several common user parameters such as, e.g., the time limit and node limit parameters,
+ *           <b>cannot</b> be controlled by the settings file, whose specifications would be overwritten
+ *           by optional command line arguments to the <code>make test</code> command, see @ref ADVANCED
+ *           for a list of available advanced testing options that have to be specified from the command line.
+ *
+ *  @b Note: Accessing settings files in subfolders of the @c settings directory is currently not supported.
  *
  *  To run SCIP with a custom settings file, say for example <code>fast.set</code>, we call
  *
@@ -5916,20 +6054,28 @@
  *  make TEST=testrun SETTINGS=fast test
  *  \endcode
  *
- *  in the SCIP root directory.
+ *  in the SCIP root directory. It is possible to enter a list of settings files as a double-quoted,
+ *  comma-separated list of settings names as <code>fast</code> above, i.e. <code>SETTINGS="fast,medium,slow"</code>
+ *  will invoke the solution process for every instance with the three settings <code>fast.set, medium.set, slow.set</code>
+ *  before continuing with the next instance from the <code>.test</code>-file. This may come in handy if the
+ *  whole test runs for a longer time and partial results are already available.
  *
  *
  *  @section ADVANCED Advanced options
  *
  *  We can further customize the test run by specifying the following options in the <code>make</code> call:
  *
- *  \arg <code>TIME</code>  - time limit for each test instance in seconds [default: 3600]
- *  \arg <code>NODES</code> - node limit [default: 2100000000]
- *  \arg <code>MEM</code>   -  memory limit in MB [default: 1536]
+ *  \arg <code>CONTINUE</code> - continue the test run if it was previously aborted [default: "false"]
  *  \arg <code>DISPFREQ</code> - display frequency of the output [default: 10000]
  *  \arg <code>FEASTOL</code> - LP feasibility tolerance for constraints [default: "default"]
  *  \arg <code>LOCK</code> - should the test run be locked to prevent other machines from performing the same test run [default: "false"]
- *  \arg <code>CONTINUE</code> - continue the test run if it was previously aborted [default: "false"]
+ *  \arg <code>MAXJOBS=n</code> - run tests on 'n' cores in parallel. Note that several instances are solved in parallel, but
+ *                                    only one thread is used per job (parallelization is not that easy) [default: 1]
+ *  \arg <code>MEM</code>   -  memory limit in MB [default: 6144]
+ *  \arg <code>NODES</code> - node limit [default: 2100000000]
+ *  \arg <code>TIME</code>  - time limit for each test instance in seconds [default: 3600]
+ *  \arg <code>SETCUTOFF</code> - if set to '1', an optimal solution value (from the <code>.solu</code>-file) is used as objective limit [default: 0]
+ *  \arg <code>THREADS</code> - the number of threads used for solving LPs, if the linked LP solver supports multithreading [default: 1]
  *  \arg <code>VALGRIND</code> - run valgrind on the SCIP binary; errors and memory leaks found by valgrind are reported as fails [default: "false"]
  *
  *
@@ -5944,15 +6090,15 @@
  *  we may have the following <code>res</code>-files in the directory <code>scip/check/results/</code>
  *
  *  \code
- *  check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.fast.res
- *  check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.slow.res
+ *  check.testrun.scip-3.2.0.linux.x86_64.gnu.opt.spx.mycomputer.fast.res
+ *  check.testrun.scip-3.2.0.linux.x86_64.gnu.opt.spx.mycomputer.slow.res
  *  \endcode
  *
  *  For a comparison of both computations, we simply call
  *
  *  \code
- *  allcmpres.sh results/check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.fast.res \
- *               results/check.testrun.scip-1.1.0.linux.x86.gnu.opt.spx.mycomputer.slow.res
+ *  allcmpres.sh results/check.testrun.scip-3.2.0.linux.x86_64.gnu.opt.spx.mycomputer.fast.res \
+ *               results/check.testrun.scip-3.2.0.linux.x86_64.gnu.opt.spx.mycomputer.slow.res
  *  \endcode
  *
  *  in the @c check directory. This produces an ASCII table on the console that provide a detailed
@@ -6020,6 +6166,80 @@
  *  allcmpres.sh printsoltimes=1 ...
  *  \endcode
  *  As in the evaluation, the output contains the two additional columns of the solving time until the first and the best solution was found.
+ *
+ *  @section STATISTICS Statistical tests
+ *
+ *  The \c allcmpres script also performs two statistical tests for comparing different settings: For deciding whether
+ *  more feasible solutions have been found or more instances have been solved to optimality or not, we use a McNemar
+ *  test. For comparing the running time and number of nodes, we use a variant of the Wilcoxon signed rank test. A
+ *  detailed explanation can be found in the PhD thesis of Timo Berthold (Heuristic algorithms in global MINLP solvers).
+ *
+ *  @subsection McNemar McNemar test
+ *
+ *  Assume that we compare two settings \c S1 and \c S2 with respect to the number of instances solved to optimality
+ *  within the timelimit. The null hypothesis would be "Both settings lead to an equal number of instances being solved
+ *  to optimality", which we would like to disprove. Let \f$n_1\f$ be the number of instances solved by setting \c S1
+ *  but not by \c S2, and let \f$n_2\f$ be the number of instances solved by setting \c S2 but not by \c S1.  The
+ *  McNemar test statistic is
+ *  \f[
+ *    \chi^2 = \frac{(n_1 - n_2)^2}{n_1 + n_2}.
+ *  \f]
+ *  Under the null hypothesis, \f$\chi^2\f$ is chi-squared distributed with one degree of freedom. This allows to compute
+ *  a \f$p\f$-value as the probability for obtaining a similar or even more extreme result under the null hypothesis.
+ *  More explicitly, \c allcmpres uses the following evaluation:
+ *  - \f$0.05 < p\f$: The null hypothesis is accepted (marked by "X").
+ *  - \f$0.005 < p \leq 0.05\f$: The null hypothesis might be false (marked by "!").
+ *  - \f$0.0005 < p \leq 0.005\f$: The null hypothesis can be false (marked by "!!").
+ *  - \f$p \leq 0.0005\f$: The null hypothesis is very likely false (marked by "!!!").
+ *
+ *  As an example consider the following output:
+ *  \code
+ *    McNemar (feas)                              x2  0.0000, 0.05 < p           X
+ *    McNemar (opt)                               x2  6.0000, p ~ (0.005, 0.05]  !
+ *  \endcode
+ *  Here, \c x2 represents \f$\chi^2\f$.
+ *
+ *  In this case, the test with respect to the number of found feasible solutions is irrelevant, since their number is
+ *  equal. In particular, the null hypothesis gets accepted (i.e., there is no difference in the settings - this is
+ *  marked by "X").
+ *
+ *  With respect to the number of instances solved to optimality within the timelimit, we have that \f$0.005 < p <=
+ *  0.05\f$ (marked by <tt>p ~ (0.005, 0.05)</tt>). Thus, there is some evidence that the null hypothesis is false, i.e., the
+ *  settings perform differently; this is marked by "!". In the concrete case, we have 230 instances, all of which are
+ *  solved by setting \c S2, but only 224 by setting \c S1.
+ *
+ *  @subsection Wilcoxon Wilcoxon signed rank test
+ *
+ *  Assume that we compare two settings \c S1 and \c S2 with respect to their solution times (within the time limit). We
+ *  generate a sorted list of the ratios of the run times, where ratios that are (absolutely or relatively) within 1\%
+ *  of 1.0 are discarded, and ratios between 0.0 and 0.99 are replaced with their negative inverse in order to
+ *  obtain a symmetric distribution for the ratios around the origin.
+ *  We then assign ranks 1 to \c N to the remaining \c N data points in nondecreasing
+ *  order of their absolute ratio. This yields two groups \c G1
+ *  and \c G2 depending on whether the ratios are smaller than -1.0 or larger than 1.0 (\c G1 contains the instances for which
+ *  setting \c S1 is faster). Then the sums of the ranks in groups \c G1 and \c G2 are computed, yielding values \c R1
+ *  and \c R2, respectively.
+ *
+ *  The Wilcoxon test statistic is then
+ *  \f[
+ *     z = \frac{\min(R1, R2) - \frac{N(N+1)}{4}}{\sqrt{\frac{N(N+1)(2N+1)}{24}}},
+ *  \f]
+ *  which we assume to be (approximately) normally distributed (with zero mean) and allows to compute the probability
+ *  \f$p\f$ that one setting is faster than the other. (Note that for \f$N \leq 60\f$, we apply a correction by
+ *  subtracting 0.5 from the numerator).
+ *
+ *  As an example consider the following output:
+ *  \code
+ *    Wilcoxon (time)                             z  -0.1285, 0.05 <= p          X
+ *    Wilcoxon (nodes)                            z -11.9154, p < 0.0005       !!!
+ *  \endcode
+ *  While the \f$z\f$-value is close to zero for the run time, it is extremely negative regarding the solving nodes. This latter
+ *  tendency for the number of nodes is significant on a 0.05 % level, i.e., the probability \f$p\f$ that setting \c S1 uses more
+ *  nodes than setting \c S2 is negligible (this null hypothesis is rejected - marked by "!!!").
+ *
+ *  However, the null hypothesis is not rejected with respect to the run time. In the concrete case, setting \c S1 has a
+ *  shifted geometric mean of its run times (over 230 instances) of 248.5, for \c S2 it is 217.6. This makes a ratio of
+ *  0.88. Still - the null hypothesis is not rejected.
  *
  *  @section SOLVER Testing and Evaluating for other solvers
  *
