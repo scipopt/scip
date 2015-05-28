@@ -37557,12 +37557,13 @@ SCIP_Real SCIPgetAvgLowerbound(
  *       - \ref SCIP_STAGE_INITSOLVE
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
  */
 SCIP_Real SCIPgetDualbound(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetDualbound", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    return getDualbound(scip);
 }
