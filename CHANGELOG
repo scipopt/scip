@@ -213,7 +213,7 @@ interface:
 - rename SCIPdigraphGetSuccessorsDatas() -> SCIPdigraphGetSuccessorsData()
 - SCIPdigraphSetNSuccessors() sets the number of successors of some digraph node to a given value
 - added new sorting functions SCIPsortRealRealRealBoolBoolPtr(), SCIPsortDownRealRealRealBoolBoolPtr()
-- added new sorting functions SCIPsortIntIntIntReal(), SCIPsortDownIntIntIntReal()
+- added new sorting functions SCIPsortIntIntIntReal(), SCIPsortDownIntIntIntReal(), SCIPsortRealIntInt(), SCIPsortDownRealIntInt()
 - added SCIPcomputeArraysIntersection() to compute the set intersection of two ordered arrays
 - added SCIPcomputeArraysSetminus() to compute the set difference of two ordered arrays
 - moved buffer memory handling to blockmemory/memory.?;

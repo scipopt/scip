@@ -4157,12 +4157,6 @@ SCIP_RETCODE solveNode(
       SCIPprobStoreRootSol(transprob, set, lp, SCIPtreeHasFocusNodeLP(tree));
    }
 
-   /* remember the last root LP solution */
-   if( actdepth == 0 )
-   {
-      printf("### root cutrounds %d\n", stat->nseparounds);
-   }
-
    /* check for cutoff */
    if( *cutoff )
    {
