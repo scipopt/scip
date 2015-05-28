@@ -331,7 +331,7 @@ public:
       _doublecheck = dc;
    }
 
-   const char* spxStatusString(const SPxSolver::Status stat)
+   const char* spxStatusString(const SPxSolver::Status stat) const
    {
       switch( stat )
       {
@@ -356,11 +356,9 @@ public:
       default:
          return "UNKNOWN";
       }  /*lint !e788*/
-
-      return "UNKNOWN";
    }
 
-   const char* cpxStatusString(const int stat)
+   const char* cpxStatusString(const int stat) const
    {
       switch( stat )
       {
@@ -385,8 +383,6 @@ public:
       default:
          return "UNKNOWN";
       }  /*lint !e788*/
-
-      return "UNKNOWN";
    }
 #endif
 
@@ -971,9 +967,9 @@ SCIP_RETCODE SCIPlpiCreate(
    /* we use this construction to allocate the memory for the SoPlex class also via the blockmemshell */
    (*lpi)->spx = static_cast<SPxSCIP*>(BMSallocMemoryCPP(sizeof(SPxSCIP)));
    SOPLEX_TRY( messagehdlr, (*lpi)->spx = new ((*lpi)->spx) SPxSCIP(messagehdlr, name) );
-   (*lpi)->spx->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_ONLYREAL);
-   (*lpi)->spx->setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_REAL);
-   (*lpi)->spx->setIntParam(SoPlex::REPRESENTATION, SoPlex::REPRESENTATION_AUTO);
+   (void) (*lpi)->spx->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_ONLYREAL);
+   (void) (*lpi)->spx->setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_REAL);
+   (void) (*lpi)->spx->setIntParam(SoPlex::REPRESENTATION, SoPlex::REPRESENTATION_AUTO);
 
    (*lpi)->cstat = NULL;
    (*lpi)->rstat = NULL;
@@ -2120,7 +2116,7 @@ SCIP_RETCODE SCIPlpiSolvePrimal(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   lpi->spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_PRIMAL);
+   (void) lpi->spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_PRIMAL);
    return spxSolve(lpi);
 }
 
@@ -2134,7 +2130,7 @@ SCIP_RETCODE SCIPlpiSolveDual(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
-   lpi->spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_DUAL);
+   (void) lpi->spx->setIntParam(SoPlex::ALGORITHM, SoPlex::ALGORITHM_DUAL);
    return spxSolve(lpi);
 }
 
@@ -3403,7 +3399,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    int*                  ninds               /**< pointer to store the number of non-zero indices
                                                *  (-1: if we do not store sparsity informations) */
    )
-{
+{  /*lint --e{715}*/
    /* create a new uninitialized full vector */
    DVector col(lpi->spx->numRowsReal());
 
@@ -3717,7 +3713,6 @@ SCIP_RETCODE SCIPlpiSetNorms(
    assert(blkmem != NULL);
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(lpinorms != NULL);
 
    /* if there was no pricing norms information available, the LPi norms were not stored */
    if( lpinorms == NULL )
@@ -3732,7 +3727,7 @@ SCIP_RETCODE SCIPlpiSetNorms(
    SCIPdebugMessage("loading LPi simplex norms %p (%d rows, %d cols) into SoPlex LP with %d rows and %d cols\n",
       (void *) lpinorms, lpinorms->nrows, lpinorms->ncols, lpi->spx->numRowsReal(), lpi->spx->numColsReal());
 
-   lpi->spx->setDualNorms(lpinorms->nrows, lpinorms->ncols, lpinorms->norms);
+   (void) lpi->spx->setDualNorms(lpinorms->nrows, lpinorms->ncols, lpinorms->norms);
 #endif
 
    return SCIP_OKAY;
@@ -3967,9 +3962,9 @@ SCIP_RETCODE SCIPlpiSetRealpar(
    case SCIP_LPPAR_ROWREPSWITCH:
       assert(dval >= -1.5);
       if( dval < 0.0 )
-         lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, SCIPlpiInfinity(lpi));
+         (void) lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, SCIPlpiInfinity(lpi));
       else
-         lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, dval);
+         (void) lpi->spx->setRealParam(SoPlex::REPRESENTATION_SWITCH, dval);
       break;
    case SCIP_LPPAR_CONDITIONLIMIT:
       lpi->conditionlimit = dval;
