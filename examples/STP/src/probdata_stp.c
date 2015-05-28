@@ -1754,6 +1754,17 @@ SCIP_RETCODE SCIPprobdataCreate(
    /* set user problem data */
    SCIP_CALL( SCIPsetProbData(scip, probdata) );
 
+   /* disable sub-SCIP heuristics */
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rens/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rins/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/dins/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/crossover/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/mutation/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/clique/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/vbounds/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/bound/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/zeroobj/freq", -1) );
+
    SCIPprobdataWriteLogLine(scip, "SECTION Comment\n");
    SCIPprobdataWriteLogLine(scip, "Name %s\n", filename);
 

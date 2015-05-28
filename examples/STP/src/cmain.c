@@ -89,8 +89,36 @@ SCIP_RETCODE runShell(
    /* include propagator */
    SCIP_CALL( SCIPincludePropStp(scip) );
 
-   /* for column generation instances, disable restarts */
-   SCIP_CALL( SCIPsetIntParam(scip,"presolving/maxrestarts",0) );
+   /* set STP-specific default parameters */
+   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "display/freq", 1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "limits/maxsol", 400) );
+   SCIP_CALL( SCIPsetIntParam(scip, "lp/rowagelimit", 30) );
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxrounds", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "separating/maxstallrounds", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "branching/relpscost/maxproprounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/coefdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/feaspump/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/fracdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/guideddiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/linesearchdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/nlpdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/objpscostdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/pscostdiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/randrounding/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rootsoldiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/shiftandpropagate/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/shifting/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/subnlp/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/undercover/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/veclendiving/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "heuristics/zirounding/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/probing/maxprerounds", 0) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/pseudoobj/timingmask", 5) );
+   SCIP_CALL( SCIPsetIntParam(scip, "propagating/redcost/freq", -1) );
+   SCIP_CALL( SCIPsetRealParam(scip, "branching/relpscost/maxreliable", 1.0) );
+   SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) );
+
 
    /**********************************
     * Process command line arguments *

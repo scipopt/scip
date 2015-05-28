@@ -34,7 +34,7 @@ extern "C" {
 extern
 SCIP_RETCODE SCIPprobdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename           /**< file name */
+   const char*           filename            /**< file name */
    );
 
 /** sets the probdata graph */
@@ -218,7 +218,7 @@ void SCIPprobdataSetNSolvers(
 extern
 SCIP_RETCODE SCIPprobdataPrintSolGraph(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename           /**< Name of the output file */
+   const char*           filename            /**< Name of the output file */
    );
 
 #endif
