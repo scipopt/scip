@@ -8705,7 +8705,6 @@ EXTERN
 SCIP_RETCODE SCIPwriteCliqueGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           fname,              /**< name of file */
-   SCIP_Bool             writeimplications,  /**< should we write the binary implications? */
    SCIP_Bool             writenodeweights    /**< should we write weights of nodes? */
    );
 

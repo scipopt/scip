@@ -1296,7 +1296,7 @@ private:
       assert(q <= p);
 
       size_t n = tx.size() / (p+1);
-      assert(n == (size_t)SCIPexprGetNChildren(expr));
+      assert(n == (size_t)SCIPexprGetNChildren(expr)); /*lint !e571*/
       assert(n >= 1);
 
       if( vx.size() > 0 )
@@ -1319,13 +1319,13 @@ private:
       Type* gradient = NULL;
       Type* hessian = NULL;
 
-      if( q <= 1 && 1 <= p )
+      if( q <= 2 && 1 <= p )
          gradient = new Type[n];
       if( q <= 2 && 2 <= p )
          hessian = new Type[n*n];
 
       for( size_t i = 0; i < n; ++i )
-         x[i] = tx[i * (p+1) + 0];
+         x[i] = tx[i * (p+1) + 0];  /*lint !e835*/
 
       if( exprEvalUser(expr, x, ty[0], gradient, hessian) != SCIP_OKAY )
       {
@@ -1344,6 +1344,8 @@ private:
 
       if( hessian != NULL )
       {
+         assert(gradient != NULL);
+
          ty[2] = 0.0;
          for( size_t i = 0; i < n; ++i )
          {
@@ -1434,7 +1436,7 @@ private:
       assert(py.size() == p+1);
 
       size_t n = tx.size() / (p+1);
-      assert(n == (size_t)SCIPexprGetNChildren(expr));
+      assert(n == (size_t)SCIPexprGetNChildren(expr)); /*lint !e571*/
       assert(n >= 1);
 
       Type* x = new Type[n];
@@ -1446,7 +1448,7 @@ private:
          hessian = new Type[n*n];
 
       for( size_t i = 0; i < n; ++i )
-         x[i] = tx[i * (p+1) + 0];
+         x[i] = tx[i * (p+1) + 0]; /*lint !e835*/
 
       if( exprEvalUser(expr, x, funcval, gradient, hessian) != SCIP_OKAY )
       {
@@ -1467,11 +1469,12 @@ private:
       case 1:
          //  px[i*2+0] = (px^0)_i = py[0] * grad[i] + py[1] * sum(j, hessian[j,i] * tx[j*2+1])
          //  px[i*2+1] = (px^1)_i = py[1] * grad[i]
+         assert(hessian != NULL);
          for( size_t i = 0; i < n; ++i )
          {
-            px[i*2+0] = py[0] * gradient[i];
+            px[i*2+0] = py[0] * gradient[i]; /*lint !e835*/
             for( size_t j = 0; j < n; ++j )
-               px[i*2+0] += py[1] * hessian[i+n*j] * tx[j*2+1];
+               px[i*2+0] += py[1] * hessian[i+n*j] * tx[j*2+1]; /*lint !e835*/
 
             px[i*2+1] = py[1] * gradient[i];
          }
@@ -1482,7 +1485,7 @@ private:
       }
 
       return true;
-   }
+   } /*lint !e715*/
 
    using CppAD::atomic_base<Type>::for_sparse_jac;
 
@@ -1500,14 +1503,14 @@ private:
       assert(s.size() == q);
 
       size_t n = r.size() / q;
-      assert(n == (size_t)SCIPexprGetNChildren(expr));
+      assert(n == (size_t)SCIPexprGetNChildren(expr)); /*lint !e571*/
 
       // sparsity for S(x) = f'(x) * R
       for( size_t j = 0; j < q; j++ )
       {
          s[j] = false;
          for( size_t i = 0; i < n; i++ )
-            s[j] |= r[i * q + j];
+            s[j] |= r[i * q + j]; /*lint !e1786*/
       }
 
       return true;
@@ -2269,7 +2272,7 @@ SCIP_EXPRINTCAPABILITY SCIPexprintGetExprtreeCapability(
    assert(data != NULL);
 
    return data->userevalcapability;
-}
+}/*lint !e715*/
 
 /** frees interpreter data */
 SCIP_RETCODE SCIPexprintFreeData(
