@@ -939,8 +939,8 @@ SCIP_RETCODE nodeCreate(
    (*node)->number = 0;
    (*node)->lowerbound = -SCIPsetInfinity(set);
    (*node)->estimate = -SCIPsetInfinity(set);
-   (*node)->reoptid = 0,
-   (*node)->reopttype = SCIP_REOPTTYPE_NONE,
+   (*node)->reoptid = 0;
+   (*node)->reopttype = (unsigned int) SCIP_REOPTTYPE_NONE;
    (*node)->depth = 0;
    (*node)->active = FALSE;
    (*node)->cutoff = FALSE;
@@ -7077,7 +7077,7 @@ void SCIPnodeSetReopttype(
        || reopttype == SCIP_REOPTTYPE_PRUNED
        || reopttype == SCIP_REOPTTYPE_FEASIBLE);
 
-   node->reopttype = reopttype;
+   node->reopttype = (unsigned int) reopttype;
 }
 
 /** gets the unique id to identify the node during reoptimization; the id is 0 if the node is the root or not part of
@@ -7088,9 +7088,8 @@ unsigned int SCIPnodeGetReoptID(
    )
 {
    assert(node != NULL);
-   assert(node->reoptid < 536870912); /* id has only 29 bits and needs to be smaller than 2^29 */
 
-   return node->reoptid;
+   return node->reoptid; /*lint !e732*/
 }
 
 /** set a unique id to identify the node during reoptimization */

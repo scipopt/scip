@@ -578,7 +578,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCliquegraph)
       {
          SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
 
-         retcode = SCIPwriteCliqueGraph(scip, filename, TRUE, FALSE);
+         retcode = SCIPwriteCliqueGraph(scip, filename, FALSE);
          if( retcode == SCIP_FILECREATEERROR )
             SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
          else

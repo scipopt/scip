@@ -314,7 +314,7 @@ public:
       (void) CPXfreeprob(m_cpxenv, &m_cpxlp);
       (void) CPXcloseCPLEX(&m_cpxenv);
 #endif
-   }
+   } /*lint !e1579*/
 
    /**< return feastol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
    Real feastol() const
