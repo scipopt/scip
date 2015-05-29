@@ -536,8 +536,26 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
       SCIPdialogMessage(scip, NULL, "no feasible solution available\n");
    else
    {
+      SCIP_Real oldfeastol;
+      SCIP_Real checkfeastolfac;
+
+      oldfeastol = SCIPfeastol(scip);
+      SCIP_CALL( SCIPgetRealParam(scip, "numerics/checkfeastolfac", &checkfeastolfac) );
+
+      /* scale feasibility tolerance by set->num_checkfeastolfac */
+      if( !SCIPisEQ(scip, checkfeastolfac, 1.0) )
+      {
+         SCIP_CALL( SCIPchgFeastol(scip, oldfeastol * checkfeastolfac) );
+      }
+
       SCIPinfoMessage(scip, NULL, "check best solution\n");
       SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, FALSE) );
+
+      /* restore old feasibilty tolerance */
+      if( !SCIPisEQ(scip, checkfeastolfac, 1.0) )
+      {
+         SCIP_CALL( SCIPchgFeastol(scip, oldfeastol) );
+      }
 
       if( feasible )
          SCIPdialogMessage(scip, NULL, "solution is feasible in original problem\n");

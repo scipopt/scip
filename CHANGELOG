@@ -2,6 +2,7 @@ SCIP version NEXT
 ==================
 
 features:
+- new parameter numerics/checkfeastolfac to scale feasibility tolerance when checking the feasibility of best found solution
 - new heuristic distribution diving that bases its score function on the changes regarding solution density
 - extended variable branching statistics in the interactive shell by sample variance of unit gains
 - extended statistic output of interactive shell by more information on diving heuristic behavior

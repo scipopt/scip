@@ -14206,8 +14206,26 @@ SCIP_RETCODE displayRelevantStats(
          sol = SCIPgetBestSol(scip);
          if( sol != NULL )
          {
+            SCIP_Real oldfeastol;
+            SCIP_Real checkfeastolfac;
             SCIP_Bool feasible;
+
+            oldfeastol = SCIPfeastol(scip);
+            SCIP_CALL( SCIPgetRealParam(scip, "numerics/checkfeastolfac", &checkfeastolfac) );
+
+            /* scale feasibility tolerance by set->num_checkfeastolfac */
+            if( !SCIPisEQ(scip, checkfeastolfac, 1.0) )
+            {
+               SCIP_CALL( SCIPchgFeastol(scip, oldfeastol * checkfeastolfac) );
+            }
+
             SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, FALSE) );
+
+            /* restore old feasibilty tolerance */
+            if( !SCIPisEQ(scip, checkfeastolfac, 1.0) )
+            {
+               SCIP_CALL( SCIPchgFeastol(scip, oldfeastol) );
+            }
 
             if( !feasible )
             {

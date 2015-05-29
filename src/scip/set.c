@@ -1630,6 +1630,11 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->num_feastol, FALSE, SCIP_DEFAULT_FEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdFeastol, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "numerics/checkfeastolfac",
+         "feasibility tolerance factor; for checking the feasibility of the best solution",
+         &(*set)->num_checkfeastolfac, FALSE, SCIP_DEFAULT_CHECKFEASTOLFAC, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "numerics/lpfeastol",
          "primal feasibility tolerance of LP solver",
          &(*set)->num_lpfeastol, FALSE, SCIP_DEFAULT_LPFEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
