@@ -2131,6 +2131,20 @@ SCIP_RETCODE mergeClique(
                   SCIP_CALL( SCIPvarDelCliqueFromList(clqvars[startidx], blkmem, clqvalues[startidx], clique) );
                }
 
+               /* if one of the other variables occurs multiple times, we can
+                * 1) deduce infeasibility if it occurs with different values
+                * 2) wait for the last occurence to fix it
+                */
+               while( startidx > 0 && clqvars[startidx - 1] == clqvars[startidx] )
+               {
+                  if( clqvalues[startidx - 1] != clqvalues[startidx] )
+                  {
+                     *infeasible = TRUE;
+                     return SCIP_OKAY;
+                  }
+                  --startidx;
+               }
+
                SCIPdebugMessage("fixing variable %s in clique %d to %d\n", SCIPvarGetName(clqvars[startidx]), (clique != NULL) ? (int) clique->id : -1,
                      clqvalues[startidx] ? 0 : 1);
 
@@ -2270,6 +2284,20 @@ SCIP_RETCODE SCIPcliquetableAdd(
          {
             if( clqvars[w] != var )
             {
+               /* if one of the other variables occurs multiple times, we can
+                * 1) deduce infeasibility if it occurs with different values
+                * 2) wait for the last occurence to fix it
+                */
+               while( w > 0 && clqvars[w - 1] == clqvars[w] )
+               {
+                  if( clqvalues[w - 1] != clqvalues[w] )
+                  {
+                     *infeasible = TRUE;
+                     return SCIP_OKAY;
+                  }
+                  --w;
+               }
+
                SCIP_CALL( SCIPvarFixBinary(clqvars[w], blkmem, set, stat, transprob, origprob, tree, reopt, lp,
                      branchcand, eventqueue, cliquetable, !clqvalues[w], infeasible, &nlocalbdchgs) );
 
@@ -2552,6 +2580,20 @@ SCIP_RETCODE cliqueCleanup(
                   continue;
 
                SCIP_CALL( SCIPvarDelCliqueFromList(clqvar, blkmem, clique->values[v], clique) );
+
+               /* if one of the other variables occurs multiple times, we can
+                * 1) deduce infeasibility if it occurs with different values
+                * 2) wait for the last occurence to fix it
+                */
+               while( v < clique->nvars - 1 && clique->vars[v + 1] == clqvar )
+               {
+                  if( clique->values[v + 1] != clique->values[v] )
+                  {
+                     *infeasible = TRUE;
+                     return SCIP_OKAY;
+                  }
+                  ++v;
+               }
 
                SCIPdebugMessage("fixing variable %s in clique %u to %d\n", SCIPvarGetName(clqvar), clique->id,
                   clique->values[v] ? 0 : 1);
