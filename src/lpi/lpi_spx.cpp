@@ -4446,7 +4446,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                                *  (-1: if we do not store sparsity informations) */
    )
-{
+{  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiGetBInvCol()\n");
 
    assert( lpi != NULL );
@@ -4545,7 +4545,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                                *  (-1: if we do not store sparsity informations) */
    )
-{
+{  /*lint --e{715}*/
    DVector col(lpi->spx->nRows());
 
    SCIPdebugMessage("calling SCIPlpiGetBInvACol()\n");
