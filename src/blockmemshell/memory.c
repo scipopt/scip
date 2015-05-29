@@ -90,7 +90,14 @@
 #define MAXMEMSIZE SCIP_MAXMEMSIZE
 #endif
 
-
+/* define inline (if not already defined) */
+#ifndef INLINE
+#if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
+#define INLINE                 __inline
+#else
+#define INLINE                 inline
+#endif
+#endif
 
 /*************************************************************************************
  * Standard Memory Management
@@ -1825,7 +1832,7 @@ void BMSdestroyBlockMemory_call(
 }
 
 /** work for allocating memory in the block memory pool */
-inline static
+INLINE static
 void* BMSallocBlockMemory_work(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    size_t                size,               /**< size of memory element to allocate */
@@ -2060,7 +2067,7 @@ void* BMSduplicateBlockMemoryArray_call(
 }
 
 /** common work for freeing block memory */
-inline static
+INLINE static
 void BMSfreeBlockMemory_work(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    void**                ptr,                /**< pointer to pointer to memory element to free */
@@ -2558,7 +2565,7 @@ size_t calcMemoryGrowSize(
 #endif
 
 /** work for allocating the next unused buffer */
-inline static
+INLINE static
 void* BMSallocBufferMemory_work(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
    size_t                size,               /**< minimal required size of the buffer */
@@ -2747,7 +2754,7 @@ void* BMSallocClearBufferMemoryArray_call(
 }
 
 /** work for reallocating the buffer to at least the given size */
-inline static
+INLINE static
 void* BMSreallocBufferMemory_work(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
    void*                 ptr,                /**< pointer to the allocated memory buffer */
@@ -2909,7 +2916,7 @@ void* BMSduplicateBufferMemoryArray_call(
 }
 
 /** work for freeing a buffer */
-inline static
+INLINE static
 void BMSfreeBufferMemory_work(
    BMS_BUFMEM*           buffer,             /**< memory buffer storage */
    void**                ptr,                /**< pointer to pointer to the allocated memory buffer */
