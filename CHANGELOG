@@ -2,6 +2,7 @@ SCIP version NEXT
 ==================
 
 features:
+- new parameter display/allviols to print all violated constraints of the best found solution (e.g., checksol in scip shell)
 - new parameter numerics/checkfeastolfac to scale feasibility tolerance when checking the feasibility of best found solution
   after the solving process finished (e.g., checksol in scip shell)
 - new heuristic distribution diving that bases its score function on the changes regarding solution density

@@ -538,9 +538,11 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
    {
       SCIP_Real oldfeastol;
       SCIP_Real checkfeastolfac;
+      SCIP_Bool dispallviols;
 
       oldfeastol = SCIPfeastol(scip);
       SCIP_CALL( SCIPgetRealParam(scip, "numerics/checkfeastolfac", &checkfeastolfac) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "display/allviols", &dispallviols) );
 
       /* scale feasibility tolerance by set->num_checkfeastolfac */
       if( !SCIPisEQ(scip, checkfeastolfac, 1.0) )
@@ -549,7 +551,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
       }
 
       SCIPinfoMessage(scip, NULL, "check best solution\n");
-      SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, FALSE) );
+      SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, dispallviols) );
 
       /* restore old feasibilty tolerance */
       if( !SCIPisEQ(scip, checkfeastolfac, 1.0) )

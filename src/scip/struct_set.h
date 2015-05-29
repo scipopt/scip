@@ -218,6 +218,7 @@ struct SCIP_Set
    int                   disp_freq;          /**< frequency for displaying node information lines */
    int                   disp_headerfreq;    /**< frequency for displaying header lines (every n'th node information line) */
    SCIP_Bool             disp_lpinfo;        /**< should the LP solver display status messages? */
+   SCIP_Bool             disp_allviols;      /**< display all violations of the best solution after the solving process finished? */
 
    /* history settings */
    SCIP_Bool             history_valuebased; /**< should statistics be collected for variable domain value pairs? */
