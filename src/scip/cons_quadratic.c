@@ -7586,7 +7586,8 @@ SCIP_RETCODE computeGauge(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_HASHMAP* varmap;
+   SCIP_QUADVARTERM* quadvarterm;
+   SCIP_BILINTERM* bilinterm;
    SCIP_Bool success;
    SCIP_Bool convex;
    int i;
@@ -7598,6 +7599,7 @@ SCIP_RETCODE computeGauge(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(consdata->sepabilinvar2pos != NULL || consdata->nbilinterms == 0); /* this should have been computed in INITSOL */
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -7623,9 +7625,8 @@ SCIP_RETCODE computeGauge(
    /* 2.
     * we are going to evaluate the function at interiorpoint; so, we need to compute interiorpoint^T A interiorpoint;
     * therefore, we need a mechanism that for a given variable, it returns its interior point value
-    * prepare map from variable to its idx such that in interiorpoint[idx] is its interior point value
+    * fortunately, sepabilinvar2pos in consdata gives us all the information that we need
     */
-   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPcalcHashtableSize(consdata->nquadvars)) );
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(consdata->gaugecoefs), consdata->nquadvars) );
 
@@ -7635,22 +7636,32 @@ SCIP_RETCODE computeGauge(
    for( i = 0; i < consdata->nquadvars; i++ )
    {
       SCIP_Real val;
-
-      val = consdata->interiorpoint[i];
-      consdata->interiorpointval += (consdata->quadvarterms[i].lincoef + consdata->quadvarterms[i].sqrcoef * val) * val;
-      consdata->gaugeconst += consdata->quadvarterms[i].sqrcoef * val * val;
-      SCIP_CALL( SCIPhashmapInsert(varmap, consdata->quadvarterms[i].var, (void *)(size_t)i) );
-   }
-
-   for( i = 0; i < consdata->nbilinterms; i++ )
-   {
-      SCIP_Real val1;
       SCIP_Real val2;
 
-      val1 = consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, consdata->bilinterms[i].var1)];
-      val2 = consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, consdata->bilinterms[i].var2)];
-      consdata->interiorpointval += consdata->bilinterms[i].coef * val1 * val2;
-      consdata->gaugeconst += consdata->bilinterms[i].coef * val1 * val2;
+      val = consdata->interiorpoint[i];
+      quadvarterm = &consdata->quadvarterms[i];
+
+      consdata->interiorpointval += (quadvarterm->lincoef + quadvarterm->sqrcoef * val) * val;
+      consdata->gaugeconst += quadvarterm->sqrcoef * val * val;
+
+      for( j = 0; j < quadvarterm->nadjbilin; ++j )
+      {
+         int bilintermidx;
+
+         bilintermidx = quadvarterm->adjbilin[j];
+         bilinterm = &consdata->bilinterms[bilintermidx];
+
+         if( bilinterm->var1 != quadvarterm->var )
+            continue;
+
+         /* the index of the variable associated with var2 in bilinterm should be given by sepabilinvar2pos */
+         assert(consdata->quadvarterms[consdata->sepabilinvar2pos[bilintermidx]].var == bilinterm->var2);
+
+         val2 = consdata->interiorpoint[consdata->sepabilinvar2pos[bilintermidx]];
+
+         consdata->interiorpointval += bilinterm->coef * val * val2;
+         consdata->gaugeconst += bilinterm->coef * val * val2;
+      }
    }
 
    /* compute gaugecoefs (b_gauge) */
@@ -7658,26 +7669,31 @@ SCIP_RETCODE computeGauge(
    {
       SCIP_Real val;
 
+      quadvarterm = &consdata->quadvarterms[i];
+
       val = consdata->interiorpoint[i];
-      consdata->gaugecoefs[i] = consdata->quadvarterms[i].lincoef + 2 * consdata->quadvarterms[i].sqrcoef * val;
-      for( j = 0; j < consdata->quadvarterms[i].nadjbilin; j++ )
+      consdata->gaugecoefs[i] = quadvarterm->lincoef + 2.0 * quadvarterm->sqrcoef * val;
+      for( j = 0; j < quadvarterm->nadjbilin; j++ )
       {
-         SCIP_BILINTERM bilinterm;
-         SCIP_VAR* var;
+         int varpos;
+         int bilintermidx;
 
-         bilinterm = consdata->bilinterms[consdata->quadvarterms[i].adjbilin[j]];
+         bilintermidx = quadvarterm->adjbilin[j];
+         bilinterm = &consdata->bilinterms[bilintermidx];
 
-         if( bilinterm.var1 == consdata->quadvarterms[i].var )
+         if( bilinterm->var1 == quadvarterm->var )
          {
-            var = bilinterm.var2;
+            /* the index of the variable associated with var2 in bilinterm should be given by sepabilinvar2pos */
+            assert(consdata->quadvarterms[consdata->sepabilinvar2pos[bilintermidx]].var == bilinterm->var2);
+            varpos = consdata->sepabilinvar2pos[bilintermidx];
          }
          else
          {
-            assert(bilinterm.var2 == consdata->quadvarterms[i].var);
-            var = bilinterm.var1;
+            assert(bilinterm->var2 == quadvarterm->var);
+            varpos = i;
          }
 
-         consdata->gaugecoefs[i] += bilinterm.coef * consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, var)];
+         consdata->gaugecoefs[i] += bilinterm->coef * consdata->interiorpoint[varpos];
       }
    }
 
@@ -7690,8 +7706,6 @@ SCIP_RETCODE computeGauge(
    }
    printf("c_gauge = %g\n", consdata->gaugeconst);
 #endif
-
-   SCIPhashmapFree(&varmap);
 
    SCIPdebugMessage("gauge function computed successfully\n");
    consdata->isgaugeavailable = TRUE;
