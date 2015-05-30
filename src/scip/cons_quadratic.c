@@ -7238,10 +7238,11 @@ SCIP_RETCODE computeInteriorPoint(
    assert((consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)) ||
          (consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)));
 
-   if( !SCIPisIpoptAvailableIpopt() )
+   /* need an NLP solver */
+   if( SCIPgetNNlpis(scip) == 0 )
       return SCIP_OKAY;
 
-   nlpi = NULL;
+   prob = NULL;
    lbs = NULL;
    ubs = NULL;
    lincoefs = NULL;
@@ -7326,12 +7327,13 @@ SCIP_RETCODE computeInteriorPoint(
       assert(consdata->nlrow != NULL);
    }
 
-   /* initializing the subproblem */
-   SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
-   SCIP_CALL( SCIPnlpiSetMessageHdlr(nlpi, SCIPgetMessagehdlr(scip)) );
+   nlpi = SCIPgetNlpis(scip)[0];
+   assert(nlpi != NULL);
 
+   /* initializing the subproblem */
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_subquad", SCIPgetProbName(scip));
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &prob, probname) );
+   assert(prob != NULL);
 
 #ifdef SCIP_DEBUG_INT
    SCIP_CALL( SCIPnlpiSetIntPar(nlpi, prob, SCIP_NLPPAR_VERBLEVEL, 0) );
@@ -7535,10 +7537,9 @@ TERMINATE:
    SCIPfreeBufferArrayNull(scip, &lininds);
    SCIPfreeBufferArrayNull(scip, &lincoefs);
 
-   if( nlpi != NULL )
+   if( prob != NULL )
    {
       SCIP_CALL( SCIPnlpiFreeProblem(nlpi, &prob) );
-      SCIP_CALL( SCIPnlpiFree(&nlpi) );
    }
 
    return SCIP_OKAY;
