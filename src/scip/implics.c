@@ -2158,7 +2158,7 @@ SCIP_RETCODE mergeClique(
          }
 
          /* delete clique from onefixedvars clique list */
-         if( clique != NULL )
+         if( clique != NULL ) /*lint !e850*/
          {
             SCIP_CALL( SCIPvarDelCliqueFromList(onefixedvar, blkmem, onefixedvalue, clique) );
          }
@@ -2309,7 +2309,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
          }
 
          /* all variables are fixed so we can stop */
-         break;
+         break; /*lint !e850*/
       }
 
       /* only column and loose variables may be member of a clique */
@@ -2608,7 +2608,7 @@ SCIP_RETCODE cliqueCleanup(
             *nchgbds += nlocalbdchgs;
          }
 
-         if( SCIPvarGetStatus(onefixedvar) == SCIP_VARSTATUS_COLUMN
+         if( SCIPvarGetStatus(onefixedvar) == SCIP_VARSTATUS_COLUMN /*lint !e850*/
             || SCIPvarGetStatus(onefixedvar) == SCIP_VARSTATUS_LOOSE )
          {
             SCIP_CALL( SCIPvarDelCliqueFromList(onefixedvar, blkmem, onefixedvalue, clique) );

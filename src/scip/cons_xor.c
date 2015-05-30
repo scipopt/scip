@@ -969,7 +969,7 @@ SCIP_RETCODE applyFixings(
 
             (void) SCIPsnprintf(varname, SCIP_MAXSTRLEN, "agg_%s", SCIPvarGetName(consdata->intvar));
             ub = SCIPvarGetUbGlobal(consdata->intvar) - 1;
-            lb = MIN(ub, SCIPvarGetLbGlobal(consdata->intvar));
+            lb = MIN(ub, SCIPvarGetLbGlobal(consdata->intvar)); /*lint !e666*/
             vartype = (lb == 0 && ub == 1) ? SCIP_VARTYPE_BINARY : SCIPvarGetType(consdata->intvar);
 
             SCIP_CALL( SCIPcreateVar(scip, &newvar, varname, lb, ub, 0.0, vartype,
