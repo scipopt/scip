@@ -140,6 +140,7 @@ struct SCIP_ConsData
 #ifdef CHECKIMPLINBILINEAR
    unsigned int          isimpladded:1;      /**< has there been an implication added for a binary variable in a bilinear term? */
 #endif
+   unsigned int          isgaugeavailable:1; /**< is the gauge function computed? */
 
    SCIP_Real             minlinactivity;     /**< sum of minimal activities of all linear terms with finite minimal activity */
    SCIP_Real             maxlinactivity;     /**< sum of maximal activities of all linear terms with finite maximal activity */
@@ -165,7 +166,6 @@ struct SCIP_ConsData
    SCIP_Real             gaugeconst;         /**< constant of the gauge function */
    SCIP_Real*            interiorpoint;      /**< interior point of the region defined by the convex function */
    SCIP_Real             interiorpointval;   /**< function value at interior point */
-   unsigned int          isgaugeavailable:1; /**< is the gauge function computed? */
 };
 
 /** quadratic constraint update method */
