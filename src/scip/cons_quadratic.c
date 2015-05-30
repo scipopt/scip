@@ -7331,10 +7331,7 @@ SCIP_RETCODE computeInteriorPoint(
    if( method == 'a' && ((consdata->isconvex && SCIPisGE(scip, nlpiside, 0.0))
             || (consdata->isconcave && SCIPisLE(scip, nlpiside, 0.0))) )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
-
-      for( i = 0; i < nquadvars; i++ )
-         consdata->interiorpoint[i] = 0.0;
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
 
       *success = TRUE;
       goto TERMINATE;
@@ -7358,6 +7355,7 @@ SCIP_RETCODE computeInteriorPoint(
 #ifdef SCIP_DEBUG_INT
    SCIP_CALL( SCIPnlpiSetIntPar(nlpi, prob, SCIP_NLPPAR_VERBLEVEL, 0) );
 #endif
+   /* TODO: maybe one should set some generous iteration limit and/or a timelimit (remaining scip solve time)? */
 
    /* ask for memory to store data needed to create vars and linear coefficients */
    SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nquadvars) );
@@ -7422,11 +7420,11 @@ SCIP_RETCODE computeInteriorPoint(
          }
          else
          {
-            /* IPOPT assumes minimization: change signs */
+            /* NLPI assumes minimization: change signs */
             for( i = 0; i < nquadvars; i++ )
                lincoefs[i] *= -1;
 
-            /* WARNING: this pointer is not ours, information should be restore! */
+            /* WARNING: this pointer is not ours, information should be restored! */
             for( i = 0; i < nlrownquadelems; i++ )
                nlrowquadelems->coef *= -1;
 
@@ -7440,7 +7438,7 @@ SCIP_RETCODE computeInteriorPoint(
          break;
 
       default:
-         SCIPerrorMessage("undefinied method for computing interior point: %c\n", method);
+         SCIPerrorMessage("undefined method for computing interior point: %c\n", method);
          return SCIP_INVALIDDATA;
    }
 
@@ -7450,7 +7448,7 @@ SCIP_RETCODE computeInteriorPoint(
    /* check termination status */
    if( SCIPnlpiGetTermstat(nlpi, prob) != SCIP_NLPTERMSTAT_OKAY )
    {
-      SCIPdebugMessage("cons %s: IPOPT termination status not okay: %d\n",
+      SCIPdebugMessage("cons <%s>: NLP Solver termination status not okay: %d\n",
             SCIPconsGetName(cons), SCIPnlpiGetTermstat(nlpi, prob));
       *success = FALSE;
       goto TERMINATE;
@@ -7462,16 +7460,16 @@ SCIP_RETCODE computeInteriorPoint(
       case SCIP_NLPSOLSTAT_GLOBOPT:
       case SCIP_NLPSOLSTAT_LOCOPT:
       case SCIP_NLPSOLSTAT_FEASIBLE:
-         SCIPdebugMessage("cons %s:found an interior point.  solution status: %d, termination status: %d\n",
-               SCIPconsGetName(cons), SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
          /* fallthrough */
+         SCIPdebugMessage("cons <%s>: found an interior point.  solution status: %d, termination status: %d\n",
+               SCIPconsGetName(cons), SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
          break;
 
       case SCIP_NLPSOLSTAT_LOCINFEASIBLE:
       case SCIP_NLPSOLSTAT_GLOBINFEASIBLE:
          /* fallthrough */
          /* TODO: we could still use the point, and let evaluateGauge decide whether the point is interior or not */
-         SCIPdebugMessage("cons %s: failed to find an interior point.  solution status: %d, termination status: %d\n",
+         SCIPdebugMessage("cons <%s>: failed to find an interior point.  solution status: %d, termination status: %d\n",
                SCIPconsGetName(cons), SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
          goto TERMINATE;
 
@@ -7479,13 +7477,14 @@ SCIP_RETCODE computeInteriorPoint(
       case SCIP_NLPSOLSTAT_UNKNOWN:
       default:
          /* fallthrough */
-         SCIPerrorMessage("cons %s: undefined behaviour of IPOPT.  solution status: %d, termination status: %d\n",
+         SCIPerrorMessage("cons <%s>: undefined behaviour of NLP Solver.  solution status: %d, termination status: %d\n",
                SCIPconsGetName(cons), SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
-         assert(0);
+         SCIPABORT();
+         goto TERMINATE;
    }
 
    /* fetch solution
-    * note: nlpi get solution (at least for IPOPT) makes interiorpoint point to the internal solution stored in the
+    * note: nlpiGetSolution (at least for IPOPT) makes interiorpoint point to the internal solution stored in the
     * nlpi problem data structure; we need to copy it here because it will be destroyed once the problem is free'd
     */
    SCIP_CALL( SCIPnlpiGetSolution(nlpi, prob, &interiorpoint, NULL, NULL, NULL) );
@@ -7520,9 +7519,9 @@ TERMINATE:
 
    if( *success )
    {
-      if( nlpi == NULL )
+      if( prob == NULL )
       {
-         printf("Computation successfull, 0 is interior point.\n");
+         printf("Computation successful, 0 is interior point.\n");
          for( i = 0; i < nquadvars; i++ )
          {
             assert(consdata->interiorpoint[i] == 0.0);
@@ -7530,7 +7529,7 @@ TERMINATE:
       }
       else
       {
-         printf("Computation successfull, NLP soltat: %d, termstat: %d\nPoint found:\n",
+         printf("Computation successful, NLP soltat: %d, termstat: %d\nPoint found:\n",
                SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
          for( i = 0; i < nquadvars; i++ )
          {
