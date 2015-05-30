@@ -7265,9 +7265,19 @@ SCIP_RETCODE computeInteriorPoint(
       for( i = 0; i < consdata->nlinvars; ++i )
       {
          if( consdata->lincoefs[i] >= 0.0 )
-            nlpiside += consdata->lincoefs[i] * SCIPvarGetUbLocal(consdata->linvars[i]);
+         {
+            if( SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->linvars[i]) ) )
+               nlpiside = SCIPinfinity(scip);
+            else
+               nlpiside += consdata->lincoefs[i] * SCIPvarGetUbLocal(consdata->linvars[i]);
+         }
          else
-            nlpiside += consdata->lincoefs[i] * SCIPvarGetLbLocal(consdata->linvars[i]);
+         {
+            if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->linvars[i]) ) )
+               nlpiside = SCIPinfinity(scip);
+            else
+               nlpiside += consdata->lincoefs[i] * SCIPvarGetLbLocal(consdata->linvars[i]);
+         }
 
          if( SCIPisInfinity(scip, nlpiside) )
          {
@@ -7288,9 +7298,19 @@ SCIP_RETCODE computeInteriorPoint(
       for( i = 0; i < consdata->nlinvars; ++i )
       {
          if( consdata->lincoefs[i] >= 0.0 )
-            nlpiside += consdata->lincoefs[i] * SCIPvarGetLbLocal(consdata->linvars[i]);
+         {
+            if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->linvars[i])) )
+               nlpiside = -SCIPinfinity(scip);
+            else
+               nlpiside += consdata->lincoefs[i] * SCIPvarGetLbLocal(consdata->linvars[i]);
+         }
          else
-            nlpiside += consdata->lincoefs[i] * SCIPvarGetUbLocal(consdata->linvars[i]);
+         {
+            if( SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->linvars[i])) )
+               nlpiside = -SCIPinfinity(scip);
+            else
+               nlpiside += consdata->lincoefs[i] * SCIPvarGetUbLocal(consdata->linvars[i]);
+         }
 
          if( SCIPisInfinity(scip,  -nlpiside) )
          {
