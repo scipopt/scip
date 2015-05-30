@@ -7242,6 +7242,7 @@ SCIP_RETCODE computeInteriorPoint(
    if( SCIPgetNNlpis(scip) == 0 )
       return SCIP_OKAY;
 
+   nlpi = NULL;
    prob = NULL;
    lbs = NULL;
    ubs = NULL;
