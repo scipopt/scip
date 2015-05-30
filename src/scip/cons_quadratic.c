@@ -7765,7 +7765,7 @@ SCIP_RETCODE evaluateGauge(
       aterm = side - consdata->interiorpointval;
 
       /* it can happen that the interior point is not really interior, since we are not so strict at the moment of
-       * computing the interior point, which makes sense in the case that the constaraint is quadratic <= linear expr,
+       * computing the interior point, which makes sense in the case that the constraint is quadratic <= linear expr,
        * since we compute a point in quadratic <= min linear expr and it might be that this set consists of a single
        * point which will not be interior. furthermore, if this set is empty, we could just take any point and it could
        * happen that for some value of linear expr, the point is actually interior, but for many it could not be.
@@ -7792,12 +7792,11 @@ SCIP_RETCODE evaluateGauge(
          printf("rhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->rhs, side, consdata->interiorpointval);
       }
 #endif
-      if( SCIPisLE(scip, aterm, 0.0) )
+      if( !SCIPisPositive(scip, aterm) )
       {
          *gaugeval = -1.0;
          return SCIP_OKAY;
       }
-      assert(SCIPisPositive(scip, aterm));
    }
    else
    {
@@ -7827,12 +7826,11 @@ SCIP_RETCODE evaluateGauge(
          printf("lhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->lhs, side, consdata->interiorpointval);
       }
 #endif
-      if( SCIPisGE(scip, aterm, 0.0) )
+      if( !SCIPisNegative(scip, aterm) )
       {
          *gaugeval = -1.0;
          return SCIP_OKAY;
       }
-      assert(SCIPisNegative(scip, aterm));
    }
 
    /* compute bterm = b_gauge^T * refsol - f(interiorpoint) - c_gauge
@@ -7872,7 +7870,7 @@ SCIP_RETCODE evaluateGauge(
       *gaugeval = bterm - sqrt(bterm*bterm + 4 * aterm * cterm);
       *gaugeval = *gaugeval / (2 * aterm);
    }
-   assert(SCIPisGE(scip, *gaugeval, 0.0));
+   assert(!SCIPisNegative(scip, *gaugeval));
    *success = TRUE;
 
 #ifdef SCIP_DEBUG_GAUGE
