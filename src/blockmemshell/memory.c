@@ -74,10 +74,15 @@
 #endif
 
 #ifndef SCIP_SIZET_FORMAT
+#if defined(__arm__)  /* TODO: exclude newer ARM 64bit here (what's the macro name?) */
+/* on ARM 32bit, size_t is not long */                 
+#define SIZET_FORMAT           "u"
+#else
 #if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
 #define SIZET_FORMAT           "lu"
 #else
 #define SIZET_FORMAT           "zu"
+#endif
 #endif
 #else
 #define SIZET_FORMAT SCIP_SIZET_FORMAT
@@ -2677,7 +2682,7 @@ void* BMSallocBufferMemory_work(
    buffer->used[bufnum] = TRUE;
    buffer->firstfree++;
 
-   debugMessage("Allocated buffer %"SIZET_FORMAT"/%"SIZET_FORMAT" at %p of size %"SIZET_FORMAT" (required size: %lu) for pointer %p.\n",
+   debugMessage("Allocated buffer %"SIZET_FORMAT"/%"SIZET_FORMAT" at %p of size %"SIZET_FORMAT" (required size: %"SIZET_FORMAT") for pointer %p.\n",
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
 
 #else
@@ -2814,7 +2819,7 @@ void* BMSreallocBufferMemory_work(
    assert( buffer->size[bufnum] >= size );
    assert( newptr == buffer->data[bufnum] );
 
-   debugMessage("Reallocated buffer %"SIZET_FORMAT"/%"SIZET_FORMAT" at %p to size %"SIZET_FORMAT" (required size: %lu) for pointer %p.\n",
+   debugMessage("Reallocated buffer %"SIZET_FORMAT"/%"SIZET_FORMAT" at %p to size %"SIZET_FORMAT" (required size: %"SIZET_FORMAT") for pointer %p.\n",
       bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, newptr);
 
 #else
