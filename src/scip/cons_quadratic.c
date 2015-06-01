@@ -83,6 +83,9 @@
 /* epsilon for differentiating between a boundary and interior point */
 #define INTERIOR_EPS 1e-1
 
+/* scaling factor for gauge function */
+#define GAUGESCALE 0.99999
+
 /* enable assert on feasibility of cuts added in INITLP (see also 82ec3324)
  * off by default, as I (SV) believe we cannot ensure that infeasibility
  * can always be ensured by other means (propagation)
@@ -7945,6 +7948,9 @@ SCIP_RETCODE computeReferencePointGauge(
          printf("refsol is in the closure of the region (gaugeval <= 1), don't modify reference point\n");
    }
 #endif
+
+   /* scale gauge value so that point is close to the boundary, but not on the boundary */
+   gaugeval *= GAUGESCALE;
 
    /* when a new solution is found, this method is called from addLinearizationCuts.
     * in this case, since the solution is feasible, gaugeval <= 1
