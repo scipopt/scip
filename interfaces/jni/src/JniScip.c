@@ -30,6 +30,7 @@
 #include "scip/scipdefplugins.h"
 
 #include <string.h>
+#include <locale.h>
 
 #ifndef NDEBUG
 #include "JniScipBoundchgtype.h"
@@ -261,6 +262,8 @@ jlong JNISCIP(create)(
    /* check all eumns of SCIP against the JNI enums */
    checkEnums();
 #endif
+   setlocale(LC_ALL,"C");
+
    JNISCIP_CALL( SCIPcreate(&scip) );
 
    return (jlong)(size_t)scip;
