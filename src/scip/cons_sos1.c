@@ -9212,7 +9212,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
 
          /* should SOS1 variables be scored by the diving heuristics specific score function;
           *  otherwise use the score function of the SOS1 constraint handler */
-         if ( SCIPdivesetUseSpecificSOS1Score(diveset) )
+         if ( SCIPdivesetSupportsType(diveset, SCIP_DIVETYPE_SOS1VARIABLE) )
          {
             SCIP_Bool roundup;
 

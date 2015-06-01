@@ -37,7 +37,9 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 #define EVENT_DISTRIBUTION    SCIP_EVENTTYPE_BOUNDCHANGED /**< the event type to be handled by this event handler */
-#define EVENTHDLR_NAME "eventhdlr_distributiondiving"
+#define EVENTHDLR_NAME        "eventhdlr_distributiondiving"
+#define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
+
 #define SQUARED(x) ((x) * (x))
 /*
  * Default parameter settings
@@ -58,8 +60,6 @@
 #define DEFAULT_LPSOLVEFREQ           1 /**< LP solve frequency for diving heuristics */
 #define DEFAULT_ONLYLPBRANCHCANDS  TRUE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
-#define DEFAULT_SPECIFICSOS1SCORE FALSE /**< should SOS1 variables be scored by the diving heuristics specific score function;
-                                         *   otherwise use the score function of the SOS1 constraint handler */
 
 #define SCOREPARAM_VALUES "lhwvd" /**< the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p.,
                                    *   'v'otes lowest c.p., votes highest c.p.('w'), 'r'evolving */
@@ -933,8 +933,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
    downscore = 0.0;
 
    /* loop over candidate rows and determine the candidate up- and down- branching score w.r.t. the score parameter */
-   SCIP_CALL( calcBranchScore(scip, heurdata, cand, candsol,
-         &upscore, &downscore, heurdata->score) );
+   SCIP_CALL( calcBranchScore(scip, heurdata, cand, candsol, &upscore, &downscore, heurdata->score) );
 
    *roundup = (upscore > downscore);
 
@@ -950,7 +949,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
+SCIP_DECL_HEUREXEC(heurExecDistributiondiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
    SCIP_DIVESET* diveset;
@@ -971,8 +970,8 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
    if( nlprows == 0 )
       return SCIP_OKAY;
 
-   /* if there are no integer variables (note that, e.g., SOS1 variables may be present) */
-   if ( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) < 1 && ! DEFAULT_SPECIFICSOS1SCORE )/*lint !e506 !e774 !e845*/
+   /* terminate if there are no integer variables (note that, e.g., SOS1 variables may be present) */
+   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
       return SCIP_OKAY;
 
    /* select and store the scoring parameter for this call of the heuristic */
@@ -1041,7 +1040,7 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
    heurdata->currentlbs = NULL;
    heurdata->currentubs = NULL;
 
-   heurdata->usescipscore = TRUE;
+   heurdata->usescipscore = FALSE;
 
    /* create event handler first to finish branch rule data */
    eventhdlrdata = NULL;
@@ -1072,7 +1071,7 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
          DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT, DEFAULT_MAXDIVEUBQUOT,
          DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL,
          DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
-         DEFAULT_MAXLPITEROFS, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DEFAULT_SPECIFICSOS1SCORE,
+         DEFAULT_MAXLPITEROFS, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES,
          divesetGetScoreDistributiondiving) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/scoreparam",

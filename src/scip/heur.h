@@ -62,8 +62,7 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
-   SCIP_Bool             specificsos1score,  /**< should SOS1 variables be scored by the diving heuristics specific score function;
-                                              *   otherwise use the score function of the SOS1 constraint handler */
+   SCIP_DIVETYPE         divetypemask,       /**< bit mask that represents the supported dive types by this dive set */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
    );
 

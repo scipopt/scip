@@ -195,8 +195,7 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
-   SCIP_Bool             specificsos1score,  /**< should SOS1 variables be scored by the diving heuristics specific score function;
-                                              *   otherwise use the score function of the SOS1 constraint handler */
+   SCIP_DIVETYPE         divetypemask,       /**< bit mask that represents the supported dive types by this dive set */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
    )
 {
@@ -220,6 +219,7 @@ SCIP_RETCODE SCIPdivesetCreate(
 
    SCIP_CALL( heurAddDiveset(heur, *diveset) );
    (*diveset)->sol = NULL;
+   (*diveset)->divetypemask = divetypemask;
 
    /* add collection of diving heuristic specific parameters */
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/minreldepth", (*diveset)->name);
@@ -292,13 +292,6 @@ SCIP_RETCODE SCIPdivesetCreate(
             "should only LP branching candidates be considered instead of the slower but "
             "more general constraint handler diving variable selection?",
             &(*diveset)->onlylpbranchcands, FALSE, onlylpbranchcands, NULL, NULL) );
-
-   (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/specificsos1score", (*diveset)->name);
-   SCIP_CALL( SCIPsetAddBoolParam(set, messagehdlr, blkmem,
-            paramname,
-            "should SOS1 variables be scored by the diving heuristics specific score function; "
-            "otherwise use the score function of the SOS1 constraint handler",
-            &(*diveset)->specificsos1score, FALSE, specificsos1score, NULL, NULL) );
 
    SCIPdivesetReset(*diveset);
 
@@ -565,16 +558,15 @@ SCIP_Bool SCIPdivesetUseOnlyLPBranchcands(
    return diveset->onlylpbranchcands;
 }
 
-/** should SOS1 variables be scored by the diving heuristics specific score function;
- *  otherwise use the score function of the SOS1 constraint handler
- */
-SCIP_Bool SCIPdivesetUseSpecificSOS1Score(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+/** returns TRUE if dive set supports diving of the specified type */
+SCIP_Bool SCIPdivesetSupportsType(
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVETYPE         divetype            /**< bit mask that represents the supported dive types by this dive set */
    )
 {
    assert(diveset != NULL);
 
-   return diveset->specificsos1score;
+   return (divetype & diveset->divetypemask);
 }
 
 /** update diveset LP statistics, should be called after every LP solved by this diving heuristic */
@@ -607,7 +599,7 @@ void divesetFree(
 SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_DIVESET*         diveset,            /**< general diving settings */
    SCIP_SET*             set,                /**< SCIP settings */
-   SCIP_DIVETYPE         divetype,           /**< represents different methods for a dive set to explore the next children */
+   SCIP_DIVETYPE         divetype,           /**< the type of diving that should be applied */
    SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
    SCIP_Real             divecandsol,        /**< LP solution value of the candidate */
    SCIP_Real             divecandfrac,       /**< fractionality of the candidate */
@@ -619,6 +611,7 @@ SCIP_RETCODE SCIPdivesetGetScore(
    assert(candscore != NULL);
    assert(roundup != NULL);
    assert(divecand != NULL);
+   assert(divetype & diveset->divetypemask);
 
    SCIP_CALL( diveset->divesetgetscore(set->scip, diveset, divetype, divecand, divecandsol, divecandfrac, candscore, roundup) );
 
