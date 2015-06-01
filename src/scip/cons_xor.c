@@ -789,7 +789,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValXorcons)
    return hashval;
 }
 
-/** deletes all fixed variables and all pairs equal variables variables */
+/** deletes all fixed variables and all pairs of equal variables */
 static
 SCIP_RETCODE applyFixings(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2242,9 +2242,7 @@ SCIP_RETCODE checkSystemGF2(
    SCIP_Bool* xoractive;
    SCIP_Real* xorvals;
    SCIP_VAR** xorvars;
-#ifndef NDEBUG
    SCIP_Bool noaggr = TRUE;
-#endif
    Type** A;
    Type* b;
    int* s;
@@ -2415,13 +2413,45 @@ SCIP_RETCODE checkSystemGF2(
             b[nconssmat] = ! b[nconssmat];
          }
 
-         /* If the constraint contains (multi-)aggregated variables, the solution might not be valid, since the
-          * implications are not represented in the matrix. */
-#ifndef NDEBUG
-         if ( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
+
+         /* replace aggregated variables */
+         while( SCIPvarGetStatus(var) == SCIP_VARSTATUS_AGGREGATED )
+         {
+            SCIP_Real scalar;
+            SCIP_Real constant;
+
+            scalar = SCIPvarGetAggrScalar(var);
+            constant = SCIPvarGetAggrConstant(var);
+
+            /* the variable resolves to a constant, we just update the rhs */
+            if( SCIPisEQ(scip, scalar, 0.0) )
+            {
+               assert(SCIPisEQ(scip, constant, 0.0) || SCIPisEQ(scip, constant, 1.0));
+               if( SCIPisEQ(scip, constant, 1.0) )
+                  b[nconssmat] = ! b[nconssmat];
+               var = NULL;
+               break;
+            }
+            /* replace aggregated variable by active variable and update rhs, if needed */
+            else
+            {
+               assert(SCIPisEQ(scip, scalar, 1.0) || SCIPisEQ(scip, scalar, -1.0));
+               if( SCIPisEQ(scip, constant, 1.0) )
+                  b[nconssmat] = ! b[nconssmat];
+
+               var = SCIPvarGetAggrVar(var);
+               assert(var != NULL);
+            }
+         }
+         /* variable resolved to a constant */
+         if( var == NULL )
+            continue;
+
+         /* If the constraint contains multiaggregated variables, the solution might not be valid, since the
+          * implications are not represented in the matrix.
+          */
+         if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR )
             noaggr = FALSE;
-#endif
-         /** @todo possibly treat aggregated variables here */
 
          if ( SCIPcomputeVarLbLocal(scip, var) > 0.5 )
          {
@@ -2431,6 +2461,8 @@ SCIP_RETCODE checkSystemGF2(
          }
          else
          {
+            assert(SCIPvarIsActive(var) || SCIPvarGetStatus(var) == SCIP_VARSTATUS_FIXED
+               || SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
             if ( SCIPvarIsActive(var) && SCIPcomputeVarUbLocal(scip, var) > 0.5 )
             {
                assert( SCIPhashmapExists(varhash, var) );
@@ -2492,19 +2524,16 @@ SCIP_RETCODE checkSystemGF2(
       /* did not find nonzero entry in b -> equation system is feasible */
       if ( i >= nconssmat )
       {
-         SCIP_HEUR* heurtrysol;
+         SCIPdebugMessage("System feasible with rank %d (nconss=%d)\n", rank, nconssmat);
 
-         SCIPdebugMessage("Found solution.\n");
-
-         /* try solution */
-         heurtrysol = SCIPfindHeur(scip, "trysol");
-
-         if ( heurtrysol != NULL )
+         /* matrix has full rank, solution is unique */
+         if( rank == nvarsmat && noaggr )
          {
-            SCIP_Bool success;
-            SCIP_VAR** vars;
-            SCIP_SOL* sol;
+            SCIP_Bool tightened;
+            SCIP_Bool infeasible;
             Type* x;
+
+            SCIPdebugMessage("Found unique solution.\n");
 
             /* construct solution */
             SCIP_CALL( SCIPallocBufferArray(scip, &x, nvarsmat) );
@@ -2517,78 +2546,129 @@ SCIP_RETCODE checkSystemGF2(
             SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
-            /* create solution */
-            SCIP_CALL( SCIPcreateSol(scip, &sol, heurtrysol) );
-
-            /* transfer solution */
-            for (j = 0; j < nvarsmat; ++j)
+            /* fix variables according to computed unique solution */
+            for( j = 0; j < nvarsmat; ++j )
             {
-               if ( x[j] != 0 )
+               assert( (int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j]) < nvars );
+               assert( xorbackidx[(int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j])] == j );
+               assert( SCIPcomputeVarLbLocal(scip, xorvars[j]) < 0.5 );
+               if( x[j] == 0 )
                {
-                  assert( (int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j]) < nvars );
-                  assert( xorbackidx[(int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j])] == j );
-                  assert( SCIPcomputeVarLbLocal(scip, xorvars[j]) < 0.5 );
-                  SCIP_CALL( SCIPsetSolVal(scip, sol, xorvars[j], 1.0) );
+                  SCIP_CALL( SCIPtightenVarUb(scip, xorvars[j], 0.0, FALSE, &infeasible, &tightened) );
+                  assert(tightened);
+                  assert(!infeasible);
+               }
+               else
+               {
+                  assert(x[j] == 1);
+                  SCIP_CALL( SCIPtightenVarLb(scip, xorvars[j], 1.0, FALSE, &infeasible, &tightened) );
+                  assert(tightened);
+                  assert(!infeasible);
                }
             }
             SCIPfreeBufferArray(scip, &x);
+         }
+         /* matrix does not have full rank, we add the solution, but cannot derive fixings */
+         else
+         {
+            SCIP_HEUR* heurtrysol;
 
-            /* add *all* variables fixed to 1 */
-            vars = SCIPgetVars(scip);
-            for (j = 0; j < nvars; ++j)
+            SCIPdebugMessage("Found solution.\n");
+
+            /* try solution */
+            heurtrysol = SCIPfindHeur(scip, "trysol");
+
+            if ( heurtrysol != NULL )
             {
-               if ( SCIPcomputeVarLbLocal(scip, vars[j]) > 0.5 )
+               SCIP_Bool success;
+               SCIP_VAR** vars;
+               SCIP_SOL* sol;
+               Type* x;
+
+               /* construct solution */
+               SCIP_CALL( SCIPallocBufferArray(scip, &x, nvarsmat) );
+               solveRowEcholonGF2(nconssmat, nvarsmat, rank, p, s, A, b, x);
+
+#ifdef SCIP_OUTPUT
+               SCIPinfoMessage(scip, NULL, "Solution:\n");
+               for (j = 0; j < nvarsmat; ++j)
+                  SCIPinfoMessage(scip, NULL, "%d ", x[j]);
+               SCIPinfoMessage(scip, NULL, "\n");
+#endif
+
+               /* create solution */
+               SCIP_CALL( SCIPcreateSol(scip, &sol, heurtrysol) );
+
+               /* transfer solution */
+               for (j = 0; j < nvarsmat; ++j)
                {
-                  SCIP_CALL( SCIPsetSolVal(scip, sol, vars[j], 1.0) );
-                  SCIPdebugMessage("Added fixed variable <%s>.\n", SCIPvarGetName(vars[j]));
-               }
-            }
-
-            /* correct integral variables if necessary */
-            for (i = 0; i < nconss; ++i)
-            {
-               consdata = SCIPconsGetData(conss[i]);
-               assert(consdata != NULL);
-
-               if ( xoractive[i] && consdata->intvar != NULL )
-               {
-                  SCIP_Real val;
-                  int nones = 0;
-
-                  for (j = 0; j < consdata->nvars; ++j)
+                  if ( x[j] != 0 )
                   {
-                     if ( SCIPgetSolVal(scip, sol, consdata->vars[j]) > 0.5 )
-                        ++nones;
+                     assert( (int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j]) < nvars );
+                     assert( xorbackidx[(int) (size_t) SCIPhashmapGetImage(varhash, xorvars[j])] == j );
+                     assert( SCIPcomputeVarLbLocal(scip, xorvars[j]) < 0.5 );
+                     SCIP_CALL( SCIPsetSolVal(scip, sol, xorvars[j], 1.0) );
                   }
-                  /* if there are aggregated variables, the solution might not be feasible */
-                  assert( ! noaggr || nones % 2 == (int) consdata->rhs );
-                  if ( (unsigned int) nones != consdata->rhs )
+               }
+               SCIPfreeBufferArray(scip, &x);
+
+               /* add *all* variables fixed to 1 */
+               vars = SCIPgetVars(scip);
+               for (j = 0; j < nvars; ++j)
+               {
+                  if ( SCIPcomputeVarLbLocal(scip, vars[j]) > 0.5 )
                   {
-                     val = (SCIP_Real) (nones - consdata->rhs)/2;
-                     if ( SCIPisGE(scip, val, SCIPvarGetLbGlobal(consdata->intvar)) && SCIPisLE(scip, val, SCIPvarGetUbGlobal(consdata->intvar)) )
+                     SCIP_CALL( SCIPsetSolVal(scip, sol, vars[j], 1.0) );
+                     SCIPdebugMessage("Added fixed variable <%s>.\n", SCIPvarGetName(vars[j]));
+                  }
+               }
+
+               /* correct integral variables if necessary */
+               for (i = 0; i < nconss; ++i)
+               {
+                  consdata = SCIPconsGetData(conss[i]);
+                  assert(consdata != NULL);
+
+                  if ( xoractive[i] && consdata->intvar != NULL )
+                  {
+                     SCIP_Real val;
+                     int nones = 0;
+
+                     for (j = 0; j < consdata->nvars; ++j)
                      {
-                        SCIP_CALL( SCIPsetSolVal(scip, sol, consdata->intvar, val) );
+                        if ( SCIPgetSolVal(scip, sol, consdata->vars[j]) > 0.5 )
+                           ++nones;
+                     }
+                     /* if there are aggregated variables, the solution might not be feasible */
+                     assert( ! noaggr || nones % 2 == (int) consdata->rhs );
+                     if ( (unsigned int) nones != consdata->rhs )
+                     {
+                        val = (SCIP_Real) (nones - consdata->rhs)/2;
+                        if ( SCIPisGE(scip, val, SCIPvarGetLbGlobal(consdata->intvar)) && SCIPisLE(scip, val, SCIPvarGetUbGlobal(consdata->intvar)) )
+                        {
+                           SCIP_CALL( SCIPsetSolVal(scip, sol, consdata->intvar, val) );
+                        }
                      }
                   }
                }
-            }
-            SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
+               SCIPdebug( SCIP_CALL( SCIPprintSol(scip, sol, NULL, FALSE) ) );
 
-            /* check feasibility of new solution and pass it to trysol heuristic */
-            SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, TRUE, TRUE, TRUE, &success) );
-            if ( success )
-            {
-               SCIP_CALL( SCIPheurPassSolAddSol(scip, heurtrysol, sol) );
-               SCIPdebugMessage("Creating solution was successful.\n");
-            }
+               /* check feasibility of new solution and pass it to trysol heuristic */
+               SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, TRUE, TRUE, TRUE, &success) );
+               if ( success )
+               {
+                  SCIP_CALL( SCIPheurPassSolAddSol(scip, heurtrysol, sol) );
+                  SCIPdebugMessage("Creating solution was successful.\n");
+               }
 #ifdef SCIP_DEBUG
-            else
-            {
-               /* the solution might not be feasible, because of additional constraints */
-               SCIPdebugMessage("Creating solution was not successful.\n");
-            }
+               else
+               {
+                  /* the solution might not be feasible, because of additional constraints */
+                  SCIPdebugMessage("Creating solution was not successful.\n");
+               }
 #endif
-            SCIP_CALL( SCIPfreeSol(scip, &sol) );
+               SCIP_CALL( SCIPfreeSol(scip, &sol) );
+            }
          }
       }
       else
@@ -4683,7 +4763,7 @@ SCIP_DECL_CONSPROP(consPropXor)
          freq = conshdlrdata->gausspropfreq;
          if ( (depth == 0 && freq == 0) || (freq > 0 && depth % freq == 0) )
          {
-            /* take usefull constraints only - might improve success rate to take all */
+            /* take useful constraints only - might improve success rate to take all */
             SCIP_CALL( checkSystemGF2(scip, conss, nusefulconss, NULL, result) );
          }
       }
