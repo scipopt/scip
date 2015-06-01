@@ -544,6 +544,17 @@ SCIP_DECL_PARAMCHGD(paramChgdArraygrowinit)
    return SCIP_OKAY;
 }
 
+/** information method for a parameter change of reopt_enable */
+static
+SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
+{  /*lint --e{715}*/
+
+   /* create or deconstruct the reoptimization data structures */
+   SCIP_CALL( SCIPenableReoptimization(scip, SCIPparamGetBool(param)) );
+
+   return SCIP_OKAY;
+}
+
 /** enable or disable all plugin timers depending on the value of the flag \p enabled */
 void SCIPsetEnableOrDisablePluginClocks(
    SCIP_SET*             set,                /**< SCIP settings */
@@ -1777,7 +1788,7 @@ SCIP_RETCODE SCIPsetCreate(
          "reoptimization/enable",
          "should reoptimization used?",
          &(*set)->reopt_enable, FALSE, SCIP_DEFAULT_REOPT_ENABLE,
-         NULL, NULL) );
+         paramChgdEnableReopt, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/maxsavednodes",
          "maximal number of saved nodes",

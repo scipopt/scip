@@ -7099,7 +7099,7 @@ void SCIPnodeSetReoptID(
    )
 {
    assert(node != NULL);
-   assert(id < 536870912); /* id has only 29 bits and needs to be smaller than 2^29 */
+   assert(id <= 536870911); /* id has only 29 bits and needs to be smaller than 2^29 */
 
    node->reoptid = id;
 }

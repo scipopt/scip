@@ -9052,8 +9052,8 @@ SCIP_RETCODE SCIPcreateProb(
    /* create solution pool for original solution candidates */
    SCIP_CALL( SCIPprimalCreate(&scip->origprimal) );
 
-   /* create reoptimization data */
-   if( scip->set->reopt_enable )
+   /* create reoptimization data (if not already done) */
+   if( scip->set->reopt_enable && scip->reopt == NULL )
    {
       SCIP_CALL( SCIPreoptCreate(&scip->reopt, scip->set, scip->messagehdlr, scip->mem->probmem) );
       SCIP_CALL( setReoptimizationParams(scip) );
@@ -14751,6 +14751,98 @@ SCIP_RETCODE SCIPsolve(
    {
       /* display most relevant statistics */
       SCIP_CALL( displayRelevantStats(scip) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** include specific heuristics and branching rules for reoptimization
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_RETCODE SCIPenableReoptimization(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             enable              /**< enable reoptimization */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPenableReoptimization", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* if the current stage is SCIP_STAGE_PROBLEM we have to include the heuristics and branching rules */
+   if( scip->set->stage == SCIP_STAGE_PROBLEM )
+   {
+      /* initialize all reoptimization data structures */
+      if( enable )
+      {
+         if( scip->reopt == NULL )
+         {
+            SCIP_CALL( SCIPreoptCreate(&scip->reopt, scip->set, scip->messagehdlr, scip->mem->probmem) );
+            SCIP_CALL( setReoptimizationParams(scip) );
+         }
+
+         /* include special branching rule for reoptimization */
+         if( SCIPfindBranchrule(scip, "nodereopt") == NULL )
+         {
+            SCIP_CALL( SCIPincludeBranchruleNodereopt(scip) );
+         }
+
+         /* include heuristics */
+         if( SCIPfindHeur(scip, "reoptsols") == NULL )
+         {
+            SCIP_CALL( SCIPincludeHeurReoptsols(scip) );
+         }
+         if( SCIPfindHeur(scip, "trivialnegation") == NULL )
+         {
+            SCIP_CALL( SCIPincludeHeurTrivialnegation(scip) );
+         }
+         if( SCIPfindHeur(scip, "ofins") == NULL )
+         {
+            SCIP_CALL( SCIPincludeHeurOfins(scip) );
+         }
+      }
+      /* exit and free all reoptimization data structures */
+      if( !enable )
+      {
+         SCIP_HEUR* heur;
+         SCIP_BRANCHRULE* branchrule;
+
+         if( scip->reopt != NULL )
+         {
+            SCIP_CALL( SCIPreoptFree(&(scip->reopt), scip->set, scip->origprimal, scip->mem->probmem) );
+            assert(scip->reopt == NULL);
+         }
+
+         /* exit heuristics */
+         heur = SCIPfindHeur(scip, "reoptsols");
+         if( heur != NULL )
+         {
+            SCIP_CALL( SCIPheurExit(heur, scip->set) );
+         }
+
+         heur = SCIPfindHeur(scip, "trivialnegation");
+         if( heur != NULL )
+         {
+            SCIP_CALL( SCIPheurExit(heur, scip->set) );
+         }
+
+         heur = SCIPfindHeur(scip, "ofins");
+         if( heur != NULL )
+         {
+            SCIP_CALL( SCIPheurExit(heur, scip->set) );
+         }
+
+         /* exit branching rule */
+         branchrule = SCIPfindBranchrule(scip, "nodereopt");
+         if( branchrule != NULL )
+         {
+            SCIP_CALL( SCIPbranchruleExit(branchrule, scip->set) );
+         }
+      }
    }
 
    return SCIP_OKAY;

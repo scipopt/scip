@@ -4055,10 +4055,6 @@ SCIP_RETCODE SCIPreoptCreate(
    SCIP_CALL( SCIPsetIncludeEventhdlr(set, eventhdlr) );
    assert(eventhdlr != NULL);
 
-   /* set and fix parameter*/
-   SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "limits/maxorigsol", 0) );
-   SCIP_CALL( SCIPsetChgParamFixed(set, "limits/maxorigsol", TRUE) );
-
    return SCIP_OKAY;
 }
 
