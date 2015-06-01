@@ -6243,6 +6243,19 @@ SCIP_RETCODE SCIPrestartSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** include specific heuristics and branching rules for reoptimization
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_RETCODE SCIPenableReoptimization(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             enable              /**< enable reoptimization */
+   );
+
 /** returns whether reoptimization is enabledor not */
 EXTERN
 SCIP_Bool SCIPisReoptEnabled(

@@ -3640,9 +3640,9 @@ SCIP_RETCODE reoptGetLeaves(
       unsigned int childid;
 
       assert(*nleaves + 1 <= leavessize);
-      assert(childid < reopt->reopttree->reoptnodessize);
 
       childid = reopt->reopttree->reoptnodes[id]->childids[i];
+      assert(childid < reopt->reopttree->reoptnodessize);
 
       if( reopt->reopttree->reoptnodes[childid]->nchilds == 0 )
       {
@@ -3996,7 +3996,6 @@ int SCIPreoptGetNInfSubtrees(
 SCIP_RETCODE SCIPreoptCreate(
    SCIP_REOPT**          reopt,              /**< pointer to reoptimization data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
@@ -4004,6 +4003,8 @@ SCIP_RETCODE SCIPreoptCreate(
    int i;
 
    assert(reopt != NULL);
+   assert(set != NULL);
+   assert(blkmem != NULL);
 
    SCIP_ALLOC( BMSallocMemory(reopt) );
    (*reopt)->runsize = DEFAULT_MEM_RUN;
@@ -4814,8 +4815,8 @@ int SCIPreoptGetNLeaves(
    {
       unsigned int childid;
 
-      assert(childid < reopt->reopttree->reoptnodessize);
       childid = reopt->reopttree->reoptnodes[id]->childids[i]; /*lint !e713*/
+      assert(childid < reopt->reopttree->reoptnodessize);
 
       if( reopt->reopttree->reoptnodes[childid]->nchilds == 0 )
          ++nleaves;
@@ -5284,9 +5285,9 @@ SCIP_RETCODE SCIPreoptGetLeaves(
       unsigned int childid;
 
       assert(*nleaves + 1 <= leavessize);
-      assert(childid < reopt->reopttree->reoptnodessize);
 
       childid = reopt->reopttree->reoptnodes[id]->childids[i];
+      assert(childid < reopt->reopttree->reoptnodessize);
 
       if( reopt->reopttree->reoptnodes[childid]->nchilds == 0 )
       {

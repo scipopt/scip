@@ -40,7 +40,6 @@ extern
 SCIP_RETCODE SCIPreoptCreate(
    SCIP_REOPT**          reopt,              /**< pointer to reoptimization data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
 

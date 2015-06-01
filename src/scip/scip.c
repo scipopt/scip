@@ -9055,7 +9055,7 @@ SCIP_RETCODE SCIPcreateProb(
    /* create reoptimization data (if not already done) */
    if( scip->set->reopt_enable && scip->reopt == NULL )
    {
-      SCIP_CALL( SCIPreoptCreate(&scip->reopt, scip->set, scip->messagehdlr, scip->mem->probmem) );
+      SCIP_CALL( SCIPreoptCreate(&scip->reopt, scip->set, scip->mem->probmem) );
       SCIP_CALL( setReoptimizationParams(scip) );
 
       /* include special branching rule for reoptimization */
@@ -14781,7 +14781,7 @@ SCIP_RETCODE SCIPenableReoptimization(
       {
          if( scip->reopt == NULL )
          {
-            SCIP_CALL( SCIPreoptCreate(&scip->reopt, scip->set, scip->messagehdlr, scip->mem->probmem) );
+            SCIP_CALL( SCIPreoptCreate(&scip->reopt, scip->set, scip->mem->probmem) );
             SCIP_CALL( setReoptimizationParams(scip) );
          }
 
