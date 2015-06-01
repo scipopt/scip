@@ -550,6 +550,7 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
 {  /*lint --e{715}*/
 
    /* create or deconstruct the reoptimization data structures */
+
    SCIP_CALL( SCIPenableReoptimization(scip, SCIPparamGetBool(param)) );
 
    return SCIP_OKAY;

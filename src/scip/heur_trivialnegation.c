@@ -30,7 +30,7 @@
 #define HEUR_NAME             "trivialnegation"
 #define HEUR_DESC             "negate solution entries if an objective coefficient changes the sign, enters or leaves the objective."
 #define HEUR_DISPCHAR         'j'
-#define HEUR_PRIORITY         30000
+#define HEUR_PRIORITY         -9000000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
@@ -70,11 +70,10 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
 
    SCIP_Real solval;
 
+   *result = SCIP_DIDNOTRUN;
+
    if( !SCIPisReoptEnabled(scip) )
-   {
-      *result = SCIP_DIDNOTRUN;
-      return SCIP_OKAY;
-   }
+   return SCIP_OKAY;
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);

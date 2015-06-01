@@ -31,7 +31,7 @@
 
 #define BRANCHRULE_NAME            "nodereopt"
 #define BRANCHRULE_DESC            "branching rule for node reoptimization"
-#define BRANCHRULE_PRIORITY        INT_MAX/4
+#define BRANCHRULE_PRIORITY        -9000000
 #define BRANCHRULE_MAXDEPTH            -1
 #define BRANCHRULE_MAXBOUNDDIST         1.0
 
