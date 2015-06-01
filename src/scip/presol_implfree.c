@@ -28,16 +28,15 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/scipdefplugins.h"
-#include "scip/pub_matrix.h"
 
+#include "scip/pub_matrix.h"
 #include "presol_implfree.h"
 
 #define PRESOL_NAME            "implfree"
 #define PRESOL_DESC            "exploit implied free variables for multi-aggregation"
-#define PRESOL_PRIORITY          1000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_PRIORITY            -1000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS               0     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define MAXABSRATIO     ((double)1000.0)     /**< max abs coefficients ratio */
 #define SIDECHANGERATIO   ((double)10.0)     /**< max side change ratio */
