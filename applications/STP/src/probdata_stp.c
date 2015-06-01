@@ -511,8 +511,8 @@ SCIP_RETCODE createDegreeConstraints(
    for( k = 0; k < nnodes; ++k )
    {
       (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "DegreeConstraint%d", k);
-      SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->degcons[k]), consname, 0, NULL, NULL,
-            -SCIPinfinity(scip), graph->maxdeg[k], TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPcreateConsLinear(scip, &(probdata->degcons[k]), consname, 0, NULL, NULL,
+            -SCIPinfinity(scip), (SCIP_Real)graph->maxdeg[k], TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
       SCIP_CALL( SCIPaddCons(scip, probdata->degcons[k]) );
    }
@@ -1564,29 +1564,25 @@ SCIP_DECL_PROBTRANS(probtransStp)
 static
 SCIP_DECL_PROBEXITSOL(probexitsolStp)
 {
-
-   SCIP_PROBDATA* probd;
-
-
    assert(scip != NULL);
-   probd = SCIPgetProbData(scip);
+   assert(probdata != NULL);
 
-   if( probd->logfile != NULL )
+   if( probdata->logfile != NULL )
    {
       int success;
       SCIP_Real factor = 1.0;
 
-      if( probd->stp_type ==  STP_MAX_NODE_WEIGHT )
+      if( probdata->stp_type ==  STP_MAX_NODE_WEIGHT )
          factor = -1.0;
 
       SCIPprobdataWriteLogLine(scip, "End\n");
       SCIPprobdataWriteLogLine(scip, "\n");
       SCIPprobdataWriteLogLine(scip, "SECTION Run\n");
-      if( probd->ug )
+      if( probdata->ug )
       {
-         SCIPprobdataWriteLogLine(scip, "Threads %d\n", probd->nSolvers);
+         SCIPprobdataWriteLogLine(scip, "Threads %d\n", probdata->nSolvers);
          SCIPprobdataWriteLogLine(scip, "Time %.1f\n", SCIPgetTotalTime(scip));
-         SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * probd->ugDual);
+         SCIPprobdataWriteLogLine(scip, "Dual %16.9f\n", factor * probdata->ugDual);
       }
       else
       {
@@ -1602,32 +1598,32 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
          SCIPprobdataWriteLogLine(scip, "\n");
          SCIPprobdataWriteLogLine(scip, "SECTION Finalsolution\n");
 
-         SCIP_CALL( SCIPprobdataWriteSolution(scip, probd->logfile) );
+         SCIP_CALL( SCIPprobdataWriteSolution(scip, probdata->logfile) );
          SCIPprobdataWriteLogLine(scip, "End\n");
       }
 
-      success = fclose(probd->logfile);
+      success = fclose(probdata->logfile);
       if( success != 0 )
       {
-         SCIPerrorMessage("An error occurred while closing file <%s>\n", probd->logfile);
+         SCIPerrorMessage("An error occurred while closing file <%s>\n", probdata->logfile);
          return SCIP_FILECREATEERROR;
       }
 
-      probd->logfile = NULL;
-      *(probd->origlogfile) = NULL;
+      probdata->logfile = NULL;
+      *(probdata->origlogfile) = NULL;
    }
 
-   if( probd->intlogfile != NULL )
+   if( probdata->intlogfile != NULL )
    {
-      int success = fclose(probd->intlogfile);
+      int success = fclose(probdata->intlogfile);
       if( success != 0 )
       {
-         SCIPerrorMessage("An error occurred while closing file <%s>\n", probd->intlogfile);
+         SCIPerrorMessage("An error occurred while closing file <%s>\n", probdata->intlogfile);
          return SCIP_FILECREATEERROR;
       }
 
-      probd->intlogfile = NULL;
-      *(probd->origintlogfile) = NULL;
+      probdata->intlogfile = NULL;
+      *(probdata->origintlogfile) = NULL;
    }
 
    return SCIP_OKAY;

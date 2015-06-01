@@ -99,8 +99,8 @@ SCIP_Bool maxprize(
       {
 	 if( SCIPisGT(scip, g->prize[k], max) )
 	 {
-         max = g->prize[k];
-	 t = k;
+            max = g->prize[k];
+            t = k;
 	 }
 	 else if( t == i && SCIPisEQ(scip, g->prize[k], max) )
 	 {
@@ -296,7 +296,7 @@ SCIP_RETCODE degree_test_pc(
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &edges2, 2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes2, 2) );
-printf("dirdeg \n");
+   printf("dirdeg \n");
    SCIPdebugMessage("Degree Test: ");
 
    if( !pc )
@@ -308,8 +308,8 @@ printf("dirdeg \n");
 
       for( i = 0; i < nnodes; i++ )
       {
-	         if( i % 100 == 0 )
-printf("dirdego \n");
+         if( i % 100 == 0 )
+            printf("dirdego \n");
          assert(g->grad[i] >= 0);
          if( !g->mark[i] )
             continue;
