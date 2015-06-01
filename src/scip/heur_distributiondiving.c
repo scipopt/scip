@@ -461,7 +461,7 @@ SCIP_RETCODE calcBranchScore(
       rowmean = heurdata->rowmeans[rowpos];
       rowvariance = heurdata->rowvariances[rowpos];
       rowinfinitiesdown = heurdata->rowinfinitiesdown[rowpos];
-      rowinfinitiesup = heurdata->rowinfinitiesdown[rowpos];
+      rowinfinitiesup = heurdata->rowinfinitiesup[rowpos];
       assert(!SCIPisNegative(scip, rowvariance));
 
       currentrowprob = SCIProwCalcProbability(scip, row, rowmean, rowvariance,
