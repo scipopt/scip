@@ -115,9 +115,9 @@ SCIP_RETCODE selectNextDiving(
       bestcandidx = -1;
 
       SCIPclearDiveBoundChanges(scip);
-      /* todo calculate number of LP candidates whose local bounds do not agree with their last LP solution value */
+
       /* search for the candidate that maximizes the dive set score function and whose solution value is still feasible */
-      for (c = 0; c < nlpcands; ++c)
+      for( c = 0; c < nlpcands; ++c )
       {
          assert(SCIPgetSolVal(scip, worksol, lpcands[c]) == lpcandssol[c]); /*lint !e777 doesn't like comparing floats for equality */
 
@@ -622,9 +622,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
              * was reached
              */
             if( ! cutoff
-                  && ((lpsolvefreq > 0 && ((SCIPgetProbingDepth (scip) - lastlpdepth) % lpsolvefreq) == 0)
+                  && ((lpsolvefreq > 0 && ((SCIPgetProbingDepth(scip) - lastlpdepth) % lpsolvefreq) == 0)
                   || (domreds + localdomreds > SCIPdivesetGetLPResolveDomChgQuot(diveset) * SCIPgetNVars(scip))
-                  || (onlylpbranchcands && nviollpcands > (int)(SCIPdivesetGetLPResolveDomChgQuot(diveset) * SCIPgetNVars(scip)))) )
+                  || (onlylpbranchcands && nviollpcands > (int)(SCIPdivesetGetLPResolveDomChgQuot(diveset) * nlpcands))) )
             {
                SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, &lperror, &cutoff) );
 
