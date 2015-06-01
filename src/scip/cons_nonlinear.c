@@ -1593,9 +1593,15 @@ SCIP_RETCODE removeFixedLinearVariables(
          if( offset != 0.0 )
          {
             if( !SCIPisInfinity(scip, -consdata->lhs) )
+            {
                consdata->lhs -= offset;
+               assert(!SCIPisInfinity(scip, REALABS(consdata->lhs)));
+            }
             if( !SCIPisInfinity(scip,  consdata->rhs) )
+            {
                consdata->rhs -= offset;
+               assert(!SCIPisInfinity(scip, REALABS(consdata->rhs)));
+            }
          }
 
          /* nothing left to do if variable had been fixed */
@@ -1632,9 +1638,15 @@ SCIP_RETCODE removeFixedLinearVariables(
             if( aggrconstant != 0.0 )
             {
                if( !SCIPisInfinity(scip, -consdata->lhs) )
+               {
                   consdata->lhs -= coef * aggrconstant;
+                  assert(!SCIPisInfinity(scip, REALABS(consdata->lhs)));
+               }
                if( !SCIPisInfinity(scip,  consdata->rhs) )
+               {
                   consdata->rhs -= coef * aggrconstant;
+                  assert(!SCIPisInfinity(scip, REALABS(consdata->rhs)));
+               }
             }
          }
       }
@@ -1779,9 +1791,15 @@ SCIP_RETCODE splitOffLinearPart(
    if( constant != 0.0 )
    {
       if( !SCIPisInfinity(scip, -consdata->lhs) )
+      {
          consdata->lhs -= constant;
+         assert(!SCIPisInfinity(scip, REALABS(consdata->lhs)));
+      }
       if( !SCIPisInfinity(scip,  consdata->rhs) )
+      {
          consdata->rhs -= constant;
+         assert(!SCIPisInfinity(scip, REALABS(consdata->rhs)));
+      }
    }
 
    for( i = 0; i < nlinvars; ++i )
