@@ -48,7 +48,7 @@ SCIP_RETCODE SCIPcreateConsStp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   GRAPH*                graph
+   GRAPH*                graph               /**< graph data structure */
    );
 
 #ifdef __cplusplus

@@ -43,7 +43,7 @@ extern "C" {
       int count;      /* number of components */
    }UF;
 
-#if 1
+
    typedef struct Vnoi_List_Node
    {
       double       dist;         /* Distance to the end of the path             */
@@ -51,7 +51,7 @@ extern "C" {
       signed int   base;         /* Voronoi base                            */
       struct Vnoi_List_Node *next;
    } VLIST;
-#endif
+
    typedef struct ST_Node
    {
       int edge;

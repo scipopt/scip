@@ -265,13 +265,13 @@ SCIP_RETCODE printGraph(
    return SCIP_OKAY;
 }
 
-
+/** perform local heuristics */
 SCIP_RETCODE do_local(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*  graph,
-   const SCIP_Real* cost,
-   const SCIP_Real* costrev,
-   int*          best_result
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      cost,               /**< arc cost array */
+   const SCIP_Real*      costrev,            /**< reversed arc cost array */
+   int*                  best_result         /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
    )
 {
    NODE* nodes;

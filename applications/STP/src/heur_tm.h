@@ -34,65 +34,61 @@
 extern "C" {
 #endif
 
-   /** creates the TM primal heuristic and includes it in SCIP */
-   extern
-   SCIP_RETCODE SCIPincludeHeurTM(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
-#if 0
-   extern
-   SCIP_RETCODE SCIPtmHeur(
-      SCIP*                 scip,                  /**< SCIP data structure */
-      const GRAPH*          graph,                 /**< graph structure */
-      PATH**                path,
-      SCIP_Real*            cost,
-      SCIP_Real*            costrev,
-      int*                  result
-      );
-#endif
-   extern
-   SCIP_RETCODE do_layer(
-      SCIP*                 scip,               /**< SCIP data structure */
-      SCIP_HEURDATA* heurdata,
-      const GRAPH*  graph,
-      int*          starts,
-      int*          bestnewstart,
-      int*          best_result,
-      int           runs,
-      int           bestincstart,
-      SCIP_Real*    cost,
-      SCIP_Real*    costrev,
-      SCIP_Real*    hopfactor,
-      SCIP_Real     maxcost,
-      SCIP_Bool*    success
-      );
+/** creates the TM primal heuristic and includes it in SCIP */
+extern
+SCIP_RETCODE SCIPincludeHeurTM(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
-   extern
-   SCIP_RETCODE do_prune(
-      SCIP*                 scip,               /**< SCIP data structure */
-      const GRAPH*          g,                  /**< graph structure */
-      SCIP_Real*            cost,               /**< edge costs */
-      int                   layer,
-      int*                  result,             /**< ST edges */
-      char*                 connected           /**< ST nodes */
-      );
+/** perform shortest paths heuristic */
+extern
+SCIP_RETCODE do_layer(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   int*                  starts,             /**< array containing start vertices (NULL to not provide any) */
+   int*                  bestnewstart,       /**< pointer to the start vertex resulting in the best soluton */
+   int*                  best_result,        /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
+   SCIP_Real*            nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
+   int                   runs,               /**< number of runs */
+   int                   bestincstart,       /**< best incumbent start vertex */
+   SCIP_Real*            cost,               /**< arc costs */
+   SCIP_Real*            costrev,            /**< reversed arc costs */
+   SCIP_Real*            hopfactor,          /**< edge cost multiplicator for HC problems */
+   SCIP_Real             maxcost,            /**< maximal edge cost (only for HC) */
+   SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
+   );
 
-   extern
-   SCIP_RETCODE do_pcprune(
-      SCIP*                 scip,               /**< SCIP data structure */
-      const GRAPH*          g,                  /**< graph structure */
-      SCIP_Real*            cost,               /**< edge costs */
-      int*                  result,             /**< ST edges */
-      char*                 connected           /**< ST nodes */
-      );
+/** prune the Steiner tree in such a way that all leaves are terminals */
+extern
+SCIP_RETCODE do_prune(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   SCIP_Real*            cost,               /**< edge costs */
+   int                   layer,              /**< layer, @note: should be set to 0 */
+   int*                  result,             /**< ST edges */
+   char*                 connected           /**< ST nodes */
+   );
 
-   extern
-   SCIP_RETCODE do_degprune(
-      SCIP*                 scip,               /**< SCIP data structure */
-      const GRAPH*          g,                  /**< graph structure */
-      int*                  result,             /**< ST edges */
-      char*                 connected           /**< ST nodes */
-      );
+/** prune the (rooted) prize collecting Steiner tree in such a way that all leaves are terminals */
+extern
+SCIP_RETCODE do_pcprune(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   SCIP_Real*            cost,               /**< edge costs */
+   int*                  result,             /**< ST edges */
+   char*                 connected           /**< ST nodes */
+   );
+
+/** prune degree constrained Tree in such a way that all leaves are terminals */
+extern
+SCIP_RETCODE do_degprune(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph structure */
+   int*                  result,             /**< ST edges */
+   char*                 connected           /**< ST nodes */
+   );
+
 #ifdef __cplusplus
 }
 #endif

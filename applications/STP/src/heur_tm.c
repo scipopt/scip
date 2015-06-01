@@ -39,9 +39,9 @@
 #define HEUR_TIMING           (SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_EVALRUNS 15 /*10*/
-#define DEFAULT_INITRUNS 100 /*100*/
-#define DEFAULT_LEAFRUNS 15 /*10*/
+#define DEFAULT_EVALRUNS 15
+#define DEFAULT_INITRUNS 100
+#define DEFAULT_LEAFRUNS 15
 #define DEFAULT_ROOTRUNS 50
 #define DEFAULT_DURINGLPFREQ 10
 #define DEFAULT_TYPE  0
@@ -55,8 +55,8 @@
 
 
 #ifdef WITH_UG
-extern
-int getUgRank();
+   extern
+   int getUgRank();
 #endif
 
 /*
@@ -371,12 +371,12 @@ SCIP_RETCODE do_pcprune(
 }
 
 
-/* prune the Steiner Tree in such a way that all leaves are terminals */
+/** prune the Steiner tree in such a way that all leaves are terminals */
 SCIP_RETCODE do_prune(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    SCIP_Real*            cost,               /**< edge costs */
-   int                   layer,              /**< number of layers (usually 1) */
+   int                   layer,              /**< layer (usually 0) */
    int*                  result,             /**< ST edges */
    char*                 connected           /**< ST nodes */
    )
@@ -496,7 +496,7 @@ SCIP_RETCODE prune(
    return SCIP_OKAY;
 }
 
-/* prune degree constrained Tree in such a way that all leaves are terminals */
+/** prune degree constrained tree in such a way that all leaves are terminals */
 SCIP_RETCODE do_degprune(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
@@ -590,141 +590,7 @@ SCIP_RETCODE do_degprune(
    return SCIP_OKAY;
 }
 
-#if 0
-/* pure TM heuristic */
-static
-SCIP_RETCODE do_tm(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
-   PATH**                path,
-   SCIP_Real*            cost,
-   SCIP_Real*            costrev,
-   int                   layer,
-   int                   start,
-   int*                  result,
-   char*                 connected
-   )
-{
-   int*   cluster;
-   int    csize = 0;
-   int    k;
-   int    e;
-   int    i;
-   int    j;
-   int    old;
-   int    newval;
-   int nnodes;
-   SCIP_Real min;
-
-   assert(scip      != NULL);
-   assert(g         != NULL);
-   assert(result    != NULL);
-   assert(connected != NULL);
-   assert(cost      != NULL);
-   assert(costrev   != NULL);
-   assert(path      != NULL);
-   assert(layer == 0);
-   nnodes = g->knots;
-
-   SCIPdebugMessage("Heuristic: Start=%5d ", start);
-
-   SCIP_CALL( SCIPallocBufferArray(scip, &cluster, nnodes) );
-
-   cluster[csize++] = start;
-
-   for( i = 0; i < nnodes; i++ )
-   {
-      g->mark[i]   = (g->grad[i] > 0);
-      connected[i] = FALSE;
-   }
-   connected[start] = TRUE;
-
-   /* CONSTCOND */
-   for( ;; )
-   {
-      /* Find a terminal with minimal distance to the current ST
-       */
-      min = FARAWAY;
-      old = -1;
-      newval = -1;
-
-      for( i = 0; i < nnodes; i++ )
-      {
-         if( g->grad[i] == 0 || g->term[i] != layer || connected[i] )
-            continue;
-
-         /*
-          */
-         if( path[i] == NULL )
-         {
-            SCIP_CALL( SCIPallocBufferArray(scip, &(path[i]), nnodes) );
-
-            assert(path[i] != NULL);
-            if( g->source[0] == i )
-               graph_path_exec(scip, g, FSP_MODE, i, cost, path[i]);
-            else
-               graph_path_exec(scip, g, FSP_MODE, i, costrev, path[i]);
-         }
-         for( k = 0; k < csize; k++ )
-         {
-            j = cluster[k];
-            assert(i != j);
-            assert(connected[j]);
-            if (LT(path[i][j].dist, min))
-            {
-               min = path[i][j].dist;
-               newval = i;
-               old = j;
-            }
-         }
-      }
-      /* Nichts mehr gefunden, also fertig
-       */
-      if (newval == -1)
-         break;
-
-      /* Weg setzten
-       */
-      assert((old > -1) && (newval > -1));
-      assert(path[newval] != NULL);
-      assert(path[newval][old].dist < FARAWAY);
-      assert(g->term[newval] == layer);
-      assert(!connected[newval]);
-      assert(connected[old]);
-
-      SCIPdebug(fputc('R', stdout));
-      SCIPdebug(fflush(stdout));
-
-      /*    printf("Connecting Knot %d-%d dist=%d\n", newval, old, path[newval][old].dist);
-       */
-      /* Gegen den Strom schwimmend alles markieren
-       */
-      k = old;
-
-      while(k != newval)
-      {
-         e = path[newval][k].edge;
-         k = g->tail[e];
-
-         if (!connected[k])
-         {
-            connected[k] = TRUE;
-            cluster[csize++] = k;
-         }
-      }
-   }
-
-   SCIPdebug(fputc('M', stdout));
-   SCIPdebug(fflush(stdout));
-   SCIPfreeBufferArray(scip, &cluster);
-
-   SCIP_CALL( do_prune(scip, g, cost, layer, result, connected) );
-
-   return SCIP_OKAY;
-}
-#endif
-
-
+/** Dijkstra based shortest paths heuristic */
 static
 SCIP_RETCODE do_tm_dijkstra(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -751,6 +617,7 @@ SCIP_RETCODE do_tm_dijkstra(
    return SCIP_OKAY;
 }
 
+/** shortest paths heuristic */
 static
 SCIP_RETCODE do_tmX(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -980,7 +847,6 @@ SCIP_RETCODE do_tm_degcons(
    for( n = 0; n < nnodes; n++ )
    {
       /* Find a terminal with minimal distance to the current ST */
-      // printf("start: %d tldegcount: %d\n", start, tldegcount);
       min = FARAWAY - 1;
       /* is the free degree sum at most one and are we not connecting the last terminal? */
       if( tldegcount <= 1 && termcount < nterms - 1)
@@ -1031,7 +897,6 @@ SCIP_RETCODE do_tm_degcons(
                      }
                   }
                }
-               // printf("degcount: %d total:%d \n", degcount, tldegcount);
                if( degcount >= degmax || (degcount >= mindegsum && SCIPisLT(scip, pathdist[i][j], min)) )
                {
                   degmax = degcount;
@@ -1052,8 +917,6 @@ SCIP_RETCODE do_tm_degcons(
             if( degs[j] < maxdegs[j] )
                break;
          }
-         //printf("termcount: %d, nterms %d\n", termcount, nterms);
-         //  assert(j != UNKNOWN);
          if( j != UNKNOWN )
          {
             assert(k != csize);
@@ -1070,11 +933,9 @@ SCIP_RETCODE do_tm_degcons(
                   newval = u;
                }
             }
-            //            assert(newval != UNKNOWN);
             if( newval != UNKNOWN )
             {
                result[flipedge(k)] = CONNECT;
-               // printf("connectTriv: %d->%d \n", g->head[k], g->tail[k]);
                degs[newval]++;
                degs[j]++;
                connected[newval] = TRUE;
@@ -1089,13 +950,11 @@ SCIP_RETCODE do_tm_degcons(
       /* break? */
       if( newval == -1 )
          break;
-      /*printf("LONGCONNECT: %d %d \n", old, newval);*/
       /* Weg setzten
        */
       assert(old > -1);
       assert(newval > -1);
       assert(pathdist[newval] != NULL);
-      //assert(pathdist[newval][old] < FARAWAY);
       assert(g->term[newval] == 0);
       assert(!connected[newval]);
       assert(connected[old]);
@@ -1108,7 +967,7 @@ SCIP_RETCODE do_tm_degcons(
       k = old;
       if( Is_term(g->term[newval]) )
          termcount++;
-      //printf("connectnewval: %d \n", newval);
+
       while(k != newval)
       {
          e = pathedge[newval][k];
@@ -1132,16 +991,12 @@ SCIP_RETCODE do_tm_degcons(
       assert(degs[newval] == 1);
    }
 
-   SCIPdebug(fputc('M', stdout));
-   SCIPdebug(fflush(stdout));
-
    *solfound = TRUE;
 
    for( i = 0; i < nnodes; i++ )
    {
       if( Is_term(g->term[i]) && !connected[i] )
       {
-         /*printf("fail! \n");*/
          *solfound = FALSE;
          break;
       }
@@ -1152,14 +1007,9 @@ SCIP_RETCODE do_tm_degcons(
       /* prune the solution */
       do_degprune(scip, g, result, connected);
 
-      /*assert(graph_sol_valid(scip, g, result));*/
       for( t = 0; t < nnodes; t++ )
          if( degs[t] > maxdegs[t] )
-         {
-            /*printf("deg fail: %d (%d, %d)\n ", t, degs[t], maxdegs[t] );*/
             *solfound = FALSE;
-            /*assert(0);*/
-         }
    }
 
    SCIPfreeBufferArray(scip, &degs);
@@ -1423,7 +1273,6 @@ SCIP_RETCODE do_tm_polzin(
       /* has the terminal already been connected? */
       if( !connected[term] )
       {
-         //printf("term: %d \n", term );
          /* connect the terminal */
          k = g->tail[node_edge[best][vcount[best]]];
          while( k != term )
@@ -1433,18 +1282,7 @@ SCIP_RETCODE do_tm_polzin(
             while( node_base[k][vcount[k] + j] != term )
                j++;
 
-            if(!(vcount[k] + j < nodenterms[k]))
-            {
-               int z;
-               printf("  vcount[k] + j: %d, nodenterms: %d\n", vcount[k] + j,nodenterms[k]);
-               for( z = 0; z < nodenterms[k]; z++)
-                  if( node_base[k][z] == term )
-                     printf("ok! for z: %d\n", z);
-                  else
-                     printf("  node_base[k][z]: %d ", node_base[k][z]);
-               printf("\n term: %d \n", term );
-               assert(0);
-            }
+            assert(vcount[k] + j < nodenterms[k]);
 
             if( !connected[k] )
             {
@@ -1503,35 +1341,7 @@ SCIP_RETCODE do_tm_polzin(
    return SCIP_OKAY;
 }
 
-#if 0
-SCIP_RETCODE SCIPtmHeur(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph,                  /**< graph structure */
-   PATH**                path,
-   SCIP_Real*            cost,
-   SCIP_Real*            costrev,
-   //SCIP_Real**           pathdist,
-   int*                  result
-   //int**                 pathedge
-   )
-{
-   int e;
-   int nnodes;
-   char* connected;
-   assert(scip != NULL);
-   assert(graph != NULL);
-   assert(cost != NULL);
-   assert(costrev != NULL);
-   nnodes = graph->knots;
-   SCIP_CALL( SCIPallocBufferArray(scip, &connected, nnodes) );
-
-   for( e = 0; e < graph->edges; e++ )
-      result[e] = UNKNOWN;
-   SCIP_CALL( do_tm(scip, graph, path, cost, costrev, 0, graph->source[0], result, connected) );
-   SCIPfreeBufferArray(scip, &connected);
-   return SCIP_OKAY;
-}
-#endif
+/** trivial PC heuristic, selecting most expensive terminal as solution */
 static
 void do_prizecoll_trivial(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1583,26 +1393,24 @@ void do_prizecoll_trivial(
 }
 
 
-
+/** perform shortest paths heuristic */
 SCIP_RETCODE do_layer(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
-   int*                  starts,
-   int*                  bestnewstart,
-   int*                  best_result,
-   int                   runs,
-   int                   bestincstart,
-   SCIP_Real*            cost,
-   SCIP_Real*            costrev,
-   SCIP_Real*            hopfactor,
-   SCIP_Real             maxcost,
-   SCIP_Bool*            success
+   int*                  starts,             /**< array containing start vertices (NULL to not provide any) */
+   int*                  bestnewstart,       /**< pointer to the start vertex resulting in the best soluton */
+   int*                  best_result,        /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
+   SCIP_Real*            nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
+   int                   runs,               /**< number of runs */
+   int                   bestincstart,       /**< best incumbent start vertex */
+   SCIP_Real*            cost,               /**< arc costs */
+   SCIP_Real*            costrev,            /**< reversed arc costs */
+   SCIP_Real*            hopfactor,          /**< edge cost multiplicator for HC problems */
+   SCIP_Real             maxcost,            /**< maximal edge cost (only for HC) */
+   SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
    )
 {
-#if 0
-   PATH** path;
-#endif
    SCIP_PQUEUE* pqueue = NULL;
    SCIP_Longint nexecs;
    SCIP_Real obj;
@@ -1631,7 +1439,6 @@ SCIP_RETCODE do_layer(
    int** pathedge = NULL;
    int** node_base = NULL;
    int** node_edge = NULL;
-
    char printfs = FALSE;
    char* connected;
 
@@ -1698,7 +1505,7 @@ SCIP_RETCODE do_layer(
    else
    {
       /* graph very large? */
-      if( nterms > 800 && nedges > 20000 && 3 * nterms < nnodes )
+      if( nterms > 500 && nedges > 10000 && 3 * nterms < nnodes )
       {
          mode = TM_DIJKSTRA;
       }
@@ -1794,34 +1601,77 @@ SCIP_RETCODE do_layer(
       if( perm == NULL )
          SCIP_CALL( SCIPallocBufferArray(scip, &perm, nnodes) );
 
-      for( k = 0; k < nnodes; k++ )
-         perm[k] = k;
-      SCIPpermuteIntArray(perm, 0, nnodes, &(heurdata->randseed));
-
-      /* use terminals (randomly permutated) as starting points for TM heuristic */
-      for( k = 0; k < nnodes; k++ )
+      /* are there no nodes are to be priorized a priori? */
+      if( nodepriority == NULL )
       {
-         if( r >= runs || r >= nterms )
-            break;
+         for( k = 0; k < nnodes; k++ )
+            perm[k] = k;
+         SCIPpermuteIntArray(perm, 0, nnodes, &(heurdata->randseed));
 
-         if( Is_term(graph->term[perm[k]]) )
-            start[r++] = perm[k];
-      }
-
-      /* still empty slots in start array? */
-      if( r < runs )
-      {
-         /* fill empty slots randomly */
+         /* use terminals (randomly permutated) as starting points for TM heuristic */
          for( k = 0; k < nnodes; k++ )
          {
-            if( r >= runs )
+            if( r >= runs || r >= nterms )
                break;
-            if( !Is_term(graph->term[perm[k]]) && graph->mark[k] && (graph->stp_type != STP_HOP_CONS || SCIPisLT(scip, pathdist[root][perm[k]], BLOCKED)) )
+
+            if( Is_term(graph->term[perm[k]]) )
                start[r++] = perm[k];
          }
-      }
 
-      /* needed for HC */
+         /* fill empty slots */
+         for( k = 0; k < nnodes && r < runs; k++ )
+            if( !Is_term(graph->term[perm[k]]) && graph->mark[k] && (graph->stp_type != STP_HOP_CONS || SCIPisLT(scip, pathdist[root][perm[k]], BLOCKED)) )
+               start[r++] = perm[k];
+      }
+      else
+      {
+         SCIP_Real max = 0;
+         int bbound = runs - runs / 3;
+
+         for( k = 0; k < nnodes; k++ )
+	 {
+	    perm[k] = k;
+            if( SCIPisLT(scip, max, nodepriority[k]) )
+               max = nodepriority[k];
+	 }
+         for( k = 0; k < nnodes; k++ )
+	 {
+	       if( Is_term(graph->term[k]) )
+	       {
+                  nodepriority[k] += SCIPgetRandomReal(0.0, max, &(heurdata->randseed));
+	       }
+	       else if( SCIPisLE(scip, 1, nodepriority[k]) )
+	       {
+		  nodepriority[k] = nodepriority[k] * 1.5;
+                  nodepriority[k] += SCIPgetRandomReal(0.0, max * 0.5, &(heurdata->randseed));
+	       }
+	 }
+         SCIPsortRealInt(nodepriority, perm, nnodes);
+	 //printf("max priority: %f \n", max );
+         for( k = nnodes - 1; k >= 0; k-- )
+         {
+            if( r >= nterms || r >= bbound )
+               break;
+
+            if( Is_term(graph->term[perm[k]]) )
+            {
+               start[r++] = perm[k];
+	       //printf("priority: %f \n", nodepriority[k] );
+               perm[k] = -1;
+            }
+         }
+
+	 /* fill empty slots */
+         for( k = nnodes - 1; k >= 0 && r < runs; k-- )
+	 {
+            if( perm[k] != -1 && graph->mark[k] && (graph->stp_type != STP_HOP_CONS || SCIPisLT(scip, pathdist[root][perm[k]], BLOCKED)) )
+	    {
+               start[r++] = perm[k];
+	       //printf("non term priority: %f \n", nodepriority[k] );
+	    }
+	 }
+      }
+      /* not all slots filled? */
       if( r < runs )
          runs = r;
 
@@ -1899,7 +1749,6 @@ SCIP_RETCODE do_layer(
                   else
                   {
                      edges_tz[z] = UNKNOWN;
-                     //printf("costrevnorm %d: %f\n", e, costrev[e] );
                   }
                   t = graph->head[e];
                }
@@ -2092,7 +1941,6 @@ SCIP_RETCODE do_layer(
 
             if( !lsuccess || SCIPisGT(scip, fabs(edgecount - graph->hoplimit) / (double) graph->hoplimit, 0.05) )
             {
-               //printf("old (*hopfactor): %f edgecount: %d hoplimit: %d Obj: %f", (*hopfactor), edgecount, graph->hoplimit, obj);
                if( !lsuccess )
                {
                   if( (*success) )
@@ -2427,18 +2275,21 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    SCIP_Real* costrev;
    SCIP_Real* nval;
    SCIP_Real* xval;
-   SCIP_Real maxcost = 0.0;
-   int* results;
    SCIP_Real pobj;
+   SCIP_Real maxcost;
    SCIP_Real oldtimelimit;
-   int best_start = -1;
-   int nedges;
-   int edgecount = 0;
-   int nvars;
-   int layer;
-   int runs;
+   int* results;
+   SCIP_Real* nodepriority;
    int e;
    int v;
+   int runs;
+   int nvars;
+   int layer;
+   int nedges;
+   int nnodes;
+   int edgecount;
+   int best_start;
+
    SCIP_Real pctrivialbound = FARAWAY;
    SCIP_Bool success;
    assert(scip != NULL);
@@ -2458,8 +2309,14 @@ SCIP_DECL_HEUREXEC(heurExecTM)
 
    graph = SCIPprobdataGetGraph(probdata);
    assert(graph != NULL);
+
+   maxcost = 0.0;
    nedges = graph->edges;
-   assert(nedges >= 0);
+   nnodes = graph->knots;
+   edgecount = 0;
+   best_start = -1;
+   nodepriority = NULL;
+
    if( graph->stp_type == STP_PRIZE_COLLECTING && graph->knots > pctrivialbound && !(heurtiming & SCIP_HEURTIMING_BEFORENODE) )
       return SCIP_OKAY;
 
@@ -2555,11 +2412,10 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       randupper = SCIPgetRandomReal(1.1, 2.5, &(heurdata->randseed));
       randlower = SCIPgetRandomReal(1.1, randupper, &(heurdata->randseed));
 
-      for( layer = 0; layer < 1; layer++ ) /*graph->layers */
+      for( layer = 0; layer < 1; layer++ )
       {
          if( xval == NULL )
          {
-            int fixed = 0;
             BMScopyMemoryArray(cost, graph->cost, nedges);
 
             /* hop constraint problem? */
@@ -2568,53 +2424,46 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                for( e = 0; e < nedges; e++)
                {
                   if( SCIPvarGetUbGlobal(vars[e] ) < 0.5 )
-                  {
                      cost[e] = BLOCKED;
-                  }
-                  if( SCIPisLT(scip, graph->cost[e], 1e+8 ) && SCIPisGT(scip, graph->cost[e], maxcost) )
-                     maxcost = graph->cost[e];
-
+                  else if( SCIPisGT(scip, cost[e], maxcost) && SCIPisLT(scip, cost[e], FARAWAY) )
+                     maxcost = cost[e];
                }
                for( e = 0; e < nedges; e++)
                   costrev[e] = cost[flipedge(e)];
             }
             else
             {
-               /* TODO chg. for asymmetric graphs */
                for( e = 0; e < nedges; e += 2)
                {
                   if( SCIPvarGetUbGlobal(vars[layer * nedges + e + 1]) < 0.5 )
                   {
                      costrev[e] = BLOCKED;
                      cost[e + 1] = BLOCKED;
-                     fixed++;
                   }
                   else
                   {
                      costrev[e] = cost[e + 1];
-                     costrev[e + 1] = cost[e];
                   }
 
                   if( SCIPvarGetUbGlobal(vars[layer * nedges + e]) < 0.5 )
                   {
-                     fixed++;
                      costrev[e + 1] = BLOCKED;
                      cost[e] = BLOCKED;
                   }
                   else
                   {
-                     costrev[e] = cost[e + 1];
                      costrev[e + 1] = cost[e];
                   }
                }
             }
-            //printf("nvars: %d fixed: %d \n", nvars,  fixed);
          }
          else
          {
             SCIP_Bool partrand = FALSE;
             SCIP_Bool totalrand = FALSE;
-
+            SCIP_CALL( SCIPallocBufferArray(scip, &nodepriority, nnodes) );
+	    for( e = 0; e < nnodes; e++)
+	       nodepriority[e] = 0.0;
             if( (SCIPisEQ(scip, heurdata->nlpiterations, SCIPgetNLPIterations(scip)) && SCIPgetRandomInt(0, 3, &(heurdata->randseed)) != 1 )
                || SCIPgetRandomInt(0, 10, &(heurdata->randseed)) == 5 )
                partrand = TRUE;
@@ -2630,18 +2479,16 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                totalrand = TRUE;
                partrand = FALSE;
             }
-#if 0
-            if( partrand )
-               printf("(partly randomized) \n");
 
-            if( totalrand )
-               printf("(totally randomized ) \n");
-            else
-               printf("(normal) \n");
-#endif
+            for( e = 0; e < nedges; e++)
+            {
+                  nodepriority[graph->head[e]] += xval[e];
+                  nodepriority[graph->tail[e]] += xval[e];
+            }
+
             if( graph->stp_type == STP_HOP_CONS )
             {
-               for( e = 0; e < nedges; e++)
+               for( e = 0; e < nedges; e++ )
                {
                   if( SCIPvarGetUbGlobal(vars[e] ) < 0.5 )
                   {
@@ -2664,8 +2511,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                      rand = SCIPgetRandomReal(randlower, randupper, &(heurdata->randseed));
                      cost[e] = cost[e] * rand;
                   }
-                  /* TODO graphcost to cost*/
-                  if( SCIPisLT(scip, cost[e], 1e+8 ) && SCIPisGT(scip, cost[e], maxcost) )
+                  if( SCIPisLT(scip, cost[e], BLOCKED) && SCIPisGT(scip, cost[e], maxcost) )
                      maxcost = cost[e];
                   assert(SCIPisGE(scip, cost[e], 0));
                }
@@ -2692,9 +2538,8 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                         costrev[e] = ((1.0 - xval[layer * nedges + e + 1]) * graph->cost[e + 1]);
 
                      if( partrand )
-                     {
                         costrev[e] = costrev[e] * rand;
-                     }
+
                      cost[e + 1] = costrev[e];
                   }
 
@@ -2720,7 +2565,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
             }
          }
 
-
          if( graph->stp_type == STP_DEG_CONS )
          {
             for( e = 0; e < nedges; e++ )
@@ -2736,7 +2580,7 @@ SCIP_DECL_HEUREXEC(heurExecTM)
          }
 
          /* can we connect the network */
-         SCIP_CALL( do_layer(scip, heurdata, graph, NULL, &best_start, results, runs, heurdata->beststartnode,
+         SCIP_CALL( do_layer(scip, heurdata, graph, NULL, &best_start, results, nodepriority, runs, heurdata->beststartnode,
                cost, costrev, &(heurdata->hopfactor), maxcost, &success) );
       }
    }
@@ -2773,25 +2617,23 @@ SCIP_DECL_HEUREXEC(heurExecTM)
       if( !success || SCIPisGT(scip, fabs(edgecount - graph->hoplimit)/(double) graph->hoplimit, 0.2) )
       {
          SCIP_Real hopfactor = heurdata->hopfactor;
-         // printf("old hopfactor: %f fac: %f hoplimit: %d ", hopfactor, fabs((double) (edgecount - graph->hoplimit)), graph->hoplimit);
          if( !success )
             hopfactor = hopfactor * (1.0 + fabs(edgecount - graph->hoplimit) / (double) graph->hoplimit);
          else
             hopfactor = hopfactor / (1.0 + fabs(edgecount - graph->hoplimit) / (double) graph->hoplimit);
-         //|| SCIPisGT(scip, fabs(edgecount - graph->hoplimit)/(double) graph->hoplimit, 0.05))
-         //    printf("new hopfactor: %f  ", hopfactor);
          if( SCIPisLE(scip, hopfactor, 0.0) )
             hopfactor = 1.0;
-         //  printf(" aft hopfactor: %f count: %d  limit: %d  \n", hopfactor, edgecount, graph->hoplimit);
          heurdata->hopfactor = hopfactor;
       }
    }
 #endif
    heurdata->nlpiterations = SCIPgetNLPIterations(scip);
+   SCIPfreeBufferArrayNull(scip, &nodepriority);
    SCIPfreeBufferArray(scip, &nval);
    SCIPfreeBufferArray(scip, &results);
    SCIPfreeBufferArray(scip, &costrev);
    SCIPfreeBufferArray(scip, &cost);
+
 
    if( heurtiming & SCIP_HEURTIMING_BEFORENODE )
    {

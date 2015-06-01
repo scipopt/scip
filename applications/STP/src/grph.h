@@ -265,7 +265,7 @@ extern SCIP_RETCODE reduce(SCIP*, GRAPH**, SCIP_Real*, int, int);
 extern SCIP_RETCODE bound_reduce(SCIP*, GRAPH*, PATH*, double*, double*, double*, double*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE hopbound_reduce(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*);
 extern SCIP_RETCODE hcrbound_reduce(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*);
-extern SCIP_RETCODE hcrcbound_reduce(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real, int*, int*, int*, int*, int*);
+extern SCIP_RETCODE hcrcbound_reduce(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real, SCIP_Real, int*, int*, int*, int*, int*, SCIP_Bool);
 
 /* sdtest.c
  */
@@ -273,7 +273,7 @@ extern SCIP_RETCODE    sd_reduction(SCIP*, GRAPH*, double*, double*, double*, do
 extern SCIP_RETCODE    sd_reduction_dir(SCIP*, GRAPH*, double**, double**, double**, double**, double*, int*, int*, int*, int*);
 extern SCIP_RETCODE    sdsp_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    sd_red(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int*);
-extern SCIP_RETCODE    sdpc_reduction(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*);
+extern SCIP_RETCODE    sdpc_reduction(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    sd2_reduction(SCIP*, GRAPH*, SCIP_Real*, int*, int*);
 extern SCIP_RETCODE    getSD(SCIP*, GRAPH*, PATH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int*, int, int, int, SCIP_Bool);
 extern SCIP_RETCODE    bd3_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);

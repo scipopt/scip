@@ -14,9 +14,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_stp.h
- * @brief  Binpacking problem reader file reader
- * @author Timo Berthold
- * @author Stefan Heinz
+ * @author Gerald Gamrath
+ * @author Thorsten Koch
+ * @author Daniel Rehfeldt
+ * @author Michael Winkler
  *
  * This file implements the reader/parser used to read the binpacking input data. For more details see \ref READER.
  */
@@ -33,11 +34,11 @@
 extern "C" {
 #endif
 
-   /** includes the binpacking file reader into SCIP */
-   extern
-   SCIP_RETCODE SCIPincludeReaderStp(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
+/** includes the stp file reader in SCIP */
+extern
+SCIP_RETCODE SCIPincludeReaderStp(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 #ifdef __cplusplus
 }

@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_stp.c
- * @brief  propagator for Steiner problems, using the LP reduced cost
+ * @brief  propagator for Steiner tree problems, using the LP reduced costs
  * @author Daniel Rehfeldt
  *
  * This propagator makes use of the reduced cost of an optimally solved LP relaxation to propagate the variables
@@ -61,7 +61,10 @@
 /** propagator data */
 struct SCIP_PropData
 {
-   SCIP_Real             maxredcost;         /**< maximum reduced cost of a single binary variable */
+   SCIP_Longint          nfails;             /**< number of recent fails*/
+   SCIP_Longint          ncalls;             /**< number of calls */
+   SCIP_Longint          lastncalls;         /**< number of calls before last propagation */
+   int                   nfixedvars;         /**< total number of variables fixed by this propagator */
 };
 
 
@@ -70,11 +73,11 @@ struct SCIP_PropData
  * @{
  */
 
-static
+/** fix a variable (corresponding to an edge) to zero */
 SCIP_RETCODE fixedgevar(
-   SCIP* scip,
-   SCIP_VAR*  edgevar,
-   int*  nfixed
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             edgevar,            /**< the variable to be fixed */
+   int*                  nfixed              /**< counter that is incriminated if variable could be fixed */
    )
 {
    if( !(SCIPvarGetLbLocal(edgevar) > 0.5 || SCIPvarGetUbLocal(edgevar) < 0.5) )
@@ -133,7 +136,10 @@ SCIP_DECL_PROPINITSOL(propInitsolStp)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   propdata->maxredcost = 0.0;
+   propdata->nfails = 0;
+   propdata->ncalls = 0;
+   propdata->nfixedvars = 0;
+   propdata->lastncalls = 0;
 
    return SCIP_OKAY;
 }
@@ -142,6 +148,7 @@ SCIP_DECL_PROPINITSOL(propInitsolStp)
 static
 SCIP_DECL_PROPEXEC(propExecStp)
 {  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
    SCIP_PROBDATA* probdata;
    SCIP_VAR** vars;
    SCIP_VAR*  edgevar;
@@ -181,11 +188,11 @@ SCIP_DECL_PROPEXEC(propExecStp)
    if( !SCIPisLPRelax(scip) )
       return SCIP_OKAY;
 
-   /* cannot apply reduced cost strengthening if no simplex basis is available */
-   if( !SCIPisLPSolBasic(scip) )
-      return SCIP_OKAY;
-
    cutoffbound = SCIPgetPrimalbound(scip);
+
+   /* get propagator data */
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
 
    /* get problem data */
    probdata = SCIPgetProbData(scip);
@@ -209,8 +216,9 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    if( SCIPisEQ(scip, lpobjval, 0.0) )
       return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
-   nfixed = 0;
+   nfixed = propdata->nfixedvars;
 
    /* the required reduced path cost to be surpassed */
    minpathcost = cutoffbound - (lpobjval + offset);

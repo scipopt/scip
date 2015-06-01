@@ -29,7 +29,6 @@
 #ifndef __SCIP_HEUR_REC_H__
 #define __SCIP_HEUR_REC_H__
 
-
 #include "scip/scip.h"
 #include "grph.h"
 
@@ -38,7 +37,7 @@ extern "C" {
 #endif
 
    /** creates the rec primal heuristic and includes it in SCIP */
-   EXTERN
+   extern
    SCIP_RETCODE SCIPincludeHeurRec(
       SCIP*                 scip                /**< SCIP data structure */
       );

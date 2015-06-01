@@ -81,7 +81,7 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
    SCIP_Real solvalue;
    SCIP_Real factor = 1.0;
 
-   if( SCIPprobdataGetType(scip) ==  STP_MAX_NODE_WEIGHT )
+   if( SCIPprobdataGetType(scip) == STP_MAX_NODE_WEIGHT )
       factor = -1.0;
 
    assert(eventhdlr != NULL);
@@ -100,10 +100,64 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
 
    SCIP_CALL( SCIPprobdataWriteIntermediateSolution(scip) );
 
-   /* Calling the bound-based reduction tests */
-   /* SCIP_CALL(bound_reduction(scip, solvalue, &elimins));
-    */
+#if 0
+   /* perform bound-based reduction tests to fix variables */
+   if( SCIPprobdataGetType(scip) == STP_HOP_CONS )
+   {
+      SCIP_PROBDATA* probdata;
+      GRAPH* g;
+   PATH* vnoi;
+   SCIP_Real*  cost;
+   SCIP_Real*  radius;
+   SCIP_Real*  costrev;
+   SCIP_Real primalobj;
+   SCIP_Real offset;
+   int*    heap;
+   int*    state;
+   int*    vbase;
+   int*    pathedge;
+   int nnodes;
+   int nedges;
+      int     hcrcnelims;
 
+         /* get problem data */
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   /* get graph */
+   g = SCIPprobdataGetGraph(probdata);
+   assert(g != NULL);
+   assert(g->stp_type == STP_HOP_CONS);
+
+   offset = SCIPprobdataGetOffset(scip);
+   primalobj = SCIPgetPrimalbound(scip);
+   nnodes = g->knots;
+   nedges = g->edges;
+
+   /* allocate memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &heap, nnodes + 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &state, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &radius, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vbase, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
+
+      printf("perfrom HC %f\n", offset);
+      SCIP_CALL( hcrcbound_reduce(scip, g, vnoi, cost, costrev, radius, offset, primalobj, heap, state, vbase, &hcrcnelims, pathedge, TRUE) );
+
+         /* free memory */
+   SCIPfreeBufferArray(scip, &vnoi);
+   SCIPfreeBufferArray(scip, &pathedge);
+   SCIPfreeBufferArray(scip, &vbase);
+   SCIPfreeBufferArray(scip, &costrev);
+   SCIPfreeBufferArray(scip, &radius);
+   SCIPfreeBufferArray(scip, &cost);
+   SCIPfreeBufferArray(scip, &state);
+   SCIPfreeBufferArray(scip, &heap);
+   }
+#endif
    return SCIP_OKAY;
 }
 

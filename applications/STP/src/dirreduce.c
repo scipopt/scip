@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dirreduce.c
- * @brief  several simple reductions for Steiner problems
+ * @brief  several simple reductions for Steiner tree problems
  * @author Stephen Maher
  * @author Daniel Rehfeldt
  *
@@ -95,10 +95,17 @@ SCIP_Bool maxprize(
    SCIP_Real max = -1;
    for( k = 0; k < g->knots; k++ )
    {
-      if( Is_term(g->term[k]) && g->mark[k] && SCIPisGT(scip, g->prize[k], max) )
+      if( Is_term(g->term[k]) && g->mark[k] &&  g->grad[k] > 0 )
       {
+	 if( SCIPisGT(scip, g->prize[k], max) )
+	 {
          max = g->prize[k];
 	 t = k;
+	 }
+	 else if( t == i && SCIPisEQ(scip, g->prize[k], max) )
+	 {
+	   t = k;
+	 }
       }
    }
 
@@ -285,11 +292,11 @@ SCIP_RETCODE degree_test_pc(
 
    nnodes = g->knots;
    *count = 0;
-
+//return SCIP_OKAY;
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &edges2, 2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes2, 2) );
-
+printf("dirdeg \n");
    SCIPdebugMessage("Degree Test: ");
 
    if( !pc )
@@ -301,6 +308,8 @@ SCIP_RETCODE degree_test_pc(
 
       for( i = 0; i < nnodes; i++ )
       {
+	         if( i % 100 == 0 )
+printf("dirdego \n");
          assert(g->grad[i] >= 0);
          if( !g->mark[i] )
             continue;
@@ -389,7 +398,7 @@ SCIP_RETCODE degree_test_pc(
 	 /* terminal of (real) degree 2? */
          else if( (g->grad[i] == 4 && pc) || (g->grad[i] == 3 && !pc) )
          {
-	    if( 1 && !maxprize(scip, g, i) )
+	    if( !maxprize(scip, g, i) )
 	    {
                i2 = 0;
                for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
@@ -471,7 +480,6 @@ SCIP_RETCODE degree_test_pc(
                //printf("contract tt %d->%d\n ", i, i1);
                assert(SCIPisLT(scip, mincost, FARAWAY));
                *fixed += g->cost[ett];
-               /*SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[ett]) ); TODO! */
 	       (*count)++;
                SCIP_CALL( graph_knot_contractpc(scip, g, i, i1, i) );
                rerun = TRUE;

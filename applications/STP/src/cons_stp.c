@@ -79,7 +79,7 @@
 #define C_T_MSTR     7
 #define C_T_PLAN     8
 #define C_T_HOPS     9
-#define C_T_LAST    10  /* Ist immer der Letzte */
+#define C_T_LAST    10  /* always the last one */
 
 
 /**@} */
@@ -91,17 +91,17 @@
 /** @brief Constraint data for  \ref cons_stp.c "Stp" constraints */
 struct SCIP_ConsData
 {
-   GRAPH*                graph;
+   GRAPH*                graph;              /**< graph data structure */
 };
 
 /** @brief Constraint handler data for \ref cons_stp.c "Stp" constraint handler */
 struct SCIP_ConshdlrData
 {
-   SCIP_Bool backcut;
-   SCIP_Bool creepflow;
-   SCIP_Bool disjunctcut;
-   SCIP_Bool nestedcut;
-   SCIP_Bool flowsep;
+   SCIP_Bool             backcut;            /**< should backcuts be applied? */
+   SCIP_Bool             creepflow;          /**< should creepflow cuts be applied? */
+   SCIP_Bool             disjunctcut;        /**< should disjunktion cuts be applied? */
+   SCIP_Bool             nestedcut;          /**< should nested cuts be applied? */
+   SCIP_Bool             flowsep;            /**< should flow separation be applied? */
    int                   maxrounds;          /**< maximal number of separation rounds per node (-1: unlimited) */
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
@@ -115,41 +115,41 @@ struct SCIP_ConshdlrData
  * @{
  */
 
-
-static int cut_add(
+/** add a cut */
+static
+int cut_add(
    SCIP*         scip,
    SCIP_CONSHDLR* conshdlr,
    const GRAPH*  g,
    const int     layer,
    const int     type,
-   const double* xval,
+   const SCIP_Real* xval,
    int* capa,
    const int updatecapa,
    int* ncuts
    )
 {
-   int     i;
-   int     ind;
-   int ret = 0;
-   double  sum   = 0.0;
+
    SCIP_ROW* row;
    SCIP_VAR** vars = SCIPprobdataGetVars(scip);
+   SCIP_Real sum = 0.0;
    SCIP_Bool inccapa = FALSE;
+   int i;
+   int ind;
+   int ret = 0;
 
    assert(scip != NULL);
    assert(g         != NULL);
-   assert(layer     >= 0);
-
    assert((layer >= 0) && (layer < g->layers));
 
    SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "2cut", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
-   for(i = 0; i < g->edges; i++)
+   for( i = 0; i < g->edges; i++ )
    {
-      if ((g->mark[g->source[layer]] == g->mark[g->tail[i]])
-         && (g->mark[g->tail[i]] != g->mark[g->head[i]]))
+      if( (g->mark[g->source[layer]] == g->mark[g->tail[i]])
+         && (g->mark[g->tail[i]] != g->mark[g->head[i]]) )
       {
          ind = layer * g->edges + i;
 
@@ -169,7 +169,7 @@ static int cut_add(
             }
          }
 
-         if (xval != NULL)
+         if( xval != NULL )
          {
             sum += xval[ind];
 
@@ -187,7 +187,7 @@ static int cut_add(
 
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-   /* checks, if cut is violated enough */
+   /* checks, if cut is sufficiently violated */
    if( SCIPisCutEfficacious(scip, NULL, row) )
    {
       SCIP_Bool infeasible;
@@ -204,26 +204,28 @@ static int cut_add(
    return ret;
 }
 
-static int graph_next_term(
+static
+int graph_next_term(
    int           terms,
    int*          term,
-   const int*    w)
+   const int*    w
+		   )
 {
    int wmax = 0;
    int i;
-   int k    = -1;
+   int k = -1;
    int t;
 
    assert(term != NULL);
 
-   for(i = 0; (i < terms); i++)
+   for( i = 0; i < terms; i++ )
    {
-      if (w[term[i]] == 0)
+      if( w[term[i]] == 0 )
       {
          k = i;
          break;
       }
-      if (w[term[i]] > wmax)
+      if( w[term[i]] > wmax )
       {
          k    = i;
          wmax = w[term[i]];
@@ -235,25 +237,27 @@ static int graph_next_term(
    t       = term[k];
    term[k] = term[terms - 1];
 
-   return(t);
+   return t;
 }
 
-static void set_capacity(
+static
+void set_capacity(
    const GRAPH*  g,
    const int     layer,
    const int     creep_flow,
    const int     flip,
    int*          capa,
-   const double* xval)
+   const SCIP_Real* xval
+		 )
 {
    int k;
 
    assert(g    != NULL);
    assert(xval != NULL);
 
-   for(k = 0; k < g->edges; k += 2)
+   for( k = 0; k < g->edges; k += 2 )
    {
-      if (!flip)
+      if( !flip )
       {
          capa[k]     = (int)(xval[layer * g->edges + k    ]
             * FLOW_FACTOR + 0.5);
@@ -268,7 +272,7 @@ static void set_capacity(
             * FLOW_FACTOR + 0.5);
       }
 
-      if (creep_flow && (capa[k] == 0) && (capa[k + 1] == 0))
+      if( creep_flow && (capa[k] == 0) && (capa[k + 1] == 0) )
       {
          capa[k]     = CREEP_VALUE;
          capa[k + 1] = CREEP_VALUE;
@@ -282,22 +286,22 @@ int sep_flow(
    SCIP_CONSHDLR* conshdlr,
    SCIP_CONSHDLRDATA* conshdlrdata,
    SCIP_CONSDATA* consdata,
-   int           maxcuts,
+   int maxcuts,
    int* ncuts
    )
 {
    GRAPH*  g;
-   double* xval;
+   SCIP_VAR** vars;
+   SCIP_ROW* row = NULL;
+   SCIP_Real* xval;
+   SCIP_Real sum;
    int    i;
    int    k;
    int    j;
    int    ind;
    int    layer;
    int    count = 0;
-   double sum;
-   SCIP_ROW* row = NULL;
-   SCIP_VAR** vars;
-   int flowsep;
+   int    flowsep;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -306,6 +310,7 @@ int sep_flow(
    vars = SCIPprobdataGetVars(scip);
    flowsep = conshdlrdata->flowsep;
 
+   /* get the graph */
    g = consdata->graph;
    assert(g != NULL);
 
@@ -316,25 +321,24 @@ int sep_flow(
    {
       for(layer = 0; layer < g->layers; layer++)
       {
-         /* Fuer die Quelle koennen wir nichts tun.
-          */
-         if (i == g->source[layer])
+         /* continue at root */
+         if( i == g->source[layer] )
             continue;
 
-         /* Bei Terminal: Summe Input == 1
-          * (Ist eigendlich ein Schnitt (Starcut))
+         /* at terminal: input sum == 1
+          * basically a cut (starcut))
           */
-         if (g->term[i] == layer)
+         if( g->term[i] == layer )
          {
             sum = 0.0;
 
-            for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
+            for( k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k] )
             {
                ind  = layer * g->edges + k;
                sum += (xval != NULL) ? xval[ind] : 0.0;
             }
 
-            if (fabs(sum - 1.0) > EPSILON)
+            if( fabs(sum - 1.0) > EPSILON )
             {
                SCIP_Bool infeasible;
 
@@ -361,25 +365,24 @@ int sep_flow(
                   goto TERMINATE;
             }
          }
-         /* Etwa keine Fluesse ?
-          */
-         if (!flowsep)
+         /* no flows ? */
+         if( !flowsep )
             continue;
 
          /* Jeder der Rausgeht, muss kleiner der Summe derer
           * die reingehen sein.
           */
-         for(j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j])
+         for( j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j] )
          {
             ind = layer * g->edges + j;
             sum = (xval != NULL) ? -xval[ind] : -1.0;
 
-            for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
+            for( k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k] )
             {
                ind  = layer * g->edges + k;
                sum += (xval != NULL) ? xval[ind] : 0.0;
             }
-            if (sum + EPSILON < 0.0)
+            if( sum + EPSILON < 0.0 )
             {
                SCIP_Bool infeasible;
 
@@ -392,7 +395,7 @@ int sep_flow(
 
                SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], -1.0) );
 
-               for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
+               for( k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k] )
                {
                   ind  = layer * g->edges + k;
 
@@ -411,21 +414,21 @@ int sep_flow(
             }
          }
 
-         /* Ab hier nur noch nicht Terminals
+         /* consider only non terminals
           */
-         if (g->term[i] == layer)
+         if( g->term[i] == layer )
             continue;
 
-         /* Der Input eines Knotens kann nicht groesser als 1.0 sein
+         /* input of a vertex has to be <= 1.0
           */
          sum   = 0.0;
 
-         for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
+         for( k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k] )
          {
             ind  = layer * g->edges + k;
             sum += (xval != NULL) ? xval[ind] : 1.0;
          }
-         if (sum - EPSILON > 1.0)
+         if( sum - EPSILON > 1.0 )
          {
             SCIP_Bool infeasible;
 
@@ -434,7 +437,7 @@ int sep_flow(
 
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
-            for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
+            for( k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k] )
             {
                ind  = layer * g->edges + k;
 
@@ -452,22 +455,20 @@ int sep_flow(
                goto TERMINATE;
          }
 
-         /* Was reingeht, muss mindestens auch rausgehen,
-          * bei 2-termialen Netzen muss es gleich sein.
-          */
+         /* incoming flow <= outgoing flow */
          sum   = 0.0;
 
-         for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
+         for( k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k] )
          {
-            ind  = layer * g->edges + k;
+            ind = layer * g->edges + k;
             sum -= (xval != NULL) ? xval[ind] : 1.0;
          }
-         for(k = g->outbeg[i]; k != EAT_LAST; k = g->oeat[k])
+         for( k = g->outbeg[i]; k != EAT_LAST; k = g->oeat[k] )
          {
-            ind  = layer * g->edges + k;
+            ind = layer * g->edges + k;
             sum += (xval != NULL) ? xval[ind] : 0.0;
          }
-         if (sum + EPSILON < 0.0)
+         if( sum + EPSILON < 0.0 )
          {
             SCIP_Bool infeasible;
 
@@ -476,15 +477,15 @@ int sep_flow(
 
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
 
-            for(k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k])
+            for( k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k] )
             {
-               ind  = layer * g->edges + k;
+               ind = layer * g->edges + k;
 
                SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], -1.0) );
             }
-            for(k = g->outbeg[i]; k != EAT_LAST; k = g->oeat[k])
+            for( k = g->outbeg[i]; k != EAT_LAST; k = g->oeat[k] )
             {
-               ind  = layer * g->edges + k;
+               ind = layer * g->edges + k;
 
                SCIP_CALL( SCIPaddVarToRow(scip, row, vars[ind], 1.0) );
             }
@@ -512,12 +513,12 @@ int sep_flow(
 
 
 static
-int sep_2cut(
+SCIP_RETCODE sep_2cut(
    SCIP* scip,
    SCIP_CONSHDLR* conshdlr,
    SCIP_CONSHDLRDATA* conshdlrdata,
    SCIP_CONSDATA* consdata,
-   int           maxcuts,
+   int maxcuts,
    int* ncuts
    )
 {
@@ -528,19 +529,21 @@ int sep_2cut(
    const int flowsep      = conshdlrdata->flowsep;
 
    GRAPH*  g;
-   double* xval;
+   SCIP_Real* xval;
+   SCIP_Real* cost;
    PATH*   path;
+   int*    w;
+   int*    capa;
    int*    term;
    int     terms = 0;
    int     tsave;
-   int*    capa;
-   double* cost;
-   int*    w;
    int     i;
    int     k;
    int     layer;
    int     count = 0;
    int     rerun = FALSE;
+   int     nedges;
+   int     nnodes;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -549,42 +552,38 @@ int sep_2cut(
    g = consdata->graph;
    assert(g != NULL);
 
+   nedges = g->edges;
+   nnodes = g->knots;
+
    xval = SCIPprobdataGetXval(scip, NULL);
    assert(xval != NULL);
 
-   capa  = malloc((size_t)g->edges * sizeof(int));
-   cost  = malloc((size_t)g->edges * sizeof(double));
-   w     = calloc((size_t)g->knots, sizeof(int));
-   term  = malloc((size_t)g->terms * sizeof(int));
-   path  = malloc((size_t)g->knots * sizeof(PATH));
+   SCIP_CALL( SCIPallocBufferArray(scip, &capa, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &w, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &term, g->terms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
 
-   assert(capa != NULL);
-   assert(cost != NULL);
-   assert(w    != NULL);
-   assert(term != NULL);
-   assert(path != NULL);
-
-   for(layer = 0; layer < g->layers; layer++)
+   for( layer = 0; layer < g->layers; layer++ )
    {
-      /* Fuer 2-terminale Netze brauchen wir keine Schnitte wenn die Flows
-       * da sind.
+      /* For 2-terminal nets no cuts are necessary if flows are given
        */
-      if (flowsep && (g->locals[layer] == 2))
+      if( flowsep && (g->locals[layer] == 2) )
          continue;
 
-      for(i = 0; i < g->edges; i++)
-         cost[i] = (xval[layer * g->edges + i] < (1.0 - SCIPepsilon(scip))) ? 1.0 : 0.0;
+      for( i = 0; i < nedges; i++ )
+         cost[i] = (xval[layer * nedges + i] < (1.0 - SCIPepsilon(scip))) ? 1.0 : 0.0;
 
-      for(i = 0; i < g->knots; i++)
+      for( i = 0; i < nnodes; i++ )
          g->mark[i] = TRUE;
 
       graph_path_exec(scip, g, FSP_MODE, g->source[layer], cost, path);
 
-      for(i = 0, count = 0; i < g->knots; i++)
+      for( i = 0, count = 0; i < nnodes; i++ )
       {
-         if ((g->term[i] == layer) && (i != g->source[layer]))
+         if( (g->term[i] == layer) && (i != g->source[layer]) )
          {
-            if (SCIPisPositive(scip, path[i].dist))
+            if( SCIPisPositive(scip, path[i].dist) )
                term[terms++] = i;
             else
                count++;
@@ -597,16 +596,15 @@ int sep_2cut(
 
       /* from source to terminal
        */
-      if (!nested_cut || disjunct_cut)
+      if( !nested_cut || disjunct_cut )
          set_capacity(g, layer, creep_flow, 0, capa, xval);
 
-      while(terms > 0)
+      while( terms > 0 )
       {
-         if( terms % 100 == 0 && SCIPisStopped(scip) )
+         if( SCIPisStopped(scip) && terms % 100 == 0 )
             break;
 
-         /* Wir suchen ein Terminal zu dem wir gehen koennen
-          */
+         /* look for reachable terminal */
          i = graph_next_term(terms, term, w);
 
          terms--;
@@ -614,7 +612,7 @@ int sep_2cut(
          assert(g->term[i]       == layer);
          assert(g->source[layer] != i);
 
-         if (nested_cut && !disjunct_cut)
+         if( nested_cut && !disjunct_cut )
             set_capacity(g, layer, creep_flow, 0, capa, xval);
 
          do
@@ -623,12 +621,11 @@ int sep_2cut(
 
             rerun = TRUE;
 
-            /* Die Welt wird zweigeteilt, daher "Schnitt"
-             */
-            for(k = 0; k < g->knots; k++)
+            /* cut */
+            for( k = 0; k < nnodes; k++ )
                g->mark[k] = (w[k] != 0);
 
-            if (cut_add(scip, conshdlr, g, layer, C_T_2CUT, xval, capa, nested_cut || disjunct_cut, ncuts))
+            if( cut_add(scip, conshdlr, g, layer, C_T_2CUT, xval, capa, nested_cut || disjunct_cut, ncuts) )
             {
                count++;
 
@@ -640,25 +637,23 @@ int sep_2cut(
 #if 0
             if (nested_cut || disjunct_cut)
                for(k = p->beg[p->rcnt - 1]; k < p->nzcnt; k++)
-                  capa[p->ind[k] % g->edges] = FLOW_FACTOR;
+                  capa[p->ind[k] % nedges] = FLOW_FACTOR;
 #endif
          }
-         while(nested_cut);               /* Nested Cut ist KONSTANT ! */
+         while( nested_cut );               /* Nested Cut ist KONSTANT ! */
       }
 
-      /* Auch den Rueckweg versuchen ?
-       */
-      if (back_cut)
+      /* back cuts enabled? */
+      if( back_cut )
       {
-         if (!nested_cut || disjunct_cut)
+         if( !nested_cut || disjunct_cut )
             set_capacity(g, layer, creep_flow, 1, capa, xval);
 
          terms = tsave;
 
-         while(terms > 0)
+         while( terms > 0 )
          {
-            /* Wir suchen ein Terminal zu dem wir gehen koennen
-             */
+            /* look for reachable terminal */
             i = graph_next_term(terms, term, w);
 
             terms--;
@@ -666,7 +661,7 @@ int sep_2cut(
             assert(g->term[i]       == layer);
             assert(g->source[layer] != i);
 
-            if (nested_cut && !disjunct_cut)
+            if( nested_cut && !disjunct_cut )
                set_capacity(g, layer, creep_flow, 1, capa, xval);
 
             rerun = FALSE;
@@ -677,10 +672,10 @@ int sep_2cut(
 
                rerun = TRUE;
 
-               for(k = 0; k < g->knots; k++)
+               for( k = 0; k < nnodes; k++ )
                   g->mark[k] = (w[k] != 0) ? 1 : 0;
 
-               if (cut_add(scip, conshdlr, g, layer, C_T_2CUT, xval, capa, nested_cut || disjunct_cut, ncuts))
+               if( cut_add(scip, conshdlr, g, layer, C_T_2CUT, xval, capa, nested_cut || disjunct_cut, ncuts) )
                {
                   count++;
 
@@ -692,12 +687,12 @@ int sep_2cut(
 #if 0
                if (nested_cut || disjunct_cut)
                   for(k = p->beg[p->rcnt - 1]; k < p->nzcnt; k++)
-                     capa[p->ind[k] % g->edges
-                        + (((p->ind[k] % g->edges) % 2)
+                     capa[p->ind[k] % nedges
+                        + (((p->ind[k] % nedges) % 2)
                            ? -1 : 1)] = FLOW_FACTOR;
 #endif
             }
-            while(nested_cut);                /* Nested Cut ist KONSTANT ! */
+            while( nested_cut );                /* Nested Cut ist KONSTANT ! */
 
             rerun = FALSE;
          }
@@ -705,15 +700,15 @@ int sep_2cut(
    }
 
  TERMINATE:
-   free(path);
-   free(term);
-   free(w);
-   free(cost);
-   free(capa);
+   SCIPfreeBufferArray(scip, &path);
+   SCIPfreeBufferArray(scip, &term);
+   SCIPfreeBufferArray(scip, &w);
+   SCIPfreeBufferArray(scip, &cost);
+   SCIPfreeBufferArray(scip, &capa);
 
    SCIPdebugMessage("2-cut Separator: %d Inequalities added\n", count);
 
-   return(count);
+   return SCIP_OKAY;
 }
 
 
@@ -932,6 +927,7 @@ SCIP_DECL_CONSPROP(consPropStp)
    graph = SCIPprobdataGetGraph(probdata);
    assert(graph != NULL);
 
+   /* for degree constraint model, check whether problem is infeasible */
    if( graph->stp_type == STP_DEG_CONS )
    {
       int k;
@@ -982,9 +978,7 @@ SCIP_DECL_CONSLOCK(consLockStp)
    nvars = SCIPprobdataGetNVars(scip);
 
    for( v = 0; v < nvars; ++v )
-   {
       SCIP_CALL( SCIPaddVarLocks(scip, vars[v], 1, 1) );
-   }
 
    return SCIP_OKAY;
 }
@@ -1086,7 +1080,7 @@ SCIP_RETCODE SCIPcreateConsStp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   GRAPH*                graph
+   GRAPH*                graph               /**< graph data structure */
    )
 {
    SCIP_CONSHDLR* conshdlr;

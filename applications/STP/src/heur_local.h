@@ -33,20 +33,21 @@
 extern "C" {
 #endif
 
-   /** creates the local primal heuristic and includes it in SCIP */
-   extern
-   SCIP_RETCODE SCIPincludeHeurLocal(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
+/** creates the local primal heuristic and includes it in SCIP */
+extern
+SCIP_RETCODE SCIPincludeHeurLocal(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
-   extern
-   SCIP_RETCODE do_local(
-      SCIP*                 scip,               /**< SCIP data structure */
-      const GRAPH*  graph,
-      const SCIP_Real* cost,
-      const SCIP_Real* costrev,
-      int*          best_result
-      );
+/** perform local heuristics */
+extern
+SCIP_RETCODE do_local(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          graph,              /**< graph data structure */
+   const SCIP_Real*      cost,               /**< arc cost array */
+   const SCIP_Real*      costrev,            /**< reversed arc cost array */
+   int*                  best_result         /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
+   );
 
 #ifdef __cplusplus
 }

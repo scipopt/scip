@@ -1392,7 +1392,7 @@ void graph_knot_chg(
 
 SCIP_RETCODE graph_knot_contract(
    SCIP*                 scip,               /**< SCIP data structure */
-   GRAPH*                p,                  /**< the graph */
+   GRAPH*                p,                  /**< graph data structure */
    int                   t,                  /**< tail node to be contracted */
    int                   s                   /**< head node to be contracted */
    )
@@ -1487,28 +1487,23 @@ SCIP_RETCODE graph_knot_contract(
    assert(stancestors != NULL);
    /* Kantenliste durchgehen
     */
-   for(i = 0; i < slc; i++)
+   for( i = 0; i < slc; i++ )
    {
-      /* Hat t schon eine Kante mit diesem Ziel ?
-       */
+      /* search for an edge out of t with same head as current edge */
       for(et = p->outbeg[t]; et != EAT_LAST; et = p->oeat[et])
          if( p->head[et] == slp[i].knot )
             break;
 
-      /* Keine gefunden, Kante aus der Liste muss eingefuegt werden.
-       */
-      if (et == EAT_LAST)
+      /* does such an edge not exist? */
+      if( et == EAT_LAST )
       {
          slp[i].mark = TRUE;
       }
       else
       {
-         /* Ja ist vorhanden !
-          */
          assert(et != EAT_LAST);
 
-         /* Muessen die Kosten korrigiert werden ?
-          * This is for nodes with edges to s and t.
+          /* This is for nodes with edges to s and t.
           * Need to adjust the out and in costs of the edge
           */
          if( SCIPisGT(scip, p->cost[et], slp[i].outcost) )
@@ -1623,22 +1618,28 @@ void prize_subtract(
    for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
       if( Is_pterm(g->term[g->head[e]]) )
          break;
-   assert(e != EAT_LAST);
 
+   assert(e != EAT_LAST);
    assert(!g->mark[g->head[e]]);
+
    j = g->head[e];
+
    assert(j != g->source[0]);
+
    for( e = g->inpbeg[j]; e != EAT_LAST; e = g->ieat[e] )
       if( g->source[0] == g->tail[e] )
          break;
-   assert(e != EAT_LAST);
 
+   assert(e != EAT_LAST);
    assert(!g->mark[g->tail[e]] || g->stp_type == STP_ROOTED_PRIZE_COLLECTING);
+
    g->cost[e] -= cost;
+
    assert(SCIPisGE(scip, g->prize[i], 0));
    assert(SCIPisEQ(scip, g->prize[i], g->cost[e]));
 }
 
+/** contract an edge in (rooted) price collecting */
 SCIP_RETCODE graph_knot_contractpc(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
@@ -1659,8 +1660,11 @@ SCIP_RETCODE graph_knot_contractpc(
 
    if( Is_term(g->term[t]) && Is_term(g->term[s]) )
    {
+      IDX*   etsancestors = NULL;
       int e;
       int j;
+
+       SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &etsancestors, g->ancestors[ets]) );
 
       for( e = g->outbeg[s]; e != EAT_LAST; e = g->oeat[e] )
          if( Is_pterm(g->term[g->head[e]]) )
@@ -1674,11 +1678,9 @@ SCIP_RETCODE graph_knot_contractpc(
       graph_knot_chg(g, j, -1);
       graph_edge_del(scip, g, e, TRUE);
 
-      for( e = g->inpbeg[j]; e != EAT_LAST; e = g->ieat[e] )
-         if( g->source[0] == g->tail[e] )
-            break;
+      e = g->inpbeg[j];
       assert(e != EAT_LAST);
-      assert(!g->mark[g->tail[e]]);
+      assert(g->source[0] == g->tail[e]);
 
       assert(SCIPisEQ(scip, g->prize[s], g->cost[e]));
 
@@ -1686,6 +1688,12 @@ SCIP_RETCODE graph_knot_contractpc(
       graph_edge_del(scip, g, e, TRUE);
 
       SCIP_CALL( graph_knot_contract(scip, g, t, s) );
+      for( e = g->inpbeg[t]; e != EAT_LAST; e = g->ieat[e] )
+	 SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->ancestors[e]), etsancestors) );
+      for( e = g->outbeg[t]; e != EAT_LAST; e = g->oeat[e] )
+	 SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->ancestors[e]), etsancestors) );
+
+      SCIPindexListNodeFree(scip, &etsancestors);
    }
    else
    {
@@ -2624,22 +2632,19 @@ char graph_valid2(
       pnode = (SCIPqueueRemove(queue));
       for( e = graph->outbeg[*pnode]; e != EAT_LAST; e = graph->oeat[e] )
       {
-
          if( SCIPisLT(scip, cost[e], BLOCKED) && !reached[graph->head[e]] )
          {
             i = graph->head[e];
             reached[i] = TRUE;
             if( Is_term(graph->term[i]) )
             {
-               assert(  !terminal[i]   );
+               assert(!terminal[i]);
                terminal[i] = TRUE;
                termcount++;
-
             }
             SCIP_CALL( SCIPqueueInsert(queue, &graph->head[e]) );
          }
       }
-
    }
    SCIPfreeBufferArray(scip, &reached);
    SCIPfreeBufferArray(scip, &terminal);

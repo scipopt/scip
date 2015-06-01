@@ -36,10 +36,19 @@ extern "C" {
 #endif
 
 /** creates the stp propagator and includes it in SCIP */
-EXTERN
+extern
 SCIP_RETCODE SCIPincludePropStp(
    SCIP*                 scip                /**< SCIP data structure */
    );
+
+/** fix a variable (corresponding to an edge) to zero */
+extern
+SCIP_RETCODE fixedgevar(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             edgevar,            /**< the variable to be fixed */
+   int*                  nfixed              /**< counter that is incriminated if variable could be fixed */
+   );
+
 
 #ifdef __cplusplus
 }
