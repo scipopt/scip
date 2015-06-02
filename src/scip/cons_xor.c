@@ -4871,11 +4871,19 @@ SCIP_DECL_CONSPRESOL(consPresolXor)
                (*naggrvars)++;
             }
 
+            /* the constraint can be deleted if the intvar is fixed or NULL */
             if( redundant )
             {
-               /* delete constraint */
-               SCIP_CALL( SCIPdelCons(scip, cons) );
-               (*ndelconss)++;
+               SCIP_Bool fixedintvar;
+
+               fixedintvar = consdata->intvar == NULL ? TRUE : SCIPisEQ(scip, SCIPvarGetLbGlobal(consdata->intvar), SCIPvarGetUbGlobal(consdata->intvar));
+
+               if( fixedintvar )
+               {
+                  /* delete constraint */
+                  SCIP_CALL( SCIPdelCons(scip, cons) );
+                  (*ndelconss)++;
+               }
             }
          }
 	 else if( (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
