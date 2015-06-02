@@ -12421,7 +12421,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       consdata->presolvedtiming = presoltiming;
 
       if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgbds > 0
-         || *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds )
+         || nnewupgdconss > 0 || *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds )
       {
          SCIP_CALL( applyFixings(scip, cons, &cutoff) );
          if( cutoff )

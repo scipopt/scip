@@ -7941,7 +7941,8 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       /*SCIPdebugMessage("presolving set partitioning / packing / covering constraint <%s>\n", SCIPconsGetName(cons));*/
 
       /* remove all variables that are fixed to zero and replace all aggregated variables */
-      if( consdata->nfixedzeros > 0 || nnewaggrvars > 0 || nnewaddconss > 0 || *naggrvars > oldnaggrvars || (nrounds == 0 && SCIPgetNRuns(scip) > 1) )
+      if( consdata->nfixedzeros > 0 || nnewaggrvars > 0 || nnewaddconss > 0 || nnewupgdconss > 0
+            || *naggrvars > oldnaggrvars || (nrounds == 0 && SCIPgetNRuns(scip) > 1) )
       {
          SCIP_CALL( applyFixings(scip, cons, naddconss, ndelconss, nfixedvars, &cutoff) );
 
