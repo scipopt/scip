@@ -204,6 +204,7 @@ struct SCIP_ConshdlrData
    char                  interiorcomputation;/**< how the interior point should be computed: 'a'ny point per constraint,
                                               * 'm'ost interior per constraint
                                               */
+   char                  branchscoring;      /**< method to use to compute score of branching candidates */
    int                   enfolplimit;        /**< maximum number of enforcement round before declaring the LP relaxation
                                               * infeasible (-1: no limit); WARNING: if this parameter is not set to -1,
                                               * SCIP might declare sub-optimal solutions optimal or feasible instances
@@ -8565,9 +8566,14 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    return SCIP_OKAY;
 }
 
-/** computes the infeasibilities of variables from the convexification gaps in the constraints and notifies the branching rule about them */
+/** registers branching candidates according to convexification gap rule
+ *
+ * That is, computes for every nonconvex term the gap between the terms value in the LP solution and the value of the underestimator
+ * as it would be (and maybe has been) constructed by the separation routines of this constraint handler. Then it registers all
+ * variables occurring in each term with the computed gap. If variables appear in more than one term, they are registered several times.
+ */
 static
-SCIP_RETCODE registerVariableInfeasibilities(
+SCIP_RETCODE registerBranchingCandidatesGap(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to check */
@@ -8771,6 +8777,210 @@ SCIP_RETCODE registerVariableInfeasibilities(
 
    return SCIP_OKAY;
 }
+
+/** registers branching candidates according to constraint violation rule
+ *
+ * That is, registers all variables appearing in nonconvex terms^1 with a score that is the violation of the constraint.
+ * This is the same rule as is applied in cons_nonlinear and other nonlinear constraint handlers.
+ *
+ * 1) We mean all quadratic variables that appear either in a nonconvex square term or in a bilinear term, if the constraint
+ * itself is nonconvex. (and this under the assumption that the rhs is violated; for violated lhs, swap terms)
+ */
+static
+SCIP_RETCODE registerBranchingCandidatesViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to check */
+   int                   nconss,             /**< number of constraints to check */
+   int*                  nnotify             /**< counter for number of notifications performed */
+   )
+{
+   SCIP_CONSDATA*     consdata;
+   SCIP_QUADVARTERM*  quadvarterm;
+   int                c;
+   int                j;
+   SCIP_VAR*          x;
+   SCIP_Real          xlb;
+   SCIP_Real          xub;
+   SCIP_Real          xval;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+
+   *nnotify = 0;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss != NULL);
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( !consdata->nquadvars )
+         continue;
+
+      if( (!SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || consdata->isconcave) &&
+         ( !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) || consdata->isconvex ) )
+         continue;
+      SCIPdebugMessage("cons %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->isconvex, consdata->isconcave);
+
+      for( j = 0; j < consdata->nquadvars; ++j )
+      {
+         quadvarterm = &consdata->quadvarterms[j];
+         if( (SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) && quadvarterm->sqrcoef < 0) ||
+             (SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && quadvarterm->sqrcoef > 0) ||
+             quadvarterm->nadjbilin > 0 )
+         {
+            x = quadvarterm->var;
+            xlb = SCIPvarGetLbLocal(x);
+            xub = SCIPvarGetUbLocal(x);
+
+            if( quadvarterm->nadjbilin == 0 )
+            {
+               xval = SCIPgetSolVal(scip, NULL, x);
+
+               /* if variable is at bounds and only in a nonconvex square term, then no need to branch, since secant is exact there */
+               if( SCIPisLE(scip, xval, xlb) || SCIPisGE(scip, xval, xub) )
+                  continue;
+            }
+
+            if( SCIPisRelEQ(scip, xlb, xub) )
+            {
+               SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(x), xlb, xub, xub-xlb);
+               continue;
+            }
+
+            SCIP_CALL( SCIPaddExternBranchCand(scip, x, MAX(consdata->lhsviol, consdata->rhsviol), SCIP_INVALID) );
+            ++*nnotify;
+         }
+      }
+   }
+
+   SCIPdebugMessage("registered %d branching candidates\n", *nnotify);
+
+   return SCIP_OKAY;
+}
+
+/** registers branching candidates according to centrality rule
+ *
+ * That is, registers all variables appearing in nonconvex terms^1 with a score that is given by the distance of the
+ * variable value from its bounds. This rule should not make sense, as the distance to the bounds is also (often) considered
+ * by the branching rule later on.
+ *
+ * 1) We mean all quadratic variables that appear either in a nonconvex square term or in a bilinear term, if the constraint
+ * itself is nonconvex. (and this under the assumption that the rhs is violated; for violated lhs, swap terms)
+ */
+static
+SCIP_RETCODE registerBranchingCandidatesCentrality(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to check */
+   int                   nconss,             /**< number of constraints to check */
+   int*                  nnotify             /**< counter for number of notifications performed */
+   )
+{
+   SCIP_CONSDATA*     consdata;
+   SCIP_QUADVARTERM*  quadvarterm;
+   int                c;
+   int                j;
+   SCIP_VAR*          x;
+   SCIP_Real          xlb;
+   SCIP_Real          xub;
+   SCIP_Real          xval;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+
+   *nnotify = 0;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss != NULL);
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( !consdata->nquadvars )
+         continue;
+
+      if( (!SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || consdata->isconcave) &&
+         ( !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) || consdata->isconvex ) )
+         continue;
+      SCIPdebugMessage("cons %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->isconvex, consdata->isconcave);
+
+      for( j = 0; j < consdata->nquadvars; ++j )
+      {
+         quadvarterm = &consdata->quadvarterms[j];
+         if( (SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) && quadvarterm->sqrcoef < 0) ||
+             (SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && quadvarterm->sqrcoef > 0) ||
+             quadvarterm->nadjbilin > 0 )
+         {
+            x = quadvarterm->var;
+            xlb = SCIPvarGetLbLocal(x);
+            xub = SCIPvarGetUbLocal(x);
+
+            if( SCIPisRelEQ(scip, xlb, xub) )
+            {
+               SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(x), xlb, xub, xub-xlb);
+               continue;
+            }
+
+            xval = SCIPgetSolVal(scip, NULL, x);
+            xval = MAX(xlb, MIN(xub, xval));
+
+            /* we multiply here the relative difference of xval to each of its bounds
+             * and scale such that if xval were in the middle, we get a score of 1
+             * and if xval is on one its bounds, the score is 0
+             */
+            SCIP_CALL( SCIPaddExternBranchCand(scip, x, 1.0 - 4.0 * (xval - xlb) * (xub - xval) / ((xub - xlb) * (xub - xlb)), SCIP_INVALID) );
+            ++*nnotify;
+         }
+      }
+   }
+
+   SCIPdebugMessage("registered %d branching candidates\n", *nnotify);
+
+   return SCIP_OKAY;
+}
+
+/** registers branching candidates */
+static
+SCIP_RETCODE registerBranchingCandidates(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to check */
+   int                   nconss,             /**< number of constraints to check */
+   int*                  nnotify             /**< counter for number of notifications performed */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   switch( conshdlrdata->branchscoring )
+   {
+      case 'g' :
+         SCIP_CALL( registerBranchingCandidatesGap(scip, conshdlr, conss, nconss, nnotify) );
+         break;
+
+      case 'v' :
+         SCIP_CALL( registerBranchingCandidatesViolation(scip, conshdlr, conss, nconss, nnotify) );
+         break;
+
+      case 'c' :
+         SCIP_CALL( registerBranchingCandidatesCentrality(scip, conshdlr, conss, nconss, nnotify) );
+         break;
+
+      default :
+         SCIPerrorMessage("invalid branchscoring selection");
+         SCIPABORT();
+         return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** registers a quadratic variable from a violated constraint as branching candidate that has a large absolute value in the LP relaxation */
 static
@@ -11438,7 +11648,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    SCIPdebugMessage("separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
 
    /* find branching candidates */
-   SCIP_CALL( registerVariableInfeasibilities(scip, conshdlr, conss, nconss, &nnotify) );
+   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, &nnotify) );
 
    /* if sepastore can decrease LP feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
    leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
@@ -12718,6 +12928,10 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/interiorcomputation",
          "how the interior point should be computed: 'a'ny point per constraint, 'm'ost interior per constraint",
          &conshdlrdata->interiorcomputation, TRUE, 'a', "am", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/branchscoring",
+         "which score to give branching candidates: convexification 'g'ap, constraint 'v'iolation, 'c'entrality of variable value in domain",
+         &conshdlrdata->branchscoring, TRUE, 'g', "cgv", NULL, NULL) );
 
    conshdlrdata->eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr),CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
