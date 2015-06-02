@@ -320,7 +320,7 @@ void getActivities(
          if( coefotheroverlap[i] > 0.0 )
          {
             /* multiply column by -1 and swap bounds */
-            double tmp;
+            SCIP_Real tmp;
             tmp = tmplowerbds[i];
             tmplowerbds[i] = -tmpupperbds[i];
             tmpupperbds[i] = -tmp;
@@ -350,8 +350,8 @@ void getActivities(
 
       if( minlowerbnd < 0.0 )
       {
-         double bndshift = -minlowerbnd;
-         if( bndshift > (double)SCIP_LONGINT_MAX )
+         SCIP_Real bndshift = -minlowerbnd;
+         if( bndshift > (SCIP_Real)SCIP_LONGINT_MAX )
          {
             /* shift value is too large */
             *minact = -SCIPinfinity(scip);
@@ -413,7 +413,7 @@ void getActivities(
       /* pack every variable on the highest possible value as long as we are feasible */
       for( i = nminratios-1; 0 <= i; i-- )
       {
-         double tmpval;
+         SCIP_Real tmpval;
 
          /* consider contribution from lower bounds */
          if( tmplowerbds[minsortedidx[i]] > 0 )
@@ -484,7 +484,7 @@ void getActivities(
       /* pack every variable on the highest possible value as long as we are feasible */
       for( i = 0; i < nmaxratios; i++ )
       {
-         double tmpval;
+         SCIP_Real tmpval;
 
          /* consider contribution from lower bounds */
          if( tmplowerbds[maxsortedidx[i]] > 0 )
@@ -1268,7 +1268,7 @@ SCIP_RETCODE calcTwoRowBnds(
                continue;
 
             rowcnt2 = SCIPmatrixGetRowNNonzs(matrix, *colpnt);
-            threshold = (double)numoverlap/(double)MIN(rowcnt, rowcnt2);
+            threshold = (SCIP_Real)numoverlap/(SCIP_Real)MIN(rowcnt, rowcnt2);
 
             /* verify if overlap-size is ok */
             if( SUPPORT_THRESHOLD <= threshold && numoverlap < rowcnt )
