@@ -1631,7 +1631,7 @@ SCIP_RETCODE do_layer(
          for( k = 0; k < nnodes; k++ )
 	 {
 	    perm[k] = k;
-            if( SCIPisLT(scip, max, nodepriority[k]) )
+            if( SCIPisLT(scip, max, nodepriority[k]) && Is_term(graph->term[k]) )
                max = nodepriority[k];
 	 }
          for( k = 0; k < nnodes; k++ )
@@ -1642,8 +1642,7 @@ SCIP_RETCODE do_layer(
 	       }
 	       else if( SCIPisLE(scip, 1, nodepriority[k]) )
 	       {
-		  nodepriority[k] = nodepriority[k] * 1.5;
-                  nodepriority[k] += SCIPgetRandomReal(0.0, max * 0.5, &(heurdata->randseed));
+		  nodepriority[k] = nodepriority[k] * SCIPgetRandomReal(0.0, &(heurdata->randseed));
 	       }
 	 }
          SCIPsortRealInt(nodepriority, perm, nnodes);
