@@ -243,6 +243,7 @@ interface:
   in cons_quadratic.h to compute linear under- and overestimation for bilinear and quadratic terms
 
 fixed bugs:
+- fix bug which lead to wrong global bound tightenings in prop_genvbounds.c
 - fix missing clean phase of bilinear terms with zero coefficient in cons_quadratic.c
 - fix handling of infinite intervals in SCIPintervalIsEmpty()
 - fix potentially tightening of LB/UB of a variable to +/- infinity in cons_quadratic
