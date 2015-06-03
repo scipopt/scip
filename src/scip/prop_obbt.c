@@ -64,7 +64,7 @@
 #define DEFAULT_DUALFEASTOL              1e-9      /**< feasibility tolerance for reduced costs used in obbt; this value
                                                     *   is used if SCIP's dual feastol is greater */
 #define DEFAULT_CONDITIONLIMIT           -1.0      /**< maximum condition limit used in LP solver (-1.0: no limit) */
-#define DEFAULT_BOUNDSTREPS              0.01      /**< minimal relative improve for strengthening bounds */
+#define DEFAULT_BOUNDSTREPS             0.001      /**< minimal relative improve for strengthening bounds */
 #define DEFAULT_FILTERING_MIN               2      /**< minimal number of filtered bounds to apply another filter
                                                     *   round */
 #define DEFAULT_ITLIMITFACTOR            10.0      /**< multiple of root node LP iterations used as total LP iteration
@@ -81,13 +81,13 @@
 #define GENVBOUND_PROP_NAME             "genvbounds"
 #define INTERVALINFTY                   1E+43      /**< value for infinity in interval operations */
 
-#define DEFAULT_SEPARATESOL              TRUE      /**< should the obbt LP solution be separated? note that that by
+#define DEFAULT_SEPARATESOL             FALSE      /**< should the obbt LP solution be separated? note that that by
                                                     *   separating solution OBBT will apply all bound tightenings
                                                     *   immediatly */
 #define DEFAULT_SEPAMINITER                 0      /**< minimum number of iteration spend to separate an obbt LP solution */
 #define DEFAULT_SEPAMAXITER                10      /**< maximum number of iteration spend to separate an obbt LP solution */
 #define DEFAULT_GENVBDSDURINGSEPA        TRUE      /**< try to create genvbounds during separation process? */
-#define DEFAULT_PROPAGATEFREQ               5      /**< trigger a propagation round after that many bound tightenings
+#define DEFAULT_PROPAGATEFREQ               0      /**< trigger a propagation round after that many bound tightenings
                                                     *   (0: no propagation) */
 
 /** translate from one value of infinity to another
