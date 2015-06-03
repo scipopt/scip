@@ -8975,54 +8975,98 @@ SCIP_RETCODE setReoptimizationParams(
    assert(scip->set != NULL);
    assert(scip->messagehdlr != NULL);
 
-   /* set size of original solution storage to 0 because we use the solution tree for reoptimization */
-   if( SCIPisParamFixed(scip, "limits/maxorigsol") )
+   if( scip->set->reopt_enable )
    {
-      SCIP_CALL( SCIPunfixParam(scip, "limits/maxorigsol") );
-   }
-   SCIP_CALL( SCIPsetSetIntParam(scip->set, scip->messagehdlr, "limits/maxorigsol", 0) );
+      /* set size of original solution storage to 0 because we use the solution tree for reoptimization */
+      if( SCIPisParamFixed(scip, "limits/maxorigsol") )
+      {
+         SCIP_CALL( SCIPunfixParam(scip, "limits/maxorigsol") );
+      }
+      SCIP_CALL( SCIPsetSetIntParam(scip->set, scip->messagehdlr, "limits/maxorigsol", 0) );
 
-   /* disable conflict analysis */
-   if( SCIPisParamFixed(scip, "conflict/enable") )
+      /* disable conflict analysis */
+      if( SCIPisParamFixed(scip, "conflict/enable") )
+      {
+         SCIP_CALL( SCIPunfixParam(scip, "conflict/enable") );
+      }
+      SCIP_CALL( SCIPsetSetBoolParam(scip->set, scip->messagehdlr, "conflict/enable", FALSE) );
+
+      /* change presolving settings */
+      if( SCIPisParamFixed(scip, "presolving/maxrestarts") )
+      {
+         SCIP_CALL( SCIPunfixParam(scip, "presolving/maxrestarts") );
+      }
+      SCIP_CALL( SCIPsetSetIntParam(scip->set, scip->messagehdlr, "presolving/maxrestarts", 0) );
+
+      if( SCIPisParamFixed(scip, "presolving/donotmultaggr") )
+      {
+         SCIP_CALL( SCIPunfixParam(scip, "presolving/donotmultaggr") );
+      }
+      SCIP_CALL( SCIPsetSetBoolParam(scip->set, scip->messagehdlr, "presolving/donotmultaggr", TRUE) );
+
+      /* disable dual reductions and objective propagation */
+      if( SCIPisParamFixed(scip, "misc/allowobjprop") )
+      {
+         SCIP_CALL( SCIPunfixParam(scip, "misc/allowobjprop") );
+      }
+      SCIP_CALL( SCIPsetSetBoolParam(scip->set, scip->messagehdlr, "misc/allowobjprop", FALSE) );
+
+      if( SCIPisParamFixed(scip, "misc/allowdualreds") )
+      {
+         SCIP_CALL( SCIPunfixParam(scip, "misc/allowdualreds") );
+      }
+      SCIP_CALL( SCIPsetSetBoolParam(scip->set, scip->messagehdlr, "misc/allowdualreds", FALSE) );
+
+      /* fix paramters */
+      SCIP_CALL( SCIPfixParam(scip, "limits/maxorigsol") );
+      SCIP_CALL( SCIPfixParam(scip, "conflict/enable") );
+      SCIP_CALL( SCIPfixParam(scip, "presolving/maxrestarts") );
+      SCIP_CALL( SCIPfixParam(scip, "presolving/donotmultaggr") );
+      SCIP_CALL( SCIPfixParam(scip, "misc/allowobjprop") );
+      SCIP_CALL( SCIPfixParam(scip, "misc/allowdualreds") );
+   }
+   else
    {
-      SCIP_CALL( SCIPunfixParam(scip, "conflict/enable") );
+      /* set size of original solution storage to 0 because we use the solution tree for reoptimization */
+      if( SCIPisParamFixed(scip, "limits/maxorigsol") )
+      {
+         SCIP_CALL( SCIPunfixParam(scip, "limits/maxorigsol") );
+      }
+      SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "limits/maxorigsol") );
+
+      /* disable conflict analysis */
+      if( SCIPisParamFixed(scip, "conflict/enable") )
+      {
+         SCIP_CALL( SCIPunfixParam(scip, "conflict/enable") );
+      }
+      SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "conflict/enable") );
+
+      /* change presolving settings */
+      if( SCIPisParamFixed(scip, "presolving/maxrestarts") )
+      {
+         SCIP_CALL( SCIPunfixParam(scip, "presolving/maxrestarts") );
+      }
+      SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "presolving/maxrestarts") );
+
+      if( SCIPisParamFixed(scip, "presolving/donotmultaggr") )
+      {
+         SCIP_CALL( SCIPunfixParam(scip, "presolving/donotmultaggr") );
+      }
+      SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "presolving/donotmultaggr") );
+
+      /* disable dual reductions and objective propagation */
+      if( SCIPisParamFixed(scip, "misc/allowobjprop") )
+      {
+         SCIP_CALL( SCIPunfixParam(scip, "misc/allowobjprop") );
+      }
+      SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "misc/allowobjprop") );
+
+      if( SCIPisParamFixed(scip, "misc/allowdualreds") )
+      {
+         SCIP_CALL( SCIPunfixParam(scip, "misc/allowdualreds") );
+      }
+      SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "misc/allowdualreds") );
    }
-   SCIP_CALL( SCIPsetSetBoolParam(scip->set, scip->messagehdlr, "conflict/enable", FALSE) );
-
-   /* change presolving settings */
-   if( SCIPisParamFixed(scip, "presolving/maxrestarts") )
-   {
-      SCIP_CALL( SCIPunfixParam(scip, "presolving/maxrestarts") );
-   }
-   SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrestarts", 0) );
-
-   if( SCIPisParamFixed(scip, "presolving/donotmultaggr") )
-   {
-      SCIP_CALL( SCIPunfixParam(scip, "presolving/donotmultaggr") );
-   }
-   SCIP_CALL( SCIPsetBoolParam(scip, "presolving/donotmultaggr", TRUE) );
-
-   /* disable dual reductions and objective propagation */
-   if( SCIPisParamFixed(scip, "misc/allowobjprop") )
-   {
-      SCIP_CALL( SCIPunfixParam(scip, "misc/allowobjprop") );
-   }
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowobjprop", FALSE) );
-
-   if( SCIPisParamFixed(scip, "misc/allowdualreds") )
-   {
-      SCIP_CALL( SCIPunfixParam(scip, "misc/allowdualreds") );
-   }
-   SCIP_CALL( SCIPsetBoolParam(scip, "misc/allowdualreds", FALSE) );
-
-
-   /* fix paramters */
-   SCIP_CALL( SCIPfixParam(scip, "limits/maxorigsol") );
-   SCIP_CALL( SCIPfixParam(scip, "conflict/enable") );
-   SCIP_CALL( SCIPfixParam(scip, "presolving/maxrestarts") );
-   SCIP_CALL( SCIPfixParam(scip, "presolving/donotmultaggr") );
-   SCIP_CALL( SCIPfixParam(scip, "misc/allowobjprop") );
-   SCIP_CALL( SCIPfixParam(scip, "misc/allowdualreds") );
 
    return SCIP_OKAY;
 }
@@ -14781,7 +14825,12 @@ SCIP_RETCODE SCIPsolve(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPenableReoptimization(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -14790,7 +14839,11 @@ SCIP_RETCODE SCIPenableReoptimization(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPenableReoptimization", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPenableReoptimization", TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* we want to skip if nothing has changed */
+   if( (enable && scip->reopt != NULL) || (!enable && scip->reopt == NULL) )
+      return SCIP_OKAY;
 
    /* check stage */
    if( scip->set->stage > SCIP_STAGE_PROBLEM )
@@ -14803,16 +14856,13 @@ SCIP_RETCODE SCIPenableReoptimization(
    scip->set->reopt_enable = enable;
 
    /* if the current stage is SCIP_STAGE_PROBLEM we have to include the heuristics and branching rule */
-   if( scip->set->stage == SCIP_STAGE_PROBLEM )
+   if( scip->set->stage <= SCIP_STAGE_PROBLEM )
    {
       /* initialize all reoptimization data structures */
-      if( enable )
+      if( enable && scip->reopt == NULL )
       {
-         if( scip->reopt == NULL )
-         {
-            SCIP_CALL( SCIPreoptCreate(&scip->reopt, scip->set, scip->mem->probmem) );
-            SCIP_CALL( setReoptimizationParams(scip) );
-         }
+         SCIP_CALL( SCIPreoptCreate(&scip->reopt, scip->set, scip->mem->probmem) );
+         SCIP_CALL( setReoptimizationParams(scip) );
 
          /* change priority of branching rule for reoptimization */
          assert(SCIPfindBranchrule(scip, "nodereopt") != NULL);
@@ -14828,35 +14878,36 @@ SCIP_RETCODE SCIPenableReoptimization(
          assert(SCIPfindHeur(scip, "reoptsols") != NULL);
          assert(SCIPfindHeur(scip, "trivialnegation") != NULL);
 
-         if( SCIPisParamFixed(scip, "heuristics/ofins/priority") )
+         if( SCIPisParamFixed(scip, "heuristics/ofins/freq") )
          {
-            SCIP_CALL( SCIPunfixParam(scip, "heuristics/ofins/priority") );
+            SCIP_CALL( SCIPunfixParam(scip, "heuristics/ofins/freq") );
          }
-         SCIP_CALL( SCIPsetIntParam(scip, "heuristics/ofins/priority", 60000) );
+         SCIP_CALL( SCIPsetIntParam(scip, "heuristics/ofins/freq", 0) );
 
-         if( SCIPisParamFixed(scip, "heuristics/reoptsols/priority") )
+         if( SCIPisParamFixed(scip, "heuristics/reoptsols/freq") )
          {
-            SCIP_CALL( SCIPunfixParam(scip, "heuristics/reoptsols/priority") );
+            SCIP_CALL( SCIPunfixParam(scip, "heuristics/reoptsols/freq") );
          }
-         SCIP_CALL( SCIPsetIntParam(scip, "heuristics/reoptsols/priority", 40000) );
+         SCIP_CALL( SCIPsetIntParam(scip, "heuristics/reoptsols/freq", 0) );
 
-         if( SCIPisParamFixed(scip, "heuristics/trivialnegation/priority") )
+         if( SCIPisParamFixed(scip, "heuristics/trivialnegation/freq") )
          {
-            SCIP_CALL( SCIPunfixParam(scip, "heuristics/trivialnegation/priority") );
+            SCIP_CALL( SCIPunfixParam(scip, "heuristics/trivialnegation/freq") );
          }
-         SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trivialnegation/priority", 30000) );
+         SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trivialnegation/freq", 0) );
 
          /* fix all parameters */
          SCIP_CALL( SCIPfixParam(scip, "branching/nodereopt/priority") );
-         SCIP_CALL( SCIPfixParam(scip, "heuristics/ofins/priority") );
-         SCIP_CALL( SCIPfixParam(scip, "heuristics/reoptsols/priority") );
-         SCIP_CALL( SCIPfixParam(scip, "heuristics/trivialnegation/priority") );
+         SCIP_CALL( SCIPfixParam(scip, "heuristics/ofins/freq") );
+         SCIP_CALL( SCIPfixParam(scip, "heuristics/reoptsols/freq") );
+         SCIP_CALL( SCIPfixParam(scip, "heuristics/trivialnegation/freq") );
       }
       /* exit and free all reoptimization data structures */
-      if( !enable && scip->reopt != NULL)
+      else if( !enable && scip->reopt != NULL)
       {
          SCIP_CALL( SCIPreoptFree(&(scip->reopt), scip->set, scip->origprimal, scip->mem->probmem) );
          assert(scip->reopt == NULL);
+         SCIP_CALL( setReoptimizationParams(scip) );
 
          /* set the priorities to defeault */
          if( SCIPisParamFixed(scip, "branching/nodereopt/priority") )
@@ -14870,23 +14921,23 @@ SCIP_RETCODE SCIPenableReoptimization(
          assert(SCIPfindHeur(scip, "reoptsols") != NULL);
          assert(SCIPfindHeur(scip, "trivialnegation") != NULL);
 
-         if( SCIPisParamFixed(scip, "heuristics/ofins/priority") )
+         if( SCIPisParamFixed(scip, "heuristics/ofins/freq") )
          {
-            SCIP_CALL( SCIPunfixParam(scip, "heuristics/ofins/priority") );
+            SCIP_CALL( SCIPunfixParam(scip, "heuristics/ofins/freq") );
          }
-         SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "heuristics/ofins/priority") );
+         SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "heuristics/ofins/freq") );
 
-         if( SCIPisParamFixed(scip, "heuristics/reoptsols/priority") )
+         if( SCIPisParamFixed(scip, "heuristics/reoptsols/freq") )
          {
-            SCIP_CALL( SCIPunfixParam(scip, "heuristics/reoptsols/priority") );
+            SCIP_CALL( SCIPunfixParam(scip, "heuristics/reoptsols/freq") );
          }
-         SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "heuristics/reoptsols/priority") );
+         SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "heuristics/reoptsols/freq") );
 
-         if( SCIPisParamFixed(scip, "heuristics/trivialnegation/priority") )
+         if( SCIPisParamFixed(scip, "heuristics/trivialnegation/freq") )
          {
-            SCIP_CALL( SCIPunfixParam(scip, "heuristics/trivialnegation/priority") );
+            SCIP_CALL( SCIPunfixParam(scip, "heuristics/trivialnegation/freq") );
          }
-         SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "heuristics/trivialnegation/priority") );
+         SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "heuristics/trivialnegation/freq") );
       }
    }
 

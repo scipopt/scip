@@ -634,7 +634,7 @@ SCIP_RETCODE soltreefreeNode(
 {
    assert(reopt != NULL);
    assert(set != NULL);
-   assert(primal != NULL);
+   assert(primal != NULL || set->stage == SCIP_STAGE_INIT);
    assert(solnode != NULL);
    assert(blkmem != NULL);
 
@@ -4072,24 +4072,27 @@ SCIP_RETCODE SCIPreoptFree(
    assert(reopt != NULL);
    assert(*reopt != NULL);
    assert(set != NULL);
-   assert(origprimal != NULL);
+   assert(origprimal != NULL || set->stage == SCIP_STAGE_INIT);
    assert(blkmem != NULL);
 
    /* free reopttree */
    SCIP_CALL( freeReoptTree((*reopt)->reopttree, blkmem) );
 
    /* free solutions */
-   for( p = (*reopt)->run-1; p >= 0; p-- )
+   if( set->stage >= SCIP_STAGE_PROBLEM )
    {
-      if( (*reopt)->soltree->sols[p] != NULL )
+      for( p = (*reopt)->run-1; p >= 0; p-- )
       {
-         BMSfreeBlockMemoryArray(blkmem, &(*reopt)->soltree->sols[p], (*reopt)->soltree->solssize[p]); /*lint !e866*/
-         (*reopt)->soltree->sols[p] = NULL;
-      }
+         if( (*reopt)->soltree->sols[p] != NULL )
+         {
+            BMSfreeBlockMemoryArray(blkmem, &(*reopt)->soltree->sols[p], (*reopt)->soltree->solssize[p]); /*lint !e866*/
+            (*reopt)->soltree->sols[p] = NULL;
+         }
 
-      if( (*reopt)->objs[p] != NULL )
-      {
-         BMSfreeMemoryArray(&(*reopt)->objs[p]);
+         if( (*reopt)->objs[p] != NULL )
+         {
+            BMSfreeMemoryArray(&(*reopt)->objs[p]);
+         }
       }
    }
 

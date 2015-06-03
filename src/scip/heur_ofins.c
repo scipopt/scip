@@ -31,8 +31,8 @@
 #define HEUR_NAME             "ofins"
 #define HEUR_DESC             "primal heuristic for reoptimization, objective function induced neighborhood search"
 #define HEUR_DISPCHAR         'A'
-#define HEUR_PRIORITY         -9000000
-#define HEUR_FREQ             0
+#define HEUR_PRIORITY         60000
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
