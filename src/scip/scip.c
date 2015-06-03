@@ -14989,7 +14989,15 @@ SCIP_SOL* SCIPgetReoptLastOptSol(
    return sol;
 }
 
-/** returns the objective coefficent of a given variable in a previous iteration */
+/** returns the objective coefficent of a given variable in a previous iteration
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPgetReoptOldObjCoef(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VAR*             var,                /**< variable */
@@ -15000,6 +15008,8 @@ SCIP_RETCODE SCIPgetReoptOldObjCoef(
    assert(scip != NULL);
    assert(var != NULL);
    assert(0 < run && run <= scip->stat->nreoptruns);
+
+   SCIP_CALL( checkStage(scip, "SCIPgetReoptOldObjCoef", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( !SCIPvarIsOriginal(var) )
    {
@@ -15085,7 +15095,7 @@ SCIP_RETCODE SCIPgetReoptLeaveIDs(
    return SCIP_OKAY;
 }
 
-/** returns the number of nodes in the reoptimization tree induced by @param node. if @param node == NULL the method
+/** returns the number of nodes in the reoptimization tree induced by @p node. if @p node == NULL the method
  * returns the number of nodes of the whole reoptimization tree.
  */
 int SCIPgetNReoptnodes(
@@ -15100,7 +15110,7 @@ int SCIPgetNReoptnodes(
    return SCIPreoptGetNNodes(scip->reopt, node);
 }
 
-/** returns the number of leaf nodes of the subtree induced by @param node. if @param node == NULL, the method
+/** returns the number of leaf nodes of the subtree induced by @p node. if @p node == NULL, the method
  *  returns the number of leaf nodes of the whole reoptimization tree.
  */
 int SCIPgetNReoptLeaves(
@@ -15115,7 +15125,7 @@ int SCIPgetNReoptLeaves(
    return SCIPreoptGetNLeaves(scip->reopt, node);
 }
 
-/** gets the node of the reoptimization tree corresponding to the unique @param id */
+/** gets the node of the reoptimization tree corresponding to the unique @p id */
 SCIP_REOPTNODE* SCIPgetReoptnode(
    SCIP*                 scip,               /**< SCIP data structure */
    unsigned int          id                  /**< unique id */
@@ -15158,7 +15168,7 @@ SCIP_RETCODE SCIPaddReoptnodeBndchg(
    return SCIP_OKAY;
 }
 
-/** set the @param representation as the new search frontier
+/** set the @p representation as the new search frontier
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -15548,7 +15558,15 @@ void SCIPresetReoptSolMarks(
    }
 }
 
-/** check if the reoptimization process should be restarted */
+/** check if the reoptimization process should be restarted
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPcheckReoptRestart(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< current node of the branch and bound tree (or NULL) */
@@ -15613,7 +15631,14 @@ SCIP_Bool SCIPreoptimizeNode(
       return FALSE;
 }
 
-/** deletes the given reoptimization node */
+/** deletes the given reoptimization node
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 SCIP_RETCODE SCIPdeleteReoptnode(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE**      reoptnode           /**< node of the reoptimization tree */
@@ -15623,6 +15648,8 @@ SCIP_RETCODE SCIPdeleteReoptnode(
    assert(scip->set->reopt_enable);
    assert(scip->reopt != NULL);
    assert((*reoptnode) != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPdeleteReoptnode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPreoptnodeDelete(reoptnode, scip->mem->probmem) );
 
@@ -39905,6 +39932,14 @@ SCIP_RETCODE SCIPprintStatistics(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPprintReoptStatistics(

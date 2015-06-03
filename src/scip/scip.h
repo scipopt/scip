@@ -6251,6 +6251,7 @@ SCIP_RETCODE SCIPrestartSolve(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PROBLEM
  */
+EXTERN
 SCIP_RETCODE SCIPenableReoptimization(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool             enable              /**< enable reoptimization */
@@ -6278,7 +6279,15 @@ void SCIPresetReoptSolMarks(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** check if the reoptimization process should be restarted */
+/** check if the reoptimization process should be restarted
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPcheckReoptRestart(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -6310,7 +6319,15 @@ SCIP_SOL* SCIPgetReoptLastOptSol(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns the objective coefficent of a given variable in a previous iteration */
+/** returns the objective coefficent of a given variable in a previous iteration
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPgetReoptOldObjCoef(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -17475,7 +17492,16 @@ SCIP_RETCODE SCIPgetReoptChildIDs(
    int*                  nids                /**< number of child nodes */
    );
 
-/** eturn the ids of leaf nodes store in the reoptimization tree induced by the given node */
+/** return the ids of all leave nodes store in the reoptimization tree induced by the given node
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 EXTERN
 SCIP_RETCODE SCIPgetReoptLeaveIDs(
    SCIP*                 scip,               /**< SCIP data strcuture */
@@ -17592,6 +17618,7 @@ SCIP_RETCODE SCIPinitilizeRepresentation(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
+EXTERN
 SCIP_RETCODE SCIPapplyReopt(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE*       reoptnode,          /**< node to reactivate */
@@ -17628,6 +17655,7 @@ SCIP_RETCODE SCIPresetReoptnodeDualcons(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
+EXTERN
 SCIP_RETCODE SCIPsplitReoptRoot(
    SCIP*                 scip,               /**< SCIP data structure */
    int*                  ncreatedchilds,     /**< pointer to store the number of created nodes */
@@ -17641,7 +17669,14 @@ SCIP_Bool SCIPreoptimizeNode(
    SCIP_NODE*            node                /**< node of the search tree */
    );
 
-/** deletes the given reoptimization node */
+/** deletes the given reoptimization node
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPdeleteReoptnode(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -19113,6 +19148,14 @@ SCIP_RETCODE SCIPprintStatistics(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN
