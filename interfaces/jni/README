@@ -5,7 +5,7 @@
 3) create softlinks to soplex and scip in "lib" folder:
    mkdir ./lib
    cd lib
-   ln -s ../../../../soplex-2.0.0 soplex
+   ln -s ../../../../soplex-*.*.* soplex
    ln -s ../../.. scip
    ln -s <path to java inlcuds> jniinc (optional if java is not the library path)
    cd ..

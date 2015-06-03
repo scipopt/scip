@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   pub_compress.h
+/**@file   pub_compr.h
  * @ingroup PUBLICMETHODS
  * @brief  public methods for tree compressions
  * @author Jakob Witzig
