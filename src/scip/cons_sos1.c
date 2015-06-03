@@ -367,8 +367,8 @@ SCIP_Bool isViolatedSOS1(
    assert( var != NULL );
    solval = SCIPgetSolVal(scip, sol, var);
 
-   /* check whether variable is nonzero w.r.t. sol */
-   if ( ! SCIPisFeasZero(scip, solval) )
+   /* check whether variable is nonzero w.r.t. sol and the bounds have not been fixed to zero by propagation */
+   if ( ! SCIPisFeasZero(scip, solval) && ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) ) )
    {
       int* succ;
       int nsucc;
@@ -383,7 +383,7 @@ SCIP_Bool isViolatedSOS1(
          var = SCIPnodeGetVarSOS1(conflictgraph, succ[s]);
          assert( var != NULL );
          solval = SCIPgetSolVal(scip, sol, var);
-         if ( ! SCIPisFeasZero(scip, solval) )
+         if ( ! SCIPisFeasZero(scip, solval) && ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) ) )
             return TRUE;
       }
    }
@@ -9196,9 +9196,6 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
             bound = nodeGetSolvalVarboundLbSOS1(scip, conflictgraph, sol, v);
          else
             bound = nodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, v);
-
-         /* bound may have changed in propagation; ensure that fracval <= 1 */
-         bound = MAX(REALABS(solval), REALABS(bound)); /*lint !e666*/
 
          /* ensure finiteness */
          bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound)); /*lint !e666*/
