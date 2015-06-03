@@ -116,6 +116,10 @@
 #define DEFAULT_DETECTPARTIALOBJECTIVE TRUE/**< should presolving try to detect subsets of constraints parallel to the
                                             *   objective function */
 #define DEFAULT_RANGEDROWPROPAGATION TRUE /**< should we perform ranged row propagation */
+#define DEFAULT_RANGEDROWARTCONS     TRUE /**< should presolving and propagation extract sub-constraints from ranged rows and equations? */
+#define DEFAULT_RANGEDROWMAXDEPTH INT_MAX /**< maximum depth to apply ranged row propagation */
+#define DEFAULT_RANGEDROWFREQ           1 /**< frequency for applying ranged row propagation */
+
 #define DEFAULT_MULTAGGRREMOVE      FALSE /**< should multi-aggregations only be performed if the constraint can be
                                            *   removed afterwards? */
 
@@ -287,6 +291,9 @@ struct SCIP_ConshdlrData
    SCIP_Bool             rangedrowpropagation;/**< should presolving and propagation try to improve bounds, detect
                                                *   infeasibility, and extract sub-constraints from ranged rows and
                                                *   equations */
+   SCIP_Bool             rangedrowartcons;   /**< should presolving and propagation extract sub-constraints from ranged rows and equations?*/
+   int                   rangedrowmaxdepth;  /**< maximum depth to apply ranged row propagation */
+   int                   rangedrowfreq;      /**< frequency for applying ranged row propagation */
    SCIP_Bool             multaggrremove;     /**< should multi-aggregations only be performed if the constraint can be
                                               *   removed afterwards? */
 };
@@ -5438,6 +5445,7 @@ SCIP_RETCODE rangedRowPropagation(
    SCIP_Bool maxactinfvarsinvalid;
    SCIP_Bool possiblegcd;
    SCIP_Bool gcdisone;
+   SCIP_Bool addartconss;
    int ninfcheckvars;
    int nunfixedvars;
    int nfixedconsvars;
@@ -5483,6 +5491,8 @@ SCIP_RETCODE rangedRowPropagation(
    assert(conshdlr != NULL);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   addartconss = conshdlrdata->rangedrowartcons;
 
    fixedact = 0;
    nfixedconsvars = 0;
@@ -5979,7 +5989,7 @@ SCIP_RETCODE rangedRowPropagation(
                         ++(*nfixedvars);
                   }
                }
-               else if( !SCIPinProbing(scip) && SCIPgetDepth(scip) < 1 &&
+               else if( !SCIPinProbing(scip) && SCIPgetDepth(scip) < 1 && !SCIPinRepropagation(scip) && addartconss &&
                   (SCIPisGT(scip, minvalue, minactinfvars) || SCIPisLT(scip, maxvalue, maxactinfvars)) )
                {
                   /* aggregation possible if we have two variables, but this will be done later on */
@@ -6243,7 +6253,7 @@ SCIP_RETCODE rangedRowPropagation(
             /* at least two solutions and more than one variable, so we add a new constraint which bounds the feasible
              * region for our infcheckvars, if possible
              */
-            else if( !SCIPinProbing(scip) && SCIPgetDepth(scip) < 1 &&
+            else if( !SCIPinProbing(scip) && SCIPgetDepth(scip) < 1 && !SCIPinRepropagation(scip) && addartconss &&
                (SCIPisGT(scip, minvalue, minactinfvars) || SCIPisLT(scip, maxvalue, maxactinfvars)) )
             {
                SCIP_CONS* newcons;
@@ -6470,8 +6480,8 @@ SCIP_RETCODE rangedRowPropagation(
             }
          }
       }
-
-      if( v == consdata->nvars && !SCIPisHugeValue(scip, -minact) && !SCIPisHugeValue(scip, maxact) )
+      if( !SCIPinProbing(scip) && SCIPgetDepth(scip) < 1 && !SCIPinRepropagation(scip) && v == consdata->nvars
+         && addartconss && !SCIPisHugeValue(scip, -minact) && !SCIPisHugeValue(scip, maxact) )
       {
          SCIP_CONS* newcons;
          char name[SCIP_MAXSTRLEN];
@@ -14808,8 +14818,10 @@ static
 SCIP_DECL_CONSPROP(consPropLinear)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool rangedrowpropagation = FALSE;
    SCIP_Bool tightenbounds;
    SCIP_Bool cutoff;
+
    int nchgbds;
    int i;
 
@@ -14831,22 +14843,31 @@ SCIP_DECL_CONSPROP(consPropLinear)
       int depth;
       int propfreq;
       int tightenboundsfreq;
+      int rangedrowfreq;
 
       depth = SCIPgetDepth(scip);
       propfreq = SCIPconshdlrGetPropFreq(conshdlr);
       tightenboundsfreq = propfreq * conshdlrdata->tightenboundsfreq;
       tightenbounds = (conshdlrdata->tightenboundsfreq >= 0)
          && ((tightenboundsfreq == 0 && depth == 0) || (tightenboundsfreq >= 1 && (depth % tightenboundsfreq == 0)));
+
+      /* check if we want to do ranged row propagation */
+      rangedrowpropagation = conshdlrdata->rangedrowpropagation;
+      rangedrowpropagation = rangedrowpropagation && !SCIPinRepropagation(scip);
+      rangedrowpropagation = rangedrowpropagation && (depth <= conshdlrdata->rangedrowmaxdepth);
+      rangedrowfreq = propfreq * conshdlrdata->rangedrowfreq;
+      rangedrowpropagation = rangedrowpropagation && (depth % rangedrowfreq == 0);
    }
 
    cutoff = FALSE;
    nchgbds = 0;
 
+
    /* process constraints marked for propagation */
    for( i = 0; i < nmarkedconss && !cutoff; i++ )
    {
       SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
-      SCIP_CALL( propagateCons(scip, conss[i], tightenbounds, conshdlrdata->rangedrowpropagation,
+      SCIP_CALL( propagateCons(scip, conss[i], tightenbounds, rangedrowpropagation,
             conshdlrdata->maxeasyactivitydelta, conshdlrdata->sortvars, &cutoff, &nchgbds) );
    }
 
@@ -16124,6 +16145,18 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
          "constraints/"CONSHDLR_NAME"/rangedrowpropagation",
          "should presolving and propagation try to improve bounds, detect infeasibility, and extract sub-constraints from ranged rows and equations?",
          &conshdlrdata->rangedrowpropagation, TRUE, DEFAULT_RANGEDROWPROPAGATION, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/"CONSHDLR_NAME"/rangedrowartcons",
+         "should presolving and propagation extract sub-constraints from ranged rows and equations?",
+         &conshdlrdata->rangedrowartcons, TRUE, DEFAULT_RANGEDROWARTCONS, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/"CONSHDLR_NAME"/rangedrowmaxdepth",
+         "maximum depth to apply ranged row propagation",
+         &conshdlrdata->rangedrowmaxdepth, TRUE, DEFAULT_RANGEDROWMAXDEPTH, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/"CONSHDLR_NAME"/rangedrowfreq",
+         "frequency for applying ranged row propagation",
+         &conshdlrdata->rangedrowfreq, TRUE, DEFAULT_RANGEDROWFREQ, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
          "constraints/"CONSHDLR_NAME"/multaggrremove",
          "should multi-aggregations only be performed if the constraint can be removed afterwards?",
