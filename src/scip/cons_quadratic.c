@@ -8887,6 +8887,7 @@ SCIP_RETCODE registerBranchingCandidatesCentrality(
    SCIP_Real          xlb;
    SCIP_Real          xub;
    SCIP_Real          xval;
+   SCIP_Real          score;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -8928,11 +8929,23 @@ SCIP_RETCODE registerBranchingCandidatesCentrality(
             xval = SCIPgetSolVal(scip, NULL, x);
             xval = MAX(xlb, MIN(xub, xval));
 
-            /* we multiply here the relative difference of xval to each of its bounds
+            /* compute relative difference of xval to each of its bounds
              * and scale such that if xval were in the middle, we get a score of 1
              * and if xval is on one its bounds, the score is 0
              */
-            SCIP_CALL( SCIPaddExternBranchCand(scip, x, 1.0 - 4.0 * (xval - xlb) * (xub - xval) / ((xub - xlb) * (xub - xlb)), SCIP_INVALID) );
+            if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
+            {
+               if( (!SCIPisInfinity(scip, -xlb) && SCIPisEQ(scip, xval, xlb)) || (!SCIPisInfinity(scip, xub) && SCIPisEQ(scip, xval, xub)) )
+                  score = 0.0;
+               else
+                  score = 1.0;
+            }
+            else
+            {
+               score = 4.0 * (xval - xlb) * (xub - xval) / ((xub - xlb) * (xub - xlb));
+            }
+
+            SCIP_CALL( SCIPaddExternBranchCand(scip, x, score, SCIP_INVALID) );
             ++*nnotify;
          }
       }
