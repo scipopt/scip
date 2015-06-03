@@ -2628,7 +2628,7 @@ SCIP_RETCODE reoptMoveIDs(
 
    assert(reopttree != NULL);
    assert(blkmem != NULL);
-   assert(0 < id1 && id1 < reopttree->reoptnodessize);
+   assert(id1 < reopttree->reoptnodessize);
    assert(id2 < reopttree->reoptnodessize);
    assert(reopttree->reoptnodes[id1] != NULL);
    assert(reopttree->reoptnodes[id2] != NULL);
@@ -5279,7 +5279,13 @@ SCIP_RETCODE SCIPreoptGetLeaves(
    else
       id = SCIPnodeGetReoptID(node);
 
-   assert(id >= 1 || SCIPnodeGetDepth(node) == 0);
+   /* return if the node is not part of the reoptimization tree */
+   if( id == 0 && node != NULL )
+   {
+      (*nleaves) = 0;
+      return SCIP_OKAY;
+   }
+
    assert(id < reopt->reopttree->reoptnodessize);
    assert(reopt->reopttree->reoptnodes[id] != NULL);
 

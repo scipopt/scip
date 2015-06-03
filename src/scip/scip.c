@@ -14856,7 +14856,7 @@ SCIP_RETCODE SCIPenableReoptimization(
    scip->set->reopt_enable = enable;
 
    /* if the current stage is SCIP_STAGE_PROBLEM we have to include the heuristics and branching rule */
-   if( scip->set->stage <= SCIP_STAGE_PROBLEM )
+   if( scip->set->stage == SCIP_STAGE_PROBLEM )
    {
       /* initialize all reoptimization data structures */
       if( enable && scip->reopt == NULL )
