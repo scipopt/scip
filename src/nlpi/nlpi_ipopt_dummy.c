@@ -136,7 +136,7 @@ SCIP_RETCODE SCIPsolveLinearProb(
    for( k = 0; k < N; ++k )
    {
       int j;
-      SCIP_ALLOC( BMSallocMemoryArray(&LU[k], N) );
+      SCIP_ALLOC( BMSallocMemoryArray(&LU[k], N) ); /*lint !e866*/
       for( j = 0; j < N; ++j )
          LU[k][j] = a[k][j];
 

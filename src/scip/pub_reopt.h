@@ -33,7 +33,7 @@
 #endif
 
 #ifdef __cplusplus
-EXTERN "C" {
+extern "C" {
 #endif
 
 /*
@@ -43,66 +43,66 @@ EXTERN "C" {
 /** returns the number of bound changes stored in the reoptnode */
 EXTERN
 int SCIPreoptnodeGetNVars(
-   SCIP_REOPTNODE*       reoptnode                /**< node of the reoptimization tree */
+   SCIP_REOPTNODE*       reoptnode           /**< node of the reoptimization tree */
    );
 
 /** returns the number of bound changes at the node stored at ID id */
 EXTERN
 int SCIPreoptnodeGetNConss(
-   SCIP_REOPTNODE*       reoptnode                /**< node of the reoptimization tree */
+   SCIP_REOPTNODE*       reoptnode           /**< node of the reoptimization tree */
    );
 
 /** returns the number of stored bound changes based on dual information in the reopttree at ID id */
 EXTERN
 int SCIPreoptnodeGetNDualBoundChgs(
-   SCIP_REOPTNODE*       reoptnode               /**< node of the reoptimization tree */
+   SCIP_REOPTNODE*       reoptnode           /**< node of the reoptimization tree */
    );
 
 /** returns the number of child nodes of @param reoptnode */
 EXTERN
 int SCIPreoptnodeGetNChildren(
-   SCIP_REOPTNODE*       reoptnode                /**< node of the reoptimizzation tree */
+   SCIP_REOPTNODE*       reoptnode           /**< node of the reoptimizzation tree */
    );
 
 /* return the lower bound stored at @param ID id */
 EXTERN
 SCIP_Real SCIPreoptnodeGetLowerbound(
-   SCIP_REOPTNODE*       reoptnode                /**< node of the reoptimization tree */
+   SCIP_REOPTNODE*       reoptnode           /**< node of the reoptimization tree */
    );
 
 /** returns the type of the @param reoptnode */
 EXTERN
 SCIP_REOPTTYPE SCIPreoptnodeGetType(
-   SCIP_REOPTNODE*       reoptnode                /**< node of the reoptimization tree */
+   SCIP_REOPTNODE*       reoptnode           /**< node of the reoptimization tree */
    );
 
 /** create the constraint which splits the node stored at ID id on the basis of the stored dual information. */
 EXTERN
 void SCIPreoptnodeGetSplitCons(
-   SCIP_REOPTNODE*       reoptnode,               /**< node of the reoptimization tree */
-   SCIP_VAR**            vars,                    /**< array to store the variables of the constraint */
-   SCIP_Real*            vals,                    /**< array to store the coefficients of the variables */
-   REOPT_CONSTYPE*       constype,                /**< type of the constraint */
-   int                   conssize,                /**< size of the arrays */
-   int*                  nvars                    /**< pointer to store the size of the constraints */
+   SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
+   SCIP_VAR**            vars,               /**< array to store the variables of the constraint */
+   SCIP_Real*            vals,               /**< array to store the coefficients of the variables */
+   REOPT_CONSTYPE*       constype,           /**< type of the constraint */
+   int                   conssize,           /**< size of the arrays */
+   int*                  nvars               /**< pointer to store the size of the constraints */
    );
 
 /** returns all added constraints at ID id */
 EXTERN
 void SCIPreoptnodeGetConss(
-   SCIP_REOPTNODE*       reoptnode,               /**< reoptimization data structure */
-   SCIP_VAR***           vars,                    /**< 2-dim array of variables */
-   SCIP_Real**           vals,                    /**< 2-dim array of values */
-   int                   mem,                     /**< allocated memory for constraints */
-   int*                  nconss,                  /**< pointer to store the number of constraints */
-   int*                  nvars                    /**< pointer to store the number of variables */
+   SCIP_REOPTNODE*       reoptnode,          /**< reoptimization data structure */
+   SCIP_VAR***           vars,               /**< 2-dim array of variables */
+   SCIP_Real**           vals,               /**< 2-dim array of values */
+   int                   mem,                /**< allocated memory for constraints */
+   int*                  nconss,             /**< pointer to store the number of constraints */
+   int*                  nvars               /**< pointer to store the number of variables */
    );
 
 /** set the parent id */
 EXTERN
 void SCIPreoptnodeSetParentID(
-   SCIP_REOPTNODE*       reoptnode,               /**< node of the reopttree */
-   unsigned int          parentid                 /**< id of the parent node */
+   SCIP_REOPTNODE*       reoptnode,          /**< node of the reopttree */
+   unsigned int          parentid            /**< id of the parent node */
    );
 
 /*
@@ -112,83 +112,83 @@ void SCIPreoptnodeSetParentID(
 /** returns the number of global restarts */
 EXTERN
 int SCIPreoptGetNRestartsGlobal(
-   SCIP_REOPT*           reopt                   /**< reoptimization data */
+   SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
 /** returns the number of local restarts in the current run */
 int SCIPreoptGetNRestartsLocal(
-   SCIP_REOPT*           reopt                    /**< reoptimization data structure */
+   SCIP_REOPT*           reopt               /**< reoptimization data structure */
    );
 
 /** returns the number of local restarts over all runs */
 int SCIPreoptGetNTotalRestartsLocal(
-   SCIP_REOPT*           reopt                    /**< reoptimization data structure */
+   SCIP_REOPT*           reopt               /**< reoptimization data structure */
    );
 
 /** returns the number of iteration with the first global restarts */
 EXTERN
 int SCIPreoptGetFirstRestarts(
-   SCIP_REOPT*           reopt                    /**< reoptimization data structure */
+   SCIP_REOPT*           reopt               /**< reoptimization data structure */
    );
 
 /** returns the number of iteration with the last global restarts */
 EXTERN
 int SCIPreoptGetLastRestarts(
-   SCIP_REOPT*           reopt                    /**< reoptimization data structure */
+   SCIP_REOPT*           reopt               /**< reoptimization data structure */
    );
 
 /** returns the number of nodes providing an improving feasible LP solution in the current run */
 EXTERN
 int SCIPreoptGetNFeasNodes(
-   SCIP_REOPT*           reopt                    /**< reoptimization data structure */
+   SCIP_REOPT*           reopt               /**< reoptimization data structure */
    );
 
 /** returns the number of nodes providing an improving feasible LP solution over all runs */
 EXTERN
 int SCIPreoptGetNTotalFeasNodes(
-   SCIP_REOPT*           reopt                    /**< reoptimization data structure */
+   SCIP_REOPT*           reopt               /**< reoptimization data structure */
    );
 
-/* returns the number of nodes that exceeded the cutoff bound in the current run */
+/** returns the number of nodes that exceeded the cutoff bound in the current run */
 EXTERN
 int SCIPreoptGetNPrunedNodes(
-   SCIP_REOPT*           reopt                    /**< reoptimization data structure */
+   SCIP_REOPT*           reopt               /**< reoptimization data structure */
    );
 
-/* returns the number of nodes that exceeded the cutoff bound over all runs */
+/** returns the number of nodes that exceeded the cutoff bound over all runs */
 EXTERN
 int SCIPreoptGetNTotalPrunedNodes(
-   SCIP_REOPT*           reopt                    /**< reoptimization data structure */
+   SCIP_REOPT*           reopt               /**< reoptimization data structure */
    );
 
 /** returns the number of reoptimized nodes that were cut off in the current run */
 EXTERN
 int SCIPreoptGetNCutoffReoptnodes(
-   SCIP_REOPT*           reopt                    /*< reoptimization data structure */
+   SCIP_REOPT*           reopt               /*< reoptimization data structure */
    );
 
 /** returns the number of reoptimized nodes that were cut off over all runs */
 EXTERN
 int SCIPreoptGetNTotalCutoffReoptnodes(
-   SCIP_REOPT*           reopt                    /*< reoptimization data structure */
+   SCIP_REOPT*           reopt               /*< reoptimization data structure */
    );
 
 /** returns the number of stored nodes with an infeasible LP in the current run */
 EXTERN
 int SCIPreoptGetNInfNodes(
-   SCIP_REOPT*           reopt                    /*< reoptimization data structure */
+   SCIP_REOPT*           reopt               /*< reoptimization data structure */
    );
 
 /** returns the number of stored nodes with an infeasible LP over all runs */
 EXTERN
 int SCIPreoptGetNTotalInfNodes(
-   SCIP_REOPT*           reopt                    /*< reoptimization data structure */
+   SCIP_REOPT*           reopt               /*< reoptimization data structure */
    );
 
 /** returns the number of found infeasible subtrees */
 EXTERN
 int SCIPreoptGetNInfSubtrees(
-   SCIP_REOPT*           reopt                    /*< reoptimization data structure */
+   SCIP_REOPT*           reopt               /*< reoptimization data structure */
    );
 
 #ifdef NDEBUG

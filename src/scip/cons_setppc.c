@@ -2750,7 +2750,11 @@ SCIP_RETCODE collectCliqueConss(
          return SCIP_OKAY;
 
       if( SCIPconsIsDeleted(cons) )
+      {
+         /* reset nlocaladdconss and continue */
+         nlocaladdconss = 0;
          continue;
+      }
       assert(nlocaladdconss == 0);
 
       SCIP_CALL( processFixings(scip, cons, cutoff, nfixedvars, &addcut, &mustcheck) );
@@ -6850,6 +6854,7 @@ SCIP_RETCODE createNormalizedSetppc(
    return SCIP_OKAY;
 }
 
+/** check, if linear constraint can be upgraded to set partitioning, packing, or covering constraint */
 static
 SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
 {  /*lint --e{715}*/
@@ -7936,7 +7941,8 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       /*SCIPdebugMessage("presolving set partitioning / packing / covering constraint <%s>\n", SCIPconsGetName(cons));*/
 
       /* remove all variables that are fixed to zero and replace all aggregated variables */
-      if( consdata->nfixedzeros > 0 || nnewaggrvars > 0 || nnewaddconss > 0 || *naggrvars > oldnaggrvars || (nrounds == 0 && SCIPgetNRuns(scip) > 1) )
+      if( consdata->nfixedzeros > 0 || nnewaggrvars > 0 || nnewaddconss > 0 || nnewupgdconss > 0
+            || *naggrvars > oldnaggrvars || (nrounds == 0 && SCIPgetNRuns(scip) > 1) )
       {
          SCIP_CALL( applyFixings(scip, cons, naddconss, ndelconss, nfixedvars, &cutoff) );
 

@@ -8753,6 +8753,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->ndivingrows = 0;
    (*lp)->divinglpiitlim = INT_MAX;
    (*lp)->resolvelperror = FALSE;
+   (*lp)->adjustlpval = FALSE;
    (*lp)->lpiuobjlim = SCIPlpiInfinity((*lp)->lpi);
    (*lp)->lpifeastol = SCIPsetLpfeastol(set);
    (*lp)->lpidualfeastol = SCIPsetDualfeastol(set);
@@ -14105,6 +14106,38 @@ SCIP_RETCODE lpSolveStable(
    return SCIP_OKAY;
 }
 
+/** adjust the LP objective value if its greater/less than +/- SCIPsetInfinity() */
+static
+void adjustLPobjval(
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   )
+{
+   assert(lp != NULL);
+   assert(set != NULL);
+   assert(messagehdlr != NULL);
+
+   if( SCIPsetIsInfinity(set, lp->lpobjval) && lp->lpobjval != SCIPsetInfinity(set) ) /*lint !e777*/
+   {
+      if( !lp->adjustlpval )
+      {
+         SCIPmessagePrintWarning(messagehdlr, "LP solution value is above SCIP's infinity value\n");
+         lp->adjustlpval = TRUE;
+      }
+      lp->lpobjval = SCIPsetInfinity(set);
+   }
+   else if( SCIPsetIsInfinity(set, -lp->lpobjval) && lp->lpobjval != -SCIPsetInfinity(set) ) /*lint !e777*/
+   {
+      if( !lp->adjustlpval )
+      {
+         SCIPmessagePrintWarning(messagehdlr, "LP solution value is below SCIP's -infinity value\n");
+         lp->adjustlpval = TRUE;
+      }
+      lp->lpobjval = -SCIPsetInfinity(set);
+   }
+}
+
 /** solves the LP with the given algorithm and evaluates return status */
 static
 SCIP_RETCODE lpSolve(
@@ -14185,7 +14218,9 @@ SCIP_RETCODE lpSolve(
       assert(lp->dualfeasible);
       lp->lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
-      if( SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) )
+      adjustLPobjval(lp, set, messagehdlr);
+
+      if( !SCIPsetIsInfinity(set, lp->lpiuobjlim) && SCIPsetIsGE(set, lp->lpobjval, lp->lpiuobjlim) )
       {
          /* the solver may return the optimal value, even if this is greater or equal than the upper bound */
          SCIPdebugMessage("optimal solution %.15g exceeds objective limit %.15g\n", lp->lpobjval, lp->lpiuobjlim);
@@ -14231,6 +14266,7 @@ SCIP_RETCODE lpSolve(
    else if( SCIPlpiIsIterlimExc(lp->lpi) )
    {
       SCIP_CALL( SCIPlpiGetObjval(lp->lpi, &lp->lpobjval) );
+      adjustLPobjval(lp, set, messagehdlr);
       lp->lpsolstat = SCIP_LPSOLSTAT_ITERLIMIT;
    }
    else if( SCIPlpiIsTimelimExc(lp->lpi) )
@@ -16398,7 +16434,7 @@ SCIP_RETCODE SCIPlpGetSol(
       else
       {
          /* if dual feasibility check is disabled, set reduced costs of basic variables to 0 */
-         if( dualfeasible == NULL && lpicols[c]->basisstatus == SCIP_BASESTAT_BASIC )
+         if( dualfeasible == NULL && lpicols[c]->basisstatus == (unsigned int) SCIP_BASESTAT_BASIC )
          {
             lpicols[c]->redcost = 0.0;
          }
@@ -16516,10 +16552,12 @@ SCIP_RETCODE SCIPlpGetSol(
    }
 
    /* if the objective value returned by the LP solver is smaller than the internally computed primal bound, then we
-    * declare the solution primal infeasible
+    * declare the solution primal infeasible; we assume primalbound and lp->lpobjval to be equal if they are both +/-
+    * infinity
     */
    /**@todo alternatively, if otherwise the LP solution is feasible, we could simply update the objective value */
-   if( stillprimalfeasible )
+   if( stillprimalfeasible && !(SCIPsetIsInfinity(set, primalbound) && SCIPsetIsInfinity(set, lp->lpobjval))
+      && !(SCIPsetIsInfinity(set, -primalbound) && SCIPsetIsInfinity(set, -lp->lpobjval)) )
    {
       stillprimalfeasible = SCIPsetIsFeasLE(set, primalbound, lp->lpobjval);
       SCIPdebugMessage(" primalbound=%.9f, lpbound=%.9g, pfeas=%u(%u)\n", primalbound, lp->lpobjval,
@@ -16527,10 +16565,11 @@ SCIP_RETCODE SCIPlpGetSol(
    }
 
    /* if the objective value returned by the LP solver is smaller than the internally computed dual bound, we declare
-    * the solution dual infeasible
+    * the solution dual infeasible; we assume dualbound and lp->lpobjval to be equal if they are both +/- infinity
     */
    /**@todo alternatively, if otherwise the LP solution is feasible, we could simply update the objective value */
-   if( stilldualfeasible )
+   if( stilldualfeasible && !(SCIPsetIsInfinity(set, dualbound) && SCIPsetIsInfinity(set, lp->lpobjval))
+      && !(SCIPsetIsInfinity(set, -dualbound) && SCIPsetIsInfinity(set, -lp->lpobjval)) )
    {
       stilldualfeasible =  SCIPsetIsFeasGE(set, dualbound, lp->lpobjval);
       SCIPdebugMessage(" dualbound=%.9f, lpbound=%.9g, dfeas=%u(%u)\n", dualbound, lp->lpobjval,

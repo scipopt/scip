@@ -54,21 +54,20 @@ struct SCIP_Diveset
    SCIP_Longint          totalsoldepth;      /**< the sum of depths at which this dive set found solutions */
    SCIP_Longint          totalnnodes;        /**< the total number of probing nodes explored by this dive set */
    SCIP_Longint          totalnbacktracks;   /**< the total number of backtracks during the execution of this dive set */
+   SCIP_Longint          nsolsfound;         /**< the total number of solutions found */
+   SCIP_Longint          nbestsolsfound;     /**< the total number of best solutions found */
+   int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
    int                   mindepth;           /**< the minimum depth reached by all executions of the dive set */
    int                   maxdepth;           /**< the maximum depth reached by an execution of the dive set */
    int                   minsoldepth;        /**< the minimum depth at which this dive set found a solution */
    int                   maxsoldepth;        /**< the maximum depth at which this dive set found a solution */
    int                   ncalls;             /**< the total number of calls of this dive set */
    int                   nsolcalls;          /**< number of calls with a leaf solution */
-   SCIP_Longint          nsolsfound;         /**< the total number of solutions found */
-   SCIP_Longint          nbestsolsfound;     /**< the total number of best solutions found */
-   int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
    int                   lpsolvefreq;        /**< LP solve frequency for diving heuristics */
    SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands;  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
-   SCIP_Bool             specificsos1score;  /**< should SOS1 variables be scored by the diving heuristics specific score function;
-                                              *   otherwise use the score function of the SOS1 constraint handler */
+   SCIP_DIVETYPE         divetypemask;       /**< bit mask that represents the supported dive types by this dive set */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore));  /**< method for candidate score and rounding direction */
 };
 

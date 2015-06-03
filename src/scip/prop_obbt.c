@@ -64,11 +64,12 @@
 #define DEFAULT_DUALFEASTOL              1e-9      /**< feasibility tolerance for reduced costs used in obbt; this value
                                                     *   is used if SCIP's dual feastol is greater */
 #define DEFAULT_CONDITIONLIMIT           -1.0      /**< maximum condition limit used in LP solver (-1.0: no limit) */
-#define DEFAULT_BOUNDSTREPS              0.01      /**< minimal relative improve for strengthening bounds */
+#define DEFAULT_BOUNDSTREPS             0.001      /**< minimal relative improve for strengthening bounds */
 #define DEFAULT_FILTERING_MIN               2      /**< minimal number of filtered bounds to apply another filter
                                                     *   round */
 #define DEFAULT_ITLIMITFACTOR            10.0      /**< multiple of root node LP iterations used as total LP iteration
                                                     *   limit for obbt (<= 0: no limit ) */
+#define DEFAULT_MINITLIMIT              5000L      /**< minimum LP iteration limit */
 #define DEFAULT_ONLYNONCONVEXVARS       FALSE      /**< only apply obbt on non-convex variables */
 #define DEFAULT_TIGHTINTBOUNDSPROBING    TRUE      /**< should bounds of integral variables be tightened during
                                                     *   the probing mode? */
@@ -80,13 +81,13 @@
 #define GENVBOUND_PROP_NAME             "genvbounds"
 #define INTERVALINFTY                   1E+43      /**< value for infinity in interval operations */
 
-#define DEFAULT_SEPARATESOL              TRUE      /**< should the obbt LP solution be separated? note that that by
+#define DEFAULT_SEPARATESOL             FALSE      /**< should the obbt LP solution be separated? note that that by
                                                     *   separating solution OBBT will apply all bound tightenings
                                                     *   immediatly */
 #define DEFAULT_SEPAMINITER                 0      /**< minimum number of iteration spend to separate an obbt LP solution */
 #define DEFAULT_SEPAMAXITER                10      /**< maximum number of iteration spend to separate an obbt LP solution */
 #define DEFAULT_GENVBDSDURINGSEPA        TRUE      /**< try to create genvbounds during separation process? */
-#define DEFAULT_PROPAGATEFREQ               5      /**< trigger a propagation round after that many bound tightenings
+#define DEFAULT_PROPAGATEFREQ               0      /**< trigger a propagation round after that many bound tightenings
                                                     *   (0: no propagation) */
 
 /** translate from one value of infinity to another
@@ -125,6 +126,7 @@ struct SCIP_PropData
    SCIP_Longint          npropagatedomreds;  /**< number of domain reductions found during propagation */
    SCIP_Longint          nprobingiterations; /**< number of LP iterations during the probing mode */
    SCIP_Longint          nfilterlpiters;     /**< number of LP iterations spend for filtering */
+   SCIP_Longint          minitlimit;         /**< minimum LP iteration limit */
    SCIP_Real             dualfeastol;        /**< feasibility tolerance for reduced costs used in obbt; this value is
                                               *   used if SCIP's dual feastol is greater */
    SCIP_Real             conditionlimit;     /**< maximum condition limit used in LP solver (-1.0: no limit) */
@@ -2302,6 +2304,7 @@ static
 SCIP_DECL_PROPEXEC(propExecObbt)
 {  /*lint --e{715}*/
    SCIP_PROPDATA* propdata;
+   SCIP_Longint itlimit;
 
    assert(scip != NULL);
    assert(prop != NULL);
@@ -2374,9 +2377,15 @@ SCIP_DECL_PROPEXEC(propExecObbt)
       return SCIP_OKAY;
    }
 
+   /* compute iteration limit */
+   if( propdata->itlimitfactor > 0.0 )
+      itlimit = (SCIP_Longint) MAX(propdata->itlimitfactor * SCIPgetNRootLPIterations(scip),
+         propdata->minitlimit); /*lint !e666*/
+   else
+      itlimit = -1;
+
    /* apply obbt */
-   SCIP_CALL( applyObbt(scip, propdata, propdata->itlimitfactor > 0.0 ?
-      (SCIP_Longint) (propdata->itlimitfactor * SCIPgetNRootLPIterations(scip)) : -1, result) );
+   SCIP_CALL( applyObbt(scip, propdata, itlimit, result) );
    assert(*result != SCIP_DIDNOTRUN);
 
    /* set current node as last node */
@@ -2521,6 +2530,10 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/itlimitfactor",
          "multiple of root node LP iterations used as total LP iteration limit for obbt (<= 0: no limit )",
          &propdata->itlimitfactor, FALSE, DEFAULT_ITLIMITFACTOR, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddLongintParam(scip, "propagating/"PROP_NAME"/minitlimit",
+         "minimum LP iteration limit",
+         &propdata->minitlimit, FALSE, DEFAULT_MINITLIMIT, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/dualfeastol",
          "feasibility tolerance for reduced costs used in obbt; this value is used if SCIP's dual feastol is greater",

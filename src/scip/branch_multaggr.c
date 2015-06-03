@@ -218,7 +218,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
       {
          assert(fixvars[i] != NULL);
 
-	 /* only integer and binary multi-aggregated variables are potential branching candidates */
+         /* only integer and binary multi-aggregated variables are potential branching candidates */
          if( SCIPvarGetStatus(fixvars[i]) == SCIP_VARSTATUS_MULTAGGR && (SCIPvarGetType(fixvars[i]) == SCIP_VARTYPE_INTEGER ||
                SCIPvarGetType(fixvars[i]) == SCIP_VARTYPE_BINARY) )
          {
@@ -243,7 +243,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                int ndownvars;
                int nupvars;
 
-	       /* start the probing mode if this is the first entrance */
+               /* start the probing mode if this is the first entrance */
                if( startprobing )
                {
                   SCIP_CALL( SCIPstartProbing(scip) );
@@ -278,7 +278,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
 
-	       /* solve the down child probing node */
+               /* solve the down child probing node */
                SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &downinf) );
                solstatdown = SCIPgetLPSolstat(scip);
                lperror = lperror || (solstatdown == SCIP_LPSOLSTAT_NOTSOLVED && downinf == 0) || (solstatdown == SCIP_LPSOLSTAT_ITERLIMIT) ||
@@ -340,7 +340,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                SCIP_CALL( SCIPprintCons(scip, probingconsup, NULL) );
                SCIPinfoMessage(scip, NULL, "\n");
 #endif
-	       /* solve the up child probing node */
+               /* solve the up child probing node */
                SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &upinf) );
                solstatup = SCIPgetLPSolstat(scip);
                lperror = lperror ||  (solstatup == SCIP_LPSOLSTAT_NOTSOLVED && upinf == 0) || (solstatup == SCIP_LPSOLSTAT_ITERLIMIT) ||
@@ -374,7 +374,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                      SCIP_Real pscdown;
                      SCIP_Real pscup;
 
-		     assert(upvars != NULL);
+                     assert(upvars != NULL);
                      assert(upvars[k] != NULL);
 
                      pscdown = SCIPvarGetPseudocost(upvars[k], scip->stat, SCIPsetFeasFloor(scip->set, upvarssols[k]) - upvarssols[k]);
@@ -419,7 +419,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
                         break;
                      }
                   }
-	       }
+               }
                else
                {
                   /* if both children are solved to optimality and they both give a new valid bound, calculate the score of the
@@ -454,9 +454,9 @@ SCIP_RETCODE selectVarMultAggrBranching(
                   SCIPstatistic(
                      if( score > *bestmultaggrscore )
                         *bestmultaggrscore = score;
-                     )
+                     );
 
-		  /* update the best branching candidate and all its values if a strictly greater score has been found */
+                  /* update the best branching candidate and all its values if a strictly greater score has been found */
                   if( score > *bestscore )
                   {
                      SCIPstatistic(
@@ -834,10 +834,11 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
 	 /* reoptimize is set to true if strong branching on fractional variables did not explicitly evaluate the objective
           * values of the probing child nodes and thus we do not have updated information
           */
-         if( SCIPisLT(scip, SCIPgetVarStrongbranchLPAge(scip, bestcand), branchruledata->reevalage) || branchruledata->maxproprounds != 0 )
-	    reoptimize = TRUE;
+         if( SCIPisLT(scip, SCIPgetVarStrongbranchLPAge(scip, bestcand), branchruledata->reevalage)
+            || branchruledata->maxproprounds != 0 )
+            reoptimize = TRUE;
 
-	 /* store values needed for the ratioggain statistic */
+         /* store values needed for the ratioggain statistic */
          if( !reoptimize )
          {
             SCIP_Real fdown;

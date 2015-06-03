@@ -286,6 +286,7 @@ $end
 ------------------------------------------------------------------------ 
 */
 
+# include <cstddef>
 # include <iostream>
 # include <limits>
 # include <cppad/local/cppad_assert.hpp>

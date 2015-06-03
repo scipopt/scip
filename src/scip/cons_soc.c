@@ -3419,10 +3419,8 @@ GENERALUPG:
       goto cleanup;
 
    /* build lower triangular part the A matrix */
-   SCIP_CALL( SCIPallocBufferArray(scip, &a, nquadvars*nquadvars) );
-   BMSclearMemoryArray(a, nquadvars*nquadvars);
-   SCIP_CALL( SCIPallocBufferArray(scip, &bp, nquadvars) );
-   BMSclearMemoryArray(bp, nquadvars);
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &a, nquadvars*nquadvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &bp, nquadvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &quadvars, nquadvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &eigvals, nquadvars) );
 
@@ -3497,19 +3495,10 @@ GENERALUPG:
       goto cleanup;
 
    /* determine whether rhs or lhs of cons is potentially SOC, if any */
-   rhsissoc = FALSE;
-   if( nneg == 1 && !SCIPisInfinity(scip, SCIPgetRhsQuadratic(scip, cons)) )
-   {
-      rhsissoc = TRUE;
-   }
+   rhsissoc = nneg == 1 && !SCIPisInfinity(scip,  SCIPgetRhsQuadratic(scip, cons));
+   lhsissoc = npos == 1 && !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons));
 
-   lhsissoc = FALSE;
-   if( npos == 1 && !SCIPisInfinity(scip, -SCIPgetLhsQuadratic(scip, cons)) )
-   {
-      lhsissoc = TRUE;
-   }
-
-   /* if non is potentailly SOC, stop */
+   /* if non is potentially SOC, stop */
    if( !rhsissoc && !lhsissoc )
       goto cleanup;
 
@@ -3518,7 +3507,7 @@ GENERALUPG:
 
    if( lhsissoc )
    {
-      /* lhs is potentailly SOC, change signs */
+      /* lhs is potentially SOC, change signs */
       lhsconstant = SCIPgetLhsQuadratic(scip, cons);
 
       for( i = 0; i < nquadvars; ++i )
@@ -3537,6 +3526,9 @@ GENERALUPG:
    rhsvarfound = FALSE;
    for( i = 0; i < nquadvars; ++i )
    {
+      if( SCIPisZero(scip, eigvals[i]) )
+         continue;
+
       term = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
 
       if( eigvals[i] > 0.0 )
@@ -3617,7 +3609,7 @@ GENERALUPG:
          }
          else
          {
-            SCIPdebugMessage("Fail because rhsvar [%g, %g] changes sign.\n", rhsvarlb, rhsvarub);
+            SCIPdebugMessage("Failed because rhsvar [%g, %g] changes sign.\n", rhsvarlb, rhsvarub);
             rhsvarfound = FALSE;
             break;
          }
@@ -3732,6 +3724,19 @@ GENERALUPG:
                   SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons)) );
       }
    }
+#ifdef SCIP_DEBUG
+   else
+   {
+      if( lhscount < 2 )
+      {
+         SCIPdebugMessage("Failed because there are not enough lhsvars (%d)\n", lhscount);
+      }
+      if( SCIPisNegative(scip, lhsconstant) )
+      {
+         SCIPdebugMessage("Failed because lhsconstant is negative (%g)\n", lhsconstant);
+      }
+   }
+#endif
 
  cleanup:
    SCIPfreeBufferArray(scip, &lhsvars);

@@ -471,7 +471,7 @@ SCIP_RETCODE conshdlrMarkConsObsolete(
       /* in case the constraint is marked to be propagated, we do not move it in the propconss array since the first
        * part of the array contains all marked constraints independently of their age
        */
-      assert(!cons->markpropagate == (cons->propconsspos < conshdlr->nmarkedpropconss));
+      assert((!cons->markpropagate) == (cons->propconsspos < conshdlr->nmarkedpropconss));
       if( cons->propagate && cons->propenabled && !cons->markpropagate )
       {
          assert(0 <= cons->propconsspos && cons->propconsspos < conshdlr->nusefulpropconss);
@@ -574,7 +574,7 @@ SCIP_RETCODE conshdlrMarkConsUseful(
       /* in case the constraint is marked to be propagated, we do not move it in the propconss array since the first
        * part of the array contains all marked constraints independently of their age
        */
-      assert(!cons->markpropagate == (cons->propconsspos < conshdlr->nmarkedpropconss));
+      assert((!cons->markpropagate) == (cons->propconsspos < conshdlr->nmarkedpropconss));
       if( cons->propagate && cons->propenabled && !cons->markpropagate)
       {
          assert(conshdlr->nusefulpropconss <= cons->propconsspos && cons->propconsspos < conshdlr->npropconss);
@@ -2233,7 +2233,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
          (int*)&(*conshdlr)->presoltiming, TRUE, presoltiming, (int) SCIP_PRESOLTIMING_FAST, (int) SCIP_PRESOLTIMING_ALWAYS, NULL, NULL) ); /*lint !e740 !e713*/
 
    return SCIP_OKAY;
-}
+} /*lint !e715*/
 
 /** calls destructor and frees memory of constraint handler */
 SCIP_RETCODE SCIPconshdlrFree(
@@ -4856,8 +4856,8 @@ SCIP_PROPTIMING SCIPconshdlrGetPropTiming(
 
 /** sets the timing mask of the propagation method of the constraint handler */
 void SCIPconshdlrSetPropTiming(
-   SCIP_CONSHDLR*        conshdlr,            /**< constraint handler */
-   SCIP_PROPTIMING       proptiming           /** timing mask to be set */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_PROPTIMING       proptiming          /**< timing mask to be set */
    )
 {
    assert(conshdlr != NULL);
@@ -4878,8 +4878,8 @@ SCIP_PRESOLTIMING SCIPconshdlrGetPresolTiming(
 
 /** sets the timing mask of the presolving method of the constraint handler */
 void SCIPconshdlrSetPresolTiming(
-   SCIP_CONSHDLR*        conshdlr,            /**< constraint handler */
-   SCIP_PRESOLTIMING     presoltiming         /** timing mask to be set */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
    )
 {
    assert(conshdlr != NULL);

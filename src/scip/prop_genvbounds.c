@@ -1501,7 +1501,8 @@ SCIP_RETCODE sortGenVBounds(
       /* compute the strong components of the i-th undirected component */
       if( nnodes > 2 )
       {
-         SCIPdigraphComputeDirectedComponents(graph, i, strongcomponents, strongcompstartidx, &nstrongcomponents);
+         SCIP_CALL( SCIPdigraphComputeDirectedComponents(graph, i, strongcomponents, strongcompstartidx,
+               &nstrongcomponents) );
 
          for( j = 0; j < nnodes; ++j )
          {
@@ -2336,7 +2337,7 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    }
 
    /* propagate locally and globally */
-   SCIP_CALL( execGenVBounds(scip, propdata, result, TRUE, NULL) );
+   SCIP_CALL( execGenVBounds(scip, propdata, result, !SCIPinProbing(scip), NULL) );
 
    /* when called in presolving stage the result is set to SCIP_SUCCESS instead of SCIP_REDUCEDDOM, this is corrected
     * here

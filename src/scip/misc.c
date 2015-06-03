@@ -4001,6 +4001,14 @@ void SCIPsort(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealIntInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortRealIntLong(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     RealIntLong
 #define SORTTPL_KEYTYPE     SCIP_Real
@@ -6246,9 +6254,9 @@ void tarjan(
    int*                  strongcomponents,   /**< array to store for each node the strongly connected
                                               *   component to which it belongs (components are
                                               *   numbered 0 to nstrongcomponents - 1); */
-   int*                  nstrongcomponents,   /**< pointer to store the number of computed components so far */
-   int*                  strongcompstartidx,  /**< array to store the start index of the computed components */
-   int*                  nstorednodes         /**< pointer to store the number of already stored nodes */
+   int*                  nstrongcomponents,  /**< pointer to store the number of computed components so far */
+   int*                  strongcompstartidx, /**< array to store the start index of the computed components */
+   int*                  nstorednodes        /**< pointer to store the number of already stored nodes */
    )
 {
    int i;
@@ -6342,7 +6350,7 @@ void tarjan(
  *
  *  @note In general a topological sort of the strongly connected components is not unique.
  */
-void SCIPdigraphComputeDirectedComponents(
+SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   compidx,            /**< number of the undirected connected component */
    int*                  strongcomponents,   /**< array to store the strongly connected components
@@ -6370,11 +6378,11 @@ void SCIPdigraphComputeDirectedComponents(
    assert(strongcompstartidx != NULL);
    assert(nstrongcomponents != NULL);
 
-   BMSallocMemoryArray(&lowlink, digraph->nnodes);
-   BMSallocMemoryArray(&dfsidx, digraph->nnodes);
-   BMSallocMemoryArray(&stack, digraph->nnodes);
-   BMSallocMemoryArray(&unprocessed, digraph->nnodes);
-   BMSallocMemoryArray(&nodeinstack, digraph->nnodes);
+   SCIP_ALLOC( BMSallocMemoryArray(&lowlink, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&dfsidx, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&stack, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&unprocessed, digraph->nnodes) );
+   SCIP_ALLOC( BMSallocMemoryArray(&nodeinstack, digraph->nnodes) );
 
    for( i = 0; i < digraph->nnodes; ++i )
    {
@@ -6418,6 +6426,8 @@ void SCIPdigraphComputeDirectedComponents(
    BMSfreeMemoryArray(&stack);
    BMSfreeMemoryArray(&unprocessed);
    BMSfreeMemoryArray(&nodeinstack);
+
+   return SCIP_OKAY;
 }
 
 /** frees the component information for the given directed graph */
@@ -7086,7 +7096,7 @@ SCIP_Longint SCIPcalcGreComDiv(
       {
          /* we can stop if one value reached one */
          if( val2 == 1 )
-            return (val2 << t);  /*lint !e647 !e701*/
+            return (val2 << t);  /*lint !e647 !e703*/
 
          /* if ((val1 xor val2) and 2) = 2, then gcd(val1, val2) = gcd((val1 + val2)/4, val2),
           * and otherwise                        gcd(val1, val2) = gcd((val1 − val2)/4, val2)
@@ -7107,7 +7117,7 @@ SCIP_Longint SCIPcalcGreComDiv(
       {
          /* we can stop if one value reached one */
          if( val1 == 1 )
-            return (val1 << t);  /*lint !e647 !e701*/
+            return (val1 << t);  /*lint !e647 !e703*/
 
          /* if ((val2 xor val1) and 2) = 2, then gcd(val2, val1) = gcd((val2 + val1)/4, val1),
           * and otherwise                        gcd(val2, val1) = gcd((val2 − val1)/4, val1)
@@ -7601,7 +7611,7 @@ SCIP_Real SCIPselectSimpleValue(
  * Random Numbers
  */
 
-#ifdef NO_RAND_R
+#if defined(NO_RAND_R) || defined(_WIN32) || defined(_WIN64)
 
 #define SCIP_RAND_MAX 32767
 /** returns a random number between 0 and SCIP_RAND_MAX */

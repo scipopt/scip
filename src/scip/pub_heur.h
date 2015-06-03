@@ -341,12 +341,11 @@ SCIP_Bool SCIPdivesetUseOnlyLPBranchcands(
    SCIP_DIVESET*         diveset             /**< diving settings */
    );
 
-/** should SOS1 variables be scored by the diving heuristics specific score function;
- *  otherwise use the score function of the SOS1 constraint handler
- */
+/** returns TRUE if dive set supports diving of the specified type */
 EXTERN
-SCIP_Bool SCIPdivesetUseSpecificSOS1Score(
-   SCIP_DIVESET*         diveset             /**< diving settings */
+SCIP_Bool SCIPdivesetSupportsType(
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_DIVETYPE         divetype            /**< bit mask that represents the supported dive types by this dive set */
    );
 
 /** frees memory of a diveset */

@@ -51,7 +51,7 @@ public:
    /** default constructor -> gives entire interval */
    SCIPInterval()
    {
-      SCIPintervalSetBounds(this, -infinity, infinity);
+      SCIPintervalSetBounds(this, -SCIPInterval::infinity,SCIPInterval::infinity);
    }
 
    /** constructor for an SCIP_INTERVAL struct */
@@ -93,11 +93,11 @@ public:
       const SCIP_INTERVAL& y                 /**< interval to compare with */
       ) const
    {
-      if( SCIPintervalIsEmpty(*this) && !SCIPintervalIsEmpty(y) )
+      if( SCIPintervalIsEmpty(SCIPInterval::infinity, *this) && !SCIPintervalIsEmpty(SCIPInterval::infinity, y) )
          return false;
-      if( this->inf <= -infinity && y.inf > -infinity )
+      if( this->inf <= -SCIPInterval::infinity && y.inf > -SCIPInterval::infinity )
          return false;
-      if( this->sup >=  infinity && y.sup <  infinity )
+      if( this->sup >= SCIPInterval::infinity && y.sup < SCIPInterval::infinity )
          return false;
       return (this->inf == y.inf) && (this->sup == y.sup);
    }
@@ -116,8 +116,8 @@ public:
       ) const
    {
       return ( (inf == y) && (sup == y) ) ||
-             ( sup <= -infinity && y <= -infinity ) ||
-             ( inf >=  infinity && y >=  infinity );
+             ( sup <= -SCIPInterval::infinity && y <= -SCIPInterval::infinity ) ||
+             ( inf >= SCIPInterval::infinity && y >= SCIPInterval::infinity );
    }
 
    /** adds another interval to this one */
@@ -371,7 +371,7 @@ SCIPInterval abs(
 {
    SCIPInterval resultant;
 
-   SCIPintervalAbs(&resultant, x);
+   SCIPintervalAbs(SCIPInterval::infinity, &resultant, x);
 
    return resultant;
 }
@@ -384,7 +384,7 @@ SCIPInterval sign(
 {
    SCIPInterval resultant;
 
-   SCIPintervalSign(&resultant, x);
+   SCIPintervalSign(SCIPInterval::infinity, &resultant, x);
 
    return resultant;
 }

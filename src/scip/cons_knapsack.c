@@ -11554,7 +11554,7 @@ SCIP_RETCODE preprocessConstraintPairs(
       assert(consdata1 != NULL);
 
       /* if both constraints didn't change since last pair processing, we can ignore the pair */
-      if( consdata0->presolvedtiming >= SCIP_PRESOLTIMING_EXHAUSTIVE && consdata1->presolvedtiming >= SCIP_PRESOLTIMING_EXHAUSTIVE )
+      if( consdata0->presolvedtiming >= SCIP_PRESOLTIMING_EXHAUSTIVE && consdata1->presolvedtiming >= SCIP_PRESOLTIMING_EXHAUSTIVE ) /*lint !e574*/
          continue;
 
       assert(consdata1->nvars >= 1);
@@ -12372,7 +12372,7 @@ SCIP_DECL_CONSPROP(consPropKnapsack)
 /** presolving method of constraint handler */
 static
 SCIP_DECL_CONSPRESOL(consPresolKnapsack)
-{  /*lint --e{715}*/
+{  /*lint --e{574,715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
    SCIP_CONS* cons;
@@ -12421,7 +12421,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       consdata->presolvedtiming = presoltiming;
 
       if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgbds > 0
-         || *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds )
+         || nnewupgdconss > 0 || *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds )
       {
          SCIP_CALL( applyFixings(scip, cons, &cutoff) );
          if( cutoff )

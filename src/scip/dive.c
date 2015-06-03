@@ -12,19 +12,14 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/*#define SCIP_DEBUG*/
-/**@file   scip.c
+
+/**@file   dive.c
  * @brief  library methods for diving heuristics
  * @author Gregor Hendel
- *
- * @todo check all checkStage() calls, use bit flags instead of the SCIP_Bool parameters
- * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
  */
 
 #include "scip/pub_dive.h"
 #include "pub_heur.h"
-#include "scip/struct_heur.h"
-#include "scip/struct_stat.h"
 
 /* the indicator and SOS1 constraint handlers are included for the diving algorithm SCIPperformGenericDivingAlgorithm() */
 #include "scip/cons_indicator.h"
@@ -76,7 +71,7 @@ SCIP_RETCODE solveLP(
    return SCIP_OKAY;
 }
 
-/**< select the next variable and type of diving */
+/** select the next variable and type of diving */
 static
 SCIP_RETCODE selectNextDiving(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -120,9 +115,9 @@ SCIP_RETCODE selectNextDiving(
       bestcandidx = -1;
 
       SCIPclearDiveBoundChanges(scip);
-      /* todo calculate number of LP candidates whose local bounds do not agree with their last LP solution value */
+
       /* search for the candidate that maximizes the dive set score function and whose solution value is still feasible */
-      for (c = 0; c < nlpcands; ++c)
+      for( c = 0; c < nlpcands; ++c )
       {
          assert(SCIPgetSolVal(scip, worksol, lpcands[c]) == lpcandssol[c]); /*lint !e777 doesn't like comparing floats for equality */
 
@@ -483,6 +478,15 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       lastlpobjval = SCIPgetLPObjval(scip);
       SCIP_CALL( SCIPlinkLPSol(scip, worksol) );
 
+      /* in case we do not solve LP's at every probing node, we must explicitly store the solution values by unlinking the
+       * solution, otherwise, the working solution may contain wrong entries, if, e.g., a backtrack occurred after an
+       * intermediate LP resolve
+       */
+      if( lpsolvefreq != 1 )
+      {
+         SCIP_CALL( SCIPunlinkSol(scip, worksol) );
+      }
+
 
       /* ensure array sizes for the diving on the fractional variables */
       if( onlylpbranchcands && nlpcands > lpcandsscoressize )
@@ -627,9 +631,9 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
              * was reached
              */
             if( ! cutoff
-                  && ((lpsolvefreq > 0 && ((SCIPgetProbingDepth (scip) - lastlpdepth) % lpsolvefreq) == 0)
+                  && ((lpsolvefreq > 0 && ((SCIPgetProbingDepth(scip) - lastlpdepth) % lpsolvefreq) == 0)
                   || (domreds + localdomreds > SCIPdivesetGetLPResolveDomChgQuot(diveset) * SCIPgetNVars(scip))
-                  || (onlylpbranchcands && nviollpcands > (int)(SCIPdivesetGetLPResolveDomChgQuot(diveset) * SCIPgetNVars(scip)))) )
+                  || (onlylpbranchcands && nviollpcands > (int)(SCIPdivesetGetLPResolveDomChgQuot(diveset) * nlpcands))) )
             {
                SCIP_CALL( solveLP(scip, diveset, maxnlpiterations, &lperror, &cutoff) );
 

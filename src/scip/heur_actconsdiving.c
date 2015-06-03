@@ -35,7 +35,7 @@
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
-
+#define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
 
 /*
  * Default parameter settings
@@ -54,18 +54,14 @@
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
 #define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15 /**< percentage of immediate domain changes during probing to trigger LP resolve */
 #define DEFAULT_LPSOLVEFREQ           1 /**< LP solve frequency for diving heuristics */
-#define DEFAULT_ONLYLPBRANCHCANDS FALSE /**< should only LP branching candidates be considered instead of the slower but
+#define DEFAULT_ONLYLPBRANCHCANDS  TRUE /**< should only LP branching candidates be considered instead of the slower but
                                          *   more general constraint handler diving variable selection? */
-#define DEFAULT_SPECIFICSOS1SCORE FALSE /**< should SOS1 variables be scored by the diving heuristics specific score function;
-                                         *   otherwise use the score function of the SOS1 constraint handler */
 
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_Bool             specificsos1score;  /**< should SOS1 variables be scored by the diving heuristics specific score function;
-                                              *   otherwise use the score function of the SOS1 constraint handler */
 };
 
 
@@ -275,8 +271,8 @@ SCIP_DECL_HEUREXEC(heurExecActconsdiving) /*lint --e{715}*/
 
    *result = SCIP_DIDNOTRUN;
 
-   /* if there are no integer variables (note that, e.g., SOS1 variables may be present) */
-   if ( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) < 1 && ! heurdata->specificsos1score )
+   /* if there are no integer variables, stop execution */
+   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
       return SCIP_OKAY;
 
    SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
@@ -345,7 +341,6 @@ SCIP_RETCODE SCIPincludeHeurActconsdiving(
 
    /* create actconsdiving primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
-   heurdata->specificsos1score = DEFAULT_SPECIFICSOS1SCORE;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -364,7 +359,7 @@ SCIP_RETCODE SCIPincludeHeurActconsdiving(
    SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH, DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT,
          DEFAULT_MAXDIVEUBQUOT, DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL, DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT,
          DEFAULT_LPSOLVEFREQ, DEFAULT_MAXLPITEROFS,
-         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DEFAULT_SPECIFICSOS1SCORE, divesetGetScoreActconsdiving) );
+         DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES, divesetGetScoreActconsdiving) );
 
    return SCIP_OKAY;
 }

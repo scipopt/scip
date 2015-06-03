@@ -74,7 +74,6 @@ SCIP_Bool SCIPsolveIsStopped(
 {
    assert(set != NULL);
    assert(stat != NULL);
-   assert(set->istimelimitfinite || SCIPsetIsInfinity(set, set->limit_time));
 
    /* increase the number of calls to this method */
    ++stat->nisstoppedcalls;
@@ -4338,6 +4337,7 @@ SCIP_RETCODE SCIPsolveCIP(
    /* switch status to UNKNOWN */
    stat->status = SCIP_STATUS_UNKNOWN;
 
+   focusnode = NULL;
    nextnode = NULL;
    unbounded = FALSE;
 

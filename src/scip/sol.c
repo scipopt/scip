@@ -1462,7 +1462,14 @@ SCIP_RETCODE SCIPsolCheck(
 
             lb = SCIPvarGetLbGlobal(var);
             ub = SCIPvarGetUbGlobal(var);
-            *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb) && SCIPsetIsFeasLE(set, solval, ub);
+
+            /* check finite lower bound */
+            if( !SCIPsetIsInfinity(set, -lb) )
+               *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb);
+
+            /* check finite upper bound */
+            if( !SCIPsetIsInfinity(set, ub) )
+               *feasible = *feasible && SCIPsetIsFeasLE(set, solval, ub);
 
             if( printreason && (SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub)) )
             {
@@ -1540,7 +1547,6 @@ SCIP_RETCODE SCIPsolCheck(
 /** try to round given solution */
 SCIP_RETCODE SCIPsolRound(
    SCIP_SOL*             sol,                /**< primal solution */
-   SCIP_LP*              lp,                 /**< LP strucure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PROB*            prob,               /**< transformed problem data */

@@ -2431,7 +2431,7 @@ SCIP_RETCODE paramsetParse(
       }
 
       /* parse emphasis line */
-      SCIP_CALL( emphasisParse(paramset, set, messagehdlr, line+1) );        /**< message handler */
+      SCIP_CALL( emphasisParse(paramset, set, messagehdlr, line+1) );        /* message handler */
       return SCIP_OKAY;
    }
    else if ( *line != '=' )
@@ -4132,32 +4132,32 @@ SCIP_RETCODE SCIPparamCheckBool(
 
 /** checks value of string parameter; issues a warning message if value is invalid */
 SCIP_RETCODE SCIPparamCheckString(
-	SCIP_PARAM*           param,              /**< parameter */
-	SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-	const char*           value               /**< value to check */
-	)
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char*           value               /**< value to check */
+   )
 {
-	return paramCheckString(param, messagehdlr, value);
+   return paramCheckString(param, messagehdlr, value);
 }
 
 /** checks value of character parameter; issues a warning message if value is invalid */
 SCIP_RETCODE SCIPparamCheckChar(
-	SCIP_PARAM*           param,              /**< parameter */
-	SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-	const char            value               /**< value to check */
-	)
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   const char            value               /**< value to check */
+   )
 {
 	return paramCheckChar(param, messagehdlr, value);
 }
 
 /** checks value of SCIP_Longint parameter; issues a warning message if value is invalid */
 SCIP_RETCODE SCIPparamCheckLongint(
-	SCIP_PARAM*           param,              /**< parameter */
-	SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
-	SCIP_Longint		  value               /**< value to check */
-	)
+   SCIP_PARAM*           param,              /**< parameter */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_Longint          value               /**< value to check */
+   )
 {
-	return paramCheckLongint(param, messagehdlr, value);
+   return paramCheckLongint(param, messagehdlr, value);
 }
 
 /** sets value of SCIP_Bool parameter */
@@ -4459,7 +4459,7 @@ SCIP_RETCODE SCIPparamSetToDefault(
 /** writes a single parameter to a file */
 SCIP_RETCODE SCIPparamWrite(
    SCIP_PARAM*           param,              /**< parameter */
-   SCIP_MESSAGEHDLR*     messagehdlr,         /**< message handler */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    const char*           filename,           /**< file name, or NULL for stdout */
    SCIP_Bool             comments,           /**< should parameter descriptions be written as comments? */
    SCIP_Bool             onlychanged         /**< should only the parameters been written, that are changed from default? */

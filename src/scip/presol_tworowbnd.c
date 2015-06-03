@@ -43,9 +43,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/scipdefplugins.h"
 #include "scip/pub_matrix.h"
-
 #include "presol_tworowbnd.h"
 
 #define PRESOL_NAME            "tworowbnd"
@@ -245,7 +243,7 @@ void getActivities(
    SCIP_Real*            minact,             /**< calculated overlap minimal activity w.r.t. to the other row */
    SCIP_Real*            maxact              /**< calculated overlap maximal activity w.r.t. to the other row */
    )
-{
+{/*lint --e{715}*/
    SCIP_Real val;
    int nothernonoverlap;
    SCIP_Real lhs;
@@ -320,7 +318,7 @@ void getActivities(
          if( coefotheroverlap[i] > 0.0 )
          {
             /* multiply column by -1 and swap bounds */
-            SCIP_Real tmp;
+            double tmp;
             tmp = tmplowerbds[i];
             tmplowerbds[i] = -tmpupperbds[i];
             tmpupperbds[i] = -tmp;
@@ -331,7 +329,7 @@ void getActivities(
 
          if( tmplowerbds[i] < minlowerbnd )
          {
-            if( tmplowerbds[i] == -SCIPinfinity(scip) )
+            if( SCIPisInfinity(scip, -tmplowerbds[i]) )
             {
                /* lower bounds have to be finite for later boundshift */
                *minact = -SCIPinfinity(scip);
@@ -352,6 +350,24 @@ void getActivities(
       {
          SCIP_Real bndshift = -minlowerbnd;
          if( bndshift > (SCIP_Real)SCIP_LONGINT_MAX )
+         {
+            /* shift value is too large */
+            *minact = -SCIPinfinity(scip);
+            *maxact = SCIPinfinity(scip);
+            return;
+         }
+      }
+
+      /* init left hand side values and consider non-overlapping contribution */
+      minlhs = lhs - val;
+      nminratios = 0;
+      maxlhs = lhs - val;
+      nmaxratios = 0;
+
+      if( minlowerbnd < 0.0 )
+      {
+         double bndshift = -minlowerbnd;
+         if( bndshift > (double)SCIP_LONGINT_MAX )
          {
             /* shift value is too large */
             *minact = -SCIPinfinity(scip);
@@ -643,7 +659,7 @@ void getActivities(
       retcode = SCIPfree(&subscip);
    }
 #endif
-}
+}/*lint !e438*/
 
 /** calculate min activity */
 static
@@ -734,7 +750,7 @@ SCIP_Real getMaxActivity(
    return supremum;
 }
 
-/**< get max activity without one column */
+/** get max activity without one column */
 static
 SCIP_Real getMaxResActivity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -782,10 +798,10 @@ void applyTightening(
    int*                  overlapidx,         /**< overlap column indexes */
    int*                  othernonoverlapidx, /**< other row non overlap indexes */
    int*                  basenonoverlapidx,  /**< base row non overlap indexes */
-   SCIP_Real*            coefbaseoverlap,     /**< base row overlap coefficients */
-   SCIP_Real*            coefotheroverlap,    /**< other row overlap coefficients */
-   SCIP_Real*            coefbasenonoverlap,  /**< base row non overlap coefficients */
-   SCIP_Real*            coefothernonoverlap, /**< other row non overlap coefficients */
+   SCIP_Real*            coefbaseoverlap,    /**< base row overlap coefficients */
+   SCIP_Real*            coefotheroverlap,   /**< other row overlap coefficients */
+   SCIP_Real*            coefbasenonoverlap, /**< base row non overlap coefficients */
+   SCIP_Real*            coefothernonoverlap,/**< other row non overlap coefficients */
    SCIP_Real*            lowerbds,           /**< lower bounds */
    SCIP_Real*            upperbds,           /**< upper bounds */
    SCIP_Real*            tmplowerbds,        /**< tmp lower bounds */

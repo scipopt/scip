@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,7 +30,7 @@
 #define HEUR_NAME             "trivialnegation"
 #define HEUR_DESC             "negate solution entries if an objective coefficient changes the sign, enters or leaves the objective."
 #define HEUR_DISPCHAR         'j'
-#define HEUR_PRIORITY         30000
+#define HEUR_PRIORITY         -9000000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
@@ -60,21 +60,20 @@ SCIP_DECL_HEURCOPY(heurCopyTrivialnegation)
 static
 SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
 {  /*lint --e{715}*/
-   SCIP_SOL* lastbestsol;         /** best solution from last run */
-   SCIP_SOL* allchanged;          /** solution with all entries negated */
-   SCIP_SOL* feasiblechanged;     /** solution with all feasible entries negated */
-   SCIP_SOL* singlenegatedsol;    /** solution with exactly one negated entry */
+   SCIP_SOL* lastbestsol;         /* best solution from last run */
+   SCIP_SOL* allchanged;          /* solution with all entries negated */
+   SCIP_SOL* feasiblechanged;     /* solution with all feasible entries negated */
+   SCIP_SOL* singlenegatedsol;    /* solution with exactly one negated entry */
    SCIP_VAR** vars;
    int nvars;
    int i;
 
    SCIP_Real solval;
 
+   *result = SCIP_DIDNOTRUN;
+
    if( !SCIPisReoptEnabled(scip) )
-   {
-      *result = SCIP_DIDNOTRUN;
-      return SCIP_OKAY;
-   }
+   return SCIP_OKAY;
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
@@ -108,15 +107,11 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
    /* change the entries */
    for( i = 0; i < nvars; i++ )
    {
-      SCIP_VAR* origvar;
-      SCIP_Real constant;
-      SCIP_Real scalar;
+      SCIP_VAR* transvar;
 
       assert(SCIPvarIsActive(vars[i]));
 
-      origvar = vars[i];
-      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar,&scalar, &constant) );
-      assert(origvar != NULL);
+      transvar = vars[i];
 
       if( SCIPvarGetType(vars[i]) == SCIP_VARTYPE_BINARY )
       {
@@ -125,12 +120,18 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
          SCIP_Real oldcoef;
          SCIP_Bool changed;
 
-         newcoef = SCIPvarGetObj(origvar);
-         oldcoef = SCIPgetReoptOldObjCoef(scip, origvar, SCIPgetNReoptRuns(scip)-1);
+         SCIP_CALL( SCIPgetReoptOldObjCoef(scip, transvar, SCIPgetNReoptRuns(scip), &oldcoef));
+         SCIP_CALL( SCIPgetReoptOldObjCoef(scip, transvar, SCIPgetNReoptRuns(scip)-1, &newcoef));
 
          /* check if variable entered or left the objective, or if its objective coefficient changed sign */
-         changed = SCIPisZero(scip, oldcoef) != SCIPisZero(scip, newcoef);
-         changed |= SCIPisPositive(scip, oldcoef) == SCIPisNegative(scip, newcoef); /*lint !e514*/
+         changed = FALSE;
+         if( !SCIPisFeasEQ(scip, oldcoef, newcoef) )
+         {
+            changed = SCIPisZero(scip, oldcoef) != SCIPisZero(scip, newcoef);
+            changed |= SCIPisPositive(scip, oldcoef) == SCIPisNegative(scip, newcoef); /*lint !e514*/
+         }
+
+         SCIPdebugMessage("check variable <%s> which has %schanged from %g to %g\n", SCIPvarGetName(transvar), changed ? "" : "not ", oldcoef, newcoef);
 
          if( changed )
          {

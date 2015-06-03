@@ -614,13 +614,13 @@ SCIP_Bool SCIPhashmapIsEmpty(
    SCIP_HASHMAP*         hashmap             /**< hash map */
 );
 
-/** gives the number of entries in a hash map */ 
+/** gives the number of entries in a hash map */
 EXTERN
 int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*         hashmap             /**< hash map */
 );
 
-/** gives the number of lists (buckets) in a hash map */ 
+/** gives the number of lists (buckets) in a hash map */
 EXTERN
 int SCIPhashmapGetNLists(
    SCIP_HASHMAP*         hashmap             /**< hash map */
@@ -633,31 +633,31 @@ SCIP_HASHMAPLIST* SCIPhashmapGetList(
    int                   listindex           /**< index of hash map list */
 );
 
-/** gives the number of entries in a list of a hash map */ 
+/** gives the number of entries in a list of a hash map */
 EXTERN
 int SCIPhashmapListGetNEntries(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list, can be NULL */
 );
 
-/** retrieves origin of given entry in a hash map */ 
+/** retrieves origin of given entry in a hash map */
 EXTERN
 void* SCIPhashmapListGetOrigin(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
 );
 
-/** retrieves image of given entry in a hash map */ 
+/** retrieves image of given entry in a hash map */
 EXTERN
 void* SCIPhashmapListGetImage(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
 );
 
-/** retrieves next entry from given entry in a hash map list, or NULL if at end of list. */ 
+/** retrieves next entry from given entry in a hash map list, or NULL if at end of list. */
 EXTERN
 SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
 );
 
-/** removes all entries in a hash map. */ 
+/** removes all entries in a hash map. */
 EXTERN
 SCIP_RETCODE SCIPhashmapRemoveAll(
    SCIP_HASHMAP*         hashmap             /**< hash map */
@@ -1010,7 +1010,7 @@ SCIP_RETCODE SCIPdigraphComputeUndirectedComponents(
  *  @note In general a topological sort of the strongly connected components is not unique.
  */
 EXTERN
-void SCIPdigraphComputeDirectedComponents(
+SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   compidx,            /**< number of the undirected connected component */
    int*                  strongcomponents,   /**< array to store the strongly connected components
@@ -1486,6 +1486,15 @@ EXTERN
 void SCIPsortRealInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
    int*                  intarray,           /**< int array to be permuted in the same way */
+   int                   len                 /**< length of arrays */
+   );
+
+/** sort of three joint arrays of Reals/ints/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortRealIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array to be sorted */
+   int*                  intarray1,          /**< int array to be permuted in the same way */
+   int*                  intarray2,          /**< int array to be permuted in the same way */
    int                   len                 /**< length of arrays */
    );
 
@@ -2564,6 +2573,19 @@ void SCIPsortedvecInsertPtrPtrLongIntInt(
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
+/** insert a new element into three joint arrays of Reals/ints/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecInsertRealIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
+   int*                  intarray1,          /**< first int array where an element is to be inserted */
+   int*                  intarray2,          /**< second int array where an element is to be inserted */
+   SCIP_Real             keyval,             /**< key value of new element */
+   int                   field2val,          /**< additional value of new element */
+   int                   field3val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
 /** insert a new element into three joint arrays of Reals/Bools/pointers, sorted by first array in non-decreasing order */
 EXTERN
 void SCIPsortedvecInsertRealBoolPtr(
@@ -3364,6 +3386,19 @@ void SCIPsortedvecInsertDownRealInt(
    int*                  pos                 /**< pointer to store the insertion position, or NULL */
    );
 
+/** insert a new element into three joint arrays of Reals/ints/ints, sorted by first array in non-increasing order */
+EXTERN
+void SCIPsortedvecInsertDownRealIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be inserted */
+   int*                  intarray1,          /**< int array where an element is to be inserted */
+   int*                  intarray2,          /**< int array where an element is to be inserted */
+   SCIP_Real             keyval,             /**< key value of new element */
+   int                   field1val,          /**< additional value of new element */
+   int                   field2val,          /**< additional value of new element */
+   int*                  len,                /**< pointer to length of arrays (will be increased by 1) */
+   int*                  pos                 /**< pointer to store the insertion position, or NULL */
+   );
+
 /** insert a new element into three joint arrays of Reals/ints/Longs, sorted by first array in non-increasing order */
 EXTERN
 void SCIPsortedvecInsertDownRealIntLong(
@@ -4038,6 +4073,16 @@ EXTERN
 void SCIPsortedvecDelPosRealInt(
    SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be deleted */
    int*                  intarray,           /**< int array where an element is to be deleted */
+   int                   pos,                /**< array position of element to be deleted */
+   int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
+   );
+
+/** delete the element at the given position from two joint arrays of Reals/ints, sorted by first array in non-decreasing order */
+EXTERN
+void SCIPsortedvecDelPosRealIntInt(
+   SCIP_Real*            realarray,          /**< SCIP_Real array where an element is to be deleted */
+   int*                  intarray1,          /**< int array where an element is to be deleted */
+   int*                  intarray2,          /**< int array where an element is to be deleted */
    int                   pos,                /**< array position of element to be deleted */
    int*                  len                 /**< pointer to length of arrays (will be decreased by 1) */
    );
@@ -5432,7 +5477,7 @@ int SCIPmemccpy(
 /** prints an error message containing of the given string followed by a string describing the current system error;
  *  prefers to use the strerror_r method, which is threadsafe; on systems where this method does not exist,
  *  NO_STRERROR_R should be defined (see INSTALL), in this case, srerror is used which is not guaranteed to be
- *  threadsafe (on SUN-systems, it actually is) 
+ *  threadsafe (on SUN-systems, it actually is)
  */
 EXTERN
 void SCIPprintSysError(

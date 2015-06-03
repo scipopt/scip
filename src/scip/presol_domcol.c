@@ -40,16 +40,14 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/scipdefplugins.h"
 #include "scip/pub_matrix.h"
-
 #include "presol_domcol.h"
 
 #define PRESOL_NAME            "domcol"
 #define PRESOL_DESC            "dominated column presolver"
 #define PRESOL_PRIORITY            -1000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              -1     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_TIMING           (SCIP_PRESOLTIMING_EXHAUSTIVE) /* timing of the presolver (fast, medium, or exhaustive) */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define DEFAULT_NUMMINPAIRS         1024     /**< minimal number of pair comparisons */
 #define DEFAULT_NUMMAXPAIRS      1048576     /**< maximal number of pair comparisons */

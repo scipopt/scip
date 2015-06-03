@@ -314,7 +314,7 @@ public:
       (void) CPXfreeprob(m_cpxenv, &m_cpxlp);
       (void) CPXcloseCPLEX(&m_cpxenv);
 #endif
-   }
+   } /*lint !e1579*/
 
    /**< return feastol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
    Real feastol() const
@@ -4446,7 +4446,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                                *  (-1: if we do not store sparsity informations) */
    )
-{
+{  /*lint --e{715}*/
    SCIPdebugMessage("calling SCIPlpiGetBInvCol()\n");
 
    assert( lpi != NULL );
@@ -4545,7 +4545,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    int*                  ninds               /**< pointer to store the number of non-zero indices, or NULL
                                                *  (-1: if we do not store sparsity informations) */
    )
-{
+{  /*lint --e{715}*/
    DVector col(lpi->spx->nRows());
 
    SCIPdebugMessage("calling SCIPlpiGetBInvACol()\n");
@@ -4855,7 +4855,6 @@ SCIP_RETCODE SCIPlpiSetNorms(
    assert(blkmem != NULL);
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
-   assert(lpinorms != NULL);
 
    /* if there was no pricing norms information available, the LPi norms were not stored */
    if( lpinorms == NULL )
@@ -4870,7 +4869,8 @@ SCIP_RETCODE SCIPlpiSetNorms(
    SCIPdebugMessage("loading LPi simplex norms %p (%d rows, %d cols) into SoPlex LP with %d rows and %d cols\n",
       (void *) lpinorms, lpinorms->nrows, lpinorms->ncols, lpi->spx->nRows(), lpi->spx->nCols());
 
-   lpi->spx->setDualNorms(lpinorms->nrows, lpinorms->ncols, lpinorms->norms);
+   if( !lpi->spx->setDualNorms(lpinorms->nrows, lpinorms->ncols, lpinorms->norms) )
+      SCIPdebugMessage("loading of LPi norms failed\n");
 #endif
 
    return SCIP_OKAY;

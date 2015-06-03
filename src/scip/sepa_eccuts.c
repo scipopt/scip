@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,7 +39,7 @@
 #define SEPA_NAME                            "eccuts"
 #define SEPA_DESC                            "separator for edge-concave functions"
 #define SEPA_PRIORITY            -13000
-#define SEPA_FREQ                     5
+#define SEPA_FREQ                    -1
 #define SEPA_MAXBOUNDDIST           1.0
 #define SEPA_USESSUBSCIP          FALSE /**< does the separator use a secondary SCIP instance? */
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
@@ -69,7 +69,7 @@
 #define ADJUSTFACETTOL             1e-6 /**< adjust resulting facets in checkRikun() up to a violation of this value */
 #define USEDUALSIMPLEX             TRUE /**< use dual or primal simplex algorithm? */
 
-/**< first values for 2^n */
+/** first values for 2^n */
 static const int poweroftwo[] = { 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096, 8192 };
 
 /*
@@ -1167,16 +1167,16 @@ SCIP_RETCODE createTcliqueGraph(
  */
 static
 SCIP_RETCODE searchEcAggrWithCliques(
-    SCIP*                 scip,               /**< SCIP data structure */
-    TCLIQUE_GRAPH*        graph,              /**< TCLIQUE graph structure */
-    SCIP_SEPADATA*        sepadata,           /**< separator data */
-    SCIP_NLROW*           nlrow,              /**< nonlinear row */
-    int*                  quadvar2aggr,       /**< mapping of quadvars to e.c. aggr. index (< 0: in no aggr.) */
-    int                   nfoundsofar,        /**< number of e.c. aggregation found so far */
-    SCIP_Bool             rhsaggr,            /**< consider nonlinear row aggregation for g(x) <= rhs (TRUE) or
-                                               *   lhs <= g(x) (FALSE) */
-    SCIP_Bool*            foundaggr,          /**< pointer to store if we have found an aggregation */
-    SCIP_Bool*            foundclique         /**< pointer to store if we have found a clique */
+   SCIP*                 scip,               /**< SCIP data structure */
+   TCLIQUE_GRAPH*        graph,              /**< TCLIQUE graph structure */
+   SCIP_SEPADATA*        sepadata,           /**< separator data */
+   SCIP_NLROW*           nlrow,              /**< nonlinear row */
+   int*                  quadvar2aggr,       /**< mapping of quadvars to e.c. aggr. index (< 0: in no aggr.) */
+   int                   nfoundsofar,        /**< number of e.c. aggregation found so far */
+   SCIP_Bool             rhsaggr,            /**< consider nonlinear row aggregation for g(x) <= rhs (TRUE) or
+                                              *   lhs <= g(x) (FALSE) */
+   SCIP_Bool*            foundaggr,          /**< pointer to store if we have found an aggregation */
+   SCIP_Bool*            foundclique         /**< pointer to store if we have found a clique */
    )
 {
    SCIP_HASHMAP* cliquemap;
@@ -2738,48 +2738,48 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpEccuts)
       return SCIP_PARAMETERWRONGVAL;
 
    /* only call separator, if we are not close to terminating */
-    if ( SCIPisStopped(scip) )
-       return SCIP_OKAY;
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
 
-    /* skip if the LP is not constructed yet */
-    if( !SCIPisNLPConstructed(scip) )
-    {
-       SCIPdebugMessage("Skip since NLP is not constructed yet.\n");
-       return SCIP_OKAY;
-    }
+   /* skip if the LP is not constructed yet */
+   if( !SCIPisNLPConstructed(scip) )
+   {
+      SCIPdebugMessage("Skip since NLP is not constructed yet.\n");
+      return SCIP_OKAY;
+   }
 
-    depth = SCIPgetDepth(scip);
+   depth = SCIPgetDepth(scip);
 
-    /* only call separator up to a maximum depth */
-    if ( sepadata->maxdepth >= 0 && depth > sepadata->maxdepth )
-       return SCIP_OKAY;
+   /* only call separator up to a maximum depth */
+   if ( sepadata->maxdepth >= 0 && depth > sepadata->maxdepth )
+      return SCIP_OKAY;
 
-    /* only call separator a given number of times at each node */
-    ncalls = SCIPsepaGetNCallsAtNode(sepa);
-    if ( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
-       || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
-       return SCIP_OKAY;
+   /* only call separator a given number of times at each node */
+   ncalls = SCIPsepaGetNCallsAtNode(sepa);
+   if ( (depth == 0 && sepadata->maxroundsroot >= 0 && ncalls >= sepadata->maxroundsroot)
+      || (depth > 0 && sepadata->maxrounds >= 0 && ncalls >= sepadata->maxrounds) )
+      return SCIP_OKAY;
 
-    /* search for nonlinear row aggregations */
-    if( !sepadata->searchedforaggr )
-    {
-       int i;
+   /* search for nonlinear row aggregations */
+   if( !sepadata->searchedforaggr )
+   {
+      int i;
 
-       SCIPstatistic( sepadata->aggrsearchtime -= SCIPgetTotalTime(scip) );
+      SCIPstatistic( sepadata->aggrsearchtime -= SCIPgetTotalTime(scip) );
 
-       SCIPdebugMessage("search for nonlinear row aggregations\n");
-       for( i = 0; i < SCIPgetNNLPNlRows(scip); ++i )
-       {
-          SCIP_NLROW* nlrow = SCIPgetNLPNlRows(scip)[i];
-          SCIP_CALL( findAndStoreEcAggregations(scip, sepadata, nlrow, NULL) );
-       }
-       sepadata->searchedforaggr = TRUE;
+      SCIPdebugMessage("search for nonlinear row aggregations\n");
+      for( i = 0; i < SCIPgetNNLPNlRows(scip); ++i )
+      {
+         SCIP_NLROW* nlrow = SCIPgetNLPNlRows(scip)[i];
+         SCIP_CALL( findAndStoreEcAggregations(scip, sepadata, nlrow, NULL) );
+      }
+      sepadata->searchedforaggr = TRUE;
 
-       SCIPstatistic( sepadata->aggrsearchtime += SCIPgetTotalTime(scip) );
-    }
+      SCIPstatistic( sepadata->aggrsearchtime += SCIPgetTotalTime(scip) );
+   }
 
-    /* search for edge-concave cuts */
-    SCIP_CALL( separateCuts(scip, sepa, sepadata, NULL, result) );
+   /* search for edge-concave cuts */
+   SCIP_CALL( separateCuts(scip, sepa, sepadata, NULL, result) );
 
    return SCIP_OKAY;
 }

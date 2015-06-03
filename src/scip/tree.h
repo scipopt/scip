@@ -174,10 +174,10 @@ SCIP_RETCODE SCIPnodeDelCons(
 /** returns all constraints added to a given node */
 extern
 void SCIPnodeGetAddedConss(
-   SCIP_NODE*          node,                      /**< node */
-   SCIP_CONS**         addedconss,                /**< array to store the constraints */
-   int*                naddedconss,               /**< number of added constraints */
-   int                 addedconsssize             /**< size of the constraint array */
+   SCIP_NODE*            node,               /**< node */
+   SCIP_CONS**           addedconss,         /**< array to store the constraints */
+   int*                  naddedconss,        /**< number of added constraints */
+   int                   addedconsssize      /**< size of the constraint array */
    );
 
 /** return all bound changes based on constraint propagation; stop saving the bound changes if we reach a branching
@@ -677,7 +677,7 @@ SCIP_RETCODE SCIPtreeAddDiveBoundChange(
    SCIP_Bool             preferred           /**< is this a bound change for the preferred child? */
    );
 
-/**< get the dive bound change data for the preferred or the alternative direction */
+/** get the dive bound change data for the preferred or the alternative direction */
 extern
 void SCIPtreeGetDiveBoundChangeData(
    SCIP_TREE*            tree,               /**< branch and bound tree */

@@ -29,7 +29,7 @@ ARCH			=	x86
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION			=	3.1.1.1
+VERSION			=	3.2.0
 VERBOSE			=	false
 OPT				=	opt
 COMP			=	msvc
@@ -238,11 +238,15 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\branch_distribution.obj \
 					$(LIBOBJDIR)\scip\branch_fullstrong.obj \
 					$(LIBOBJDIR)\scip\branch_inference.obj \
-					$(LIBOBJDIR)\scip\branch_mostinf.obj \
 					$(LIBOBJDIR)\scip\branch_leastinf.obj \
+					$(LIBOBJDIR)\scip\branch_mostinf.obj \
+					$(LIBOBJDIR)\scip\branch_multaggr.obj \
+               $(LIBOBJDIR)\scip\branch_nodereopt.obj \
 					$(LIBOBJDIR)\scip\branch_pscost.obj \
 					$(LIBOBJDIR)\scip\branch_random.obj \
 					$(LIBOBJDIR)\scip\branch_relpscost.obj \
+               $(LIBOBJDIR)\scip\compr_largestrepr.obj \
+               $(LIBOBJDIR)\scip\compr_weakcompr.obj \
 					$(LIBOBJDIR)\scip\cons_abspower.obj \
 					$(LIBOBJDIR)\scip\cons_and.obj \
 					$(LIBOBJDIR)\scip\cons_bivariate.obj \
@@ -271,11 +275,14 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\cons_xor.obj \
 					$(LIBOBJDIR)\scip\dialog_default.obj \
 					$(LIBOBJDIR)\scip\disp_default.obj \
+               $(LIBOBJDIR)\scip\event_softtimelimit.obj \
 					$(LIBOBJDIR)\scip\heur_actconsdiving.obj \
+               $(LIBOBJDIR)\scip\heur_bound.obj \
 					$(LIBOBJDIR)\scip\heur_clique.obj \
 					$(LIBOBJDIR)\scip\heur_coefdiving.obj \
 					$(LIBOBJDIR)\scip\heur_crossover.obj \
 					$(LIBOBJDIR)\scip\heur_dins.obj \
+               $(LIBOBJDIR)\scip\heur_distributiondiving.obj \
 					$(LIBOBJDIR)\scip\heur_dualval.obj \
 					$(LIBOBJDIR)\scip\heur_feaspump.obj \
 					$(LIBOBJDIR)\scip\heur_fixandinfer.obj \
@@ -290,11 +297,13 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\heur_nlpdiving.obj \
 					$(LIBOBJDIR)\scip\heur_objpscostdiving.obj \
 					$(LIBOBJDIR)\scip\heur_octane.obj \
+               $(LIBOBJDIR)\scip\heur_ofins.obj \
 					$(LIBOBJDIR)\scip\heur_oneopt.obj \
 					$(LIBOBJDIR)\scip\heur_proximity.obj \
 					$(LIBOBJDIR)\scip\heur_pscostdiving.obj \
 					$(LIBOBJDIR)\scip\heur_randrounding.obj \
 					$(LIBOBJDIR)\scip\heur_rens.obj \
+               $(LIBOBJDIR)\scip\heur_reoptsols.obj \
 					$(LIBOBJDIR)\scip\heur_rins.obj \
 					$(LIBOBJDIR)\scip\heur_rootsoldiving.obj \
 					$(LIBOBJDIR)\scip\heur_rounding.obj \
@@ -303,6 +312,7 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\heur_simplerounding.obj \
 					$(LIBOBJDIR)\scip\heur_subnlp.obj \
 					$(LIBOBJDIR)\scip\heur_trivial.obj \
+               $(LIBOBJDIR)\scip\heur_trivialnegation.obj \
 					$(LIBOBJDIR)\scip\heur_trysol.obj \
 					$(LIBOBJDIR)\scip\heur_twoopt.obj \
 					$(LIBOBJDIR)\scip\heur_undercover.obj \
@@ -322,15 +332,16 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\presol_components.obj \
 					$(LIBOBJDIR)\scip\presol_convertinttobin.obj \
 					$(LIBOBJDIR)\scip\presol_domcol.obj\
+               $(LIBOBJDIR)\scip\presol_dualagg.obj \
 					$(LIBOBJDIR)\scip\presol_dualinfer.obj \
 					$(LIBOBJDIR)\scip\presol_gateextraction.obj \
 					$(LIBOBJDIR)\scip\presol_implfree.obj \
 					$(LIBOBJDIR)\scip\presol_implics.obj \
 					$(LIBOBJDIR)\scip\presol_inttobinary.obj \
 					$(LIBOBJDIR)\scip\presol_redvub.obj \
-					$(LIBOBJDIR)\scip\presol_stuffing.obj \
 					$(LIBOBJDIR)\scip\presol_trivial.obj \
 					$(LIBOBJDIR)\scip\presol_tworowbnd.obj \
+               $(LIBOBJDIR)\scip\presol_stuffing.obj \
 					$(LIBOBJDIR)\scip\prop_dualfix.obj \
 					$(LIBOBJDIR)\scip\prop_genvbounds.obj \
 					$(LIBOBJDIR)\scip\prop_obbt.obj \
@@ -343,6 +354,7 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\reader_ccg.obj \
 					$(LIBOBJDIR)\scip\reader_cip.obj \
 					$(LIBOBJDIR)\scip\reader_cnf.obj \
+               $(LIBOBJDIR)\scip\reader_diff.obj \
 					$(LIBOBJDIR)\scip\reader_fix.obj \
 					$(LIBOBJDIR)\scip\reader_fzn.obj \
 					$(LIBOBJDIR)\scip\reader_gms.obj \
@@ -361,6 +373,8 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\sepa_clique.obj \
 					$(LIBOBJDIR)\scip\sepa_closecuts.obj \
 					$(LIBOBJDIR)\scip\sepa_cmir.obj \
+               $(LIBOBJDIR)\scip\sepa_disjunctive.obj \
+               $(LIBOBJDIR)\scip\sepa_eccuts.obj \
 					$(LIBOBJDIR)\scip\sepa_flowcover.obj \
 					$(LIBOBJDIR)\scip\sepa_gomory.obj \
 					$(LIBOBJDIR)\scip\sepa_impliedbounds.obj \
@@ -370,15 +384,16 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\sepa_rapidlearning.obj \
 					$(LIBOBJDIR)\scip\sepa_strongcg.obj \
 					$(LIBOBJDIR)\scip\sepa_zerohalf.obj \
-      				$(LIBOBJDIR)\scip\branch.obj \
-					$(LIBOBJDIR)\scip\buffer.obj \
+					$(LIBOBJDIR)\scip\branch.obj \
 					$(LIBOBJDIR)\scip\clock.obj \
+               $(LIBOBJDIR)\scip\compr.obj \
 					$(LIBOBJDIR)\scip\conflict.obj \
 					$(LIBOBJDIR)\scip\cons.obj \
 					$(LIBOBJDIR)\scip\cutpool.obj \
 					$(LIBOBJDIR)\scip\debug.obj \
 					$(LIBOBJDIR)\scip\dialog.obj \
 					$(LIBOBJDIR)\scip\disp.obj \
+               $(LIBOBJDIR)\scip\dive.obj \
 					$(LIBOBJDIR)\scip\event.obj \
 					$(LIBOBJDIR)\scip\fileio.obj \
 					$(LIBOBJDIR)\scip\heur.obj \
@@ -402,6 +417,7 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\prop.obj \
 					$(LIBOBJDIR)\scip\reader.obj \
 					$(LIBOBJDIR)\scip\relax.obj \
+               $(LIBOBJDIR)\scip\reopt.obj \
 					$(LIBOBJDIR)\scip\retcode.obj \
 					$(LIBOBJDIR)\scip\scip.obj \
 					$(LIBOBJDIR)\scip\scipdefplugins.obj \

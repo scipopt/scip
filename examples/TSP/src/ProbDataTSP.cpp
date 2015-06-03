@@ -126,7 +126,7 @@ SCIP_RETCODE ProbDataTSP::scip_copy(
    )
 {
    // get source prob data and its graph
-   ProbDataTSP * sourceprobdatatsp = NULL;
+   ProbDataTSP * sourceprobdatatsp;
    sourceprobdatatsp = dynamic_cast<ProbDataTSP *>(SCIPgetObjProbData(sourcescip));
    assert( sourceprobdatatsp != NULL );
    GRAPH * sourcegraph = sourceprobdatatsp->graph_;

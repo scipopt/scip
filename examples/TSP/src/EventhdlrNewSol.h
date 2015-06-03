@@ -80,7 +80,7 @@ public:
     *  given event handler and event data.
     */
    virtual SCIP_DECL_EVENTEXEC(scip_exec);
-};
+}; /*lint !e1712*/
 
 } /* namespace tsp */
 

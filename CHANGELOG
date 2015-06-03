@@ -2,6 +2,12 @@ SCIP version NEXT
 ==================
 
 features:
+- new parameter display/allviols to print all violated constraints of the best solution during checksol in the scip shell
+- new parameter numerics/checkfeastolfac to scale feasibility tolerance when checking the feasibility of best found solution
+  after the solving process finished (e.g., checksol in scip shell)
+- new heuristic distribution diving that bases its score function on the changes regarding solution density
+- extended variable branching statistics in the interactive shell by sample variance of unit gains
+- extended statistic output of interactive shell by more information on diving heuristic behavior
 - obbt propagator applies now additional separation and propagation in order to learn stronger and more bound tightenings
 - possible to change objective coefficients during probing mode
 - variable histories can be transferred between sub-SCIPs solved by LNS heuristics and the component presolver
@@ -65,6 +71,11 @@ features:
 - possibility to set a soft time limit which becomes active only after the first primal solution was found
 
 parameters:
+- new parameter heuristics/*diving/lpresolvedomchgquot to determine the percentage of changed domains since previous LP to trigger
+  an LP resolve [default: 0.15] (* stands for eight diving heuristics to support this feature)
+- new parameter heuristics/*diving/lpsolvefreq to determine the frequency for resolving LP's during the execution of
+  this heuristic [default: 1, use 0 for a dynamic setting based on the number of domain reductions]
+  (* stands for eight diving heuristics to support this feature)
 - new parameter "heuristics/shiftandpropagate/selectbest" to trigger if shiftandpropagate should select the best candidate in every round?
   (set to FALSE for static order) (default is FALSE)
 - new parameter "heuristics/shiftandpropagate/maxcutoffquot" to select a maximum percentage of allowed cutoffs before stopping the heuristic
@@ -76,7 +87,7 @@ parameters:
 - new parameter "branching/relpscost/lowerrortol" to define a lower reliability threshold for relative error based reliability
 - new parameter "branching/relpscost/higherrortol" to define the highest reliability threshold for relative error based reliability
 - new parameter "branching/relpscost/usehyptestforreliability" to enable strong branching decisions based on a 2-sample student-T test
-  of all prior pseudo-cost observations   between the best pseudo-candidate and the candidate for which to decide whether strong-branching
+  of all prior pseudo-cost observations between the best pseudo-candidate and the candidate for which to decide whether strong-branching
   should be applied
 - new parameter "branching/relpscost/usedynamicconfidence" to use a dynamic confidence level based on the amount of
   strong-branching simplex-iterations compared to the overall simplex iterations (default is FALSE)
@@ -123,8 +134,10 @@ parameters:
 - new parameter "constraints/SOS1/nstrongrounds" to define the maximal number of strong branching rounds to perform for each node (only
   available for neighborhood and bipartite branching)
 - new parameter "constraints/SOS1/nstrongiter" to define the maximal number LP iterations to perform for each strong branching round
-- new parameter "constraints/SOS1/boundcutsfromsos1" to define whether to separate bound (clique) inequalities from initial SOS1 constraints
+- new parameter "constraints/SOS1/boundcutsfromsos1" to define whether to separate bound (clique) inequalities from SOS1 constraints
 - new parameter "constraints/SOS1/boundcutsfromgraph" to define whether to separate bound (clique) inequalities from the conflict graph
+- new parameter "constraints/SOS1/autocutsfromsos1" to automatically switch to separating bound cuts from SOS1 constraints if the SOS1
+  constraints do not overlap
 - new parameter "constraints/SOS1/boundcutsfreq" to define the frequency for separating bound (clique) cuts
 - new parameter "constraints/SOS1/boundcutsdepth" to define the node depth of separating bound (clique) cuts
 - new parameter "constraints/SOS1/maxboundcuts" to define the maximal number of bound (clique) cuts separated per branching node
@@ -156,13 +169,11 @@ parameters:
 - new paramter "misc/allowdualreds" to allow dual reductions
 - new advance parameter "constraints/soc/generalsocupgrade" to allow general quadratics to be upgraded to soc
 - new parameter "limits/softtime" to set a soft time limit (active only after first primal solution was found)
+- new parameter "heuristics/shiftandpropagate/binlocksfirst" to set if binaries without locks should be preferred in ordering
 
 performance improvements:
-- adjusted (hard) diving heuristics to solve fewer LPs at shallow depths of the tree; after an LP was solved,
-  the next depth to perform an LP solve is determined dynamically based on the heuristic success so far
-  and the difference between the depth and the maximum dive depth; if more than one candidate should
-  be rounded, all candidates are sorted w.r.t. the diving score and then attempted in order of their score
-  unless their LP solution has already become infeasible from intermediate propagations.
+- adjusted (hard) diving heuristics to solve fewer LPs. LP's are resolved only if a parameter-defined
+  percentage of the variable bounds changed through domain propagation or at a predefined frequency.
 - all hard diving heuristics additionally consider indicator variables as candidate variables and try to
   make indicator constraints feasible before passing a rounded solution to SCIPtrySol()
 - improved vartype upgradability from continuous to implicit variables in cons_linear.c, depending on their objective
@@ -172,6 +183,17 @@ performance improvements:
 - improved propagation of SOS1 constraint handler using the information from a conflict
 
 interface:
+- avoid potential comparisons of different infinity values by adjusting the LP solution value
+- new callback function SCIP_DECL_CONSGETDIVEBDCHGS to provide
+  constraint handler method to suggest dive bound changes during the generic diving algorithm, see type_cons.h for details
+- SCIPincludeConshdlr has a new argument to provide a divebdchg-callback for the constraint handler to include
+- new method SCIPaddDiveBoundChange() to add a diving bound change to the diving bound change storage of SCIP together with the information if this is a
+  bound change for the preferred direction or not, to be used by constraint handlers inside the getDiveBdChgs-callback
+- new setter function SCIPsetConshdlrGetDiveBdChgs() in scip.h to set dive bound change callback for this constraint handler
+- SCIPintervalSign(),  SCIPintervalAbs(), SCIPintervalMax(), SCIPintervalMin(), SCIPexprgraphGetNodePolynomialMonomialCurvature(),
+  and SCIPexprgraphTightenNodeBounds() need an infinity value to decide whether an interval is empty or not
+- SCIPgetFeasibilityQuadratic() and SCIPgetActivityQuadratic() returns now a SCIP_RETCODE and needs an additional SCIP_Real* to
+  store the result
 - new method SCIPwriteParam() to write a single parameter to a file
 - new methods SCIPcheckParam{Bool,Char,...}() to check whether a parameter value is within the feasible domain
 - new methods SCIPchgCoefLinear() and SCIPdelCoefLinear() to modify linear constraint during problem creation
@@ -183,7 +205,9 @@ interface:
 - methods which support statistical tests in pub_misc.h, SCIPstudentTGetCriticalValue(), SCIPcomputeTwoSampleTTestValue() etc.
 - new enum SCIP_CONFIDENCE_LEVEL for different levels of confidence for statistical tests.
 - new struct SCIP_DIVESET that bundles options for SCIP's diving heuristics; all hard diving heuristics (those
-  without 'obj' at the beginning) create their diveset and store it in their heuristic data.
+  without 'obj' at the beginning) include diveset and implement only the scoring callback.
+- new method SCIPcreateDiveset() to add a diveset to a heuristic. Heuristics may have multiple divesets
+  under different names
 - new callback SCIP_DECL_DIVESETGETSCORE to implement scoring function to guide diving
 - new method SCIPperformGenericDivingAlgorithm() that performs diving with periodic LP resolve according to
   the diveset argument.
@@ -192,7 +216,7 @@ interface:
 - rename SCIPdigraphGetSuccessorsDatas() -> SCIPdigraphGetSuccessorsData()
 - SCIPdigraphSetNSuccessors() sets the number of successors of some digraph node to a given value
 - added new sorting functions SCIPsortRealRealRealBoolBoolPtr(), SCIPsortDownRealRealRealBoolBoolPtr()
-- added new sorting functions SCIPsortIntIntIntReal(), SCIPsortDownIntIntIntReal()
+- added new sorting functions SCIPsortIntIntIntReal(), SCIPsortDownIntIntIntReal(), SCIPsortRealIntInt(), SCIPsortDownRealIntInt()
 - added SCIPcomputeArraysIntersection() to compute the set intersection of two ordered arrays
 - added SCIPcomputeArraysSetminus() to compute the set difference of two ordered arrays
 - moved buffer memory handling to blockmemory/memory.?;
@@ -219,11 +243,22 @@ interface:
   in cons_quadratic.h to compute linear under- and overestimation for bilinear and quadratic terms
 
 fixed bugs:
+- fix bug which lead to wrong global bound tightenings in prop_genvbounds.c
+- fix missing clean phase of bilinear terms with zero coefficient in cons_quadratic.c
+- fix handling of infinite intervals in SCIPintervalIsEmpty()
+- fix potentially tightening of LB/UB of a variable to +/- infinity in cons_quadratic
+- fix spatial branching on implicit integer variables
+- fixed bug in intervalarith.c: bivariate quadratic equations may have been solved wrongly if second variable is unbounded
+- fix wrong sorting of bilinear terms in cons_quadratic
+- fix wrong comparisons of values larger/less than +/- SCIPinfinity() in branch.c, lp.c, and sol.c
 - fixed wrong assert in cons_indicator (slack variables might be replaced by active variables that have nonzero objective)
 - try to handle fixings of multi-aggregated variable in cons_sos1 presolving and avoid error
 - fix potential memory leak in method SCIPgetConsCopy()
 - fix potential memory leak in method detectRedundantConstraints() of the knapsack constraint handler
 - fix potential memory leak in SoPlex LP interfaces when setting invalid basis
+- fix call to random generator for Windows operating systems in misc.c
+- fix late creation of auxiliary LP in cons_nonlinear.c, which lead to a segmentation fault with lpi_spx2.cpp
+- fixed again a bug in backward propagation of linear expressions in expression graph
 
 SCIP version 3.1.2
 ==================

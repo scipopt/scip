@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,7 +30,7 @@
 #define HEUR_NAME             "reoptsols"
 #define HEUR_DESC             "primal heuristic updating solutions found in a previous optimization round"
 #define HEUR_DISPCHAR         'J'
-#define HEUR_PRIORITY         40000
+#define HEUR_PRIORITY         -9000000
 #define HEUR_FREQ             0
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
@@ -47,7 +47,6 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   SCIP_Bool reopt;                 /**< reoptimization is enabled */
    int maxsols;                     /**< maximal number of solution to update per run */
    int maxruns;                     /**< check solutions of the last k runs only */
 
@@ -145,7 +144,6 @@ static SCIP_DECL_HEURINIT(heurInitReoptsols)
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL );
 
-   heurdata->reopt = SCIPisReoptEnabled(scip);
    heurdata->ncheckedsols = 0;
    heurdata->nimprovingsols = 0;
 
@@ -158,139 +156,139 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
 {/*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
 
+   SCIP_SOL** sols;
+   SCIP_Real objsimsol;
+   SCIP_Bool sepabestsol;
+   int allocmem;
+   int nchecksols;
+   int nsolsadded;
+#ifdef SCIP_MORE_DEBUG
+   int nsolsaddedrun;
+#endif
+   int run;
+   int max_run;
+
    assert(heur != NULL);
    assert(scip != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   if( !SCIPisReoptEnabled(scip) )
+      return SCIP_OKAY;
 
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
 
-   *result = SCIP_DIDNOTRUN;
+   max_run = heurdata->maxruns == -1 ? 0 : MAX(0, SCIPgetNReoptRuns(scip)-1-heurdata->maxruns); /*lint !e666*/
+   nchecksols = heurdata->maxsols == -1 ? INT_MAX : heurdata->maxsols;
 
-   if( heurdata->reopt )
+   SCIP_CALL( SCIPgetRealParam(scip, "reoptimization/objsimsol", &objsimsol) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "reoptimization/sepabestsol", &sepabestsol) );
+
+   /* allocate a buffer array to store the solutions */
+   allocmem = 20;
+   SCIP_CALL( SCIPallocBufferArray(scip, &sols, allocmem) );
+
+   nsolsadded = 0;
+
+   for( run = SCIPgetNReoptRuns(scip); run > max_run && nchecksols > 0; run-- )
    {
-      SCIP_SOL** sols;
-      SCIP_Real objsimsol;
-      SCIP_Bool sepabestsol;
-      int allocmem;
-      int nchecksols;
-      int nsolsadded;
+      SCIP_Real sim;
+      int nsols;
+
 #ifdef SCIP_MORE_DEBUG
-      int nsolsaddedrun;
+      nsolsaddedrun = 0;
 #endif
-      int run;
-      int max_run;
+      nsols = 0;
 
-      max_run = heurdata->maxruns == -1 ? 0 : MAX(0, SCIPgetNReoptRuns(scip)-1-heurdata->maxruns); /*lint !e666*/
-      nchecksols = heurdata->maxsols == -1 ? INT_MAX : heurdata->maxsols;
+      if( objsimsol == -1 )
+         sim = 1;
+      else
+         sim = SCIPgetReoptSimilarity(scip, run, SCIPgetNReoptRuns(scip)-1);
 
-      SCIP_CALL( SCIPgetRealParam(scip, "reoptimization/objsimsol", &objsimsol) );
-      SCIP_CALL( SCIPgetBoolParam(scip, "reoptimization/sepabestsol", &sepabestsol) );
-
-      /* allocate a buffer array to store the solutions */
-      allocmem = 20;
-      SCIP_CALL( SCIPallocBufferArray(scip, &sols, allocmem) );
-
-      nsolsadded = 0;
-
-      for( run = SCIPgetNReoptRuns(scip); run > max_run && nchecksols > 0; run-- )
+      if( sim >= objsimsol )
       {
-         SCIP_Real sim;
-         int nsols;
+         int s;
 
-#ifdef SCIP_MORE_DEBUG
-         nsolsaddedrun = 0;
-#endif
-         nsols = 0;
+         /* get solutions of a specific run */
+         SCIP_CALL( SCIPgetReopSolsRun(scip, run, sols, allocmem, &nsols) );
 
-         if( objsimsol == -1 )
-            sim = 1;
-         else
-            sim = SCIPgetReoptSimilarity(scip, run, SCIPgetNReoptRuns(scip)-1);
-
-         if( sim >= objsimsol )
+         /* check memory and reallocate */
+         if( nsols > allocmem )
          {
-            int s;
+            allocmem = nsols;
+            SCIP_CALL( SCIPreallocBufferArray(scip, &sols, allocmem) );
 
-            /* get solutions of a specific run */
             SCIP_CALL( SCIPgetReopSolsRun(scip, run, sols, allocmem, &nsols) );
+         }
+         assert(nsols <= allocmem);
 
-            /* check memory and reallocate */
-            if( nsols > allocmem )
-            {
-               allocmem = nsols;
-               SCIP_CALL( SCIPreallocBufferArray(scip, &sols, allocmem) );
+         /* update the solutions
+          * stop, if the maximal number of solutions to be checked is reached
+          */
+         for( s = 0; s < nsols && nchecksols > 0; s++ )
+         {
+            SCIP_SOL* sol;
+            SCIP_Real objsol;
 
-               SCIP_CALL( SCIPgetReopSolsRun(scip, run, sols, allocmem, &nsols) );
-            }
-            assert(nsols <= allocmem);
+            sol = sols[s];
 
-            /* update the solutions
-             * stop, if the maximal number of solutions to be checked is reached
+            SCIP_CALL( SCIPrecomputeSolObj(scip, sol) );
+            objsol = SCIPgetSolTransObj(scip, sol);
+
+            /* we do not want to add solutions with objective value +infinity.
+             * moreover, the solution should improve the current primal bound
              */
-            for( s = 0; s < nsols && nchecksols > 0; s++ )
+            if( !SCIPisInfinity(scip, objsol) && !SCIPisInfinity(scip, -objsol)
+              && SCIPisFeasLT(scip, objsol, SCIPgetCutoffbound(scip)) )
             {
-               SCIP_SOL* sol;
-               SCIP_Real objsol;
+               SCIP_Bool stored;
+               SCIP_Bool feasible;
 
-               sol = sols[s];
-
-               SCIP_CALL( SCIPrecomputeSolObj(scip, sol) );
-               objsol = SCIPgetSolTransObj(scip, sol);
-
-               /* we do not want to add solutions with objective value +infinity.
-                * moreover, the solution should improve the current primal bound
-                */
-               if( !SCIPisInfinity(scip, objsol) && !SCIPisInfinity(scip, -objsol)
-                 && SCIPisFeasLT(scip, objsol, SCIPgetCutoffbound(scip)) )
+               if( sepabestsol )
                {
-                  SCIP_Bool stored;
-                  SCIP_Bool feasible;
+                  SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, FALSE, TRUE) );
+               }
+               else
+                  feasible = TRUE;
 
-                  if( sepabestsol )
+               if( feasible)
+               {
+                  /* create a new solution */
+                  SCIP_CALL( createNewSol(scip, heur, sol, &stored) );
+
+                  if( stored )
                   {
-                     SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, FALSE, TRUE) );
-                  }
-                  else
-                     feasible = TRUE;
-
-                  if( feasible)
-                  {
-                     /* create a new solution */
-                     SCIP_CALL( createNewSol(scip, heur, sol, &stored) );
-
-                     if( stored )
-                     {
-                        nsolsadded++;
+                     nsolsadded++;
 #ifdef SCIP_MORE_DEBUG
-                        nsolsaddedrun++;
+                     nsolsaddedrun++;
 #endif
-                        heurdata->nimprovingsols++;
-                     }
+                     heurdata->nimprovingsols++;
                   }
                }
-
-               nchecksols--;
-               heurdata->ncheckedsols++;
             }
+
+            nchecksols--;
+            heurdata->ncheckedsols++;
          }
+      }
 #ifdef SCIP_MORE_DEBUG
          printf(">> heuristic <%s> found %d of %d improving solutions from run %d.\n", HEUR_NAME, nsolsaddedrun, nsols, run);
 #endif
       }
 
-      SCIPdebugMessage(">> heuristic <%s> found %d improving solutions.\n", HEUR_NAME, nsolsadded);
+   SCIPdebugMessage(">> heuristic <%s> found %d improving solutions.\n", HEUR_NAME, nsolsadded);
 
-      if( nsolsadded > 0 )
-         *result = SCIP_FOUNDSOL;
-      else
-         *result = SCIP_DIDNOTFIND;
+   if( nsolsadded > 0 )
+      *result = SCIP_FOUNDSOL;
+   else
+      *result = SCIP_DIDNOTFIND;
 
-      /* reset the marks of the checked solutions */
-      SCIPresetReoptSolMarks(scip);
+   /* reset the marks of the checked solutions */
+   SCIPresetReoptSolMarks(scip);
 
-      /* free the buffer array */
-      SCIPfreeBufferArray(scip, &sols);
-   }
+   /* free the buffer array */
+   SCIPfreeBufferArray(scip, &sols);
 
    return SCIP_OKAY;
 }

@@ -28,16 +28,15 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/scipdefplugins.h"
-#include "scip/pub_matrix.h"
 
+#include "scip/pub_matrix.h"
 #include "presol_implfree.h"
 
 #define PRESOL_NAME            "implfree"
 #define PRESOL_DESC            "exploit implied free variables for multi-aggregation"
-#define PRESOL_PRIORITY          1000000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
+#define PRESOL_PRIORITY            -1000     /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS               0     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_TIMING           SCIP_PRESOLTIMING_MEDIUM /* timing of the presolver (fast, medium, or exhaustive) */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define MAXABSRATIO     ((SCIP_Real)1000.0)     /**< max abs coefficients ratio */
 #define SIDECHANGERATIO   ((SCIP_Real)10.0)     /**< max side change ratio */
@@ -491,12 +490,12 @@ SCIP_Real sideChangeNumericalStable(
 /** calculate the huge contribution counters */
 static
 void getNumHugeActivities(
-    SCIP*                 scip,              /**< current scip instance */
-    SCIPMILPMATRIX*       matrix,            /**< constraint matrix */
-    int*                  maxactposhuge,     /**< max activity positive contribution counter */
-    int*                  maxactneghuge,     /**< max activity negative contribution counter */
-    int*                  minactposhuge,     /**< min activity positive contribution counter */
-    int*                  minactneghuge      /**< min activity negative contribution counter */
+   SCIP*                 scip,               /**< current scip instance */
+   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   int*                  maxactposhuge,      /**< max activity positive contribution counter */
+   int*                  maxactneghuge,      /**< max activity negative contribution counter */
+   int*                  minactposhuge,      /**< min activity positive contribution counter */
+   int*                  minactneghuge       /**< min activity negative contribution counter */
    )
 {
    SCIP_Real val;

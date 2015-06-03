@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -41,11 +41,6 @@
 #define LP_MAX_LINELEN       65536
 #define LP_MAX_PUSHEDTOKENS  2
 #define LP_INIT_COEFSSIZE    8192
-#define LP_INIT_QUADCOEFSSIZE 16
-#define LP_MAX_PRINTLEN      561       /**< the maximum length of any line is 560 + '\\0' = 561*/
-#define LP_MAX_NAMELEN       256       /**< the maximum length for any name is 255 + '\\0' = 256 */
-#define LP_PRINTLEN          100
-
 
 /** Section in LP File */
 enum LpSection
@@ -639,7 +634,7 @@ static
 SCIP_RETCODE getVariable(
    SCIP*                 scip,               /**< SCIP data structure */
    char*                 name,               /**< name of the variable */
-   SCIP_VAR**            var                /**< pointer to store the variable */
+   SCIP_VAR**            var                 /**< pointer to store the variable */
    )
 {
    assert(name != NULL);

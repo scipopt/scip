@@ -2903,6 +2903,7 @@ SCIP_RETCODE SCIPnlpiOracleEvalHessianLag(
 
    for( i = 0; i < oracle->nconss; ++i )
    {
+      assert( lambda != NULL ); /* for lint */
       if( lambda[i] == 0.0 )
          continue;
       SCIP_CALL( hessLagAddQuad(lambda[i], oracle->conss[i]->nquadelems, oracle->conss[i]->quadelems, oracle->heslagoffsets, oracle->heslagcols, hessian) );

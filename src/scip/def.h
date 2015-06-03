@@ -83,8 +83,8 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                311 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               1 /**< SCIP sub version number */
+#define SCIP_VERSION                320 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               0 /**< SCIP sub version number */
 #define SCIP_COPYRIGHT   "Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
@@ -120,10 +120,15 @@ extern "C" {
 /*
  * Size_t format
  */
+#if defined(__arm__)  /* TODO: exclude newer ARM 64bit here (what's the macro name?) */
+/* on ARM 32bit, size_t is not long */
+#define SCIP_SIZET_FORMAT           "u"
+#else
 #if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
 #define SCIP_SIZET_FORMAT           "lu"
 #else
 #define SCIP_SIZET_FORMAT           "zu"
+#endif
 #endif
 
 /*
@@ -139,6 +144,7 @@ extern "C" {
 #define SCIP_DEFAULT_EPSILON          1e-09  /**< default upper bound for floating points to be considered zero */
 #define SCIP_DEFAULT_SUMEPSILON       1e-06  /**< default upper bound for sums of floating points to be considered zero */
 #define SCIP_DEFAULT_FEASTOL          1e-06  /**< default feasibility tolerance for constraints */
+#define SCIP_DEFAULT_CHECKFEASTOLFAC    1.0  /**< default factor to change the feasibility tolerance when testing the best solution for feasibility (after solving process) */
 #define SCIP_DEFAULT_LPFEASTOL        1e-06  /**< default primal feasibility tolerance of LP solver */
 #define SCIP_DEFAULT_DUALFEASTOL      1e-07  /**< default feasibility tolerance for reduced costs */
 #define SCIP_DEFAULT_BARRIERCONVTOL   1e-10  /**< default convergence tolerance used in barrier algorithm */

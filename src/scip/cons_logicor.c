@@ -2765,7 +2765,7 @@ SCIP_RETCODE prepareCons(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   assert(consdata->nvars > 1);
+   assert(consdata->nvars > 0);
 
    *redundant = FALSE;
 
@@ -2913,7 +2913,6 @@ SCIP_RETCODE removeRedundantConssAndNonzeros(
 
       if( *cutoff )
       {
-         *cutoff = TRUE;
          SCIPfreeBufferArray(scip, &myconss);
 
          return SCIP_OKAY;
@@ -3151,10 +3150,7 @@ SCIP_RETCODE shortenConss(
       }
 
       if( *cutoff )
-      {
-         *cutoff = TRUE;
          goto TERMINATE;
-      }
 
       assert(consdata->nvars >= 2);
 
@@ -3182,6 +3178,11 @@ SCIP_RETCODE shortenConss(
             boundtypes[v] = TRUE;
          }
       }
+
+      SCIP_CALL( SCIPcleanupCliques(scip, cutoff) );
+
+      if( *cutoff )
+         goto TERMINATE;
 
       /* use implications and cliques to derive global fixings and to shrink the number of variables in this constraints */
       SCIP_CALL( SCIPshrinkDisjunctiveVarSet(scip, probvars, bounds, boundtypes, redundants, consdata->nvars, &nredvars,
@@ -3277,7 +3278,6 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
    int*                  nupgdconss,         /**< pointer to count number of upgraded constraints */
    int*                  nchgcoefs,          /**< pointer to count number of changed/deleted coefficients */
    SCIP_Bool*            cutoff              /**< pointer to store, if cut off appeared */
-
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -3349,10 +3349,7 @@ SCIP_RETCODE removeConstraintsDueToNegCliques(
       }
 
       if( *cutoff )
-      {
-         *cutoff = TRUE;
          goto TERMINATE;
-      }
 
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);

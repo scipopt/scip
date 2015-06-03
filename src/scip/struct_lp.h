@@ -350,6 +350,7 @@ struct SCIP_Lp
    SCIP_Bool             divingobjchg;       /**< objective values were changed in diving or probing: LP objective is invalid */
    SCIP_Bool             divinglazyapplied;  /**< lazy bounds were applied to the LP during diving */
    SCIP_Bool             resolvelperror;     /**< an error occured during resolving the LP after diving or probing */
+   SCIP_Bool             adjustlpval;        /**< does an infinite LP objective value has been adjusted so far? */
    SCIP_Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */
    SCIP_Bool             lpiscaling;         /**< current SCALING setting in LPI */
    SCIP_Bool             lpipresolving;      /**< current PRESOLVING setting in LPI */

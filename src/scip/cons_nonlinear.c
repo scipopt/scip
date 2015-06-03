@@ -1593,9 +1593,15 @@ SCIP_RETCODE removeFixedLinearVariables(
          if( offset != 0.0 )
          {
             if( !SCIPisInfinity(scip, -consdata->lhs) )
+            {
                consdata->lhs -= offset;
+               assert(!SCIPisInfinity(scip, REALABS(consdata->lhs)));
+            }
             if( !SCIPisInfinity(scip,  consdata->rhs) )
+            {
                consdata->rhs -= offset;
+               assert(!SCIPisInfinity(scip, REALABS(consdata->rhs)));
+            }
          }
 
          /* nothing left to do if variable had been fixed */
@@ -1632,9 +1638,15 @@ SCIP_RETCODE removeFixedLinearVariables(
             if( aggrconstant != 0.0 )
             {
                if( !SCIPisInfinity(scip, -consdata->lhs) )
+               {
                   consdata->lhs -= coef * aggrconstant;
+                  assert(!SCIPisInfinity(scip, REALABS(consdata->lhs)));
+               }
                if( !SCIPisInfinity(scip,  consdata->rhs) )
+               {
                   consdata->rhs -= coef * aggrconstant;
+                  assert(!SCIPisInfinity(scip, REALABS(consdata->rhs)));
+               }
             }
          }
       }
@@ -1779,9 +1791,15 @@ SCIP_RETCODE splitOffLinearPart(
    if( constant != 0.0 )
    {
       if( !SCIPisInfinity(scip, -consdata->lhs) )
+      {
          consdata->lhs -= constant;
+         assert(!SCIPisInfinity(scip, REALABS(consdata->lhs)));
+      }
       if( !SCIPisInfinity(scip,  consdata->rhs) )
+      {
          consdata->rhs -= constant;
+         assert(!SCIPisInfinity(scip, REALABS(consdata->rhs)));
+      }
    }
 
    for( i = 0; i < nlinvars; ++i )
@@ -2177,7 +2195,7 @@ SCIP_RETCODE reformNode2Var(
    /* set also bounds of auxvarnode to bounds, so it is available for new parent nodes (currently node->parents)
     * when updating their curvature information; avoid having to run domain propagation through exprgraph
     */
-   SCIPexprgraphTightenNodeBounds(exprgraph, auxvarnode, bounds, BOUNDTIGHTENING_MINSTRENGTH, &cutoff);
+   SCIPexprgraphTightenNodeBounds(exprgraph, auxvarnode, bounds, BOUNDTIGHTENING_MINSTRENGTH, INTERVALINFTY, &cutoff);
    assert(!cutoff); /* we tightenend bounds from [-inf,+inf] to bounds, this should not be infeasible */
 
    /* add new constraint auxvar == node */
@@ -2247,7 +2265,7 @@ SCIP_RETCODE reformEnsureChildrenMinCurvature(
    if( needupdate )
    {
       SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(node, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-      assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(node)));
+      assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(node)));
    }
 
    return SCIP_OKAY;
@@ -2372,7 +2390,7 @@ SCIP_RETCODE reformMonomial(
 
          SCIP_CALL( SCIPexprgraphAddNode(exprgraph, expnode, -1, 1, &factors[0]) );
          SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(expnode, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-         assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(expnode)));
+         assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(expnode)));
       }
 
       if( createauxcons )
@@ -2531,7 +2549,7 @@ SCIP_RETCODE reformMonomial(
          SCIP_CALL( SCIPexprgraphCreateNode(SCIPblkmem(scip), &productnode, SCIP_EXPR_MUL, NULL) );
          SCIP_CALL( SCIPexprgraphAddNode(exprgraph, productnode, -1, 2, leftright) );
          SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(productnode, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-         assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(productnode)));
+         assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(productnode)));
       }
 
       if( createauxcons )
@@ -2658,7 +2676,7 @@ SCIP_RETCODE reformulate(
 
          /* make sure bounds and curvature of node are uptodate */
          SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(node, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-         assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(node)));
+         assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(node)));
 
          /* try external reformulation methods */
          for( u = 0; u < conshdlrdata->nnlconsupgrades; ++u )
@@ -2674,7 +2692,7 @@ SCIP_RETCODE reformulate(
 
                SCIP_CALL( reformReplaceNode(exprgraph, &node, reformnode, conss, nconss) );
                SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(reformnode, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-               assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(reformnode)));
+               assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(reformnode)));
 
                break;
             }
@@ -2914,7 +2932,7 @@ SCIP_RETCODE reformulate(
 
             /* update curvature of node */
             SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(node, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-            assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(node)));
+            assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(node)));
 
             if( SCIPexprgraphGetNodeCurvature(node) == SCIP_EXPRCURV_UNKNOWN )
             {
@@ -3302,7 +3320,7 @@ SCIP_RETCODE reformulate(
             {
                /* refresh curvature information in node, since we changed children, it should be convex or concave now */
                SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(node, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-               assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(node)));
+               assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(node)));
                assert(SCIPexprgraphGetNodeCurvature(node) != SCIP_EXPRCURV_UNKNOWN);
 
                /* we are done and can proceed with the next node */
@@ -3362,7 +3380,7 @@ SCIP_RETCODE reformulate(
                /* replace node by auxnode and refresh its curvature */
                SCIP_CALL( reformReplaceNode(exprgraph, &node, auxnode, conss, nconss) );
                SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(auxnode, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
-               assert(!SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(auxnode)));
+               assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(auxnode)));
 
                break;
             }
@@ -3430,7 +3448,7 @@ SCIP_RETCODE reformulate(
 
          for( m = 0; m < SCIPexprgraphGetNodePolynomialNMonomials(consdata->exprgraphnode); ++m )
          {
-            SCIP_CALL( SCIPexprgraphGetNodePolynomialMonomialCurvature(consdata->exprgraphnode, m, &curv) );
+            SCIP_CALL( SCIPexprgraphGetNodePolynomialMonomialCurvature(consdata->exprgraphnode, m, INTERVALINFTY, &curv) );
 
             monomial = SCIPexprgraphGetNodePolynomialMonomials(consdata->exprgraphnode)[m];
             assert(monomial != NULL);
@@ -4139,9 +4157,8 @@ SCIP_RETCODE addConcaveEstimatorUnivariate(
 
    if( SCIPisEQ(scip, xlb, xub) )
    {
-      assert(SCIPisFeasEQ(scip, vallb, valub));
       slope = 0.0;
-      /* choose most conservative value, so cut is also valid if above assert does not hold */
+      /* choose most conservative value for the cut */
       if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
          constant = MAX(vallb, valub);
       else
@@ -4655,10 +4672,15 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
       ref[j] = MIN(SCIPvarGetUbLocal(vars[j]), MAX(SCIPvarGetLbLocal(vars[j]), ref[j]));  /*lint !e666*/
    }
 
+   /* create empty auxiliary LP and decide its objective sense */
    assert(consdata->curvatures[exprtreeidx] == SCIP_EXPRCURV_CONVEX || consdata->curvatures[exprtreeidx] == SCIP_EXPRCURV_CONCAVE);
    doupper = (consdata->curvatures[exprtreeidx] & SCIP_EXPRCURV_CONVEX);  /*lint !e641*/
-
-   lpi = NULL;
+   SCIP_CALL( SCIPlpiCreate(&lpi, SCIPgetMessagehdlr(scip), "concaveunderest", doupper ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE) );
+   if( lpi == NULL )
+   {
+      SCIPerrorMessage("failed to create auxiliary LP\n");
+      return SCIP_ERROR;
+   }
 
    /* columns are cut coefficients plus constant */
    ncols = nvars + 1;
@@ -4740,7 +4762,6 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
    SCIP_CALL( SCIPexprtreeEval(exprtree, ref, &funcval) );
    funcval *= treecoef;
 
-   SCIP_CALL( SCIPlpiCreate(&lpi, SCIPgetMessagehdlr(scip), "concaveunderest", doupper ? SCIP_OBJSEN_MINIMIZE : SCIP_OBJSEN_MAXIMIZE) );
    SCIP_CALL( SCIPlpiAddCols(lpi, ncols, obj, lb, ub, NULL, 0, NULL, NULL, NULL) );
    SCIP_CALL( SCIPlpiAddRows(lpi, nrows, lhs, rhs, NULL, nnonz, beg, ind, val) );
 
@@ -4823,11 +4844,11 @@ SCIP_RETCODE addConcaveEstimatorMultivariate(
  */
 static
 SCIP_RETCODE getCoeffsAndConstantFromLinearExpr(
-   SCIP_EXPR*           expr,           /**< the linear expression */
-   SCIP_Real            scalar,         /**< the scalar value, i.e. the coeff of the given expression */
-   SCIP_Real*           varcoeffs,      /**< buffer array to store the computed coefficients */
-   SCIP_Real*           constant        /**< buffer to hold the constant value of the given expression */
-)
+   SCIP_EXPR*            expr,               /**< the linear expression */
+   SCIP_Real             scalar,             /**< the scalar value, i.e. the coeff of the given expression */
+   SCIP_Real*            varcoeffs,          /**< buffer array to store the computed coefficients */
+   SCIP_Real*            constant            /**< buffer to hold the constant value of the given expression */
+   )
 {
    switch( SCIPexprGetOperator( expr ) )
    {
@@ -6220,7 +6241,7 @@ SCIP_RETCODE propagateBoundsCons(
    {
       SCIPintervalSet(&nonlinactivity, 0.0);
    }
-   assert(!SCIPintervalIsEmpty(nonlinactivity) );
+   assert(!SCIPintervalIsEmpty(INTERVALINFTY, nonlinactivity) );
 
    /* @todo adding SCIPepsilon may be sufficient? */
    SCIPintervalSetBounds(&consbounds,
@@ -6500,7 +6521,7 @@ SCIP_RETCODE propagateConstraintSides(
 
       /* if we want the expression graph to propagate the bounds in any case, we set minstrength to a negative value */
       SCIPexprgraphTightenNodeBounds(conshdlrdata->exprgraph, consdata->exprgraphnode, bounds,
-         consdata->forcebackprop ? -1.0 : BOUNDTIGHTENING_MINSTRENGTH, &cutoff);
+         consdata->forcebackprop ? -1.0 : BOUNDTIGHTENING_MINSTRENGTH, INTERVALINFTY, &cutoff);
       consdata->forcebackprop = FALSE; /* do this only once */
 
       if( cutoff )
@@ -6642,7 +6663,7 @@ SCIP_RETCODE propagateBounds(
 #ifndef NDEBUG
          consdata = SCIPconsGetData(conss[c]);
          assert(consdata != NULL);
-         assert(consdata->exprgraphnode == NULL || !SCIPintervalIsEmpty(SCIPexprgraphGetNodeBounds(consdata->exprgraphnode)));
+         assert(consdata->exprgraphnode == NULL || !SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(consdata->exprgraphnode)));
 #endif
 
          SCIP_CALL( propagateBoundsCons(scip, conshdlr, conss[c], &propresult, nchgbds, &redundant) );

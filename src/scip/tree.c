@@ -939,8 +939,8 @@ SCIP_RETCODE nodeCreate(
    (*node)->number = 0;
    (*node)->lowerbound = -SCIPsetInfinity(set);
    (*node)->estimate = -SCIPsetInfinity(set);
-   (*node)->reoptid = 0,
-   (*node)->reopttype = SCIP_REOPTTYPE_NONE,
+   (*node)->reoptid = 0;
+   (*node)->reopttype = (unsigned int) SCIP_REOPTTYPE_NONE;
    (*node)->depth = 0;
    (*node)->active = FALSE;
    (*node)->cutoff = FALSE;
@@ -1593,10 +1593,10 @@ SCIP_RETCODE SCIPnodeDelCons(
 
 /** returns all constraints added to a given node */
 void SCIPnodeGetAddedConss(
-   SCIP_NODE*          node,                      /**< node */
-   SCIP_CONS**         addedconss,                /**< array to store the constraints */
-   int*                naddedconss,               /**< number of added constraints */
-   int                 addedconsssize             /**< size of the constraint array */
+   SCIP_NODE*            node,               /**< node */
+   SCIP_CONS**           addedconss,         /**< array to store the constraints */
+   int*                  naddedconss,        /**< number of added constraints */
+   int                   addedconsssize      /**< size of the constraint array */
    )
 {
    int cons;
@@ -1623,7 +1623,7 @@ void SCIPnodeGetAddedConss(
 
 /** returns the number of added constraints to the given node */
 int SCIPnodeGetNAddedConss(
-   SCIP_NODE*           node                      /**< node */
+   SCIP_NODE*            node                /**< node */
    )
 {
    assert(node != NULL);
@@ -4562,9 +4562,9 @@ SCIP_RETCODE SCIPtreeCreate(
    /* allocate one slot for the prioritized and the unprioritized bound change */
    for( p = 0; p <= 1; ++p )
    {
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->divebdchgdirs[p], 1) );
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->divebdchgvars[p], 1) );
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->divebdchgvals[p], 1) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->divebdchgdirs[p], 1) ); /*lint !e866*/
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->divebdchgvars[p], 1) ); /*lint !e866*/
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->divebdchgvals[p], 1) ); /*lint !e866*/
       (*tree)->ndivebdchanges[p] = 0;
       (*tree)->divebdchgsize[p] = 1;
    }
@@ -4643,9 +4643,9 @@ SCIP_RETCODE SCIPtreeFree(
    /* free diving bound change storage */
    for( p = 0; p <= 1; ++p )
    {
-      BMSfreeBlockMemoryArray(blkmem, &(*tree)->divebdchgdirs[p], (*tree)->divebdchgsize[p]);
-      BMSfreeBlockMemoryArray(blkmem, &(*tree)->divebdchgvals[p], (*tree)->divebdchgsize[p]);
-      BMSfreeBlockMemoryArray(blkmem, &(*tree)->divebdchgvars[p], (*tree)->divebdchgsize[p]);
+      BMSfreeBlockMemoryArray(blkmem, &(*tree)->divebdchgdirs[p], (*tree)->divebdchgsize[p]); /*lint !e866*/
+      BMSfreeBlockMemoryArray(blkmem, &(*tree)->divebdchgvals[p], (*tree)->divebdchgsize[p]); /*lint !e866*/
+      BMSfreeBlockMemoryArray(blkmem, &(*tree)->divebdchgvars[p], (*tree)->divebdchgsize[p]); /*lint !e866*/
    }
 
    /* free pointer arrays */
@@ -6037,9 +6037,9 @@ SCIP_RETCODE SCIPtreeAddDiveBoundChange(
 
    if( pos == tree->divebdchgsize[idx] - 1 )
    {
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tree->divebdchgdirs[idx], tree->divebdchgsize[idx], tree->divebdchgsize[idx] + ARRAYGROWTH) );
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tree->divebdchgvars[idx], tree->divebdchgsize[idx], tree->divebdchgsize[idx] + ARRAYGROWTH) );
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tree->divebdchgvals[idx], tree->divebdchgsize[idx], tree->divebdchgsize[idx] + ARRAYGROWTH) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tree->divebdchgdirs[idx], tree->divebdchgsize[idx], tree->divebdchgsize[idx] + ARRAYGROWTH) ); /*lint !e866*/
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tree->divebdchgvars[idx], tree->divebdchgsize[idx], tree->divebdchgsize[idx] + ARRAYGROWTH) ); /*lint !e866*/
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tree->divebdchgvals[idx], tree->divebdchgsize[idx], tree->divebdchgsize[idx] + ARRAYGROWTH) ); /*lint !e866*/
       tree->divebdchgsize[idx] += ARRAYGROWTH;
    }
 
@@ -6052,7 +6052,7 @@ SCIP_RETCODE SCIPtreeAddDiveBoundChange(
    return SCIP_OKAY;
 }
 
-/**< get the dive bound change data for the preferred or the alternative direction */
+/** get the dive bound change data for the preferred or the alternative direction */
 void SCIPtreeGetDiveBoundChangeData(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_VAR***           variables,          /**< pointer to store variables for the specified direction */
@@ -7053,7 +7053,7 @@ SCIP_Real SCIPnodeGetEstimate(
 
 /** gets the reoptimization type of this node */
 SCIP_REOPTTYPE SCIPnodeGetReopttype(
-   SCIP_NODE*           node                 /**< node **/
+   SCIP_NODE*            node                /**< node **/
    )
 {
    assert(node != NULL);
@@ -7077,20 +7077,19 @@ void SCIPnodeSetReopttype(
        || reopttype == SCIP_REOPTTYPE_PRUNED
        || reopttype == SCIP_REOPTTYPE_FEASIBLE);
 
-   node->reopttype = reopttype;
+   node->reopttype = (unsigned int) reopttype;
 }
 
 /** gets the unique id to identify the node during reoptimization; the id is 0 if the node is the root or not part of
  * the reoptimization tree
  */
 unsigned int SCIPnodeGetReoptID(
-   SCIP_NODE*           node                 /**< node */
+   SCIP_NODE*            node                /**< node */
    )
 {
    assert(node != NULL);
-   assert(node->reoptid < 536870912); /* id has only 29 bits and needs to be smaller than 2^29 */
 
-   return node->reoptid;
+   return node->reoptid; /*lint !e732*/
 }
 
 /** set a unique id to identify the node during reoptimization */
@@ -7100,7 +7099,7 @@ void SCIPnodeSetReoptID(
    )
 {
    assert(node != NULL);
-   assert(id < 536870912); /* id has only 29 bits and needs to be smaller than 2^29 */
+   assert(id <= 536870911); /* id has only 29 bits and needs to be smaller than 2^29 */
 
    node->reoptid = id;
 }
@@ -7124,7 +7123,7 @@ void SCIPnodeGetNDomchg(
    int*                  nconsprop,          /**< pointer to store number of constraint propagations (or NULL if not needed) */
    int*                  nprop               /**< pointer to store number of propagations (or NULL if not needed) */
    )
-{
+{  /*lint --e{641}*/
    SCIP_Bool count_branchings;
    SCIP_Bool count_consprop;
    SCIP_Bool count_prop;
@@ -7173,7 +7172,7 @@ void SCIPnodeGetNDomchg(
 int SCIPnodeGetNDualBndchgs(
    SCIP_NODE*            node                /**< node */
    )
-{
+{  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int i;
    int nboundchgs;
@@ -7201,7 +7200,7 @@ int SCIPnodeGetNDualBndchgs(
        && ((boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
             && boundchgs[i].data.inferencedata.reason.cons == NULL)
         || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-            && boundchgs[i].data.inferencedata.reason.prop == NULL)) ) /*lint !e641*/
+            && boundchgs[i].data.inferencedata.reason.prop == NULL)) )
          npseudobranchvars++;
       else if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
          break;
@@ -7220,7 +7219,7 @@ void SCIPnodeGetDualBoundchgs(
                                               *   should be called again */
    int                   varssize            /**< available slots in arrays */
 )
-{
+{  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;
    int i;
@@ -7252,7 +7251,7 @@ void SCIPnodeGetDualBoundchgs(
          if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
                && boundchgs[i].data.inferencedata.reason.cons == NULL)
           || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-                && boundchgs[i].data.inferencedata.reason.prop == NULL) ) /*lint !e641*/
+                && boundchgs[i].data.inferencedata.reason.prop == NULL) )
             (*nvars)++;
          else if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
             break;
@@ -7266,7 +7265,7 @@ void SCIPnodeGetDualBoundchgs(
       j = 0;
       for( i = i+1; i < nboundchgs; i++)
       {
-         assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING ); /*lint !e641*/
+         assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING );
          if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
          {
             if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
@@ -7446,7 +7445,7 @@ void SCIPnodeGetConsProps(
                                               *   should be called again */
    int                   conspropvarssize    /**< available slots in arrays */
    )
-{
+{  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;
    int first_dual;
@@ -7535,7 +7534,7 @@ void SCIPnodeGetBdChgsAfterDual(
                                               *   should be called again */
    int                   branchvarssize      /**< available slots in arrays */
    )
-{
+{  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;
    int first_dual;

@@ -25,7 +25,6 @@
 #include "scip/scip.h"
 #include "scip/scipdefplugins.h"
 #include "scip/scipshell.h"
-#include "pricer_coloring.h"
 #include "branch_coloring.h"
 #include "coloringplugins.h"
 

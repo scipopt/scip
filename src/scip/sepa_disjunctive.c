@@ -302,7 +302,14 @@ SCIP_RETCODE generateDisjCutSOS1(
          for (c = 0; c < rownnonz; ++c)
          {
             ind = SCIPcolGetLPPos(rowcols[c]);
-            assert( ind >= 0 );
+
+            /* if column is not in LP, then return without generating cut */
+            if ( ind < 0 )
+            {
+               *row = NULL;
+               return SCIP_OKAY;
+            }
+
             cutcoefs[ind] -= cutcoef * rowvals[c];
          }
       }
@@ -671,7 +678,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
       SCIP_Bool madeintegral;
       SCIP_Real cutlhs1;
       SCIP_Real cutlhs2;
-      SCIP_ROW* row;
+      SCIP_ROW* row = NULL;
       SCIP_VAR* var;
       SCIP_COL* col;
 
@@ -729,6 +736,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpDisjunctive)
 
       /* add coefficients to cut */
       SCIP_CALL( generateDisjCutSOS1(scip, sepa, rows, nrows, cols, ncols, ndisjcuts, TRUE, cutlhs1, cutlhs2, simplexcoefs1, simplexcoefs2, cutcoefs, &row, &madeintegral) );
+      if ( row == NULL )
+         continue;
 
       /* raise cutrank for present cut */
       ++cutrank;
