@@ -9197,6 +9197,10 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
          else
             bound = nodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, v);
 
+         /* bound may have changed in propagation; ensure that fracval <= 1 */
+         if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
+            solval = bound;
+
          /* ensure finiteness */
          bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound)); /*lint !e666*/
          fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval)); /*lint !e666*/
