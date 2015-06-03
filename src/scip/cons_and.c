@@ -1698,13 +1698,10 @@ SCIP_RETCODE propagateCons(
       return SCIP_OKAY;
    }
 
-   if( SCIPvarGetUbLocal(resvar) < 0.5 )
-      return SCIP_OKAY;
-
    /* if resultant is fixed to TRUE, all operator variables can be fixed to TRUE (rule (2)) */
    if( SCIPvarGetLbLocal(resvar) > 0.5 )
    {
-      /* fix resultant to zero */
+      /* fix operands to one */
       SCIP_CALL( consdataFixOperandsOne(scip, cons, vars, nvars, cutoff, nfixedvars) );
 
       return SCIP_OKAY;
