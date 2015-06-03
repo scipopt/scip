@@ -6205,6 +6205,7 @@ SCIP_RETCODE SCIPtreeStartProbing(
    tree->probinglpwassolved = lp->solved;
    tree->probingloadlpistate = FALSE;
    tree->probinglpwasrelax = lp->isrelax;
+   lp->isrelax = TRUE;
    tree->probingsolvedlp = FALSE;
    tree->probingobjchanged = FALSE;
    lp->divingobjchg = FALSE;

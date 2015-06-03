@@ -32154,6 +32154,8 @@ SCIP_RETCODE solveProbingLP(
    /* load the LP state (if necessary) */
    SCIP_CALL( SCIPtreeLoadProbingLPState(scip->tree, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp) );
 
+   SCIPlpSetIsRelax(scip->lp, TRUE);
+
    /* solve probing LP */
    SCIP_CALL( SCIPlpSolveAndEval(scip->lp, scip->set, scip->messagehdlr, scip->mem->probmem, scip->stat,
          scip->eventqueue, scip->eventfilter, scip->transprob, (SCIP_Longint)itlim, FALSE, FALSE, FALSE, lperror) );
@@ -32190,7 +32192,7 @@ SCIP_RETCODE solveProbingLP(
    scip->tree->probingsolvedlp = TRUE;
 
    /* the LP is infeasible or the objective limit was reached */
-   if( !(*lperror) && SCIPlpIsRelax(scip->lp) && (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE
+   if( !(*lperror) && (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_INFEASIBLE
          || SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OBJLIMIT ||
          (SCIPlpGetSolstat(scip->lp) == SCIP_LPSOLSTAT_OPTIMAL
             && SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))) )

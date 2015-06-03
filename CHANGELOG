@@ -259,6 +259,7 @@ fixed bugs:
 - fix call to random generator for Windows operating systems in misc.c
 - fix late creation of auxiliary LP in cons_nonlinear.c, which lead to a segmentation fault with lpi_spx2.cpp
 - fixed again a bug in backward propagation of linear expressions in expression graph
+- fixed problem with lpisrelax flag in probing mode when doing branch-and-price
 
 SCIP version 3.1.2
 ==================
