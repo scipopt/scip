@@ -554,7 +554,7 @@ SCIP_RETCODE sd_red(
    netgraph->source[0] = 0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, nterms) );
-   graph_path_init(netgraph);
+   SCIP_CALL( graph_path_init(scip, netgraph) );
    graph_path_exec(scip, netgraph, MST_MODE, 0, netgraph->cost, mst);
 
    /* traverse all edges */
@@ -660,7 +660,7 @@ SCIP_RETCODE sd_red(
                      l = netgraph->tail[ne];
                      if( SCIPisGT(scip, netgraph->cost[ne], dist) )
                         dist = netgraph->cost[ne];
-                     if( !SCIPisEQ(scip, mstsdist[l], UNKNOWN) )
+                     if( !SCIPisEQ(scip, mstsdist[l], (double) UNKNOWN) )
                      {
                         if( SCIPisGT(scip, mstsdist[l], dist) )
                            dist = mstsdist[l];
@@ -696,7 +696,7 @@ SCIP_RETCODE sd_red(
    }
 
    /* free memory*/
-   graph_path_exit(netgraph);
+   graph_path_exit(scip, netgraph);
    graph_free(scip, netgraph, TRUE);
    SCIPfreeBufferArray(scip, &mst);
    SCIPfreeBufferArray(scip, &neighbterms2);
@@ -932,7 +932,8 @@ SCIP_RETCODE sdpc_reduction(
 		  for( e2 = netgraph->outbeg[nodesid[tj]]; e2 != EAT_LAST; e2 = netgraph->oeat[e2] )
                      if( netgraph->head[e2] == nodesid[tk] )
                         break;
-                  if( 0 && e2 != EAT_LAST && SCIPisGT(scip, ecost, g->cost[e2])
+#if 0
+                  if( e2 != EAT_LAST && SCIPisGT(scip, ecost, g->cost[e2])
                      && SCIPisGT(scip, ecost, g->cost[e2] + termdist1[j] - g->prize[tj])
                      && SCIPisGT(scip, ecost, g->cost[e2] + termdist2[k] - g->prize[tk])
                      && SCIPisGT(scip, ecost, g->cost[e2] + termdist1[j] + termdist2[k] - g->prize[tj] - g->prize[tk]) )
@@ -942,6 +943,7 @@ SCIP_RETCODE sdpc_reduction(
                      (*nelims)++;
                      break;
                   }
+#endif
 	       }
 	    }
 	 }
@@ -1860,7 +1862,7 @@ inline static double mst_cost(
 
    return(cost);
 }
-#if 1
+#if 0
 /* C. W. Duin and A. Volganant
  *
  * "Reduction Tests for the Steiner Problem in Graphs"
@@ -2419,7 +2421,7 @@ SCIP_RETCODE sl_reduction(
 
    voronoi_terms(scip, g, g->cost, vnoi, vbase, heap, state);
 
-   SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2) );
+   SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2.0) );
    for( j = 0; j < nnodes; j++ )
    {
       forbidden[j] = FALSE;
@@ -2683,7 +2685,7 @@ SCIP_RETCODE nv_reduction(
       }
       else
       {
-         if( pc )
+         if( distnode != NULL )
             t = distnode[i];
          ttdist = distance[i];
       }
@@ -2784,7 +2786,7 @@ SCIP_RETCODE ledge_reduction(
 
    voronoi_terms(scip, g, g->cost, vnoi, vbase, heap, state);
 
-   if( SCIPisGT(scip, nedges, (nterms - 1) * nterms) )
+   if( nedges >= (nterms - 1) * nterms )
       maxnedges = (nterms - 1) * nterms;
    else
       maxnedges = nedges;
@@ -2836,7 +2838,7 @@ SCIP_RETCODE ledge_reduction(
             assert(Is_term(g->term[v2]));
             assert(nodesid[v1] >= 0);
             assert(nodesid[v2] >= 0);
-            ne = EAT_LAST;
+
             for( ne = netgraph->outbeg[nodesid[v1]]; ne != EAT_LAST; ne = netgraph->oeat[ne] )
                if( netgraph->head[ne] == nodesid[v2] )
                   break;
@@ -2871,7 +2873,7 @@ SCIP_RETCODE ledge_reduction(
 
    /* compute a MST on netgraph */
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, netnnodes) );
-   graph_path_init(netgraph);
+   SCIP_CALL( graph_path_init(scip, netgraph) );
    graph_path_exec(scip, netgraph, MST_MODE, 0, netgraph->cost, mst);
 
    maxcost = -1;
@@ -2920,7 +2922,7 @@ SCIP_RETCODE ledge_reduction(
    level0(scip, g);
 
    /* free netgraph and  MST data structure */
-   graph_path_exit(netgraph);
+   graph_path_exit(scip, netgraph);
    graph_free(scip, netgraph, TRUE);
    SCIPfreeBufferArray(scip, &mst);
    SCIPfreeBufferArray(scip, &nodesid);

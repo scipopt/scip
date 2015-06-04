@@ -244,7 +244,7 @@ SCIP_RETCODE graph_init_history(
 
    for( e = 0; e < nedges; e++ )
    {
-      SCIP_CALL( SCIPallocMemory(scip, &((ancestors)[e])) );
+      SCIP_CALL( SCIPallocMemory(scip, &(ancestors[e])) );
       (ancestors)[e]->index = e;
       (ancestors)[e]->parent = NULL;
 
@@ -296,11 +296,6 @@ SCIP_RETCODE graph_resize(
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->head), esize) );
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->ieat), esize) );
       SCIP_CALL( SCIPreallocMemoryArray(scip, &(g->oeat), esize) );
-   }
-   if( g->stp_type == STP_GRID )
-   {
-      g->grid_ncoords = realloc(g->grid_ncoords, (size_t)g->grid_dim * sizeof(int));
-      assert(g->grid_ncoords != NULL);
    }
 
    return SCIP_OKAY;
@@ -465,7 +460,7 @@ SCIP_RETCODE graph_obstgrid_create(
    int    k;
    int    tmp;
    int    shift;
-   int    nnodes = 0;
+   int    nnodes;
    int    nedges;
    double  scale_factor;
    int    gridedgecount;
@@ -578,7 +573,6 @@ SCIP_RETCODE graph_obstgrid_create(
       }
       /* the position of the (future) terminal */
       k = getNodeNumber(grid_dim, -1, ncoords, currcoord) - 1;
-      tmp = -1;
 
       if( i == 0 )
          g->source[0] = k;
@@ -624,7 +618,7 @@ SCIP_RETCODE graph_grid_create(
    int    k;
    int    tmp;
    int    shift;
-   int    nnodes = 0;
+   int    nnodes;
    int    nedges;
    double  scale_factor;
    int    gridedgecount;
@@ -732,7 +726,7 @@ SCIP_RETCODE graph_grid_create(
       }
       /* the position of the (future) terminal */
       k = getNodeNumber(grid_dim, -1, ncoords, currcoord) - 1;
-      tmp = -1;
+
 #if 0
       if( i == 0 )
       {
@@ -782,7 +776,7 @@ SCIP_RETCODE graph_grid_coordinates(
    assert(coords != NULL);
    assert(ncoords != NULL);
    if( *nodecoords == NULL )
-     SCIP_CALL( SCIPallocMemoryArray(scip, nodecoords, grid_dim) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, nodecoords, grid_dim) );
 
    for( i = 0; i < grid_dim; i++ )
    {
@@ -810,10 +804,8 @@ SCIP_RETCODE graph_prize_transform(
    int node;
    int nnodes;
    int nterms;
-   double tmpsum = 0.0;
    assert(graph != NULL);
    assert(graph->edges == graph->esize);
-   root = graph->source[0];
    nnodes = graph->knots;
    nterms = graph->terms;
    prize = graph->prize;
@@ -845,13 +837,12 @@ SCIP_RETCODE graph_prize_transform(
          /* switch the terminal property, mark k */
          graph_knot_chg(graph, k, -2);
          graph_knot_chg(graph, node, 0);
-         assert(GT(prize[k], 0));
-         tmpsum += prize[k];
+         assert(SCIPisGE(scip, prize[k], 0.0));
 
          /* add one edge going from the root to the 'copied' terminal and one going from the former terminal to its copy */
-         graph_edge_add(graph, root, k, 0, FARAWAY);
+         graph_edge_add(graph, root, k, 0.0, FARAWAY);
          graph_edge_add(graph, root, node, prize[k], FARAWAY);
-         graph_edge_add(graph, k, node, 0, FARAWAY);
+         graph_edge_add(graph, k, node, 0.0, FARAWAY);
       }
       else
       {
@@ -877,7 +868,6 @@ SCIP_RETCODE graph_rootprize_transform(
    int node;
    int nnodes;
    int nterms;
-   SCIP_Real tmpsum = 0.0;
 
    assert(graph != NULL);
    assert(graph->edges == graph->esize);
@@ -913,16 +903,15 @@ SCIP_RETCODE graph_rootprize_transform(
          /* switch the terminal property, mark k as former terminal */
          graph_knot_chg(graph, k, -2);
          graph_knot_chg(graph, node, 0);
-         assert(GT(prize[k], 0));
-         tmpsum += prize[k];
+         assert(SCIPisGE(scip, prize[k], 0.0));
 
          /* add one edge going from the root to the 'copied' terminal and one going from the former terminal to its copy */
          graph_edge_add(graph, root, node, prize[k], FARAWAY);
-         graph_edge_add(graph, k, node, 0, FARAWAY);
+         graph_edge_add(graph, k, node, 0.0, FARAWAY);
       }
       else
       {
-         prize[k] = 0;
+         prize[k] = 0.0;
       }
    }
    /* one for the root */
@@ -1038,8 +1027,8 @@ void graph_free(
       if( p->orgtail != NULL )
       {
          assert(p->orghead != NULL);
- SCIPfreeMemoryArray(scip, &(p->orgtail));
- SCIPfreeMemoryArray(scip, &(p->orghead));
+         SCIPfreeMemoryArray(scip, &(p->orgtail));
+         SCIPfreeMemoryArray(scip, &(p->orghead));
       }
       curr = p->fixedges;
       while( curr != NULL )
@@ -1052,13 +1041,13 @@ void graph_free(
 
    if( p->stp_type == STP_DEG_CONS )
    {
-       SCIPfreeMemoryArray(scip, &(p->maxdeg));
+      SCIPfreeMemoryArray(scip, &(p->maxdeg));
    }
    else if( p->stp_type == STP_GRID )
    {
       int i;
       for( i = 0; i < p->grid_dim; i++ )
-        SCIPfreeMemoryArray(scip, &(p->grid_coordinates[i]));
+         SCIPfreeMemoryArray(scip, &(p->grid_coordinates[i]));
 
       SCIPfreeMemoryArray(scip, &(p->grid_coordinates));
       SCIPfreeMemoryArray(scip, &(p->grid_ncoords));
@@ -1076,9 +1065,8 @@ SCIP_RETCODE graph_copy(
    GRAPH* g;
    GRAPH* p;
 
-   assert(p != NULL);
-
    p = orgraph;
+   assert(p != NULL);
 
    SCIP_CALL( graph_init(scip, copygraph, p->ksize, p->esize, p->layers, p->flags) );
    g = *copygraph;
@@ -1279,9 +1267,9 @@ SCIP_RETCODE graph_knot_contract(
       double       outcost;
    } SLIST;
 
-   SLIST* slp = NULL;
-   IDX**   ancestors = NULL;
-   IDX**   revancestors = NULL;
+   SLIST* slp;
+   IDX**   ancestors;
+   IDX**   revancestors;
    IDX*   tsancestors = NULL;
    IDX*   stancestors = NULL;
    int    slc = 0;
@@ -1332,7 +1320,6 @@ SCIP_RETCODE graph_knot_contract(
 
       if( p->head[es] != t )
       {
-         i = 0;
          ancestors[slc] = NULL;
          SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(ancestors[slc]), p->ancestors[es]) );
          revancestors[slc] = NULL;
@@ -1376,7 +1363,7 @@ SCIP_RETCODE graph_knot_contract(
       {
          assert(et != EAT_LAST);
 
-          /* This is for nodes with edges to s and t.
+         /* This is for nodes with edges to s and t.
           * Need to adjust the out and in costs of the edge
           */
          if( SCIPisGT(scip, p->cost[et], slp[i].outcost) )
@@ -1508,7 +1495,7 @@ void prize_subtract(
 
    g->cost[e] -= cost;
 
-   assert(SCIPisGE(scip, g->prize[i], 0));
+   assert(SCIPisGE(scip, g->prize[i], 0.0));
    assert(SCIPisEQ(scip, g->prize[i], g->cost[e]));
 }
 
@@ -1537,7 +1524,7 @@ SCIP_RETCODE graph_knot_contractpc(
       int e;
       int j;
 
-       SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &etsancestors, g->ancestors[ets]) );
+      SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &etsancestors, g->ancestors[ets]) );
 
       for( e = g->outbeg[s]; e != EAT_LAST; e = g->oeat[e] )
          if( Is_pterm(g->term[g->head[e]]) )
@@ -1683,8 +1670,8 @@ void graph_edge_add(
    int    e;
 
    assert(g      != NULL);
-   assert(GE(cost1, 0) || cost1 == UNKNOWN );
-   assert(GE(cost2, 0) || cost2 == UNKNOWN );
+   assert(GE(cost1, 0.0) || EQ(cost1, (double) UNKNOWN));
+   assert(GE(cost2, 0.0) || EQ(cost2, (double) UNKNOWN));
    assert(tail   >= 0);
    assert(tail   <  g->knots);
    assert(head   >= 0);
@@ -1858,9 +1845,9 @@ void graph_uncover(
 
    assert(g      != NULL);
 
-   for(e = 0; e < g->edges; e++)
+   for( e = 0; e < g->edges; e++ )
    {
-      if (g->ieat[e] == EAT_HIDE)
+      if( g->ieat[e] == EAT_HIDE )
       {
          assert(e % 2 == 0);
          assert(g->oeat[e] == EAT_HIDE);
@@ -2421,9 +2408,9 @@ SCIP_Bool graph_sol_valid(
    for( i = 0; i < nnodes; i++ )
       terminal[i] = FALSE;
    /* BFS until all terminals are reached */
-   SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2) );
+   SCIP_CALL_ABORT( SCIPqueueCreate(&queue, nnodes, 2.0) );
 
-   SCIP_CALL( SCIPqueueInsert(queue, &root) );
+   SCIP_CALL_ABORT( SCIPqueueInsert(queue, &root) );
    termcount = 1;
    terminal[root] = TRUE;
 
@@ -2442,7 +2429,7 @@ SCIP_Bool graph_sol_valid(
                terminal[i] = TRUE;
                termcount++;
             }
-            SCIP_CALL( SCIPqueueInsert(queue, &graph->head[e]) );
+            SCIP_CALL_ABORT( SCIPqueueInsert(queue, &graph->head[e]) );
          }
       }
 
@@ -2494,9 +2481,9 @@ char graph_valid2(
       reached[i] = FALSE;
    }
    /* BFS until all terminals are reached */
-   SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2) );
+   SCIP_CALL_ABORT( SCIPqueueCreate(&queue, nnodes, 2.0) );
 
-   SCIP_CALL( SCIPqueueInsert(queue, &root) );
+   SCIP_CALL_ABORT( SCIPqueueInsert(queue, &root) );
    termcount = 1;
    terminal[root] = TRUE;
    reached[root] = TRUE;
@@ -2515,7 +2502,7 @@ char graph_valid2(
                terminal[i] = TRUE;
                termcount++;
             }
-            SCIP_CALL( SCIPqueueInsert(queue, &graph->head[e]) );
+            SCIP_CALL_ABORT( SCIPqueueInsert(queue, &graph->head[e]) );
          }
       }
    }

@@ -123,8 +123,6 @@ struct key
 #define KEY_NODEWEIGHTS_NW       6000
 #define KEY_NODEWEIGHTS_END      6001
 
-#define KEY_PRIZECOLL_MD         7000
-
 #define KEY_MAXDEGS_MD           8000
 
 #define KEY_OBSTACLES_RR         9000
@@ -134,7 +132,6 @@ struct key
 #define KEY_HOPCONS_FACTOR       10001
 
 #define KEY_PRIZECOLL_E          11000
-
 
 static const struct key keyword_table[] =
    {
@@ -267,15 +264,17 @@ typedef union parameter
 /*--- Arguments: Pointer to string.                                       ---*/
 /*--- Returns  : The argument, but now pointing to a lower case string.   ---*/
 /*---------------------------------------------------------------------------*/
-static char* strlower(
-   char* s)
+static
+char* strlower(
+   char* s
+   )
 {
    char* t;
 
-   for(t = s; *s != '\0'; s++)
+   for( t = s; *s != '\0'; s++ )
       *s = (char)tolower(*s);
 
-   return(t);
+   return t;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -371,7 +370,7 @@ static int get_arguments(
    int missmatch = FALSE;
    int i;
    int decimal_spaces;
-   char is_negative;
+   SCIP_Bool is_negative;
    assert(format != NULL);
    assert(s      != NULL);
    assert(para   != NULL);
@@ -390,9 +389,9 @@ static int get_arguments(
          /* Go to next digit.
           */
          while((*s != '\0') && !isdigit(*s) && (*s != '.') && (*s != '-') )
-	 {
+         {
             s++;
-	 }
+         }
          /* Someting left ?
           */
          if (*s != '\0')
@@ -403,16 +402,16 @@ static int get_arguments(
              */
             para->n = 0;
             decimal_spaces = -1;
-	    is_negative = FALSE;
+            is_negative = FALSE;
             while(isdigit(*s) || (*s == '.') || (*s == '-'))
             {
-	       if( *s == '.' )
-		  decimal_spaces = 0;
-	       else if( *s == '-' )
-		  is_negative = TRUE;
-	       else if( decimal_spaces != -1 )
-		  para->n = para->n + pow(10, -(++decimal_spaces)) * (*s - '0');
-	       else
+               if( *s == '.' )
+                  decimal_spaces = 0;
+               else if( *s == '-' )
+                  is_negative = TRUE;
+               else if( decimal_spaces != -1 )
+                  para->n = para->n + pow(10.0, (double) -(++decimal_spaces)) * (*s - '0');
+               else
                   para->n = para->n * 10 + (*s - '0');
                s++;
             }
@@ -546,7 +545,6 @@ static int start_section(
    const char* err_missing_v   = "Section name missing";
    const char* err_badsect_s   = "Unknown section name [%s]";
    const char* err_required_s  = "Can't access required file [%s]";
-   const char* err_duplicate_s = "Duplicate Section [%s]";
 
    CURF            temp;
    char            inclname[MAX_PATH_LEN];
@@ -566,7 +564,7 @@ static int start_section(
 
    /* Extract names
     */
-   if ((tokens = sscanf(s, "%63s %63s %s", sectname, dummy, inclname)) < 1)
+   if( (tokens = sscanf(s, "%63s %63s %s", sectname, dummy, inclname)) < 1 )
       message(MSG_FATAL, curf, err_missing_v);
    else
    {
@@ -580,54 +578,53 @@ static int start_section(
          (sizeof(section_table) / sizeof(struct section)) - 1,
          sizeof(struct section), sec_cmp);
 
-      if (temp.section == NULL)
+      if( temp.section == NULL )
          message(MSG_FATAL, curf, err_badsect_s, sectname);
       else
       {
-         if (0 && temp.section->mark & SECTION_EXISTEND)
+#if 0
+         if( temp.section->mark & SECTION_EXISTEND )
             message(MSG_FATAL, curf, err_duplicate_s, sectname);
+#endif
+         /* Is this section in a separate file ?
+          */
+         if( tokens == 1 )
+         {
+            curf->section        = temp.section;
+            curf->section->mark |= SECTION_EXISTEND;
+            ret                  = SUCCESS;
+         }
          else
          {
-            /* Is this section in a separate file ?
-             */
-            if (tokens == 1)
+            (void)sprintf(temp.filename, "%s%s%c%s",
+               pathname,
+               (*inclname == '\0') ? basename : inclname,
+               EXTSEP,
+               temp.section->extension);
+
+            if (access(temp.filename, R_OK))
             {
-               curf->section        = temp.section;
-               curf->section->mark |= SECTION_EXISTEND;
-               ret                  = SUCCESS;
+               /* We can't access the include file.
+                * If the section is optional, we just ignore
+                * the whole thing, otherwise we have a problem.
+                */
+               if (temp.section->flag & FLAG_REQUIRED)
+                  message(MSG_FATAL, curf, err_required_s, temp.filename);
+               else
+               {
+                  temp.section = &section_table[0];
+                  ret          = SUCCESS;
+               }
             }
             else
             {
-               (void)sprintf(temp.filename, "%s%s%c%s",
-                  pathname,
-                  (*inclname == '\0') ? basename : inclname,
-                  EXTSEP,
-                  temp.section->extension);
-
-               if (access(temp.filename, R_OK))
+               if (!open_file(&temp))
                {
-                  /* We can't access the include file.
-                   * If the section is optional, we just ignore
-                   * the whole thing, otherwise we have a problem.
-                   */
-                  if (temp.section->flag & FLAG_REQUIRED)
-                     message(MSG_FATAL, curf, err_required_s, temp.filename);
-                  else
-                  {
-                     temp.section = &section_table[0];
-                     ret          = SUCCESS;
-                  }
-               }
-               else
-               {
-                  if (!open_file(&temp))
-                  {
-                     *save                = *curf;
-                     *curf                = temp;
-                     curf->section->mark |= SECTION_EXISTEND;
+                  *save                = *curf;
+                  *curf                = temp;
+                  curf->section->mark |= SECTION_EXISTEND;
 
-                     ret                  = SUCCESS;
-                  }
+                  ret                  = SUCCESS;
                }
             }
          }
@@ -670,19 +667,22 @@ void init_coordinates(
    (*termcount)++;
 }
 
-static int get_scale_order(
+static
+int get_scale_order(
    SCIP_Real number
    )
 {
-   int order = 0;
    int ints;
+   int order;
    int trail_zeroes;
-   int length;
    int i;
+   int length;
    char s;
    char str_number[SCIP_MAXSTRLEN];
    (void)SCIPsnprintf(str_number, SCIP_MAXSTRLEN, "%f", number);
-   length = strlen(str_number);
+   length = (int) strlen(str_number);
+   if( SCIP_MAXSTRLEN < length )
+      length = (int) SCIP_MAXSTRLEN;
 
    for( i = 0; i < length; i++ )
    {
@@ -723,31 +723,27 @@ static void scale_coords(
    assert(nnodes > 0);
    assert(grid_dim > 1);
 
-   scale_factor = 1;
    *scaled_coords = (int**) malloc(grid_dim * sizeof(int*));
 
    for( i = 0; i < grid_dim; i++ )
       for( j = 0; j < nnodes; j++ )
       {
-	 tmp = get_scale_order(coordinates[i][j]);
+         tmp = get_scale_order(coordinates[i][j]);
 
-	 if( max_order < tmp )
-	 {
-	    max_order = tmp;
-	    printf("new max coord: %f \n", coordinates[i][j]);
-            printf("max order: %d \n", max_order);
-	 }
+         if( max_order < tmp )
+         {
+            max_order = tmp;
+         }
       }
 
-   printf("max order: %d \n", max_order);
    *scale_order = max_order;
-   scale_factor = pow(10, max_order);
-   printf("scale_factor: %d \n", scale_factor);
+   scale_factor = (int) pow(10.0, (double) max_order);
+
    for( i = 0; i < grid_dim; i++ )
    {
       (*scaled_coords)[i] = (int*) malloc(nnodes * sizeof(int));
       for( j = 0; j < nnodes; j++ )
-	 (*scaled_coords)[i][j] = coordinates[i][j] * scale_factor;
+         (*scaled_coords)[i][j] = (int) coordinates[i][j] * scale_factor;
    }
 }
 
@@ -783,8 +779,6 @@ SCIP_RETCODE graph_load(
    CURF         save;
    PARA         para    [MAX_ARGUMENTS];
    double       nodeweight;
-   //SCIP_Real*   cost = NULL;                      /* needed for NWSTP */
-   //double*      maxnodeweights = NULL;
    char         buffer  [MAX_LINE_LEN];
    char         pathname[MAX_PATH_LEN];
    char         basename[MAX_PATH_LEN];
@@ -810,7 +804,7 @@ SCIP_RETCODE graph_load(
    int          stp_type = -1;
    int          termcount = 0;
    int          nobstacles = -1;
-   int          scale_order = NULL;
+   int          scale_order = 1;
    int          is_gridgraph = FALSE;
    int          has_coordinates = FALSE;
    int          obstacle_counter = 0;
@@ -945,27 +939,26 @@ SCIP_RETCODE graph_load(
             message(MSG_ERROR, &curf, err_unknown_s, keyword);
          else
          {
-	    char* format = (char*) p->format;
+            char* format = (char*) p->format;
             assert(p != NULL);
 
             message(MSG_DEBUG, &curf, msg_keyword_sd, p->keyword, p->sw_code);
 
             /* Yes, so lets get the rest of the line if possible
              */
-	    if( stp_type == STP_MAX_NODE_WEIGHT && p->format != NULL && (p->sw_code == KEY_TERMINALS_T || p->sw_code == KEY_GRAPH_E) )
-	    {
+            if( stp_type == STP_MAX_NODE_WEIGHT && p->format != NULL && (p->sw_code == KEY_TERMINALS_T || p->sw_code == KEY_GRAPH_E) )
+            {
                if( p->sw_code == KEY_TERMINALS_T)
                   format = (char*)"nn";
                else if( p->sw_code == KEY_GRAPH_E )
                   format = (char*)"nn";
-	    }
+            }
 
-	    if( stp_type == STP_DIRECTED && p->sw_code == KEY_GRAPH_A )
-	    {
-	       format = (char*)"nnnn";
-	    }
-            if ((p->format == NULL)
-               || !get_arguments(&curf, (const char*) format, s, para))
+            if( stp_type == STP_DIRECTED && p->sw_code == KEY_GRAPH_A )
+            {
+               format = (char*)"nnnn";
+            }
+            if( p->format == NULL || !get_arguments(&curf, (const char*) format, s, para) )
             {
                /* Now, what should we do ?
                 */
@@ -1037,7 +1030,7 @@ SCIP_RETCODE graph_load(
                      stp_type = STP_HOP_CONS;
                   else if( strcmp(para[0].s, "SAP") == 0 )
                      stp_type = STP_DIRECTED;
-		  else if( strcmp(para[0].s, "GSTP") == 0 )
+                  else if( strcmp(para[0].s, "GSTP") == 0 )
                      stp_type = GSTP;
                   break;
                case KEY_COMMENT_REMARK :
@@ -1048,71 +1041,71 @@ SCIP_RETCODE graph_load(
                case KEY_GRAPH_NODES :
                   nodes = (int)para[0].n;
                   break;
-	       case KEY_GRAPH_OBSTACLES :
-		  nobstacles = (int)para[0].n;
-		  if( nobstacles > 0 )
-		     stp_type = STP_OBSTACLES_GRID;
+               case KEY_GRAPH_OBSTACLES :
+                  nobstacles = (int)para[0].n;
+                  if( nobstacles > 0 )
+                     stp_type = STP_OBSTACLES_GRID;
                   break;
-	       case KEY_GRAPH_HOPLIMIT :
-		  printf("HOP PROBLEM \n");
-		  hoplimit = (int)para[0].n;
-		  stp_type = STP_HOP_CONS;
-		  break;
+               case KEY_GRAPH_HOPLIMIT :
+                  printf("HOP PROBLEM \n");
+                  hoplimit = (int)para[0].n;
+                  stp_type = STP_HOP_CONS;
+                  break;
                case KEY_GRAPH_EDGES :
                   edges = (int)para[0].n;
                   break;
                case KEY_GRAPH_A :
                case KEY_GRAPH_AA :
                case KEY_GRAPH_E :
-		  if( (int)para[0].n > nodes || (int)para[1].n > nodes )
+                  if( (int)para[0].n > nodes || (int)para[1].n > nodes )
                   {
                      message(MSG_FATAL, &curf, err_badedge_ddd,
                         (int)para[0].n, (int)para[1].n, nodes);
                      ret = FAILURE;
-		     break;
+                     break;
                   }
 
                   if( g == NULL )
                   {
-		     if( stp_type == GSTP )
+                     if( stp_type == GSTP )
                         SCIP_CALL( graph_init(scip, graph, nodes * 2, edges * 2 + nodes * nodes, 1, 0) );
                      else
                         SCIP_CALL( graph_init(scip, graph, nodes, edges * 2, 1, 0) );
-		     g = *graph;
+                     g = *graph;
                      assert(g != NULL);
                      assert(g->source[0] == UNKNOWN);
                      for( i = 0; i < nodes; i++ )
                         graph_knot_add(g, -1);
 
-		     if( stp_type == STP_HOP_CONS )
-		     {
-		        assert(hoplimit != UNKNOWN);
-			g->hoplimit = hoplimit;
-		     }
+                     if( stp_type == STP_HOP_CONS )
+                     {
+                        assert(hoplimit != UNKNOWN);
+                        g->hoplimit = hoplimit;
+                     }
                   }
 
                   if( stp_type == STP_HOP_CONS )
-		  {
-		     tail = (int)para[0].n - 1;
-		     head = (int)para[1].n - 1;
-		     /* check whether the anti-parallel arc has already been added */
-		     for( i = g->inpbeg[head]; i != EAT_LAST; i = g->ieat[i] )
-		        if( g->tail[i] == tail )
-			   break;
-		     if( i == EAT_LAST )
-		        graph_edge_add(g, tail, head, (double)para[2].n, FARAWAY);
-		     else
-		        g->cost[i] = (double)para[2].n;
+                  {
+                     tail = (int)para[0].n - 1;
+                     head = (int)para[1].n - 1;
+                     /* check whether the anti-parallel arc has already been added */
+                     for( i = g->inpbeg[head]; i != EAT_LAST; i = g->ieat[i] )
+                        if( g->tail[i] == tail )
+                           break;
+                     if( i == EAT_LAST )
+                        graph_edge_add(g, tail, head, (double)para[2].n, FARAWAY);
+                     else
+                        g->cost[i] = (double)para[2].n;
 
-		  }
+                  }
                   else if( stp_type == STP_DIRECTED )
                   {
                      graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1, (double)para[2].n, (double)para[3].n);
                   }
                   else if( stp_type == STP_MAX_NODE_WEIGHT )
-		  {
-		     graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1, 0, 0);
-		  }
+                  {
+                     graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1, 0.0, 0.0);
+                  }
                   else
                   {
                      graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1,
@@ -1124,117 +1117,123 @@ SCIP_RETCODE graph_load(
 
 
                   break;
-	       case KEY_MAXDEGS_MD :
-		  assert(g != NULL);
-		  assert((int)para[0].n >= 0);
+               case KEY_MAXDEGS_MD :
+                  assert(g != NULL);
+                  assert((int)para[0].n >= 0);
 
-		  if( degcount < nodes )
-		  {
+                  if( degcount < nodes )
+                  {
                      if( g->maxdeg == NULL )
                      {
-                        g->maxdeg = malloc((size_t)nodes * sizeof(int));
-			stp_type = STP_DEG_CONS;
+                        SCIP_CALL( SCIPallocMemoryArray(scip, &(g->maxdeg), nodes ) );
+                        stp_type = STP_DEG_CONS;
                      }
                      g->maxdeg[degcount++] = (int)para[0].n;
-                     break;
-		  }
-		  else
-		  {
+                  }
+                  else
+                  {
                      message(MSG_FATAL, &curf, err_baddeg_dd,
                         degcount, nodes);
                      ret = FAILURE;
-		  }
-	       case KEY_NODEWEIGHTS_NW :
-		  nodeweight = (double) para[0].n;
-		  assert(g != NULL);
-		  assert(presol != NULL);
+                  }
+                  break;
+               case KEY_NODEWEIGHTS_NW :
+                  nodeweight = (double) para[0].n;
+                  assert(g != NULL);
+                  assert(presol != NULL);
 
-		  if( stp_type != STP_NODE_WEIGHTS )
-		     stp_type = STP_NODE_WEIGHTS;
+                  if( stp_type != STP_NODE_WEIGHTS )
+                     stp_type = STP_NODE_WEIGHTS;
 
-		  if( Is_term(g->term[nwcount]) )
+                  if( Is_term(g->term[nwcount]) )
                      presol->fixed += nodeweight;
-		  else
+                  else
                      /* add node-weight to edge-weights of all incoming edges */
                      for( i = g->inpbeg[nwcount]; i != EAT_LAST; i = g->ieat[i] )
                         g->cost[i] += nodeweight;
-		  nwcount++;
-		  break;
-	       case KEY_NODEWEIGHTS_END :
+                  nwcount++;
+                  break;
+               case KEY_NODEWEIGHTS_END :
                   message(MSG_INFO, &curf, "CRC [%X]", crc);
                   curf.section = &section_table[0];
                   break;
-	       case KEY_OBSTACLES_RR :
-		  assert(nobstacles > 0);
-		  if( obstacle_coords == NULL )
-		  {
+               case KEY_OBSTACLES_RR :
+                  assert(nobstacles > 0);
+                  if( obstacle_coords == NULL )
+                  {
                      assert(obstacle_counter == 0);
-                     obstacle_coords = (int**) malloc((size_t)4 * sizeof(int*));
+                     SCIP_CALL( SCIPallocBufferArray(scip, &obstacle_coords, 4) );
                      for( i = 0; i < 4; i++ )
-                        obstacle_coords[i] = (int*)malloc((size_t)nobstacles * sizeof(int));
-
-		  }
-		  for( i = 0; i < 4; i++ )
-		     obstacle_coords[i][obstacle_counter] = (int)para[i].n;
-		  obstacle_counter++;
-		  break;
-	       case KEY_OBSTACLES_END :
-		  message(MSG_INFO, &curf, "CRC [%X]", crc);
+                        SCIP_CALL( SCIPallocBufferArray(scip, &(obstacle_coords[i]), nobstacles) );
+                  }
+                  for( i = 0; i < 4; i++ )
+                     obstacle_coords[i][obstacle_counter] = (int)para[i].n;
+                  obstacle_counter++;
+                  break;
+               case KEY_OBSTACLES_END :
+                  message(MSG_INFO, &curf, "CRC [%X]", crc);
                   curf.section = &section_table[0];
 
-		  if( obstacle_counter != nobstacles )
-		  {
-		     message(MSG_FATAL, &curf, "obstacle number does not match coordinates \n");
+                  if( obstacle_counter != nobstacles )
+                  {
+                     message(MSG_FATAL, &curf, "obstacle number does not match coordinates \n");
                      ret = FAILURE;
-		     break;
-		  }
+                     break;
+                  }
                   if( scaled_coordinates == NULL )
-		  {
-		     message(MSG_FATAL, &curf, "coordinates not given \n");
+                  {
+                     message(MSG_FATAL, &curf, "coordinates not given \n");
                      ret = FAILURE;
-		     break;
-		  }
+                     break;
+                  }
                   assert(g == NULL);
                   SCIP_CALL( graph_obstgrid_create(scip, graph, scaled_coordinates, obstacle_coords, nodes, grid_dim, nobstacles, scale_order) );
-		  g = *graph;
+                  g = *graph;
                   for( i = 0; i < 4; i++ )
-                     free(obstacle_coords[i]);
-		  free(obstacle_coords);
-		  break;
+                     SCIPfreeBufferArrayNull(scip, &(obstacle_coords[i]));
+                  SCIPfreeBufferArrayNull(scip, &(obstacle_coords));
+                  break;
                case KEY_TERMINALS_END :
                   if( transformed == 0 )
                   {
                      if( stp_type == STP_MAX_NODE_WEIGHT )
                      {
                         assert(nodes == termcount);
-                        SCIP_CALL( graph_maxweight_transform(scip, g, g->prize) );
-                        //free(maxnodeweights);
+                        if( g != NULL )
+                        {
+                           SCIP_CALL( graph_maxweight_transform(scip, g, g->prize) );
+                        }
+                        else
+                        {
+                           message(MSG_FATAL, &curf, "graph not initialized \n");
+                           ret = FAILURE;
+                           break;
+                        }
+
                      }
                      else if( stp_type == STP_PRIZE_COLLECTING )
                      {
-                        assert(g->prize != NULL);
                         SCIP_CALL( graph_prize_transform(scip, g) );
                      }
                      else if( stp_type == STP_ROOTED_PRIZE_COLLECTING )
                      {
-                        assert(g->prize != NULL);
                         SCIP_CALL( graph_rootprize_transform(scip, g) );
                      }
                   }
                   curf.section = &section_table[0];
                   break;
                case KEY_TERMINALS_TERMINALS :
-		  terms = (int)para[0].n;
-		  assert(terms > 0);
+                  terms = (int)para[0].n;
+                  assert(terms > 0);
 
-		  if( stp_type == STP_MAX_NODE_WEIGHT )
-		  {
+                  if( stp_type == STP_MAX_NODE_WEIGHT )
+                  {
                      assert(terms == nodes);
-		     if( g->prize == NULL )
+                     if( g->prize == NULL )
                         SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), terms) );
-		  }
+                  }
                   break;
-	       case KEY_TERMINALS_GROUPS :
+               case KEY_TERMINALS_GROUPS :
                   assert(stp_type == GSTP);
                   tgroups = (int)para[0].n;
                   printf("ngroups: %d \n", tgroups);
@@ -1249,10 +1248,10 @@ SCIP_RETCODE graph_load(
                   assert(g != NULL);
 
                   if ((int)para[0].n <= nodes)
-		  {
+                  {
                      g->source[0] = (int)para[0].n - 1;
-		     graph_knot_chg(g, (int)para[0].n - 1, 0);
-		  }
+                     graph_knot_chg(g, (int)para[0].n - 1, 0);
+                  }
                   else
                   {
                      message(MSG_FATAL, &curf, err_badroot_dd,
@@ -1260,102 +1259,101 @@ SCIP_RETCODE graph_load(
                      ret = FAILURE;
                   }
                   break;
-	       case KEY_TERMINALS_ROOTP :
-		  assert(g != NULL);
-		  assert(terms > 0);
-		  g->source[0] = (int)para[0].n - 1;
-		  graph_knot_chg(g, (int)para[0].n - 1, 0);
-		  stp_type = STP_ROOTED_PRIZE_COLLECTING;
+               case KEY_TERMINALS_ROOTP :
+                  assert(g != NULL);
+                  assert(terms > 0);
+                  g->source[0] = (int)para[0].n - 1;
+                  graph_knot_chg(g, (int)para[0].n - 1, 0);
+                  stp_type = STP_ROOTED_PRIZE_COLLECTING;
                   if( g->prize == NULL )
-		     SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), nodes) );
-		  g->prize[(int)para[0].n - 1] = 0;
+                     SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), nodes) );
+                  g->prize[(int)para[0].n - 1] = 0;
                   break;
                case KEY_TERMINALS_T :
-		  if( stp_type == STP_MAX_NODE_WEIGHT )
-		  {
-		     assert(g->prize != NULL);
-		     g->prize[(int)para[0].n - 1] = (double)para[1].n;
-		     if( SCIPisGT(scip, (double)para[1].n, 0.0) )
+                  if( stp_type == STP_MAX_NODE_WEIGHT )
+                  {
+                     assert(g->prize != NULL);
+                     g->prize[(int)para[0].n - 1] = (double)para[1].n;
+                     if( SCIPisGT(scip, (double)para[1].n, 0.0) )
                         presol->fixed -= (double)para[1].n;
                      /*  printf("maxnodeweight: %f \n", (double)para[1].n);*/
-		     termcount++;
-		  }
-		  else
+                     termcount++;
+                  }
+                  else
                      graph_knot_chg(g, (int)para[0].n - 1, 0);
                   break;
-	       case KEY_TERMINALS_TG :
-		  assert(tgroups > 0);
-		  graph_edge_add(g, (int)para[0].n - 1, g->knots - tgroups + (int)para[1].n - 1, 1e+8,  1e+8);
-		  assert(Is_term(g->term[g->knots - tgroups + (int)para[1].n - 1]));
-		  break;
-	       case KEY_TERMINALS_TP :
+               case KEY_TERMINALS_TG :
+                  assert(tgroups > 0);
+                  graph_edge_add(g, (int)para[0].n - 1, g->knots - tgroups + (int)para[1].n - 1, 1e+8,  1e+8);
+                  assert(Is_term(g->term[g->knots - tgroups + (int)para[1].n - 1]));
+                  break;
+               case KEY_TERMINALS_TP :
                   graph_knot_chg(g, (int)para[0].n - 1, 0);
-		  if( g->prize == NULL )
-		  {
-		     assert(stp_type != STP_ROOTED_PRIZE_COLLECTING);
-		     stp_type = STP_PRIZE_COLLECTING;
-		     SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), nodes) );
-		  }
-		  g->prize[(int)para[0].n - 1] = (double)para[1].n;
-		  //printf("prize: x: %d , %f \n", (int)para[0].n - 1, g->prize[(int)para[0].n - 1] );
-		  termcount++;
+                  if( g->prize == NULL )
+                  {
+                     assert(stp_type != STP_ROOTED_PRIZE_COLLECTING);
+                     stp_type = STP_PRIZE_COLLECTING;
+                     SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), nodes) );
+                  }
+                  g->prize[(int)para[0].n - 1] = (double)para[1].n;
+                  termcount++;
                   break;
                case KEY_COORDINATES_DD :
-		  /* in this case coordinates are not needed */
-		  if( terms > 0 )
-		  {
-		     ret        = SUCCESS;
+                  /* in this case coordinates are not needed */
+                  if( terms > 0 )
+                  {
+                     ret        = SUCCESS;
                      stop_input = TRUE;
-		     break;
-		  }
-		  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 2, nodes);
+                     break;
+                  }
+                  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 2, nodes);
                   break;
                case KEY_COORDINATES_DDD :
                   init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 3, nodes);
                   break;
-	       case KEY_COORDINATES_DDDD :
-		  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 4, nodes);
+               case KEY_COORDINATES_DDDD :
+                  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 4, nodes);
                   break;
-	       case KEY_COORDINATES_DDDDD :
-		  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 5, nodes);
+               case KEY_COORDINATES_DDDDD :
+                  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 5, nodes);
                   break;
-	       case KEY_COORDINATES_DDDDDD :
-		  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 6, nodes);
+               case KEY_COORDINATES_DDDDDD :
+                  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 6, nodes);
                   break;
-	       case KEY_COORDINATES_DDDDDDD :
-		  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 7, nodes);
+               case KEY_COORDINATES_DDDDDDD :
+                  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 7, nodes);
                   break;
-	       case KEY_COORDINATES_DDDDDDDD :
-		  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 8, nodes);
+               case KEY_COORDINATES_DDDDDDDD :
+                  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 8, nodes);
                   break;
-	       case KEY_COORDINATES_END :
-		  assert(g == NULL);
-		  assert(grid_dim > 1);
-		  message(MSG_INFO, &curf, "CRC [%X]", crc);
+               case KEY_COORDINATES_END :
+                  assert(g == NULL);
+                  assert(grid_dim > 1);
+                  message(MSG_INFO, &curf, "CRC [%X]", crc);
 
                   curf.section = &section_table[0];
-		  if( termcount != nodes )
-		  {
-		     message(MSG_FATAL, &curf, "node number does not match coordinates \n");
+                  if( termcount != nodes )
+                  {
+                     message(MSG_FATAL, &curf, "node number does not match coordinates \n");
                      ret = FAILURE;
-		     break;
-		  }
-
-		  /* scale all coordinates such that they are integers */
-		  scale_coords(coordinates, &scaled_coordinates, &scale_order, nodes, grid_dim);
-
-		  for( i = 0; i < grid_dim; i++ )
-                     free(coordinates[i]);
-
-		  free(coordinates);
-
-		  if( stp_type != STP_OBSTACLES_GRID )
-		  {
-		     SCIP_CALL( graph_grid_create(scip, graph, scaled_coordinates, nodes, grid_dim, scale_order) );
-		     g = *graph;
+                     break;
                   }
 
-		  break;
+                  /* scale all coordinates such that they are integers */
+                  scale_coords(coordinates, &scaled_coordinates, &scale_order, nodes, grid_dim);
+
+                  for( i = 0; i < grid_dim; i++ )
+                     free(coordinates[i]);
+
+                  free(coordinates);
+
+                  if( stp_type != STP_OBSTACLES_GRID )
+                  {
+                     SCIP_CALL( graph_grid_create(scip, graph, scaled_coordinates, nodes, grid_dim, scale_order) );
+                     g = *graph;
+                  }
+
+                  break;
                case KEY_COORDINATES_GRID :
                   is_gridgraph = TRUE;
                   break;
@@ -1379,14 +1377,14 @@ SCIP_RETCODE graph_load(
                   if (presol != NULL)
                      presol->time = (int)para[0].n;
                   break;
-	       case KEY_PRESOLVE_EA :
-		  break;
-	       case KEY_PRESOLVE_EC :
-		  break;
-	       case KEY_PRESOLVE_ED :
-		  break;
-	       case KEY_PRESOLVE_ES :
-		  break;
+               case KEY_PRESOLVE_EA :
+                  break;
+               case KEY_PRESOLVE_EC :
+                  break;
+               case KEY_PRESOLVE_ED :
+                  break;
+               case KEY_PRESOLVE_ES :
+                  break;
                default :
                   /* CONSTCOND */
                   assert(FALSE);
@@ -1422,9 +1420,9 @@ SCIP_RETCODE graph_load(
 
       if( g->stp_type == UNKNOWN )
       {
-	 if( stp_type != UNKNOWN )
-	    g->stp_type = stp_type;
-	 else
+         if( stp_type != UNKNOWN )
+            g->stp_type = stp_type;
+         else
             g->stp_type = STP_UNDIRECTED;
       }
       graph_flags(g, (has_coordinates ? GRAPH_HAS_COORDINATES : 0)
@@ -1438,6 +1436,12 @@ SCIP_RETCODE graph_load(
    }
    else
    {
+      if( obstacle_coords != NULL )
+      {
+         for( i = 0; i < 4; i++ )
+            SCIPfreeBufferArrayNull(scip, &(obstacle_coords[i]));
+         SCIPfreeBufferArrayNull(scip, &(obstacle_coords));
+      }
       return SCIP_READERROR;
    }
 

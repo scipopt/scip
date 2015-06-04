@@ -646,7 +646,7 @@ SCIP_RETCODE bound_reduce(
 
    /* compute MST on adjgraph */
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, nterms) );
-   graph_path_init(adjgraph);
+   SCIP_CALL( graph_path_init(scip, adjgraph) );
    graph_path_exec(scip, adjgraph, MST_MODE, 0, adjgraph->cost, mst);
 
    max = -1.0;
@@ -723,7 +723,7 @@ SCIP_RETCODE bound_reduce(
    if( !success )
    {
       /* free memory and return */
-      graph_path_exit(adjgraph);
+      graph_path_exit(scip, adjgraph);
       graph_free(scip, adjgraph, TRUE);
       SCIPfreeBufferArray(scip, &mst);
       SCIPfreeBufferArrayNull(scip, &starts);
@@ -889,7 +889,7 @@ SCIP_RETCODE bound_reduce(
 
    printf("nelimsX (edges) in bound reduce: %d,\n", *nelims);
    /* free adjgraph */
-   graph_path_exit(adjgraph);
+   graph_path_exit(scip, adjgraph);
    graph_free(scip, adjgraph, TRUE);
 
    /* free memory*/
@@ -996,7 +996,7 @@ SCIP_RETCODE hopbound_reduce(
    adjgraph->source[0] = 0;
    assert(graph_valid(adjgraph));
    SCIP_CALL( SCIPallocBufferArray(scip, &mst, nterms) );
-   graph_path_init(adjgraph);
+   SCIP_CALL( graph_path_init(scip, adjgraph) );
    graph_path_exec(scip, adjgraph, MST_MODE, 0, adjgraph->cost, mst);
 
    max = -1;
@@ -1105,7 +1105,7 @@ SCIP_RETCODE hopbound_reduce(
 
    printf("nelimsX (edges) in hop bound reduce: %d,\n", *nelims);
    /* free adjgraph */
-   graph_path_exit(adjgraph);
+   graph_path_exit(scip, adjgraph);
    graph_free(scip, adjgraph, TRUE);
 
    /* free memory*/
@@ -3364,7 +3364,7 @@ SCIP_RETCODE reduce(
       return SCIP_OKAY;
 
    /* initialise shortest path algorithms */
-   graph_path_init((*graph));
+   SCIP_CALL( graph_path_init(scip, (*graph)) );
 
    level0(scip, (*graph));
 
@@ -3387,7 +3387,7 @@ SCIP_RETCODE reduce(
    }
    printf("reduced: %d \n", level);
    printf("offset : %f \n", *offset );
-   graph_path_exit((*graph));
+   graph_path_exit(scip, (*graph));
 
    return SCIP_OKAY;
 }

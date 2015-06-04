@@ -212,12 +212,14 @@ extern SCIP_Bool graph_sol_valid(SCIP*, const GRAPH*, int*);
 
 /* grphpath.c
  */
-extern void   graph_path_init(GRAPH*);
-extern void   graph_path_exit(GRAPH*);
+extern SCIP_RETCODE   graph_path_init(SCIP*, GRAPH*);
+extern void   graph_path_exit(SCIP*, GRAPH*);
 extern void   graph_path_exec(SCIP*, const GRAPH*, int, int, SCIP_Real*, PATH*);
 extern void   graph_path_execX(SCIP*, const GRAPH*, int, SCIP_Real*, SCIP_Real*, int*);
 extern void   graph_path_st(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, int*, int, char*);
+#if 0
 extern void   calculate_distances(SCIP*, const GRAPH*, PATH**, double*, int);
+#endif
 extern void   voronoi(SCIP* scip, const GRAPH*, SCIP_Real*, SCIP_Real*, char*, int*, PATH*);
 extern void   get2next(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, PATH*, int*, int*, int*);
 extern void   get3next(SCIP*, const GRAPH*, SCIP_Real*, SCIP_Real*, PATH*, int*, int*, int*);
@@ -239,8 +241,8 @@ extern void   graph_path_length(const GRAPH*, const PATH*);
 
 /* grphmcut.c
  */
-extern void   graph_mincut_init(GRAPH*);
-extern void   graph_mincut_exit(GRAPH*);
+extern SCIP_RETCODE   graph_mincut_init(SCIP*, GRAPH*);
+extern void   graph_mincut_exit(SCIP*, GRAPH*);
 extern void   graph_mincut_exec(GRAPH*, int, int, const int*, int*, int);
 
 /* grphload.c
@@ -280,9 +282,8 @@ extern SCIP_RETCODE    bd3_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, in
 extern SCIP_RETCODE    nv_reduction(SCIP*, GRAPH*, PATH*,double*, int*, int*, int*, int*);
 extern SCIP_RETCODE    sl_reduction(SCIP*, GRAPH*, PATH*, double*, int*, int*, int*, int*);
 extern SCIP_RETCODE    ledge_reduction(SCIP*, GRAPH*, PATH*, int*, int*, int*, int*);
-extern SCIP_RETCODE    nsv_reduction(SCIP*, GRAPH*, SCIP_Real*, SCIP_Real*, int*);
-
 #if 0
+extern SCIP_RETCODE    nsv_reduction(SCIP*, GRAPH*, SCIP_Real*, SCIP_Real*, int*);
 extern SCIP_RETCODE    nv_reduction_optimal(SCIP*, GRAPH*, double*, int*, int);
 #endif
 

@@ -15,12 +15,10 @@
  *
  * von Jianxiu Hao und James B. Orlin entnommen.
  */
-#define GRPHMCUT_C
 
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
-
 #include "portab.h"
 #include "grph.h"
 
@@ -64,8 +62,10 @@ static int    cutsums  = 0;
 /*--- Parameter: Graph                                                    ---*/
 /*--- Returns  : Nichts                                                   ---*/
 /*---------------------------------------------------------------------------*/
-void graph_mincut_init(
-   GRAPH* p)
+SCIP_RETCODE graph_mincut_init(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                p                   /**< graph data structure */
+     )
 {
    assert(p    != NULL);
    assert(p->mincut_dist == NULL);
@@ -78,25 +78,17 @@ void graph_mincut_init(
    assert(p->mincut_x    == NULL);
    assert(p->mincut_r    == NULL);
 
-   p->mincut_dist = malloc((size_t)p->knots * sizeof(int));
-   p->mincut_head = malloc((size_t)p->knots * sizeof(int));
-   p->mincut_numb = malloc((size_t)p->knots * sizeof(int));
-   p->mincut_prev = malloc((size_t)p->knots * sizeof(int));
-   p->mincut_next = malloc((size_t)p->knots * sizeof(int));
-   p->mincut_temp = malloc((size_t)p->knots * sizeof(int));
-   p->mincut_e    = malloc((size_t)p->knots * sizeof(int));
-   p->mincut_x    = malloc((size_t)p->edges * sizeof(int));
-   p->mincut_r    = malloc((size_t)p->edges * sizeof(int));
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_dist), p->knots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_head), p->knots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_numb), p->knots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_prev), p->knots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_next), p->knots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_temp), p->knots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_e), p->knots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_x), p->edges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_r), p->edges) );
 
-   assert(p->mincut_dist != NULL);
-   assert(p->mincut_head != NULL);
-   assert(p->mincut_numb != NULL);
-   assert(p->mincut_prev != NULL);
-   assert(p->mincut_next != NULL);
-   assert(p->mincut_temp != NULL);
-   assert(p->mincut_e    != NULL);
-   assert(p->mincut_x    != NULL);
-   assert(p->mincut_r    != NULL);
+   return SCIP_OKAY;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -106,7 +98,9 @@ void graph_mincut_init(
 /*--- Returns  : Nichts                                                   ---*/
 /*---------------------------------------------------------------------------*/
 void graph_mincut_exit(
-   GRAPH* p)
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                p                   /**< graph data structure */
+     )
 {
    assert(p->mincut_dist != NULL);
    assert(p->mincut_head != NULL);
@@ -118,25 +112,15 @@ void graph_mincut_exit(
    assert(p->mincut_x    != NULL);
    assert(p->mincut_r    != NULL);
 
-   free((void*)p->mincut_dist);
-   free((void*)p->mincut_head);
-   free((void*)p->mincut_numb);
-   free((void*)p->mincut_prev);
-   free((void*)p->mincut_next);
-   free((void*)p->mincut_temp);
-   free((void*)p->mincut_e);
-   free((void*)p->mincut_x);
-   free((void*)p->mincut_r);
-
-   p->mincut_dist = NULL;
-   p->mincut_head = NULL;
-   p->mincut_numb = NULL;
-   p->mincut_prev = NULL;
-   p->mincut_next = NULL;
-   p->mincut_temp = NULL;
-   p->mincut_e    = NULL;
-   p->mincut_x    = NULL;
-   p->mincut_r    = NULL;
+   SCIPfreeMemoryArray(scip, &(p->mincut_dist));
+   SCIPfreeMemoryArray(scip, &(p->mincut_head));
+   SCIPfreeMemoryArray(scip, &(p->mincut_numb));
+   SCIPfreeMemoryArray(scip, &(p->mincut_prev));
+   SCIPfreeMemoryArray(scip, &(p->mincut_next));
+   SCIPfreeMemoryArray(scip, &(p->mincut_temp));
+   SCIPfreeMemoryArray(scip, &(p->mincut_e));
+   SCIPfreeMemoryArray(scip, &(p->mincut_x));
+   SCIPfreeMemoryArray(scip, &(p->mincut_r));
 
 #if STATIST
    cut_statist();

@@ -1062,11 +1062,10 @@ SCIP_DECL_PROBCOPY(probcopyStp)
    SCIPdebugPrintf("########################## probcopy ###########################\n");
 
    SCIP_CALL( graph_copy(scip, sourcedata->graph, &graphcopy) );
-
-   graph_path_init(graphcopy);
+   SCIP_CALL( graph_path_init(scip, graphcopy) );
 
    if( sourcedata->mode == MODE_CUT )
-      graph_mincut_init(graphcopy);
+      SCIP_CALL( graph_mincut_init(scip, graphcopy) );
 
    SCIP_CALL( probdataCreate(scip, targetdata, graphcopy) );
    (*targetdata)->minelims = sourcedata->minelims;
@@ -1399,9 +1398,9 @@ SCIP_DECL_PROBDELORIG(probdelorigStp)
    if( (*probdata)->graph != NULL )
    {
       if ( (*probdata)->mode == MODE_CUT )
-         graph_mincut_exit((*probdata)->graph);
+         graph_mincut_exit(scip, (*probdata)->graph);
 
-      graph_path_exit((*probdata)->graph);
+      graph_path_exit(scip, (*probdata)->graph);
 
       graph_free(scip, (*probdata)->graph, TRUE);
    }
@@ -1868,10 +1867,10 @@ SCIP_RETCODE SCIPprobdataCreate(
       int k;
 
       /* init shortest path algorithm (needed for creating path variables) */
-      graph_path_init(graph);
+      SCIP_CALL( graph_path_init(scip, graph) );
 
       if( probdata->mode == MODE_CUT )
-         graph_mincut_init(graph);
+         SCIP_CALL( graph_mincut_init(scip, graph) );
 
       if( print )
          SCIP_CALL( probdataPrintGraph(graph, "ReducedGraph.gml", NULL) );

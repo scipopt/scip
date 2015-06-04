@@ -35,11 +35,11 @@ int GNODECmpByDist(
 {
    SCIP_Real first = ((GNODE*)first_arg)->dist;
    SCIP_Real second = ((GNODE*)second_arg)->dist;
-   if( first < second )
+   if( LT(first,second) )
    {
       return -1;
    }
-   else if( first == second )
+   else if( EQ(first, second) )  /* first == second */
    {
       return 0;
    }
@@ -638,5 +638,4 @@ void SCIPunionfindFree(
 {
    SCIPfreeMemoryArray(scip, &uf->parent);
    SCIPfreeMemoryArray(scip, &uf->size);
-   uf = NULL;
 }
