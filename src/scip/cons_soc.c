@@ -3419,7 +3419,7 @@ GENERALUPG:
       goto cleanup;
 
    /* build lower triangular part the A matrix */
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &a, nquadvars*nquadvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &a, nquadvars*nquadvars) ); /*lint !e647*/
    SCIP_CALL( SCIPallocClearBufferArray(scip, &bp, nquadvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &quadvars, nquadvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &eigvals, nquadvars) );

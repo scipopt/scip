@@ -7485,7 +7485,7 @@ SCIP_RETCODE computeInteriorPoint(
          SCIPerrorMessage("cons <%s>: undefined behaviour of NLP Solver.  solution status: %d, termination status: %d\n",
                SCIPconsGetName(cons), SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
          SCIPABORT();
-         goto TERMINATE;
+         goto TERMINATE; /*lint !e527*/
    }
 
    /* fetch solution
@@ -8988,7 +8988,7 @@ SCIP_RETCODE registerBranchingCandidates(
       default :
          SCIPerrorMessage("invalid branchscoring selection");
          SCIPABORT();
-         return SCIP_ERROR;
+         return SCIP_ERROR; /*lint !e527*/
    }
 
    return SCIP_OKAY;
