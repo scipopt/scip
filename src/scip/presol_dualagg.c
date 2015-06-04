@@ -495,6 +495,9 @@ SCIP_DECL_PRESOLEXEC(presolExecDualagg)
    if( SCIPgetNBinVars(scip) == 0 )
       return SCIP_OKAY;
 
+   if( !SCIPallowDualReds(scip) )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
    matrix = NULL;

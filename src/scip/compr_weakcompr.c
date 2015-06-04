@@ -263,7 +263,7 @@ SCIP_RETCODE constructCompression(
    assert(comprdata->nrepresentatives <= comprdata->representativessize);
 
    /* initialize the representatives */
-   SCIP_CALL( SCIPinitilizeRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives) );
+   SCIP_CALL( SCIPinitRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives) );
 
    /* create 2 candidates for the fixed variables */
    if( nvars[0] >= 1 )

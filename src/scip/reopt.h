@@ -378,6 +378,7 @@ SCIP_RETCODE SCIPreoptApply(
 extern
 SCIP_RETCODE SCIPreoptDeleteNode(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    unsigned int          id,                 /**< id of the node */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
@@ -406,6 +407,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
 extern
 SCIP_RETCODE SCIPreoptApplyCompression(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_REOPTNODE**      representatives,    /**< array of representatives */
    int                   nrepresentatives,   /**< number of representatives */
@@ -433,7 +435,17 @@ SCIP_RETCODE SCIPreoptSaveOpenNodes(
 /** initialize an empty node */
 extern
 void SCIPreoptnodeInit(
-   SCIP_REOPTNODE*       reoptnode           /**< node of the reopttree */
+   SCIP_REOPTNODE*       reoptnode,          /**< node of the reopttree */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** reset the given reoptimization node */
+extern
+SCIP_RETCODE SCIPreoptnodeReset(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_REOPTNODE*       reoptnode           /**< reoptimization node */
    );
 
 /** delete the given reoptimization node */

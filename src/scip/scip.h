@@ -17601,12 +17601,48 @@ void SCIPgetReoptnodePath(
    int*                  nafterdualvars      /**< number of variables directly after the first based on dual information */
    );
 
-/** initialite an empty reoptnode */
+/** initialize a set of empty reoptimization nodes
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ */
 EXTERN
-SCIP_RETCODE SCIPinitilizeRepresentation(
+SCIP_RETCODE SCIPinitRepresentation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE**      representatives,    /**< array of representatives */
-   int                   nrepresentatives    /**< number of represenatived */
+   int                   nrepresentatives    /**< number of representatives */
+   );
+
+/** reset a set of initialized reoptimization nodes
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ */
+SCIP_RETCODE SCIPresetRepresentation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE**      representatives,    /**< array of representatives */
+   int                   nrepresentatives    /**< number of representatives */
+   );
+
+/** free a set of initialized reoptimization nodes
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ */
+EXTERN
+SCIP_RETCODE SCIPfreeRepresentation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE**      representatives,    /**< array of representatives */
+   int                   nrepresentatives    /**< number of representatives */
    );
 
 /** reactivate the given @p reoptnode and split them into several nodes if necessary
@@ -17653,6 +17689,7 @@ SCIP_RETCODE SCIPresetReoptnodeDualcons(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_SOLVING
  */
 EXTERN

@@ -15191,7 +15191,7 @@ SCIP_RETCODE SCIPsetReoptCompression(
 
    SCIP_CALL( checkStage(scip, "SCIPsetReoptCompression", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPreoptApplyCompression(scip->reopt, scip->mem->probmem, representation, nrepresentatives, success) );
+   SCIP_CALL( SCIPreoptApplyCompression(scip->reopt, scip->set, scip->mem->probmem, representation, nrepresentatives, success) );
 
    return SCIP_OKAY;
 }
@@ -15256,7 +15256,7 @@ void SCIPgetReoptnodePath(
  *  @pre This method can be called if @p scip is in one of the following stages:
  *       - \ref SCIP_STAGE_PRESOLVED
  */
-SCIP_RETCODE SCIPinitilizeRepresentation(
+SCIP_RETCODE SCIPinitRepresentation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE**      representatives,    /**< array of representatives */
    int                   nrepresentatives    /**< number of representatives */
@@ -15264,14 +15264,73 @@ SCIP_RETCODE SCIPinitilizeRepresentation(
 {
    int r;
 
+   assert(scip != NULL);
    assert(representatives != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPinitilizeRepresentation", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPinitRepresentation", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    for( r = 0; r < nrepresentatives; r++ )
    {
       SCIP_CALL( SCIPallocBlockMemory(scip, &representatives[r]) ); /*lint !e866*/
-      SCIPreoptnodeInit(representatives[r]);
+      SCIPreoptnodeInit(representatives[r], scip->set);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** reset a set of initialized reoptimization nodes
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ */
+SCIP_RETCODE SCIPresetRepresentation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE**      representatives,    /**< array of representatives */
+   int                   nrepresentatives    /**< number of representatives */
+   )
+{
+   int r;
+
+   assert(scip != NULL);
+   assert(representatives != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPresetRepresentation", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   for( r = 0; r < nrepresentatives; r++ )
+   {
+      SCIP_CALL( SCIPreoptnodeReset(scip->reopt, scip->set, scip->mem->probmem, representatives[r]) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** free a set of initialized reoptimization nodes
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ */
+SCIP_RETCODE SCIPfreeRepresentation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE**      representatives,    /**< array of representatives */
+   int                   nrepresentatives    /**< number of representatives */
+   )
+{
+   int r;
+
+   assert(scip != NULL);
+   assert(representatives != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPfreeRepresentation", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   for( r = 0; r < nrepresentatives; r++ )
+   {
+      SCIP_CALL( SCIPreoptnodeDelete(&representatives[r], scip->mem->probmem) );
    }
 
    return SCIP_OKAY;
@@ -15637,6 +15696,7 @@ SCIP_Bool SCIPreoptimizeNode(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_SOLVING
  */
 SCIP_RETCODE SCIPdeleteReoptnode(
@@ -15649,7 +15709,7 @@ SCIP_RETCODE SCIPdeleteReoptnode(
    assert(scip->reopt != NULL);
    assert((*reoptnode) != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPdeleteReoptnode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPdeleteReoptnode", FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPreoptnodeDelete(reoptnode, scip->mem->probmem) );
 

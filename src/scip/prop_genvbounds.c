@@ -2148,6 +2148,9 @@ SCIP_DECL_PROPPRESOL(propPresolGenvbounds)
 
    *result = SCIP_DIDNOTRUN;
 
+   if( !SCIPallowDualReds(scip) )
+      return SCIP_OKAY;
+
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);

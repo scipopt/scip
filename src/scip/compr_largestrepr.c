@@ -422,43 +422,46 @@ SCIP_RETCODE constructCompression(
 
       SCIPdebugMessage("-> final representation is of size %d with loi = %.1f\n", nreps, loi);
 
-      /* we found a better representation, i.e., with less loss of information */
+      /* We found a better representation, i.e., with less loss of information.
+       * 1. reset the previous represenation
+       * 2. check if we need to reallocate the memory
+       * 3. set the new representation
+       */
       if( SCIPisFeasLT(scip, loi, comprdata->loi) )
       {
-         comprdata->loi = loi;
-         comprdata->nrepresentatives = nreps;
+         /* reset the current representation */
+         SCIP_CALL( SCIPresetRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives) );
 
          /* ensure that enough memory is allocated */
          if( comprdata->representativessize < nreps )
          {
+            /* free the representatoin */
+            SCIP_CALL( SCIPfreeRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives) );
+
+            /* reallocate memory */
             SCIP_CALL( SCIPreallocMemoryArray(scip, &comprdata->representatives, nreps) );
             comprdata->representativessize = nreps;
+
+            /* initialize the representation */
+            SCIP_CALL( SCIPinitRepresentation(scip, comprdata->representatives, comprdata->representativessize) );
          }
 
-         for( k = 0; k < comprdata->niters+2; k++ )
+         /* set the new representation
+          *
+          * copy the new representation. we skip the last representative because it is implicitly given by the union of
+          * the logic-or constraints of all previous representatives.
+          */
+         comprdata->loi = loi;
+         comprdata->nrepresentatives = nreps;
+
+         for( k = 0; k < nreps-1; k++ )
          {
-            /* clear the old representation */
-            if( comprdata->representatives[k] != NULL )
+            int v;
+
+            for( v = 0; v < nrepvars[k]; v++ )
             {
-               SCIPfreeMemory(scip, &comprdata->representatives[k]);
-               comprdata->representatives[k] = NULL;
-            }
-
-            /* copy the new representation. we skip the last representative because it is
-             * implicitly given by the union of the logic-or constraints of all previous
-             * representatives. */
-            if( k < nreps-1 )
-            {
-               int v;
-
-               /* allocate memory for representative */
-               SCIP_CALL( SCIPinitilizeRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives) );
-
-               for( v = 0; v < nrepvars[k]; v++ )
-               {
-                  SCIP_CALL( SCIPaddReoptnodeBndchg(scip, comprdata->representatives[k], repvars[k][v],
-                        repvals[k][v], repvals[k][v] == 0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER) );
-               }
+               SCIP_CALL( SCIPaddReoptnodeBndchg(scip, comprdata->representatives[k], repvars[k][v],
+                     repvals[k][v], repvals[k][v] == 0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER) );
             }
          }
 
@@ -655,6 +658,10 @@ SCIP_DECL_COMPREXEC(comprExecLargestrepr)
       comprdata->loi = SCIPinfinity(scip);
       comprdata->nnodes = 0;
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &comprdata->representatives, comprdata->representativessize) );
+
+      /* initialize the representation */
+      SCIP_CALL( SCIPinitRepresentation(scip, comprdata->representatives, comprdata->representativessize) );
+
       comprdata->initialized = TRUE;
    }
 

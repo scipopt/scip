@@ -3459,6 +3459,10 @@ SCIP_DECL_PROPPRESOL(propPresolPseudoobj)
    if( !propdata->force && SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
+   /* do nothing if objective propagation is not allowed */
+   if( !SCIPallowObjProp(scip) )
+      return SCIP_OKAY;
+
    pseudoobjval = SCIPgetGlobalPseudoObjval(scip);
    if( SCIPisInfinity(scip, -pseudoobjval) )
       return SCIP_OKAY;

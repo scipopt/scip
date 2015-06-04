@@ -232,6 +232,11 @@ SCIP_DECL_PROPPRESOL(propPresolDualfix)
    assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
    assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
+   if( !SCIPallowDualReds(scip) )
+      return SCIP_OKAY;
+
    cutoff = FALSE;
    unbounded = FALSE;
    oldnfixedvars = *nfixedvars;
