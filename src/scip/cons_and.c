@@ -1698,6 +1698,13 @@ SCIP_RETCODE propagateCons(
       return SCIP_OKAY;
    }
 
+   /* if the resultant and at least one operand are locally fixed to zero, the constraint is locally redundant */
+   if( SCIPvarGetUbLocal(resvar) < 0.5 && !consdata->nofixedzero )
+   {
+      SCIP_CALL( SCIPdelConsLocal(scip, cons) );
+      return SCIP_OKAY;
+   }
+
    /* if resultant is fixed to TRUE, all operator variables can be fixed to TRUE (rule (2)) */
    if( SCIPvarGetLbLocal(resvar) > 0.5 )
    {
