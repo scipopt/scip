@@ -7205,6 +7205,9 @@ SCIP_DECL_CONSINITSOL(consInitsolNonlinear)
       {
          if( consdata->nlrow == NULL )
          {
+            /* compute curvature for the quadratic constraint if not done yet */
+            SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkconvexexpensive, conshdlrdata->assumeconvex) );
+
             SCIP_CALL( createNlRow(scip, conss[c]) );
             assert(consdata->nlrow != NULL);
          }
