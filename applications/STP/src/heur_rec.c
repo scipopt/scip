@@ -761,7 +761,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolRec)
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecRec)
-{
+{  /*lint --e{715}*/
    SCIP_HEUR** heurs;
    SCIP_HEURDATA* heurdata;
    SCIP_HEURDATA* tmheurdata;

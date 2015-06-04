@@ -244,7 +244,7 @@ SCIP_RETCODE graph_init_history(
 
    for( e = 0; e < nedges; e++ )
    {
-      SCIP_CALL( SCIPallocMemory(scip, &(ancestors[e])) );
+      SCIP_CALL( SCIPallocMemory(scip, &(ancestors[e])) ); /*lint !e866*/
       (ancestors)[e]->index = e;
       (ancestors)[e]->parent = NULL;
 
@@ -486,8 +486,8 @@ SCIP_RETCODE graph_obstgrid_create(
          termcoords[i][j] = coords[i][j];
    }
 
-   SCIPallocMemoryArray(scip, &ncoords, grid_dim);
-   SCIPallocMemoryArray(scip, &currcoord, grid_dim);
+   SCIP_CALL( SCIPallocMemoryArray(scip, &ncoords, grid_dim) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &currcoord, grid_dim) );
 
    /* sort the coordinates and delete multiples */
    for( i = 0; i < grid_dim; i++ )
@@ -1320,6 +1320,10 @@ SCIP_RETCODE graph_knot_contract(
 
       if( p->head[es] != t )
       {
+         assert(ancestors != NULL);
+         assert(revancestors != NULL);
+         assert(slp != NULL);
+
          ancestors[slc] = NULL;
          SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(ancestors[slc]), p->ancestors[es]) );
          revancestors[slc] = NULL;
@@ -1838,7 +1842,7 @@ void graph_edge_hide(
 void graph_uncover(
    GRAPH*                g                   /**< the graph */
    )
-{
+{/*lint --e{850}*/
    int head;
    int tail;
    int e;
