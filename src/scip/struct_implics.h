@@ -85,15 +85,16 @@ struct SCIP_CliqueList
 /** collection of cliques */
 struct SCIP_CliqueTable
 {
-   SCIP_HASHTABLE*       hashtable;          /**< hashtable holding all cliques */
+   SCIP_HASHTABLE*       hashtable;          /**< hash table holding all cliques */
    SCIP_CLIQUE**         cliques;            /**< cliques stored in the table */
+   SCIP_Longint          nentries;           /**< number of entries in the whole clique table */
    int                   ncliques;           /**< number of cliques stored in the table */
    int                   size;               /**< size of cliques array */
    int                   ncreatedcliques;    /**< number of ever created cliques */
    int                   ncleanupfixedvars;  /**< number of fixed variables when the last cleanup was performed */
    int                   ncleanupaggrvars;   /**< number of aggregated variables when the last cleanup was performed */
-   int                   ndirtycliques;    /**< number of cliques stored when the last cleanup was performed */
-   SCIP_Longint          nentries;           /**< number of entries in the whole clique table */
+   int                   ndirtycliques;      /**< number of cliques stored when the last cleanup was performed */
+   SCIP_Bool             incleanup;          /**< is this clique table currently performing cleanup? */
 };
 
 #ifdef __cplusplus

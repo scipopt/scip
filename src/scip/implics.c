@@ -1279,6 +1279,10 @@ void SCIPcliqueDelVar(
    assert(SCIPvarIsBinary(var));
    assert(cliquetable != NULL);
 
+   /* if the clique is the leading clique during the cleanup step, we do not need to insert it again */
+   if( cliquetable->incleanup && clique->index == 0 )
+      return;
+
    SCIPdebugMessage("marking variable <%s> == %u from clique %u for deletion\n", SCIPvarGetName(var), value, clique->id);
 
    /* find variable in clique */
@@ -1299,7 +1303,7 @@ void SCIPcliqueDelVar(
    {
       int v;
       /* all variables prior to the one marked for startcleanup should be unfixed */
-      for( v = clique->startcleanup - 1; v >= 0; --v)
+      for( v = clique->startcleanup - 1; v >= 0; --v )
       {
          assert(SCIPvarGetUbGlobal(clique->vars[v]) > 0.5);
          assert(SCIPvarGetLbGlobal(clique->vars[v]) < 0.5);
@@ -1772,6 +1776,7 @@ SCIP_RETCODE SCIPcliquetableCreate(
    (*cliquetable)->ncleanupaggrvars = 0;
    (*cliquetable)->ndirtycliques = 0;
    (*cliquetable)->nentries = 0;
+   (*cliquetable)->incleanup = FALSE;
 
    return SCIP_OKAY;
 }
@@ -2565,18 +2570,39 @@ SCIP_RETCODE cliqueCleanup(
          for( v = 0; v < clique->nvars ; ++v )
          {
             SCIP_VAR* clqvar = clique->vars[v];
+            SCIP_Bool clqval = clique->values[v];
 
             assert(SCIPvarGetStatus(clqvar) == SCIP_VARSTATUS_COLUMN
                || SCIPvarGetStatus(clqvar) == SCIP_VARSTATUS_LOOSE);
 
-            if( onefixedvalue != clique->values[v] || clqvar != onefixedvar )
+            if( onefixedvalue != clqval || clqvar != onefixedvar )
             {
                /* the variable could have been fixed already because it appears more than once in the clique */
                if( SCIPvarGetLbGlobal(clqvar) > SCIPvarGetUbGlobal(clqvar) - 0.5 )
+               {
+                  /* the fixing must have occurred previously inside this loop. It may happen that
+                   * the variable occurs together with its negation in that clique, which is usually
+                   * handled during the merge step, but leads to a direct infeasibility because it
+                   * contradicts any other variable fixed to one in this clique
+                   */
+                  if( (clqval && SCIPvarGetLbGlobal(clqvar) > 0.5)
+                     || (! clqval && SCIPvarGetUbGlobal(clqvar) < 0.5) )
+                  {
+                     /* impossible because we would have detected this in the previous cleanup loop */
+                     assert(clqvar != onefixedvar);
+                     *infeasible = TRUE;
+
+                     return SCIP_OKAY;
+                  }
                   continue;
+               }
 
-               SCIP_CALL( SCIPvarDelCliqueFromList(clqvar, blkmem, clique->values[v], clique) );
+               SCIP_CALL( SCIPvarDelCliqueFromList(clqvar, blkmem, clqval, clique) );
 
+/* the following piece of code is wrong at this point because it assumes sorted variables. can be enabled if sorting
+ * of variables is performed earlier than it is now
+ */
+#ifdef SCIP_DISABLED_CODE
                /* if one of the other variables occurs multiple times, we can
                 * 1) deduce infeasibility if it occurs with different values
                 * 2) wait for the last occurence to fix it
@@ -2590,12 +2616,12 @@ SCIP_RETCODE cliqueCleanup(
                   }
                   ++v;
                }
-
+#endif
                SCIPdebugMessage("fixing variable %s in clique %u to %d\n", SCIPvarGetName(clqvar), clique->id,
-                  clique->values[v] ? 0 : 1);
+                  clqval ? 0 : 1);
 
                SCIP_CALL( SCIPvarFixBinary(clqvar, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
-                     eventqueue, cliquetable, !clique->values[v], infeasible, nchgbds) );
+                     eventqueue, cliquetable, !clqval, infeasible, nchgbds) );
 
                if( *infeasible )
                   return SCIP_OKAY;
@@ -2722,6 +2748,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    /* delay events */
    SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
 
+   cliquetable->incleanup = TRUE;
    while( cliquetable->ndirtycliques > 0 && !(*infeasible) )
    {
       SCIP_CLIQUE* clique;
@@ -2878,6 +2905,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
          }
       }
    }
+   cliquetable->incleanup = FALSE;
 
    /* remember the number of fixed variables and cliques in order to avoid unnecessary cleanups */
    cliquetable->ncleanupfixedvars = stat->npresolfixedvars;
