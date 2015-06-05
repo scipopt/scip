@@ -1656,7 +1656,9 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
 void SCIPcliquelistRemoveFromCliques(
    SCIP_CLIQUELIST*      cliquelist,         /**< clique list data structure */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_VAR*             var                 /**< active problem variable the clique list belongs to */
+   SCIP_VAR*             var,                /**< active problem variable the clique list belongs to */
+   SCIP_Bool             irrelevantvar       /**< has the variable become irrelevant, meaning that equality
+                                              *   cliques need to be relaxed? */
    )
 {
    assert(SCIPvarIsBinary(var));
@@ -1689,6 +1691,10 @@ void SCIPcliquelistRemoveFromCliques(
                SCIPvarGetName(var), value, clique->id, clique->nvars);
 
             SCIPcliqueDelVar(clique, cliquetable, var, (SCIP_Bool)value);
+
+            if( irrelevantvar )
+               clique->equation = FALSE;
+
             cliqueCheck(clique);
          }
       }

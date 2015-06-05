@@ -1432,6 +1432,26 @@ SCIP_RETCODE consdataFree(
    return SCIP_OKAY;
 }
 
+/** check the locks of an AND resultant and removes it from all global structures if the resultant is not locked anymore */
+static
+SCIP_RETCODE checkLocksAndRes(
+   SCIP*const            scip,               /**< SCIP data structure */
+   SCIP_VAR*             res                 /**< resultant of AND constraint */
+   )
+{
+   assert(scip != NULL);
+   assert(res != NULL);
+
+   /* the resultant has no locks left and might be dual fixed now, we need to delete all its cliques */
+   if( SCIPvarIsActive(res) && SCIPvarGetNLocksDown(res) == 0 && SCIPvarGetNLocksUp(res) == 0
+      && SCIPgetStage(scip) < SCIP_STAGE_FREETRANS )
+   {
+      SCIP_CALL( SCIPremoveVarFromGlobalStructures(scip, res) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** installs rounding locks for the given and-constraint associated with given coefficient */
 static
 SCIP_RETCODE lockRoundingAndCons(
@@ -1558,9 +1578,12 @@ SCIP_RETCODE unlockRoundingAndCons(
             SCIP_CALL( SCIPunlockVarCons(scip, vars[v], cons, hasrhs, haslhs) );
          }
       }
+
       if( res != NULL )
       {
          SCIP_CALL( SCIPunlockVarCons(scip, res, cons, TRUE, TRUE) );
+
+         SCIP_CALL( checkLocksAndRes(scip, res) );
       }
    }
 
@@ -1924,7 +1947,7 @@ SCIP_RETCODE createAndAddAndCons(
       SCIP_CALL( SCIPaddCons(scip, newcons) );
       SCIPdebugPrintCons(scip, newcons, NULL);
 
-      /* force all deriving constraint from this and constraint to be checked and not removale */
+      /* force all deriving constraint from this and constraint to be checked and not removable */
       SCIP_CALL( SCIPchgAndConsCheckFlagWhenUpgr(scip, newcons, TRUE) );
       SCIP_CALL( SCIPchgAndConsRemovableFlagWhenUpgr(scip, newcons, TRUE) );
 
@@ -5473,7 +5496,7 @@ SCIP_RETCODE tryUpgradingXor(
 
       oldnlinvars = nlinvars;
 
-      /* determine all dieffernet variables over the linear variables and all variables in all and constraints */
+      /* determine all different variables over the linear variables and all variables in all and constraints */
       for( v = nvars - 1, v1 = nlinvars - 1; v >= 0 && v1 >= 0; )
       {
          SCIP_VAR* var;
@@ -8134,6 +8157,8 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
                SCIP_CALL( SCIPaddVarLocks(scip, andvars[v], nlockspos, nlocksneg) );
             }
             SCIP_CALL( SCIPaddVarLocks(scip, andres, nlocksneg + nlockspos, nlocksneg + nlockspos) );
+
+            SCIP_CALL( checkLocksAndRes(scip, andres) );
          }
          if( hasrhs )
          {
@@ -8145,6 +8170,8 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
             if( !haslhs )
             {
                SCIP_CALL( SCIPaddVarLocks(scip, andres, nlocksneg + nlockspos, nlocksneg + nlockspos) );
+
+               SCIP_CALL( checkLocksAndRes(scip, andres) );
             }
          }
       }
@@ -8157,6 +8184,8 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
                SCIP_CALL( SCIPaddVarLocks(scip, andvars[v], nlocksneg, nlockspos) );
             }
             SCIP_CALL( SCIPaddVarLocks(scip, andres, nlocksneg + nlockspos, nlocksneg + nlockspos) );
+
+            SCIP_CALL( checkLocksAndRes(scip, andres) );
          }
          if( hasrhs )
          {
@@ -8168,6 +8197,8 @@ SCIP_DECL_CONSLOCK(consLockPseudoboolean)
             if( !haslhs )
             {
                SCIP_CALL( SCIPaddVarLocks(scip, andres, nlocksneg + nlockspos, nlocksneg + nlockspos) );
+
+               SCIP_CALL( checkLocksAndRes(scip, andres) );
             }
          }
       }

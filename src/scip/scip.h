@@ -8721,6 +8721,28 @@ SCIP_RETCODE SCIPwriteCliqueGraph(
    SCIP_Bool             writenodeweights    /**< should we write weights of nodes? */
    );
 
+/** Removes (irrelevant) variable from all its global structures, i.e. cliques, implications and variable bounds.
+ *  This is an advanced method which should be used with care.
+ *
+ *  @return SCIP_OKAY if everything worked, otherwise a suitable error code is passed
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+SCIP_RETCODE SCIPremoveVarFromGlobalStructures(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to remove from global structures */
+   );
+
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score
  *  values of the variables; higher factor leads to a higher probability that this variable is chosen for branching
  *
