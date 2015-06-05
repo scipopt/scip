@@ -6370,6 +6370,7 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
    int maxdfs;
    int nstorednodes;
    int i;
+   SCIP_RETCODE retcode;
 
    assert(digraph != NULL);
    assert(compidx >= 0);
@@ -6378,11 +6379,13 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
    assert(strongcompstartidx != NULL);
    assert(nstrongcomponents != NULL);
 
-   SCIP_ALLOC( BMSallocMemoryArray(&lowlink, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsidx, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&stack, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&unprocessed, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&nodeinstack, digraph->nnodes) );
+   retcode = SCIP_OKAY;
+
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&lowlink, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&dfsidx, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&stack, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&unprocessed, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&nodeinstack, digraph->nnodes), TERMINATE );
 
    for( i = 0; i < digraph->nnodes; ++i )
    {
@@ -6421,13 +6424,16 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
    /* to simplify the iteration over all strongly connected components */
    strongcompstartidx[*nstrongcomponents] = nstorednodes;
 
-   BMSfreeMemoryArray(&lowlink);
-   BMSfreeMemoryArray(&dfsidx);
-   BMSfreeMemoryArray(&stack);
-   BMSfreeMemoryArray(&unprocessed);
-   BMSfreeMemoryArray(&nodeinstack);
+   assert(retcode == SCIP_OKAY);
 
-   return SCIP_OKAY;
+ TERMINATE:
+   BMSfreeMemoryArrayNull(&lowlink);
+   BMSfreeMemoryArrayNull(&dfsidx);
+   BMSfreeMemoryArrayNull(&stack);
+   BMSfreeMemoryArrayNull(&unprocessed);
+   BMSfreeMemoryArrayNull(&nodeinstack);
+
+   return retcode;
 }
 
 /** frees the component information for the given directed graph */
