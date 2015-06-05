@@ -6282,7 +6282,7 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
    }
 
    /* check correct linear constraint */
-   if ( ! SCIPisInfinity(scip, SCIPgetLhsLinear(scip, lincons)) && ! SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) )
+   if ( ! SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, lincons)) && ! SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: linear constraint is ranged or equation.\n", name);
       *success = FALSE;
