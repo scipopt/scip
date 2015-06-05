@@ -2390,6 +2390,7 @@ SCIP_RETCODE sl_reduction(
    int     k;
    int     e;
    int     j;
+   int     t;
    int     head;
    int     tail;
    int     root;
@@ -2434,7 +2435,8 @@ SCIP_RETCODE sl_reduction(
       {
          /* traverse voronoi-region of (terminal) i */
 	 assert(SCIPqueueIsEmpty(queue));
-         SCIP_CALL( SCIPqueueInsert(queue, &i) );
+	 t = i;
+         SCIP_CALL( SCIPqueueInsert(queue, &t) );
 	 vrcount = 1;
 	 vrnodes[0] = i;
 	 visited[i] = TRUE;

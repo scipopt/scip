@@ -471,7 +471,7 @@ SCIP_RETCODE bound_reduce(
    int* state,
    int* vbase,
    int* nelims,
-   int fixed
+   SCIP_Real fixed
    )
 {
    SCIP_HEUR** heurs;
@@ -1065,7 +1065,7 @@ SCIP_RETCODE hopbound_reduce(
             assert(e >= 0);
             tail = graph->tail[e];
             head = graph->head[e];
-            tmpcost = 1 + bound;
+            tmpcost = 1.0 + bound;
             if( vbase[tail] != vbase[head] )
             {
                tmpcost += vnoi[head].dist + vnoi[tail].dist;
@@ -1131,6 +1131,7 @@ SCIP_RETCODE hcrbound_reduce(
    int* pathedge
    )
 {
+   SCIP_Real tmpcost;
    int e;
    int k;
    int root;
@@ -1140,7 +1141,6 @@ SCIP_RETCODE hcrbound_reduce(
    int nnodes;
    int nedges;
    int nterms;
-   int tmpcost;
    int hoplimit;
 
    assert(scip != NULL);
@@ -1183,6 +1183,10 @@ SCIP_RETCODE hcrbound_reduce(
    /* distance from root to all nodes */
    graph_path_execX(scip, graph, root, cost, pathdist, pathedge);
 
+      /* no paths should go back to the root */
+   for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+      costrev[e] = FARAWAY;
+
    /* build voronoi diagram */
    voronoi_terms(scip, graph, costrev, vnoi, vbase, heap, state);
 
@@ -1211,7 +1215,7 @@ SCIP_RETCODE hcrbound_reduce(
          {
             assert(e >= 0);
             head = graph->head[e];
-            tmpcost = pathdist[k] + 1 + vnoi[head].dist + bound;
+            tmpcost = pathdist[k] + 1.0 + vnoi[head].dist + bound;
 
 	    etemp = graph->oeat[e];
             /* can edge e (i.e. both arc e and its reverse arc) or arc e be deleted? */
@@ -1337,7 +1341,7 @@ SCIP_RETCODE hcrcbound_reduce(
             for( e = graph->inpbeg[k]; e != EAT_LAST; e = graph->ieat[e] )
                if( SCIPisLT(scip, graph->cost[e], min) )
                   min = graph->cost[e];
-            assert(SCIPisGT(scip, FARAWAY, min));
+            assert(SCIPisGT(scip, BLOCKED, min));
             if( SCIPisGT(scip, min, maxmin) )
                maxmin = min;
             bound += min;
@@ -1378,7 +1382,7 @@ SCIP_RETCODE hcrcbound_reduce(
          {
             costrev[e + 1] = graph->cost[e];
 
-            if( SCIPisGT(scip, graph->cost[e], maxcost) && SCIPisLT(scip, graph->cost[e], BLOCKED) )
+            if( SCIPisGT(scip, graph->cost[e], maxcost) && SCIPisLT(scip, costrev[e + 1], BLOCKED) )
                maxcost = graph->cost[e];
          }
          cost[e] = costrev[e + 1];
@@ -1398,6 +1402,10 @@ SCIP_RETCODE hcrcbound_reduce(
    /* distance from root to all nodes */
    graph_path_execX(scip, graph, root, cost, pathdist, pathedge);
 
+   /* no paths should go back to the root */
+   for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
+      costrev[e] = FARAWAY;
+
    /* build voronoi diagram */
    voronoi_terms(scip, graph, costrev, vnoi, vbase, heap, state);
 
@@ -1414,7 +1422,7 @@ SCIP_RETCODE hcrcbound_reduce(
       /* compute UB */
       SCIP_CALL( do_layer(scip, tmheurdata, graph, NULL, &best_start, result, NULL, 50, root, cost, costrev, &hopfactor, maxcost, &success) );
 
-      objval = 0;
+      objval = 0.0;
       for( e = 0; e < nedges; e++ )
          if( result[e] == CONNECT )
             objval += graph->cost[e];
@@ -1423,9 +1431,9 @@ SCIP_RETCODE hcrcbound_reduce(
    {
       printf("CCC obj given: %f \n\n ", objval);
       objval = objval - fixed;
-      assert(objval >= 0);
+      assert(SCIPisGT(scip, objval, 0.0));
    }
-   printf("CCC obj: %f \n\n ", objval);
+   printf("CCC obj: %f bound: %f\n\n ", objval, bound);
    /* traverse all node, try to eliminate first the node and then all incident edges */
    for( k = 0; k < nnodes; k++ )
    {

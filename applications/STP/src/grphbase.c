@@ -481,7 +481,7 @@ SCIP_RETCODE graph_obstgrid_create(
 
    for( i = 0; i < grid_dim; i++ )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(termcoords[i]), nterms) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(termcoords[i]), nterms) ); /*lint !e866*/
       for( j = 0; j < nterms; j++ )
          termcoords[i][j] = coords[i][j];
    }
@@ -641,8 +641,8 @@ SCIP_RETCODE graph_grid_create(
       for( j = 0; j < nterms; j++ )
          termcoords[i][j] = coords[i][j];
    }
-   SCIPallocMemoryArray(scip, &ncoords, grid_dim);
-   SCIPallocMemoryArray(scip, &currcoord, grid_dim);
+   SCIP_CALL( SCIPallocMemoryArray(scip, &ncoords, grid_dim) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &currcoord, grid_dim) );
 
    /* sort the coordinates and delete multiples */
    for( i = 0; i < grid_dim; i++ )
@@ -1131,8 +1131,8 @@ SCIP_RETCODE graph_copy(
       BMScopyMemoryArray(g->grid_coordinates, p->grid_coordinates, p->grid_dim);
       for( i = 0; i < p->grid_dim; i++ )
       {
-	 SCIP_CALL( SCIPallocMemoryArray(scip, &(g->grid_coordinates[i]), p->terms) );
-	 BMScopyMemoryArray(g->grid_coordinates[i], p->grid_coordinates[i], p->terms);
+	 SCIP_CALL( SCIPallocMemoryArray(scip, &(g->grid_coordinates[i]), p->terms) ); /*lint !e866*/
+	 BMScopyMemoryArray(g->grid_coordinates[i], p->grid_coordinates[i], p->terms); /*lint !e866*/
       }
       SCIP_CALL( SCIPallocMemoryArray(scip, &(g->grid_ncoords), p->grid_dim) );
       BMScopyMemoryArray(g->grid_ncoords, p->grid_ncoords, p->grid_dim);
@@ -1268,8 +1268,8 @@ SCIP_RETCODE graph_knot_contract(
    } SLIST;
 
    SLIST* slp;
-   IDX**   ancestors;
-   IDX**   revancestors;
+   IDX**   ancestors = NULL;
+   IDX**   revancestors = NULL;
    IDX*   tsancestors = NULL;
    IDX*   stancestors = NULL;
    int    slc = 0;

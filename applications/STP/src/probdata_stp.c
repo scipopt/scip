@@ -549,7 +549,7 @@ SCIP_RETCODE createPrizeConstraints(
       {
          (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeSymConstraint%d", r);
          SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizesymcons[r]), consname, 0, NULL, NULL,
-               -SCIPinfinity(scip), 1, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+               -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCons(scip, probdata->prizesymcons[r]) );
       }
    }
@@ -559,7 +559,7 @@ SCIP_RETCODE createPrizeConstraints(
    {
       (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeConstraint");
       SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizecons), consname, 0, NULL, NULL,
-            1, 1, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+            1.0, 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, probdata->prizecons) );
    }
 
@@ -811,11 +811,11 @@ SCIP_RETCODE createVariables(
          /* Hop-Constrained STP */
          if( graph->stp_type == STP_HOP_CONS )
 	 {
-	    int hopfactor;
+	    SCIP_Real hopfactor;
 	    for( e = 0; e < nedges; ++e )
             {
-               /* TODO: When presolving is used: MODIFY */
-               hopfactor = 1;
+               /* @note: When contractions are used in presolving: modify */
+               hopfactor = 1.0;
                SCIP_CALL( SCIPaddCoefLinear(scip, probdata->hopcons, probdata->edgevars[e], hopfactor) );
 	    }
 	 }
@@ -921,7 +921,7 @@ SCIP_RETCODE createVariables(
 	    }
 	    else
 	    {
-	       SCIP_CALL( SCIPaddCoefLinear(scip, probdata->edgecons[e], var, -realnterms) );
+	       SCIP_CALL( SCIPaddCoefLinear(scip, probdata->edgecons[e], var, (double) -realnterms) );
 	    }
 	    probdata->edgevars[e] = var;
          }
@@ -1562,7 +1562,7 @@ SCIP_DECL_PROBTRANS(probtransStp)
 
 static
 SCIP_DECL_PROBEXITSOL(probexitsolStp)
-{
+{ /* lint --e{715} */
    assert(scip != NULL);
    assert(probdata != NULL);
 
@@ -1671,7 +1671,6 @@ SCIP_RETCODE SCIPprobdataCreate(
    int reduction;
    char mode;
    char probtype[16];
-   char printfs = FALSE;
    char* intlogfilename;
    char* logfilename;
    char tmpfilename[SCIP_MAXSTRLEN];
@@ -1686,12 +1685,10 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* create graph */
    SCIP_CALL( graph_load(scip, &graph, filename, &presolinfo) );
-
-   if( printfs )
+#if 0
       printf("load type :: %d \n\n", graph->stp_type);
-   if( printfs )
       printf("fixed: %f \n\n", presolinfo.fixed );
-
+#endif
    /* create problem data */
    SCIP_CALL( probdataCreate(scip, &probdata, graph) );
 
@@ -2442,8 +2439,6 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       grid_dim = graph->grid_dim;
       assert(grid_dim > 1);
       assert(grid_dim < 256);
-      assert(norgedges = graph->edges);
-      assert(norgnodes = graph->knots);
       SCIP_CALL( SCIPallocBufferArray(scip, &nodenumber, norgnodes) );
       strcpy(strdim, "P");
       for( i = 1; i < grid_dim; i++ )
@@ -2747,7 +2742,6 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
       SCIP_Bool feasible;
       int e;
       int nvars = probdata->nvars;
-      int fails = 0;
       /* check whether the new solution is valid with respect to the original bounds */
 #if  1
 
@@ -2756,7 +2750,6 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
          if( SCIPisGT(scip, nval[e], SCIPvarGetUbGlobal(edgevars[e])) ||  SCIPisGT(scip, SCIPvarGetLbGlobal(edgevars[e]), nval[e]) )
          {
             *success = FALSE;
-            fails++;
             SCIP_CALL( SCIPfreeSol(scip, &sol) );
             return SCIP_OKAY;
          }
@@ -2820,13 +2813,13 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
 
       SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, TRUE, TRUE, TRUE, &feasible) );
 
-      SCIPdebugPrintf("checked sol: feasible=%d\n", feasible);
+      SCIPdebugPrintf("checked sol: feasible=%u\n", feasible);
 
       /* check solution for feasibility in original problem space */
       if( !feasible )
       {
          SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
-         SCIPdebugPrintf("checked sol org: feasible=%d\n", feasible);
+         SCIPdebugPrintf("checked sol org: feasible=%u\n", feasible);
 
          if( feasible )
          {

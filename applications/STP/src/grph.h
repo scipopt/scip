@@ -264,7 +264,7 @@ extern void graph_boxcoord(GRAPH* g);
  */
 extern void level0(SCIP*, GRAPH*);
 extern SCIP_RETCODE reduce(SCIP*, GRAPH**, SCIP_Real*, int, int);
-extern SCIP_RETCODE bound_reduce(SCIP*, GRAPH*, PATH*, double*, double*, double*, double*, int*, int*, int*, int*, int);
+extern SCIP_RETCODE bound_reduce(SCIP*, GRAPH*, PATH*, double*, double*, double*, double*, int*, int*, int*, int*, SCIP_Real);
 extern SCIP_RETCODE hopbound_reduce(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*);
 extern SCIP_RETCODE hcrbound_reduce(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE hcrcbound_reduce(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real, SCIP_Real, int*, int*, int*, int*, int*, SCIP_Bool);
