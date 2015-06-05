@@ -397,6 +397,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  method should process only the useful constraints in most runs, and only occasionally the remaining
  *  nconss - nusefulconss constraints.
  *
+ *  @note if the constraint handler uses dual information in propagation it is nesassary to check via calling
+ *        SCIPallowDualReds and SCIPallowObjProp if dual reductions and propgation with the current cutoff bound, resp.,
+ *        are allowed.
+ *
  *  input:
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
@@ -442,6 +446,9 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *
  *  @note the counters state the changes since the last call including the changes of this presolving method during its
  *        call
+ *
+ *  @note if the constraint handler performs dual presolving it is nesassary to check via calling SCIPallowDualReds
+ *        if dual reductions are allowed.
  *
  *  input/output:
  *  - nfixedvars      : pointer to count total number of variables fixed of all presolvers

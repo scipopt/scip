@@ -1991,6 +1991,9 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
    if( SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
+   if( !SCIPallowDualReds(scip) )
+      return SCIP_OKAY;
+
    *result = SCIP_DIDNOTFIND;
 
    presoldata = SCIPpresolGetData(presol);

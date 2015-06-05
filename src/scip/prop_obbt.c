@@ -2332,6 +2332,9 @@ SCIP_DECL_PROPEXEC(propExecObbt)
       return SCIP_OKAY;
    }
 
+   if( !SCIPallowObjProp(scip) )
+      return SCIP_OKAY;
+
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);

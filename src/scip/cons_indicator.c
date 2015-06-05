@@ -3226,7 +3226,7 @@ SCIP_RETCODE presolRoundIndicator(
    if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(consdata->slackvar)) )
    {
       /* perform dual reductions - if required */
-      if ( dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
+      if ( dualreductions )
       {
          SCIP_VAR* binvar;
          SCIP_Real obj;
@@ -3618,7 +3618,7 @@ SCIP_RETCODE propIndicator(
       if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(consdata->slackvar)) )
       {
          /* perform dual reduction - if required */
-         if ( dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
+         if ( dualreductions )
          {
             SCIP_VAR* binvar;
             SCIP_Real obj;
@@ -3875,7 +3875,7 @@ SCIP_RETCODE enforceIndicators(
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
       SCIP_CALL( propIndicator(scip, conss[c], consdata,
-            conshdlrdata->dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip), conshdlrdata->addopposite,
+            conshdlrdata->dualreductions && SCIPallowDualReds(scip), conshdlrdata->addopposite,
             &cutoff, &cnt) );
       if ( cutoff )
       {
@@ -5413,8 +5413,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 
          /* perform one presolving round */
          SCIP_CALL( presolRoundIndicator(scip, conshdlrdata, cons, consdata,
-               conshdlrdata->dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip), &cutoff, &success,
-               ndelconss, nfixedvars) );
+               conshdlrdata->dualreductions && SCIPallowDualReds(scip), &cutoff, &success, ndelconss, nfixedvars) );
 
          if ( cutoff )
          {
@@ -5885,9 +5884,8 @@ SCIP_DECL_CONSPROP(consPropIndicator)
 
       *result = SCIP_DIDNOTFIND;
 
-      SCIP_CALL( propIndicator(scip, cons, consdata,
-            conshdlrdata->dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip), conshdlrdata->addopposite,
-            &cutoff, &cnt) );
+      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions && SCIPallowDualReds(scip),
+            conshdlrdata->addopposite, &cutoff, &cnt) );
 
       if ( cutoff )
       {

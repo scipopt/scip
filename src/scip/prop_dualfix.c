@@ -274,7 +274,7 @@ SCIP_DECL_PROPEXEC(propExecDualfix)
     *
     *  do not run if propagation w.r.t. current objective is not allowed
     */
-   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) || !SCIPallowObjProp(scip) )
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) || !SCIPallowDualReds(scip) )
       return SCIP_OKAY;
 
    cutoff = FALSE;
