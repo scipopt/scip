@@ -2510,7 +2510,7 @@ SCIP_RETCODE SCIPsetConshdlrPresol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method of constraint handler */
    int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-   SCIP_Bool             delaypresol         /**< should presolving method be delayed, if other presolvers found reductions? */
+   SCIP_PRESOLTIMING     presoltiming        /**< timing mask of the constraint handler's presolving method */
    );
 
 /** sets method of constraint handler to free specific constraint data
