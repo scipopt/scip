@@ -43,7 +43,7 @@
 #define PRESOL_MAXROUNDS             -1      /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
-#define DEFAULT_WRITEPROBLEMS     FALSE      /**< should the single components be written as an .lp-file? */
+#define DEFAULT_WRITEPROBLEMS     FALSE      /**< should the single components be written as an .cip-file? */
 #define DEFAULT_MAXINTVARS          500      /**< maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
 #define DEFAULT_NODELIMIT       10000LL      /**< maximum number of nodes to be solved in subproblems */
 #define DEFAULT_INTFACTOR           1.0      /**< the weight of an integer variable compared to binary variables */
@@ -71,7 +71,7 @@ struct SCIP_PresolData
    SCIP_Real             feastolfactor;      /** parameter to increase the feasibility tolerance in all sub-SCIPs */
    SCIP_Bool             didsearch;          /** did the presolver already search for components? */
    SCIP_Bool             pluginscopied;      /** was the copying of the plugins successful? */
-   SCIP_Bool             writeproblems;      /** should the single components be written as an .lp-file? */
+   SCIP_Bool             writeproblems;      /** should the single components be written as an .cip-file? */
    int                   maxintvars;         /** maximum number of integer (or binary) variables to solve a subproblem directly (-1: no solving) */
    int                   lastnvars;          /** number of variables after last run of the presolver */
 #ifdef SCIP_STATISTIC
@@ -1433,7 +1433,7 @@ SCIP_RETCODE SCIPincludePresolComponents(
    /* add presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
          "presolving/components/writeproblems",
-         "should the single components be written as an .lp-file?",
+         "should the single components be written as an .cip-file?",
          &presoldata->writeproblems, FALSE, DEFAULT_WRITEPROBLEMS, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "presolving/components/maxintvars",
