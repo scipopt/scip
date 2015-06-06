@@ -13552,7 +13552,7 @@ SCIP_RETCODE SCIPvarAddToRow(
 /* optionally, define this compiler flag to write complete variable histories to a file */
 #ifdef SCIP_HISTORYTOFILE
 SCIP_Longint counter = 0l;
-const char* historypath="/OPTI/bzfhende/pseudocosts"; /* allows for user-defined path; use '.' for calling directory of SCIP */
+const char* historypath="."; /* allows for user-defined path; use '.' for calling directory of SCIP */
 #endif
 
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of
