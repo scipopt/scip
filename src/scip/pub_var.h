@@ -437,7 +437,7 @@ SCIP_Bool SCIPvarIsDeleted(
  */
 EXTERN
 void SCIPvarMarkDeletable(
-   SCIP_VAR*             var
+   SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** marks the variable to be not deletable from the problem */

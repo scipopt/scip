@@ -97,7 +97,7 @@ void SCIPconshdlrSetProp(
    int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
-         );
+   );
 
 /** gets array with constraints of constraint handler; the first SCIPconshdlrGetNActiveConss() entries are the active
  *  constraints, the last SCIPconshdlrGetNConss() - SCIPconshdlrGetNActiveConss() constraints are deactivated
@@ -460,7 +460,7 @@ SCIP_PROPTIMING SCIPconshdlrGetPropTiming(
 EXTERN
 void SCIPconshdlrSetPropTiming(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
-   SCIP_PROPTIMING       proptiming          /** timing mask to be set */
+   SCIP_PROPTIMING       proptiming          /**< timing mask to be set */
    );
 
 
