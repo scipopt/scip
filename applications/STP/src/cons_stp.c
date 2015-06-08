@@ -234,7 +234,7 @@ static
 void set_capacity(
    const GRAPH*  g,
    const int     layer,
-   const int     creep_flow,
+   const SCIP_Bool creep_flow,
    const int     flip,
    int*          capa,
    const SCIP_Real* xval
@@ -291,7 +291,7 @@ SCIP_RETCODE sep_flow(
    int    ind;
    int    layer;
    int    count = 0;
-   int    flowsep;
+   unsigned int    flowsep;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
@@ -512,11 +512,11 @@ SCIP_RETCODE sep_2cut(
    int* ncuts
    )
 {
-   const unsigned int nested_cut   = conshdlrdata->nestedcut;
-   const unsigned int back_cut     = conshdlrdata->backcut;
-   const unsigned int creep_flow   = conshdlrdata->creepflow;
-   const unsigned int disjunct_cut = conshdlrdata->disjunctcut;
-   const unsigned int flowsep      = conshdlrdata->flowsep;
+   const SCIP_Bool nested_cut   = conshdlrdata->nestedcut;
+   const SCIP_Bool back_cut     = conshdlrdata->backcut;
+   const SCIP_Bool creep_flow   = conshdlrdata->creepflow;
+   const SCIP_Bool disjunct_cut = conshdlrdata->disjunctcut;
+   const SCIP_Bool flowsep      = conshdlrdata->flowsep;
 
    GRAPH*  g;
    SCIP_Real* xval;
@@ -550,11 +550,11 @@ SCIP_RETCODE sep_2cut(
    xval = SCIPprobdataGetXval(scip, NULL);
    assert(xval != NULL);
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &capa, nedges) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &cost, nedges) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &w, nnodes) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &term, g->terms) );
-   SCIP_CALL( SCIPallocMemoryArray(scip, &path, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &capa, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &w, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &term, g->terms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &path, nnodes) );
 
    for( layer = 0; layer < g->layers; layer++ )
    {
@@ -567,7 +567,10 @@ SCIP_RETCODE sep_2cut(
          cost[i] = (xval[layer * nedges + i] < (1.0 - SCIPepsilon(scip))) ? 1.0 : 0.0;
 
       for( i = 0; i < nnodes; i++ )
+      {
+	 w[i] = 0;
          g->mark[i] = TRUE;
+      }
 
       graph_path_exec(scip, g, FSP_MODE, g->source[layer], cost, path);
 
@@ -694,11 +697,11 @@ SCIP_RETCODE sep_2cut(
    }
 
  TERMINATE:
-   SCIPfreeMemoryArray(scip, &path);
-   SCIPfreeMemoryArray(scip, &term);
-   SCIPfreeMemoryArray(scip, &w);
-   SCIPfreeMemoryArray(scip, &cost);
-   SCIPfreeMemoryArray(scip, &capa);
+   SCIPfreeBufferArray(scip, &path);
+   SCIPfreeBufferArray(scip, &term);
+   SCIPfreeBufferArray(scip, &w);
+   SCIPfreeBufferArray(scip, &cost);
+   SCIPfreeBufferArray(scip, &capa);
 
    SCIPdebugMessage("2-cut Separator: %d Inequalities added\n", count);
 

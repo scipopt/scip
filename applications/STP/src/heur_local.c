@@ -898,7 +898,7 @@ SCIP_RETCODE do_local(
                   edge = UNKNOWN;
                   while( boundpaths[l] != NULL )
                   {
-                     SCIPpairheapDeletemin(scip, &edge, &edgecost, &boundpaths[l], &heapsize[l]);
+                     SCIP_CALL( SCIPpairheapDeletemin(scip, &edge, &edgecost, &boundpaths[l], &heapsize[l]) );
 
                      node = (vbase[graph->head[edge]] == UNKNOWN)? UNKNOWN : SCIPunionfindFind(&uf, vbase[graph->head[edge]]);
                      assert( (vbase[graph->tail[edge]] == UNKNOWN)? UNKNOWN : SCIPunionfindFind(&uf, vbase[graph->tail[edge]]) == l );
@@ -1007,7 +1007,7 @@ SCIP_RETCODE do_local(
                      printf("adding edge %d %d \n ", supernodesid[node], supernodesid[adjnode] );
                   /* compute the cost of the boundary-path pertaining to the boundary-edge 'edge' */
                   edgecost = vnoi[graph->tail[edge]].dist + graph->cost[edge] + vnoi[graph->head[edge]].dist;
-                  graph_edge_add(supergraph, supernodesid[node], supernodesid[adjnode], edgecost, edgecost);
+                  graph_edge_add(scip, supergraph, supernodesid[node], supernodesid[adjnode], edgecost, edgecost);
                }
 
                /* compute a MST on the supergraph */
@@ -1455,7 +1455,7 @@ SCIP_RETCODE do_local(
                e = UNKNOWN;
                while( boundpaths[crucnode] != NULL )
                {
-                  SCIPpairheapDeletemin(scip, &e, &edgecost, &boundpaths[crucnode], &(heapsize[crucnode]));
+                  SCIP_CALL( SCIPpairheapDeletemin(scip, &e, &edgecost, &boundpaths[crucnode], &(heapsize[crucnode])) );
                   assert( e != UNKNOWN );
                   k = vbase[graph->tail[e]];
                   l = vbase[graph->head[e]];

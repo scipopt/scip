@@ -633,8 +633,9 @@ static int start_section(
    return(ret);
 }
 
-inline static
-void init_coordinates(
+static
+SCIP_RETCODE init_coordinates(
+   SCIP* scip,
    GRAPH* g,
    PARA* para,
    double*** coordinates,
@@ -649,22 +650,25 @@ void init_coordinates(
    if( *coordinates == NULL )
    {
       assert(g == NULL);
+      assert(termcount != NULL);
+      assert(grid_dim != NULL);
       assert(*termcount == 0);
       assert(nodes > 0);
 
       *grid_dim = dim;
 
       /* allocate memory for the coordinate arrays */
-      *coordinates = (double**) malloc(dim * sizeof(double*));
+      SCIP_CALL( SCIPallocMemoryArray(scip, coordinates, dim) );
 
       for( i = 0; i < dim; i++ )
-         (*coordinates)[i] = (double*) malloc((nodes) * sizeof(double));
+	 SCIP_CALL( SCIPallocMemoryArray(scip, &((*coordinates)[i]), nodes) ); /*lint !e866*/
    }
 
    for( i = 0; i < dim; i++ )
       (*coordinates)[i][*termcount] = (double)para[i + 1].n;
 
    (*termcount)++;
+   return SCIP_OKAY;
 }
 
 static
@@ -816,7 +820,7 @@ SCIP_RETCODE graph_load(
 
    /* No section loaded so far.
     */
-   for(i = 1; i < (int)(sizeof(section_table) / sizeof(section_table[0])); i++)
+   for( i = 1; i < (int)(sizeof(section_table) / sizeof(section_table[0])); i++ )
       section_table[i].mark = SECTION_MISSING;
 
    /* Get the names...
@@ -825,7 +829,7 @@ SCIP_RETCODE graph_load(
 
    /* Did we get a path ?
     */
-   if ((s = strrchr(pathname, DIRSEP[0])) == NULL)
+   if( (s = strrchr(pathname, DIRSEP[0])) == NULL )
    {
       /* No, no path.
        */
@@ -866,7 +870,7 @@ SCIP_RETCODE graph_load(
       {
          /* Read a line.
           */
-         if ((s = fgets(buffer, sizeof(buffer), curf.fp)) == NULL)
+         if ((s = fgets(buffer, (int) sizeof(buffer), curf.fp)) == NULL)
          {
             /* No more lines available, so we can close the file.
              */
@@ -1093,22 +1097,22 @@ SCIP_RETCODE graph_load(
                         if( g->tail[i] == tail )
                            break;
                      if( i == EAT_LAST )
-                        graph_edge_add(g, tail, head, (double)para[2].n, FARAWAY);
+                        graph_edge_add(scip, g, tail, head, (double)para[2].n, FARAWAY);
                      else
                         g->cost[i] = (double)para[2].n;
 
                   }
                   else if( stp_type == STP_DIRECTED )
                   {
-                     graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1, (double)para[2].n, (double)para[3].n);
+                     graph_edge_add(scip, g, (int)para[0].n - 1, (int)para[1].n - 1, (double)para[2].n, (double)para[3].n);
                   }
                   else if( stp_type == STP_MAX_NODE_WEIGHT )
                   {
-                     graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1, 0.0, 0.0);
+                     graph_edge_add(scip, g, (int)para[0].n - 1, (int)para[1].n - 1, 0.0, 0.0);
                   }
                   else
                   {
-                     graph_edge_add(g, (int)para[0].n - 1, (int)para[1].n - 1,
+                     graph_edge_add(scip, g, (int)para[0].n - 1, (int)para[1].n - 1,
                         (double)para[2].n,
                         (p->sw_code == KEY_GRAPH_E)
                         ? (double)para[2].n
@@ -1164,7 +1168,7 @@ SCIP_RETCODE graph_load(
                      assert(obstacle_counter == 0);
                      SCIP_CALL( SCIPallocBufferArray(scip, &obstacle_coords, 4) );
                      for( i = 0; i < 4; i++ )
-                        SCIP_CALL( SCIPallocBufferArray(scip, &(obstacle_coords[i]), nobstacles) );
+                        SCIP_CALL( SCIPallocBufferArray(scip, &(obstacle_coords[i]), nobstacles) ); /*lint !e866*/
                   }
                   for( i = 0; i < 4; i++ )
                      obstacle_coords[i][obstacle_counter] = (int)para[i].n;
@@ -1189,7 +1193,8 @@ SCIP_RETCODE graph_load(
                   assert(g == NULL);
                   SCIP_CALL( graph_obstgrid_create(scip, graph, scaled_coordinates, obstacle_coords, nodes, grid_dim, nobstacles, scale_order) );
                   g = *graph;
-                  for( i = 0; i < 4; i++ )
+		  if( obstacle_coords != NULL )
+                  for( i = 3; i >= 0; i-- )
                      SCIPfreeBufferArrayNull(scip, &(obstacle_coords[i]));
                   SCIPfreeBufferArrayNull(scip, &(obstacle_coords));
                   break;
@@ -1229,6 +1234,7 @@ SCIP_RETCODE graph_load(
                   if( stp_type == STP_MAX_NODE_WEIGHT )
                   {
                      assert(terms == nodes);
+		     assert(g != NULL);
                      if( g->prize == NULL )
                         SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), terms) );
                   }
@@ -1272,6 +1278,7 @@ SCIP_RETCODE graph_load(
                case KEY_TERMINALS_T :
                   if( stp_type == STP_MAX_NODE_WEIGHT )
                   {
+		     assert(g != NULL);
                      assert(g->prize != NULL);
                      g->prize[(int)para[0].n - 1] = (double)para[1].n;
                      if( SCIPisGT(scip, (double)para[1].n, 0.0) )
@@ -1283,11 +1290,13 @@ SCIP_RETCODE graph_load(
                      graph_knot_chg(g, (int)para[0].n - 1, 0);
                   break;
                case KEY_TERMINALS_TG :
+		  assert(g != NULL);
                   assert(tgroups > 0);
-                  graph_edge_add(g, (int)para[0].n - 1, g->knots - tgroups + (int)para[1].n - 1, 1e+8,  1e+8);
+                  graph_edge_add(scip, g, (int)para[0].n - 1, g->knots - tgroups + (int)para[1].n - 1, 1e+8,  1e+8);
                   assert(Is_term(g->term[g->knots - tgroups + (int)para[1].n - 1]));
                   break;
                case KEY_TERMINALS_TP :
+		  assert(g != NULL);
                   graph_knot_chg(g, (int)para[0].n - 1, 0);
                   if( g->prize == NULL )
                   {
@@ -1306,25 +1315,25 @@ SCIP_RETCODE graph_load(
                      stop_input = TRUE;
                      break;
                   }
-                  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 2, nodes);
+                  SCIP_CALL( init_coordinates(scip, g, para, &coordinates, &grid_dim, &termcount, 2, nodes) );
                   break;
                case KEY_COORDINATES_DDD :
-                  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 3, nodes);
+                  SCIP_CALL( init_coordinates(scip, g, para, &coordinates, &grid_dim, &termcount, 3, nodes) );
                   break;
                case KEY_COORDINATES_DDDD :
-                  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 4, nodes);
+                  SCIP_CALL( init_coordinates(scip, g, para, &coordinates, &grid_dim, &termcount, 4, nodes) );
                   break;
                case KEY_COORDINATES_DDDDD :
-                  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 5, nodes);
+                  SCIP_CALL( init_coordinates(scip, g, para, &coordinates, &grid_dim, &termcount, 5, nodes) );
                   break;
                case KEY_COORDINATES_DDDDDD :
-                  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 6, nodes);
+                  SCIP_CALL( init_coordinates(scip, g, para, &coordinates, &grid_dim, &termcount, 6, nodes) );
                   break;
                case KEY_COORDINATES_DDDDDDD :
-                  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 7, nodes);
+                  SCIP_CALL( init_coordinates(scip, g, para, &coordinates, &grid_dim, &termcount, 7, nodes) );
                   break;
                case KEY_COORDINATES_DDDDDDDD :
-                  init_coordinates(g, para, &coordinates, &grid_dim, &termcount, 8, nodes);
+                  SCIP_CALL( init_coordinates(scip, g, para, &coordinates, &grid_dim, &termcount, 8, nodes) );
                   break;
                case KEY_COORDINATES_END :
                   assert(g == NULL);
@@ -1342,10 +1351,11 @@ SCIP_RETCODE graph_load(
                   /* scale all coordinates such that they are integers */
                   scale_coords(coordinates, &scaled_coordinates, &scale_order, nodes, grid_dim);
 
+		  if( coordinates != NULL )
                   for( i = 0; i < grid_dim; i++ )
-                     free(coordinates[i]);
+                     SCIPfreeMemoryArrayNull(scip, &(coordinates[i]));
 
-                  free(coordinates);
+                  SCIPfreeMemoryArrayNull(scip, &coordinates);
 
                   if( stp_type != STP_OBSTACLES_GRID )
                   {

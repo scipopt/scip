@@ -1535,10 +1535,10 @@ SCIP_RETCODE do_layer(
 
       for( k = 0; k < nnodes; k++ )
       {
-         SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[k]) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &node_base[k], nterms) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &node_dist[k], nterms) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &node_edge[k], nterms) );
+         SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[k]) ); /*lint !e866*/
+         SCIP_CALL( SCIPallocBufferArray(scip, &node_base[k], nterms) ); /*lint !e866*/
+         SCIP_CALL( SCIPallocBufferArray(scip, &node_dist[k], nterms) ); /*lint !e866*/
+         SCIP_CALL( SCIPallocBufferArray(scip, &node_edge[k], nterms) ); /*lint !e866*/
       }
 
       SCIP_CALL( SCIPallocBufferArray(scip, &vcount, nnodes) );
@@ -1557,8 +1557,8 @@ SCIP_RETCODE do_layer(
 
          if( Is_term(graph->term[k]) )
          {
-            SCIP_CALL( SCIPallocBufferArray(scip, &(pathdist[k]), nnodes) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &(pathedge[k]), nnodes) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &(pathdist[k]), nnodes) ); /*lint !e866*/
+            SCIP_CALL( SCIPallocBufferArray(scip, &(pathedge[k]), nnodes) ); /*lint !e866*/
          }
       }
 
@@ -1620,8 +1620,11 @@ SCIP_RETCODE do_layer(
          for( k = 0; k < nnodes && r < runs; k++ )
 	 {
 	    if( graph->stp_type == STP_HOP_CONS )
+	    {
+	       assert(dijkdist != NULL);
                if( SCIPisGE(scip, dijkdist[perm[k]], BLOCKED) )
                   continue;
+	    }
             if( !Is_term(graph->term[perm[k]]) && graph->mark[k] )
                start[r++] = perm[k];
 	 }
@@ -1649,7 +1652,7 @@ SCIP_RETCODE do_layer(
             }
 	 }
          SCIPsortRealInt(nodepriority, perm, nnodes);
-	 printf("max priority: %f \n", max );
+	 //printf("max priority: %f \n", max );
          for( k = nnodes - 1; k >= 0; k-- )
          {
             if( r >= nterms || r >= bbound )
@@ -1667,13 +1670,16 @@ SCIP_RETCODE do_layer(
          for( k = nnodes - 1; k >= 0 && r < runs; k-- )
 	 {
 	    if( graph->stp_type == STP_HOP_CONS )
+	    {
+	       assert(dijkdist != NULL);
                if( SCIPisGE(scip, dijkdist[perm[k]], BLOCKED) )
                   continue;
+	    }
             if( perm[k] != -1 && graph->mark[k] )
 	    {
                start[r++] = perm[k];
-	       if( !Is_term(graph->term[perm[k]]) )
-	          printf("non term priority: %f \n", nodepriority[k] );
+               /* if( !Is_term(graph->term[perm[k]]) )
+	          printf("non term priority: %f \n", nodepriority[k] );*/
 	    }
 	 }
       }
@@ -1812,6 +1818,8 @@ SCIP_RETCODE do_layer(
 
          if( mode == TM_SP )
          {
+	    assert(pathdist != NULL);
+            assert(pathedge != NULL);
             if( !firstrun )
             {
                for( k = 0; k < nterms - 1; k++ )
@@ -1895,7 +1903,7 @@ SCIP_RETCODE do_layer(
    }
    else
    {
-      double* orgcost = NULL;
+      SCIP_Real* orgcost = NULL;
       int edgecount;
       char solfound = FALSE;
       assert(SCIPisGT(scip, (*hopfactor), 0.0));
@@ -1914,7 +1922,7 @@ SCIP_RETCODE do_layer(
             for( e = 0; e < nedges; e++ )
             {
                if( (SCIPisLT(scip, cost[e], BLOCKED )) )
-                  cost[e] = 1 + orgcost[e] / ((*hopfactor) * maxcost);
+                  cost[e] = 1.0 + orgcost[e] / ((*hopfactor) * maxcost);
                result[e] = UNKNOWN;
             }
 
@@ -1975,7 +1983,7 @@ SCIP_RETCODE do_layer(
          //printf("  final (*hopfactor): %f \n", (*hopfactor));
          for( e = 0; e < nedges; e++ )
             if( (SCIPisLT(scip, cost[e], BLOCKED )) )
-               cost[e] = 1 + orgcost[e] / ((*hopfactor) * maxcost);
+               cost[e] = 1.0 + orgcost[e] / ((*hopfactor) * maxcost);
          for( e = 0; e < nedges; e++)
             costrev[e] = cost[flipedge(e)];
       }
@@ -2002,7 +2010,9 @@ SCIP_RETCODE do_layer(
             if( r == 0 )
             {
                int i;
-               for( i = 0; i < nnodes; i++ )
+               assert(pathdist != NULL);
+               assert(pathedge != NULL);
+	       for( i = 0; i < nnodes; i++ )
                   graph->mark[i] = (graph->grad[i] > 0);
                /* intialize shortest paths from all terminals */
                for( k = 0; k < nnodes; ++k )
@@ -2030,6 +2040,8 @@ SCIP_RETCODE do_layer(
             if( r == 0 )
             {
                int i;
+	       assert(pathdist != NULL);
+               assert(pathedge != NULL);
                for( i = 0; i < nnodes; i++ )
                   graph->mark[i] = (graph->grad[i] > 0);
                /* intialize shortest paths from all terminals */
@@ -2084,6 +2096,7 @@ SCIP_RETCODE do_layer(
 
       if( graph->stp_type == STP_HOP_CONS )
       {
+	 assert(orgcost != NULL);
          for( e = 0; e < nedges; e++ )
          {
             cost[e] = orgcost[e];
@@ -2098,6 +2111,8 @@ SCIP_RETCODE do_layer(
    SCIPfreeBufferArrayNull(scip, &perm);
    if( mode == TM_SP )
    {
+      assert(pathedge != NULL);
+      assert(pathdist != NULL);
       SCIPfreeBufferArray(scip, &cluster);
       for( k = nnodes - 1; k >= 0; k-- )
       {
@@ -2113,6 +2128,10 @@ SCIP_RETCODE do_layer(
       SCIPpqueueFree(&pqueue);
 
       SCIPfreeBufferArray(scip, &vcount);
+      assert(node_edge != NULL);
+      assert(node_dist != NULL);
+      assert(node_base != NULL);
+      assert(gnodearr != NULL);
       for( k = nnodes - 1; k >= 0; k-- )
       {
          SCIPfreeBufferArray(scip, &node_edge[k]);
@@ -2421,6 +2440,15 @@ SCIP_DECL_HEUREXEC(heurExecTM)
             }
             else
             {
+	       SCIP_CALL( SCIPallocBufferArray(scip, &nodepriority, nnodes) );
+	       for( e = 0; e < nnodes; e++)
+	       {
+                  if( Is_term(graph->term[e]) )
+                     nodepriority[e] = (double) graph->grad[e];
+                  else
+                     nodepriority[e] = SCIPgetRandomReal(0.0, 1.0, &(heurdata->randseed));
+	       }
+
                for( e = 0; e < nedges; e += 2)
                {
                   if( SCIPvarGetUbGlobal(vars[layer * nedges + e + 1]) < 0.5 )

@@ -1,12 +1,26 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*   Type....: Function                                                      */
-/*   File....: sdtest.c                                                      */
-/*   Name....: Special Distance Test                                         */
-/*   Author..: Thorsten Koch                                                 */
-/*   Copyright by Author, All rights reserved                                */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   sdtest.c
+ * @brief  special distanced based reduction tests for Steiner problems
+ * @author Thorsten Koch
+ * @author Stephen Maher
+ * @author Daniel Rehfeldt
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -286,13 +300,14 @@ void compute_sd(
    const GRAPH*  p,
    int           start,
    const double* cost,
-   const double* random,
+   const double* randarr,
    int*          heap,
    int*          state,
    int*          count, /* pointer to store number of elements of heap */
    double* pathdist,
    double* pathtran,
-   double* pathrand)
+   double* pathrand
+   )
 {
    int    k;
    int    m;
@@ -391,7 +406,7 @@ void compute_sd(
                else
                {
                   tran = pathtran[k] + cost[i];
-                  temprand = pathrand[k] + random[i];
+                  temprand = pathrand[k] + randarr[i];
                }
 
 
@@ -542,7 +557,7 @@ SCIP_RETCODE sd_red(
             }
             else
             {
-               graph_edge_add(netgraph, nodesid[i], nodesid[i2], ecost, ecost);
+               graph_edge_add(scip, netgraph, nodesid[i], nodesid[i2], ecost, ecost);
                assert(netgraph->edges <= maxnedges);
             }
          }
@@ -831,7 +846,7 @@ SCIP_RETCODE sdpc_reduction(
             }
             else
             {
-               graph_edge_add(netgraph, nodesid[i], nodesid[i2], ecost, ecost);
+               graph_edge_add(scip, netgraph, nodesid[i], nodesid[i2], ecost, ecost);
                assert(netgraph->edges <= maxnedges);
             }
          }
@@ -1401,7 +1416,7 @@ SCIP_RETCODE sd_reduction(
    /* this is the offset used to minimise the number of knots to examine in large graphs. */
    if( g->knots > KNOTLIMIT )
    {
-      srand(runnum*100);
+      srand(runnum * 100);
       i = 0;
       do
       {
@@ -1769,18 +1784,18 @@ SCIP_RETCODE bd3_reduction(
       /* save ancestors */
       for( k = 0; k < 3; k++ )
       {
-	 SCIPindexListNodeFree(scip, &(ancestors[k]));
-	 SCIPindexListNodeFree(scip, &(revancestors[k]));
+	 SCIPintListNodeFree(scip, &(ancestors[k]));
+	 SCIPintListNodeFree(scip, &(revancestors[k]));
       }
 
-      SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(ancestors[0]), g->ancestors[e1]) );
-      SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(revancestors[0]), g->ancestors[Edge_anti(e1)]) );
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[0]), g->ancestors[e1]) );
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[0]), g->ancestors[Edge_anti(e1)]) );
 
-      SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(ancestors[1]), g->ancestors[e2]) );
-      SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(revancestors[1]), g->ancestors[Edge_anti(e2)]) );
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[1]), g->ancestors[e2]) );
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[1]), g->ancestors[Edge_anti(e2)]) );
 
-      SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(ancestors[2]), g->ancestors[e3]) );
-      SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(revancestors[2]), g->ancestors[Edge_anti(e3)]) );
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[2]), g->ancestors[e3]) );
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[2]), g->ancestors[Edge_anti(e3)]) );
 
       (*nelims)++;
 
@@ -1798,13 +1813,13 @@ SCIP_RETCODE bd3_reduction(
 	 n1 = graph_edge_redirect(g, e2, k2, k3, c2 + c3);
 	 if( n1 >= 0 )
 	 {
-            SCIPindexListNodeFree(scip, &(g->ancestors[n1]));
-            SCIPindexListNodeFree(scip, &(g->ancestors[Edge_anti(n1)]));
-            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[n1]), revancestors[1]) );
-            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors[2]) );
+            SCIPintListNodeFree(scip, &(g->ancestors[n1]));
+            SCIPintListNodeFree(scip, &(g->ancestors[Edge_anti(n1)]));
+            SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), revancestors[1]) );
+            SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors[2]) );
 
-            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), ancestors[1]) );
-            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors[2]) );
+            SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), ancestors[1]) );
+            SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors[2]) );
 	 }
       }
 #endif
@@ -1817,13 +1832,13 @@ SCIP_RETCODE bd3_reduction(
          n1 = graph_edge_redirect(g, e3, k3, k1, c3 + c1);
          if( n1 >= 0 )
 	 {
-            SCIPindexListNodeFree(scip, &(g->ancestors[n1]));
-            SCIPindexListNodeFree(scip, &(g->ancestors[Edge_anti(n1)]));
-            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[n1]), revancestors[2]) );
-            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors[0]) );
+            SCIPintListNodeFree(scip, &(g->ancestors[n1]));
+            SCIPintListNodeFree(scip, &(g->ancestors[Edge_anti(n1)]));
+            SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), revancestors[2]) );
+            SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors[0]) );
 
-            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), ancestors[2]) );
-            SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors[0]) );
+            SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), ancestors[2]) );
+            SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors[0]) );
 	 }
       }
 #endif
@@ -1832,8 +1847,8 @@ SCIP_RETCODE bd3_reduction(
 
    for( k = 0; k < 3; k++ )
    {
-      SCIPindexListNodeFree(scip, &(ancestors[k]));
-      SCIPindexListNodeFree(scip, &(revancestors[k]));
+      SCIPintListNodeFree(scip, &(ancestors[k]));
+      SCIPintListNodeFree(scip, &(revancestors[k]));
    }
 
    SCIPfreeBufferArray(scip, &revancestors);
@@ -2010,7 +2025,7 @@ SCIP_RETCODE nsv_reduction(
            e, i, k, min1, min2, cost1, cost2);
          */
          *fixed += g->cost[e];
-         SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e]) );
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e]) );
          SCIP_CALL( graph_knot_contract(scip, g, i, k) );
 
          (*nelims)++;
@@ -2282,8 +2297,8 @@ SCIP_RETCODE nv_reduction_optimal(
             else
             {
                *fixed += min1;
-               SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[shortarc]) ); /* I think that this should be
-                                                                                                           shortarc instead of shortarctail */
+               SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[shortarc]) ); /* I think that this should be
+                                                                                                         shortarc instead of shortarctail */
                SCIP_CALL( graph_knot_contract(scip, g, i, shortarctail) );
 
                if( g->stp_type == STP_HOP_CONS )
@@ -2339,7 +2354,7 @@ SCIP_RETCODE nv_reduction_optimal(
 
          if( Is_term(g->term[i]) )
          {
-            SCIPindexListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
+            SCIPintListNodeAppendCopy(&(g->fixedges), g->ancestors[e]);
             *fixed += g->cost[e];
          }
          graph_knot_contract(g, j, i);
@@ -2525,7 +2540,7 @@ SCIP_RETCODE sl_reduction(
 	    }
             else
 	    {
-	       SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e]) );
+	       SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e]) );
                SCIP_CALL( graph_knot_contract(scip, g, j, k) );
 	    }
             forbidden[vbase[j]] = TRUE;
@@ -2717,7 +2732,7 @@ SCIP_RETCODE nv_reduction(
          }
          else
          {
-	    SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[edge1]) );
+	    SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[edge1]) );
             SCIP_CALL( graph_knot_contract(scip, g, i, k) );
          }
       }
@@ -2863,7 +2878,7 @@ SCIP_RETCODE ledge_reduction(
             else
             {
 	       edgeorg[netgraph->edges / 2] = e;
-               graph_edge_add(netgraph, nodesid[v1], nodesid[v2], cost, cost);
+               graph_edge_add(scip, netgraph, nodesid[v1], nodesid[v2], cost, cost);
                assert(netgraph->edges <= maxnedges);
             }
          }
@@ -3112,8 +3127,8 @@ int nv_reduction(
                assert(min2 < FARAWAY);
 
                *fixed += min1;
-               SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[shortarc]); /* I think that this should be
-                                                                                                         shortarc instead of shortarctail */
+               SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[shortarc]); /* I think that this should be
+                                                                                                       shortarc instead of shortarctail */
 
                   graph_knot_contract(scip, g, shortarctail, i);
                   //graph_knot_contract(scip, g, i, shortarctail);
@@ -3165,7 +3180,7 @@ int nv_reduction(
 
             if( !Is_term(g->term[i]) && !Is_term(g->term[j]) )
             {
-               SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e]);
+               SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e]);
                   *fixed += g->cost[e];
                   graph_knot_contract(scip, g, j, i);
 

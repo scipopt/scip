@@ -24,8 +24,6 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#define DIRREDUCE_C
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -194,7 +192,7 @@ SCIP_RETCODE degree_test_dir(
 
             if( Is_term(g->term[i]) )
             {
-               SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e1]) );
+               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e1]) );
                *fixed += g->cost[e1];
                SCIP_CALL( graph_knot_contract(scip, g, i1, i) );
             }
@@ -424,10 +422,10 @@ SCIP_RETCODE degree_test_pc(
 
                   e = edges2[0];
                   e1 = edges2[1];
-                  SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(ancestors), g->ancestors[e]) );
-                  SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(ancestors), g->ancestors[Edge_anti(e1)]) );
-                  SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(revancestors), g->ancestors[Edge_anti(e)]) );
-                  SCIP_CALL( SCIPindexListNodeAppendCopy(scip, &(revancestors), g->ancestors[e1]) );
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), g->ancestors[e]) );
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), g->ancestors[Edge_anti(e1)]) );
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors), g->ancestors[Edge_anti(e)]) );
+                  SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors), g->ancestors[e1]) );
                   printf("delet - term - %d\n ", i);
                   /* contract edge */
                   n1 = graph_edge_redirect(scip, g, e, nodes2[1], nodes2[0], g->cost[e] + g->cost[e1] - g->prize[i]);
@@ -436,15 +434,15 @@ SCIP_RETCODE degree_test_pc(
                   if( n1 >= 0)
                   {
 		     /* add ancestors */
-		     SCIPindexListNodeFree(scip, &(g->ancestors[n1]));
-                     SCIPindexListNodeFree(scip, &(g->ancestors[Edge_anti(n1)]));
-                     SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors) );
-                     SCIP_CALL(  SCIPindexListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors) );
+		     SCIPintListNodeFree(scip, &(g->ancestors[n1]));
+                     SCIPintListNodeFree(scip, &(g->ancestors[Edge_anti(n1)]));
+                     SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[n1]), ancestors) );
+                     SCIP_CALL(  SCIPintListNodeAppendCopy(scip, &(g->ancestors[Edge_anti(n1)]), revancestors) );
                   }
                   (*count) += deleteterm(scip, g, i);
                   (*fixed) += g->prize[i];
-                  SCIPindexListNodeFree(scip, &(ancestors));
-                  SCIPindexListNodeFree(scip, &(revancestors));
+                  SCIPintListNodeFree(scip, &(ancestors));
+                  SCIPintListNodeFree(scip, &(revancestors));
                }
 	    }
          }

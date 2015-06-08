@@ -1556,7 +1556,7 @@ SCIP_RETCODE voronoi_radius(
                }
                else
                {
-                  graph_edge_add(adjgraph, nodesid[vbm], nodesid[vbk], ecost, ecost);
+                  graph_edge_add(scip, adjgraph, nodesid[vbm], nodesid[vbk], ecost, ecost);
                }
 
                if( SCIPisGT(scip, rad[vbk], path[k].dist + ((vbk == root)? cost[i] : costrev[i])) )
@@ -1721,7 +1721,7 @@ void voronoi_repair(
 	    {
                node1 = SCIPunionfindFind(uf, vbase[m]);
                node2 = SCIPunionfindFind(uf, vbase[k]);
-               if( state[m] == CONNECT && ((node1 == crucnode) ^ (node2 == crucnode)) && g->mark[m] && g->mark[vbase[m]]
+               if( state[m] == CONNECT && ((node1 == crucnode) != (node2 == crucnode)) && g->mark[m] && g->mark[vbase[m]]
                   && g->mark[node1] && g->mark[node2] && ((e == UNKNOWN) || SCIPisGT(scip,
                         (path[g->tail[e]].dist + cost[e] + path[g->head[e]].dist), path[k].dist + cost[i] + path[m].dist)) )
                   e = i;

@@ -48,7 +48,7 @@
 #define   DEFAULT_COUNTPRESOLTIME  TRUE
 #define   DEFAULT_REDUCTION    1
 #define   DEFAULT_MINELIMS     5
-#define   DEFAULT_PRETIMELIMIT -1
+#define   DEFAULT_PRETIMELIMIT -1.0
 
 #define STP_MODES "cfp" /* valid values for user parameter 'stp/mode' */
 

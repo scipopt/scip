@@ -197,7 +197,7 @@ extern void   graph_knot_chg(GRAPH*, int, int);
 extern SCIP_RETCODE   graph_knot_contract(SCIP*, GRAPH*, int, int);
 extern SCIP_RETCODE   graph_knot_contractpc(SCIP*, GRAPH*, int, int, int);
 extern void   graph_knot_contract_dir(GRAPH*, int, int);
-extern void   graph_edge_add(GRAPH*, int, int, double, double);
+extern void   graph_edge_add(SCIP*, GRAPH*, int, int, double, double);
 extern void   graph_edge_del(SCIP*, GRAPH*, int, SCIP_Bool);
 extern void   graph_edge_hide(GRAPH*, int);
 extern int    graph_edge_redirect(SCIP*, GRAPH*, int, int, int, SCIP_Real);

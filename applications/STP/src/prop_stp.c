@@ -80,7 +80,7 @@ SCIP_RETCODE fixedgevar(
    int*                  nfixed              /**< counter that is incriminated if variable could be fixed */
    )
 {
-   if( !(SCIPvarGetLbLocal(edgevar) > 0.5 || SCIPvarGetUbLocal(edgevar) < 0.5) )
+   if( !(SCIPvarGetLbGlobal(edgevar) > 0.5 || SCIPvarGetUbGlobal(edgevar) < 0.5) )
    {
       (*nfixed)++;
 
@@ -262,9 +262,6 @@ SCIP_DECL_PROPEXEC(propExecStp)
       {
          for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
          {
-            edgevar = vars[e];
-            redcost = SCIPgetVarRedcost(scip, edgevar);
-
 	    /* try to fix edge */
             SCIP_CALL( fixedgevar(scip, vars[e], &nfixed) );
 
@@ -280,7 +277,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
             redcost = SCIPgetVarRedcost(scip, edgevar);
             if( SCIPisGT(scip, pathdist[k] + redcost + vnoi[graph->head[e]].dist, minpathcost) )
                /* try to fix edge */
-               SCIP_CALL( fixedgevar(scip, vars[e], &nfixed) );
+               SCIP_CALL( fixedgevar(scip, edgevar, &nfixed) );
          }
       }
    }

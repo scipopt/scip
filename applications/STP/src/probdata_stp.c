@@ -35,10 +35,6 @@
 #include "scip/misc.h"
 #include "scip/struct_misc.h"
 
-#define   DEFAULT_COMPCENTRAL  1
-#define   DEFAULT_EMITGRAPH    FALSE
-#define   DEFAULT_REDUCTION    1
-
 #define CENTER_OK    0
 #define CENTER_DEG   1
 #define CENTER_SUM   2
@@ -2708,6 +2704,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
 	    {
                if( probdata->mode == MODE_PRICE )
                {
+		  assert(var != NULL);
                   SCIP_CALL( SCIPaddCoefLinear(scip, probdata->edgecons[path[tail].edge], var, 1.0) );
                }
                else

@@ -616,7 +616,7 @@ SCIP_RETCODE buildsolgraph(
          {
             (*edgeancestor)[j++] = i;
             (*edgeancestor)[j++] = i + 1;
-            graph_edge_add(newgraph, dnodemap[graph->tail[i]], dnodemap[graph->head[i]], graph->cost[i], graph->cost[i + 1]);
+            graph_edge_add(scip, newgraph, dnodemap[graph->tail[i]], dnodemap[graph->head[i]], graph->cost[i], graph->cost[i + 1]);
 
             /* (*edgeweight)[e]: number of solutions containing edge e */
             for( k = 0; k < heurdata->nselectedsols; k++ )
@@ -1014,18 +1014,18 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                fixed = FALSE;
 	       if( curr != NULL )
 	       {
-               while( curr != NULL )
-               {
-                  i++;
-                  avg += edgeweight[curr->index];
-                  if(  SCIPvarGetUbGlobal(vars[edgeancestor[curr->index]] ) < 0.5 )
-                     fixed = TRUE;
+                  while( curr != NULL )
+                  {
+                     i++;
+                     avg += edgeweight[curr->index];
+                     if(  SCIPvarGetUbGlobal(vars[edgeancestor[curr->index]] ) < 0.5 )
+                        fixed = TRUE;
 
-                  curr = curr->parent;
+                     curr = curr->parent;
+                  }
+                  avg = (double) avg / (double) i;
+                  assert(avg >= 1);
                }
-               avg = (double) avg / (double) i;
-               assert(avg >= 1);
-	    }
 	       /* is an ancestor edge fixed? */
                if( fixed )
                {
@@ -1097,6 +1097,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
          /* retransform solution found by TM heuristic */
          if( solgraph->terms > 1 )
          {
+	    assert(results != NULL);
             for( e = 0; e < nsoledges; e++ )
             {
                if( results[e] == CONNECT )
