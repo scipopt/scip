@@ -1368,23 +1368,34 @@ void cliqueCheck(
       SCIP_CLIQUE** cliques;
       int ncliques;
       int pos;
+      SCIP_VAR* var;
 
-      assert(i == 0 || SCIPvarGetIndex(clique->vars[i-1]) <= SCIPvarGetIndex(clique->vars[i]));
-      assert(i == 0 || clique->vars[i-1] != clique->vars[i] || clique->values[i-1] <= clique->values[i]);
-      ncliques = SCIPvarGetNCliques(clique->vars[i], clique->values[i]);
+      var = clique->vars[i];
+      assert(i == 0 || SCIPvarGetIndex(clique->vars[i-1]) <= SCIPvarGetIndex(var));
+      assert(i == 0 || clique->vars[i-1] != var || clique->values[i-1] <= clique->values[i]);
+      ncliques = SCIPvarGetNCliques(var, clique->values[i]);
 
-      assert(SCIPvarIsActive(clique->vars[i]) || ncliques == 0);
+      assert(SCIPvarIsActive(var) || ncliques == 0);
 
       /* cliquelist of inactive variables are already destroyed */
       if( ncliques == 0 )
          continue;
 
-      cliques = SCIPvarGetCliques(clique->vars[i], clique->values[i]);
+      cliques = SCIPvarGetCliques(var, clique->values[i]);
       pos = cliquesSearchClique(cliques, ncliques, clique);
-      assert(0 <= pos && pos < ncliques);
-      assert(cliques[pos] == clique);
-      assert(clique->index >= 0);
+
+      /* assert that the clique is correctly listed in all clique lists of unfixed variables. For fixed variables,
+       * we require that a clean up has been correctly scheduled, but not yet been processed
+       */
+      if( SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var) > 0.5 )
+      {
+         assert(0 <= pos && pos < ncliques);
+         assert(cliques[pos] == clique);
+      }
+      else
+         assert(0 <= clique->startcleanup && clique->startcleanup <= i);
    }
+   assert(clique->index >= 0);
 }
 #else
 #define cliqueCheck(clique) /**/
@@ -2323,8 +2334,9 @@ SCIP_RETCODE SCIPcliquetableAdd(
          break; /*lint !e850*/
       }
 
-      /* only column and loose variables may be member of a clique */
-      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN && SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE )
+      /* only unfixed column and loose variables may be member of a clique */
+      if( SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var) < 0.5 ||
+            (SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN && SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE) )
       {
          --nvars;
          clqvars[v] = clqvars[nvars];
@@ -2386,7 +2398,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
    if( nbdchgs != NULL )
       *nbdchgs += nlocalbdchgs;
 
-   /* did we stop early do to a pair of negated variables? */
+   /* did we stop early due to a pair of negated variables? */
    if( nvars == 0 || *infeasible )
    {
       BMSfreeBlockMemoryArray(blkmem, &clqvars, size);
