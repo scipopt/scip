@@ -2304,8 +2304,33 @@ SCIP_RETCODE SCIPcliquetableAdd(
 
          for( w = nvars - 1; w >= 0; --w )
          {
-            if( clqvars[w] != var )
+            SCIP_VAR* clqvar = clqvars[w];
+
+            /* the rare case where the same variable appears several times is handled later during sort and merge */
+            if( clqvar != var )
             {
+               SCIP_Bool clqval = clqvalues[w];
+
+               /* check if variable is fixed already and terminate with infeasible if this fixing contradicts the clique info */
+               if( SCIPvarGetLbGlobal(clqvar) > SCIPvarGetUbGlobal(clqvar) - 0.5 )
+               {
+
+                  /* check if fixing contradicts clique constraint */
+                  if( (clqval && SCIPvarGetLbGlobal(clqvar) > 0.5)
+                     || (! clqval && SCIPvarGetUbGlobal(clqvar) < 0.5) )
+                  {
+                     *infeasible = TRUE;
+
+                     return SCIP_OKAY;
+                  }
+
+                  continue;
+               }
+
+/* the following piece of code is disabled because it assumes the clqvars to be sorted which they aren't until the method
+ * sortAndMergeClique() is called
+ */
+#ifdef SCIP_DISABLED_CODE
                /* if one of the other variables occurs multiple times, we can
                 * 1) deduce infeasibility if it occurs with different values
                 * 2) wait for the last occurence to fix it
@@ -2319,11 +2344,13 @@ SCIP_RETCODE SCIPcliquetableAdd(
                   }
                   --w;
                }
+#endif
 
-               SCIP_CALL( SCIPvarFixBinary(clqvars[w], blkmem, set, stat, transprob, origprob, tree, reopt, lp,
-                     branchcand, eventqueue, cliquetable, !clqvalues[w], infeasible, &nlocalbdchgs) );
+               /* fix the variable */
+               SCIP_CALL( SCIPvarFixBinary(clqvar, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
+                     branchcand, eventqueue, cliquetable, !clqval, infeasible, &nlocalbdchgs) );
 
-               SCIPdebugMessage("fixed var %s with value %u to %d (was %s)\n", SCIPvarGetName(clqvars[w]), clqvalues[w], clqvalues[w] ? 0 : 1, *infeasible ? "infeasible" : "feasible");
+               SCIPdebugMessage("fixed var %s with value %u to %d (was %s)\n", SCIPvarGetName(clqvar), clqval, clqval ? 0 : 1, *infeasible ? "infeasible" : "feasible");
 
                if( *infeasible )
                   break;
