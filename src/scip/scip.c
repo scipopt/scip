@@ -15331,6 +15331,7 @@ SCIP_RETCODE SCIPfreeRepresentation(
    for( r = 0; r < nrepresentatives; r++ )
    {
       SCIP_CALL( SCIPreoptnodeDelete(&representatives[r], scip->mem->probmem) );
+      assert(representatives[r] == NULL);
    }
 
    return SCIP_OKAY;
@@ -15655,7 +15656,10 @@ SCIP_Real SCIPgetReoptSimilarity(
    assert(run1 > 0 && run1 <= scip->stat->nreoptruns);
    assert(run2 > 0 && run2 <= scip->stat->nreoptruns);
 
-   return SCIPreoptGetSimilarity(scip->reopt, scip->set, run1, run2, scip->transprob->vars, scip->transprob->nvars);
+   if( run1 == scip->stat->nreoptruns && run2 == run1-1 )
+      return SCIPreoptGetSimToPrevious(scip->reopt);
+   else
+      return SCIPreoptGetSimilarity(scip->reopt, scip->set, run1, run2, scip->transprob->vars, scip->transprob->nvars);
 }
 
 /** returns if a node should be reoptimized */
@@ -40046,7 +40050,7 @@ SCIP_RETCODE SCIPprintReoptStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  total            : %10d %10d\n", nsolsupdated, nimprovingsols);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f\n",
          (SCIP_Real)nsolsupdated/scip->stat->nreoptruns, (SCIP_Real)nimprovingsols/scip->stat->nreoptruns);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Inf Subtress       : %10d\n", SCIPreoptGetNInfSubtrees(scip->reopt));
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Inf Subtrees       : %10d\n", SCIPreoptGetNInfSubtrees(scip->reopt));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Restarts           :     global      local\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  first            : %10d         --\n", SCIPreoptGetFirstRestarts(scip->reopt));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  last             : %10d         --\n", SCIPreoptGetLastRestarts(scip->reopt));

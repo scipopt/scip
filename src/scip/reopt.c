@@ -577,22 +577,23 @@ SCIP_RETCODE reopttreeDeleteNode(
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    unsigned int          id,                 /**< id of a node */
-   SCIP_Bool             exitsolve           /**< delete at the end of the solving process (hard delete) */
+   SCIP_Bool             softreset           /**< delete at the end of the solving process */
    )
 {
    assert(reopttree != NULL );
    assert(id < reopttree->reoptnodessize);
    assert(reopttree->reoptnodes[id] != NULL );
 
-   if( exitsolve )
-   {
-      SCIP_CALL( reoptnodeDelete(&reopttree->reoptnodes[id], blkmem) );
-   }
-   else
+   if( softreset )
    {
       SCIP_CALL( reoptnodeReset(reopttree->reoptnodes[id], set, blkmem) );
    }
+   else
+   {
+      SCIP_CALL( reoptnodeDelete(&reopttree->reoptnodes[id], blkmem) );
+   }
 
+   assert(softreset || reopttree->reoptnodes[id] == NULL);
    assert(reopttree->reoptnodes[id] == NULL || reopttree->reoptnodes[id]->conss == NULL || reopttree->reoptnodes[id]->nconss == 0);
    assert(reopttree->reoptnodes[id] == NULL || reopttree->reoptnodes[id]->childids == NULL || reopttree->reoptnodes[id]->nchilds == 0);
 
@@ -640,7 +641,7 @@ SCIP_RETCODE soltreefreeNode(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_PRIMAL*          primal,             /**< the primal */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SOLNODE*         solnode             /**< node within the solution tree */
+   SCIP_SOLNODE**        solnode             /**< node within the solution tree */
    )
 {
    assert(reopt != NULL);
@@ -650,29 +651,28 @@ SCIP_RETCODE soltreefreeNode(
    assert(blkmem != NULL);
 
    /* free recursive right subtree */
-   if( solnode->rchild != NULL )
+   if( (*solnode)->rchild != NULL )
    {
-      SCIP_CALL( soltreefreeNode(reopt, set, primal, blkmem, solnode->rchild) );
+      SCIP_CALL( soltreefreeNode(reopt, set, primal, blkmem, &(*solnode)->rchild) );
    }
+   assert((*solnode)->rchild == NULL);
 
    /* free recursive left subtree */
-   if( solnode->lchild != NULL )
+   if( (*solnode)->lchild != NULL )
    {
-      SCIP_CALL( soltreefreeNode(reopt, set, primal, blkmem, solnode->lchild) );
+      SCIP_CALL( soltreefreeNode(reopt, set, primal, blkmem, &(*solnode)->lchild) );
    }
+   assert((*solnode)->lchild == NULL);
 
-   if( solnode->sol != NULL )
+   if( (*solnode)->sol != NULL )
    {
       assert(set->stage == SCIP_STAGE_PROBLEM);
 
-      SCIP_CALL( SCIPsolFree(&solnode->sol, blkmem, primal) );
+      SCIP_CALL( SCIPsolFree(&(*solnode)->sol, blkmem, primal) );
    }
 
    /* free this nodes */
-   if( solnode->lchild == NULL || solnode->rchild == NULL )
-   {
-      BMSfreeBlockMemoryNull(blkmem, &solnode);
-   }
+   BMSfreeBlockMemoryNull(blkmem, solnode);
 
    return SCIP_OKAY;
 }
@@ -693,7 +693,7 @@ SCIP_RETCODE freeSolTree(
    assert(blkmem != NULL);
 
    /* free all nodes recursive */
-   SCIP_CALL( soltreefreeNode(reopt, set, origprimal, blkmem, reopt->soltree->root) );
+   SCIP_CALL( soltreefreeNode(reopt, set, origprimal, blkmem, &reopt->soltree->root) );
 
    BMSfreeBlockMemoryArray(blkmem, &reopt->soltree->sols, reopt->runsize);
    BMSfreeBlockMemoryArray(blkmem, &reopt->soltree->nsols, reopt->runsize);
@@ -878,6 +878,7 @@ SCIP_RETCODE createReoptnode(
    if(reopttree->reoptnodes[id] == NULL )
    {
       SCIP_ALLOC( BMSallocBlockMemory(blkmem, &reopttree->reoptnodes[id]) ); /*lint !e866*/
+
       reopttree->reoptnodes[id]->conss = NULL;
       reopttree->reoptnodes[id]->nconss = 0;
       reopttree->reoptnodes[id]->consssize = 0;
@@ -1012,7 +1013,7 @@ SCIP_RETCODE freeReoptTree(
    assert(blkmem != NULL);
 
    /* free nodes */
-   SCIP_CALL( clearReoptnodes(reopttree, set, blkmem, TRUE) );
+   SCIP_CALL( clearReoptnodes(reopttree, set, blkmem, FALSE) );
 
    /* free the data */
    BMSfreeBlockMemoryArray(blkmem, &reopttree->reoptnodes, reopttree->reoptnodessize);
@@ -3660,7 +3661,7 @@ SCIP_RETCODE reoptGetLeaves(
    {
       unsigned int childid;
 
-      assert(*nleaves + 1 <= leavessize);
+      assert(*nleaves <= leavessize);
 
       childid = reopt->reopttree->reoptnodes[id]->childids[i];
       assert(childid < reopt->reopttree->reoptnodessize);
@@ -3676,7 +3677,7 @@ SCIP_RETCODE reoptGetLeaves(
          int nleaves2;
 
          nleaves2 = 0;
-         SCIP_CALL( reoptGetLeaves(reopt, childid, &leaves[l], leavessize, &nleaves2) );
+         SCIP_CALL( reoptGetLeaves(reopt, childid, &leaves[l], leavessize - l, &nleaves2) );
          l += nleaves2;
          (*nleaves) += nleaves2;
       }
@@ -3700,6 +3701,7 @@ SCIP_RETCODE reoptResetTree(
 
    /* clear the tree */
    SCIP_CALL( clearReoptnodes(reopt->reopttree, set, blkmem, softreset) );
+   assert(reopt->reopttree->nreoptnodes == 0);
 
    /* reset the dual constraint */
    if( reopt->dualcons != NULL )
@@ -3725,6 +3727,10 @@ SCIP_RETCODE reoptRestart(
 
    /* clear the tree */
    SCIP_CALL( reoptResetTree(reopt, set, blkmem, FALSE) );
+   assert(reopt->reopttree->nreoptnodes == 0);
+
+   /* allocate memory for the root node */
+   SCIP_CALL( createReoptnode(reopt->reopttree, set, blkmem, 0) );
 
    reopt->nglbrestarts += 1;
 
@@ -4049,8 +4055,8 @@ SCIP_RETCODE SCIPreoptCreate(
    (*reopt)->nglbrestarts = 0;
    (*reopt)->nlocrestarts = 0;
    (*reopt)->ntotallocrestarts = 0;
-   (*reopt)->firstrestart = -1;
-   (*reopt)->lastrestart = -1;
+   (*reopt)->firstrestart = 0;
+   (*reopt)->lastrestart = 0;
 
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*reopt)->prevbestsols, (*reopt)->runsize) );
    SCIP_ALLOC( BMSallocMemoryArray(&(*reopt)->objs, (*reopt)->runsize) );
@@ -5314,7 +5320,10 @@ SCIP_RETCODE SCIPreoptGetLeaves(
    assert(id < reopt->reopttree->reoptnodessize);
    assert(reopt->reopttree->reoptnodes[id] != NULL);
 
-   for(i = 0; i < reopt->reopttree->reoptnodes[id]->nchilds; i++)
+   for( i = 0; i < leavessize; i++ )
+      leaves[i] = 0;
+
+   for( i = 0; i < reopt->reopttree->reoptnodes[id]->nchilds; i++ )
    {
       unsigned int childid;
 
@@ -5330,7 +5339,11 @@ SCIP_RETCODE SCIPreoptGetLeaves(
       }
       else
       {
-         SCIP_CALL( reoptGetLeaves(reopt, childid, &leaves[*nleaves], leavessize, nleaves) );
+         int nleaves2;
+
+         nleaves2 = 0;
+         SCIP_CALL( reoptGetLeaves(reopt, childid, &leaves[*nleaves], leavessize - (*nleaves), &nleaves2) );
+         (*nleaves) += nleaves2;
       }
    }
 
@@ -5427,18 +5440,7 @@ SCIP_RETCODE SCIPreoptApplyCompression(
       /* get an empty slot*/
       id = (unsigned int) (size_t) SCIPqueueRemove(reopttree->openids);
       assert(1 <= id && id < reopttree->reoptnodessize);
-
-//      assert(reopttree->reoptnodes[id] == NULL);
-//      /* ensure that the slot is empty */
-//      if( reopttree->reoptnodes[id] != NULL )
-//      {
-//         assert(reopttree->reoptnodes[id]->nvars == 0);
-//         assert(reopttree->reoptnodes[id]->nconss == 0);
-//         assert(reopttree->reoptnodes[id]->nchilds == 0);
-//
-//         /* hard reset */
-//         SCIP_CALL( reopttreeDeleteNode(reopttree, set, blkmem, id, TRUE) );
-//      }
+      assert(reopttree->reoptnodes[id] == NULL);
 
       SCIP_CALL( createReoptnode(reopttree, set, blkmem, id) );
       assert(reopttree->reoptnodes[id] != NULL);
@@ -6438,6 +6440,7 @@ SCIP_RETCODE SCIPreoptnodeDelete(
    )
 {
    assert(reoptnode != NULL);
+   assert(blkmem != NULL);
 
    SCIP_CALL( reoptnodeDelete(reoptnode, blkmem) );
 

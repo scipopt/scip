@@ -75,7 +75,10 @@ SCIP_RETCODE sortIDs(
    }
 
    /* sort the ids in decreasing order */
-   SCIPsortDownRealPtr(lowerbounds, (void*) childids, nchildids);
+   SCIPsortDownRealInt(lowerbounds, childids, nchildids);
+
+   /* free buffer memory */
+   SCIPfreeBufferArray(scip, &lowerbounds);
 
    return SCIP_OKAY;
 }
