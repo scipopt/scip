@@ -2850,7 +2850,7 @@ SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
    assert(stat   != NULL);
    assert(nlp    != NULL);
 
-   if( !SCIPnlpHasSolution(nlp) )
+   if( nlp->solstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {
       SCIPerrorMessage("do not have NLP solution for computing NLP activity\n");
       return SCIP_ERROR;
