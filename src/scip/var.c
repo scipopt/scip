@@ -9764,9 +9764,20 @@ SCIP_RETCODE SCIPvarAddVlb(
                 *   b > 0, x >= b*z + d  <->  x == 0 -> z <= -d/b
                 *   b < 0, x >= b*z + d  <->  x == 0 -> z >= -d/b
                 */
+               SCIP_Real implbound;
+               implbound = -vlbconstant/vlbcoef;
+
+               /* tighten the implication bound if the variable is integer */
+               if( SCIPvarIsIntegral(vlbvar) )
+               {
+                  if( vlbcoef >= 0 )
+                     implbound = SCIPsetFloor(set, implbound);
+                  else
+                     implbound = SCIPsetCeil(set, implbound);
+               }
                SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
                      cliquetable, branchcand, eventqueue, FALSE, vlbvar, (vlbcoef >= 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER),
-                     -vlbconstant/vlbcoef, transitive, infeasible, nbdchgs) );
+                     implbound, transitive, infeasible, nbdchgs) );
             }
             else
             {
