@@ -19,7 +19,7 @@
  * @author Daniel Rehfeldt
  * @author Michael Winkler
  *
- * This file implements the reader/parser used to read the binpacking input data. For more details see \ref READER.
+ * This file implements the reader used to read and write Steiner tree problems.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

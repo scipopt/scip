@@ -513,7 +513,6 @@ SCIP_RETCODE buildsolgraph(
       /* count and mark selected nodes and edges */
       for( i = 0; i < nedges; i += 2 )
       {
-         /* */
          for( j = 0; j < heurdata->nselectedsols; j++ )
          {
             varsolval = SCIPgetSolVal(scip, sols[solselection[j]], vars[i]);
@@ -685,7 +684,6 @@ SCIP_DECL_HEURFREE(heurFreeRec)
    return SCIP_OKAY;
 }
 
-
 /** initialization method of primal heuristic (called after problem was transformed) */
 static
 SCIP_DECL_HEURINIT(heurInitRec)
@@ -717,52 +715,10 @@ SCIP_DECL_HEURINIT(heurInitRec)
    return SCIP_OKAY;
 }
 
-
-
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-static
-SCIP_DECL_HEUREXIT(heurExitRec)
-{  /*lint --e{715}*/
-   return SCIP_OKAY;
-}
-
-
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#if 0
-static
-SCIP_DECL_HEURINITSOL(heurInitsolRec)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rec primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define heurInitsolRec NULL
-#endif
-
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#if 0
-static
-SCIP_DECL_HEUREXITSOL(heurExitsolRec)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of rec primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#else
-#define heurExitsolRec NULL
-#endif
-
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecRec)
 {  /*lint --e{715}*/
-   SCIP_HEUR** heurs;
    SCIP_HEURDATA* heurdata;
    SCIP_HEURDATA* tmheurdata;
    SCIP_PROBDATA* probdata;
@@ -797,7 +753,6 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    int runs;
    int count;
    int solindex;
-   int nheurs;
    int nedges;
    int nnodes;
    int probtype;
@@ -963,14 +918,8 @@ SCIP_DECL_HEUREXEC(heurExecRec)
          assert(newsol != NULL);
 
          /* get TM heuristic data */
-         heurs = SCIPgetHeurs(scip);
-         nheurs = SCIPgetNHeurs(scip);
-         for( i = 0; i < nheurs; i++ )
-            if( strcmp(SCIPheurGetName(heurs[i]), "TM") == 0 )
-               break;
-
-         assert(i < nheurs);
-         tmheurdata = SCIPheurGetData(heurs[i]);
+         assert(SCIPfindHeur(scip, "TM") != NULL);
+         tmheurdata = SCIPheurGetData(SCIPfindHeur(scip, "TM"));
 
          /* presolve new graph */
 
@@ -1245,13 +1194,8 @@ SCIP_RETCODE SCIPincludeHeurRec(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyRec) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeRec) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitRec) );
-   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitRec) );
 
    /* add rec primal heuristic parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nusedsols",
-         "number of solutions to be taken into account",
-         &heurdata->nusedsols, FALSE, DEFAULT_NUSEDSOLS, 2, INT_MAX, NULL, NULL) );
-
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nwaitingsols",
          "number of solution findings to be in abeyance",
          &heurdata->nwaitingsols, FALSE, DEFAULT_NWAITINGSOLS, 1, INT_MAX, NULL, NULL) );

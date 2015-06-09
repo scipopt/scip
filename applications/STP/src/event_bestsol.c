@@ -15,9 +15,10 @@
 
 /**@file   event_bestsol.c
  * @brief  eventhdlr for best solution found
- * @author Stefan Heinz
- * @author Michael Winkler
  * @author Gerald Gamrath
+ * @author Daniel Rehfeldt
+ *
+ * Event handler for printing DIMACS solution file.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -100,7 +101,7 @@ SCIP_DECL_EVENTEXEC(eventExecBestsol)
 
    SCIP_CALL( SCIPprobdataWriteIntermediateSolution(scip) );
 
-#if 1
+#if 0
    /* perform bound-based reduction tests to fix variables */
    if( SCIPprobdataGetType(scip) == STP_HOP_CONS )
    {

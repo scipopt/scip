@@ -18,6 +18,8 @@
  * @author Stefan Heinz
  * @author Michael Winkler
  * @author Gerald Gamrath
+ *
+ * Event handler for printing DIMACS solution file.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

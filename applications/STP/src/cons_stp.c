@@ -328,7 +328,7 @@ SCIP_RETCODE sep_flow(
                sum += (xval != NULL) ? xval[ind] : 0.0;
             }
 
-            if( fabs(sum - 1.0) > EPSILON )
+            if( !SCIPisFeasEQ(scip, sum, 1.0) )
             {
                SCIP_Bool infeasible;
 
@@ -359,9 +359,7 @@ SCIP_RETCODE sep_flow(
          if( !flowsep )
             continue;
 
-         /* Jeder der Rausgeht, muss kleiner der Summe derer
-          * die reingehen sein.
-          */
+         /* the value of each outgoing edge needs to be smaller than the sum of the ingoing edges */
          for( j = g->outbeg[i]; j != EAT_LAST; j = g->oeat[j] )
          {
             ind = layer * g->edges + j;
@@ -372,7 +370,7 @@ SCIP_RETCODE sep_flow(
                ind  = layer * g->edges + k;
                sum += (xval != NULL) ? xval[ind] : 0.0;
             }
-            if( sum + EPSILON < 0.0 )
+            if( SCIPisFeasNegative(scip, sum) )
             {
                SCIP_Bool infeasible;
 
@@ -404,13 +402,11 @@ SCIP_RETCODE sep_flow(
             }
          }
 
-         /* consider only non terminals
-          */
+         /* consider only non terminals */
          if( g->term[i] == layer )
             continue;
 
-         /* input of a vertex has to be <= 1.0
-          */
+         /* input of a vertex has to be <= 1.0 */
          sum   = 0.0;
 
          for( k = g->inpbeg[i]; k != EAT_LAST; k = g->ieat[k] )
@@ -418,7 +414,7 @@ SCIP_RETCODE sep_flow(
             ind  = layer * g->edges + k;
             sum += (xval != NULL) ? xval[ind] : 1.0;
          }
-         if( sum - EPSILON > 1.0 )
+         if( SCIPisFeasGT(scip, sum, 1.0) )
          {
             SCIP_Bool infeasible;
 
@@ -458,7 +454,7 @@ SCIP_RETCODE sep_flow(
             ind = layer * g->edges + k;
             sum += (xval != NULL) ? xval[ind] : 0.0;
          }
-         if( sum + EPSILON < 0.0 )
+         if( SCIPisFeasNegative(scip, sum) )
          {
             SCIP_Bool infeasible;
 
@@ -558,13 +554,12 @@ SCIP_RETCODE sep_2cut(
 
    for( layer = 0; layer < g->layers; layer++ )
    {
-      /* For 2-terminal nets no cuts are necessary if flows are given
-       */
+      /* For 2-terminal nets no cuts are necessary if flows are given */
       if( flowsep && (g->locals[layer] == 2) )
          continue;
 
       for( i = 0; i < nedges; i++ )
-         cost[i] = (xval[layer * nedges + i] < (1.0 - SCIPepsilon(scip))) ? 1.0 : 0.0;
+         cost[i] = SCIPisFeasLT(scip, xval[layer * nedges + i], 1.0) ? 1.0 : 0.0;
 
       for( i = 0; i < nnodes; i++ )
       {
@@ -574,6 +569,7 @@ SCIP_RETCODE sep_2cut(
 
       graph_path_exec(scip, g, FSP_MODE, g->source[layer], cost, path);
 
+      /* search all terminals not connected to the root by the LP solution */
       for( i = 0, count = 0; i < nnodes; i++ )
       {
          if( (g->term[i] == layer) && (i != g->source[layer]) )
@@ -589,8 +585,7 @@ SCIP_RETCODE sep_2cut(
       count = 0;
       tsave = terms;
 
-      /* from source to terminal
-       */
+      /* from source to terminal */
       if( !nested_cut || disjunct_cut )
          set_capacity(g, layer, creep_flow, 0, capa, xval);
 
@@ -630,13 +625,8 @@ SCIP_RETCODE sep_2cut(
             }
             else
                break;
-#if 0
-            if (nested_cut || disjunct_cut)
-               for(k = p->beg[p->rcnt - 1]; k < p->nzcnt; k++)
-                  capa[p->ind[k] % nedges] = FLOW_FACTOR;
-#endif
          }
-         while( nested_cut );               /* Nested Cut ist KONSTANT ! */
+         while( nested_cut );               /* Nested Cut is CONSTANT ! */
       }
 
       /* back cuts enabled? */
@@ -689,7 +679,7 @@ SCIP_RETCODE sep_2cut(
                            ? -1 : 1)] = FLOW_FACTOR;
 #endif
             }
-            while( nested_cut );                /* Nested Cut ist KONSTANT ! */
+            while( nested_cut );                /* Nested Cut is CONSTANT ! */
 
             rerun = FALSE;
          }
@@ -924,7 +914,7 @@ SCIP_DECL_CONSPROP(consPropStp)
    graph = SCIPprobdataGetGraph(probdata);
    assert(graph != NULL);
 
-   /* for degree constraint model, check whether problem is infeasible */
+   /* for degree constrained model, check whether problem is infeasible */
    if( graph->stp_type == STP_DEG_CONS )
    {
       int k;
@@ -1022,7 +1012,6 @@ SCIP_RETCODE SCIPincludeConshdlrStp(
 
    /* create stp constraint handler data */
    SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
-   /* TODO: (optional) create constraint handler specific data here */
 
    conshdlr = NULL;
    /* include constraint handler */
@@ -1098,9 +1087,6 @@ SCIP_RETCODE SCIPcreateConsStp(
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, FALSE, TRUE, TRUE, TRUE, TRUE,
          FALSE, FALSE, FALSE, FALSE, FALSE) );
-
-   SCIPdebugMessage("created constraint: ");
-
 
    return SCIP_OKAY;
 }

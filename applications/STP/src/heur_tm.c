@@ -39,11 +39,11 @@
 #define HEUR_TIMING           (SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_EVALRUNS 15
-#define DEFAULT_INITRUNS 100
-#define DEFAULT_LEAFRUNS 15
-#define DEFAULT_ROOTRUNS 50
-#define DEFAULT_DURINGLPFREQ 10
+#define DEFAULT_EVALRUNS 15                  /**< number of runs */
+#define DEFAULT_INITRUNS 100                 /**< number of initial runs */
+#define DEFAULT_LEAFRUNS 15                  /**< number of runs at leafs */
+#define DEFAULT_ROOTRUNS 50                  /**< number of runs at the root */
+#define DEFAULT_DURINGLPFREQ 10              /**< frequency during LP solving */
 #define DEFAULT_TYPE  0
 #define DEFAULT_RANDSEED 0
 
@@ -76,6 +76,7 @@ struct SCIP_HeurData
    int                   leafruns;           /**< number of runs at leafs */
    int                   rootruns;           /**< number of runs at the root */
    int                   duringlpfreq;       /**< frequency during LP solving */
+   int                   type;               /**< Heuristic type: 0 automatic, 1 TM_SP, 2 TM_VORONOI, 3 TM_DIJKSTRA */
    int                   beststartnode;      /**< start node of the so far best found solution */
    unsigned int          randseed;           /**< seed value for random number generator */
    unsigned int          timing;             /**< timing for timing mask */
@@ -184,7 +185,6 @@ SCIP_RETCODE printGraph(
 
    return SCIP_OKAY;
 }
-
 #endif
 
 /* prune the (rooted) prize collecting Steiner tree in such a way that all leaves are terminals */
@@ -1478,12 +1478,9 @@ SCIP_RETCODE do_layer(
    SCIP_CALL( SCIPallocBufferArray(scip, &result, nedges) );
 
    /* get user parameter */
-   SCIP_CALL( SCIPgetIntParam(scip, "heuristics/"HEUR_NAME"/type", &mode) );
+   mode = heurdata->type;
    assert(mode == AUTO || mode == TM_SP || mode == TM_VORONOI || mode == TM_DIJKSTRA);
 
-#if 0
-   printf(" tmmode: %d -> ", mode);
-#endif
    if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING || graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
    {
       /* number of terminals small? */
@@ -1516,9 +1513,7 @@ SCIP_RETCODE do_layer(
             mode = TM_SP;
       }
    }
-#if 0
-   printf(" %d \n ", mode);
-#endif
+
    /* allocate memory according to selected mode */
    if( mode == TM_DIJKSTRA || graph->stp_type == STP_HOP_CONS )
    {
@@ -1652,7 +1647,7 @@ SCIP_RETCODE do_layer(
             }
 	 }
          SCIPsortRealInt(nodepriority, perm, nnodes);
-	 //printf("max priority: %f \n", max );
+
          for( k = nnodes - 1; k >= 0; k-- )
          {
             if( r >= nterms || r >= bbound )
@@ -1661,7 +1656,6 @@ SCIP_RETCODE do_layer(
             if( Is_term(graph->term[perm[k]]) )
             {
                start[r++] = perm[k];
-	       //printf("priority: %f \n", nodepriority[k] );
                perm[k] = -1;
             }
          }
@@ -1678,8 +1672,6 @@ SCIP_RETCODE do_layer(
             if( perm[k] != -1 && graph->mark[k] )
 	    {
                start[r++] = perm[k];
-               /* if( !Is_term(graph->term[perm[k]]) )
-	          printf("non term priority: %f \n", nodepriority[k] );*/
 	    }
 	 }
       }
@@ -1695,7 +1687,7 @@ SCIP_RETCODE do_layer(
                break;
 
          /* no, we still have to */
-         if( r == runs )
+         if( r == runs && runs > 0 )
             start[nexecs % runs] = best;
       }
    }
@@ -1800,8 +1792,6 @@ SCIP_RETCODE do_layer(
             z++;
          assert(z <= nterms - 2);
 
-         /* if( r == runs -1 )
-            printf("%d best: %d\n",terminalperm[runs - 1], best );*/
          /* if the edge has been fixed, continue*/
          if( edges_tz[terminalperm[z]] == UNKNOWN )
             continue;
@@ -1944,7 +1934,7 @@ SCIP_RETCODE do_layer(
             {
                min = obj;
                *bestnewstart = root;
-               //printf("SUCCESS!!! (*hopfactor): %f Obj(run: %d, ncall: %d)=%.12e, edgecount: %d  limit: %d \n", (*hopfactor), r, (int) nexecs, obj, edgecount, graph->hoplimit);
+
                for( e = 0; e < nedges; e++ )
                   best_result[e] = result[e];
                (*success) = TRUE;
@@ -1971,7 +1961,6 @@ SCIP_RETCODE do_layer(
                   (*hopfactor) = (*hopfactor) / (1.0 + fabs((double) edgecount - graph->hoplimit) / (double) graph->hoplimit);
                }
 
-               //printf("  new (*hopfactor): %f \n", (*hopfactor));
                assert(SCIPisGT(scip, (*hopfactor), 0.0));
             }
             else
@@ -1980,7 +1969,7 @@ SCIP_RETCODE do_layer(
             }
          }
          (*hopfactor) = bestfactor;
-         //printf("  final (*hopfactor): %f \n", (*hopfactor));
+
          for( e = 0; e < nedges; e++ )
             if( (SCIPisLT(scip, cost[e], BLOCKED )) )
                cost[e] = 1.0 + orgcost[e] / ((*hopfactor) * maxcost);
@@ -2014,6 +2003,7 @@ SCIP_RETCODE do_layer(
                assert(pathedge != NULL);
 	       for( i = 0; i < nnodes; i++ )
                   graph->mark[i] = (graph->grad[i] > 0);
+
                /* intialize shortest paths from all terminals */
                for( k = 0; k < nnodes; ++k )
                {
@@ -2028,12 +2018,6 @@ SCIP_RETCODE do_layer(
             }
 
             SCIP_CALL( do_tm_degcons(scip, graph, cost, costrev, pathdist, start[r], perm, result, cluster, pathedge, &(heurdata->randseed), connected, &solfound) );
-#if 0
-            if( solfound )
-               printf("success in run: %d  ", r);
-            else
-               printf("  FAIL in run: %d ", r);
-#endif
          }
          else if( mode == TM_SP )
          {
@@ -2074,7 +2058,7 @@ SCIP_RETCODE do_layer(
                edgecount++;
             }
          }
-         //printf(" Obj(run: %d, ncall: %d)=%.12e, count: %d  limit: %d \n", r, (int) nexecs, obj, edgecount, graph->hoplimit);
+
          SCIPdebugMessage(" Obj=%.12e\n", obj);
 
          if( SCIPisLT(scip, obj, min) && (graph->stp_type != STP_DEG_CONS || solfound) && !SCIPisStopped(scip) )
@@ -2083,9 +2067,6 @@ SCIP_RETCODE do_layer(
             {
                min = obj;
                *bestnewstart = start[r];
-#if 0
-               printf(" Obj(run: %d, ncall: %d)=%.12e, count: %d  limit: %d \n", r, (int) nexecs, obj, edgecount, graph->hoplimit);
-#endif
 
                for( e = 0; e < nedges; e++ )
                   best_result[e] = result[e];
@@ -2231,45 +2212,8 @@ SCIP_DECL_HEURINIT(heurInitTM)
    heurdata->randseed = 0;
 #endif
 
-   SCIPheurSetTimingmask(heur, (SCIP_HEURTIMING) heurdata->timing);
-
    return SCIP_OKAY;
 }
-
-
-/** deinitialization method of primal heuristic (called before transformed problem is freed) */
-static
-SCIP_DECL_HEUREXIT(heurExitTM)
-{  /*lint --e{715}*/
-   return SCIP_OKAY;
-}
-
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-#if 0
-static
-SCIP_DECL_HEURINITSOL(heurInitsolTM)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of TM primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#endif
-
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-#if 0
-static
-SCIP_DECL_HEUREXITSOL(heurExitsolTM)
-{  /*lint --e{715}*/
-   SCIPerrorMessage("method of TM primal heuristic not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
-
-   return SCIP_OKAY;
-}
-#endif
-
 
 /** execution method of primal heuristic */
 static
@@ -2408,7 +2352,6 @@ SCIP_DECL_HEUREXEC(heurExecTM)
    /* prize collecting problem and too many edges for the heuristic to handle? */
    if( graph->stp_type == STP_PRIZE_COLLECTING && graph->edges > pctrivialbound )
    {
-      printf("tm trivial\n");
       do_prizecoll_trivial(scip, graph, results);
    }
    else
@@ -2683,11 +2626,6 @@ SCIP_RETCODE SCIPincludeHeurTM(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyTM) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeTM) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitTM) );
-   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitTM) );
-#if 0
-   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolTM) );
-   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolTM) );
-#endif
    heurdata->ncalls = 0;
    heurdata->nlpiterations = -1;
    heurdata->nexecs = 0;
@@ -2718,7 +2656,7 @@ SCIP_RETCODE SCIPincludeHeurTM(
          &heurdata->duringlpfreq, FALSE, DEFAULT_DURINGLPFREQ, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/type",
          "Heuristic: 0 automatic, 1 TM_SP, 2 TM_VORONOI, 3 TM_DIJKSTRA",
-         NULL, FALSE, DEFAULT_TYPE, 0, 3, NULL, NULL) );
+         &heurdata->type, FALSE, DEFAULT_TYPE, 0, 3, NULL, NULL) );
    heurdata->hopfactor = DEFAULT_HOPFACTOR;
 
    (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "timing when heuristc should be called (%u:BEFORENODE, %u:DURINGLPLOOP, %u:AFTERLPLOOP, %u:AFTERNODE)", SCIP_HEURTIMING_BEFORENODE, SCIP_HEURTIMING_DURINGLPLOOP, SCIP_HEURTIMING_AFTERLPLOOP, SCIP_HEURTIMING_AFTERNODE);

@@ -40,6 +40,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           (SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)
+
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_DURINGROOT    TRUE
@@ -149,7 +150,6 @@ SCIP_RETCODE lca(
 
    return SCIP_OKAY;
 }
-
 
 /** checks whether node is crucial, i.e. a terminal or a vertex with degree at least 3 (w.r.t. the steinertree) */
 static
@@ -265,6 +265,7 @@ SCIP_RETCODE printGraph(
    return SCIP_OKAY;
 }
 #endif
+
 /** perform local heuristics */
 SCIP_RETCODE do_local(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -338,7 +339,7 @@ SCIP_RETCODE do_local(
    nodes[root].edge = -1;
 
 
-   /** VERTEX  INSERTION */
+   /* VERTEX INSERTION */
    newnverts = 0;
    if( graph->stp_type == STP_UNDIRECTED || graph->stp_type == STP_GRID || graph->stp_type == STP_OBSTACLES_GRID || graph->stp_type == GSTP )
    {
@@ -1489,6 +1490,7 @@ SCIP_RETCODE do_local(
 
                /* counts the nodes connected during the following 'preprocessing' */
                count = 0;
+
                /* try to connect the nodes of C (directly) to COMP(C), as a preprocessing for voronoi-repair */
                for( k = 0; k < nkpnodes; k++ )
                {
@@ -1787,7 +1789,6 @@ SCIP_RETCODE do_local(
 
          SCIP_CALL( SCIPprobdataPrintGraph2(graph,"TESTXX.gml", edgemark) );
          SCIPfreeBufferArray(scip, &edgemark);
-         assert(0);
 #endif
 
 
@@ -1935,41 +1936,6 @@ SCIP_DECL_HEURFREE(heurFreeLocal)
    return SCIP_OKAY;
 }
 
-
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-static
-SCIP_DECL_HEURINITSOL(heurInitsolLocal)
-{
-   SCIP_HEURDATA* heurdata;
-
-
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-
-   /* create heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   if( heurdata->duringroot && SCIPheurGetFreqofs(heur) == 0 )
-      SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_BEFORENODE);
-
-   return SCIP_OKAY;
-}
-
-
-/** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
-static
-SCIP_DECL_HEUREXITSOL(heurExitsolLocal)
-{
-   assert(heur != NULL);
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-
-   /* reset the timing mask to its default value */
-   SCIPheurSetTimingmask(heur, HEUR_TIMING);
-
-   return SCIP_OKAY;
-}
-
 /** execution method of primal heuristic */
 static
 SCIP_DECL_HEUREXEC(heurExecLocal)
@@ -2054,12 +2020,8 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    lastsolindices[v] = SCIPsolGetIndex(newsol);
 
    /* has the new solution been found by this very heuristic? */
-   if( SCIPsolGetHeur(newsol) != NULL && strcmp(SCIPheurGetName(SCIPsolGetHeur(newsol)), "local") == 0 )
+   if( SCIPsolGetHeur(newsol) == heur )
       return SCIP_OKAY;
-
-   /* reset the timing mask to its default value, unless the heuristic is called at the root node */
-   if( SCIPgetNNodes(scip) > 1 )
-      SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
    *result = SCIP_DIDNOTFIND;
 
@@ -2215,10 +2177,8 @@ SCIP_RETCODE SCIPincludeHeurLocal(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyLocal) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeLocal) );
-   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolLocal) );
-   SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolLocal) );
-   /* add local primal heuristic parameters */
 
+   /* add local primal heuristic parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "stp/duringroot",
          "should the heuristic be called during the root node?",
          &heurdata->duringroot, TRUE, DEFAULT_DURINGROOT, NULL, NULL) );

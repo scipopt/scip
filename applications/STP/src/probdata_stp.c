@@ -30,7 +30,6 @@
 #include "scip/scip.h"
 #include "cons_stp.h"
 #include "grph.h"
-#include "portab.h"
 #include "scip/cons_linear.h"
 #include "scip/misc.h"
 #include "scip/struct_misc.h"
@@ -47,7 +46,6 @@
 
 #define PRIZEA      0
 #define PRIZEB      1
-/*#define PRINT_PRESOL */
 
 
 /** @brief Problem data which is accessible in all places
@@ -108,10 +106,10 @@ struct SCIP_ProbData
  */
 static
 SCIP_RETCODE central_terminal(
-   SCIP*  scip,
-   GRAPH* g,
-   int*   central_term,
-   int    what
+   SCIP*                 scip,
+   GRAPH*                g,
+   int*                  central_term,
+   int                   what
    )
 {
    PATH*   path;
@@ -230,7 +228,7 @@ SCIP_RETCODE central_terminal(
    SCIPfreeBufferArray(scip, &cost);
    SCIPfreeBufferArray(scip, &path);
 
-   printf("Central Terminal is %d (min=%g, max=%g, old=%g)\n",
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Central Terminal is %d (min=%g, max=%g, old=%g)\n",
       center, minimum, maximum, oldval);
 
    *central_term = center;
@@ -280,7 +278,7 @@ SCIP_RETCODE probdataFree(
 {
    int e;
    int t;
-   SCIPdebugPrintf ("probdataFree \n");
+   SCIPdebugMessage("probdataFree \n");
    assert(scip != NULL);
    assert(probdata != NULL);
 
@@ -334,7 +332,6 @@ SCIP_RETCODE probdataFree(
          SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->prizecons)) );
       }
    }
-
 
    /* release path constraints */
    if( (*probdata)->mode == MODE_PRICE )
@@ -403,13 +400,15 @@ SCIP_RETCODE probdataPrintGraph(
    int m;
 
    assert(graph != NULL);
-   file = fopen((filename != NULL) ? filename : "graphX.gml", "w");
+   file = fopen((filename != NULL) ? filename : "stpgraph.gml", "w");
 
+#ifndef NDEBUG
    for( e = 0; e < graph->edges; e += 2 )
    {
       assert(graph->tail[e] == graph->head[e + 1]);
       assert(graph->tail[e + 1] == graph->head[e]);
    }
+#endif
 
    /* write GML format opening, undirected */
    SCIPgmlWriteOpening(file, FALSE);
@@ -460,19 +459,19 @@ SCIP_RETCODE createHopConstraint(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata            /**< problem data */
    )
-
 {
    GRAPH* graph;
    SCIP_Real rhs;
    assert(scip != NULL);
    assert(probdata != NULL);
 
-   SCIPdebugPrintf("createHopeConstraint \n");
+   SCIPdebugMessage("createHopeConstraint \n");
    graph = probdata->graph;
    assert(graph != NULL);
    rhs = graph->hoplimit;
-   SCIPdebugPrintf("Hop limit: %f \n ", rhs);
-   /* TODO with presolving contractions enabled one might set: set rhs = rhs - (number of fixed edges) */
+   SCIPdebugMessage("Hop limit: %f \n ", rhs);
+
+   /* @todo with presolving contractions enabled one might set rhs = rhs - (number of fixed edges) */
    SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->hopcons), "HopConstraint", 0, NULL, NULL,
          -SCIPinfinity(scip), rhs, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
@@ -498,7 +497,7 @@ SCIP_RETCODE createDegreeConstraints(
    assert(scip != NULL);
    assert(probdata != NULL);
 
-   SCIPdebugPrintf("createDegreeConstraints \n");
+   SCIPdebugMessage("createDegreeConstraints \n");
    graph = probdata->graph;
    nnodes = probdata->nnodes;
 
@@ -535,7 +534,7 @@ SCIP_RETCODE createPrizeConstraints(
    assert(probdata != NULL);
    graph = probdata->graph;
    realnterms = probdata->realnterms;
-   SCIPdebugPrintf("createPrizeConstraints \n");
+   SCIPdebugMessage("createPrizeConstraints \n");
 #if PRIZEB
    if( graph->stp_type != STP_ROOTED_PRIZE_COLLECTING )
    {
@@ -583,7 +582,6 @@ SCIP_RETCODE createPrizeConstraints(
             -SCIPinfinity(scip), 0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
       SCIP_CALL( SCIPaddCons(scip, probdata->prizeimplpcons[r]) );
    }
-   printf("r: %d, terms: %d \n", r, realnterms);
    assert(r == realnterms);
 #endif
 #endif
@@ -612,8 +610,9 @@ SCIP_RETCODE createConstraints(
 
    assert(scip != NULL);
    assert(probdata != NULL);
+   assert(probdata->mode != MODE_CUT);
 
-   SCIPdebugPrintf("createConstraints \n");
+   SCIPdebugMessage("createConstraints \n");
    graph = probdata->graph;
    nedges = probdata->nedges;
    nnodes = probdata->nnodes;
@@ -760,7 +759,7 @@ SCIP_RETCODE createVariables(
    assert(probdata != NULL);
 
    graph = probdata->graph;
-   SCIPdebugPrintf("createVariables \n");
+   SCIPdebugMessage("createVariables \n");
 
    /* if the graph reduction solved the whole problem, NULL is returned */
    if( graph != NULL )
@@ -790,7 +789,8 @@ SCIP_RETCODE createVariables(
             objint = objint && SCIPisIntegral(scip, graph->cost[e]);
          }
 
-#if  0
+#if 0
+         /* add constraint that sum of edge and its reverse needs to be at most 1 */
          for( e = 0; e < nedges; e=e+2 )
          {
             SCIP_CONS* cons;
@@ -1055,7 +1055,7 @@ SCIP_DECL_PROBCOPY(probcopyStp)
 {
    GRAPH* graphcopy;
 
-   SCIPdebugPrintf("########################## probcopy ###########################\n");
+   SCIPdebugMessage("########################## probcopy ###########################\n");
 
    SCIP_CALL( graph_copy(scip, sourcedata->graph, &graphcopy) );
    SCIP_CALL( graph_path_init(scip, graphcopy) );
@@ -1387,7 +1387,7 @@ SCIP_DECL_PROBCOPY(probcopyStp)
 static
 SCIP_DECL_PROBDELORIG(probdelorigStp)
 {
-   SCIPdebugPrintf("probdelorigStp \n");
+   SCIPdebugMessage("probdelorigStp \n");
 
    SCIPdebugMessage("free original problem data\n");
 
@@ -1415,7 +1415,7 @@ SCIP_DECL_PROBTRANS(probtransStp)
    SCIP_Real timelimit;
    SCIP_Bool update;
 
-   SCIPdebugPrintf("probtransStp \n");
+   SCIPdebugMessage("probtransStp \n");
 
    SCIP_CALL( SCIPgetBoolParam(scip, "stp/countpresoltime", &update) );
 
@@ -1558,7 +1558,7 @@ SCIP_DECL_PROBTRANS(probtransStp)
 
 static
 SCIP_DECL_PROBEXITSOL(probexitsolStp)
-{ /* lint --e{715} */
+{  /*lint --e{715}*/
    assert(scip != NULL);
    assert(probdata != NULL);
 
@@ -1628,12 +1628,10 @@ SCIP_DECL_PROBEXITSOL(probexitsolStp)
 static
 SCIP_DECL_PROBDELTRANS(probdeltransStp)
 {
-   SCIPdebugPrintf("probdeltransStp \n");
-
-
    SCIPdebugMessage("free transformed problem data\n");
 
    SCIP_CALL( probdataFree(scip, probdata) );
+
    return SCIP_OKAY;
 }
 
@@ -1681,10 +1679,10 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* create graph */
    SCIP_CALL( graph_load(scip, &graph, filename, &presolinfo) );
-#if 0
-      printf("load type :: %d \n\n", graph->stp_type);
-      printf("fixed: %f \n\n", presolinfo.fixed );
-#endif
+
+   SCIPdebugMessage("load type :: %d \n\n", graph->stp_type);
+   SCIPdebugMessage("fixed: %f \n\n", presolinfo.fixed );
+
    /* create problem data */
    SCIP_CALL( probdataCreate(scip, &probdata, graph) );
 
@@ -1819,7 +1817,10 @@ SCIP_RETCODE SCIPprobdataCreate(
       probdata->mode = MODE_PRICE;
    }
    else
+   {
+      assert(mode == 'c');
       probdata->mode = MODE_CUT;
+   }
 
    assert(graph != NULL );
 
@@ -1853,7 +1854,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    probdata->graph = graph;
 
-   /* */
+   /* create model */
    if( graph != NULL )
    {
       int t;
@@ -1956,6 +1957,8 @@ void SCIPprobdataSetGraph(
    GRAPH*                graph
    )
 {
+   assert(probdata != NULL);
+
    probdata->graph = graph;
 }
 
@@ -1965,6 +1968,8 @@ GRAPH* SCIPprobdataGetGraph(
    SCIP_PROBDATA*        probdata            /**< problem data */
    )
 {
+   assert(probdata != NULL);
+
    return probdata->graph;
 }
 
@@ -1975,6 +1980,8 @@ void SCIPprobdataSetOffset(
    SCIP_Real             offset              /**< the offset value */
    )
 {
+   assert(probdata != NULL);
+
    probdata->offset = offset;
 }
 
@@ -2039,7 +2046,7 @@ int SCIPprobdataGetNEdges(
    return probdata->nedges;
 }
 
-/** returns the number of terminals  */
+/** returns the number of terminals */
 int SCIPprobdataGetNTerms(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -2054,7 +2061,7 @@ int SCIPprobdataGetNTerms(
    return probdata->nterms;
 }
 
-/** returns the number of terminals without the root node  */
+/** returns the number of terminals without the root node */
 int SCIPprobdataGetRNTerms(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -2069,7 +2076,7 @@ int SCIPprobdataGetRNTerms(
    return probdata->realnterms;
 }
 
-/** returns root  */
+/** returns root */
 int SCIPprobdataGetRoot(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -2108,7 +2115,7 @@ SCIP_Real SCIPprobdataGetOffset(
 /** returns the variable for a given index */
 SCIP_VAR* SCIPprobdataGetedgeVarByIndex(
    SCIP*                 scip,               /**< SCIP data structure */
-   int                   idx
+   int                   idx                 /**< index of the edge */
    )
 {
    SCIP_PROBDATA* probdata;
@@ -2125,7 +2132,7 @@ SCIP_VAR* SCIPprobdataGetedgeVarByIndex(
 /** returns the LP solution values */
 SCIP_Real* SCIPprobdataGetXval(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol
+   SCIP_SOL*             sol                 /**< solution to get values from */
    )
 {
    SCIP_PROBDATA* probdata;
@@ -2193,8 +2200,6 @@ int* SCIPprobdataGetRTerms(
 
    return probdata->realterms;
 }
-
-
 
 /** returns the array with all edge variables */
 SCIP_VAR** SCIPprobdataGetEdgeVars(
@@ -2681,6 +2686,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
             SCIP_CALL( SCIPaddCoefLinear(scip, probdata->pathcons[t], var, 1.0) );
             SCIP_CALL( SCIPsetSolVal(scip, sol, var, 1.0) );
 	    pathvars[t] = var;
+            assert(var != NULL);
          }
          tail = probdata->realterms[t];
 
@@ -2715,6 +2721,11 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
 	    }
             tail = graph->tail[path[tail].edge];
          }
+         if( probdata->mode == MODE_PRICE )
+         {
+            assert(var != NULL);
+            SCIP_CALL( SCIPreleaseVar(scip, &var) );
+         }
       }
 
       /* store the new solution value */
@@ -2739,9 +2750,8 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
       SCIP_Bool feasible;
       int e;
       int nvars = probdata->nvars;
-      /* check whether the new solution is valid with respect to the original bounds */
-#if  1
 
+      /* check whether the new solution is valid with respect to the original bounds */
       for( e = 0; e < nvars; e++ )
       {
          if( SCIPisGT(scip, nval[e], SCIPvarGetUbGlobal(edgevars[e])) ||  SCIPisGT(scip, SCIPvarGetLbGlobal(edgevars[e]), nval[e]) )
@@ -2751,8 +2761,6 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
             return SCIP_OKAY;
          }
       }
-
-#endif
 
       /* post-processing of solution for MWCS and PCSPG */
       if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
@@ -2810,13 +2818,13 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
 
       SCIP_CALL( SCIPcheckSol(scip, sol, FALSE, TRUE, TRUE, TRUE, &feasible) );
 
-      SCIPdebugPrintf("checked sol: feasible=%u\n", feasible);
+      SCIPdebugMessage("checked sol: feasible=%u\n", feasible);
 
       /* check solution for feasibility in original problem space */
       if( !feasible )
       {
          SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
-         SCIPdebugPrintf("checked sol org: feasible=%u\n", feasible);
+         SCIPdebugMessage("checked sol org: feasible=%u\n", feasible);
 
          if( feasible )
          {
@@ -2863,7 +2871,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
 }
 
 
-/** print graph (in undirected form) in GML format */
+/** print graph (in undirected form) in GML format with given edges highlighted */
 SCIP_RETCODE SCIPprobdataPrintGraph2(
    const GRAPH*          graph,              /**< Graph to be printed */
    const char*           filename,           /**< Name of the output file */

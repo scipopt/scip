@@ -28,13 +28,10 @@
 #include "scip/misc.h"
 
 /* compares distances of two GNODE structures */
-int GNODECmpByDist(
-   void                  *first_arg,         /**< first argument */
-   void                  *second_arg         /**< second argument */
-   )
+SCIP_DECL_SORTPTRCOMP(GNODECmpByDist)
 {
-   SCIP_Real first = ((GNODE*)first_arg)->dist;
-   SCIP_Real second = ((GNODE*)second_arg)->dist;
+   SCIP_Real first = ((GNODE*)elem1)->dist;
+   SCIP_Real second = ((GNODE*)elem2)->dist;
    if( LT(first,second) )
    {
       return -1;
@@ -93,11 +90,14 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
       if( curr1 != NULL )
       {
          curr3 = *node1;
+         assert(curr3 != NULL);
+
          while( curr3 != last )
          {
             if( curr3->index == curr2->index )
                break;
             curr3 = curr3->parent;
+            assert(curr3 != NULL);
          }
          if( curr3 == last && curr3->index != curr2->index  )
          {
@@ -115,6 +115,7 @@ SCIP_RETCODE SCIPintListNodeAppendCopy(
       }
       if( curr3 == NULL )
       {
+         assert(new != NULL);
          new->index = curr2->index;
          curr1 = new;
       }
@@ -344,14 +345,6 @@ SCIP_RETCODE pairheapCombineSiblings(
    /* store all siblings in an array */
    for( nsiblings = 0; (*p) != NULL; nsiblings++ )
    {
-#if 0
-      /* if the last entry is reached, double the size of the array */
-      if( nsiblings == *size )
-      {
-         SCIP_CALL( phnode_double(scip, &treearray, *size) );
-         *size = *size * 2;
-      }
-#endif
       assert(size > nsiblings);
       treearray[nsiblings] = (*p);
       if( (*p)->prev != NULL )
@@ -481,10 +474,11 @@ void SCIPpairheapMeldheaps(
    assert(root2 != NULL);
    assert(sizeroot1 != NULL);
    assert(sizeroot2 != NULL);
+
    if( *root1 == NULL && *root2 == NULL )
    {
-      assert(sizeroot1 == 0);
-      assert(sizeroot2 == 0);
+      assert(*sizeroot1 == 0);
+      assert(*sizeroot2 == 0);
       return;
    }
 

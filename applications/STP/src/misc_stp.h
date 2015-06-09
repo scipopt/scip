@@ -106,6 +106,7 @@ void SCIPintListNodeFree(
    );
 
 /* compares distances of two GNODE structures */
+extern
 int GNODECmpByDist(
    void                  *first_arg,         /**< first argument */
    void                  *second_arg         /**< second argument */
@@ -244,6 +245,7 @@ void SCIPunionfindUnion(
    );
 
 /** frees the data fields of the union-find structure */
+extern
 void SCIPunionfindFree(
    SCIP*                 scip,               /**< SCIP data structure */
    UF*                   uf                  /**< union find data structure */

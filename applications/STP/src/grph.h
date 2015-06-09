@@ -292,12 +292,6 @@ extern SCIP_RETCODE    nv_reduction_optimal(SCIP*, GRAPH*, double*, int*, int);
 extern SCIP_RETCODE degree_test_dir(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE degree_test_pc(SCIP*, GRAPH*, SCIP_Real*, int*);
 
-/* bndtest.c
- */
-extern void get_close_terms(PATH**, double*, int*, int*, int*, int*, int, int);
-extern double compute_node_lb(double*, double*, int*, int*, int*, int, int, int, int, int*);
-extern SCIP_RETCODE bound_reduction(SCIP*, double, int*);
-
 /* validate.c
  */
 extern int    validate(const GRAPH*, const double*);

@@ -20,8 +20,7 @@
  * @author Daniel Rehfeldt
  * @author Michael Winkler
  *
- *
- *
+ * This file implements the reader used to read and write Steiner tree problems.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -95,11 +94,11 @@ SCIP_DECL_READERREAD(readerReadStp)
    SCIP_CALL( retcode );
 
    probdata = SCIPgetProbData(scip);
-   if( SCIPgetStage(scip) == SCIP_STAGE_INIT ||  probdata == NULL ) /*|| SCIPprobdataGetGraph(SCIPgetProbData(scip)) == NULL )*/
+   if( SCIPgetStage(scip) == SCIP_STAGE_INIT ||  probdata == NULL )
       return SCIP_READERROR;
-   else if(SCIPprobdataGetGraph(probdata) != NULL && mode == 'p'){
-      printf("activate pricer \n");
-      SCIP_CALL( SCIPsetBoolParam(scip, "lp/disablecutoff", TRUE) );
+   else if(SCIPprobdataGetGraph(probdata) != NULL && mode == 'p')
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "activate pricer\n");
 #if 0
       SCIP_CALL( SCIPsetBoolParam(scip, "propagating/pseudoobj/force", TRUE) );
 #endif

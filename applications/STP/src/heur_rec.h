@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rec.h
- * @ingroup PRIMALHEURISTICS
  * @brief  recombination heuristic for STPs
  * @author Daniel Rehfeldt
  *
@@ -36,11 +35,11 @@
 extern "C" {
 #endif
 
-   /** creates the rec primal heuristic and includes it in SCIP */
-   extern
-   SCIP_RETCODE SCIPincludeHeurRec(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
+/** creates the rec primal heuristic and includes it in SCIP */
+extern
+SCIP_RETCODE SCIPincludeHeurRec(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 #ifdef __cplusplus
 }
