@@ -15,8 +15,6 @@
 
 /**@file   event_bestsol.h
  * @brief  eventhdlr for best solution found
- * @author Stefan Heinz
- * @author Michael Winkler
  * @author Gerald Gamrath
  *
  * Event handler for printing DIMACS solution file.
