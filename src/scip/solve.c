@@ -1002,6 +1002,14 @@ SCIP_RETCODE updateEstimate(
 
    /* calculate the estimate: lowerbound + sum(min{f_j * pscdown_j, (1-f_j) * pscup_j}) */
    estimate = SCIPnodeGetLowerbound(focusnode);
+
+   /* an infinite lower bound implies an infinite estimate */
+   if( SCIPsetIsInfinity(set, estimate) )
+   {
+      SCIPnodeSetEstimate(focusnode, set, estimate);
+      return SCIP_OKAY;
+   }
+
    for( i = 0; i < nlpcands; ++i )
    {
       SCIP_Real pscdown;
