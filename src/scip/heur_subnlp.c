@@ -617,12 +617,12 @@ SCIP_RETCODE addLogicOrConstraints(
          coefssize = nvars;
       }
 
-      /* logic or constraints: 1 == sum_j x_j */
+      /* logic or constraints: 1 <= sum_j x_j */
 
       SCIP_CALL( SCIPcreateNlRow(scip, &nlrow, SCIPconsGetName(conss[i]), 0.0,
             nvars, SCIPgetVarsLogicor(scip, conss[i]), coefs,
             0, NULL, 0, NULL, NULL,
-            1.0, 1.0) );
+            1.0, SCIPinfinity(scip)) );
 
       SCIP_CALL( SCIPaddNlRow(scip, nlrow) );
       SCIP_CALL( SCIPreleaseNlRow(scip, &nlrow) );

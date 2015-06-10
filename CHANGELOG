@@ -243,6 +243,7 @@ interface:
   in cons_quadratic.h to compute linear under- and overestimation for bilinear and quadratic terms
 
 fixed bugs:
+- fix characterization of logic or constraints in SCIP's NLP relaxation
 - fix wrong handling of SCIP_NLPSOLSTAT_LOCALINFEASIBLE solution status in nlp.c
 - fix bug which lead to wrong global bound tightenings in prop_genvbounds.c
 - fix missing clean phase of bilinear terms with zero coefficient in cons_quadratic.c
