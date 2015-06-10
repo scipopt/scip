@@ -2605,7 +2605,6 @@ SCIP_RETCODE cliqueCleanup(
 
       }
       clique->nvars = w;
-      clique->startcleanup = -1;
 
       if( onefixedvar != NULL )
       {
@@ -2681,6 +2680,7 @@ SCIP_RETCODE cliqueCleanup(
 
          clique->nvars = 0;
          clique->equation = FALSE;
+         clique->startcleanup = -1;
 
          return SCIP_OKAY;
       }
@@ -2708,6 +2708,7 @@ SCIP_RETCODE cliqueCleanup(
 
             clique->nvars = 0;
             clique->equation = FALSE;
+            clique->startcleanup = -1;
 
             return SCIP_OKAY;
          }
