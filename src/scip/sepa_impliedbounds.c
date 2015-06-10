@@ -524,7 +524,7 @@ SCIP_RETCODE SCIPincludeSepaImpliedbounds(
    /* create impliedbounds separator data */
    SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
    assert(sepadata != NULL);
-   
+
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
