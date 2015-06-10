@@ -14645,6 +14645,12 @@ SCIP_RETCODE SCIPsolve(
             /* inform the reoptimization plugin that a new iteration starts */
             SCIP_CALL( SCIPreoptAddRun(scip->reopt, scip->set, scip->mem->probmem, scip->transprob->vars,
                   scip->transprob->nvars, scip->set->limit_maxsol) );
+
+            if( scip->stat->nreoptruns >= 2 )
+            {
+               assert(scip->transprob != NULL);
+               SCIP_CALL( SCIPreoptMergeVarHistory(scip->reopt, scip->stat, scip->transprob->vars, scip->transprob->nvars) );
+            }
          }
 
          if( scip->set->stage == SCIP_STAGE_SOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING )
@@ -14722,8 +14728,11 @@ SCIP_RETCODE SCIPsolve(
 
    /* we have to store all unprocessed nodes if reoptimization is enabled */
    if( scip->set->reopt_enable && scip->set->stage != SCIP_STAGE_PRESOLVING
-    && SCIPsolveIsStopped(scip->set, scip->stat, TRUE) && SCIPgetNNodesLeft(scip) > 0 )
+    && SCIPsolveIsStopped(scip->set, scip->stat, TRUE) )
    {
+      /* save unprocessed nodes */
+      if( SCIPgetNNodesLeft(scip) > 0 )
+      {
          SCIP_NODE** leaves;
          SCIP_NODE** children;
          SCIP_NODE** siblings;
@@ -14742,6 +14751,7 @@ SCIP_RETCODE SCIPsolve(
 
          /* add all open node to the reoptimization tree */
          SCIP_CALL( SCIPreoptSaveOpenNodes(scip->reopt, scip->set, scip->mem->probmem, leaves, nleaves, children, nchildren, siblings, nsiblings) );
+      }
    }
 
    /* release the CTRL-C interrupt */
@@ -14790,6 +14800,13 @@ SCIP_RETCODE SCIPsolve(
       }
 
       SCIPdebugMessage("-> saved %d solution.\n", nsols);
+
+      /* store variable history */
+      if( scip->set->reopt_storevarhistory )
+      {
+         SCIP_CALL( SCIPreoptUpdateVarHistory(scip->reopt, scip->set, scip->stat, scip->origprob, scip->transprob,
+               scip->mem->probmem, scip->transprob->vars, scip->transprob->nvars) );
+      }
    }
 
    /* stop solving timer */

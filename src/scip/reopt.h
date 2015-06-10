@@ -428,6 +428,28 @@ SCIP_RETCODE SCIPreoptSaveOpenNodes(
    int                   nsiblings           /**< number of open leave nodes */
    );
 
+/** merges the variable history of the current run with the stored history */
+extern
+SCIP_RETCODE SCIPreoptMergeVarHistory(
+   SCIP_REOPT*           reopt,
+   SCIP_STAT*            stat,
+   SCIP_VAR**            vars,
+   int                   nvars
+   );
+
+/** updates the variable history */
+extern
+SCIP_RETCODE SCIPreoptUpdateVarHistory(
+   SCIP_REOPT*           reopt,
+   SCIP_SET*             set,
+   SCIP_STAT*            stat,
+   SCIP_PROB*            origprob,
+   SCIP_PROB*            transprob,
+   BMS_BLKMEM*           blkmem,
+   SCIP_VAR**            vars,
+   int                   nvars
+   );
+
 /*
  * methods for reoptnode
  */

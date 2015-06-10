@@ -138,6 +138,8 @@ struct SCIP_Reopt
 
    SCIP_Longint          lastseennode;            /**< node number of the last caught event */
 
+   SCIP_HISTORY**        varhistory;
+
    /* data structure to track decisions based on dual information */
    SCIP_Longint          currentnode;             /**< number of the current node */
    LOGICORDATA*          dualcons;                /**< constraint describing bound changes based on dual information */
