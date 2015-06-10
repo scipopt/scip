@@ -2015,7 +2015,7 @@ SCIP_RETCODE lpiStrongbranches(
    BMSfreeMemoryArray(&dobjval);
    BMSfreeMemoryArray(&cbndtype);
    BMSfreeMemoryArray(&dbndval);
-   BMSfreeMemoryArray(&mbndind)
+   BMSfreeMemoryArray(&mbndind);
 
       return SCIP_OKAY;
 }
