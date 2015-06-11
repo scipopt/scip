@@ -86,7 +86,7 @@ SCIP_RETCODE Exec(
    /* get the corresponding node of the reoptimization tree */
    reoptnode = SCIPgetReoptnode(scip, curid);
    assert(reoptnode != NULL);
-   reopttype = SCIPreoptnodeGetType(reoptnode);
+   reopttype = (SCIP_REOPTTYPE)SCIPreoptnodeGetType(reoptnode);
 
 
    /* The current node is equal to the root and dual reductions were performed. Since the root has a special role
@@ -167,7 +167,7 @@ SCIP_RETCODE Exec(
       reoptnode = SCIPgetReoptnode(scip, childid);
       assert(reoptnode != NULL);
 
-      reopttype = SCIPreoptnodeGetType(reoptnode);
+      reopttype = (SCIP_REOPTTYPE)SCIPreoptnodeGetType(reoptnode);
       ncreatedchilds = 0;
 
       /* check whether node need to be split */
