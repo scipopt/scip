@@ -3505,9 +3505,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
                                                *  (-1: if we do not store sparsity informations) */
    )
 {
-   int* sub;
    int nrows;
-   int numnz;
    int i;
 
    SCIPdebugMessage("Calling SCIPlpiGetBInvCol (%d)\n",lpi->lpid);
@@ -3537,10 +3535,7 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef,               /**< vector to return coefficients */
-   int*                  inds,               /**< array to store the non-zero indices */
-   int*                  ninds               /**< pointer to store the number of non-zero indices
-                                               *  (-1: if we do not store sparsity informations) */
+   SCIP_Real*            coef                /**< vector to return coefficients */
    )
 {  /*lint --e{715}*/
    SCIP_Real* val;
@@ -3738,7 +3733,7 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    return SCIP_OKAY;
 }
 
-#if 0  /* already implemented above ! */
+
 /** get column of inverse basis matrix times constraint matrix B^-1 * A */
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
@@ -3814,7 +3809,7 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
 
    return SCIP_OKAY;
 }
-#endif
+
 
 /*
  * LP State Methods
