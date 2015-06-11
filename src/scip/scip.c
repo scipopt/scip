@@ -1487,7 +1487,7 @@ SCIP_RETCODE SCIPcopyPlugins(
    SCIP_Bool             copyconshdlrs,      /**< should the constraint handlers be copied */
    SCIP_Bool             copyconflicthdlrs,  /**< should the conflict handlers be copied */
    SCIP_Bool             copypresolvers,     /**< should the presolvers be copied */
-   SCIP_Bool             copyrelaxators,     /**< should the relaxation handlers  be copied */
+   SCIP_Bool             copyrelaxators,     /**< should the relaxation handlers be copied */
    SCIP_Bool             copyseparators,     /**< should the separators be copied */
    SCIP_Bool             copypropagators,    /**< should the propagators be copied */
    SCIP_Bool             copyheuristics,     /**< should the heuristics be copied */
@@ -1642,7 +1642,7 @@ SCIP_RETCODE SCIPcopyProb(
    SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables corresponding
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
-                                              *   target constraints, or NULL  */
+                                              *   target constraints, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
    const char*           name                /**< problem name of target */
    )
@@ -3227,7 +3227,7 @@ SCIP_RETCODE SCIPcopy(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
-   const char*           suffix,             /**< suffix which will be added to the names of the target SCIP, might be empty */
+   const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
    SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
                                               *   plugins will be copied and activated, and the modifiable flag of
@@ -4657,7 +4657,7 @@ SCIP_RETCODE SCIPsetReaderWrite(
 /** returns the reader of the given name, or NULL if not existing */
 SCIP_READER* SCIPfindReader(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of constraint handler */
+   const char*           name                /**< name of reader */
    )
 {
    assert(scip != NULL);
@@ -4713,8 +4713,7 @@ SCIP_RETCODE SCIPincludePricer(
                                               *   problem variables with negative reduced costs are found?
                                               *   if this is set to FALSE it may happen that the pricer produces columns
                                               *   that already exist in the problem (which are also priced in by the
-                                              *   default problem variable pricing in the same round)
-                                              */
+                                              *   default problem variable pricing in the same round) */
    SCIP_DECL_PRICERCOPY  ((*pricercopy)),    /**< copy method of variable pricer or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_PRICERFREE  ((*pricerfree)),    /**< destructor of variable pricer */
    SCIP_DECL_PRICERINIT  ((*pricerinit)),    /**< initialize variable pricer */
@@ -4773,8 +4772,7 @@ SCIP_RETCODE SCIPincludePricerBasic(
                                               *   problem variables with negative reduced costs are found?
                                               *   if this is set to FALSE it may happen that the pricer produces columns
                                               *   that already exist in the problem (which are also priced in by the
-                                              *   default problem variable pricing in the same round)
-                                              */
+                                              *   default problem variable pricing in the same round) */
    SCIP_DECL_PRICERREDCOST((*pricerredcost)),/**< reduced cost pricing method of variable pricer for feasible LPs */
    SCIP_DECL_PRICERFARKAS((*pricerfarkas)),  /**< Farkas pricing method of variable pricer for infeasible LPs */
    SCIP_PRICERDATA*      pricerdata          /**< variable pricer data */
@@ -6197,7 +6195,7 @@ SCIP_RETCODE SCIPincludePresolBasic(
 SCIP_RETCODE SCIPsetPresolCopy(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOL*          presol,             /**< presolver */
-   SCIP_DECL_PRESOLCOPY ((*presolcopy))     /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
+   SCIP_DECL_PRESOLCOPY ((*presolcopy))      /**< copy method of presolver or NULL if you don't want to copy your plugin into sub-SCIPs */
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPsetPresolCopy", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
