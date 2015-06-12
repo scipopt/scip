@@ -2991,10 +2991,11 @@ SCIP_RETCODE paramsetSetPresolvingDefault(
    /* explicitly reset parameters of knapsack constraint handler, if the constraint handler is included */
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "constraints/knapsack/disaggregation") );
 
-   /* explicitly reset restart parameters */
+   /* explicitly reset restart and maxrounds parameters */
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "presolving/maxrestarts") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "presolving/restartfac") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "presolving/restartminred") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "presolving/maxrounds") );
 
    /* explicitly reset probing parameters */
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "propagating/probing/maxuseless") );
@@ -3257,6 +3258,9 @@ SCIP_RETCODE paramsetSetPresolvingOff(
 
    /* explicitly turn off restarts */
    SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/maxrestarts", 0, quiet) );
+
+   /* set the maximum number of presolving rounds to zero */
+   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/maxrounds", 0, quiet) );
 
    return SCIP_OKAY;
 }
