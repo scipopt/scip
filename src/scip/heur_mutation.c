@@ -128,7 +128,8 @@ SCIP_RETCODE createSubproblem(
    j = 0;
    BMSclearMemoryArray(marked, nbinvars+nintvars);
 
-   /* leave the loop after at most that many iterations */
+   /* leave the loop after at most that many iterations
+    * @todo change this method to a single random permutation, which is guaranteed to succeed, and maybe even faster */
    maxiters = 3 * (nbinvars + nintvars);
 
    while( j < nmarkers && maxiters > 0 )

@@ -2852,10 +2852,11 @@ SCIP_RETCODE paramsetSetHeuristicsFast(
 {
    int i;
 
-#define NEXPENSIVEHEURFREQS 14
+#define NEXPENSIVEHEURFREQS 15
    static const char* const expensiveheurfreqs[NEXPENSIVEHEURFREQS] = {
       "heuristics/coefdiving/freq",
       "heuristics/crossover/freq",
+      "heuristics/distributiondiving/freq"
       "heuristics/feaspump/freq",
       "heuristics/fracdiving/freq",
       "heuristics/guideddiving/freq",
@@ -3791,7 +3792,8 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "branching/fullstrong/maxbounddist", 0.0, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "branching/relpscost/sbiterquot", 1.0, quiet) );
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "branching/relpscost/sbiterofs", 1000000, quiet) );
-
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "branching/relpscost/maxreliable", 10.0, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "branching/relpscost/usehyptestforreliability",TRUE, quiet) );
       break;
 
    default:
