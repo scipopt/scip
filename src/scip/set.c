@@ -1420,7 +1420,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "lp/lexdualalgo",
-         "should the lexicographic dual alogrithm be used?",
+         "should the lexicographic dual algorithm be used?",
          &(*set)->lp_lexdualalgo, TRUE, SCIP_DEFAULT_LP_LEXDUALALGO,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
@@ -1430,7 +1430,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/lexdualmaxrounds",
-         "maximum number of rounds in the  lexicographic dual algorithm (-1: unbounded)",
+         "maximum number of rounds in the lexicographic dual algorithm (-1: unbounded)",
          &(*set)->lp_lexdualmaxrounds, TRUE, SCIP_DEFAULT_LP_LEXDUALMAXROUNDS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
