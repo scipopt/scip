@@ -6493,7 +6493,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsIndicator)
          solval = SCIPgetSolVal(scip, sol, binvar);
 
          /* we only treat indicator variables with integral solution values that are not yet fixed */
-         if( SCIPisFeasIntegral(scip, solval) && SCIPvarGetLbLocal(binvar) < SCIPvarGetUbLocal(binvar) - 0.5 )
+         if( SCIPvarIsActive(binvar) && SCIPisFeasIntegral(scip, solval) && SCIPvarGetLbLocal(binvar) < SCIPvarGetUbLocal(binvar) - 0.5 )
          {
             SCIP_Real score;
             SCIP_Bool roundup;
