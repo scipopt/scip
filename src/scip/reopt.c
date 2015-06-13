@@ -5235,7 +5235,7 @@ int SCIPreoptGetNDualBndchgs(
    return ndualbndchgs;
 }
 
-/** returns the child nodes of @param node that need to be reoptimized next or NULL if @param node is a leaf */
+/** returns the child nodes of @p node that need to be reoptimized next or NULL if @p node is a leaf */
 SCIP_RETCODE SCIPreoptGetChildIDs(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SET*             set,                /**< global SCIP settings */

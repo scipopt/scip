@@ -70,7 +70,7 @@ void SCIPnodeGetAncestorBranchings(
    int                   branchvarssize      /**< available slots in arrays */
    );
 
-/** returns the set of variable branchings that were performed between the given @param node and the given @param parent node. */
+/** returns the set of variable branchings that were performed between the given @p node and the given @p parent node. */
 EXTERN
 void SCIPnodeGetAncestorBranchingsPart(
    SCIP_NODE*            node,               /**< node data */
