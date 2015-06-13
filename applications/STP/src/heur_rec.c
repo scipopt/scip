@@ -16,6 +16,8 @@
 /**@file   heur_rec.c
  * @brief  primal recombination heuristic for Steiner problems
  * @author Daniel Rehfeldt
+ *
+ * Recombination heuristic
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -97,11 +99,12 @@ SCIP_DECL_PARAMCHGD(paramChgdRandomseed)
    return SCIP_OKAY;
 }
 
+/** edge cost multiplier */
 static
 SCIP_Real costMultiplier(
-   SCIP*                 scip,
-   SCIP_HEURDATA*        heurdata,
-   SCIP_Real             avg
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
+   SCIP_Real             avg                 /**< number of solutions containing this edge */
    )
 {
    int factor = 1;
@@ -157,13 +160,13 @@ SCIP_Real costMultiplier(
 /** select solutions to be merged */
 static
 SCIP_RETCODE selectdiffsols(
-   SCIP*                 scip,
-   GRAPH*                graph,
-   SCIP_HEURDATA*        heurdata,
-   SCIP_VAR**            vars,
-   SCIP_SOL**            newsol,
-   int*                  selection,
-   SCIP_Bool*            success
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                graph,              /**< graph data structure */
+   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
+   SCIP_VAR**            vars,               /**< problem variables */
+   SCIP_SOL**            newsol,             /**< new solution */
+   int*                  selection,          /**< selected solutions */
+   SCIP_Bool*            success             /**< could at least two solutions be selected? */
    )
 {
    SCIP_Real* soltimes;
@@ -313,15 +316,14 @@ SCIP_RETCODE selectdiffsols(
    return SCIP_OKAY;
 }
 
-
 /** select solutions to be merged */
 static
 SCIP_RETCODE selectsols(
-   SCIP*                 scip,
-   SCIP_HEURDATA*        heurdata,
-   SCIP_SOL**            newsol,
-   int*                  selection,
-   SCIP_Bool             randomize
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
+   SCIP_SOL**            newsol,             /**< new solution */
+   int*                  selection,          /**< selected solutions */
+   SCIP_Bool             randomize           /**< select solutions randomly? */
    )
 {
    SCIP_Real* soltimes;
@@ -439,15 +441,15 @@ SCIP_RETCODE selectsols(
 /** merge selected solutions to a new graph */
 static
 SCIP_RETCODE buildsolgraph(
-   SCIP*              scip,
-   SCIP_HEURDATA*     heurdata,
-   SCIP_SOL**         newsol,
-   GRAPH*             graph,
-   GRAPH**            solgraph,
-   int**              edgeancestor,
-   int**              edgeweight,
-   SCIP_Bool*         success,
-   SCIP_Bool          randomize
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
+   SCIP_SOL**            newsol,             /**< new solution */
+   GRAPH*                graph,              /**< graph structure */
+   GRAPH**               solgraph,           /**< pointer to store new graph */
+   int**                 edgeancestor,       /**< ancestor to edge edge */
+   int**                 edgeweight,         /**< fore each edge: number of solution that contain this edge */
+   SCIP_Bool*            success,            /**< new graph constructed? */
+   SCIP_Bool             randomize           /**< select solution randomly? */
    )
 {
    GRAPH* newgraph;
@@ -783,20 +785,11 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    graph = SCIPprobdataGetGraph(probdata);
    assert(graph != NULL);
 
-   /* get edge variables */
-   vars = SCIPprobdataGetVars(scip);
-   assert(vars != NULL);
-   assert(vars[0] != NULL);
-
    probtype = graph->stp_type;
    nsols = SCIPgetNSolsFound(scip);
-   nedges = graph->edges;
-   nnodes = graph->knots;
-   results = NULL;
-   randomize = TRUE;
 
    /* only call heuristic, if sufficiently many solutions are available */
-   if( SCIPgetNSols(scip) < heurdata->nusedsols + 1 )
+   if( SCIPgetNSols(scip) < DEFAULT_NUSEDSOLS + 1 )
       return SCIP_OKAY;
 
    /* suspend heuristic? */
@@ -820,6 +813,17 @@ SCIP_DECL_HEUREXEC(heurExecRec)
          && heurdata->bestsolindex == SCIPsolGetIndex(SCIPgetBestSol(scip)) )
          return SCIP_OKAY;
    }
+
+   /* get edge variables */
+   vars = SCIPprobdataGetVars(scip);
+   assert(vars != NULL);
+   assert(vars[0] != NULL);
+
+   nedges = graph->edges;
+   nnodes = graph->knots;
+   results = NULL;
+   randomize = TRUE;
+
 
    heurdata->ncalls++;
    *result = SCIP_DIDNOTRUN;
@@ -1004,8 +1008,8 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             for( e = 0; e < nsoledges; e++ )
                results[e] = UNKNOWN;
             /* run TM heuristic */
-            SCIP_CALL( do_layer(scip, tmheurdata, solgraph, NULL, &best_start, results, nodepriority, heurdata->ntmruns,
-                  solgraph->source[0], cost, costrev, &hopfactor, maxcost, &success) );
+            SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, solgraph, NULL, &best_start, results, heurdata->ntmruns,
+                  solgraph->source[0], cost, costrev, &hopfactor, nodepriority, maxcost, &success) );
 
             if( !success )
             {
@@ -1025,7 +1029,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
             /* run local heuristic */
             if( solgraph->stp_type != STP_HOP_CONS && solgraph->stp_type != STP_MAX_NODE_WEIGHT && probtype != STP_DEG_CONS )
-               SCIP_CALL( do_local(scip, solgraph, cost, costrev, results) );
+               SCIP_CALL( SCIPheurImproveSteinerTree(scip, solgraph, cost, costrev, results) );
 
             if( probtype == STP_UNDIRECTED )
                assert(graph_sol_valid(scip, solgraph, results));
@@ -1083,11 +1087,11 @@ SCIP_DECL_HEUREXEC(heurExecRec)
          }
          /* prune solution (in the original graph) */
          if( probtype == STP_PRIZE_COLLECTING || probtype == STP_MAX_NODE_WEIGHT || probtype == STP_ROOTED_PRIZE_COLLECTING )
-            SCIP_CALL( do_pcprune(scip, graph, graph->cost, orgresults, stnodes) );
+            SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, orgresults, stnodes) );
          else if( probtype == STP_DEG_CONS )
-            SCIP_CALL( do_degprune(scip, graph, orgresults, stnodes) );
+            SCIP_CALL( SCIPheurPruneDegConsSteinerTree(scip, graph, orgresults, stnodes) );
          else
-            SCIP_CALL( do_prune(scip, graph, graph->cost, 0, orgresults, stnodes) );
+            SCIP_CALL( SCIPheurPruneSteinerTree(scip, graph, graph->cost, 0, orgresults, stnodes) );
 
          SCIPfreeBufferArray(scip, &stnodes);
          pobj = 0.0;
@@ -1107,7 +1111,6 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
          if( SCIPisGT(scip, SCIPgetSolOrigObj(scip, newsol) - SCIPprobdataGetOffset(scip), pobj) )
          {
-
             sol = NULL;
             SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
 
