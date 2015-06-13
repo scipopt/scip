@@ -42,14 +42,14 @@
 #define READER_DESC             "file reader for steiner tree data format"
 #define READER_EXTENSION        "stp"
 
-#define   DEFAULT_COMPCENTRAL  1
-#define   DEFAULT_EMITGRAPH    FALSE
-#define   DEFAULT_COUNTPRESOLTIME  TRUE
-#define   DEFAULT_REDUCTION    1
-#define   DEFAULT_MINELIMS     5
-#define   DEFAULT_PRETIMELIMIT -1.0
+#define   DEFAULT_COMPCENTRAL  1             /**< selection type for the root (for undirected STPs) */
+#define   DEFAULT_EMITGRAPH    FALSE         /**< emit graph? */
+#define   DEFAULT_COUNTPRESOLTIME  TRUE      /**< count presolving time as part of overall solution time? */
+#define   DEFAULT_REDUCTION    1             /**< reduction mode to apply */
+#define   DEFAULT_MINELIMS     5             /**< minimal number of eliminations to be achieved for reiteration of reduction methods */
+#define   DEFAULT_PRETIMELIMIT -1.0          /**< presolving time limit */
 
-#define STP_MODES "cfp" /* valid values for user parameter 'stp/mode' */
+#define STP_MODES "cfp" /**< valid values for user parameter 'stp/mode' */
 
 /**@} */
 
@@ -76,7 +76,7 @@ SCIP_DECL_READERCOPY(readerCopyStp)
 /** problem reading method of the reader */
 static
 SCIP_DECL_READERREAD(readerReadStp)
-{
+{  /*lint --e{715}*/
    SCIP_RETCODE          retcode;
    SCIP_PROBDATA*        probdata;
    char                  mode;
@@ -112,7 +112,7 @@ SCIP_DECL_READERREAD(readerReadStp)
 /** problem writing method of the reader */
 static
 SCIP_DECL_READERWRITE(readerWriteStp)
-{
+{  /*lint --e{715}*/
    const GRAPH* graph;
    SCIP_Real offset;
 

@@ -39,9 +39,9 @@ SCIP_RETCODE SCIPincludeHeurLocal(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** perform local heuristics */
+/** perform local heuristics on a given Steiner tree */
 extern
-SCIP_RETCODE do_local(
+SCIP_RETCODE SCIPheurImproveSteinerTree(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      cost,               /**< arc cost array */

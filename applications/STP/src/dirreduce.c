@@ -81,6 +81,7 @@ int deleteterm(
    }
    return count;
 }
+
 static
 SCIP_Bool maxprize(
    SCIP* scip,
@@ -90,23 +91,24 @@ SCIP_Bool maxprize(
 {
    int k;
    int t = -1;
-   SCIP_Real max = -1;
+   SCIP_Real max = -1.0;
    for( k = 0; k < g->knots; k++ )
    {
-      if( Is_term(g->term[k]) && g->mark[k] &&  g->grad[k] > 0 )
+      if( Is_term(g->term[k]) && g->mark[k] && g->grad[k] > 0 )
       {
+	 assert(k != g->source[0]);
 	 if( SCIPisGT(scip, g->prize[k], max) )
 	 {
             max = g->prize[k];
             t = k;
 	 }
-	 else if( t == i && SCIPisEQ(scip, g->prize[k], max) )
+	 else if( t == i && SCIPisGE(scip, g->prize[k], max) )
 	 {
 	   t = k;
 	 }
       }
    }
-
+//printf("maxprize: %f (from %d) \n", g->prize[t], t );
    return (t == i);
 }
 
@@ -290,7 +292,7 @@ SCIP_RETCODE degree_test_pc(
 
    nnodes = g->knots;
    *count = 0;
-//return SCIP_OKAY;
+
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &edges2, 2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes2, 2) );
@@ -306,10 +308,8 @@ SCIP_RETCODE degree_test_pc(
 
       for( i = 0; i < nnodes; i++ )
       {
-         if( i % 100 == 0 )
-            printf("dirdego \n");
          assert(g->grad[i] >= 0);
-         if( !g->mark[i] )
+         if( !g->mark[i] || g->grad[i] == 0 )
             continue;
 
          if( !Is_term(g->term[i]) )
@@ -379,8 +379,9 @@ SCIP_RETCODE degree_test_pc(
 	    /* if terminal node i is node the one with the highest prize, delete*/
             if( !maxprize(scip, g, i) )
             {
+	       //printf("delet 0 term %d prize: %f count:%d\n ", i, g->prize[i], *count);
+	       (*fixed) += g->prize[i];
                (*count) += deleteterm(scip, g, i);
-               //printf("delet 0 term %d\n ", i);
             }
          }
          /* terminal of (real) degree 1? */
@@ -392,6 +393,7 @@ SCIP_RETCODE degree_test_pc(
             assert(e != EAT_LAST);
 	    assert(g->head[e] != g->source[0] || !pc);
             (*count) += trydg1edgepc(scip, g, fixed, i, e, &rerun);
+	    //printf("delet 1 term %d\n ", i);
 	 }
 	 /* terminal of (real) degree 2? */
          else if( (g->grad[i] == 4 && pc) || (g->grad[i] == 3 && !pc) )
@@ -401,14 +403,15 @@ SCIP_RETCODE degree_test_pc(
                i2 = 0;
                for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
                {
-                  /*
-                    if( i2 >= 2 )
-                    for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-                    printf("edge: %d %d term? %d mark? %d \n", i, g->head[e], Is_term(g->term[g->head[e]]), g->mark[g->head[e]]);
-                  */
+
+
+
                   i1 = g->head[e];
                   if( g->mark[i1] )
                   {
+		    if( i2 >= 2 )
+                  //  for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
+                   // printf("edge: %d %d term? %d mark? %d \n", i, g->head[e], Is_term(g->term[g->head[e]]), g->mark[g->head[e]]);
 		     assert(i2 < 2);
                      edges2[i2] = e;
                      nodes2[i2++] = i1;
@@ -426,7 +429,7 @@ SCIP_RETCODE degree_test_pc(
                   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), g->ancestors[Edge_anti(e1)]) );
                   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors), g->ancestors[Edge_anti(e)]) );
                   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors), g->ancestors[e1]) );
-                  printf("delet - term - %d\n ", i);
+                 // printf("delet - term - %d\n ", i);
                   /* contract edge */
                   n1 = graph_edge_redirect(scip, g, e, nodes2[1], nodes2[0], g->cost[e] + g->cost[e1] - g->prize[i]);
                   //printf("after delet - term - %d\n ", i);
@@ -475,7 +478,7 @@ SCIP_RETCODE degree_test_pc(
                && SCIPisLE(scip, g->cost[ett], g->prize[g->head[ett]]) )
             {
                i1 = g->head[ett];
-               //printf("contract tt %d->%d\n ", i, i1);
+              // printf("contract tt %d->%d\n ", i, i1);
                assert(SCIPisLT(scip, mincost, FARAWAY));
                *fixed += g->cost[ett];
 	       (*count)++;

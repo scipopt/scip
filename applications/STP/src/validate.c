@@ -187,9 +187,13 @@ static void trail2(
 /*--- Parameter: Graph, Loesung.                                          ---*/
 /*--- Returns  : TRUE / FALSE                                             ---*/
 /*---------------------------------------------------------------------------*/
-int validate(
+/** validates whether a (LP) solution is feasible */
+SCIP_RETCODE SCIPvalidateStpSol(
+   SCIP* scip,
    const GRAPH*  g,
-   const double* xval)
+   const double* xval,
+   SCIP_Bool*    feasible
+		     )
 {
    char* connected;
    int   ret       = TRUE;
@@ -198,22 +202,19 @@ int validate(
    int   deg;
    int   e;
    assert(g         != NULL);
-   assert(connected != NULL);
    if( g->knots == 1 )
       return TRUE;
    assert(xval      != NULL);
 
-   connected = calloc((size_t)g->knots, sizeof(char));
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &connected, g->knots) );
+   //connected = calloc((size_t)g->knots, sizeof(char));
 
+     // assert(connected != NULL);
+   *feasible = FALSE;
    for(layer = 0; ret && (layer < g->layers); layer++)
    {
       if (layer > 0)
          memset(connected, 0, (size_t)g->knots * sizeof(char));
-#if 0
-      trail(g, g->source[layer], xval + layer * g->edges, -1,
-         memset(connected, 0, (size_t)g->knots * sizeof(char)),
-         0, param_get("MAX_HOPS")->i);
-#endif
 
 #if 1
       trail(g, g->source[layer], xval + layer * g->edges, -1,
@@ -234,21 +235,19 @@ int validate(
             if( deg > g->maxdeg[i] )
             {
                ret = FALSE;
-               printf("deg condition violated \n");
+               SCIPdebugMessage("deg condition violated \n");
                break;
             }
 
          }
-         /* Etwa ein Kreis ?
-          */
-         if (connected[i] >= 2)
+         /* circle? */
+         if( connected[i] >= 2)
          {
             ret = FALSE;
             break;
          }
 
-         /* Jemand noch einsam
-          */
+         /* vertex not reached? */
          if ((g->grad[i] > 0) && (g->term[i] == layer) && !connected[i])
          {
             ret = FALSE;
@@ -256,9 +255,10 @@ int validate(
          }
       }
    }
-   free(connected);
+   SCIPfreeBufferArray(scip, &connected);
+   //free(connected);
 
-   if (ret)
+   if( ret )
       ret = nail(g, xval);
 
    /* SCIP-Heuristiken können (z.B. durch Runden) Lösungen konstruieren, die einen Kreis aus Steiner-Knoten enthalten, der
@@ -279,5 +279,6 @@ int validate(
    }
 #endif
 #endif
-   return(ret);
+   *feasible = (SCIP_Bool) ret;
+   return SCIP_OKAY;;
 }

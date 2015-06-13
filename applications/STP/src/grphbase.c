@@ -1,21 +1,36 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*   Type....: Functions                                                     */
-/*   File....: grphbase.c                                                    */
-/*   Name....: Basic Graph Routines                                          */
-/*   Author..: Thorsten Koch                                                 */
-/*   Copyright by Author, All rights reserved                                */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   grphbase.c
+ * @brief  includes several methodes for Steiner problem graphs
+ * @author Thorsten Koch
+ * @author Daniel Rehfeldt
+ *
+ * This file contains several basic methods to process Steiner problem graphs.
+ * A graph can not be reduced in terms of edge or node size, but edges can be marked as
+ * EAT_FREE (to not be used anymore) and nodes may have degree one.
+ * The method 'graph_pack()' can be used to build a new graph, discarding those nodes and edges
+ *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /*lint -esym(750,GRPHBASE_C) -esym(766,stdlib.h) -esym(766,malloc.h)         */
 /*lint -esym(766,string.h)                                                   */
 
-/* Ein Graph wird initialisiert, und dannach veraendert sich die Anzahl
- * seiner Knoten 'g->knots' und Kanten 'g->edges' nicht mehr kleiner.
- * Allerdings kann der Grad eines Knotens auf 0 zurueckgehen und eine
- * Kante als EAT_FREE gekennzeichnet werden. Wird dann 'graph_pack()'
- * aufgerufen, werden diese Knoten und Kanten nicht uebernommen.
- */
+
 #define GRPHBASE_C
 #include "scip/misc.h"
 #include <stdio.h>
@@ -128,6 +143,7 @@ GRAPH* graph_init2(
 
 #endif
 
+/** initalize a graph */
 SCIP_RETCODE graph_init(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH**               g,                  /**< new graph */
@@ -154,6 +170,7 @@ SCIP_RETCODE graph_init(
    /* ancestor data for retransformation after reductions */
    p->fixedges = NULL;
    p->ancestors = NULL;
+   p->pcancestors = NULL;
    p->orgtail = NULL;
    p->orghead = NULL;
 
@@ -210,20 +227,24 @@ SCIP_RETCODE graph_init(
    return SCIP_OKAY;
 }
 
-/* initialize data structures required to keep track of reductions */
+/** initialize data structures required to keep track of reductions */
 SCIP_RETCODE graph_init_history(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph               /**< graph */
    )
 {
    IDX** ancestors;          /* ancestor lists array (over all edges) */
+   IDX** pcancestors;        /* ancestor lists array (over all nodes) */
    int* orgtail;             /* (original) tail of all orginal edges  */
    int* orghead;             /* (original) head of all orginal edges  */
    int e;
    int nedges;
+   SCIP_Bool pc;
 
    assert(scip != NULL);
    assert(graph != NULL);
+
+   pc = graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING;
 
    nedges = graph->edges;
 
@@ -249,10 +270,21 @@ SCIP_RETCODE graph_init_history(
       (ancestors)[e]->parent = NULL;
 
    }
+
+   if( pc )
+   {
+      int k;
+      int nnodes = graph->knots;
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(graph->pcancestors), nnodes) );
+      pcancestors = graph->pcancestors;
+      for( k = 0; k < nnodes; k++ )
+         pcancestors[k] = NULL;
+   }
+
    return SCIP_OKAY;
 }
 
-/* enlarge graph */
+/** enlarge the graph */
 SCIP_RETCODE graph_resize(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph to be resized */
@@ -925,7 +957,7 @@ SCIP_RETCODE graph_rootprize_transform(
 SCIP_RETCODE graph_maxweight_transform(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
-   SCIP_Real*            maxweights
+   SCIP_Real*            maxweights          /**< array containing the weight of each node */
    )
 {
    int e;
@@ -1020,6 +1052,21 @@ void graph_free(
          }
       }
       SCIPfreeMemoryArray(scip, &(p->ancestors));
+   }
+
+   if( p->pcancestors != NULL )
+   {
+      for( e = 0; e < p->knots; e++ )
+      {
+         curr = p->pcancestors[e];
+         while( curr != NULL )
+         {
+            p->pcancestors[e] = curr->parent;
+	    SCIPfreeMemory(scip, &(curr));
+            curr = p->pcancestors[e];
+         }
+      }
+      SCIPfreeMemoryArray(scip, &(p->pcancestors));
    }
 
    if( final )
@@ -1197,7 +1244,7 @@ void graph_ident(
    (void)printf("Graph Ident = %d\n", ident);
 }
 
-/* ARGSUSED */
+/** add a vertex */
 void graph_knot_add(
    GRAPH*                p,                  /**< the graph */
    int                   term                /**< terminal property */
@@ -1221,7 +1268,7 @@ void graph_knot_add(
    p->knots++;
 }
 
-/* ARGSUSED */
+/** change terminal property of a vertex */
 void graph_knot_chg(
    GRAPH*                p,                  /**< the graph */
    int                   node,               /**< node to be changed */
@@ -1250,7 +1297,7 @@ void graph_knot_chg(
    }
 }
 
-
+/** contract an edge, given by its endpoints */
 SCIP_RETCODE graph_knot_contract(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                p,                  /**< graph data structure */
@@ -1312,8 +1359,7 @@ SCIP_RETCODE graph_knot_contract(
       SCIP_CALL( SCIPallocBufferArray(scip, &revancestors, sgrad - 1) );
    }
 
-   /* Liste mit Kanten des aufzuloesenden Knotens merken
-    */
+   /* store edges to be moved/removed */
    for( es = p->outbeg[s]; es != EAT_LAST; es = p->oeat[es] )
    {
       assert(p->tail[es] == s);
@@ -1474,7 +1520,7 @@ SCIP_RETCODE graph_knot_contract(
    return SCIP_OKAY;
 }
 
-
+/** subtract a given sum from the prize of a terminal */
 void prize_subtract(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
@@ -2145,12 +2191,14 @@ SCIP_RETCODE graph_pack(
    int    i;
    int    nnodes;
    int    nedges;
+   SCIP_Bool pc;
 
    assert(scip      != NULL);
    assert(graph      != NULL);
    assert(graph_valid(graph));
 
    g = graph;
+   pc = g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING;
    nnodes = 0;
    nedges = 0;
    SCIP_CALL( SCIPallocBufferArray(scip, &new, g->knots) );
@@ -2219,12 +2267,24 @@ SCIP_RETCODE graph_pack(
    for( i = 0; i < nedges; i++ )
       q->ancestors[i] = NULL;
 
+   if( pc )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(q->pcancestors), nedges) );
+      for( i = 0; i < nnodes; i++ )
+         q->pcancestors[i] = NULL;
+   }
+
    /* add nodes (of positive degree) */
    for( i = 0; i < g->knots; i++ )
    {
       assert(g->term[i] < g->layers);
       if( g->grad[i] > 0 )
+      {
+         if( pc )
+            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(q->pcancestors[q->knots]), g->pcancestors[i]) );
+
          graph_knot_add(q, g->term[i]);
+      }
    }
 
    /* add edges */
@@ -2248,6 +2308,7 @@ SCIP_RETCODE graph_pack(
 
       SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(q->ancestors[q->edges]), g->ancestors[i]) );
       SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(q->ancestors[q->edges + 1]), g->ancestors[i + 1]) );
+
       graph_edge_add(scip, q, new[g->tail[i]], new[g->head[i]], g->cost[i], g->cost[Edge_anti(i)]);
    }
 

@@ -266,8 +266,8 @@ SCIP_RETCODE printGraph(
 }
 #endif
 
-/** perform local heuristics */
-SCIP_RETCODE do_local(
+/** perform local heuristics on a given Steiner tree */
+SCIP_RETCODE SCIPheurImproveSteinerTree(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          graph,              /**< graph data structure */
    const SCIP_Real*      cost,               /**< arc cost array */
@@ -496,9 +496,9 @@ SCIP_RETCODE do_local(
       if( newnverts > 0  )
       {
          if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
-            SCIP_CALL( do_pcprune(scip, graph, graph->cost, best_result, steinertree) );
+            SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, best_result, steinertree) );
          else
-            SCIP_CALL( do_prune(scip, graph, graph->cost, 0, best_result, steinertree) );
+            SCIP_CALL( SCIPheurPruneSteinerTree(scip, graph, graph->cost, 0, best_result, steinertree) );
 
          for( i = 0; i < nnodes; i++ )
             SCIPlinkcuttreeInit(&nodes[i]);
@@ -1962,6 +1962,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    int nedges;
    int* results;
    int* lastsolindices;
+   SCIP_Bool feasible;
    assert(heur != NULL);
    assert(scip != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -2063,8 +2064,8 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    {
       if( SCIPvarGetUbLocal(vars[e + 1]) < 0.5 )
       {
-         costrev[e] = 1e+10;
-         cost[e + 1] = 1e+10;
+         costrev[e] = BLOCKED;
+         cost[e + 1] = BLOCKED;
       }
       else
       {
@@ -2074,8 +2075,8 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
       if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
       {
-         costrev[e + 1] = 1e+10;
-         cost[e] = 1e+10;
+         costrev[e + 1] = BLOCKED;
+         cost[e] = BLOCKED;
       }
       else
       {
@@ -2103,20 +2104,23 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       }
 
       if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
-         SCIP_CALL( do_pcprune(scip, graph, graph->cost, results, steinertree) );
+         SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, results, steinertree) );
       else
-         SCIP_CALL( do_prune(scip, graph, graph->cost, 0, results, steinertree) );
+         SCIP_CALL( SCIPheurPruneSteinerTree(scip, graph, graph->cost, 0, results, steinertree) );
       SCIPfreeBufferArray(scip, &steinertree);
    }
 
    /* execute local heuristics */
-   SCIP_CALL( do_local(scip, graph, cost, costrev, results) );
+   SCIP_CALL( SCIPheurImproveSteinerTree(scip, graph, cost, costrev, results) );
 
    /* can we connect the network */
    for( v = 0; v < nvars; v++ )
       nval[v] = (results[v % nedges] == (v / nedges)) ? 1.0 : 0.0;
 
-   if( validate(graph, nval) )
+   SCIP_CALL( SCIPvalidateStpSol(scip, graph, nval, &feasible) );
+
+   /* solution feasible? */
+   if( feasible )
    {
       pobj = 0.0;
 

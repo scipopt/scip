@@ -103,19 +103,20 @@ struct SCIP_ConshdlrData
  * @{
  */
 
+
 /** add a cut */
 static
 SCIP_RETCODE cut_add(
-   SCIP*         scip,
-   SCIP_CONSHDLR* conshdlr,
-   const GRAPH*  g,
-   const int     layer,
-   const int     type,
-   const SCIP_Real* xval,
-   int* capa,
-   const int updatecapa,
-   int* ncuts,
-   SCIP_Bool* success
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   const GRAPH*          g,                  /**< graph data structure */
+   const int             layer,              /**< current layer, set to zero usually */
+   const int             type,               /**< type of cut */
+   const SCIP_Real*      xval,               /**< edge values */
+   int*                  capa,               /**< edges capacities (scaled) */
+   const int             updatecapa,         /**< update capacities? */
+   int*                  ncuts,              /**< pointer to store number of cuts */
+   SCIP_Bool*            success             /**< pointer to store whether add cut be added */
    )
 {
 
@@ -232,12 +233,12 @@ int graph_next_term(
 
 static
 void set_capacity(
-   const GRAPH*  g,
-   const int     layer,
-   const SCIP_Bool creep_flow,
-   const int     flip,
-   int*          capa,
-   const SCIP_Real* xval
+   const GRAPH*          g,                  /**< graph data structure */
+   const int             layer,              /**< current layer, usually set to zero  */
+   const SCIP_Bool       creep_flow,         /**< creep flow? */
+   const int             flip,               /**< reverse the flow? */
+   int*                  capa,               /**< edges capacities (scaled) */
+   const SCIP_Real*      xval                /**< edge values */
    )
 {
    int k;
@@ -270,14 +271,15 @@ void set_capacity(
    }
 }
 
+/** separate */
 static
 SCIP_RETCODE sep_flow(
-   SCIP* scip,
-   SCIP_CONSHDLR* conshdlr,
-   SCIP_CONSHDLRDATA* conshdlrdata,
-   SCIP_CONSDATA* consdata,
-   int maxcuts,
-   int* ncuts
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   int                   maxcuts,            /**< maximal number of cuts */
+   int*                  ncuts               /**< pointer to store number of cuts */
    )
 {
    GRAPH*  g;
@@ -497,15 +499,15 @@ SCIP_RETCODE sep_flow(
    return SCIP_OKAY;
 }
 
-
+/** separate 2-cuts */
 static
 SCIP_RETCODE sep_2cut(
-   SCIP* scip,
-   SCIP_CONSHDLR* conshdlr,
-   SCIP_CONSHDLRDATA* conshdlrdata,
-   SCIP_CONSDATA* consdata,
-   int maxcuts,
-   int* ncuts
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   int                   maxcuts,            /**< maximal number of cuts */
+   int*                  ncuts               /**< pointer to store number of cuts */
    )
 {
    const SCIP_Bool nested_cut   = conshdlrdata->nestedcut;
@@ -838,7 +840,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpStp)
    {
       consdata = SCIPconsGetData(conss[i]);
 
-      feasible = (SCIP_Bool) validate(consdata->graph, SCIPprobdataGetXval(scip, NULL));
+      SCIP_CALL( SCIPvalidateStpSol(scip, consdata->graph, SCIPprobdataGetXval(scip, NULL), &feasible) );
 
       if( !feasible )
       {
@@ -863,7 +865,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsStp)
    {
       consdata = SCIPconsGetData(conss[i]);
 
-      feasible = (SCIP_Bool) validate(consdata->graph, SCIPprobdataGetXval(scip, NULL));
+      SCIP_CALL( SCIPvalidateStpSol(scip, consdata->graph, SCIPprobdataGetXval(scip, NULL), &feasible) );
 
       if( !feasible )
       {
@@ -888,7 +890,7 @@ SCIP_DECL_CONSCHECK(consCheckStp)
    {
       consdata = SCIPconsGetData(conss[i]);
 
-      feasible = (SCIP_Bool) validate(consdata->graph, SCIPprobdataGetXval(scip, sol));
+      SCIP_CALL( SCIPvalidateStpSol(scip, consdata->graph, SCIPprobdataGetXval(scip, sol), &feasible) );
 
       if( !feasible )
       {

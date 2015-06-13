@@ -14,11 +14,17 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   probdata_stp.c
- * @brief  Problem data for stp problem
+ * @brief  Problem data for Steiner problems
  * @author Gerald Gamrath
  * @author Thorsten Koch
  * @author Michael Winkler
  * @author Daniel Rehfeldt
+ *
+ * This file implements the problem data for Steiner problems.
+ *
+ * The problem data contains the (preprocessed) graph, several constraints and further information.
+ *
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -34,18 +40,18 @@
 #include "scip/misc.h"
 #include "scip/struct_misc.h"
 
-#define CENTER_OK    0
-#define CENTER_DEG   1
-#define CENTER_SUM   2
-#define CENTER_MIN   3
-#define CENTER_ALL   4
+#define CENTER_OK    0           /**< do nothing */
+#define CENTER_DEG   1           /**< find maximum degree */
+#define CENTER_SUM   2           /**< find the minimum distance sum */
+#define CENTER_MIN   3           /**< find the minimum largest distance */
+#define CENTER_ALL   4           /**< find the minimum distance sum to all knots */
 
-#define MODE_CUT    0
-#define MODE_FLOW   1
-#define MODE_PRICE  2
+#define MODE_CUT    0           /**< branch and cut */
+#define MODE_FLOW   1           /**< use flow model */
+#define MODE_PRICE  2           /**< branch and price */
 
-#define PRIZEA      0
-#define PRIZEB      1
+#define PRIZEA      0           /**< use 2-cyle inequalities? */
+#define PRIZEB      1           /**< use symmetry inequalities in Prize collecting? */
 
 
 /** @brief Problem data which is accessible in all places
@@ -98,7 +104,9 @@ struct SCIP_ProbData
  * @{
  */
 
-/* what = CENTER_OK  : Do nothing
+ /*
+ * distinguishes a teminal as the root; with centertype
+ *      = CENTER_OK  : Do nothing
  *      = CENTER_DEG : find maximum degree
  *      = CENTER_SUM : find the minimum distance sum
  *      = CENTER_MIN : find the minimum largest distance
@@ -106,10 +114,10 @@ struct SCIP_ProbData
  */
 static
 SCIP_RETCODE central_terminal(
-   SCIP*                 scip,
-   GRAPH*                g,
-   int*                  central_term,
-   int                   what
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  central_term,       /**< pointer to store the selected (terminal) vertex */
+   int                   centertype          /**< type of root selection */
    )
 {
    PATH*   path;
@@ -129,12 +137,12 @@ SCIP_RETCODE central_terminal(
 
    *central_term = g->source[0];
 
-   if( what == CENTER_OK )
+   if( centertype == CENTER_OK )
       return SCIP_OKAY;
 
    /* Find knot of maximum degree.
     */
-   if( what == CENTER_DEG )
+   if( centertype == CENTER_DEG )
    {
       degree = 0;
 
@@ -179,7 +187,7 @@ SCIP_RETCODE central_terminal(
          assert((path[k].edge >= 0) || (k == i));
          assert((path[k].edge >= 0) || (path[k].dist == 0));
 
-         if( Is_term(g->term[k]) || (what == CENTER_ALL) )
+         if( Is_term(g->term[k]) || (centertype == CENTER_ALL) )
          {
             sum += path[k].dist;
 
@@ -188,7 +196,7 @@ SCIP_RETCODE central_terminal(
          }
       }
 
-      if( (what == CENTER_SUM) || (what == CENTER_ALL) )
+      if( (centertype == CENTER_SUM) || (centertype == CENTER_ALL) )
       {
          if( sum < minimum )
          {
@@ -203,7 +211,7 @@ SCIP_RETCODE central_terminal(
       }
       else
       {
-         assert(what == CENTER_MIN);
+         assert(centertype == CENTER_MIN);
 
          /* If the maximum distance to terminal ist shorter or if
           * it is of the same length but the degree of the knot is
@@ -240,7 +248,7 @@ static
 SCIP_RETCODE probdataCreate(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA**       probdata,           /**< pointer to problem data */
-   GRAPH*                graph               /**< graph */
+   GRAPH*                graph               /**< graph data structure */
    )
 {
    assert(scip != NULL);

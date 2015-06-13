@@ -65,10 +65,11 @@ SCIP_RETCODE fixedgevar(
    int*                  nfixed              /**< counter that is incriminated if variable could be fixed */
    )
 {
-   assert(SCIPvarGetLbLocal(edgevar) < 0.5);
-
-   if( SCIPvarGetUbLocal(edgevar) > 0.5 )
+  printf("fix?: %s \n", SCIPvarGetName(edgevar));
+  assert(SCIPvarGetLbLocal(edgevar) < 0.5);//...I004 ?*/
+   if( SCIPvarGetUbLocal(edgevar) > 0.5 && SCIPvarGetLbLocal(edgevar) < 0.5 )
    {
+      printf("fix: %s \n", SCIPvarGetName(edgevar));
       SCIP_CALL( SCIPchgVarUb(scip, edgevar, 0.0) );
       (*nfixed)++;
    }
@@ -122,6 +123,9 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    *result = SCIP_DIDNOTRUN;
 
+   if( 1 < 2 )
+      return SCIP_OKAY;
+
    /* propagator can only be applied during solving stage */
    if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
@@ -163,7 +167,10 @@ SCIP_DECL_PROPEXEC(propExecStp)
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;
-
+#if 0
+   cutoffbound = SCIPgetPrimalbound(scip);
+SCIP_Real offset = SCIPprobdataGetOffset(scip);
+#endif
    /* the required reduced path cost to be surpassed */
    minpathcost = cutoffbound - lpobjval;
    SCIPdebugMessage("cutoffbound %f, lpobjval %f\n", cutoffbound, lpobjval);
@@ -192,9 +199,9 @@ SCIP_DECL_PROPEXEC(propExecStp)
    graph_path_execX(scip, graph, graph->source[0], cost, pathdist, pathedge);
 
    /* no paths should go back to the root */
-   for( e = graph->outbeg[graph->source[0]]; e != EAT_LAST; e = graph->oeat[e] )
+/*   for( e = graph->outbeg[graph->source[0]]; e != EAT_LAST; e = graph->oeat[e] )
       costrev[e] = FARAWAY;
-
+*/
    /* build voronoi diagram */
    voronoi_terms(scip, graph, costrev, vnoi, vbase, graph->path_heap, graph->path_state);
 
@@ -204,7 +211,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
          if( Is_term(graph->term[k]) )
             continue;
 
-      if( !Is_term(graph->term[k]) && SCIPisGT(scip, pathdist[k] + vnoi[k].dist, minpathcost) )
+      if( 1 && !Is_term(graph->term[k]) && SCIPisGT(scip, pathdist[k] + vnoi[k].dist, minpathcost) )
       {
          for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
          {
@@ -215,7 +222,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
 	    SCIP_CALL( fixedgevar(scip, vars[flipedge(e)], &nfixed) );
          }
       }
-      else
+      else if (1)
       {
          for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
          {

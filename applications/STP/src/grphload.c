@@ -666,7 +666,7 @@ SCIP_RETCODE init_coordinates(
 
    for( i = 0; i < dim; i++ )
       (*coordinates)[i][*termcount] = (double)para[i + 1].n;
-
+//printf("add coord dim: %f, %f, %d \n", (double)para[1].n, (double)para[2].n, dim);
    (*termcount)++;
    return SCIP_OKAY;
 }
@@ -709,7 +709,8 @@ int get_scale_order(
 
 
 /* scales coordinates in such a way, that they become integer */
-static void scale_coords(
+static
+SCIP_RETCODE scale_coords(
    double** coordinates,
    int*** scaled_coords,
    int* scale_order,
@@ -727,7 +728,7 @@ static void scale_coords(
    assert(nnodes > 0);
    assert(grid_dim > 1);
 
-   *scaled_coords = (int**) malloc(grid_dim * sizeof(int*));
+   SCIP_CALL( SCIPallocMemoryArray(scip, scaled_coords, grid_dim) );
 
    for( i = 0; i < grid_dim; i++ )
       for( j = 0; j < nnodes; j++ )
@@ -742,13 +743,18 @@ static void scale_coords(
 
    *scale_order = max_order;
    scale_factor = (int) pow(10.0, (double) max_order);
-
+//printf("scalefactor %d \n", scale_factor);
    for( i = 0; i < grid_dim; i++ )
    {
-      (*scaled_coords)[i] = (int*) malloc(nnodes * sizeof(int));
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((*scaled_coords)[i]), nnodes) );
       for( j = 0; j < nnodes; j++ )
-         (*scaled_coords)[i][j] = (int) coordinates[i][j] * scale_factor;
+      {
+         (*scaled_coords)[i][j] = (int) (coordinates[i][j] * scale_factor);
+//printf("unscaled %f \n", (coordinates)[i][j] );
+//printf("scaled %d \n", (*scaled_coords)[i][j] );
+      }
    }
+   return SCIP_OKAY;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -1051,7 +1057,6 @@ SCIP_RETCODE graph_load(
                      stp_type = STP_OBSTACLES_GRID;
                   break;
                case KEY_GRAPH_HOPLIMIT :
-                  printf("HOP PROBLEM \n");
                   hoplimit = (int)para[0].n;
                   stp_type = STP_HOP_CONS;
                   break;
@@ -1242,12 +1247,10 @@ SCIP_RETCODE graph_load(
                case KEY_TERMINALS_GROUPS :
                   assert(stp_type == GSTP);
                   tgroups = (int)para[0].n;
-                  printf("ngroups: %d \n", tgroups);
                   presol->fixed -= tgroups * 1e+8;
                   for( i = 0; i < tgroups; i++ )
                   {
                      graph_knot_add(g, 0);
-
                   }
                   break;
                case KEY_TERMINALS_ROOT :
@@ -1349,7 +1352,7 @@ SCIP_RETCODE graph_load(
                   }
 
                   /* scale all coordinates such that they are integers */
-                  scale_coords(coordinates, &scaled_coordinates, &scale_order, nodes, grid_dim);
+                  SCIP_CALL( scale_coords(coordinates, &scaled_coordinates, &scale_order, nodes, grid_dim) );
 
 		  if( coordinates != NULL )
                   for( i = 0; i < grid_dim; i++ )
