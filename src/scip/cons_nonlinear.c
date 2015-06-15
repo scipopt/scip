@@ -5879,7 +5879,7 @@ SCIP_RETCODE registerLargeLPValueVariableForBranching(
          {
             var = SCIPexprtreeGetVars(consdata->exprtrees[j])[i];
             /* do not propose fixed variables */
-            if( SCIPisEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
+            if( SCIPisRelEQ(scip, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)) )
                continue;
             val = SCIPgetSolVal(scip, NULL, var);
             if( REALABS(val) > brvarval )
