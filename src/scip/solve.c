@@ -213,6 +213,10 @@ SCIP_RETCODE SCIPprimalHeuristics(
    if( set->nheurs == 0 || (heurtiming == SCIP_HEURTIMING_AFTERNODE && nextnode == NULL) )
       return SCIP_OKAY;
 
+   /* do not continue if we reached a time limit */
+   if( SCIPsolveIsStopped(set, stat, FALSE) )
+      return SCIP_OKAY;
+
    /* sort heuristics by priority, but move the delayed heuristics to the front */
    SCIPsetSortHeurs(set);
 
@@ -315,7 +319,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
       /* if the new solution cuts off the current node due to a new primal solution (via the cutoff bound) interrupt
        * calling the remaining heuristics
        */
-      if( result == SCIP_FOUNDSOL && (lowerbound > primal->cutoffbound || SCIPsolveIsStopped(set, stat, FALSE)) )
+      if( (result == SCIP_FOUNDSOL && lowerbound > primal->cutoffbound) || SCIPsolveIsStopped(set, stat, FALSE) )
          break;
 
       /* make sure that heuristic did not change probing or diving status */
