@@ -2502,83 +2502,83 @@ SCIP_RETCODE SCIPincludePropObbt(
    SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolObbt) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropObbt) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/creategenvbounds",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/creategenvbounds",
          "should obbt try to provide genvbounds if possible?",
          &propdata->creategenvbounds, TRUE, DEFAULT_CREATE_GENVBOUNDS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/normalize",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/normalize",
          "should coefficients in filtering be normalized w.r.t. the domains sizes?",
          &propdata->normalize, TRUE, DEFAULT_FILTERING_NORM, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/applyfilterrounds",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/applyfilterrounds",
          "try to filter bounds in so-called filter rounds by solving auxiliary LPs?",
          &propdata->applyfilterrounds, TRUE, DEFAULT_APPLY_FILTERROUNDS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/applytrivialfilter",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/applytrivialfilter",
          "try to filter bounds with the LP solution after each solve?",
          &propdata->applytrivialfilter, TRUE, DEFAULT_APPLY_TRIVIALFITLERING, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/genvbdsduringfilter",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/genvbdsduringfilter",
          "should we try to generate genvbounds during trivial and aggressive filtering?",
          &propdata->genvbdsduringfilter, TRUE, DEFAULT_GENVBDSDURINGFILTER, NULL, NULL) );
 
-  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/genvbdsduringsepa",
+  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/genvbdsduringsepa",
          "try to create genvbounds during separation process?",
          &propdata->genvbdsduringsepa, TRUE, DEFAULT_GENVBDSDURINGSEPA, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/minfilter",
+   SCIP_CALL( SCIPaddIntParam(scip, "propagating/" PROP_NAME "/minfilter",
          "minimal number of filtered bounds to apply another filter round",
          &propdata->nminfilter, TRUE, DEFAULT_FILTERING_MIN, 1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/itlimitfactor",
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/itlimitfactor",
          "multiple of root node LP iterations used as total LP iteration limit for obbt (<= 0: no limit )",
          &propdata->itlimitfactor, FALSE, DEFAULT_ITLIMITFACTOR, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddLongintParam(scip, "propagating/"PROP_NAME"/minitlimit",
+   SCIP_CALL( SCIPaddLongintParam(scip, "propagating/" PROP_NAME "/minitlimit",
          "minimum LP iteration limit",
          &propdata->minitlimit, FALSE, DEFAULT_MINITLIMIT, 0L, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/dualfeastol",
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/dualfeastol",
          "feasibility tolerance for reduced costs used in obbt; this value is used if SCIP's dual feastol is greater",
          &propdata->dualfeastol, FALSE, DEFAULT_DUALFEASTOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/conditionlimit",
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/conditionlimit",
          "maximum condition limit used in LP solver (-1.0: no limit)",
          &propdata->conditionlimit, FALSE, DEFAULT_CONDITIONLIMIT, -1.0, SCIP_REAL_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "propagating/"PROP_NAME"/boundstreps",
+   SCIP_CALL( SCIPaddRealParam(scip, "propagating/" PROP_NAME "/boundstreps",
          "minimal relative improve for strengthening bounds",
          &propdata->boundstreps, FALSE, DEFAULT_BOUNDSTREPS, 0.0, 1.0, NULL, NULL) );
 
-  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/onlynonconvexvars",
+  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/onlynonconvexvars",
          "only apply obbt on non-convex variables",
          &propdata->onlynonconvexvars, TRUE, DEFAULT_ONLYNONCONVEXVARS, NULL, NULL) );
 
-  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/tightintboundsprobing",
+  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/tightintboundsprobing",
          "should integral bounds be tightened during the probing mode?",
          &propdata->tightintboundsprobing, TRUE, DEFAULT_TIGHTINTBOUNDSPROBING, NULL, NULL) );
 
-  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/tightcontboundsprobing",
+  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/tightcontboundsprobing",
          "should continuous bounds be tightened during the probing mode?",
          &propdata->tightcontboundsprobing, TRUE, DEFAULT_TIGHTCONTBOUNDSPROBING, NULL, NULL) );
 
-  SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/orderingalgo",
+  SCIP_CALL( SCIPaddIntParam(scip, "propagating/" PROP_NAME "/orderingalgo",
         "select the type of ordering algorithm which should be used (0: no special ordering, 1: greedy, 2: greedy reverse)",
         &propdata->orderingalgo, TRUE, DEFAULT_ORDERINGALGO, 0, 2, NULL, NULL) );
 
-  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/separatesol",
+  SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/separatesol",
          "should the obbt LP solution be separated?",
          &propdata->separatesol, TRUE, DEFAULT_SEPARATESOL, NULL, NULL) );
 
-  SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/sepaminiter",
+  SCIP_CALL( SCIPaddIntParam(scip, "propagating/" PROP_NAME "/sepaminiter",
         "minimum number of iteration spend to separate an obbt LP solution",
         &propdata->sepaminiter, TRUE, DEFAULT_SEPAMINITER, 0, INT_MAX, NULL, NULL) );
 
-  SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/sepamaxiter",
+  SCIP_CALL( SCIPaddIntParam(scip, "propagating/" PROP_NAME "/sepamaxiter",
         "maximum number of iteration spend to separate an obbt LP solution",
         &propdata->sepamaxiter, TRUE, DEFAULT_SEPAMAXITER, 0, INT_MAX, NULL, NULL) );
 
-  SCIP_CALL( SCIPaddIntParam(scip, "propagating/"PROP_NAME"/propagatefreq",
+  SCIP_CALL( SCIPaddIntParam(scip, "propagating/" PROP_NAME "/propagatefreq",
         "trigger a propagation round after that many bound tightenings (0: no propagation)",
         &propdata->propagatefreq, TRUE, DEFAULT_PROPAGATEFREQ, 0, INT_MAX, NULL, NULL) );
 

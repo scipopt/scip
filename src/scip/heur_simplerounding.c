@@ -465,7 +465,7 @@ SCIP_RETCODE SCIPincludeHeurSimplerounding(
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolSimplerounding) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeSimplerounding) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/oncepernode",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/oncepernode",
          "should the heuristic only be called once per node?",
          &heurdata->oncepernode, TRUE, DEFAULT_ONCEPERNODE, NULL, NULL) );
 

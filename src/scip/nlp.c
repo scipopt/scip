@@ -5108,7 +5108,7 @@ SCIP_RETCODE SCIPnlpCreate(
    (*nlp)->eventhdlr = SCIPsetFindEventhdlr(set, EVENTHDLR_NAME);
    if( (*nlp)->eventhdlr == NULL )
    {
-      SCIPerrorMessage("NLP eventhandler <"EVENTHDLR_NAME"> not found.\n");
+      SCIPerrorMessage("NLP eventhandler <" EVENTHDLR_NAME "> not found.\n");
       return SCIP_PLUGINNOTFOUND;
    }
    SCIP_CALL( SCIPeventfilterAdd(set->scip->eventfilter, blkmem, set,

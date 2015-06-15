@@ -642,11 +642,11 @@ SCIP_RETCODE SCIPincludePropRedcost(
 
    /* add redcost propagator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/"PROP_NAME"/continuous",
+         "propagating/" PROP_NAME "/continuous",
          "should reduced cost fixing be also applied to continuous variables?",
          &propdata->continuous, FALSE, DEFAULT_CONTINUOUS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/"PROP_NAME"/useimplics",
+         "propagating/" PROP_NAME "/useimplics",
          "should implications be used to strength the reduced cost for binary variables?",
          &propdata->useimplics, FALSE, DEFAULT_USEIMPLICS, NULL, NULL) );
 

@@ -2159,59 +2159,59 @@ SCIP_RETCODE SCIPincludeHeurSubNlp(
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolSubNlp) );
 
    /* add Nlp primal heuristic parameters */
-   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/nlpverblevel",
+   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/nlpverblevel",
          "verbosity level of NLP solver",
          &heurdata->nlpverblevel, FALSE, 0, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/nlpiterlimit",
+   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/nlpiterlimit",
          "iteration limit of NLP solver; 0 to use solver default",
          &heurdata->nlpiterlimit, FALSE, 0, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/nlptimelimit",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nlptimelimit",
          "time limit of NLP solver; 0 to use solver default",
          &heurdata->nlptimelimit, FALSE, 0.0, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/"HEUR_NAME"/nlpoptfile",
+   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/" HEUR_NAME "/nlpoptfile",
          "name of an NLP solver specific options file",
          &heurdata->nlpoptfile, TRUE, "", NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/resolvetolfactor",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/resolvetolfactor",
          "if SCIP does not accept a NLP feasible solution, resolve NLP with feas. tolerance reduced by this factor (set to 1.0 to turn off resolve)",
          &heurdata->resolvetolfactor, TRUE, 0.001, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/resolvefromscratch",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/resolvefromscratch",
          "should the NLP resolve be started from the original starting point or the infeasible solution?",
          &heurdata->resolvefromscratch, TRUE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/iteroffset",
+   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/iteroffset",
          "number of iterations added to the contingent of the total number of iterations",
          &heurdata->iteroffset, FALSE, 500, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/iterquotient",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/iterquotient",
          "contingent of NLP iterations in relation to the number of nodes in SCIP",
          &heurdata->iterquot,  FALSE, 0.1, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/"HEUR_NAME"/itermin",
+   SCIP_CALL( SCIPaddIntParam (scip, "heuristics/" HEUR_NAME "/itermin",
          "contingent of NLP iterations in relation to the number of nodes in SCIP",
          &heurdata->itermin,   FALSE, 300, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/"HEUR_NAME"/runalways",
+   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/runalways",
          "whether to run NLP heuristic always if starting point available (does not use iteroffset,iterquot,itermin)",
          &heurdata->runalways, FALSE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minimprove",
          "factor by which NLP heuristic should at least improve the incumbent",
          &heurdata->minimprove, TRUE, 0.01, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxpresolverounds",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxpresolverounds",
          "limit on number of presolve rounds in sub-SCIP (-1 for unlimited, 0 for no presolve)",
          &heurdata->maxpresolverounds, TRUE, -1, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/"HEUR_NAME"/forbidfixings",
+   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/forbidfixings",
          "whether to add constraints that forbid specific fixings that turned out to be infeasible",
          &heurdata->forbidfixings, FALSE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/"HEUR_NAME"/keepcopy",
+   SCIP_CALL( SCIPaddBoolParam (scip, "heuristics/" HEUR_NAME "/keepcopy",
          "whether to keep SCIP copy or to create new copy each time heuristic is applied",
          &heurdata->keepcopy, TRUE, TRUE, NULL, NULL) );
 

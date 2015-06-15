@@ -723,59 +723,59 @@ SCIP_RETCODE SCIPincludeSepaRapidlearning(
    SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeRapidlearning) );
 
    /* add rapidlearning separator parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applyconflicts",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/applyconflicts",
          "should the found conflicts be applied in the original SCIP?",
          &sepadata->applyconflicts, TRUE, DEFAULT_APPLYCONFLICTS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applybdchgs",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/applybdchgs",
          "should the found global bound deductions be applied in the original SCIP?",
          &sepadata->applybdchgs, TRUE, DEFAULT_APPLYBDCHGS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applyinfervals",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/applyinfervals",
          "should the inference values be used as initialization in the original SCIP?",
          &sepadata->applyinfervals, TRUE, DEFAULT_APPLYINFERVALS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/reducedinfer",
-         "should the inference values only be used when "SEPA_NAME" found other reductions?",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/reducedinfer",
+         "should the inference values only be used when " SEPA_NAME " found other reductions?",
          &sepadata->reducedinfer, TRUE, DEFAULT_REDUCEDINFER, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applyprimalsol",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/applyprimalsol",
          "should the incumbent solution be copied to the original SCIP?",
          &sepadata->applyprimalsol, TRUE, DEFAULT_APPLYPRIMALSOL, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/applysolved",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/applysolved",
          "should a solved status be copied to the original SCIP?",
          &sepadata->applysolved, TRUE, DEFAULT_APPLYSOLVED, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/contvars",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/contvars",
          "should rapid learning be applied when there are continuous variables?",
          &sepadata->contvars, TRUE, DEFAULT_CONTVARS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "separating/"SEPA_NAME"/contvarsquot",
+   SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/contvarsquot",
          "maximal portion of continuous variables to apply rapid learning",
          &sepadata->contvarsquot, TRUE, DEFAULT_CONTVARSQUOT, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "separating/"SEPA_NAME"/lpiterquot",
+   SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/lpiterquot",
          "maximal fraction of LP iterations compared to node LP iterations",
          &sepadata->lpiterquot, TRUE, DEFAULT_LPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxnvars",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxnvars",
          "maximum problem size (variables) for which rapid learning will be called",
          &sepadata->maxnvars, TRUE, DEFAULT_MAXNVARS, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxnconss",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxnconss",
          "maximum problem size (constraints) for which rapid learning will be called",
          &sepadata->maxnconss, TRUE, DEFAULT_MAXNCONSS, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxnodes",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxnodes",
          "maximum number of nodes considered in rapid learning run",
          &sepadata->maxnodes, TRUE, DEFAULT_MAXNODES, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/minnodes",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/minnodes",
          "minimum number of nodes considered in rapid learning run",
          &sepadata->minnodes, TRUE, DEFAULT_MINNODES, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/copycuts",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &sepadata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 

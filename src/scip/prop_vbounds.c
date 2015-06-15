@@ -1913,22 +1913,22 @@ SCIP_RETCODE SCIPincludePropVbounds(
          eventExecVbound, (SCIP_EVENTHDLRDATA*)propdata) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/"PROP_NAME"/usebdwidening", "should bound widening be used to initialize conflict analysis?",
+         "propagating/" PROP_NAME "/usebdwidening", "should bound widening be used to initialize conflict analysis?",
          &propdata->usebdwidening, FALSE, DEFAULT_USEBDWIDENING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/"PROP_NAME"/useimplics", "should implications be propagated?",
+         "propagating/" PROP_NAME "/useimplics", "should implications be propagated?",
          &propdata->useimplics, FALSE, DEFAULT_USEIMPLICS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/"PROP_NAME"/usecliques", "should cliques be propagated?",
+         "propagating/" PROP_NAME "/usecliques", "should cliques be propagated?",
          &propdata->usecliques, FALSE, DEFAULT_USECLIQUES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/"PROP_NAME"/usevbounds", "should vbounds be propagated?",
+         "propagating/" PROP_NAME "/usevbounds", "should vbounds be propagated?",
          &propdata->usevbounds, FALSE, DEFAULT_USEVBOUNDS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/"PROP_NAME"/dotoposort", "should the bounds be topologically sorted in advance?",
+         "propagating/" PROP_NAME "/dotoposort", "should the bounds be topologically sorted in advance?",
          &propdata->dotoposort, FALSE, DEFAULT_DOTOPOSORT, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/"PROP_NAME"/sortcliques", "should cliques be regarded for the topological sort?",
+         "propagating/" PROP_NAME "/sortcliques", "should cliques be regarded for the topological sort?",
          &propdata->sortcliques, FALSE, DEFAULT_SORTCLIQUES, NULL, NULL) );
 
    return SCIP_OKAY;

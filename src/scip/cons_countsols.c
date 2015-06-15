@@ -1771,7 +1771,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", &active) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", &active) );
 
    switch( SCIPgetStage(scip) )
    {
@@ -1783,7 +1783,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
       /* activate constraint handler cons_countsols */
       if( !active )
       {
-         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", TRUE) );
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_TRANSFORMED:
@@ -1794,7 +1794,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
       /* reset cons_countsols activation */
       if( !active )
       {
-         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", FALSE) );
       }
       break;
 
@@ -1841,7 +1841,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", &active) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", &active) );
    SCIP_CALL( SCIPgetIntParam(scip, "presolving/maxrestarts", &nrestarts) );
 
    if( nrestarts != 0 )
@@ -1867,7 +1867,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       /* activate constraint handler cons_countsols */
       if( !active )
       {
-         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", TRUE) );
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_TRANSFORMED:
@@ -1879,7 +1879,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       /* reset activity status of constraint handler cons_countsols */
       if( !active )
       {
-         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", FALSE) );
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
@@ -1972,7 +1972,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       /* reset cons_countsols activation */
       if( !active )
       {
-         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", FALSE) );
       }
 
       /* evaluate retcode */
@@ -2506,23 +2506,23 @@ SCIP_RETCODE includeConshdlrCountsols(
 
    /* add countsols constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/active",
+         "constraints/" CONSHDLR_NAME "/active",
          "is the constraint handler active?",
          &conshdlrdata->active, FALSE, DEFAULT_ACTIVE, NULL, NULL));
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/sparsetest",
+         "constraints/" CONSHDLR_NAME "/sparsetest",
          "should the sparse solution test be turned on?",
          &conshdlrdata->sparsetest, FALSE, DEFAULT_SPARSETEST, NULL, NULL));
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/discardsols",
+         "constraints/" CONSHDLR_NAME "/discardsols",
          "is it allowed to discard solutions?",
          &conshdlrdata->discardsols, FALSE, DEFAULT_DISCARDSOLS, NULL, NULL));
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/collect",
+         "constraints/" CONSHDLR_NAME "/collect",
          "should the solutions be collected?",
          &conshdlrdata->collect, FALSE, DEFAULT_COLLECT, NULL, NULL));
    SCIP_CALL( SCIPaddLongintParam(scip,
-         "constraints/"CONSHDLR_NAME"/sollimit",
+         "constraints/" CONSHDLR_NAME "/sollimit",
          "counting stops, if the given number of solutions were found (-1: no limit)",
          &conshdlrdata->sollimit, FALSE, DEFAULT_SOLLIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL));
 
@@ -2575,10 +2575,10 @@ SCIP_RETCODE SCIPcount(
    SCIP_Bool active;
 
    /* activate constraint handler cons_countsols */
-   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", &active) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", &active) );
    if( !active )
    {
-      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", TRUE) );
    }
 
    /* check if the parameter setting allows a valid counting process */
@@ -2590,7 +2590,7 @@ SCIP_RETCODE SCIPcount(
    /* reset activity status of constraint handler cons_countsols */
    if( !active )
    {
-      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", FALSE) );
    }
 
    return SCIP_OKAY;

@@ -3693,47 +3693,47 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
    /* add pseudoobj propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/minuseless",
+         "propagating/" PROP_NAME "/minuseless",
          "minimal number of successive none binary variable propagator whithout a bound reduction before aborted",
          &propdata->minuseless, TRUE, DEFAULT_MINUSELESS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
-         "propagating/"PROP_NAME"/maxvarsfrac",
+         "propagating/" PROP_NAME "/maxvarsfrac",
          "maximal fraction of none binary variables with non-zero objective without a bound reduction before aborted",
          &propdata->maxvarsfrac, TRUE, DEFAULT_MAXVARSFRAC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/"PROP_NAME"/propfullinroot",
+         "propagating/" PROP_NAME "/propfullinroot",
          "do we want to propagate all none binary variables if we are propagating the root node",
          &propdata->propfullinroot, TRUE, DEFAULT_PROPFULLINROOT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/"PROP_NAME"/propcutoffbound",
+         "propagating/" PROP_NAME "/propcutoffbound",
          "propagate new cutoff bound directly globally",
          &propdata->propcutoffbound, TRUE, DEFAULT_PROPCUTOFFBOUND, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/"PROP_NAME"/force",
+         "propagating/" PROP_NAME "/force",
          "should the propagator be forced even active pricer are present?",
          &propdata->force, TRUE, DEFAULT_FORCE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/maxnewvars",
+         "propagating/" PROP_NAME "/maxnewvars",
          "number of variable added after the propgatore is reinitialized?",
          &propdata->maxnewvars, TRUE, DEFAULT_MAXNEWVARS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/"PROP_NAME"/propuseimplics",
+         "propagating/" PROP_NAME "/propuseimplics",
          "use implications to strengthen the propagation of binary variable (increasing the objective change)?",
          &propdata->propuseimplics, TRUE, DEFAULT_PROPUSEIMPLICS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/"PROP_NAME"/respropuseimplics",
+         "propagating/" PROP_NAME "/respropuseimplics",
          "use implications to strengthen the resolve propagation of binary variable (increasing the objective change)?",
          &propdata->respropuseimplics, TRUE, DEFAULT_RESPROPUSEIMPLICS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/maximplvars",
+         "propagating/" PROP_NAME "/maximplvars",
          "maximum number of binary variables the implications are used if turned on (-1: unlimited)?",
          &propdata->maximplvars, TRUE, DEFAULT_MAXIMPLVARS, -1, INT_MAX, NULL, NULL) );
 

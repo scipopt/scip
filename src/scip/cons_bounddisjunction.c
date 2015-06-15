@@ -2980,7 +2980,7 @@ SCIP_RETCODE SCIPincludeConshdlrBounddisjunction(
 
    /* create conflict handler parameter */
    SCIP_CALL( SCIPaddRealParam(scip,
-         "conflict/"CONSHDLR_NAME"/continuousfrac", "maximal percantage of continuous variables within a conflict",
+         "conflict/" CONSHDLR_NAME "/continuousfrac", "maximal percantage of continuous variables within a conflict",
          &conflicthdlrdata->continuousfrac, FALSE, DEFAULT_CONTINUOUSFRAC, 0.0, 1.0, NULL, NULL) );
 
    /* create conflict handler for bound disjunction constraints */

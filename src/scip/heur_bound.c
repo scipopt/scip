@@ -366,15 +366,15 @@ SCIP_RETCODE SCIPincludeHeurBound(
 
    /* add bound heuristic parameters */
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/onlywithoutsol",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/onlywithoutsol",
          "Should heuristic only be executed if no primal solution was found, yet?",
          &heurdata->onlywithoutsol, TRUE, DEFAULT_ONLYWITHOUTSOL, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxproprounds",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxproprounds",
          "maximum number of propagation rounds during probing (-1 infinity, -2 parameter settings)",
          &heurdata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -1, INT_MAX/4, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/bound",
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/bound",
          "to which bound should integer variables be fixed? ('l'ower, 'u'pper, or 'b'oth)",
          &heurdata->bound, FALSE, DEFAULT_BOUND, "lub", NULL, NULL) );
 

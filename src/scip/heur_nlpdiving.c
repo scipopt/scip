@@ -42,7 +42,7 @@
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Nlpdiving"
-#define EVENTHDLR_DESC         "bound change event handler for "HEUR_NAME" heuristic"
+#define EVENTHDLR_DESC         "bound change event handler for " HEUR_NAME " heuristic"
 
 
 /*
@@ -1304,7 +1304,7 @@ SCIP_RETCODE solveSubMIP(
 #ifndef NDEBUG
       SCIP_CALL( retcode );
 #endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in "HEUR_NAME" heuristic; sub-SCIP terminated with code <%d>\n",retcode);
+      SCIPwarningMessage(scip, "Error while solving subproblem in " HEUR_NAME " heuristic; sub-SCIP terminated with code <%d>\n",retcode);
    }
 
    /* check, whether a solution was found;
@@ -2583,85 +2583,85 @@ SCIP_RETCODE SCIPincludeHeurNlpdiving(
          eventExecNlpdiving, NULL) );
    if ( heurdata->eventhdlr == NULL )
    {
-      SCIPerrorMessage("event handler for "HEUR_NAME" heuristic not found.\n");
+      SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
    /* nlpdiving heuristic parameters */
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/"HEUR_NAME"/minreldepth",
+         "heuristics/" HEUR_NAME "/minreldepth",
          "minimal relative depth to start diving",
          &heurdata->minreldepth, TRUE, DEFAULT_MINRELDEPTH, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/"HEUR_NAME"/maxreldepth",
+         "heuristics/" HEUR_NAME "/maxreldepth",
          "maximal relative depth to start diving",
          &heurdata->maxreldepth, TRUE, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/"HEUR_NAME"/maxnlpiterabs",
+         "heuristics/" HEUR_NAME "/maxnlpiterabs",
          "minimial absolute number of allowed NLP iterations",
          &heurdata->maxnlpiterabs, FALSE, DEFAULT_MAXNLPITERABS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/"HEUR_NAME"/maxnlpiterrel",
+         "heuristics/" HEUR_NAME "/maxnlpiterrel",
          "additional allowed number of NLP iterations relative to successfully found solutions",
          &heurdata->maxnlpiterrel, FALSE, DEFAULT_MAXNLPITERREL, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/"HEUR_NAME"/maxdiveubquot",
+         "heuristics/" HEUR_NAME "/maxdiveubquot",
          "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)",
          &heurdata->maxdiveubquot, TRUE, DEFAULT_MAXDIVEUBQUOT, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/"HEUR_NAME"/maxdiveavgquot",
+         "heuristics/" HEUR_NAME "/maxdiveavgquot",
          "maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)",
          &heurdata->maxdiveavgquot, TRUE, DEFAULT_MAXDIVEAVGQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/"HEUR_NAME"/maxdiveubquotnosol",
+         "heuristics/" HEUR_NAME "/maxdiveubquotnosol",
          "maximal UBQUOT when no solution was found yet (0.0: no limit)",
          &heurdata->maxdiveubquotnosol, TRUE, DEFAULT_MAXDIVEUBQUOTNOSOL, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/"HEUR_NAME"/maxdiveavgquotnosol",
+         "heuristics/" HEUR_NAME "/maxdiveavgquotnosol",
          "maximal AVGQUOT when no solution was found yet (0.0: no limit)",
          &heurdata->maxdiveavgquotnosol, TRUE, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/"HEUR_NAME"/maxfeasnlps",
+         "heuristics/" HEUR_NAME "/maxfeasnlps",
          "maximal number of NLPs with feasible solution to solve during one dive",
          &heurdata->maxfeasnlps, FALSE, DEFAULT_MAXFEASNLPS, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/"HEUR_NAME"/backtrack",
+         "heuristics/" HEUR_NAME "/backtrack",
          "use one level of backtracking if infeasibility is encountered?",
          &heurdata->backtrack, FALSE, DEFAULT_BACKTRACK, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/"HEUR_NAME"/lp",
+         "heuristics/" HEUR_NAME "/lp",
          "should the LP relaxation be solved before the NLP relaxation?",
          &heurdata->lp, TRUE, DEFAULT_LP, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/"HEUR_NAME"/preferlpfracs",
+         "heuristics/" HEUR_NAME "/preferlpfracs",
          "prefer variables that are also fractional in LP solution?",
          &heurdata->preferlpfracs, TRUE, DEFAULT_PREFERLPFRACS, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/"HEUR_NAME"/minsuccquot",
+         "heuristics/" HEUR_NAME "/minsuccquot",
          "heuristic will not run if less then this percentage of calls succeeded (0.0: no limit)",
          &heurdata->minsuccquot, FALSE, DEFAULT_MINSUCCQUOT, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/"HEUR_NAME"/fixquot",
+         "heuristics/" HEUR_NAME "/fixquot",
          "percentage of fractional variables that should be fixed before the next NLP solve",
          &heurdata->fixquot, FALSE, DEFAULT_FIXQUOT, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/"HEUR_NAME"/prefercover",
+         "heuristics/" HEUR_NAME "/prefercover",
          "should variables in a minimal cover be preferred?",
          &heurdata->prefercover, FALSE, DEFAULT_PREFERCOVER, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/"HEUR_NAME"/solvesubmip",
+         "heuristics/" HEUR_NAME "/solvesubmip",
          "should a sub-MIP be solved if all cover variables are fixed?",
          &heurdata->solvesubmip, FALSE, DEFAULT_SOLVESUBMIP, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/"HEUR_NAME"/nlpfastfail",
+         "heuristics/" HEUR_NAME "/nlpfastfail",
          "should the NLP solver stop early if it converges slow?",
          &heurdata->nlpfastfail, FALSE, DEFAULT_NLPFASTFAIL, NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip,
-         "heuristics/"HEUR_NAME"/nlpstart",
+         "heuristics/" HEUR_NAME "/nlpstart",
          "which point should be used as starting point for the NLP solver? ('n'one, last 'f'easible, from dive's'tart)",
          &heurdata->nlpstart, TRUE, DEFAULT_NLPSTART, "fns", NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip,
-         "heuristics/"HEUR_NAME"/varselrule",
+         "heuristics/" HEUR_NAME "/varselrule",
          "which variable selection should be used? ('f'ractionality, 'c'oefficient, 'p'seudocost, 'g'uided, 'd'ouble, 'v'eclen)",
          &heurdata->varselrule, FALSE, DEFAULT_VARSELRULE, "fcpgdv", NULL, NULL) );
 

@@ -1933,9 +1933,9 @@ SCIP_RETCODE createAndAddAndCons(
 #endif
 #endif
 
-      SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/nlcseparate", &separate) );
-      SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/nlcpropagate", &propagate) );
-      SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/nlcremovable", &removable) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "constraints/" CONSHDLR_NAME "/nlcseparate", &separate) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "constraints/" CONSHDLR_NAME "/nlcpropagate", &propagate) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "constraints/" CONSHDLR_NAME "/nlcremovable", &removable) );
 
       /* we do not want to check the and constraints, so the check flag will be FALSE */
 
@@ -8571,22 +8571,22 @@ SCIP_RETCODE SCIPincludeConshdlrPseudoboolean(
 
    /* add pseudoboolean constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/decomposenormal",
+         "constraints/" CONSHDLR_NAME "/decomposenormal",
          "decompose all normal pseudo boolean constraint into a \"linear\" constraint \"and\" constraints",
          &conshdlrdata->decomposenormalpbcons, TRUE, DEFAULT_DECOMPOSENORMALPBCONS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/decomposeindicator",
+         "constraints/" CONSHDLR_NAME "/decomposeindicator",
          "decompose all indicator pseudo boolean constraint into a \"linear\" constraint \"and\" constraints",
          &conshdlrdata->decomposeindicatorpbcons, TRUE, DEFAULT_DECOMPOSEINDICATORPBCONS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/nlcseparate", "should the nonlinear constraints be separated during LP processing?",
+         "constraints/" CONSHDLR_NAME "/nlcseparate", "should the nonlinear constraints be separated during LP processing?",
          NULL, TRUE, DEFAULT_SEPARATENONLINEAR, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/nlcpropagate", "should the nonlinear constraints be propagated during node processing?",
+         "constraints/" CONSHDLR_NAME "/nlcpropagate", "should the nonlinear constraints be propagated during node processing?",
          NULL, TRUE, DEFAULT_PROPAGATENONLINEAR, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/nlcremovable", "should the nonlinear constraints be removable?",
+         "constraints/" CONSHDLR_NAME "/nlcremovable", "should the nonlinear constraints be removable?",
          NULL, TRUE, DEFAULT_REMOVABLENONLINEAR, NULL, NULL) );
 
    return SCIP_OKAY;

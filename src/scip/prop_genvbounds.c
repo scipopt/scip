@@ -2610,19 +2610,19 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
          PROP_PRESOL_MAXROUNDS, PROP_PRESOLTIMING) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropGenvbounds) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/global",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/global",
          "apply global propagation?",
          &propdata->global, TRUE, DEFAULT_GLOBAL_PROPAGATION, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/propinrootnode",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/propinrootnode",
          "apply genvbounds in root node if no new incumbent was found?",
          &propdata->propinrootnode, TRUE, DEFAULT_PROPAGATE_IN_ROOT_NODE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/sort",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/sort",
          "sort genvbounds and wait for bound change events?",
          &propdata->sort, TRUE, DEFAULT_SORT, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/propasconss",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/propasconss",
          "should genvbounds be transformed to (linear) constraints?",
          &propdata->propasconss, TRUE, DEFAULT_PROPASCONSS, NULL, NULL) );
 

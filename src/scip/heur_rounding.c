@@ -762,11 +762,11 @@ SCIP_RETCODE SCIPincludeHeurRounding(
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolRounding) );
 
    /* add rounding primal heuristic parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/successfactor",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/successfactor",
          "number of calls per found solution that are considered as standard success, a higher factor causes the heuristic to be called more often",
          &heurdata->successfactor, TRUE, DEFAULT_SUCCESSFACTOR, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/oncepernode",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/oncepernode",
          "should the heuristic only be called once per node?",
          &heurdata->oncepernode, TRUE, DEFAULT_ONCEPERNODE, NULL, NULL) );
 

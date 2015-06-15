@@ -827,39 +827,39 @@ SCIP_RETCODE SCIPincludeSepaDisjunctive(
    SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolDisjunctive) );
 
    /* add separator parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxdepth",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxdepth",
          "node depth of separating bipartite disjunctive cuts (-1: no limit)",
          &sepadata->maxdepth, TRUE, DEFAULT_MAXDEPTH, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxrounds",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxrounds",
          "maximal number of separation rounds per iteration in a branching node (-1: no limit)",
          &sepadata->maxrounds, TRUE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxroundsroot",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxroundsroot",
          "maximal number of separation rounds in the root node (-1: no limit)",
          &sepadata->maxroundsroot, TRUE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxinvcuts",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxinvcuts",
          "maximal number of cuts investigated per iteration in a branching node",
          &sepadata->maxinvcuts, TRUE, DEFAULT_MAXINVCUTS, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxinvcutsroot",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxinvcutsroot",
          "maximal number of cuts investigated per iteration in the root node",
          &sepadata->maxinvcutsroot, TRUE, DEFAULT_MAXINVCUTSROOT, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxconfsdelay",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxconfsdelay",
          "delay separation if number of conflict graph edges is larger than predefined value (-1: no limit)",
          &sepadata->maxconfsdelay, TRUE, DEFAULT_MAXCONFSDELAY, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxrank",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxrank",
          "maximal rank of a disj. cut that could not be scaled to integral coefficients (-1: unlimited)",
          &sepadata->maxrank, FALSE, DEFAULT_MAXRANK, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "separating/"SEPA_NAME"/maxrankintegral",
+   SCIP_CALL( SCIPaddIntParam(scip, "separating/" SEPA_NAME "/maxrankintegral",
          "maximal rank of a disj. cut that could be scaled to integral coefficients (-1: unlimited)",
          &sepadata->maxrankintegral, FALSE, DEFAULT_MAXRANKINTEGRAL, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "separating/"SEPA_NAME"/maxweightrange",
+   SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/maxweightrange",
          "maximal valid range max(|weights|)/min(|weights|) of row weights",
          &sepadata->maxweightrange, TRUE, DEFAULT_MAXWEIGHTRANGE, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
