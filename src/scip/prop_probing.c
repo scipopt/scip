@@ -1039,7 +1039,7 @@ SCIP_DECL_PROPEXEC(propExecProbing)
          ++nbinvars;
       }
    }
-   SCIPdebugMessage("problem <%s> node %"SCIP_LONGINT_FORMAT" probing propagation found %d of %d possible probing candidates\n", SCIPgetProbName(scip), SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nbinvars, nvars);
+   SCIPdebugMessage("problem <%s> node %" SCIP_LONGINT_FORMAT " probing propagation found %d of %d possible probing candidates\n", SCIPgetProbName(scip), SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nbinvars, nvars);
 
    if( nbinvars == 0 )
    {

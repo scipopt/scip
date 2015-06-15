@@ -597,14 +597,14 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
    {
       *result = SCIP_CUTOFF;
 
-      SCIPdebugMessage("node %"SCIP_LONGINT_FORMAT": detected cutoff\n",
+      SCIPdebugMessage("node %" SCIP_LONGINT_FORMAT ": detected cutoff\n",
          SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
    }
    else if( nchgbds > 0 )
    {
       *result = SCIP_REDUCEDDOM;
 
-      SCIPdebugMessage("node %"SCIP_LONGINT_FORMAT": %d bound changes (max redcost <%g>)\n",
+      SCIPdebugMessage("node %" SCIP_LONGINT_FORMAT ": %d bound changes (max redcost <%g>)\n",
          SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) , nchgbds, propdata->maxredcost);
    }
 

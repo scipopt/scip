@@ -1606,7 +1606,7 @@ SCIP_RETCODE SCIPprobScaleObj(
          }
          if( gcd != 0 )
             intscalar /= gcd;
-         SCIPdebugMessage("integral objective scalar: gcd=%"SCIP_LONGINT_FORMAT", intscalar=%g\n", gcd, intscalar);
+         SCIPdebugMessage("integral objective scalar: gcd=%" SCIP_LONGINT_FORMAT ", intscalar=%g\n", gcd, intscalar);
 
          /* only apply scaling if the final scalar is small enough */
          if( intscalar <= OBJSCALE_MAXFINALSCALE )

@@ -1656,7 +1656,7 @@ SCIP_RETCODE findNewBounds(
 
    if( iterationsleft )
    {
-      SCIPdebugMessage("still iterations left: %"SCIP_LONGINT_FORMAT"\n", *nleftiterations);
+      SCIPdebugMessage("still iterations left: %" SCIP_LONGINT_FORMAT "\n", *nleftiterations);
    }
    else
    {

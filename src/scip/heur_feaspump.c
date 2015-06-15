@@ -786,7 +786,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    maxloops = (heurdata->maxloops == -1 ? INT_MAX : heurdata->maxloops);
    maxstallloops = (heurdata->maxstallloops == -1 ? INT_MAX : heurdata->maxstallloops);
 
-   SCIPdebugMessage("executing feasibility pump heuristic, nlpiters=%"SCIP_LONGINT_FORMAT", maxnlpit:%"SCIP_LONGINT_FORMAT", maxflips:%d \n",
+   SCIPdebugMessage("executing feasibility pump heuristic, nlpiters=%" SCIP_LONGINT_FORMAT ", maxnlpit:%" SCIP_LONGINT_FORMAT ", maxflips:%d \n",
       nlpiterations, maxnlpiterations, maxflips);
 
    *result = SCIP_DIDNOTFIND;
@@ -989,7 +989,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
                   solval);
                SCIP_CALL( SCIPfixVarProbing(probingscip, probingvar, solval) );
                SCIP_CALL( SCIPpropagateProbing(probingscip, -1, &infeasible, &ndomreds) );
-               SCIPdebugMessage("  -> reduced %"SCIP_LONGINT_FORMAT" domains\n", ndomreds);
+               SCIPdebugMessage("  -> reduced %" SCIP_LONGINT_FORMAT " domains\n", ndomreds);
 
                if( infeasible )
                {
@@ -1136,7 +1136,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
       /* update iteration count */
       heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
-      SCIPdebugMessage(" -> number of iterations: %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", lperror=%u, lpsolstat=%d\n",
+      SCIPdebugMessage(" -> number of iterations: %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", lperror=%u, lpsolstat=%d\n",
          heurdata->nlpiterations, adjustedMaxNLPIterations(maxnlpiterations, nsolsfound, nstallloops), lperror, lpsolstat);
 
       /* check whether LP was solved optimal */
@@ -1194,7 +1194,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       else
          nstallloops++;
 
-      SCIPdebugMessage(" -> loop finished: %d fractional variables (stall: %d/%d, iterations: %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT")\n",
+      SCIPdebugMessage(" -> loop finished: %d fractional variables (stall: %d/%d, iterations: %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ")\n",
          nfracs, nstallloops, maxstallloops, heurdata->nlpiterations, adjustedMaxNLPIterations(maxnlpiterations, nsolsfound, nstallloops));
    }
 

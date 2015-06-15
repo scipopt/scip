@@ -400,7 +400,7 @@ SCIP_DECL_EVENTEXEC(eventExecDins)
    /* interrupt solution process of sub-SCIP */
    if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
    {
-      SCIPdebugMessage("interrupt after  %"SCIP_LONGINT_FORMAT" LPs\n",SCIPgetNLPs(scip));
+      SCIPdebugMessage("interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -909,7 +909,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    }
 
    /* solve the subproblem */
-   SCIPdebugMessage("solving DINS sub-MIP with neighborhoodsize %d and maxnodes %"SCIP_LONGINT_FORMAT"\n", heurdata->neighborhoodsize, nsubnodes);
+   SCIPdebugMessage("solving DINS sub-MIP with neighborhoodsize %d and maxnodes %" SCIP_LONGINT_FORMAT "\n", heurdata->neighborhoodsize, nsubnodes);
    retcode = SCIPsolve(subscip);
 
    /* drop LP events of sub-SCIP */
@@ -936,7 +936,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
    nsubsols = SCIPgetNSols(subscip);
-   SCIPdebugMessage("DINS used %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" nodes and found %d solutions\n", SCIPgetNNodes(subscip), nsubnodes, nsubsols);
+   SCIPdebugMessage("DINS used %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " nodes and found %d solutions\n", SCIPgetNNodes(subscip), nsubnodes, nsubsols);
 
    /* check, whether a  (new) solution was found */
    if( nsubsols > 0 )

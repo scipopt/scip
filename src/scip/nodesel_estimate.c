@@ -151,7 +151,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectEstimate)
    if( SCIPgetNNodes(scip) < nodeseldata->plungeoffset )
    {
       /* we don't want to plunge yet: select best node from the tree */
-      SCIPdebugMessage("nnodes=%"SCIP_LONGINT_FORMAT" < %d=plungeoffset -> don't start plunging\n", SCIPgetNNodes(scip),
+      SCIPdebugMessage("nnodes=%" SCIP_LONGINT_FORMAT " < %d=plungeoffset -> don't start plunging\n", SCIPgetNNodes(scip),
          nodeseldata->plungeoffset);
 
       if( SCIPgetNNodes(scip) % bestnodefreq == 0 )

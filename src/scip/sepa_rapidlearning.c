@@ -458,7 +458,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
    /* abort solving, if limit of applied conflicts is reached */
    else if( SCIPgetNConflictConssApplied(subscip) >= restartnum )
    {
-      SCIPdebugMessage("finish after %"SCIP_LONGINT_FORMAT" successful conflict calls.\n", SCIPgetNConflictConssApplied(subscip));
+      SCIPdebugMessage("finish after %" SCIP_LONGINT_FORMAT " successful conflict calls.\n", SCIPgetNConflictConssApplied(subscip));
    }
    /* if the first 20% of the solution process were successful, proceed */
    else if( (sepadata->applyprimalsol && SCIPgetNSols(subscip) > 0 && SCIPisFeasLT(scip, SCIPgetUpperbound(subscip), SCIPgetUpperbound(scip) ) )
@@ -477,7 +477,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpRapidlearning)
       }
       if( SCIPgetNConflictConssFound(subscip) > 0 )
       {
-         SCIPdebugMessage("   - there were %"SCIP_LONGINT_FORMAT" conflict constraints created\n", SCIPgetNConflictConssApplied(subscip));
+         SCIPdebugMessage("   - there were %" SCIP_LONGINT_FORMAT " conflict constraints created\n", SCIPgetNConflictConssApplied(subscip));
       }
 
       /* set node limit to 100% */

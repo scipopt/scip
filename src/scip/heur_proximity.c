@@ -157,7 +157,7 @@ SCIP_RETCODE solveLp(
    }
 
    /* solve LP */
-   SCIPdebugMessage(" -> old LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+   SCIPdebugMessage(" -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
    /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
     * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
@@ -172,7 +172,7 @@ SCIP_RETCODE solveLp(
 #endif
    }
 
-   SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+   SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
    SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
    if( !lperror && SCIPgetLPSolstat(scip) == SCIP_LPSOLSTAT_OPTIMAL )
    {
@@ -604,7 +604,7 @@ SCIP_DECL_HEUREXEC(heurExecProximity)
    /* check whether we have enough nodes left to call subproblem solving */
    if( nnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping proximity: nnodes=%"SCIP_LONGINT_FORMAT", minnodes=%"SCIP_LONGINT_FORMAT"\n", nnodes, heurdata->minnodes);
+      SCIPdebugMessage("skipping proximity: nnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
@@ -993,9 +993,9 @@ SCIP_RETCODE SCIPapplyProximity(
    SCIP_CALL( SCIPtransformProb(subscip) );
    SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
 
-   SCIPstatisticMessage("solving subproblem at Node: %"SCIP_LONGINT_FORMAT" "
-         "nnodes: %"SCIP_LONGINT_FORMAT" "
-         "iterlim: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNNodes(scip), nnodes, iterlim);
+   SCIPstatisticMessage("solving subproblem at Node: %" SCIP_LONGINT_FORMAT " "
+         "nnodes: %" SCIP_LONGINT_FORMAT " "
+         "iterlim: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNNodes(scip), nnodes, iterlim);
 
    /* solve the subproblem with all previously adjusted parameters */
    nfixedvars = SCIPgetNFixedVars(subscip);
@@ -1008,9 +1008,9 @@ SCIP_RETCODE SCIPapplyProximity(
    retcode = SCIPsolve(subscip);
 
    SCIPstatisticMessage("solve of subscip %d:"
-         "usednodes: %"SCIP_LONGINT_FORMAT" "
-         "lp iters: %"SCIP_LONGINT_FORMAT" "
-         "root iters: %"SCIP_LONGINT_FORMAT" "
+         "usednodes: %" SCIP_LONGINT_FORMAT " "
+         "lp iters: %" SCIP_LONGINT_FORMAT " "
+         "root iters: %" SCIP_LONGINT_FORMAT " "
          "Presolving Time: %.2f\n", heurdata->subprobidx,
          SCIPgetNNodes(subscip), SCIPgetNLPIterations(subscip), SCIPgetNRootLPIterations(subscip), SCIPgetPresolvingTime(subscip));
 

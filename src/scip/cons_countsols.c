@@ -244,7 +244,7 @@ void toString(
 #ifdef WITH_GMP
    (void) mpz_get_str(*buffer, 10, value);
 #else
-   (void) SCIPsnprintf (*buffer, buffersize, "%"SCIP_LONGINT_FORMAT"", value);
+   (void) SCIPsnprintf (*buffer, buffersize, "%" SCIP_LONGINT_FORMAT "", value);
 #endif
 }
 
@@ -667,7 +667,7 @@ SCIP_RETCODE collectSolution(
          ubvalues[v] = lbvalues[v];
       }
 
-      SCIPdebugMessage("variable <%s> [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"]\n",
+      SCIPdebugMessage("variable <%s> [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "]\n",
          SCIPvarGetName(var), lbvalues[v], ubvalues[v]);
    }
 
@@ -920,14 +920,14 @@ SCIP_RETCODE checkKnapsack(
       capacity = SCIPgetCapacityKnapsack(scip, conss[c]);
       weights = SCIPgetWeightsKnapsack(scip,conss[c]);
 
-      SCIPdebugMessage("knapsack capacity = %"SCIP_LONGINT_FORMAT"\n", capacity);
+      SCIPdebugMessage("knapsack capacity = %" SCIP_LONGINT_FORMAT "\n", capacity);
 
       capa = capacity + 0.1;
 
       for( v = nvars - 1; v >= 0 && capa >= 0 ; --v )
       {
          SCIPdebug( SCIP_CALL( SCIPprintVar( scip, vars[v], NULL) ) );
-         SCIPdebugMessage("weight = %"SCIP_LONGINT_FORMAT" :\n", weights[v]);
+         SCIPdebugMessage("weight = %" SCIP_LONGINT_FORMAT " :\n", weights[v]);
          assert( SCIPvarIsIntegral(vars[v]) );
 
          /* the weights should be greater or equal to zero */
@@ -1923,7 +1923,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       nsols = SCIPgetNCountedSols(scip, &valid);
 
       if( valid )
-         SCIPdialogMessage(scip, NULL, "Feasible Solutions : %"SCIP_LONGINT_FORMAT"", nsols);
+         SCIPdialogMessage(scip, NULL, "Feasible Solutions : %" SCIP_LONGINT_FORMAT "", nsols);
       else
       {
          char* buffer;
@@ -2080,7 +2080,7 @@ SCIP_RETCODE writeExpandedSolutions(
          solcnt++;
 
          /* print solution number */
-         SCIPinfoMessage(scip, file, "%d(%"SCIP_LONGINT_FORMAT"), ", s+1, solcnt);
+         SCIPinfoMessage(scip, file, "%d(%" SCIP_LONGINT_FORMAT "), ", s+1, solcnt);
 
          objval = 0.0;
 
@@ -2288,7 +2288,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                /* sort original variables array and the corresponding transformed variables w.r.t. the problem index */
                SCIPsortDownPtrPtr((void**)allvars, (void**)origvars, varCompProbindex, norigvars);
 
-               SCIPdialogMessage(scip, NULL, "saving %"SCIP_LONGINT_FORMAT" (%d) feasible solutions\n", nsols, nsparsesols);
+               SCIPdialogMessage(scip, NULL, "saving %" SCIP_LONGINT_FORMAT " (%d) feasible solutions\n", nsols, nsparsesols);
 
                /* first row: output the names of the variables in the given ordering */
                SCIPinfoMessage(scip, file, "#, ");

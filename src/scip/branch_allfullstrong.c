@@ -404,7 +404,7 @@ SCIP_RETCODE SCIPselectVarPseudoStrongBranching(
          if( lperror )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "(node %"SCIP_LONGINT_FORMAT") error in strong branching call for variable <%s> with solution %g\n",
+               "(node %" SCIP_LONGINT_FORMAT ") error in strong branching call for variable <%s> with solution %g\n",
                SCIPgetNNodes(scip), SCIPvarGetName(pseudocands[c]), solval);
             break;
          }

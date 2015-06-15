@@ -2199,7 +2199,7 @@ SCIP_RETCODE solveSubscip(
    assert( nodelimit >= 0 );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) );
 
-   SCIPdebugMessage("Solving sub-SCIP (time limit: %f  mem limit: %f  node limit: %"SCIP_LONGINT_FORMAT") ...\n", timelimit, memorylimit, nodelimit);
+   SCIPdebugMessage("Solving sub-SCIP (time limit: %f  mem limit: %f  node limit: %" SCIP_LONGINT_FORMAT ") ...\n", timelimit, memorylimit, nodelimit);
 
    /* disable statistic timing inside sub SCIP */
    if( !sepadata->output )

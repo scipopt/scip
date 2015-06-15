@@ -481,7 +481,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectUct)
    else
    {
       /* trigger update of visits along the path from the selected node to the root node */
-      SCIPdebugMessage("updating node visits from node number %"SCIP_LONGINT_FORMAT"\n", SCIPnodeGetNumber(*selnode));
+      SCIPdebugMessage("updating node visits from node number %" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(*selnode));
       updateVisits(nodeseldata, *selnode);
    }
 

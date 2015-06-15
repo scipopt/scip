@@ -235,7 +235,7 @@ SCIP_DECL_HEUREXEC(heurExecZeroobj)
    /* check whether we have enough nodes left to call subproblem solving */
    if( nnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping zeroobj: nnodes=%"SCIP_LONGINT_FORMAT", minnodes=%"SCIP_LONGINT_FORMAT"\n", nnodes, heurdata->minnodes);
+      SCIPdebugMessage("skipping zeroobj: nnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
@@ -520,7 +520,7 @@ SCIP_RETCODE SCIPapplyZeroobj(
    SCIP_CALL( SCIPtransformProb(subscip) );
    SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_NODESOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
 
-   SCIPdebugMessage("solving subproblem: nnodes=%"SCIP_LONGINT_FORMAT"\n", nnodes);
+   SCIPdebugMessage("solving subproblem: nnodes=%" SCIP_LONGINT_FORMAT "\n", nnodes);
    retcode = SCIPsolve(subscip);
 
    /* drop LP events of sub-SCIP */

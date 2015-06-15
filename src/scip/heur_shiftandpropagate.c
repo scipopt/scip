@@ -1310,7 +1310,7 @@ SCIP_DECL_HEUREXIT(heurExitShiftandpropagate)
          heurdata->lpsolstat
          );
       SCIPstatisticMessage(
-         "  SHIFTANDPROPAGATE PROBING  :  %d probings, %"SCIP_LONGINT_FORMAT" domain reductions,  ncutoffs: %d ,  LP iterations: %"SCIP_LONGINT_FORMAT" \n ",
+         "  SHIFTANDPROPAGATE PROBING  :  %d probings, %" SCIP_LONGINT_FORMAT " domain reductions,  ncutoffs: %d ,  LP iterations: %" SCIP_LONGINT_FORMAT " \n ",
          heurdata->nprobings,
          heurdata->ntotaldomredsfound,
          heurdata->ncutoffs,
@@ -1965,7 +1965,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
          ++nprobings;
          SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
-         SCIPdebugMessage("Propagation finished! <%"SCIP_LONGINT_FORMAT"> domain reductions %s, <%d> probing depth\n", ndomredsfound, cutoff ? "CUTOFF" : "",
+         SCIPdebugMessage("Propagation finished! <%" SCIP_LONGINT_FORMAT "> domain reductions %s, <%d> probing depth\n", ndomredsfound, cutoff ? "CUTOFF" : "",
             SCIPgetProbingDepth(scip));
       }
       assert(!cutoff || probing);
@@ -2119,7 +2119,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          }
 #endif
 
-         SCIPdebugMessage(" -> old LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+         SCIPdebugMessage(" -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
          /* solve LP;
           * errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
@@ -2139,7 +2139,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, NULL) );
 #endif
 
-         SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+         SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
          SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 
          /* check if this is a feasible solution */

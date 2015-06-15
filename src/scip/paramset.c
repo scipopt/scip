@@ -124,7 +124,7 @@ SCIP_RETCODE paramCheckLongint(
 
    if( value < param->data.longintparam.minvalue || value > param->data.longintparam.maxvalue )
    {
-      SCIPmessagePrintWarning(messagehdlr, "Invalid value <%"SCIP_LONGINT_FORMAT"> for longint parameter <%s>. Must be in range [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"].\n",
+      SCIPmessagePrintWarning(messagehdlr, "Invalid value <%" SCIP_LONGINT_FORMAT "> for longint parameter <%s>. Must be in range [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "].\n",
          value, param->name, param->data.longintparam.minvalue, param->data.longintparam.maxvalue);
       return SCIP_PARAMETERWRONGVAL;
    }
@@ -251,7 +251,7 @@ SCIP_RETCODE paramWrite(
             param->data.intparam.minvalue, param->data.intparam.maxvalue, param->data.intparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_LONGINT:
-         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: longint, range: [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"], default: %"SCIP_LONGINT_FORMAT"]\n", 
+         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: longint, range: [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "], default: %" SCIP_LONGINT_FORMAT "]\n",
             param->data.longintparam.minvalue, param->data.longintparam.maxvalue, param->data.longintparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_REAL:
@@ -283,7 +283,7 @@ SCIP_RETCODE paramWrite(
       SCIPmessageFPrintInfo(messagehdlr, file, "%d", SCIPparamGetInt(param));
       break;
    case SCIP_PARAMTYPE_LONGINT:
-      SCIPmessageFPrintInfo(messagehdlr, file, "%"SCIP_LONGINT_FORMAT"", SCIPparamGetLongint(param));
+      SCIPmessageFPrintInfo(messagehdlr, file, "%" SCIP_LONGINT_FORMAT "", SCIPparamGetLongint(param));
       break;
    case SCIP_PARAMTYPE_REAL:
       SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", SCIPparamGetReal(param));

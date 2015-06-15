@@ -190,7 +190,7 @@ SCIP_DECL_PRESOLEXEC(presolExecConvertinttobin)
 
       nnewbinvars = (int)SCIPfloor(scip, (log((SCIP_Real) domainsize)/log(2.0))) + 1;
 
-      SCIPdebugMessage("integer variable <%s> [%g,%g], domainsize %"SCIP_LONGINT_FORMAT"\n, <uplocks = %d, downlocks = %d will be 'binarized' by %d binary variables\n ",
+      SCIPdebugMessage("integer variable <%s> [%g,%g], domainsize %" SCIP_LONGINT_FORMAT "\n, <uplocks = %d, downlocks = %d will be 'binarized' by %d binary variables\n ",
          SCIPvarGetName(vars[v]), lb, ub, domainsize, SCIPvarGetNLocksUp(vars[v]), SCIPvarGetNLocksDown(vars[v]), nnewbinvars);
 
       assert(nnewbinvars > 0);

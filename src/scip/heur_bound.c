@@ -174,7 +174,7 @@ SCIP_RETCODE applyBoundHeur(
       SCIP_LPSOLSTAT lpstatus;
       SCIP_Bool lperror;
 
-      SCIPdebugMessage("starting solving bound-heur LP at time %g, LP iterations: %"SCIP_LONGINT_FORMAT"\n",
+      SCIPdebugMessage("starting solving bound-heur LP at time %g, LP iterations: %" SCIP_LONGINT_FORMAT "\n",
          SCIPgetSolvingTime(scip), SCIPgetNLPIterations(scip));
 
       /* solve LP; errors in the LP solver should not kill the overall solving process, if the LP is just needed for a
@@ -198,7 +198,7 @@ SCIP_RETCODE applyBoundHeur(
 
       lpstatus = SCIPgetLPSolstat(scip);
 
-      SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
       SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, lpstatus);
 
       /* check if this is a feasible solution */

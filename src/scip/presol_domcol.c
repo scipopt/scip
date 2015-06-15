@@ -2369,7 +2369,7 @@ SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 #ifdef SCIP_DEBUG
       if( (nconvarsfixed + nintvarsfixed + nbinvarsfixed) > 0 )
       {
-         SCIPdebugMessage("### %d vars [%"SCIP_LONGINT_FORMAT" dom] => fixed [cont: %d, int: %d, bin: %d], %scutoff detected\n",
+         SCIPdebugMessage("### %d vars [%" SCIP_LONGINT_FORMAT " dom] => fixed [cont: %d, int: %d, bin: %d], %scutoff detected\n",
             ncols, ndomrelations, nconvarsfixed, nintvarsfixed, nbinvarsfixed, (*result != SCIP_CUTOFF) ? "no " : "");
       }
 #endif

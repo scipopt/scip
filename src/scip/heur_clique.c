@@ -566,7 +566,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    /* check whether we have enough nodes left to call subproblem solving */
    if( nstallnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping " HEUR_NAME ": nstallnodes=%"SCIP_LONGINT_FORMAT", minnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, heurdata->minnodes);
+      SCIPdebugMessage("skipping " HEUR_NAME ": nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
@@ -726,7 +726,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       lpstatus = SCIPgetLPSolstat(scip);
 
-      SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
       SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, lpstatus);
    }
 
@@ -778,7 +778,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       shortconflict = cutoff && (nonefixvars > 0);
 
       /* create own conflict */
-      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "conf%"SCIP_LONGINT_FORMAT"", SCIPgetNNodes(scip));
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "conf%" SCIP_LONGINT_FORMAT "", SCIPgetNNodes(scip));
 
       /* get negated variables for our conflict */
       SCIP_CALL( SCIPgetNegatedVars(scip, nonefixvars, onefixvars, onefixvars) );
@@ -963,7 +963,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          SCIP_Bool success;
          int nsubsols;
 
-         SCIPdebugMessage("solving subproblem: nstallnodes=%"SCIP_LONGINT_FORMAT", maxnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, heurdata->maxnodes);
+         SCIPdebugMessage("solving subproblem: nstallnodes=%" SCIP_LONGINT_FORMAT ", maxnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->maxnodes);
 
 #ifdef NDEBUG
          {
@@ -1000,7 +1000,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
             shortconflict = backtracked;
 
             /* create own conflict */
-            (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "conf%"SCIP_LONGINT_FORMAT"", SCIPgetNNodes(scip));
+            (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "conf%" SCIP_LONGINT_FORMAT "", SCIPgetNNodes(scip));
 
             /* get negated variables for our conflict */
             SCIP_CALL( SCIPgetNegatedVars(scip, nonefixvars, onefixvars, onefixvars) );
@@ -1057,7 +1057,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
    /* calculate next node number to run this heuristic */
    tmpnnodes = (SCIP_Longint) SCIPceil(scip, heurdata->nnodefornextrun * heurdata->multiplier);
    heurdata->nnodefornextrun = MIN(tmpnnodes, INT_MAX);
-   SCIPdebugMessage("Next run will be at node %"SCIP_LONGINT_FORMAT".\n", heurdata->nnodefornextrun);
+   SCIPdebugMessage("Next run will be at node %" SCIP_LONGINT_FORMAT ".\n", heurdata->nnodefornextrun);
 #endif
    return SCIP_OKAY;
 }

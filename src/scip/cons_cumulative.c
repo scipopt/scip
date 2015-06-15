@@ -9512,7 +9512,7 @@ SCIP_RETCODE normalizeCumulativeCondition(
    }
    else if( gcd >= 2 )
    {
-      SCIPdebugMessage("cumulative condition: dividing demands by %"SCIP_LONGINT_FORMAT"\n", gcd);
+      SCIPdebugMessage("cumulative condition: dividing demands by %" SCIP_LONGINT_FORMAT "\n", gcd);
 
       for( v = 0; v < nvars; ++v )
          demands[v] /= gcd;
@@ -12479,11 +12479,11 @@ SCIP_DECL_CONSFREE(consFreeCumulative)
    if( !conshdlrdata->iscopy )
    {
       /* statisitc output if SCIP_STATISTIC is defined */
-      SCIPstatisticPrintf("time-table: lb=%"SCIP_LONGINT_FORMAT", ub=%"SCIP_LONGINT_FORMAT", cutoff=%"SCIP_LONGINT_FORMAT"\n",
+      SCIPstatisticPrintf("time-table: lb=%" SCIP_LONGINT_FORMAT ", ub=%" SCIP_LONGINT_FORMAT ", cutoff=%" SCIP_LONGINT_FORMAT "\n",
          conshdlrdata->nlbtimetable, conshdlrdata->nubtimetable, conshdlrdata->ncutofftimetable);
-      SCIPstatisticPrintf("edge-finder: lb=%"SCIP_LONGINT_FORMAT", ub=%"SCIP_LONGINT_FORMAT", cutoff=%"SCIP_LONGINT_FORMAT"\n",
+      SCIPstatisticPrintf("edge-finder: lb=%" SCIP_LONGINT_FORMAT ", ub=%" SCIP_LONGINT_FORMAT ", cutoff=%" SCIP_LONGINT_FORMAT "\n",
          conshdlrdata->nlbedgefinder, conshdlrdata->nubedgefinder, conshdlrdata->ncutoffedgefinder);
-      SCIPstatisticPrintf("overload: time-table=%"SCIP_LONGINT_FORMAT" time-time edge-finding=%"SCIP_LONGINT_FORMAT"\n",
+      SCIPstatisticPrintf("overload: time-table=%" SCIP_LONGINT_FORMAT " time-time edge-finding=%" SCIP_LONGINT_FORMAT "\n",
       conshdlrdata->ncutoffoverload, conshdlrdata->ncutoffoverloadTTEF);
    }
 #endif

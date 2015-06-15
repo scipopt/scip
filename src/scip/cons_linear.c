@@ -4149,7 +4149,7 @@ SCIP_RETCODE normalizeCons(
    if( success && scm != 1 )
    {
       /* scale the constraint with the smallest common multiple of all denominators */
-      SCIPdebugMessage("scale linear constraint with %"SCIP_LONGINT_FORMAT" to make coefficients integral\n", scm);
+      SCIPdebugMessage("scale linear constraint with %" SCIP_LONGINT_FORMAT " to make coefficients integral\n", scm);
       SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( scaleCons(scip, cons, (SCIP_Real)scm) );
 
@@ -4188,7 +4188,7 @@ SCIP_RETCODE normalizeCons(
       if( gcd > 1 )
       {
          /* divide the constraint by the greatest common divisor of the coefficients */
-         SCIPdebugMessage("divide linear constraint by greatest common divisor %"SCIP_LONGINT_FORMAT"\n", gcd);
+         SCIPdebugMessage("divide linear constraint by greatest common divisor %" SCIP_LONGINT_FORMAT "\n", gcd);
          SCIPdebugPrintCons(scip, cons, NULL);
          SCIP_CALL( scaleCons(scip, cons, 1.0/(SCIP_Real)gcd) );
 
@@ -11347,7 +11347,7 @@ SCIP_RETCODE simplifyInequalities(
       else
          ++v;
 
-      SCIPdebugMessage("stopped at pos %d (of %d), subactivities [%g, %g], redundant = %u, hasrhs = %u, siderest = %g, gcd = %"SCIP_LONGINT_FORMAT", offset position for 'side' coefficients = %d\n", v, nvars, minactsub, maxactsub, redundant, hasrhs, siderest, gcd, offsetv);
+      SCIPdebugMessage("stopped at pos %d (of %d), subactivities [%g, %g], redundant = %u, hasrhs = %u, siderest = %g, gcd = %" SCIP_LONGINT_FORMAT ", offset position for 'side' coefficients = %d\n", v, nvars, minactsub, maxactsub, redundant, hasrhs, siderest, gcd, offsetv);
 
       /* check if we can remove redundant variables */
       if( v < nvars && (redundant ||
@@ -12129,7 +12129,7 @@ SCIP_RETCODE simplifyInequalities(
       }
       assert(SCIPisZero(scip, newcoef) || SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(newcoef) + feastol)) == gcd);
 
-      SCIPdebugMessage("gcd = %"SCIP_LONGINT_FORMAT", rest = %"SCIP_LONGINT_FORMAT", restcoef = %"SCIP_LONGINT_FORMAT"; changing coef of variable <%s> to %g and %s by %"SCIP_LONGINT_FORMAT"\n", gcd, rest, restcoef, SCIPvarGetName(vars[candpos]), newcoef, hasrhs ? "reduced rhs" : "increased lhs", hasrhs ? rest : (rest > 0 ? gcd - rest : 0));
+      SCIPdebugMessage("gcd = %" SCIP_LONGINT_FORMAT ", rest = %" SCIP_LONGINT_FORMAT ", restcoef = %" SCIP_LONGINT_FORMAT "; changing coef of variable <%s> to %g and %s by %" SCIP_LONGINT_FORMAT "\n", gcd, rest, restcoef, SCIPvarGetName(vars[candpos]), newcoef, hasrhs ? "reduced rhs" : "increased lhs", hasrhs ? rest : (rest > 0 ? gcd - rest : 0));
 
       if( SCIPisZero(scip, newcoef) )
       {

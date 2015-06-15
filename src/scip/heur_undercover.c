@@ -2199,9 +2199,9 @@ SCIP_RETCODE solveSubproblem(
    }
    SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/" HEUR_NAME "/freq", -1) );
 
-   SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %"SCIP_LONGINT_FORMAT", nstallnodes = %"SCIP_LONGINT_FORMAT"\n", timelimit, memorylimit, nodelimit, nstallnodes);
+   SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %" SCIP_LONGINT_FORMAT ", nstallnodes = %" SCIP_LONGINT_FORMAT "\n", timelimit, memorylimit, nodelimit, nstallnodes);
 
-   SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %"SCIP_LONGINT_FORMAT", nstallnodes = %"SCIP_LONGINT_FORMAT"\n", timelimit, memorylimit, nodelimit, nstallnodes);
+   SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %" SCIP_LONGINT_FORMAT ", nstallnodes = %" SCIP_LONGINT_FORMAT "\n", timelimit, memorylimit, nodelimit, nstallnodes);
 
    /* disable statistic timing inside sub SCIP */
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
@@ -2385,7 +2385,7 @@ SCIP_RETCODE performFixing(
 
       /* propagate the bound change; conflict analysis is performed automatically */
       SCIP_CALL( SCIPpropagateProbing(scip, 0, infeas, &ndomredsfound) );
-      SCIPdebugMessage("  --> propagation reduced %"SCIP_LONGINT_FORMAT" further domains\n", ndomredsfound);
+      SCIPdebugMessage("  --> propagation reduced %" SCIP_LONGINT_FORMAT " further domains\n", ndomredsfound);
 
       /* if propagation led to a cutoff, we backtrack immediately */
       if( *infeas )
@@ -2425,7 +2425,7 @@ SCIP_RETCODE performFixing(
 
       /* propagate the bound change */
       SCIP_CALL( SCIPpropagateProbing(scip, 0, infeas, &ndomredsfound) );
-      SCIPdebugMessage("  --> propagation reduced %"SCIP_LONGINT_FORMAT" further domains\n", ndomredsfound);
+      SCIPdebugMessage("  --> propagation reduced %" SCIP_LONGINT_FORMAT " further domains\n", ndomredsfound);
 
       /* if propagation led to a cutoff, we backtrack immediately */
       if( *infeas )
@@ -3242,7 +3242,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    /* only call heuristics if we have enough nodes left to call sub-CIP solving */
    if( nstallnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping undercover heuristic: nstallnodes=%"SCIP_LONGINT_FORMAT", minnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, heurdata->minnodes);
+      SCIPdebugMessage("skipping undercover heuristic: nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 

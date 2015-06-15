@@ -1195,7 +1195,7 @@ SCIP_RETCODE solveSubNLP(
 
 
    /* let the NLP solver do its magic */
-   SCIPdebugMessage("start NLP solve with iteration limit %"SCIP_LONGINT_FORMAT" and timelimit %g\n", itercontingent, timelimit);
+   SCIPdebugMessage("start NLP solve with iteration limit %" SCIP_LONGINT_FORMAT " and timelimit %g\n", itercontingent, timelimit);
    SCIP_CALL( SCIPsolveNLP(heurdata->subscip) );
 
    SCIPdebugMessage("NLP solver returned with termination status %d and solution status %d, objective value is %g\n",
@@ -2070,7 +2070,7 @@ SCIP_DECL_HEUREXEC(heurExecSubNlp)
       if( itercontingent < heurdata->itermin )
       {
          /* not enough iterations left to start NLP solver */
-         SCIPdebugMessage("skip NLP heuristic; contingent=%"SCIP_LONGINT_FORMAT"; minimal number of iterations=%d; success ratio=%g\n",
+         SCIPdebugMessage("skip NLP heuristic; contingent=%" SCIP_LONGINT_FORMAT "; minimal number of iterations=%d; success ratio=%g\n",
             itercontingent, heurdata->itermin, (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
          return SCIP_OKAY;
       }

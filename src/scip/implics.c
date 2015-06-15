@@ -2789,7 +2789,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       && cliquetable->ndirtycliques == 0 )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("cleaning up clique table with %d cliques (with %"SCIP_LONGINT_FORMAT" entries)\n", cliquetable->ncliques, cliquetable->nentries);
+   SCIPdebugMessage("cleaning up clique table with %d cliques (with %" SCIP_LONGINT_FORMAT " entries)\n", cliquetable->ncliques, cliquetable->nentries);
 
    /* delay events */
    SCIP_CALL( SCIPeventqueueDelay(eventqueue) );
@@ -2960,7 +2960,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
 
    assert(*infeasible || checkNEntries(cliquetable));
 
-   SCIPdebugMessage("cleaned up clique table has %d cliques left (with %"SCIP_LONGINT_FORMAT" entries)\n", cliquetable->ncliques, cliquetable->nentries);
+   SCIPdebugMessage("cleaned up clique table has %d cliques left (with %" SCIP_LONGINT_FORMAT " entries)\n", cliquetable->ncliques, cliquetable->nentries);
 
    /* process events */
    SCIP_CALL( SCIPeventqueueProcess(eventqueue, blkmem, set, NULL, lp, branchcand, NULL) );
