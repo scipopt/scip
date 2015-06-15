@@ -217,7 +217,7 @@ SCIP_RETCODE reopttreeCheckMemory(
    {
       unsigned int id;
 
-      assert(reopttree->nreoptnodes == (int)(reopttree->reoptnodessize)-1);
+      assert(reopttree->nreoptnodes == (int)(reopttree->reoptnodessize));
 
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopttree->reoptnodes, reopttree->reoptnodessize,
             2*reopttree->reoptnodessize) ); /*lint !e647*/
@@ -945,10 +945,6 @@ SCIP_RETCODE createReopttree(
    }
    assert(SCIPqueueNElems(reopttree->openids) == (int)(reopttree->reoptnodessize)-1);
 
-   /* initialize the root node */
-   reopttree->reoptnodes[0] = NULL;
-   SCIP_CALL( createReoptnode(reopttree, set, blkmem, 0) );
-
    reopttree->nreoptnodes = 0;
    reopttree->ninfsubtrees = 0;
    reopttree->ntotalfeasnodes = 0;
@@ -959,6 +955,10 @@ SCIP_RETCODE createReopttree(
    reopttree->ntotalprunednodes= 0;
    reopttree->ncutoffreoptnodes = 0;
    reopttree->ntotalcutoffreoptnodes = 0;
+
+   /* initialize the root node */
+   reopttree->reoptnodes[0] = NULL;
+   SCIP_CALL( createReoptnode(reopttree, set, blkmem, 0) );
 
    return SCIP_OKAY;
 }
@@ -5842,7 +5842,6 @@ SCIP_RETCODE SCIPreoptApply(
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree to reactivate */
    unsigned int          id,                 /**< id of the node to reactivate */
    SCIP_Real             estimate,           /**< estimate of the child nodes that should be created */
-   SCIP_Real             lowerbound,         /**< lowerbound of the current focusnode */
    SCIP_NODE**           childnodes,         /**< array to store the created child nodes */
    int*                  ncreatedchilds,     /**< pointer to store number of created child nodes */
    int*                  naddedconss,        /**< pointer to store number of generated constraints */
@@ -5960,7 +5959,7 @@ SCIP_RETCODE SCIPreoptApply(
             /* set the estimate */
             if( !SCIPsetIsInfinity(set, REALABS(reoptnode->lowerbound)) )
             {
-               if( SCIPsetIsRelGE(set, reoptnode->lowerbound, lowerbound) )
+               if( SCIPsetIsRelGE(set, reoptnode->lowerbound, SCIPnodeGetLowerbound(childnodes[c])) )
                   SCIPnodeSetEstimate(childnodes[c], set, reoptnode->lowerbound);
             }
          }
@@ -6055,7 +6054,7 @@ SCIP_RETCODE SCIPreoptApply(
             /* set estimates */
             if( !SCIPsetIsInfinity(set, REALABS(reopt->reopttree->reoptnodes[id]->lowerbound)) )
             {
-               if( SCIPsetIsRelGE(set, reoptnode->lowerbound, lowerbound))
+               if( SCIPsetIsRelGE(set, reoptnode->lowerbound, SCIPnodeGetLowerbound(childnodes[c])))
                   SCIPnodeSetEstimate(childnodes[c], set, reoptnode->lowerbound);
             }
          }
@@ -6095,7 +6094,7 @@ SCIP_RETCODE SCIPreoptApply(
       /* set the estimate */
       if( !SCIPsetIsInfinity(set, REALABS(reopt->reopttree->reoptnodes[id]->lowerbound)) )
       {
-         if( SCIPsetIsRelGE(set, reopt->reopttree->reoptnodes[id]->lowerbound, lowerbound) )
+         if( SCIPsetIsRelGE(set, reopt->reopttree->reoptnodes[id]->lowerbound, SCIPnodeGetLowerbound(childnodes[0])) )
             SCIPnodeSetEstimate(childnodes[0], set, reopt->reopttree->reoptnodes[id]->lowerbound);
       }
 

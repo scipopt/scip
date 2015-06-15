@@ -15349,7 +15349,6 @@ SCIP_RETCODE SCIPapplyReopt(
    SCIP_REOPTNODE*       reoptnode,          /**< node to reactivate */
    unsigned int          id,                 /**< unique id of the reoptimization node */
    SCIP_Real             estimate,           /**< estimate of the child nodes that should be created */
-   SCIP_Real             lowerbound,         /**< lowerbound of the current focusnode */
    SCIP_NODE**           childnodes,         /**< array to store the created child nodes */
    int*                  ncreatedchilds,     /**< pointer to store number of created child nodes */
    int*                  naddedconss,        /**< pointer to store number of generated constraints */
@@ -15364,7 +15363,7 @@ SCIP_RETCODE SCIPapplyReopt(
 
    SCIP_CALL( SCIPreoptApply(scip->reopt, scip, scip->set, scip->stat, scip->transprob, scip->origprob, scip->tree,
          scip->lp, scip->branchcand, scip->eventqueue, scip->cliquetable, scip->mem->probmem,
-         (unsigned int)scip->set->misc_permutationseed, reoptnode, id, estimate, lowerbound, childnodes, ncreatedchilds,
+         (unsigned int)scip->set->misc_permutationseed, reoptnode, id, estimate, childnodes, ncreatedchilds,
          naddedconss, childnodessize, success) );
 
    return SCIP_OKAY;

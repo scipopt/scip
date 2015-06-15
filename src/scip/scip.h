@@ -17660,7 +17660,6 @@ SCIP_RETCODE SCIPapplyReopt(
    SCIP_REOPTNODE*       reoptnode,          /**< node to reactivate */
    unsigned int          id,                 /**< unique id of the reoptimization node */
    SCIP_Real             estimate,           /**< estimate of the child nodes that should be created */
-   SCIP_Real             lowerbound,         /**< lowerbound of the current focusnode */
    SCIP_NODE**           childnodes,         /**< array to store the created child nodes */
    int*                  ncreatedchilds,     /**< pointer to store number of created child nodes */
    int*                  naddedconss,        /**< pointer to store number of generated constraints */

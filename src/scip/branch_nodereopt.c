@@ -188,8 +188,8 @@ SCIP_RETCODE Exec(
       SCIP_CALL( SCIPallocBufferArray(scip, &childnodes, childnodessize) );
 
       /* apply the reoptimization */
-      SCIP_CALL( SCIPapplyReopt(scip, reoptnode, childid, SCIPnodeGetEstimate(curnode), SCIPnodeGetLowerbound(curnode),
-            childnodes, &ncreatedchilds, &naddedconss, childnodessize, &success) );
+      SCIP_CALL( SCIPapplyReopt(scip, reoptnode, childid, SCIPnodeGetEstimate(curnode), childnodes, &ncreatedchilds,
+            &naddedconss, childnodessize, &success) );
 
       if( !success )
       {
@@ -200,8 +200,8 @@ SCIP_RETCODE Exec(
          SCIP_CALL( SCIPreallocBufferArray(scip, &childnodes, childnodessize) );
 
          /* apply the reoptimization */
-         SCIP_CALL( SCIPapplyReopt(scip, reoptnode, childid, SCIPnodeGetEstimate(curnode), SCIPnodeGetLowerbound(curnode),
-               childnodes, &ncreatedchilds, &naddedconss, childnodessize, &success) );
+         SCIP_CALL( SCIPapplyReopt(scip, reoptnode, childid, SCIPnodeGetEstimate(curnode), childnodes, &ncreatedchilds,
+               &naddedconss, childnodessize, &success) );
       }
 
       assert(success);
