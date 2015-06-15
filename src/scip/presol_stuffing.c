@@ -103,7 +103,7 @@ SCIP_RETCODE singletonColumnStuffing(
 
    for( col = 0; col < ncols; col++ )
    {
-      /* consider only at rows with minimal one continuous singleton column */
+      /* consider only rows with minimal one continuous singleton column */
       if( SCIPmatrixGetColNNonzs(matrix, col) == 1 &&
           SCIPvarGetType(SCIPmatrixGetVar(matrix, col)) == SCIP_VARTYPE_CONTINUOUS )
       {
@@ -113,9 +113,9 @@ SCIP_RETCODE singletonColumnStuffing(
 
          rowprocessed[row] = TRUE;
 
+         /* claim >= relation */
          if( SCIPmatrixIsRowRhsInfinity(matrix, row) )
          {
-            /* consider >= relation with obj > 0 and coef > 0 */
             fillcnt = 0;
             tryfixing = TRUE;
             constant1 = 0.0;
@@ -128,17 +128,28 @@ SCIP_RETCODE singletonColumnStuffing(
             for( ; (rowpnt < rowend); rowpnt++, valpnt++ )
             {
                SCIP_VAR* var;
+               SCIP_Real lb;
+               SCIP_Real ub;
 
                coef = *valpnt;
                idx = *rowpnt;
                var = SCIPmatrixGetVar(matrix, idx);
+               lb = SCIPvarGetLbGlobal(var);
+               ub = SCIPvarGetUbGlobal(var);
 
                if( SCIPmatrixGetColNNonzs(matrix, idx) == 1 && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
                {
+                  /* need obj > 0 and coef > 0 */
                   if( SCIPvarGetObj(var) > 0 && coef > 0 )
                   {
-                     constant1 += coef * SCIPvarGetLbGlobal(var);
-                     constant2 += coef * SCIPvarGetLbGlobal(var);
+                     if( SCIPisInfinity(scip, -lb) )
+                     {
+                        tryfixing = FALSE;
+                        break;
+                     }
+
+                     constant1 += coef * lb;
+                     constant2 += coef * lb;
                      colratios[fillcnt] = SCIPvarGetObj(var) / coef;
                      colindices[fillcnt] = idx;
                      colcoeffs[fillcnt] = coef;
@@ -146,10 +157,16 @@ SCIP_RETCODE singletonColumnStuffing(
                   }
                   else if( SCIPvarGetObj(var) < 0 && coef < 0 )
                   {
+                     if( SCIPisInfinity(scip, ub) )
+                     {
+                        tryfixing = FALSE;
+                        break;
+                     }
+
                      /* swap column and bounds */
                      swapped[idx] = TRUE;
-                     constant1 += -coef * -SCIPvarGetUbGlobal(var);
-                     constant2 += -coef * -SCIPvarGetUbGlobal(var);
+                     constant1 += -coef * -ub;
+                     constant2 += -coef * -ub;
                      colratios[fillcnt] = -SCIPvarGetObj(var) / -coef;
                      colindices[fillcnt] = idx;
                      colcoeffs[fillcnt] = -coef;
@@ -157,46 +174,48 @@ SCIP_RETCODE singletonColumnStuffing(
                   }
                   else if( SCIPvarGetObj(var) > 0 && coef < 0 )
                   {
-                     if( SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)) )
+                     if( SCIPisInfinity(scip, -lb) )
                      {
                         /* unbounded */
                         tryfixing = FALSE;
                         break;
                      }
-                     else
-                     {
-                        constant1 += coef * SCIPvarGetLbGlobal(var);
-                        constant2 += coef * SCIPvarGetLbGlobal(var);
-                     }
+
+                     constant1 += coef * lb;
+                     constant2 += coef * lb;
                   }
                   else
                   {
                      /* obj < 0 and coef > 0 */
-                     if( SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)) )
+                     if( SCIPisInfinity(scip, ub) )
                      {
                         /* unbounded */
                         tryfixing = FALSE;
                         break;
                      }
-                     else
-                     {
-                        constant1 += coef * SCIPvarGetUbGlobal(var);
-                        constant2 += coef * SCIPvarGetUbGlobal(var);
-                     }
+
+                     constant1 += coef * ub;
+                     constant2 += coef * ub;
                   }
                }
                else
                {
+                  if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
+                  {
+                     tryfixing = FALSE;
+                     break;
+                  }
+
                   /* discrete variables and non-singleton continuous variables */
                   if( coef > 0 )
                   {
-                     constant1 += coef * SCIPvarGetUbGlobal(var);
-                     constant2 += coef * SCIPvarGetLbGlobal(var);
+                     constant1 += coef * ub;
+                     constant2 += coef * lb;
                   }
                   else
                   {
-                     constant1 += coef * SCIPvarGetLbGlobal(var);
-                     constant2 += coef * SCIPvarGetUbGlobal(var);
+                     constant1 += coef * lb;
+                     constant2 += coef * ub;
                   }
                }
             }
@@ -209,21 +228,29 @@ SCIP_RETCODE singletonColumnStuffing(
                for( k = 0; k < fillcnt; k++ )
                {
                   SCIP_VAR* var;
+                  SCIP_Real lb;
+                  SCIP_Real ub;
 
                   idx = colindices[k];
                   var = SCIPmatrixGetVar(matrix, idx);
+                  lb = SCIPvarGetLbGlobal(var);
+                  ub = SCIPvarGetUbGlobal(var);
+
+                  /* stop fixing of variable bounds are not finite */
+                  if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
+                     break;
 
                   assert(SCIPmatrixGetColNNonzs(matrix, idx) == 1 && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
                   if( swapped[idx] )
                   {
-                     value = colcoeffs[k] * (-SCIPvarGetLbGlobal(var));
-                     boundoffset = colcoeffs[k] * (-SCIPvarGetUbGlobal(var));
+                     value = colcoeffs[k] * (-lb);
+                     boundoffset = colcoeffs[k] * (-ub);
                   }
                   else
                   {
-                     value = colcoeffs[k] * SCIPvarGetUbGlobal(var);
-                     boundoffset = colcoeffs[k] * SCIPvarGetLbGlobal(var);
+                     value = colcoeffs[k] * ub;
+                     boundoffset = colcoeffs[k] * lb;
                   }
 
                   if( SCIPisLE(scip, value, SCIPmatrixGetRowLhs(matrix, row) - constant1 + boundoffset) )
@@ -232,6 +259,7 @@ SCIP_RETCODE singletonColumnStuffing(
                         varstofix[idx] = FIXATLB;
                      else
                         varstofix[idx] = FIXATUB;
+
                      (*nfixings)++;
                   }
                   else if( SCIPisLE(scip, SCIPmatrixGetRowLhs(matrix, row), constant2) )
@@ -240,6 +268,7 @@ SCIP_RETCODE singletonColumnStuffing(
                         varstofix[idx] = FIXATUB;
                      else
                         varstofix[idx] = FIXATLB;
+
                      (*nfixings)++;
                   }
 
@@ -351,6 +380,9 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
                lb = SCIPvarGetLbGlobal(var);
                assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
 
+               /* avoid fixings to infinite values */
+               assert(!SCIPisInfinity(scip, -lb));
+
                /* fix at lower bound */
                SCIP_CALL( SCIPfixVar(scip, var, lb, &infeasible, &fixed) );
                if( infeasible )
@@ -369,6 +401,9 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
 
                ub = SCIPvarGetUbGlobal(var);
                assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
+
+               /* avoid fixings to infinite values */
+               assert(!SCIPisInfinity(scip, ub));
 
                /* fix at upper bound */
                SCIP_CALL( SCIPfixVar(scip, var, ub, &infeasible, &fixed) );
