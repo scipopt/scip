@@ -124,9 +124,9 @@ void SCIPhistoryUnite(
 
          /* we update the variance of two sets A and B as S_A+B = S_A + (mu_A)^2 * count_A ...*/
          /* @todo is there a numerically more stable variant for this merge? */
-         history->pscostvariance[i] = history->pscostvariance[i] + oldmean * oldmean * (addhistory->pscostcount[d] - history->pscostcount[i]) + \
+         history->pscostvariance[i] = history->pscostvariance[i] + oldmean * oldmean * (history->pscostcount[i] - addhistory->pscostcount[d]) + \
                /* S_B + (mu_B)^2 * count_B */
-               addhistory->pscostcount[d] * addhistory->pscostvariance[d] * addhistory->pscostvariance[d] -  \
+               addhistory->pscostvariance[d] + addhistory->pscostcount[d] * addhistory->pscostweightedmean[d] * addhistory->pscostweightedmean[d] -  \
                /* - count_A+B * mu_A+B^ 2 */
                history->pscostcount[i] * history->pscostweightedmean[i] * history->pscostweightedmean[i];
       }
@@ -137,14 +137,19 @@ void SCIPhistoryUnite(
          assert(history->pscostvariance[i] == 0.0);
       }
 #endif
+      /* @todo this assert may be too hard. Slight violations of the nonegativity could as well be handled by
+       * assigning the maximum of 0.0 and the value to this variance expression
+       */
+      assert(history->pscostvariance[i] >= -1e-6);
 
-      history->vsids[0] += addhistory->vsids[d];
-      history->conflengthsum[0] += addhistory->conflengthsum[d];
-      history->inferencesum[0] += addhistory->inferencesum[d];
-      history->cutoffsum[0] += addhistory->cutoffsum[d];
-      history->nactiveconflicts[0] += addhistory->nactiveconflicts[d];
-      history->nbranchings[0] += addhistory->nbranchings[d];
-      history->branchdepthsum[0] += addhistory->branchdepthsum[d];
+      history->vsids[i] += addhistory->vsids[d];
+      history->conflengthsum[i] += addhistory->conflengthsum[d];
+      history->inferencesum[i] += addhistory->inferencesum[d];
+      history->cutoffsum[i] += addhistory->cutoffsum[d];
+      history->nactiveconflicts[i] += addhistory->nactiveconflicts[d];
+      history->nbranchings[i] += addhistory->nbranchings[d];
+      history->branchdepthsum[i] += addhistory->branchdepthsum[d];
+
    }
 
 }
