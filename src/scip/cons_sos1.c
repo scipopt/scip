@@ -6501,7 +6501,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Cons(
    /* get nodes in the conflict graph */
    for (j = 0; j < nvars; ++j)
    {
-      if ( SCIPisFeasNegative(scip, SCIPvarGetUbLocal(consdata->vars[j])) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(consdata->vars[j])) )
+      if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(consdata->vars[j])) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(consdata->vars[j])) )
       {
          nodes[j] = varGetNodeSOS1(conshdlrdata, consdata->vars[j]);
          assert( nodes[j] >= 0 );
