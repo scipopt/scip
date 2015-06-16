@@ -73,7 +73,7 @@
 #define DEFAULT_ONLYNONCONVEXVARS       FALSE      /**< only apply obbt on non-convex variables */
 #define DEFAULT_TIGHTINTBOUNDSPROBING    TRUE      /**< should bounds of integral variables be tightened during
                                                     *   the probing mode? */
-#define DEFAULT_TIGHTCONTBOUNDSPROBING   TRUE      /**< should bounds of continuous variables be tightened during
+#define DEFAULT_TIGHTCONTBOUNDSPROBING  FALSE      /**< should bounds of continuous variables be tightened during
                                                     *   the probing mode? */
 #define DEFAULT_ORDERINGALGO                1      /**< which type of ordering algorithm should we use?
                                                     *   (0: no, 1: greedy, 2: greedy reverse) */
