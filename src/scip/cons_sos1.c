@@ -6501,8 +6501,11 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Cons(
    /* get nodes in the conflict graph */
    for (j = 0; j < nvars; ++j)
    {
-      nodes[j] = varGetNodeSOS1(conshdlrdata, consdata->vars[j]);
-      assert( nodes[j] >= 0 );
+      if ( SCIPisFeasNegative(scip, SCIPvarGetUbLocal(consdata->vars[j])) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(consdata->vars[j])) )
+      {
+         nodes[j] = varGetNodeSOS1(conshdlrdata, consdata->vars[j]);
+         assert( nodes[j] >= 0 );
+      }
    }
 
    /* generate bound constraint from conflict graph nodes */
