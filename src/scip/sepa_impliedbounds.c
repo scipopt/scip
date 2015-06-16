@@ -37,7 +37,7 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define RELCUTCOEFMAXRANGE          1.0 /**< maximal allowed range of cut coefficients, relative to 1/feastol */
-#define DEFAULT_USETWOSIZECLIQUES FALSE /**< should violated inequalities for cliques with 2 variables be separated? */
+#define DEFAULT_USETWOSIZECLIQUES  TRUE /**< should violated inequalities for cliques with 2 variables be separated? */
 
 /** separator-specific data for the implied bounds separator */
 struct SCIP_SepaData
