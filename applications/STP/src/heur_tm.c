@@ -14,11 +14,18 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_tm.c
- * @brief  TM primal heuristic
+ * @brief  shortest paths based primal heuristics for Steiner problems
  * @author Gerald Gamrath
  * @author Thorsten Koch
  * @author Daniel Rehfeldt
  * @author Michael Winkler
+ *
+ * This file implements several shortest paths based primal heuristics for Steiner problems, see
+ * "SCIP-Jack - A solver for STP and variants with parallelization extensions" by
+ * Gamrath, Koch, Maher, Rehfeldt and Shinano
+ *
+ * A list of all interface methods can be found in heur_tm.h
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -44,8 +51,8 @@
 #define DEFAULT_LEAFRUNS 15                  /**< number of runs at leafs */
 #define DEFAULT_ROOTRUNS 50                  /**< number of runs at the root */
 #define DEFAULT_DURINGLPFREQ 10              /**< frequency during LP solving */
-#define DEFAULT_TYPE  0
-#define DEFAULT_RANDSEED 0
+#define DEFAULT_TYPE  0                      /**< heuristic to execute */
+#define DEFAULT_RANDSEED 0                   /**< seed for pseudo-random functions */
 
 #define AUTO        0
 #define TM_SP       1
@@ -578,8 +585,6 @@ SCIP_RETCODE SCIPheurPruneDegConsSteinerTree(
                   break;
                }
             }
-            if( j == EAT_LAST )
-               printf("in %d \n", i);
             assert(j != EAT_LAST);
          }
       }
@@ -867,7 +872,6 @@ SCIP_RETCODE do_tm_degcons(
             j = cluster[(k + z) % csize];
             assert(i != j);
             assert(connected[j]);
-            //printf("deg: %d, max: %d dist: %f\n", degs[j], maxdegs[j], pathdist[i][j] );
 
             if( SCIPisLE(scip, pathdist[i][j], min) && degs[j] < maxdegs[j])
             {
@@ -1783,24 +1787,24 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
 	 if( nodepriority == NULL )
 	 {
 	    for( t = 0; t < nterms - 1; t++ )
-	      if( rootedges_z[t] == UNKNOWN )
-		terminalprio[t] = 0.0;
-	      else
-	        terminalprio[t] = SCIPgetRandomReal(0.0, graph->cost[flipedge(rootedges_t[t])], &(heurdata->randseed));
+               if( rootedges_z[t] == UNKNOWN )
+                  terminalprio[t] = 0.0;
+               else
+                  terminalprio[t] = SCIPgetRandomReal(0.0, graph->cost[flipedge(rootedges_t[t])], &(heurdata->randseed));
 	 }
 	 else
 	 {
 	    SCIP_Real max = 0.0;
 	    for( t = 0; t < nterms - 1; t++ )
-              if( rootedges_z[t] != UNKNOWN && SCIPisLT(scip, max, nodepriority[graph->tail[rootedges_z[t]]]) )
-                   max = nodepriority[graph->tail[rootedges_z[t]]];
+               if( rootedges_z[t] != UNKNOWN && SCIPisLT(scip, max, nodepriority[graph->tail[rootedges_z[t]]]) )
+                  max = nodepriority[graph->tail[rootedges_z[t]]];
 	    for( t = 0; t < nterms - 1; t++ )
-	      if( rootedges_z[t] == UNKNOWN )
-		terminalprio[t] = 0.0;
-	      else
-	        terminalprio[t] = nodepriority[graph->tail[rootedges_z[t]]] + SCIPgetRandomReal(0.0, max, &(heurdata->randseed));
+               if( rootedges_z[t] == UNKNOWN )
+                  terminalprio[t] = 0.0;
+               else
+                  terminalprio[t] = nodepriority[graph->tail[rootedges_z[t]]] + SCIPgetRandomReal(0.0, max, &(heurdata->randseed));
 	 }
-	    SCIPsortRealInt(terminalprio, terminalperm, nterms - 1);
+         SCIPsortRealInt(terminalprio, terminalperm, nterms - 1);
       }
 
       if( best >= 0 && best < nterms && SCIPgetRandomInt(0, 2, &(heurdata->randseed)) == 1 )
@@ -1901,7 +1905,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
          rootedge = rootedges_z[r];
          if( rootedge != UNKNOWN )
          {
-            //printf("rootedge: %d %d \n", graph->tail[rootedge],graph->head[rootedge] );
+            SCIPdebugMessage("rootedge: %d %d \n", graph->tail[rootedge],graph->head[rootedge] );
             assert(costrev[rootedge] == FARAWAY);
             costrev[rootedge] = 0.0;
             cost[flipedge(rootedge)] = 0.0;
@@ -2411,14 +2415,14 @@ SCIP_DECL_HEUREXEC(heurExecTM)
             {
 	       if( graph->stp_type != STP_PRIZE_COLLECTING && graph->stp_type != STP_MAX_NODE_WEIGHT )
 	       {
-	       SCIP_CALL( SCIPallocBufferArray(scip, &nodepriority, nnodes) );
-	       for( e = 0; e < nnodes; e++)
-	       {
-                  if( Is_term(graph->term[e]) )
-                     nodepriority[e] = (double) graph->grad[e];
-                  else
-                     nodepriority[e] = SCIPgetRandomReal(0.0, 1.0, &(heurdata->randseed));
-	       }
+                  SCIP_CALL( SCIPallocBufferArray(scip, &nodepriority, nnodes) );
+                  for( e = 0; e < nnodes; e++)
+                  {
+                     if( Is_term(graph->term[e]) )
+                        nodepriority[e] = (double) graph->grad[e];
+                     else
+                        nodepriority[e] = SCIPgetRandomReal(0.0, 1.0, &(heurdata->randseed));
+                  }
 	       }
 
                for( e = 0; e < nedges; e += 2)

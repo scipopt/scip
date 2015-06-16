@@ -1,20 +1,35 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*   Type....: Function                                                      */
-/*   File....: grphmcut.c                                                    */
-/*   Name....: Graph Minimum Cut Routine                                     */
-/*   Author..: Thorsten Koch                                                 */
-/*   Copyright by Author, All rights reserved                                */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* Der nachfolgend implementierte Algorithmus ist dem Artikel:
+/**@file   probdata_stp.c
+ * @brief  Minimum cut routine for Steiner problems
+ * @author Gerald Gamrath
+ * @author Thorsten Koch
+ * @author Daniel Rehfeldt
  *
- *              A Faster Algorithm for Finding
- *                the Minimum Cut in A Graph
+ * This file implements a graph minimum cut routine for Steiner problems. For more details see \ref MINCUT page.
  *
- * von Jianxiu Hao und James B. Orlin entnommen.
+ * @page MINCUT Graph minimum cut routine
+ *
+ * The implemented algorithm is described in "A Faster Algorithm for Finding the Minimum Cut in a Graph" by Hao and Orlin.
+ *
+ * A list of all interface methods can be found in grph.h.
  */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 
 #include <stdio.h>
 #include <assert.h>
@@ -316,8 +331,7 @@ static void initialise(
    int*         w,
    int*         dmax)
 {
-   int* r;
-   int* x;
+
    int i;
    int j;
    int k;
@@ -341,9 +355,6 @@ static void initialise(
    assert(residi != NULL);
    assert(p->mincut_r != NULL);
    assert(p->mincut_x != NULL);
-
-   r = p->mincut_r;
-   x = p->mincut_x;
 
    /* Knotenarrays Initialisieren
     */
@@ -416,10 +427,10 @@ static void initialise(
       assert((j == t) || (q_next[j] != Q_NMOQ));
       assert((j == t) || (q_prev[j] != Q_NMOQ));
 
-      assert(r[k] + r[Edge_anti(k)] == capa[k] + capa[Edge_anti(k)]);
-      assert(x[k]                   >= 0);
-      assert(x[k]                   <= capa[k]);
-      assert(r[k]                   == capa[k] - x[k] + x[Edge_anti(k)]);
+      assert((p->mincut_r)[k] + (p->mincut_r)[Edge_anti(k)] == capa[k] + capa[Edge_anti(k)]);
+      assert((p->mincut_x)[k]                   >= 0);
+      assert((p->mincut_x)[k]                   <= capa[k]);
+      assert((p->mincut_r)[k]                   == capa[k] - (p->mincut_x)[k] + (p->mincut_x)[Edge_anti(k)]);
    }
 #if DEBUG > 1
    show_flow(p, capa, w);

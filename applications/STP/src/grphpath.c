@@ -30,7 +30,6 @@
  * und dann sofort wieder entfernt wird, koennen maximal n-1 Knoten
  * in der Tabelle sein.
  */
-#define GRPHPATH_C
 #include <stdlib.h>
 #include <stdio.h>
 #include <stddef.h>

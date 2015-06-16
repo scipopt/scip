@@ -1,12 +1,30 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*   Type....: Function                                                      */
-/*   File....: grphload.c                                                    */
-/*   Name....: Graph File Loader                                             */
-/*   Author..: Thorsten Koch, Daniel Rehfeldt                                */
-/*   Copyright by Author, All rights reserved                                */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   reduce.c
+ * @brief  methods for loading Steiner problems in .stp format
+ * @author Thorsten Koch
+ * @author Daniel Rehfeldt
+ *
+ * This file includes methods for reading a Steiner problem in .stp format
+ *
+ * A list of all interface methods can be found in grph.h.
+ *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /*lint -esym(750,GRPHLOAD_C) -esym(766,errno.h)                              */
 
 #define GRPHLOAD_C
@@ -666,7 +684,7 @@ SCIP_RETCODE init_coordinates(
 
    for( i = 0; i < dim; i++ )
       (*coordinates)[i][*termcount] = (double)para[i + 1].n;
-//printf("add coord dim: %f, %f, %d \n", (double)para[1].n, (double)para[2].n, dim);
+
    (*termcount)++;
    return SCIP_OKAY;
 }
@@ -743,15 +761,13 @@ SCIP_RETCODE scale_coords(
 
    *scale_order = max_order;
    scale_factor = (int) pow(10.0, (double) max_order);
-//printf("scalefactor %d \n", scale_factor);
+
    for( i = 0; i < grid_dim; i++ )
    {
       SCIP_CALL( SCIPallocMemoryArray(scip, &((*scaled_coords)[i]), nnodes) );
       for( j = 0; j < nnodes; j++ )
       {
          (*scaled_coords)[i][j] = (int) (coordinates[i][j] * scale_factor);
-//printf("unscaled %f \n", (coordinates)[i][j] );
-//printf("scaled %d \n", (*scaled_coords)[i][j] );
       }
    }
    return SCIP_OKAY;

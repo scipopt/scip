@@ -14,8 +14,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   misc_stp.h
- * @brief  miscellaneous data structures and methods
+ * @brief  miscellaneous methods used for solving Steiner problems
  * @author Daniel Rehfeldt
+ *
+ * This file includes miscellaneous methods used for solving Steiner problems. For more details see \ref MISCSTP page.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

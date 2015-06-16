@@ -14,8 +14,19 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   misc_stp.c
- * @brief  miscellaneous methods for STP
+ * @brief  miscellaneous methods used for solving Steiner problems
  * @author Daniel Rehfeldt
+ *
+ * This file includes miscellaneous methods used for solving Steiner problems. For more details see \ref MISCSTP page.
+ *
+ * @page MISCSTP Miscellaneous methods used for STPs
+ *
+ * -Integer data linked list
+ * -Linear link-cut tree
+ * -Union-find data structure
+ * -Paring heap
+ *
+ * A list of all interface methods can be found in misc_stp.h.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

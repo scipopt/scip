@@ -104,11 +104,11 @@ SCIP_Bool maxprize(
 	 }
 	 else if( t == i && SCIPisGE(scip, g->prize[k], max) )
 	 {
-	   t = k;
+            t = k;
 	 }
       }
    }
-//printf("maxprize: %f (from %d) \n", g->prize[t], t );
+   SCIPdebugMessage("maxprize: %f (from %d) \n", g->prize[t], t );
    return (t == i);
 }
 
@@ -129,7 +129,7 @@ int trydg1edgepc(
    assert(Is_term(g->term[i]));
    if( SCIPisLE(scip, g->prize[i], g->cost[iout]) )
    {
-      //printf("DEL (1 edge) terminal %d \n", i);
+      SCIPdebugMessage("DEL (1 edge) terminal %d \n", i);
       i1 = g->head[iout];
       if( (i1 < i) && (Is_term(g->term[i1]) || g->grad[i1] == 2) )
          (*rerun) = TRUE;
@@ -257,7 +257,7 @@ SCIP_RETCODE degree_test_dir(
       }
    }
    SCIPdebugMessage(" %d Knots deleted\n", *count);
-   //printf("dirdeg %d Knots deleted\n", *count);
+   SCIPdebugMessage("dirdeg %d Knots deleted\n", *count);
    assert(graph_valid(g));
 
    return SCIP_OKAY;
@@ -296,7 +296,7 @@ SCIP_RETCODE degree_test_pc(
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &edges2, 2) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes2, 2) );
-   printf("dirdeg \n");
+
    SCIPdebugMessage("Degree Test: ");
 
    if( !pc )
@@ -324,7 +324,7 @@ SCIP_RETCODE degree_test_pc(
                assert(g->oeat[g->outbeg[i]] == EAT_LAST);
 
                graph_edge_del(scip, g, e1, TRUE);
-               //printf("delete NT %d\n ",  i);
+               SCIPdebugMessage("delete NT %d\n ",  i);
                assert(g->grad[i] == 0);
 
                /* the last node? */
@@ -364,7 +364,7 @@ SCIP_RETCODE degree_test_pc(
 
                SCIP_CALL( graph_knot_contract(scip, g, i2, i) );
                (*count)++;
-               //printf("contract NT %d %d \n ", i2, i);
+               SCIPdebugMessage("contract NT %d %d \n ", i2, i);
                if( (Is_term(g->term[i2]) && (i2 < i)) || (Is_term(g->term[i1]) && (i1 < i)) )
                   rerun = TRUE;
             }
@@ -379,7 +379,7 @@ SCIP_RETCODE degree_test_pc(
 	    /* if terminal node i is node the one with the highest prize, delete*/
             if( !maxprize(scip, g, i) )
             {
-	       //printf("delet 0 term %d prize: %f count:%d\n ", i, g->prize[i], *count);
+	       SCIPdebugMessage("delet 0 term %d prize: %f count:%d\n ", i, g->prize[i], *count);
 	       (*fixed) += g->prize[i];
                (*count) += deleteterm(scip, g, i);
             }
@@ -393,7 +393,7 @@ SCIP_RETCODE degree_test_pc(
             assert(e != EAT_LAST);
 	    assert(g->head[e] != g->source[0] || !pc);
             (*count) += trydg1edgepc(scip, g, fixed, i, e, &rerun);
-	    //printf("delet 1 term %d\n ", i);
+	    SCIPdebugMessage("delet 1 term %d\n ", i);
 	 }
 	 /* terminal of (real) degree 2? */
          else if( (g->grad[i] == 4 && pc) || (g->grad[i] == 3 && !pc) )
@@ -409,10 +409,8 @@ SCIP_RETCODE degree_test_pc(
                   i1 = g->head[e];
                   if( g->mark[i1] )
                   {
-		    if( i2 >= 2 )
-                  //  for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
-                   // printf("edge: %d %d term? %d mark? %d \n", i, g->head[e], Is_term(g->term[g->head[e]]), g->mark[g->head[e]]);
-		     assert(i2 < 2);
+                     if( i2 >= 2 )
+                        assert(i2 < 2);
                      edges2[i2] = e;
                      nodes2[i2++] = i1;
                   }
@@ -429,10 +427,10 @@ SCIP_RETCODE degree_test_pc(
                   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors), g->ancestors[Edge_anti(e1)]) );
                   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors), g->ancestors[Edge_anti(e)]) );
                   SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors), g->ancestors[e1]) );
-                 // printf("delet - term - %d\n ", i);
+                  SCIPdebugMessage("delet - term - %d\n ", i);
                   /* contract edge */
                   n1 = graph_edge_redirect(scip, g, e, nodes2[1], nodes2[0], g->cost[e] + g->cost[e1] - g->prize[i]);
-                  //printf("after delet - term - %d\n ", i);
+                  SCIPdebugMessage("after delet - term - %d\n ", i);
                   /* new edge inserted? */
                   if( n1 >= 0)
                   {
@@ -478,7 +476,7 @@ SCIP_RETCODE degree_test_pc(
                && SCIPisLE(scip, g->cost[ett], g->prize[g->head[ett]]) )
             {
                i1 = g->head[ett];
-              // printf("contract tt %d->%d\n ", i, i1);
+               SCIPdebugMessage("contract tt %d->%d\n ", i, i1);
                assert(SCIPisLT(scip, mincost, FARAWAY));
                *fixed += g->cost[ett];
 	       (*count)++;
@@ -492,7 +490,7 @@ SCIP_RETCODE degree_test_pc(
    if( !pc )
       g->mark[g->source[0]] = TRUE;
    SCIPdebugMessage(" %d Knots deleted\n", *count);
-   printf("dirdeg %d Knots deleted\n", *count);
+   SCIPdebugMessage("dirdeg %d Knots deleted\n", *count);
    /* free memory */
    SCIPfreeBufferArray(scip, &nodes2);
    SCIPfreeBufferArray(scip, &edges2);

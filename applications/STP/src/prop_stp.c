@@ -65,11 +65,9 @@ SCIP_RETCODE fixedgevar(
    int*                  nfixed              /**< counter that is incriminated if variable could be fixed */
    )
 {
-  printf("fix?: %s \n", SCIPvarGetName(edgevar));
-  assert(SCIPvarGetLbLocal(edgevar) < 0.5);//...I004 ?*/
+   assert(SCIPvarGetLbLocal(edgevar) < 0.5);
    if( SCIPvarGetUbLocal(edgevar) > 0.5 && SCIPvarGetLbLocal(edgevar) < 0.5 )
    {
-      printf("fix: %s \n", SCIPvarGetName(edgevar));
       SCIP_CALL( SCIPchgVarUb(scip, edgevar, 0.0) );
       (*nfixed)++;
    }
@@ -169,7 +167,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    *result = SCIP_DIDNOTFIND;
 #if 0
    cutoffbound = SCIPgetPrimalbound(scip);
-SCIP_Real offset = SCIPprobdataGetOffset(scip);
+   SCIP_Real offset = SCIPprobdataGetOffset(scip);
 #endif
    /* the required reduced path cost to be surpassed */
    minpathcost = cutoffbound - lpobjval;
@@ -199,9 +197,9 @@ SCIP_Real offset = SCIPprobdataGetOffset(scip);
    graph_path_execX(scip, graph, graph->source[0], cost, pathdist, pathedge);
 
    /* no paths should go back to the root */
-/*   for( e = graph->outbeg[graph->source[0]]; e != EAT_LAST; e = graph->oeat[e] )
-      costrev[e] = FARAWAY;
-*/
+   /*   for( e = graph->outbeg[graph->source[0]]; e != EAT_LAST; e = graph->oeat[e] )
+        costrev[e] = FARAWAY;
+   */
    /* build voronoi diagram */
    voronoi_terms(scip, graph, costrev, vnoi, vbase, graph->path_heap, graph->path_state);
 

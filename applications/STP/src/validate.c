@@ -1,12 +1,27 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*   Type....: Function                                                      */
-/*   File....: validate.c                                                    */
-/*   Name....: STP Solution validation                                       */
-/*   Author..: Thorsten Koch                                                 */
-/*   Copyright by Author, All rights reserved                                */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   portab.h
+ * @brief  Method to validate Steiner problem solutions
+ * @author Thorsten Koch
+ * @author Gerald Gamrath
+ * @author Daniel Rehfeldt
+ *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -202,20 +217,24 @@ SCIP_RETCODE SCIPvalidateStpSol(
    int   deg;
    int   e;
    assert(g         != NULL);
+
    if( g->knots == 1 )
-      return TRUE;
+   {
+      *feasible = TRUE;
+      return SCIP_OKAY;
+   }
+
    assert(xval      != NULL);
 
    SCIP_CALL( SCIPallocClearBufferArray(scip, &connected, g->knots) );
-   //connected = calloc((size_t)g->knots, sizeof(char));
 
-     // assert(connected != NULL);
    *feasible = FALSE;
    for(layer = 0; ret && (layer < g->layers); layer++)
    {
+#if 0
       if (layer > 0)
          memset(connected, 0, (size_t)g->knots * sizeof(char));
-
+#endif
 #if 1
       trail(g, g->source[layer], xval + layer * g->edges, -1,
          connected,
@@ -256,7 +275,6 @@ SCIP_RETCODE SCIPvalidateStpSol(
       }
    }
    SCIPfreeBufferArray(scip, &connected);
-   //free(connected);
 
    if( ret )
       ret = nail(g, xval);
@@ -280,5 +298,5 @@ SCIP_RETCODE SCIPvalidateStpSol(
 #endif
 #endif
    *feasible = (SCIP_Bool) ret;
-   return SCIP_OKAY;;
+   return SCIP_OKAY;
 }

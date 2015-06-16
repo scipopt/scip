@@ -20,11 +20,20 @@
  * @author Michael Winkler
  * @author Daniel Rehfeldt
  *
- * This file implements the problem data for Steiner problems.
+ * This file implements the problem data for Steiner problems. For more details see \ref PROBLEMDATA page.
+ *
+ * @page PROBLEMDATA Main problem data
+ *
+ * The problem data is accessible in all plugins.
  *
  * The problem data contains the (preprocessed) graph, several constraints and further information.
  *
+ * The function SCIPprobdataCreate(), which is called in the \ref reader_stp.c "reader plugin" to parse the input file
+ * reduce the graph,initializes the problem data structure and creates the problem in the SCIP environment. For this, it creates
+ * ...
+ * See the body of the function SCIPprobdataCreate() for more details.
  *
+ * A list of all interface methods can be found in probdata_stp.h.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -104,7 +113,7 @@ struct SCIP_ProbData
  * @{
  */
 
- /*
+/*
  * distinguishes a teminal as the root; with centertype
  *      = CENTER_OK  : Do nothing
  *      = CENTER_DEG : find maximum degree
@@ -2314,6 +2323,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
    IDX* curr;
    SCIP_PROBDATA* probdata;
    int  e;
+   int  k;
    int  norgedges;
    int  norgnodes;
    int  nsolnodes;
@@ -2342,8 +2352,8 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 
    for( e = 0; e < norgedges; e++ )
       orgedges[e] = FALSE;
-   for( e = 0; e < norgnodes; e++ )
-      orgnodes[e] = FALSE;
+   for( k = 0; k < norgnodes; k++ )
+      orgnodes[k] = FALSE;
    ancestors = graph->ancestors;
    if( graph->stp_type == STP_UNDIRECTED || graph->stp_type == STP_DIRECTED ||graph->stp_type == STP_DEG_CONS
       || graph->stp_type == STP_NODE_WEIGHTS || graph->stp_type == STP_HOP_CONS || graph->stp_type == GSTP )
@@ -2408,9 +2418,9 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 
       SCIPprobdataWriteLogLine(scip, "Vertices %d\n", nsolnodes);
 
-      for( e = 0; e < norgnodes; e++ )
-         if( orgnodes[e] == TRUE )
-            SCIPinfoMessage(scip, file, "V %d\n", e + 1);
+      for( k = 0; k < norgnodes; k++ )
+         if( orgnodes[k] == TRUE )
+            SCIPinfoMessage(scip, file, "V %d\n", k + 1);
 
       SCIPprobdataWriteLogLine(scip, "Edges %d\n", nsoledges);
       if( graph->stp_type == STP_HOP_CONS )
@@ -2479,13 +2489,13 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       SCIPprobdataWriteLogLine(scip, "Edges %d\n", nsoledges);
       SCIPprobdataWriteLogLine(scip, "Points %d\n", nsolnodes);
       nodecount = 0;
-      for( e = 0; e < norgnodes; e++ )
+      for( k = 0; k < norgnodes; k++ )
       {
-         if( orgnodes[e] == TRUE )
+         if( orgnodes[k] == TRUE )
          {
-	    nodenumber[e] = nodecount++;
+	    nodenumber[k] = nodecount++;
             SCIPprobdataWriteLogLine(scip, "%s ", strdim);
-            SCIP_CALL( graph_grid_coordinates(scip, coords, &nodecoords, ncoords, e, grid_dim) );
+            SCIP_CALL( graph_grid_coordinates(scip, coords, &nodecoords, ncoords, k, grid_dim) );
             for( i = 0; i < grid_dim; i++ )
             {
                SCIPprobdataWriteLogLine(scip, "%d ", nodecoords[i]);
@@ -2558,18 +2568,52 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
             }
 	 }
       }
-
+      /* @todo cover PCSPG with single node solution*/
       if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING && orgnodes[root] == FALSE )
       {
 	 orgnodes[root] = TRUE;
 	 assert(nsolnodes == 0);
 	 nsolnodes = 1;
       }
+      printf("nsolnodesbef : %d \n", nsolnodes);
+      if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING  || graph->stp_type == STP_PRIZE_COLLECTING )
+      {
+         for( k = 0; k < graph->norgmodelknots; k++ )
+         {
+            if( orgnodes[k] == TRUE )
+            {
+               curr = graph->pcancestors[k];
+               while( curr != NULL )
+               {
+                  if( orgedges[curr->index] == FALSE )
+                  {
+                     orgedges[curr->index] = TRUE;
+                     nsoledges++;
+                  }
+                  if( orgnodes[graph->orgtail[curr->index]] == FALSE )
+                  {
+                     orgnodes[graph->orgtail[curr->index]] = TRUE;
+                     nsolnodes++;
+		     printf("+node : %d \n", graph->orgtail[curr->index]);
+                  }
+                  if( orgnodes[graph->orghead[curr->index]] == FALSE )
+                  {
+                     orgnodes[graph->orghead[curr->index]] = TRUE;
+		     printf("+2node : %d \n", graph->orgtail[curr->index]);
+                     nsolnodes++;
+                  }
+                  curr = curr->parent;
+               }
+            }
+         }
+      }
+
+      printf("nsolnodes after: %d \n", nsolnodes);
       SCIPprobdataWriteLogLine(scip, "Vertices %d\n", nsolnodes);
 
-      for( e = 0; e < norgnodes; e++ )
-         if( orgnodes[e] == TRUE )
-	    SCIPinfoMessage(scip, file, "V %d\n", e + 1);
+      for( k = 0; k < norgnodes; k++ )
+         if( orgnodes[k] == TRUE )
+	    SCIPinfoMessage(scip, file, "V %d\n", k + 1);
 
       SCIPprobdataWriteLogLine(scip, "Edges %d\n", nsoledges);
       for( e = 0; e < norgedges; e += 2 )
@@ -2693,8 +2737,8 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
             SCIP_CALL( SCIPaddVar(scip, var) );
             SCIP_CALL( SCIPaddCoefLinear(scip, probdata->pathcons[t], var, 1.0) );
             SCIP_CALL( SCIPsetSolVal(scip, sol, var, 1.0) );
+	    assert(var != NULL);
 	    pathvars[t] = var;
-            assert(var != NULL);
          }
          tail = probdata->realterms[t];
 

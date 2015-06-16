@@ -14,12 +14,9 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_stp.h
- * @brief  Constraint handler stores the local branching decision data
- * @author Timo Berthold
- * @author Stefan Heinz
- *
- * This constraint handler is used to store the branching decision of the \ref BRANCHING "Ryan/Foster branching rule"
- * which is implemented in \ref branch_ryanfoster.c.
+ * @brief  Constraint handler for Steiner problems
+ * @author Gerald Gamrath
+ * @author Daniel Rehfeldt
  *
  */
 

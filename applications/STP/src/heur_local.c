@@ -16,6 +16,12 @@
 /**@file   heur_local.c
  * @brief  improvement heuristic for STPs
  * @author Daniel Rehfeldt
+ *
+ * This file implements three local heuristics, namely vertex insertion, key-path exchange and key-vertex elimination,
+ * see "Fast Local Search for Steiner Trees in Graphs" by Uchoa and Werneck.
+ *
+ * A list of all interface methods can be found in heur_local.h.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

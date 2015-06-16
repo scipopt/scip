@@ -17,7 +17,12 @@
  * @brief  primal recombination heuristic for Steiner problems
  * @author Daniel Rehfeldt
  *
- * Recombination heuristic
+ * This file implements a recombination heuristic for Steiner problems, see
+ * "SCIP-Jack - A solver for STP and variants with parallelization extensions" by
+ * Gamrath, Koch, Maher, Rehfeldt and Shinano
+ *
+ * A list of all interface methods can be found in heur_rec.h
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -1214,6 +1219,8 @@ SCIP_RETCODE SCIPincludeHeurRec(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/ntmruns",
          "number of runs in TM",
          &heurdata->ntmruns, FALSE, DEFAULT_NTMRUNS, 1, INT_MAX, NULL, NULL) );
+
+   heurdata->nusedsols = DEFAULT_NUSEDSOLS;
 
    return SCIP_OKAY;
 }

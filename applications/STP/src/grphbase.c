@@ -27,11 +27,10 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/*lint -esym(750,GRPHBASE_C) -esym(766,stdlib.h) -esym(766,malloc.h)         */
+/*lint -esym(766,stdlib.h) -esym(766,malloc.h)         */
 /*lint -esym(766,string.h)                                                   */
 
 
-#define GRPHBASE_C
 #include "scip/misc.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,6 +40,8 @@
 #include "misc_stp.h"
 #include "grph.h"
 #if 0
+
+#define GRPHBASE_C -esym(750,GRPHBASE_C)
 GRAPH* graph_init2(
    int ksize,
    int esize,
@@ -1054,21 +1055,6 @@ void graph_free(
       SCIPfreeMemoryArray(scip, &(p->ancestors));
    }
 
-   if( p->pcancestors != NULL )
-   {
-      for( e = 0; e < p->knots; e++ )
-      {
-         curr = p->pcancestors[e];
-         while( curr != NULL )
-         {
-            p->pcancestors[e] = curr->parent;
-	    SCIPfreeMemory(scip, &(curr));
-            curr = p->pcancestors[e];
-         }
-      }
-      SCIPfreeMemoryArray(scip, &(p->pcancestors));
-   }
-
    if( final )
    {
       if( p->orgtail != NULL )
@@ -1083,6 +1069,21 @@ void graph_free(
          p->fixedges = curr->parent;
          SCIPfreeMemory(scip, &(curr));
          curr = p->fixedges;
+      }
+
+      if( p->pcancestors != NULL )
+      {
+         for( e = 0; e < p->norgmodelknots; e++ )
+         {
+            curr = p->pcancestors[e];
+            while( curr != NULL )
+            {
+               p->pcancestors[e] = curr->parent;
+               SCIPfreeMemory(scip, &(curr));
+               curr = p->pcancestors[e];
+            }
+         }
+         SCIPfreeMemoryArray(scip, &(p->pcancestors));
       }
    }
 
@@ -1588,6 +1589,15 @@ SCIP_RETCODE graph_knot_contractpc(
          if( Is_pterm(g->term[g->head[e]]) )
             break;
       assert(e != EAT_LAST);
+      /*
+        assert(g->pcancestors != NULL);
+        if( g->pcancestors[s] != NULL )
+        {
+        SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->pcancestors[s]) );
+        SCIPintListNodeFree(scip, &(g->pcancestors[s]));
+        }
+        SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->ancestors[e]) );
+      */
       j = g->head[e];
 
       assert(j != g->source[0]);
@@ -1606,12 +1616,16 @@ SCIP_RETCODE graph_knot_contractpc(
       graph_edge_del(scip, g, e, TRUE);
 
       SCIP_CALL( graph_knot_contract(scip, g, t, s) );
+
+      printf("contract: %d, %d \n", t, s);
+
       for( e = g->inpbeg[t]; e != EAT_LAST; e = g->ieat[e] )
 	 SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e]), etsancestors) );
       for( e = g->outbeg[t]; e != EAT_LAST; e = g->oeat[e] )
 	 SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e]), etsancestors) );
 
       SCIPintListNodeFree(scip, &etsancestors);
+
    }
    else
    {
@@ -2191,14 +2205,12 @@ SCIP_RETCODE graph_pack(
    int    i;
    int    nnodes;
    int    nedges;
-   SCIP_Bool pc;
 
    assert(scip      != NULL);
    assert(graph      != NULL);
    assert(graph_valid(graph));
 
    g = graph;
-   pc = g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING;
    nnodes = 0;
    nedges = 0;
    SCIP_CALL( SCIPallocBufferArray(scip, &new, g->knots) );
@@ -2253,6 +2265,7 @@ SCIP_RETCODE graph_pack(
    q->grid_coordinates = g->grid_coordinates;
    q->fixedges = g->fixedges;
    q->hoplimit = g->hoplimit;
+   q->pcancestors = g->pcancestors;
 
    if( new == NULL )
    {
@@ -2266,13 +2279,14 @@ SCIP_RETCODE graph_pack(
    SCIP_CALL( SCIPallocMemoryArray(scip, &(q->ancestors), nedges) );
    for( i = 0; i < nedges; i++ )
       q->ancestors[i] = NULL;
-
+#if 0
    if( pc )
    {
       SCIP_CALL( SCIPallocMemoryArray(scip, &(q->pcancestors), nedges) );
       for( i = 0; i < nnodes; i++ )
          q->pcancestors[i] = NULL;
    }
+#endif
 
    /* add nodes (of positive degree) */
    for( i = 0; i < g->knots; i++ )
@@ -2280,9 +2294,10 @@ SCIP_RETCODE graph_pack(
       assert(g->term[i] < g->layers);
       if( g->grad[i] > 0 )
       {
+#if 0
          if( pc )
             SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(q->pcancestors[q->knots]), g->pcancestors[i]) );
-
+#endif
          graph_knot_add(q, g->term[i]);
       }
    }

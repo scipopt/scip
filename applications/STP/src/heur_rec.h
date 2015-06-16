@@ -14,15 +14,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rec.h
- * @brief  recombination heuristic for STPs
+ * @brief  primal recombination heuristic for Steiner problems
  * @author Daniel Rehfeldt
  *
- * Inspired by genetic algorithms, STP recombination is a improvement heuristic which requires
- * more than one feasible solution. For a set of feasible solutions, e.g., the three best found so far, it fixes
- * variables having value one it at least one solution and solves a corresponding sub-SCIP. Based on @ref
- * heur_crossover.h
+ * This file implements a recombination heuristic for Steiner problems, see
+ * "SCIP-Jack - A solver for STP and variants with parallelization extensions" by
+ * Gamrath, Koch, Maher, Rehfeldt and Shinano
+ *
  */
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_HEUR_REC_H__

@@ -14,12 +14,10 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_stp.h
- * @ingroup PROPAGATORS
- * @brief  propagator for Steiner problems, that makes use of the LP reduced cost and cutoff bound
+ * @brief  propagator for Steiner tree problems, using the LP reduced costs
  * @author Daniel Rehfeldt
  *
- * This propagator uses the reduced cost of an optimally solved LP-relaxation to propagate the variables by means of the
- * cutoff bound.
+ * This propagator makes use of the reduced cost of an optimally solved LP relaxation to propagate the variables
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
