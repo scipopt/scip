@@ -566,7 +566,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
                 * occured or variable was fixed by propagation while backtracking => Abort diving!
                 */
-               if( SCIPisFeasLT(scip, bdchgvalue, SCIPvarGetLbLocal(bdchgvar)) || SCIPisFeasGT(scip, bdchgvalue, SCIPvarGetUbLocal(bdchgvar)) )
+               if( SCIPisFeasLE(scip, bdchgvalue, SCIPvarGetLbLocal(bdchgvar)) || SCIPisFeasGE(scip, bdchgvalue, SCIPvarGetUbLocal(bdchgvar)) )
                {
                   SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
                      SCIPvarGetName(bdchgvar), SCIPvarGetLbLocal(bdchgvar), SCIPvarGetUbLocal(bdchgvar), nextcandsol);
