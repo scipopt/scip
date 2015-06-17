@@ -129,6 +129,9 @@ void SCIPhistoryUnite(
                addhistory->pscostvariance[d] + addhistory->pscostcount[d] * addhistory->pscostweightedmean[d] * addhistory->pscostweightedmean[d] -  \
                /* - count_A+B * mu_A+B^ 2 */
                history->pscostcount[i] * history->pscostweightedmean[i] * history->pscostweightedmean[i];
+
+         /* slight violations of nonnegativity are numerically possible */
+         history->pscostvariance[i] = MAX(history->pscostvariance[i], 0.0);
       }
 #ifndef NDEBUG
       else
@@ -137,10 +140,6 @@ void SCIPhistoryUnite(
          assert(history->pscostvariance[i] == 0.0);
       }
 #endif
-      /* @todo this assert may be too hard. Slight violations of the nonegativity could as well be handled by
-       * assigning the maximum of 0.0 and the value to this variance expression
-       */
-      assert(history->pscostvariance[i] >= -1e-6);
 
       history->vsids[i] += addhistory->vsids[d];
       history->conflengthsum[i] += addhistory->conflengthsum[d];
