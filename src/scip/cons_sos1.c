@@ -6478,6 +6478,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Cons(
    SCIP_CONSDATA* consdata;
    int* nodes;
    int nvars;
+   int cnt = 0;
    int j;
 
    assert( scip != NULL );
@@ -6503,14 +6504,17 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Cons(
    {
       if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(consdata->vars[j])) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(consdata->vars[j])) )
       {
-         nodes[j] = varGetNodeSOS1(conshdlrdata, consdata->vars[j]);
-         assert( nodes[j] >= 0 );
+         assert( varGetNodeSOS1(conshdlrdata, consdata->vars[j]) >= 0 );
+         nodes[cnt++] = varGetNodeSOS1(conshdlrdata, consdata->vars[j]);
       }
    }
 
    /* generate bound constraint from conflict graph nodes */
-   SCIP_CALL( generateBoundInequalityFromSOS1Nodes(scip, conshdlr, conshdlrdata->conflictgraph, nodes, nvars, 1.0, local, global,
-         strengthen, removable, SCIPconsGetName(cons), rowlb, rowub) );
+   if ( cnt > 0 )
+   {
+      SCIP_CALL( generateBoundInequalityFromSOS1Nodes(scip, conshdlr, conshdlrdata->conflictgraph, nodes, cnt, 1.0, local, global,
+            strengthen, removable, SCIPconsGetName(cons), rowlb, rowub) );
+   }
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &nodes);
@@ -6884,6 +6888,7 @@ SCIP_RETCODE separateSOS1(
          if( conshdlrdata->boundcutsfromsos1 || conshdlrdata->switchcutsfromsos1 )
          {
             SCIP_Bool cutoff;
+
             SCIP_CALL( initsepaBoundInequalityFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, sol, TRUE, maxboundcuts, &ngen, &cutoff) );
             if ( cutoff )
             {

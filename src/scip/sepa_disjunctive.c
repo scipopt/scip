@@ -52,7 +52,7 @@
 #define DEFAULT_MAXROUNDSROOT       100 /**< maximal number of separation rounds in the root node (-1: no limit) */
 #define DEFAULT_MAXINVCUTS           50 /**< maximal number of cuts investigated per iteration in a branching node */
 #define DEFAULT_MAXINVCUTSROOT      250 /**< maximal number of cuts investigated per iteration in the root node */
-#define DEFAULT_MAXCONFSDELAY        -1 /**< delay separation if number of conflict graph edges is larger than predefined value (-1: no limit) */
+#define DEFAULT_MAXCONFSDELAY    100000 /**< delay separation if number of conflict graph edges is larger than predefined value (-1: no limit) */
 
 
 /** separator data */
