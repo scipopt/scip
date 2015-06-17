@@ -89,7 +89,6 @@ struct SCIP_HeurData
 
    char                  scoreparam;         /**< score user parameter */
    char                  score;              /**< score to be used depending on user parameter to use fixed score or revolve */
-   SCIP_Bool             usescipscore;       /**< should the SCIP branching score be used for weighing up and down score? */
 };
 
 struct SCIP_EventhdlrData
@@ -345,7 +344,7 @@ SCIP_RETCODE calcBranchScore(
    SCIP_Real             lpsolval,           /**< current fractional LP-relaxation solution value  */
    SCIP_Real*            upscore,            /**< pointer to store the variable score when branching on it in upward direction */
    SCIP_Real*            downscore,          /**< pointer to store the variable score when branching on it in downward direction */
-   char                  scoreparam          /**< the score parameter of this branching rule */
+   char                  scoreparam          /**< the score parameter of this heuristic */
    )
 {
    SCIP_COL* varcol;
@@ -539,11 +538,11 @@ SCIP_RETCODE calcBranchScore(
    return SCIP_OKAY;
 }
 
-/** free branchrule data */
+/** free heuristic data */
 static
 SCIP_RETCODE heurdataFreeArrays(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata            /**< branching rule data */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
    assert(heurdata->memsize == 0 || heurdata->rowmeans != NULL);
@@ -631,7 +630,7 @@ void heurdataAddBoundChangeVar(
    if( heurdata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777 see above */
       return;
 
-   /* add the variable to the branch rule data of variables to process updates for */
+   /* add the variable to the heuristic data of variables to process updates for */
    assert(heurdata->varpossmemsize > heurdata->nupdatedvars);
    varpos = heurdata->nupdatedvars;
    heurdata->updatedvars[varpos] = var;
@@ -643,7 +642,7 @@ void heurdataAddBoundChangeVar(
 static
 SCIP_VAR* heurdataPopBoundChangeVar(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata            /**< branchrule data */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
    SCIP_VAR* var;
@@ -912,8 +911,21 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
 
    varindex = SCIPvarGetProbindex(cand);
 
+   /* terminate with a penalty for inactive variables, which the plugin can currently not score
+    * this should never happen with default settings where only LP branching candidates are iterated, but might occur
+    * if other constraint handlers try to score an inactive variable that was (multi-)aggregated or negated
+    */
+   if( varindex == - 1 )
+   {
+      *score = -1.0;
+      *roundup = FALSE;
+
+      return SCIP_OKAY;
+   }
+
+
    /* in debug mode, ensure that all bound process events which occurred in the mean time have been captured
-    * by the branching rule event system
+    * by the heuristic event system
     */
    assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(cand), SCIPvarGetUbLocal(cand)));
    assert(0 <= varindex && varindex < heurdata->varpossmemsize);
@@ -925,7 +937,7 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
    assert((heurdata->currentubs[varindex] == SCIP_INVALID)
       || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(cand), heurdata->currentubs[varindex])); /*lint !e777 */
 
-   /* if the branching rule has not captured the variable bounds yet, this can be done now */
+   /* if the heuristic has not captured the variable bounds yet, this can be done now */
    if( heurdata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777 */
       heurdataUpdateCurrentBounds(scip, heurdata, cand);
 
@@ -935,13 +947,9 @@ SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
    /* loop over candidate rows and determine the candidate up- and down- branching score w.r.t. the score parameter */
    SCIP_CALL( calcBranchScore(scip, heurdata, cand, candsol, &upscore, &downscore, heurdata->score) );
 
+   /* score is simply the maximum of the two individual scores */
    *roundup = (upscore > downscore);
-
-   /* if weighted scoring is enabled, use the branching score method of SCIP to weigh up and down score */
-   if( heurdata->usescipscore )
-      *score = SCIPgetBranchScore(scip, cand, downscore, upscore);
-   else
-      *score = MAX(upscore, downscore);
+   *score = MAX(upscore, downscore);
 
    return SCIP_OKAY;
 }
@@ -1040,9 +1048,7 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
    heurdata->currentlbs = NULL;
    heurdata->currentubs = NULL;
 
-   heurdata->usescipscore = FALSE;
-
-   /* create event handler first to finish branch rule data */
+   /* create event handler first to finish heuristic data */
    eventhdlrdata = NULL;
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
    eventhdlrdata->heurdata = heurdata;
