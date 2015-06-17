@@ -71,6 +71,7 @@ features:
 - possibility to set a soft time limit which becomes active only after the first primal solution was found
 
 parameters:
+- new parameter 'DELHEADERS' for 'uninstall'-target: scip headers are only removed when invoking 'make uninstall DELHEADERS=true'
 - new parameter heuristics/*diving/lpresolvedomchgquot to determine the percentage of changed domains since previous LP to trigger
   an LP resolve [default: 0.15] (* stands for eight diving heuristics to support this feature)
 - new parameter heuristics/*diving/lpsolvefreq to determine the frequency for resolving LP's during the execution of
@@ -244,6 +245,7 @@ interface:
   in cons_quadratic.h to compute linear under- and overestimation for bilinear and quadratic terms
 
 fixed bugs:
+- fix behavior of 'make install' which now sets symbolic links and short links to binaries and libraries
 - fix characterization of logic or constraints in SCIP's NLP relaxation
 - fix wrong handling of SCIP_NLPSOLSTAT_LOCALINFEASIBLE solution status in nlp.c
 - fix bug which lead to wrong global bound tightenings in prop_genvbounds.c
