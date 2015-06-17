@@ -136,7 +136,7 @@ parameters:
 - new parameter "constraints/SOS1/nstrongiter" to define the maximal number LP iterations to perform for each strong branching round
 - new parameter "constraints/SOS1/boundcutsfromsos1" to define whether to separate bound (clique) inequalities from SOS1 constraints
 - new parameter "constraints/SOS1/boundcutsfromgraph" to define whether to separate bound (clique) inequalities from the conflict graph
-- new parameter "constraints/SOS1/autocutsfromsos1" to automatically switch to separating bound cuts from SOS1 constraints if the SOS1 
+- new parameter "constraints/SOS1/autocutsfromsos1" to automatically switch to separating bound cuts from SOS1 constraints if the SOS1
   constraints do not overlap
 - new parameter "constraints/SOS1/boundcutsfreq" to define the frequency for separating bound (clique) cuts
 - new parameter "constraints/SOS1/boundcutsdepth" to define the node depth of separating bound (clique) cuts
@@ -172,6 +172,7 @@ parameters:
 - new parameter "heuristics/shiftandpropagate/binlocksfirst" to set if binaries without locks should be preferred in ordering
 
 performance improvements:
+- zi rounding heuristic uses buffer data structures, thereby decreasing total memory usage of SCIP
 - adjusted (hard) diving heuristics to solve fewer LPs. LP's are resolved only if a parameter-defined
   percentage of the variable bounds changed through domain propagation or at a predefined frequency.
 - all hard diving heuristics additionally consider indicator variables as candidate variables and try to
