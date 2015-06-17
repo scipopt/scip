@@ -2143,6 +2143,13 @@
  * This callback can be implemented to return the number of variables involved into a particular constraint.
  * In order to have access to the variable pointers, consider implementing @ref CONSGETVARS.
  *
+ * @subsection CONSGETDIVEBDCHGS
+ *
+ *  This callback is used inside the various diving heuristics of SCIP and does not affect the normal branching
+ *  of the actual search.
+ *  The constraint handler can provide this callback to render a current working solution (even more) infeasible by
+ *  suggesting one or several variable bound changes.
+ *
  * @section CONS_FURTHERINFO Further documentation
  *
  * Further documentation can be found in @ref type_cons.h for callback descriptions and a complete
