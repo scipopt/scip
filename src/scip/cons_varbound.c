@@ -504,7 +504,11 @@ SCIP_RETCODE resolvePropagation(
       {
          SCIP_Real relaxedbd;
 
-         if( SCIPvarIsIntegral(var) )
+         /* For integer variables, we can reduce the inferbound by 1 - 2eps, because this will be adjusted
+          * to the bound we need; however, if inferbound has a large value, adding 2*eps might be lost
+          * due to fixed precision floating point arithmetics, so we explicitly check this here.
+          */
+         if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip))
             relaxedbd = (consdata->lhs - (inferbd - 1.0 + 2*SCIPfeastol(scip))) / vbdcoef;
          else
             relaxedbd = (consdata->lhs - inferbd) / vbdcoef;
