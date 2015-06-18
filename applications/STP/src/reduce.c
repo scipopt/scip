@@ -507,7 +507,7 @@ SCIP_RETCODE bound_reduce(
    SCIP_Real  mstobj;
    SCIP_Real  maxcost;
    SCIP_Real  radiim2;
-#if 0
+#if 1
    SCIP_Real* cost3;
    SCIP_Real  radiim3;
    IDX** ancestors;
@@ -551,7 +551,7 @@ SCIP_RETCODE bound_reduce(
    nnodes = graph->knots;
    root = graph->source[0];
    pc = (graph->stp_type == STP_ROOTED_PRIZE_COLLECTING) || (graph->stp_type == STP_PRIZE_COLLECTING);
-#if 0
+#if 1
    cost3 = NULL;
    edges3 = NULL;
    nodes3 = NULL;
@@ -721,7 +721,7 @@ SCIP_RETCODE bound_reduce(
       assert( SCIPisGT(scip, FARAWAY, radius[k]) );
       radiim2 += radius[k];
    }
-#if 0
+#if 1
    if( nterms >= 3 )
       radiim3 = radiim2 - radius[nterms - 3];
    else
@@ -740,8 +740,6 @@ SCIP_RETCODE bound_reduce(
    /* PC or RPC? Then restore oringinal graph */
    if( pc )
       SCIP_CALL( pcgraphorg(scip, graph) );
-   if( pc )
-      assert(!graph->mark[root]);
 
    if( !success )
    {
@@ -847,7 +845,14 @@ SCIP_RETCODE bound_reduce(
             }
             e = etemp;
          }
-#if 0
+      }
+   }
+#if 1
+   /* traverse all node, try to eliminate 3 degree nodes */
+   for( k = 0; k < nnodes; k++ )
+   {
+      if( (!graph->mark[k] && pc) || graph->grad[k] == 0 )
+         continue;
          if( graph->grad[k] == 3 && !Is_term(graph->term[k]) )
          {
             tmpcost = vnoi[k].dist + vnoi[k + nnodes].dist + vnoi[k + 2 * nnodes].dist + radiim3;
@@ -868,7 +873,7 @@ SCIP_RETCODE bound_reduce(
                   }
                }
 
-               printf("eliminated 3 knot %d\n", k);
+               SCIPdebugMessage("eliminated 3 knot %d\n", k);
                /* get incident edges, cost and adjacent nodes */
                l = 0;
                for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
@@ -903,17 +908,16 @@ SCIP_RETCODE bound_reduce(
                assert(graph->grad[k] == 0);
             }
          }
+    }
 #endif
-      }
-   }
 
-   printf("nelimsX (edges) in bound reduce: %d,\n", *nelims);
+   SCIPdebugMessage("nelims (edges) in bound reduce: %d,\n", *nelims);
    /* free adjgraph */
    graph_path_exit(scip, adjgraph);
    graph_free(scip, adjgraph, TRUE);
 
    /* free memory*/
-#if 0
+#if 1
    if( ancestors != NULL )
    {
       assert(revancestors != NULL);
@@ -1334,7 +1338,7 @@ SCIP_RETCODE hcrcbound_reduce(
          result[e] = UNKNOWN;
          result[e + 1] = UNKNOWN;
 
-         if( SCIPvarGetUbGlobal(vars[e + 1]) < 0.5 )
+         if( SCIPvarGetUbLocal(vars[e + 1]) < 0.5 )
          {
             costrev[e] = BLOCKED;
          }
@@ -1346,7 +1350,7 @@ SCIP_RETCODE hcrcbound_reduce(
                maxcost = costrev[e];
          }
          cost[e + 1] = costrev[e];
-         if( SCIPvarGetUbGlobal(vars[e]) < 0.5 )
+         if( SCIPvarGetUbLocal(vars[e]) < 0.5 )
          {
             costrev[e + 1] = BLOCKED;
          }
@@ -1371,7 +1375,6 @@ SCIP_RETCODE hcrcbound_reduce(
             maxcost = graph->cost[e];
       }
    }
-
 
    maxmin = -1.0;
    for( k = 0; k < nnodes; k++ )
@@ -1421,8 +1424,9 @@ SCIP_RETCODE hcrcbound_reduce(
    }
    else
    {
-      objval = objval - fixed;
-      assert(SCIPisGT(scip, objval, 0.0));
+      /* objval = objval - fixed; */
+     objval = SCIPgetCutoffbound(scip);
+     assert(SCIPisGT(scip, objval, 0.0));
    }
 
    /* traverse all node, try to eliminate first the node and then all incident edges */
@@ -2309,7 +2313,9 @@ SCIP_RETCODE levelPC1(
       if( bred )
       {
          SCIP_CALL( bound_reduce(scip, g, vnoi, cost, g->prize, sddist, edgerealarr,  heap, state, vbase, &brednelims) );
+#if 0
          if( brednelims <= 2 * reductbound )
+#endif
             bred = FALSE;
 
          SCIPdebugMessage("bound reduce: %d \n", brednelims);
@@ -2519,7 +2525,7 @@ SCIP_RETCODE reduce(
    SCIP_CALL( graph_init_history(scip, (*graph)) );
 
    /* if no reduction methods available, return */
-#if 0
+#if 1
    if( (*graph)->stp_type == STP_DEG_CONS || (*graph)->stp_type == STP_GRID || (*graph)->stp_type == STP_OBSTACLES_GRID  )
       return SCIP_OKAY;
 #endif

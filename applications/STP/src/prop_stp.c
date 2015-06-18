@@ -107,7 +107,6 @@ SCIP_DECL_PROPEXEC(propExecStp)
    SCIP_Real* cost;
    SCIP_Real* costrev;
    SCIP_Real*  pathdist;
-   SCIP_Real redcost;
    SCIP_Real lpobjval;
    SCIP_Real cutoffbound;
    SCIP_Real minpathcost;
@@ -121,7 +120,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( 1 < 2 )
+   if( 1 )
       return SCIP_OKAY;
 
    /* propagator can only be applied during solving stage */
@@ -140,7 +139,15 @@ SCIP_DECL_PROPEXEC(propExecStp)
    if( !SCIPisLPRelax(scip) )
       return SCIP_OKAY;
 
+      /* we cannot apply reduced cost strengthening, if no simplex basis is available */
+   if( !SCIPisLPSolBasic(scip) )
+      return SCIP_OKAY;
+
    cutoffbound = SCIPgetCutoffbound(scip);
+
+      /* reduced cost strengthening can only be applied, if cutoff is finite */
+   if( SCIPisInfinity(scip, cutoffbound) )
+      return SCIP_OKAY;
 
    /* get problem data */
    probdata = SCIPgetProbData(scip);
@@ -158,6 +165,10 @@ SCIP_DECL_PROPEXEC(propExecStp)
    if( vars == NULL )
       return SCIP_OKAY;
 
+   /* chack if all integral variables are fixed */
+   if( SCIPgetNPseudoBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
    /* get LP objective value */
    lpobjval = SCIPgetLPObjval(scip);
 
@@ -170,7 +181,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    SCIP_Real offset = SCIPprobdataGetOffset(scip);
 #endif
    /* the required reduced path cost to be surpassed */
-   minpathcost = cutoffbound - lpobjval;
+   minpathcost = cutoffbound - lpobjval + 1;
    SCIPdebugMessage("cutoffbound %f, lpobjval %f\n", cutoffbound, lpobjval);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
@@ -180,7 +191,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
 
-   for( e = 0; e < nedges; e += 2)
+   for( e = 0; e < nedges; e += 2 )
    {
       assert(SCIPvarIsBinary(vars[e]));
       assert(SCIPvarIsBinary(vars[e + 1]));
@@ -197,9 +208,9 @@ SCIP_DECL_PROPEXEC(propExecStp)
    graph_path_execX(scip, graph, graph->source[0], cost, pathdist, pathedge);
 
    /* no paths should go back to the root */
-   /*   for( e = graph->outbeg[graph->source[0]]; e != EAT_LAST; e = graph->oeat[e] )
+   for( e = graph->outbeg[graph->source[0]]; e != EAT_LAST; e = graph->oeat[e] )
         costrev[e] = FARAWAY;
-   */
+
    /* build voronoi diagram */
    voronoi_terms(scip, graph, costrev, vnoi, vbase, graph->path_heap, graph->path_state);
 
@@ -224,10 +235,9 @@ SCIP_DECL_PROPEXEC(propExecStp)
       {
          for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
          {
-            edgevar = vars[e];
-            redcost = SCIPgetVarRedcost(scip, edgevar);
-            if( SCIPisGT(scip, pathdist[k] + redcost + vnoi[graph->head[e]].dist, minpathcost) )
+            if( SCIPisGT(scip, pathdist[k] + cost[e] + vnoi[graph->head[e]].dist, minpathcost) )
             {
+	       edgevar = vars[e];
                /* try to fix edge */
                SCIP_CALL( fixedgevar(scip, edgevar, &nfixed) );
             }
