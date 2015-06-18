@@ -17,7 +17,7 @@
  * @brief  shortest paths based primal heuristics for Steiner problems
  * @author Gerald Gamrath
  * @author Thorsten Koch
- * @author Daniel Rehfeldtö
+ * @author Daniel Rehfeldt
  * @author Michael Winkler
  *
  * This file implements several shortest paths based primal heuristics for Steiner problems, see
