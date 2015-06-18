@@ -38,7 +38,6 @@ include $(SCIPDIR)/make/make.project
 MAINNAME	=	stp
 CMAINOBJ	=	cmain.o \
 			cons_stp.o \
-			crc32.o \
 			grphbase.o \
 			grphload.o \
 			grphmcut.o \

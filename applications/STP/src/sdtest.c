@@ -34,12 +34,6 @@
 #define KNOTLIMIT 1e+20
 
 
-typedef struct sd_path
-{
-   double dist;
-   double tran;
-} SDPTH;
-
 #if 0
 /** for debug purposes only */
 static

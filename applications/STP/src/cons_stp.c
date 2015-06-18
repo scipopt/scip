@@ -64,8 +64,6 @@
 #define DEFAULT_NESTEDCUT     FALSE /**< Try Nested-Cuts */
 #define DEFAULT_FLOWSEP        TRUE /**< Try Flow-Cuts */
 
-#define C_T_2CUT     1
-
 #define FLOW_FACTOR     100000
 #define CREEP_VALUE     1
 /**@} */
@@ -109,7 +107,6 @@ SCIP_RETCODE cut_add(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    const GRAPH*          g,                  /**< graph data structure */
    const int             layer,              /**< current layer, set to zero usually */
-   const int             type,               /**< type of cut */
    const SCIP_Real*      xval,               /**< edge values */
    int*                  capa,               /**< edges capacities (scaled) */
    const int             updatecapa,         /**< update capacities? */
@@ -614,7 +611,7 @@ SCIP_RETCODE sep_2cut(
             for( k = 0; k < nnodes; k++ )
                g->mark[k] = (w[k] != 0);
 
-	    SCIP_CALL( cut_add(scip, conshdlr, g, layer, C_T_2CUT, xval, capa, nested_cut || disjunct_cut, ncuts, &addedcut) );
+	    SCIP_CALL( cut_add(scip, conshdlr, g, layer, xval, capa, nested_cut || disjunct_cut, ncuts, &addedcut) );
             if( addedcut )
             {
                count++;
@@ -660,7 +657,7 @@ SCIP_RETCODE sep_2cut(
                for( k = 0; k < nnodes; k++ )
                   g->mark[k] = (w[k] != 0) ? 1 : 0;
 
-	       SCIP_CALL( cut_add(scip, conshdlr, g, layer, C_T_2CUT, xval, capa, nested_cut || disjunct_cut, ncuts, &addedcut) );
+	       SCIP_CALL( cut_add(scip, conshdlr, g, layer, xval, capa, nested_cut || disjunct_cut, ncuts, &addedcut) );
                if( addedcut )
                {
                   count++;

@@ -40,7 +40,6 @@
 #include <unistd.h>        /* R_OK  */
 
 #include "portab.h"
-#include "crc32.h"
 #include "grph.h"
 
 #define MSG_FATAL    0
@@ -811,7 +810,6 @@ SCIP_RETCODE graph_load(
    char         keyword [MAX_KEYWORD_LEN];
    int          stop_input = FALSE;
    int          ret        = FAILURE;
-   unsigned int crc        = 0;
    char*        s;
    char*        t;
    struct key*  p;
@@ -929,10 +927,6 @@ SCIP_RETCODE graph_load(
          if (*s == '\0')
             continue;
 
-         /* Computation of Checksum
-          */
-         crc = STPcrc32((unsigned char*)s, crc);
-
          /* Build a keyword of form "sectionname.keyword"
           */
          (void)strcpy(keyword, curf.section->name);
@@ -1003,13 +997,8 @@ SCIP_RETCODE graph_load(
                      message(MSG_INFO, &curf, msg_newsect_s,
                         curf.section->name);
 
-                  /* Reset CRC
-                   */
-                  crc = 0;
                   break;
                case KEY_END : /* END found. */
-                  message(MSG_INFO, &curf, "CRC [%X]", crc);
-
                   curf.section = &section_table[0];
                   break;
                case KEY_EOF : /* EOF found */
@@ -1179,7 +1168,6 @@ SCIP_RETCODE graph_load(
                   nwcount++;
                   break;
                case KEY_NODEWEIGHTS_END :
-                  message(MSG_INFO, &curf, "CRC [%X]", crc);
                   curf.section = &section_table[0];
                   break;
                case KEY_OBSTACLES_RR :
@@ -1196,7 +1184,6 @@ SCIP_RETCODE graph_load(
                   obstacle_counter++;
                   break;
                case KEY_OBSTACLES_END :
-                  message(MSG_INFO, &curf, "CRC [%X]", crc);
                   curf.section = &section_table[0];
 
                   if( obstacle_counter != nobstacles )
@@ -1357,7 +1344,6 @@ SCIP_RETCODE graph_load(
                case KEY_COORDINATES_END :
                   assert(g == NULL);
                   assert(grid_dim > 1);
-                  message(MSG_INFO, &curf, "CRC [%X]", crc);
 
                   curf.section = &section_table[0];
                   if( termcount != nodes )

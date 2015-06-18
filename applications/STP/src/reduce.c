@@ -853,62 +853,62 @@ SCIP_RETCODE bound_reduce(
    {
       if( (!graph->mark[k] && pc) || graph->grad[k] == 0 )
          continue;
-         if( graph->grad[k] == 3 && !Is_term(graph->term[k]) )
+      if( graph->grad[k] == 3 && !Is_term(graph->term[k]) )
+      {
+         tmpcost = vnoi[k].dist + vnoi[k + nnodes].dist + vnoi[k + 2 * nnodes].dist + radiim3;
+         if( SCIPisGT(scip, tmpcost, obj) )
          {
-            tmpcost = vnoi[k].dist + vnoi[k + nnodes].dist + vnoi[k + 2 * nnodes].dist + radiim3;
-            if( SCIPisGT(scip, tmpcost, obj) )
+            /* first 3-node elimination? */
+            if( ancestors == NULL )
             {
-               /* first 3-node elimination? */
-               if( ancestors == NULL )
-               {
-                  SCIP_CALL( SCIPallocBufferArray(scip, &cost3, 3) );
-                  SCIP_CALL( SCIPallocBufferArray(scip, &edges3, 3) );
-                  SCIP_CALL( SCIPallocBufferArray(scip, &nodes3, 3) );
-                  SCIP_CALL( SCIPallocBufferArray(scip, &ancestors, 3) );
-                  SCIP_CALL( SCIPallocBufferArray(scip, &revancestors, 3) );
-                  for( l = 0; l < 3; l++ )
-                  {
-                     ancestors[l] = NULL;
-                     revancestors[l] = NULL;
-                  }
-               }
-
-               SCIPdebugMessage("eliminated 3 knot %d\n", k);
-               /* get incident edges, cost and adjacent nodes */
-               l = 0;
-               for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
-               {
-                  assert(l < 3);
-                  edges3[l] = e;
-                  nodes3[l] = graph->head[e];
-                  cost3[l++] = graph->cost[e];
-               }
-
-               /* clear */
+               SCIP_CALL( SCIPallocBufferArray(scip, &cost3, 3) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &edges3, 3) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &nodes3, 3) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &ancestors, 3) );
+               SCIP_CALL( SCIPallocBufferArray(scip, &revancestors, 3) );
                for( l = 0; l < 3; l++ )
                {
-                  SCIPintListNodeFree(scip, &(ancestors[l]));
-                  SCIPintListNodeFree(scip, &(revancestors[l]));
+                  ancestors[l] = NULL;
+                  revancestors[l] = NULL;
                }
-
-               /* store ancestors of incident edges */
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[0]), graph->ancestors[edges3[0]]) );
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[0]), graph->ancestors[Edge_anti(edges3[0])]) );
-
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[1]), graph->ancestors[edges3[1]]) );
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[1]), graph->ancestors[Edge_anti(edges3[1])]) );
-
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[2]), graph->ancestors[edges3[2]]) );
-               SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[2]), graph->ancestors[Edge_anti(edges3[2])]) );
-
-               SCIP_CALL( graph_edge_reinsert(scip, graph, edges3[0], nodes3[0], nodes3[1], cost3[0] + cost3[1], ancestors[0], ancestors[1], revancestors[0], revancestors[1]) );
-               SCIP_CALL( graph_edge_reinsert(scip, graph, edges3[1], nodes3[1], nodes3[2], cost3[1] + cost3[2], ancestors[1], ancestors[2], revancestors[1], revancestors[2]) );
-               SCIP_CALL( graph_edge_reinsert(scip, graph, edges3[2], nodes3[2], nodes3[0], cost3[2] + cost3[0], ancestors[2], ancestors[0], revancestors[2], revancestors[0]) );
-
-               assert(graph->grad[k] == 0);
             }
+
+            SCIPdebugMessage("eliminated 3 knot %d\n", k);
+            /* get incident edges, cost and adjacent nodes */
+            l = 0;
+            for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
+            {
+               assert(l < 3);
+               edges3[l] = e;
+               nodes3[l] = graph->head[e];
+               cost3[l++] = graph->cost[e];
+            }
+
+            /* clear */
+            for( l = 0; l < 3; l++ )
+            {
+               SCIPintListNodeFree(scip, &(ancestors[l]));
+               SCIPintListNodeFree(scip, &(revancestors[l]));
+            }
+
+            /* store ancestors of incident edges */
+            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[0]), graph->ancestors[edges3[0]]) );
+            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[0]), graph->ancestors[Edge_anti(edges3[0])]) );
+
+            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[1]), graph->ancestors[edges3[1]]) );
+            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[1]), graph->ancestors[Edge_anti(edges3[1])]) );
+
+            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(ancestors[2]), graph->ancestors[edges3[2]]) );
+            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(revancestors[2]), graph->ancestors[Edge_anti(edges3[2])]) );
+
+            SCIP_CALL( graph_edge_reinsert(scip, graph, edges3[0], nodes3[0], nodes3[1], cost3[0] + cost3[1], ancestors[0], ancestors[1], revancestors[0], revancestors[1]) );
+            SCIP_CALL( graph_edge_reinsert(scip, graph, edges3[1], nodes3[1], nodes3[2], cost3[1] + cost3[2], ancestors[1], ancestors[2], revancestors[1], revancestors[2]) );
+            SCIP_CALL( graph_edge_reinsert(scip, graph, edges3[2], nodes3[2], nodes3[0], cost3[2] + cost3[0], ancestors[2], ancestors[0], revancestors[2], revancestors[0]) );
+
+            assert(graph->grad[k] == 0);
          }
-    }
+      }
+   }
 #endif
 
    SCIPdebugMessage("nelims (edges) in bound reduce: %d,\n", *nelims);
@@ -1425,8 +1425,8 @@ SCIP_RETCODE hcrcbound_reduce(
    else
    {
       /* objval = objval - fixed; */
-     objval = SCIPgetCutoffbound(scip);
-     assert(SCIPisGT(scip, objval, 0.0));
+      objval = SCIPgetCutoffbound(scip);
+      assert(SCIPisGT(scip, objval, 0.0));
    }
 
    /* traverse all node, try to eliminate first the node and then all incident edges */

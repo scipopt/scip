@@ -76,7 +76,9 @@ struct SCIP_ProbData
    SCIP_CONS**           degcons;            /**< array of (node) degree constraints */
    SCIP_CONS**           edgecons;           /**< array of constraints */
    SCIP_CONS**           pathcons;           /**< array of constraints */
+#if PRIZEA
    SCIP_CONS**           prizeimplpcons;     /**< prize collecting, improving LP constraints */
+#endif
    SCIP_CONS**           prizesymcons;       /**< prize collecting, improving LP constraints */
    SCIP_CONS*            hopcons;            /**< hop constraint */
    SCIP_CONS*            prizecons;          /**< prize constraint */
@@ -2738,6 +2740,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
             SCIP_CALL( SCIPaddCoefLinear(scip, probdata->pathcons[t], var, 1.0) );
             SCIP_CALL( SCIPsetSolVal(scip, sol, var, 1.0) );
 	    assert(var != NULL);
+            assert(pathvars != NULL);
 	    pathvars[t] = var;
          }
          tail = probdata->realterms[t];
@@ -2750,6 +2753,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
                if( probdata->mode == MODE_PRICE )
                {
 		  /* add the new path variable to the constraints corresponding to the current edge */
+		  assert(var != NULL);
                   SCIP_CALL( SCIPaddCoefLinear(scip, probdata->edgecons[t * nedges + path[tail].edge], var, 1.0) );
                }
                else

@@ -150,7 +150,6 @@ $(OBJDIR)/cons_stp.o: src/cons_stp.c src/cons_stp.h ../../src/scip/scip.h \
  ../../src/scip/intervalarith.h ../../src/nlpi/type_exprinterpret.h \
  ../../src/scip/presolve.h src/grph.h src/misc_stp.h src/probdata_stp.h \
  src/portab.h
-$(OBJDIR)/crc32.o: src/crc32.c src/crc32.h
 $(OBJDIR)/grphbase.o: src/grphbase.c ../../src/scip/misc.h ../../src/scip/def.h \
  ../../src/scip/type_retcode.h ../../src/scip/pub_message.h \
  ../../src/scip/type_message.h ../../src/blockmemshell/memory.h \
@@ -188,8 +187,8 @@ $(OBJDIR)/grphbase.o: src/grphbase.c ../../src/scip/misc.h ../../src/scip/def.h 
  ../../src/scip/pub_var.h ../../src/lpi/lpi.h ../../src/nlpi/pub_expr.h \
  ../../src/scip/intervalarith.h ../../src/nlpi/type_exprinterpret.h \
  ../../src/scip/presolve.h src/grph.h
-$(OBJDIR)/grphload.o: src/grphload.c src/portab.h src/crc32.h src/grph.h \
- ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \
+$(OBJDIR)/grphload.o: src/grphload.c src/portab.h src/grph.h ../../src/scip/scip.h \
+ ../../src/scip/def.h ../../src/scip/type_retcode.h \
  ../../src/scip/pub_message.h ../../src/scip/type_message.h \
  ../../src/blockmemshell/memory.h ../../src/scip/type_result.h \
  ../../src/scip/type_clock.h ../../src/scip/type_misc.h \
@@ -600,7 +599,7 @@ $(OBJDIR)/probdata_stp.o: src/probdata_stp.c src/probdata_stp.h \
  ../../src/scip/pub_var.h ../../src/lpi/lpi.h ../../src/nlpi/pub_expr.h \
  ../../src/scip/intervalarith.h ../../src/nlpi/type_exprinterpret.h \
  ../../src/scip/presolve.h src/grph.h src/misc_stp.h src/cons_stp.h \
- src/portab.h ../../src/scip/cons_linear.h ../../src/scip/misc.h \
+ ../../src/scip/cons_linear.h ../../src/scip/misc.h \
  ../../src/scip/struct_misc.h
 $(OBJDIR)/event_bestsol.o: src/event_bestsol.c src/event_bestsol.h \
  ../../src/scip/scip.h ../../src/scip/def.h ../../src/scip/type_retcode.h \

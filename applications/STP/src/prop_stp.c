@@ -36,7 +36,7 @@
 
 #define PROP_NAME              "stp"
 #define PROP_DESC              "stp propagator"
-#define PROP_TIMING             SCIP_PROPTIMING_DURINGLPLOOP | SCIP_PROPTIMING_AFTERLPLOOP
+#define PROP_TIMING            SCIP_PROPTIMING_DURINGLPLOOP | SCIP_PROPTIMING_AFTERLPLOOP
 #define PROP_PRIORITY          +1000000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
@@ -120,9 +120,6 @@ SCIP_DECL_PROPEXEC(propExecStp)
 
    *result = SCIP_DIDNOTRUN;
 
-   if( 1 )
-      return SCIP_OKAY;
-
    /* propagator can only be applied during solving stage */
    if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
@@ -165,23 +162,20 @@ SCIP_DECL_PROPEXEC(propExecStp)
    if( vars == NULL )
       return SCIP_OKAY;
 
-   /* chack if all integral variables are fixed */
+   /* check if all integral variables are fixed */
    if( SCIPgetNPseudoBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
    /* get LP objective value */
    lpobjval = SCIPgetLPObjval(scip);
-
+#if 0
    if( SCIPisEQ(scip, lpobjval, 0.0) )
       return SCIP_OKAY;
-
-   *result = SCIP_DIDNOTFIND;
-#if 0
-   cutoffbound = SCIPgetPrimalbound(scip);
-   SCIP_Real offset = SCIPprobdataGetOffset(scip);
 #endif
+   *result = SCIP_DIDNOTFIND;
+
    /* the required reduced path cost to be surpassed */
-   minpathcost = cutoffbound - lpobjval + 1;
+   minpathcost = cutoffbound - lpobjval;
    SCIPdebugMessage("cutoffbound %f, lpobjval %f\n", cutoffbound, lpobjval);
 
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
@@ -191,14 +185,39 @@ SCIP_DECL_PROPEXEC(propExecStp)
    SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
 
-   for( e = 0; e < nedges; e += 2 )
+   for( e = 0; e < nedges; ++e )
    {
       assert(SCIPvarIsBinary(vars[e]));
-      assert(SCIPvarIsBinary(vars[e + 1]));
-      cost[e] = SCIPgetVarRedcost(scip, vars[e]);
-      cost[e + 1] = SCIPgetVarRedcost(scip, vars[e + 1]);
-      costrev[e] = cost[e + 1];
-      costrev[e + 1] = cost[e];
+
+      /* variable is already fixed, we must not trust the reduced cost */
+      if( SCIPvarGetLbLocal(vars[e]) + 0.5 > SCIPvarGetUbLocal(vars[e]) )
+      {
+         if( SCIPvarGetLbLocal(vars[e]) > 0.5 )
+            cost[e] = 0.0;
+         else
+         {
+            assert(SCIPvarGetUbLocal(vars[e]) < 0.5);
+            cost[e] = FARAWAY;
+         }
+      }
+      else
+      {
+         if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, vars[e])) )
+         {
+            assert(!SCIPisDualfeasNegative(scip, SCIPgetVarRedcost(scip, vars[e])));
+            cost[e] = SCIPgetVarRedcost(scip, vars[e]);
+         }
+         else
+         {
+            assert(!SCIPisDualfeasPositive(scip, SCIPgetVarRedcost(scip, vars[e])));
+            assert(SCIPisFeasEQ(scip, SCIPgetSolVal(scip, NULL, vars[e]), 1.0) || SCIPisDualfeasZero(scip, SCIPgetVarRedcost(scip, vars[e])));
+            cost[e] = 0.0;
+         }
+      }
+      if( e % 2 == 0 )
+         costrev[e + 1] = cost[e];
+      else
+         costrev[e - 1] = cost[e];
    }
 
    for( k = 0; k < nnodes; k++ )
@@ -220,7 +239,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
          if( Is_term(graph->term[k]) )
             continue;
 
-      if( 1 && !Is_term(graph->term[k]) && SCIPisGT(scip, pathdist[k] + vnoi[k].dist, minpathcost) )
+      if( !Is_term(graph->term[k]) && SCIPisGT(scip, pathdist[k] + vnoi[k].dist, minpathcost) )
       {
          for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
          {
@@ -231,7 +250,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
 	    SCIP_CALL( fixedgevar(scip, vars[flipedge(e)], &nfixed) );
          }
       }
-      else if (1)
+      else
       {
          for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
          {
