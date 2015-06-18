@@ -26,7 +26,7 @@
  *
  * This example is a method for solving mixed integer programs with multiple objective functions (MOMIP).
  *
- * A multi objective mixed integer problem is given by a cost matrix \f$C \in Q^{p \times (n+m)} \f$, 
+ * A multi objective mixed integer problem is given by a cost matrix \f$C \in Q^{p \times (n+m)} \f$,
  * a constraint matrix \f$ A \in Q^{\ell \times (n+m)} \f$ and a right hand vector \f$ b \in Q^\ell \f$
  * for some integers \f$ n, m, \ell \f$.
  * It has the form
@@ -36,17 +36,22 @@
  *    Ax \leq b \\
  *    x \in \mathbb{Z}^n \times \mathbb{R}^m
  * \f}
- * 
+ *
  * The algorithm computes all feasible solutions which minimize \f$ w^TCx \f$ for some \f$ w \geq 0 \f$.
  * Those are called extremal supported non-dominated solutions.
  *
- * The program can be built following these steps: 
- * - Install the <a href="http://lemon.cs.elte.hu/pub/doc/1.2.3/index.html">lemon</a> graph library for <code>c++</code>
+ * @section INSTALL Quick installation guide
+ *
+ * The program can be built following these steps:
+ * - Install the <a href="http://lemon.cs.elte.hu/trac/lemon/">lemon</a> graph library for <code>c++</code>
  * - Install SCIP
- * - In the Makefile, make sure the variable SCIPDIR correctly points to the SCIP root direction
- * - Build the binary using <code>make</code>; follow the instructions for creating softlinks
+ * - In the Makefile, make sure the variable <code>SCIPDIR</code> correctly points to the SCIP root directory
+ * - Build the binary using <code>make</code>; follow the instructions for creating the necessary link to lemon
  * - If building the softlinks fails, go to the <code>lib</code> directory.
- *   Try manually creating a softlink named <code>lemoninc</code> to the directory containing the lemon header files.
+ *   Try manually creating a softlink named <code>lemon</code> to the directory containing the lemon header files,
+ *   see also the <code>INSTALL</code>-file for further information
+ *
+ * @section RUNNING Running The Executable
  *
  * After the sources were sucessfully built, you can call the program from the example directory root via
  *
@@ -54,9 +59,9 @@
  *     bin/multiopt <instance>.mop [<SCIP-settings-file>.set]
  *
  * The optional settings file argument can be used to pass customized settings for the solving process inside SCIP
- * as the underlying MIP solver. Some settings are handled differently from usual SCIP behaviour. 
+ * as the underlying MIP solver. Some settings are handled differently from usual SCIP behaviour.
  * For example, if a time limit is given, it is applied to the whole MOMIP solving process, not every SCIP call individually.
- * 
+ *
  * The input file has to follow some simple conventions
  * - It has to contain a problem in <a href="http://en.wikipedia.org/wiki/MPS_%28format%29">MPS</a> format
  * - The file extension must be <code>.mop</code>
@@ -66,21 +71,25 @@
  * Then use ZIMPL to translate your instance to MPS. Now open the output file with an editor, find the names of the extra objectives and
  * change the mark <code>E</code> to <code>N</code> manually.
  *
- * The program implements the Lifted Weightspace Algorithm.  Basically, in each iteration, the algorithm chooses a weight 
+ * @section ALGORITHM Algorithmic description
+ *
+ * The program implements the Lifted Weightspace Algorithm.  Basically, in each iteration, the algorithm chooses a weight
  * \f$ w \in W = \{ w \geq 0 | \sum w = 1 \} \f$ and uses
  * SCIP to solve the single objective problem with \f$ c = w^TC \f$ .
- * To calculate the weights, the algorithm keeps track of the lifted weight space polyhedron 
+ * To calculate the weights, the algorithm keeps track of the lifted weight space polyhedron
  * \f$ P = \{ (a,w) \in R \times W | a \leq w^TCx,  x \in X \} \f$
  * where \f$ X \f$ is the set of solutions found so far. \f$ P \f$ is a convex polyhedron.
  * In each iteration, the algorithm chooses a vertex \f$ (a,w) \f$ of \f$ P \f$ such that \f$ w \f$ has not yet been used in weighted optimization.
  * Every time a new solution is found, \f$ P \f$ is updated.
 
- * \image html before_update.png "before update" 
- * \image html after_update.png "after update" 
+ * \image html before_update.png "before update"
+ * \image html after_update.png "after update"
 
  * To understand the algorithm, consider this: The problem of finding the minimal weighted objective value \f$ a_w \f$ for every weight \f$ w \f$
- * is equivalent to computing the set of all pairs \f$ (a,w) \f$ such that there exists a solution \f$ x \f$ with \f$ a \geq w^TCx\f$. \f$ P \f$ 
- * is exactely the complement of that set.
+ * is equivalent to computing the set of all pairs \f$ (a,w) \f$ such that there exists a solution \f$ x \f$ with \f$ a \geq w^TCx\f$. \f$ P \f$
+ * is exactly the complement of that set.
+ *
+ * @section LIBRARY The design of this example
  *
  * The functionality is distributed amongst several classes as follows:
  * - main.h reads the arguments, calls all other functions and produces text output.
@@ -90,7 +99,7 @@
  * - LiftedWeightSpaceSolver.h is the implementation of the lifted weight space algorithm, inheriting from WeightedSolver.h.
  * - Skeleton.h contains the 1-skeleton of the lifted weight space polyhedron.
  * - WeightSpaceVertex.h represents individual vertices of the weight space polyhedron.
- * 
+ *
  * The output from the program should look something like this:
  *
  *     reading parameter file <scipmip.set>
@@ -114,11 +123,11 @@
  *            19.00       14.00       10.00   solutions/tenfelde-podehl-3.sol
  *            15.00        9.00       17.00   solutions/tenfelde-podehl-2.sol
  *            13.00       16.00       11.00   solutions/tenfelde-podehl-4.sol
- *     
+ *
  *                                         Runs                               Solutions    Time/s     Nodes   LP Iter     V_new    V_proc
- *     
+ *
  *                                           11                                       4      0.16        11        69        10        10
- *     
+ *
  * As you can see, the program generates two tables of output. In the first table, each row represents a weighted optimization call.
  * The used weight is displayed as well as the cost vector of the optimal solution, if one was found.
  * Furthermore, the time (in seconds) as well as the number of lp iterations and nodes for solving the MIP is given.
@@ -126,11 +135,9 @@
  * V_new is the number of vertices added to the skeleton due to a polyhedron update, if there was one.
  * V_proc is the number of vertices that have either been confirmed or removed during an update.
  *
- * @TODO add eigene referenz
- *
  * A version of the lifted weight space algorithm was first mentioned in
  *
- * Matthias Ehrgott, Andreas Löhne, Lizhen Shao 
- * A dual variant of Benson’s “outer approximation algorithm” for multiple objective linear programming
+ * Matthias Ehrgott, Andreas Löhne, and Lizhen Shao:
+ * A dual variant of Benson’s “outer approximation algorithm” for multiple objective linear programming,
  * _Journal of Global Optimization_, Volume 52, Issue 4, pp 757-778, 2012
  */

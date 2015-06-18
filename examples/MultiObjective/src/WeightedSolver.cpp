@@ -16,8 +16,8 @@
 /**@file   WeightedSolver.cpp
  * @brief  Class providing all methods for using the algorithm
  * @author Timo Strunk
- * 
- * @desc   Abstract superclass for a multi objective solver using weighted objective functions.
+ *
+ * Abstract superclass for a multi objective solver using weighted objective functions.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -41,7 +41,7 @@
 
 /** SCIP style constructor */
 WeightedSolver::WeightedSolver(
-   const char*           paramfilename       /**< name of file with SCIP parameters */     
+   const char*           paramfilename       /**< name of file with SCIP parameters */
    )
    : scip_(NULL),
      multiopt_status_(SCIP_STATUS_UNKNOWN),
@@ -101,7 +101,7 @@ WeightedSolver::~WeightedSolver()
    {
       delete[] it->second;
    }
-   
+
    SCIP_PROBDATA* probdata = SCIPgetProbData(scip_);
 
    delete probdata->objectives;
@@ -224,8 +224,8 @@ SCIP_RETCODE WeightedSolver::writeSolution(
    return SCIP_OKAY;
 }
 
-/** delete non extremal solutions 
- *  for each nondominated point p we try to find a point 
+/** delete non extremal solutions
+ *  for each nondominated point p we try to find a point
  *  q <= p which is a convex combination of the other nondominated points */
 SCIP_RETCODE WeightedSolver::checkAndWriteSolutions()
 {
@@ -258,14 +258,14 @@ SCIP_RETCODE WeightedSolver::checkAndWriteSolutions()
 }
 
 /** prepare the LP for the extremality check
- *  For a given point p* it has the form 
- *  x_1 * p_1 + ... + x_n * p_n <= p* 
+ *  For a given point p* it has the form
+ *  x_1 * p_1 + ... + x_n * p_n <= p*
  *  x_1 + ... + x_n = 1
  *  x_i >= 0 for all i = 1,...,n */
 SCIP_RETCODE WeightedSolver::createExtremalityLP()
 {
    int ncols = nondom_points_.size();
-   int nrows = getNObjs() + 1; 
+   int nrows = getNObjs() + 1;
    int nnonz = ncols * nrows;
 
    /* prepare data structures for lp*/
@@ -285,7 +285,7 @@ SCIP_RETCODE WeightedSolver::createExtremalityLP()
    {
       lhs[i] = - SCIPinfinity(scip_);
       rhs[i] = 0.;
-   } 
+   }
 
    lhs[nrows - 1] = 1.;
    rhs[nrows - 1] = 1.;
@@ -309,7 +309,7 @@ SCIP_RETCODE WeightedSolver::createExtremalityLP()
 
    /* create lp */
    SCIP_CALL( SCIPcreateMessagehdlrDefault(&extremality_msg_, FALSE, NULL, FALSE) );
-   SCIP_CALL( SCIPlpiCreate(&extremality_lpi_, extremality_msg_, "calculate convex combination", SCIP_OBJSEN_MINIMIZE) );            
+   SCIP_CALL( SCIPlpiCreate(&extremality_lpi_, extremality_msg_, "calculate convex combination", SCIP_OBJSEN_MINIMIZE) );
 
    SCIP_CALL( SCIPlpiLoadColLP(
       extremality_lpi_,
@@ -326,8 +326,8 @@ SCIP_RETCODE WeightedSolver::createExtremalityLP()
       nnonz,
       beg,
       ind,
-      val 
-    ) );		
+      val
+    ) );
 
    /* delete data structures */
    delete[] obj;
@@ -345,7 +345,7 @@ SCIP_RETCODE WeightedSolver::createExtremalityLP()
 /** solve the extremality lp for one particular nondom point */
 SCIP_RETCODE WeightedSolver::solveExtremalityLP(const std::vector<SCIP_Real>* cost_vector, int point_index)
 {
-   int nrows = getNObjs(); 
+   int nrows = getNObjs();
 
    SCIP_Real obj_one = 1.;
    SCIP_Real obj_zero = 0.;
@@ -375,11 +375,11 @@ SCIP_RETCODE WeightedSolver::solveExtremalityLP(const std::vector<SCIP_Real>* co
    candidate_is_extremal_ = SCIPisGT(scip_, objval, 0.);
 
    /* clean up */
-   SCIP_CALL( SCIPlpiChgObj(extremality_lpi_, 1, &point_index, &obj_zero) );		
+   SCIP_CALL( SCIPlpiChgObj(extremality_lpi_, 1, &point_index, &obj_zero) );
    delete[] ind;
    delete[] lhs;
    delete[] rhs;
-   
+
    return SCIP_OKAY;
 }
 

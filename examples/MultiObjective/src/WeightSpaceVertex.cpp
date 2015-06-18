@@ -16,8 +16,8 @@
 /**@file   WeightSpaceVertex.cpp
  * @brief  Weight space vertex
  * @author Timo Strunk
- * 
- * @desc  Data structure storing combinatorial and geometric information about a vertex of the weight space polyhedron
+ *
+ * Data structure storing combinatorial and geometric information about a vertex of the weight space polyhedron
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -39,7 +39,7 @@ WeightSpaceVertex::WeightSpaceVertex(
       incident_facets_(incident_facets),
       weight_(weight),
       weighted_objective_value_(weighted_objval)
-{   
+{
    sort(incident_facets_.begin(), incident_facets_.end());
 
    assert( nobjs_ > 0 );
@@ -83,22 +83,22 @@ bool WeightSpaceVertex::isNeighbour(const WeightSpaceVertex* point) const
    common_facets.resize(nobjs_);
    cit = set_intersection(
       point->incident_facets_.begin(),
-      point->incident_facets_.end(), 
-      incident_facets_.begin(), 
+      point->incident_facets_.end(),
+      incident_facets_.begin(),
       incident_facets_.end(),
       common_facets.begin());
-      
+
    return cit - common_facets.begin() >= nobjs_ - 1;
 }
 
 /** returns the weighted objective value */
-SCIP_Real WeightSpaceVertex::getWeightedObjectiveValue() const 
+SCIP_Real WeightSpaceVertex::getWeightedObjectiveValue() const
 {
    return weighted_objective_value_;
 }
 
 /** returns the weight */
-const std::vector<SCIP_Real> * WeightSpaceVertex::getWeight() const 
+const std::vector<SCIP_Real> * WeightSpaceVertex::getWeight() const
 {
    return weight_;
 }
@@ -110,7 +110,7 @@ const std::vector< const std::vector<SCIP_Real>* >* WeightSpaceVertex::getFacets
 }
 
 /** returns the graph node associated with the vertex */
-lemon::ListGraph::Node WeightSpaceVertex::getNode() const 
+lemon::ListGraph::Node WeightSpaceVertex::getNode() const
 {
    return node_;
 }
@@ -137,16 +137,16 @@ void WeightSpaceVertex::joinFacets(
 
    incident_facets_.resize(nobjs_ - 1);
    cit = set_intersection(
-      facetsObs.begin(), 
-      facetsObs.end(), 
+      facetsObs.begin(),
+      facetsObs.end(),
       facetsAdj.begin(),
-      facetsAdj.end(), 
+      facetsAdj.end(),
       incident_facets_.begin());
    incident_facets_.push_back(new_facet);
    sort(incident_facets_.begin(), incident_facets_.end());
 }
 
-/** calculates the weight w and the weighted objective value a 
+/** calculates the weight w and the weighted objective value a
  *  based on w and a for the obsolete and the adjacent vertex
  *  by solving the equation system
  *  I) (w,a)         = h * (w_obs, a_obs) + (1 - h) * (w_adj, a_adj)
@@ -156,7 +156,7 @@ void WeightSpaceVertex::joinFacets(
 /** sets nonzero dimensions to union of given points nonzero dimensions */
 void  WeightSpaceVertex::calculate_weight(
       const WeightSpaceVertex*          obsolete,           /**< vertex cut off by new solution */
-      const WeightSpaceVertex*          adjacent,           /**< adjacent non obsolete vertex */      
+      const WeightSpaceVertex*          adjacent,           /**< adjacent non obsolete vertex */
       const std::vector<SCIP_Real>*     new_facet           /**< new solution cutting off the obsolete vertex */
   )
 {

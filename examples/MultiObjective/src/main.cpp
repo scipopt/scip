@@ -17,8 +17,8 @@
  * @brief  main file
  * @author Timo Strunk
  *
- * @desc   This is the main class of the program responsible for reading the arguments and running the program.
- *         Furthermore it is responsible for writing standard output.
+ * This is the main class of the program responsible for reading the arguments and running the program.
+ * Furthermore it is responsible for writing standard output.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -65,8 +65,8 @@ std::ostream& operator<<(
 }
 
 /** return the scalar product of two vectors */
-SCIP_Real scalar_product( 
-   const std::vector<SCIP_Real>&   u, 
+SCIP_Real scalar_product(
+   const std::vector<SCIP_Real>&   u,
    const std::vector<SCIP_Real>&   v
    )
 {
@@ -76,7 +76,7 @@ SCIP_Real scalar_product(
 
    std::vector<SCIP_Real>::const_iterator uit = u.begin();
    std::vector<SCIP_Real>::const_iterator vit = v.begin();
-   
+
    while( uit != u.end() )
    {
       result += (*uit) * (*vit);
@@ -105,14 +105,14 @@ Main::~Main()
 }
 
 /** run the program */
-SCIP_RETCODE Main::run(   
+SCIP_RETCODE Main::run(
    int                argc,          /**< number of command line arguments */
    char**             argv           /**< array of command line arguments */
    )
 {
    if(argc <= 1)
    {
-      std::cout << "usage: multiopt <problem file>.mop [<parameter file>.set]" 
+      std::cout << "usage: multiopt <problem file>.mop [<parameter file>.set]"
                 << std::endl;
 
       return SCIP_READERROR;
@@ -154,7 +154,7 @@ SCIP_RETCODE Main::run(
 }
 
 /** determine name of SCIP parameter file from arguments */
-const char* Main::readParamfilename(   
+const char* Main::readParamfilename(
    int                argc,          /**< number of command line arguments */
    char**             argv           /**< array of command line arguments */
    )
@@ -172,15 +172,15 @@ const char* Main::readParamfilename(
 
    if( SCIPfileExists(result) )
    {
-      std::cout << "reading parameter file <" 
-                << result << ">" 
+      std::cout << "reading parameter file <"
+                << result << ">"
                 << std::endl;
    }
    else
    {
       std::cout << "parameter file "
-                << "<" << result << ">" 
-                << " not found - using default parameters" 
+                << "<" << result << ">"
+                << " not found - using default parameters"
                 << std::endl;
       result = NULL;
    }
@@ -309,7 +309,7 @@ void Main::evaluateStatus()
    {
       std::cout << " ABORTED: user interrupt" << std::endl;
    }
-   else if( solver_status != SCIP_STATUS_OPTIMAL 
+   else if( solver_status != SCIP_STATUS_OPTIMAL
             && solver_status != SCIP_STATUS_UNBOUNDED )
    {
       std::cout << " ABORTED: SCIP_STATUS = " << (int)solver_status << std::endl;
@@ -320,7 +320,7 @@ void Main::evaluateStatus()
 void Main::printSolutions()
 {
    const std::vector<std::string>* objnames         = solver_->getObjNames();
-   const std::map< const std::vector<SCIP_Real>*, 
+   const std::map< const std::vector<SCIP_Real>*,
                    const char* >*  cost_to_filename = solver_->getCostToFilename();
    const std::vector<SCIP_Real>*   cost_vector;
 
@@ -335,7 +335,7 @@ void Main::printSolutions()
 
    std::cout << "   solution file" << std::endl;
 
-   for( std::map< const std::vector<SCIP_Real>*, 
+   for( std::map< const std::vector<SCIP_Real>*,
            const char* >::const_iterator it = cost_to_filename->begin();
         it != cost_to_filename->end();
         ++it )
@@ -348,7 +348,7 @@ void Main::printSolutions()
       {
          std::cout << std::setw(WIDTH_VEC_ENTRY) << *jt;
       }
-      
+
       std::cout << "   " << it->second << std::endl;
    }
 }
@@ -356,7 +356,7 @@ void Main::printSolutions()
 /** print every unbounded cost ray */
 void Main::printUnboundedRays()
 {
-   const std::vector< const std::vector<SCIP_Real>* >* 
+   const std::vector< const std::vector<SCIP_Real>* >*
                                    cost_rays = solver_->getCostRays();
    const std::vector<std::string>* objnames  = solver_->getObjNames();
    const std::vector<SCIP_Real>*   cost_vector;
@@ -374,7 +374,7 @@ void Main::printUnboundedRays()
 
       std::cout << std::endl;
 
-      for( std::vector< const std::vector<SCIP_Real>* >::const_iterator 
+      for( std::vector< const std::vector<SCIP_Real>* >::const_iterator
               it = cost_rays->begin();
            it != cost_rays->end();
            ++it
@@ -387,7 +387,7 @@ void Main::printUnboundedRays()
          {
             std::cout << std::setw(WIDTH_VEC_ENTRY) << *it;
          }
-      
+
          std::cout << std::endl;
       }
    }

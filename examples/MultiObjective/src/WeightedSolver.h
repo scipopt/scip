@@ -16,8 +16,8 @@
 /**@file   WeightedSolver.h
  * @brief  Class providing all methods for using the algorithm
  * @author Timo Strunk
- * 
- * @desc   Abstract superclass for a multi objective solver using weighted objective functions.
+ *
+ * Abstract superclass for a multi objective solver using weighted objective functions.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -135,7 +135,7 @@ class WeightedSolver
    std::vector< const std::vector< SCIP_Real>* >  nondom_points_;     /**< list of found non dominated points*/
    std::vector< const std::vector<SCIP_Real>* >   cost_rays_;         /**< cost vectors of unbounded primal rays*/
 
-   std::map< const std::vector<SCIP_Real>*, 
+   std::map< const std::vector<SCIP_Real>*,
              SCIP_SOL* >                          cost_to_sol_;       /**< maps cost vectors to solutions */
 
  private:
@@ -144,14 +144,14 @@ class WeightedSolver
    SCIP_LPI*             extremality_lpi_;        /**< lp interfaced for determining extremality */
    SCIP_MESSAGEHDLR*     extremality_msg_;        /**< message handler dealing with extremality lp messages */
    bool                  candidate_is_extremal_;  /**< true if nondom point checked by lp is extremal */
-   int                   n_written_sols_;         /**< number of solutions written to files */										    
+   int                   n_written_sols_;         /**< number of solutions written to files */
 
-   std::map< const std::vector<SCIP_Real>*, 
+   std::map< const std::vector<SCIP_Real>*,
              const char* >                        cost_to_filename_;  /**< maps confirmed extremal points to solution files */
 
    /** prepare the LP for the extremality check */
    SCIP_RETCODE createExtremalityLP();
-   
+
    /** solve the extremality lp for one particular nondom point */
    SCIP_RETCODE solveExtremalityLP(const std::vector<SCIP_Real>* nondom_point, int point_index);
 

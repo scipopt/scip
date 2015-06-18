@@ -57,15 +57,13 @@ MAINOBJFILES	=	$(addprefix $(OBJDIR)/,$(MAINOBJ) $(SECOBJS) )
 
 TESTSETDIR	=	data
 TESTFILES       =       data/*.mop
-#INCLUDE 	= 	-Ilib/lemon-src
 
 VERBOSE 	= 	false
 MAKELEMONLINKS  = 	true
 
-FLAGS		+=	-I$(LIBDIR)/lemoninc
-LEMONLINKS	=	$(LIBDIR)/lemoninc
-LEMONLINKS	+=	$(LIBDIR)/liblemon.$(OSTYPE).$(ARCH).$(COMP).$(STATICLIBEXT)
-LEMONLINKS	+=	$(LIBDIR)/liblemon.$(OSTYPE).$(ARCH).$(COMP).$(SHAREDLIBEXT)
+FLAGS		+=	-I$(LIBDIR)/lemon/include
+LEMONLINKS	=	$(LIBDIR)/lemon
+LINKSMARKERFILE	=	$(LIBDIR)/linkscreated
 #-----------------------------------------------------------------------------
 # Rules
 #-----------------------------------------------------------------------------
@@ -147,7 +145,7 @@ $(MAINFILE):	$(BINDIR) $(OBJDIR) $(LIBDIR) $(MAINOBJFILES)
 		$(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) 	\
 		$(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) -Wno-shadow $(LINKCXX_o) $@ \
-		$(LINKCXX_L)$(LIBDIR) $(LINKCXX_l)lemon.$(OSTYPE).$(ARCH).$(COMP)
+		$(LINKCXX_L)$(LIBDIR)/lemon/lib $(LINKCXX_l)emon
 
 
 $(OBJDIR)/%.o:	$(SRCDIR)/%.c
@@ -161,24 +159,42 @@ $(OBJDIR)/%.o:	$(SRCDIR)/%.cpp
 info:
 	@echo "$(MAINOBJFILES)"
 
+.PHONY: removemarker
+removemarker:
+		@rm -f $(LINKSMARKERFILE)
+
+.PHONY: links
+links:		|$(LIBDIR) removemarker echosoftlinks $(LEMONLINKS)
+
+.PHONY: echosoftlinks
+echosoftlinks:
+		@echo
+		@echo "- Current settings: LPS=$(LPS) OSTYPE=$(OSTYPE) ARCH=$(ARCH) COMP=$(COMP) SUFFIX=$(LINKLIBSUFFIX) ZIMPL=$(ZIMPL) ZIMPLOPT=$(ZIMPLOPT) IPOPT=$(IPOPT) IPOPTOPT=$(IPOPTOPT) EXPRINT=$(EXPRINT) GAMS=$(GAMS)"
+		@echo
+		@echo "*   This example code for multiobjective optimization requires an installation of the lemon";
+		@echo "*   graph library:";
+		@echo
+		@echo "*   'lib/lemon' should point to the main directory of your lemon installation";
+		@echo "*   containing the subdirectories 'include' and 'lib', i.e.";
+		@echo "*   'lib/lemon/include/lemon/list_graph.h' should exist";
+		@echo "*   The links will be installed in the 'lib' directory.";
+		@echo "*   For more information and if you experience problems see the INSTALL file.";
+
 .PHONY: $(LEMONLINKS)
+$(LEMONLINKS):
 ifeq ($(MAKELEMONLINKS), true)
-		@$(SHELL) -ec 'if test ! -e $@ ; \
+		@$(SHELL) -ec 'if test ! -e $(LINKSMARKERFILE); \
 			then \
-				DIRNAME=`dirname $@` ; \
-				BASENAMEA=`basename $@ .$(STATICLIBEXT)` ; \
-				BASENAMESO=`basename $@ .$(SHAREDLIBEXT)` ; \
 				echo ; \
 				echo "- preparing missing soft-link \"$@\":" ; \
-				if test -e $$DIRNAME/$$BASENAMEA.$(SHAREDLIBEXT) ; \
+				DIRNAME=`dirname $@` ; \
+				# test for a systemwide lemon library - grep returns 0 if it succesfully finds a match \
+				if test "`ldconfig -p | grep libemon`" == "0" ; \
 				then \
-					echo "* this soft-link is not necessarily needed since \"$$DIRNAME/$$BASENAMEA.$(SHAREDLIBEXT)\" already exists - press return to skip" ; \
+					echo "> Enter soft-link target file or directory for \"$@\" (not required because lemon installation was found in system): " ; \
+				else \
+					echo "> Enter soft-link target file or directory for \"$@\" (required because no lemon installation was found in system): " ; \
 				fi ; \
-				if test -e $$DIRNAME/$$BASENAMESO.$(STATICLIBEXT) ; \
-				then \
-					echo "* this soft-link is not necessarily needed since \"$$DIRNAME/$$BASENAMESO.$(STATICLIBEXT)\" already exists - press return to skip" ; \
-				fi ; \
-				echo "> Enter soft-link target file or directory for \"$@\" (return if not needed): " ; \
 				echo -n "> " ; \
 				cd $$DIRNAME ; \
 				eval $(READ) TARGET ; \
@@ -193,6 +209,8 @@ ifeq ($(MAKELEMONLINKS), true)
 				fi ; \
 				echo ; \
 			fi'
+		@rm -f $(LINKSMARKERFILE)
+		@echo "this is only a marker" > $(LINKSMARKERFILE)
 endif
 
 #---- EOF --------------------------------------------------------------------

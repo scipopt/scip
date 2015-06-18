@@ -17,7 +17,7 @@
  * @brief  Objective data structure
  * @author Timo Strunk
  *
- * @desc   Data structure storing objective data
+ * Data structure storing objective data
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -37,7 +37,7 @@ class Objectives
 {
  public:
    /** default constructor */
-   Objectives(); 
+   Objectives();
 
    /** default destructor */
    ~Objectives();
@@ -49,14 +49,14 @@ class Objectives
 
    /** set objective coefficient corresponding to given variable and objective name */
    void addCost(
-      SCIP_VAR*          var                 /**< pointer to SCIP variable */, 
-      const char*        objname             /**< identifier of objective in mps file */, 
+      SCIP_VAR*          var                 /**< pointer to SCIP variable */,
+      const char*        objname             /**< identifier of objective in mps file */,
       SCIP_Real          val                 /**< cost coefficient */
       );
 
    /** change objective function of scip instance to new weighted objective */
    SCIP_RETCODE setWeightedObjective(
-      SCIP*                             scip      /**< SCIP solver */, 
+      SCIP*                             scip      /**< SCIP solver */,
       const std::vector<SCIP_Real>*     weight    /**< vector containing weight for every objective */
       );
 
@@ -68,14 +68,14 @@ class Objectives
       SCIP_Real                         rhs       /**< right hand side */
       );
 
-   /** calculate the vector containing the objective value of the current solution 
+   /** calculate the vector containing the objective value of the current solution
        for every objective */
    std::vector<SCIP_Real>* calculateCost(
       SCIP*              scip,               /**< SCIP solver */
       SCIP_Sol*          sol                 /**< SCIP solution */
       );
 
-   /** calculate the vector containing the objective value of the SCIP primal ray 
+   /** calculate the vector containing the objective value of the SCIP primal ray
        for every objective */
    std::vector<SCIP_Real>* calculateCostRay(
       SCIP*              scip                /**< SCIP solver */

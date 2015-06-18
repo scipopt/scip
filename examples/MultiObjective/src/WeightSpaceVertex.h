@@ -16,8 +16,8 @@
 /**@file   WeightSpaceVertex.h
  * @brief  Weight space vertex
  * @author Timo Strunk
- * 
- * @desc  Data structure storing combinatorial and geometric information about a vertex of the weight space polyhedron
+ *
+ * Data structure storing combinatorial and geometric information about a vertex of the weight space polyhedron
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -67,13 +67,13 @@ class WeightSpaceVertex
 
    /** returns the weight */
    const std::vector<SCIP_Real>* getWeight() const;
-   
+
    /** returns the set of facets defining the vertex */
    const std::vector< const std::vector<SCIP_Real>* >* getFacets() const;
-   
+
    /** returns the graph node associated with the vertex */
    lemon::ListGraph::Node getNode() const ;
-   
+
    /** sets the graph node associated with the vertex */
    void setNode(
       lemon::ListGraph::Node  node /**< corresponding node in skeleton graph */
@@ -101,11 +101,11 @@ class WeightSpaceVertex
       const std::vector<SCIP_Real>*     new_facet           /**< new solution cutting off the obsolete vertex */
       );
 
-   /** calculates the weight w and the weighted objective value a 
+   /** calculates the weight w and the weighted objective value a
     *  based on w and a for the obsolete and the adjacent vertex */
    void calculate_weight(
       const WeightSpaceVertex*          obsolete,           /**< vertex cut off by new solution */
-      const WeightSpaceVertex*          adjacent,           /**< adjacent non obsolete vertex */      
+      const WeightSpaceVertex*          adjacent,           /**< adjacent non obsolete vertex */
       const std::vector<SCIP_Real>*     new_facet           /**< new solution cutting off the obsolete vertex */
    );
 

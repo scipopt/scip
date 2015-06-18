@@ -17,7 +17,7 @@
  * @brief  Weight space polyhedron
  * @author Timo Strunk
  *
- * @desc   This class represents the lifted weight space polyhedron.  It supplies weights for the solver to test.
+ * This class represents the lifted weight space polyhedron.  It supplies weights for the solver to test.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -52,7 +52,7 @@ class Skeleton
 
    /** initialize the polyhedron with the first solution */
    void init(
-      const std::vector<SCIP_Real>*     cost_vector,                       /**< cost vector of first solution */ 
+      const std::vector<SCIP_Real>*     cost_vector,                       /**< cost vector of first solution */
       std::vector< const std::vector<SCIP_Real>* >*   cost_rays = NULL     /**< list of known unbounded cost rays */
       );
 
@@ -101,7 +101,7 @@ class Skeleton
    lemon::ListGraph::Node                         last_returned_node_;     /**< last tested node */
    std::vector<WeightSpaceVertex*>                vertices_;               /**< list of all generated vertices */
    int                                            n_new_nodes_;            /**< number of vertices added in last call*/
-   int                                            n_proc_nodes_;           /**< number of vertices processed in 
+   int                                            n_proc_nodes_;           /**< number of vertices processed in
 									    * last call to isExtremal() */
    std::vector< const std::vector<SCIP_Real>* >   facets_;                 /**< all facets of the polyhedron */
 
@@ -114,7 +114,7 @@ class Skeleton
 
    /** create all facets defining the inital weight space polyhedron */
    void createInitialFacets(
-      const std::vector<SCIP_Real>*     cost_vector         /**< cost vector of first solution */ 
+      const std::vector<SCIP_Real>*     cost_vector         /**< cost vector of first solution */
       );
 
    /** create corner vertex of initial weight space polyhedron */
@@ -125,7 +125,7 @@ class Skeleton
    /** wether the new solution makes a given weight space vertex obsolete */
    bool isMakingObsolete(
       const std::vector<SCIP_Real>*     cost_vector,        /**< cost vector of a solution */
-      const WeightSpaceVertex*          vertex,             /**< vertex that might be obsolete */ 
+      const WeightSpaceVertex*          vertex,             /**< vertex that might be obsolete */
       bool                              strict=false        /**< no tolerance for slight obsolecity */
       );
 
@@ -150,11 +150,11 @@ class Skeleton
    /** calculate new vertices from obsolete vertices and add them to the graph */
    void createNewVertices();
 
-   /** calculate and add edges between all pairs of combinatorially adjacent new vertices */ 
+   /** calculate and add edges between all pairs of combinatorially adjacent new vertices */
    void createNewEdges();
 
    /** creates a new node between an obsolete and a non obsolete node */
-   void makeIntermediateVertex( 
+   void makeIntermediateVertex(
       lemon::ListGraph::Edge            cut_edge            /**< an edge between an obsolete and a non-obsolete node */
       );
 

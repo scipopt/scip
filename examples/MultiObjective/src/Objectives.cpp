@@ -17,7 +17,7 @@
  * @brief  Objective data structure
  * @author Timo Strunk
  *
- * @desc   Data structure storing objective data
+ * Data structure storing objective data
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -60,8 +60,8 @@ void Objectives::addObjective(
 
 /** set objective coefficient corresponding to given variable and objective name */
 void Objectives::addCost(
-   SCIP_VAR*             var                 /**< pointer to SCIP variable */, 
-   const char*           objname             /**< identifier of objective in mps file */, 
+   SCIP_VAR*             var                 /**< pointer to SCIP variable */,
+   const char*           objname             /**< identifier of objective in mps file */,
    SCIP_Real             val                 /**< cost coefficient */
    )
 {
@@ -90,7 +90,7 @@ void Objectives::addCost(
 
 /** change objective function of scip instance to new weighted objective */
 SCIP_RETCODE Objectives::setWeightedObjective(
-   SCIP*                          scip      /**< SCIP solver */, 
+   SCIP*                          scip      /**< SCIP solver */,
    const std::vector<SCIP_Real>*  weight    /**< vector containing weight for every objective */
    )
 {
@@ -106,9 +106,9 @@ SCIP_RETCODE Objectives::setWeightedObjective(
    {
       SCIP_CALL( SCIPfreeTransform(scip) );
    }
-    
-   for( std::map<SCIP_VAR*, std::vector<SCIP_Real>* >::const_iterator it = cost_columns_.begin(); 
-        it != cost_columns_.end(); 
+
+   for( std::map<SCIP_VAR*, std::vector<SCIP_Real>* >::const_iterator it = cost_columns_.begin();
+        it != cost_columns_.end();
         ++it )
    {
       newobj = 0.;
@@ -152,17 +152,17 @@ SCIP_RETCODE Objectives::createObjectiveConstraint(
       vals[i] = scalar_product(*weight, *(jt->second));
 
       ++i;
-   }    
-   
+   }
+
    sprintf(name,"objcons%d",++nconstraints_);
    SCIP_CALL( SCIPcreateConsBasicLinear(
          scip,
          cons,
          name,
          nvars,
-         vars, 
-         vals, 
-         -SCIP_DEFAULT_INFINITY, 
+         vars,
+         vals,
+         -SCIP_DEFAULT_INFINITY,
          rhs
          ));
 
@@ -173,7 +173,7 @@ SCIP_RETCODE Objectives::createObjectiveConstraint(
    return SCIP_OKAY;
 }
 
-/** calculate the vector containing the objective value of the current solution 
+/** calculate the vector containing the objective value of the current solution
     for every objective */
 std::vector<SCIP_Real>* Objectives::calculateCost(
    SCIP*                 scip,               /**< SCIP solver */
@@ -182,11 +182,11 @@ std::vector<SCIP_Real>* Objectives::calculateCost(
 {
    int nobjs;
    std::vector<SCIP_Real> * result;
-   
+
    nobjs = getNObjs();
    result = new std::vector<SCIP_Real>(nobjs, 0.);
-   
-   for( std::map<SCIP_VAR*, std::vector<SCIP_Real>* >::const_iterator 
+
+   for( std::map<SCIP_VAR*, std::vector<SCIP_Real>* >::const_iterator
            it = cost_columns_.begin();
         it != cost_columns_.end(); ++it )
    {
@@ -199,7 +199,7 @@ std::vector<SCIP_Real>* Objectives::calculateCost(
    return result;
 }
 
-/** calculate the vector containing the objective value of the SCIP primal ray 
+/** calculate the vector containing the objective value of the SCIP primal ray
     for every objective */
 std::vector<SCIP_Real>* Objectives::calculateCostRay(
    SCIP*                 scip                /**< SCIP solver */
@@ -208,7 +208,7 @@ std::vector<SCIP_Real>* Objectives::calculateCostRay(
    int                      nobjs  = getNObjs();
    std::vector<SCIP_Real> * result = new std::vector<SCIP_Real>(nobjs, 0.);
 
-   for( std::map<SCIP_VAR*, std::vector<SCIP_Real>* >::const_iterator 
+   for( std::map<SCIP_VAR*, std::vector<SCIP_Real>* >::const_iterator
            it = cost_columns_.begin();
         it != cost_columns_.end(); ++it )
    {
@@ -224,12 +224,12 @@ std::vector<SCIP_Real>* Objectives::calculateCostRay(
       {
          SCIP_VAR* var = it->first;
          /* find implicit primal ray */
-         if( 
-            ( SCIPvarGetObj(var) < 0 && 
-              SCIPvarGetNLocksUp(var) == 0 && 
+         if(
+            ( SCIPvarGetObj(var) < 0 &&
+              SCIPvarGetNLocksUp(var) == 0 &&
               SCIPvarGetUbGlobal(var) == SCIPinfinity(scip) ) ||
-            ( SCIPvarGetObj(var) > 0 && 
-              SCIPvarGetNLocksDown(var) == 0 && 
+            ( SCIPvarGetObj(var) > 0 &&
+              SCIPvarGetNLocksDown(var) == 0 &&
               SCIPvarGetLbGlobal(var) == - SCIPinfinity(scip) )
             )
          {

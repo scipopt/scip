@@ -17,7 +17,7 @@
  * @brief  Main class of the algorithm
  * @author Timo Strunk
  *
- * @desc   Realization of a weighted solver using the lifted weight space polyhedron to calculate weights.
+ * Realization of a weighted solver using the lifted weight space polyhedron to calculate weights.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -41,7 +41,7 @@ class LiftedWeightSpaceSolver : public WeightedSolver
  public:
    /** SCIP style constructor */
    LiftedWeightSpaceSolver(
-      const char*        paramfilename       /**< name of file with SCIP parameters */ 
+      const char*        paramfilename       /**< name of file with SCIP parameters */
       );
 
    /** default destructor */
@@ -99,7 +99,7 @@ class LiftedWeightSpaceSolver : public WeightedSolver
 
    /** get the MIP solution and check wheather it is a new optimum*/
    SCIP_RETCODE evaluateSolution();
-   
+
    /** initialize lp for feasible weight generation */
    SCIP_RETCODE createFeasibleWeightLPI();
 
@@ -111,7 +111,7 @@ class LiftedWeightSpaceSolver : public WeightedSolver
 
    /** add new cost ray constraint to feasible weight lp */
    SCIP_RETCODE updateFeasibleWeightLPI(const std::vector<SCIP_Real>* cost_ray);
-   
+
    /** return true if the given vector has an entry close to infinity */
    bool hasInfiniteComponent(const std::vector<SCIP_Real>* cost_vector);
 

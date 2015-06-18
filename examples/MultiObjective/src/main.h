@@ -16,8 +16,9 @@
 /**@file   main.h
  * @brief  main file
  * @author Timo Strunk
- * @desc   This is the main class of the program responsible for reading the arguments and running the program.
- *         Furthermore it is responsible for writing standard output.
+ *
+ * This is the main class of the program responsible for reading the arguments and running the program.
+ * Furthermore it is responsible for writing standard output.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -47,8 +48,8 @@ std::ostream& operator<<(
    );
 
 /** return the scalar product of two vectors */
-SCIP_Real scalar_product( 
-   const std::vector<SCIP_Real>&   u, 
+SCIP_Real scalar_product(
+   const std::vector<SCIP_Real>&   u,
    const std::vector<SCIP_Real>&   v
    );
 
@@ -81,7 +82,7 @@ class Main
    int                   n_v_proc_total_;    /**< sum of 1-skeleton vertices processed so far */
 
    /** determine name of SCIP parameter file from arguments */
-   const char* readParamfilename(   
+   const char* readParamfilename(
       int                argc,          /**< number of command line arguments */
       char**             argv           /**< array of command line arguments */
       );

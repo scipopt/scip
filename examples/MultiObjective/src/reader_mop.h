@@ -20,6 +20,11 @@
  *
  * The mop-reader adapts the mps-reader of SCIP by the functionality to read multiple objectives.
  *
+ * The input file has to follow some simple conventions
+ * - It has to contain a problem in <a href="http://en.wikipedia.org/wiki/MPS_%28format%29">MPS</a> format
+ * - The file extension must be <code>.mop</code>
+ * - Every row marked <code>N</code> is treated as one of the cost vectors
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

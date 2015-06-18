@@ -17,7 +17,7 @@
  * @brief  Weight space polyhedron
  * @author Timo Strunk
  *
- * @desc   This class represents the lifted weight space polyhedron.  It supplies weights for the solver to test.
+ * This class represents the lifted weight space polyhedron.  It supplies weights for the solver to test.
  * It uses the lemon graph library to store the 1-skeleton of the polyhedron.
  */
 
@@ -59,7 +59,7 @@ Skeleton::~Skeleton()
       delete *it;
    }
 
-   for( std::vector< const std::vector<SCIP_Real>* >::iterator 
+   for( std::vector< const std::vector<SCIP_Real>* >::iterator
            it = facets_.begin();
         it != facets_.end();
         ++it )
@@ -71,7 +71,7 @@ Skeleton::~Skeleton()
 /** initialize the polyhedron with the first solution
  * by creating a node and vertex for every corner of the weight space and a complete graph between them */
 void Skeleton::init(
-   const std::vector<SCIP_Real>*                   cost_vector,  /**< cost vector of first solution */ 
+   const std::vector<SCIP_Real>*                   cost_vector,  /**< cost vector of first solution */
    std::vector< const std::vector<SCIP_Real>* >*   cost_rays     /**< list of known unbounded cost rays */
    )
 {
@@ -111,7 +111,7 @@ void Skeleton::init(
 
 /** create all facets defining the inital weight space polyhedron */
 void Skeleton::createInitialFacets(
-   const std::vector<SCIP_Real>*                   cost_vector   /**< cost vector of first solution */ 
+   const std::vector<SCIP_Real>*                   cost_vector   /**< cost vector of first solution */
    )
 {
    int nobjs = SCIPgetProbData(scip_)->objectives->getNObjs();
@@ -180,7 +180,7 @@ bool Skeleton::isExtremal(
    const std::vector<SCIP_Real>* facet = createFacetFromCost(cost_vector);
 
    bool result = isMakingObsolete(facet, vertex_map_[last_returned_node_], false);
-   
+
    if(result)
    {
       addFacet(facet);
@@ -263,9 +263,9 @@ void Skeleton::addPrimalRays(
 {
    /* variables for caching update statistics */
    int n_new_nodes_tmp = n_new_nodes_;
-   int n_proc_nodes_tmp = n_proc_nodes_; 
+   int n_proc_nodes_tmp = n_proc_nodes_;
 
-   for( std::vector< const std::vector<SCIP_Real>* >::const_iterator 
+   for( std::vector< const std::vector<SCIP_Real>* >::const_iterator
            it = cost_rays->begin();
         it != cost_rays->end();
         ++it )
@@ -300,7 +300,7 @@ lemon::ListGraph::Node Skeleton::findObsoleteNode(
 /** wether the new facet makes a given point obsolete */
 bool Skeleton::isMakingObsolete(
    const std::vector<SCIP_Real>*        facet,              /**< facet coefficient vector */
-   const WeightSpaceVertex*             vertex,             /**< vertex that might be obsolete */ 
+   const WeightSpaceVertex*             vertex,             /**< vertex that might be obsolete */
    bool                                 strict              /**< no tolerance for slight obsolecity */
    )
 {
@@ -367,7 +367,7 @@ void Skeleton::addFacet(
    }
 
    /* apply changes */
-   updateGraph(); 
+   updateGraph();
 
    delete cut_edges_;
    delete unscanned_nodes_;
@@ -453,7 +453,7 @@ void Skeleton::createNewVertices()
    }
 }
 
-/** calculate and add edges between all pairs of combinatorially adjacent new vertices */ 
+/** calculate and add edges between all pairs of combinatorially adjacent new vertices */
 void Skeleton::createNewEdges()
 {
    for( std::vector<WeightSpaceVertex*>::iterator qit = new_vertices_->begin();
@@ -471,7 +471,7 @@ void Skeleton::createNewEdges()
 }
 
 /** creates a new node between an obsolete and a non obsolete node */
-void Skeleton::makeIntermediateVertex( 
+void Skeleton::makeIntermediateVertex(
    lemon::ListGraph::Edge               cut_edge            /**< an edge between an obsolete and a non-obsolete node */
    )
 {

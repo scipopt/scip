@@ -16,10 +16,10 @@
  * @brief  Main class of the algorithm
  * @author Timo Strunk
  *
- * @desc   Realization of a weighted solver using the lifted weight space polyhedron to calculate weights.
- *         It gets the weight from the skeleton, then changes the objective in the SCIP problem to the weighted
- *         objective.  Then it solves the problem and uses the skeleton to determine if the new solution is
- *         an extremal supported nondominated point.
+ * Realization of a weighted solver using the lifted weight space polyhedron to calculate weights.
+ * It gets the weight from the skeleton, then changes the objective in the SCIP problem to the weighted
+ * objective.  Then it solves the problem and uses the skeleton to determine if the new solution is
+ * an extremal supported nondominated point.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -39,7 +39,7 @@
 
 /** SCIP style constructor */
 LiftedWeightSpaceSolver::LiftedWeightSpaceSolver(
-   const char*           paramfilename       /**< name of file with SCIP parameters */ 
+   const char*           paramfilename       /**< name of file with SCIP parameters */
       )
    : WeightedSolver(paramfilename),
      solving_stage_(MULTIOPT_UNSOLVED),
@@ -96,7 +96,7 @@ SCIP_RETCODE LiftedWeightSpaceSolver::solveNext()
 
    found_new_optimum_ = false;
    nnodes_last_run_ = 0;
-   niterations_last_run_ = 0; 
+   niterations_last_run_ = 0;
    duration_last_run_ = 0;
    cost_vector_ = NULL;
    solution_ = NULL;
@@ -110,8 +110,8 @@ SCIP_RETCODE LiftedWeightSpaceSolver::solveNext()
    /* solve with next weight and process the result */
    SCIP_CALL( loadNextWeight() );
    SCIP_CALL( solveWeighted() );
-   SCIP_CALL( evaluateSolution() ); 
-   
+   SCIP_CALL( evaluateSolution() );
+
    ++nruns_;
 
    SCIPstopClock(scip_, clock_iteration_);
@@ -220,7 +220,7 @@ SCIP_Real LiftedWeightSpaceSolver::getTotalDuration() const
 /** return true if the given vector has an entry close to infinity */
 bool LiftedWeightSpaceSolver::hasInfiniteComponent(const std::vector<SCIP_Real>* cost_vector)
 {
-   bool result = false; 
+   bool result = false;
 
    for( std::vector<SCIP_Real>::const_iterator it = cost_vector_->begin();
         it != cost_vector_->end();
@@ -250,7 +250,7 @@ SCIP_RETCODE LiftedWeightSpaceSolver::evaluateSolution()
       else
       {
          found_new_optimum_ = skeleton_->isExtremal(cost_vector_);
-      }         
+      }
 
       if( found_new_optimum_ )
       {
@@ -288,7 +288,7 @@ SCIP_RETCODE LiftedWeightSpaceSolver::evaluateSolution()
       solving_stage_ = MULTIOPT_SOLVED;
       multiopt_status_ = SCIP_STATUS_OPTIMAL;
    }
-   else if(    mip_status_ != SCIP_STATUS_OPTIMAL 
+   else if(    mip_status_ != SCIP_STATUS_OPTIMAL
             && mip_status_ != SCIP_STATUS_UNBOUNDED )
    {
       solving_stage_ = MULTIOPT_SOLVED;
@@ -314,7 +314,7 @@ int LiftedWeightSpaceSolver::getNProcessedVertices() const
 SCIP_RETCODE LiftedWeightSpaceSolver::createFeasibleWeightLPI()
 {
    assert( feasible_weight_lpi_ == NULL );
-  
+
    int nobjs = SCIPgetProbData(scip_)->objectives->getNObjs();
 
    int ncols = nobjs + 1;
@@ -355,7 +355,7 @@ SCIP_RETCODE LiftedWeightSpaceSolver::createFeasibleWeightLPI()
       val[2 * nobjs + i] = -1.;
    }
 
-   /** init slack rows */   
+   /** init slack rows */
    for( int i = 0; i < nobjs; ++i )
    {
       lhs[i] = 0.;
@@ -366,13 +366,13 @@ SCIP_RETCODE LiftedWeightSpaceSolver::createFeasibleWeightLPI()
    lhs[nobjs] = 1.;
    rhs[nobjs] = 1.;
 
-   SCIP_CALL( SCIPlpiCreate( 
-         &feasible_weight_lpi_, 
-         NULL, 
+   SCIP_CALL( SCIPlpiCreate(
+         &feasible_weight_lpi_,
+         NULL,
          "feasible weight",
          SCIP_OBJSEN_MAXIMIZE
          ) );
- 
+
    SCIP_CALL(  SCIPlpiLoadColLP(
          feasible_weight_lpi_,
          SCIP_OBJSEN_MAXIMIZE,
@@ -388,7 +388,7 @@ SCIP_RETCODE LiftedWeightSpaceSolver::createFeasibleWeightLPI()
          nnonz,
          beg,
          ind,
-         val 
+         val
          ) );
 
    delete[] obj;
@@ -476,8 +476,8 @@ SCIP_RETCODE LiftedWeightSpaceSolver::updateFeasibleWeightLPI(const std::vector<
 
    ind[nobjs] = nobjs;
    val[nobjs] = - 1;
-   
-   SCIP_CALL( SCIPlpiAddRows( 	
+
+   SCIP_CALL( SCIPlpiAddRows(
       feasible_weight_lpi_,
       1,
       &lhs,
@@ -486,7 +486,7 @@ SCIP_RETCODE LiftedWeightSpaceSolver::updateFeasibleWeightLPI(const std::vector<
       nnonz,
       &beg,
       ind,
-      val 
+      val
       ) );
 
    delete[] ind;
