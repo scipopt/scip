@@ -1619,6 +1619,20 @@ int SCIPbdchgidxGetPos(
    SCIP_BDCHGIDX*        bdchgidx            /**< bound change index */
    );
 
+/** removes (redundant) cliques, implications and variable bounds of variable from all other variables' implications and variable
+ *  bounds arrays, and optionally removes them also from the variable itself
+ */
+extern
+SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
+   SCIP_VAR*             var,                /**< problem variable */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             irrelevantvar,      /**< has the variable become irrelevant? */
+   SCIP_Bool             onlyredundant,      /**< should only the redundant implications and variable bounds be removed? */
+   SCIP_Bool             removefromvar       /**< should the implications and variable bounds be removed from the var itself? */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and

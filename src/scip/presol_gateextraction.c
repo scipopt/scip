@@ -1363,12 +1363,12 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
       else
       {
          /* make sure that we correct the parameter for only extrating set-partitioning constraints */
-         if( SCIPisParamFixed(scip, "presolving/"PRESOL_NAME"/onlysetpart") )
+         if( SCIPisParamFixed(scip, "presolving/" PRESOL_NAME "/onlysetpart") )
          {
-            SCIPwarningMessage(scip, "unfixing parameter <presolving/"PRESOL_NAME"/onlysetpart> in gate extration presolver\n");
-            SCIP_CALL( SCIPunfixParam(scip, "presolving/"PRESOL_NAME"/onlysetpart") );
+            SCIPwarningMessage(scip, "unfixing parameter <presolving/" PRESOL_NAME "/onlysetpart> in gate extration presolver\n");
+            SCIP_CALL( SCIPunfixParam(scip, "presolving/" PRESOL_NAME "/onlysetpart") );
          }
-         SCIP_CALL( SCIPsetBoolParam(scip, "presolving/"PRESOL_NAME"/onlysetpart", TRUE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "presolving/" PRESOL_NAME "/onlysetpart", TRUE) );
          assert(presoldata->onlysetpart);
       }
    }
@@ -1808,19 +1808,19 @@ SCIP_RETCODE SCIPincludePresolGateextraction(
 
    /* add gateextraction presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/"PRESOL_NAME"/onlysetpart",
+         "presolving/" PRESOL_NAME "/onlysetpart",
          "should we only try to extract set-partitioning constraints and no and-constraints",
          &presoldata->onlysetpart, TRUE, DEFAULT_ONLYSETPART, NULL, NULL) );
 
    /* add gateextraction presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/"PRESOL_NAME"/searchequations",
+         "presolving/" PRESOL_NAME "/searchequations",
          "should we try to extract set-partitioning constraint out of one logicor and one corresponding set-packing constraint",
          &presoldata->searchequations, TRUE, DEFAULT_SEARCHEQUATIONS, NULL, NULL) );
 
    /* add gateextraction presolver parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "presolving/"PRESOL_NAME"/sorting",
+         "presolving/" PRESOL_NAME "/sorting",
          "order logicor contraints to extract big-gates before smaller ones (-1), do not order them (0) or order them to extract smaller gates at first (1)",
          &presoldata->sorting, TRUE, DEFAULT_SORTING, -1, 1, NULL, NULL) );
 

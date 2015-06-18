@@ -1529,15 +1529,15 @@ SCIP_Real adjustedUb(
       return ub;
 }
 
-/* removes (redundant) cliques, implications and variable bounds of variable from all other variables' implications and variable
- * bounds arrays, and optionally removes them also from the variable itself
+/** removes (redundant) cliques, implications and variable bounds of variable from all other variables' implications and variable
+ *  bounds arrays, and optionally removes them also from the variable itself
  */
-static
-SCIP_RETCODE varRemoveCliquesImplicsVbs(
+SCIP_RETCODE SCIPvarRemoveCliquesImplicsVbs(
    SCIP_VAR*             var,                /**< problem variable */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool             irrelevantvar,      /**< has the variable become irrelevant? */
    SCIP_Bool             onlyredundant,      /**< should only the redundant implications and variable bounds be removed? */
    SCIP_Bool             removefromvar       /**< should the implications and variable bounds be removed from the var itself? */
    )
@@ -1552,8 +1552,8 @@ SCIP_RETCODE varRemoveCliquesImplicsVbs(
    lb = SCIPvarGetLbGlobal(var);
    ub = SCIPvarGetUbGlobal(var);
 
-   SCIPdebugMessage("removing %s implications and vbounds of <%s>[%g,%g]\n",
-      onlyredundant ? "redundant" : "all", SCIPvarGetName(var), lb, ub);
+   SCIPdebugMessage("removing %s implications and vbounds of %s<%s>[%g,%g]\n",
+      onlyredundant ? "redundant" : "all", irrelevantvar ? "irrelevant " : "", SCIPvarGetName(var), lb, ub);
 
    /* remove implications of (fixed) binary variable */
    if( var->implics != NULL && (!onlyredundant || lb > 0.5 || ub < 0.5) )
@@ -1810,7 +1810,7 @@ SCIP_RETCODE varRemoveCliquesImplicsVbs(
    /* remove the variable from all cliques */
    if( SCIPvarIsBinary(var) )
    {
-      SCIPcliquelistRemoveFromCliques(var->cliquelist, cliquetable, var);
+      SCIPcliquelistRemoveFromCliques(var->cliquelist, cliquetable, var, irrelevantvar);
       SCIPcliquelistFree(&var->cliquelist, blkmem);
    }
 
@@ -3639,7 +3639,7 @@ SCIP_RETCODE SCIPvarFix(
       var->locdom.ub = fixedval;
 
       /* delete implications and variable bounds information */
-      SCIP_CALL( varRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, TRUE) );
+      SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE, TRUE) );
       assert(var->vlbs == NULL);
       assert(var->vubs == NULL);
       assert(var->implics == NULL);
@@ -4490,7 +4490,7 @@ SCIP_RETCODE SCIPvarAggregate(
    /* delete implications and variable bounds of the aggregated variable from other variables, but keep them in the
     * aggregated variable
     */
-   SCIP_CALL( varRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE) );
+   SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE, FALSE) );
    assert(var->cliquelist == NULL);
 
    /* set the aggregated variable's objective value to 0.0 */
@@ -5251,7 +5251,7 @@ SCIP_RETCODE SCIPvarMultiaggregate(
        * variable bound variable of another variable), we have to remove it from the other variables implications or
        * variable bounds
        */
-      SCIP_CALL( varRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, TRUE) );
+      SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE, TRUE) );
       assert(var->vlbs == NULL);
       assert(var->vubs == NULL);
       assert(var->implics == NULL);
@@ -5647,7 +5647,7 @@ SCIP_RETCODE SCIPvarRemove(
       else
       {
          /* unlink the variable from all other variables' lists and free the data structures */
-         SCIP_CALL( varRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, TRUE) );
+         SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, FALSE, TRUE) );
       }
    }
 
@@ -6415,7 +6415,7 @@ SCIP_RETCODE varProcessChgLbGlobal(
    /* remove redundant implications and variable bounds */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
    {
-      SCIP_CALL( varRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, TRUE, TRUE) );
+      SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, TRUE, TRUE) );
    }
 
    /* issue bound change event */
@@ -6589,7 +6589,7 @@ SCIP_RETCODE varProcessChgUbGlobal(
    /* remove redundant implications and variable bounds */
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE )
    {
-      SCIP_CALL( varRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, TRUE, TRUE) );
+      SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, blkmem, cliquetable, set, FALSE, TRUE, TRUE) );
    }
 
    /* issue bound change event */
@@ -9764,9 +9764,20 @@ SCIP_RETCODE SCIPvarAddVlb(
                 *   b > 0, x >= b*z + d  <->  x == 0 -> z <= -d/b
                 *   b < 0, x >= b*z + d  <->  x == 0 -> z >= -d/b
                 */
+               SCIP_Real implbound;
+               implbound = -vlbconstant/vlbcoef;
+
+               /* tighten the implication bound if the variable is integer */
+               if( SCIPvarIsIntegral(vlbvar) )
+               {
+                  if( vlbcoef >= 0 )
+                     implbound = SCIPsetFloor(set, implbound);
+                  else
+                     implbound = SCIPsetCeil(set, implbound);
+               }
                SCIP_CALL( varAddTransitiveImplic(var, blkmem, set, stat, transprob, origprob, tree, reopt, lp,
                      cliquetable, branchcand, eventqueue, FALSE, vlbvar, (vlbcoef >= 0.0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER),
-                     -vlbconstant/vlbcoef, transitive, infeasible, nbdchgs) );
+                     implbound, transitive, infeasible, nbdchgs) );
             }
             else
             {
@@ -13552,7 +13563,7 @@ SCIP_RETCODE SCIPvarAddToRow(
 /* optionally, define this compiler flag to write complete variable histories to a file */
 #ifdef SCIP_HISTORYTOFILE
 SCIP_Longint counter = 0l;
-const char* historypath="/OPTI/bzfhende/pseudocosts"; /* allows for user-defined path; use '.' for calling directory of SCIP */
+const char* historypath="."; /* allows for user-defined path; use '.' for calling directory of SCIP */
 #endif
 
 /** updates the pseudo costs of the given variable and the global pseudo costs after a change of

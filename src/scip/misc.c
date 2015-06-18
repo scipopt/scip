@@ -1377,7 +1377,7 @@ SCIP_RETCODE hashtableResize(
    nnewlists = (int) MIN((unsigned int)(hashtable->nlists * SCIP_HASHTABLE_GROW_FACTOR), SCIP_HASHTABLE_MAXSIZE);
    nnewlists = MAX(nnewlists, hashtable->nlists);
 
-   SCIPdebugMessage("load = %g, nelements = %"SCIP_LONGINT_FORMAT", nlists = %d, nnewlist = %d\n", SCIPhashtableGetLoad(hashtable), hashtable->nelements, hashtable->nlists, nnewlists);
+   SCIPdebugMessage("load = %g, nelements = %" SCIP_LONGINT_FORMAT ", nlists = %d, nnewlist = %d\n", SCIPhashtableGetLoad(hashtable), hashtable->nelements, hashtable->nlists, nnewlists);
 
    if( nnewlists > hashtable->nlists )
    {
@@ -1821,7 +1821,7 @@ void SCIPhashtablePrintStatistics(
    }
    assert(sumslotsize == hashtable->nelements);
 
-   SCIPmessagePrintInfo(messagehdlr, "%"SCIP_LONGINT_FORMAT" hash entries, used %d/%d slots (%.1f%%)",
+   SCIPmessagePrintInfo(messagehdlr, "%" SCIP_LONGINT_FORMAT " hash entries, used %d/%d slots (%.1f%%)",
       hashtable->nelements, usedslots, hashtable->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashtable->nlists));
    if( usedslots > 0 )
       SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot",
@@ -6370,6 +6370,7 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
    int maxdfs;
    int nstorednodes;
    int i;
+   SCIP_RETCODE retcode;
 
    assert(digraph != NULL);
    assert(compidx >= 0);
@@ -6378,11 +6379,13 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
    assert(strongcompstartidx != NULL);
    assert(nstrongcomponents != NULL);
 
-   SCIP_ALLOC( BMSallocMemoryArray(&lowlink, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&dfsidx, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&stack, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&unprocessed, digraph->nnodes) );
-   SCIP_ALLOC( BMSallocMemoryArray(&nodeinstack, digraph->nnodes) );
+   retcode = SCIP_OKAY;
+
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&lowlink, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&dfsidx, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&stack, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&unprocessed, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&nodeinstack, digraph->nnodes), TERMINATE );
 
    for( i = 0; i < digraph->nnodes; ++i )
    {
@@ -6421,13 +6424,16 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
    /* to simplify the iteration over all strongly connected components */
    strongcompstartidx[*nstrongcomponents] = nstorednodes;
 
-   BMSfreeMemoryArray(&lowlink);
-   BMSfreeMemoryArray(&dfsidx);
-   BMSfreeMemoryArray(&stack);
-   BMSfreeMemoryArray(&unprocessed);
-   BMSfreeMemoryArray(&nodeinstack);
+   assert(retcode == SCIP_OKAY);
 
-   return SCIP_OKAY;
+ TERMINATE:
+   BMSfreeMemoryArrayNull(&lowlink);
+   BMSfreeMemoryArrayNull(&dfsidx);
+   BMSfreeMemoryArrayNull(&stack);
+   BMSfreeMemoryArrayNull(&unprocessed);
+   BMSfreeMemoryArrayNull(&nodeinstack);
+
+   return retcode;
 }
 
 /** frees the component information for the given directed graph */
@@ -7467,7 +7473,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
          gcd = ABS(nominator);
          scm = denominator;
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-         SCIPdebugMessage(" -> c=%d first rational: val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%u\n",
+         SCIPdebugMessage(" -> c=%d first rational: val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
             c, val, nominator, denominator, gcd, scm, rational);
          break;
       }
@@ -7487,7 +7493,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
          gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
          scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-         SCIPdebugMessage(" -> c=%d next rational : val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%u\n",
+         SCIPdebugMessage(" -> c=%d next rational : val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
             c, val, nominator, denominator, gcd, scm, rational);
       }
       else
@@ -7505,7 +7511,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
       if( (SCIP_Real)scm/(SCIP_Real)gcd < bestscalar )
 	 bestscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
 
-      SCIPdebugMessage(" -> integrality could be achieved by scaling with %g (rational:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT")\n",
+      SCIPdebugMessage(" -> integrality could be achieved by scaling with %g (rational:%" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ")\n",
          (SCIP_Real)scm/(SCIP_Real)gcd, scm, gcd);
    }
 
@@ -7587,7 +7593,7 @@ SCIP_Real SCIPselectSimpleValue(
       if( success )
       {
          val = (SCIP_Real)nominator/(SCIP_Real)denominator;
-         SCIPdebugPrintf(" %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" == %.9f\n", nominator, denominator, val);
+         SCIPdebugPrintf(" %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " == %.9f\n", nominator, denominator, val);
 
          if( val - lb < 0.0 || val - ub > 0.0 )
          {

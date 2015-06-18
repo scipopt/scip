@@ -3419,7 +3419,7 @@ GENERALUPG:
       goto cleanup;
 
    /* build lower triangular part the A matrix */
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &a, nquadvars*nquadvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &a, nquadvars*nquadvars) ); /*lint !e647*/
    SCIP_CALL( SCIPallocClearBufferArray(scip, &bp, nquadvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &quadvars, nquadvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &eigvals, nquadvars) );
@@ -5000,55 +5000,55 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    }
 
    /* add soc constraint handler parameters */
-   SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/scaling",
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/scaling",
          "whether scaling of infeasibility is 'o'ff, by sup-norm of function 'g'radient, or by left/right hand 's'ide",
          &conshdlrdata->scaling,          TRUE,   'o', "ogs",   NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/projectpoint",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/projectpoint",
          "whether the reference point of a cut should be projected onto the feasible set of the SOC constraint",
          &conshdlrdata->projectpoint,     TRUE,  FALSE,         NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam (scip, "constraints/"CONSHDLR_NAME"/nauxvars",
+   SCIP_CALL( SCIPaddIntParam (scip, "constraints/" CONSHDLR_NAME "/nauxvars",
          "number of auxiliary variables to use when creating a linear outer approx. of a SOC3 constraint; 0 to turn off",
          &conshdlrdata->nauxvars,         FALSE, 0, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/glineur",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/glineur",
          "whether the Glineur Outer Approximation should be used instead of Ben-Tal Nemirovski",
          &conshdlrdata->glineur,          FALSE, TRUE,          NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacy",
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacy",
          "minimal efficacy of a cut to be added to LP in separation",
          &conshdlrdata->minefficacy,      FALSE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sparsify",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/sparsify",
          "whether to sparsify cuts",
          &conshdlrdata->sparsify,         TRUE,  FALSE,         NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sparsifymaxloss",
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/sparsifymaxloss",
          "maximal loss in cut efficacy by sparsification",
          &conshdlrdata->sparsifymaxloss,  TRUE,  0.2, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sparsifynzgrowth",
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/sparsifynzgrowth",
          "growth rate of maximal allowed nonzeros in cuts in sparsification",
          &conshdlrdata->sparsifynzgrowth, TRUE,  1.3, 1.000001, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linfeasshift",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/linfeasshift",
          "whether to try to make solutions feasible in check by shifting the variable on the right hand side",
          &conshdlrdata->linfeasshift,     FALSE, TRUE,          NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/nlpform",
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/nlpform",
          "which formulation to use when adding a SOC constraint to the NLP (a: automatic, q: nonconvex quadratic form, s: convex sqrt form, e: convex exponential-sqrt form, d: convex division form)",
          &conshdlrdata->nlpform,          FALSE, 'a', "aqsed", NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sepanlpmincont",
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/sepanlpmincont",
          "minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation",
          &conshdlrdata->sepanlpmincont, FALSE, 1.0, 0.0, 2.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/enfocutsremovable",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/enfocutsremovable",
          "are cuts added during enforcement removable from the LP in the same node?",
          &conshdlrdata->enfocutsremovable, TRUE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/generalsocupgrade",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/generalsocupgrade",
          "try to upgrade more general quadratics to soc?",
          &conshdlrdata->generalsocupg, TRUE, TRUE, NULL, NULL) );
 

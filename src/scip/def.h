@@ -305,6 +305,17 @@ extern "C" {
                        }                                                                                      \
                        while( FALSE )
 
+#define SCIP_ALLOC_TERMINATE(retcode, x, TERM)   do                                                           \
+                       {                                                                                      \
+                          if( NULL == (x) )                                                                   \
+                          {                                                                                   \
+                             SCIPerrorMessage("No memory in function call\n");                                \
+                             retcode = SCIP_NOMEMORY;                                                         \
+                             goto TERM;                                                                       \
+                          }                                                                                   \
+                       }                                                                                      \
+                       while( FALSE )
+
 
 /*
  * Define to mark deprecated API functions

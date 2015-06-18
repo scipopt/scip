@@ -75,7 +75,10 @@ SCIP_RETCODE sortIDs(
    }
 
    /* sort the ids in decreasing order */
-   SCIPsortDownRealPtr(lowerbounds, (void*) childids, nchildids);
+   SCIPsortDownRealInt(lowerbounds, (signed int*)childids, nchildids);
+
+   /* free buffer memory */
+   SCIPfreeBufferArray(scip, &lowerbounds);
 
    return SCIP_OKAY;
 }
@@ -263,7 +266,7 @@ SCIP_RETCODE constructCompression(
    assert(comprdata->nrepresentatives <= comprdata->representativessize);
 
    /* initialize the representatives */
-   SCIP_CALL( SCIPinitilizeRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives) );
+   SCIP_CALL( SCIPinitRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives) );
 
    /* create 2 candidates for the fixed variables */
    if( nvars[0] >= 1 )

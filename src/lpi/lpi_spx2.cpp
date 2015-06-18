@@ -13,17 +13,13 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   lpi_spx.cpp
+/**@file   lpi_spx2.cpp
  * @ingroup LPIS
- * @brief  LP interface for SoPlex version 1.4 and higher
- * @author Tobias Achterberg
- * @author Timo Berthold
+ * @brief  LP interface for SoPlex version 2.0 and higher
+ * @author Matthias Miltenberger
  * @author Ambros Gleixner
- * @author Marc Pfetsch
  *
- * This is an implementation of SCIP's LP interface for SoPlex. While the ratio test is fixed to SoPlex's standard,
- * different pricing methods can be chosen and an autopricing strategy (start with devex and switch to steepest edge
- * after too many iterations) is implemented directly. Scaler and simplifier may be applied if solving from scratch.
+ * This is an implementation of SCIP's LP interface for SoPlex using the extended and improved interface of SoPlex 2.0
  *
  * For debugging purposes, the SoPlex results can be double checked with CPLEX if WITH_LPSCHECK is defined. This may
  * yield false positives, since the LP is dumped to a file for transfering it to CPLEX, hence, precision may be lost.
@@ -3665,7 +3661,7 @@ SCIP_RETCODE SCIPlpiGetNorms(
 
    lpi->spx->getNdualNorms(nrows, ncols);
 
-   if( nrows == 0 )
+   if( nrows == 0 && ncols == 0)
    {
       (*lpinorms = NULL);
       return SCIP_OKAY;

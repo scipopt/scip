@@ -150,6 +150,9 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  @note the counters state the changes since the last call including the changes of this presolving method during its
  *        last call
  *
+ *  @note if the propagator uses dual information for presolving it is nesassary to check via calling SCIPallowDualReds
+ *        if dual reductions are allowed.
+ *
  *  input/output:
  *  - nfixedvars      : pointer to total number of variables fixed of all presolvers
  *  - naggrvars       : pointer to total number of variables aggregated of all presolvers
@@ -215,6 +218,9 @@ typedef struct SCIP_PropData SCIP_PROPDATA;       /**< locally defined propagato
  *  resolving method.
  *
  *  See the description of the propagation conflict resolving method of constraint handlers for further details.
+ *
+ *  @note if the propagtor uses dual information it is nesassary to check via calling SCIPallowDualReds and
+ *        SCIPallowObjProp if dual reductions and propgation with the current cutoff bound, resp., are allowed.
  *
  *  input:
  *  - scip            : SCIP main data structure

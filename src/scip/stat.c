@@ -527,7 +527,7 @@ void SCIPstatUpdateMemsaveMode(
       {
          /* switch to memory saving mode */
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "(node %"SCIP_LONGINT_FORMAT") switching to memory saving mode (mem: %.1fM/%.1fM)\n",
+            "(node %" SCIP_LONGINT_FORMAT ") switching to memory saving mode (mem: %.1fM/%.1fM)\n",
             stat->nnodes, (SCIP_Real)memused/(1024.0*1024.0), set->limit_memory);
          stat->memsavemode = TRUE;
          set->nodesel = NULL;
@@ -536,7 +536,7 @@ void SCIPstatUpdateMemsaveMode(
       {
          /* switch to standard mode */
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "(node %"SCIP_LONGINT_FORMAT") switching to standard mode (mem: %.1fM/%.1fM)\n",
+            "(node %" SCIP_LONGINT_FORMAT ") switching to standard mode (mem: %.1fM/%.1fM)\n",
             stat->nnodes, (SCIP_Real)memused/(1024.0*1024.0), set->limit_memory);
          stat->memsavemode = FALSE;
          set->nodesel = NULL;

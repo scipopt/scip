@@ -1066,7 +1066,7 @@ SCIP_RETCODE checkCons(
             SCIPinfoMessage(scip, NULL, "violation:");
             if( !SCIPisFeasIntegral(scip, solval) )
             {
-               SCIPinfoMessage(scip, NULL, " resultant variable <%s> has fractional solution value %"SCIP_REAL_FORMAT"\n",
+               SCIPinfoMessage(scip, NULL, " resultant variable <%s> has fractional solution value %" SCIP_REAL_FORMAT "\n",
                      SCIPvarGetName(consdata->resvar), solval);
             }
             else if( i == consdata->nvars )
@@ -1698,13 +1698,17 @@ SCIP_RETCODE propagateCons(
       return SCIP_OKAY;
    }
 
-   if( SCIPvarGetUbLocal(resvar) < 0.5 )
+   /* if the resultant and at least one operand are locally fixed to zero, the constraint is locally redundant */
+   if( SCIPvarGetUbLocal(resvar) < 0.5 && !consdata->nofixedzero )
+   {
+      SCIP_CALL( SCIPdelConsLocal(scip, cons) );
       return SCIP_OKAY;
+   }
 
    /* if resultant is fixed to TRUE, all operator variables can be fixed to TRUE (rule (2)) */
    if( SCIPvarGetLbLocal(resvar) > 0.5 )
    {
-      /* fix resultant to zero */
+      /* fix operands to one */
       SCIP_CALL( consdataFixOperandsOne(scip, cons, vars, nvars, cutoff, nfixedvars) );
 
       return SCIP_OKAY;
@@ -4448,8 +4452,7 @@ SCIP_DECL_CONSPRESOL(consPresolAnd)
    }
 
    /* perform dual presolving on AND-constraints */
-   if( conshdlrdata->dualpresolving && !cutoff && !SCIPisStopped(scip) && SCIPallowObjProp(scip)
-         && SCIPallowDualReds(scip))
+   if( conshdlrdata->dualpresolving && !cutoff && !SCIPisStopped(scip) && SCIPallowDualReds(scip))
    {
       SCIP_CALL( dualPresolve(scip, conss, nconss, conshdlrdata->eventhdlr, &entries, &nentries, &cutoff, nfixedvars, naggrvars, nchgcoefs, ndelconss, nupgdconss, naddconss) );
    }
@@ -4861,7 +4864,7 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
 
    /* add AND-constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/presolpairwise",
+         "constraints/" CONSHDLR_NAME "/presolpairwise",
          "should pairwise constraint comparison be performed in presolving?",
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -4869,23 +4872,23 @@ SCIP_RETCODE SCIPincludeConshdlrAnd(
          "should hash table be used for detecting redundant constraints in advance",
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/linearize",
+         "constraints/" CONSHDLR_NAME "/linearize",
          "should the AND-constraint get linearized and removed (in presolving)?",
          &conshdlrdata->linearize, TRUE, DEFAULT_LINEARIZE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/enforcecuts",
+         "constraints/" CONSHDLR_NAME "/enforcecuts",
          "should cuts be separated during LP enforcing?",
          &conshdlrdata->enforcecuts, TRUE, DEFAULT_ENFORCECUTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/aggrlinearization",
+         "constraints/" CONSHDLR_NAME "/aggrlinearization",
          "should an aggregated linearization be used?",
          &conshdlrdata->aggrlinearization, TRUE, DEFAULT_AGGRLINEARIZATION, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/upgraderesultant",
+         "constraints/" CONSHDLR_NAME "/upgraderesultant",
          "should all binary resultant variables be upgraded to implicit binary variables?",
          &conshdlrdata->upgrresultant, TRUE, DEFAULT_UPGRRESULTANT, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/dualpresolving",
+         "constraints/" CONSHDLR_NAME "/dualpresolving",
          "should dual presolving be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
 

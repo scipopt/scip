@@ -348,12 +348,6 @@ SCIP_Bool SCIPdivesetSupportsType(
    SCIP_DIVETYPE         divetype            /**< bit mask that represents the supported dive types by this dive set */
    );
 
-/** frees memory of a diveset */
-EXTERN
-SCIP_RETCODE SCIPdivesetFree(
-   SCIP_DIVESET**        diveset             /**< general diving settings */
-   );
-
 #ifdef __cplusplus
 }
 #endif

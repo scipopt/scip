@@ -93,30 +93,30 @@ echo set save $SETFILE                 >> $TMPFILE
 if test "$REOPT" = false
 then
     # read and solve the instance
-	echo read $SCIPPATH/$INSTANCE         >> $TMPFILE
+    echo read $SCIP_INSTANCEPATH/$INSTANCE         >> $TMPFILE
 
     # set objective limit: optimal solution value from solu file, if existent
-	if test $SETCUTOFF = 1
-	then
-	    if test $SOLUFILE == ""
-	    then
-	        echo Exiting test because no solu file can be found for this test
-	        exit
-	    fi
-	    CUTOFF=`grep "$SHORTPROBNAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
-	    if test ""$CUTOFF != ""
-	    then
-	        echo set limits objective $CUTOFF      >> $TMPFILE
-        	echo set heur emph off                 >> $TMPFILE
-	    fi
-	fi
+    if test $SETCUTOFF = 1
+    then
+        if test $SOLUFILE == ""
+        then
+            echo Exiting test because no solu file can be found for this test
+            exit
+        fi
+        CUTOFF=`grep "$SHORTPROBNAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
+        if test ""$CUTOFF != ""
+        then
+            echo set limits objective $CUTOFF      >> $TMPFILE
+            echo set heur emph off                 >> $TMPFILE
+        fi
+    fi
 
-	echo $OPTCOMMAND                       >> $TMPFILE
-	echo display statistics                >> $TMPFILE
-	echo checksol                          >> $TMPFILE
+    echo $OPTCOMMAND                       >> $TMPFILE
+    echo display statistics                >> $TMPFILE
+    echo checksol                          >> $TMPFILE
 else
     # read the difflist file
-	cat $SCIPPATH/$INSTANCE                >> $TMPFILE
+    cat $SCIP_INSTANCEPATH/$INSTANCE                >> $TMPFILE
 fi
 
 # currently, the solution checker only supports .mps-files.

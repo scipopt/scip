@@ -308,7 +308,9 @@ extern
 void SCIPcliquelistRemoveFromCliques(
    SCIP_CLIQUELIST*      cliquelist,         /**< clique list data structure */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
-   SCIP_VAR*             var                 /**< active problem variable the clique list belongs to */
+   SCIP_VAR*             var,                /**< active problem variable the clique list belongs to */
+   SCIP_Bool             irrelevantvar       /**< has the variable become irrelevant, meaning that equality
+                                              *   cliques need to be relaxed? */
    );
 
 /** creates a clique table data structure */

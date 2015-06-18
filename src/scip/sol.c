@@ -1437,7 +1437,7 @@ SCIP_RETCODE SCIPsolCheck(
    assert(prob != NULL);
    assert(feasible != NULL);
 
-   SCIPdebugMessage("checking solution with objective value %g (nodenum=%"SCIP_LONGINT_FORMAT", origin=%u)\n",
+   SCIPdebugMessage("checking solution with objective value %g (nodenum=%" SCIP_LONGINT_FORMAT ", origin=%u)\n",
       sol->obj, sol->nodenum, sol->solorigin);
 
    *feasible = TRUE;

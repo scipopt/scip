@@ -217,7 +217,7 @@ double negate(
    )
 {
    /* The following line of code is taken from GAOL, http://sourceforge.net/projects/gaol. */
-   asm volatile ("fldl %1; fchs; fstpl %0" : "=m" (x) : "m" (x));
+   __asm volatile ("fldl %1; fchs; fstpl %0" : "=m" (x) : "m" (x));
    return x;
 }
 

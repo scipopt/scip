@@ -2143,6 +2143,13 @@
  * This callback can be implemented to return the number of variables involved into a particular constraint.
  * In order to have access to the variable pointers, consider implementing @ref CONSGETVARS.
  *
+ * @subsection CONSGETDIVEBDCHGS
+ *
+ *  This callback is used inside the various diving heuristics of SCIP and does not affect the normal branching
+ *  of the actual search.
+ *  The constraint handler can provide this callback to render a current working solution (even more) infeasible by
+ *  suggesting one or several variable bound changes.
+ *
  * @section CONS_FURTHERINFO Further documentation
  *
  * Further documentation can be found in @ref type_cons.h for callback descriptions and a complete
@@ -7307,3 +7314,20 @@
  * \verbinclude parameters.set
  */
 
+/**@page PYTHON_INTERFACE Python interface for the SCIP Optimization Suite
+ *
+ * This page shows how to install the Python interface that comes with SCIP. A short usage example is shown below.
+ *
+ * INSTALL:
+ * \verbinclude interfaces/python/INSTALL
+ *
+ * Usage information (README):
+ * \verbinclude interfaces/python/README
+ */
+
+/**@page JNI_INTERFACE Java native interface for SCIP
+ *
+ * This page shows how to install and test the Java native interface (JNI) of SCIP.
+ *
+ * \verbinclude interfaces/jni/README
+ */

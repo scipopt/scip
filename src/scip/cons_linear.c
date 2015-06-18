@@ -116,6 +116,10 @@
 #define DEFAULT_DETECTPARTIALOBJECTIVE TRUE/**< should presolving try to detect subsets of constraints parallel to the
                                             *   objective function */
 #define DEFAULT_RANGEDROWPROPAGATION TRUE /**< should we perform ranged row propagation */
+#define DEFAULT_RANGEDROWARTCONS     TRUE /**< should presolving and propagation extract sub-constraints from ranged rows and equations? */
+#define DEFAULT_RANGEDROWMAXDEPTH INT_MAX /**< maximum depth to apply ranged row propagation */
+#define DEFAULT_RANGEDROWFREQ           1 /**< frequency for applying ranged row propagation */
+
 #define DEFAULT_MULTAGGRREMOVE      FALSE /**< should multi-aggregations only be performed if the constraint can be
                                            *   removed afterwards? */
 
@@ -287,6 +291,9 @@ struct SCIP_ConshdlrData
    SCIP_Bool             rangedrowpropagation;/**< should presolving and propagation try to improve bounds, detect
                                                *   infeasibility, and extract sub-constraints from ranged rows and
                                                *   equations */
+   SCIP_Bool             rangedrowartcons;   /**< should presolving and propagation extract sub-constraints from ranged rows and equations?*/
+   int                   rangedrowmaxdepth;  /**< maximum depth to apply ranged row propagation */
+   int                   rangedrowfreq;      /**< frequency for applying ranged row propagation */
    SCIP_Bool             multaggrremove;     /**< should multi-aggregations only be performed if the constraint can be
                                               *   removed afterwards? */
 };
@@ -4142,7 +4149,7 @@ SCIP_RETCODE normalizeCons(
    if( success && scm != 1 )
    {
       /* scale the constraint with the smallest common multiple of all denominators */
-      SCIPdebugMessage("scale linear constraint with %"SCIP_LONGINT_FORMAT" to make coefficients integral\n", scm);
+      SCIPdebugMessage("scale linear constraint with %" SCIP_LONGINT_FORMAT " to make coefficients integral\n", scm);
       SCIPdebugPrintCons(scip, cons, NULL);
       SCIP_CALL( scaleCons(scip, cons, (SCIP_Real)scm) );
 
@@ -4181,7 +4188,7 @@ SCIP_RETCODE normalizeCons(
       if( gcd > 1 )
       {
          /* divide the constraint by the greatest common divisor of the coefficients */
-         SCIPdebugMessage("divide linear constraint by greatest common divisor %"SCIP_LONGINT_FORMAT"\n", gcd);
+         SCIPdebugMessage("divide linear constraint by greatest common divisor %" SCIP_LONGINT_FORMAT "\n", gcd);
          SCIPdebugPrintCons(scip, cons, NULL);
          SCIP_CALL( scaleCons(scip, cons, 1.0/(SCIP_Real)gcd) );
 
@@ -5438,6 +5445,7 @@ SCIP_RETCODE rangedRowPropagation(
    SCIP_Bool maxactinfvarsinvalid;
    SCIP_Bool possiblegcd;
    SCIP_Bool gcdisone;
+   SCIP_Bool addartconss;
    int ninfcheckvars;
    int nunfixedvars;
    int nfixedconsvars;
@@ -5483,6 +5491,8 @@ SCIP_RETCODE rangedRowPropagation(
    assert(conshdlr != NULL);
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
+
+   addartconss = conshdlrdata->rangedrowartcons;
 
    fixedact = 0;
    nfixedconsvars = 0;
@@ -5979,7 +5989,7 @@ SCIP_RETCODE rangedRowPropagation(
                         ++(*nfixedvars);
                   }
                }
-               else if( !SCIPinProbing(scip) && SCIPgetDepth(scip) < 1 &&
+               else if( !SCIPinProbing(scip) && SCIPgetDepth(scip) < 1 && !SCIPinRepropagation(scip) && addartconss &&
                   (SCIPisGT(scip, minvalue, minactinfvars) || SCIPisLT(scip, maxvalue, maxactinfvars)) )
                {
                   /* aggregation possible if we have two variables, but this will be done later on */
@@ -6243,7 +6253,7 @@ SCIP_RETCODE rangedRowPropagation(
             /* at least two solutions and more than one variable, so we add a new constraint which bounds the feasible
              * region for our infcheckvars, if possible
              */
-            else if( !SCIPinProbing(scip) && SCIPgetDepth(scip) < 1 &&
+            else if( !SCIPinProbing(scip) && SCIPgetDepth(scip) < 1 && !SCIPinRepropagation(scip) && addartconss &&
                (SCIPisGT(scip, minvalue, minactinfvars) || SCIPisLT(scip, maxvalue, maxactinfvars)) )
             {
                SCIP_CONS* newcons;
@@ -6470,8 +6480,8 @@ SCIP_RETCODE rangedRowPropagation(
             }
          }
       }
-
-      if( v == consdata->nvars && !SCIPisHugeValue(scip, -minact) && !SCIPisHugeValue(scip, maxact) )
+      if( !SCIPinProbing(scip) && SCIPgetDepth(scip) < 1 && !SCIPinRepropagation(scip) && v == consdata->nvars
+         && addartconss && !SCIPisHugeValue(scip, -minact) && !SCIPisHugeValue(scip, maxact) )
       {
          SCIP_CONS* newcons;
          char name[SCIP_MAXSTRLEN];
@@ -11337,7 +11347,7 @@ SCIP_RETCODE simplifyInequalities(
       else
          ++v;
 
-      SCIPdebugMessage("stopped at pos %d (of %d), subactivities [%g, %g], redundant = %u, hasrhs = %u, siderest = %g, gcd = %"SCIP_LONGINT_FORMAT", offset position for 'side' coefficients = %d\n", v, nvars, minactsub, maxactsub, redundant, hasrhs, siderest, gcd, offsetv);
+      SCIPdebugMessage("stopped at pos %d (of %d), subactivities [%g, %g], redundant = %u, hasrhs = %u, siderest = %g, gcd = %" SCIP_LONGINT_FORMAT ", offset position for 'side' coefficients = %d\n", v, nvars, minactsub, maxactsub, redundant, hasrhs, siderest, gcd, offsetv);
 
       /* check if we can remove redundant variables */
       if( v < nvars && (redundant ||
@@ -12119,7 +12129,7 @@ SCIP_RETCODE simplifyInequalities(
       }
       assert(SCIPisZero(scip, newcoef) || SCIPcalcGreComDiv(gcd, (SCIP_Longint)(REALABS(newcoef) + feastol)) == gcd);
 
-      SCIPdebugMessage("gcd = %"SCIP_LONGINT_FORMAT", rest = %"SCIP_LONGINT_FORMAT", restcoef = %"SCIP_LONGINT_FORMAT"; changing coef of variable <%s> to %g and %s by %"SCIP_LONGINT_FORMAT"\n", gcd, rest, restcoef, SCIPvarGetName(vars[candpos]), newcoef, hasrhs ? "reduced rhs" : "increased lhs", hasrhs ? rest : (rest > 0 ? gcd - rest : 0));
+      SCIPdebugMessage("gcd = %" SCIP_LONGINT_FORMAT ", rest = %" SCIP_LONGINT_FORMAT ", restcoef = %" SCIP_LONGINT_FORMAT "; changing coef of variable <%s> to %g and %s by %" SCIP_LONGINT_FORMAT "\n", gcd, rest, restcoef, SCIPvarGetName(vars[candpos]), newcoef, hasrhs ? "reduced rhs" : "increased lhs", hasrhs ? rest : (rest > 0 ? gcd - rest : 0));
 
       if( SCIPisZero(scip, newcoef) )
       {
@@ -14808,8 +14818,10 @@ static
 SCIP_DECL_CONSPROP(consPropLinear)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_Bool rangedrowpropagation = FALSE;
    SCIP_Bool tightenbounds;
    SCIP_Bool cutoff;
+
    int nchgbds;
    int i;
 
@@ -14831,22 +14843,31 @@ SCIP_DECL_CONSPROP(consPropLinear)
       int depth;
       int propfreq;
       int tightenboundsfreq;
+      int rangedrowfreq;
 
       depth = SCIPgetDepth(scip);
       propfreq = SCIPconshdlrGetPropFreq(conshdlr);
       tightenboundsfreq = propfreq * conshdlrdata->tightenboundsfreq;
       tightenbounds = (conshdlrdata->tightenboundsfreq >= 0)
          && ((tightenboundsfreq == 0 && depth == 0) || (tightenboundsfreq >= 1 && (depth % tightenboundsfreq == 0)));
+
+      /* check if we want to do ranged row propagation */
+      rangedrowpropagation = conshdlrdata->rangedrowpropagation;
+      rangedrowpropagation = rangedrowpropagation && !SCIPinRepropagation(scip);
+      rangedrowpropagation = rangedrowpropagation && (depth <= conshdlrdata->rangedrowmaxdepth);
+      rangedrowfreq = propfreq * conshdlrdata->rangedrowfreq;
+      rangedrowpropagation = rangedrowpropagation && (depth % rangedrowfreq == 0);
    }
 
    cutoff = FALSE;
    nchgbds = 0;
 
+
    /* process constraints marked for propagation */
    for( i = 0; i < nmarkedconss && !cutoff; i++ )
    {
       SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
-      SCIP_CALL( propagateCons(scip, conss[i], tightenbounds, conshdlrdata->rangedrowpropagation,
+      SCIP_CALL( propagateCons(scip, conss[i], tightenbounds, rangedrowpropagation,
             conshdlrdata->maxeasyactivitydelta, conshdlrdata->sortvars, &cutoff, &nchgbds) );
    }
 
@@ -15120,32 +15141,31 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
             }
          }
 
-	 /* convert special equalities */
-	 if( !cutoff && SCIPconsIsActive(cons) )
-	 {
-	    SCIP_CALL( convertEquality(scip, cons, conshdlrdata, &cutoff, nfixedvars, naggrvars, ndelconss) );
-	 }
+         /* convert special equalities */
+         if( !cutoff && SCIPconsIsActive(cons) )
+         {
+            SCIP_CALL( convertEquality(scip, cons, conshdlrdata, &cutoff, nfixedvars, naggrvars, ndelconss) );
+         }
 
-	 /* apply dual presolving for variables that appear in only one constraint */
-	 if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving
-            && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
-	 {
-	    SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
-	 }
+         /* apply dual presolving for variables that appear in only one constraint */
+         if( !cutoff && SCIPconsIsActive(cons) && conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
+         {
+            SCIP_CALL( dualPresolve(scip, cons, &cutoff, nfixedvars, naggrvars, ndelconss) );
+         }
 
-	 /* check if an inequality is parallel to the objective function */
-	 if( !cutoff && SCIPconsIsActive(cons) )
-	 {
-	    SCIP_CALL( checkParallelObjective(scip, cons, conshdlrdata) );
-	 }
+         /* check if an inequality is parallel to the objective function */
+         if( !cutoff && SCIPconsIsActive(cons) )
+         {
+            SCIP_CALL( checkParallelObjective(scip, cons, conshdlrdata) );
+         }
 
-	 /* remember the first changed constraint to begin the next aggregation round with */
-	 if( firstchange == INT_MAX && consdata->changed )
-	    firstchange = c;
+         /* remember the first changed constraint to begin the next aggregation round with */
+         if( firstchange == INT_MAX && consdata->changed )
+            firstchange = c;
 
-	 /* remember the first constraint that was not yet tried to be upgraded, to begin the next upgrading round with */
-	 if( firstupgradetry == INT_MAX && !consdata->upgradetried )
-	    firstupgradetry = c;
+         /* remember the first constraint that was not yet tried to be upgraded, to begin the next upgrading round with */
+         if( firstupgradetry == INT_MAX && !consdata->upgradetried )
+            firstupgradetry = c;
       }
    }
 
@@ -15232,7 +15252,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinear)
       && *nupgdconss == oldnupgdconss && *nchgcoefs == oldnchgcoefs && *nchgsides == oldnchgsides
       )
    {
-      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) && !SCIPisStopped(scip) )
+      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && !SCIPisStopped(scip) )
       {
          SCIP_CALL( fullDualPresolve(scip, conss, nconss, &cutoff, nchgbds) );
       }
@@ -16038,94 +16058,106 @@ SCIP_RETCODE SCIPincludeConshdlrLinear(
 
    /* add linear constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/tightenboundsfreq",
+         "constraints/" CONSHDLR_NAME "/tightenboundsfreq",
          "multiplier on propagation frequency, how often the bounds are tightened (-1: never, 0: only at root)",
          &conshdlrdata->tightenboundsfreq, TRUE, DEFAULT_TIGHTENBOUNDSFREQ, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxrounds",
+         "constraints/" CONSHDLR_NAME "/maxrounds",
          "maximal number of separation rounds per node (-1: unlimited)",
          &conshdlrdata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxroundsroot",
+         "constraints/" CONSHDLR_NAME "/maxroundsroot",
          "maximal number of separation rounds per node in the root node (-1: unlimited)",
          &conshdlrdata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxsepacuts",
+         "constraints/" CONSHDLR_NAME "/maxsepacuts",
          "maximal number of cuts separated per separation round",
          &conshdlrdata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxsepacutsroot",
+         "constraints/" CONSHDLR_NAME "/maxsepacutsroot",
          "maximal number of cuts separated per separation round in the root node",
          &conshdlrdata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/presolpairwise",
+         "constraints/" CONSHDLR_NAME "/presolpairwise",
          "should pairwise constraint comparison be performed in presolving?",
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/presolusehashing",
+         "constraints/" CONSHDLR_NAME "/presolusehashing",
          "should hash table be used for detecting redundant constraints in advance", 
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/nmincomparisons",
+         "constraints/" CONSHDLR_NAME "/nmincomparisons",
          "number for minimal pairwise presolve comparisons",
          &conshdlrdata->nmincomparisons, TRUE, DEFAULT_NMINCOMPARISONS, 1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/"CONSHDLR_NAME"/mingainpernmincomparisons",
+         "constraints/" CONSHDLR_NAME "/mingainpernmincomparisons",
          "minimal gain per minimal pairwise presolve comparisons to repeat pairwise comparison round",
          &conshdlrdata->mingainpernmincomp, TRUE, DEFAULT_MINGAINPERNMINCOMP, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxaggrnormscale",
+         "constraints/" CONSHDLR_NAME "/maxaggrnormscale",
          "maximal allowed relative gain in maximum norm for constraint aggregation (0.0: disable constraint aggregation)",
          &conshdlrdata->maxaggrnormscale, TRUE, DEFAULT_MAXAGGRNORMSCALE, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxeasyactivitydelta",
+         "constraints/" CONSHDLR_NAME "/maxeasyactivitydelta",
          "maximum activity delta to run easy propagation on linear constraint (faster, but numerically less stable)",
          &conshdlrdata->maxeasyactivitydelta, TRUE, DEFAULT_MAXEASYACTIVITYDELTA, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxcardbounddist",
+         "constraints/" CONSHDLR_NAME "/maxcardbounddist",
          "maximal relative distance from current node's dual bound to primal bound compared to best node's dual bound for separating knapsack cardinality cuts",
          &conshdlrdata->maxcardbounddist, TRUE, DEFAULT_MAXCARDBOUNDDIST, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/separateall",
+         "constraints/" CONSHDLR_NAME "/separateall",
          "should all constraints be subject to cardinality cut generation instead of only the ones with non-zero dual value?",
          &conshdlrdata->separateall, FALSE, DEFAULT_SEPARATEALL, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/aggregatevariables",
+         "constraints/" CONSHDLR_NAME "/aggregatevariables",
          "should presolving search for aggregations in equations",
          &conshdlrdata->aggregatevariables, TRUE, DEFAULT_AGGREGATEVARIABLES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/simplifyinequalities",
+         "constraints/" CONSHDLR_NAME "/simplifyinequalities",
          "should presolving try to simplify inequalities",
          &conshdlrdata->simplifyinequalities, TRUE, DEFAULT_SIMPLIFYINEQUALITIES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/dualpresolving",
+         "constraints/" CONSHDLR_NAME "/dualpresolving",
          "should dual presolving steps be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/sortvars", "apply binaries sorting in decr. order of coeff abs value?",
+         "constraints/" CONSHDLR_NAME "/sortvars", "apply binaries sorting in decr. order of coeff abs value?",
          &conshdlrdata->sortvars, TRUE, DEFAULT_SORTVARS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/checkrelmaxabs",
+         "constraints/" CONSHDLR_NAME "/checkrelmaxabs",
          "should the violation for a constraint with side 0.0 be checked relative to 1.0 (FALSE) or to the maximum absolute value in the activity (TRUE)?",
          &conshdlrdata->checkrelmaxabs, TRUE, DEFAULT_CHECKRELMAXABS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/detectcutoffbound",
+         "constraints/" CONSHDLR_NAME "/detectcutoffbound",
          "should presolving try to detect constraints parallel to the objective function defining an upper bound and prevent these constraints from entering the LP?",
          &conshdlrdata->detectcutoffbound, TRUE, DEFAULT_DETECTCUTOFFBOUND, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/detectlowerbound",
+         "constraints/" CONSHDLR_NAME "/detectlowerbound",
          "should presolving try to detect constraints parallel to the objective function defining a lower bound and prevent these constraints from entering the LP?",
          &conshdlrdata->detectlowerbound, TRUE, DEFAULT_DETECTLOWERBOUND, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/detectpartialobjective",
+         "constraints/" CONSHDLR_NAME "/detectpartialobjective",
          "should presolving try to detect subsets of constraints parallel to the objective function?",
          &conshdlrdata->detectpartialobjective, TRUE, DEFAULT_DETECTPARTIALOBJECTIVE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/rangedrowpropagation",
+         "constraints/" CONSHDLR_NAME "/rangedrowpropagation",
          "should presolving and propagation try to improve bounds, detect infeasibility, and extract sub-constraints from ranged rows and equations?",
          &conshdlrdata->rangedrowpropagation, TRUE, DEFAULT_RANGEDROWPROPAGATION, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/multaggrremove",
+         "constraints/" CONSHDLR_NAME "/rangedrowartcons",
+         "should presolving and propagation extract sub-constraints from ranged rows and equations?",
+         &conshdlrdata->rangedrowartcons, TRUE, DEFAULT_RANGEDROWARTCONS, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/" CONSHDLR_NAME "/rangedrowmaxdepth",
+         "maximum depth to apply ranged row propagation",
+         &conshdlrdata->rangedrowmaxdepth, TRUE, DEFAULT_RANGEDROWMAXDEPTH, 0, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/" CONSHDLR_NAME "/rangedrowfreq",
+         "frequency for applying ranged row propagation",
+         &conshdlrdata->rangedrowfreq, TRUE, DEFAULT_RANGEDROWFREQ, 1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "constraints/" CONSHDLR_NAME "/multaggrremove",
          "should multi-aggregations only be performed if the constraint can be removed afterwards?",
          &conshdlrdata->multaggrremove, TRUE, DEFAULT_MULTAGGRREMOVE, NULL, NULL) );
 

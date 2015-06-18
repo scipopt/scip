@@ -1087,6 +1087,9 @@ SCIP_RETCODE setupConstraints(
 
    for( c = 0; c < n_con && *success; ++c )
    {
+      /* nqpcheck() need to be before LUrhs is processed, as it puts the constant of the quad. term into the sides */
+      nqpterms = c < nlc ? nqpcheck(-(c+1), &rowqp, &colqp, &delsqp) : 0;
+
       lhs = LUrhs[2*c];
       if( SCIPisInfinity(scip, -lhs) )
          lhs = -SCIPinfinity(scip);
@@ -1151,7 +1154,6 @@ SCIP_RETCODE setupConstraints(
       else
          removable = FALSE;
 
-      nqpterms = c < nlc ? nqpcheck(-(c+1), &rowqp, &colqp, &delsqp) : 0;
       if( nqpterms == 0 )
       {
          /* linear */

@@ -745,13 +745,16 @@ SCIP_RETCODE propagateCons(
    assert( infeasible != NULL );
    assert( nfixedvars != NULL );
 
+   *nfixedvars = 0;
+
+   if( !SCIPallowDualReds(scip) )
+      return SCIP_OKAY;
+
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
    assert( consdata->nspcons > 0 );
    assert( consdata->nblocks > 0 );
    assert( consdata->vars != NULL );
-
-   *nfixedvars = 0;
 
    nspcons = consdata->nspcons;
    nblocks = consdata->nblocks;

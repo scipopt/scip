@@ -1086,7 +1086,7 @@ SCIP_DECL_PRESOLEXEC(presolExecImplfree)
    if( SCIPgetNVars(scip) == 0 || SCIPisStopped(scip) || SCIPgetNActivePricers(scip) > 0 )
       return SCIP_OKAY;
 
-   if( SCIPgetNContVars(scip)==0 )
+   if( SCIPgetNContVars(scip) == 0 )
       return SCIP_OKAY;
 
    *result = SCIP_DIDNOTFIND;

@@ -1930,7 +1930,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       break;
 
    case SCIP_PARAMTYPE_LONGINT:
-      (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %"SCIP_LONGINT_FORMAT", new value [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"]: ",
+      (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %" SCIP_LONGINT_FORMAT ", new value [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "]: ",
          SCIPparamGetLongint(param), SCIPparamGetLongintMin(param), SCIPparamGetLongintMax(param));
       SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
       if( endoffile )
@@ -1951,7 +1951,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       retcode = SCIPchgLongintParam(scip, param, longintval);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
-         SCIPdialogMessage(scip, NULL, "%s = %"SCIP_LONGINT_FORMAT"\n", SCIPparamGetName(param), longintval);
+         SCIPdialogMessage(scip, NULL, "%s = %" SCIP_LONGINT_FORMAT "\n", SCIPparamGetName(param), longintval);
 
          SCIP_CALL( retcode );
       }
@@ -1971,7 +1971,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-      if( sscanf(valuestr, "%"SCIP_REAL_FORMAT, &realval) != 1 )
+      if( sscanf(valuestr, "%" SCIP_REAL_FORMAT, &realval) != 1 )
       {
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
@@ -2546,7 +2546,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-   if( sscanf(valuestr, "%"SCIP_REAL_FORMAT, &objlim) != 1 )
+   if( sscanf(valuestr, "%" SCIP_REAL_FORMAT, &objlim) != 1 )
    {
       SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
       return SCIP_OKAY;

@@ -1926,22 +1926,22 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
 
    /* add constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/checkslacktype",
+         "constraints/" CONSHDLR_NAME "/checkslacktype",
          "should type of slack constraint be checked when creating superindicator constraint?",
          &conshdlrdata->checkslacktype, TRUE, DEFAULT_CHECKSLACKTYPE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxupgdcoeflinear",
+         "constraints/" CONSHDLR_NAME "/maxupgdcoeflinear",
          "maximum big-M coefficient of binary variable in upgrade to a linear constraint (relative to smallest coefficient)",
          &conshdlrdata->maxupgdcoeflinear, TRUE, DEFAULT_MAXUPGDCOEFLINEAR, 0.0, 1e15, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/upgdprioindicator",
+         "constraints/" CONSHDLR_NAME "/upgdprioindicator",
          "priority for upgrading to an indicator constraint (-1: never)",
          &conshdlrdata->upgdprioindicator, TRUE, DEFAULT_UPGDPRIOINDICATOR, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/upgdpriolinear",
+         "constraints/" CONSHDLR_NAME "/upgdpriolinear",
          "priority for upgrading to an indicator constraint (-1: never)",
          &conshdlrdata->upgdpriolinear, TRUE, DEFAULT_UPGDPRIOLINEAR, -1, INT_MAX, NULL, NULL) );
 

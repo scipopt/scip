@@ -2775,59 +2775,59 @@ SCIP_RETCODE SCIPincludeHeurDualval(
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolDualval) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolDualval) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/forceimprovements",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/forceimprovements",
          "exit if objective doesn't improve",
          &heurdata->forceimprovements, TRUE, DEFAULT_FORCEIMPROVEMENTS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/onlycheaper",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/onlycheaper",
          "add constraint to ensure that discrete vars are improving",
          &heurdata->onlycheaper, TRUE, DEFAULT_ONLYCHEAPER, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/onlyleaves",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/onlyleaves",
          "disable the heuristic if it was not called at a leaf of the B&B tree",
          &heurdata->onlyleaves, FALSE, DEFAULT_ONLYLEAVES, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/relaxindicators",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/relaxindicators",
          "relax the indicator variables by introducing continuous copies",
          &heurdata->relaxindicators, FALSE, DEFAULT_RELAXINDICATORS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/relaxcontvars",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/relaxcontvars",
          "relax the continous variables",
          &heurdata->relaxcontvars, FALSE, DEFAULT_RELAXCONTVARS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/heurverblevel",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/heurverblevel",
          "verblevel of the heuristic, default is 0 to display nothing",
          &heurdata->heurverblevel, FALSE, DEFAULT_HEURVERBLEVEL, 0, 4, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/nlpverblevel",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/nlpverblevel",
          "verblevel of the nlp solver, can be 0 or 1",
          &heurdata->nlpverblevel, FALSE, DEFAULT_NLPVERBLEVEL, 0, 1, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/rankvalue",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/rankvalue",
          "number of ranks that should be displayed when the heuristic is called",
          &heurdata->rankvalue, FALSE, DEFAULT_RANKVALUE, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxcalls",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxcalls",
          "maximal number of recursive calls of the heuristic (if dynamicdepth is off)",
          &heurdata->maxcalls, FALSE, DEFAULT_MAXCALLS, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/dynamicdepth",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/dynamicdepth",
          "says if and how the recursion depth is computed at runtime",
          &heurdata->dynamicdepth, FALSE, DEFAULT_DYNAMICDEPTH, 0, 1, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxequalranks",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxequalranks",
          "maximal number of variables that may have maximal rank, quit if there are more, turn off by setting -1",
          &heurdata->maxequalranks, FALSE, DEFAULT_MAXEQUALRANKS, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/mingap",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/mingap",
          "minimal gap for which we still run the heuristic, if gap is less we return without doing anything",
          &heurdata->mingap, FALSE, DEFAULT_MINGAP, 0.0, 100.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/lambdaslack",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/lambdaslack",
          "value added to objective of slack variables, must not be zero",
          &heurdata->lambdaslack, FALSE, DEFAULT_LAMBDASLACK, 0.1, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/lambdaobj",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/lambdaobj",
          "scaling factor for the objective function",
          &heurdata->lambdaobj, FALSE, DEFAULT_LAMBDAOBJ, 0.0, 1.0, NULL, NULL) );
 

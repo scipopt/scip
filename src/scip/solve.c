@@ -213,6 +213,10 @@ SCIP_RETCODE SCIPprimalHeuristics(
    if( set->nheurs == 0 || (heurtiming == SCIP_HEURTIMING_AFTERNODE && nextnode == NULL) )
       return SCIP_OKAY;
 
+   /* do not continue if we reached a time limit */
+   if( SCIPsolveIsStopped(set, stat, FALSE) )
+      return SCIP_OKAY;
+
    /* sort heuristics by priority, but move the delayed heuristics to the front */
    SCIPsetSortHeurs(set);
 
@@ -315,7 +319,7 @@ SCIP_RETCODE SCIPprimalHeuristics(
       /* if the new solution cuts off the current node due to a new primal solution (via the cutoff bound) interrupt
        * calling the remaining heuristics
        */
-      if( result == SCIP_FOUNDSOL && (lowerbound > primal->cutoffbound || SCIPsolveIsStopped(set, stat, FALSE)) )
+      if( (result == SCIP_FOUNDSOL && lowerbound > primal->cutoffbound) || SCIPsolveIsStopped(set, stat, FALSE) )
          break;
 
       /* make sure that heuristic did not change probing or diving status */
@@ -1002,6 +1006,14 @@ SCIP_RETCODE updateEstimate(
 
    /* calculate the estimate: lowerbound + sum(min{f_j * pscdown_j, (1-f_j) * pscup_j}) */
    estimate = SCIPnodeGetLowerbound(focusnode);
+
+   /* an infinite lower bound implies an infinite estimate */
+   if( SCIPsetIsInfinity(set, estimate) )
+   {
+      SCIPnodeSetEstimate(focusnode, set, estimate);
+      return SCIP_OKAY;
+   }
+
    for( i = 0; i < nlpcands; ++i )
    {
       SCIP_Real pscdown;
@@ -2226,7 +2238,7 @@ SCIP_RETCODE priceAndCutLoop(
 
                if( stat->ninitconssadded != oldninitconssadded )
                {
-                  SCIPdebugMessage("new initial constraints added during propagation: old=%"SCIP_LONGINT_FORMAT", new=%"SCIP_LONGINT_FORMAT"\n", oldninitconssadded, stat->ninitconssadded);
+                  SCIPdebugMessage("new initial constraints added during propagation: old=%" SCIP_LONGINT_FORMAT ", new=%" SCIP_LONGINT_FORMAT "\n", oldninitconssadded, stat->ninitconssadded);
 
                   SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, reopt, lp,
                         branchcand, eventqueue, eventfilter, cliquetable, FALSE, FALSE, cutoff) );
@@ -2441,7 +2453,7 @@ SCIP_RETCODE priceAndCutLoop(
 
                if( stat->ninitconssadded != oldninitconssadded )
                {
-                  SCIPdebugMessage("new initial constraints added during propagation: old=%"SCIP_LONGINT_FORMAT", new=%"SCIP_LONGINT_FORMAT"\n",
+                  SCIPdebugMessage("new initial constraints added during propagation: old=%" SCIP_LONGINT_FORMAT ", new=%" SCIP_LONGINT_FORMAT "\n",
                         oldninitconssadded, stat->ninitconssadded);
 
                   SCIP_CALL( SCIPinitConssLP(blkmem, set, sepastore, stat, transprob, origprob, tree, reopt, lp,
@@ -3484,7 +3496,7 @@ SCIP_RETCODE propAndSolve(
             newinitconss, cutoff, unbounded, lperror, pricingaborted) );
 
       *initiallpsolved = TRUE;
-      SCIPdebugMessage(" -> LP status: %d, LP obj: %g, iter: %"SCIP_LONGINT_FORMAT", count: %"SCIP_LONGINT_FORMAT"\n",
+      SCIPdebugMessage(" -> LP status: %d, LP obj: %g, iter: %" SCIP_LONGINT_FORMAT ", count: %" SCIP_LONGINT_FORMAT "\n",
          SCIPlpGetSolstat(lp),
          *cutoff ? SCIPsetInfinity(set) : (*lperror ? -SCIPsetInfinity(set) : SCIPlpGetObjval(lp, set, transprob)),
          stat->nlpiterations, stat->lpcount);
@@ -3497,14 +3509,14 @@ SCIP_RETCODE propAndSolve(
       {
          if( forcedlpsolve )
          {
-            SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT" cannot be dealt with\n",
+            SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT " cannot be dealt with\n",
                stat->nnodes, stat->nlps);
             return SCIP_LPERROR;
          }
          SCIPtreeSetFocusNodeLP(tree, FALSE);
          ++(*nlperrors);
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, actdepth == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL,
-            "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- using pseudo solution instead (loop %d)\n",
+            "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- using pseudo solution instead (loop %d)\n",
             stat->nnodes, stat->nlps, *nlperrors);
       }
 
@@ -3514,14 +3526,14 @@ SCIP_RETCODE propAndSolve(
          *forcedenforcement = TRUE;
 
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, actdepth == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL,
-            "(node %"SCIP_LONGINT_FORMAT") LP solver hit %s limit in LP %"SCIP_LONGINT_FORMAT" -- using pseudo solution instead\n",
+            "(node %" SCIP_LONGINT_FORMAT ") LP solver hit %s limit in LP %" SCIP_LONGINT_FORMAT " -- using pseudo solution instead\n",
             stat->nnodes, SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_TIMELIMIT ? "time" : "iteration", stat->nlps);
       }
 
       if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
       {
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, actdepth == 0 ? SCIP_VERBLEVEL_HIGH : SCIP_VERBLEVEL_FULL,
-            "(node %"SCIP_LONGINT_FORMAT") LP relaxation is unbounded (LP %"SCIP_LONGINT_FORMAT")\n", stat->nnodes, stat->nlps);
+            "(node %" SCIP_LONGINT_FORMAT ") LP relaxation is unbounded (LP %" SCIP_LONGINT_FORMAT ")\n", stat->nnodes, stat->nlps);
       }
 
       /* if we solve exactly, the LP claims to be infeasible but the infeasibility could not be proved,
@@ -3532,9 +3544,9 @@ SCIP_RETCODE propAndSolve(
       {
          if( SCIPbranchcandGetNPseudoCands(branchcand) == 0 && transprob->ncontvars > 0 )
          {
-            SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") could not prove infeasibility of LP %"SCIP_LONGINT_FORMAT" (exactsolve=%u, pricingaborted=%u), all variables are fixed, %d continuous vars\n",
+            SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") could not prove infeasibility of LP %" SCIP_LONGINT_FORMAT " (exactsolve=%u, pricingaborted=%u), all variables are fixed, %d continuous vars\n",
                stat->nnodes, stat->nlps, set->misc_exactsolve, *pricingaborted, transprob->ncontvars);
-            SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT")  -> have to call PerPlex() (feature not yet implemented)\n", stat->nnodes);
+            SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ")  -> have to call PerPlex() (feature not yet implemented)\n", stat->nnodes);
             /**@todo call PerPlex */
             return SCIP_LPERROR;
          }
@@ -3544,7 +3556,7 @@ SCIP_RETCODE propAndSolve(
             *forcedenforcement = TRUE;
 
             SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %"SCIP_LONGINT_FORMAT") could not prove infeasibility of LP %"SCIP_LONGINT_FORMAT" (exactsolve=%u, pricingaborted=%u) -- using pseudo solution (%d unfixed vars) instead\n",
+               "(node %" SCIP_LONGINT_FORMAT ") could not prove infeasibility of LP %" SCIP_LONGINT_FORMAT " (exactsolve=%u, pricingaborted=%u) -- using pseudo solution (%d unfixed vars) instead\n",
                stat->nnodes, stat->nlps, set->misc_exactsolve, *pricingaborted, SCIPbranchcandGetNPseudoCands(branchcand));
          }
       }
@@ -3682,7 +3694,7 @@ SCIP_RETCODE solveNode(
    /* clear the storage of external branching candidates */
    SCIPbranchcandClearExternCands(branchcand);
 
-   SCIPdebugMessage("Processing node %"SCIP_LONGINT_FORMAT" in depth %d, %d siblings\n",
+   SCIPdebugMessage("Processing node %" SCIP_LONGINT_FORMAT " in depth %d, %d siblings\n",
       stat->nnodes, actdepth, tree->nsiblings);
    SCIPdebugMessage("current pseudosolution: obj=%g\n", SCIPlpGetPseudoObjval(lp, set, transprob));
    /*debug(SCIPprobPrintPseudoSol(transprob, set));*/
@@ -3833,7 +3845,7 @@ SCIP_RETCODE solveNode(
       {
          if( forcedlpsolve )
          {
-            SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT" cannot be dealt with\n",
+            SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT " cannot be dealt with\n",
                stat->nnodes, stat->nlps);
             return SCIP_LPERROR;
          }
@@ -3841,7 +3853,7 @@ SCIP_RETCODE solveNode(
          lp->resolvelperror = FALSE;
          nlperrors++;
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- using pseudo solution instead (loop %d)\n",
+            "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- using pseudo solution instead (loop %d)\n",
             stat->nnodes, stat->nlps, nlperrors);
       }
 
@@ -4088,7 +4100,7 @@ SCIP_RETCODE solveNode(
                   }
 
                   SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, verblevel,
-                     "(node %"SCIP_LONGINT_FORMAT") forcing the solution of an LP (last LP %"SCIP_LONGINT_FORMAT")...\n", stat->nnodes, stat->nlps);
+                     "(node %" SCIP_LONGINT_FORMAT ") forcing the solution of an LP (last LP %" SCIP_LONGINT_FORMAT ")...\n", stat->nnodes, stat->nlps);
 
                   /* solve the LP in the next loop */
                   SCIPtreeSetFocusNodeLP(tree, TRUE);
@@ -4136,7 +4148,7 @@ SCIP_RETCODE solveNode(
    /* check for too many LP errors */
    if( nlperrors >= MAXNLPERRORS )
    {
-      SCIPerrorMessage("(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles in LP %"SCIP_LONGINT_FORMAT" -- aborting\n", stat->nnodes, stat->nlps);
+      SCIPerrorMessage("(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles in LP %" SCIP_LONGINT_FORMAT " -- aborting\n", stat->nnodes, stat->nlps);
       return SCIP_LPERROR;
    }
 
@@ -4614,7 +4626,7 @@ SCIP_RETCODE SCIPsolveCIP(
       if( nsuccessconflicts >= restartconfnum && restartAllowed(set, stat) )
       {
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-            "(run %d, node %"SCIP_LONGINT_FORMAT") restarting after %"SCIP_LONGINT_FORMAT" successful conflict analysis calls\n",
+            "(run %d, node %" SCIP_LONGINT_FORMAT ") restarting after %" SCIP_LONGINT_FORMAT " successful conflict analysis calls\n",
             stat->nruns, stat->nnodes, nsuccessconflicts);
          *restart = TRUE;
 
@@ -4628,7 +4640,7 @@ SCIP_RETCODE SCIPsolveCIP(
       if( restartAllowed(set, stat) && set->limit_autorestartnodes == stat->nnodes && stat->ntotalnodes - stat->nruns + 1 == set->limit_autorestartnodes )
       {
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-               "(run %d, node %"SCIP_LONGINT_FORMAT") restarting: triggering parameter controlled restart)\n",
+               "(run %d, node %" SCIP_LONGINT_FORMAT ") restarting: triggering parameter controlled restart)\n",
                stat->nruns, stat->nnodes);
          *restart = TRUE;
       }
@@ -4644,7 +4656,7 @@ SCIP_RETCODE SCIPsolveCIP(
       /* display node information line */
       SCIP_CALL( SCIPdispPrintLine(set, messagehdlr, stat, NULL, (SCIPnodeGetDepth(focusnode) == 0) && infeasible && !foundsol, TRUE) );
 
-      SCIPdebugMessage("Processing of node %"SCIP_LONGINT_FORMAT" in depth %d finished. %d siblings, %d children, %d leaves left\n",
+      SCIPdebugMessage("Processing of node %" SCIP_LONGINT_FORMAT " in depth %d finished. %d siblings, %d children, %d leaves left\n",
          stat->nnodes, SCIPnodeGetDepth(focusnode), tree->nsiblings, tree->nchildren, SCIPtreeGetNLeaves(tree));
       SCIPdebugMessage("**********************************************************************\n");
    }

@@ -4443,7 +4443,7 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
       }
 
       /* perform dual reductions */
-      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
+      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
       {
          SCIP_CALL( dualPresolving(scip, cons, conshdlrdata->eventhdlr, nfixedvars, ndelconss, nchgcoefs, result) );
 
@@ -4502,7 +4502,10 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
                conshdlrdata->usestrengthening, &firstchange, nfixedvars, ndelconss, nchgcoefs, &cutoff) );
 
          if( cutoff )
+         {
+            *result = SCIP_CUTOFF;
             goto TERMINATE;
+         }
       }
 
       if( SCIPisPresolveFinished(scip) )
@@ -4516,7 +4519,10 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
                   &entries, &nentries, nfixedvars, ndelconss, nchgcoefs, &cutoff) );
 
             if( cutoff )
+            {
+               *result = SCIP_CUTOFF;
                goto TERMINATE;
+            }
          }
 
          /* check for redundant constraints due to negated clique information */
@@ -4527,7 +4533,10 @@ SCIP_DECL_CONSPRESOL(consPresolLogicor)
                   nupgdconss, nchgcoefs, &cutoff) );
 
             if( cutoff )
+            {
+               *result = SCIP_CUTOFF;
                goto TERMINATE;
+            }
          }
       }
    }

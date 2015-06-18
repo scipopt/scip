@@ -30,8 +30,8 @@
 #define HEUR_NAME             "reoptsols"
 #define HEUR_DESC             "primal heuristic updating solutions found in a previous optimization round"
 #define HEUR_DISPCHAR         'J'
-#define HEUR_PRIORITY         -9000000
-#define HEUR_FREQ             0
+#define HEUR_PRIORITY         40000
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         0
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFOREPRESOL
@@ -363,9 +363,9 @@ SCIP_RETCODE SCIPincludeHeurReoptsols(
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolReoptsols) );
 
    /* parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxsols", "maximal number solutions which should be checked. (-1: all)",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxsols", "maximal number solutions which should be checked. (-1: all)",
          &heurdata->maxsols, TRUE, 1000, -1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxruns", "check solutions of the last k runs. (-1: all)",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxruns", "check solutions of the last k runs. (-1: all)",
          &heurdata->maxruns, TRUE, -1, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;

@@ -4803,15 +4803,13 @@ SCIP_RETCODE SCIPlpiGetNorms(
    assert(lpi->spx != NULL);
    assert(lpinorms != NULL);
 
-   // we only store steepest edge norms and don't want to allocate memory otherwise
-   if( lpi->pricing != SCIP_PRICING_STEEP && lpi->pricing != SCIP_PRICING_STEEPQSTART)
+   lpi->spx->getNdualNorms(nrows, ncols);
+
+   if( nrows == 0 && ncols == 0)
    {
-      (*lpinorms) = NULL;
+      (*lpinorms = NULL);
       return SCIP_OKAY;
    }
-
-   nrows = lpi->spx->nRows();
-   ncols = lpi->spx->rep() == SPxSolver::COLUMN ? 0 : lpi->spx->nCols();
 
    /* allocate lpinorms data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, lpinorms) );

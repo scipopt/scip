@@ -71,6 +71,7 @@ features:
 - possibility to set a soft time limit which becomes active only after the first primal solution was found
 
 parameters:
+- new parameter 'DELHEADERS' for 'uninstall'-target: scip headers are only removed when invoking 'make uninstall DELHEADERS=true'
 - new parameter heuristics/*diving/lpresolvedomchgquot to determine the percentage of changed domains since previous LP to trigger
   an LP resolve [default: 0.15] (* stands for eight diving heuristics to support this feature)
 - new parameter heuristics/*diving/lpsolvefreq to determine the frequency for resolving LP's during the execution of
@@ -172,6 +173,7 @@ parameters:
 - new parameter "heuristics/shiftandpropagate/binlocksfirst" to set if binaries without locks should be preferred in ordering
 
 performance improvements:
+- zi rounding heuristic uses buffer data structures, thereby decreasing total memory usage of SCIP
 - adjusted (hard) diving heuristics to solve fewer LPs. LP's are resolved only if a parameter-defined
   percentage of the variable bounds changed through domain propagation or at a predefined frequency.
 - all hard diving heuristics additionally consider indicator variables as candidate variables and try to
@@ -243,6 +245,9 @@ interface:
   in cons_quadratic.h to compute linear under- and overestimation for bilinear and quadratic terms
 
 fixed bugs:
+- fix behavior of 'make install' which now sets symbolic links and short links to binaries and libraries
+- fix characterization of logic or constraints in SCIP's NLP relaxation
+- fix wrong handling of SCIP_NLPSOLSTAT_LOCALINFEASIBLE solution status in nlp.c
 - fix bug which lead to wrong global bound tightenings in prop_genvbounds.c
 - fix missing clean phase of bilinear terms with zero coefficient in cons_quadratic.c
 - fix handling of infinite intervals in SCIPintervalIsEmpty()
@@ -259,6 +264,7 @@ fixed bugs:
 - fix call to random generator for Windows operating systems in misc.c
 - fix late creation of auxiliary LP in cons_nonlinear.c, which lead to a segmentation fault with lpi_spx2.cpp
 - fixed again a bug in backward propagation of linear expressions in expression graph
+- fixed problem with lpisrelax flag in probing mode when doing branch-and-price
 
 SCIP version 3.1.2
 ==================

@@ -204,14 +204,14 @@ SCIP_SOL* SCIPreoptGetLastBestSol(
    SCIP_REOPT*           reopt               /**< reoptimization data */
    );
 
-/** returns the node of the reoptimization tree corresponding to the unique @param id */
+/** returns the node of the reoptimization tree corresponding to the unique @p id */
 extern
 SCIP_REOPTNODE* SCIPreoptGetReoptnode(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    unsigned int          id                  /**< unique id */
    );
 
-/** returns the coefficent of variable with index @param idx in run @param run */
+/** returns the coefficent of variable with index @p idx in run @p run */
 extern
 SCIP_Real SCIPreoptGetOldObjCoef(
    SCIP_REOPT*           reopt,              /**< reopt data */
@@ -291,7 +291,7 @@ int SCIPreoptGetNLeaves(
    SCIP_NODE*            node                /**< node of the search tree */
    );
 
-/** returns the child nodes of @param node that need to be reoptimized next or NULL if @param node is a leaf */
+/** returns the child nodes of @p node that need to be reoptimized next or NULL if @p node is a leaf */
 extern
 SCIP_RETCODE SCIPreoptGetChildIDs(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
@@ -303,7 +303,7 @@ SCIP_RETCODE SCIPreoptGetChildIDs(
    int*                  nchilds             /**< pointer to store the number of child nodes */
    );
 
-/** returns all leaves of the subtree induced by @param node */
+/** returns all leaves of the subtree induced by @p node */
 extern
 SCIP_RETCODE SCIPreoptGetLeaves(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
@@ -366,7 +366,6 @@ SCIP_RETCODE SCIPreoptApply(
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree to reactivate */
    unsigned int          id,                 /**< id of the node to reactivate */
    SCIP_Real             estimate,           /**< estimate of the child nodes that should be created */
-   SCIP_Real             lowerbound,         /**< lowerbound of the current focusnode */
    SCIP_NODE**           childnodes,         /**< array to store the created child nodes */
    int*                  ncreatedchilds,     /**< pointer to store number of created child nodes */
    int*                  naddedconss,        /**< pointer to store number of generated constraints */
@@ -378,6 +377,7 @@ SCIP_RETCODE SCIPreoptApply(
 extern
 SCIP_RETCODE SCIPreoptDeleteNode(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
+   SCIP_SET*             set,                /**< global SCIP settings */
    unsigned int          id,                 /**< id of the node */
    BMS_BLKMEM*           blkmem              /**< block memory */
    );
@@ -406,6 +406,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
 extern
 SCIP_RETCODE SCIPreoptApplyCompression(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_REOPTNODE**      representatives,    /**< array of representatives */
    int                   nrepresentatives,   /**< number of representatives */
@@ -433,7 +434,17 @@ SCIP_RETCODE SCIPreoptSaveOpenNodes(
 /** initialize an empty node */
 extern
 void SCIPreoptnodeInit(
-   SCIP_REOPTNODE*       reoptnode           /**< node of the reopttree */
+   SCIP_REOPTNODE*       reoptnode,          /**< node of the reopttree */
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** reset the given reoptimization node */
+extern
+SCIP_RETCODE SCIPreoptnodeReset(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_REOPTNODE*       reoptnode           /**< reoptimization node */
    );
 
 /** delete the given reoptimization node */

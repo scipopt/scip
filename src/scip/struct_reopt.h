@@ -45,8 +45,8 @@ struct SCIP_SolNode
 /** tree for solution */
 struct SCIP_SolTree
 {
-   SCIP_SOLNODE*         root;               /**< root node of the solution tree */
    SCIP_SOLNODE***       sols;               /**< array of arrays of solutions of the reoptimization runs */
+   SCIP_SOLNODE*         root;               /**< root node of the solution tree */
    int*                  solssize;           /**< size of sols[x] arrays */
    int*                  nsols;              /**< number of solutions stored in sols[x] array */
 };
@@ -64,26 +64,21 @@ struct LogicOrData
 /** nodes of SCIP_ReoptTree */
 struct SCIP_ReoptNode
 {
-   /* data to store the branching path */
-   SCIP_VAR**            vars;                    /**< variables along the branching path up to the next stored node */
-   SCIP_Real*            varbounds;               /**< bounds along the branching path up to the next stored node */
-   SCIP_BOUNDTYPE*       varboundtypes;           /**< boundtypes along the branching path up to the next stored node */
-   int                   nvars;                   /**< number of branching decisions up to the next stored node */
-   int                   varssize;                /**< size of allocated memory */
-
-   SCIP_VAR**            afterdualvars;           /**< variables along the branching path after the first decision based on dual information */
-   SCIP_Real*            afterdualvarbounds;      /**< bounds along the branching path after the first decision based on dual information */
-   SCIP_BOUNDTYPE*       afterdualvarboundtypes;  /**< boundtypes along the branching path after the first dual information */
-   int                   nafterdualvars;          /**< number of branching decisions after the first dual information */
-   int                   afterdualvarssize;       /**< size of allocated memory */
-
-   SCIP_Bool             dualfixing;              /**< flag whether bound changes based on dual decisions exist */
-   SCIP_Real             lowerbound;              /**< the last lowerbound of this node in the previous iteration */
-
-   /* other information: child nodes, added constraints, ... */
    LOGICORDATA**         conss;                   /**< array of constraints added to the node, i.e., logic-or constraints */
+   SCIP_VAR**            vars;                    /**< variables along the branching path up to the next stored node */
+   SCIP_VAR**            afterdualvars;           /**< variables along the branching path after the first decision based on dual information */
    LOGICORDATA*          dualconscur;             /**< dual constraint that need to be added the current round */
    LOGICORDATA*          dualconsnex;             /**< dual constraint that need to be added the next round */
+   SCIP_BOUNDTYPE*       varboundtypes;           /**< boundtypes along the branching path up to the next stored node */
+   SCIP_BOUNDTYPE*       afterdualvarboundtypes;  /**< boundtypes along the branching path after the first dual information */
+   SCIP_Real*            varbounds;               /**< bounds along the branching path up to the next stored node */
+   SCIP_Real*            afterdualvarbounds;      /**< bounds along the branching path after the first decision based on dual information */
+   SCIP_Real             lowerbound;              /**< the last lowerbound of this node in the previous iteration */
+   SCIP_Bool             dualfixing;              /**< flag whether bound changes based on dual decisions exist */
+   int                   nvars;                   /**< number of branching decisions up to the next stored node */
+   int                   varssize;                /**< size of allocated memory */
+   int                   nafterdualvars;          /**< number of branching decisions after the first dual information */
+   int                   afterdualvarssize;       /**< size of allocated memory */
    int                   nchilds;                 /**< number of child nodes */
    int                   allocchildmem;           /**< allocated memory for child nodes */
    int                   nconss;                  /**< number of added constraints */
@@ -97,14 +92,10 @@ struct SCIP_ReoptNode
 /* tree to store the current search tree */
 struct SCIP_ReoptTree
 {
-   SCIP_Bool             initialized;             /**< is the data structure initialized? */
 
    SCIP_REOPTNODE**      reoptnodes;              /**< array of SCIP_REOPTNODE */
    SCIP_QUEUE*           openids;                 /**< queue of open positions in the reoptnodes array */
-   unsigned int          reoptnodessize;          /**< size of allocated memory for the reoptnodes array and the openid queue */
    int                   nreoptnodes;             /**< number of saved nodes */
-
-   /* statistics */
    int                   nfeasnodes;              /**< number of feasible nodes in the current run */
    int                   ntotalfeasnodes;         /**< number of feasible nodes over all runs */
    int                   ninfnodes;               /**< number of (LP-)infeasible nodes in the current run */
@@ -114,40 +105,31 @@ struct SCIP_ReoptTree
    int                   ncutoffreoptnodes;       /**< number of cut off reoptimized nodes in the current run */
    int                   ntotalcutoffreoptnodes;  /**< number of cut off reoptimized nodes over all runs */
    int                   ninfsubtrees;            /**< number of found infeasible subtrees */
+   SCIP_Bool             initialized;             /**< is the data structure initialized? */
+   unsigned int          reoptnodessize;          /**< size of allocated memory for the reoptnodes array and the openid queue */
 };
 
 /** reoptimization data and solution storage */
 struct SCIP_Reopt
 {
+   SCIP_SOL**            prevbestsols;            /**< list of best solutions of all previous rounds */
+   SCIP_Real**           objs;                    /**< list of objective coefficients */
+   LOGICORDATA**         glbconss;                /**< global constraints that need to be added at the beginning of the next iteration */
+   LOGICORDATA*          dualcons;                /**< constraint describing bound changes based on dual information */
+   SCIP_REOPTTREE*       reopttree;               /**< data structure to store the current reoptimization search tree */
+   SCIP_SOLTREE*         soltree;                 /**< tree to handle all saved solutions */
+   SCIP_CLOCK*           savingtime;              /**< time needed to store the nodes */
+   SCIP_Real             simtolastobj;            /**< similarity to the last objective function */
+   SCIP_Real             simtofirstobj;           /**< similarity to the first objective function */
+   SCIP_Longint          lastbranched;            /**< number of the last branched node */
+   SCIP_Longint          lastseennode;            /**< node number of the last caught event */
+   SCIP_Longint          currentnode;             /**< number of the current node */
    int                   run;                     /**< number of the current reoptimization run */
    int                   runsize;                 /**< allocated memory for runs */
    int                   firstobj;                /**< first non empty objective function */
-
-   SCIP_Real**           objs;                    /**< list of objective coefficients */
-   SCIP_SOL**            prevbestsols;            /**< list of best solutions of all previous rounds */
-   SCIP_SOLTREE*         soltree;                 /**< tree to handle all saved solutions */
-
-   SCIP_Real             simtolastobj;            /**< similarity to the last objective function */
-   SCIP_Real             simtofirstobj;           /**< similarity to the first objective function */
-
-   SCIP_REOPTTREE*       reopttree;               /**< data structure to store the current reoptimization search tree */
-
-   SCIP_Longint          lastbranched;            /**< number of the last branched node */
-
    int                   noptsolsbyreoptsol;      /**< number of successive optimal solutions found by heur_reoptsols */
-
-   SCIP_Longint          lastseennode;            /**< node number of the last caught event */
-
-   /* data structure to track decisions based on dual information */
-   SCIP_Longint          currentnode;             /**< number of the current node */
-   LOGICORDATA*          dualcons;                /**< constraint describing bound changes based on dual information */
-
-   /* global constraints */
-   LOGICORDATA**         glbconss;                /**< global constraints that need to be added at the beginning of the next iteration */
    int                   nglbconss;               /**< number of stored global constraints */
    int                   allocmemglbconss;        /**< allocated memory for global constraints */
-
-   /* statistics */
    int                   ncheckedsols;            /**< number of updated solutions by reoptsols */
    int                   nimprovingsols;          /**< number of improving solutions found by reoptsols */
    int                   nglbrestarts;            /**< number of global restarts */
@@ -155,9 +137,6 @@ struct SCIP_Reopt
    int                   nlocrestarts;            /**< number of local restarts in the current iteration */
    int                   firstrestart;            /**< run with the first global restart or -1 of no restart  */
    int                   lastrestart;             /**< run with the last global restart or -1 if no restart */
-
-   /* clocks */
-   SCIP_CLOCK*           savingtime;              /**< time needed to store the nodes */
 };
 
 #ifdef __cplusplus

@@ -597,14 +597,14 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
    {
       *result = SCIP_CUTOFF;
 
-      SCIPdebugMessage("node %"SCIP_LONGINT_FORMAT": detected cutoff\n",
+      SCIPdebugMessage("node %" SCIP_LONGINT_FORMAT ": detected cutoff\n",
          SCIPnodeGetNumber(SCIPgetCurrentNode(scip)));
    }
    else if( nchgbds > 0 )
    {
       *result = SCIP_REDUCEDDOM;
 
-      SCIPdebugMessage("node %"SCIP_LONGINT_FORMAT": %d bound changes (max redcost <%g>)\n",
+      SCIPdebugMessage("node %" SCIP_LONGINT_FORMAT ": %d bound changes (max redcost <%g>)\n",
          SCIPnodeGetNumber(SCIPgetCurrentNode(scip)) , nchgbds, propdata->maxredcost);
    }
 
@@ -642,11 +642,11 @@ SCIP_RETCODE SCIPincludePropRedcost(
 
    /* add redcost propagator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/"PROP_NAME"/continuous",
+         "propagating/" PROP_NAME "/continuous",
          "should reduced cost fixing be also applied to continuous variables?",
          &propdata->continuous, FALSE, DEFAULT_CONTINUOUS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "propagating/"PROP_NAME"/useimplics",
+         "propagating/" PROP_NAME "/useimplics",
          "should implications be used to strength the reduced cost for binary variables?",
          &propdata->useimplics, FALSE, DEFAULT_USEIMPLICS, NULL, NULL) );
 

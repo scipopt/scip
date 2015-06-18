@@ -207,7 +207,7 @@ void writeLPs(
       fclose(filemin);
    }
    else
-      assert(0);
+      SCIPABORT();
 }
 #endif
 
