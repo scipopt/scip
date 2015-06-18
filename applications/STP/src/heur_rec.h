@@ -14,21 +14,18 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rec.h
- * @ingroup PRIMALHEURISTICS
- * @brief  recombination heuristic for STPs
+ * @brief  primal recombination heuristic for Steiner problems
  * @author Daniel Rehfeldt
  *
- * Inspired by genetic algorithms, STP recombination is a improvement heuristic which requires
- * more than one feasible solution. For a set of feasible solutions, e.g., the three best found so far, it fixes
- * variables having value one it at least one solution and solves a corresponding sub-SCIP. Based on @ref
- * heur_crossover.h
+ * This file implements a recombination heuristic for Steiner problems, see
+ * "SCIP-Jack - A solver for STP and variants with parallelization extensions" by
+ * Gamrath, Koch, Maher, Rehfeldt and Shinano
+ *
  */
-
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_HEUR_REC_H__
 #define __SCIP_HEUR_REC_H__
-
 
 #include "scip/scip.h"
 #include "grph.h"
@@ -37,11 +34,11 @@
 extern "C" {
 #endif
 
-   /** creates the rec primal heuristic and includes it in SCIP */
-   EXTERN
-   SCIP_RETCODE SCIPincludeHeurRec(
-      SCIP*                 scip                /**< SCIP data structure */
-      );
+/** creates the rec primal heuristic and includes it in SCIP */
+extern
+SCIP_RETCODE SCIPincludeHeurRec(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
 
 #ifdef __cplusplus
 }

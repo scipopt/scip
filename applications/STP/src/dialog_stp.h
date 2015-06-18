@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   dialog_stp.h
- * @ingroup DIALOGS
  * @brief  stp user interface dialog
  * @author Gerald Gamrath
  */
@@ -32,7 +31,7 @@ extern "C" {
 #endif
 
 /** includes or updates the stp dialog menus in SCIP */
-EXTERN
+extern
 SCIP_RETCODE SCIPincludeDialogStp(
    SCIP*                 scip                /**< SCIP data structure */
    );

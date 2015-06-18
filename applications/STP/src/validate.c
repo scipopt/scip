@@ -1,12 +1,27 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*   Type....: Function                                                      */
-/*   File....: validate.c                                                    */
-/*   Name....: STP Solution validation                                       */
-/*   Author..: Thorsten Koch                                                 */
-/*   Copyright by Author, All rights reserved                                */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   portab.h
+ * @brief  Method to validate Steiner problem solutions
+ * @author Thorsten Koch
+ * @author Gerald Gamrath
+ * @author Daniel Rehfeldt
+ *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -187,31 +202,39 @@ static void trail2(
 /*--- Parameter: Graph, Loesung.                                          ---*/
 /*--- Returns  : TRUE / FALSE                                             ---*/
 /*---------------------------------------------------------------------------*/
-int validate(
+/** validates whether a (LP) solution is feasible */
+SCIP_RETCODE SCIPvalidateStpSol(
+   SCIP* scip,
    const GRAPH*  g,
-   const double* xval)
+   const double* xval,
+   SCIP_Bool*    feasible
+		     )
 {
-   char* connected = calloc((size_t)g->knots, sizeof(char));
+   char* connected;
    int   ret       = TRUE;
    int   i;
    int   layer;
    int   deg;
    int   e;
    assert(g         != NULL);
-   assert(connected != NULL);
+
    if( g->knots == 1 )
-      return TRUE;
+   {
+      *feasible = TRUE;
+      return SCIP_OKAY;
+   }
+
    assert(xval      != NULL);
+
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &connected, g->knots) );
+
+   *feasible = FALSE;
    for(layer = 0; ret && (layer < g->layers); layer++)
    {
+#if 0
       if (layer > 0)
          memset(connected, 0, (size_t)g->knots * sizeof(char));
-#if 0
-      trail(g, g->source[layer], xval + layer * g->edges, -1,
-         memset(connected, 0, (size_t)g->knots * sizeof(char)),
-         0, param_get("MAX_HOPS")->i);
 #endif
-
 #if 1
       trail(g, g->source[layer], xval + layer * g->edges, -1,
          connected,
@@ -231,21 +254,19 @@ int validate(
             if( deg > g->maxdeg[i] )
             {
                ret = FALSE;
-               printf("deg condition violated \n");
+               SCIPdebugMessage("deg condition violated \n");
                break;
             }
 
          }
-         /* Etwa ein Kreis ?
-          */
-         if (connected[i] >= 2)
+         /* circle? */
+         if( connected[i] >= 2)
          {
             ret = FALSE;
             break;
          }
 
-         /* Jemand noch einsam
-          */
+         /* vertex not reached? */
          if ((g->grad[i] > 0) && (g->term[i] == layer) && !connected[i])
          {
             ret = FALSE;
@@ -253,9 +274,9 @@ int validate(
          }
       }
    }
-   free(connected);
+   SCIPfreeBufferArray(scip, &connected);
 
-   if (ret)
+   if( ret )
       ret = nail(g, xval);
 
    /* SCIP-Heuristiken können (z.B. durch Runden) Lösungen konstruieren, die einen Kreis aus Steiner-Knoten enthalten, der
@@ -276,5 +297,6 @@ int validate(
    }
 #endif
 #endif
-   return(ret);
+   *feasible = (SCIP_Bool) ret;
+   return SCIP_OKAY;
 }

@@ -15,6 +15,13 @@
 
 /**@file   probdata_stp.h
  * @brief  Problem data for stp problem
+ * @author Gerald Gamrath
+ * @author Thorsten Koch
+ * @author Michael Winkler
+ * @author Daniel Rehfeldt
+ *
+ * This file implements the problem data for Steiner problems. For more details see \ref PROBLEMDATA page.
+ *
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -134,6 +141,7 @@ SCIP_Real* SCIPprobdataGetXval(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol
    );
+
 /** returns all edge constraints */
 extern
 SCIP_CONS** SCIPprobdataGetEdgeConstraints(
@@ -155,6 +163,7 @@ SCIP_RETCODE SCIPprobdataPrintGraph(
    SCIP_Bool             printsol            /**< should solution be highlighted? */
    );
 
+/** print graph (in undirected form) in GML format with given edges highlighted */
 extern
 SCIP_RETCODE SCIPprobdataPrintGraph2(
    const GRAPH*          graph,              /**< Graph to be printed */
@@ -212,16 +221,6 @@ void SCIPprobdataSetNSolvers(
    SCIP*                 scip,               /**< SCIP data structure */
    int                   nSolvers            /**< the number of solvers */
    );
-
-#if 0
-/** print (undirected) graph and highlight current solution */
-extern
-SCIP_RETCODE SCIPprobdataPrintSolGraph(
-   SCIP*                 scip,               /**< SCIP data structure */
-   const char*           filename            /**< Name of the output file */
-   );
-
-#endif
 
 /** returns problem type */
 extern
