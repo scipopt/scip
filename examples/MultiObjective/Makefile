@@ -119,7 +119,7 @@ $(TESTSETDIR):
 
 .PHONY: test
 test:           $(MAINFILE) $(TESTSETDIR)
-		@for i in $(TESTFILES) ; do $(MAINFILE) $$i || break 1 ; done
+		@for i in $(TESTFILES) ; do $(MAINFILE) $$i || exit 1 ; done
 
 .PHONY: clean
 clean:		$(OBJDIR)

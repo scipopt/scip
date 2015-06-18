@@ -69,12 +69,16 @@ testgamscluster:
 		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) \
 		"$(CONVERTSCIP)" $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) $(SETCUTOFF);
 
-
-SCIPEXAMPLES	=	Binpacking CallableLibrary Coloring Eventhdlr GMI LOP MIPSolver Scheduler TSP VRP
+SCIPEXAMPLES	=	Binpacking CallableLibrary Coloring Eventhdlr GMI LOP MIPSolver MultiObjective Scheduler TSP VRP
 
 .PHONY: testexamples
 testexamples:
-		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C examples/$(EXAMPLE) $^ test || exit 1;)
+		@-echo "" > exampletestsummary.log
+		@$(foreach EXAMPLE, $(SCIPEXAMPLES), echo $(EXAMPLE);  $(MAKE) -C examples/$(EXAMPLE) $^ test && { echo "tested $(EXAMPLE) example -- success" >> exampletestsummary.log; } \
+			|| { echo "tested example $(EXAMPLE) -- FAIL" >> exampletestsummary.log; };)
+		@-echo "Summary: "
+		@-cat exampletestsummary.log
+		@-rm -f exampletestsummary.log
 
 .PHONY: docexamples
 docexamples:
