@@ -69,6 +69,7 @@ features:
 - new plugin "compr" for rearranging the search tree, currently this only works on the reoptimization tree
 - extended expression parsing to support power, realpower, and signpower operators
 - possibility to set a soft time limit which becomes active only after the first primal solution was found
+- the AMPL interface now passes an initial guess, if specified, as a solution (that will be checked for feasibility) to SCIP
 
 parameters:
 - new parameter 'DELHEADERS' for 'uninstall'-target: scip headers are only removed when invoking 'make uninstall DELHEADERS=true'
