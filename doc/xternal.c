@@ -89,6 +89,7 @@
  *   - \ref BRANCH  "Branching rules"
  *   - \ref NODESEL "Node selectors"
  *   - \ref HEUR    "Primal heuristics"
+ *      + \ref DIVINGHEUR "Diving heuristics"
  *   - \ref RELAX   "Relaxation handlers"
  *   - \ref READER  "File readers"
  *   - \ref DIALOG  "Dialogs"
@@ -3779,7 +3780,11 @@
  * On the other hand, feasible solutions can be discovered by primal heuristics.
  * \n
  * A complete list of all primal heuristics contained in this release can be found \ref PRIMALHEURISTICS "here".
- *
+ * \n
+ * Diving heuristics are primal heuristics that explore an auxiliary search tree in a depth-first manner. Since SCIP
+ * version 3.2, it is easy to integrate further diving heuristics by using a special controller for the scoring,
+ * see \ref DIVINGHEUR "here" for information on how to implement a diving heuristic.
+ * \n
  * We now explain how users can add their own primal heuristics.
  * Take the simple and fast LP rounding heuristic (src/scip/heur_simplerounding.c) as an example.
  * The idea of simple rounding is to iterate over all fractional variables of an LP solution and round them down,
@@ -4040,7 +4045,7 @@
  *
  * @subsection HEUREXIT
  *
- * The HEUREXIT callback is executed before the transformed problem is freed.
+ * The HEUREXIT callback is executed before the tDIVINGHEURransformed problem is freed.
  * In this method, the primal heuristic should free all resources that have been allocated for the solving process in
  * HEURINIT.
  *
@@ -4054,8 +4059,123 @@
  * The HEUREXITSOL callback is executed before the branch-and-bound process is freed. The primal heuristic should use this
  * call to clean up its branch-and-bound data, which was allocated in HEURINITSOL.
  */
-
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
+/**@page DIVINGHEUR How to implement a diving heuristic
+ *
+ * Diving heuristics are an important addon to the branch-and-cut search. A diving heuristic explores a single probing
+ * path down the search tree. In contrast to the regular search guided by branching rule(s) and the selected
+ * node selector, the diving is performed in an auxiliary tree originating from the focus node of the main
+ * search tree where the heuristic was called. The advantage of this approach is that many different scoring mechanisms
+ * can be safely tried as diving heuristic and may probably lead to better solutions. SCIP has a lot of diving heuristics
+ * included in its default plugin set.
+ * \n
+ *
+ * Since SCIP version 3.2, the diving heuristics have been redesigned to contain mainly the scoring function used by the
+ * heuristic. In order to implement a user-defined diving heuristic, it is possible to create one (or several)
+ * divesets that control the scoring mechanism and add them to the primal heuristic. This has the advantage that
+ * less code is necessary to create a working diving heuristic. The SCIP statistics now also display some interesting statistics
+ * about every diveset together in the section 'Diving Statistics'.
+ * \n
+ *
+ * This page contains the necessary steps to understand and include a diveset into ones primal diving heuristic plugin. As
+ * a prerequisite, you should understand the basic implementation steps for a primal heuristic, see \ref HEUR.
+ * In order to make use of divesets, they must be included _after_ the primal heuristic to which they should belong
+ * has been included, by using SCIPincludeDiveset(). This will create the data structure for the diveset and
+ * append it to the list of divesets belonging to the heuristic, which can be retrieved later together with their number
+ * by using SCIPheurGetDivesets() and SCIPheurGetNDivesets(), respectively. No further memory allocation or deletion is needed;
+ * As a member of the heuristic, SCIP automatically takes care of freeing the diveset when it is exiting.
+ * \n
+ *
+ * Before the inclusion, one may think of adjusting the various properties that a diveset offers to control
+ * the behavior of the algorithm. These are subject to the following section.
+ * \n
+ *
+ * It is mandatory to implement the fundamental scoring callback of the diveset, which is explained in more detail
+ * in Section \ref DIVING_FUNDAMENTALCALLBACKS.
+ * \n
+ *
+ * Once the properties have been carefully adjusted and the scoring
+ * has been defined, use the method SCIPperformGenericDivingAlgorithm() inside the execution callback (\ref HEUREXEC) of the primal
+ * heuristic to which the diveset belongs, after checking possible preliminaries that may not be met at all times of the search.
+ * \n
+ *
+ * For a code example, we refer to \ref heur_guideddiving.c, which guides the diving into the direction of the current incumbent solution.
+ * Before it calls SCIPperformGenericDivingAlgorithm(), it checks whether an incumbent is available, and returns if there is none.
+ *
+ *
+ * @section DIVING_PARAMETERS User parameters and properties for every diveset
+ *
+ * Every diveset controls the diving behavior through a set of user-defined parameters, which are explained in the following:
+ *
+ * \par MINRELDEPTH
+ * the minimal relative depth (to the maximum depth explored during regular search) of the current focus node to start diving
+ *
+ * \par MAXRELDEPTH
+ * the maximal relative depth (to the maximum depth explored during regular search) of the current focus node to start diving
+ *
+ * \par MAXLPITERQUOT
+ * maximal fraction of diving LP iterations compared to node LP iterations that this dive controller may consume
+ *
+ * \par MAXLPITEROFS
+ * an additional number of allowed LP iterations
+ *
+ * \par MAXDIVEUBQUOT
+ * maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
+ *   where diving is performed (0.0: no limit)
+ *
+ * \par MAXDIVEAVGQUOT
+ * maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
+ * where diving is performed (0.0: no limit)
+ *
+ * \par MAXDIVEUBQUOTNOSOL
+ * maximal UBQUOT when no solution was found yet (0.0: no limit)
+ *
+ * \par MAXDIVEAVGQUOTNOSOL
+ * maximal AVGQUOT when no solution was found yet (0.0: no limit)
+ *
+ * \par BACKTRACK
+ * use one level of backtracking if infeasibility is encountered?
+ *
+ * \par LPRESOLVEDOMCHGQUOT
+ * parameter to control LP resolve dynamically based on this percentage of observed bound changes relative to all variables or
+ * the LP branching candidates (integer variables with fractional solution values) from the last node where an LP has been solved.
+ * This property has no effect when the LPSOLVEFREQ is set to 1.
+ *
+ * \par LPSOLVEFREQ
+ * LP solve frequency for diveset, use a positive integer k to solve an LP at every k'th depth of the diving search (ie. 1 causes the
+ * diveset to solve _all_ intermediate LPs) or 0 to only resolve the LP relaxation after propagation found at least a certain percentage
+ * domain changes, see also the previous LPRESOLVEDOMCHGQUOT parameter.
+ *
+ * \par ONLYLPBRANCHCANDS
+ * Set this property to TRUE if only LP branching candidates be considered for the execution of the diving algorithm instead of the slower but
+ * more general constraint handler diving variable selection.
+ *
+ * \par DIVETYPES
+ * bit mask that represents all supported dive types. Irrelevant if only LP branching candidates should be scored, otherwise, different
+ * constraint handlers may ask the diveset if it supports their preferred divetype. See \ref type_heur.h for a list of
+ * available dive types.
+ *
+ * @section DIVING_FUNDAMENTALCALLBACKS Fundamental callbacks of a diveset
+ *
+ * Only one callback is necessary to complete a diveset to guide the diving search performed:
+ *
+ * @subsection DIVESETGETSCORE
+ *
+ * The scoring callback expects a candidate variable and calculates a score value and a preferred direction. The selected
+ * variable for diving will be one that _maximizes_ the score function provided by the diveset.
+ * If the diveset should support more than one possible type of diving, it may use the divetype argument as a hint how
+ * the caller of the score function (could be the diving algorithm itself or one of the constraint handlers that
+ * implement diving variable selection) intends to perform the search.
+ *
+ * @section DIVING_FURTHERINFO Further information
+ *
+ * This is all there is to extend the SCIP set of diving heuristics by a new one. For further information, please see
+ * diveset related methods in \ref type_heur.h, \ref pub_heur.h, \ref pub_dive.h, and \ref heur_guideddiving.c or
+ * other diving heuristics that implement diving through a diveset.
+ */
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 /**@page RELAX How to add relaxation handlers
  *
  * SCIP provides specific support for LP relaxations of constraint integer programs. In addition, relaxation handlers,
