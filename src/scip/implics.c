@@ -1706,7 +1706,9 @@ void SCIPcliquelistRemoveFromCliques(
             if( irrelevantvar )
                clique->equation = FALSE;
 
-            cliqueCheck(clique);
+            /* during the cleanup step, we skip the consistency check because clique may be temporarily inconsistent */
+            if( ! cliquetable->incleanup || clique->index > 0 )
+               cliqueCheck(clique);
          }
       }
    }
