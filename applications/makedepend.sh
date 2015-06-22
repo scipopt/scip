@@ -3,14 +3,14 @@
 # This scripts generates the dependences for SCIP
 #
 
-EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens TSP VRP)
+APPLICATIONS=(Coloring MultiObjective Scheduler STP)
 OPTS=(opt dbg opt-gccold)
 
-for EXAMPLE in ${EXAMPLES[@]}
+for APPLICATION in ${APPLICATIONS[@]}
 do
-    echo ===== $EXAMPLE =====
+    echo ===== $APPLICATION =====
     echo
-    cd $EXAMPLE
+    cd $APPLICATION
     for OPT in ${OPTS[@]}
     do
 	make OPT=$OPT ZIMPL=false LPS=none depend

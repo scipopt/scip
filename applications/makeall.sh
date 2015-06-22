@@ -3,7 +3,7 @@
 # run with bash -e makeall.sh to stop on errors
 #
 
-EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens TSP VRP)
+APPLICATIONS=(Coloring MultiObjective Scheduler STP)
 LPSOLVERS=(clp cpx none spx spx2)
 OPTS=(opt dbg)
 
@@ -26,13 +26,13 @@ OSTYPE=`uname -s | tr '[:upper:]' '[:lower:]' | \
     -e 's/windows.*/windows/' \
     -e 's/mingw.*/mingw/'`
 
-for EXAMPLE in ${EXAMPLES[@]}
+for APPLICATION in ${APPLICATIONS[@]}
 do
     echo
     echo
-    echo ===== $EXAMPLE =====
+    echo ===== $APPLICATION =====
     echo
-    cd $EXAMPLE
+    cd $APPLICATION
     echo
     for OPT in ${OPTS[@]}
     do
