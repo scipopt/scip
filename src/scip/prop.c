@@ -143,6 +143,17 @@ SCIP_RETCODE SCIPpropCreate(
    assert(freq >= -1);
    assert(propexec != NULL);
 
+   /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
+    * error message
+    */
+   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
+   {
+      SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
+         "'SCIP_PRESOLTIMING' for <%s> propagator instead.\n", name);
+
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
    SCIP_ALLOC( BMSallocMemory(prop) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*prop)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*prop)->desc, desc, strlen(desc)+1) );
@@ -832,7 +843,7 @@ void SCIPpropSetExitpre(
 }
 
 /** sets presolving method of propagator */
-void SCIPpropSetPresol(
+SCIP_RETCODE SCIPpropSetPresol(
    SCIP_PROP*            prop,               /**< propagator */
    SCIP_DECL_PROPPRESOL  ((*proppresol)),    /**< presolving method */
    int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
@@ -844,8 +855,21 @@ void SCIPpropSetPresol(
 
    prop->proppresol = proppresol;
    prop->presolpriority = presolpriority;
+   /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
+    * error message
+    */
+   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
+   {
+      SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
+         "'SCIP_PRESOLTIMING' for <%s> constraint handler instead.\n", prop->name);
+
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
    prop->presoltiming = presoltiming;
    prop->maxprerounds = presolmaxrounds;
+
+   return SCIP_OKAY;
 }
 
 /** sets propagation conflict resolving callback of propagator */

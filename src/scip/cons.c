@@ -2040,6 +2040,17 @@ SCIP_RETCODE SCIPconshdlrCreate(
    assert(eagerfreq >= -1);
    assert(!needscons || ((conshdlrcopy == NULL) == (conscopy == NULL)));
 
+   /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
+    * error message
+    */
+   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
+   {
+      SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
+         "'SCIP_PRESOLTIMING' for <%s> constraint handler instead.\n", name);
+
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
    /* both callbacks have to exist or not exist */
    assert((consgetvars != NULL) == (consgetnvars != NULL));
 
@@ -4058,7 +4069,7 @@ void SCIPconshdlrSetExitpre(
 }
 
 /** sets presolving method of constraint handler */
-void SCIPconshdlrSetPresol(
+SCIP_RETCODE SCIPconshdlrSetPresol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method of constraint handler */
    int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
@@ -4069,7 +4080,21 @@ void SCIPconshdlrSetPresol(
 
    conshdlr->conspresol = conspresol;
    conshdlr->maxprerounds = maxprerounds;
+
+   /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
+    * error message
+    */
+   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
+   {
+      SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
+         "'SCIP_PRESOLTIMING' for <%s> constraint handler instead.\n", conshdlr->name);
+
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
    conshdlr->presoltiming = presoltiming;
+
+   return SCIP_OKAY;
 }
 
 /** sets method of constraint handler to free specific constraint data */
