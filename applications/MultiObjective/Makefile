@@ -181,7 +181,7 @@ echosoftlinks:
 		@echo "*   For more information and if you experience problems see the INSTALL file.";
 
 .PHONY: $(LEMONLINKS)
-$(LEMONLINKS):
+$(LEMONLINKS): $(LIBDIR)
 ifeq ($(MAKELEMONLINKS), true)
 		@$(SHELL) -ec 'if test ! -e $(LINKSMARKERFILE); \
 			then \

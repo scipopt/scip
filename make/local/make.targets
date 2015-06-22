@@ -69,12 +69,14 @@ testgamscluster:
 		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) \
 		"$(CONVERTSCIP)" $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) $(SETCUTOFF);
 
-SCIPEXAMPLES	=	Binpacking CallableLibrary Coloring Eventhdlr GMI LOP MIPSolver MultiObjective Scheduler TSP VRP
+SCIPEXAMPLES	=	examples/Binpacking examples/CallableLibrary applications/Coloring \
+                  examples/Eventhdlr examples/GMI examples/LOP examples/MIPSolver \
+                  applications/MultiObjective applications/Scheduler applications/STP examples/TSP examples/VRP
 
 .PHONY: testexamples
 testexamples:
 		@-echo "" > exampletestsummary.log
-		@$(foreach EXAMPLE, $(SCIPEXAMPLES), echo $(EXAMPLE);  $(MAKE) -C examples/$(EXAMPLE) $^ test && { echo "tested $(EXAMPLE) example -- success" >> exampletestsummary.log; } \
+		@$(foreach EXAMPLE, $(SCIPEXAMPLES), echo $(EXAMPLE);  $(MAKE) -C $(EXAMPLE) $^ test && { echo "tested $(EXAMPLE) example -- success" >> exampletestsummary.log; } \
 			|| { echo "tested example $(EXAMPLE) -- FAIL" >> exampletestsummary.log; };)
 		@-echo "Summary: "
 		@-cat exampletestsummary.log
@@ -82,7 +84,7 @@ testexamples:
 
 .PHONY: docexamples
 docexamples:
-		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C examples/$(EXAMPLE) $^ doc || exit 1;)
+		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C $(EXAMPLE) $^ doc || exit 1;)
 
 .PHONY: coverage
 coverage:
