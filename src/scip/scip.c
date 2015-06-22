@@ -5509,7 +5509,7 @@ SCIP_RETCODE SCIPsetConshdlrPresol(
 
    SCIP_CALL( checkStage(scip, "SCIPsetConshdlrPresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPconshdlrSetPresol(conshdlr, conspresol, maxprerounds, presoltiming);
+   SCIP_CALL( SCIPconshdlrSetPresol(conshdlr, conspresol, maxprerounds, presoltiming) );
 
    name = SCIPconshdlrGetName(conshdlr);
 
@@ -7054,15 +7054,13 @@ SCIP_RETCODE SCIPsetPropPresol(
    assert(scip != NULL);
    SCIP_CALL( checkStage(scip, "SCIPsetPropPresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-
    assert(prop != NULL);
-   SCIPpropSetPresol(prop, proppresol, presolpriority, presolmaxrounds, presoltiming);
+   SCIP_CALL( SCIPpropSetPresol(prop, proppresol, presolpriority, presolmaxrounds, presoltiming) );
 
    name = SCIPpropGetName(prop);
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/maxprerounds", name);
    SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, presolmaxrounds) );
-
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presolpriority", name);
    SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, presolpriority) );
