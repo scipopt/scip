@@ -200,9 +200,15 @@ SCIP_RETCODE countNonlinearities(
          probindex = -1;
          for( v = 0; v < nandvars; v++ )
          {
-            SCIP_CALL( binvarGetActiveProbindex(scip, andvars[v], &probindex) );
-            if( probindex >= 0 )
-               nlcount[probindex]++;
+            /* don't rely on the and conshdlr removing fixed variables
+             * @todo fix the and conshdlr in that respect
+             */
+            if( SCIPvarGetStatus(andvars[v]) != SCIP_VARSTATUS_FIXED )
+            {
+               SCIP_CALL( binvarGetActiveProbindex(scip, andvars[v], &probindex) );
+               if( probindex >= 0 )
+                  nlcount[probindex]++;
+            }
          }
 
          SCIP_CALL( binvarGetActiveProbindex(scip, andres, &probindex) );
