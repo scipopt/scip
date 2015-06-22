@@ -764,7 +764,7 @@ SCIP_RETCODE bound_reduce(
    }
 #endif
 
-#if 0
+#if 1
    printf("radiim2: %f \n", radiim2);
    printf("mstobj: %f \n", mstobj);
    printf("totalobj: %f \n", obj);
@@ -779,7 +779,7 @@ SCIP_RETCODE bound_reduce(
    {
       if( (!graph->mark[k] && pc) || graph->grad[k] == 0 )
          continue;
-#if 0
+#if 1
       if( pc && Is_term(graph->term[k]) )
          continue;
 #endif
@@ -789,6 +789,7 @@ SCIP_RETCODE bound_reduce(
       if( !Is_term(graph->term[k]) && (SCIPisGT(scip, tmpcost, obj)
             || (!stnode[k] && SCIPisGE(scip, tmpcost, obj))) )
       {
+         SCIPdebugMessage("delete vertex: %d of degree: %d\n", k, graph->grad[k]);
          /* delete all incident edges */
          while( graph->outbeg[k] != EAT_LAST )
          {
@@ -799,7 +800,6 @@ SCIP_RETCODE bound_reduce(
             assert(!Is_pterm(graph->term[graph->head[e]]));
             assert(!Is_pterm(graph->term[graph->tail[e]]));
 
-            /* printf("knotdelete: %d->%d \n", graph->tail[e], graph->head[e]);*/
             graph_edge_del(scip, graph, e, TRUE);
          }
       }
@@ -828,7 +828,7 @@ SCIP_RETCODE bound_reduce(
             if( (SCIPisGT(scip, tmpcost, obj) || (result[e] != CONNECT && result[flipedge(e)] != CONNECT && SCIPisGE(scip, tmpcost, obj)))
                && SCIPisLT(scip, graph->cost[e], FARAWAY) && (!pc || graph->mark[head]) )
             {
-               /*printf("delete edge: %d\n", e);*/
+               SCIPdebugMessage("delete edge: %d->%d \n", graph->tail[e], graph->head[e]);
                if( graph->stp_type == STP_HOP_CONS && SCIPisGT(scip, graph->cost[e], graph->cost[flipedge(e)]) )
                {
                   graph->cost[e] = FARAWAY;
@@ -836,7 +836,6 @@ SCIP_RETCODE bound_reduce(
                }
                else
                {
-                  /*  printf("delete: %d->%d \n", graph->tail[e], graph->head[e]); */
                   assert(!Is_pterm(graph->term[head]));
                   assert(!Is_pterm(graph->term[tail]));
                   graph_edge_del(scip, graph, e, TRUE);
@@ -853,6 +852,7 @@ SCIP_RETCODE bound_reduce(
    {
       if( (!graph->mark[k] && pc) || graph->grad[k] == 0 )
          continue;
+
       if( graph->grad[k] == 3 && !Is_term(graph->term[k]) )
       {
          tmpcost = vnoi[k].dist + vnoi[k + nnodes].dist + vnoi[k + 2 * nnodes].dist + radiim3;
@@ -873,6 +873,11 @@ SCIP_RETCODE bound_reduce(
                }
             }
 
+            assert(cost3 != NULL);
+            assert(edges3 != NULL);
+            assert(nodes3 != NULL);
+            assert(ancestors != NULL);
+            assert(revancestors != NULL);
             SCIPdebugMessage("eliminated 3 knot %d\n", k);
             /* get incident edges, cost and adjacent nodes */
             l = 0;
@@ -2285,6 +2290,7 @@ SCIP_RETCODE levelPC1(
       bd3nelims = 0;
       nvslnelims = 0;
       degnelims = 0;
+      brednelims = 0;
 
       if( nvsl )
       {
@@ -2306,19 +2312,6 @@ SCIP_RETCODE levelPC1(
             sd2 = FALSE;
 
          SCIPdebugMessage("SDsp: %d \n", sd2nelims);
-         if( SCIPgetTotalTime(scip) > timelimit )
-            break;
-      }
-
-      if( bred )
-      {
-         SCIP_CALL( bound_reduce(scip, g, vnoi, cost, g->prize, sddist, edgerealarr,  heap, state, vbase, &brednelims) );
-#if 0
-         if( brednelims <= 2 * reductbound )
-#endif
-            bred = FALSE;
-
-         SCIPdebugMessage("bound reduce: %d \n", brednelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -2346,6 +2339,17 @@ SCIP_RETCODE levelPC1(
          SCIPdebugMessage("bd3nelims: %d, ", bd3nelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
+      }
+
+      if( bred )
+      {
+         SCIP_CALL( bound_reduce(scip, g, vnoi, cost, g->prize, sddist, edgerealarr,  heap, state, vbase, &brednelims) );
+
+#if 0
+         if( brednelims <= 2 * reductbound )
+#endif
+	    bred = FALSE;
+         SCIPdebugMessage("bound reduce: %d \n", brednelims);
       }
 
       if( degnelims + sdnelims + sd2nelims + bd3nelims <= reductbound )

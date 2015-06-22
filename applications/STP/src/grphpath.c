@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   graphpath.c
+/**@file   grphpath.c
  * @brief  Shortest path based graph algorithms for Steiner problems
  * @author Thorsten Koch
  * @author Daniel Rehfeldt
@@ -1561,7 +1561,7 @@ SCIP_RETCODE voronoi_radius(
                   else
                      ecost = path[m].dist + cost[i];
                }
-               /*
+
                if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
                {
                   if( SCIPisGT(scip, ecost, graph->prize[vbm]) && root != vbm )
@@ -1569,7 +1569,7 @@ SCIP_RETCODE voronoi_radius(
                   if( SCIPisGT(scip, ecost, graph->prize[vbk]) && root != vbk )
                      ecost = graph->prize[vbk];
                }
-*/
+
                /* find edge in adjgraph */
                for( ne = adjgraph->outbeg[nodesid[vbk]]; ne != EAT_LAST; ne = adjgraph->oeat[ne] )
                   if( adjgraph->head[ne] == nodesid[vbm] )

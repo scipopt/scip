@@ -1617,7 +1617,7 @@ SCIP_RETCODE graph_knot_contractpc(
 
       SCIP_CALL( graph_knot_contract(scip, g, t, s) );
 
-      printf("contract: %d, %d \n", t, s);
+      SCIPdebugMessage("PC contract: %d, %d \n", t, s);
 
       for( e = g->inpbeg[t]; e != EAT_LAST; e = g->ieat[e] )
 	 SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e]), etsancestors) );
@@ -1625,7 +1625,6 @@ SCIP_RETCODE graph_knot_contractpc(
 	 SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e]), etsancestors) );
 
       SCIPintListNodeFree(scip, &etsancestors);
-
    }
    else
    {

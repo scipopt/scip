@@ -18,6 +18,7 @@
  * @author Gerald Gamrath
  * @author Daniel Rehfeldt
  *
+ * This file checks solutions for feasibility and separates violated model constraints. For more details see \ref CONS page.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

@@ -43,15 +43,29 @@
 
 /**@} */
 
-
 /**@name Default parameter values
  *
  * @{
  */
 
+#define DEFAULT_MAXNWAITINGROUNDS        3    /**< maximal number of rounds to wait until propagating again */
+
 
 /**@} */
 
+
+/*
+ * Data structures
+ */
+
+
+/** propagator data */
+struct SCIP_PropData
+{
+   SCIP_Longint          nfails;             /**< number of failures since last successful call                     */
+   SCIP_Longint          ncalls;             /**< number of calls */
+   SCIP_Longint          nlastcall;          /**< number of last call */
+};
 
 /**@name Local methods
  *
@@ -95,10 +109,30 @@ SCIP_DECL_PROPCOPY(propCopyStp)
    return SCIP_OKAY;
 }
 
+
+/** destructor of propagator to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_PROPFREE(propFreeStp)
+{  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
+
+   /* free propagator data */
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   SCIPfreeMemory(scip, &propdata);
+
+   SCIPpropSetData(prop, NULL);
+
+   return SCIP_OKAY;
+}
+
+
 /** reduced cost propagation method for an LP solution */
 static
 SCIP_DECL_PROPEXEC(propExecStp)
 {  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
    SCIP_PROBDATA* probdata;
    SCIP_VAR** vars;
    SCIP_VAR*  edgevar;
@@ -136,7 +170,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    if( !SCIPisLPRelax(scip) )
       return SCIP_OKAY;
 
-      /* we cannot apply reduced cost strengthening, if no simplex basis is available */
+   /* we cannot apply reduced cost strengthening, if no simplex basis is available */
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
@@ -165,6 +199,19 @@ SCIP_DECL_PROPEXEC(propExecStp)
    /* check if all integral variables are fixed */
    if( SCIPgetNPseudoBranchCands(scip) == 0 )
       return SCIP_OKAY;
+
+   /* get propagator data */
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   propdata->ncalls++;
+
+   /* @todo: parameter */
+   if( propdata->nfails > 0 && (propdata->nlastcall + DEFAULT_MAXNWAITINGROUNDS >= propdata->ncalls)
+     && (propdata->nlastcall + propdata->nfails > propdata->ncalls) )
+      return SCIP_OKAY;
+
+   propdata->nlastcall = propdata->ncalls;
 
    /* get LP objective value */
    lpobjval = SCIPgetLPObjval(scip);
@@ -263,10 +310,17 @@ SCIP_DECL_PROPEXEC(propExecStp)
          }
       }
    }
-   printf("fixed: %d \n", nfixed );
+   SCIPdebugMessage("fixed by STP propagator: %d \n", nfixed );
 
    if( nfixed > 0 )
+   {
+      propdata->nfails = 0;
       *result = SCIP_REDUCEDDOM;
+   }
+   else
+   {
+      propdata->nfails++;
+   }
 
    SCIPfreeBufferArray(scip, &vnoi);
    SCIPfreeBufferArray(scip, &pathedge);
@@ -290,15 +344,23 @@ SCIP_RETCODE SCIPincludePropStp(
    )
 {
    SCIP_PROP* prop;
+   SCIP_PROPDATA* propdata;
+
+   /* create redcost propagator data */
+   SCIP_CALL( SCIPallocMemory(scip, &propdata) );
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         propExecStp, NULL) );
+         propExecStp, propdata) );
 
    assert(prop != NULL);
 
    /* set optional callbacks via setter functions */
    SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyStp) );
+   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeStp) );
+   propdata->nfails = 0;
+   propdata->ncalls = 0;
+   propdata->nlastcall = 0;
 
    return SCIP_OKAY;
 }

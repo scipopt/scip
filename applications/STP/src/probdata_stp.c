@@ -28,9 +28,8 @@
  *
  * The problem data contains the (preprocessed) graph, several constraints and further information.
  *
- * The function SCIPprobdataCreate(), which is called in the \ref reader_stp.c "reader plugin" to parse the input file
- * reduce the graph,initializes the problem data structure and creates the problem in the SCIP environment. For this, it creates
- * ...
+ * The function SCIPprobdataCreate(), which is called in the \ref reader_stp.c "reader plugin", parses the input file
+ * reduces the graph, initializes the problem data structure and creates the problem in the SCIP environment.
  * See the body of the function SCIPprobdataCreate() for more details.
  *
  * A list of all interface methods can be found in probdata_stp.h.
@@ -2685,7 +2684,7 @@ SCIP_RETCODE SCIPprobdataAddNewSol(
       SCIP_Real* flowvals;
       PATH* path;
       SCIP_VAR** pathvars;
-      SCIP_VAR* var;
+      SCIP_VAR* var = NULL;
       char varname[SCIP_MAXSTRLEN];
       int realnterms = probdata->realnterms;
       int tail;

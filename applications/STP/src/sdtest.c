@@ -1468,7 +1468,7 @@ SCIP_RETCODE sd_reduction(
    SCIP_Real*  sdtrans,
    SCIP_Real*  sdrand,
    SCIP_Real* cost,
-   SCIP_Real* random,
+   SCIP_Real* randarr,
    int*    heap,
    int*    state,
    int*    knotexamined,
@@ -1508,8 +1508,8 @@ SCIP_RETCODE sd_reduction(
       g->mark[i] = (g->grad[i] > 0);
       for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
       {
-         random[e] = (double)(rand() % 512);
-         cost[e] = g->cost[e] * 1000.0 + random[e];
+         randarr[e] = (double)(rand() % 512);
+         cost[e] = g->cost[e] * 1000.0 + randarr[e];
       }
    }
 
@@ -1551,7 +1551,7 @@ SCIP_RETCODE sd_reduction(
          g->mark[g->head[e]] = 2;
       }
 
-      compute_sd(g, i, cost, random, heap, state, &count, sddist, sdtrans, sdrand);
+      compute_sd(g, i, cost, randarr, heap, state, &count, sddist, sdtrans, sdrand);
 
       for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
       {
@@ -1566,7 +1566,7 @@ SCIP_RETCODE sd_reduction(
          j = g->oeat[e];
 
          if( SCIPisLT(scip, g->cost[e], FARAWAY) && SCIPisLT(scip, sddist[g->head[e]], cost[e])
-            && SCIPisLT(scip, sddist[g->head[e]] - sdrand[g->head[e]], cost[e] - random[e]) )
+            && SCIPisLT(scip, sddist[g->head[e]] - sdrand[g->head[e]], cost[e] - randarr[e]) )
          {
             graph_edge_del(scip, g, e, TRUE);
             (*elimins)++;
@@ -1957,7 +1957,7 @@ SCIP_RETCODE bd3_reduction(
    return SCIP_OKAY;
 }
 
-
+#if 0
 inline static double mst_cost(
    const GRAPH* g,
    const PATH*  mst)
@@ -1972,7 +1972,7 @@ inline static double mst_cost(
 
    return(cost);
 }
-#if 0
+
 /* C. W. Duin and A. Volganant
  *
  * "Reduction Tests for the Steiner Problem in Graphs"
