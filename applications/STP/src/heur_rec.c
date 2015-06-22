@@ -59,7 +59,7 @@
 
 #ifdef WITH_UG
 extern
-int getUgRank();
+int getUgRank(void);
 #endif
 
 /*
