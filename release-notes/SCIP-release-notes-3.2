@@ -1,0 +1,78 @@
+Notes for SCIP Release 3.2
+
+
+Features
+========
+
+- added reoptimization feature
+
+- new primal heuristics distribution diving, indicator, bound, ofins
+
+- new branching rules distribution, multaggr, nodereopt and a new rule for SOS1 constraints
+
+- extended variable branching by considering solution density
+
+- extended probing mode
+
+- transferring history information between LNS heuristics and the component presolver
+
+- added output information for BAK: Branch-and-bound Analysis Kit
+
+- MPS is able to read semi-integer variables
+
+- the original problem can now be permuted directly after reading
+
+- improved clique and variable bound heuristics
+
+- SOC constraint updrade for special quadratic constraints
+
+- new score in hybrid reliability pseudocost branching
+
+- started support for user-defined operators in expression trees/graphs
+
+- added presolving levels (FAST, MEDIUM, and EXHAUSTIV)
+
+- improved separation procedure of SOS1 constraint handler
+
+
+Interfaces
+==========
+
+- moved buffer memory handling to blockmemory/memory.*
+
+- new callback function SCIP_DECL_CONSGETDIVEBDCHGS to provide constraint handler method
+  to suggest dive bound changes during the generic diving algorithm, see type_cons.h for
+  details
+
+- new method SCIPperformGenericDivingAlgorithm() that performs diving with periodic LP
+  resolve according to the diveset argument.
+
+- new function BMSallocClearBlockMemoryArray()/SCIPallocClearBlockMemoryArray() and
+  BMSallocClearBufferMemoryArray(), SCIPallocClearBufferArray() to allocate arrays
+  that are initialized to 0
+
+
+Performance Improvements and Bug Fixes
+======================================
+
+- decreasing total memory usage of SCIP by using more buffer data structures
+
+- adjust diving heuristics to solve fewer LPs
+
+- improved vartype upgradability from continuous to implicit variables
+
+- using sparsity information of the SoPlex LP
+
+- new presolving/propagation algorithm using the gcd for ranged rows and equations in cons_linear
+
+- improved propagation of SOS1 constraint handler using the information from a conflict
+
+- and many bug fixes, see CHANGELOG
+
+
+Additional Notes
+================
+
+- moving some examples in an application directory
+
+- better handling of large values returned by the LP solver
