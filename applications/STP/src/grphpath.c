@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   graphpath.c
+/**@file   grphpath.c
  * @brief  Shortest path based graph algorithms for Steiner problems
  * @author Thorsten Koch
  * @author Daniel Rehfeldt
@@ -448,7 +448,7 @@ void graph_path_exec(
    }
 }
 
-/* limited dijkstra, stoping at terminals */
+/** limited Dijkstra, stoping at terminals */
 void sdpaths(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
@@ -738,7 +738,7 @@ void calculate_distances(
    }
 }
 #endif
-/* extend a voronoi region until all neighbouring terminals are spanned */
+/** extend a voronoi region until all neighbouring terminals are spanned */
 SCIP_RETCODE voronoi_extend(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
@@ -824,21 +824,21 @@ SCIP_RETCODE voronoi_extend(
             }
          }
       }
-      assert( nneighbterms == 0);
+      assert(nneighbterms == 0);
    }
    return SCIP_OKAY;
 }
 
 
-/* extend a voronoi region until all neighbouring terminals are spanned */
+/** extend a voronoi region until all neighbouring terminals are spanned */
 SCIP_RETCODE voronoi_extend2(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            cost,               /**< edgecosts */
    PATH*                 path,               /**< shortest paths data structure */
-   SCIP_Real**           distarr,
-   int**                 basearr,
-   int**                 edgearr,
+   SCIP_Real**           distarr,            /**< array to store distance from each node to its base */
+   int**                 basearr,            /**< array to store the bases */
+   int**                 edgearr,            /**< array to store the ancestor edge */
    char*                 termsmark,          /**< array to mark terminal */
    int*                  reachednodes,       /**< array to mark reached nodes */
    int*                  nreachednodes,      /**< pointer to number of reached nodes */
@@ -1561,7 +1561,7 @@ SCIP_RETCODE voronoi_radius(
                   else
                      ecost = path[m].dist + cost[i];
                }
-               /*
+
                if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
                {
                   if( SCIPisGT(scip, ecost, graph->prize[vbm]) && root != vbm )
@@ -1569,7 +1569,7 @@ SCIP_RETCODE voronoi_radius(
                   if( SCIPisGT(scip, ecost, graph->prize[vbk]) && root != vbk )
                      ecost = graph->prize[vbk];
                }
-*/
+
                /* find edge in adjgraph */
                for( ne = adjgraph->outbeg[nodesid[vbk]]; ne != EAT_LAST; ne = adjgraph->oeat[ne] )
                   if( adjgraph->head[ne] == nodesid[vbm] )

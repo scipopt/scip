@@ -14,7 +14,6 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_local.h
- * @ingroup PRIMALHEURISTICS
  * @brief  Improvement heuristic for STP
  * @author Daniel Rehfeldt
  *

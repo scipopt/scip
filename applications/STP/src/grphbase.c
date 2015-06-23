@@ -1441,8 +1441,7 @@ SCIP_RETCODE graph_knot_contract(
       }
    }
 
-   /* Einzufuegenden Kanten einfuegen
-    */
+   /* insert edges */
    for( i = 0; i < slc; i++ )
    {
       assert(slp != NULL);
@@ -1617,7 +1616,7 @@ SCIP_RETCODE graph_knot_contractpc(
 
       SCIP_CALL( graph_knot_contract(scip, g, t, s) );
 
-      printf("contract: %d, %d \n", t, s);
+      SCIPdebugMessage("PC contract: %d, %d \n", t, s);
 
       for( e = g->inpbeg[t]; e != EAT_LAST; e = g->ieat[e] )
 	 SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e]), etsancestors) );
@@ -1625,7 +1624,6 @@ SCIP_RETCODE graph_knot_contractpc(
 	 SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e]), etsancestors) );
 
       SCIPintListNodeFree(scip, &etsancestors);
-
    }
    else
    {
@@ -1697,18 +1695,18 @@ int graph_edge_redirect(
    return e;
 }
 
-
+/** reinsert an edge to replace two other edges */
 SCIP_RETCODE graph_edge_reinsert(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
-   int                   e1,
-   int                   k1,
-   int                   k2,
-   SCIP_Real             cost,
-   IDX*                  ancestors0,
-   IDX*                  ancestors1,
-   IDX*                  revancestors0,
-   IDX*                  revancestors1
+   int                   e1,                 /**< edge to reinsert */
+   int                   k1,                 /**< tail */
+   int                   k2,                 /**< head */
+   SCIP_Real             cost,               /**< edgecost */
+   IDX*                  ancestors0,         /**< ancestors of first edge */
+   IDX*                  ancestors1,         /**< ancestors of second edge */
+   IDX*                  revancestors0,      /**< reverse ancestors of first edge */
+   IDX*                  revancestors1       /**< reverse ancestors of first edge */
    )
 {
    int n1;
@@ -1730,7 +1728,7 @@ SCIP_RETCODE graph_edge_reinsert(
 }
 
 
-/* ARGSUSED */
+/** add a new edge to the graph */
 void graph_edge_add(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
@@ -1815,6 +1813,7 @@ inline static void edge_remove(
    }
 }
 
+/** delete an edge */
 void graph_edge_del(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
@@ -1953,7 +1952,7 @@ void graph_uncover(
    }
 }
 
-/* unmark terminals and switch terminal property to orgininal terminals */
+/** mark terminals and switch terminal property to original terminals */
 SCIP_RETCODE pcgraphorg(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph               /**< the graph */
@@ -1991,6 +1990,7 @@ SCIP_RETCODE pcgraphorg(
    return SCIP_OKAY;
 }
 
+/** unmark terminals and switch terminal property to transformed terminals */
 SCIP_RETCODE pcgraphtrans(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph               /**< the graph */
@@ -2190,7 +2190,7 @@ GRAPH *graph_pack2(
 }
 #endif
 
-
+/** pack the graph, i.e. build a new graph that discards deleted edges and nodes */
 SCIP_RETCODE graph_pack(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                graph,              /**< the graph */
@@ -2343,8 +2343,7 @@ SCIP_RETCODE graph_pack(
    return SCIP_OKAY;
 }
 
-
-
+/** traverse the graph */
 void graph_trail(
    const GRAPH*          p,                  /**< the new graph */
    int                   i                   /**< node to start from */
@@ -2366,8 +2365,9 @@ void graph_trail(
    }
 }
 
+/** is the graph valid? */
 int graph_valid(
-   const GRAPH*          p                  /**< the new graph */
+   const GRAPH*          p                   /**< the new graph */
    )
 {
    const char* fehler1  = "*** Graph Validation Error: Head invalid, Knot %d, Edge %d, Tail=%d, Head=%d\n";
@@ -2472,10 +2472,11 @@ int graph_valid(
    return TRUE;
 }
 
+/** verifies whether a given primal solution is feasible */
 SCIP_Bool graph_sol_valid(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          graph,              /**< the new graph */
-   int*                  result
+   const GRAPH*          graph,              /**< graph data structure */
+   int*                  result              /**< solution array, indicating whether an edge is in the solution */
    )
 {
    SCIP_QUEUE* queue;

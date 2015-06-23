@@ -763,7 +763,7 @@ SCIP_RETCODE scale_coords(
 
    for( i = 0; i < grid_dim; i++ )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((*scaled_coords)[i]), nnodes) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((*scaled_coords)[i]), nnodes) ); /*lint !e866*/
       for( j = 0; j < nnodes; j++ )
       {
          (*scaled_coords)[i][j] = (int) (coordinates[i][j] * scale_factor);

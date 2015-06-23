@@ -17,6 +17,19 @@
  * @brief  Constraint handler for Steiner problems
  * @author Gerald Gamrath
  * @author Daniel Rehfeldt
+ * @author Michael Winkler
+ *
+ * This file checks solutions for feasibility and separates violated model constraints. For more details see \ref CONS page.
+ *
+ * @page CONS Separating violated constraints
+ *
+ * This file implements a constraint handler checking solutions for feasibility and separating violated model constraints as
+ * described in: "Solving the Steiner Tree Problem in Graphs to Optimality" by T. Koch and A. Martin.
+ * The separation problem for the cut inequalities described in \ref PROBLEM can be solved by a max flow algorithm in
+ * polynomial time.  Regarding the variable values of a given LP solution as capacities on the edges, one can check for each
+ * \f$t ∈ T \ {r}\f$, with \f$r\f$ being the root, whether the minimal \f$(r, t)\f$-cut is less than one. In this case,
+ * a violated cut inequality has been found, otherwise none exists. In order to calculate such a minimal cut, Hao
+ * and Orlin's preflow-push algorithm is used.
  *
  */
 

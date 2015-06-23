@@ -48,7 +48,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 extern
 void SCIPprobdataSetGraph(
    SCIP_PROBDATA*        probdata,           /**< problem data */
-   GRAPH*                graph
+   GRAPH*                graph               /**< graph data structure */
    );
 
 /** returns the graph */

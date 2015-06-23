@@ -153,20 +153,22 @@ int getcloseterms(
 
 
 static int issmaller(
+   SCIP* scip,
    const double* pathdist,
    const double* pathtran,
    int          a,
    int          b)
 {
-   return (LT(pathdist[a], pathdist[b]) || (!GT(pathdist[a], pathdist[b]) && LT(pathtran[a], pathtran[b])));
+   return (SCIPisLT(scip, pathdist[a], pathdist[b]) || (!SCIPisGT(scip, pathdist[a], pathdist[b]) && SCIPisLT(scip, pathtran[a], pathtran[b])));
 }
 static int islarger(
+   SCIP* scip,
    const double* pathdist,
    const double* pathtran,
    int          a,
    int          b)
 {
-   return (GT(pathdist[a], pathdist[b]) || (!LT(pathdist[a], pathdist[b]) && GT(pathtran[a], pathtran[b])));
+   return (SCIPisGT(scip, pathdist[a], pathdist[b]) || (!SCIPisLT(scip, pathdist[a], pathdist[b]) && SCIPisGT(scip, pathtran[a], pathtran[b])));
 }
 /*---------------------------------------------------------------------------*/
 /*--- Name     : get NEAREST knot                                         ---*/
@@ -176,6 +178,7 @@ static int islarger(
 /*--- Returns  : Nummer des bewussten Knotens                             ---*/
 /*---------------------------------------------------------------------------*/
 inline static int nearest(
+   SCIP*         scip,
    int*          heap,
    int*          state,
    int*          count, /* pointer to store number of elements of heap */
@@ -197,10 +200,10 @@ inline static int nearest(
    state[heap[1]] = 1;
 
    if ((*count) > 2)
-      if (islarger(pathdist, pathtran, heap[2], heap[3]))
+      if (islarger(scip, pathdist, pathtran, heap[2], heap[3]))
          c++;
 
-   while((c <= (*count)) && islarger(pathdist, pathtran, heap[j], heap[c]))
+   while((c <= (*count)) && islarger(scip, pathdist, pathtran, heap[j], heap[c]))
    {
       t              = heap[c];
       heap[c]        = heap[j];
@@ -211,7 +214,7 @@ inline static int nearest(
       c             += c;
 
       if ((c + 1) <= (*count))
-         if (issmaller(pathdist, pathtran, heap[c + 1], heap[c]))
+         if (issmaller(scip, pathdist, pathtran, heap[c + 1], heap[c]))
             c++;
    }
    return(k);
@@ -220,6 +223,7 @@ inline static int nearest(
 
 /** insert respectively change element in heap */
 inline static void correct(
+   SCIP*         scip,
    int*          heap,
    int*          state,
    int*          count, /* pointer to store number of elements of heap */
@@ -244,7 +248,7 @@ inline static void correct(
    j = state[l];
    c = j / 2;
 
-   while((j > 1) && (islarger(pathdist, pathtran, heap[c], heap[j])))
+   while((j > 1) && (islarger(scip, pathdist, pathtran, heap[c], heap[j])))
    {
       t              = heap[c];
       heap[c]        = heap[j];
@@ -261,6 +265,7 @@ inline static void correct(
 /** Dijkstra's algorithm for shortest path or minimum spanning tree */
 static
 void compute_sd(
+   SCIP* scip,
    const GRAPH*  p,
    int           start,
    const double* cost,
@@ -281,6 +286,7 @@ void compute_sd(
    double dist;
    double temprand;
 
+   assert(scip != NULL);
    assert(p      != NULL);
    assert(start  >= 0);
    assert(start  <  p->knots);
@@ -330,7 +336,7 @@ void compute_sd(
       {
          /* Na, wer ist der Naechste ?
           */
-         k = nearest(heap, state, count, pathdist, pathtran);
+         k = nearest(scip, heap, state, count, pathdist, pathtran);
 
          /* Wieder einen erledigt
           */
@@ -373,17 +379,19 @@ void compute_sd(
                   temprand = pathrand[k] + randarr[i];
                }
 
+               if( SCIPisGE(scip, pathdist[k], pathtran[k] + cost[i]) )
+		  dist = pathdist[k];
+	       else
+		  dist = pathtran[k] + cost[i];
 
-               dist = Max(pathdist[k], pathtran[k] + cost[i]);
-
-               if (LT(dist, pathdist[m])
-                  || (EQ(dist, pathdist[m]) && LT(tran, pathtran[m])))
+               if( SCIPisLT(scip, dist, pathdist[m])
+                  || (SCIPisEQ(scip, dist, pathdist[m]) && SCIPisLT(scip, tran, pathtran[m])) )
                {
                   pathdist[m] = dist;
                   pathtran[m] = tran;
                   pathrand[m] = temprand;
 
-                  correct(heap, state, count, pathdist, pathtran, m);
+                  correct(scip, heap, state, count, pathdist, pathtran, m);
                }
             }
          }
@@ -1468,12 +1476,13 @@ SCIP_RETCODE sd_reduction(
    SCIP_Real*  sdtrans,
    SCIP_Real*  sdrand,
    SCIP_Real* cost,
-   SCIP_Real* random,
+   SCIP_Real* randarr,
    int*    heap,
    int*    state,
    int*    knotexamined,
    int*    elimins,
-   int     runnum
+   int     runnum,
+   unsigned int* seed
    )
 {
    SCIP_Real redstarttime;
@@ -1508,8 +1517,8 @@ SCIP_RETCODE sd_reduction(
       g->mark[i] = (g->grad[i] > 0);
       for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
       {
-         random[e] = (double)(rand() % 512);
-         cost[e] = g->cost[e] * 1000.0 + random[e];
+         randarr[e] = SCIPgetRandomReal(0.0, (g->cost[e]), seed);/* @todo: org (double)(rand() % 512); */
+         cost[e] = g->cost[e] * 1.0 + randarr[e];
       }
    }
 
@@ -1551,7 +1560,7 @@ SCIP_RETCODE sd_reduction(
          g->mark[g->head[e]] = 2;
       }
 
-      compute_sd(g, i, cost, random, heap, state, &count, sddist, sdtrans, sdrand);
+      compute_sd(scip, g, i, cost, randarr, heap, state, &count, sddist, sdtrans, sdrand);
 
       for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
       {
@@ -1566,7 +1575,7 @@ SCIP_RETCODE sd_reduction(
          j = g->oeat[e];
 
          if( SCIPisLT(scip, g->cost[e], FARAWAY) && SCIPisLT(scip, sddist[g->head[e]], cost[e])
-            && SCIPisLT(scip, sddist[g->head[e]] - sdrand[g->head[e]], cost[e] - random[e]) )
+            && SCIPisLT(scip, sddist[g->head[e]] - sdrand[g->head[e]], cost[e] - randarr[e]) )
          {
             graph_edge_del(scip, g, e, TRUE);
             (*elimins)++;
@@ -1957,7 +1966,7 @@ SCIP_RETCODE bd3_reduction(
    return SCIP_OKAY;
 }
 
-
+#if 0
 inline static double mst_cost(
    const GRAPH* g,
    const PATH*  mst)
@@ -1972,7 +1981,7 @@ inline static double mst_cost(
 
    return(cost);
 }
-#if 0
+
 /* C. W. Duin and A. Volganant
  *
  * "Reduction Tests for the Steiner Problem in Graphs"
