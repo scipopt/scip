@@ -106,6 +106,7 @@
  * @subsection CHG Changes between different versions of SCIP
  * - \ref CHANGELOG    "Change log"
  * - \ref RELEASENOTES "Release notes"
+ * - \ref CHG8         "Interface changes between version 3.1 and 3.2"
  * - \ref CHG7         "Interface changes between version 3.0 and 3.1"
  * - \ref CHG6         "Interface changes between version 2.1 and 3.0"
  * - \ref CHG5         "Interface changes between version 2.0 and 2.1"
@@ -7074,6 +7075,110 @@
   * @section MISCELLANEOUS7 Miscellaneous
   *
   *   - Moved LP solver interfaces to subdirectory src/lpi.
+  *
+  * <br>
+  * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
+  */
+
+ /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+ /**@page CHG8 Interface changes between SCIP 3.1 and SCIP 3.2
+  *
+  *
+  * @section CHGCALLBACKS8 New and changed callbacks
+  *
+  * - <b>Branching Rules</b>:
+  *   - Added paramter "forcestrongbranch" to SCIPselectVarStrongBranching()
+  *   - Added paramter "executebranching" SCIPexecRelpscostBranching()
+  *   - Added paramter "presoltiming" to SCIPpropCumulativeCondition()
+  *
+  *   <br>
+  * - <b>Domain Propagation</b>:
+  *
+  *   <br>
+  * - <b>Message Handler</b>:
+  *
+  *   <br>
+  * - <b>Variable Pricers</b>:
+  *
+  *   <br>
+  * - <b>Primal Heuristics</b>:
+  *   - Added paramter "freesubscip" to SCIPapplyProximity()
+  *
+  * <br>
+  * @section CHGINTERFUNC8 Changed interface methods
+  *
+  *   <br>
+  * - <b>Branching Rules</b>:
+  *
+  *   <br>
+  * - <b>Constraint Handlers</b>:
+  *   - Removed method SCIPconshdlrIsPresolvingDelayed()
+  *   - Removed method SCIPconshdlrWasPresolvingDelayed()
+  *   - Renamed method SCIPconshdlrGetPropTimingmask() to SCIPconshdlrGetPropTiming()
+  *
+  *   <br>
+  * - <b>Domain Propagation</b>:
+  *
+  *   <br>
+  * - <b>LP and Cutting Planes</b>:
+  *   - Added parameter "inds" to SCIPgetLPBInvRow()
+  *   - Added parameter "ninds" to SCIPgetLPBInvRow()
+  *   - Added parameter "inds" to SCIPgetLPBInvCol()
+  *   - Added parameter "ninds" to SCIPgetLPBInvCol()
+  *   - Added parameter "inds" to SCIPgetLPBInvARow()
+  *   - Added parameter "ninds" to SCIPgetLPBInvARow()
+  *   - Added parameter "inds" to SCIPgetLPBInvACol()
+  *   - Added parameter "ninds" to SCIPgetLPBInvACol()
+  *   - Added parameter "maxweight" to SCIPcalcMIR()
+  *   - Added parameter "weightinds" to SCIPcalcMIR()
+  *   - Added parameter "nweightinds" to SCIPcalcMIR()
+  *   - Added parameter "rowlensum" to SCIPcalcMIR()
+  *   - Added parameter "inds" to SCIPcalcStrongCG()
+  *   - Added parameter "ninds" to SCIPcalcStrongCG()
+  *
+  *   <br>
+  * - <b>Message Handler</b>:
+  *
+  *   <br>
+  * - <b>Parameters</b>:
+  *
+  *   <br>
+  * - <b>Variables</b>:
+  *   - Removed method SCIPvarGetNBinImpls()
+  *
+  *   <br>
+  * - <b>Data structures</b>:
+  *   - Renamed method SCIPdigraphGetNodeDatas() to SCIPdigraphGetNodeData()
+  *   - Renamed method SCIPdigraphSetNodeDatas() to SCIPdigraphSetNodeData()
+  *   - Renamed method SCIPdigraphGetSuccessorsDatas() to SCIPdigraphGetSuccessorsData()
+  *
+  *   <br>
+  * - <b>Misc</b>:
+  *   - Removed parameter "delaypos" from SCIPincludeConshdlr()
+  *   - Added parameter "presoltiming" to SCIPincludeConshdlr()
+  *   - Added parameter "consgetdivebdchgs" to SCIPincludeConshdlr()
+  *   - Removed parameter "delaypos" from SCIPsetConshdlrPresol()
+  *   - Added parameter "presoltiming" to SCIPsetConshdlrPresol()
+  *   - Removed parameter "delaypos" from SCIPincludePresol()
+  *   - Added parameter "presoltiming" to SCIPincludePresol()
+  *   - Removed parameter "delaypos" from SCIPincludePresolBasic()
+  *   - Added parameter "presoltiming" to SCIPincludePresolBasic()
+  *   - Removed paramter "presoldelay" from SCIPincludePresol()
+  *   - Removed paramter "presoltiming" from SCIPincludePresol()
+  *   - Removed paramter "presoldelay" from SCIPsetPropPresol()
+  *   - Removed paramter "presoltiming" from SCIPsetPropPresol()
+  *   - Added parameter "ndomredsdown" to SCIPgetVarStrongbranchWithPropagation()
+  *   - Added parameter "ndomredsup" to SCIPgetVarStrongbranchWithPropagation()
+  *   - Added parameter "isequation" to SCIPaddClique()
+  *   - Removed parameter "writeimplications" from SCIPwriteCliqueGraph()
+  *   - Removed method SCIPallocBufferSize()
+  *   - Removed method SCIPduplicateBufferSize()
+  *   - Removed method SCIPreallocBufferSize()
+  *   - Removed method SCIPfreeBufferSize()
+  *   - Removed method callback SCIPdialogExecConflictgraph()
+  *
+  * <br>
+  * @section MISCELLANEOUS7 Miscellaneous
   *
   * <br>
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
