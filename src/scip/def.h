@@ -118,20 +118,6 @@ extern "C" {
 #endif
 
 /*
- * Size_t format
- */
-#if defined(__arm__)  /* TODO: exclude newer ARM 64bit here (what's the macro name?) */
-/* on ARM 32bit, size_t is not long */
-#define SCIP_SIZET_FORMAT           "u"
-#else
-#if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
-#define SCIP_SIZET_FORMAT           "lu"
-#else
-#define SCIP_SIZET_FORMAT           "zu"
-#endif
-#endif
-
-/*
  * Floating point values
  */
 
