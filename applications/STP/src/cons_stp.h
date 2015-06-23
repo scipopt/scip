@@ -17,6 +17,7 @@
  * @brief  Constraint handler for Steiner problems
  * @author Gerald Gamrath
  * @author Daniel Rehfeldt
+ * @author Michael Winkler
  *
  * This file checks solutions for feasibility and separates violated model constraints. For more details see \ref CONS page.
  */

@@ -16,6 +16,11 @@
 /**@file   xternal.c
  * @brief  main document page
  * @author Daniel Rehfeldt
+ * @author Gerald Gamrath
+ * @author Thorsten Koch
+ * @author Stephen Maher
+ * @author Yuji Shinano
+ * @author Michael Winkler
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -49,7 +54,7 @@
 
 /**@page PROBLEM Problem description and solving approach
  *
- * A more intricate description of the following can be found in
+ * A more intricate account of the following can be found in
  * "SCIP-Jack - A solver for STP and variants with parallelization extensions" by G. Gamrath et al.
  * The Steiner tree problem in graphs (SPG) can be described as follows: Given an undirected connected graph
  * \f$ G=(V,E)\f$, costs \f[ c: E \rightarrow  \mathcal{Q}^+ \f] and a set \f$ T \subset V \f$ of \f$ \textit{terminals} \f$,
@@ -62,10 +67,13 @@
  *
  *
  * Our branch-and-cut based Steiner tree solver can be dissected into three major components.
+ *
  * First, problem specific preprocessing is extremely important. Apart from some pathological instances
  * specifically constructed to defy presolving techniques, preprocessing is often able to significantly
  * reduce instances.
- * Second, heuristics are needed to find good or even optimal solutions
+ *
+ * Second, heuristics are needed to find good or even optimal solutions.
+ *
  * Finally, at the core is the branch-and-cut procedure used to compute a lower bound and prove optimality:
  *
  * The problem can be formulated using the directed equivalent of the STP, the Steiner arborescence problem (SAP):
@@ -76,10 +84,12 @@
  * terminal as the root. This results in a one-to-one correspondence between the respective solution sets
  * Introducing variables \f$y_a\f$ for \f$a\in A\f$ with the interpretation \f$y_a:=1\f$, if \f$a\f$ is in the
  * Steiner arborecence, and \f$y_a:=0\f$ otherwise, we obtain the integer program:
+ *
  * \f[
- * \begin{eqnarray}
- *   \min \vec{c}^T y\\
- *   y(\delta^+(W))&\geq& 1, \hspace{22mm}\text{for all }\, W\subset V, r\in W, (V\setminus W)\cap T\neq \emptyset\\
+ *  \begin{array}[t]{rll}
+ *   \min {c}^T y\\
+ *  \\
+ *   y(\delta^+(W))&\geq& 1, ~~~ \forall  , W\subset V, r\in W, (V\setminus W)\cap T\neq \emptyset\\
  *   y(\delta^-(v))&
  *   \left\{{\begin{array}{l} = \\
  *       = \\
@@ -90,15 +100,15 @@
  *    \label{flowcons1}
  *     0, \mbox{if } v=r;\\
  *     1, \mbox{if } v\in T\setminus{r};\\
- *     1, \mbox{if } v\in N; \end{array}} \hspace{2.9mm}\text{for all } v \in V
+ *     1, \mbox{if } v\in N; \end{array}} \hspace{2.9mm}\forall  v \in V
  *   \\
  *   \label{flowcons2}
- *   y(\delta^-(v))&\leq& y(\delta^+(v)), \hspace{10.5mm}\text{for all } v\in N;\\
+ *   y(\delta^-(v))&\leq& y(\delta^+(v)), \hspace{10.5mm}\forall  v\in N;\\
  *   \label{flowcons3}
- *   y(\delta^-(v))&\geq& y_a, \hspace{20.2mm}\text{for all } a\in\delta^+(v), v\in N;\\
- *  0\leq y_a&\leq& 1, \hspace{22mm}\text{for all } a\in A;\\
- *   y_a&\in& \{0,1\}, \hspace{15.1mm}\text{for all } a\in A,
- * \end{eqnarray}
+ *   y(\delta^-(v))&\geq& y_a, \hspace{20.2mm}\forall  a\in\delta^+(v), v\in N;\\
+ *  0\leq y_a&\leq& 1, \hspace{22mm}\forall  a\in A;\\
+ *   y_a&\in& \{0,1\}, \hspace{15.1mm}\forall  a\in A,
+ *  \end{array}
  * \f]
  * where \f$N=V\setminus T\f$, \f$\delta^+(X):=\{(u,v)\in A| u\in X, v\in V\setminus X\}\f$, \f$\delta^-(X):= \delta^+(V \setminus X)\f$ for
  * \f$X\subset V\f$ i.e., \f$\delta^+(X)\f$ is the set of all arcs going out of and \f$\delta^-(X)\f$ the set of all arcs going into \f$X\f$.
@@ -108,14 +118,23 @@
  *
  * In addition to Steiner Problems in Graphs there exist several variants of which the following can be solved by SCIP-JACK,
  * transforming them to a Steiner Arborescence Problem, and in some cases introducing additional constraints:
+ *
  * -Steiner Arborescence Problems,
+ *
  * -Rectilinear Steiner Minimum Tree Problems,
+ *
  * -Node-Weighted Steiner Tree Problems,
- * -Prize-Collecting Steiner Tree Problems
+ *
+ * -Prize-Collecting Steiner Tree Problems,
+ *
  * -Rooted Prize-Collecting Steiner Tree Problems,
+ *
  * -Maximum-Weight Connected Subgraph Problems,
+ *
  * -Degree-Constrained Steiner Tree Problems,
+ *
  * -Group Steiner Tree Problems, and
+ *
  * -Hop-Constrained Directed Steiner Tree Problems.
  */
 
