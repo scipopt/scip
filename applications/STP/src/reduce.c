@@ -2025,6 +2025,7 @@ SCIP_RETCODE level1(
    int     brednelims;
    int     degtnelims;
    int     reductbound;
+   unsigned int seed;
 
    SCIP_Bool    le = TRUE;
    SCIP_Bool    sd = TRUE;
@@ -2041,6 +2042,7 @@ SCIP_RETCODE level1(
 
    nnodes = g->knots;
    nedges = g->edges;
+   seed = 0;
    runnum = 0;
 
    if( SCIPisLE(scip, (double) g->terms / (double) nnodes, 0.03 ) )
@@ -2169,7 +2171,7 @@ SCIP_RETCODE level1(
                nodearrint[i] = -1;
             for( i = 0; i < 5; i++ )
             {
-               SCIP_CALL( sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, randarr, heap, state, nodearrint, &nelims, runnum) );
+               SCIP_CALL( sd_reduction(scip, g, sddist, sdtrans, sdrand, cost, randarr, heap, state, nodearrint, &nelims, runnum, &seed) );
                runnum++;
                sdnelims += nelims;
                if( nelims <= 5 * reductbound )
@@ -2529,7 +2531,9 @@ SCIP_RETCODE reduce(
    SCIP_CALL( graph_init_history(scip, (*graph)) );
 
    /* if no reduction methods available, return */
-#if 1
+   if( (*graph)->stp_type == STP_DEG_CONS  )
+      return SCIP_OKAY;
+#if 0
    if( (*graph)->stp_type == STP_DEG_CONS || (*graph)->stp_type == STP_GRID || (*graph)->stp_type == STP_OBSTACLES_GRID  )
       return SCIP_OKAY;
 #endif

@@ -596,7 +596,7 @@ SCIP_RETCODE SCIPheurPruneDegConsSteinerTree(
 
 /** Dijkstra based shortest paths heuristic */
 static
-SCIP_RETCODE do_tm_dijkstra(
+SCIP_RETCODE computeSteinerTreeDijk(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    SCIP_Real*            cost,               /**< edge costs */
@@ -621,9 +621,9 @@ SCIP_RETCODE do_tm_dijkstra(
    return SCIP_OKAY;
 }
 
-/** shortest paths heuristic */
+/** shortest paths based heuristic */
 static
-SCIP_RETCODE do_tmX(
+SCIP_RETCODE computeSteinerTree(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
    SCIP_Real*            cost,               /**< edge costs */
@@ -762,22 +762,22 @@ SCIP_RETCODE do_tmX(
 }
 
 
-/* pure TM heuristic for degree constrained STPs */
+/** heuristic for degree constrained STPs */
 static
-SCIP_RETCODE do_tm_degcons(
+SCIP_RETCODE computeDegConsTree(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*          g,                  /**< graph structure */
+   const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            cost,               /**< edge costs */
    SCIP_Real*            costrev,            /**< reversed edge costs */
-   SCIP_Real**           pathdist,
-   int                   start,
-   int*                  perm,
-   int*                  result,
-   int*                  cluster,
-   int**                 pathedge,
-   unsigned int*         randseed,
-   char*                 connected,
-   char*                 solfound
+   SCIP_Real**           pathdist,           /**< distances from each terminal to all nodes */
+   int                   start,              /**< start vertex */
+   int*                  perm,               /**< permutation array */
+   int*                  result,             /**< array to indicate whether an edge is in the solution */
+   int*                  cluster,            /**< array for internal computations */
+   int**                 pathedge,           /**< ancestor edges for shortest paths from each terminal to all nodes */
+   unsigned int*         randseed,           /**< random seed */
+   char*                 connected,          /**< array to indicate whether a vertex is in the solution */
+   char*                 solfound            /**< pointer to store whether a solution has been found */
    )
 {
    SCIP_Real min;
@@ -1019,23 +1019,24 @@ SCIP_RETCODE do_tm_degcons(
    return SCIP_OKAY;
 }
 
+/** Voronoi based shortest path heuristic */
 static
-SCIP_RETCODE do_tm_polzin(
+SCIP_RETCODE computeSteinerTreeVnoi(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph structure */
-   SCIP_PQUEUE*          pqueue,
-   GNODE**               gnodearr,
-   SCIP_Real*            cost,
-   SCIP_Real*            costrev,
-   SCIP_Real**           node_dist,
-   int                   start,
-   int*                  result,
-   int*                  vcount,
-   int*                  nodenterms,
-   int**                 node_base,
-   int**                 node_edge,
-   char                  firstrun,
-   char*                 connected
+   SCIP_PQUEUE*          pqueue,             /**< priority queue */
+   GNODE**               gnodearr,           /**< internal array */
+   SCIP_Real*            cost,               /**< edge costs */
+   SCIP_Real*            costrev,            /**< reversed edge costs */
+   SCIP_Real**           node_dist,          /**< internal array */
+   int                   start,              /**< start vertex */
+   int*                  result,             /**< array to indicate whether an edge is in the solution */
+   int*                  vcount,             /**< internal array */
+   int*                  nodenterms,         /**< internal array */
+   int**                 node_base,          /**< internal array */
+   int**                 node_edge,          /**< internal array */
+   char                  firstrun,           /**< method called for the first time? (during one heuristic round) */
+   char*                 connected           /**< array to indicate whether a vertex is in the solution */
    )
 {
    int    k;
@@ -1252,7 +1253,7 @@ SCIP_RETCODE do_tm_polzin(
       SCIPfreeBufferArray(scip, &terms);
    }
 
-   /** PHASE II **/
+   /* PHASE II */
    else
    {
       for( k = 0; k < nnodes; k++ )
@@ -1347,8 +1348,8 @@ SCIP_RETCODE do_tm_polzin(
 static
 void do_prizecoll_trivial(
    SCIP*                 scip,               /**< SCIP data structure */
-   const GRAPH*  graph,
-   int*          best_result
+   const GRAPH*          graph,              /**< graph data structure */
+   int*                  best_result         /**< array to indicate whether an edge is in the solution */
    )
 {
    double maxcost = -1;
@@ -1866,13 +1867,13 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
                   }
                }
             }
-            SCIP_CALL( do_tmX(scip, graph, cost, costrev, pathdist, graph->tail[rootedge], perm, result, cluster, pathedge, connected, &(heurdata->randseed)) );
+            SCIP_CALL( computeSteinerTree(scip, graph, cost, costrev, pathdist, graph->tail[rootedge], perm, result, cluster, pathedge, connected, &(heurdata->randseed)) );
             firstrun = FALSE;
          }
          else
          {
             assert(mode == TM_DIJKSTRA);
-            SCIP_CALL( do_tm_dijkstra(scip, graph, cost, costrev, dijkdist, result, dijkedge, root, connected) );
+            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, root, connected) );
          }
          if( SCIPisStopped(scip) )
             break;
@@ -1944,7 +1945,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
                result[e] = UNKNOWN;
             }
 
-            SCIP_CALL( do_tm_dijkstra(scip, graph, cost, costrev, dijkdist, result, dijkedge, root, connected) );
+            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, root, connected) );
 
             obj = 0.0;
             edgecount = 0;
@@ -2019,7 +2020,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
          }
          else if( mode == TM_DIJKSTRA )
          {
-            SCIP_CALL(do_tm_dijkstra(scip, graph, cost, costrev, dijkdist, result, dijkedge, start[r], connected) );
+            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, start[r], connected) );
          }
          else if( graph->stp_type == STP_DEG_CONS )
          {
@@ -2045,7 +2046,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
                }
             }
 
-            SCIP_CALL( do_tm_degcons(scip, graph, cost, costrev, pathdist, start[r], perm, result, cluster, pathedge, &(heurdata->randseed), connected, &solfound) );
+            SCIP_CALL( computeDegConsTree(scip, graph, cost, costrev, pathdist, start[r], perm, result, cluster, pathedge, &(heurdata->randseed), connected, &solfound) );
          }
          else if( mode == TM_SP )
          {
@@ -2069,11 +2070,11 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
                   }
                }
             }
-            SCIP_CALL( do_tmX(scip, graph, cost, costrev, pathdist, start[r], perm, result, cluster, pathedge, connected, &(heurdata->randseed)) );
+            SCIP_CALL( computeSteinerTree(scip, graph, cost, costrev, pathdist, start[r], perm, result, cluster, pathedge, connected, &(heurdata->randseed)) );
          }
          else
          {
-            SCIP_CALL( do_tm_polzin(scip, graph, pqueue, gnodearr, cost, costrev, node_dist, start[r], result, vcount,
+            SCIP_CALL( computeSteinerTreeVnoi(scip, graph, pqueue, gnodearr, cost, costrev, node_dist, start[r], result, vcount,
                   nodenterms, node_base, node_edge, (r == 0), connected) );
          }
          obj = 0.0;

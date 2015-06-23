@@ -448,7 +448,7 @@ void graph_path_exec(
    }
 }
 
-/* limited dijkstra, stoping at terminals */
+/** limited Dijkstra, stoping at terminals */
 void sdpaths(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
@@ -738,7 +738,7 @@ void calculate_distances(
    }
 }
 #endif
-/* extend a voronoi region until all neighbouring terminals are spanned */
+/** extend a voronoi region until all neighbouring terminals are spanned */
 SCIP_RETCODE voronoi_extend(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
@@ -824,21 +824,21 @@ SCIP_RETCODE voronoi_extend(
             }
          }
       }
-      assert( nneighbterms == 0);
+      assert(nneighbterms == 0);
    }
    return SCIP_OKAY;
 }
 
 
-/* extend a voronoi region until all neighbouring terminals are spanned */
+/** extend a voronoi region until all neighbouring terminals are spanned */
 SCIP_RETCODE voronoi_extend2(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            cost,               /**< edgecosts */
    PATH*                 path,               /**< shortest paths data structure */
-   SCIP_Real**           distarr,
-   int**                 basearr,
-   int**                 edgearr,
+   SCIP_Real**           distarr,            /**< array to store distance from each node to its base */
+   int**                 basearr,            /**< array to store the bases */
+   int**                 edgearr,            /**< array to store the ancestor edge */
    char*                 termsmark,          /**< array to mark terminal */
    int*                  reachednodes,       /**< array to mark reached nodes */
    int*                  nreachednodes,      /**< pointer to number of reached nodes */

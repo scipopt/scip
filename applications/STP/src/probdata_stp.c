@@ -1972,7 +1972,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 /** sets the probdata graph */
 void SCIPprobdataSetGraph(
    SCIP_PROBDATA*        probdata,           /**< problem data */
-   GRAPH*                graph
+   GRAPH*                graph               /**< graph data structure */
    )
 {
    assert(probdata != NULL);
