@@ -70,6 +70,12 @@ features:
 - extended expression parsing to support power, realpower, and signpower operators
 - possibility to set a soft time limit which becomes active only after the first primal solution was found
 - the AMPL interface now passes an initial guess, if specified, as a solution (that will be checked for feasibility) to SCIP
+- new presolver tworowbnd for improving variable bounds and detecting redundant constraints added
+- new presolver dualagg for aggregating single up-/downlocked variables by a binary variable added
+- new presolver implfree for aggregating implied free variables added
+- new presolver redvub which can detect redundant variable upper bound constraints added
+- new presolver stuffing for fixing of singleton continuous variables added
+- added matrix module for getting access to the internal mixed inter linear problem matrix
 
 parameters:
 - new parameter 'DELHEADERS' for 'uninstall'-target: scip headers are only removed when invoking 'make uninstall DELHEADERS=true'
@@ -244,6 +250,7 @@ interface:
 - SCIPsolveLinearProb() solves a linear problem of the form Ax=b for a regular square matrix A
 - new methods SCIPaddSquareLinearization(), SCIPaddSquareSecant(), SCIPaddBilinLinearization(), and SCIPaddBilinMcCormick()
   in cons_quadratic.h to compute linear under- and overestimation for bilinear and quadratic terms
+- new methods for mixed inter linear matrix access (see pub_matrix.h) added
 
 fixed bugs:
 - fix behavior of 'make install' which now sets symbolic links and short links to binaries and libraries
