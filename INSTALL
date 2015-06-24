@@ -50,7 +50,7 @@ following information
  (a) the directory where the include files of the LP solver are located
  (b) the library file(s) "lib*.a" or/and "lib*.so"
 
-Beside that, SCIP needs the some soft-link targets for ZIMPL
+Beside that, SCIP needs similar soft-link targets for ZIMPL
  (a) the directory where the include files of ZIMPL are located
  (b) the library file(s) "lib*.a" or/and "lib*.so"
 
@@ -97,7 +97,7 @@ compilation settings:
               "dbg", "opt", or "prf" 
 
 - $(LPS):     the LP solver to use
-              "spx", "clp", "cpx", "xprs", "msk", "grb", "qso", "none"
+              "spx", "spx2", "clp", "cpx", "xprs", "msk", "grb", "qso", "none"
 
 - $(EXPRINT): the expressions interpreter (code that computes derivatives and hessians) to use
               "none", "cppad"
@@ -321,7 +321,7 @@ make[1]: Leaving directory `/sw/scip'
    Create one of the given name in the "make/" subdirectory. You may take
    "make/make.linux.x86.gnu.opt" or any other file in the make subdirectory as example.
 
-   The readline library seems to differ sligtly on different OS distributions. Some versions
+   The readline library seems to differ slightly on different OS distributions. Some versions
    do not support the remove_history() call.
    In this case, you have to either add "-DNO_REMOVE_HISTORY" to the FLAGS in the
    appropriate make/make.* file, or to compile with "make USRFLAGS=-DNO_REMOVE_HISTORY".
@@ -350,7 +350,7 @@ make[1]: Leaving directory `/sw/scip'
 
    On some systems, the option [-e] is not available for the read command.
    You have to compile with READ=read.
-   
+
    In some situations, it may be necessary to adjust the flags for
    linking against Clp. SCIP's Makefile tries to find the file
    "clp_addlibs.txt", which specifies the needed libraries. The first
@@ -385,28 +385,21 @@ make[1]: Leaving directory `/sw/scip'
          (e.g. "cd scip; ln -s /soplex/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex.linux.x86.gnu.a")
          Warning! The ".opt" in the name of the SOPLEX library does not appear in the name of the soft-link.
 
-   (b) to use SOPLEX (Version 1.3.2)
-       - ln -s <path to SOPLEX' *.h files> <path to SCIP>/lib/spx132inc
-       - ln -s <file libsoplex.[...].a> <path to SCIP>/lib/libsoplex132.$(OSTYPE).$(ARCH).$(COMP).a
-         for each operating system and architecture to use
-         (e.g. "cd scip; ln -s /soplex132/lib/libsoplex.linux.x86.gnu.opt.a lib/libsoplex132.linux.x86.gnu.a")
-         Warning! The ".opt" in the name of the SOPLEX library does not appear in the name of the soft-link.
-
-   (c) to use CPLEX (Version >= 10.0)
+   (b) to use CPLEX (Version >= 10.0)
        - ln -s <path to directory of cplex.h> <path to SCIP>/lib/cpxinc
          (e.g. "cd scip; ln -s /cplex121/include/ilcplex lib/cpxinc")
        - ln -s <file libcplex.a> <path to SCIP>/lib/libcplex.$(OSTYPE).$(ARCH).$(COMP).a
          for each operation system and architecture to use
          (e.g. "cd scip; ln -s /cplex121/lib/x86-64_debian4.0_4.1/static_pic/libcplex.a lib/libcplex.linux.x86.gnu.a")
 
-   (d) to use XPRESS
+   (c) to use XPRESS
        - ln -s <path to directory of xprs.h> <path to SCIP>/lib/xprsinc
          (e.g. "cd scip; ln -s /xpressmp/include lib/xprsinc")
        - ln -s <file libxprs.a> <path to SCIP>/lib/libxprs.$(OSTYPE).$(ARCH).$(COMP).a
          for each operation system and architecture to use
          (e.g. "cd scip; ln -s /xpressmp/lib/libxprs.a lib/libxprs.linux.x86.gnu.a")
 
-   (e) to use MOSEK
+   (d) to use MOSEK
        - ln -s <path to directory of mosek.h> <path to SCIP>/lib/mskinc
          (e.g. "cd scip; ln -s /mosek/4/tools/platform/linux32x86/h lib/mskinc")
        - ln -s <file libmosek.so> <path to SCIP>/lib/libmosek.$(OSTYPE).$(ARCH).$(COMP).so
@@ -414,25 +407,25 @@ make[1]: Leaving directory `/sw/scip'
          (e.g. "cd scip; ln -s /mosek/4/tools/platform/linux32x86/bin/libmosek.so lib/libmosek.linux.x86.gnu.so")
        - since MOSEK is a shared library, make sure your LD_LIBRARY_PATH contains <path to SCIP>/lib
 
-   (f) to use CLP
+   (e) to use CLP
        - ln -s <path to Clp main directory> <path to SCIP>/lib/libclp.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)
          for each operating system and architecture to use
          (e.g. "cd scip; ln -s /Coin-Clp lib/libclp.linux.x86.gnu.opt")
 
-   (g) to use ZIMPL as additional file reader for reading *.zpl files
+   (f) to use ZIMPL as additional file reader for reading *.zpl files
        - mkdir <path to SCIP>/lib/zimplinc
        - ln -s <path to ZIMPL's *.h files> <path to SCIP>/lib/zimplinc/zimpl
        - ln -s <file libzimpl-<version>.<options>.a> <path to SCIP>/lib/libzimpl.$(OSTYPE).$(ARCH).$(COMP).a
        Note that ZIMPL needs the GNU multiprecision library (GMP) to be installed on your system.
 
-   (h) to use IPOPT as NLP solver
+   (g) to use IPOPT as NLP solver
        - ln -s <path to IPOPT installation> <path to SCIP>/lib/ipopt.$(OSTYPE).$(ARCH).$(COMP).$(IPOPTOPT)
          (e.g. "cd scip; ln -s /Ipopt lib/ipopt.linux.x86.gnu.opt")
          The path to the IPOPT installation is the path under where the Ipopt build has been installed.
          It should contain the directories include/coin with the Ipopt header files, the directory lib with the Ipopt libraries,
          and the directory share/coin/doc/Ipopt (Ipopt >= 3.9.0) or share/doc/coin/Ipopt (Ipopt < 3.9.0) with the ipopt_addlibs_cpp.txt file.
 
-   (i) to use GAMS
+   (h) to use GAMS
        - ln -s <path to GAMS system directory> <path to SCIP>/lib/gams.$(OSTYPE).$(ARCH).$(COMP)
 
 4. To run the program enter "bin/scip.$(OSTYPE).$(ARCH).$(COMP).$(OPT).$(LPS)"
