@@ -2320,7 +2320,7 @@ SCIP_RETCODE varParse(
    /* get objective coefficient */
    if( !SCIPstrToRealValue(token, obj, endptr) )
    {
-      endptr = NULL;
+      *endptr = NULL;
       return SCIP_READERROR;
    }
 
