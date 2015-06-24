@@ -50,7 +50,7 @@
 enum Fixingdirection
 {
    FIXATLB = -1,
-   NOFIX   =  0,
+   NOFIX   =  0
 };
 typedef enum Fixingdirection FIXINGDIRECTION;
 
