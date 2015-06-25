@@ -273,6 +273,7 @@ fixed bugs:
 - fix late creation of auxiliary LP in cons_nonlinear.c, which lead to a segmentation fault with lpi_spx2.cpp
 - fixed again a bug in backward propagation of linear expressions in expression graph
 - fixed problem with lpisrelax flag in probing mode when doing branch-and-price
+- fixed bug in pseudoboolean constraint handler about negated variables
 
 SCIP version 3.1.2
 ==================
