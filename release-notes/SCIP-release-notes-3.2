@@ -4,11 +4,15 @@ Notes for SCIP Release 3.2
 Features
 ========
 
-- added reoptimization feature
+- added reoptimization feature for optimization problems with changed objective function or tighter feasible region
 
 - new primal heuristics distribution diving, indicator, bound, ofins
 
 - new branching rules distribution, multaggr, nodereopt and a new rule for SOS1 constraints
+
+- new separator eccuts
+
+- new presolver tworowbnd, dualagg, implfree, redvub, stuffing
 
 - extended variable branching by considering solution density
 
@@ -18,23 +22,27 @@ Features
 
 - added output information for BAK: Branch-and-bound Analysis Kit
 
-- MPS is able to read semi-integer variables
+- able to read semi-integer variables for MPS files
 
-- the original problem can now be permuted directly after reading
+- original problem can be permuted directly after reading
 
 - improved clique and variable bound heuristics
 
 - generalized upgrade from (SOC-representable) quadratic constraints to SOC constraints
 
-- new score in hybrid reliability pseudocost branching
+- new score in hybrid reliability pseudo cost branching
 
 - started support for user-defined operators in expression trees/graphs
 
-- added presolving levels (FAST, MEDIUM, and EXHAUSTIV)
+- added presolving levels (FAST, MEDIUM, and EXHAUSTIVE)
+
+- added matrix module for getting access to the internal mixed inter linear problem matrix
 
 - improved separation procedure of SOS1 constraint handler
 
 - improved separation procedure for convex quadratic constraints
+
+- improved performance of diving heuristics
 
 
 Interfaces
@@ -42,16 +50,19 @@ Interfaces
 
 - moved buffer memory handling to blockmemory/memory.*
 
+- new function BMSallocClearBlockMemoryArray()/SCIPallocClearBlockMemoryArray() and
+  BMSallocClearBufferMemoryArray(), SCIPallocClearBufferArray() to allocate arrays
+  that are initialized to 0
+
 - new callback function SCIP_DECL_CONSGETDIVEBDCHGS to provide constraint handler method
   to suggest dive bound changes during the generic diving algorithm, see type_cons.h for
   details
 
 - new method SCIPperformGenericDivingAlgorithm() that performs diving with periodic LP
-  resolve according to the diveset argument.
+  resolve according to the diveset argument
 
-- new function BMSallocClearBlockMemoryArray()/SCIPallocClearBlockMemoryArray() and
-  BMSallocClearBufferMemoryArray(), SCIPallocClearBufferArray() to allocate arrays
-  that are initialized to 0
+- new methods to change quadratic constraints during problem stage
+
 
 
 Performance Improvements and Bug Fixes
@@ -78,3 +89,5 @@ Additional Notes
 - moving some examples in an application directory
 
 - better handling of large values returned by the LP solver
+
+- extended statistic output of interactive shell
