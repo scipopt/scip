@@ -17,9 +17,6 @@
 /**@file   pub_dive.h
  * @brief  library methods for diving heuristics
  * @author Gregor Hendel
- *
- * @todo check all checkStage() calls, use bit flags instead of the SCIP_Bool parameters
- * @todo check all SCIP_STAGE_* switches, and include the new stages TRANSFORMED and INITSOLVE
  */
 
 #ifndef PUB_DIVE_H_

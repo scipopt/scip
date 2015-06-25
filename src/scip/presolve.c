@@ -1032,9 +1032,6 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
    assert(scip->transprob != NULL);
    nprobvars = SCIPprobGetNVars(scip->transprob);
 
-   /* @todo need global memory because allocating and clearing can be expensive in presolving, i.e. calloc(memset) is
-    *       too expensive, might also consider other data structures like hashmaps for issetvar and counts
-    */
    /* allocate temporary memory */
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &issetvar, 2*nprobvars) ); /*lint !e647*/
    SCIP_CALL( SCIPallocCleanBufferArray(scip, &counts, 2*nprobvars) ); /*lint !e647*/
@@ -1065,6 +1062,16 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
     * variable bounds instead of the 'normal' implications
     */
    implbinvarsexist = (SCIPprobGetNImplBinVars(scip->transprob) > 0);
+
+#if 0
+   /* @todo do the cleanup here rather than before calling SCIPshrinkDisjunctiveVarSet()? */
+   if( usebin )
+   {
+      SCIP_Bool infeasible;
+
+      SCIP_CALL( SCIPcleanupCliques(scip, &infeasible) );
+   }
+#endif
 
    /* check for same implied binary variables */
    for( v = 0; v < nvars; ++v )

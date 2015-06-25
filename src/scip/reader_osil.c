@@ -2530,6 +2530,10 @@ SCIP_DECL_READERREAD(readerReadOsil)
       SCIP_CALL( SCIPreleaseCons(scip, &objcons) );
    }
 
+   /* return read error retcode if something went wrong */
+   if( !doingfine )
+      return SCIP_READERROR;
+
    if( retcode == SCIP_PLUGINNOTFOUND )
       retcode = SCIP_READERROR;
 

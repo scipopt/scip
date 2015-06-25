@@ -708,7 +708,7 @@ EXTERN
 SCIP_RETCODE SCIPcopyVars(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables  to the corresponding
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables to the corresponding
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
@@ -892,7 +892,7 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to the corresponding
-                                              *   variables of the target SCIP, must not be NULL! */
+                                              *   variables of the target SCIP, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
@@ -1186,7 +1186,7 @@ SCIP_RETCODE SCIPcopy(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
-   const char*           suffix,             /**< suffix which will be added to the names of the source SCIP */
+   const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
    SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
                                               *   plugins will be copied and activated, and the modifiable flag of
@@ -2510,7 +2510,7 @@ SCIP_RETCODE SCIPsetConshdlrPresol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method of constraint handler */
    int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-   SCIP_Bool             delaypresol         /**< should presolving method be delayed, if other presolvers found reductions? */
+   SCIP_PRESOLTIMING     presoltiming        /**< timing mask of the constraint handler's presolving method */
    );
 
 /** sets method of constraint handler to free specific constraint data
@@ -2913,7 +2913,7 @@ SCIP_RETCODE SCIPincludePresolBasic(
    const char*           desc,               /**< description of presolver */
    int                   priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int                   maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-   SCIP_Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
+   SCIP_PRESOLTIMING     timing,             /**< timing mask of the presolver */
    SCIP_DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
    SCIP_PRESOLDATA*      presoldata          /**< presolver data */
    );
@@ -2939,7 +2939,7 @@ EXTERN
 SCIP_RETCODE SCIPsetPresolInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOL*          presol,             /**< presolver */
-   SCIP_DECL_PRESOLINIT ((*presolinit))      /**< initialize presolver */
+   SCIP_DECL_PRESOLINIT  ((*presolinit))     /**< initialize presolver */
    );
 
 /** sets deinitialization method of presolver */
@@ -3087,7 +3087,7 @@ SCIP_RETCODE SCIPsetRelaxExitsol(
 EXTERN
 SCIP_RELAX* SCIPfindRelax(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of relaxation handler*/
+   const char*           name                /**< name of relaxation handler */
    );
 
 /** returns the array of currently available relaxation handlers  */
@@ -3252,8 +3252,8 @@ SCIP_RETCODE SCIPincludeProp(
    int                   priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   freq,               /**< frequency for calling propagator */
    SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
-   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
-   int                   presolpriority,     /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagator should be executed */
+   int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
    SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the propagator's presolving method */
    SCIP_DECL_PROPCOPY    ((*propcopy)),      /**< copy method of propagator or NULL if you don't want to copy your plugin into sub-SCIPs */
@@ -3363,7 +3363,7 @@ SCIP_RETCODE SCIPsetPropPresol(
    SCIP_DECL_PROPPRESOL((*proppresol)),      /**< presolving method of propagator */
    int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
-   SCIP_Bool             presoldelay         /**< should presolving be delayed, if other presolvers found reductions? */
+   SCIP_PRESOLTIMING     presoltiming        /**< timing mask of the propagator's presolving method */
    );
 
 /** sets propagation conflict resolving callback of propagator */
@@ -3415,6 +3415,13 @@ SCIP_RETCODE SCIPsetPropPresolPriority(
  *  @note method has all heuristic callbacks as arguments and is thus changed every time a new
  *        callback is added in future releases; consider using SCIPincludeHeurBasic() and setter functions
  *        if you seek for a method which is less likely to change in future releases
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
  */
 EXTERN
 SCIP_RETCODE SCIPincludeHeur(
@@ -3560,7 +3567,7 @@ SCIP_RETCODE SCIPincludeCompr(
    SCIP_DECL_COMPRINITSOL ((*comprinitsol)), /**< solving process initialization method of tree compression */
    SCIP_DECL_COMPREXITSOL ((*comprexitsol)), /**< solving process deinitialization method of tree compression */
    SCIP_DECL_COMPREXEC   ((*comprexec)),     /**< execution method of tree compression */
-   SCIP_COMPRDATA*        comprdata          /**< tree compression data */
+   SCIP_COMPRDATA*       comprdata           /**< tree compression data */
    );
 
 /** creates a tree compression and includes it in SCIP with its most fundamental callbacks.
@@ -3596,7 +3603,7 @@ EXTERN
 SCIP_RETCODE SCIPsetComprFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COMPR*           compr,              /**< tree compression */
-   SCIP_DECL_COMPRFREE    ((*comprfree))     /**< destructor of tree compression */
+   SCIP_DECL_COMPRFREE   ((*comprfree))      /**< destructor of tree compression */
    );
 
 /** sets initialization method of tree compression */
@@ -3660,11 +3667,18 @@ SCIP_RETCODE SCIPsetComprPriority(
 /** create a diving set associated with a primal heuristic. The primal heuristic needs to be included
  *  before this method can be called. The diveset is installed in the array of divesets of the heuristic
  *  and can be retrieved later by accessing SCIPheurGetDivesets()
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. otherwise a suitable error code is passed. see \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
  */
 EXTERN
 SCIP_RETCODE SCIPcreateDiveset(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_DIVESET**        diveset,            /**< common diving heuristic settings */
+   SCIP_DIVESET**        diveset,            /**< pointer to created diving heuristic settings, or NULL if not needed */
    SCIP_HEUR*            heur,               /**< primal heuristic to which the diveset belongs */
    const char*           name,               /**< name for the diveset, or NULL if the name of the heuristic should be used */
    SCIP_Real             minreldepth,        /**< minimal relative depth to start diving */
@@ -6229,34 +6243,56 @@ SCIP_RETCODE SCIPrestartSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** include specific heuristics and branching rules for reoptimization
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+EXTERN
+SCIP_RETCODE SCIPenableReoptimization(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             enable              /**< enable reoptimization */
+   );
+
 /** returns whether reoptimization is enabledor not */
 EXTERN
 SCIP_Bool SCIPisReoptEnabled(
-   SCIP*                 scip                     /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* returns the stored solutions corresponding to a given run */
+/** returns the stored solutions corresponding to a given run */
 EXTERN
 SCIP_RETCODE SCIPgetReopSolsRun(
-   SCIP*                 scip,                    /**< SCIP data structue */
-   int                   run,                     /**< number of the run */
-   SCIP_SOL**            sols,                    /**< array to store solutions */
-   int                   allocmem,                /**< allocated size of the array */
-   int*                  nsols                    /**< number of solutions */
+   SCIP*                 scip,               /**< SCIP data structue */
+   int                   run,                /**< number of the run */
+   SCIP_SOL**            sols,               /**< array to store solutions */
+   int                   allocmem,           /**< allocated size of the array */
+   int*                  nsols               /**< number of solutions */
    );
 
-/* mark all stored solutions as not updated */
+/** mark all stored solutions as not updated */
 EXTERN
 void SCIPresetReoptSolMarks(
-   SCIP*                 scip                     /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** check if the reoptimization process should be restarted */
+/** check if the reoptimization process should be restarted
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPcheckReoptRestart(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node,                    /**< current node of the branch and bound tree (or NULL) */
-   SCIP_Bool*            restart                  /**< pointer to store of the reoptimitation process should be restarted */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< current node of the branch and bound tree (or NULL) */
+   SCIP_Bool*            restart             /**< pointer to store of the reoptimitation process should be restarted */
    );
 
 /** save bound change based on dual information in the reoptimization tree
@@ -6270,25 +6306,34 @@ SCIP_RETCODE SCIPcheckReoptRestart(
  */
 EXTERN
 SCIP_RETCODE SCIPaddReoptDualBndchg(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node,                    /**< node of the search tree */
-   SCIP_VAR*             var,                     /**< variable whose bound changed */
-   SCIP_Real             newbound,                /**< new bound of the variable */
-   SCIP_Real             oldbound                 /**< old bound of the variable */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< node of the search tree */
+   SCIP_VAR*             var,                /**< variable whose bound changed */
+   SCIP_Real             newbound,           /**< new bound of the variable */
+   SCIP_Real             oldbound            /**< old bound of the variable */
    );
 
-/* returns the optimal solution of the last iteration or NULL of none exists */
+/** returns the optimal solution of the last iteration or NULL of none exists */
 EXTERN
 SCIP_SOL* SCIPgetReoptLastOptSol(
-   SCIP*                 scip                     /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
-/* returns the objective coefficent of a given variable in a previous iteration */
+/** returns the objective coefficent of a given variable in a previous iteration
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
-SCIP_Real SCIPgetReoptOldObjCoef(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_VAR*             var,                     /**< variable */
-   int                   run                      /**< number of the run */
+SCIP_RETCODE SCIPgetReoptOldObjCoef(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable */
+   int                   run,                /**< number of the run */
+   SCIP_Real*            objcoef             /**< pointer to store the objective coefficient */
    );
 
 /** returns whether we are in the restarting phase
@@ -8690,8 +8735,29 @@ EXTERN
 SCIP_RETCODE SCIPwriteCliqueGraph(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           fname,              /**< name of file */
-   SCIP_Bool             writeimplications,  /**< should we write the binary implications? */
    SCIP_Bool             writenodeweights    /**< should we write weights of nodes? */
+   );
+
+/** Removes (irrelevant) variable from all its global structures, i.e. cliques, implications and variable bounds.
+ *  This is an advanced method which should be used with care.
+ *
+ *  @return SCIP_OKAY if everything worked, otherwise a suitable error code is passed
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+SCIP_RETCODE SCIPremoveVarFromGlobalStructures(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to remove from global structures */
    );
 
 /** sets the branch factor of the variable; this value can be used in the branching methods to scale the score
@@ -9603,6 +9669,36 @@ SCIP_RETCODE SCIPinitVarBranchStats(
    SCIP_VAR*             var,                /**< variable which should be initialized */
    SCIP_Real             downpscost,         /**< value to which pseudocosts for downwards branching should be initialized */
    SCIP_Real             uppscost,           /**< value to which pseudocosts for upwards branching should be initialized */
+   SCIP_Real             downvsids,          /**< value to which VSIDS score for downwards branching should be initialized */
+   SCIP_Real             upvsids,            /**< value to which VSIDS score for upwards branching should be initialized */
+   SCIP_Real             downconflen,        /**< value to which conflict length score for downwards branching should be initialized */
+   SCIP_Real             upconflen,          /**< value to which conflict length score for upwards branching should be initialized */
+   SCIP_Real             downinfer,          /**< value to which inference counter for downwards branching should be initialized */
+   SCIP_Real             upinfer,            /**< value to which inference counter for upwards branching should be initialized */
+   SCIP_Real             downcutoff,         /**< value to which cutoff counter for downwards branching should be initialized */
+   SCIP_Real             upcutoff            /**< value to which cutoff counter for upwards branching should be initialized */
+   );
+
+/** initializes the upwards and downwards conflict scores, conflict lengths, inference scores, cutoff scores of a
+ *  variable w.r.t. a value by the given values (SCIP_VALUEHISTORY)
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPinitVarValueBranchStats(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var,                /**< variable which should be initialized */
+   SCIP_Real             value,              /**< domain value, or SCIP_UNKNOWN */
    SCIP_Real             downvsids,          /**< value to which VSIDS score for downwards branching should be initialized */
    SCIP_Real             upvsids,            /**< value to which VSIDS score for upwards branching should be initialized */
    SCIP_Real             downconflen,        /**< value to which conflict length score for downwards branching should be initialized */
@@ -14923,8 +15019,8 @@ void SCIPupdateDivesetStats(
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
    int                   nprobingnodes,      /**< the number of probing nodes explored this time */
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
-   int                   nsolsfound,         /**< the number of solutions found */
-   int                   nbestsolsfound,     /**< the number of best solutions found */
+   SCIP_Longint          nsolsfound,         /**< the number of solutions found */
+   SCIP_Longint          nbestsolsfound,     /**< the number of best solutions found */
    SCIP_Bool             leavewassol         /**< was a solution found at the leaf? */
    );
 
@@ -17087,7 +17183,7 @@ SCIP_NODE* SCIPgetRootNode(
  */
 EXTERN
 int SCIPgetEffectiveRootDepth(
-   SCIP*                scip                /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
    );
 
 /** returns whether the current node is already solved and only propagated again
@@ -17377,12 +17473,6 @@ void SCIPsetFocusnodeLP(
 /**@name Reoptimization Methods */
 /**@{ */
 
-/* disable all techniques performing dual reductions */
-EXTERN
-SCIP_RETCODE SCIPdisableAllDualTechniques(
-   SCIP*                 scip                     /**< SCIP data structure */
-   );
-
 /** return the ids of child nodes stored in the reoptimization tree
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -17395,45 +17485,54 @@ SCIP_RETCODE SCIPdisableAllDualTechniques(
  */
 EXTERN
 SCIP_RETCODE SCIPgetReoptChildIDs(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node,                    /**< node of the search tree */
-   unsigned int*         ids,                     /**< array to store the ids of child nodes */
-   int                   mem,                     /**< allocated memory */
-   int*                  nids                     /**< number of child nodes */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< node of the search tree */
+   unsigned int*         ids,                /**< array to store the ids of child nodes */
+   int                   mem,                /**< allocated memory */
+   int*                  nids                /**< number of child nodes */
    );
 
-/** eturn the ids of leaf nodes store in the reoptimization tree induced by the given node */
+/** return the ids of all leave nodes store in the reoptimization tree induced by the given node
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
 EXTERN
 SCIP_RETCODE SCIPgetReoptLeaveIDs(
-   SCIP*                 scip,                    /**< SCIP data strcuture */
-   SCIP_NODE*            node,                    /**< node of the search tree */
-   unsigned int*         ids,                     /**< array of ids */
-   int                   mem,                     /**< allocated memory */
-   int*                  nids                     /**< number of child nodes */
+   SCIP*                 scip,               /**< SCIP data strcuture */
+   SCIP_NODE*            node,               /**< node of the search tree */
+   unsigned int*         ids,                /**< array of ids */
+   int                   mem,                /**< allocated memory */
+   int*                  nids                /**< number of child nodes */
    );
 
-/** returns the number of nodes in the reoptimization tree induced by @param node. if @param node == NULL, the method
+/** returns the number of nodes in the reoptimization tree induced by @p node. if @p node == NULL, the method
  *  method returns the number of nodes of the whole reoptimization tree.
  */
 EXTERN
 int SCIPgetNReoptnodes(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node                     /**< node of the search tree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node                /**< node of the search tree */
    );
 
-/** returns the number of leave nodes of the subtree induced by @param node. if @param node == NULL, the method
+/** returns the number of leave nodes of the subtree induced by @p node. if @p node == NULL, the method
  *  method returns the number of leaf nodes of the whole reoptimization tree.
  */
 EXTERN
 int SCIPgetNReoptLeaves(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node                     /**< node of the search tree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node                /**< node of the search tree */
    );
 
-/** gets the node of the reoptimization tree corresponding to the unique @param id */
+/** gets the node of the reoptimization tree corresponding to the unique @p id */
 SCIP_REOPTNODE* SCIPgetReoptnode(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   unsigned int          id                       /**< unique id */
+   SCIP*                 scip,               /**< SCIP data structure */
+   unsigned int          id                  /**< unique id */
    );
 
 /** add a variable bound change to a given reoptnode
@@ -17448,14 +17547,14 @@ SCIP_REOPTNODE* SCIPgetReoptnode(
  */
 EXTERN
 SCIP_RETCODE SCIPaddReoptnodeBndchg(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE*       reoptnode,               /**< node of the reoptimization tree */
-   SCIP_VAR*             var,                     /**< variable pointer */
-   SCIP_Real             val,                     /**< value of the variable */
-   SCIP_BOUNDTYPE        boundtype                /**< bound type of the variable value */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
+   SCIP_VAR*             var,                /**< variable pointer */
+   SCIP_Real             val,                /**< value of the variable */
+   SCIP_BOUNDTYPE        boundtype           /**< bound type of the variable value */
    );
 
-/** set the @param representation as the new search frontier
+/** set the @p representation as the new search frontier
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -17465,10 +17564,10 @@ SCIP_RETCODE SCIPaddReoptnodeBndchg(
  */
 EXTERN
 SCIP_RETCODE SCIPsetReoptCompression(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE**      representation,          /**< array of representatives */
-   int                   nrepresentatives,        /**< number of representatives */
-   SCIP_Bool*            success                  /**< pointer to store the result */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE**      representation,     /**< array of representatives */
+   int                   nrepresentatives,   /**< number of representatives */
+   SCIP_Bool*            success             /**< pointer to store the result */
    );
 
 /** add stored constraint to a reoptimization node
@@ -17481,33 +17580,69 @@ SCIP_RETCODE SCIPsetReoptCompression(
  */
 EXTERN
 SCIP_RETCODE SCIPaddReoptnodeCons(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE*       reoptnode,               /**< node of the reoptimization tree */
-   SCIP_VAR**            vars,                    /**< array of variables */
-   SCIP_Real*            vals,                    /**< array of variable bounds */
-   int                   nvars,                   /**< number of variables */
-   REOPT_CONSTYPE        constype                 /**< type of the constraint */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_Real*            vals,               /**< array of variable bounds */
+   int                   nvars,              /**< number of variables */
+   REOPT_CONSTYPE        constype            /**< type of the constraint */
    );
 
-/* return the branching path stored in the reoptree at ID id */
+/** return the branching path stored in the reoptree at ID id */
 EXTERN
 void SCIPgetReoptnodePath(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE*       reoptnode,               /**< node of the reoptimization tree */
-   SCIP_VAR**            vars,                    /**< array of variables */
-   SCIP_Real*            vals,                    /**< array of variable bounds */
-   SCIP_BOUNDTYPE*       boundtypes,              /**< array of bound types */
-   int                   mem,                     /**< allocated memory */
-   int*                  nvars,                   /**< number of variables */
-   int*                  nafterdualvars           /**< number of variables directly after the first based on dual information */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
+   SCIP_VAR**            vars,               /**< array of variables */
+   SCIP_Real*            vals,               /**< array of variable bounds */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of bound types */
+   int                   mem,                /**< allocated memory */
+   int*                  nvars,              /**< number of variables */
+   int*                  nafterdualvars      /**< number of variables directly after the first based on dual information */
    );
 
-/* initialite an empty reoptnode */
+/** initialize a set of empty reoptimization nodes
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ */
 EXTERN
-SCIP_RETCODE SCIPinitilizeRepresentation(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE**      representatives,         /**< array of representatives */
-   int                   nrepresentatives         /**< number of represenatived */
+SCIP_RETCODE SCIPinitRepresentation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE**      representatives,    /**< array of representatives */
+   int                   nrepresentatives    /**< number of representatives */
+   );
+
+/** reset a set of initialized reoptimization nodes
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ */
+SCIP_RETCODE SCIPresetRepresentation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE**      representatives,    /**< array of representatives */
+   int                   nrepresentatives    /**< number of representatives */
+   );
+
+/** free a set of initialized reoptimization nodes
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVED
+ */
+EXTERN
+SCIP_RETCODE SCIPfreeRepresentation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE**      representatives,    /**< array of representatives */
+   int                   nrepresentatives    /**< number of representatives */
    );
 
 /** reactivate the given @p reoptnode and split them into several nodes if necessary
@@ -17519,17 +17654,17 @@ SCIP_RETCODE SCIPinitilizeRepresentation(
  *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
+EXTERN
 SCIP_RETCODE SCIPapplyReopt(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE*       reoptnode,               /**< node to reactivate */
-   unsigned int          id,                      /**< unique id of the reoptimization node */
-   SCIP_Real             estimate,                /**< estimate of the child nodes that should be created */
-   SCIP_Real             lowerbound,              /**< lowerbound of the current focusnode */
-   SCIP_NODE**           childnodes,              /**< array to store the created child nodes */
-   int*                  ncreatedchilds,          /**< pointer to store number of created child nodes */
-   int*                  naddedconss,             /**< pointer to store number of generated constraints */
-   int                   childnodessize,          /**< available size of childnodes array */
-   SCIP_Bool*            success                  /**< pointer store the result*/
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE*       reoptnode,          /**< node to reactivate */
+   unsigned int          id,                 /**< unique id of the reoptimization node */
+   SCIP_Real             estimate,           /**< estimate of the child nodes that should be created */
+   SCIP_NODE**           childnodes,         /**< array to store the created child nodes */
+   int*                  ncreatedchilds,     /**< pointer to store number of created child nodes */
+   int*                  naddedconss,        /**< pointer to store number of generated constraints */
+   int                   childnodessize,     /**< available size of childnodes array */
+   SCIP_Bool*            success             /**< pointer store the result*/
    );
 
 /** remove the stored information about bound changes based in dual information
@@ -17543,8 +17678,8 @@ SCIP_RETCODE SCIPapplyReopt(
  */
 EXTERN
 SCIP_RETCODE SCIPresetReoptnodeDualcons(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node                     /**< node of the search tree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node                /**< node of the search tree */
    );
 
 /** splits the root into several nodes and moves the child nodes of the root to one of the created nodes
@@ -17553,44 +17688,53 @@ SCIP_RETCODE SCIPresetReoptnodeDualcons(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_SOLVING
  */
+EXTERN
 SCIP_RETCODE SCIPsplitReoptRoot(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   int*                  ncreatedchilds,          /**< pointer to store the number of created nodes */
-   int*                  naddedconss              /**< pointer to store the number added constraints */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int*                  ncreatedchilds,     /**< pointer to store the number of created nodes */
+   int*                  naddedconss         /**< pointer to store the number added constraints */
    );
 
 /** returns if a node should be reoptimized */
 EXTERN
 SCIP_Bool SCIPreoptimizeNode(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_NODE*            node                     /**< node of the search tree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node                /**< node of the search tree */
    );
 
-/** deletes the given reoptimization node */
+/** deletes the given reoptimization node
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
 EXTERN
 SCIP_RETCODE SCIPdeleteReoptnode(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_REOPTNODE**      reoptnode                /**< node of the reoptimization tree */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_REOPTNODE**      reoptnode           /**< node of the reoptimization tree */
    );
 
 /** return the similarity between two objective functions */
 EXTERN
 SCIP_Real SCIPgetReoptSimilarity(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   int                   run1,                    /**< number of run */
-   int                   run2                     /**< number of run */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   run1,               /**< number of run */
+   int                   run2                /**< number of run */
    );
 
-/* check the changes of teh variable coefficient in the objective function */
+/** check the changes of teh variable coefficient in the objective function */
 EXTERN
 void SCIPgetVarCoefChg(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   int                   varidx,                  /**< index of variable */
-   SCIP_Bool*            negated,                 /**< coefficient changed the sign */
-   SCIP_Bool*            entering,                /**< coefficient gets non-zero coefficient */
-   SCIP_Bool*            leaving                  /**< coefficient gets zero coefficient */
+   SCIP*                 scip,               /**< SCIP data structure */
+   int                   varidx,             /**< index of variable */
+   SCIP_Bool*            negated,            /**< coefficient changed the sign */
+   SCIP_Bool*            entering,           /**< coefficient gets non-zero coefficient */
+   SCIP_Bool*            leaving             /**< coefficient gets zero coefficient */
    );
 
 /*
@@ -19040,6 +19184,14 @@ SCIP_RETCODE SCIPprintStatistics(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_INIT
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
  *       - \ref SCIP_STAGE_SOLVED
  */
 EXTERN

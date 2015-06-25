@@ -333,7 +333,7 @@ SCIP_RETCODE SCIPincludeBranchruleRandom(
    SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextRandom) );
    SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsRandom) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "branching/"BRANCHRULE_NAME"/seed", "initial random seed value",
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/" BRANCHRULE_NAME "/seed", "initial random seed value",
          &branchruledata->initseed, FALSE, DEFAULT_INITSEED, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;

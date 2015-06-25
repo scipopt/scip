@@ -288,6 +288,7 @@ $end
 --------------------------------------------------------------------------
 */
 
+# include <cstddef>
 # include <cppad/local/cppad_assert.hpp>
 # include <cppad/check_simple_vector.hpp>
 # include <cppad/check_numeric_type.hpp>

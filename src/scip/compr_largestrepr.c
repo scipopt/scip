@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -42,19 +42,19 @@
 struct SCIP_ComprData
 {
    /* representative data */
-   SCIP_REOPTNODE**      representatives;         /**< list of representatives */
-   int                   nrepresentatives;        /**< number of representatives */
-   int                   representativessize;            /**< allocated memory for representatives */
-   SCIP_Bool             initialized;             /**< was compressor data initialized? */
+   SCIP_REOPTNODE**      representatives;    /**< list of representatives */
+   int                   nrepresentatives;   /**< number of representatives */
+   int                   representativessize;/**< allocated memory for representatives */
+   SCIP_Bool             initialized;        /**< was compressor data initialized? */
 
    /* statictics */
-   SCIP_Real             rate;                    /**< rate of compression */
-   SCIP_Real             loi;                     /**< loss of information */
-   int                   nnodes;                  /**< number of nodes after compressing */
+   SCIP_Real             rate;               /**< rate of compression */
+   SCIP_Real             loi;                /**< loss of information */
+   int                   nnodes;             /**< number of nodes after compressing */
 
    /* parameters */
-   int                   mincomvars;              /**< minimal number of common variables */
-   int                   niters;                  /**< number of runs in the constrained part */
+   int                   mincomvars;         /**< minimal number of common variables */
+   int                   niters;             /**< number of runs in the constrained part */
 };
 
 
@@ -62,17 +62,16 @@ struct SCIP_ComprData
  * Local methods
  */
 
-/**
- * calculate a signature of variables fixed to 0 and 1 by using binary shift
- * and or operations. we calculate the signature on the basis of SCIPvarGetProbindex() % 64
+/** calculate a signature of variables fixed to 0 and 1 by using binary shift
+ *  and or operations. we calculate the signature on the basis of SCIPvarGetProbindex() % 64
  */
 static
 void calcSignature(
-   SCIP_VAR**            vars,                    /**< variable array */
-   SCIP_Real*            vals,                    /**< value array */
-   int                   nvars,                   /**< number of variables */
-   SCIP_Longint*         signature0,              /**< pointer to store the signatures of variables fixed to 0 */
-   SCIP_Longint*         signature1               /**< pointer to store the signatures of variables fixed to 1 */
+   SCIP_VAR**            vars,               /**< variable array */
+   SCIP_Real*            vals,               /**< value array */
+   int                   nvars,              /**< number of variables */
+   SCIP_Longint*         signature0,         /**< pointer to store the signatures of variables fixed to 0 */
+   SCIP_Longint*         signature1          /**< pointer to store the signatures of variables fixed to 1 */
    )
 {
    int v;
@@ -91,22 +90,21 @@ void calcSignature(
    return;
 }
 
-/**
- * try to find a representation of the current search frontier.
+/** try to find a representation of the current search frontier.
  *
- * we use the signatures of variables fixed to 0 and 1 to decide if there is
- * definitely no intersection or if the intersection is potentially non-empty.
+ *  We use the signatures of variables fixed to 0 and 1 to decide if there is
+ *  definitely no intersection or if the intersection is potentially non-empty.
  *
- * to find a good representation we start the procedure with a node and choose the best one.
- * the heuristic tries to find a representation of size 2 in each iteration, i.e., runs in the
- * constrained part.
+ *  To find a good representation we start the procedure with a node and choose the best one.
+ *  the heuristic tries to find a representation of size 2 in each iteration, i.e., runs in the
+ *  constrained part.
  */
 static
 SCIP_RETCODE constructCompression(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_COMPR*           compr,                   /**< compression method */
-   SCIP_COMPRDATA*       comprdata,               /**< compression data */
-   SCIP_RESULT*          result                   /**< result pointer */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COMPR*           compr,              /**< compression method */
+   SCIP_COMPRDATA*       comprdata,          /**< compression data */
+   SCIP_RESULT*          result              /**< result pointer */
    )
 {
    SCIP_NODE* currentnode;
@@ -197,7 +195,7 @@ SCIP_RETCODE constructCompression(
 
    for( start_id = 0; start_id < nleaveids; start_id++ )
    {
-      nreps = 0;
+      nreps = -1;
       loi = 0.0;
 
       /* initialize the covered-array with FALSE */
@@ -217,7 +215,7 @@ SCIP_RETCODE constructCompression(
 
       /* try to find common representatives */
       while( nreps-1 <= comprdata->niters
-          && (nreps == 0 || (current_id % nleaveids) != start_id) )
+          && (nreps == -1 || (current_id % nleaveids) != start_id) )
       {
          int* idx_common_vars;
          int* idx_non_zero;
@@ -230,13 +228,16 @@ SCIP_RETCODE constructCompression(
          int v;
 
          /* find the first id which is not covered */
-         while( covered[current_id % nleaveids] && (nreps == 0 || (current_id % nleaveids) != start_id) )
+         while( covered[current_id % nleaveids] && (nreps == -1 || (current_id % nleaveids) != start_id) )
             current_id++;
 
          current_id %= nleaveids;
 
-         if( nreps != 0 && current_id == start_id )
+         if( nreps > 0 && current_id == start_id )
             goto TERMINATE;
+
+         /* if the this is the fist round with a new start_id we set the number of representatives to 0 */
+         nreps = MAX(0, nreps);
 
          nnemptyinters = 0;
 
@@ -415,7 +416,7 @@ SCIP_RETCODE constructCompression(
 
      TERMINATE:
 
-      /** add the number of variables of uncovered nodes to the loss of information */
+      /* add the number of variables of uncovered nodes to the loss of information */
       for( k = 0; k < nleaveids; k++ )
       {
          if( !covered[k] )
@@ -424,43 +425,46 @@ SCIP_RETCODE constructCompression(
 
       SCIPdebugMessage("-> final representation is of size %d with loi = %.1f\n", nreps, loi);
 
-      /* we found a better representation, i.e., with less loss of information */
+      /* We found a better representation, i.e., with less loss of information.
+       * 1. reset the previous represenation
+       * 2. check if we need to reallocate the memory
+       * 3. set the new representation
+       */
       if( SCIPisFeasLT(scip, loi, comprdata->loi) )
       {
-         comprdata->loi = loi;
-         comprdata->nrepresentatives = nreps;
+         /* reset the current representation */
+         SCIP_CALL( SCIPresetRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives) );
 
          /* ensure that enough memory is allocated */
          if( comprdata->representativessize < nreps )
          {
+            /* free the representatoin */
+            SCIP_CALL( SCIPfreeRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives) );
+
+            /* reallocate memory */
             SCIP_CALL( SCIPreallocMemoryArray(scip, &comprdata->representatives, nreps) );
             comprdata->representativessize = nreps;
+
+            /* initialize the representation */
+            SCIP_CALL( SCIPinitRepresentation(scip, comprdata->representatives, comprdata->representativessize) );
          }
 
-         for( k = 0; k < comprdata->niters+2; k++ )
+         /* set the new representation
+          *
+          * copy the new representation. we skip the last representative because it is implicitly given by the union of
+          * the logic-or constraints of all previous representatives.
+          */
+         comprdata->loi = loi;
+         comprdata->nrepresentatives = nreps;
+
+         for( k = 0; k < nreps-1; k++ )
          {
-            /* clear the old representation */
-            if( comprdata->representatives[k] != NULL )
+            int v;
+
+            for( v = 0; v < nrepvars[k]; v++ )
             {
-               SCIPfreeMemory(scip, &comprdata->representatives[k]);
-               comprdata->representatives[k] = NULL;
-            }
-
-            /* copy the new representation. we skip the last representative because it is
-             * implicitly given by the union of the logic-or constraints of all previous
-             * representatives. */
-            if( k < nreps-1 )
-            {
-               int v;
-
-               /* allocate memory for representative */
-               SCIP_CALL( SCIPinitilizeRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives) );
-
-               for( v = 0; v < nrepvars[k]; v++ )
-               {
-                  SCIP_CALL( SCIPaddReoptnodeBndchg(scip, comprdata->representatives[k], repvars[k][v],
-                        repvals[k][v], repvals[k][v] == 0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER) );
-               }
+               SCIP_CALL( SCIPaddReoptnodeBndchg(scip, comprdata->representatives[k], repvars[k][v],
+                     repvals[k][v], repvals[k][v] == 0 ? SCIP_BOUNDTYPE_UPPER : SCIP_BOUNDTYPE_LOWER) );
             }
          }
 
@@ -547,15 +551,13 @@ SCIP_RETCODE constructCompression(
    return SCIP_OKAY;
 }
 
-/**
- * apply the found representation to the reopttree.
- */
+/** apply the found representation to the reopttree. */
 static
 SCIP_RETCODE applyCompression(
-   SCIP*                 scip,                    /**< SCIP data structure */
-   SCIP_COMPR*           compr,                   /**< compression method */
-   SCIP_COMPRDATA*       comprdata,               /**< compression data */
-   SCIP_RESULT*          result                   /**< result pointer */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_COMPR*           compr,              /**< compression method */
+   SCIP_COMPRDATA*       comprdata,          /**< compression data */
+   SCIP_RESULT*          result              /**< result pointer */
    )
 {
    SCIP_Bool success;
@@ -576,6 +578,8 @@ SCIP_RETCODE applyCompression(
 
    success = FALSE;
    SCIP_CALL( SCIPsetReoptCompression(scip, comprdata->representatives, comprdata->nrepresentatives, &success) );
+
+   SCIP_CALL( SCIPfreeRepresentation(scip, comprdata->representatives, comprdata->representativessize) );
 
    if( success )
       *result = SCIP_SUCCESS;
@@ -619,13 +623,6 @@ SCIP_DECL_COMPREXIT(comprExitLargestrepr)
 
    if( comprdata->initialized )
    {
-      int r;
-
-      for( r = 0; r < comprdata->nrepresentatives; r++ )
-      {
-         SCIP_CALL( SCIPdeleteReoptnode(scip, &comprdata->representatives[r]) );
-      }
-
       if( comprdata->representativessize > 0 )
       {
          SCIPfreeMemoryArray(scip, &comprdata->representatives);
@@ -659,8 +656,14 @@ SCIP_DECL_COMPREXEC(comprExecLargestrepr)
       comprdata->loi = SCIPinfinity(scip);
       comprdata->nnodes = 0;
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &comprdata->representatives, comprdata->representativessize) );
+
+      /* initialize the representation */
+      SCIP_CALL( SCIPinitRepresentation(scip, comprdata->representatives, comprdata->representativessize) );
+
       comprdata->initialized = TRUE;
    }
+
+   *result = SCIP_DIDNOTRUN;
 
    /* try to find a representation */
    SCIP_CALL( constructCompression(scip, compr, comprdata, result) );

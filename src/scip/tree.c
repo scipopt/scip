@@ -238,7 +238,7 @@ SCIP_RETCODE SCIPnodeCaptureLPIState(
 {
    assert(node != NULL);
 
-   SCIPdebugMessage("capture %d times LPI state of node #%"SCIP_LONGINT_FORMAT" at depth %d (current: %d)\n",
+   SCIPdebugMessage("capture %d times LPI state of node #%" SCIP_LONGINT_FORMAT " at depth %d (current: %d)\n",
       nuses, SCIPnodeGetNumber(node), SCIPnodeGetDepth(node),
       SCIPnodeGetType(node) == SCIP_NODETYPE_FORK ? node->data.fork->nlpistateref : node->data.subroot->nlpistateref);
 
@@ -267,7 +267,7 @@ SCIP_RETCODE SCIPnodeReleaseLPIState(
 {
    assert(node != NULL);
 
-   SCIPdebugMessage("release LPI state of node #%"SCIP_LONGINT_FORMAT" at depth %d (current: %d)\n",
+   SCIPdebugMessage("release LPI state of node #%" SCIP_LONGINT_FORMAT " at depth %d (current: %d)\n",
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node),
       SCIPnodeGetType(node) == SCIP_NODETYPE_FORK ? node->data.fork->nlpistateref : node->data.subroot->nlpistateref);
    switch( SCIPnodeGetType(node) )
@@ -792,7 +792,7 @@ SCIP_RETCODE nodeAssignParent(
          return SCIP_MAXDEPTHLEVEL;
       }
    }
-   SCIPdebugMessage("assigning parent #%"SCIP_LONGINT_FORMAT" to node #%"SCIP_LONGINT_FORMAT" at depth %d\n",
+   SCIPdebugMessage("assigning parent #%" SCIP_LONGINT_FORMAT " to node #%" SCIP_LONGINT_FORMAT " at depth %d\n",
       parent != NULL ? SCIPnodeGetNumber(parent) : -1, SCIPnodeGetNumber(node), SCIPnodeGetDepth(node));
 
    /* register node in the childlist of the focus (the parent) node */
@@ -823,7 +823,7 @@ SCIP_RETCODE nodeReleaseParent(
    assert(blkmem != NULL);
    assert(tree != NULL);
 
-   SCIPdebugMessage("releasing parent-child relationship of node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d with parent #%"SCIP_LONGINT_FORMAT" of type %d\n",
+   SCIPdebugMessage("releasing parent-child relationship of node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d with parent #%" SCIP_LONGINT_FORMAT " of type %d\n",
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), 
       node->parent != NULL ? SCIPnodeGetNumber(node->parent) : -1,
       node->parent != NULL ? (int)SCIPnodeGetType(node->parent) : -1);
@@ -914,7 +914,7 @@ SCIP_RETCODE nodeReleaseParent(
       if( singleChild && SCIPnodeGetDepth(parent) == tree->effectiverootdepth && !set->reopt_enable )
       {
          tree->effectiverootdepth++;
-         SCIPdebugMessage("unlinked node #%"SCIP_LONGINT_FORMAT" in depth %d -> new effective root depth: %d\n", 
+         SCIPdebugMessage("unlinked node #%" SCIP_LONGINT_FORMAT " in depth %d -> new effective root depth: %d\n",
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->effectiverootdepth);
       }
    }
@@ -939,8 +939,8 @@ SCIP_RETCODE nodeCreate(
    (*node)->number = 0;
    (*node)->lowerbound = -SCIPsetInfinity(set);
    (*node)->estimate = -SCIPsetInfinity(set);
-   (*node)->reoptid = 0,
-   (*node)->reopttype = SCIP_REOPTTYPE_NONE,
+   (*node)->reoptid = 0;
+   (*node)->reopttype = (unsigned int) SCIP_REOPTTYPE_NONE;
    (*node)->depth = 0;
    (*node)->active = FALSE;
    (*node)->cutoff = FALSE;
@@ -993,7 +993,7 @@ SCIP_RETCODE SCIPnodeCreateChild(
    SCIP_CALL( SCIPvisualNewChild(stat->visual, set, stat, *node) );
 
 
-   SCIPdebugMessage("created child node #%"SCIP_LONGINT_FORMAT" at depth %u (prio: %g)\n",
+   SCIPdebugMessage("created child node #%" SCIP_LONGINT_FORMAT " at depth %u (prio: %g)\n",
       SCIPnodeGetNumber(*node), (*node)->depth, nodeselprio);
 
    return SCIP_OKAY;
@@ -1018,7 +1018,7 @@ SCIP_RETCODE SCIPnodeFree(
    assert(blkmem != NULL);
    assert(tree != NULL);
 
-   SCIPdebugMessage("free node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d\n",
+   SCIPdebugMessage("free node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d\n",
       SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node), SCIPnodeGetType(*node));
 
    /* inform solution debugger, that the node has been freed */
@@ -1155,7 +1155,7 @@ SCIP_RETCODE SCIPnodeCutoff(
             tree->root == node, tree->focusnode == node, oldlowerbound, tree->effectiverootdepth) );
    }
 
-   SCIPdebugMessage("cutting off %s node #%"SCIP_LONGINT_FORMAT" at depth %d (cutoffdepth: %d)\n",
+   SCIPdebugMessage("cutting off %s node #%" SCIP_LONGINT_FORMAT " at depth %d (cutoffdepth: %d)\n",
       node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->cutoffdepth);
 
    return SCIP_OKAY;
@@ -1182,7 +1182,7 @@ void SCIPnodePropagateAgain(
 
       SCIPvisualMarkedRepropagateNode(stat->visual, stat, node);
 
-      SCIPdebugMessage("marked %s node #%"SCIP_LONGINT_FORMAT" at depth %d to be propagated again (repropdepth: %d)\n", 
+      SCIPdebugMessage("marked %s node #%" SCIP_LONGINT_FORMAT " at depth %d to be propagated again (repropdepth: %d)\n",
          node->active ? "active" : "inactive", SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), tree->repropdepth);
    }
 }
@@ -1275,7 +1275,7 @@ SCIP_RETCODE nodeRepropagate(
    assert(SCIPeventqueueIsDelayed(eventqueue));
    assert(cutoff != NULL);
 
-   SCIPdebugMessage("propagating again node #%"SCIP_LONGINT_FORMAT" at depth %d\n", 
+   SCIPdebugMessage("propagating again node #%" SCIP_LONGINT_FORMAT " at depth %d\n",
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node));
    initialreprop = node->reprop;
 
@@ -1330,7 +1330,7 @@ SCIP_RETCODE nodeRepropagate(
    if( *cutoff )
       stat->nrepropcutoffs++;
 
-   SCIPdebugMessage("repropagation %"SCIP_LONGINT_FORMAT" at depth %u changed %"SCIP_LONGINT_FORMAT" bounds (total reprop bound changes: %"SCIP_LONGINT_FORMAT"), cutoff: %u\n",
+   SCIPdebugMessage("repropagation %" SCIP_LONGINT_FORMAT " at depth %u changed %" SCIP_LONGINT_FORMAT " bounds (total reprop bound changes: %" SCIP_LONGINT_FORMAT "), cutoff: %u\n",
       stat->nreprops, node->depth, stat->nboundchgs - oldnboundchgs, stat->nrepropboundchgs, *cutoff);
 
    /* if a propagation marked with the reprop flag was successful, we want to repropagate the whole subtree */
@@ -1342,7 +1342,7 @@ SCIP_RETCODE nodeRepropagate(
    {
       treeNextRepropsubtreecount(tree);
       node->repropsubtreemark = tree->repropsubtreecount; /*lint !e732*/
-      SCIPdebugMessage("initial repropagation at depth %u changed %"SCIP_LONGINT_FORMAT" bounds -> repropagating subtree (new mark: %d)\n",
+      SCIPdebugMessage("initial repropagation at depth %u changed %" SCIP_LONGINT_FORMAT " bounds -> repropagating subtree (new mark: %d)\n",
          node->depth, stat->nboundchgs - oldnboundchgs, tree->repropsubtreecount);
       assert((int)(node->repropsubtreemark) == tree->repropsubtreecount); /* bitfield must be large enough */
    }
@@ -1408,7 +1408,7 @@ SCIP_RETCODE nodeActivate(
    assert(!SCIPtreeProbing(tree));
    assert(cutoff != NULL);
 
-   SCIPdebugMessage("activate node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d (reprop subtree mark: %u)\n",
+   SCIPdebugMessage("activate node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d (reprop subtree mark: %u)\n",
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), node->repropsubtreemark);
 
    /* apply domain and constraint set changes */
@@ -1469,7 +1469,7 @@ SCIP_RETCODE nodeDeactivate(
    assert(tree != NULL);
    assert(SCIPnodeGetType(node) != SCIP_NODETYPE_FOCUSNODE);
 
-   SCIPdebugMessage("deactivate node #%"SCIP_LONGINT_FORMAT" at depth %d of type %d  (reprop subtree mark: %u)\n",
+   SCIPdebugMessage("deactivate node #%" SCIP_LONGINT_FORMAT " at depth %d of type %d  (reprop subtree mark: %u)\n",
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetType(node), node->repropsubtreemark);
 
    /* undo domain and constraint set changes */
@@ -1593,10 +1593,10 @@ SCIP_RETCODE SCIPnodeDelCons(
 
 /** returns all constraints added to a given node */
 void SCIPnodeGetAddedConss(
-   SCIP_NODE*          node,                      /**< node */
-   SCIP_CONS**         addedconss,                /**< array to store the constraints */
-   int*                naddedconss,               /**< number of added constraints */
-   int                 addedconsssize             /**< size of the constraint array */
+   SCIP_NODE*            node,               /**< node */
+   SCIP_CONS**           addedconss,         /**< array to store the constraints */
+   int*                  naddedconss,        /**< number of added constraints */
+   int                   addedconsssize      /**< size of the constraint array */
    )
 {
    int cons;
@@ -1623,7 +1623,7 @@ void SCIPnodeGetAddedConss(
 
 /** returns the number of added constraints to the given node */
 int SCIPnodeGetNAddedConss(
-   SCIP_NODE*           node                      /**< node */
+   SCIP_NODE*            node                /**< node */
    )
 {
    assert(node != NULL);
@@ -2388,7 +2388,7 @@ SCIP_RETCODE SCIPnodePropagateImplics(
       || SCIPnodeGetType(node) == SCIP_NODETYPE_PROBINGNODE);
    assert(cutoff != NULL);
 
-   SCIPdebugMessage("implication graph propagation of node #%"SCIP_LONGINT_FORMAT" in depth %d\n",
+   SCIPdebugMessage("implication graph propagation of node #%" SCIP_LONGINT_FORMAT " in depth %d\n",
       SCIPnodeGetNumber(node), SCIPnodeGetDepth(node));
 
    *cutoff = FALSE;
@@ -3293,7 +3293,7 @@ SCIP_RETCODE SCIPtreeLoadLP(
    assert(lp != NULL);
    assert(initroot != NULL);
 
-   SCIPdebugMessage("load LP for current fork node #%"SCIP_LONGINT_FORMAT" at depth %d\n", 
+   SCIPdebugMessage("load LP for current fork node #%" SCIP_LONGINT_FORMAT " at depth %d\n",
       tree->focuslpfork == NULL ? -1 : SCIPnodeGetNumber(tree->focuslpfork),
       tree->focuslpfork == NULL ? -1 : SCIPnodeGetDepth(tree->focuslpfork));
    SCIPdebugMessage("-> old LP has %d cols and %d rows\n", SCIPlpGetNCols(lp), SCIPlpGetNRows(lp));
@@ -3422,7 +3422,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    assert(set != NULL);
    assert(lp != NULL);
 
-   SCIPdebugMessage("load LP state for current fork node #%"SCIP_LONGINT_FORMAT" at depth %d\n", 
+   SCIPdebugMessage("load LP state for current fork node #%" SCIP_LONGINT_FORMAT " at depth %d\n",
       tree->focuslpstatefork == NULL ? -1 : SCIPnodeGetNumber(tree->focuslpstatefork),
       tree->focuslpstatefork == NULL ? -1 : SCIPnodeGetDepth(tree->focuslpstatefork));
 
@@ -3527,7 +3527,7 @@ SCIP_RETCODE nodeToLeaf(
       || SCIPnodeGetType(lpstatefork) == SCIP_NODETYPE_SUBROOT);
 
    /* convert node into leaf */
-   SCIPdebugMessage("convert node #%"SCIP_LONGINT_FORMAT" at depth %d to leaf with lpstatefork #%"SCIP_LONGINT_FORMAT" at depth %d\n",
+   SCIPdebugMessage("convert node #%" SCIP_LONGINT_FORMAT " at depth %d to leaf with lpstatefork #%" SCIP_LONGINT_FORMAT " at depth %d\n",
       SCIPnodeGetNumber(*node), SCIPnodeGetDepth(*node),
       lpstatefork == NULL ? -1 : SCIPnodeGetNumber(lpstatefork),
       lpstatefork == NULL ? -1 : SCIPnodeGetDepth(lpstatefork));
@@ -3673,7 +3673,7 @@ SCIP_RETCODE focusnodeCleanupVars(
       }
    }
 
-   SCIPdebugMessage("delvars at node %"SCIP_LONGINT_FORMAT", deleted %d vars\n", stat->nnodes, ndelvars);
+   SCIPdebugMessage("delvars at node %" SCIP_LONGINT_FORMAT ", deleted %d vars\n", stat->nnodes, ndelvars);
 
    if( ndelvars > 0 )
    {
@@ -3707,7 +3707,7 @@ SCIP_RETCODE focusnodeToDeadend(
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
    assert(tree->nchildren == 0);
 
-   SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to dead-end at depth %d\n",
+   SCIPdebugMessage("focusnode #%" SCIP_LONGINT_FORMAT " to dead-end at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
    /* remove variables from the problem that are marked as deletable and were created at this node */
@@ -3744,7 +3744,7 @@ SCIP_RETCODE focusnodeToJunction(
    assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
    assert(SCIPlpGetNNewcols(lp) == 0);
 
-   SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to junction at depth %d\n",
+   SCIPdebugMessage("focusnode #%" SCIP_LONGINT_FORMAT " to junction at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
    /* convert node into junction */
@@ -3791,7 +3791,7 @@ SCIP_RETCODE focusnodeToPseudofork(
    assert(tree->nchildren > 0);
    assert(lp != NULL);
 
-   SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to pseudofork at depth %d\n",
+   SCIPdebugMessage("focusnode #%" SCIP_LONGINT_FORMAT " to pseudofork at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
    /* remove variables from the problem that are marked as deletable and were created at this node */
@@ -3847,7 +3847,7 @@ SCIP_RETCODE focusnodeToFork(
    assert(lp->flushed);
    assert(lp->solved || lp->resolvelperror);
 
-   SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to fork at depth %d\n",
+   SCIPdebugMessage("focusnode #%" SCIP_LONGINT_FORMAT " to fork at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
    /* usually, the LP should be solved to optimality; otherwise, numerical troubles occured,
@@ -3884,7 +3884,7 @@ SCIP_RETCODE focusnodeToFork(
    if( lperror || lp->resolvelperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %"SCIP_LONGINT_FORMAT") numerical troubles: LP %"SCIP_LONGINT_FORMAT" not optimal -- convert node into junction instead of fork\n",
+         "(node %" SCIP_LONGINT_FORMAT ") numerical troubles: LP %" SCIP_LONGINT_FORMAT " not optimal -- convert node into junction instead of fork\n",
          stat->nnodes, stat->nlps);
 
       /* remove all additions to the LP at this node */
@@ -3962,7 +3962,7 @@ SCIP_RETCODE focusnodeToSubroot(
    assert(lp->flushed);
    assert(lp->solved);
 
-   SCIPdebugMessage("focusnode #%"SCIP_LONGINT_FORMAT" to subroot at depth %d\n",
+   SCIPdebugMessage("focusnode #%" SCIP_LONGINT_FORMAT " to subroot at depth %d\n",
       SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
 
    /* usually, the LP should be solved to optimality; otherwise, numerical troubles occured,
@@ -4008,7 +4008,7 @@ SCIP_RETCODE focusnodeToSubroot(
    if( lperror || SCIPlpGetSolstat(lp) != SCIP_LPSOLSTAT_OPTIMAL )
    {
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-         "(node %"SCIP_LONGINT_FORMAT") numerical troubles: LP %"SCIP_LONGINT_FORMAT" not optimal -- convert node into junction instead of subroot\n",
+         "(node %" SCIP_LONGINT_FORMAT ") numerical troubles: LP %" SCIP_LONGINT_FORMAT " not optimal -- convert node into junction instead of subroot\n",
          stat->nnodes, stat->nlps);
 
       /* remove all additions to the LP at this node */
@@ -4168,7 +4168,7 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(lp != NULL);
    assert(cutoff != NULL);
 
-   SCIPdebugMessage("focusing node #%"SCIP_LONGINT_FORMAT" of type %d in depth %d\n",
+   SCIPdebugMessage("focusing node #%" SCIP_LONGINT_FORMAT " of type %d in depth %d\n",
       *node != NULL ? SCIPnodeGetNumber(*node) : -1, *node != NULL ? (int)SCIPnodeGetType(*node) : 0,
       *node != NULL ? SCIPnodeGetDepth(*node) : -1);
 
@@ -4562,9 +4562,9 @@ SCIP_RETCODE SCIPtreeCreate(
    /* allocate one slot for the prioritized and the unprioritized bound change */
    for( p = 0; p <= 1; ++p )
    {
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->divebdchgdirs[p], 1) );
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->divebdchgvars[p], 1) );
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->divebdchgvals[p], 1) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->divebdchgdirs[p], 1) ); /*lint !e866*/
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->divebdchgvars[p], 1) ); /*lint !e866*/
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*tree)->divebdchgvals[p], 1) ); /*lint !e866*/
       (*tree)->ndivebdchanges[p] = 0;
       (*tree)->divebdchgsize[p] = 1;
    }
@@ -4643,9 +4643,9 @@ SCIP_RETCODE SCIPtreeFree(
    /* free diving bound change storage */
    for( p = 0; p <= 1; ++p )
    {
-      BMSfreeBlockMemoryArray(blkmem, &(*tree)->divebdchgdirs[p], (*tree)->divebdchgsize[p]);
-      BMSfreeBlockMemoryArray(blkmem, &(*tree)->divebdchgvals[p], (*tree)->divebdchgsize[p]);
-      BMSfreeBlockMemoryArray(blkmem, &(*tree)->divebdchgvars[p], (*tree)->divebdchgsize[p]);
+      BMSfreeBlockMemoryArray(blkmem, &(*tree)->divebdchgdirs[p], (*tree)->divebdchgsize[p]); /*lint !e866*/
+      BMSfreeBlockMemoryArray(blkmem, &(*tree)->divebdchgvals[p], (*tree)->divebdchgsize[p]); /*lint !e866*/
+      BMSfreeBlockMemoryArray(blkmem, &(*tree)->divebdchgvars[p], (*tree)->divebdchgsize[p]); /*lint !e866*/
    }
 
    /* free pointer arrays */
@@ -4881,7 +4881,7 @@ SCIP_RETCODE SCIPtreeSetNodesel(
       if( stat->nnodes > 0 )
       {
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-            "(node %"SCIP_LONGINT_FORMAT") switching to node selector <%s>\n", stat->nnodes, SCIPnodeselGetName(nodesel));
+            "(node %" SCIP_LONGINT_FORMAT ") switching to node selector <%s>\n", stat->nnodes, SCIPnodeselGetName(nodesel));
       }
    }
 
@@ -4928,7 +4928,7 @@ SCIP_RETCODE SCIPtreeCutoff(
       node = tree->siblings[i];
       if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
-         SCIPdebugMessage("cut off sibling #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n", 
+         SCIPdebugMessage("cut off sibling #%" SCIP_LONGINT_FORMAT " at depth %d with lowerbound=%g at position %d\n",
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
 
          if( set->reopt_enable )
@@ -4951,7 +4951,7 @@ SCIP_RETCODE SCIPtreeCutoff(
       node = tree->children[i];
       if( SCIPsetIsGE(set, node->lowerbound, cutoffbound) )
       {
-         SCIPdebugMessage("cut off child #%"SCIP_LONGINT_FORMAT" at depth %d with lowerbound=%g at position %d\n",
+         SCIPdebugMessage("cut off child #%" SCIP_LONGINT_FORMAT " at depth %d with lowerbound=%g at position %d\n",
             SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), node->lowerbound, i);
 
          if( set->reopt_enable )
@@ -6037,9 +6037,9 @@ SCIP_RETCODE SCIPtreeAddDiveBoundChange(
 
    if( pos == tree->divebdchgsize[idx] - 1 )
    {
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tree->divebdchgdirs[idx], tree->divebdchgsize[idx], tree->divebdchgsize[idx] + ARRAYGROWTH) );
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tree->divebdchgvars[idx], tree->divebdchgsize[idx], tree->divebdchgsize[idx] + ARRAYGROWTH) );
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tree->divebdchgvals[idx], tree->divebdchgsize[idx], tree->divebdchgsize[idx] + ARRAYGROWTH) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tree->divebdchgdirs[idx], tree->divebdchgsize[idx], tree->divebdchgsize[idx] + ARRAYGROWTH) ); /*lint !e866*/
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tree->divebdchgvars[idx], tree->divebdchgsize[idx], tree->divebdchgsize[idx] + ARRAYGROWTH) ); /*lint !e866*/
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &tree->divebdchgvals[idx], tree->divebdchgsize[idx], tree->divebdchgsize[idx] + ARRAYGROWTH) ); /*lint !e866*/
       tree->divebdchgsize[idx] += ARRAYGROWTH;
    }
 
@@ -6052,7 +6052,7 @@ SCIP_RETCODE SCIPtreeAddDiveBoundChange(
    return SCIP_OKAY;
 }
 
-/**< get the dive bound change data for the preferred or the alternative direction */
+/** get the dive bound change data for the preferred or the alternative direction */
 void SCIPtreeGetDiveBoundChangeData(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_VAR***           variables,          /**< pointer to store variables for the specified direction */
@@ -6141,7 +6141,7 @@ SCIP_RETCODE treeCreateProbingNode(
    if( tree->probingroot == NULL )
    {
       tree->probingroot = node;
-      SCIPdebugMessage("created probing root node #%"SCIP_LONGINT_FORMAT" at depth %d\n",
+      SCIPdebugMessage("created probing root node #%" SCIP_LONGINT_FORMAT " at depth %d\n",
          SCIPnodeGetNumber(node), SCIPnodeGetDepth(node));
    }
    else
@@ -6149,7 +6149,7 @@ SCIP_RETCODE treeCreateProbingNode(
       assert(SCIPnodeGetType(tree->probingroot) == SCIP_NODETYPE_PROBINGNODE);
       assert(SCIPnodeGetDepth(tree->probingroot) < SCIPnodeGetDepth(node));
 
-      SCIPdebugMessage("created probing child node #%"SCIP_LONGINT_FORMAT" at depth %d, probing depth %d\n", 
+      SCIPdebugMessage("created probing child node #%" SCIP_LONGINT_FORMAT " at depth %d, probing depth %d\n",
          SCIPnodeGetNumber(node), SCIPnodeGetDepth(node), SCIPnodeGetDepth(node) - SCIPnodeGetDepth(tree->probingroot));
    }
 
@@ -6205,6 +6205,7 @@ SCIP_RETCODE SCIPtreeStartProbing(
    tree->probinglpwassolved = lp->solved;
    tree->probingloadlpistate = FALSE;
    tree->probinglpwasrelax = lp->isrelax;
+   lp->isrelax = TRUE;
    tree->probingsolvedlp = FALSE;
    tree->probingobjchanged = FALSE;
    lp->divingobjchg = FALSE;
@@ -6603,7 +6604,7 @@ SCIP_RETCODE SCIPtreeEndProbing(
          if( lperror )
          {
             SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
-               "(node %"SCIP_LONGINT_FORMAT") unresolved numerical troubles while resolving LP %"SCIP_LONGINT_FORMAT" after probing\n",
+               "(node %" SCIP_LONGINT_FORMAT ") unresolved numerical troubles while resolving LP %" SCIP_LONGINT_FORMAT " after probing\n",
                stat->nnodes, stat->nlps);
             lp->resolvelperror = TRUE;
             tree->focusnodehaslp = FALSE;
@@ -7053,7 +7054,7 @@ SCIP_Real SCIPnodeGetEstimate(
 
 /** gets the reoptimization type of this node */
 SCIP_REOPTTYPE SCIPnodeGetReopttype(
-   SCIP_NODE*           node                 /**< node **/
+   SCIP_NODE*            node                /**< node **/
    )
 {
    assert(node != NULL);
@@ -7077,20 +7078,19 @@ void SCIPnodeSetReopttype(
        || reopttype == SCIP_REOPTTYPE_PRUNED
        || reopttype == SCIP_REOPTTYPE_FEASIBLE);
 
-   node->reopttype = reopttype;
+   node->reopttype = (unsigned int) reopttype;
 }
 
 /** gets the unique id to identify the node during reoptimization; the id is 0 if the node is the root or not part of
  * the reoptimization tree
  */
 unsigned int SCIPnodeGetReoptID(
-   SCIP_NODE*           node                 /**< node */
+   SCIP_NODE*            node                /**< node */
    )
 {
    assert(node != NULL);
-   assert(node->reoptid < 536870912); /* id has only 29 bits and needs to be smaller than 2^29 */
 
-   return node->reoptid;
+   return node->reoptid; /*lint !e732*/
 }
 
 /** set a unique id to identify the node during reoptimization */
@@ -7100,7 +7100,7 @@ void SCIPnodeSetReoptID(
    )
 {
    assert(node != NULL);
-   assert(id < 536870912); /* id has only 29 bits and needs to be smaller than 2^29 */
+   assert(id <= 536870911); /* id has only 29 bits and needs to be smaller than 2^29 */
 
    node->reoptid = id;
 }
@@ -7124,7 +7124,7 @@ void SCIPnodeGetNDomchg(
    int*                  nconsprop,          /**< pointer to store number of constraint propagations (or NULL if not needed) */
    int*                  nprop               /**< pointer to store number of propagations (or NULL if not needed) */
    )
-{
+{  /*lint --e{641}*/
    SCIP_Bool count_branchings;
    SCIP_Bool count_consprop;
    SCIP_Bool count_prop;
@@ -7173,7 +7173,7 @@ void SCIPnodeGetNDomchg(
 int SCIPnodeGetNDualBndchgs(
    SCIP_NODE*            node                /**< node */
    )
-{
+{  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int i;
    int nboundchgs;
@@ -7201,7 +7201,7 @@ int SCIPnodeGetNDualBndchgs(
        && ((boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
             && boundchgs[i].data.inferencedata.reason.cons == NULL)
         || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-            && boundchgs[i].data.inferencedata.reason.prop == NULL)) ) /*lint !e641*/
+            && boundchgs[i].data.inferencedata.reason.prop == NULL)) )
          npseudobranchvars++;
       else if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
          break;
@@ -7220,7 +7220,7 @@ void SCIPnodeGetDualBoundchgs(
                                               *   should be called again */
    int                   varssize            /**< available slots in arrays */
 )
-{
+{  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;
    int i;
@@ -7252,7 +7252,7 @@ void SCIPnodeGetDualBoundchgs(
          if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
                && boundchgs[i].data.inferencedata.reason.cons == NULL)
           || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
-                && boundchgs[i].data.inferencedata.reason.prop == NULL) ) /*lint !e641*/
+                && boundchgs[i].data.inferencedata.reason.prop == NULL) )
             (*nvars)++;
          else if( boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_BRANCHING )
             break;
@@ -7266,7 +7266,7 @@ void SCIPnodeGetDualBoundchgs(
       j = 0;
       for( i = i+1; i < nboundchgs; i++)
       {
-         assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING ); /*lint !e641*/
+         assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING );
          if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
          {
             if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
@@ -7394,7 +7394,7 @@ void SCIPnodeGetAncestorBranchings(
    }
 }
 
-/** returns the set of variable branchings that were performed between the given @param node and the given @param parent node. */
+/** returns the set of variable branchings that were performed between the given @p node and the given @p parent node. */
 void SCIPnodeGetAncestorBranchingsPart(
    SCIP_NODE*            node,               /**< node data */
    SCIP_NODE*            parent,             /**< node data of the last ancestor node */
@@ -7446,7 +7446,7 @@ void SCIPnodeGetConsProps(
                                               *   should be called again */
    int                   conspropvarssize    /**< available slots in arrays */
    )
-{
+{  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;
    int first_dual;
@@ -7535,7 +7535,7 @@ void SCIPnodeGetBdChgsAfterDual(
                                               *   should be called again */
    int                   branchvarssize      /**< available slots in arrays */
    )
-{
+{  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;
    int first_dual;

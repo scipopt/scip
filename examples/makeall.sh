@@ -3,8 +3,8 @@
 # run with bash -e makeall.sh to stop on errors
 #
 
-EXAMPLES=(Coloring Binpacking Eventhdlr GMI LOP MIPSolver Queens Scheduler TSP VRP CallableLibrary)
-LPSOLVERS=(clp cpx none spx)
+EXAMPLES=(Binpacking CallableLibrary Eventhdlr GMI LOP MIPSolver Queens TSP VRP)
+LPSOLVERS=(clp cpx none spx spx2)
 OPTS=(opt dbg)
 
 # determine architecture

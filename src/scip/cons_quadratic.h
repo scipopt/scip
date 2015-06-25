@@ -535,19 +535,22 @@ SCIP_RETCODE SCIPchgRhsQuadratic(
 
 /** gets the feasibility of the quadratic constraint in the given solution */
 EXTERN
-SCIP_Real SCIPgetFeasibilityQuadratic(
-	SCIP*                 scip,               /**< SCIP data structure */
-	SCIP_CONS*            cons,               /**< constraint data */
-	SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
-	);
+/** gets the feasibility of the quadratic constraint in the given solution */
+SCIP_RETCODE SCIPgetFeasibilityQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
+   SCIP_Real*            feasibility         /**< pointer to store the feasibility */
+   );
 
 /** gets the activity of the quadratic constraint in the given solution */
 EXTERN
-SCIP_Real SCIPgetActivityQuadratic(
-	SCIP*                 scip,               /**< SCIP data structure */
-	SCIP_CONS*            cons,               /**< constraint data */
-	SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
-	);
+SCIP_RETCODE SCIPgetActivityQuadratic(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
+   SCIP_Real*            activity            /**< pointer to store the activity */
+   );
 
 /** changes the linear coefficient value for a given quadratic variable in a quadratic constraint data; if not
  *  available, it adds it
@@ -569,11 +572,11 @@ SCIP_RETCODE SCIPchgLinearCoefQuadratic(
  */
 EXTERN
 SCIP_RETCODE SCIPchgSquareCoefQuadratic(
-	SCIP*                 scip,               /**< SCIP data structure */
-	SCIP_CONS*            cons,               /**< constraint data */
-	SCIP_VAR*             var,                /**< quadratic variable */
-	SCIP_Real             coef                /**< new coefficient */
-	);
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint data */
+   SCIP_VAR*             var,                /**< quadratic variable */
+   SCIP_Real             coef                /**< new coefficient */
+   );
 
 /** changes the bilinear coefficient value for a given quadratic variable in a quadratic constraint data; if not
  *  available, it adds it

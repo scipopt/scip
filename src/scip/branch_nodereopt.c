@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2013 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -31,7 +31,7 @@
 
 #define BRANCHRULE_NAME            "nodereopt"
 #define BRANCHRULE_DESC            "branching rule for node reoptimization"
-#define BRANCHRULE_PRIORITY        INT_MAX/4
+#define BRANCHRULE_PRIORITY        -9000000
 #define BRANCHRULE_MAXDEPTH            -1
 #define BRANCHRULE_MAXBOUNDDIST         1.0
 
@@ -39,18 +39,12 @@
  * Data structures
  */
 
-/*
- *  static methods
- */
 
-
-/*
- * Execute the branching of nodes with additional constraints.
- */
+/** Execute the branching of nodes with additional constraints. */
 static
 SCIP_RETCODE Exec(
-   SCIP*                 scip,
-   SCIP_RESULT*          result
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_RESULT*          result              /**< pointer to store the result */
 )
 {
    SCIP_REOPTNODE* reoptnode;
@@ -61,6 +55,7 @@ SCIP_RETCODE Exec(
    unsigned int curid;
    int naddedconss;
    int nchilds;
+   int childnodessize;
    int ncreatednodes;
    int c;
 
@@ -91,15 +86,15 @@ SCIP_RETCODE Exec(
    /* get the corresponding node of the reoptimization tree */
    reoptnode = SCIPgetReoptnode(scip, curid);
    assert(reoptnode != NULL);
-   reopttype = SCIPreoptnodeGetType(reoptnode);
+   reopttype = (SCIP_REOPTTYPE)SCIPreoptnodeGetType(reoptnode);
 
 
-   /** The current node is equal to the root and dual reductions were performed. Since the root has a special role
-    *  within the reoptimiziation we have to split the root node into several nodes and move all stored child nodes to
-    *  the one representing the root node including all dual reductions as before.
+   /* The current node is equal to the root and dual reductions were performed. Since the root has a special role
+    * within the reoptimiziation we have to split the root node into several nodes and move all stored child nodes to
+    * the one representing the root node including all dual reductions as before.
     *
-    *  @note If the type is infsubtree, there cannot exist a child node and the method SCIPapplyReopt adds a global valid
-    *  constraint only.
+    * @note If the type is infsubtree, there cannot exist a child node and the method SCIPapplyReopt adds a global valid
+    * constraint only.
     */
    if( curid == 0 )
    {
@@ -143,9 +138,17 @@ SCIP_RETCODE Exec(
   REVIVE:
 
    /* get the IDs of all child nodes */
-   SCIP_CALL( SCIPallocBufferArray(scip, &childids, SCIPreoptnodeGetNChildren(reoptnode)) );
-   SCIP_CALL( SCIPgetReoptChildIDs(scip, curnode, childids, SCIPreoptnodeGetNChildren(reoptnode), &nchilds) );
-   assert(SCIPreoptnodeGetNChildren(reoptnode) == nchilds);
+   childnodessize = SCIPreoptnodeGetNChildren(reoptnode);
+   SCIP_CALL( SCIPallocBufferArray(scip, &childids, childnodessize) );
+   SCIP_CALL( SCIPgetReoptChildIDs(scip, curnode, childids, childnodessize, &nchilds) );
+
+   if( childnodessize < nchilds )
+   {
+      childnodessize = SCIPreoptnodeGetNChildren(reoptnode);
+      SCIP_CALL( SCIPreallocBufferArray(scip, &childids, childnodessize) );
+      SCIP_CALL( SCIPgetReoptChildIDs(scip, curnode, childids, childnodessize, &nchilds) );
+   }
+   assert(nchilds <= childnodessize);
 
    naddedconss = 0;
 
@@ -153,7 +156,6 @@ SCIP_RETCODE Exec(
    {
       SCIP_NODE** childnodes;
       SCIP_Bool success;
-      int childnodessize;
       unsigned int childid;
       int ncreatedchilds;
 
@@ -165,10 +167,10 @@ SCIP_RETCODE Exec(
       reoptnode = SCIPgetReoptnode(scip, childid);
       assert(reoptnode != NULL);
 
-      reopttype = SCIPreoptnodeGetType(reoptnode);
+      reopttype = (SCIP_REOPTTYPE)SCIPreoptnodeGetType(reoptnode);
       ncreatedchilds = 0;
 
-      /** check whether node need to be split */
+      /* check whether node need to be split */
       if( reopttype == SCIP_REOPTTYPE_STRBRANCHED || reopttype == SCIP_REOPTTYPE_INFSUBTREE )
       {
          /* by default we assume the node get split into two node (because using a constraint to split the node is
@@ -186,8 +188,8 @@ SCIP_RETCODE Exec(
       SCIP_CALL( SCIPallocBufferArray(scip, &childnodes, childnodessize) );
 
       /* apply the reoptimization */
-      SCIP_CALL( SCIPapplyReopt(scip, reoptnode, childid, SCIPnodeGetEstimate(curnode), SCIPnodeGetLowerbound(curnode),
-            childnodes, &ncreatedchilds, &naddedconss, childnodessize, &success) );
+      SCIP_CALL( SCIPapplyReopt(scip, reoptnode, childid, SCIPnodeGetEstimate(curnode), childnodes, &ncreatedchilds,
+            &naddedconss, childnodessize, &success) );
 
       if( !success )
       {
@@ -198,8 +200,8 @@ SCIP_RETCODE Exec(
          SCIP_CALL( SCIPreallocBufferArray(scip, &childnodes, childnodessize) );
 
          /* apply the reoptimization */
-         SCIP_CALL( SCIPapplyReopt(scip, reoptnode, childid, SCIPnodeGetEstimate(curnode), SCIPnodeGetLowerbound(curnode),
-               childnodes, &ncreatedchilds, &naddedconss, childnodessize, &success) );
+         SCIP_CALL( SCIPapplyReopt(scip, reoptnode, childid, SCIPnodeGetEstimate(curnode), childnodes, &ncreatedchilds,
+               &naddedconss, childnodessize, &success) );
       }
 
       assert(success);
@@ -240,18 +242,37 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpnodereopt)
 
    if( SCIPisReoptEnabled(scip) && SCIPreoptimizeNode(scip, SCIPgetCurrentNode(scip)) )
    {
+      SCIP_VAR** branchcands;
+      SCIP_Real* branchcandssol;
+      SCIP_Real* branchcandsfrac;
+      int nbranchcands;
+
+      SCIP_Bool sbinit;
+      SCIP_Real objsimrootlp;
+
+      SCIP_CALL( SCIPgetBoolParam(scip, "reoptimization/strongbranchinginit", &sbinit) );
+      SCIP_CALL( SCIPgetRealParam(scip, "reoptimization/objsimrootLP", &objsimrootlp) );
+
+      if( sbinit && SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip)
+       && SCIPgetReoptSimilarity(scip, SCIPgetNReoptRuns(scip), SCIPgetNReoptRuns(scip)) <= objsimrootlp ) /* check objsimrootlp */
+      {
+         /* get branching candidates */
+         SCIP_CALL( SCIPgetLPBranchCands(scip, &branchcands, &branchcandssol, &branchcandsfrac, NULL, &nbranchcands, NULL) );
+
+         /* run strong branching initialization */
+         if( nbranchcands > 0 )
+         {
+            SCIP_CALL( SCIPexecRelpscostBranching(scip, TRUE, branchcands, branchcandssol, branchcandsfrac, nbranchcands, FALSE, result) );
+            assert(*result == SCIP_DIDNOTRUN || *result == SCIP_CUTOFF || *result == SCIP_REDUCEDDOM);
+         }
+      }
+
       if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM)
       {
-         if( SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip) )
-         {
-            SCIP_CALL( Exec(scip, result) );
-         }
-         else
-         {
-            assert(1 <= SCIPnodeGetReoptID(SCIPgetCurrentNode(scip)));
+         assert((SCIPnodeGetReoptID(SCIPgetCurrentNode(scip)) == 0 && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
+              || 1 <= SCIPnodeGetReoptID(SCIPgetCurrentNode(scip)));
 
-            SCIP_CALL( Exec(scip, result) );
-         }
+         SCIP_CALL( Exec(scip, result) );
       }
    }
 
@@ -268,19 +289,10 @@ static SCIP_DECL_BRANCHEXECEXT(branchExecextnodereopt)
 
    if ( SCIPisReoptEnabled(scip) && SCIPreoptimizeNode(scip, SCIPgetCurrentNode(scip)) )
    {
-      if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM)
-      {
-         if( SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip) )
-         {
-            SCIP_CALL( Exec(scip, result) );
-         }
-         else
-         {
-            assert(1 <= SCIPnodeGetReoptID(SCIPgetCurrentNode(scip)));
+      assert((SCIPnodeGetReoptID(SCIPgetCurrentNode(scip)) == 0 && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
+           || 1 <= SCIPnodeGetReoptID(SCIPgetCurrentNode(scip)));
 
-            SCIP_CALL( Exec(scip, result) );
-         }
-      }
+      SCIP_CALL( Exec(scip, result) );
    }
 
    return SCIP_OKAY;
@@ -296,19 +308,10 @@ static SCIP_DECL_BRANCHEXECPS(branchExecpsnodereopt)
 
    if( SCIPisReoptEnabled(scip) && SCIPreoptimizeNode(scip, SCIPgetCurrentNode(scip)) )
    {
-      if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM )
-      {
-         if( SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip) )
-         {
-            SCIP_CALL( Exec(scip, result) );
-         }
-         else
-         {
-            assert(1 <= SCIPnodeGetReoptID(SCIPgetCurrentNode(scip)));
+      assert((SCIPnodeGetReoptID(SCIPgetCurrentNode(scip)) == 0 && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
+           || 1 <= SCIPnodeGetReoptID(SCIPgetCurrentNode(scip)));
 
-            SCIP_CALL( Exec(scip, result) );
-         }
-      }
+      SCIP_CALL( Exec(scip, result) );
    }
 
    return SCIP_OKAY;
@@ -320,7 +323,7 @@ static SCIP_DECL_BRANCHEXECPS(branchExecpsnodereopt)
 
 /** creates the nodereopt branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleNodereopt(
-   SCIP*                 scip                     /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
 )
 {
    SCIP_BRANCHRULE* branchrule;

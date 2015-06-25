@@ -1,0 +1,14 @@
+The Multiobjective code requires the lemon graph
+library. We tested the code with versions 1.2.3 and 1.2.4 of the library.
+
+For compilation, please follow these steps:
+
+1. install the lemon graph library (http://lemon.cs.elte.hu/trac/lemon/)
+2. compile the example using "make"
+	-typing make for the first time should automatically hint you to enter
+	 the path to the lemon library in case that the library is not installed
+	 systemwide.
+	 In this case, "lib/lemon" should point to the main directory of your lemon installation
+	 containing the subdirectories "include" and "lib", i.e.
+	 "lib/lemon/include/lemon/list_graph.h" should exist
+3. call "make links" or manually reset the symbolic link if you want to change the lemon installation

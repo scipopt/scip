@@ -542,7 +542,7 @@ void SCIPdispLongint(
          decpower++;
          val /= 1000;
       }
-      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d"SCIP_LONGINT_FORMAT"%c", width-1, decpowerchar[decpower]);
+      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d" SCIP_LONGINT_FORMAT "%c", width-1, decpowerchar[decpower]);
 
       if( width == 2 && val < 0 )
          SCIPmessageFPrintInfo(messagehdlr, file, "-%c", decpowerchar[decpower]);

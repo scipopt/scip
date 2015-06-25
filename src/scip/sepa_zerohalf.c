@@ -13,10 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* prints short statistics (callback, preprocessing, adding cuts) */
-/* // #define SCIP_DEBUG */
-/* // #define ZEROHALF__PRINT_STATISTICS */ /**< print statistics */
-
 /**
  * @file   sepa_zerohalf.c
  * @brief  {0,1/2}-cuts separator
@@ -59,6 +55,8 @@
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
 
+/* prints short statistics (callback, preprocessing, adding cuts) */
+/* #define ZEROHALF__PRINT_STATISTICS */ /**< print statistics */
 
 #define SEPA_NAME              "zerohalf"
 #define SEPA_DESC              "{0,1/2}-cuts separator"
@@ -3375,7 +3373,7 @@ SCIP_RETCODE preprocessTrivialZerohalfCuts(
          if( SCIPisLE(scip, mod2data->slacks[mod2data->rowsind[firstrowsind + r]], maxslack ))
          {
             if( BITARRAYSAREEQUAL(mod2data->rows[mod2data->rowsind[firstrowsind + r]],
-                  zerorow, mod2data->rowsbitarraysize) ) /* check if row is (0 ... 0 , 1) */
+                  zerorow, mod2data->rowsbitarraysize) ) /*lint !e647 check if row is (0 ... 0 , 1) */
             {
                /* a violated zerohalf cut has been found */
                weights = NULL;
@@ -3453,7 +3451,7 @@ SCIP_RETCODE preprocessRows(
    SCIP_Bool             removelargeslackrows, /**< should rows with slack > maxslack be removed? */
    SCIP_Bool             removeidenticalrows /**< should identical rows be removed? */
    )
-{
+{ /*lint --e{647}*/
    int                   r1;
    int                   r2;
    SCIP_Bool*            rowisprocessed;

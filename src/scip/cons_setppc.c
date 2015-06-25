@@ -2750,7 +2750,11 @@ SCIP_RETCODE collectCliqueConss(
          return SCIP_OKAY;
 
       if( SCIPconsIsDeleted(cons) )
+      {
+         /* reset nlocaladdconss and continue */
+         nlocaladdconss = 0;
          continue;
+      }
       assert(nlocaladdconss == 0);
 
       SCIP_CALL( processFixings(scip, cons, cutoff, nfixedvars, &addcut, &mustcheck) );
@@ -6850,6 +6854,7 @@ SCIP_RETCODE createNormalizedSetppc(
    return SCIP_OKAY;
 }
 
+/** check, if linear constraint can be upgraded to set partitioning, packing, or covering constraint */
 static
 SCIP_DECL_LINCONSUPGD(linconsUpgdSetppc)
 {  /*lint --e{715}*/
@@ -7936,7 +7941,8 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       /*SCIPdebugMessage("presolving set partitioning / packing / covering constraint <%s>\n", SCIPconsGetName(cons));*/
 
       /* remove all variables that are fixed to zero and replace all aggregated variables */
-      if( consdata->nfixedzeros > 0 || nnewaggrvars > 0 || nnewaddconss > 0 || *naggrvars > oldnaggrvars || (nrounds == 0 && SCIPgetNRuns(scip) > 1) )
+      if( consdata->nfixedzeros > 0 || nnewaggrvars > 0 || nnewaddconss > 0 || nnewupgdconss > 0
+            || *naggrvars > oldnaggrvars || (nrounds == 0 && SCIPgetNRuns(scip) > 1) )
       {
          SCIP_CALL( applyFixings(scip, cons, naddconss, ndelconss, nfixedvars, &cutoff) );
 
@@ -8016,7 +8022,7 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
       }
 
       /* perform dual reductions */
-      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
+      if( conshdlrdata->dualpresolving && SCIPallowDualReds(scip) )
       {
          SCIP_CALL( dualPresolving(scip, cons, nfixedvars, ndelconss, result) );
 
@@ -8055,11 +8061,11 @@ SCIP_DECL_CONSPRESOL(consPresolSetppc)
     */
    if( nconss > 1 && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0
       && ((conshdlrdata->nsetpart > 0 && !SCIPdoNotMultaggr(scip) && conshdlrdata->conshdlrlinear != NULL)
-         || (conshdlrdata->dualpresolving && SCIPallowDualReds(scip) && SCIPallowObjProp(scip)
+         || (conshdlrdata->dualpresolving && SCIPallowDualReds(scip)
                && conshdlrdata->nsetpart < nconss && !SCIPdoNotAggr(scip))) )
    {
       SCIP_CALL( removeDoubleAndSingletonsAndPerformDualpresolve(scip, conss, nconss, conshdlrdata->dualpresolving
-            && SCIPallowDualReds(scip) && SCIPallowObjProp(scip), conshdlrdata->conshdlrlinear != NULL, nfixedvars,
+            && SCIPallowDualReds(scip), conshdlrdata->conshdlrlinear != NULL, nfixedvars,
             naggrvars, ndelconss, nchgcoefs, nchgsides, &cutoff) );
 
       if( cutoff )
@@ -8831,31 +8837,31 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
 
    /* set partitioning constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/npseudobranches",
+         "constraints/" CONSHDLR_NAME "/npseudobranches",
          "number of children created in pseudo branching (0: disable pseudo branching)",
          &conshdlrdata->npseudobranches, TRUE, DEFAULT_NPSEUDOBRANCHES, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/presolpairwise",
+         "constraints/" CONSHDLR_NAME "/presolpairwise",
          "should pairwise constraint comparison be performed in presolving?",
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/presolusehashing",
+         "constraints/" CONSHDLR_NAME "/presolusehashing",
          "should hash table be used for detecting redundant constraints in advance",
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/dualpresolving",
+         "constraints/" CONSHDLR_NAME "/dualpresolving",
          "should dual presolving steps be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/cliquelifting",
+         "constraints/" CONSHDLR_NAME "/cliquelifting",
          " should we try to lift variables into other clique constraints, fix variables, aggregate them, and also shrink the amount of variables in clique constraints",
          &conshdlrdata->cliquelifting, TRUE, DEFAULT_CLIQUELIFTING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/addvariablesascliques",
+         "constraints/" CONSHDLR_NAME "/addvariablesascliques",
          "should we try to generate extra cliques out of all binary variables to maybe fasten redundant constraint detection",
          &conshdlrdata->addvariablesascliques, TRUE, DEFAULT_ADDVARIABLESASCLIQUES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/cliqueshrinking",
+         "constraints/" CONSHDLR_NAME "/cliqueshrinking",
          "should we try to shrink the number of variables in a clique constraints, by replacing more than one variable by only one",
          &conshdlrdata->cliqueshrinking, TRUE, DEFAULT_CLIQUESHRINKING, NULL, NULL) );
 

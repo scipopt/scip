@@ -43,9 +43,7 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/scipdefplugins.h"
 #include "scip/pub_matrix.h"
-
 #include "presol_tworowbnd.h"
 
 #define PRESOL_NAME            "tworowbnd"
@@ -209,7 +207,7 @@ void writeLPs(
       fclose(filemin);
    }
    else
-      assert(0);
+      SCIPABORT();
 }
 #endif
 
@@ -245,7 +243,7 @@ void getActivities(
    SCIP_Real*            minact,             /**< calculated overlap minimal activity w.r.t. to the other row */
    SCIP_Real*            maxact              /**< calculated overlap maximal activity w.r.t. to the other row */
    )
-{
+{/*lint --e{715}*/
    SCIP_Real val;
    int nothernonoverlap;
    SCIP_Real lhs;
@@ -331,7 +329,7 @@ void getActivities(
 
          if( tmplowerbds[i] < minlowerbnd )
          {
-            if( tmplowerbds[i] == -SCIPinfinity(scip) )
+            if( SCIPisInfinity(scip, -tmplowerbds[i]) )
             {
                /* lower bounds have to be finite for later boundshift */
                *minact = -SCIPinfinity(scip);
@@ -339,6 +337,18 @@ void getActivities(
                return;
             }
             minlowerbnd = tmplowerbds[i];
+         }
+      }
+
+      if( minlowerbnd < 0.0 )
+      {
+         SCIP_Real bndshift = -minlowerbnd;
+         if( bndshift > (SCIP_Real)SCIP_LONGINT_MAX )
+         {
+            /* shift value is too large */
+            *minact = -SCIPinfinity(scip);
+            *maxact = SCIPinfinity(scip);
+            return;
          }
       }
 
@@ -413,7 +423,7 @@ void getActivities(
       /* pack every variable on the highest possible value as long as we are feasible */
       for( i = nminratios-1; 0 <= i; i-- )
       {
-         double tmpval;
+         SCIP_Real tmpval;
 
          /* consider contribution from lower bounds */
          if( tmplowerbds[minsortedidx[i]] > 0 )
@@ -484,7 +494,7 @@ void getActivities(
       /* pack every variable on the highest possible value as long as we are feasible */
       for( i = 0; i < nmaxratios; i++ )
       {
-         double tmpval;
+         SCIP_Real tmpval;
 
          /* consider contribution from lower bounds */
          if( tmplowerbds[maxsortedidx[i]] > 0 )
@@ -643,7 +653,7 @@ void getActivities(
       retcode = SCIPfree(&subscip);
    }
 #endif
-}
+}/*lint !e438*/
 
 /** calculate min activity */
 static
@@ -734,7 +744,7 @@ SCIP_Real getMaxActivity(
    return supremum;
 }
 
-/**< get max activity without one column */
+/** get max activity without one column */
 static
 SCIP_Real getMaxResActivity(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -782,10 +792,10 @@ void applyTightening(
    int*                  overlapidx,         /**< overlap column indexes */
    int*                  othernonoverlapidx, /**< other row non overlap indexes */
    int*                  basenonoverlapidx,  /**< base row non overlap indexes */
-   SCIP_Real*            coefbaseoverlap,     /**< base row overlap coefficients */
-   SCIP_Real*            coefotheroverlap,    /**< other row overlap coefficients */
-   SCIP_Real*            coefbasenonoverlap,  /**< base row non overlap coefficients */
-   SCIP_Real*            coefothernonoverlap, /**< other row non overlap coefficients */
+   SCIP_Real*            coefbaseoverlap,    /**< base row overlap coefficients */
+   SCIP_Real*            coefotheroverlap,   /**< other row overlap coefficients */
+   SCIP_Real*            coefbasenonoverlap, /**< base row non overlap coefficients */
+   SCIP_Real*            coefothernonoverlap,/**< other row non overlap coefficients */
    SCIP_Real*            lowerbds,           /**< lower bounds */
    SCIP_Real*            upperbds,           /**< upper bounds */
    SCIP_Real*            tmplowerbds,        /**< tmp lower bounds */
@@ -1268,7 +1278,7 @@ SCIP_RETCODE calcTwoRowBnds(
                continue;
 
             rowcnt2 = SCIPmatrixGetRowNNonzs(matrix, *colpnt);
-            threshold = (double)numoverlap/(double)MIN(rowcnt, rowcnt2);
+            threshold = (SCIP_Real)numoverlap/(SCIP_Real)MIN(rowcnt, rowcnt2);
 
             /* verify if overlap-size is ok */
             if( SUPPORT_THRESHOLD <= threshold && numoverlap < rowcnt )

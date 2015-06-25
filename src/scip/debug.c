@@ -876,7 +876,7 @@ SCIP_RETCODE SCIPdebugRemoveNode(
       /* wrong node will be cutoff */
       if( solisinnode )
       {
-         SCIPerrorMessage("debugging solution was cut off in local node #%"SCIP_LONGINT_FORMAT" (%p) at depth %d\n",
+         SCIPerrorMessage("debugging solution was cut off in local node #%" SCIP_LONGINT_FORMAT " (%p) at depth %d\n",
             node->number, node, SCIPnodeGetDepth(node));
          SCIPABORT();
       }
@@ -1480,7 +1480,7 @@ SCIP_RETCODE SCIPdebugIncludeProp(
 
    /* include propagator */
    SCIP_CALL( SCIPincludeProp(scip, "debug", "debugging propagator", 99999999, -1, FALSE,
-         SCIP_PROPTIMING_ALWAYS, 99999999, 0, FALSE, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+         SCIP_PROPTIMING_ALWAYS, 99999999, 0, SCIP_PRESOLTIMING_FAST, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
          NULL, propExecDebug, NULL, NULL) );
 
    return SCIP_OKAY;

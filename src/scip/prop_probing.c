@@ -1039,7 +1039,7 @@ SCIP_DECL_PROPEXEC(propExecProbing)
          ++nbinvars;
       }
    }
-   SCIPdebugMessage("problem <%s> node %"SCIP_LONGINT_FORMAT" probing propagation found %d of %d possible probing candidates\n", SCIPgetProbName(scip), SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nbinvars, nvars);
+   SCIPdebugMessage("problem <%s> node %" SCIP_LONGINT_FORMAT " probing propagation found %d of %d possible probing candidates\n", SCIPgetProbName(scip), SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nbinvars, nvars);
 
    if( nbinvars == 0 )
    {
@@ -1139,31 +1139,31 @@ SCIP_RETCODE SCIPincludePropProbing(
 
    /* add probing propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/maxruns",
+         "propagating/" PROP_NAME "/maxruns",
          "maximal number of runs, probing participates in (-1: no limit)",
          &propdata->maxruns, FALSE, DEFAULT_MAXRUNS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/proprounds",
+         "propagating/" PROP_NAME "/proprounds",
          "maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)",
          &propdata->proprounds, TRUE, DEFAULT_PROPROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/maxfixings",
+         "propagating/" PROP_NAME "/maxfixings",
          "maximal number of fixings found, until probing is interrupted (0: don't iterrupt)",
          &propdata->maxfixings, TRUE, DEFAULT_MAXFIXINGS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/maxuseless",
+         "propagating/" PROP_NAME "/maxuseless",
          "maximal number of successive probings without fixings, until probing is aborted (0: don't abort)",
          &propdata->maxuseless, TRUE, DEFAULT_MAXUSELESS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/maxtotaluseless",
+         "propagating/" PROP_NAME "/maxtotaluseless",
          "maximal number of successive probings without fixings, bound changes, and implications, until probing is aborted (0: don't abort)",
          &propdata->maxtotaluseless, TRUE, DEFAULT_MAXTOTALUSELESS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/maxsumuseless",
+         "propagating/" PROP_NAME "/maxsumuseless",
          "maximal number of probings without fixings, until probing is aborted (0: don't abort)",
          &propdata->maxsumuseless, TRUE, DEFAULT_MAXSUMUSELESS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/maxdepth",
+         "propagating/" PROP_NAME "/maxdepth",
          "maximal depth until propagation is executed(-1: no limit)",
          &propdata->maxdepth, TRUE, DEFAULT_MAXDEPTH, -1, INT_MAX, NULL, NULL) );
 

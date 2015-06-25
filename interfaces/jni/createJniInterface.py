@@ -210,6 +210,7 @@ def convertUnsignedInt(unsignedinttype):
         'SCIP_DUALPACKET',
         'SCIP_EVENTTYPE',
         'SCIP_PROPTIMING',
+        'SCIP_PRESOLTIMING',
         'SCIP_HEURTIMING'
         ]
     for unsignedint in unsignedinttypes:

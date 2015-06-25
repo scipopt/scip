@@ -30,6 +30,10 @@
 #   checkStage (only for scip.c).
 #   [checkstage, default: false, option: -s]
 #
+# - Check whether two comments occur in one line; this sometimes indicates
+#   bad style
+#   [checkcomments, default: false]
+#
 # Note the this will not give a complete check. The checks are also
 # heuristic in order to avoid to be flooded with warnings. To
 # guarantee correct indentation of the code, one should use the
@@ -54,6 +58,7 @@ my $checktabs = 0;       # check whether tabs are present
 my $checkbrackets = 0;   # check whether brackets are badly placed
 my $checkdebug = 0;      # check whether debug messages contain a newline at end
 my $checkothers = 0;     # check for SCIP_CALL_ABORT and printfs
+my $checkcomments = 0;   # check for two comments in a line
 
 my $checkindent = 1;     # check for correct indentation
 my $checktabsparam = 1;  # check whether tabs in parameter lists are present
@@ -125,7 +130,7 @@ for (my $i = 0; $i < $narg; ++$i)
       # handle comments
 
       # make sure that no comment ends and afterwards starts on the same line
-      if ( $str =~ /\*\/(.*)\/\*/ )
+      if ( $checkcomments == 1 && $str =~ /\*\/(.*)\/\*/ )
       {
 	 if ( $str =~ /\*lint/ )
 	 {

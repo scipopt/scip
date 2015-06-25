@@ -141,7 +141,7 @@
 #define SCIP_DEFAULT_DISP_FREQ              100 /**< frequency for displaying node information lines */
 #define SCIP_DEFAULT_DISP_HEADERFREQ         15 /**< frequency for displaying header lines (every n'th node info line) */
 #define SCIP_DEFAULT_DISP_LPINFO          FALSE /**< should the LP solver display status messages? */
-
+#define SCIP_DEFAULT_DISP_ALLVIOLS        FALSE /**< display all violations of the best solution after the solving process finished? */
 
 /* History */
 
@@ -206,7 +206,7 @@
 #define SCIP_DEFAULT_LP_LEXDUALBASIC      FALSE /**< choose fractional basic variables in lexicographic dual algorithm */
 #define SCIP_DEFAULT_LP_LEXDUALSTALLING    TRUE /**< turn on the lex dual algorithm only when stalling? */
 #define SCIP_DEFAULT_LP_DISABLECUTOFF         2 /**< disable the cutoff bound in the LP solver? (0: enabled, 1: disabled, 2: auto) */
-#define SCIP_DEFAULT_LP_ROWREPSWITCH        2.0 /**< simplex algorithm shall use row representation of the basis
+#define SCIP_DEFAULT_LP_ROWREPSWITCH        1.2 /**< simplex algorithm shall use row representation of the basis
                                                  *   if number of rows divided by number of columns exceeds this value */
 #define SCIP_DEFAULT_LP_THREADS               0 /**< number of threads used for solving the LP (0: automatic) */
 #define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit
@@ -263,13 +263,13 @@
 
 /* Presolving */
 
-#define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-04 /**< abort presolve, if at most this fraction of the problem was changed
+#define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-03 /**< abort presolve, if at most this fraction of the problem was changed
                                                  *   in last presolve round */
 #define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited, 0: off) */
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
-#define SCIP_DEFAULT_PRESOL_RESTARTFAC     0.05 /**< fraction of integer variables that were fixed in the root node
+#define SCIP_DEFAULT_PRESOL_RESTARTFAC    0.025 /**< fraction of integer variables that were fixed in the root node
                                                  *   triggering a restart with preprocessing after root node evaluation */
-#define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC  0.20 /**< fraction of integer variables that were fixed in the root node triggering an
+#define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC  0.10 /**< fraction of integer variables that were fixed in the root node triggering an
                                                  *   immediate restart with preprocessing */
 #define SCIP_DEFAULT_PRESOL_SUBRESTARTFAC  1.00 /**< fraction of integer variables that were globally fixed during the
                                                  *   solving process triggering a restart with preprocessing */
@@ -294,14 +294,14 @@
 
 #define SCIP_DEFAULT_REOPT_OBJSIMSOL       -1.0 /**< reuse stored solutions only if the similarity of the new and the old objective
                                                      function is greater or equal than this value */
-#define SCIP_DEFAULT_REOPT_OBJSIMROOTLP     1.0 /**< similarity of two sequential objective function to disable solving the root LP. */
+#define SCIP_DEFAULT_REOPT_OBJSIMROOTLP     0.8 /**< similarity of two sequential objective function to disable solving the root LP. */
 #define SCIP_DEFAULT_REOPT_OBJSIMDELAY     -1.0 /**< start reoptimzing the search if the new objective function has similarity of
                                                  *   at least SCIP_DEFAULT_REOPT_DELAY w.r.t. the previous objective function. */
 #define SCIP_DEFAULT_REOPT_VARORDERINTERDICTION 'd' /** use the 'd'efault or a 'r'andom variable order for interdiction branching when applying the reoptimization */
 #define SCIP_DEFAULT_REOPT_MAXSAVEDNODES  INT_MAX/**< maximum number of saved nodes */
 #define SCIP_DEFAULT_REOPT_MAXDIFFOFNODES INT_MAX/**< maximum number of bound changes of two ancestor nodes
                                                   *  such that the path get not shrunk */
-#define SCIP_DEFAULT_REOPT_FORCEHEURRESTART  10 /**< force a restart if the last n optimal solutions are found by reoptssols heuristic */
+#define SCIP_DEFAULT_REOPT_FORCEHEURRESTART   3 /**< force a restart if the last n optimal solutions are found by reoptssols heuristic */
 #define SCIP_DEFAULT_REOPT_SAVESOLS      INT_MAX/**< save n best solutions found so far. */
 #define SCIP_DEFAULT_REOPT_SOLVELP            1 /**< strategy for solving the LP at nodes from reoptimization */
 #define SCIP_DEFAULT_REOPT_SOLVELPDIFF        1 /**< difference of path length between two ancestor nodes to solve the LP */
@@ -310,7 +310,7 @@
 #define SCIP_DEFAULT_REOPT_SEPABESTSOL    FALSE /**< separate the optimal solution, i.e., for constraint shortest path problems */
 #define SCIP_DEFAULT_REOPT_COMMONTIMELIMIT TRUE /**< is the given time limit for all reoptimization round? */
 #define SCIP_DEFAULT_REOPT_SHRINKINNER     TRUE /**< replace branched transit nodes by their child nodes, if the number of bound changes is not to large */
-#define SCIP_DEFAULT_REOPT_STRONGBRANCHINIT FALSE/**< try to fix variables before reoptimizing by probing like strong branching */
+#define SCIP_DEFAULT_REOPT_STRONGBRANCHINIT TRUE/**< try to fix variables before reoptimizing by probing like strong branching */
 #define SCIP_DEFAULT_REOPT_REDUCETOFRONTIER TRUE/**< delete stored nodes which were not reoptimized */
 #define SCIP_DEFAULT_REOPT_SAVECONSPROP     FALSE/**< save constraint propagation */
 #define SCIP_DEFAULT_REOPT_USESPLITCONS    TRUE /**< use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node */
@@ -540,6 +540,18 @@ SCIP_DECL_PARAMCHGD(paramChgdArraygrowinit)
    /* change arraygrowinit */
    BMSsetBufferMemoryArraygrowinit(SCIPbuffer(scip), newarraygrowinit);
    BMSsetBufferMemoryArraygrowinit(SCIPcleanbuffer(scip), newarraygrowinit);
+
+   return SCIP_OKAY;
+}
+
+/** information method for a parameter change of reopt_enable */
+static
+SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
+{  /*lint --e{715}*/
+
+   /* create or deconstruct the reoptimization data structures */
+
+   SCIP_CALL( SCIPenableReoptimization(scip, SCIPparamGetBool(param)) );
 
    return SCIP_OKAY;
 }
@@ -930,6 +942,9 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->mem_externestim = 0;
    (*set)->sepa_primfeastol = SCIP_INVALID;
 
+   /* the default time limit is infinite */
+   (*set)->istimelimitfinite = FALSE;
+
    /* branching parameters */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "branching/scorefunc",
@@ -1196,6 +1211,11 @@ SCIP_RETCODE SCIPsetCreate(
          "should the LP solver display status messages?",
          &(*set)->disp_lpinfo, FALSE, SCIP_DEFAULT_DISP_LPINFO,
          NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "display/allviols",
+         "display all violations of the best solution after the solving process finished?",
+         &(*set)->disp_allviols, FALSE, SCIP_DEFAULT_DISP_ALLVIOLS,
+         NULL, NULL) );
 
    /* history parameters */
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
@@ -1218,7 +1238,7 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "limits/time",
          "maximal time in seconds to run",
-         &(*set)->limit_time, FALSE, SCIP_DEFAULT_LIMIT_TIME, 0.0, SCIP_REAL_MAX,
+         &(*set)->limit_time, FALSE, SCIP_DEFAULT_LIMIT_TIME, 0.0, SCIP_DEFAULT_LIMIT_TIME,
          SCIPparamChgdLimit, NULL) );
    SCIP_CALL( SCIPsetAddLongintParam(*set, messagehdlr, blkmem,
          "limits/nodes",
@@ -1400,7 +1420,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "lp/lexdualalgo",
-         "should the lexicographic dual alogrithm be used?",
+         "should the lexicographic dual algorithm be used?",
          &(*set)->lp_lexdualalgo, TRUE, SCIP_DEFAULT_LP_LEXDUALALGO,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
@@ -1410,7 +1430,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/lexdualmaxrounds",
-         "maximum number of rounds in the  lexicographic dual algorithm (-1: unbounded)",
+         "maximum number of rounds in the lexicographic dual algorithm (-1: unbounded)",
          &(*set)->lp_lexdualmaxrounds, TRUE, SCIP_DEFAULT_LP_LEXDUALMAXROUNDS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
@@ -1627,6 +1647,11 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->num_feastol, FALSE, SCIP_DEFAULT_FEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
          paramChgdFeastol, NULL) );
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "numerics/checkfeastolfac",
+         "feasibility tolerance factor; for checking the feasibility of the best solution",
+         &(*set)->num_checkfeastolfac, FALSE, SCIP_DEFAULT_CHECKFEASTOLFAC, 0.0, SCIP_REAL_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
          "numerics/lpfeastol",
          "primal feasibility tolerance of LP solver",
          &(*set)->num_lpfeastol, FALSE, SCIP_DEFAULT_LPFEASTOL, SCIP_MINEPSILON*1e+03, SCIP_MAXEPSILON,
@@ -1764,7 +1789,7 @@ SCIP_RETCODE SCIPsetCreate(
          "reoptimization/enable",
          "should reoptimization used?",
          &(*set)->reopt_enable, FALSE, SCIP_DEFAULT_REOPT_ENABLE,
-         NULL, NULL) );
+         paramChgdEnableReopt, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/maxsavednodes",
          "maximal number of saved nodes",
@@ -1821,13 +1846,13 @@ SCIP_RETCODE SCIPsetCreate(
          &(*set)->reopt_commontimelimit, TRUE, SCIP_DEFAULT_REOPT_COMMONTIMELIMIT,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-         "reoptimization/shrinktransit",
+         "reoptimization/shrinkinner",
          "replace branched inner nodes by their child nodes, if the number of bound changes is not to large",
          &(*set)->reopt_shrinkinner, TRUE, SCIP_DEFAULT_REOPT_SHRINKINNER,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "reoptimization/strongbranchinginit",
-         " try to fix variables before reoptimizing by probing like strong branching",
+         "try to fix variables at the root node before reoptimizing by probing like strong branching",
          &(*set)->reopt_sbinit, TRUE, SCIP_DEFAULT_REOPT_STRONGBRANCHINIT,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
@@ -2059,9 +2084,6 @@ SCIP_RETCODE SCIPsetCreate(
          "when writing a generic problem the index for the first variable should start with?",
          &(*set)->write_genoffset, FALSE, SCIP_DEFAULT_WRITE_GENNAMES_OFFSET, 0, INT_MAX/2,
          NULL, NULL) );
-
-   /* check if default time limit is finite; if the time limit is changed later, this flag is set accordingly */
-   (*set)->istimelimitfinite = !SCIPsetIsInfinity(*set, SCIP_DEFAULT_LIMIT_TIME);
 
    return SCIP_OKAY;
 }
@@ -4686,7 +4708,7 @@ void SCIPsetSetLimitChanged(
 {
    set->limitchanged = TRUE;
 
-   set->istimelimitfinite = !SCIPsetIsInfinity(set, set->limit_time);
+   set->istimelimitfinite = (set->limit_time < SCIP_DEFAULT_LIMIT_TIME);
 }
 
 /** returns the maximal number of variables priced into the LP per round */

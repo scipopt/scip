@@ -305,7 +305,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
          downconflict = FALSE;
          upconflict = FALSE;
          lperror = FALSE;
-         SCIPdebugMessage("strong branching on variable <%s> already performed (lpage=%"SCIP_LONGINT_FORMAT", down=%g (%+g), up=%g (%+g))\n",
+         SCIPdebugMessage("strong branching on variable <%s> already performed (lpage=%" SCIP_LONGINT_FORMAT ", down=%g (%+g), up=%g (%+g))\n",
             SCIPvarGetName(lpcands[c]), SCIPgetVarStrongbranchLPAge(scip, lpcands[c]), down, downgain, up, upgain);
       }
       else
@@ -345,7 +345,7 @@ SCIP_RETCODE SCIPselectVarStrongBranching(
          if( lperror )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
-               "(node %"SCIP_LONGINT_FORMAT") error in strong branching call%s for variable <%s> with solution %g\n",
+               "(node %" SCIP_LONGINT_FORMAT ") error in strong branching call%s for variable <%s> with solution %g\n",
                SCIPgetNNodes(scip), propagate ? " with propagation" : "", SCIPvarGetName(lpcands[c]), lpcandssol[c]);
             break;
          }

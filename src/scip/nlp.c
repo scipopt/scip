@@ -2850,7 +2850,7 @@ SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
    assert(stat   != NULL);
    assert(nlp    != NULL);
 
-   if( !SCIPnlpHasSolution(nlp) )
+   if( nlp->solstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {
       SCIPerrorMessage("do not have NLP solution for computing NLP activity\n");
       return SCIP_ERROR;
@@ -4797,7 +4797,7 @@ SCIP_RETCODE nlpCalcFracVars(
    assert(nlp->validfracvars <= stat->nnlps);
    assert(SCIPnlpHasSolution(nlp));
 
-   SCIPdebugMessage("calculating NLP fractional variables: validfracvars=%"SCIP_LONGINT_FORMAT", nnlps=%"SCIP_LONGINT_FORMAT"\n", nlp->validfracvars, stat->nnlps);
+   SCIPdebugMessage("calculating NLP fractional variables: validfracvars=%" SCIP_LONGINT_FORMAT ", nnlps=%" SCIP_LONGINT_FORMAT "\n", nlp->validfracvars, stat->nnlps);
 
    if( nlp->solstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {
@@ -5108,7 +5108,7 @@ SCIP_RETCODE SCIPnlpCreate(
    (*nlp)->eventhdlr = SCIPsetFindEventhdlr(set, EVENTHDLR_NAME);
    if( (*nlp)->eventhdlr == NULL )
    {
-      SCIPerrorMessage("NLP eventhandler <"EVENTHDLR_NAME"> not found.\n");
+      SCIPerrorMessage("NLP eventhandler <" EVENTHDLR_NAME "> not found.\n");
       return SCIP_PLUGINNOTFOUND;
    }
    SCIP_CALL( SCIPeventfilterAdd(set->scip->eventfilter, blkmem, set,

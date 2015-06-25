@@ -1,9 +1,9 @@
-/* $Id: fun_construct.hpp 2991 2013-10-22 16:25:15Z bradbell $ */
+/* $Id: fun_construct.hpp 3098 2014-02-18 03:19:39Z bradbell $ */
 # ifndef CPPAD_FUN_CONSTRUCT_INCLUDED
 # define CPPAD_FUN_CONSTRUCT_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-14 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
@@ -468,8 +468,9 @@ total_num_var_(0)
 	CPPAD_ASSERT_UNKNOWN( compare_change_ == 0 );
 
 # ifndef NDEBUG
+	// on MS Visual Studio 2012, CppAD required in front of isnan ?
 	for(i = 0; i < m; i++) 
-	if( taylor_[dep_taddr_[i]] != y[i].value_ || isnan( y[i].value_ ) )
+	if( taylor_[dep_taddr_[i]] != y[i].value_ || CppAD::isnan( y[i].value_ ) )
 	{	using std::endl;
 		std::ostringstream buf;
 		buf << "A dependent variable value is not equal to "

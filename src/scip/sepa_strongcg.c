@@ -362,7 +362,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    else
       maxsepacuts = sepadata->maxsepacuts;
 
-   SCIPdebugMessage("searching strong CG cuts: %d cols, %d rows, maxdnom=%"SCIP_LONGINT_FORMAT", maxscale=%g, maxcuts=%d\n",
+   SCIPdebugMessage("searching strong CG cuts: %d cols, %d rows, maxdnom=%" SCIP_LONGINT_FORMAT ", maxscale=%g, maxcuts=%d\n",
       ncols, nrows, maxdnom, maxscale, maxsepacuts);
 
    /* for all basic columns belonging to integer variables, try to generate a strong CG cut */

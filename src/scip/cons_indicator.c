@@ -12,10 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* #define SCIP_DEBUG */
-/* #define SCIP_OUTPUT */
-/* #define SCIP_MORE_DEBUG */
-/* #define SCIP_ENABLE_IISCHECK */
 
 /**@file   cons_indicator.c
  * @brief  constraint handler for indicator constraints
@@ -205,6 +201,8 @@
 #include "scip/heur_indicator.h"
 #include "scip/pub_misc.h"
 
+/* #define SCIP_OUTPUT */
+/* #define SCIP_ENABLE_IISCHECK */
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "indicator"
@@ -3226,7 +3224,7 @@ SCIP_RETCODE presolRoundIndicator(
    if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(consdata->slackvar)) )
    {
       /* perform dual reductions - if required */
-      if ( dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
+      if ( dualreductions )
       {
          SCIP_VAR* binvar;
          SCIP_Real obj;
@@ -3618,7 +3616,7 @@ SCIP_RETCODE propIndicator(
       if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(consdata->slackvar)) )
       {
          /* perform dual reduction - if required */
-         if ( dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip) )
+         if ( dualreductions )
          {
             SCIP_VAR* binvar;
             SCIP_Real obj;
@@ -3875,7 +3873,7 @@ SCIP_RETCODE enforceIndicators(
 
       /* first perform propagation (it might happen that standard propagation is turned off) */
       SCIP_CALL( propIndicator(scip, conss[c], consdata,
-            conshdlrdata->dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip), conshdlrdata->addopposite,
+            conshdlrdata->dualreductions && SCIPallowDualReds(scip), conshdlrdata->addopposite,
             &cutoff, &cnt) );
       if ( cutoff )
       {
@@ -5413,8 +5411,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
 
          /* perform one presolving round */
          SCIP_CALL( presolRoundIndicator(scip, conshdlrdata, cons, consdata,
-               conshdlrdata->dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip), &cutoff, &success,
-               ndelconss, nfixedvars) );
+               conshdlrdata->dualreductions && SCIPallowDualReds(scip), &cutoff, &success, ndelconss, nfixedvars) );
 
          if ( cutoff )
          {
@@ -5885,9 +5882,8 @@ SCIP_DECL_CONSPROP(consPropIndicator)
 
       *result = SCIP_DIDNOTFIND;
 
-      SCIP_CALL( propIndicator(scip, cons, consdata,
-            conshdlrdata->dualreductions && SCIPallowDualReds(scip) && SCIPallowObjProp(scip), conshdlrdata->addopposite,
-            &cutoff, &cnt) );
+      SCIP_CALL( propIndicator(scip, cons, consdata, conshdlrdata->dualreductions && SCIPallowDualReds(scip),
+            conshdlrdata->addopposite, &cutoff, &cnt) );
 
       if ( cutoff )
       {
@@ -6282,7 +6278,7 @@ SCIP_DECL_CONSPARSE(consParseIndicator)
    }
 
    /* check correct linear constraint */
-   if ( ! SCIPisInfinity(scip, SCIPgetLhsLinear(scip, lincons)) && ! SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) )
+   if ( ! SCIPisInfinity(scip, -SCIPgetLhsLinear(scip, lincons)) && ! SCIPisInfinity(scip, SCIPgetRhsLinear(scip, lincons)) )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "while parsing indicator constraint <%s>: linear constraint is ranged or equation.\n", name);
       *success = FALSE;

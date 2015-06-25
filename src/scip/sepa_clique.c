@@ -690,7 +690,7 @@ SCIP_RETCODE newsolCliqueAddRow(
    assert(vars != NULL);
 
    /* create the cut (handle retcode since we do not have a backtrace) */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "clique%"SCIP_LONGINT_FORMAT"_%d", sepadata->ncalls, sepadata->ncuts);
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "clique%" SCIP_LONGINT_FORMAT "_%d", sepadata->ncalls, sepadata->ncuts);
    SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );

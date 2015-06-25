@@ -33,9 +33,8 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/scipdefplugins.h"
-#include "scip/pub_matrix.h"
 
+#include "scip/pub_matrix.h"
 #include "presol_redvub.h"
 
 #define PRESOL_NAME            "redvub"

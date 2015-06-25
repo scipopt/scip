@@ -232,6 +232,11 @@ SCIP_DECL_PROPPRESOL(propPresolDualfix)
    assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
    assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
+   if( !SCIPallowDualReds(scip) )
+      return SCIP_OKAY;
+
    cutoff = FALSE;
    unbounded = FALSE;
    oldnfixedvars = *nfixedvars;
@@ -269,7 +274,7 @@ SCIP_DECL_PROPEXEC(propExecDualfix)
     *
     *  do not run if propagation w.r.t. current objective is not allowed
     */
-   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) || !SCIPallowObjProp(scip) )
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) || !SCIPallowDualReds(scip) )
       return SCIP_OKAY;
 
    cutoff = FALSE;

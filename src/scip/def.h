@@ -118,15 +118,6 @@ extern "C" {
 #endif
 
 /*
- * Size_t format
- */
-#if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
-#define SCIP_SIZET_FORMAT           "lu"
-#else
-#define SCIP_SIZET_FORMAT           "zu"
-#endif
-
-/*
  * Floating point values
  */
 
@@ -139,6 +130,7 @@ extern "C" {
 #define SCIP_DEFAULT_EPSILON          1e-09  /**< default upper bound for floating points to be considered zero */
 #define SCIP_DEFAULT_SUMEPSILON       1e-06  /**< default upper bound for sums of floating points to be considered zero */
 #define SCIP_DEFAULT_FEASTOL          1e-06  /**< default feasibility tolerance for constraints */
+#define SCIP_DEFAULT_CHECKFEASTOLFAC    1.0  /**< default factor to change the feasibility tolerance when testing the best solution for feasibility (after solving process) */
 #define SCIP_DEFAULT_LPFEASTOL        1e-06  /**< default primal feasibility tolerance of LP solver */
 #define SCIP_DEFAULT_DUALFEASTOL      1e-07  /**< default feasibility tolerance for reduced costs */
 #define SCIP_DEFAULT_BARRIERCONVTOL   1e-10  /**< default convergence tolerance used in barrier algorithm */
@@ -294,6 +286,17 @@ extern "C" {
                           if( ((retcode) = (x)) != SCIP_OKAY )                                                \
                           {                                                                                   \
                              SCIPerrorMessage("Error <%d> in function call\n", retcode);                      \
+                             goto TERM;                                                                       \
+                          }                                                                                   \
+                       }                                                                                      \
+                       while( FALSE )
+
+#define SCIP_ALLOC_TERMINATE(retcode, x, TERM)   do                                                           \
+                       {                                                                                      \
+                          if( NULL == (x) )                                                                   \
+                          {                                                                                   \
+                             SCIPerrorMessage("No memory in function call\n");                                \
+                             retcode = SCIP_NOMEMORY;                                                         \
                              goto TERM;                                                                       \
                           }                                                                                   \
                        }                                                                                      \

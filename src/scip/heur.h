@@ -62,8 +62,7 @@ SCIP_RETCODE SCIPdivesetCreate(
    SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
    SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
                                               *   more general constraint handler diving variable selection? */
-   SCIP_Bool             specificsos1score,  /**< should SOS1 variables be scored by the diving heuristics specific score function;
-                                              *   otherwise use the score function of the SOS1 constraint handler */
+   SCIP_DIVETYPE         divetypemask,       /**< bit mask that represents the supported dive types by this dive set */
    SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
    );
 
@@ -74,23 +73,24 @@ void SCIPdivesetReset(
    );
 
 /** update diveset statistics and global diveset statistics */
+extern
 void SCIPdivesetUpdateStats(
    SCIP_DIVESET*         diveset,            /**< diveset to be reset */
    SCIP_STAT*            stat,               /**< global SCIP statistics */
    int                   depth,              /**< the depth reached this time */
    int                   nprobingnodes,      /**< the number of probing nodes explored this time */
    int                   nbacktracks,        /**< the number of backtracks during probing this time */
-   int                   nsolsfound,         /**< number of new solutions found this time */
-   int                   nbestsolsfound,     /**< number of new best solutions found this time */
+   SCIP_Longint          nsolsfound,         /**< number of new solutions found this time */
+   SCIP_Longint          nbestsolsfound,     /**< number of new best solutions found this time */
    SCIP_Bool             leavesol            /**< has the diving heuristic reached a feasible leaf */
    );
 
-/** stores the candidate score and preferred rounding direction for a candidate variable */
+/** get the candidate score and preferred rounding direction for a candidate variable */
 extern
 SCIP_RETCODE SCIPdivesetGetScore(
    SCIP_DIVESET*         diveset,            /**< general diving settings */
    SCIP_SET*             set,                /**< SCIP settings */
-   SCIP_DIVETYPE         divetype,           /**< represents different methods for a dive set to explore the next children */
+   SCIP_DIVETYPE         divetype,           /**< the type of diving that should be applied */
    SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
    SCIP_Real             divecandsol,        /**< LP solution value of the candidate */
    SCIP_Real             divecandfrac,       /**< fractionality of the candidate */
@@ -128,7 +128,7 @@ SCIP_RETCODE SCIPheurCreate(
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed */
-   SCIP_Bool             usessubscip,        /**< does the separator use a secondary SCIP instance? */
+   SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */

@@ -48,6 +48,8 @@ public:
    /** destructor */
    virtual ~ProbDataTSP()
    {
+      if( graph_ != NULL )
+         release_graph(&graph_); /*lint !e1551*/
    }
 
    /** Copies user data if you want to copy it to a subscip */
@@ -111,7 +113,7 @@ public:
       return graph_;
    }
 
-};
+};/*lint !e1712*/
 
 
 } /* namespace tsp */

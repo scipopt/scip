@@ -72,6 +72,8 @@
 -esym(528,consdataPrint)  // Symbol not referenced
 -esym(1712,Obj*)          // Default constructor not defined for class
 
+-esym(1740,"*::scip_")
+
 -e537  // Repeated include file
 -e631  // Tag defined differently
 -e717  // do ... while(0);

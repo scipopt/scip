@@ -628,7 +628,6 @@ SCIP_RETCODE SCIPnodepqBound(
    )
 {
    SCIP_NODE* node;
-   SCIP_Bool reoptenabled;
    int pos;
    SCIP_Bool parentfelldown;
 
@@ -668,8 +667,7 @@ SCIP_RETCODE SCIPnodepqBound(
 
          SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
 
-         SCIP_CALL( SCIPsetGetBoolParam(set, "reoptimization/enable", &reoptenabled) );
-         if( reoptenabled )
+         if( set->reopt_enable )
          {
             assert(reopt != NULL);
             SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE,

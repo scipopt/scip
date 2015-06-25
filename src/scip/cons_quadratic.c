@@ -83,6 +83,15 @@
 /* epsilon for differentiating between a boundary and interior point */
 #define INTERIOR_EPS 1e-1
 
+/* scaling factor for gauge function */
+#define GAUGESCALE 0.99999
+
+/* enable assert on feasibility of cuts added in INITLP (see also 82ec3324)
+ * off by default, as I (SV) believe we cannot ensure that infeasibility
+ * can always be ensured by other means (propagation)
+ */
+/* #define ASSERT_INITLP_FEASCUT */
+
 /*
  * Data structures
  */
@@ -122,7 +131,7 @@ struct SCIP_ConsData
    unsigned int          quadvarssorted:1;   /**< are the quadratic variables already sorted? */
    unsigned int          quadvarsmerged:1;   /**< are equal quadratic variables already merged? */
    unsigned int          bilinsorted:1;      /**< are the bilinear terms already sorted? */
-   unsigned int          bilinmerged:1;      /**< are equal bilinear terms already merged? */
+   unsigned int          bilinmerged:1;      /**< are equal bilinear terms (and bilinear terms with zero coefficient) already merged? */
 
    unsigned int          isconvex:1;         /**< is quadratic function is convex ? */
    unsigned int          isconcave:1;        /**< is quadratic function is concave ? */
@@ -134,6 +143,7 @@ struct SCIP_ConsData
 #ifdef CHECKIMPLINBILINEAR
    unsigned int          isimpladded:1;      /**< has there been an implication added for a binary variable in a bilinear term? */
 #endif
+   unsigned int          isgaugeavailable:1; /**< is the gauge function computed? */
 
    SCIP_Real             minlinactivity;     /**< sum of minimal activities of all linear terms with finite minimal activity */
    SCIP_Real             maxlinactivity;     /**< sum of maximal activities of all linear terms with finite maximal activity */
@@ -159,7 +169,6 @@ struct SCIP_ConsData
    SCIP_Real             gaugeconst;         /**< constant of the gauge function */
    SCIP_Real*            interiorpoint;      /**< interior point of the region defined by the convex function */
    SCIP_Real             interiorpointval;   /**< function value at interior point */
-   unsigned int          isgaugeavailable:1; /**< is the gauge function computed? */
 };
 
 /** quadratic constraint update method */
@@ -195,6 +204,7 @@ struct SCIP_ConshdlrData
    char                  interiorcomputation;/**< how the interior point should be computed: 'a'ny point per constraint,
                                               * 'm'ost interior per constraint
                                               */
+   char                  branchscoring;      /**< method to use to compute score of branching candidates */
    int                   enfolplimit;        /**< maximum number of enforcement round before declaring the LP relaxation
                                               * infeasible (-1: no limit); WARNING: if this parameter is not set to -1,
                                               * SCIP might declare sub-optimal solutions optimal or feasible instances
@@ -1556,6 +1566,30 @@ SCIP_DECL_SORTINDCOMP(bilinTermComp)
    return SCIPvarCompare(consdata->bilinterms[ind1].var2, consdata->bilinterms[ind2].var2);
 }
 
+#ifndef NDEBUG
+/** checks if all bilinear terms are sorted correctly */
+static
+SCIP_Bool consdataCheckBilinTermsSort(
+   SCIP_CONSDATA* consdata
+   )
+{
+   int i;
+
+   assert(consdata != NULL);
+
+   /* nothing to check if the bilinear terms have not been sorted yet */
+   if( !consdata->bilinsorted )
+      return TRUE;
+
+   for( i = 0; i < consdata->nbilinterms - 1; ++i )
+   {
+      if( bilinTermComp(consdata, i, i+1) > 0 )
+         return FALSE;
+   }
+   return TRUE;
+}
+#endif
+
 /** sorting of bilinear terms */
 static
 SCIP_RETCODE consdataSortBilinTerms(
@@ -1625,6 +1659,7 @@ SCIP_RETCODE consdataSortBilinTerms(
          consdata->quadvarterms[v].adjbilin[i] = invperm[consdata->quadvarterms[v].adjbilin[i]];
 
    consdata->bilinsorted = TRUE;
+   assert(consdataCheckBilinTermsSort(consdata));
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &perm);
@@ -2310,6 +2345,9 @@ SCIP_RETCODE addBilinearTerm(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
+   /* check if the bilinear terms are sorted */
+   assert(consdataCheckBilinTermsSort(consdata));
+
    assert(var1pos >= 0);
    assert(var1pos < consdata->nquadvars);
    assert(var2pos >= 0);
@@ -2362,16 +2400,21 @@ SCIP_RETCODE addBilinearTerm(
    if( consdata->nbilinterms == 1 )
    {
       consdata->bilinsorted = TRUE;
-      consdata->bilinmerged = TRUE;
+
+      /* we have to take care of the bilinear term in mergeAndCleanBilinearTerms() if the coefficient is zero */
+      consdata->bilinmerged = !SCIPisZero(scip, consdata->bilinterms[0].coef);
    }
    else
    {
       consdata->bilinsorted = consdata->bilinsorted
-         && (bilinTermComp(consdata, consdata->nbilinterms-2, consdata->nbilinterms-1) >= 0);
+         && (bilinTermComp(consdata, consdata->nbilinterms-2, consdata->nbilinterms-1) <= 0);
       consdata->bilinmerged = FALSE;
    }
 
    consdata->iscurvchecked = FALSE;
+
+   /* check if the bilinear terms are sorted */
+   assert(consdataCheckBilinTermsSort(consdata));
 
    return SCIP_OKAY;
 }
@@ -2666,6 +2709,9 @@ SCIP_RETCODE mergeAndCleanBilinearTerms(
 
    consdata = SCIPconsGetData(cons);
 
+   /* check if the bilinear terms are sorted */
+   assert(consdataCheckBilinTermsSort(consdata));
+
    if( consdata->bilinmerged )
       return SCIP_OKAY;
 
@@ -2710,6 +2756,9 @@ SCIP_RETCODE mergeAndCleanBilinearTerms(
    SCIPfreeBufferArray(scip, &todelete);
 
    consdata->bilinmerged = TRUE;
+
+   /* check if the bilinear terms are sorted */
+   assert(consdataCheckBilinTermsSort(consdata));
 
    return SCIP_OKAY;
 }
@@ -3403,7 +3452,7 @@ SCIP_RETCODE getImpliedBounds(
       ++pos;
    }
 
-   assert(!SCIPintervalIsEmpty(*resultant));
+   assert(resultant->sup >= resultant->inf);
 
    return SCIP_OKAY;
 }
@@ -6448,7 +6497,8 @@ void SCIPaddBilinMcCormick(
       cand3 = ubx * lby;
       cand4 = ubx * uby;
 
-      if( bilincoef > 0.0 )
+      /* take most conservative value for underestimator */
+      if( bilincoef < 0.0 )
          constant = bilincoef * MAX( MAX(cand1, cand2), MAX(cand3, cand4) );
       else
          constant = bilincoef * MIN( MIN(cand1, cand2), MIN(cand3, cand4) );
@@ -7192,10 +7242,12 @@ SCIP_RETCODE computeInteriorPoint(
    assert((consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)) ||
          (consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)));
 
-   if( !SCIPisIpoptAvailableIpopt() )
+   /* need an NLP solver */
+   if( SCIPgetNNlpis(scip) == 0 )
       return SCIP_OKAY;
 
    nlpi = NULL;
+   prob = NULL;
    lbs = NULL;
    ubs = NULL;
    lincoefs = NULL;
@@ -7218,9 +7270,19 @@ SCIP_RETCODE computeInteriorPoint(
       for( i = 0; i < consdata->nlinvars; ++i )
       {
          if( consdata->lincoefs[i] >= 0.0 )
-            nlpiside += consdata->lincoefs[i] * SCIPvarGetUbLocal(consdata->linvars[i]);
+         {
+            if( SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->linvars[i]) ) )
+               nlpiside = SCIPinfinity(scip);
+            else
+               nlpiside += consdata->lincoefs[i] * SCIPvarGetUbLocal(consdata->linvars[i]);
+         }
          else
-            nlpiside += consdata->lincoefs[i] * SCIPvarGetLbLocal(consdata->linvars[i]);
+         {
+            if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->linvars[i]) ) )
+               nlpiside = SCIPinfinity(scip);
+            else
+               nlpiside += consdata->lincoefs[i] * SCIPvarGetLbLocal(consdata->linvars[i]);
+         }
 
          if( SCIPisInfinity(scip, nlpiside) )
          {
@@ -7241,9 +7303,19 @@ SCIP_RETCODE computeInteriorPoint(
       for( i = 0; i < consdata->nlinvars; ++i )
       {
          if( consdata->lincoefs[i] >= 0.0 )
-            nlpiside += consdata->lincoefs[i] * SCIPvarGetLbLocal(consdata->linvars[i]);
+         {
+            if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(consdata->linvars[i])) )
+               nlpiside = -SCIPinfinity(scip);
+            else
+               nlpiside += consdata->lincoefs[i] * SCIPvarGetLbLocal(consdata->linvars[i]);
+         }
          else
-            nlpiside += consdata->lincoefs[i] * SCIPvarGetUbLocal(consdata->linvars[i]);
+         {
+            if( SCIPisInfinity(scip, SCIPvarGetUbLocal(consdata->linvars[i])) )
+               nlpiside = -SCIPinfinity(scip);
+            else
+               nlpiside += consdata->lincoefs[i] * SCIPvarGetUbLocal(consdata->linvars[i]);
+         }
 
          if( SCIPisInfinity(scip,  -nlpiside) )
          {
@@ -7264,10 +7336,7 @@ SCIP_RETCODE computeInteriorPoint(
    if( method == 'a' && ((consdata->isconvex && SCIPisGE(scip, nlpiside, 0.0))
             || (consdata->isconcave && SCIPisLE(scip, nlpiside, 0.0))) )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
-
-      for( i = 0; i < nquadvars; i++ )
-         consdata->interiorpoint[i] = 0.0;
+      SCIP_CALL( SCIPallocClearMemoryArray(scip, &(consdata->interiorpoint), nquadvars) );
 
       *success = TRUE;
       goto TERMINATE;
@@ -7280,16 +7349,18 @@ SCIP_RETCODE computeInteriorPoint(
       assert(consdata->nlrow != NULL);
    }
 
-   /* initializing the subproblem */
-   SCIP_CALL( SCIPcreateNlpSolverIpopt(SCIPblkmem(scip), &nlpi) );
-   SCIP_CALL( SCIPnlpiSetMessageHdlr(nlpi, SCIPgetMessagehdlr(scip)) );
+   nlpi = SCIPgetNlpis(scip)[0];
+   assert(nlpi != NULL);
 
+   /* initializing the subproblem */
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_subquad", SCIPgetProbName(scip));
    SCIP_CALL( SCIPnlpiCreateProblem(nlpi, &prob, probname) );
+   assert(prob != NULL);
 
 #ifdef SCIP_DEBUG_INT
    SCIP_CALL( SCIPnlpiSetIntPar(nlpi, prob, SCIP_NLPPAR_VERBLEVEL, 0) );
 #endif
+   /* TODO: maybe one should set some generous iteration limit and/or a timelimit (remaining scip solve time)? */
 
    /* ask for memory to store data needed to create vars and linear coefficients */
    SCIP_CALL( SCIPallocBufferArray(scip, &lbs, nquadvars) );
@@ -7354,11 +7425,11 @@ SCIP_RETCODE computeInteriorPoint(
          }
          else
          {
-            /* IPOPT assumes minimization: change signs */
+            /* NLPI assumes minimization: change signs */
             for( i = 0; i < nquadvars; i++ )
                lincoefs[i] *= -1;
 
-            /* WARNING: this pointer is not ours, information should be restore! */
+            /* WARNING: this pointer is not ours, information should be restored! */
             for( i = 0; i < nlrownquadelems; i++ )
                nlrowquadelems->coef *= -1;
 
@@ -7372,7 +7443,7 @@ SCIP_RETCODE computeInteriorPoint(
          break;
 
       default:
-         SCIPerrorMessage("undefinied method for computing interior point: %c\n", method);
+         SCIPerrorMessage("undefined method for computing interior point: %c\n", method);
          return SCIP_INVALIDDATA;
    }
 
@@ -7382,7 +7453,7 @@ SCIP_RETCODE computeInteriorPoint(
    /* check termination status */
    if( SCIPnlpiGetTermstat(nlpi, prob) != SCIP_NLPTERMSTAT_OKAY )
    {
-      SCIPdebugMessage("cons %s: IPOPT termination status not okay: %d\n",
+      SCIPdebugMessage("cons <%s>: NLP Solver termination status not okay: %d\n",
             SCIPconsGetName(cons), SCIPnlpiGetTermstat(nlpi, prob));
       *success = FALSE;
       goto TERMINATE;
@@ -7394,16 +7465,16 @@ SCIP_RETCODE computeInteriorPoint(
       case SCIP_NLPSOLSTAT_GLOBOPT:
       case SCIP_NLPSOLSTAT_LOCOPT:
       case SCIP_NLPSOLSTAT_FEASIBLE:
-         SCIPdebugMessage("cons %s:found an interior point.  solution status: %d, termination status: %d\n",
-               SCIPconsGetName(cons), SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
          /* fallthrough */
+         SCIPdebugMessage("cons <%s>: found an interior point.  solution status: %d, termination status: %d\n",
+               SCIPconsGetName(cons), SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
          break;
 
       case SCIP_NLPSOLSTAT_LOCINFEASIBLE:
       case SCIP_NLPSOLSTAT_GLOBINFEASIBLE:
          /* fallthrough */
          /* TODO: we could still use the point, and let evaluateGauge decide whether the point is interior or not */
-         SCIPdebugMessage("cons %s: failed to find an interior point.  solution status: %d, termination status: %d\n",
+         SCIPdebugMessage("cons <%s>: failed to find an interior point.  solution status: %d, termination status: %d\n",
                SCIPconsGetName(cons), SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
          goto TERMINATE;
 
@@ -7411,13 +7482,14 @@ SCIP_RETCODE computeInteriorPoint(
       case SCIP_NLPSOLSTAT_UNKNOWN:
       default:
          /* fallthrough */
-         SCIPerrorMessage("cons %s: undefined behaviour of IPOPT.  solution status: %d, termination status: %d\n",
+         SCIPerrorMessage("cons <%s>: undefined behaviour of NLP Solver.  solution status: %d, termination status: %d\n",
                SCIPconsGetName(cons), SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
-         assert(0);
+         SCIPABORT();
+         goto TERMINATE; /*lint !e527*/
    }
 
    /* fetch solution
-    * note: nlpi get solution (at least for IPOPT) makes interiorpoint point to the internal solution stored in the
+    * note: nlpiGetSolution (at least for IPOPT) makes interiorpoint point to the internal solution stored in the
     * nlpi problem data structure; we need to copy it here because it will be destroyed once the problem is free'd
     */
    SCIP_CALL( SCIPnlpiGetSolution(nlpi, prob, &interiorpoint, NULL, NULL, NULL) );
@@ -7452,11 +7524,22 @@ TERMINATE:
 
    if( *success )
    {
-      printf("Computation successfull, NLP soltat: %d, termstat: %d\nPoint found:\n",
-               SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
-      for( i = 0; i < nquadvars; i++ )
+      if( prob == NULL )
       {
-         printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[i].var), consdata->interiorpoint[i]);
+         printf("Computation successful, 0 is interior point.\n");
+         for( i = 0; i < nquadvars; i++ )
+         {
+            assert(consdata->interiorpoint[i] == 0.0);
+         }
+      }
+      else
+      {
+         printf("Computation successful, NLP soltat: %d, termstat: %d\nPoint found:\n",
+               SCIPnlpiGetSolstat(nlpi, prob), SCIPnlpiGetTermstat(nlpi, prob));
+         for( i = 0; i < nquadvars; i++ )
+         {
+            printf("%s = %g\n", SCIPvarGetName(consdata->quadvarterms[i].var), consdata->interiorpoint[i]);
+         }
       }
    }
    else
@@ -7478,10 +7561,9 @@ TERMINATE:
    SCIPfreeBufferArrayNull(scip, &lininds);
    SCIPfreeBufferArrayNull(scip, &lincoefs);
 
-   if( nlpi != NULL )
+   if( prob != NULL )
    {
       SCIP_CALL( SCIPnlpiFreeProblem(nlpi, &prob) );
-      SCIP_CALL( SCIPnlpiFree(&nlpi) );
    }
 
    return SCIP_OKAY;
@@ -7509,7 +7591,8 @@ SCIP_RETCODE computeGauge(
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA* consdata;
-   SCIP_HASHMAP* varmap;
+   SCIP_QUADVARTERM* quadvarterm;
+   SCIP_BILINTERM* bilinterm;
    SCIP_Bool success;
    SCIP_Bool convex;
    int i;
@@ -7521,6 +7604,7 @@ SCIP_RETCODE computeGauge(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
+   assert(consdata->sepabilinvar2pos != NULL || consdata->nbilinterms == 0); /* this should have been computed in INITSOL */
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -7546,9 +7630,8 @@ SCIP_RETCODE computeGauge(
    /* 2.
     * we are going to evaluate the function at interiorpoint; so, we need to compute interiorpoint^T A interiorpoint;
     * therefore, we need a mechanism that for a given variable, it returns its interior point value
-    * prepare map from variable to its idx such that in interiorpoint[idx] is its interior point value
+    * fortunately, sepabilinvar2pos in consdata gives us all the information that we need
     */
-   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), SCIPcalcHashtableSize(consdata->nquadvars)) );
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(consdata->gaugecoefs), consdata->nquadvars) );
 
@@ -7558,22 +7641,32 @@ SCIP_RETCODE computeGauge(
    for( i = 0; i < consdata->nquadvars; i++ )
    {
       SCIP_Real val;
-
-      val = consdata->interiorpoint[i];
-      consdata->interiorpointval += (consdata->quadvarterms[i].lincoef + consdata->quadvarterms[i].sqrcoef * val) * val;
-      consdata->gaugeconst += consdata->quadvarterms[i].sqrcoef * val * val;
-      SCIP_CALL( SCIPhashmapInsert(varmap, consdata->quadvarterms[i].var, (void *)(size_t)i) );
-   }
-
-   for( i = 0; i < consdata->nbilinterms; i++ )
-   {
-      SCIP_Real val1;
       SCIP_Real val2;
 
-      val1 = consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, consdata->bilinterms[i].var1)];
-      val2 = consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, consdata->bilinterms[i].var2)];
-      consdata->interiorpointval += consdata->bilinterms[i].coef * val1 * val2;
-      consdata->gaugeconst += consdata->bilinterms[i].coef * val1 * val2;
+      val = consdata->interiorpoint[i];
+      quadvarterm = &consdata->quadvarterms[i];
+
+      consdata->interiorpointval += (quadvarterm->lincoef + quadvarterm->sqrcoef * val) * val;
+      consdata->gaugeconst += quadvarterm->sqrcoef * val * val;
+
+      for( j = 0; j < quadvarterm->nadjbilin; ++j )
+      {
+         int bilintermidx;
+
+         bilintermidx = quadvarterm->adjbilin[j];
+         bilinterm = &consdata->bilinterms[bilintermidx];
+
+         if( bilinterm->var1 != quadvarterm->var )
+            continue;
+
+         /* the index of the variable associated with var2 in bilinterm should be given by sepabilinvar2pos */
+         assert(consdata->quadvarterms[consdata->sepabilinvar2pos[bilintermidx]].var == bilinterm->var2);
+
+         val2 = consdata->interiorpoint[consdata->sepabilinvar2pos[bilintermidx]];
+
+         consdata->interiorpointval += bilinterm->coef * val * val2;
+         consdata->gaugeconst += bilinterm->coef * val * val2;
+      }
    }
 
    /* compute gaugecoefs (b_gauge) */
@@ -7581,26 +7674,31 @@ SCIP_RETCODE computeGauge(
    {
       SCIP_Real val;
 
+      quadvarterm = &consdata->quadvarterms[i];
+
       val = consdata->interiorpoint[i];
-      consdata->gaugecoefs[i] = consdata->quadvarterms[i].lincoef + 2 * consdata->quadvarterms[i].sqrcoef * val;
-      for( j = 0; j < consdata->quadvarterms[i].nadjbilin; j++ )
+      consdata->gaugecoefs[i] = quadvarterm->lincoef + 2.0 * quadvarterm->sqrcoef * val;
+      for( j = 0; j < quadvarterm->nadjbilin; j++ )
       {
-         SCIP_BILINTERM bilinterm;
-         SCIP_VAR* var;
+         int varpos;
+         int bilintermidx;
 
-         bilinterm = consdata->bilinterms[consdata->quadvarterms[i].adjbilin[j]];
+         bilintermidx = quadvarterm->adjbilin[j];
+         bilinterm = &consdata->bilinterms[bilintermidx];
 
-         if( bilinterm.var1 == consdata->quadvarterms[i].var )
+         if( bilinterm->var1 == quadvarterm->var )
          {
-            var = bilinterm.var2;
+            /* the index of the variable associated with var2 in bilinterm should be given by sepabilinvar2pos */
+            assert(consdata->quadvarterms[consdata->sepabilinvar2pos[bilintermidx]].var == bilinterm->var2);
+            varpos = consdata->sepabilinvar2pos[bilintermidx];
          }
          else
          {
-            assert(bilinterm.var2 == consdata->quadvarterms[i].var);
-            var = bilinterm.var1;
+            assert(bilinterm->var2 == quadvarterm->var);
+            varpos = i;
          }
 
-         consdata->gaugecoefs[i] += bilinterm.coef * consdata->interiorpoint[(int)(size_t)SCIPhashmapGetImage(varmap, var)];
+         consdata->gaugecoefs[i] += bilinterm->coef * consdata->interiorpoint[varpos];
       }
    }
 
@@ -7613,8 +7711,6 @@ SCIP_RETCODE computeGauge(
    }
    printf("c_gauge = %g\n", consdata->gaugeconst);
 #endif
-
-   SCIPhashmapFree(&varmap);
 
    SCIPdebugMessage("gauge function computed successfully\n");
    consdata->isgaugeavailable = TRUE;
@@ -7674,7 +7770,7 @@ SCIP_RETCODE evaluateGauge(
       aterm = side - consdata->interiorpointval;
 
       /* it can happen that the interior point is not really interior, since we are not so strict at the moment of
-       * computing the interior point, which makes sense in the case that the constaraint is quadratic <= linear expr,
+       * computing the interior point, which makes sense in the case that the constraint is quadratic <= linear expr,
        * since we compute a point in quadratic <= min linear expr and it might be that this set consists of a single
        * point which will not be interior. furthermore, if this set is empty, we could just take any point and it could
        * happen that for some value of linear expr, the point is actually interior, but for many it could not be.
@@ -7701,12 +7797,11 @@ SCIP_RETCODE evaluateGauge(
          printf("rhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->rhs, side, consdata->interiorpointval);
       }
 #endif
-      if( SCIPisLE(scip, aterm, 0.0) )
+      if( !SCIPisPositive(scip, aterm) )
       {
          *gaugeval = -1.0;
          return SCIP_OKAY;
       }
-      assert(SCIPisPositive(scip, aterm));
    }
    else
    {
@@ -7736,12 +7831,11 @@ SCIP_RETCODE evaluateGauge(
          printf("lhs: %g level: %15.20g interiorpointval: %15.20g\n", consdata->lhs, side, consdata->interiorpointval);
       }
 #endif
-      if( SCIPisGE(scip, aterm, 0.0) )
+      if( !SCIPisNegative(scip, aterm) )
       {
          *gaugeval = -1.0;
          return SCIP_OKAY;
       }
-      assert(SCIPisNegative(scip, aterm));
    }
 
    /* compute bterm = b_gauge^T * refsol - f(interiorpoint) - c_gauge
@@ -7769,6 +7863,16 @@ SCIP_RETCODE evaluateGauge(
    }
 
    /* now compute gauge */
+   if( convex && cterm < 0.0 )
+   {
+      assert(SCIPisZero(scip, cterm));
+      cterm = 0.0;
+   }
+   else if( !convex && cterm > 0.0 )
+   {
+      assert(SCIPisZero(scip, cterm));
+      cterm = 0.0;
+   }
    assert(bterm*bterm + 4*aterm*cterm >= 0);
 
    if( convex )
@@ -7781,7 +7885,7 @@ SCIP_RETCODE evaluateGauge(
       *gaugeval = bterm - sqrt(bterm*bterm + 4 * aterm * cterm);
       *gaugeval = *gaugeval / (2 * aterm);
    }
-   assert(SCIPisGE(scip, *gaugeval, 0.0));
+   assert(!SCIPisNegative(scip, *gaugeval));
    *success = TRUE;
 
 #ifdef SCIP_DEBUG_GAUGE
@@ -7855,6 +7959,9 @@ SCIP_RETCODE computeReferencePointGauge(
          printf("refsol is in the closure of the region (gaugeval <= 1), don't modify reference point\n");
    }
 #endif
+
+   /* scale gauge value so that point is close to the boundary, but not on the boundary */
+   gaugeval *= GAUGESCALE;
 
    /* when a new solution is found, this method is called from addLinearizationCuts.
     * in this case, since the solution is feasible, gaugeval <= 1
@@ -8469,9 +8576,14 @@ SCIP_DECL_EVENTEXEC(processNewSolutionEvent)
    return SCIP_OKAY;
 }
 
-/** computes the infeasibilities of variables from the convexification gaps in the constraints and notifies the branching rule about them */
+/** registers branching candidates according to convexification gap rule
+ *
+ * That is, computes for every nonconvex term the gap between the terms value in the LP solution and the value of the underestimator
+ * as it would be (and maybe has been) constructed by the separation routines of this constraint handler. Then it registers all
+ * variables occurring in each term with the computed gap. If variables appear in more than one term, they are registered several times.
+ */
 static
-SCIP_RETCODE registerVariableInfeasibilities(
+SCIP_RETCODE registerBranchingCandidatesGap(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_CONS**           conss,              /**< constraints to check */
@@ -8676,6 +8788,223 @@ SCIP_RETCODE registerVariableInfeasibilities(
    return SCIP_OKAY;
 }
 
+/** registers branching candidates according to constraint violation rule
+ *
+ * That is, registers all variables appearing in nonconvex terms^1 with a score that is the violation of the constraint.
+ * This is the same rule as is applied in cons_nonlinear and other nonlinear constraint handlers.
+ *
+ * 1) We mean all quadratic variables that appear either in a nonconvex square term or in a bilinear term, if the constraint
+ * itself is nonconvex. (and this under the assumption that the rhs is violated; for violated lhs, swap terms)
+ */
+static
+SCIP_RETCODE registerBranchingCandidatesViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to check */
+   int                   nconss,             /**< number of constraints to check */
+   int*                  nnotify             /**< counter for number of notifications performed */
+   )
+{
+   SCIP_CONSDATA*     consdata;
+   SCIP_QUADVARTERM*  quadvarterm;
+   int                c;
+   int                j;
+   SCIP_VAR*          x;
+   SCIP_Real          xlb;
+   SCIP_Real          xub;
+   SCIP_Real          xval;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+
+   *nnotify = 0;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss != NULL);
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( !consdata->nquadvars )
+         continue;
+
+      if( (!SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || consdata->isconcave) &&
+         ( !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) || consdata->isconvex ) )
+         continue;
+      SCIPdebugMessage("cons %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->isconvex, consdata->isconcave);
+
+      for( j = 0; j < consdata->nquadvars; ++j )
+      {
+         quadvarterm = &consdata->quadvarterms[j];
+         if( (SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) && quadvarterm->sqrcoef < 0) ||
+             (SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && quadvarterm->sqrcoef > 0) ||
+             quadvarterm->nadjbilin > 0 )
+         {
+            x = quadvarterm->var;
+            xlb = SCIPvarGetLbLocal(x);
+            xub = SCIPvarGetUbLocal(x);
+
+            if( quadvarterm->nadjbilin == 0 )
+            {
+               xval = SCIPgetSolVal(scip, NULL, x);
+
+               /* if variable is at bounds and only in a nonconvex square term, then no need to branch, since secant is exact there */
+               if( SCIPisLE(scip, xval, xlb) || SCIPisGE(scip, xval, xub) )
+                  continue;
+            }
+
+            if( SCIPisRelEQ(scip, xlb, xub) )
+            {
+               SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(x), xlb, xub, xub-xlb);
+               continue;
+            }
+
+            SCIP_CALL( SCIPaddExternBranchCand(scip, x, MAX(consdata->lhsviol, consdata->rhsviol), SCIP_INVALID) );
+            ++*nnotify;
+         }
+      }
+   }
+
+   SCIPdebugMessage("registered %d branching candidates\n", *nnotify);
+
+   return SCIP_OKAY;
+}
+
+/** registers branching candidates according to centrality rule
+ *
+ * That is, registers all variables appearing in nonconvex terms^1 with a score that is given by the distance of the
+ * variable value from its bounds. This rule should not make sense, as the distance to the bounds is also (often) considered
+ * by the branching rule later on.
+ *
+ * 1) We mean all quadratic variables that appear either in a nonconvex square term or in a bilinear term, if the constraint
+ * itself is nonconvex. (and this under the assumption that the rhs is violated; for violated lhs, swap terms)
+ */
+static
+SCIP_RETCODE registerBranchingCandidatesCentrality(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to check */
+   int                   nconss,             /**< number of constraints to check */
+   int*                  nnotify             /**< counter for number of notifications performed */
+   )
+{
+   SCIP_CONSDATA*     consdata;
+   SCIP_QUADVARTERM*  quadvarterm;
+   int                c;
+   int                j;
+   SCIP_VAR*          x;
+   SCIP_Real          xlb;
+   SCIP_Real          xub;
+   SCIP_Real          xval;
+   SCIP_Real          score;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+
+   *nnotify = 0;
+
+   for( c = 0; c < nconss; ++c )
+   {
+      assert(conss != NULL);
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( !consdata->nquadvars )
+         continue;
+
+      if( (!SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || consdata->isconcave) &&
+         ( !SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) || consdata->isconvex ) )
+         continue;
+      SCIPdebugMessage("cons %s violation: %g %g  convex: %u %u\n", SCIPconsGetName(conss[c]), consdata->lhsviol, consdata->rhsviol, consdata->isconvex, consdata->isconcave);
+
+      for( j = 0; j < consdata->nquadvars; ++j )
+      {
+         quadvarterm = &consdata->quadvarterms[j];
+         if( (SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) && quadvarterm->sqrcoef < 0) ||
+             (SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) && quadvarterm->sqrcoef > 0) ||
+             quadvarterm->nadjbilin > 0 )
+         {
+            x = quadvarterm->var;
+            xlb = SCIPvarGetLbLocal(x);
+            xub = SCIPvarGetUbLocal(x);
+
+            if( SCIPisRelEQ(scip, xlb, xub) )
+            {
+               SCIPdebugMessage("ignore fixed variable <%s>[%g, %g], diff %g\n", SCIPvarGetName(x), xlb, xub, xub-xlb);
+               continue;
+            }
+
+            xval = SCIPgetSolVal(scip, NULL, x);
+            xval = MAX(xlb, MIN(xub, xval));
+
+            /* compute relative difference of xval to each of its bounds
+             * and scale such that if xval were in the middle, we get a score of 1
+             * and if xval is on one its bounds, the score is 0
+             */
+            if( SCIPisInfinity(scip, -xlb) || SCIPisInfinity(scip, xub) )
+            {
+               if( (!SCIPisInfinity(scip, -xlb) && SCIPisEQ(scip, xval, xlb)) || (!SCIPisInfinity(scip, xub) && SCIPisEQ(scip, xval, xub)) )
+                  score = 0.0;
+               else
+                  score = 1.0;
+            }
+            else
+            {
+               score = 4.0 * (xval - xlb) * (xub - xval) / ((xub - xlb) * (xub - xlb));
+            }
+
+            SCIP_CALL( SCIPaddExternBranchCand(scip, x, score, SCIP_INVALID) );
+            ++*nnotify;
+         }
+      }
+   }
+
+   SCIPdebugMessage("registered %d branching candidates\n", *nnotify);
+
+   return SCIP_OKAY;
+}
+
+/** registers branching candidates */
+static
+SCIP_RETCODE registerBranchingCandidates(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_CONS**           conss,              /**< constraints to check */
+   int                   nconss,             /**< number of constraints to check */
+   int*                  nnotify             /**< counter for number of notifications performed */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   switch( conshdlrdata->branchscoring )
+   {
+      case 'g' :
+         SCIP_CALL( registerBranchingCandidatesGap(scip, conshdlr, conss, nconss, nnotify) );
+         break;
+
+      case 'v' :
+         SCIP_CALL( registerBranchingCandidatesViolation(scip, conshdlr, conss, nconss, nnotify) );
+         break;
+
+      case 'c' :
+         SCIP_CALL( registerBranchingCandidatesCentrality(scip, conshdlr, conss, nconss, nnotify) );
+         break;
+
+      default :
+         SCIPerrorMessage("invalid branchscoring selection");
+         SCIPABORT();
+         return SCIP_ERROR; /*lint !e527*/
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** registers a quadratic variable from a violated constraint as branching candidate that has a large absolute value in the LP relaxation */
 static
 SCIP_RETCODE registerLargeLPValueVariableForBranching(
@@ -8832,6 +9161,15 @@ SCIP_RETCODE replaceByLinearConstraints(
                lhs = -SCIPinfinity(scip);
          }
          SCIPdebugMessage("Linear constraint is a bound: %g <= <%s> <= %g\n", lhs, SCIPvarGetName(*consdata->linvars), rhs);
+
+         if( SCIPisInfinity(scip, -rhs) || SCIPisInfinity(scip, lhs) )
+         {
+            SCIPdebugMessage("node will marked as infeasible since lb/ub of %s is +/-infinity\n",
+               SCIPvarGetName(consdata->linvars[0]));
+
+            *infeasible = TRUE;
+            return SCIP_OKAY;
+         }
 
          if ( ! SCIPisInfinity(scip, -lhs) )
          {
@@ -9070,7 +9408,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
       SCIPintervalSet(&a_, a);
       SCIPintervalSetBounds(&tmp, -SCIPintervalGetSup(b), -SCIPintervalGetInf(b));
       SCIPintervalSolveUnivariateQuadExpressionPositive(intervalinfty, &tmp, a_, tmp, rhs);
-      if( SCIPintervalIsEmpty(tmp) )
+      if( SCIPintervalIsEmpty(intervalinfty, tmp) )
       {
          SCIPdebugMessage("found <%s> infeasible due to domain propagation for quadratic variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(var));
          *result = SCIP_CUTOFF;
@@ -9099,7 +9437,7 @@ SCIP_RETCODE propagateBoundsQuadVar(
       return SCIP_OKAY;
    }
 
-   if( SCIPintervalIsEmpty(newrange) )
+   if( SCIPintervalIsEmpty(intervalinfty, newrange) )
    {
       SCIPdebugMessage("found <%s> infeasible due to domain propagation for quadratic variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(var));
       *result = SCIP_CUTOFF;
@@ -9263,7 +9601,7 @@ SCIP_RETCODE propagateBoundsBilinearTerm(
    /* try to find domain reductions for x */
    SCIPintervalSolveBivariateQuadExpressionAllScalar(intervalinfty, &xbnds, xsqrcoef, ysqrcoef, bilincoef, xlincoef, ylincoef, rhs, xbnds, ybnds);
 
-   if( SCIPintervalIsEmpty(xbnds) )
+   if( SCIPintervalIsEmpty(intervalinfty, xbnds) )
    {
       SCIPdebugMessage("found <%s> infeasible due to domain propagation for quadratic variable <%s>\n", SCIPconsGetName(cons), SCIPvarGetName(x));
       *result = SCIP_CUTOFF;
@@ -9425,7 +9763,7 @@ void propagateBoundsGetQuadActivity(
    SCIPintervalSetBounds(&consdata->quadactivitybounds,
       (*minactivityinf > 0 ? -intervalinfty : *minquadactivity),
       (*maxactivityinf > 0 ?  intervalinfty : *maxquadactivity));
-   assert(!SCIPintervalIsEmpty(consdata->quadactivitybounds));
+   assert(!SCIPintervalIsEmpty(intervalinfty, consdata->quadactivitybounds));
 }
 
 /** propagates bounds on a quadratic constraint */
@@ -9501,11 +9839,11 @@ SCIP_RETCODE propagateBoundsCons(
 
    /* compute activity of quad term part, if not up to date
     * in that case, we also collect the contribution of each quad var term for later */
-   if( SCIPintervalIsEmpty(consdata->quadactivitybounds) )
+   if( SCIPintervalIsEmpty(intervalinfty, consdata->quadactivitybounds) )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &quadactcontr, consdata->nquadvars) );
       propagateBoundsGetQuadActivity(scip, consdata, intervalinfty, &minquadactivity, &maxquadactivity, &quadminactinf, &quadmaxactinf, quadactcontr);
-      assert(!SCIPintervalIsEmpty(consdata->quadactivitybounds));
+      assert(!SCIPintervalIsEmpty(intervalinfty, consdata->quadactivitybounds));
    }
 
    SCIPdebugMessage("linear activity: [%g, %g]   quadratic activity: [%g, %g]\n",
@@ -9846,7 +10184,7 @@ SCIP_RETCODE propagateBoundsCons(
                {
                   rhs2.inf = -intervalinfty;
                }
-               assert(!SCIPintervalIsEmpty(rhs2));
+               assert(!SCIPintervalIsEmpty(intervalinfty, rhs2));
 
                /* if rhs2 is entire, then there is nothing we could propagate */
                if( SCIPintervalIsEntire(intervalinfty, rhs2) )
@@ -10651,7 +10989,7 @@ SCIP_DECL_CONSINITSOL(consInitsolQuadratic)
       }
 
       /* compute gauge function using interior points per constraint, only when there are quadratic variables */
-      if( conshdlrdata->gaugecuts && consdata->nquadvars > 0 )
+      if( conshdlrdata->gaugecuts && SCIPgetSubscipDepth(scip) == 0 && consdata->nquadvars > 0 )
       {
          SCIP_CALL( checkCurvature(scip, conss[c], conshdlrdata->checkcurvature) );  /*lint !e613 */
          if( (consdata->isconvex && !SCIPisInfinity(scip, consdata->rhs)) ||
@@ -10868,7 +11206,9 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613 */
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
          SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+#ifdef ASSERT_INITLP_FEASCUT
          assert( ! infeasible );
+#endif
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
          continue;
       }
@@ -10921,7 +11261,9 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
                SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+#ifdef ASSERT_INITLP_FEASCUT
                assert( ! infeasible );
+#endif
 
                SCIP_CALL( SCIPreleaseRow (scip, &row) );
             }
@@ -10996,7 +11338,9 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
                   SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+#ifdef ASSERT_INITLP_FEASCUT
                   assert( ! infeasible );
+#endif
 
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
                }
@@ -11013,7 +11357,9 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
                   SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+#ifdef ASSERT_INITLP_FEASCUT
                   assert( ! infeasible );
+#endif
 
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
                }
@@ -11325,7 +11671,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpQuadratic)
    SCIPdebugMessage("separation failed (bestefficacy = %g < %g = minefficacy ); max viol: %g\n", sepaefficacy, minefficacy, maxviol);
 
    /* find branching candidates */
-   SCIP_CALL( registerVariableInfeasibilities(scip, conshdlr, conss, nconss, &nnotify) );
+   SCIP_CALL( registerBranchingCandidates(scip, conshdlr, conss, nconss, &nnotify) );
 
    /* if sepastore can decrease LP feasibility tolerance, we can add cuts with efficacy in [eps, feastol] */
    leastpossibleefficacy = SCIPgetRelaxFeastolFactor(scip) > 0.0 ? SCIPepsilon(scip) : SCIPfeastol(scip);
@@ -12526,85 +12872,89 @@ SCIP_RETCODE SCIPincludeConshdlrQuadratic(
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransQuadratic) );
 
    /* add quadratic constraint handler parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/replacebinaryprod",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/replacebinaryprod",
          "max. length of linear term which when multiplied with a binary variables is replaced by an auxiliary variable and a linear reformulation (0 to turn off)",
          &conshdlrdata->replacebinaryprodlength, FALSE, INT_MAX, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/empathy4and",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/empathy4and",
          "empathy level for using the AND constraint handler: 0 always avoid using AND; 1 use AND sometimes; 2 use AND as often as possible",
          &conshdlrdata->empathy4and, FALSE, 0, 0, 2, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/binreforminitial",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/binreforminitial",
          "whether to make non-varbound linear constraints added due to replacing products with binary variables initial",
          &conshdlrdata->binreforminitial, TRUE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/binreformmaxcoef",
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/binreformmaxcoef",
          "limit (as factor on 1/feastol) on coefficients and coef. range in linear constraints created when replacing products with binary variables",
          &conshdlrdata->binreformmaxcoef, TRUE, 1e-4, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacysepa",
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacysepa",
          "minimal efficacy for a cut to be added to the LP during separation; overwrites separating/efficacy",
          &conshdlrdata->mincutefficacysepa, TRUE, 0.0001, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/minefficacyenfofac",
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/minefficacyenfofac",
          "minimal target efficacy of a cut in order to add it to relaxation during enforcement as a factor of the feasibility tolerance (may be ignored)",
          &conshdlrdata->mincutefficacyenfofac, TRUE, 2.0, 1.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/scaling",
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/scaling",
          "whether scaling of infeasibility is 'o'ff, by sup-norm of function 'g'radient, or by left/right hand 's'ide",
          &conshdlrdata->scaling, TRUE, 'o', "ogs", NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/cutmaxrange",
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/cutmaxrange",
          "maximal coef range of a cut (maximal coefficient divided by minimal coefficient) in order to be added to LP relaxation",
          &conshdlrdata->cutmaxrange, TRUE, 1e+7, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linearizeheursol",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/linearizeheursol",
          "whether linearizations of convex quadratic constraints should be added to cutpool in a solution found by some heuristic",
          &conshdlrdata->linearizeheursol, TRUE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/checkcurvature",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkcurvature",
          "whether multivariate quadratic functions should be checked for convexity/concavity",
          &conshdlrdata->checkcurvature, FALSE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/checkfactorable",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/checkfactorable",
          "whether constraint functions should be checked to be factorable",
          &conshdlrdata->checkfactorable, TRUE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/linfeasshift",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/linfeasshift",
          "whether to try to make solutions in check function feasible by shifting a linear variable (esp. useful if constraint was actually objective function)",
          &conshdlrdata->linfeasshift, TRUE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/disaggregate",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/disaggregate",
          "whether to disaggregate quadratic parts that decompose into a sum of non-overlapping quadratic terms",
          &conshdlrdata->disaggregate, TRUE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxproprounds",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxproprounds",
          "limit on number of propagation rounds for a single constraint within one round of SCIP propagation during solve",
          &conshdlrdata->maxproprounds, TRUE, 1, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxproproundspresolve",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxproproundspresolve",
          "limit on number of propagation rounds for a single constraint within one round of SCIP presolve",
          &conshdlrdata->maxproproundspresolve, TRUE, 10, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/enfolplimit",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/enfolplimit",
          "maximum number of enforcement rounds before declaring the LP relaxation infeasible (-1: no limit); WARNING: changing this parameter might lead to incorrect results!",
          &conshdlrdata->enfolplimit, TRUE, -1, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/sepanlpmincont",
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/sepanlpmincont",
          "minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation",
          &conshdlrdata->sepanlpmincont, FALSE, 1.0, 0.0, 2.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/enfocutsremovable",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/enfocutsremovable",
          "are cuts added during enforcement removable from the LP in the same node?",
          &conshdlrdata->enfocutsremovable, TRUE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/gaugecuts",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/gaugecuts",
          "should convex quadratics generated strong cuts via gauge function?",
          &conshdlrdata->gaugecuts, FALSE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "constraints/"CONSHDLR_NAME"/interiorcomputation",
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/interiorcomputation",
          "how the interior point should be computed: 'a'ny point per constraint, 'm'ost interior per constraint",
          &conshdlrdata->interiorcomputation, TRUE, 'a', "am", NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branchscoring",
+         "which score to give branching candidates: convexification 'g'ap, constraint 'v'iolation, 'c'entrality of variable value in domain",
+         &conshdlrdata->branchscoring, TRUE, 'g', "cgv", NULL, NULL) );
 
    conshdlrdata->eventhdlr = NULL;
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr),CONSHDLR_NAME"_boundchange", "signals a bound change to a quadratic constraint",
@@ -12677,7 +13027,7 @@ SCIP_RETCODE SCIPincludeQuadconsUpgrade(
       conshdlrdata->nquadconsupgrades++;
 
       /* adds parameter to turn on and off the upgrading step */
-      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/"CONSHDLR_NAME"/upgrade/%s", conshdlrname);
+      (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "constraints/" CONSHDLR_NAME "/upgrade/%s", conshdlrname);
       (void) SCIPsnprintf(paramdesc, SCIP_MAXSTRLEN, "enable quadratic upgrading for constraint handler <%s>", conshdlrname);
       SCIP_CALL( SCIPaddBoolParam(scip,
             paramname, paramdesc,
@@ -13778,16 +14128,18 @@ SCIP_RETCODE SCIPchgRhsQuadratic(
 }
 
 /** gets the feasibility of the quadratic constraint in the given solution */
-SCIP_Real SCIPgetFeasibilityQuadratic(
+SCIP_RETCODE SCIPgetFeasibilityQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
+   SCIP_Real*            feasibility         /**< pointer to store the feasibility */
    )
 {
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(feasibility != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13801,29 +14153,34 @@ SCIP_Real SCIPgetFeasibilityQuadratic(
    assert(consdata != NULL);
 
    if( SCIPisInfinity(scip, consdata->rhs) && SCIPisInfinity(scip, -consdata->lhs) )
-      return SCIPinfinity(scip);
+      *feasibility = SCIPinfinity(scip);
    else if( SCIPisInfinity(scip, -consdata->lhs) )
-      return (consdata->rhs - consdata->activity);
+      *feasibility = (consdata->rhs - consdata->activity);
    else if( SCIPisInfinity(scip, consdata->rhs) )
-      return (consdata->activity - consdata->lhs);
+      *feasibility = (consdata->activity - consdata->lhs);
+   else
+   {
+      assert(!SCIPisInfinity(scip, -consdata->rhs));
+      assert(!SCIPisInfinity(scip, consdata->lhs));
+      *feasibility = MIN( consdata->rhs - consdata->activity, consdata->activity - consdata->lhs );
+   }
 
-   assert(!SCIPisInfinity(scip, -consdata->rhs));
-   assert(!SCIPisInfinity(scip, consdata->lhs));
-
-   return MIN( consdata->rhs - consdata->activity, consdata->activity - consdata->lhs );
+   return SCIP_OKAY;
 }
 
 /** gets the activity of the quadratic constraint in the given solution */
-SCIP_Real SCIPgetActivityQuadratic(
+SCIP_RETCODE SCIPgetActivityQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint data */
-   SCIP_SOL*             sol                 /**< solution, or NULL to use current node's solution */
+   SCIP_SOL*             sol,                /**< solution, or NULL to use current node's solution */
+   SCIP_Real*            activity            /**< pointer to store the activity */
    )
 {
    SCIP_CONSDATA* consdata;
 
    assert(scip != NULL);
    assert(cons != NULL);
+   assert(activity != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
@@ -13836,8 +14193,9 @@ SCIP_Real SCIPgetActivityQuadratic(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   return consdata->activity;
+   *activity = consdata->activity;
 
+   return SCIP_OKAY;
 }
 
 /** changes the linear coefficient value for a given quadratic variable in a quadratic constraint data; if not

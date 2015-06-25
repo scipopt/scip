@@ -215,7 +215,7 @@ SCIP_RETCODE writeProblem(
             SCIPdialogMessage(scip, NULL, "error creating the file <%s>\n", filename);
             SCIPdialoghdlrClearBuffer(dialoghdlr);
             break;
-         }         
+         }
          else if(retcode == SCIP_WRITEERROR )
          {
             SCIPdialogMessage(scip, NULL, "error writing file <%s>\n", filename);
@@ -232,7 +232,7 @@ SCIP_RETCODE writeProblem(
                SCIPdialogMessage(scip, NULL, "following readers are avaliable for writing:\n");
                displayReaders(scip, FALSE, TRUE);
 
-               SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, 
+               SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog,
                      "select a suitable reader by extension (or return): ", &extension, &endoffile) );
 
                if( extension[0] == '\0' )
@@ -336,7 +336,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons)
             SCIP_CALL( SCIPaddCons(scip, cons) );
             SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
-            SCIPdialogMessage(scip, NULL, "successfully added constraint\n"); 
+            SCIPdialogMessage(scip, NULL, "successfully added constraint\n");
             SCIPescapeString(consstr, SCIP_MAXSTRLEN, str);
 
             SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, consstr, FALSE) );
@@ -536,8 +536,29 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChecksol)
       SCIPdialogMessage(scip, NULL, "no feasible solution available\n");
    else
    {
+      SCIP_Real oldfeastol;
+      SCIP_Real checkfeastolfac;
+      SCIP_Bool dispallviols;
+
+      oldfeastol = SCIPfeastol(scip);
+      SCIP_CALL( SCIPgetRealParam(scip, "numerics/checkfeastolfac", &checkfeastolfac) );
+      SCIP_CALL( SCIPgetBoolParam(scip, "display/allviols", &dispallviols) );
+
+      /* scale feasibility tolerance by set->num_checkfeastolfac */
+      if( !SCIPisEQ(scip, checkfeastolfac, 1.0) )
+      {
+         SCIP_CALL( SCIPchgFeastol(scip, oldfeastol * checkfeastolfac) );
+      }
+
       SCIPinfoMessage(scip, NULL, "check best solution\n");
-      SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, TRUE) );
+
+      SCIP_CALL( SCIPcheckSolOrig(scip, sol, &feasible, TRUE, dispallviols) );
+
+      /* restore old feasibilty tolerance */
+      if( !SCIPisEQ(scip, checkfeastolfac, 1.0) )
+      {
+         SCIP_CALL( SCIPchgFeastol(scip, oldfeastol) );
+      }
 
       if( feasible )
          SCIPdialogMessage(scip, NULL, "solution is feasible in original problem\n");
@@ -578,7 +599,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCliquegraph)
       {
          SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
 
-         retcode = SCIPwriteCliqueGraph(scip, filename, TRUE, FALSE);
+         retcode = SCIPwriteCliqueGraph(scip, filename, FALSE);
          if( retcode == SCIP_FILECREATEERROR )
             SCIPdialogMessage(scip, NULL, "error creating file <%s>\n", filename);
          else
@@ -1910,7 +1931,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       break;
 
    case SCIP_PARAMTYPE_LONGINT:
-      (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %"SCIP_LONGINT_FORMAT", new value [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"]: ",
+      (void) SCIPsnprintf(prompt, SCIP_MAXSTRLEN, "current value: %" SCIP_LONGINT_FORMAT ", new value [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "]: ",
          SCIPparamGetLongint(param), SCIPparamGetLongintMin(param), SCIPparamGetLongintMax(param));
       SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, prompt, &valuestr, &endoffile) );
       if( endoffile )
@@ -1931,7 +1952,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
       retcode = SCIPchgLongintParam(scip, param, longintval);
       if( retcode != SCIP_PARAMETERWRONGVAL )
       {
-         SCIPdialogMessage(scip, NULL, "%s = %"SCIP_LONGINT_FORMAT"\n", SCIPparamGetName(param), longintval);
+         SCIPdialogMessage(scip, NULL, "%s = %" SCIP_LONGINT_FORMAT "\n", SCIPparamGetName(param), longintval);
 
          SCIP_CALL( retcode );
       }
@@ -1951,7 +1972,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-      if( sscanf(valuestr, "%"SCIP_REAL_FORMAT, &realval) != 1 )
+      if( sscanf(valuestr, "%" SCIP_REAL_FORMAT, &realval) != 1 )
       {
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
@@ -2526,7 +2547,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetLimitsObjective)
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-   if( sscanf(valuestr, "%"SCIP_REAL_FORMAT, &objlim) != 1 )
+   if( sscanf(valuestr, "%" SCIP_REAL_FORMAT, &objlim) != 1 )
    {
       SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
       return SCIP_OKAY;
@@ -3058,7 +3079,7 @@ SCIP_RETCODE SCIPcreateRootDialog(
    SCIP_DIALOG**         root                /**< pointer to store the root dialog */
    )
 {
-   SCIP_CALL( SCIPincludeDialog(scip, root, 
+   SCIP_CALL( SCIPincludeDialog(scip, root,
          dialogCopyDefault,
          SCIPdialogExecMenuLazy, NULL, NULL,
          "SCIP", "SCIP's main menu", TRUE, NULL) );
@@ -3090,7 +3111,7 @@ SCIP_RETCODE SCIPincludeDialogDefault(
    /* change */
    if( !SCIPdialogHasEntry(root, "change") )
    {
-      SCIP_CALL( SCIPincludeDialog(scip, &submenu, 
+      SCIP_CALL( SCIPincludeDialog(scip, &submenu,
             NULL,
             SCIPdialogExecMenu, NULL, NULL,
             "change", "change the problem", TRUE, NULL) );
@@ -3150,7 +3171,7 @@ SCIP_RETCODE SCIPincludeDialogDefault(
    /* checksol */
    if( !SCIPdialogHasEntry(root, "checksol") )
    {
-      SCIP_CALL( SCIPincludeDialog(scip, &dialog, 
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL,
             SCIPdialogExecChecksol, NULL, NULL,
             "checksol", "double checks best solution w.r.t. original problem", FALSE, NULL) );
@@ -3982,7 +4003,7 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
    int nparams;
    int i;
 
-   SCIP_BRANCHRULE** branchrules; 
+   SCIP_BRANCHRULE** branchrules;
    SCIP_CONFLICTHDLR** conflicthdlrs;
    SCIP_CONSHDLR** conshdlrs;
    SCIP_DISP** disps;

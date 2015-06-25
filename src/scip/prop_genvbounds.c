@@ -1501,7 +1501,8 @@ SCIP_RETCODE sortGenVBounds(
       /* compute the strong components of the i-th undirected component */
       if( nnodes > 2 )
       {
-         SCIPdigraphComputeDirectedComponents(graph, i, strongcomponents, strongcompstartidx, &nstrongcomponents);
+         SCIP_CALL( SCIPdigraphComputeDirectedComponents(graph, i, strongcomponents, strongcompstartidx,
+               &nstrongcomponents) );
 
          for( j = 0; j < nnodes; ++j )
          {
@@ -2147,6 +2148,9 @@ SCIP_DECL_PROPPRESOL(propPresolGenvbounds)
 
    *result = SCIP_DIDNOTRUN;
 
+   if( !SCIPallowDualReds(scip) )
+      return SCIP_OKAY;
+
    /* get propagator data */
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
@@ -2336,7 +2340,7 @@ SCIP_DECL_PROPEXEC(propExecGenvbounds)
    }
 
    /* propagate locally and globally */
-   SCIP_CALL( execGenVBounds(scip, propdata, result, TRUE, NULL) );
+   SCIP_CALL( execGenVBounds(scip, propdata, result, !SCIPinProbing(scip), NULL) );
 
    /* when called in presolving stage the result is set to SCIP_SUCCESS instead of SCIP_REDUCEDDOM, this is corrected
     * here
@@ -2606,19 +2610,19 @@ SCIP_RETCODE SCIPincludePropGenvbounds(
          PROP_PRESOL_MAXROUNDS, PROP_PRESOLTIMING) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropGenvbounds) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/global",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/global",
          "apply global propagation?",
          &propdata->global, TRUE, DEFAULT_GLOBAL_PROPAGATION, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/propinrootnode",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/propinrootnode",
          "apply genvbounds in root node if no new incumbent was found?",
          &propdata->propinrootnode, TRUE, DEFAULT_PROPAGATE_IN_ROOT_NODE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/sort",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/sort",
          "sort genvbounds and wait for bound change events?",
          &propdata->sort, TRUE, DEFAULT_SORT, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/"PROP_NAME"/propasconss",
+   SCIP_CALL( SCIPaddBoolParam(scip, "propagating/" PROP_NAME "/propasconss",
          "should genvbounds be transformed to (linear) constraints?",
          &propdata->propasconss, TRUE, DEFAULT_PROPASCONSS, NULL, NULL) );
 
