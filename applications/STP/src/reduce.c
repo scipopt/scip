@@ -31,6 +31,7 @@
 /*lint -esym(750,REDUCE_C) -esym(766,stdlib.h) -esym(766,string.h)           */
 
 #define REDUCE_C
+#define GRIDNODEBOUND 1000000
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -2047,6 +2048,9 @@ SCIP_RETCODE level1(
 
    if( SCIPisLE(scip, (double) g->terms / (double) nnodes, 0.03 ) )
       bred = TRUE;
+
+   if( g->stp_type == STP_GRID && nnodes > GRIDNODEBOUND )
+      advanced = FALSE;
 
    /* get timelimit parameter*/
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );

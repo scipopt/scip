@@ -1651,6 +1651,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
                nodepriority[k] = nodepriority[k] * SCIPgetRandomReal(1.0, 2.0, &(heurdata->randseed));
             }
 	 }
+
          SCIPsortRealInt(nodepriority, perm, nnodes);
 
          for( k = nnodes - 1; k >= 0; k-- )
@@ -1668,16 +1669,16 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
 	 /* fill empty slots */
          for( k = nnodes - 1; k >= 0 && r < runs; k-- )
 	 {
+	    if( perm[k] == -1 )
+	    continue;
 	    if( graph->stp_type == STP_HOP_CONS )
 	    {
 	       assert(dijkdist != NULL);
                if( SCIPisGE(scip, dijkdist[perm[k]], BLOCKED) )
                   continue;
 	    }
-            if( perm[k] != -1 && graph->mark[k] )
-	    {
+            if( graph->mark[k] )
                start[r++] = perm[k];
-	    }
 	 }
       }
       /* not all slots filled? */

@@ -1128,8 +1128,6 @@ SCIP_RETCODE graph_load(
                         ? (double)para[2].n
                         : (double)para[3].n);
                   }
-
-
                   break;
                case KEY_MAXDEGS_MD :
                   assert(g != NULL);
