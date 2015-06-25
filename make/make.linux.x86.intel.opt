@@ -3,7 +3,7 @@ CXX		=	icpc
 LINKCC		=	icc
 LINKCXX		=	icpc
 FLAGS		+=	-DNDEBUG -DROUNDING_FE
-OFLAGS		+=	-O3 -fp-model extended -fp-model fast -w1 -ip -mtune=core2 #-msse4.1 -fno-rtti
+OFLAGS		+=	-O2 -fp-model extended -fp-model fast -w1 -ip -mtune=core2 #-msse4.1 -fno-rtti
 CFLAGS		+=
 CXXFLAGS	+=	-std=c++0x
 ARFLAGS		=	crs
