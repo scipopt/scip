@@ -4101,7 +4101,7 @@
  * heuristic to which the diveset belongs, after checking possible preliminaries that may not be met at all times of the search.
  * \n
  *
- * For a code example, we refer to \ref heur_guideddiving.c, which guides the diving into the direction of the current incumbent solution.
+ * For a code example, we refer to \ref heur_guideddiving.h, which guides the diving into the direction of the current incumbent solution.
  * Before it calls SCIPperformGenericDivingAlgorithm(), it checks whether an incumbent is available, and returns if there is none.
  *
  *
@@ -4172,7 +4172,7 @@
  * @section DIVING_FURTHERINFO Further information
  *
  * This is all there is to extend the SCIP set of diving heuristics by a new one. For further information, please see
- * diveset related methods in \ref type_heur.h, \ref pub_heur.h, \ref pub_dive.h, and \ref heur_guideddiving.c or
+ * diveset related methods in \ref type_heur.h, \ref pub_heur.h, \ref pub_dive.h, and \ref heur_guideddiving.h or
  * other diving heuristics that implement diving through a diveset.
  */
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
