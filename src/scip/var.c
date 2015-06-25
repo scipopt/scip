@@ -1975,6 +1975,8 @@ SCIP_RETCODE varCreate(
    (*var)->pseudocostflag = FALSE;
    (*var)->eventqueueimpl = FALSE;
    (*var)->deletable = FALSE;
+   (*var)->delglobalstructs = FALSE;
+
    stat->nvaridx++;
 
    /* create branching and inference history entries */
@@ -16576,6 +16578,29 @@ void SCIPvarMarkNotDeletable(
    assert(var != NULL);
 
    var->deletable = FALSE;
+}
+
+/** marks variable to be deleted from global structures (cliques etc.) when cleaning up
+ *
+ *  @note: this is not equivalent to marking the variable itself for deletion, this is done by using SCIPvarMarkDeletable()
+ */
+void SCIPvarMarkDeleteGlobalStructures(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   var->delglobalstructs = TRUE;
+}
+
+/** returns whether the variable was flagged for deletion from global structures (cliques etc.) */
+SCIP_Bool SCIPvarIsMarkedDeleteGlobalStructures(
+   SCIP_VAR*             var                 /**< problem variable */
+   )
+{
+   assert(var != NULL);
+
+   return var->delglobalstructs;
 }
 
 /** returns whether variable is allowed to be deleted completely from the problem */
