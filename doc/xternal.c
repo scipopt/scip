@@ -5844,7 +5844,7 @@
  * problem containts integer and implicit integer variables, reoptimization will be automatically disabled if there are
  * still (implicit) integer variables after presolving the problem.
  *
- * For more information on reoptimization we refere to@par
+ * For more information on reoptimization we refer to@par
  * Jakob Witzig@n
  * Reoptimization Techniques in MIP Solvers@n
  * Master's Thesis, Technical University of Berlin, 2014.
@@ -7424,6 +7424,8 @@
  */
 
 /**@page RELEASENOTES Release notes
+ *
+ * \verbinclude SCIP-release-notes-3.2
  *
  * \verbinclude SCIP-release-notes-3.1
  *
