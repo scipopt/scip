@@ -69,6 +69,7 @@
  * - \ref FAQ     "Frequently asked questions (FAQ)"
  * - \ref TEST     "How to run automated tests with SCIP"
  * - \ref COUNTER  "How to use SCIP to count feasible solutions"
+ * - \ref REOPT    "How to use reoptimization in SCIP"
  *
  *
  * @section PROGRAMMING Programming with SCIP
@@ -5738,6 +5739,75 @@
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+/**@page REOPT How to use reoptimization
+ *
+ * The reoptimization feature of SCIP can be used to solve a sequence of optimization problems \f$(P_{i})_{i \in I}\f$ with
+ * \f[
+ *    (P_i) \quad \min \{ c_i^T x \;|\; A^ix \geq b^i,\; x_{j} \in \{0,1\}^{n}\;\forall j \in \mathcal{I} \}
+ * \f]
+ * such that between two problems \f$P_i\f$ and \f$P_{i+1}\f$ the space of solutions gets restricted and/or the objective
+ * fuction changes. To use reoptimization the user has to change the paramter <code>reoptimization/enable</code> to
+ * <code>TRUE</code> before the solving process of the first problem of the sequence starts, i.e., in stage
+ * <code>SCIP_STAGE_INIT</code> or <code>SCIP_STAGE_PROBLEM</code>. This can be done via the interactive shell or by
+ * calling SCIPenableReoptimization(). In both cases SCIP changes some paramters and fixes them to avoid the use of dual
+ * information:
+ * -# disable conflict analysis based on dual information
+ * -# set the limit of stored <code>maxorigsol</code> to zero because this is handled by a special solution tree provided
+ *    by the reoptimization feature itself
+ * -# disable restarts (<code>presolving/maxrestarts = 0</code>)
+ * -# disable multi-aggegations (<code>presolving/donotmultaggr = TRUE</code>)
+ * -# disable dual reductions within presolvers and propagators (<code>misc/allowdualreds = FALSE</code>)
+ * -# disable propagation with current cutoff bound (<code>misc/allowobjprop = FALSE</code>)
+ *
+ * In contrast to the presolving and propagating methods that are using dual information, performing strong branching is
+ * allowed. The bound tightenings resulting from strong branching are handeled in a special way. After changing the objective
+ * function and solving the modified problem the feasible region that was pruned by strong branching will be reconstructed
+ * within the tree.
+ *
+ * If the reoptimization feature is enabled SCIP tries to reuse the search tree, espacialy the search frontier at the end
+ * of the solving process, to speed up the solving process of the following problems. Therefore, the current release
+ * provides the branching rule <code>branch_nodereopt</code> to reconstruct the tree. SCIP triggers a restart of the
+ * reoptimization, i.e., solving the problem from scratch, if
+ *
+ * -# the stored search tree is too large,
+ * -# the objective functions changed too much, or
+ * -# the last \f$n\f$ optimal solution are updated solution of previous runs.
+ *
+ * The thresholds to trigger a restart can be set by the user:
+ *
+ * -# <code>reoptimization/maxsavednodes</code>
+ * -# <code>reoptimization/delay</code>
+ * -# <code>reoptimization/forceheurrestart</code>
+ *
+ * Before SCIP discards all the stored information and solves the problem from scratch it tries to compress the search
+ * tree. Therefore, the current release provides compression heuristics that try to find a good and much smaller
+ * representation of the current search tree.
+ *
+ * To change the objective function the user has two possibilities:
+ * -# Using the provided reader <code>reader_diff</code> the objective function can be changed via using the interactive
+ *    shell
+ *    \code
+ *    SCIP> read new_obj.diff
+ *    \endcode
+ *    or by calling SCIPreadDiff().
+ * -# The objective function can be changed within the code. Therefore, the transformed problem needs to be freed by
+ *    calling SCIPfreeTransform(). Afterwards, the objective coefficient of each variable can be changed by calling
+ *    SCIPchgVarObj().
+ *
+ * After changing the objective function the modified problem can be solved as usal.
+ *
+ * \note Currently, the reoptimization feature only supports pure binary and mixed binary programs. In case the original
+ * problem containts integer and implicit integer variables, reoptimization will be automiatically disabled if there are
+ * still (implicit) integer variables after presolving the problem.
+ *
+ * For more information on reoptimization we refere to@par
+ * Jakob Witzig@n
+ * Reoptimization Techniques in MIP Solvers@n
+ * Master's Thesis, Technical University of Berlin, 2014, .
+ */
+ */
+
+/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 /**@page OBJ Creating, capturing, releasing, and adding data objects
  *
  *  Data objects (variables, constraints, rows, ... ) are subject to reference counting
@@ -7443,6 +7513,7 @@
  * <table>
  * <tr><td>\ref reader_cip.h "CIP format"</td> <td>for SCIP's constraint integer programming format</td></tr>
  * <tr><td>\ref reader_cnf.h "CNF format"</td> <td>DIMACS CNF (conjunctive normal form) file format used for example for SAT problems</td></tr>
+ * <tr><td>\ref reader_diff.h "DIFF format"</td> <td>for reading a new objective function for mixed-integer programs</td></tr>
  * <tr><td>\ref reader_fzn.h "FZN format"</td> <td>FlatZinc is a low-level solver input language that is the target language for MiniZinc</td></tr>
  * <tr><td>\ref reader_gms.h "GMS format"</td> <td>for mixed-integer nonlinear programs (<a href="http://www.gams.com/docs/document.htm">GAMS</a>) [reading requires compilation with GAMS=true and a working GAMS system]</td></tr>
  * <tr><td>\ref reader_lp.h  "LP format"</td>  <td>for mixed-integer (quadratically constrained quadratic) programs (CPLEX)</td></tr>

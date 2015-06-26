@@ -34,6 +34,7 @@
  *   - \ref BRANCH  "Branching rules"
  *   - \ref NODESEL "Node selectors"
  *   - \ref HEUR    "Primal heuristics"
+ *      + \ref DIVINGHEUR "Diving heuristics"
  *   - \ref RELAX   "Relaxation handlers"
  *   - \ref READER  "File readers"
  *   - \ref DIALOG  "Dialogs"
@@ -46,6 +47,7 @@
  *  @section HOWTOUSESECTION How to use ...
  *
  *   - \ref CONF    "Conflict analysis"
+     - \ref REOPT   "Reoptimization"
  *   - \ref TEST     "How to run automated tests with SCIP"
  *   - \ref COUNTER  "How to use SCIP to count feasible solutions"
  */
