@@ -1437,7 +1437,7 @@
  * Presolving methods should be assigned a timing based on how expensive they are, e.g., presolvers that provide fast algorithms that
  * usually have a high impact (i.e., remove lots of variables or tighten bounds of many variables) should have a timing FAST.
  * If a presolving method implements different algorithms of different complexity, it may also get multiple timings and check the timing
- * internally in the \ref PRESOLEXEC callback to decide which algorithms to run.
+ * internally in the \ref CONSPRESOL callback to decide which algorithms to run.
  *
  * \par CONSHDLR_MAXPREROUNDS: the default maximal number of presolving rounds the constraint handler participates in.
  * The preprocessing is executed in rounds.
@@ -2611,7 +2611,7 @@
  * They are passed together with the presolver itself to SCIP using SCIPincludePresol() or SCIPincludePresolBasic(),
  * see @ref PRESOL_INTERFACE.
  *
- *  Presolver plugins have only one fundamental callback method, namely the @ref PRESOLEXEC method.
+ * Presolver plugins have only one fundamental callback method, namely the @ref PRESOLEXEC method.
  * This method has to be implemented for every presolver; the other callback methods are optional.
  * In the C++ wrapper class scip::ObjPresol, the scip_exec() method (which corresponds to the PRESOLEXEC callback) is a virtual
  * abstract member function.
@@ -3061,7 +3061,7 @@
  * Presolving methods should be assigned a timing based on how expensive they are, e.g., presolvers that provide fast algorithms that
  * usually have a high impact (i.e., remove lots of variables or tighten bounds of many variables) should have a timing FAST.
  * If a presolving method implements different algorithms of different complexity, it may also get multiple timings and check the timing
- * internally in the \ref PRESOLEXEC callback to decide which algorithms to run.
+ * internally in the \ref PROPPRESOL callback to decide which algorithms to run.
  *
  * \par PROP_PRESOL_PRIORITY: the priority of the presolving method.
  * This attribute is analogous to the PROP_PRIORITY flag, but deals with the preprocessing method of the presolver.
@@ -5791,13 +5791,12 @@
  *    (P_i) \quad \min \{ c_i^T x \;|\; A^ix \geq b^i,\; x_{j} \in \{0,1\}^{n}\;\forall j \in \mathcal{I} \}
  * \f]
  * such that between two problems \f$P_i\f$ and \f$P_{i+1}\f$ the space of solutions gets restricted and/or the objective
- * fuction changes. To use reoptimization the user has to change the paramter <code>reoptimization/enable</code> to
+ * fuction changes. To use reoptimization the user has to change the parameter <code>reoptimization/enable</code> to
  * <code>TRUE</code> before the solving process of the first problem of the sequence starts, i.e., in stage
  * <code>SCIP_STAGE_INIT</code> or <code>SCIP_STAGE_PROBLEM</code>. This can be done via the interactive shell or by
- * calling SCIPenableReoptimization(). In both cases SCIP changes some paramters and fixes them to avoid the use of dual
- * information:
+ * calling SCIPenableReoptimization(). In both cases SCIP changes some parameters and fixes them:
  * -# disable conflict analysis based on dual information
- * -# set the limit of stored <code>maxorigsol</code> to zero because this is handled by a special solution tree provided
+ * -# set the limit <code>maxorigsol</code> of stored solutions to zero because this is handled by a special solution tree provided
  *    by the reoptimization feature itself
  * -# disable restarts (<code>presolving/maxrestarts = 0</code>)
  * -# disable multi-aggegations (<code>presolving/donotmultaggr = TRUE</code>)
@@ -5809,7 +5808,7 @@
  * function and solving the modified problem the feasible region that was pruned by strong branching will be reconstructed
  * within the tree.
  *
- * If the reoptimization feature is enabled SCIP tries to reuse the search tree, espacialy the search frontier at the end
+ * If the reoptimization feature is enabled SCIP tries to reuse the search tree, especially the search frontier at the end
  * of the solving process, to speed up the solving process of the following problems. Therefore, the current release
  * provides the branching rule <code>branch_nodereopt</code> to reconstruct the tree. SCIP triggers a restart of the
  * reoptimization, i.e., solving the problem from scratch, if
@@ -5828,7 +5827,7 @@
  * tree. Therefore, the current release provides compression heuristics that try to find a good and much smaller
  * representation of the current search tree.
  *
- * To change the objective function the user has two possibilities:
+ * After a problem in the sequence of optimization problems was solved, the objective function can be changed in two ways:
  * -# Using the provided reader <code>reader_diff</code> the objective function can be changed via using the interactive
  *    shell
  *    \code
@@ -5842,14 +5841,13 @@
  * After changing the objective function the modified problem can be solved as usal.
  *
  * \note Currently, the reoptimization feature only supports pure binary and mixed binary programs. In case the original
- * problem containts integer and implicit integer variables, reoptimization will be automiatically disabled if there are
+ * problem containts integer and implicit integer variables, reoptimization will be automatically disabled if there are
  * still (implicit) integer variables after presolving the problem.
  *
  * For more information on reoptimization we refere to@par
  * Jakob Witzig@n
  * Reoptimization Techniques in MIP Solvers@n
- * Master's Thesis, Technical University of Berlin, 2014, .
- */
+ * Master's Thesis, Technical University of Berlin, 2014.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
