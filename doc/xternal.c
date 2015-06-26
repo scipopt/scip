@@ -70,6 +70,7 @@
  * - \ref TEST     "How to run automated tests with SCIP"
  * - \ref COUNTER  "How to use SCIP to count feasible solutions"
  * - \ref REOPT    "How to use reoptimization in SCIP"
+ * - \ref APPLICATIONS "Extensions of SCIP for specific applications"
  *
  *
  * @section PROGRAMMING Programming with SCIP
@@ -125,7 +126,7 @@
  *
  */
 
-/** @page EXAMPLES Examples projects
+/** @page EXAMPLES Example projects
  *
  *  SCIP contains several examples that demonstrate its usage. They are contained in the &quot;examples&quot; directory
  *  in the source code distribution.
@@ -140,14 +141,6 @@
  *  <td>
  *  An implementation of the column generation approach for the binpacking problem. It includes a customized reader,
  *  Ryan/Foster branching rule, (global) problem data, variable data, and constraint handler.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Coloring"><b>Coloring</b></a>
- *  </td>
- *  <td>
- *  An implemenation of the column generation approach for graph coloring of Mehrotra and Trick.
  *  </td>
  *  </tr>
  *  <tr>
@@ -204,7 +197,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Queen/scip_intro.pdf"><b>Queen</b></a>
+ *  <a href="http://scip.zib.de/doc/examples/Queens/scip_intro.pdf"><b>Queen</b></a>
  *  </td>
  *  <td>
  *  An example showing the use of SCIP as callable library.
@@ -226,18 +219,52 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/examples/Scheduler"><b>Scheduler</b></a>
- *  </td>
- *  <td>
- *  An example containing three readers and one primal heuristic for scheduling problems.
- *  </td>
- *  </tr>
- *  <tr>
- *  <td>
  *  <a href="http://scip.zib.de/doc/examples/GMI"><b>GMI</b></a>
  *  </td>
  *  <td>
  *  An example about Gomory mixed-integer cuts.
+ *  </td>
+ *  </tr>
+ *  </table>
+ *
+ */
+
+/** @page APPLICATIONS Application projects
+ *
+ *  There are several extensions of SCIP for particular applications included in the release. They are contained in the &quot;applications&quot; directory
+ *  in the source code distribution.
+ *
+ *  <table>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/Coloring"><b>Coloring</b></a>
+ *  </td>
+ *  <td>
+ *  An implemenation of the column generation approach for graph coloring of Mehrotra and Trick.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/Scheduler"><b>Scheduler</b></a>
+ *  </td>
+ *  <td>
+ *  A solver for scheduling problems.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/STP"><b>Steiner Tree Problem</b></a>
+ *  </td>
+ *  <td>
+ *  A solver for Steiner Tree Problems in graphs, based on a branch-and-cut approach.
+ *  </td>
+ *  </tr>
+ *  <tr>
+ *  <td>
+ *  <a href="http://scip.zib.de/doc/applications/MultiObjective"><b>Multi-objective Optimization</b></a>
+ *  </td>
+ *  <td>
+ *  A solver for multi-objective optimization problems.
  *  </td>
  *  </tr>
  *  </table>
@@ -851,8 +878,8 @@
  *   We suggest the use one of the following examples:
  *     - The <a href="http://scip.zib.de/doc/examples/VRP"><b>VRP</b></a>-example is a <b>branch-and-cut-and-price</b> (column generation)-code
  *       in <b>C++</b>.
- *     - The <a href="http://scip.zib.de/doc/examples/Coloring"><b>Coloring</b></a>
- *        and the <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>-example are
+ *     - The <a href="http://scip.zib.de/doc/examples/Binpacking"><b>Binpacking</b></a>-example 
+ *       and the <a href="http://scip.zib.de/doc/applications/Coloring"><b>Coloring</b></a> application are
  *       <b>branch-and-cut-and-price</b> (column generation)-codes in <b>C</b>.
  *     - The <a href="http://scip.zib.de/doc/examples/TSP"><b>TSP</b></a>-example
  *        is a <b>branch-and-cut</b>-code in <b>C++</b>.
@@ -862,9 +889,9 @@
  * - Copy one of the examples in the <code>examples</code> directory (in the SCIP root
  *   directory). For instance, type
  *   \verbatim
- > cp -r examples/Coloring/ ../SCIPProject/ ; cd ../SCIPProject
+ > cp -r examples/Binpacking/ ../SCIPProject/ ; cd ../SCIPProject
      \endverbatim
- *   from the SCIP root directory for copying the content of the <code>Coloring</code>-example into a fresh
+ *   from the SCIP root directory for copying the content of the <code>Binpacking</code>-example into a fresh
  *   directory named SCIPProject in the parent directory of the SCIP root directory and jumping to
  *   the new SCIPProject directory rightafter.
  * - Open the <code>Makefile</code>  via
@@ -1403,6 +1430,15 @@
  * This property indicates at which places the propagation routine of the constraint handler is called.
  * Possible values are defined in type_timing.h and can be concatenated, e.g., as in SCIP_PROPTIMING_ALWAYS.
  *
+ * \par CONSHDLR_PRESOLTIMING: the timing of the constraint handler's presolving method (FAST, MEDIUM, or EXHAUSTIVE).
+ * Every presolving round starts with the FAST presolving methods. MEDIUM presolvers are only called, if FAST presolvers did not find
+ * enough reductions in this round so far, and EXHAUSTIVE presolving steps are only performed if all presolvers called before
+ * in this round were unsuccessful.
+ * Presolving methods should be assigned a timing based on how expensive they are, e.g., presolvers that provide fast algorithms that
+ * usually have a high impact (i.e., remove lots of variables or tighten bounds of many variables) should have a timing FAST.
+ * If a presolving method implements different algorithms of different complexity, it may also get multiple timings and check the timing
+ * internally in the \ref PRESOLEXEC callback to decide which algorithms to run.
+ *
  * \par CONSHDLR_MAXPREROUNDS: the default maximal number of presolving rounds the constraint handler participates in.
  * The preprocessing is executed in rounds.
  * If enough changes have been applied to the model, an additional preprocessing round is performed.
@@ -1410,9 +1446,6 @@
  * handler participates in.
  * A value of -1 means that there is no limit on the number of rounds.
  * A value of 0 means the preprocessing callback of the constraint handler is disabled.
- *
- * \par CONSHDLR_DELAYPRESOL: the default for whether the presolving method should be delayed, if other presolvers found reductions.
- * This property is analogous to the DELAYSEPA flag, but deals with the preprocessing method of the constraint handler.
  *
  *
  *
@@ -2049,7 +2082,7 @@
  *  - SCIP_DELAYED    : the presolver was skipped, but should be called again
  *
  * Please see also the @ref CONS_ADDITIONALPROPERTIES section to learn about the properties
- * CONSHDLR_MAXPREROUNDS and CONSHDLR_DELAYPRESOL, which influence the behaviour of SCIP
+ * CONSHDLR_PRESOLTIMING and CONSHDLR_MAXPREROUNDS, which influence the behaviour of SCIP
  * calling CONSPRESOL.
  *
  * @subsection CONSACTIVE
@@ -2177,8 +2210,8 @@
  * are generated by a pricer have to be flagged as "modifiable" in the SCIPcreateCons() call.
  *
  * We now explain how users can add their own pricers.
- * For example, look into the stable set pricer for the coloring problem (examples/Coloring/src/pricer_coloring.c) of the
- * Coloring example project.
+ * For example, look into the variable pricer for the binpacking problem (examples/Binpacking/src/pricer_binpacking.c) of the
+ * Binpacking example project.
  * The example is written in C. C++ users can easily adapt the code by using the scip::scip::ObjPricer wrapper base class and
  * implement the scip_...() virtual methods instead of the SCIP_DECL_PRICER... callback methods.
  *
@@ -2195,7 +2228,7 @@
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Use SCIPincludePricerMypricer() in order to include the pricer into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypricer".
  * -# Adjust the properties of the pricer (see \ref PRICER_PROPERTIES).
  * -# Define the pricer data (see \ref PRICER_DATA). This is optional.
@@ -2272,7 +2305,7 @@
  *
  *
  * In addition, the pricer has to be activated before the solution process starts, like it is done
- * in the reader of the Coloring example (examples/Coloring/src/reader_col.c) by calling
+ * in the pricer of the Coloring application (applications/Coloring/src/reader_col.c) by calling
  * \code
  * SCIP_CALL( SCIPactivatePricer(scip, SCIPfindPricer(scip, "coloring")) );
  * \endcode
@@ -2284,7 +2317,7 @@
  * \endcode
  * You also have to initialize the fields in struct SCIP_PricerData afterwards.
  *
- * You may also add user parameters for your pricer, see the method SCIPincludePricerColoring() in the pricer of the Coloring example
+ * You may also add user parameters for your pricer, see the method SCIPincludePricerColoring() in the pricer of the Coloring application
  * for an example of how to add user parameters.
  *
  *
@@ -2457,13 +2490,13 @@
  * to strengthen the LP relaxation by exploiting integrality information, and to extract useful information in the
  * presolving step.
  * Constraint based presolving is done in the CONSPRESOL callback methods of the constraint handlers, see \ref CONSPRESOL.
- * The presolver plugins complement the constraint based presolving by additional, usually optimality based, presolving
- * reductions.
+ * Some propagation steps can already be applied in presolving via the PROPRESOL callback methods of propagators, see \ref PROPPRESOL.
+ * The presolver plugins complement these by additional, usually optimality based, presolving reductions.
  * \n
  * A complete list of all presolvers contained in this release can be found \ref PRESOLVERS "here".
  *
  * We now explain how users can add their own presolvers.
- * Take the dual fixing presolver (src/scip/presol_dualfix.c) as an example.
+ * Take the trivial presolver (src/scip/presol_trivial.c) as an example.
  * As all other default plugins, it is written in C. C++ users can easily adapt the code by using the scip::ObjPresol wrapper
  * base class and implement the scip_...() virtual methods instead of the SCIP_DECL_PRESOL... callback methods.
  *
@@ -2476,7 +2509,7 @@
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Use SCIPincludePresolMypresolver() in order to include the presolver into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypresolver".
  * -# Adjust the properties of the presolver (see \ref PRESOL_PROPERTIES).
  * -# Define the presolver data (see \ref PRESOL_DATA). This is optional.
@@ -2501,8 +2534,19 @@
  * \par PRESOL_DESC: the description of the presolver.
  * This string is printed as a description of the presolver in the interactive shell.
  *
+ * \par PRESOL_TIMING: the default timing of the presolver.
+ * There are three presolving timings: FAST, MEDIUM, and EXHAUSTIVE.
+ * Every presolving round starts with the FAST presolvers. MEDIUM presolvers are only called, if FAST presolvers did not find
+ * enough reductions in this round so far, and EXHAUSTIVE presolving steps are only performed if all presolvers called before
+ * in this round were unsuccessful.
+ * Presolvers should be assigned a timing based on how expensive they are, e.g., presolvers that provide fast algorithms that
+ * usually have a high impact (i.e., remove lots of variables or tighten bounds of many variables) should have a timing FAST.
+ * If a presolver implements different algorithms of different complexity, it may also get multiple timings and check the timing
+ * internally in the \ref PRESOLEXEC callback to decide which algorithms to run.
+ *
  * \par PRESOL_PRIORITY: the priority of the presolver.
- * In each presolving round, the presolvers and presolving methods of the constraint handlers are called in
+ * Within a presolving round, when calling all presolvers and presolving methods of propagators and constraint handlers
+ * with a given timing, those are called in
  * a predefined order, which is given by the priorities of the presolvers and the check priorities of the
  * constraint handlers, see \ref CONS_PROPERTIES.
  * First, the presolvers with non-negative priority are called in the order of decreasing priority.
@@ -2510,11 +2554,11 @@
  * priority.
  * Finally, the presolvers with negative priority are called in the order of decreasing priority.
  * \n
- * The priority of the presolver should be set according to the complexity of the presolving algorithm and the impact of the reduction:
- * presolvers that provide fast algorithms that usually have a high impact (i.e., remove lots of variables or tighten
- * bounds of many variables) should have a high priority. An easy way to list the
- * priorities of all presolvers and constraint handlers is to type "display presolvers" and "display conshdlrs" in
- * the interactive shell of SCIP.
+ * Again, presolvers that provide fast algorithms that  usually have a high impact (i.e., remove lots of variables or tighten
+ * bounds of many variables) should have a high priority.
+ * An easy way to list the timings and
+ * priorities of all presolvers, propagators, and constraint handlers is to type "display presolvers", "display propagators",
+ * and "display conshdlrs" in the interactive shell of SCIP.
  *
  * \par PRESOL_MAXROUNDS: the default maximal number of rounds the presolver participates in.
  * The presolving is conducted in rounds: the presolvers and presolving methods of the constraint handlers
@@ -2522,11 +2566,6 @@
  * The "maxrounds" parameter of a presolver imposes a limit on the number of presolving rounds in which the
  * presolver is called. The PRESOL_MAXROUNDS property specifies the default value for this parameter.
  * A value of -1 represents an unlimited number of rounds.
- *
- * \par PRESOL_DELAY: the default for whether the presolver should be delayed, if other presolvers found reductions.
- * If the presolver is marked to be delayed, it is only executed if no other presolvers found a reduction during the current
- * presolving round.
- * If the presolver is very expensive, you may want to mark it to be delayed until all cheap presolving methods have been executed.
  *
  *
  * @section PRESOL_DATA Presolver Data
@@ -2683,7 +2722,7 @@
       \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Use SCIPincludeSepaMyseparator() in order to include the separator into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myseparator".
  * -# Adjust the properties of the separator (see \ref SEPA_PROPERTIES).
  * -# Define the separator data (see \ref SEPA_DATA). This is optional.
@@ -2951,7 +2990,7 @@
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Use SCIPincludePropMypropagator() in order to include the propagator into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mypropagator".
  * -# Adjust the properties of the propagator (see \ref PROP_PROPERTIES).
  * -# Define the propagator data (see \ref PROP_DATA). This is optional.
@@ -3014,6 +3053,15 @@
  *
  * The following properties are optional and only need to be defined if the propagator supports
  * presolving, that is, if the \ref PROPPRESOL "presolving callback" is implemented.
+
+ * \par PROP_PRESOLTIMING: the timing of the presolving method (FAST, MEDIUM, or EXHAUSTIVE).
+ * Every presolving round starts with the FAST presolving methods. MEDIUM presolvers are only called, if FAST presolvers did not find
+ * enough reductions in this round so far, and EXHAUSTIVE presolving steps are only performed if all presolvers called before
+ * in this round were unsuccessful.
+ * Presolving methods should be assigned a timing based on how expensive they are, e.g., presolvers that provide fast algorithms that
+ * usually have a high impact (i.e., remove lots of variables or tighten bounds of many variables) should have a timing FAST.
+ * If a presolving method implements different algorithms of different complexity, it may also get multiple timings and check the timing
+ * internally in the \ref PRESOLEXEC callback to decide which algorithms to run.
  *
  * \par PROP_PRESOL_PRIORITY: the priority of the presolving method.
  * This attribute is analogous to the PROP_PRIORITY flag, but deals with the preprocessing method of the presolver.
@@ -3025,9 +3073,6 @@
  * participates in.
  * A value of -1 means, that there is no limit on the number of rounds.
  * A value of 0 means, the preprocessing callback of the propagator is disabled.
- *
- * \par PROP_PRESOL_DELAY: the default for whether the presolving method should be delayed, if other propagators or constraint handlers found presolving reductions.
- * This property is analogous to the PROP_DELAY flag, but deals with the preprocessing method of the propagator.
  *
  * @section PROP_DATA Propagator Data
  *
@@ -3210,7 +3255,7 @@
  *
  *
  * Please see also the @ref PROP_ADDITIONALPROPERTIES section to learn about the properties
- * PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS, and PROP_PRESOL_DELAY, which influence the behaviour of SCIP
+ * PROP_PRESOLTIMING and PROP_PRESOL_MAXROUNDS, which influence the behaviour of SCIP
  * calling PROPPRESOL.
  *
  */
@@ -3256,7 +3301,7 @@
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Use SCIPincludeBranchruleMybranchingrule() in order to include the branching rule into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mybranchingrule".
  * -# Adjust the properties of the branching rule (see \ref BRANCHRULE_PROPERTIES).
  * -# Define the branching rule data (see \ref BRANCHRULE_DATA). This is optional.
@@ -3557,7 +3602,7 @@
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Use SCIPincludeNodeselMynodeselector() in oder to include the node selector into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mynodeselector".
  * -# Adjust the properties of the node selector (see \ref NODESEL_PROPERTIES).
  * -# Define the node selector data (see \ref NODESEL_DATA). This is optional.
@@ -3804,7 +3849,7 @@
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Use SCIPincludeHeurMyheuristic() in order to include the heuristic into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myheuristic".
  * -# Adjust the properties of the primal heuristic (see \ref HEUR_PROPERTIES).
  * -# Define the primal heuristic data (see \ref HEUR_DATA). This is optional.
@@ -4203,7 +4248,7 @@
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Use SCIPincludeRelaxMyrelaxator() in order to include the relaxation handler into your SCIP instance,
- *    e.g, in the main file of your project (see, e.g., src/main.c in the Coloring example).
+ *    e.g, in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myrelaxator".
  * -# Adjust the properties of the relaxation handler (see \ref RELAX_PROPERTIES).
  * -# Define the relaxation handler data (see \ref RELAX_DATA). This is optional.
@@ -4441,7 +4486,7 @@
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Use SCIPincludeReaderMyreader() in order to include the file reader into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "myreader".
  * -# Adjust the \ref READER_PROPERTIES "properties of the file reader".
  * -# Define the \ref READER_DATA "file reader data". This is optional.
@@ -4659,7 +4704,7 @@
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Use SCIPincludeDialogMydialog() in order to include the dialog handler into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydialog".
  * -# Adjust the \ref DIALOG_PROPERTIES "properties of the dialog".
  * -# Define the \ref DIALOG_DATA "dialog data". This is optional.
@@ -4883,7 +4928,7 @@
       \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Use SCIPincludeDispMydisplaycolumn() in order to include the display column into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mydisplaycolumn".
  * -# Adjust the \ref DISP_PROPERTIES "properties of the display column".
  * -# Define the  \ref DISP_DATA "display column data". This is optional.
@@ -5319,7 +5364,7 @@
  *    \n
  *    Make sure to adjust your Makefile such that these files are compiled and linked to your project.
  * -# Use SCIPcreateNlpSolverMynlpi() in order to include the NLPI into your SCIP instance,
- *    e.g., in the main file of your project (see, e.g., src/main.c in the Coloring example).
+ *    e.g., in the main file of your project (see, e.g., src/cmain.c in the Binpacking example).
  * -# Open the new files with a text editor and replace all occurrences of "xyz" by "mynlpi".
  * -# Adjust the properties of the nlpi (see \ref NLPI_PROPERTIES).
  * -# Define the NLPI and NLPIPROBLEM data (see \ref NLPI_DATA).
