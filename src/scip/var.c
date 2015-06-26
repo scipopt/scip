@@ -9587,6 +9587,11 @@ SCIP_RETCODE SCIPvarAddVlb(
             {
                /* x >= b*z + d  ->  z <= (x-d)/b */
                newzub = (xub - vlbconstant)/vlbcoef;
+
+               /* return if the new bound is less than -infinity */
+               if( SCIPsetIsInfinity(set, REALABS(newzub)) )
+                  return SCIP_OKAY;
+
                if( SCIPsetIsFeasLT(set, newzub, zlb) )
                {
                   *infeasible = TRUE;
@@ -9638,6 +9643,11 @@ SCIP_RETCODE SCIPvarAddVlb(
             {
                /* x >= b*z + d  ->  z >= (x-d)/b */
                newzlb = (xub - vlbconstant)/vlbcoef;
+
+               /* return if the new bound is larger than infinity */
+               if( SCIPsetIsInfinity(set, REALABS(newzlb)) )
+                  return SCIP_OKAY;
+
                if( SCIPsetIsFeasGT(set, newzlb, zub) )
                {
                   *infeasible = TRUE;
