@@ -74,7 +74,7 @@ WeightSpaceVertex::~WeightSpaceVertex()
    }
 }
 
-/** whether this and point are neighbours in the 1-skeleton*/
+/** whether this and point are neighbours in the 1-skeleton */
 bool WeightSpaceVertex::isNeighbour(const WeightSpaceVertex* point) const
 {
    std::vector<const std::vector<SCIP_Real> * > common_facets;
@@ -234,7 +234,7 @@ void WeightSpaceVertex::updateFacet(const std::vector<SCIP_Real>* facet)
 
 /** writes weight space vertex to an output stream */
 void WeightSpaceVertex::print(
-   std::ostream&                   os        /** stream the vector should be written to*/
+   std::ostream&                   os        /**< stream the vector should be written to */
    ) const
 {
    os << "facets" << std::endl;
@@ -250,8 +250,8 @@ void WeightSpaceVertex::print(
 
 /** writes weight space vertex to an output stream */
 std::ostream& operator<<(
-   std::ostream&                   os,       /** stream the vector should be written to*/
-   const WeightSpaceVertex         v         /** vertex that should be written */
+   std::ostream&                   os,       /**< stream the vector should be written to */
+   const WeightSpaceVertex         v         /**< vertex that should be written */
    )
 {
    v.print(os);
