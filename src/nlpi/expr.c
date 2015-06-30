@@ -5099,7 +5099,7 @@ SCIP_RETCODE exprParse(
    nopenbrackets = 0;
 
    /* find the end of this expression
-    * a '+' right at the beginning indicates a coefficient, not treated here
+    * a '+' right at the beginning indicates a coefficient, not treated here, or a summation
     */
    while( subexpptr != lastchar && !(nopenbrackets == 0 && (subexpptr[0] == '+' || subexpptr[0] == '-') && subexpptr != str) )
    {
@@ -5113,6 +5113,9 @@ SCIP_RETCODE exprParse(
    if( subexpptr != lastchar )
    {
       SCIP_CALL( exprParse(blkmem, messagehdlr, &arg1, str, (int) ((subexpptr - 1) - str + 1), subexpptr - 1, nvars, varnames, vartable, recursiondepth + 1) );
+
+      if( subexpptr[0] == '+' )
+         ++subexpptr;
       SCIP_CALL( exprParse(blkmem, messagehdlr, &arg2, subexpptr , (int) (lastchar - (subexpptr ) + 1), lastchar, nvars, varnames, vartable, recursiondepth + 1) );
 
       /* make new expression from two arguments

@@ -5509,7 +5509,7 @@ SCIP_RETCODE SCIPsetConshdlrPresol(
 
    SCIP_CALL( checkStage(scip, "SCIPsetConshdlrPresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIPconshdlrSetPresol(conshdlr, conspresol, maxprerounds, presoltiming);
+   SCIP_CALL( SCIPconshdlrSetPresol(conshdlr, conspresol, maxprerounds, presoltiming) );
 
    name = SCIPconshdlrGetName(conshdlr);
 
@@ -7054,15 +7054,13 @@ SCIP_RETCODE SCIPsetPropPresol(
    assert(scip != NULL);
    SCIP_CALL( checkStage(scip, "SCIPsetPropPresol", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-
    assert(prop != NULL);
-   SCIPpropSetPresol(prop, proppresol, presolpriority, presolmaxrounds, presoltiming);
+   SCIP_CALL( SCIPpropSetPresol(prop, proppresol, presolpriority, presolmaxrounds, presoltiming) );
 
    name = SCIPpropGetName(prop);
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/maxprerounds", name);
    SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, presolmaxrounds) );
-
 
    (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "propagating/%s/presolpriority", name);
    SCIP_CALL( SCIPsetSetDefaultIntParam(scip->set, paramname, presolpriority) );
@@ -13437,6 +13435,8 @@ SCIP_RETCODE presolveRound(
       if( nlocalbdchgs > 0 || *infeasible )
          SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
             "clique table cleanup detected %d bound changes%s\n", nlocalbdchgs, *infeasible ? " and infeasibility" : "");
+
+      scip->stat->npresolfixedvars += nlocalbdchgs;
 
       if( !*infeasible && scip->set->nheurs > 0 )
       {
@@ -22359,6 +22359,10 @@ SCIP_RETCODE SCIPremoveVarFromGlobalStructures(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPremoveVarFromGlobalStructures", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
+   /* mark the variable as deletable from global structures - This is necessary for the delayed clean up of cliques */
+   SCIPvarMarkDeleteGlobalStructures(var);
+
+   /* remove variable from all its cliques, implications, and variable bounds */
    SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, SCIPblkmem(scip), scip->cliquetable, scip->set, TRUE, FALSE, TRUE) );
 
    return SCIP_OKAY;

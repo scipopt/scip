@@ -69,9 +69,8 @@ struct SCIP_PricerData
 /** copy method for pricer plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_PRICERCOPY(pricerCopyStp)
-{
+{ /*lint --e{715}*/
    SCIPdebugPrintf("pricerCopy \n");
-   assert(scip != NULL);
    assert(pricer != NULL);
    assert(strcmp(SCIPpricerGetName(pricer), PRICER_NAME) == 0);
 
@@ -193,7 +192,6 @@ SCIP_RETCODE pricing(
    int t;
    int i;
 
-   SCIPdebugMessage(farkas ? "FARKAS \n" :"REDCOST \n");
    assert(scip != NULL);
    assert(pricer != NULL);
 
@@ -354,7 +352,7 @@ SCIP_RETCODE pricing(
 /** reduced cost pricing method of variable pricer for feasible LPs */
 static
 SCIP_DECL_PRICERREDCOST(pricerRedcostStp)
-{
+{ /*lint --e{715}*/
    SCIP_CALL( pricing(scip, pricer, lowerbound, FALSE) );
 
    /* set result pointer */
@@ -365,7 +363,7 @@ SCIP_DECL_PRICERREDCOST(pricerRedcostStp)
 /** Farkas pricing method of variable pricer for infeasible LPs */
 static
 SCIP_DECL_PRICERFARKAS(pricerFarkasStp)
-{
+{ /*lint --e{715}*/
    SCIP_CALL( pricing(scip, pricer,  NULL, TRUE) );
 
    return SCIP_OKAY;

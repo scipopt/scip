@@ -14,11 +14,15 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_tm.h
- * @ingroup PRIMALHEURISTICS
- * @brief  TM primal heuristic
+ * @brief  shortest paths based primal heuristics for Steiner problems
  * @author Gerald Gamrath
  * @author Thorsten Koch
+ * @author Daniel Rehfeldt
  * @author Michael Winkler
+ *
+ * This file implements several shortest paths based primal heuristics for Steiner problems, see
+ * "SCIP-Jack - A solver for STP and variants with parallelization extensions" by
+ * Gamrath, Koch, Maher, Rehfeldt and Shinano
  *
  */
 
@@ -29,7 +33,9 @@
 
 #include "scip/scip.h"
 #include "grph.h"
+
 #define DEFAULT_HOPFACTOR 0.33
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -39,46 +45,40 @@ extern "C" {
    SCIP_RETCODE SCIPincludeHeurTM(
       SCIP*                 scip                /**< SCIP data structure */
       );
-#if 0
+
+   /** execute shortest paths heuristic to obtain a Steiner tree */
    extern
-   SCIP_RETCODE SCIPtmHeur(
-      SCIP*                 scip,                  /**< SCIP data structure */
-      const GRAPH*          graph,                 /**< graph structure */
-      PATH**                path,
-      SCIP_Real*            cost,
-      SCIP_Real*            costrev,
-      int*                  result
-      );
-#endif
-   extern
-   SCIP_RETCODE do_layer(
+   SCIP_RETCODE SCIPheurComputeSteinerTree(
       SCIP*                 scip,               /**< SCIP data structure */
-      SCIP_HEURDATA* heurdata,
-      const GRAPH*  graph,
-      int*          starts,
-      int*          bestnewstart,
-      int*          best_result,
-      int           runs,
-      int           bestincstart,
-      SCIP_Real*    cost,
-      SCIP_Real*    costrev,
-      SCIP_Real*    hopfactor,
-      SCIP_Real     maxcost,
-      SCIP_Bool*    success
+      SCIP_HEURDATA*        heurdata,           /**< SCIP data structure */
+      const GRAPH*          graph,              /**< graph data structure */
+      int*                  starts,             /**< array containing start vertices (NULL to not provide any) */
+      int*                  bestnewstart,       /**< pointer to the start vertex resulting in the best soluton */
+      int*                  best_result,        /**< array indicating whether an arc is part of the solution (CONNECTED/UNKNOWN) */
+      int                   runs,               /**< number of runs */
+      int                   bestincstart,       /**< best incumbent start vertex */
+      SCIP_Real*            cost,               /**< arc costs */
+      SCIP_Real*            costrev,            /**< reversed arc costs */
+      SCIP_Real*            hopfactor,          /**< edge cost multiplicator for HC problems */
+      SCIP_Real*            nodepriority,       /**< vertex priorities for vertices to be starting points (NULL for no priorities) */
+      SCIP_Real             maxcost,            /**< maximal edge cost (only for HC) */
+      SCIP_Bool*            success             /**< pointer to store whether a solution could be found */
       );
 
+   /** prune a Steiner tree in such a way that all leaves are terminals */
    extern
-   SCIP_RETCODE do_prune(
+   SCIP_RETCODE SCIPheurPruneSteinerTree(
       SCIP*                 scip,               /**< SCIP data structure */
       const GRAPH*          g,                  /**< graph structure */
       SCIP_Real*            cost,               /**< edge costs */
-      int                   layer,
+      int                   layer,              /**< layer, @note: should be set to 0 */
       int*                  result,             /**< ST edges */
       char*                 connected           /**< ST nodes */
       );
 
+   /** prune the (rooted) prize collecting Steiner tree in such a way that all leaves are terminals */
    extern
-   SCIP_RETCODE do_pcprune(
+   SCIP_RETCODE SCIPheurPrunePCSteinerTree(
       SCIP*                 scip,               /**< SCIP data structure */
       const GRAPH*          g,                  /**< graph structure */
       SCIP_Real*            cost,               /**< edge costs */
@@ -86,13 +86,15 @@ extern "C" {
       char*                 connected           /**< ST nodes */
       );
 
+   /** prune a degree constrained Steiner tree in such a way that all leaves are terminals */
    extern
-   SCIP_RETCODE do_degprune(
+   SCIP_RETCODE SCIPheurPruneDegConsSteinerTree(
       SCIP*                 scip,               /**< SCIP data structure */
       const GRAPH*          g,                  /**< graph structure */
       int*                  result,             /**< ST edges */
       char*                 connected           /**< ST nodes */
       );
+
 #ifdef __cplusplus
 }
 #endif

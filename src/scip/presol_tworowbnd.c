@@ -340,12 +340,6 @@ void getActivities(
          }
       }
 
-      /* init left hand side values and consider non-overlapping contribution */
-      minlhs = lhs - val;
-      nminratios = 0;
-      maxlhs = lhs - val;
-      nmaxratios = 0;
-
       if( minlowerbnd < 0.0 )
       {
          SCIP_Real bndshift = -minlowerbnd;

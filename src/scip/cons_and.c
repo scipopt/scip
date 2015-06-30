@@ -450,6 +450,19 @@ SCIP_RETCODE consdataCreate(
 
    assert(SCIPvarIsBinary((*consdata)->resvar));
 
+   /* note: currently, this constraint handler does not handle multiaggregations (e.g. during propagation), hence we forbid
+    * multiaggregation from the beginning for the involved variables
+    */
+   if( SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE )
+   {
+      for( v = 0; v < (*consdata)->nvars; ++v )
+      {
+         assert((*consdata)->vars[v] != NULL);
+         SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->vars[v]) );
+      }
+      SCIP_CALL( SCIPmarkDoNotMultaggrVar(scip, (*consdata)->resvar) );
+   }
+
    /* capture vars */
    SCIP_CALL( SCIPcaptureVar(scip, (*consdata)->resvar) );
    for( v = 0; v < (*consdata)->nvars; v++ )

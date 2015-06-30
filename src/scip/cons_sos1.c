@@ -9096,10 +9096,10 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
          assert( conshdlrdata != NULL );
 
          /* store variable fixed to be nonzero on stack */
-         assert( 0 <= conshdlrdata->nfixnonzerovars );
-         assert( conshdlrdata->fixnonzerovars != NULL );
+         assert( 0 <= conshdlrdata->nfixnonzerovars && conshdlrdata->nfixnonzerovars <= SCIPgetNTotalVars(scip) );
          if ( conshdlrdata->nfixnonzerovars < conshdlrdata->maxnfixnonzerovars )
          {
+            assert( conshdlrdata->fixnonzerovars != NULL );
             assert( SCIPeventGetVar(event) != NULL );
             conshdlrdata->fixnonzerovars[conshdlrdata->nfixnonzerovars++] = SCIPeventGetVar(event);
          }
@@ -9118,10 +9118,10 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
          assert( conshdlrdata != NULL );
 
          /* store variable fixed to be nonzero on stack */
-         assert( 0 <= conshdlrdata->nfixnonzerovars );
-         assert( conshdlrdata->fixnonzerovars != NULL );
+         assert( 0 <= conshdlrdata->nfixnonzerovars && conshdlrdata->nfixnonzerovars <= SCIPgetNTotalVars(scip) );
          if ( conshdlrdata->nfixnonzerovars < conshdlrdata->maxnfixnonzerovars )
          {
+            assert( conshdlrdata->fixnonzerovars != NULL );
             assert( SCIPeventGetVar(event) != NULL );
             conshdlrdata->fixnonzerovars[conshdlrdata->nfixnonzerovars++] = SCIPeventGetVar(event);
          }

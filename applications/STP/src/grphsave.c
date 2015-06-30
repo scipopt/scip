@@ -1,13 +1,31 @@
-#ident "@(#) $Id: grphsave.c,v 1.5 1999/09/30 16:02:10 bzfkocht Exp $"
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*   Type....: Function                                                      */
-/*   File....: grphsave.c                                                    */
-/*   Name....: Graph File Saving Routines                                    */
-/*   Author..: Thorsten Koch                                                 */
-/*   Copyright by Author, All rights reserved                                */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
+
+/**@file   reduce.c
+ * @brief  Saving routines for Steiner problems
+ * @author Gerald Gamrath
+ * @author Thorsten Koch
+ * @author Daniel Rehfeldt
+ *
+ * This file includes several saving routines for Steiner problems
+ *
+ * A list of all interface methods can be found in grph.h.
+ *
+ */
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <stdio.h>
 #include <string.h>
@@ -92,7 +110,7 @@ void SCIPwriteStp(
    fprintf(fp, "Nodes %d\n", g->knots);
    fprintf(fp, "Edges %d\n", g->edges / 2);
 
-   for(i = 0; i < g->edges; i += 2)
+   for( i = 0; i < g->edges; i += 2 )
    {
       if (g->ieat[i] != EAT_FREE)
       {

@@ -38,7 +38,6 @@ include $(SCIPDIR)/make/make.project
 MAINNAME	=	stp
 CMAINOBJ	=	cmain.o \
 			cons_stp.o \
-			crc32.o \
 			grphbase.o \
 			grphload.o \
 			grphmcut.o \
@@ -56,7 +55,6 @@ CMAINOBJ	=	cmain.o \
 			reduce.o \
 			dirreduce.o \
 			sdtest.o \
-			bndtest.o \
 			prop_stp.o \
 			validate.o
 CXXMAINOBJ	=
@@ -95,9 +93,10 @@ lint:		$(MAINSRC)
 		$(SHELL) -ec 'for i in $^; \
 			do \
 			echo $$i; \
-			$(LINT) $(SCIPDIR)/lint/scip.lnt +os\(lint.out\) -u -zero \
+			$(LINT) -I$(SCIPDIR) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
 			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
 			done'
+
 .PHONY: scip
 scip:
 		@$(MAKE) -C $(SCIPDIR) libs $^

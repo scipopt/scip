@@ -182,7 +182,7 @@ struct SCIP_ConsData
    SCIP_Longint          weightsum;          /**< sum of all weights */
    SCIP_Longint          onesweightsum;      /**< sum of weights of variables fixed to one */
    unsigned int          propagated:1;       /**< is the knapsack constraint already propagated? */
-   unsigned int          presolvedtiming:3;  /**< max level in which the knapsack constraint is already presolved */
+   unsigned int          presolvedtiming:4;  /**< max level in which the knapsack constraint is already presolved */
    unsigned int          sorted:1;           /**< are the knapsack items sorted by weight? */
    unsigned int          cliquepartitioned:1;/**< is the clique partition valid? */
    unsigned int          negcliquepartitioned:1;/**< is the negated clique partition valid? */

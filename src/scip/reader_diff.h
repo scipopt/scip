@@ -18,10 +18,7 @@
  * @brief  diff file reader
  * @author Jakob Witzig
  *
- * This reader allows to parse and write CPLEX .lp files with linear and quadratic constraints and objective,
- * special ordered sets of type 1 and 2, indicators on linear constraints, and semicontinuous variables.
- * For writing, linear (general and specialized), indicator, quadratic, second order cone, and
- * special ordered set constraints are supported.
+ * This reader allows to parse a new objective function the style of CPLEX .lp files.
  *
  * The lp format is defined within the CPLEX documentation.
  */

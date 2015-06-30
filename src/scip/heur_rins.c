@@ -406,7 +406,7 @@ SCIP_DECL_HEUREXEC(heurExecRins)
 
    /* reward RINS if it succeeded often */
    nnodes = (SCIP_Longint)(nnodes * 3.0 * (SCIPheurGetNBestSolsFound(heur)+1.0)/(SCIPheurGetNCalls(heur) + 1.0));
-   nnodes -= 100 * heurdata->ncreatedsubmips;  /* count the setup costs for the sub-MIP as 100 nodes */
+   nnodes -= (SCIP_Longint)(100.0 * heurdata->ncreatedsubmips);  /* count the setup costs for the sub-MIP as 100 nodes */
    nnodes += heurdata->nodesofs;
 
    /* determine the node limit for the current process */
