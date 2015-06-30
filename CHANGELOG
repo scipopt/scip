@@ -215,7 +215,7 @@ interface:
 - new enum SCIP_CONFIDENCE_LEVEL for different levels of confidence for statistical tests.
 - new struct SCIP_DIVESET that bundles options for SCIP's diving heuristics; all hard diving heuristics (those
   without 'obj' at the beginning) include diveset and implement only the scoring callback.
-- new method SCIPincludeDiveset() to add a diveset to a heuristic. Heuristics may have multiple divesets
+- new method SCIPcreateDiveset() to add a diveset to a heuristic. Heuristics may have multiple divesets
   under different names
 - new callback SCIP_DECL_DIVESETGETSCORE to implement scoring function to guide diving
 - new method SCIPperformGenericDivingAlgorithm() that performs diving with periodic LP resolve according to
