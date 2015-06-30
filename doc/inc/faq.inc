@@ -180,6 +180,7 @@ Maybe the parameters of a function in SCIP changed. Relevant changes between ver
 <li> <a href="./CHG5.shtml">Interface changes between SCIP 2.0 and SCIP 2.1</a></li>
 <li> <a href="./CHG6.shtml">Interface changes between SCIP 2.1 and SCIP 3.0</a></li>
 <li> <a href="./CHG7.shtml">Interface changes between SCIP 3.0 and SCIP 3.1</a></li>
+<li> <a href="./CHG8.shtml">Interface changes between SCIP 3.1 and SCIP 3.2</a></li>
 </ul>
     </div>
   </li>
