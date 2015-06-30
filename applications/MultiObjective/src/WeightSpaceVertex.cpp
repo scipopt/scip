@@ -32,7 +32,7 @@
 
 /** creates inital vertex */
 WeightSpaceVertex::WeightSpaceVertex(
-   std::vector< const std::vector<SCIP_Real>* >     incident_facets,   /**< incident nondominated points */
+   std::vector< const std::vector<SCIP_Real>* >     incident_facets,  /**< incident nondominated points */
    std::vector<SCIP_Real>*                          weight,           /**< weight vector */
    SCIP_Real                                        weighted_objval   /**< weighted objective value */
   ) : nobjs_(weight->size()),
@@ -234,7 +234,7 @@ void WeightSpaceVertex::updateFacet(const std::vector<SCIP_Real>* facet)
 
 /** writes weight space vertex to an output stream */
 void WeightSpaceVertex::print(
-   std::ostream&                   os        /**< stream the vector should be written to */
+   std::ostream&                   os        /**< stream the vector should be written to*/
    ) const
 {
    os << "facets" << std::endl;
@@ -250,7 +250,7 @@ void WeightSpaceVertex::print(
 
 /** writes weight space vertex to an output stream */
 std::ostream& operator<<(
-   std::ostream&                   os,       /**< stream the vector should be written to */
+   std::ostream&                   os,       /**< stream the vector should be written to*/
    const WeightSpaceVertex         v         /**< vertex that should be written */
    )
 {
