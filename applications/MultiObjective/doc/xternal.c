@@ -34,7 +34,7 @@
  * \f{eqnarray*}{
  *    \min Cx \\
  *    Ax \leq b \\
- *    x \in \mathbb{Z}^n \times \mathbb{R}^m
+ *    x \in Z^n \times R^m
  * \f}
  *
  * The algorithm computes all feasible solutions which minimize \f$ w^TCx \f$ for some \f$ w \geq 0 \f$.

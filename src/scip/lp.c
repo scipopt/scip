@@ -14116,7 +14116,6 @@ void adjustLPobjval(
 {
    assert(lp != NULL);
    assert(set != NULL);
-   assert(messagehdlr != NULL);
 
    if( SCIPsetIsInfinity(set, lp->lpobjval) && lp->lpobjval != SCIPsetInfinity(set) ) /*lint !e777*/
    {

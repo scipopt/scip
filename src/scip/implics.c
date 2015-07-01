@@ -2304,7 +2304,8 @@ SCIP_RETCODE SCIPcliquetableAdd(
       assert(SCIPvarIsBinary(var));
 
       /* if we have a variables already fixed to one in the clique, fix all other to zero */
-      if( (clqvalues[v] && SCIPvarGetLbGlobal(var) > 0.5) || (!clqvalues[v] && SCIPvarGetUbGlobal(var) < 0.5) )
+      if( ! SCIPvarIsMarkedDeleteGlobalStructures(var) &&
+            ((clqvalues[v] && SCIPvarGetLbGlobal(var) > 0.5) || (!clqvalues[v] && SCIPvarGetUbGlobal(var) < 0.5)) )
       {
          SCIPdebugMessage("in a clique var %s with value %u is fixed to %d -> fix the rest\n", SCIPvarGetName(var), clqvalues[v], clqvalues[v] ? 1 : 0);
 
@@ -2369,12 +2370,13 @@ SCIP_RETCODE SCIPcliquetableAdd(
 
       /* only unfixed column and loose variables may be member of a clique */
       if( SCIPvarGetUbGlobal(var) - SCIPvarGetLbGlobal(var) < 0.5 ||
-            (SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN && SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE) )
+            (SCIPvarGetStatus(var) != SCIP_VARSTATUS_COLUMN && SCIPvarGetStatus(var) != SCIP_VARSTATUS_LOOSE) ||
+            SCIPvarIsMarkedDeleteGlobalStructures(var) )
       {
          --nvars;
          clqvars[v] = clqvars[nvars];
          clqvalues[v] = clqvalues[nvars];
-         isequation = isequation && !(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+         isequation = isequation && !(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR) && ! SCIPvarIsMarkedDeleteGlobalStructures(var);
       }
    }
 
@@ -2566,13 +2568,15 @@ SCIP_RETCODE cliqueCleanup(
                || SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_LOOSE
                || SCIPvarGetStatus(clique->vars[v]) == SCIP_VARSTATUS_FIXED);
 
-         /* check for a variable fixed to zero in the clique */
+         /* check for variables that are either fixed to zero or marked for deletion from global structures */
          if( (clique->values[v] && SCIPvarGetUbGlobal(clique->vars[v]) < 0.5) ||
-               (!clique->values[v] && SCIPvarGetLbGlobal(clique->vars[v]) > 0.5) )
+               (!clique->values[v] && SCIPvarGetLbGlobal(clique->vars[v]) > 0.5) ||
+               SCIPvarIsMarkedDeleteGlobalStructures(clique->vars[v]) )
          {
             /* the variable will be overwritten by subsequent active variables */
             continue;
          }
+
          /* check for a variable fixed to one in the clique */
          else if( (clique->values[v] && SCIPvarGetLbGlobal(clique->vars[v]) > 0.5)
                || (!clique->values[v] && SCIPvarGetUbGlobal(clique->vars[v]) < 0.5) )

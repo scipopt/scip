@@ -22359,6 +22359,10 @@ SCIP_RETCODE SCIPremoveVarFromGlobalStructures(
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPremoveVarFromGlobalStructures", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
+   /* mark the variable as deletable from global structures - This is necessary for the delayed clean up of cliques */
+   SCIPvarMarkDeleteGlobalStructures(var);
+
+   /* remove variable from all its cliques, implications, and variable bounds */
    SCIP_CALL( SCIPvarRemoveCliquesImplicsVbs(var, SCIPblkmem(scip), scip->cliquetable, scip->set, TRUE, FALSE, TRUE) );
 
    return SCIP_OKAY;

@@ -38,8 +38,8 @@
 #define PRESOL_MAXROUNDS               0     /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
 #define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
-#define MAXABSRATIO     ((double)1000.0)     /**< max abs coefficients ratio */
-#define SIDECHANGERATIO   ((double)10.0)     /**< max side change ratio */
+#define MAXABSRATIO     ((SCIP_Real)1000.0)     /**< max abs coefficients ratio */
+#define SIDECHANGERATIO   ((SCIP_Real)10.0)     /**< max side change ratio */
 
 
 /*

@@ -189,7 +189,9 @@ const char* Main::readParamfilename(
 }
 
 /** prints comments about the result of file reading */
-SCIP_RETCODE Main::readProblem(const char* filename)
+SCIP_RETCODE Main::readProblem(
+   const char*           filename            /**< filename of file to read */
+   )
 {
    SCIP_RETCODE          result;
 
@@ -418,8 +420,8 @@ void Main::printBottomLine()
 /** runs the program: reads specified instance file, calls the solver and prints out
  *  relevant information */
 int main(
-   int                   argc,          /** number of arguments */
-   char**                argv           /** array of arguments */
+   int                   argc,          /**< number of arguments */
+   char**                argv           /**< array of arguments */
    )
 {
    SCIP_RETCODE retcode;

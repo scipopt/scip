@@ -53,15 +53,15 @@ Objectives::~Objectives()
 /** add new objective name */
 void Objectives::addObjective(
    const char*           name                /**< identifier of objective in mps file */
-      )
+   )
 {
    objnames_.push_back(std::string(name));
 }
 
 /** set objective coefficient corresponding to given variable and objective name */
 void Objectives::addCost(
-   SCIP_VAR*             var                 /**< pointer to SCIP variable */,
-   const char*           objname             /**< identifier of objective in mps file */,
+   SCIP_VAR*             var                 /**< pointer to SCIP variable */
+   const char*           objname             /**< identifier of objective in mps file */
    SCIP_Real             val                 /**< cost coefficient */
    )
 {
@@ -90,8 +90,8 @@ void Objectives::addCost(
 
 /** change objective function of scip instance to new weighted objective */
 SCIP_RETCODE Objectives::setWeightedObjective(
-   SCIP*                          scip      /**< SCIP solver */,
-   const std::vector<SCIP_Real>*  weight    /**< vector containing weight for every objective */
+   SCIP*                          scip       /**< SCIP solver */
+   const std::vector<SCIP_Real>*  weight     /**< vector containing weight for every objective */
    )
 {
    int nobjs;
@@ -128,10 +128,10 @@ SCIP_RETCODE Objectives::setWeightedObjective(
 
 /** creates constraint of the form wCx <= b */
 SCIP_RETCODE Objectives::createObjectiveConstraint(
-   SCIP*                             scip,     /**< SCIP solver */
-   SCIP_CONS**                       cons,     /**< pointer for storing the created constraint */
-   const std::vector<SCIP_Real>*     weight,   /**< coefficients of cost vectors in constraint */
-   SCIP_Real                         rhs       /**< right hand side */
+   SCIP*                             scip,   /**< SCIP solver */
+   SCIP_CONS**                       cons,   /**< pointer for storing the created constraint */
+   const std::vector<SCIP_Real>*     weight, /**< coefficients of cost vectors in constraint */
+   SCIP_Real                         rhs     /**< right hand side */
    )
 {
    char* name = new char[32];
@@ -278,17 +278,20 @@ int Objectives::objIndex(
 
 /* c bindings for objective functions */
 
-extern "C" void c_addCost(Objectives* objectives,
-   SCIP_VAR* var,
-   const char* objname,
-   SCIP_Real val)
+extern "C" void c_addCost(
+   Objectives*           objectives,         /**< objectives class */
+   SCIP_VAR*             var,                /**< pointer to SCIP variable */
+   const char*           objname,            /**< identifier of objective in mps file */
+   SCIP_Real             val                 /**< cost coefficient */
+   )
 {
    objectives->addCost(var, objname, val);
 }
 
 extern "C" void c_addObjective(
-  Objectives* probdata,
-   const char* name)
+   Objectives*           probdata,           /**< objectives class */
+   const char*           name                /**< identifier of objective in mps file */
+   )
 {
    probdata->addObjective(name);
 }

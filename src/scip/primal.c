@@ -529,12 +529,12 @@ SCIP_RETCODE primalAddSol(
    {
       SCIP_Bool feasible;
 
-      SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, TRUE, TRUE, TRUE, &feasible) );
+      SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
       if( !feasible )
       {
          SCIPerrorMessage("infeasible solution accepted:\n");
-         SCIP_CALL( SCIPsolPrint(sol, set, stat, transprob, NULL, NULL, FALSE) );
+         SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, origprob, transprob, NULL, FALSE) );
       }
       assert(feasible);
    }
