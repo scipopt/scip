@@ -161,6 +161,7 @@ LDFLAGS			=	lib\ipopt.$(ARCH)\lib\libipopt.lib \
 					lib\if.$(ARCH)\libmmt.lib \
 					lib\if.$(ARCH)\libirc.lib \
 					lib\if.$(ARCH)\svml_dispmt.lib \
+					lib\if.$(ARCH)\libdecimal.lib \
 					$(LDFLAGS)
 !else
 LDFLAGS			=	lib\ipopt.$(ARCH)\lib\libipopt.lib \
