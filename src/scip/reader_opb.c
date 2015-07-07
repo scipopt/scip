@@ -2409,7 +2409,7 @@ SCIP_RETCODE writeOpbObjective(
       if( objsense == SCIP_OBJSENSE_MAXIMIZE )
          mult *= -1;
 
-      SCIPdebugMessage("print objective function multiplied with %"SCIP_LONGINT_FORMAT"\n", mult);
+      SCIPdebugMessage("print objective function multiplied with %" SCIP_LONGINT_FORMAT "\n", mult);
 
       appendBuffer(scip, file, linebuffer, &linecnt, "min:");
 
@@ -2439,7 +2439,7 @@ SCIP_RETCODE writeOpbObjective(
 
          if( SCIPvarGetObj(var) * mult > SCIP_LONGINT_MAX )
          {
-            SCIPerrorMessage("Integral objective value to big (mult = %"SCIP_LONGINT_FORMAT", value = %g, mult*value = %g, printingvalue = %"SCIP_LONGINT_FORMAT")for printing in opb format.\n", mult, SCIPvarGetObj(var), SCIPvarGetObj(var) * mult, (SCIP_Longint) SCIPround(scip, SCIPvarGetObj(var) * mult));
+            SCIPerrorMessage("Integral objective value to big (mult = %" SCIP_LONGINT_FORMAT ", value = %g, mult*value = %g, printingvalue = %" SCIP_LONGINT_FORMAT ")for printing in opb format.\n", mult, SCIPvarGetObj(var), SCIPvarGetObj(var) * mult, (SCIP_Longint) SCIPround(scip, SCIPvarGetObj(var) * mult));
          }
 
          /* replace and-resultant with corresponding variables */
@@ -2455,7 +2455,7 @@ SCIP_RETCODE writeOpbObjective(
             negated = SCIPvarIsNegated(andvars[pos][nandvars[pos] - 1]);
 
             /* print and-vars */
-            (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " %+"SCIP_LONGINT_FORMAT"%s%s%s",
+            (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " %+" SCIP_LONGINT_FORMAT "%s%s%s",
                (SCIP_Longint) (SCIPvarGetObj(var) * mult), multisymbol, negated ? "~" : "",
                strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][nandvars[pos] - 1]) : andvars[pos][nandvars[pos] - 1]), "x"));
             appendBuffer(scip, file, linebuffer, &linecnt, buffer);
@@ -2470,7 +2470,7 @@ SCIP_RETCODE writeOpbObjective(
          }
          else
          {
-            (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " %+"SCIP_LONGINT_FORMAT"%s%s%s",
+            (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " %+" SCIP_LONGINT_FORMAT "%s%s%s",
                (SCIP_Longint) (SCIPvarGetObj(var) * mult), multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(var) : var), "x"));
             appendBuffer(scip, file, linebuffer, &linecnt, buffer);
          }
@@ -2539,7 +2539,7 @@ SCIP_RETCODE printNLRow(
 
    /* print comment line if we have to multiply the coefficients to get integrals */
    if( ABS(*mult) != 1 )
-      SCIPinfoMessage(scip, file, "* the following constraint is multiplied by %"SCIP_LONGINT_FORMAT" to get integral coefficients\n", ABS(*mult) );
+      SCIPinfoMessage(scip, file, "* the following constraint is multiplied by %" SCIP_LONGINT_FORMAT " to get integral coefficients\n", ABS(*mult) );
 
 #ifndef NDEBUG
    /* check that these variables are sorted */
@@ -2550,7 +2550,7 @@ SCIP_RETCODE printNLRow(
    /* if we have a soft constraint print the weight*/
    if( weight != 0 )
    {
-      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "[%+"SCIP_LONGINT_FORMAT"] ", weight);
+      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "[%+" SCIP_LONGINT_FORMAT "] ", weight);
       appendBuffer(scip, file, linebuffer, &linecnt, buffer);
    }
 
@@ -2578,11 +2578,11 @@ SCIP_RETCODE printNLRow(
 
          if( vals[v] * (*mult) > SCIP_LONGINT_MAX )
          {
-            SCIPerrorMessage("Integral coefficient to big (mult = %"SCIP_LONGINT_FORMAT", value = %g, mult*value = %g, printingvalue = %"SCIP_LONGINT_FORMAT")for printing in opb format.\n", *mult, vals[v], vals[v] * (*mult), (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)));
+            SCIPerrorMessage("Integral coefficient to big (mult = %" SCIP_LONGINT_FORMAT ", value = %g, mult*value = %g, printingvalue = %" SCIP_LONGINT_FORMAT ")for printing in opb format.\n", *mult, vals[v], vals[v] * (*mult), (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)));
          }
 
 	 /* print and-vars */
-	 (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT"%s%s%s",
+	 (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+" SCIP_LONGINT_FORMAT "%s%s%s",
 	    (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)), multisymbol, negated ? "~" : "",
 	    strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(andvars[pos][nandvars[pos] - 1]) : andvars[pos][nandvars[pos] - 1]), "x") );
 	 appendBuffer(scip, file, linebuffer, &linecnt, buffer);
@@ -2599,7 +2599,7 @@ SCIP_RETCODE printNLRow(
       }
       else
       {
-         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT"%s%s%s ",
+         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+" SCIP_LONGINT_FORMAT "%s%s%s ",
             (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)), multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(var) : var), "x"));
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
       }
@@ -2609,7 +2609,7 @@ SCIP_RETCODE printNLRow(
    if( SCIPisZero(scip, lhs) )
       lhs = 0.0;
 
-   (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s %"SCIP_LONGINT_FORMAT" ;\n", type, (SCIP_Longint) (lhs * (*mult)) );
+   (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s %" SCIP_LONGINT_FORMAT " ;\n", type, (SCIP_Longint) (lhs * (*mult)) );
    appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
    writeBuffer(scip, file, linebuffer, &linecnt);
@@ -2769,12 +2769,12 @@ SCIP_RETCODE printRow(
 
    /* print comment line if we have to multiply the coefficients to get integrals */
    if( ABS(*mult) != 1 )
-      SCIPinfoMessage(scip, file, "* the following constraint is multiplied by %"SCIP_LONGINT_FORMAT" to get integral coefficients\n", ABS(*mult) );
+      SCIPinfoMessage(scip, file, "* the following constraint is multiplied by %" SCIP_LONGINT_FORMAT " to get integral coefficients\n", ABS(*mult) );
 
    /* if we have a soft constraint print the weight*/
    if( weight != 0 )
    {
-      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "[%+"SCIP_LONGINT_FORMAT"] ", weight);
+      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "[%+" SCIP_LONGINT_FORMAT "] ", weight);
       appendBuffer(scip, file, linebuffer, &linecnt, buffer);
    }
 
@@ -2790,10 +2790,10 @@ SCIP_RETCODE printRow(
 
       if( vals[v] * (*mult) > SCIP_LONGINT_MAX )
       {
-         SCIPerrorMessage("Integral coefficient to big (mult = %"SCIP_LONGINT_FORMAT", value = %g, mult*value = %g, printingvalue = %"SCIP_LONGINT_FORMAT")for printing in opb format.\n", *mult, vals[v], vals[v] * (*mult), (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)));
+         SCIPerrorMessage("Integral coefficient to big (mult = %" SCIP_LONGINT_FORMAT ", value = %g, mult*value = %g, printingvalue = %" SCIP_LONGINT_FORMAT ")for printing in opb format.\n", *mult, vals[v], vals[v] * (*mult), (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)));
       }
 
-      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT"%s%s%s ",
+      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+" SCIP_LONGINT_FORMAT "%s%s%s ",
          (SCIP_Longint) SCIPround(scip, vals[v] * (*mult)), multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(var) : var), "x"));
       appendBuffer(scip, file, linebuffer, &linecnt, buffer);
    }
@@ -2802,7 +2802,7 @@ SCIP_RETCODE printRow(
    if( SCIPisZero(scip, lhs) )
       lhs = 0.0;
 
-   (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s %"SCIP_LONGINT_FORMAT" ;\n", type, (SCIP_Longint) (lhs * (*mult)) );
+   (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s %" SCIP_LONGINT_FORMAT " ;\n", type, (SCIP_Longint) (lhs * (*mult)) );
    appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
    writeBuffer(scip, file, linebuffer, &linecnt);
@@ -2976,7 +2976,7 @@ SCIP_RETCODE printPBRow(
 
    /* print comment line if we have to multiply the coefficients to get integrals */
    if( ABS(*mult) != 1 )
-      SCIPinfoMessage(scip, file, "* the following constraint is multiplied by %"SCIP_LONGINT_FORMAT" to get integral coefficients\n", ABS(*mult) );
+      SCIPinfoMessage(scip, file, "* the following constraint is multiplied by %" SCIP_LONGINT_FORMAT " to get integral coefficients\n", ABS(*mult) );
 
    /* if indicator variable exist we have a soft constraint */
    if( indvar != NULL )
@@ -2998,7 +2998,7 @@ SCIP_RETCODE printPBRow(
 
       negated = SCIPvarIsNegated(var);
 
-      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+"SCIP_LONGINT_FORMAT"%s%s%s ",
+      (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%+" SCIP_LONGINT_FORMAT "%s%s%s ",
          (SCIP_Longint) SCIPround(scip, linvals[v] * (*mult)), multisymbol, negated ? "~" : "", strstr(SCIPvarGetName(negated ? SCIPvarGetNegationVar(var) : var), "x")); /*lint !e613 */
       appendBuffer(scip, file, linebuffer, &linecnt, buffer);
    }
@@ -3028,7 +3028,7 @@ SCIP_RETCODE printPBRow(
    if( SCIPisZero(scip, lhs) )
       lhs = 0.0;
 
-   (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s %"SCIP_LONGINT_FORMAT" ;\n", type, (SCIP_Longint) (lhs * (*mult)) );
+   (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, "%s %" SCIP_LONGINT_FORMAT " ;\n", type, (SCIP_Longint) (lhs * (*mult)) );
    appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
    writeBuffer(scip, file, linebuffer, &linecnt);
@@ -3952,7 +3952,7 @@ SCIP_RETCODE writeOpbRelevantAnds(
          }
 
          /* print rhslhs */
-         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " = %"SCIP_LONGINT_FORMAT" ;\n", rhslhs);
+         (void) SCIPsnprintf(buffer, OPB_MAX_LINELEN, " = %" SCIP_LONGINT_FORMAT " ;\n", rhslhs);
          appendBuffer(scip, file, linebuffer, &linecnt, buffer);
 
          writeBuffer(scip, file, linebuffer, &linecnt);

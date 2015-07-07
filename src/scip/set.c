@@ -206,7 +206,7 @@
 #define SCIP_DEFAULT_LP_LEXDUALBASIC      FALSE /**< choose fractional basic variables in lexicographic dual algorithm */
 #define SCIP_DEFAULT_LP_LEXDUALSTALLING    TRUE /**< turn on the lex dual algorithm only when stalling? */
 #define SCIP_DEFAULT_LP_DISABLECUTOFF         2 /**< disable the cutoff bound in the LP solver? (0: enabled, 1: disabled, 2: auto) */
-#define SCIP_DEFAULT_LP_ROWREPSWITCH        2.0 /**< simplex algorithm shall use row representation of the basis
+#define SCIP_DEFAULT_LP_ROWREPSWITCH        1.2 /**< simplex algorithm shall use row representation of the basis
                                                  *   if number of rows divided by number of columns exceeds this value */
 #define SCIP_DEFAULT_LP_THREADS               0 /**< number of threads used for solving the LP (0: automatic) */
 #define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit
@@ -263,13 +263,13 @@
 
 /* Presolving */
 
-#define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-04 /**< abort presolve, if at most this fraction of the problem was changed
+#define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-03 /**< abort presolve, if at most this fraction of the problem was changed
                                                  *   in last presolve round */
 #define SCIP_DEFAULT_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds (-1: unlimited, 0: off) */
 #define SCIP_DEFAULT_PRESOL_MAXRESTARTS      -1 /**< maximal number of restarts (-1: unlimited) */
-#define SCIP_DEFAULT_PRESOL_RESTARTFAC     0.05 /**< fraction of integer variables that were fixed in the root node
+#define SCIP_DEFAULT_PRESOL_RESTARTFAC    0.025 /**< fraction of integer variables that were fixed in the root node
                                                  *   triggering a restart with preprocessing after root node evaluation */
-#define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC  0.20 /**< fraction of integer variables that were fixed in the root node triggering an
+#define SCIP_DEFAULT_PRESOL_IMMRESTARTFAC  0.10 /**< fraction of integer variables that were fixed in the root node triggering an
                                                  *   immediate restart with preprocessing */
 #define SCIP_DEFAULT_PRESOL_SUBRESTARTFAC  1.00 /**< fraction of integer variables that were globally fixed during the
                                                  *   solving process triggering a restart with preprocessing */
@@ -1421,7 +1421,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "lp/lexdualalgo",
-         "should the lexicographic dual alogrithm be used?",
+         "should the lexicographic dual algorithm be used?",
          &(*set)->lp_lexdualalgo, TRUE, SCIP_DEFAULT_LP_LEXDUALALGO,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
@@ -1431,7 +1431,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "lp/lexdualmaxrounds",
-         "maximum number of rounds in the  lexicographic dual algorithm (-1: unbounded)",
+         "maximum number of rounds in the lexicographic dual algorithm (-1: unbounded)",
          &(*set)->lp_lexdualmaxrounds, TRUE, SCIP_DEFAULT_LP_LEXDUALMAXROUNDS, -1, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,

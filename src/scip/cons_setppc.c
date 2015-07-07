@@ -7857,15 +7857,26 @@ SCIP_DECL_CONSPROP(consPropSetppc)
    {
       assert(SCIPconsGetData(conss[c]) != NULL);
 
-      /* do not propagate constraints with multi-aggregated variables, which should only happen in probing mode,
-       * otherwise the multi-aggregation should be resolved
+      /* during presolving, we do not want to propagate constraints with multiaggregated variables. After presolving,
+       * we want to resolve the multiaggregation to have a clean data structure; All initial constraints should not
+       * have multiaggregated variables, but this is not true for constraints that were introduced during solving
        */
-      if( inpresolve && SCIPconsGetData(conss[c])->existmultaggr )
-         continue;
-#ifndef NDEBUG
-      else if( !inpresolve )
-         assert(!(SCIPconsGetData(conss[c])->existmultaggr));
-#endif
+      if( SCIPconsGetData(conss[c])->existmultaggr )
+      {
+         int naddconss, ndelconss;
+
+         if( inpresolve )
+            continue;
+
+         naddconss = ndelconss = 0;
+         SCIP_CALL( applyFixings(scip, conss[c], &naddconss, &ndelconss, &nfixedvars, &cutoff) );
+
+         if( cutoff )
+            break;
+      }
+
+      /* all multiaggregations should be resolved at here */
+      assert(inpresolve || ! SCIPconsGetData(conss[c])->existmultaggr);
 
       SCIP_CALL( processFixings(scip, conss[c], &cutoff, &nfixedvars, &addcut, &mustcheck) );
    }
@@ -8837,31 +8848,31 @@ SCIP_RETCODE SCIPincludeConshdlrSetppc(
 
    /* set partitioning constraint handler parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/npseudobranches",
+         "constraints/" CONSHDLR_NAME "/npseudobranches",
          "number of children created in pseudo branching (0: disable pseudo branching)",
          &conshdlrdata->npseudobranches, TRUE, DEFAULT_NPSEUDOBRANCHES, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/presolpairwise",
+         "constraints/" CONSHDLR_NAME "/presolpairwise",
          "should pairwise constraint comparison be performed in presolving?",
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/presolusehashing",
+         "constraints/" CONSHDLR_NAME "/presolusehashing",
          "should hash table be used for detecting redundant constraints in advance",
          &conshdlrdata->presolusehashing, TRUE, DEFAULT_PRESOLUSEHASHING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/dualpresolving",
+         "constraints/" CONSHDLR_NAME "/dualpresolving",
          "should dual presolving steps be performed?",
          &conshdlrdata->dualpresolving, TRUE, DEFAULT_DUALPRESOLVING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/cliquelifting",
+         "constraints/" CONSHDLR_NAME "/cliquelifting",
          " should we try to lift variables into other clique constraints, fix variables, aggregate them, and also shrink the amount of variables in clique constraints",
          &conshdlrdata->cliquelifting, TRUE, DEFAULT_CLIQUELIFTING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/addvariablesascliques",
+         "constraints/" CONSHDLR_NAME "/addvariablesascliques",
          "should we try to generate extra cliques out of all binary variables to maybe fasten redundant constraint detection",
          &conshdlrdata->addvariablesascliques, TRUE, DEFAULT_ADDVARIABLESASCLIQUES, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/cliqueshrinking",
+         "constraints/" CONSHDLR_NAME "/cliqueshrinking",
          "should we try to shrink the number of variables in a clique constraints, by replacing more than one variable by only one",
          &conshdlrdata->cliqueshrinking, TRUE, DEFAULT_CLIQUESHRINKING, NULL, NULL) );
 

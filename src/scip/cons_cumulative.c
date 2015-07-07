@@ -9512,7 +9512,7 @@ SCIP_RETCODE normalizeCumulativeCondition(
    }
    else if( gcd >= 2 )
    {
-      SCIPdebugMessage("cumulative condition: dividing demands by %"SCIP_LONGINT_FORMAT"\n", gcd);
+      SCIPdebugMessage("cumulative condition: dividing demands by %" SCIP_LONGINT_FORMAT "\n", gcd);
 
       for( v = 0; v < nvars; ++v )
          demands[v] /= gcd;
@@ -12479,11 +12479,11 @@ SCIP_DECL_CONSFREE(consFreeCumulative)
    if( !conshdlrdata->iscopy )
    {
       /* statisitc output if SCIP_STATISTIC is defined */
-      SCIPstatisticPrintf("time-table: lb=%"SCIP_LONGINT_FORMAT", ub=%"SCIP_LONGINT_FORMAT", cutoff=%"SCIP_LONGINT_FORMAT"\n",
+      SCIPstatisticPrintf("time-table: lb=%" SCIP_LONGINT_FORMAT ", ub=%" SCIP_LONGINT_FORMAT ", cutoff=%" SCIP_LONGINT_FORMAT "\n",
          conshdlrdata->nlbtimetable, conshdlrdata->nubtimetable, conshdlrdata->ncutofftimetable);
-      SCIPstatisticPrintf("edge-finder: lb=%"SCIP_LONGINT_FORMAT", ub=%"SCIP_LONGINT_FORMAT", cutoff=%"SCIP_LONGINT_FORMAT"\n",
+      SCIPstatisticPrintf("edge-finder: lb=%" SCIP_LONGINT_FORMAT ", ub=%" SCIP_LONGINT_FORMAT ", cutoff=%" SCIP_LONGINT_FORMAT "\n",
          conshdlrdata->nlbedgefinder, conshdlrdata->nubedgefinder, conshdlrdata->ncutoffedgefinder);
-      SCIPstatisticPrintf("overload: time-table=%"SCIP_LONGINT_FORMAT" time-time edge-finding=%"SCIP_LONGINT_FORMAT"\n",
+      SCIPstatisticPrintf("overload: time-table=%" SCIP_LONGINT_FORMAT " time-time edge-finding=%" SCIP_LONGINT_FORMAT "\n",
       conshdlrdata->ncutoffoverload, conshdlrdata->ncutoffoverloadTTEF);
    }
 #endif
@@ -13542,83 +13542,83 @@ SCIP_RETCODE SCIPincludeConshdlrCumulative(
 
    /* add cumulative constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/ttinfer",
+         "constraints/" CONSHDLR_NAME "/ttinfer",
          "should time-table (core-times) propagator be used to infer bounds?",
          &conshdlrdata->ttinfer, FALSE, DEFAULT_TTINFER, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/efcheck",
+         "constraints/" CONSHDLR_NAME "/efcheck",
          "should edge-finding be used to detect an overload?",
          &conshdlrdata->efcheck, FALSE, DEFAULT_EFCHECK, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/efinfer",
+         "constraints/" CONSHDLR_NAME "/efinfer",
          "should edge-finding be used to infer bounds?",
          &conshdlrdata->efinfer, FALSE, DEFAULT_EFINFER, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/useadjustedjobs", "should edge-finding be executed?",
+         "constraints/" CONSHDLR_NAME "/useadjustedjobs", "should edge-finding be executed?",
          &conshdlrdata->useadjustedjobs, TRUE, DEFAULT_USEADJUSTEDJOBS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/ttefcheck",
+         "constraints/" CONSHDLR_NAME "/ttefcheck",
          "should time-table edge-finding be used to detect an overload?",
          &conshdlrdata->ttefcheck, FALSE, DEFAULT_TTEFCHECK, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/ttefinfer",
+         "constraints/" CONSHDLR_NAME "/ttefinfer",
          "should time-table edge-finding be used to infer bounds?",
          &conshdlrdata->ttefinfer, FALSE, DEFAULT_TTEFINFER, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/usebinvars", "should the binary representation be used?",
+         "constraints/" CONSHDLR_NAME "/usebinvars", "should the binary representation be used?",
          &conshdlrdata->usebinvars, FALSE, DEFAULT_USEBINVARS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/localcuts", "should cuts be added only locally?",
+         "constraints/" CONSHDLR_NAME "/localcuts", "should cuts be added only locally?",
          &conshdlrdata->localcuts, FALSE, DEFAULT_LOCALCUTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/usecovercuts", "should covering cuts be added every node?",
+         "constraints/" CONSHDLR_NAME "/usecovercuts", "should covering cuts be added every node?",
          &conshdlrdata->usecovercuts, FALSE, DEFAULT_USECOVERCUTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/cutsasconss",
+         "constraints/" CONSHDLR_NAME "/cutsasconss",
          "should the cumulative constraint create cuts as knapsack constraints?",
          &conshdlrdata->cutsasconss, FALSE, DEFAULT_CUTSASCONSS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/sepaold",
+         "constraints/" CONSHDLR_NAME "/sepaold",
          "shall old sepa algo be applied?",
          &conshdlrdata->sepaold, FALSE, DEFAULT_SEPAOLD, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/fillbranchcands", "should branching candidates be added to storage?",
+         "constraints/" CONSHDLR_NAME "/fillbranchcands", "should branching candidates be added to storage?",
          &conshdlrdata->fillbranchcands, FALSE, DEFAULT_FILLBRANCHCANDS, NULL, NULL) );
 
    /* presolving parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/dualpresolve", "should dual presolving be applied?",
+         "constraints/" CONSHDLR_NAME "/dualpresolve", "should dual presolving be applied?",
          &conshdlrdata->dualpresolve, FALSE, DEFAULT_DUALPRESOLVE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/coeftightening", "should coefficient tightening be applied?",
+         "constraints/" CONSHDLR_NAME "/coeftightening", "should coefficient tightening be applied?",
          &conshdlrdata->coeftightening, FALSE, DEFAULT_COEFTIGHTENING, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/normalize", "should demands and capacity be normalized?",
+         "constraints/" CONSHDLR_NAME "/normalize", "should demands and capacity be normalized?",
          &conshdlrdata->normalize, FALSE, DEFAULT_NORMALIZE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/presolpairwise",
+         "constraints/" CONSHDLR_NAME "/presolpairwise",
          "should pairwise constraint comparison be performed in presolving?",
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/disjunctive", "extract disjunctive constraints?",
+         "constraints/" CONSHDLR_NAME "/disjunctive", "extract disjunctive constraints?",
          &conshdlrdata->disjunctive, FALSE, DEFAULT_DISJUNCTIVE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxnodes",
+         "constraints/" CONSHDLR_NAME "/maxnodes",
          "number of branch-and-bound nodes to solve an independent cumulative constraint (-1: no limit)?",
          &conshdlrdata->maxnodes, FALSE, DEFAULT_MAXNODES, -1LL, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/detectdisjunctive", "search for conflict set via maximal cliques to detect disjunctive constraints",
+         "constraints/" CONSHDLR_NAME "/detectdisjunctive", "search for conflict set via maximal cliques to detect disjunctive constraints",
          &conshdlrdata->detectdisjunctive, FALSE, DEFAULT_DETECTDISJUNCTIVE, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/detectvarbounds", "search for conflict set via maximal cliques to detect variable bound constraints",
+         "constraints/" CONSHDLR_NAME "/detectvarbounds", "search for conflict set via maximal cliques to detect variable bound constraints",
          &conshdlrdata->detectvarbounds, FALSE, DEFAULT_DETECTVARBOUNDS, NULL, NULL) );
 
    /* conflict analysis parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/usebdwidening", "should bound widening be used during the conflict analysis?",
+         "constraints/" CONSHDLR_NAME "/usebdwidening", "should bound widening be used during the conflict analysis?",
          &conshdlrdata->usebdwidening, FALSE, DEFAULT_USEBDWIDENING, NULL, NULL) );
 
    return SCIP_OKAY;
@@ -13668,7 +13668,7 @@ SCIP_RETCODE SCIPcreateConsCumulative(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      SCIPerrorMessage(""CONSHDLR_NAME" constraint handler not found\n");
+      SCIPerrorMessage("" CONSHDLR_NAME " constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -14047,7 +14047,7 @@ SCIP_RETCODE SCIPpropCumulativeCondition(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      SCIPerrorMessage(""CONSHDLR_NAME" constraint handler not found\n");
+      SCIPerrorMessage("" CONSHDLR_NAME " constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -14202,7 +14202,7 @@ SCIP_RETCODE SCIPsetSolveCumulative(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      SCIPerrorMessage(""CONSHDLR_NAME" constraint handler not found\n");
+      SCIPerrorMessage("" CONSHDLR_NAME " constraint handler not found\n");
       return SCIP_PLUGINNOTFOUND;
    }
 
@@ -14255,7 +14255,7 @@ SCIP_RETCODE SCIPsolveCumulative(
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
    if( conshdlr == NULL )
    {
-      SCIPerrorMessage(""CONSHDLR_NAME" constraint handler not found\n");
+      SCIPerrorMessage("" CONSHDLR_NAME " constraint handler not found\n");
       (*error) = TRUE;
       return SCIP_PLUGINNOTFOUND;
    }

@@ -21,6 +21,7 @@
     </tab>
     <tab type="user" url="@ref INTERFACES" title="Interfaces"/>
     <tab type="user" url="@ref EXAMPLES" title="Examples"/>
+    <tab type="user" url="@ref APPLICATIONS" title="Applications"/>
     <tab type="user" url="@ref HOWTOADD" title="How To"/>
   </navindex>
 

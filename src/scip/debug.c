@@ -876,7 +876,7 @@ SCIP_RETCODE SCIPdebugRemoveNode(
       /* wrong node will be cutoff */
       if( solisinnode )
       {
-         SCIPerrorMessage("debugging solution was cut off in local node #%"SCIP_LONGINT_FORMAT" (%p) at depth %d\n",
+         SCIPerrorMessage("debugging solution was cut off in local node #%" SCIP_LONGINT_FORMAT " (%p) at depth %d\n",
             node->number, node, SCIPnodeGetDepth(node));
          SCIPABORT();
       }

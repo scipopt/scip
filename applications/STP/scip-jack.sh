@@ -11,8 +11,13 @@ OUTPUTFILE=$4
 # check all variables defined
 if [ -z ${OUTPUTFILE} ]
 then
-    echo Skipping SCIP-Jack run since not command line parameters were given
+    echo Skipping SCIP-Jack run since not all command line parameters were given:
     echo "usage: scip-jack.sh FILENAME TIME THREADS OUTPUTFILE "
+    echo
+    echo FILENAME=$FILENAME
+    echo TIME=$TIME
+    echo THREADS=$THREADS
+    echo OUTPUTFILE=$OUTPUTFILE
     exit 1;
 fi
 

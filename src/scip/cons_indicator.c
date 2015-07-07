@@ -12,10 +12,6 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-/* #define SCIP_DEBUG */
-/* #define SCIP_OUTPUT */
-/* #define SCIP_MORE_DEBUG */
-/* #define SCIP_ENABLE_IISCHECK */
 
 /**@file   cons_indicator.c
  * @brief  constraint handler for indicator constraints
@@ -205,6 +201,8 @@
 #include "scip/heur_indicator.h"
 #include "scip/pub_misc.h"
 
+/* #define SCIP_OUTPUT */
+/* #define SCIP_ENABLE_IISCHECK */
 
 /* constraint handler properties */
 #define CONSHDLR_NAME          "indicator"

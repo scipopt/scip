@@ -529,12 +529,12 @@ SCIP_RETCODE SCIPincludeHeurIndicator(
 
    /* add parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/"HEUR_NAME"/oneopt",
+         "heuristics/" HEUR_NAME "/oneopt",
          "whether the one-opt heuristic should be started",
          &heurdata->oneopt, TRUE, DEFAULT_ONEOPT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/"HEUR_NAME"/improvesols",
+         "heuristics/" HEUR_NAME "/improvesols",
          "Try to improve other solutions by one-opt?",
          &heurdata->improvesols, TRUE, DEFAULT_IMPROVESOLS, NULL, NULL) );
 

@@ -1017,7 +1017,7 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
 
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/alwaysbranch",
+         "constraints/" CONSHDLR_NAME "/alwaysbranch",
          "alawys perform branching if one of the constraints is violated, otherwise only if all integers are fixed",
          &conshdlrdata->alwaysbranch, FALSE, DEFAULT_ALWAYSBRANCH, NULL, NULL) );
 

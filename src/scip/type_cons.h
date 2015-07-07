@@ -802,14 +802,22 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *
  *  This callback is used inside the various diving heuristics of SCIP and does not affect the normal branching
  *  of the actual search.
- *  The constraint handler can provide this callback to render the current solution infeasible. The solution is
- *  rendered infeasible by determining bound changes that should be applied to the next explored search node.
+ *  The constraint handler can provide this callback to render the current solution (even more) infeasible by
+ *  suggesting one or several variable bound changes. Infact,
+ *  since diving heuristics do not necessarily solve LP relaxations at every probing depth, some of the variable
+ *  local bounds might already be conflicting with the solution values.
+ *  The solution is rendered infeasible by determining bound changes that should be applied to the next explored search node
+ *  via SCIPaddDiveBoundChange().
  *  An alternative in case that the preferred bound change(s) were detected infeasible must be provided.
+ *
+ *  The constraint handler must take care to only add bound changes that further shrink the variable domain.
  *
  *  The success pointer must be used to indicate whether the constraint handler succeeded in selecting diving bound
  *  changes. The infeasible pointer should be set to TRUE if the constraint handler found a local infeasibility.  If the
  *  constraint handler needs to select between several candidates, it may use the scoring mechanism of the diveset
  *  argument to control its choice.
+ *
+ *
  *
  *  This callback is optional.
  *

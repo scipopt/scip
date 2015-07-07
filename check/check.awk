@@ -979,7 +979,7 @@ BEGIN {
          # note: probtype has length 5, but field width is 6
          if( reoptimization == 0 )
 	 {
-	    printf("%-*s  %-5s %7d %7d %7d %11d %16.9g %16.9g %6s %9d %8d %7.1f ",
+	    printf("%-*s  %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %9d %8d %7.1f ",
                    namelength, shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
 	 }
 	 else

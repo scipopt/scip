@@ -823,7 +823,7 @@ void printValue(
    {
       SCIP_Longint longvalue;
       longvalue = SCIPconvertRealToLongint(scip, value);
-      SCIPinfoMessage(scip, file, "%"SCIP_LONGINT_FORMAT"", longvalue);
+      SCIPinfoMessage(scip, file, "%" SCIP_LONGINT_FORMAT "", longvalue);
       break;
    }
    case FZN_FLOAT:

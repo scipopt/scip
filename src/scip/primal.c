@@ -529,12 +529,12 @@ SCIP_RETCODE primalAddSol(
    {
       SCIP_Bool feasible;
 
-      SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, TRUE, TRUE, TRUE, &feasible) );
+      SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
       if( !feasible )
       {
          SCIPerrorMessage("infeasible solution accepted:\n");
-         SCIP_CALL( SCIPsolPrint(sol, set, stat, transprob, NULL, NULL, FALSE) );
+         SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, origprob, transprob, NULL, FALSE) );
       }
       assert(feasible);
    }
@@ -603,11 +603,11 @@ SCIP_RETCODE primalAddSol(
       stat->firstprimalbound = SCIPprobExternObjval(transprob, origprob, set, primalsolval);
 
       SCIPdebugMessage("First Solution stored in problem specific statistics.\n");
-      SCIPdebugMessage("-> %"SCIP_LONGINT_FORMAT" nodes, %d runs, %.2g time, %d depth, %.15g objective\n", stat->nnodesbeforefirst, stat->nrunsbeforefirst,
+      SCIPdebugMessage("-> %" SCIP_LONGINT_FORMAT " nodes, %d runs, %.2g time, %d depth, %.15g objective\n", stat->nnodesbeforefirst, stat->nrunsbeforefirst,
          stat->firstprimaltime, stat->firstprimaldepth, stat->firstprimalbound);
    }
 
-   SCIPdebugMessage(" -> stored at position %d of %d solutions, found %"SCIP_LONGINT_FORMAT" solutions\n",
+   SCIPdebugMessage(" -> stored at position %d of %d solutions, found %" SCIP_LONGINT_FORMAT " solutions\n",
       insertpos, primal->nsols, primal->nsolsfound);
 
    /* update the solution value sums in variables */
@@ -706,7 +706,7 @@ SCIP_RETCODE primalAddOrigSol(
    if( SCIPsetIsFeasLE(set, SCIPsolGetOrigObj(sol), SCIPprobGetObjlim(prob, set)) )
       primal->nlimsolsfound++;
 
-   SCIPdebugMessage(" -> stored at position %d of %d solutions, found %"SCIP_LONGINT_FORMAT" solutions\n",
+   SCIPdebugMessage(" -> stored at position %d of %d solutions, found %" SCIP_LONGINT_FORMAT " solutions\n",
       insertpos, primal->nsols, primal->nsolsfound);
 
    return SCIP_OKAY;

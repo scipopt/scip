@@ -1377,7 +1377,7 @@ SCIP_RETCODE hashtableResize(
    nnewlists = (int) MIN((unsigned int)(hashtable->nlists * SCIP_HASHTABLE_GROW_FACTOR), SCIP_HASHTABLE_MAXSIZE);
    nnewlists = MAX(nnewlists, hashtable->nlists);
 
-   SCIPdebugMessage("load = %g, nelements = %"SCIP_LONGINT_FORMAT", nlists = %d, nnewlist = %d\n", SCIPhashtableGetLoad(hashtable), hashtable->nelements, hashtable->nlists, nnewlists);
+   SCIPdebugMessage("load = %g, nelements = %" SCIP_LONGINT_FORMAT ", nlists = %d, nnewlist = %d\n", SCIPhashtableGetLoad(hashtable), hashtable->nelements, hashtable->nlists, nnewlists);
 
    if( nnewlists > hashtable->nlists )
    {
@@ -1821,7 +1821,7 @@ void SCIPhashtablePrintStatistics(
    }
    assert(sumslotsize == hashtable->nelements);
 
-   SCIPmessagePrintInfo(messagehdlr, "%"SCIP_LONGINT_FORMAT" hash entries, used %d/%d slots (%.1f%%)",
+   SCIPmessagePrintInfo(messagehdlr, "%" SCIP_LONGINT_FORMAT " hash entries, used %d/%d slots (%.1f%%)",
       hashtable->nelements, usedslots, hashtable->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashtable->nlists));
    if( usedslots > 0 )
       SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot",
@@ -3904,6 +3904,15 @@ void SCIPsort(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrRealBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Bool
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     PtrPtrInt
 #define SORTTPL_KEYTYPE     void*
@@ -3948,6 +3957,16 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortPtrPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrPtrRealBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
 #define SORTTPL_PTRCOMP
 #include "scip/sorttpl.c" /*lint !e451*/
 
@@ -4396,6 +4415,16 @@ void SCIPsortDown(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortDownPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrRealBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Bool
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortDownPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownPtrPtrInt
 #define SORTTPL_KEYTYPE     void*
@@ -4438,12 +4467,23 @@ void SCIPsortDown(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
-/* SCIPsortPtrPtrRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+/* SCIPsortDownPtrPtrRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownPtrPtrRealInt
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownPtrPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrPtrRealBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
 #define SORTTPL_PTRCOMP
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
@@ -7473,7 +7513,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
          gcd = ABS(nominator);
          scm = denominator;
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-         SCIPdebugMessage(" -> c=%d first rational: val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%u\n",
+         SCIPdebugMessage(" -> c=%d first rational: val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
             c, val, nominator, denominator, gcd, scm, rational);
          break;
       }
@@ -7493,7 +7533,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
          gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
          scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-         SCIPdebugMessage(" -> c=%d next rational : val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%u\n",
+         SCIPdebugMessage(" -> c=%d next rational : val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
             c, val, nominator, denominator, gcd, scm, rational);
       }
       else
@@ -7511,7 +7551,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
       if( (SCIP_Real)scm/(SCIP_Real)gcd < bestscalar )
 	 bestscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
 
-      SCIPdebugMessage(" -> integrality could be achieved by scaling with %g (rational:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT")\n",
+      SCIPdebugMessage(" -> integrality could be achieved by scaling with %g (rational:%" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ")\n",
          (SCIP_Real)scm/(SCIP_Real)gcd, scm, gcd);
    }
 
@@ -7593,7 +7633,7 @@ SCIP_Real SCIPselectSimpleValue(
       if( success )
       {
          val = (SCIP_Real)nominator/(SCIP_Real)denominator;
-         SCIPdebugPrintf(" %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" == %.9f\n", nominator, denominator, val);
+         SCIPdebugPrintf(" %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " == %.9f\n", nominator, denominator, val);
 
          if( val - lb < 0.0 || val - ub > 0.0 )
          {

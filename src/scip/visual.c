@@ -497,14 +497,14 @@ void SCIPvisualSolvedNode(
       printTime(visual, stat, TRUE);
       if( branchvar != NULL )
       {
-         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
+         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\\nnr:\\t%" SCIP_LONGINT_FORMAT "\n",
             (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
             SCIPvarGetName(branchvar),  SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
             branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, lowerbound, stat->nnodes);
       }
       else
       {
-         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
+         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\\nnr:\\t%" SCIP_LONGINT_FORMAT "\n",
             (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), lowerbound, stat->nnodes);
       }
       vbcSetColor(visual, stat, node, SCIP_VBCCOLOR_SOLVED);
@@ -558,14 +558,14 @@ void SCIPvisualCutoffNode(
       printTime(visual, stat, TRUE);
       if( branchvar != NULL )
       {
-         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
+         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t%s [%g,%g] %s %f\\nbound:\\t%f\\nnr:\\t%" SCIP_LONGINT_FORMAT "\n",
             (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node),
             SCIPvarGetName(branchvar),  SCIPvarGetLbLocal(branchvar), SCIPvarGetUbLocal(branchvar),
             branchtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=",  branchbound, lowerbound, stat->nnodes);
       }
       else
       {
-         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\\nnr:\\t%"SCIP_LONGINT_FORMAT"\n",
+         SCIPmessageFPrintInfo(visual->messagehdlr, visual->vbcfile, "I %d \\inode:\\t%d (%p)\\idepth:\\t%d\\nvar:\\t-\\nbound:\\t%f\\nnr:\\t%" SCIP_LONGINT_FORMAT "\n",
             (int)nodenum, (int)nodenum, node, SCIPnodeGetDepth(node), lowerbound, stat->nnodes);
       }
       vbcSetColor(visual, stat, node, SCIP_VBCCOLOR_CUTOFF);

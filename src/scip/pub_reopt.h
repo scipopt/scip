@@ -58,19 +58,19 @@ int SCIPreoptnodeGetNDualBoundChgs(
    SCIP_REOPTNODE*       reoptnode           /**< node of the reoptimization tree */
    );
 
-/** returns the number of child nodes of @param reoptnode */
+/** returns the number of child nodes of @p reoptnode */
 EXTERN
 int SCIPreoptnodeGetNChildren(
    SCIP_REOPTNODE*       reoptnode           /**< node of the reoptimizzation tree */
    );
 
-/* return the lower bound stored at @param ID id */
+/* return the lower bound stored at @p ID id */
 EXTERN
 SCIP_Real SCIPreoptnodeGetLowerbound(
    SCIP_REOPTNODE*       reoptnode           /**< node of the reoptimization tree */
    );
 
-/** returns the type of the @param reoptnode */
+/** returns the type of the @p reoptnode */
 EXTERN
 SCIP_REOPTTYPE SCIPreoptnodeGetType(
    SCIP_REOPTNODE*       reoptnode           /**< node of the reoptimization tree */

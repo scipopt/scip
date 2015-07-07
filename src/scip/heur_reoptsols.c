@@ -363,9 +363,9 @@ SCIP_RETCODE SCIPincludeHeurReoptsols(
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolReoptsols) );
 
    /* parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxsols", "maximal number solutions which should be checked. (-1: all)",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxsols", "maximal number solutions which should be checked. (-1: all)",
          &heurdata->maxsols, TRUE, 1000, -1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxruns", "check solutions of the last k runs. (-1: all)",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxruns", "check solutions of the last k runs. (-1: all)",
          &heurdata->maxruns, TRUE, -1, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;

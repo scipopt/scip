@@ -174,7 +174,7 @@ SCIP_RETCODE applyBoundHeur(
       SCIP_LPSOLSTAT lpstatus;
       SCIP_Bool lperror;
 
-      SCIPdebugMessage("starting solving bound-heur LP at time %g, LP iterations: %"SCIP_LONGINT_FORMAT"\n",
+      SCIPdebugMessage("starting solving bound-heur LP at time %g, LP iterations: %" SCIP_LONGINT_FORMAT "\n",
          SCIPgetSolvingTime(scip), SCIPgetNLPIterations(scip));
 
       /* solve LP; errors in the LP solver should not kill the overall solving process, if the LP is just needed for a
@@ -198,7 +198,7 @@ SCIP_RETCODE applyBoundHeur(
 
       lpstatus = SCIPgetLPSolstat(scip);
 
-      SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+      SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
       SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, lpstatus);
 
       /* check if this is a feasible solution */
@@ -366,15 +366,15 @@ SCIP_RETCODE SCIPincludeHeurBound(
 
    /* add bound heuristic parameters */
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/onlywithoutsol",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/onlywithoutsol",
          "Should heuristic only be executed if no primal solution was found, yet?",
          &heurdata->onlywithoutsol, TRUE, DEFAULT_ONLYWITHOUTSOL, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxproprounds",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxproprounds",
          "maximum number of propagation rounds during probing (-1 infinity, -2 parameter settings)",
          &heurdata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -1, INT_MAX/4, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/bound",
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/bound",
          "to which bound should integer variables be fixed? ('l'ower, 'u'pper, or 'b'oth)",
          &heurdata->bound, FALSE, DEFAULT_BOUND, "lub", NULL, NULL) );
 

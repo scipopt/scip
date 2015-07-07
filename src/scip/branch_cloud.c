@@ -185,7 +185,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("Execlp method of "BRANCHRULE_NAME" branching\n");
+   SCIPdebugMessage("Execlp method of " BRANCHRULE_NAME " branching\n");
 
    /* get problem variables and LP row data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -330,7 +330,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       retcode = SCIPsolveDiveLP(scip, -1, &lperror, NULL);
       if( retcode != SCIP_OKAY )
       {
-         SCIPwarningMessage(scip, "Error while solving LP in "BRANCHRULE_NAME"; LP solve terminated with code <%d>\n",retcode);
+         SCIPwarningMessage(scip, "Error while solving LP in " BRANCHRULE_NAME "; LP solve terminated with code <%d>\n",retcode);
       }
 #else
       SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror, NULL) );
@@ -671,31 +671,31 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
 
    /* add cloud branching rule parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "branching/"BRANCHRULE_NAME"/usecloud",
+         "branching/" BRANCHRULE_NAME "/usecloud",
          "should a cloud of points be used?",
          &branchruledata->usecloud, FALSE, DEFAULT_USECLOUD, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "branching/"BRANCHRULE_NAME"/onlyF2",
+         "branching/" BRANCHRULE_NAME "/onlyF2",
          "should only F2 be used?",
          &branchruledata->onlyF2, FALSE, DEFAULT_ONLYF2, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "branching/"BRANCHRULE_NAME"/useunion",
+         "branching/" BRANCHRULE_NAME "/useunion",
          "should the union of candidates be used?",
          &branchruledata->useunion, FALSE, DEFAULT_USEUNION, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "branching/"BRANCHRULE_NAME"/maxpoints",
+         "branching/" BRANCHRULE_NAME "/maxpoints",
          "maximum number of points for the cloud (-1 means no limit)",
          &branchruledata->maxpoints, FALSE, DEFAULT_MAXPOINTS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "branching/"BRANCHRULE_NAME"/minsuccessrate",
+         "branching/" BRANCHRULE_NAME "/minsuccessrate",
          "minimum success rate for the cloud",
          &branchruledata->minsuccessrate, FALSE, DEFAULT_MINSUCCESSRATE, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "branching/"BRANCHRULE_NAME"/minsuccessunion",
+         "branching/" BRANCHRULE_NAME "/minsuccessunion",
          "minimum success rate for the union",
          &branchruledata->minsuccessunion, FALSE, DEFAULT_MINSUCCESSUNION, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "branching/"BRANCHRULE_NAME"/maxdepthunion",
+         "branching/" BRANCHRULE_NAME "/maxdepthunion",
          "maximum depth for the union",
          &branchruledata->maxdepthunion, FALSE, DEFAULT_MAXDEPTHUNION, 0, 65000, NULL, NULL) );
 

@@ -1,26 +1,39 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
-/*   Type....: Function                                                      */
-/*   File....: grphmcut.c                                                    */
-/*   Name....: Graph Minimum Cut Routine                                     */
-/*   Author..: Thorsten Koch                                                 */
-/*   Copyright by Author, All rights reserved                                */
+/*                  This file is part of the program and library             */
+/*         SCIP --- Solving Constraint Integer Programs                      */
+/*                                                                           */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*                            fuer Informationstechnik Berlin                */
+/*                                                                           */
+/*  SCIP is distributed under the terms of the ZIB Academic License.         */
+/*                                                                           */
+/*  You should have received a copy of the ZIB Academic License              */
+/*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* Der nachfolgend implementierte Algorithmus ist dem Artikel:
+/**@file   probdata_stp.c
+ * @brief  Minimum cut routine for Steiner problems
+ * @author Gerald Gamrath
+ * @author Thorsten Koch
+ * @author Daniel Rehfeldt
  *
- *              A Faster Algorithm for Finding
- *                the Minimum Cut in A Graph
+ * This file implements a graph minimum cut routine for Steiner problems. For more details see \ref MINCUT page.
  *
- * von Jianxiu Hao und James B. Orlin entnommen.
+ * @page MINCUT Graph minimum cut routine
+ *
+ * The implemented algorithm is described in "A Faster Algorithm for Finding the Minimum Cut in a Graph" by Hao and Orlin.
+ *
+ * A list of all interface methods can be found in grph.h.
  */
-#define GRPHMCUT_C
+
+/*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+
 
 #include <stdio.h>
 #include <assert.h>
 #include <stdlib.h>
-
 #include "portab.h"
 #include "grph.h"
 
@@ -64,8 +77,10 @@ static int    cutsums  = 0;
 /*--- Parameter: Graph                                                    ---*/
 /*--- Returns  : Nichts                                                   ---*/
 /*---------------------------------------------------------------------------*/
-void graph_mincut_init(
-   GRAPH* p)
+SCIP_RETCODE graph_mincut_init(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                p                   /**< graph data structure */
+     )
 {
    assert(p    != NULL);
    assert(p->mincut_dist == NULL);
@@ -78,25 +93,17 @@ void graph_mincut_init(
    assert(p->mincut_x    == NULL);
    assert(p->mincut_r    == NULL);
 
-   p->mincut_dist = malloc((size_t)p->knots * sizeof(int));
-   p->mincut_head = malloc((size_t)p->knots * sizeof(int));
-   p->mincut_numb = malloc((size_t)p->knots * sizeof(int));
-   p->mincut_prev = malloc((size_t)p->knots * sizeof(int));
-   p->mincut_next = malloc((size_t)p->knots * sizeof(int));
-   p->mincut_temp = malloc((size_t)p->knots * sizeof(int));
-   p->mincut_e    = malloc((size_t)p->knots * sizeof(int));
-   p->mincut_x    = malloc((size_t)p->edges * sizeof(int));
-   p->mincut_r    = malloc((size_t)p->edges * sizeof(int));
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_dist), p->knots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_head), p->knots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_numb), p->knots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_prev), p->knots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_next), p->knots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_temp), p->knots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_e), p->knots) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_x), p->edges) );
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(p->mincut_r), p->edges) );
 
-   assert(p->mincut_dist != NULL);
-   assert(p->mincut_head != NULL);
-   assert(p->mincut_numb != NULL);
-   assert(p->mincut_prev != NULL);
-   assert(p->mincut_next != NULL);
-   assert(p->mincut_temp != NULL);
-   assert(p->mincut_e    != NULL);
-   assert(p->mincut_x    != NULL);
-   assert(p->mincut_r    != NULL);
+   return SCIP_OKAY;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -106,7 +113,9 @@ void graph_mincut_init(
 /*--- Returns  : Nichts                                                   ---*/
 /*---------------------------------------------------------------------------*/
 void graph_mincut_exit(
-   GRAPH* p)
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                p                   /**< graph data structure */
+     )
 {
    assert(p->mincut_dist != NULL);
    assert(p->mincut_head != NULL);
@@ -118,25 +127,15 @@ void graph_mincut_exit(
    assert(p->mincut_x    != NULL);
    assert(p->mincut_r    != NULL);
 
-   free((void*)p->mincut_dist);
-   free((void*)p->mincut_head);
-   free((void*)p->mincut_numb);
-   free((void*)p->mincut_prev);
-   free((void*)p->mincut_next);
-   free((void*)p->mincut_temp);
-   free((void*)p->mincut_e);
-   free((void*)p->mincut_x);
-   free((void*)p->mincut_r);
-
-   p->mincut_dist = NULL;
-   p->mincut_head = NULL;
-   p->mincut_numb = NULL;
-   p->mincut_prev = NULL;
-   p->mincut_next = NULL;
-   p->mincut_temp = NULL;
-   p->mincut_e    = NULL;
-   p->mincut_x    = NULL;
-   p->mincut_r    = NULL;
+   SCIPfreeMemoryArray(scip, &(p->mincut_dist));
+   SCIPfreeMemoryArray(scip, &(p->mincut_head));
+   SCIPfreeMemoryArray(scip, &(p->mincut_numb));
+   SCIPfreeMemoryArray(scip, &(p->mincut_prev));
+   SCIPfreeMemoryArray(scip, &(p->mincut_next));
+   SCIPfreeMemoryArray(scip, &(p->mincut_temp));
+   SCIPfreeMemoryArray(scip, &(p->mincut_e));
+   SCIPfreeMemoryArray(scip, &(p->mincut_x));
+   SCIPfreeMemoryArray(scip, &(p->mincut_r));
 
 #if STATIST
    cut_statist();
@@ -332,8 +331,7 @@ static void initialise(
    int*         w,
    int*         dmax)
 {
-   int* r;
-   int* x;
+
    int i;
    int j;
    int k;
@@ -357,9 +355,6 @@ static void initialise(
    assert(residi != NULL);
    assert(p->mincut_r != NULL);
    assert(p->mincut_x != NULL);
-
-   r = p->mincut_r;
-   x = p->mincut_x;
 
    /* Knotenarrays Initialisieren
     */
@@ -432,10 +427,10 @@ static void initialise(
       assert((j == t) || (q_next[j] != Q_NMOQ));
       assert((j == t) || (q_prev[j] != Q_NMOQ));
 
-      assert(r[k] + r[Edge_anti(k)] == capa[k] + capa[Edge_anti(k)]);
-      assert(x[k]                   >= 0);
-      assert(x[k]                   <= capa[k]);
-      assert(r[k]                   == capa[k] - x[k] + x[Edge_anti(k)]);
+      assert((p->mincut_r)[k] + (p->mincut_r)[Edge_anti(k)] == capa[k] + capa[Edge_anti(k)]);
+      assert((p->mincut_x)[k]                   >= 0);
+      assert((p->mincut_x)[k]                   <= capa[k]);
+      assert((p->mincut_r)[k]                   == capa[k] - (p->mincut_x)[k] + (p->mincut_x)[Edge_anti(k)]);
    }
 #if DEBUG > 1
    show_flow(p, capa, w);

@@ -73,21 +73,6 @@
 #define LONGINT_FORMAT SCIP_LONGINT_FORMAT
 #endif
 
-#ifndef SCIP_SIZET_FORMAT
-#if defined(__arm__)  /* TODO: exclude newer ARM 64bit here (what's the macro name?) */
-/* on ARM 32bit, size_t is not long */                 
-#define SIZET_FORMAT           "u"
-#else
-#if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
-#define SIZET_FORMAT           "lu"
-#else
-#define SIZET_FORMAT           "zu"
-#endif
-#endif
-#else
-#define SIZET_FORMAT SCIP_SIZET_FORMAT
-#endif
-
 #ifndef SCIP_MAXMEMSIZE
 /* we take SIZE_MAX / 2 to detect negative sizes which got a very large value when casting to (unsigned) size_t */
 #define MAXMEMSIZE SIZE_MAX / 2
@@ -242,14 +227,14 @@ void BMSdisplayMemory_call(
    list = memlist;
    while( list != NULL )
    {
-      printInfo("%12p %8"SIZET_FORMAT" %s:%d\n", list->ptr, list->size, list->filename, list->line);
+      printInfo("%12p %8llu %s:%d\n", list->ptr, (unsigned long long) list->size, list->filename, list->line);
       used += list->size;
       list = list->next;
    }
-   printInfo("Total:    %8"SIZET_FORMAT"\n", memused);
+   printInfo("Total:    %8llu\n", (unsigned long long) memused);
    if( used != memused )
    {
-      errorMessage("Used memory in list sums up to %"SIZET_FORMAT" instead of %"SIZET_FORMAT"\n", used, memused);
+      errorMessage("Used memory in list sums up to %llu instead of %llu\n", (unsigned long long)used, (unsigned long long)memused);
    }
    checkMemlist();
 }
@@ -328,7 +313,8 @@ void* BMSallocClearMemory_call(
 {
    void* ptr;
 
-   debugMessage("calloc %"SIZET_FORMAT" elements of %"SIZET_FORMAT" bytes [%s:%d]\n", num, typesize, filename, line);
+   debugMessage("calloc %llu elements of %llu bytes [%s:%d]\n", (unsigned long long)num, (unsigned long long)typesize,
+      filename, line);
 
 #ifndef NDEBUG
    if ( num > (MAXMEMSIZE / typesize) )
@@ -346,7 +332,7 @@ void* BMSallocClearMemory_call(
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for allocation of %"SIZET_FORMAT" bytes.\n", num * typesize);
+      printError("Insufficient memory for allocation of %llu bytes.\n", (unsigned long long)(num * typesize));
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
@@ -365,7 +351,7 @@ void* BMSallocMemory_call(
 {
    void* ptr;
 
-   debugMessage("malloc %"SIZET_FORMAT" bytes [%s:%d]\n", size, filename, line);
+   debugMessage("malloc %llu bytes [%s:%d]\n", (unsigned long long)size, filename, line);
 
 #ifndef NDEBUG
    if ( size > MAXMEMSIZE )
@@ -382,7 +368,7 @@ void* BMSallocMemory_call(
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for allocation of %"SIZET_FORMAT" bytes.\n", size);
+      printError("Insufficient memory for allocation of %llu bytes.\n", (unsigned long long)size);
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
@@ -403,7 +389,8 @@ void* BMSallocMemoryArray_call(
    void* ptr;
    size_t size;
 
-   debugMessage("malloc %"SIZET_FORMAT" elements of %"SIZET_FORMAT" bytes [%s:%d]\n", num, typesize, filename, line);
+   debugMessage("malloc %llu elements of %llu bytes [%s:%d]\n",
+      (unsigned long long)num, (unsigned long long)typesize, filename, line);
 
 #ifndef NDEBUG
    if ( num > (MAXMEMSIZE / typesize) )
@@ -421,7 +408,7 @@ void* BMSallocMemoryArray_call(
    if( ptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for allocation of %"SIZET_FORMAT" bytes.\n", size);
+      printError("Insufficient memory for allocation of %llu bytes.\n", (unsigned long long)size);
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
@@ -450,7 +437,7 @@ void* BMSreallocMemory_call(
    if ( size > MAXMEMSIZE )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate standard memory of size exceeding %llu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -461,7 +448,7 @@ void* BMSreallocMemory_call(
    if( newptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for reallocation of %"SIZET_FORMAT" bytes.\n", size);
+      printError("Insufficient memory for reallocation of %llu bytes.\n", (unsigned long long)size);
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
@@ -492,7 +479,7 @@ void* BMSreallocMemoryArray_call(
    if ( num > (MAXMEMSIZE / typesize) )
    {
       printErrorHeader(filename, line);
-      printError("Tried to allocate standard memory of size exceeding %u.\n", MAXMEMSIZE);
+      printError("Tried to allocate standard memory of size exceeding %llu.\n", MAXMEMSIZE);
       return NULL;
    }
 #endif
@@ -504,7 +491,7 @@ void* BMSreallocMemoryArray_call(
    if( newptr == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Insufficient memory for reallocation of %"SIZET_FORMAT" bytes.\n", size);
+      printError("Insufficient memory for reallocation of %llu bytes.\n", (unsigned long long)size);
    }
 #if !defined(NDEBUG) && defined(NPARASCIP)
    else
@@ -1549,7 +1536,7 @@ void* BMSallocChunkMemory_call(
       printErrorHeader(filename, line);
       printError("Insufficient memory for new chunk.\n");
    }
-   debugMessage("alloced %8"SIZET_FORMAT" bytes in %p [%s:%d]\n", size, (void*)ptr, filename, line);
+   debugMessage("alloced %8llu bytes in %p [%s:%d]\n", (unsigned long long)size, (void*)ptr, filename, line);
 
    checkChkmem(chkmem);
 
@@ -1883,7 +1870,7 @@ void* BMSallocBlockMemory_work(
       printErrorHeader(filename, line);
       printError("Insufficient memory for new chunk.\n");
    }
-   debugMessage("alloced %8"SIZET_FORMAT" bytes in %p [%s:%d]\n", size, ptr, filename, line);
+   debugMessage("alloced %8llu bytes in %p [%s:%d]\n", (unsigned long long)size, ptr, filename, line);
 
    blkmem->memused += (long long) size;
 
@@ -2091,7 +2078,7 @@ void BMSfreeBlockMemory_work(
    alignSize(&size);
    hashnumber = getHashNumber((int)size);
 
-   debugMessage("free    %8"SIZET_FORMAT" bytes in %p [%s:%d]\n", size, *ptr, filename, line);
+   debugMessage("free    %8llu bytes in %p [%s:%d]\n", (unsigned long long)size, *ptr, filename, line);
 
    /* find correspoding chunk block */
    assert( blkmem->chkmemhash != NULL );
@@ -2101,7 +2088,7 @@ void BMSfreeBlockMemory_work(
    if( chkmem == NULL )
    {
       printErrorHeader(filename, line);
-      printError("Tried to free pointer <%p> in block memory <%p> of unknown size %"SIZET_FORMAT".\n", *ptr, (void*)blkmem, size);
+      printError("Tried to free pointer <%p> in block memory <%p> of unknown size %llu.\n", *ptr, (void*)blkmem, (unsigned long long)size);
       return;
    }
    assert(chkmem->elemsize == (int)size);
@@ -2335,7 +2322,7 @@ void BMSdisplayBlockMemory_call(
       totalnelems > 0 ? 100.0 * (double) (totalneagerelems + totalnlazyelems) / (double) (totalnelems) : 0.0,
       (double)allocedmem/(1024.0*1024.0));
 #endif
-   printInfo("%d blocks (%d unused), %"LONGINT_FORMAT" bytes allocated, %"LONGINT_FORMAT" bytes free",
+   printInfo("%d blocks (%d unused), %" LONGINT_FORMAT " bytes allocated, %" LONGINT_FORMAT " bytes free",
       nblocks + nunusedblocks, nunusedblocks, allocedmem, freemem);
    if( allocedmem > 0 )
       printInfo(" (%.1f%%)", 100.0 * (double) freemem / (double) allocedmem);
@@ -2389,13 +2376,13 @@ void BMScheckEmptyBlockMemory_call(
             if( nelems != neagerelems + chkmem->lazyfreesize )
             {
 #ifndef NDEBUG
-               printInfo("%"LONGINT_FORMAT" bytes (%d elements of size %"LONGINT_FORMAT") not freed. First Allocator: %s:%d\n",
+               printInfo("%" LONGINT_FORMAT " bytes (%d elements of size %" LONGINT_FORMAT ") not freed. First Allocator: %s:%d\n",
                   (((long long)nelems - (long long)neagerelems) - (long long)chkmem->lazyfreesize)
                   * (long long)(chkmem->elemsize),
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize),
                   chkmem->filename, chkmem->line);
 #else
-               printInfo("%"LONGINT_FORMAT" bytes (%d elements of size %"LONGINT_FORMAT") not freed.\n",
+               printInfo("%" LONGINT_FORMAT " bytes (%d elements of size %" LONGINT_FORMAT ") not freed.\n",
                   ((nelems - neagerelems) - chkmem->lazyfreesize) * (long long)(chkmem->elemsize),
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize));
 #endif
@@ -2406,7 +2393,7 @@ void BMScheckEmptyBlockMemory_call(
    }
 
    if( allocedmem != freemem )
-      printInfo("%"LONGINT_FORMAT" bytes not freed in total.\n", allocedmem - freemem);
+      printInfo("%" LONGINT_FORMAT " bytes not freed in total.\n", allocedmem - freemem);
 }
 
 
@@ -2682,8 +2669,9 @@ void* BMSallocBufferMemory_work(
    buffer->used[bufnum] = TRUE;
    buffer->firstfree++;
 
-   debugMessage("Allocated buffer %"SIZET_FORMAT"/%"SIZET_FORMAT" at %p of size %"SIZET_FORMAT" (required size: %"SIZET_FORMAT") for pointer %p.\n",
-      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, ptr);
+   debugMessage("Allocated buffer %llu/%llu at %p of size %llu (required size: %llu) for pointer %p.\n",
+      (unsigned long long)bufnum, (unsigned long long)(buffer->ndata), buffer->data[bufnum],
+      (unsigned long long)(buffer->size[bufnum]), (unsigned long long)size, ptr);
 
 #else
    if( buffer->clean )
@@ -2819,8 +2807,9 @@ void* BMSreallocBufferMemory_work(
    assert( buffer->size[bufnum] >= size );
    assert( newptr == buffer->data[bufnum] );
 
-   debugMessage("Reallocated buffer %"SIZET_FORMAT"/%"SIZET_FORMAT" at %p to size %"SIZET_FORMAT" (required size: %"SIZET_FORMAT") for pointer %p.\n",
-      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], size, newptr);
+   debugMessage("Reallocated buffer %llu/%llu at %p to size %llu (required size: %llu) for pointer %p.\n",
+      (unsigned long long)bufnum, (unsigned long long)(buffer->ndata), buffer->data[bufnum],
+      (unsigned long long)(buffer->size[bufnum]), (unsigned long long)size, newptr);
 
 #else
    newptr = ptr;
@@ -2979,8 +2968,9 @@ void BMSfreeBufferMemory_work(
    while ( buffer->firstfree > 0 && !buffer->used[buffer->firstfree-1] )
       --buffer->firstfree;
 
-   debugMessage("Freed buffer %"SIZET_FORMAT"/%"SIZET_FORMAT" at %p of size %"SIZET_FORMAT" for pointer %p, first free is %"SIZET_FORMAT".\n",
-      bufnum, buffer->ndata, buffer->data[bufnum], buffer->size[bufnum], *ptr, buffer->firstfree);
+   debugMessage("Freed buffer %llu/%llu at %p of size %llu for pointer %p, first free is %llu.\n",
+      (unsigned long long)bufnum, (unsigned long long)(buffer->ndata), buffer->data[bufnum],
+      (unsigned long long)(buffer->size[bufnum]), *ptr, (unsigned long long)(buffer->firstfree));
 
    *ptr = NULL;
 }
@@ -3069,8 +3059,8 @@ void BMSprintBufferMemory(
    totalmem = 0UL;
    for (i = 0; i < buffer->ndata; ++i)
    {
-      printf("[%c] %8"SIZET_FORMAT" bytes at %p\n", buffer->used[i] ? '*' : ' ', buffer->size[i], buffer->data[i]);
+      printf("[%c] %8llu bytes at %p\n", buffer->used[i] ? '*' : ' ', (unsigned long long)(buffer->size[i]), buffer->data[i]);
       totalmem += buffer->size[i];
    }
-   printf("    %8"SIZET_FORMAT" bytes total in %"SIZET_FORMAT" buffers\n", totalmem, buffer->ndata);
+   printf("    %8llu bytes total in %llu buffers\n", (unsigned long long)totalmem, (unsigned long long)(buffer->ndata));
 }

@@ -74,7 +74,7 @@ scip:
 		@$(MAKE) -C $(SCIPDIR) libs $^
 
 .PHONY: doc
-doc:		
+doc:
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
@@ -85,7 +85,7 @@ $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
 
-$(OBJDIR):	
+$(OBJDIR):
 		@-mkdir -p $(OBJDIR)
 
 $(BINDIR):
@@ -111,7 +111,8 @@ ifeq ($(TEST), short)
 		@-(cd check/testset && ln -fs ../../$(SCIPDIR)/check/testset/short.solu);
 endif
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+			$(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS);
 
 .PHONY: clean
 clean:		$(OBJDIR)

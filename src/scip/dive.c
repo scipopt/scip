@@ -129,7 +129,7 @@ SCIP_RETCODE selectNextDiving(
 
          score = lpcandsscores[c];
          /* update the best candidate if it has a higher score and a solution value which does not violate one of the local bounds */
-         if( SCIPisFeasLE(scip, SCIPvarGetLbLocal(lpcands[c]), lpcandssol[c]) && SCIPisFeasGE(scip, SCIPvarGetUbLocal(lpcands[c]), lpcandssol[c]) )
+         if( SCIPisLE(scip, SCIPvarGetLbLocal(lpcands[c]), lpcandssol[c]) && SCIPisGE(scip, SCIPvarGetUbLocal(lpcands[c]), lpcandssol[c]) )
          {
             if( score > bestscore )
             {
@@ -346,7 +346,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    /* enables collection of variable statistics during probing */
    SCIPenableVarHistory(scip);
 
-   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing %s heuristic: depth=%d, %d fractionals, dualbound=%g, avgbound=%g, cutoffbound=%g, searchbound=%g\n",
+   SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") executing %s heuristic: depth=%d, %d fractionals, dualbound=%g, avgbound=%g, cutoffbound=%g, searchbound=%g\n",
       SCIPgetNNodes(scip), SCIPheurGetName(heur), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPgetAvgDualbound(scip),
       SCIPretransformObj(scip, SCIPgetCutoffbound(scip)), SCIPretransformObj(scip, searchbound));
 
@@ -558,33 +558,45 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             /* apply all suggested domain changes of the variables */
             for( d = 0; d < nbdchanges; ++d )
             {
+               SCIP_Real lblocal;
+               SCIP_Real ublocal;
+
                bdchgvar = bdchgvars[d];
                bdchgvalue = bdchgvals[d];
                nextcandsol = SCIPgetSolVal(scip, worksol, bdchgvar);
                bdchgdir = bdchgdirs[d];
 
+               assert(bdchgvar != NULL);
+               lblocal = SCIPvarGetLbLocal(bdchgvar);
+               ublocal = SCIPvarGetUbLocal(bdchgvar);
+
                /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
                 * occured or variable was fixed by propagation while backtracking => Abort diving!
                 */
-               if( SCIPisFeasLT(scip, bdchgvalue, SCIPvarGetLbLocal(bdchgvar)) || SCIPisFeasGT(scip, bdchgvalue, SCIPvarGetUbLocal(bdchgvar)) )
+               if( (bdchgdir == SCIP_BRANCHDIR_UPWARDS && SCIPisFeasLE(scip, bdchgvalue, lblocal)) ||
+                     (bdchgdir == SCIP_BRANCHDIR_DOWNWARDS && SCIPisFeasGE(scip, bdchgvalue, ublocal)) ||
+                     (bdchgdir == SCIP_BRANCHDIR_FIXED &&
+                      ( SCIPisFeasLT(scip, bdchgvalue, lblocal) ||
+                        SCIPisFeasGT(scip, bdchgvalue, ublocal) ||
+                        ( SCIPisFeasEQ(scip, lblocal, ublocal) && nbdchanges < 2 ))) )
                {
                   SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
-                     SCIPvarGetName(bdchgvar), SCIPvarGetLbLocal(bdchgvar), SCIPvarGetUbLocal(bdchgvar), nextcandsol);
+                     SCIPvarGetName(bdchgvar), lblocal, ublocal, nextcandsol);
                   cutoff = TRUE;
                   break;
                }
 
-               if( SCIPisFeasLT(scip, nextcandsol, SCIPvarGetLbLocal(bdchgvar)) || SCIPisFeasGT(scip, nextcandsol, SCIPvarGetUbLocal(bdchgvar)) )
+               if( SCIPisFeasLT(scip, nextcandsol, lblocal) || SCIPisFeasGT(scip, nextcandsol, ublocal) )
                {
                   SCIPdebugMessage("selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
-                        SCIPvarGetName(bdchgvar), SCIPvarGetLbLocal(bdchgvar), SCIPvarGetUbLocal(bdchgvar), nextcandsol);
+                        SCIPvarGetName(bdchgvar), lblocal, ublocal, nextcandsol);
                   cutoff = TRUE;
                   break;
                }
 
-               SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g],",
+               SCIPdebugMessage("  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ": var <%s>, sol=%g, oldbounds=[%g,%g],",
                      SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
-                     SCIPvarGetName(bdchgvar), nextcandsol, SCIPvarGetLbLocal(bdchgvar), SCIPvarGetUbLocal(bdchgvar));
+                     SCIPvarGetName(bdchgvar), nextcandsol, lblocal, ublocal);
 
                /* tighten the lower and/or upper bound depending on the bound change type */
                switch( bdchgdir )
@@ -597,11 +609,11 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                      SCIP_CALL( SCIPchgVarUbProbing(scip, bdchgvar, bdchgvalue) );
                      break;
                   case SCIP_BRANCHDIR_FIXED:
-                     if( SCIPisFeasLT(scip, SCIPvarGetLbLocal(bdchgvar), bdchgvalue) )
+                     if( SCIPisFeasLT(scip, lblocal, bdchgvalue) )
                      {
                         SCIP_CALL( SCIPchgVarLbProbing(scip, bdchgvar, bdchgvalue) );
                      }
-                     if( SCIPisFeasGT(scip, SCIPvarGetUbLocal(bdchgvar), bdchgvalue) )
+                     if( SCIPisFeasGT(scip, ublocal, bdchgvalue) )
                      {
                         SCIP_CALL( SCIPchgVarUbProbing(scip, bdchgvar, bdchgvalue) );
                      }
@@ -614,7 +626,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                }
 
                SCIPdebugMessage("newbounds=[%g,%g]\n",
-                     SCIPvarGetLbLocal(bdchgvar), SCIPvarGetUbLocal(bdchgvar));
+                     lblocal, ublocal);
             }
             /* break loop immediately if we detected a cutoff */
             if( cutoff )
@@ -778,7 +790,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIPupdateDivesetStats(scip, diveset, totalnprobingnodes, totalnbacktracks, SCIPgetNSolsFound(scip) - oldnsolsfound,
          SCIPgetNBestSolsFound(scip) - oldnbestsolsfound, success);
 
-   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") finished %s heuristic: %d fractionals, dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", objval=%g/%g, lpsolstat=%d, cutoff=%u\n",
+   SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") finished %s heuristic: %d fractionals, dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", objval=%g/%g, lpsolstat=%d, cutoff=%u\n",
       SCIPgetNNodes(scip), SCIPdivesetGetName(diveset), nlpcands, SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
       SCIPretransformObj(scip, SCIPgetLPObjval(scip)), SCIPretransformObj(scip, searchbound), SCIPgetLPSolstat(scip), cutoff);
 

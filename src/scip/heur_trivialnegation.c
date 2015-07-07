@@ -73,7 +73,7 @@ SCIP_DECL_HEUREXEC(heurExecTrivialnegation)
    *result = SCIP_DIDNOTRUN;
 
    if( !SCIPisReoptEnabled(scip) )
-   return SCIP_OKAY;
+      return SCIP_OKAY;
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);

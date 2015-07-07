@@ -251,12 +251,12 @@ void SCIPpropSetExitpre(
 
 /** sets presolving method of propagator */
 extern
-void SCIPpropSetPresol(
+SCIP_RETCODE SCIPpropSetPresol(
    SCIP_PROP*            prop,               /**< propagator */
    SCIP_DECL_PROPPRESOL  ((*proppresol)),    /**< presolving method */
    int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
-   SCIP_Bool             presoldelay         /**< should presolving be delayed, if other presolvers found reductions? */
+   SCIP_PRESOLTIMING     presoltiming        /**< timing mask of the propagator's presolving method */
    );
 
 /** sets propagation conflict resolving callback of propagator */

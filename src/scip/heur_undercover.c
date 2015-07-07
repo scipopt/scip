@@ -2192,16 +2192,16 @@ SCIP_RETCODE solveSubproblem(
    }
 
    /* forbid recursive call of undercover heuristic */
-   if( SCIPisParamFixed(subscip, "heuristics/"HEUR_NAME"/freq") )
+   if( SCIPisParamFixed(subscip, "heuristics/" HEUR_NAME "/freq") )
    {
-      SCIPwarningMessage(scip, "unfixing parameter heuristics/"HEUR_NAME"/freq in subscip of undercover heuristic to avoid recursive calls\n");
-      SCIP_CALL( SCIPunfixParam(subscip, "heuristics/"HEUR_NAME"/freq") );
+      SCIPwarningMessage(scip, "unfixing parameter heuristics/" HEUR_NAME "/freq in subscip of undercover heuristic to avoid recursive calls\n");
+      SCIP_CALL( SCIPunfixParam(subscip, "heuristics/" HEUR_NAME "/freq") );
    }
-   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/"HEUR_NAME"/freq", -1) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "heuristics/" HEUR_NAME "/freq", -1) );
 
-   SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %"SCIP_LONGINT_FORMAT", nstallnodes = %"SCIP_LONGINT_FORMAT"\n", timelimit, memorylimit, nodelimit, nstallnodes);
+   SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %" SCIP_LONGINT_FORMAT ", nstallnodes = %" SCIP_LONGINT_FORMAT "\n", timelimit, memorylimit, nodelimit, nstallnodes);
 
-   SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %"SCIP_LONGINT_FORMAT", nstallnodes = %"SCIP_LONGINT_FORMAT"\n", timelimit, memorylimit, nodelimit, nstallnodes);
+   SCIPdebugMessage("timelimit = %g, memlimit = %g, nodelimit = %" SCIP_LONGINT_FORMAT ", nstallnodes = %" SCIP_LONGINT_FORMAT "\n", timelimit, memorylimit, nodelimit, nstallnodes);
 
    /* disable statistic timing inside sub SCIP */
    SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
@@ -2385,7 +2385,7 @@ SCIP_RETCODE performFixing(
 
       /* propagate the bound change; conflict analysis is performed automatically */
       SCIP_CALL( SCIPpropagateProbing(scip, 0, infeas, &ndomredsfound) );
-      SCIPdebugMessage("  --> propagation reduced %"SCIP_LONGINT_FORMAT" further domains\n", ndomredsfound);
+      SCIPdebugMessage("  --> propagation reduced %" SCIP_LONGINT_FORMAT " further domains\n", ndomredsfound);
 
       /* if propagation led to a cutoff, we backtrack immediately */
       if( *infeas )
@@ -2425,7 +2425,7 @@ SCIP_RETCODE performFixing(
 
       /* propagate the bound change */
       SCIP_CALL( SCIPpropagateProbing(scip, 0, infeas, &ndomredsfound) );
-      SCIPdebugMessage("  --> propagation reduced %"SCIP_LONGINT_FORMAT" further domains\n", ndomredsfound);
+      SCIPdebugMessage("  --> propagation reduced %" SCIP_LONGINT_FORMAT " further domains\n", ndomredsfound);
 
       /* if propagation led to a cutoff, we backtrack immediately */
       if( *infeas )
@@ -3242,7 +3242,7 @@ SCIP_DECL_HEUREXEC(heurExecUndercover)
    /* only call heuristics if we have enough nodes left to call sub-CIP solving */
    if( nstallnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping undercover heuristic: nstallnodes=%"SCIP_LONGINT_FORMAT", minnodes=%"SCIP_LONGINT_FORMAT"\n", nstallnodes, heurdata->minnodes);
+      SCIPdebugMessage("skipping undercover heuristic: nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
@@ -3355,116 +3355,116 @@ SCIP_RETCODE SCIPincludeHeurUndercover(
 
    /* add string parameters */
    heurdata->fixingalts = NULL;
-   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/"HEUR_NAME"/fixingalts",
+   SCIP_CALL( SCIPaddStringParam(scip, "heuristics/" HEUR_NAME "/fixingalts",
          "prioritized sequence of fixing values used ('l'p relaxation, 'n'lp relaxation, 'i'ncumbent solution)",
          &heurdata->fixingalts, FALSE, DEFAULT_FIXINGALTS, NULL, NULL) );
 
    /* add longint parameters */
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/maxnodes",
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxnodes",
          "maximum number of nodes to regard in the subproblem",
          &heurdata->maxnodes, TRUE, DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/minnodes",
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/minnodes",
          "minimum number of nodes required to start the subproblem",
          &heurdata->minnodes, TRUE, DEFAULT_MINNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/nodesofs",
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/nodesofs",
          "number of nodes added to the contingent of the total nodes",
          &heurdata->nodesofs, FALSE, DEFAULT_NODESOFS, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
    /* add real parameters */
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/conflictweight",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/conflictweight",
          "weight for conflict score in fixing order",
          &heurdata->conflictweight, TRUE, DEFAULT_CONFLICTWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/cutoffweight",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/cutoffweight",
          "weight for cutoff score in fixing order",
          &heurdata->cutoffweight, TRUE, DEFAULT_CUTOFFWEIGHT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/inferenceweight",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/inferenceweight",
          "weight for inference score in fixing order",
          &heurdata->inferenceweight, TRUE, DEFAULT_INFERENCEWEIGHT, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/maxcoversizevars",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxcoversizevars",
          "maximum coversize (as fraction of total number of variables)",
          &heurdata->maxcoversizevars, TRUE, DEFAULT_MAXCOVERSIZEVARS, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/maxcoversizeconss",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/maxcoversizeconss",
          "maximum coversize maximum coversize (as ratio to the percentage of non-affected constraints)",
          &heurdata->maxcoversizeconss, TRUE, DEFAULT_MAXCOVERSIZECONSS, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/mincoveredrel",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/mincoveredrel",
          "minimum percentage of nonlinear constraints in the original problem",
          &heurdata->mincoveredrel, TRUE, DEFAULT_MINCOVEREDREL, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minimprove",
          "factor by which the heuristic should at least improve the incumbent",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, -1.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/nodesquot",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nodesquot",
          "contingent of sub problem nodes in relation to the number of nodes of the original problem",
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/recoverdiv",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/recoverdiv",
          "fraction of covering variables in the last cover which need to change their value when recovering",
          &heurdata->recoverdiv, TRUE, DEFAULT_RECOVERDIV, 0.0, 1.0, NULL, NULL) );
 
    /* add int parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/mincoveredabs",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/mincoveredabs",
          "minimum number of nonlinear constraints in the original problem",
          &heurdata->mincoveredabs, TRUE, DEFAULT_MINCOVEREDABS, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxbacktracks",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxbacktracks",
          "maximum number of backtracks in fix-and-propagate",
          &heurdata->maxbacktracks, TRUE, DEFAULT_MAXBACKTRACKS, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxrecovers",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxrecovers",
          "maximum number of recoverings",
          &heurdata->maxrecovers, TRUE, DEFAULT_MAXRECOVERS, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxreorders",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxreorders",
          "maximum number of reorderings of the fixing order",
          &heurdata->maxreorders, TRUE, DEFAULT_MAXREORDERS, 0, INT_MAX, NULL, NULL) );
 
    /* add char parameters */
-   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/coveringobj",
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/coveringobj",
          "objective function of the covering problem (influenced nonlinear 'c'onstraints/'t'erms, 'd'omain size, 'l'ocks, 'm'in of up/down locks, 'u'nit penalties)",
          &heurdata->coveringobj, TRUE, DEFAULT_COVERINGOBJ, COVERINGOBJS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/fixingorder",
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/fixingorder",
          "order in which variables should be fixed (increasing 'C'onflict score, decreasing 'c'onflict score, increasing 'V'ariable index, decreasing 'v'ariable index",
          &heurdata->fixingorder, TRUE, DEFAULT_FIXINGORDER, FIXINGORDERS, NULL, NULL) );
 
    /* add bool parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/beforecuts",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/beforecuts",
          "should the heuristic be called at root node before cut separation?",
          &heurdata->beforecuts, TRUE, DEFAULT_BEFORECUTS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/fixintfirst",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/fixintfirst",
          "should integer variables in the cover be fixed first?",
          &heurdata->fixintfirst, TRUE, DEFAULT_FIXINTFIRST, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/locksrounding",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/locksrounding",
          "shall LP values for integer vars be rounded according to locks?",
          &heurdata->locksrounding, TRUE, DEFAULT_LOCKSROUNDING, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/onlyconvexify",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/onlyconvexify",
          "should we only fix variables in order to obtain a convex problem?",
          &heurdata->onlyconvexify, FALSE, DEFAULT_ONLYCONVEXIFY, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/postnlp",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/postnlp",
          "should the NLP heuristic be called to polish a feasible solution?",
          &heurdata->postnlp, FALSE, DEFAULT_POSTNLP, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/coverbd",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/coverbd",
          "should bounddisjunction constraints be covered (or just copied)?",
          &heurdata->coverbd, TRUE, DEFAULT_COVERBD, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/reusecover",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/reusecover",
          "shall the cover be reused if a conflict was added after an infeasible subproblem?",
          &heurdata->reusecover, TRUE, DEFAULT_REUSECOVER, NULL, NULL) );
 

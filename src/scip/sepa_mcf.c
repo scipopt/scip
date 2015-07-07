@@ -13,10 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* #define COUNTNETWORKVARIABLETYPES */
-/* #define SCIP_DEBUG */
-/* #define MCF_DEBUG */
-
 /**@file   sepa_mcf.c
  * @brief  multi-commodity-flow network cut separator
  * @author Tobias Achterberg
@@ -39,6 +35,9 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+
+/* #define COUNTNETWORKVARIABLETYPES */
+/* #define MCF_DEBUG */
 
 /* algorithmic defines in testing phase*/
 /* #define USEFLOWFORTIEBREAKING */

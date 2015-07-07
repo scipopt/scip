@@ -407,7 +407,7 @@ void SCIPconshdlrSetExitpre(
 
 /** sets presolving method of constraint handler */
 extern
-void SCIPconshdlrSetPresol(
+SCIP_RETCODE SCIPconshdlrSetPresol(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSPRESOL  ((*conspresol)),    /**< presolving method of constraint handler */
    int                   maxprerounds,       /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */

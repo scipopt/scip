@@ -11,16 +11,7 @@ testcluster:
 		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) false $(OPTCOMMAND) $(SETCUTOFF);
-
-.PHONY: testclusterreopt
-testclusterreopt:
-		cd check; \
-		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) \
-		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
-		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
-		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) true $(OPTCOMMAND) $(SETCUTOFF);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS);
 
 .PHONY: testclustercpx
 testclustercpx:
@@ -69,16 +60,22 @@ testgamscluster:
 		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) \
 		"$(CONVERTSCIP)" $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) $(SETCUTOFF);
 
-
-SCIPEXAMPLES	=	Binpacking CallableLibrary Coloring Eventhdlr GMI LOP MIPSolver Scheduler TSP VRP
+SCIPEXAMPLES	=	examples/Binpacking examples/CallableLibrary applications/Coloring \
+                  examples/Eventhdlr examples/GMI examples/LOP examples/MIPSolver \
+                  applications/MultiObjective applications/Scheduler applications/STP examples/TSP examples/VRP
 
 .PHONY: testexamples
 testexamples:
-		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C examples/$(EXAMPLE) $^ test || exit 1;)
+		@-echo "" > exampletestsummary.log
+		@$(foreach EXAMPLE, $(SCIPEXAMPLES), echo $(EXAMPLE);  $(MAKE) -C $(EXAMPLE) $^ test && { echo "tested $(EXAMPLE) example -- success" >> exampletestsummary.log; } \
+			|| { echo "tested example $(EXAMPLE) -- FAIL" >> exampletestsummary.log; };)
+		@-echo "Summary: "
+		@-cat exampletestsummary.log
+		@-rm -f exampletestsummary.log
 
 .PHONY: docexamples
 docexamples:
-		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C examples/$(EXAMPLE) $^ doc || exit 1;)
+		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C $(EXAMPLE) $^ doc || exit 1;)
 
 .PHONY: coverage
 coverage:

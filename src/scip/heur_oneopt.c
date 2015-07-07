@@ -803,7 +803,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          }
 
          /* solve LP */
-         SCIPdebugMessage(" -> old LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+         SCIPdebugMessage(" -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
          /**@todo in case of an MINLP, if SCIPisNLPConstructed() is TRUE, say, rather solve the NLP instead of the LP */
          /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
@@ -819,7 +819,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror, NULL) );
 #endif
 
-         SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+         SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
          SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 
          /* check if this is a feasible solution */

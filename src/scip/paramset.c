@@ -124,7 +124,7 @@ SCIP_RETCODE paramCheckLongint(
 
    if( value < param->data.longintparam.minvalue || value > param->data.longintparam.maxvalue )
    {
-      SCIPmessagePrintWarning(messagehdlr, "Invalid value <%"SCIP_LONGINT_FORMAT"> for longint parameter <%s>. Must be in range [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"].\n",
+      SCIPmessagePrintWarning(messagehdlr, "Invalid value <%" SCIP_LONGINT_FORMAT "> for longint parameter <%s>. Must be in range [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "].\n",
          value, param->name, param->data.longintparam.minvalue, param->data.longintparam.maxvalue);
       return SCIP_PARAMETERWRONGVAL;
    }
@@ -251,7 +251,7 @@ SCIP_RETCODE paramWrite(
             param->data.intparam.minvalue, param->data.intparam.maxvalue, param->data.intparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_LONGINT:
-         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: longint, range: [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"], default: %"SCIP_LONGINT_FORMAT"]\n", 
+         SCIPmessageFPrintInfo(messagehdlr, file, "# [type: longint, range: [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "], default: %" SCIP_LONGINT_FORMAT "]\n",
             param->data.longintparam.minvalue, param->data.longintparam.maxvalue, param->data.longintparam.defaultvalue);
          break;
       case SCIP_PARAMTYPE_REAL:
@@ -283,7 +283,7 @@ SCIP_RETCODE paramWrite(
       SCIPmessageFPrintInfo(messagehdlr, file, "%d", SCIPparamGetInt(param));
       break;
    case SCIP_PARAMTYPE_LONGINT:
-      SCIPmessageFPrintInfo(messagehdlr, file, "%"SCIP_LONGINT_FORMAT"", SCIPparamGetLongint(param));
+      SCIPmessageFPrintInfo(messagehdlr, file, "%" SCIP_LONGINT_FORMAT "", SCIPparamGetLongint(param));
       break;
    case SCIP_PARAMTYPE_REAL:
       SCIPmessageFPrintInfo(messagehdlr, file, "%.15g", SCIPparamGetReal(param));
@@ -1310,7 +1310,7 @@ SCIP_RETCODE paramParseReal(
    assert(set != NULL);
    assert(valuestr != NULL);
 
-   if( sscanf(valuestr, "%"SCIP_REAL_FORMAT, &value) == 1 )
+   if( sscanf(valuestr, "%" SCIP_REAL_FORMAT, &value) == 1 )
    {
       SCIP_CALL( SCIPparamSetReal(param, set, messagehdlr, value, TRUE) );
    }
@@ -2852,10 +2852,11 @@ SCIP_RETCODE paramsetSetHeuristicsFast(
 {
    int i;
 
-#define NEXPENSIVEHEURFREQS 14
+#define NEXPENSIVEHEURFREQS 15
    static const char* const expensiveheurfreqs[NEXPENSIVEHEURFREQS] = {
       "heuristics/coefdiving/freq",
       "heuristics/crossover/freq",
+      "heuristics/distributiondiving/freq",
       "heuristics/feaspump/freq",
       "heuristics/fracdiving/freq",
       "heuristics/guideddiving/freq",
@@ -2991,10 +2992,11 @@ SCIP_RETCODE paramsetSetPresolvingDefault(
    /* explicitly reset parameters of knapsack constraint handler, if the constraint handler is included */
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "constraints/knapsack/disaggregation") );
 
-   /* explicitly reset restart parameters */
+   /* explicitly reset restart and maxrounds parameters */
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "presolving/maxrestarts") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "presolving/restartfac") );
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "presolving/restartminred") );
+   SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "presolving/maxrounds") );
 
    /* explicitly reset probing parameters */
    SCIP_CALL( SCIPparamsetSetToDefault(paramset, set, messagehdlr, "propagating/probing/maxuseless") );
@@ -3257,6 +3259,9 @@ SCIP_RETCODE paramsetSetPresolvingOff(
 
    /* explicitly turn off restarts */
    SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/maxrestarts", 0, quiet) );
+
+   /* set the maximum number of presolving rounds to zero */
+   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "presolving/maxrounds", 0, quiet) );
 
    return SCIP_OKAY;
 }
@@ -3787,7 +3792,8 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "branching/fullstrong/maxbounddist", 0.0, quiet) );
       SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "branching/relpscost/sbiterquot", 1.0, quiet) );
       SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "branching/relpscost/sbiterofs", 1000000, quiet) );
-
+      SCIP_CALL( paramSetReal(paramset, set, messagehdlr, "branching/relpscost/maxreliable", 10.0, quiet) );
+      SCIP_CALL( paramSetBool(paramset, set, messagehdlr, "branching/relpscost/usehyptestforreliability",TRUE, quiet) );
       break;
 
    default:

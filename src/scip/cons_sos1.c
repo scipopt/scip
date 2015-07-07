@@ -6478,6 +6478,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Cons(
    SCIP_CONSDATA* consdata;
    int* nodes;
    int nvars;
+   int cnt = 0;
    int j;
 
    assert( scip != NULL );
@@ -6501,13 +6502,19 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Cons(
    /* get nodes in the conflict graph */
    for (j = 0; j < nvars; ++j)
    {
-      nodes[j] = varGetNodeSOS1(conshdlrdata, consdata->vars[j]);
-      assert( nodes[j] >= 0 );
+      if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(consdata->vars[j])) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(consdata->vars[j])) )
+      {
+         assert( varGetNodeSOS1(conshdlrdata, consdata->vars[j]) >= 0 );
+         nodes[cnt++] = varGetNodeSOS1(conshdlrdata, consdata->vars[j]);
+      }
    }
 
    /* generate bound constraint from conflict graph nodes */
-   SCIP_CALL( generateBoundInequalityFromSOS1Nodes(scip, conshdlr, conshdlrdata->conflictgraph, nodes, nvars, 1.0, local, global,
-         strengthen, removable, SCIPconsGetName(cons), rowlb, rowub) );
+   if ( cnt > 0 )
+   {
+      SCIP_CALL( generateBoundInequalityFromSOS1Nodes(scip, conshdlr, conshdlrdata->conflictgraph, nodes, cnt, 1.0, local, global,
+            strengthen, removable, SCIPconsGetName(cons), rowlb, rowub) );
+   }
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &nodes);
@@ -6881,6 +6888,7 @@ SCIP_RETCODE separateSOS1(
          if( conshdlrdata->boundcutsfromsos1 || conshdlrdata->switchcutsfromsos1 )
          {
             SCIP_Bool cutoff;
+
             SCIP_CALL( initsepaBoundInequalityFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, sol, TRUE, maxboundcuts, &ngen, &cutoff) );
             if ( cutoff )
             {
@@ -9088,10 +9096,10 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
          assert( conshdlrdata != NULL );
 
          /* store variable fixed to be nonzero on stack */
-         assert( 0 <= conshdlrdata->nfixnonzerovars );
-         assert( conshdlrdata->fixnonzerovars != NULL );
+         assert( 0 <= conshdlrdata->nfixnonzerovars && conshdlrdata->nfixnonzerovars <= SCIPgetNTotalVars(scip) );
          if ( conshdlrdata->nfixnonzerovars < conshdlrdata->maxnfixnonzerovars )
          {
+            assert( conshdlrdata->fixnonzerovars != NULL );
             assert( SCIPeventGetVar(event) != NULL );
             conshdlrdata->fixnonzerovars[conshdlrdata->nfixnonzerovars++] = SCIPeventGetVar(event);
          }
@@ -9110,10 +9118,10 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
          assert( conshdlrdata != NULL );
 
          /* store variable fixed to be nonzero on stack */
-         assert( 0 <= conshdlrdata->nfixnonzerovars );
-         assert( conshdlrdata->fixnonzerovars != NULL );
+         assert( 0 <= conshdlrdata->nfixnonzerovars && conshdlrdata->nfixnonzerovars <= SCIPgetNTotalVars(scip) );
          if ( conshdlrdata->nfixnonzerovars < conshdlrdata->maxnfixnonzerovars )
          {
+            assert( conshdlrdata->fixnonzerovars != NULL );
             assert( SCIPeventGetVar(event) != NULL );
             conshdlrdata->fixnonzerovars[conshdlrdata->nfixnonzerovars++] = SCIPeventGetVar(event);
          }
@@ -9345,148 +9353,148 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
    /* add SOS1 constraint handler parameters */
 
    /* adjacency matrix parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxsosadjacency",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxsosadjacency",
          "do not create an adjacency matrix if number of SOS1 variables is larger than predefined value (-1: no limit)",
          &conshdlrdata->maxsosadjacency, TRUE, DEFAULT_MAXSOSADJACENCY, -1, INT_MAX, NULL, NULL) );
 
    /* presolving parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxextensions",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxextensions",
          "maximal number of extensions that will be computed for each SOS1 constraint  (-1: no limit)",
          &conshdlrdata->maxextensions, TRUE, DEFAULT_MAXEXTENSIONS, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxtightenbds",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxtightenbds",
          "maximal number of bound tightening rounds per presolving round (-1: no limit)",
          &conshdlrdata->maxtightenbds, TRUE, DEFAULT_MAXTIGHTENBDS, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/updateconflpresol",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/updateconflpresol",
          "if TRUE then update conflict graph during presolving procedure",
          &conshdlrdata->updateconflpresol, TRUE, DEFAULT_UPDATECONFLPRESOL, NULL, NULL) );
 
    /* propagation parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/conflictprop",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/conflictprop",
          "whether to use conflict graph propagation",
          &conshdlrdata->conflictprop, TRUE, DEFAULT_CONFLICTPROP, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/implprop",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/implprop",
          "whether to use implication graph propagation",
          &conshdlrdata->implprop, TRUE, DEFAULT_IMPLPROP, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sosconsprop",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/sosconsprop",
          "whether to use SOS1 constraint propagation",
          &conshdlrdata->sosconsprop, TRUE, DEFAULT_SOSCONSPROP, NULL, NULL) );
 
    /* branching parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/neighbranch",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/neighbranch",
          "if TRUE turn neighborhood branching method on (note: an automatic switching to SOS1 branching is possible)",
          &conshdlrdata->neighbranch, TRUE, DEFAULT_NEIGHBRANCH, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/bipbranch",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/bipbranch",
          "if TRUE turn bipartite branching method on (note: an automatic switching to SOS1 branching is possible)",
          &conshdlrdata->bipbranch, TRUE, DEFAULT_BIPBRANCH, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/sos1branch",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/sos1branch",
          "if TRUE turn SOS1 branching method on",
          &conshdlrdata->sos1branch, TRUE, DEFAULT_SOS1BRANCH, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/autosos1branch",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/autosos1branch",
          "if TRUE then automatically switch to SOS1 branching if the SOS1 constraints do not overlap",
          &conshdlrdata->autosos1branch, TRUE, DEFAULT_AUTOSOS1BRANCH, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/fixnonzero",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/fixnonzero",
          "if neighborhood branching is used, then fix the branching variable (if positive in sign) to the value of the feasibility tolerance",
          &conshdlrdata->fixnonzero, TRUE, DEFAULT_FIXNONZERO, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/addcomps",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/addcomps",
          "if TRUE then add complementarity constraints to the branching nodes (can be used in combination with neighborhood or bipartite branching)",
          &conshdlrdata->addcomps, TRUE, DEFAULT_ADDCOMPS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxaddcomps",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxaddcomps",
          "maximal number of complementarity constraints added per branching node (-1: no limit)",
          &conshdlrdata->maxaddcomps, TRUE, DEFAULT_MAXADDCOMPS, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/addcompsfeas",
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/addcompsfeas",
          "minimal feasibility value for complementarity constraints in order to be added to the branching node",
          &conshdlrdata->addcompsfeas, TRUE, DEFAULT_ADDCOMPSFEAS, -SCIP_REAL_MAX, SCIP_REAL_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "constraints/"CONSHDLR_NAME"/addbdsfeas",
+   SCIP_CALL( SCIPaddRealParam(scip, "constraints/" CONSHDLR_NAME "/addbdsfeas",
          "minimal feasibility value for bound inequalities in order to be added to the branching node",
          &conshdlrdata->addbdsfeas, TRUE, DEFAULT_ADDBDSFEAS, -SCIP_REAL_MAX, SCIP_REAL_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/addextendedbds",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/addextendedbds",
          "should added complementarity constraints be extended to SOS1 constraints to get tighter bound inequalities",
          &conshdlrdata->addextendedbds, TRUE, DEFAULT_ADDEXTENDEDBDS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchsos",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branchsos",
          "Use SOS1 branching in enforcing (otherwise leave decision to branching rules)?",
          &conshdlrdata->branchsos, FALSE, TRUE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchnonzeros",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branchnonzeros",
          "Branch on SOS constraint with most number of nonzeros?",
          &conshdlrdata->branchnonzeros, FALSE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/branchweight",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branchweight",
          "Branch on SOS cons. with highest nonzero-variable weight for branching (needs branchnonzeros = false)?",
          &conshdlrdata->branchweight, FALSE, FALSE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/addcompsdepth",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/addcompsdepth",
          "only add complementarity constraints to branching nodes for predefined depth (-1: no limit)",
          &conshdlrdata->addcompsdepth, TRUE, DEFAULT_ADDCOMPSDEPTH, -1, INT_MAX, NULL, NULL) );
 
    /* selection rule parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/nstrongrounds",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/nstrongrounds",
          "maximal number of strong branching rounds to perform for each node (-1: auto); only available for neighborhood and bipartite branching",
          &conshdlrdata->nstrongrounds, TRUE, DEFAULT_NSTRONGROUNDS, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/nstrongiter",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/nstrongiter",
          "maximal number LP iterations to perform for each strong branching round (-2: auto, -1: no limit)",
          &conshdlrdata->nstrongiter, TRUE, DEFAULT_NSTRONGITER, -2, INT_MAX, NULL, NULL) );
 
    /* separation parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/boundcutsfromsos1",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/boundcutsfromsos1",
          "if TRUE separate bound inequalities from initial SOS1 constraints",
          &conshdlrdata->boundcutsfromsos1, TRUE, DEFAULT_BOUNDCUTSFROMSOS1, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/boundcutsfromgraph",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/boundcutsfromgraph",
          "if TRUE separate bound inequalities from the conflict graph",
          &conshdlrdata->boundcutsfromgraph, TRUE, DEFAULT_BOUNDCUTSFROMGRAPH, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/autocutsfromsos1",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/autocutsfromsos1",
          "if TRUE then automatically switch to separating initial SOS1 constraints if the SOS1 constraints do not overlap",
          &conshdlrdata->autocutsfromsos1, TRUE, DEFAULT_AUTOCUTSFROMSOS1, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/boundcutsfreq",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/boundcutsfreq",
          "frequency for separating bound cuts; zero means to separate only in the root node",
          &conshdlrdata->boundcutsfreq, TRUE, DEFAULT_BOUNDCUTSFREQ, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/boundcutsdepth",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/boundcutsdepth",
          "node depth of separating bound cuts (-1: no limit)",
          &conshdlrdata->boundcutsdepth, TRUE, DEFAULT_BOUNDCUTSDEPTH, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxboundcuts",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxboundcuts",
          "maximal number of bound cuts separated per branching node",
          &conshdlrdata->maxboundcuts, TRUE, DEFAULT_MAXBOUNDCUTS, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maxboundcutsroot",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maxboundcutsroot",
          "maximal number of bound cuts separated per iteration in the root node",
          &conshdlrdata->maxboundcutsroot, TRUE, DEFAULT_MAXBOUNDCUTSROOT, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/"CONSHDLR_NAME"/strthenboundcuts",
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/strthenboundcuts",
          "if TRUE then bound cuts are strengthened in case bound variables are available",
          &conshdlrdata->strthenboundcuts, TRUE, DEFAULT_STRTHENBOUNDCUTS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/implcutsfreq",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/implcutsfreq",
          "frequency for separating implied bound cuts; zero means to separate only in the root node",
          &conshdlrdata->implcutsfreq, TRUE, DEFAULT_IMPLCUTSFREQ, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/implcutsdepth",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/implcutsdepth",
          "node depth of separating implied bound cuts (-1: no limit)",
          &conshdlrdata->implcutsdepth, TRUE, DEFAULT_IMPLCUTSDEPTH, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maximplcuts",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maximplcuts",
          "maximal number of implied bound cuts separated per branching node",
          &conshdlrdata->maxboundcuts, TRUE, DEFAULT_MAXIMPLCUTS, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/maximplcutsroot",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/maximplcutsroot",
          "maximal number of implied bound cuts separated per iteration in the root node",
          &conshdlrdata->maximplcutsroot, TRUE, DEFAULT_MAXIMPLCUTSROOT, 0, INT_MAX, NULL, NULL) );
 

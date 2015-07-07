@@ -708,7 +708,7 @@ EXTERN
 SCIP_RETCODE SCIPcopyVars(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
-   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables  to the corresponding
+   SCIP_HASHMAP*         varmap,             /**< a hashmap to store the mapping of source variables to the corresponding
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
@@ -892,7 +892,7 @@ SCIP_RETCODE SCIPcopyConss(
    SCIP*                 sourcescip,         /**< source SCIP data structure */
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< a SCIP_HASHMAP mapping variables of the source SCIP to the corresponding
-                                              *   variables of the target SCIP, must not be NULL! */
+                                              *   variables of the target SCIP, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
    SCIP_Bool             global,             /**< create a global or a local copy? */
@@ -1186,7 +1186,7 @@ SCIP_RETCODE SCIPcopy(
                                               *   target variables, or NULL */
    SCIP_HASHMAP*         consmap,            /**< a hashmap to store the mapping of source constraints to the corresponding
                                               *   target constraints, or NULL */
-   const char*           suffix,             /**< suffix which will be added to the names of the source SCIP */
+   const char*           suffix,             /**< optional suffix for problem name inside the target SCIP */
    SCIP_Bool             global,             /**< create a global or a local copy? */
    SCIP_Bool             enablepricing,      /**< should pricing be enabled in copied SCIP instance? If TRUE, pricer
                                               *   plugins will be copied and activated, and the modifiable flag of
@@ -2913,7 +2913,7 @@ SCIP_RETCODE SCIPincludePresolBasic(
    const char*           desc,               /**< description of presolver */
    int                   priority,           /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
    int                   maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-   SCIP_Bool             delay,              /**< should presolver be delayed, if other presolvers found reductions? */
+   SCIP_PRESOLTIMING     timing,             /**< timing mask of the presolver */
    SCIP_DECL_PRESOLEXEC  ((*presolexec)),    /**< execution method of presolver */
    SCIP_PRESOLDATA*      presoldata          /**< presolver data */
    );
@@ -2939,7 +2939,7 @@ EXTERN
 SCIP_RETCODE SCIPsetPresolInit(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PRESOL*          presol,             /**< presolver */
-   SCIP_DECL_PRESOLINIT ((*presolinit))      /**< initialize presolver */
+   SCIP_DECL_PRESOLINIT  ((*presolinit))     /**< initialize presolver */
    );
 
 /** sets deinitialization method of presolver */
@@ -3087,7 +3087,7 @@ SCIP_RETCODE SCIPsetRelaxExitsol(
 EXTERN
 SCIP_RELAX* SCIPfindRelax(
    SCIP*                 scip,               /**< SCIP data structure */
-   const char*           name                /**< name of relaxation handler*/
+   const char*           name                /**< name of relaxation handler */
    );
 
 /** returns the array of currently available relaxation handlers  */
@@ -3252,8 +3252,8 @@ SCIP_RETCODE SCIPincludeProp(
    int                   priority,           /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   freq,               /**< frequency for calling propagator */
    SCIP_Bool             delay,              /**< should propagator be delayed, if other propagators found reductions? */
-   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagators should be executed */
-   int                   presolpriority,     /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
+   SCIP_PROPTIMING       timingmask,         /**< positions in the node solving loop where propagator should be executed */
+   int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
    SCIP_PRESOLTIMING     presoltiming,       /**< timing mask of the propagator's presolving method */
    SCIP_DECL_PROPCOPY    ((*propcopy)),      /**< copy method of propagator or NULL if you don't want to copy your plugin into sub-SCIPs */
@@ -3363,7 +3363,7 @@ SCIP_RETCODE SCIPsetPropPresol(
    SCIP_DECL_PROPPRESOL((*proppresol)),      /**< presolving method of propagator */
    int                   presolpriority,     /**< presolving priority of the propagator (>= 0: before, < 0: after constraint handlers) */
    int                   presolmaxrounds,    /**< maximal number of presolving rounds the propagator participates in (-1: no limit) */
-   SCIP_Bool             presoldelay         /**< should presolving be delayed, if other presolvers found reductions? */
+   SCIP_PRESOLTIMING     presoltiming        /**< timing mask of the propagator's presolving method */
    );
 
 /** sets propagation conflict resolving callback of propagator */
@@ -17660,7 +17660,6 @@ SCIP_RETCODE SCIPapplyReopt(
    SCIP_REOPTNODE*       reoptnode,          /**< node to reactivate */
    unsigned int          id,                 /**< unique id of the reoptimization node */
    SCIP_Real             estimate,           /**< estimate of the child nodes that should be created */
-   SCIP_Real             lowerbound,         /**< lowerbound of the current focusnode */
    SCIP_NODE**           childnodes,         /**< array to store the created child nodes */
    int*                  ncreatedchilds,     /**< pointer to store number of created child nodes */
    int*                  naddedconss,        /**< pointer to store number of generated constraints */

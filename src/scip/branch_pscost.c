@@ -652,35 +652,35 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpPscost) );
    SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextPscost) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "branching/"BRANCHRULE_NAME"/strategy",
+   SCIP_CALL( SCIPaddCharParam(scip, "branching/" BRANCHRULE_NAME "/strategy",
          "strategy for utilizing pseudo-costs of external branching candidates (multiply as in pseudo costs 'u'pdate rule, or by 'd'omain reduction, or by domain reduction of 's'ibling, or by 'v'ariable score)",
          &branchruledata->strategy, FALSE, BRANCHRULE_STRATEGY_DEFAULT, BRANCHRULE_STRATEGIES, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/minscoreweight",
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/" BRANCHRULE_NAME "/minscoreweight",
          "weight for minimum of scores of a branching candidate when building weighted sum of min/max/sum of scores",
          &branchruledata->scoreminweight, TRUE, BRANCHRULE_SCOREMINWEIGHT_DEFAULT, -SCIPinfinity(scip), SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/maxscoreweight",
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/" BRANCHRULE_NAME "/maxscoreweight",
          "weight for maximum of scores of a branching candidate when building weighted sum of min/max/sum of scores",
          &branchruledata->scoremaxweight, TRUE, BRANCHRULE_SCOREMAXWEIGHT_DEFAULT, -SCIPinfinity(scip), SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/sumscoreweight",
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/" BRANCHRULE_NAME "/sumscoreweight",
          "weight for sum of scores of a branching candidate when building weighted sum of min/max/sum of scores",
          &branchruledata->scoresumweight, TRUE, BRANCHRULE_SCORESUMWEIGHT_DEFAULT, -SCIPinfinity(scip), SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "branching/"BRANCHRULE_NAME"/nchildren",
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/" BRANCHRULE_NAME "/nchildren",
          "number of children to create in n-ary branching",
          &branchruledata->nchildren, FALSE, BRANCHRULE_NCHILDREN_DEFAULT, 2, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "branching/"BRANCHRULE_NAME"/narymaxdepth",
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/" BRANCHRULE_NAME "/narymaxdepth",
          "maximal depth where to do n-ary branching, -1 to turn off",
          &branchruledata->narymaxdepth, FALSE, BRANCHRULE_NARYMAXDEPTH_DEFAULT, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/naryminwidth",
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/" BRANCHRULE_NAME "/naryminwidth",
          "minimal domain width in children when doing n-ary branching, relative to global bounds",
          &branchruledata->naryminwidth, FALSE, BRANCHRULE_NARYMINWIDTH_DEFAULT, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/narywidthfactor",
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/" BRANCHRULE_NAME "/narywidthfactor",
          "factor of domain width in n-ary branching when creating nodes with increasing distance from branching value",
          &branchruledata->narywidthfactor, FALSE, BRANCHRULE_NARYWIDTHFAC_DEFAULT, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 

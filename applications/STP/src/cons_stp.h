@@ -14,13 +14,12 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_stp.h
- * @brief  Constraint handler stores the local branching decision data
- * @author Timo Berthold
- * @author Stefan Heinz
+ * @brief  Constraint handler for Steiner problems
+ * @author Gerald Gamrath
+ * @author Daniel Rehfeldt
+ * @author Michael Winkler
  *
- * This constraint handler is used to store the branching decision of the \ref BRANCHING "Ryan/Foster branching rule"
- * which is implemented in \ref branch_ryanfoster.c.
- *
+ * This file checks solutions for feasibility and separates violated model constraints. For more details see \ref CONS page.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -48,7 +47,7 @@ SCIP_RETCODE SCIPcreateConsStp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   GRAPH*                graph
+   GRAPH*                graph               /**< graph data structure */
    );
 
 #ifdef __cplusplus

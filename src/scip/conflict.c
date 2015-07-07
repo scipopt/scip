@@ -5619,7 +5619,7 @@ SCIP_RETCODE conflictAnalyzeLP(
             (*iterations) += iter;
             stat->nconflictlps++;
             stat->nconflictlpiterations += iter;
-            SCIPdebugMessage(" -> resolved objlim exceeding LP in %d iterations (total: %"SCIP_LONGINT_FORMAT") (infeasible:%u, objlim: %u, optimal:%u)\n",
+            SCIPdebugMessage(" -> resolved objlim exceeding LP in %d iterations (total: %" SCIP_LONGINT_FORMAT ") (infeasible:%u, objlim: %u, optimal:%u)\n",
                iter, stat->nconflictlpiterations, SCIPlpiIsPrimalInfeasible(lpi), SCIPlpiIsObjlimExc(lpi),
                SCIPlpiIsOptimal(lpi));
             valid = (SCIPlpiIsObjlimExc(lpi) || SCIPlpiIsPrimalInfeasible(lpi) || SCIPlpiIsDualFeasible(lpi));
@@ -5873,7 +5873,7 @@ SCIP_RETCODE conflictAnalyzeLP(
          (*iterations) += iter;
          stat->nconflictlps++;
          stat->nconflictlpiterations += iter;
-         SCIPdebugMessage(" -> resolved LP in %d iterations (total: %"SCIP_LONGINT_FORMAT") (infeasible:%u)\n",
+         SCIPdebugMessage(" -> resolved LP in %d iterations (total: %" SCIP_LONGINT_FORMAT ") (infeasible:%u)\n",
             iter, stat->nconflictlpiterations, SCIPlpiIsPrimalInfeasible(lpi));
 
          /* evaluate result */

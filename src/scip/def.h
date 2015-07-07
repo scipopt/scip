@@ -84,7 +84,7 @@ extern "C" {
 
 
 #define SCIP_VERSION                320 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               0 /**< SCIP sub version number */
+#define SCIP_SUBVERSION               1 /**< SCIP sub version number */
 #define SCIP_COPYRIGHT   "Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
@@ -114,20 +114,6 @@ extern "C" {
 #define SCIP_LONGINT_FORMAT           "I64d"
 #else
 #define SCIP_LONGINT_FORMAT           "lld"
-#endif
-#endif
-
-/*
- * Size_t format
- */
-#if defined(__arm__)  /* TODO: exclude newer ARM 64bit here (what's the macro name?) */
-/* on ARM 32bit, size_t is not long */
-#define SCIP_SIZET_FORMAT           "u"
-#else
-#if defined(_WIN32) || defined(_WIN64) || defined(__STDC__)
-#define SCIP_SIZET_FORMAT           "lu"
-#else
-#define SCIP_SIZET_FORMAT           "zu"
 #endif
 #endif
 

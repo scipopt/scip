@@ -2812,60 +2812,60 @@ SCIP_RETCODE SCIPincludeSepaEccuts(
 
    /* add eccuts separator parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "separating/"SEPA_NAME"/dynamiccuts",
+         "separating/" SEPA_NAME "/dynamiccuts",
          "should generated cuts be removed from the LP if they are no longer tight?",
          &sepadata->dynamiccuts, FALSE, DEFAULT_DYNAMICCUTS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxrounds",
+         "separating/" SEPA_NAME "/maxrounds",
          "maximal number of eccuts separation rounds per node (-1: unlimited)",
          &sepadata->maxrounds, FALSE, DEFAULT_MAXROUNDS, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxroundsroot",
+         "separating/" SEPA_NAME "/maxroundsroot",
          "maximal number of eccuts separation rounds in the root node (-1: unlimited)",
          &sepadata->maxroundsroot, FALSE, DEFAULT_MAXROUNDSROOT, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxdepth",
+         "separating/" SEPA_NAME "/maxdepth",
          "maximal depth at which the separator is applied (-1: unlimited)",
          &sepadata->maxdepth, FALSE, DEFAULT_MAXDEPTH, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxsepacuts",
+         "separating/" SEPA_NAME "/maxsepacuts",
          "maximal number of edge-concave cuts separated per separation round",
          &sepadata->maxsepacuts, FALSE, DEFAULT_MAXSEPACUTS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxsepacutsroot",
+         "separating/" SEPA_NAME "/maxsepacutsroot",
          "maximal number of edge-concave cuts separated per separation round in the root node",
          &sepadata->maxsepacutsroot, FALSE, DEFAULT_MAXSEPACUTSROOT, 0, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "separating/"SEPA_NAME"/cutmaxrange",
+   SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/cutmaxrange",
          "maximal coef. range of a cut (max coef. divided by min coef.) in order to be added to LP relaxation",
          &sepadata->cutmaxrange, FALSE, DEFAULT_CUTMAXRANGE, 0.0, SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "separating/"SEPA_NAME"/minviolation",
+   SCIP_CALL( SCIPaddRealParam(scip, "separating/" SEPA_NAME "/minviolation",
          "minimal violation of an edge-concave cut to be separated",
          &sepadata->minviolation, FALSE, DEFAULT_MINVIOLATION, 0.0, 0.5, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/minaggrsize",
+         "separating/" SEPA_NAME "/minaggrsize",
          "search for edge-concave aggregations of at least this size",
          &sepadata->minaggrsize, TRUE, DEFAULT_MINAGGRSIZE, 3, 5, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxaggrsize",
+         "separating/" SEPA_NAME "/maxaggrsize",
          "search for edge-concave aggregations of at most this size",
          &sepadata->maxaggrsize, TRUE, DEFAULT_MAXAGGRSIZE, 3, 5, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxbilinterms",
+         "separating/" SEPA_NAME "/maxbilinterms",
          "maximum number of bilinear terms allowed to be in a quadratic constraint",
          &sepadata->maxbilinterms, TRUE, DEFAULT_MAXBILINTERMS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "separating/"SEPA_NAME"/maxstallrounds",
+         "separating/" SEPA_NAME "/maxstallrounds",
          "maximum number of unsuccessful rounds in the edge-concave aggregation search",
          &sepadata->maxstallrounds, TRUE, DEFAULT_MAXSTALLROUNDS, 0, INT_MAX, NULL, NULL) );
 

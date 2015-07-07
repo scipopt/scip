@@ -13,10 +13,6 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/* prints short statistics (callback, preprocessing, adding cuts) */
-/* // #define SCIP_DEBUG */
-/* // #define ZEROHALF__PRINT_STATISTICS */ /**< print statistics */
-
 /**
  * @file   sepa_zerohalf.c
  * @brief  {0,1/2}-cuts separator
@@ -59,6 +55,8 @@
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
 
+/* prints short statistics (callback, preprocessing, adding cuts) */
+/* #define ZEROHALF__PRINT_STATISTICS */ /**< print statistics */
 
 #define SEPA_NAME              "zerohalf"
 #define SEPA_DESC              "{0,1/2}-cuts separator"

@@ -116,6 +116,17 @@ SCIP_RETCODE SCIPpresolCreate(
    assert(name != NULL);
    assert(desc != NULL);
 
+   /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
+    * error message
+    */
+   if( timing < SCIP_PRESOLTIMING_FAST || timing > SCIP_PRESOLTIMING_ALWAYS )
+   {
+      SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
+         "'SCIP_PRESOLTIMING' for <%s> presolver instead.\n", name);
+
+      return SCIP_PARAMETERWRONGVAL;
+   }
+
    SCIP_ALLOC( BMSallocMemory(presol) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*presol)->name, name, strlen(name)+1) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*presol)->desc, desc, strlen(desc)+1) );
