@@ -253,6 +253,18 @@ interface:
 - new methods for mixed inter linear matrix access (see pub_matrix.h) added
 
 fixed bugs:
+- fixed bug in primal.c and tree.c by using SCIPinfinity() as a cutoffbound to delete child nodes
+- fixed bug in cons_indicator with handling local bounds
+- fixed bug in cons_quadratic.c which leads to an overflow when SCIP allocates memory for a dense matrix
+- fixed bug in lp.c which leads to wrong primal and dual feasibility
+- fixed wrong comparison when executing branching rule for external branching candidates
+- fixed bug in cons_abspower.c: do not generate cuts with infinity right-hand-side anymore
+- fixed wrong handling of infinite activities and primal values in sepastore.c and lp.c
+- fixed assert in cons_soc.c: now soc with 1 lhs variable are allowed
+- fixed bug that led to an erroneous warning about the clock type
+- fixed setting of enforcement flag for constraints created by reformulation in nonlinear constraint handlers
+- fixed bug in heur_nlpdiving.c: wrong counting of fix variables
+- fixed bug in cons_quadratic.c: do not generate linearization cuts for disabled constraints
 - fix behavior of 'make install' which now sets symbolic links and short links to binaries and libraries
 - fix characterization of logic or constraints in SCIP's NLP relaxation
 - fix wrong handling of SCIP_NLPSOLSTAT_LOCALINFEASIBLE solution status in nlp.c
@@ -275,26 +287,10 @@ fixed bugs:
 - fixed problem with lpisrelax flag in probing mode when doing branch-and-price
 - fixed bug in pseudoboolean constraint handler about negated variables
 
-SCIP version 3.1.2
-==================
-
-fixed bugs:
-- fixed bug in primal.c and tree.c by using SCIPinfinity() as a cutoffbound to delete child nodes
-- fixed bug in cons_indicator with handling local bounds
-- fixed bug in cons_quadratic.c which leads to an overflow when SCIP allocates memory for a dense matrix
-- fixed bug in lp.c which leads to wrong primal and dual feasibility
-- fixed wrong comparison when executing branching rule for external branching candidates
-- fixed bug in cons_abspower.c: do not generate cuts with infinity right-hand-side anymore
-- fixed wrong handling of infinite activities and primal values in sepastore.c and lp.c
-- fixed assert in cons_soc.c: now soc with 1 lhs variable are allowed
-- fixed bug that led to an erroneous warning about the clock type
-- fixed setting of enforcement flag for constraints created by reformulation in nonlinear constraint handlers
-- fixed bug in heur_nlpdiving.c: wrong counting of fix variables
-- fixed bug in cons_quadratic.c: do not generate linearization cuts for disabled constraints
-
 misc:
 - moved assertions in comparison methods from scip.c to set.c
 - added more checks to SCIP{alloc,realloc,duplicate}BufferArray() to handle overflows properly
+
 
 SCIP version 3.1.1
 ==================
