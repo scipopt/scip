@@ -20,11 +20,11 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-/**@mainpage Multi Objective Mixed Integer Programming using a Lifted Weight Space Algorithm
+/**@mainpage PolySCIP - Multi Objective Mixed Integer Programming using a Lifted Weight Space Algorithm
  * @version  0.1
  * @author   Timo Strunk
  *
- * This example is a method for solving mixed integer programs with multiple objective functions (MOMIP).
+ * This application is a method for solving mixed integer programs with multiple objective functions (MOMIP).
  *
  * A multi objective mixed integer problem is given by a cost matrix \f$C \in Q^{p \times (n+m)} \f$,
  * a constraint matrix \f$ A \in Q^{\ell \times (n+m)} \f$ and a right hand vector \f$ b \in Q^\ell \f$
@@ -53,7 +53,7 @@
  *
  * @section RUNNING Running The Executable
  *
- * After the sources were sucessfully built, you can call the program from the example directory root via
+ * After the sources were sucessfully built, you can call the program from the application directory root via
  *
  *
  *     bin/multiopt <instance>.mop [<SCIP-settings-file>.set]
@@ -89,7 +89,7 @@
  * is equivalent to computing the set of all pairs \f$ (a,w) \f$ such that there exists a solution \f$ x \f$ with \f$ a \geq w^TCx\f$. \f$ P \f$
  * is exactly the complement of that set.
  *
- * @section LIBRARY The design of this example
+ * @section LIBRARY The design of this application
  *
  * The functionality is distributed amongst several classes as follows:
  * - main.h reads the arguments, calls all other functions and produces text output.
