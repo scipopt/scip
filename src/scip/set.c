@@ -308,6 +308,7 @@
 #define SCIP_DEFAULT_REOPT_ENABLE         FALSE /**< enable reoptimization */
 #define SCIP_DEFAULT_REOPT_SEPAGLBINFSUBTREES TRUE/**< save global constraints to separate infeasible subtrees */
 #define SCIP_DEFAULT_REOPT_SEPABESTSOL    FALSE /**< separate the optimal solution, i.e., for constraint shortest path problems */
+#define SCIP_DEFAULT_REOPT_STOREVARHISTOTY FALSE/**< use the variable history of the previouse solve if the objective function has changed only slightly */
 #define SCIP_DEFAULT_REOPT_COMMONTIMELIMIT TRUE /**< is the given time limit for all reoptimization round? */
 #define SCIP_DEFAULT_REOPT_SHRINKINNER     TRUE /**< replace branched transit nodes by their child nodes, if the number of bound changes is not to large */
 #define SCIP_DEFAULT_REOPT_STRONGBRANCHINIT TRUE/**< try to fix variables before reoptimizing by probing like strong branching */
@@ -1809,6 +1810,11 @@ SCIP_RETCODE SCIPsetCreate(
          "reoptimization/sepabestsol",
          "separate the optimal solution, i.e., for constrained shortest path",
          &(*set)->reopt_sepabestsol, TRUE, SCIP_DEFAULT_REOPT_SEPABESTSOL,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/storevarhistory",
+         "use variable history of the previous solve if the objctive function has changed only slightly",
+         &(*set)->reopt_storevarhistory, TRUE, SCIP_DEFAULT_REOPT_STOREVARHISTOTY,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "reoptimization/solvelp",

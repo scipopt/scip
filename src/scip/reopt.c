@@ -38,6 +38,7 @@
 #include "scip/cons_logicor.h"
 #include "scip/clock.h"
 #include "scip/heur_reoptsols.h"
+#include "scip/history.h"
 #include "blockmemshell/memory.h"
 
 #define DEFAULT_MEM_VARAFTERDUAL    10
@@ -4059,6 +4060,7 @@ SCIP_RETCODE SCIPreoptCreate(
    (*reopt)->ntotallocrestarts = 0;
    (*reopt)->firstrestart = 0;
    (*reopt)->lastrestart = 0;
+   (*reopt)->varhistory = NULL;
 
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*reopt)->prevbestsols, (*reopt)->runsize) );
    SCIP_ALLOC( BMSallocMemoryArray(&(*reopt)->objs, (*reopt)->runsize) );
@@ -5404,6 +5406,167 @@ SCIP_RETCODE SCIPreoptSaveOpenNodes(
    return SCIP_OKAY;
 }
 
+/** merges the variable history of the current run with the stored history */
+SCIP_RETCODE SCIPreoptMergeVarHistory(
+   SCIP_REOPT*           reopt,
+   SCIP_STAT*            stat,
+   SCIP_VAR**            vars,
+   int                   nvars
+   )
+{
+   int idx;
+   int v;
+
+   assert(reopt != NULL);
+   assert(stat != NULL);
+   assert(nvars >= 0);
+
+   if( reopt->simtolastobj < 0.975 || reopt->varhistory == NULL )
+   {
+      if( reopt->varhistory != NULL )
+      {
+         for( v = 0; v < nvars; v++ )
+         {
+            idx = SCIPvarGetProbindex(vars[v]);
+            assert(idx >= 0 && idx < nvars);
+
+            SCIPhistoryReset(reopt->varhistory[idx]);
+         }
+      }
+
+      return SCIP_OKAY;
+   }
+
+   for( v = 0; v < nvars; v++ )
+   {
+      idx = SCIPvarGetProbindex(vars[v]);
+      assert(0 <= idx && idx <= nvars);
+
+      SCIPvarSetHistory(vars[v], reopt->varhistory[idx], stat);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** updates the variable history */
+SCIP_RETCODE SCIPreoptUpdateVarHistory(
+   SCIP_REOPT*           reopt,
+   SCIP_SET*             set,
+   SCIP_STAT*            stat,
+   SCIP_PROB*            origprob,
+   SCIP_PROB*            transprob,
+   BMS_BLKMEM*           blkmem,
+   SCIP_VAR**            vars,
+   int                   nvars
+   )
+{
+   SCIP_SOL* lastoptsol;
+   SCIP_Real objdelta;
+   SCIP_Real oldobj;
+   int v;
+
+   assert(reopt != NULL);
+   assert(stat != NULL);
+   assert(blkmem != NULL);
+   assert(nvars >= 0);
+
+   SCIPdebugMessage("updating variable history\n");
+   printf("updating variable history\n");
+
+   if( reopt->varhistory == NULL )
+   {
+      /* allocate memory */
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->varhistory, nvars) );
+
+      for( v = 0; v < nvars; v++ )
+      {
+         SCIP_CALL( SCIPhistoryCreate(&(reopt->varhistory[v]), blkmem) );
+      }
+   }
+
+   /* optimal solution of the current run */
+   lastoptsol = reopt->prevbestsols[reopt->run-1];
+
+   /* bst objective value of the previous run */
+   if( reopt->run == 1 )
+      oldobj = 0;
+   else
+   {
+      assert(reopt->run >= 2);
+
+      oldobj = 0;
+      for( v = 0; v < nvars; v++ )
+      {
+         SCIP_Real objval;
+         SCIP_Real solval;
+         int idx;
+
+         idx = SCIPvarGetProbindex(vars[v]);
+         solval = SCIPsolGetVal(lastoptsol, set, stat, vars[v]);
+         objval = reopt->objs[reopt->run-2][idx];
+
+         oldobj += objval * solval;
+      }
+   }
+
+   /* the objective delta is defined as: new LP obj - old LP obj and has to be non-negative. for the reoptimization we
+    * are interested in the obj value of the best solution of the current iteration wrt the objective function of the
+    * previous iteration instead of the old LP obj.
+    * hence, c_{i}(x_{i}) <= c_{i-1}(x_{i}) <==> c_{i}(x_{i}) - c_{i-1}(x_{i}) <= 0 we multiply with -1.
+    */
+   objdelta = SCIPsolGetObj(lastoptsol, set, transprob, origprob) - oldobj;
+   objdelta *= -1.0;
+   assert(!SCIPsetIsNegative(set, objdelta));
+
+   /* update the history and scale them */
+   for( v = 0; v < nvars; v++ )
+   {
+      SCIP_Real solvedelta;
+      SCIP_Real avginference[2];
+      SCIP_Real avgcutoff[2];
+      int idx;
+      int d;
+
+      idx = SCIPvarGetProbindex(vars[v]);
+      assert(idx >= 0 && idx < nvars);
+
+      /* get and scale stored data and data from the current iteration for both directions */
+      for( d = 0; d <= 1; d++ )
+      {
+         /* pseudo cost */
+         if( d == 0 )
+            solvedelta = SCIPsolGetVal(lastoptsol, set, stat, vars[v]) - SCIPvarGetAvgSol(vars[v]);
+
+         /* inference score */
+         avginference[d] = SCIPvarGetAvgInferences(vars[v], stat, (SCIP_BRANCHDIR)d);
+         avginference[d] += SCIPhistoryGetAvgInferences(reopt->varhistory[idx], (SCIP_BRANCHDIR)d);
+         avginference[d] /= 2;
+
+         /* cutoff score */
+         avgcutoff[d] = SCIPvarGetAvgCutoffs(vars[v], stat, (SCIP_BRANCHDIR)d);
+         avgcutoff[d] += SCIPhistoryGetAvgCutoffs(reopt->varhistory[idx], (SCIP_BRANCHDIR)d);
+         avgcutoff[d] /= 2;
+      }
+
+      /* reset the history */
+      SCIPhistoryReset(reopt->varhistory[idx]);
+
+      /* set the updated history for both directions */
+      for( d = 0; d <= 1; d++ )
+      {
+         SCIPhistoryIncNBranchings(reopt->varhistory[idx], (SCIP_BRANCHDIR)d, 1);
+
+         if( d == 1 )
+            SCIPhistoryUpdatePseudocost(reopt->varhistory[idx], set, solvedelta, 0, 1);
+
+         SCIPhistoryIncInferenceSum(reopt->varhistory[idx], (SCIP_BRANCHDIR)d, avginference[d]);
+         SCIPhistoryIncCutoffSum(reopt->varhistory[idx], (SCIP_BRANCHDIR)d, avgcutoff[d]);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** reset the complete tree and set the given search frontier */
 SCIP_RETCODE SCIPreoptApplyCompression(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
@@ -6057,7 +6220,7 @@ SCIP_RETCODE SCIPreoptApply(
             /* set estimates */
             if( !SCIPsetIsInfinity(set, REALABS(reopt->reopttree->reoptnodes[id]->lowerbound)) )
             {
-               if( SCIPsetIsRelGE(set, reoptnode->lowerbound, SCIPnodeGetLowerbound(childnodes[c])))
+               if( SCIPsetIsRelGE(set, reoptnode->lowerbound, SCIPnodeGetLowerbound(childnodes[c])) )
                   SCIPnodeSetEstimate(childnodes[c], set, reoptnode->lowerbound);
             }
          }

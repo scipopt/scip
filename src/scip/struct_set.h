@@ -395,6 +395,7 @@ struct SCIP_Set
    SCIP_Bool             reopt_enable;       /**< enable reoptimization */
    SCIP_Bool             reopt_sepaglbinfsubtrees;/**< save global constraints to separate infeasible subtrees */
    SCIP_Bool             reopt_sepabestsol;  /**< separate only the best solution, i.e., for constrained shortest path */
+   SCIP_Bool             reopt_storevarhistory;/**< use variable history of the previouse solve if the objctive function has changed only slightly */
    SCIP_Bool             reopt_commontimelimit;/**< time limit over all reoptimization rounds? */
    SCIP_Bool             reopt_shrinkinner;  /**< replace branched inner nodes by their child nodes, if the number of bound changes is not to large */
    SCIP_Bool             reopt_sbinit;       /**< try to fix variables before reoptimizing by probing like strong branching */

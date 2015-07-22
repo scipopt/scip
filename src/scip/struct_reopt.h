@@ -123,6 +123,10 @@ struct SCIP_Reopt
    SCIP_Real             simtofirstobj;           /**< similarity to the first objective function */
    SCIP_Longint          lastbranched;            /**< number of the last branched node */
    SCIP_Longint          lastseennode;            /**< node number of the last caught event */
+
+   SCIP_HISTORY**        varhistory;
+
+   /* data structure to track decisions based on dual information */
    SCIP_Longint          currentnode;             /**< number of the current node */
    int                   run;                     /**< number of the current reoptimization run */
    int                   runsize;                 /**< allocated memory for runs */
