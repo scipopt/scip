@@ -2473,10 +2473,15 @@ void BMSdestroyBufferMemory_call(
 
    if ( *buffer != NULL )
    {
-      for (i = 0; i < (*buffer)->ndata; ++i)
-      {
-         assert( ! (*buffer)->used[i] );
-         BMSfreeMemoryArrayNull(&(*buffer)->data[i]);
+      i = (*buffer)->ndata;
+      if ( i > 0 ) {
+         for (--i ; ; i--)
+         {
+            assert( ! (*buffer)->used[i] );
+            BMSfreeMemoryArrayNull(&(*buffer)->data[i]);
+            if ( i == 0 )
+               break;
+         }
       }
       BMSfreeMemoryArrayNull(&(*buffer)->data);
       BMSfreeMemoryArrayNull(&(*buffer)->size);
