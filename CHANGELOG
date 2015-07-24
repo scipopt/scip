@@ -2,12 +2,14 @@ SCIP version NEXT
 ==================
 
 features:
+- can now solve relaxations within probing
 
 parameters:
 
 performance improvements:
 
 interface:
+- new function SCIPsolveProbingRelax() to solve a relaxation within probing
 
 fixed bugs:
 

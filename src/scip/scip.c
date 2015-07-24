@@ -32507,6 +32507,85 @@ SCIP_RETCODE SCIPapplyCutsProbing(
    return SCIP_OKAY;
 }
 
+/** solves relaxation(s) at the current probing node (cannot be applied at preprocessing stage);
+ *  no separation or pricing is applied
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPsolveProbingRelax(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a relaxation was infeasible or the objective
+                                              *   limit was reached (or NULL, if not needed) */
+   )
+{
+   SCIP_SET* set;
+   int r;
+
+   SCIP_CALL( checkStage(scip, "SCIPsolveProbingRelax", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if ( ! SCIPtreeProbing(scip->tree) )
+   {
+      SCIPerrorMessage("not in probing mode\n");
+      return SCIP_INVALIDCALL;
+   }
+   assert( SCIPtreeGetCurrentDepth(scip->tree) > 0 );
+
+   assert( cutoff != NULL );
+   *cutoff = FALSE;
+
+   set = scip->set;
+
+   /* sort relaxators by priority */
+   SCIPsetSortRelaxs(set);
+
+   /* solve relaxations */
+   for (r = 0; r < set->nrelaxs && !(*cutoff); ++r)
+   {
+      SCIP_RELAX* relax;
+      SCIP_Real lowerbound;
+      SCIP_RESULT result;
+
+      lowerbound = -SCIPinfinity(scip);
+
+      relax = set->relaxs[r];
+      assert( relax != NULL );
+
+      SCIP_CALL( SCIPrelaxExec(relax, set, scip->stat, SCIPtreeGetCurrentDepth(scip->tree), &lowerbound, &result) );
+
+      /* ?????????????? todo: check lowerbound for cutoff */
+
+
+      switch( result )
+      {
+      case SCIP_CUTOFF:
+         *cutoff = TRUE;
+         SCIPdebugMessage(" -> relaxator <%s> detected cutoff\n", SCIPrelaxGetName(relax));
+         break;
+
+      case SCIP_CONSADDED:
+      case SCIP_REDUCEDDOM:
+      case SCIP_SEPARATED:
+      case SCIP_SUSPENDED:
+         SCIPerrorMessage("The relaxator should not return <%d> within probing mode.\n", result);
+         break;
+
+      case SCIP_SUCCESS:
+      case SCIP_DIDNOTRUN:
+         break;
+
+      default:
+         SCIPerrorMessage("Invalid result code <%d> of relaxator <%s>\n", result, SCIPrelaxGetName(relax));
+         return SCIP_INVALIDRESULT;
+      }  /*lint !e788*/
+   }
+
+   return SCIP_OKAY;
+}
+
 /** gets the candidate score and preferred rounding direction for a candidate variable */
 SCIP_RETCODE SCIPgetDivesetScore(
    SCIP*                 scip,               /**< SCIP data structure */
