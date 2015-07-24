@@ -23,6 +23,9 @@
 #ifndef __SCIP_DEF_H__
 #define __SCIP_DEF_H__
 
+#ifdef __cplusplus
+#define __STDC_LIMIT_MACROS
+#endif
 
 #include <stdio.h>
 #include <stdint.h>

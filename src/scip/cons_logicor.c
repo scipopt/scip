@@ -4759,7 +4759,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    *success = FALSE;
 
    /* cutoff "logicor" from the constraint string */
-   startptr = strchr(str, '('); /*lint !e158*/
+   startptr = strchr((char*)str, '(');
 
    if( startptr == NULL )
    {
