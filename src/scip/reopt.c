@@ -2115,7 +2115,8 @@ SCIP_RETCODE addNode(
 #endif
 
       /* update LPI state if node is pseudobranched or feasible */
-      switch( reopttype ) {
+      switch( reopttype )
+      {
          case SCIP_REOPTTYPE_TRANSIT:
             assert(reopt->reopttree->reoptnodes[id]->nconss == 0);
 
@@ -2195,7 +2196,8 @@ SCIP_RETCODE addNode(
    {
       id = 0;
 
-      switch( reopttype ) {
+      switch( reopttype )
+      {
          case SCIP_REOPTTYPE_TRANSIT:
             /* ensure that no dual constraints are stored */
             SCIP_CALL( SCIPreoptResetDualBndchgs(reopt, node, blkmem) );
@@ -2430,7 +2432,8 @@ SCIP_RETCODE addNode(
 #endif
    }
 
-   switch( reopttype ) {
+   switch( reopttype )
+   {
       case SCIP_REOPTTYPE_TRANSIT:
       case SCIP_REOPTTYPE_LOGICORNODE:
       case SCIP_REOPTTYPE_LEAF:
@@ -4978,7 +4981,8 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
    SCIPdebugMessage(" -> strong branched : %s\n", strongbranched ? "yes" : "no");
    SCIPdebugMessage(" -> LP lpsolstat    : %d\n", lpsolstat);
 
-   switch( eventtype ) {
+   switch( eventtype )
+   {
       case SCIP_EVENTTYPE_NODEFEASIBLE:
          /* current node has to be the eventnode */
          assert(isfocusnode);
@@ -5555,7 +5559,8 @@ SCIP_RETCODE SCIPreoptSplitRoot(
       nvars = reopttree->reoptnodes[0]->dualconscur->nvars;
 
       /* calculate the order of the variables */
-      switch (set->reopt_varorderinterdiction) {
+      switch (set->reopt_varorderinterdiction)
+      {
          case 'd':
             break;
 
