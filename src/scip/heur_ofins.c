@@ -262,6 +262,10 @@ SCIP_RETCODE applyOfins(
 
    *result = SCIP_DIDNOTFIND;
 
+   /* do not run, if no solution was found */
+   if ( SCIPgetReoptLastOptSol(scip) == NULL )
+      return SCIP_OKAY;
+
    /* get variable data */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
