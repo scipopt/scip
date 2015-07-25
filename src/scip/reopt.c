@@ -72,8 +72,7 @@ SCIP_DECL_EVENTEXEC(eventExecReopt)
    assert( eventnode != NULL );
 
    /* skip if the node is not the focus nodes */
-   if( SCIPnodeGetType(eventnode) != SCIP_NODETYPE_FOCUSNODE
-    || SCIPnodeGetDepth(eventnode) != SCIPgetEffectiveRootDepth(scip) )
+   if( SCIPnodeGetType(eventnode) != SCIP_NODETYPE_FOCUSNODE || SCIPnodeGetDepth(eventnode) != SCIPgetEffectiveRootDepth(scip) )
       return SCIP_OKAY;
 
    SCIPdebugMessage("catch event for node %lld: <%s>: %g -> %g\n", SCIPnodeGetNumber(eventnode),
@@ -1144,14 +1143,14 @@ SCIP_RETCODE updateConstraintPropagation(
    return SCIP_OKAY;
 }
 
-/** save bound changes made after the first bound change based on dual information, e.g., mode by strong branching.
+/** save bound changes made after the first bound change based on dual information, e.g., mode by strong branching
  *
- *  this method is can be used during reoptimization. if we want to reconstruct a node containing dual bound changes we
+ *  This method is can be used during reoptimization. if we want to reconstruct a node containing dual bound changes we
  *  have to split the node into the original one and at least one node representing the pruned part. all bound changes,
  *  i.e., (constraint) propagation, made after the first bound change based on dual information are still valid for
  *  the original node after changing the objective function. thus, we can store them for the following iterations.
  *
- *  it should be noted, that these bound change will be found by (constraint) propagation methods anyway after changing
+ *  It should be noted, that these bound change will be found by (constraint) propagation methods anyway after changing
  *  the objective function. do not saving these information and find them again might be useful for conflict analysis.
  */
 static
@@ -1202,9 +1201,12 @@ SCIP_RETCODE saveAfterDualBranchings(
    {
       int newsize;
       newsize = nbranchvars + 1;
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvars), reopt->reopttree->reoptnodes[id]->afterdualvarssize, newsize) );
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvarbounds), reopt->reopttree->reoptnodes[id]->afterdualvarssize, newsize) );
-      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes), reopt->reopttree->reoptnodes[id]->afterdualvarssize, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvars),
+            reopt->reopttree->reoptnodes[id]->afterdualvarssize, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvarbounds),
+            reopt->reopttree->reoptnodes[id]->afterdualvarssize, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &(reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes),
+            reopt->reopttree->reoptnodes[id]->afterdualvarssize, newsize) );
       reopt->reopttree->reoptnodes[id]->afterdualvarssize = newsize;
 
       SCIPnodeGetBdChgsAfterDual(node,
@@ -1383,7 +1385,8 @@ SCIP_RETCODE moveChildrenUp(
    assert(reopt->reopttree->reoptnodes[nodeid]->childids != NULL);
 
    /* ensure that enough memory at the parentID is available */
-   SCIP_CALL( reoptnodeCheckMemory(reopt->reopttree->reoptnodes[parentid], blkmem, 0, reopt->reopttree->reoptnodes[parentid]->nchilds + reopt->reopttree->reoptnodes[nodeid]->nchilds, 0) );
+   SCIP_CALL( reoptnodeCheckMemory(reopt->reopttree->reoptnodes[parentid], blkmem, 0,
+         reopt->reopttree->reoptnodes[parentid]->nchilds + reopt->reopttree->reoptnodes[nodeid]->nchilds, 0) );
 
    while( reopt->reopttree->reoptnodes[nodeid]->nchilds > 0 )
    {
@@ -1394,7 +1397,8 @@ SCIP_RETCODE moveChildrenUp(
       assert(0 < childid && childid < reopt->reopttree->reoptnodessize);
 
       /* check the memory */
-      SCIP_CALL( reoptnodeCheckMemory(reopt->reopttree->reoptnodes[childid], blkmem, reopt->reopttree->reoptnodes[childid]->nvars + reopt->reopttree->reoptnodes[nodeid]->nvars, 0, 0) );
+      SCIP_CALL( reoptnodeCheckMemory(reopt->reopttree->reoptnodes[childid], blkmem,
+            reopt->reopttree->reoptnodes[childid]->nvars + reopt->reopttree->reoptnodes[nodeid]->nvars, 0, 0) );
       assert(reopt->reopttree->reoptnodes[childid]->varssize >= reopt->reopttree->reoptnodes[childid]->nvars + reopt->reopttree->reoptnodes[nodeid]->nvars);
 
       /* save branching information */
@@ -1880,10 +1884,10 @@ SCIP_RETCODE saveLocalConssData(
 
 /** collect all bound changes based on dual information
  *
- *  if the bound changes are global, all information are already stored because they were caught by the event handler.
+ *  If the bound changes are global, all information are already stored because they were caught by the event handler.
  *  otherwise, we have to use SCIPnodeGetDualBoundchgs.
  *
- *  afterwards, we check if the constraint will be added in the next iteration or after splitting the node.
+ *  Afterwards, we check if the constraint will be added in the next iteration or after splitting the node.
  */
 static
 SCIP_RETCODE collectDualInformation(

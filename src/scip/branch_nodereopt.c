@@ -40,12 +40,12 @@
  */
 
 
-/** Execute the branching of nodes with additional constraints. */
+/** execute the branching of nodes with additional constraints */
 static
 SCIP_RETCODE Exec(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RESULT*          result              /**< pointer to store the result */
-)
+   )
 {
    SCIP_REOPTNODE* reoptnode;
    SCIP_NODE* curnode;
@@ -58,7 +58,6 @@ SCIP_RETCODE Exec(
    int childnodessize;
    int ncreatednodes;
    int c;
-
 
    assert(scip != NULL );
    assert(SCIPisReoptEnabled(scip));
@@ -174,8 +173,7 @@ SCIP_RETCODE Exec(
       if( reopttype == SCIP_REOPTTYPE_STRBRANCHED || reopttype == SCIP_REOPTTYPE_INFSUBTREE )
       {
          /* by default we assume the node get split into two node (because using a constraint to split the node is
-          * the default case
-          */
+          * the default case */
          childnodessize = 2;
       }
       else
@@ -254,7 +252,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpnodereopt)
       SCIP_CALL( SCIPgetRealParam(scip, "reoptimization/objsimrootLP", &objsimrootlp) );
 
       if( sbinit && SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip)
-       && SCIPgetReoptSimilarity(scip, SCIPgetNReoptRuns(scip), SCIPgetNReoptRuns(scip)) <= objsimrootlp ) /* check objsimrootlp */
+         && SCIPgetReoptSimilarity(scip, SCIPgetNReoptRuns(scip), SCIPgetNReoptRuns(scip)) <= objsimrootlp ) /* check objsimrootlp */
       {
          /* get branching candidates */
          SCIP_CALL( SCIPgetLPBranchCands(scip, &branchcands, &branchcandssol, &branchcandsfrac, NULL, &nbranchcands, NULL) );

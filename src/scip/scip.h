@@ -6257,7 +6257,7 @@ SCIP_RETCODE SCIPenableReoptimization(
    SCIP_Bool             enable              /**< enable reoptimization */
    );
 
-/** returns whether reoptimization is enabledor not */
+/** returns whether reoptimization is enabled or not */
 EXTERN
 SCIP_Bool SCIPisReoptEnabled(
    SCIP*                 scip                /**< SCIP data structure */
@@ -17511,8 +17511,8 @@ SCIP_RETCODE SCIPgetReoptLeaveIDs(
    int*                  nids                /**< number of child nodes */
    );
 
-/** returns the number of nodes in the reoptimization tree induced by @p node. if @p node == NULL, the method
- *  method returns the number of nodes of the whole reoptimization tree.
+/** returns the number of nodes in the reoptimization tree induced by @p node; if @p node == NULL, the method
+ *  returns the number of nodes of the whole reoptimization tree.
  */
 EXTERN
 int SCIPgetNReoptnodes(
@@ -17520,8 +17520,8 @@ int SCIPgetNReoptnodes(
    SCIP_NODE*            node                /**< node of the search tree */
    );
 
-/** returns the number of leave nodes of the subtree induced by @p node. if @p node == NULL, the method
- *  method returns the number of leaf nodes of the whole reoptimization tree.
+/** returns the number of leave nodes of the subtree induced by @p node; if @p node == NULL, the method
+ *  returns the number of leaf nodes of the whole reoptimization tree.
  */
 EXTERN
 int SCIPgetNReoptLeaves(

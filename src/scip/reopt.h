@@ -219,7 +219,7 @@ SCIP_Real SCIPreoptGetOldObjCoef(
    int                   idx                 /**< problem index of variable */
    );
 
-/** return the best solution of a given run.
+/** return the best solution of a given run
  *
  *  @note the returned solution is part of the original space.
  */

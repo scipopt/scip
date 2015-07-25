@@ -99,7 +99,7 @@
 #include "scip/cons_linear.h"
 
 /* We need to include the branching and the heurtistics for reoptimization after creating the reoptimization because we
- * do not want to build this plugins by default if reoptimization is disabled. */
+ * do not want to use these plugins by default if reoptimization is disabled. */
 #include "scip/branch_nodereopt.h"
 #include "scip/heur_reoptsols.h"
 #include "scip/heur_trivialnegation.h"
@@ -14720,7 +14720,7 @@ SCIP_RETCODE SCIPsolve(
 
    /* we have to store all unprocessed nodes if reoptimization is enabled */
    if( scip->set->reopt_enable && scip->set->stage != SCIP_STAGE_PRESOLVING
-    && SCIPsolveIsStopped(scip->set, scip->stat, TRUE) && SCIPgetNNodesLeft(scip) > 0 )
+      && SCIPsolveIsStopped(scip->set, scip->stat, TRUE) && SCIPgetNNodesLeft(scip) > 0 )
    {
          SCIP_NODE** leaves;
          SCIP_NODE** children;
@@ -15077,7 +15077,7 @@ SCIP_RETCODE SCIPgetReoptLeaveIDs(
    unsigned int*         ids,                /**< array of ids */
    int                   idssize,            /**< size of ids array */
    int*                  nids                /**< number of child nodes */
-)
+   )
 {
    assert(scip != NULL);
 
@@ -15093,8 +15093,8 @@ SCIP_RETCODE SCIPgetReoptLeaveIDs(
    return SCIP_OKAY;
 }
 
-/** returns the number of nodes in the reoptimization tree induced by @p node. if @p node == NULL the method
- * returns the number of nodes of the whole reoptimization tree.
+/** returns the number of nodes in the reoptimization tree induced by @p node; if @p node == NULL the method
+ *  returns the number of nodes of the whole reoptimization tree.
  */
 int SCIPgetNReoptnodes(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -15108,7 +15108,7 @@ int SCIPgetNReoptnodes(
    return SCIPreoptGetNNodes(scip->reopt, node);
 }
 
-/** returns the number of leaf nodes of the subtree induced by @p node. if @p node == NULL, the method
+/** returns the number of leaf nodes of the subtree induced by @p node; if @p node == NULL, the method
  *  returns the number of leaf nodes of the whole reoptimization tree.
  */
 int SCIPgetNReoptLeaves(
@@ -15563,7 +15563,7 @@ SCIP_RETCODE SCIPrestartSolve(
    return SCIP_OKAY;
 }
 
-/** returns whether reoptimization is enabledor not */
+/** returns whether reoptimization is enabled or not */
 SCIP_Bool SCIPisReoptEnabled(
    SCIP*                 scip                /**< SCIP data structure */
    )
