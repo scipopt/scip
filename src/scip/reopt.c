@@ -4584,7 +4584,6 @@ SCIP_SOL* SCIPreoptGetLastBestSol(
       return NULL;
    else
    {
-      assert(reopt->prevbestsols[reopt->run-2] != NULL);
       return reopt->prevbestsols[reopt->run-2];
    }
 }
