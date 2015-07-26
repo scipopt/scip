@@ -14719,27 +14719,27 @@ SCIP_RETCODE SCIPsolve(
    while( restart && !SCIPsolveIsStopped(scip->set, scip->stat, TRUE) );
 
    /* we have to store all unprocessed nodes if reoptimization is enabled */
-   if( scip->set->reopt_enable && scip->set->stage != SCIP_STAGE_PRESOLVING
+   if( scip->set->reopt_enable && scip->set->stage != SCIP_STAGE_PRESOLVING && scip->set->stage != SCIP_STAGE_SOLVED
       && SCIPsolveIsStopped(scip->set, scip->stat, TRUE) && SCIPgetNNodesLeft(scip) > 0 )
    {
-         SCIP_NODE** leaves;
-         SCIP_NODE** children;
-         SCIP_NODE** siblings;
-         int nleaves;
-         int nchildren;
-         int nsiblings;
+      SCIP_NODE** leaves;
+      SCIP_NODE** children;
+      SCIP_NODE** siblings;
+      int nleaves;
+      int nchildren;
+      int nsiblings;
 
-         /* get all open leave nodes */
-         SCIP_CALL( SCIPgetLeaves(scip, &leaves, &nleaves) );
+      /* get all open leave nodes */
+      SCIP_CALL( SCIPgetLeaves(scip, &leaves, &nleaves) );
 
-         /* get all open children nodes */
-         SCIP_CALL( SCIPgetChildren(scip, &children, &nchildren) );
+      /* get all open children nodes */
+      SCIP_CALL( SCIPgetChildren(scip, &children, &nchildren) );
 
-         /* get all open sibling nodes */
-         SCIP_CALL( SCIPgetSiblings(scip, &siblings, &nsiblings) );
+      /* get all open sibling nodes */
+      SCIP_CALL( SCIPgetSiblings(scip, &siblings, &nsiblings) );
 
-         /* add all open node to the reoptimization tree */
-         SCIP_CALL( SCIPreoptSaveOpenNodes(scip->reopt, scip->set, scip->mem->probmem, leaves, nleaves, children, nchildren, siblings, nsiblings) );
+      /* add all open node to the reoptimization tree */
+      SCIP_CALL( SCIPreoptSaveOpenNodes(scip->reopt, scip->set, scip->mem->probmem, leaves, nleaves, children, nchildren, siblings, nsiblings) );
    }
 
    /* release the CTRL-C interrupt */

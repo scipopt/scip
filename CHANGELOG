@@ -1,3 +1,18 @@
+SCIP version NEXT
+==================
+
+features:
+
+parameters:
+
+performance improvements:
+
+interface:
+
+fixed bugs:
+- fixed some problem with reoptimization when the problems are infeasible or have been solved in presolving
+
+
 SCIP version 3.2.0
 ==================
 
