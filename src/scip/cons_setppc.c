@@ -5306,17 +5306,13 @@ SCIP_RETCODE addCliques(
 static
 SCIP_RETCODE multiAggregateBinvar(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             linearconshdlrexist,/**< does the linear constraint handler exist, necessaray for
-                                              *   multi-aggregations
-                                              */
-   SCIP_VAR**            vars,               /**< all variables including the variable to which will be
-                                              *   multi-aggregated
-                                              */
+   SCIP_Bool             linearconshdlrexist,/**< does the linear constraint handler exist, necessaray for multi-aggregations */
+   SCIP_VAR**            vars,               /**< all variables including the variable to which will be multi-aggregated */
    int                   nvars,              /**< number of all variables */
    int                   pos,                /**< position of variable for multi-aggregation */
    SCIP_Bool*            infeasible,         /**< pointer to store infeasibility status of aggregation */
    SCIP_Bool*            aggregated          /**< pointer to store aggregation status */
-)
+   )
 {
    SCIP_VAR** tmpvars;
    SCIP_Real* scalars;
@@ -6168,7 +6164,7 @@ SCIP_RETCODE detectRedundantConstraints(
    int*                  firstchange,        /**< pointer to store first changed constraint */
    int*                  ndelconss,          /**< pointer to count number of deleted constraints */
    int*                  nchgsides           /**< pointer to count number of changed left/right hand sides */
-)
+   )
 {
    SCIP_HASHTABLE* hashtable;
    int hashtablesize;
