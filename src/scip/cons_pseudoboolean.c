@@ -4133,7 +4133,7 @@ SCIP_RETCODE correctLocksAndCaptures(
    SCIP_Real const       newrhs,             /**< new right hand side of pseudoboolean constraint */
    SCIP_VAR**const       andress,            /**< current and-resultants in pseudoboolean constraint */
    SCIP_Real*const       andcoefs,           /**< current and-resultants-coeffcients in pseudoboolean constraint */
-   SCIP_Bool*const       andnegs,           /**< current negation status of and-resultants in pseudoboolean constraint */
+   SCIP_Bool*const       andnegs,            /**< current negation status of and-resultants in pseudoboolean constraint */
    int const             nandress            /**< number of current and-resultants in pseudoboolean constraint */
    )
 {
