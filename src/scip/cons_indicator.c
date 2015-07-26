@@ -3705,7 +3705,7 @@ SCIP_RETCODE enforceCuts(
    SCIP_SOL*             sol,                /**< solution to be enforced */
    SCIP_Bool             genlogicor,         /**< whether logicor constraint should be generated */
    int*                  nGen                /**< number of cuts generated */
-)
+   )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_LPI* lp;

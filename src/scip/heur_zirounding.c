@@ -302,7 +302,7 @@ void rowFindSlackVar(
    SCIP_ROW*             row,                /**< the row for which a slack variable is searched */
    SCIP_VAR**            varpointer,         /**< pointer to store the slack variable */
    SCIP_Real*            coeffpointer        /**< pointer to store the coefficient of the slack variable */
-)
+   )
 {
    int v;
    SCIP_COL** rowcols;

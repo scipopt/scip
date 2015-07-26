@@ -7219,7 +7219,7 @@ void SCIPnodeGetDualBoundchgs(
                                               *   if this is larger than the array size, arrays should be reallocated and method
                                               *   should be called again */
    int                   varssize            /**< available slots in arrays */
-)
+   )
 {  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;

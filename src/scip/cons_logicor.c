@@ -1907,7 +1907,7 @@ SCIP_RETCODE detectRedundantConstraints(
    int                   nconss,             /**< number of constraints in constraint set */
    int*                  firstchange,        /**< pointer to store first changed constraint */
    int*                  ndelconss           /**< pointer to count number of deleted constraints */
-)
+   )
 {
    SCIP_HASHTABLE* hashtable;
    int hashtablesize;

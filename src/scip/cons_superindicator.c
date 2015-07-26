@@ -288,7 +288,7 @@ SCIP_RETCODE upgradeIndicatorSuperindicator(
    SCIP_CONS*            cons,               /**< superindicator constraint to be upgraded */
    SCIP_Bool*            success,            /**< pointer to store if the upgrading was successful */
    SCIP_Bool*            deleted             /**< pointer to store if the constraint was deleted */
-)
+   )
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
@@ -404,7 +404,7 @@ SCIP_RETCODE upgradeLinearSuperindicator(
    SCIP_CONS*            cons,               /**< superindicator constraint to be upgraded */
    SCIP_Bool*            success,            /**< pointer to store if the upgrading was successful */
    SCIP_Bool*            deleted             /**< pointer to store if the constraint was deleted */
-)
+   )
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;

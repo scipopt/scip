@@ -3568,7 +3568,7 @@ SCIP_RETCODE detectRedundantConstraints(
    int*                  ndelconss,          /**< pointer to count number of deleted constraints */
    int*                  naddconss,          /**< pointer to count number of added constraints */
    SCIP_Bool*            cutoff              /**< pointer to store TRUE, if a cutoff was found */
-)
+   )
 {
    SCIP_HASHTABLE* hashtable;
    int hashtablesize;

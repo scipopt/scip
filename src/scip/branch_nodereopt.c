@@ -322,7 +322,7 @@ static SCIP_DECL_BRANCHEXECPS(branchExecpsnodereopt)
 /** creates the nodereopt branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleNodereopt(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_BRANCHRULE* branchrule;
    SCIP_BRANCHRULEDATA* branchruledata;

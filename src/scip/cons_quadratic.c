@@ -7213,7 +7213,7 @@ SCIP_RETCODE computeInteriorPoint(
    SCIP_CONS*            cons,               /**< constraint */
    char                  method,             /**< method for computing interior point ('a' any point, 'm'ost interior) */
    SCIP_Bool*            success             /**< buffer to store if an interior point was found */
-)
+   )
 {
    SCIP_CONSDATA* consdata;
    SCIP_QUADELEM* nlrowquadelems;

@@ -177,7 +177,7 @@ void SCIPvisualExit(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
-  )
+   )
 {
    assert( visual != NULL );
    assert( set != NULL );

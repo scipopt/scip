@@ -4123,7 +4123,7 @@ void SCIPconshdlrSetTrans(
 void SCIPconshdlrSetInitlp(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_DECL_CONSINITLP  ((*consinitlp))     /**< initialize LP with relaxations of "initial" constraints */
-         )
+   )
 {
    assert(conshdlr != NULL);
 

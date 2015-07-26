@@ -1204,7 +1204,7 @@ SCIP_RETCODE updatePrimalRay(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Bool             lperror             /**< has there been an LP error? */
-)
+   )
 {
    assert(blkmem != NULL);
    assert(set != NULL);
@@ -3597,7 +3597,7 @@ static
 SCIP_Bool restartAllowed(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
-)
+   )
 {
    assert(set != NULL);
    assert(stat != NULL);

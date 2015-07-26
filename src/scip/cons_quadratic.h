@@ -498,7 +498,7 @@ EXTERN
 SCIP_Bool SCIPisLinearLocalQuadratic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint */
-);
+   );
 
 /** Adds the constraint to an NLPI problem. */
 EXTERN

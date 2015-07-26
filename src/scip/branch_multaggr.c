@@ -1033,7 +1033,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
 /** creates the multi-aggregated branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleMultAggr(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_BRANCHRULE* branchrule;

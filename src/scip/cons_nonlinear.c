@@ -4948,7 +4948,7 @@ SCIP_RETCODE addUserEstimator(
    SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
    SCIP_ROW*             row,                /**< row where to add cut */
    SCIP_Bool*            success             /**< buffer to store whether a cut was succefully added to the row */
-)
+   )
 {
    SCIP_CONSDATA* consdata;
    SCIP_EXPRTREE* exprtree;

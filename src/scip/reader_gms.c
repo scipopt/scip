@@ -1355,7 +1355,7 @@ SCIP_RETCODE printExpr(
    SCIP_Bool             transformed,        /**< expression belongs to transformed constraint? */
    SCIP_EXPR*            expr,               /**< expression to print */
    SCIP_VAR**            exprvars            /**< variables of expression */
-)
+   )
 {
    char buffer[GMS_MAX_PRINTLEN];
 

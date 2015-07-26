@@ -199,7 +199,7 @@ SCIP_DECL_BRANCHEXECPS(branchExecpsXyz)
 /** creates the xyz branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleXyz(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_BRANCHRULE* branchrule;
