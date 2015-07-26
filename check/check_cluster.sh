@@ -160,8 +160,16 @@ do
                 continue
             fi
 
+            if test "$BINNAME" = "cplex"
+            then
+                CONFFILE=configuration_tmpfile_setup_cplex.sh
+                JOBNAME=CPLEX
+            else
+                CONFFILE=configuration_tmpfile_setup_scip.sh
+                JOBNAME=SCIP
+            fi
             # call tmp file configuration for SCIP
-            . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $SCIP_INSTANCEPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
+            . ./${CONFFILE} $INSTANCE $SCIPPATH $SCIP_INSTANCEPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
             	$FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $SOLUFILE
 
             # check queue type
@@ -169,17 +177,22 @@ do
             then
             # additional environment variables needed by run.sh
                 export SOLVERPATH=$SCIPPATH
-                export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
+                if test "$JOBNAME" = "SCIP"
+                then
+                    export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
+                else
+                    export EXECNAME=$BINNAME
+                fi
                 export BASENAME=$FILENAME
                 export FILENAME=$SCIP_INSTANCEPATH/$INSTANCE
                 export CLIENTTMPDIR
                 export HARDTIMELIMIT
                 export HARDMEMLIMIT
                 export CHECKERPATH=$SCIPPATH/solchecker
-                sbatch --job-name=SCIP$SHORTPROBNAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
+                sbatch --job-name=${JOBNAME}${SHORTPROBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
             else
                 # -V to copy all environment variables
-                qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N SCIP$SHORTPROBNAME -v SOLVERPATH=$SCIPPATH,EXECNAME=$SCIPPATH/../$BINNAME, \
+                qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME}$SHORTPROBNAME -v SOLVERPATH=$SCIPPATH,EXECNAME=$SCIPPATH/../$BINNAME, \
                     BASENAME=$FILENAME,FILENAME=$SCIP_INSTANCEPATH/$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
             fi
         done # end for SETNAME
