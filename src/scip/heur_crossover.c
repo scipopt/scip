@@ -241,14 +241,16 @@ SCIP_Bool solHasNewSource(
    int*                  selection,          /**< pool of solutions crossover uses */
    int                   selectionsize,      /**< size of solution pool */
    int                   newsol              /**< candidate solution */
-)
+   )
 {
    int i;
 
    for( i = 0; i < selectionsize; i++)
+   {
       if( SCIPsolGetHeur(sols[selection[i]]) == SCIPsolGetHeur(sols[newsol])
          && SCIPsolGetNodenum(sols[selection[i]]) == SCIPsolGetNodenum(sols[newsol]) )
          return FALSE;
+   }
 
    return TRUE;
 }
