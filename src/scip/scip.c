@@ -14795,7 +14795,7 @@ SCIP_RETCODE SCIPsolve(
    SCIPclockStop(scip->stat->solvingtimeoverall, scip->set);
 
    /* decrease time limit during reoptimization */
-   if( scip->set->reopt_commontimelimit )
+   if( scip->set->reopt_enable && scip->set->reopt_commontimelimit )
    {
       SCIP_Real timelimit;
       SCIP_Real usedtime;
