@@ -25,6 +25,19 @@
 #    SOLUFILE - .solu file for this test set, for parsing optimal solution values
 #    VALGRINDCMD - the valgrind command to use
 
+# function to capitalize a whole string
+function capitalize {
+    echo "$1" | tr '[:lower:]' '[:upper:]'
+}
+
+# function to strip version of, e.g., scip-3.2... to only scip
+function stripversion {
+    NAMENOPATH=`basename $1`
+    # by '%%', Trim the longest match from the end
+    NAMENOVERSION=${NAMENOPATH%%-*}
+    echo $NAMENOVERSION
+}
+
 # input environment - these environment variables should be set before invoking this script
 BINNAME=$1       # name of the binary
 TSTNAME=$2       # name of the test set
@@ -39,11 +52,15 @@ SETCUTOFF=$9     # set this to 1 if you want the scripts to (try to) pass a best
 # get current SCIP path
 SCIPPATH=`pwd`
 
-# check if binary exists
-if test ! -e $SCIPPATH/../$BINNAME
+# check if binary exists. The second condition checks whether there is a binary of that name directly available
+# independent of whether it is a symlink, file in the working directory, or application in the path
+if test ! -e $SCIPPATH/../$BINNAME && ! type $BINNAME >/dev/null 2>&1
 then
-    echo Skipping test since the binary $BINNAME does not exist.
-    exit
+   echo "ERROR: \"$BINNAME\" not found."
+   echo "       This is needed by ${0} to work. Check your"
+   echo "       \$PATH variable or install the tool \"$BINNAME\"."
+   echo Skipping test since the binary $BINNAME does not exist.
+   exit 2
 fi
 
 # create results directory if it doesn't already exist

@@ -13,6 +13,7 @@
 #*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
 TSTNAME=$1
 BINNAME=$2
 SETNAMES=$3
@@ -33,9 +34,10 @@ REOPT=${17}
 OPTCOMMAND=${18}
 SETCUTOFF=${19}
 MAXJOBS=${20}
+VISUALIZE=${21}
 
 # check if all variables defined (by checking the last one)
-if test -z $MAXJOBS
+if test -z $VISUALIZE
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -58,6 +60,7 @@ then
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"
     echo "MAXJOBS       = $MAXJOBS"
+    echo "VISUALIZE     = $VISUALIZE"
     exit 1;
 fi
 
@@ -122,14 +125,26 @@ do
             continue
         fi
 
+        # find out the solver that should be used
+        SOLVER=`stripversion $BINNAME`
+
+        CONFFILE="configuration_tmpfile_setup_${SOLVER}.sh"
+
         # overwrite the tmp file now
         # call tmp file configuration for SCIP
-        . ./configuration_tmpfile_setup_scip.sh $INSTANCE $SCIPPATH $SCIP_INSTANCEPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
-        	$FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ  $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $SOLUFILE
+        . ./$CONFFILE $INSTANCE $SCIPPATH $SCIP_INSTANCEPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
+            $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ  $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $VISUALIZE $SOLUFILE
 
         # additional environment variables needed by run.sh
         export SOLVERPATH=$SCIPPATH
-        export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
+        EXECNAME=$BINNAME
+
+        if test "$SOLVER" = "scip"
+        then
+            export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
+        else
+            export EXECNAME=$BINNAME
+        fi
         export BASENAME=$FILENAME
         export FILENAME=$SCIP_INSTANCEPATH/$INSTANCE
         export SOLNAME=$SOLCHECKFILE

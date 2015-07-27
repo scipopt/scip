@@ -57,6 +57,7 @@ CLIENTTMPDIR    =       /tmp
 REOPT		=	false
 OPTCOMMAND	=	optimize
 SETCUTOFF	=	0
+VISUALIZE       =       false
 MAXJOBS         =       1
 
 
