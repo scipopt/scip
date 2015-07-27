@@ -11,7 +11,7 @@ testcluster:
 		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) false $(OPTCOMMAND) $(SETCUTOFF);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) false $(OPTCOMMAND) $(SETCUTOFF) $VISUALIZE;
 
 .PHONY: testclusterreopt
 testclusterreopt:
@@ -26,10 +26,10 @@ testclusterreopt:
 testclustercpx:
 		cd check; \
 		$(SHELL) ./check_cluster.sh $(TEST) $(CPLEX) $(SETTINGS) \
-                $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
+                $(notdir $(CPLEX)).$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
                 $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
                 $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) false $(OPTCOMMAND) $(SETCUTOFF);
+                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) false $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
 .PHONY: testclustercbc
 testclustercbc:

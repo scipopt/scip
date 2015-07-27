@@ -38,7 +38,8 @@ OPTCOMMAND=${16} # - command that should per executed after reading the instance
 CLIENTTMPDIR=${17}
 SOLBASENAME=${18}
 SETCUTOFF=${19}
-SOLUFILE=${20}   # - solu file, only necessary if $SETCUTOFF is 1
+VISUALIZE=${20}
+SOLUFILE=${21}   # - solu file, only necessary if $SETCUTOFF is 1
 
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
@@ -84,6 +85,13 @@ then
     exit 1
 fi
 
+if test "$VISUALIZE" = true
+then
+    # exit because visualization feature is not supported here
+    echo "Warning: CPlex configuration currently cannot handle visualization"
+    exit 1
+fi
+
 # set objective limit: optimal solution value from solu file, if existent
 if test $SETCUTOFF = 1
 then
@@ -112,7 +120,7 @@ echo set threads $THREADS               >> $TMPFILE
 echo set parallel 1                     >> $TMPFILE
 echo set lpmethod 4                     >> $TMPFILE
 echo set barrier crossover -1           >> $TMPFILE
-echo write $SETFILE                     >> $TMPFILE
+#echo write $SETFILE                     >> $TMPFILE
 echo read $SCIP_INSTANCEPATH/$INSTANCE                  >> $TMPFILE
 echo display problem stats              >> $TMPFILE
 echo $OPTCOMMAND                        >> $TMPFILE

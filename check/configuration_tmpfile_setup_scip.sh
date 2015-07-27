@@ -38,8 +38,8 @@ OPTCOMMAND=${16} # - command that should per executed after reading the instance
 CLIENTTMPDIR=${17}
 SOLBASENAME=${18}
 SETCUTOFF=${19}
-SOLUFILE=${20}   # - solu file, only necessary if $SETCUTOFF is 1
-
+VISUALIZE=${20}  # - true if visualization data should be recorded
+SOLUFILE=${21}   # - solu file, only necessary if $SETCUTOFF is 1
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
 #   echo "argument $((i+1)): ${args[$i]}"
@@ -89,6 +89,13 @@ echo set display freq $DISPFREQ        >> $TMPFILE
 # avoid switching to dfs - better abort with memory error
 echo set memory savefac 1.0            >> $TMPFILE
 echo set save $SETFILE                 >> $TMPFILE
+
+if test "$VISUALIZE" = true
+then
+    BAKFILENAME="`basename $TMPFILE .tmp`.dat"
+    echo visualization output set to "$BAKFILENAME"
+    echo set visual bakfilename "results/${BAKFILENAME}" >> $TMPFILE
+fi
 
 if test "$REOPT" = false
 then

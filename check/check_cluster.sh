@@ -53,9 +53,10 @@ VALGRIND=${20}
 REOPT=${21}
 OPTCOMMAND=${22}
 SETCUTOFF=${23}
+VISUALIZE=${24}
 
 # check if all variables defined (by checking the last one)
-if test -z $SETCUTOFF
+if test -z $VISUALIZE
 then
     echo Skipping test since not all variables are defined
     echo "TSTNAME       = $TSTNAME"
@@ -81,6 +82,7 @@ then
     echo "REOPT         = $REOPT"
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"
+    echo "VISUALIZE     = $VISUALIZE"
     exit 1;
 fi
 
@@ -160,39 +162,39 @@ do
                 continue
             fi
 
-            if test "$BINNAME" = "cplex"
-            then
-                CONFFILE=configuration_tmpfile_setup_cplex.sh
-                JOBNAME=CPLEX
-            else
-                CONFFILE=configuration_tmpfile_setup_scip.sh
-                JOBNAME=SCIP
-            fi
+            # find out the solver that should be used
+            SOLVER=`stripversion $BINNAME`
+
+            CONFFILE="configuration_tmpfile_setup_${SOLVER}.sh"
+
             # call tmp file configuration for SCIP
             . ./${CONFFILE} $INSTANCE $SCIPPATH $SCIP_INSTANCEPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \
-            	$FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $SOLUFILE
+                $FEASTOL $TIMELIMIT $MEMLIMIT $NODELIMIT $LPS $DISPFREQ $REOPT $OPTCOMMAND $CLIENTTMPDIR $FILENAME $SETCUTOFF $VISUALIZE $SOLUFILE
+
+
+            JOBNAME="`capitalize ${SOLVER}`${SHORTPROBNAME}"
+            if test "$SOLVER" = "scip"
+            then
+                export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
+            else
+                export EXECNAME=$BINNAME
+            fi
 
             # check queue type
             if test  "$QUEUETYPE" = "srun"
             then
             # additional environment variables needed by run.sh
                 export SOLVERPATH=$SCIPPATH
-                if test "$JOBNAME" = "SCIP"
-                then
-                    export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
-                else
-                    export EXECNAME=$BINNAME
-                fi
                 export BASENAME=$FILENAME
                 export FILENAME=$SCIP_INSTANCEPATH/$INSTANCE
                 export CLIENTTMPDIR
                 export HARDTIMELIMIT
                 export HARDMEMLIMIT
                 export CHECKERPATH=$SCIPPATH/solchecker
-                sbatch --job-name=${JOBNAME}${SHORTPROBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
+                sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
             else
                 # -V to copy all environment variables
-                qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME}$SHORTPROBNAME -v SOLVERPATH=$SCIPPATH,EXECNAME=$SCIPPATH/../$BINNAME, \
+                qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} -v SOLVERPATH=$SCIPPATH,EXECNAME=${EXECNAME}, \
                     BASENAME=$FILENAME,FILENAME=$SCIP_INSTANCEPATH/$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
             fi
         done # end for SETNAME
