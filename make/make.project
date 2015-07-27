@@ -54,6 +54,7 @@ CONTINUE	=	false
 LOCK		=	false
 VALGRIND	=	false
 CLIENTTMPDIR    =       /tmp
+REOPT		=	false
 OPTCOMMAND	=	optimize
 SETCUTOFF	=	0
 MAXJOBS         =       1

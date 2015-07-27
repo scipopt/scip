@@ -5050,9 +5050,6 @@ SCIP_RETCODE SCIPaddPricedVar(
  *       - \ref SCIP_STAGE_TRANSFORMING
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_EXITSOLVE
  *       - \ref SCIP_STAGE_FREETRANS
  */
 EXTERN
@@ -14989,6 +14986,22 @@ EXTERN
 SCIP_RETCODE SCIPapplyCutsProbing(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Bool*            cutoff              /**< pointer to store whether an empty domain was created */
+   );
+
+/** solves relaxation(s) at the current probing node (cannot be applied at preprocessing stage);
+ *  no separation or pricing is applied
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPsolveProbingRelax(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool*            cutoff              /**< pointer to store whether a relaxation was infeasible or the objective
+                                              *   limit was reached (or NULL, if not needed) */
    );
 
 /** stores the candidate score and preferred rounding direction for a candidate variable */

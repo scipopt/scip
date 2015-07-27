@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   prop_stp.c
- * @brief  propagator for Steiner problems, using the LP reduced cost
+ * @brief  propagator for Steiner tree problems, using the LP reduced costs
  * @author Daniel Rehfeldt
  *
  * This propagator makes use of the reduced cost of an optimally solved LP relaxation to propagate the variables
@@ -36,18 +36,19 @@
 
 #define PROP_NAME              "stp"
 #define PROP_DESC              "stp propagator"
-#define PROP_TIMING             SCIP_PROPTIMING_DURINGLPLOOP | SCIP_PROPTIMING_AFTERLPLOOP
+#define PROP_TIMING            SCIP_PROPTIMING_DURINGLPLOOP | SCIP_PROPTIMING_AFTERLPLOOP
 #define PROP_PRIORITY          +1000000 /**< propagator priority */
 #define PROP_FREQ                     1 /**< propagator frequency */
 #define PROP_DELAY                FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 
 /**@} */
 
-
 /**@name Default parameter values
  *
  * @{
  */
+
+#define DEFAULT_MAXNWAITINGROUNDS        3    /**< maximal number of rounds to wait until propagating again */
 
 
 /**@} */
@@ -61,27 +62,28 @@
 /** propagator data */
 struct SCIP_PropData
 {
-   SCIP_Real             maxredcost;         /**< maximum reduced cost of a single binary variable */
+   SCIP_Longint          nfails;             /**< number of failures since last successful call                     */
+   SCIP_Longint          ncalls;             /**< number of calls */
+   SCIP_Longint          nlastcall;          /**< number of last call */
 };
-
 
 /**@name Local methods
  *
  * @{
  */
 
-static
+/** fix a variable (corresponding to an edge) to zero */
 SCIP_RETCODE fixedgevar(
-   SCIP* scip,
-   SCIP_VAR*  edgevar,
-   int*  nfixed
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             edgevar,            /**< the variable to be fixed */
+   int*                  nfixed              /**< counter that is incriminated if variable could be fixed */
    )
 {
-   if( !(SCIPvarGetLbLocal(edgevar) > 0.5 || SCIPvarGetUbLocal(edgevar) < 0.5) )
+   assert(SCIPvarGetLbLocal(edgevar) < 0.5);
+   if( SCIPvarGetUbLocal(edgevar) > 0.5 && SCIPvarGetLbLocal(edgevar) < 0.5 )
    {
-      (*nfixed)++;
-
       SCIP_CALL( SCIPchgVarUb(scip, edgevar, 0.0) );
+      (*nfixed)++;
    }
    return SCIP_OKAY;
 }
@@ -107,6 +109,7 @@ SCIP_DECL_PROPCOPY(propCopyStp)
    return SCIP_OKAY;
 }
 
+
 /** destructor of propagator to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_PROPFREE(propFreeStp)
@@ -124,24 +127,12 @@ SCIP_DECL_PROPFREE(propFreeStp)
    return SCIP_OKAY;
 }
 
-/** solving process initialization method of propagator (called when branch and bound process is about to begin) */
-static
-SCIP_DECL_PROPINITSOL(propInitsolStp)
-{
-   SCIP_PROPDATA* propdata;
-
-   propdata = SCIPpropGetData(prop);
-   assert(propdata != NULL);
-
-   propdata->maxredcost = 0.0;
-
-   return SCIP_OKAY;
-}
 
 /** reduced cost propagation method for an LP solution */
 static
 SCIP_DECL_PROPEXEC(propExecStp)
 {  /*lint --e{715}*/
+   SCIP_PROPDATA* propdata;
    SCIP_PROBDATA* probdata;
    SCIP_VAR** vars;
    SCIP_VAR*  edgevar;
@@ -150,8 +141,6 @@ SCIP_DECL_PROPEXEC(propExecStp)
    SCIP_Real* cost;
    SCIP_Real* costrev;
    SCIP_Real*  pathdist;
-   SCIP_Real offset;
-   SCIP_Real redcost;
    SCIP_Real lpobjval;
    SCIP_Real cutoffbound;
    SCIP_Real minpathcost;
@@ -161,7 +150,7 @@ SCIP_DECL_PROPEXEC(propExecStp)
    int e;
    int nedges;
    int nnodes;
-   int nfixed;
+   int nfixed = 0;
 
    *result = SCIP_DIDNOTRUN;
 
@@ -181,17 +170,20 @@ SCIP_DECL_PROPEXEC(propExecStp)
    if( !SCIPisLPRelax(scip) )
       return SCIP_OKAY;
 
-   /* cannot apply reduced cost strengthening if no simplex basis is available */
+   /* we cannot apply reduced cost strengthening, if no simplex basis is available */
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
-   cutoffbound = SCIPgetPrimalbound(scip);
+   cutoffbound = SCIPgetCutoffbound(scip);
+
+      /* reduced cost strengthening can only be applied, if cutoff is finite */
+   if( SCIPisInfinity(scip, cutoffbound) )
+      return SCIP_OKAY;
 
    /* get problem data */
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
-   offset = SCIPprobdataGetOffset(scip);
    graph = SCIPprobdataGetGraph(probdata);
    assert(graph != NULL);
 
@@ -204,17 +196,35 @@ SCIP_DECL_PROPEXEC(propExecStp)
    if( vars == NULL )
       return SCIP_OKAY;
 
+   /* check if all integral variables are fixed */
+   if( SCIPgetNPseudoBranchCands(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* get propagator data */
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   propdata->ncalls++;
+
+   /* @todo: parameter */
+   if( propdata->nfails > 0 && (propdata->nlastcall + DEFAULT_MAXNWAITINGROUNDS >= propdata->ncalls)
+     && (propdata->nlastcall + propdata->nfails > propdata->ncalls) )
+      return SCIP_OKAY;
+
+   propdata->nlastcall = propdata->ncalls;
+
    /* get LP objective value */
    lpobjval = SCIPgetLPObjval(scip);
-
+#if 0
    if( SCIPisEQ(scip, lpobjval, 0.0) )
       return SCIP_OKAY;
+#endif
    *result = SCIP_DIDNOTFIND;
-   nfixed = 0;
 
    /* the required reduced path cost to be surpassed */
-   minpathcost = cutoffbound - (lpobjval + offset);
-   printf("cutoffbound %f, lpobjval %f offset: %f \n", cutoffbound, lpobjval, offset);
+   minpathcost = cutoffbound - lpobjval;
+   SCIPdebugMessage("cutoffbound %f, lpobjval %f\n", cutoffbound, lpobjval);
+
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &pathdist, nnodes) );
@@ -222,25 +232,50 @@ SCIP_DECL_PROPEXEC(propExecStp)
    SCIP_CALL( SCIPallocBufferArray(scip, &pathedge, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vnoi, nnodes) );
 
-   for( e = 0; e < nedges; e += 2)
+   for( e = 0; e < nedges; ++e )
    {
       assert(SCIPvarIsBinary(vars[e]));
-      assert(SCIPvarIsBinary(vars[e + 1]));
-      cost[e] = SCIPgetVarRedcost(scip, vars[e]);
-      cost[e + 1] = SCIPgetVarRedcost(scip, vars[e + 1]);
-      costrev[e] = cost[e + 1];
-      costrev[e + 1] = cost[e];
-   }
 
+      /* variable is already fixed, we must not trust the reduced cost */
+      if( SCIPvarGetLbLocal(vars[e]) + 0.5 > SCIPvarGetUbLocal(vars[e]) )
+      {
+         if( SCIPvarGetLbLocal(vars[e]) > 0.5 )
+            cost[e] = 0.0;
+         else
+         {
+            assert(SCIPvarGetUbLocal(vars[e]) < 0.5);
+            cost[e] = FARAWAY;
+         }
+      }
+      else
+      {
+         if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, NULL, vars[e])) )
+         {
+            assert(!SCIPisDualfeasNegative(scip, SCIPgetVarRedcost(scip, vars[e])));
+            cost[e] = SCIPgetVarRedcost(scip, vars[e]);
+         }
+         else
+         {
+            assert(!SCIPisDualfeasPositive(scip, SCIPgetVarRedcost(scip, vars[e])));
+            assert(SCIPisFeasEQ(scip, SCIPgetSolVal(scip, NULL, vars[e]), 1.0) || SCIPisDualfeasZero(scip, SCIPgetVarRedcost(scip, vars[e])));
+            cost[e] = 0.0;
+         }
+      }
+      if( e % 2 == 0 )
+         costrev[e + 1] = cost[e];
+      else
+         costrev[e - 1] = cost[e];
+   }
 
    for( k = 0; k < nnodes; k++ )
       graph->mark[k] = (graph->grad[k] > 0);
+
    /* distance from root to all nodes */
    graph_path_execX(scip, graph, graph->source[0], cost, pathdist, pathedge);
 
    /* no paths should go back to the root */
    for( e = graph->outbeg[graph->source[0]]; e != EAT_LAST; e = graph->oeat[e] )
-      costrev[e] = FARAWAY;
+        costrev[e] = FARAWAY;
 
    /* build voronoi diagram */
    voronoi_terms(scip, graph, costrev, vnoi, vbase, graph->path_heap, graph->path_state);
@@ -250,13 +285,11 @@ SCIP_DECL_PROPEXEC(propExecStp)
       if( graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
          if( Is_term(graph->term[k]) )
             continue;
+
       if( !Is_term(graph->term[k]) && SCIPisGT(scip, pathdist[k] + vnoi[k].dist, minpathcost) )
       {
          for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
          {
-            edgevar = vars[e];
-            redcost = SCIPgetVarRedcost(scip, edgevar);
-
 	    /* try to fix edge */
             SCIP_CALL( fixedgevar(scip, vars[e], &nfixed) );
 
@@ -268,15 +301,26 @@ SCIP_DECL_PROPEXEC(propExecStp)
       {
          for( e = graph->outbeg[k]; e != EAT_LAST; e = graph->oeat[e] )
          {
-            edgevar = vars[e];
-            redcost = SCIPgetVarRedcost(scip, edgevar);
-            if( SCIPisGT(scip, pathdist[k] + redcost + vnoi[graph->head[e]].dist, minpathcost) )
+            if( SCIPisGT(scip, pathdist[k] + cost[e] + vnoi[graph->head[e]].dist, minpathcost) )
+            {
+	       edgevar = vars[e];
                /* try to fix edge */
-               SCIP_CALL( fixedgevar(scip, vars[e], &nfixed) );
+               SCIP_CALL( fixedgevar(scip, edgevar, &nfixed) );
+            }
          }
       }
    }
-   printf("fixed: %d \n", nfixed );
+   SCIPdebugMessage("fixed by STP propagator: %d \n", nfixed );
+
+   if( nfixed > 0 )
+   {
+      propdata->nfails = 0;
+      *result = SCIP_REDUCEDDOM;
+   }
+   else
+   {
+      propdata->nfails++;
+   }
 
    SCIPfreeBufferArray(scip, &vnoi);
    SCIPfreeBufferArray(scip, &pathedge);
@@ -299,10 +343,10 @@ SCIP_RETCODE SCIPincludePropStp(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PROPDATA* propdata;
    SCIP_PROP* prop;
+   SCIP_PROPDATA* propdata;
 
-   /* create stp propagator data */
+   /* create redcost propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
 
    /* include propagator */
@@ -313,8 +357,10 @@ SCIP_RETCODE SCIPincludePropStp(
 
    /* set optional callbacks via setter functions */
    SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyStp) );
-   SCIP_CALL( SCIPsetPropInitsol(scip, prop, propInitsolStp) );
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeStp) );
+   propdata->nfails = 0;
+   propdata->ncalls = 0;
+   propdata->nlastcall = 0;
 
    return SCIP_OKAY;
 }

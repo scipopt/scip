@@ -119,7 +119,6 @@ SCIP_RETCODE runShell(
    SCIP_CALL( SCIPsetRealParam(scip, "branching/relpscost/maxreliable", 1.0) );
    SCIP_CALL( SCIPsetRealParam(scip, "separating/minefficacyroot", 0.01) );
 
-
    /**********************************
     * Process command line arguments *
     **********************************/

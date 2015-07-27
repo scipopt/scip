@@ -57,7 +57,7 @@ typedef enum LpExpType LPEXPTYPE;
 
 enum LpSense
 {
-   LP_SENSE_NOTHING, LP_SENSE_LE, LP_SENSE_GE, LP_SENSE_EQ
+   LP_SENSE_LE, LP_SENSE_GE, LP_SENSE_EQ
 };
 typedef enum LpSense LPSENSE;
 

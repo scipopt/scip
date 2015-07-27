@@ -2568,12 +2568,12 @@ SCIP_RETCODE saveGlobalCons(
    {
       SCIP_BOUNDTYPE* boundtypes;
       int nbranchvars;
-      int nvars;
+      int conssize;
       int nglbconss;
       int v;
 
       nglbconss = reopt->nglbconss;
-      nvars = SCIPnodeGetDepth(node)+1;
+      conssize = SCIPnodeGetDepth(node)+1;
 
       /* check if enough memory to store the global constraint is available */
       SCIP_CALL( checkMemGlbCons(reopt, blkmem, nglbconss+1) );
@@ -2581,13 +2581,13 @@ SCIP_RETCODE saveGlobalCons(
       /* allocate memory to store the infeasible path
        * we use the permanent allocated array consbounds to store the boundtypes */
       SCIP_ALLOC( BMSallocBlockMemory(blkmem, &reopt->glbconss[nglbconss]) ); /*lint !e866*/
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->vars, nvars) );
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->vals, nvars) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->vars, conssize) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->vals, conssize) );
 
       /* allocate buffer */
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &boundtypes, nvars) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &boundtypes, conssize) );
 
-      reopt->glbconss[nglbconss]->varssize = nvars;
+      reopt->glbconss[nglbconss]->varssize = conssize;
       reopt->glbconss[nglbconss]->constype = REOPT_CONSTYPE_INFSUBTREE;
 
       SCIPnodeGetAncestorBranchings(node,
@@ -2595,18 +2595,20 @@ SCIP_RETCODE saveGlobalCons(
             reopt->glbconss[nglbconss]->vals,
             boundtypes,
             &nbranchvars,
-            nvars);
+            conssize);
 
-      if( nvars < nbranchvars )
+      if( conssize < nbranchvars )
       {
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->vars, nvars, nbranchvars) );
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->vals, nvars, nbranchvars) );
-         nvars = nbranchvars;
-         reopt->glbconss[nglbconss]->varssize = nvars;
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->vars, conssize, nbranchvars) );
+         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->vals, conssize, nbranchvars) );
+         conssize = nbranchvars;
+         reopt->glbconss[nglbconss]->varssize = conssize;
 
          SCIPnodeGetAncestorBranchings(node, reopt->glbconss[nglbconss]->vars, reopt->glbconss[nglbconss]->vals,
-               boundtypes, &nbranchvars, nvars);
+               boundtypes, &nbranchvars, conssize);
       }
+
+      reopt->glbconss[nglbconss]->nvars = nbranchvars;
 
       /* transform into original variables */
       for(v = 0; v < nbranchvars; v++)
@@ -4877,6 +4879,7 @@ SCIP_RETCODE SCIPreoptAddInfNode(
    if( set->reopt_sepaglbinfsubtrees )
    {
       SCIP_CALL( saveGlobalCons(reopt, set, blkmem, node, REOPT_CONSTYPE_INFSUBTREE) );
+      ++reopt->reopttree->ninfsubtrees;
    }
 
    ++reopt->reopttree->ninfnodes;
@@ -6318,7 +6321,6 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
       SCIPfreeBlockMemoryArrayNull(scip, &reopt->glbconss[c]->vals, reopt->glbconss[c]->nvars);
       SCIPfreeBlockMemoryArrayNull(scip, &reopt->glbconss[c]->vars, reopt->glbconss[c]->nvars);
       SCIPfreeBlockMemoryNull(scip, &reopt->glbconss[c]); /*lint !e866*/
-      reopt->glbconss[c]->nvars = 0;
 
       /* free buffer */
       SCIPfreeBufferArray(scip, &consvars);

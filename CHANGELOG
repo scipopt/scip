@@ -2,6 +2,22 @@ SCIP version NEXT
 ==================
 
 features:
+- can now solve relaxations within probing
+
+parameters:
+
+performance improvements:
+
+interface:
+- new function SCIPsolveProbingRelax() to solve a relaxation within probing
+
+fixed bugs:
+
+
+SCIP version 3.2.0
+==================
+
+features:
 - new parameter display/allviols to print all violated constraints of the best solution during checksol in the scip shell
 - new parameter numerics/checkfeastolfac to scale feasibility tolerance when checking the feasibility of best found solution
   after the solving process finished (e.g., checksol in scip shell)
@@ -69,6 +85,13 @@ features:
 - new plugin "compr" for rearranging the search tree, currently this only works on the reoptimization tree
 - extended expression parsing to support power, realpower, and signpower operators
 - possibility to set a soft time limit which becomes active only after the first primal solution was found
+- the AMPL interface now passes an initial guess, if specified, as a solution (that will be checked for feasibility) to SCIP
+- new presolver tworowbnd for improving variable bounds and detecting redundant constraints added
+- new presolver dualagg for aggregating single up-/downlocked variables by a binary variable added
+- new presolver implfree for aggregating implied free variables added
+- new presolver redvub which can detect redundant variable upper bound constraints added
+- new presolver stuffing for fixing of singleton continuous variables added
+- added matrix module for getting access to the internal mixed inter linear problem matrix
 
 parameters:
 - new parameter 'DELHEADERS' for 'uninstall'-target: scip headers are only removed when invoking 'make uninstall DELHEADERS=true'
@@ -176,8 +199,8 @@ performance improvements:
 - zi rounding heuristic uses buffer data structures, thereby decreasing total memory usage of SCIP
 - adjusted (hard) diving heuristics to solve fewer LPs. LP's are resolved only if a parameter-defined
   percentage of the variable bounds changed through domain propagation or at a predefined frequency.
-- all hard diving heuristics additionally consider indicator variables as candidate variables and try to
-  make indicator constraints feasible before passing a rounded solution to SCIPtrySol()
+- some of the diving heuristics additionally consider indicator variables and SOS1 variables as candidate variables and try to
+  make these constraint types feasible before passing a rounded solution to SCIPtrySol()
 - improved vartype upgradability from continuous to implicit variables in cons_linear.c, depending on their objective
   coefficients
 - using sparsity information of the SoPlex LP
@@ -243,6 +266,7 @@ interface:
 - SCIPsolveLinearProb() solves a linear problem of the form Ax=b for a regular square matrix A
 - new methods SCIPaddSquareLinearization(), SCIPaddSquareSecant(), SCIPaddBilinLinearization(), and SCIPaddBilinMcCormick()
   in cons_quadratic.h to compute linear under- and overestimation for bilinear and quadratic terms
+- new methods for mixed inter linear matrix access (see pub_matrix.h) added
 
 fixed bugs:
 - fix behavior of 'make install' which now sets symbolic links and short links to binaries and libraries
@@ -265,6 +289,7 @@ fixed bugs:
 - fix late creation of auxiliary LP in cons_nonlinear.c, which lead to a segmentation fault with lpi_spx2.cpp
 - fixed again a bug in backward propagation of linear expressions in expression graph
 - fixed problem with lpisrelax flag in probing mode when doing branch-and-price
+- fixed bug in pseudoboolean constraint handler about negated variables
 
 SCIP version 3.1.2
 ==================

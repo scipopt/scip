@@ -575,7 +575,10 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                 */
                if( (bdchgdir == SCIP_BRANCHDIR_UPWARDS && SCIPisFeasLE(scip, bdchgvalue, lblocal)) ||
                      (bdchgdir == SCIP_BRANCHDIR_DOWNWARDS && SCIPisFeasGE(scip, bdchgvalue, ublocal)) ||
-                     (bdchgdir == SCIP_BRANCHDIR_FIXED && ublocal - lblocal < 0.5) )
+                     (bdchgdir == SCIP_BRANCHDIR_FIXED &&
+                      ( SCIPisFeasLT(scip, bdchgvalue, lblocal) ||
+                        SCIPisFeasGT(scip, bdchgvalue, ublocal) ||
+                        ( SCIPisFeasEQ(scip, lblocal, ublocal) && nbdchanges < 2 ))) )
                {
                   SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
                      SCIPvarGetName(bdchgvar), lblocal, ublocal, nextcandsol);

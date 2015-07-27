@@ -1424,6 +1424,38 @@ SCIP_RETCODE setupSOS(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE setupInitialSolution(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata            /**< problem data */
+   )
+{
+   SCIP_Bool stored;
+   SCIP_SOL* sol;
+   ASL* asl;
+   int i;
+
+   assert(scip != NULL);
+   assert(probdata != NULL);
+
+   asl = probdata->asl;
+
+   /* if no initial guess available, then do nothing */
+   if( X0 == NULL )
+      return SCIP_OKAY;
+
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+
+   for( i = 0; i < n_var; ++i )
+   {
+      SCIP_CALL( SCIPsetSolVal(scip, sol, probdata->vars[i], X0[i]) );
+   }
+
+   SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
+
+   return SCIP_OKAY;
+}
+
 /*
  * Callback methods of probdata
  */
@@ -1568,6 +1600,7 @@ SCIP_DECL_READERREAD(readerReadNl)
    }
 
    want_derivs = 0;
+   want_xpi0 = 1;
    (void) qp_read(nl, 0);
 
    *result = SCIP_DIDNOTFIND;
@@ -1595,6 +1628,7 @@ SCIP_DECL_READERREAD(readerReadNl)
    SCIP_CALL( SCIPsetProbDelorig(scip, probdataDelOrigNl) );
 
    SCIP_CALL( setupVariables(scip, probdata) );
+   SCIP_CALL( setupInitialSolution(scip, probdata) );
 
    SCIP_CALL( setupObjective(scip, probdata, &success) );
    if( !success )
@@ -1626,6 +1660,7 @@ SCIP_DECL_READERREAD(readerReadNl)
       nl = jac0dim((char*)filename, (fint)strlen(filename));
 
       want_derivs = 1; /* we want derivatives */
+      want_xpi0 = 1; /* we want the initial guess (primal only) */
       asl->i.congrd_mode = 1; /* ask for compact gradient */
       (void) fg_read(nl, ASL_return_read_err);
    }

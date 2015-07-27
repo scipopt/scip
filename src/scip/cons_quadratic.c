@@ -7863,6 +7863,16 @@ SCIP_RETCODE evaluateGauge(
    }
 
    /* now compute gauge */
+   if( convex && cterm < 0.0 )
+   {
+      assert(SCIPisZero(scip, cterm));
+      cterm = 0.0;
+   }
+   else if( !convex && cterm > 0.0 )
+   {
+      assert(SCIPisZero(scip, cterm));
+      cterm = 0.0;
+   }
    assert(bterm*bterm + 4*aterm*cterm >= 0);
 
    if( convex )
