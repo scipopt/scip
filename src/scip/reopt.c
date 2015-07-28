@@ -5748,15 +5748,15 @@ SCIP_RETCODE SCIPreoptApplyCompression(
        * 3. set the parent relation */
       if( representatives[r]->nvars > 0 )
       {
+         int v;
+
          assert(representatives[r]->nvars <= representatives[r]->varssize);
-         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reopttree->reoptnodes[id]->vars, representatives[r]->vars,
-               representatives[r]->nvars) );
-         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reopttree->reoptnodes[id]->varbounds,
-               representatives[r]->varbounds, representatives[r]->nvars) );
-         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reopttree->reoptnodes[id]->varboundtypes,
-               representatives[r]->varboundtypes, representatives[r]->nvars) );
-         reopttree->reoptnodes[id]->varssize = representatives[r]->varssize;
-         reopttree->reoptnodes[id]->nvars = representatives[r]->nvars;
+
+         for( v = 0; v < representatives[r]->nvars; v++ )
+         {
+            SCIP_CALL( SCIPreoptnodeAddBndchg(reopttree->reoptnodes[id], blkmem, representatives[r]->vars[v],
+                  representatives[r]->varbounds[v], representatives[r]->varboundtypes[v]) );
+         }
       }
 
       if( representatives[r]->nconss > 0 )
