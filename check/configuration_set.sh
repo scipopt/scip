@@ -30,11 +30,12 @@ function capitalize {
     echo "$1" | tr '[:lower:]' '[:upper:]'
 }
 
-# function to strip version of, e.g., scip-3.2... to only scip
+# function to strip version of, e.g., scip-3.2... to only scip and scipampl.* to scipampl
 function stripversion {
     NAMENOPATH=`basename $1`
     # by '%%', Trim the longest match from the end
     NAMENOVERSION=${NAMENOPATH%%-*}
+    NAMENOVERSION=${NAMENOVERSION%%.*}
     echo $NAMENOVERSION
 }
 
