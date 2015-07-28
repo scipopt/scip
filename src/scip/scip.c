@@ -9115,6 +9115,8 @@ SCIP_RETCODE SCIPcreateProb(
 
    SCIP_CALL( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set, scip->messagehdlr) );
 
+   assert(scip->set->debugsoldata == NULL);
+   SCIP_CALL( SCIPdebugSolDataCreate(&((scip->set)->debugsoldata)));
    SCIPdebugSetMainscipset(scip->set);
 
    SCIP_CALL( SCIPprobCreate(&scip->origprob, scip->mem->probmem, scip->set, name,

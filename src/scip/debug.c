@@ -580,7 +580,7 @@ SCIP_RETCODE SCIPdebugFreeDebugData(
    debugsoldata = SCIPsetGetDebugSolData(set);
 
    /* check if we are in the original problem and not in a sub MIP */
-   if( !isMainscipset(set) )
+   if( debugsoldata == NULL || !isMainscipset(set) )
       return SCIP_OKAY;
 
    for( s = debugsoldata->nsolvals - 1; s >= 0; --s )

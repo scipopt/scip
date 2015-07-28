@@ -879,7 +879,6 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->conflicthdlrsnamesorted = FALSE;
 
    (*set)->debugsoldata = NULL;
-   SCIP_CALL( SCIPdebugSolDataCreate(&((*set)->debugsoldata)));
 
    (*set)->presols = NULL;
    (*set)->npresols = 0;
