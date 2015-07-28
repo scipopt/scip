@@ -877,6 +877,10 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->conflicthdlrssize = 0;
    (*set)->conflicthdlrssorted = FALSE;
    (*set)->conflicthdlrsnamesorted = FALSE;
+
+   (*set)->debugsoldata = NULL;
+   SCIP_CALL( SCIPdebugSolDataCreate(&((*set)->debugsoldata)));
+
    (*set)->presols = NULL;
    (*set)->npresols = 0;
    (*set)->presolssize = 0;
@@ -4739,6 +4743,15 @@ int SCIPsetGetSepaMaxcuts(
       return set->sepa_maxcuts;
 }
 
+/** returns debug solution data */
+SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->debugsoldata;
+}
 
 
 /*

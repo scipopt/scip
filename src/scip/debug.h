@@ -29,18 +29,28 @@
 /** uncomment this define to activate debugging the LP interface  */
 /* #define SCIP_DEBUG_LP_INTERFACE */
 
+
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
 #include "scip/type_retcode.h"
 #include "scip/type_lp.h"
 #include "scip/type_prob.h"
 #include "scip/type_tree.h"
+#include "scip/type_misc.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+/** solution data for debugging purposes */
+typedef struct SCIP_DebugSolData SCIP_DEBUGSOLDATA;
+
 #ifdef SCIP_DEBUG_SOLUTION
+
+/** creates debug solution data */
+SCIP_RETCODE SCIPdebugSolDataCreate(
+   SCIP_DEBUGSOLDATA**   debugsoldata        /**< pointer to debug solution data */
+   );
 
 /** frees debugging data */
 extern
@@ -229,6 +239,7 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 
 #else
 
+#define SCIPdebugSolDataCreate(debugsoldata) SCIP_OKAY
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
 #define SCIPdebugCheckConss(scip,conss,nconss) SCIP_OKAY
 #define SCIPdebugCheckRow(set,row) SCIP_OKAY
