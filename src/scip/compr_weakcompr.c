@@ -200,6 +200,7 @@ SCIP_RETCODE constructCompression(
       int mem_conss;
       int nvars2;
       int nafterdualvars;
+      SCIPdebug(int c);
 
       mem_vars = SCIPgetNBinVars(scip);
 

@@ -33,6 +33,8 @@
 #define COMPR_MINNNODES        20
 
 #define DEFAUL_MEM_REPR        10
+#define DEFAULT_ITERS           5
+#define DEFAULT_MINCOMMONVARS   3
 
 /*
  * Data structures
@@ -49,7 +51,7 @@ struct SCIP_ComprData
 
    /* statictics */
    SCIP_Real             rate;               /**< rate of compression */
-   SCIP_Real             loi;                /**< loss of information */
+   SCIP_Real             score;              /**< score of the best representation found */
    int                   nnodes;             /**< number of nodes after compressing */
 
    /* parameters */
@@ -116,7 +118,7 @@ SCIP_RETCODE constructCompression(
    SCIP_BOUNDTYPE** bounds;
    SCIP_Bool* covered;
    const char** varnames;
-   SCIP_Real loi;
+   SCIP_Real score;
    int nreps;
    SCIP_Longint* signature0;
    SCIP_Longint* signature1;
@@ -196,7 +198,7 @@ SCIP_RETCODE constructCompression(
    for( start_id = 0; start_id < nleaveids; start_id++ )
    {
       nreps = -1;
-      loi = 0.0;
+      score = 0.0;
 
       /* initialize the covered-array with FALSE */
       SCIP_CALL( SCIPallocBufferArray(scip, &covered, nleaveids) );
@@ -283,7 +285,7 @@ SCIP_RETCODE constructCompression(
             nnon_zero_vars++;
          }
 
-         SCIPdebugMessage("start with ID %u, %d non zeros\n", leaveids[current_id], nnon_zero_vars);
+         SCIPdebugMessage("start with ID %u, %d fixed variables\n", leaveids[current_id], nnon_zero_vars);
 
          covered_ids[ncovered] = current_id;
          ncovered++;
@@ -357,7 +359,7 @@ SCIP_RETCODE constructCompression(
                covered[next_id] = TRUE;
                nnemptyinters++;
 
-               SCIPdebugMessage("-> found intersection with ID %u, %d non zeros\n", leaveids[next_id], nnon_zero_vars);
+               SCIPdebugMessage("-> found intersection with ID %u, %d common variables\n", leaveids[next_id], nnon_zero_vars);
 
                covered_ids[ncovered] = next_id;
                ncovered++;
@@ -396,13 +398,10 @@ SCIP_RETCODE constructCompression(
             covered[current_id] = FALSE;
          }
 
-         /* calculate the loss of information */
-         for( v = 0; v < ncovered; v++ )
-         {
-            loi += nvars[covered_ids[v]] - nnon_zero_vars;
-         }
+         /* calculate the score */
+         score += ncovered * nnon_zero_vars;
 
-         SCIPdebugMessage("-> current representation is of size %d with loi = %.1f\n", nreps, loi);
+         SCIPdebugMessage("-> current representation is of size %d with loi = %.1f\n", nreps, score);
 
          current_id = (current_id + 1) % nleaveids;
 
@@ -417,20 +416,14 @@ SCIP_RETCODE constructCompression(
      TERMINATE:
 
       /* add the number of variables of uncovered nodes to the loss of information */
-      for( k = 0; k < nleaveids; k++ )
-      {
-         if( !covered[k] )
-            loi += nvars[k];
-      }
-
-      SCIPdebugMessage("-> final representation is of size %d with loi = %.1f\n", nreps, loi);
+      SCIPdebugMessage("-> final representation is of size %d with score = %.1f\n", nreps, score);
 
       /* We found a better representation, i.e., with less loss of information.
        * 1. reset the previous represenation
        * 2. check if we need to reallocate the memory
        * 3. set the new representation
        */
-      if( SCIPisFeasLT(scip, loi, comprdata->loi) )
+      if( SCIPisFeasGT(scip, score, comprdata->score) )
       {
          /* reset the current representation */
          SCIP_CALL( SCIPresetRepresentation(scip, comprdata->representatives, comprdata->nrepresentatives) );
@@ -454,7 +447,7 @@ SCIP_RETCODE constructCompression(
           * copy the new representation. we skip the last representative because it is implicitly given by the union of
           * the logic-or constraints of all previous representatives.
           */
-         comprdata->loi = loi;
+         comprdata->score = score;
          comprdata->nrepresentatives = nreps;
 
          for( k = 0; k < nreps-1; k++ )
@@ -489,7 +482,7 @@ SCIP_RETCODE constructCompression(
    /* check if we have found a representation and construct the missing constraints */
    if( comprdata->nrepresentatives > 0 )
    {
-      SCIPdebugMessage("best representation found has %d leaf nodes and loi = %g\n", comprdata->nrepresentatives, comprdata->loi);
+      SCIPdebugMessage("best representation found has %d leaf nodes and score = %g\n", comprdata->nrepresentatives, comprdata->score);
 
       /* iterate over all representatives */
       for( k = 0; k < comprdata->nrepresentatives-1; k++ )
@@ -653,7 +646,7 @@ SCIP_DECL_COMPREXEC(comprExecLargestrepr)
       comprdata->representativessize = DEFAUL_MEM_REPR;
       comprdata->nrepresentatives = 0;
       comprdata->rate = 0.0;
-      comprdata->loi = SCIPinfinity(scip);
+      comprdata->score = 0.0;
       comprdata->nnodes = 0;
       SCIP_CALL( SCIPallocClearMemoryArray(scip, &comprdata->representatives, comprdata->representativessize) );
 
@@ -677,6 +670,10 @@ SCIP_DECL_COMPREXEC(comprExecLargestrepr)
       assert(*result == SCIP_DIDNOTRUN || *result == SCIP_SUCCESS);
 
       SCIPdebugMessage("->%s apply compression.\n", *result == SCIP_DIDNOTRUN ? " did not" : "");
+   }
+   else
+   {
+      SCIP_CALL( SCIPfreeRepresentation(scip, comprdata->representatives, comprdata->representativessize) );
    }
 
    return SCIP_OKAY;
@@ -710,8 +707,10 @@ SCIP_RETCODE SCIPincludeComprLargestrepr(
    SCIP_CALL( SCIPsetComprFree(scip, compr, comprFreeLargestrepr) );
 
    /* add largestrepr tree compression parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "compression/"COMPR_NAME"/iterations", "number of runs in the constrained part.", &comprdata->niters, FALSE, 5, 1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "compression/"COMPR_NAME"/mincommonvars", "minimal number of common variables.", &comprdata->mincomvars, FALSE, 3, 1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "compression/"COMPR_NAME"/iterations", "number of runs in the constrained part.",
+         &comprdata->niters, FALSE, DEFAULT_ITERS, 1, INT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddIntParam(scip, "compression/"COMPR_NAME"/mincommonvars", "minimal number of common variables.",
+         &comprdata->mincomvars, FALSE, DEFAULT_MINCOMMONVARS, 1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

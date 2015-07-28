@@ -15328,8 +15328,11 @@ SCIP_RETCODE SCIPfreeRepresentation(
 
    for( r = 0; r < nrepresentatives; r++ )
    {
-      SCIP_CALL( SCIPreoptnodeDelete(&representatives[r], scip->mem->probmem) );
-      assert(representatives[r] == NULL);
+      if( representatives[r] != NULL )
+      {
+         SCIP_CALL( SCIPreoptnodeDelete(&representatives[r], scip->mem->probmem) );
+         assert(representatives[r] == NULL);
+      }
    }
 
    return SCIP_OKAY;
