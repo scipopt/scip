@@ -1882,7 +1882,7 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "reoptimization/varorderinterdiction", "use the 'd'efault or a 'r'andom variable order for interdiction branching when applying the reoptimization",
-         &(*set)->reopt_varorderinterdiction, TRUE, SCIP_DEFAULT_REOPT_VARORDERINTERDICTION, "dr",
+         &(*set)->reopt_varorderinterdiction, TRUE, SCIP_DEFAULT_REOPT_VARORDERINTERDICTION, "dir",
          NULL, NULL) );
 
    /* separation parameters */

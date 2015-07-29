@@ -3823,6 +3823,51 @@ SCIP_RETCODE reoptSaveNewObj(
    return SCIP_OKAY;
 }
 
+/** orders the variable by infernce score */
+static
+SCIP_RETCODE getInferenceOrder(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_VAR**            vars,               /**< variable array to permute */
+   SCIP_Real*            vals,               /**< bound array to permute in the same order */
+   int                   nvars,              /**< number of variables */
+   SCIP_Bool             isroot              /**< is the current node the root node */
+   )
+{
+   SCIP_Real* infscore;
+   int v;
+
+   assert(set != NULL);
+   assert(vars != NULL);
+   assert(vals != NULL);
+   assert(nvars >= 0);
+
+   /* allocate buffer for the scores */
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &infscore, nvars) );
+
+   for( v = 0; v < nvars; v++ )
+   {
+      if( SCIPsetIsEQ(set, vals[v], 1.0) )
+      {
+         infscore[v] = 0.75 * SCIPvarGetAvgInferences(vars[v], stat, SCIP_BRANCHDIR_UPWARDS)
+            + 0.25 * SCIPvarGetAvgInferences(vars[v], stat, SCIP_BRANCHDIR_DOWNWARDS);
+      }
+      else
+      {
+         infscore[v] = 0.25 * SCIPvarGetAvgInferences(vars[v], stat, SCIP_BRANCHDIR_UPWARDS)
+               + 0.75 * SCIPvarGetAvgInferences(vars[v], stat, SCIP_BRANCHDIR_DOWNWARDS);
+      }
+   }
+
+   /* sort vars and vals by score */
+   SCIPsortDownRealRealPtr(infscore, vals, (void*) vars, nvars);
+
+   /* free buffer */
+   SCIPsetFreeBufferArray(set, &infscore);
+
+   return SCIP_OKAY;
+}
+
 /** permute the variable and bound array randomly */
 static
 void permuteRandom(
@@ -5672,6 +5717,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    unsigned int          randseed,           /**< seed value for random generator */
    int*                  ncreatedchilds,     /**< pointer to store the number of created nodes */
@@ -5694,6 +5740,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    assert(reopt->reopttree->reoptnodes[0]->dualfixing);
    assert(reopt->reopttree->reoptnodes[0]->reopttype == (unsigned int)SCIP_REOPTTYPE_STRBRANCHED);
    assert(set != NULL);
+   assert(stat != NULL);
    assert(blkmem != NULL);
 
    reopttree = reopt->reopttree;
@@ -5718,9 +5765,16 @@ SCIP_RETCODE SCIPreoptSplitRoot(
 
       /* calculate the order of the variables */
       switch (set->reopt_varorderinterdiction) {
+         /* default order */
          case 'd':
             break;
 
+         /* inference order */
+         case 'i':
+            SCIP_CALL( getInferenceOrder(set, stat, vars, vals, nvars, TRUE) );
+            break;
+
+         /* random order */
          case 'r':
             permuteRandom(vars, vals, nvars, &randseed);
             break;
@@ -6154,9 +6208,16 @@ SCIP_RETCODE SCIPreoptApply(
          /* calculate the order of the variables */
          switch (set->reopt_varorderinterdiction)
          {
+         /* default order */
          case 'd':
             break;
 
+         /* inference order */
+         case 'i':
+            SCIP_CALL( getInferenceOrder(set, stat, vars, vals, nvars, FALSE) );
+            break;
+
+         /* random order */
          case 'r':
             permuteRandom(vars, vals, nvars, &randseed);
             break;

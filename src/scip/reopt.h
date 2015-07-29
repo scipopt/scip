@@ -396,6 +396,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    unsigned int          randseed,           /**< seed value for random generator */
    int*                  ncreatedchilds,     /**< pointer to store the number of created nodes */

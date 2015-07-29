@@ -15754,7 +15754,7 @@ SCIP_RETCODE SCIPsplitReoptRoot(
 
    SCIP_CALL( checkStage(scip, "SCIPsplitReoptRoot", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPreoptSplitRoot(scip->reopt, scip->tree, scip->set, scip->mem->probmem,
+   SCIP_CALL( SCIPreoptSplitRoot(scip->reopt, scip->tree, scip->set, scip->stat, scip->mem->probmem,
          (unsigned int)scip->set->misc_permutationseed, ncreatedchilds, naddedconss) );
 
    return SCIP_OKAY;
