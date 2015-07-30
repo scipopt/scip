@@ -477,8 +477,6 @@ SCIP_RETCODE isSolutionInNode(
    SCIP_Bool* boolptr;
    SCIP_DEBUGSOLDATA* debugsoldata;
 
-   debugsoldata = SCIPsetGetDebugSolData(set);
-
    assert(set != NULL);
    assert(blkmem != NULL);
    assert(node != NULL);
@@ -490,6 +488,8 @@ SCIP_RETCODE isSolutionInNode(
       *solcontained = FALSE;
       return SCIP_OKAY;
    }
+
+   debugsoldata = SCIPsetGetDebugSolData(set);
 
    /* generate the hashmap */
    if( debugsoldata->solinnode == NULL )
@@ -623,6 +623,10 @@ SCIP_RETCODE SCIPdebugCheckConss(
    SCIP_DEBUGSOLDATA* debugsoldata;
    assert(scip->set != NULL);
 
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isMainscipset(scip->set) )
+      return SCIP_OKAY;
+
    debugsoldata = SCIPsetGetDebugSolData(scip->set);
 
    assert(conss != NULL || nconss == 0);
@@ -630,10 +634,6 @@ SCIP_RETCODE SCIPdebugCheckConss(
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
-      return SCIP_OKAY;
-
-   /* check if we are in the original problem and not in a sub MIP */
-   if( !isMainscipset(scip->set) )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug
@@ -698,16 +698,17 @@ SCIP_RETCODE SCIPdebugCheckRow(
    SCIP_Real solval;
 
    assert(set != NULL);
+
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isMainscipset(set) )
+      return SCIP_OKAY;
+
    debugsoldata = SCIPsetGetDebugSolData(set);
 
    assert(row != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
-      return SCIP_OKAY;
-
-   /* check if we are in the original problem and not in a sub MIP */
-   if( !isMainscipset(set) )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
@@ -798,15 +799,14 @@ SCIP_RETCODE SCIPdebugCheckLbGlobal(
    assert(scip != NULL);
    assert(var != NULL);
 
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isMainscipset(scip->set) )
+      return SCIP_OKAY;
 
    debugsoldata = SCIPsetGetDebugSolData(scip->set);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
-      return SCIP_OKAY;
-
-   /* check if we are in the original problem and not in a sub MIP */
-   if( !isMainscipset(scip->set) )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
@@ -840,14 +840,14 @@ SCIP_RETCODE SCIPdebugCheckUbGlobal(
    assert(scip != NULL);
    assert(var != NULL);
 
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isMainscipset(scip->set) )
+      return SCIP_OKAY;
+
    debugsoldata = SCIPsetGetDebugSolData(scip->set);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
-      return SCIP_OKAY;
-
-   /* check if we are in the original problem and not in a sub MIP */
-   if( !isMainscipset(scip->set) )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
@@ -887,19 +887,19 @@ SCIP_RETCODE SCIPdebugCheckInference(
    assert(node != NULL);
    assert(var != NULL);
 
-   debugsoldata = SCIPsetGetDebugSolData(set);
-   assert(debugsoldata != NULL);
-
-   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
-   if( debugsoldata->debugsoldisabled )
-      return SCIP_OKAY;
-
    /* in case we are in probing or diving we have to avoid checking the solution */
    if( SCIPlpDiving(set->scip->lp) || SCIPtreeProbing(set->scip->tree) )
       return SCIP_OKAY;
 
    /* check if we are in the original problem and not in a sub MIP */
    if( !isMainscipset(set) )
+      return SCIP_OKAY;
+
+   debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
+
+   /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
+   if( debugsoldata->debugsoldisabled )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
@@ -945,15 +945,15 @@ SCIP_RETCODE SCIPdebugRemoveNode(
    assert(blkmem != NULL);
    assert(node != NULL);
 
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isMainscipset(set) )
+      return SCIP_OKAY;
+
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
-      return SCIP_OKAY;
-
-   /* check if we are in the original problem and not in a sub MIP */
-   if( !isMainscipset(set) )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
@@ -1004,15 +1004,15 @@ SCIP_RETCODE SCIPdebugCheckVbound(
    assert(set != NULL);
    assert(var != NULL);
 
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isMainscipset(set) )
+      return SCIP_OKAY;
+
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
-      return SCIP_OKAY;
-
-   /* check if we are in the original problem and not in a sub MIP */
-   if( !isMainscipset(set) )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
@@ -1057,15 +1057,15 @@ SCIP_RETCODE SCIPdebugCheckImplic(
    assert(var != NULL);
    assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
 
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isMainscipset(set) )
+      return SCIP_OKAY;
+
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
-      return SCIP_OKAY;
-
-   /* check if we are in the original problem and not in a sub MIP */
-   if( !isMainscipset(set) )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
@@ -1126,15 +1126,15 @@ SCIP_RETCODE SCIPdebugCheckClique(
    assert(set != NULL);
    assert(vars != NULL);
 
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isMainscipset(set) )
+      return SCIP_OKAY;
+
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
-      return SCIP_OKAY;
-
-   /* check if we are in the original problem and not in a sub MIP */
-   if( !isMainscipset(set) )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
@@ -1319,15 +1319,15 @@ SCIP_RETCODE SCIPdebugCheckConflict(
    assert(node != NULL);
    assert(nbdchginfos == 0 || bdchginfos != NULL);
 
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isMainscipset(set) )
+      return SCIP_OKAY;
+
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
-      return SCIP_OKAY;
-
-   /* check if we are in the original problem and not in a sub MIP */
-   if( !isMainscipset(set) )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
@@ -1379,15 +1379,15 @@ SCIP_RETCODE SCIPdebugCheckConflictFrontier(
    assert(node != NULL);
    assert(nbdchginfos == 0 || bdchginfos != NULL);
 
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isMainscipset(set) )
+      return SCIP_OKAY;
+
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
-      return SCIP_OKAY;
-
-   /* check if we are in the original problem and not in a sub MIP */
-   if( !isMainscipset(set) )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
@@ -1457,15 +1457,15 @@ SCIP_RETCODE SCIPdebugSolIsValidInSubtree(
 
    assert(scip->set != NULL);
 
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isMainscipset(scip->set) )
+      return SCIP_OKAY;
+
    debugsoldata = SCIPsetGetDebugSolData(scip->set);
    assert(debugsoldata != NULL);
 
    /* when debugging was disabled the solution is not defined to be not valid in the current subtree */
    if( debugsoldata->debugsoldisabled )
-      return SCIP_OKAY;
-
-   /* check if we are in the original problem and not in a sub MIP */
-   if( !isMainscipset(scip->set) )
       return SCIP_OKAY;
 
    /* check if the incumbent solution is at least as good as the debug solution, so we can stop to check the debug solution */
@@ -1488,6 +1488,10 @@ void SCIPdebugSetMainscipset(
 {
    SCIP_DEBUGSOLDATA* debugsoldata;
    assert(set != NULL);
+
+   /* check if we are in the original problem and not in a sub MIP */
+   if( !isMainscipset(set) )
+      return;
 
    debugsoldata = SCIPsetGetDebugSolData(set);
    assert(debugsoldata != NULL);
