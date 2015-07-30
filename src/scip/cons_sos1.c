@@ -3820,6 +3820,8 @@ SCIP_RETCODE freeImplGraphSOS1(
    /* free implication graph */
    SCIPdigraphFree(&conshdlrdata->implgraph);
 
+   conshdlrdata->nimplnodes = 0;
+
    return SCIP_OKAY;
 }
 
