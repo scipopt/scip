@@ -766,7 +766,7 @@ END {
 	       if( length(sname) <= 19 )
 		   printf("%19s |", sname);
 	       else
-		   printf("*%18s |", substr(sname, length(sname)-19));
+		   printf("*%17s|", substr(sname, length(sname)-18));
 	   }
 	   else if( printsoltimes )
 	   {
