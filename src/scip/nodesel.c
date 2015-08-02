@@ -670,7 +670,7 @@ SCIP_RETCODE SCIPnodepqBound(
          if( set->reopt_enable )
          {
             assert(reopt != NULL);
-            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE,
+            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp,
                   SCIPlpGetSolstat(lp), SCIPnodeGetDepth(node) == 0, SCIPtreeGetFocusNode(tree) == node,
                   SCIPnodeGetLowerbound(node), SCIPtreeGetEffectiveRootDepth(tree)));
          }

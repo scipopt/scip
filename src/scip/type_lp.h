@@ -62,7 +62,8 @@ enum SCIP_RowOriginType
 {
    SCIP_ROWORIGINTYPE_UNSPEC = 0,       /**< unspecified origin of row */
    SCIP_ROWORIGINTYPE_CONS   = 1,       /**< row created by constraint handler */
-   SCIP_ROWORIGINTYPE_SEPA   = 2        /**< row created by separator */
+   SCIP_ROWORIGINTYPE_SEPA   = 2,       /**< row created by separator */
+   SCIP_ROWORIGINTYPE_REOPT  = 3        /**< row created by reoptimization */
 };
 typedef enum SCIP_RowOriginType SCIP_ROWORIGINTYPE;
 

@@ -1151,7 +1151,7 @@ SCIP_RETCODE SCIPnodeCutoff(
    {
       assert(reopt != NULL);
       /* check if the node should be stored for reoptimization */
-      SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, SCIPlpGetSolstat(lp),
+      SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
             tree->root == node, tree->focusnode == node, oldlowerbound, tree->effectiverootdepth) );
    }
 
@@ -3568,7 +3568,7 @@ SCIP_RETCODE nodeToLeaf(
       {
          assert(reopt != NULL);
          /* check if the node should be stored for reoptimization */
-         SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, *node, SCIP_EVENTTYPE_NODEINFEASIBLE, SCIPlpGetSolstat(lp),
+         SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, *node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
                tree->root == *node, tree->focusnode == *node, (*node)->lowerbound, tree->effectiverootdepth) );
       }
 
@@ -4199,7 +4199,7 @@ SCIP_RETCODE SCIPnodeFocus(
       {
          assert(reopt != NULL);
          /* check if the node should be stored for reoptimization */
-         SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, *node, SCIP_EVENTTYPE_NODEINFEASIBLE, SCIPlpGetSolstat(lp),
+         SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, *node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
                tree->root == (*node), tree->focusnode == (*node), (*node)->lowerbound, tree->effectiverootdepth) );
       }
 
@@ -4935,7 +4935,7 @@ SCIP_RETCODE SCIPtreeCutoff(
          {
             assert(reopt != NULL);
             /* check if the node should be stored for reoptimization */
-            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, SCIPlpGetSolstat(lp),
+            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
                   tree->root == node, tree->focusnode == node, node->lowerbound, tree->effectiverootdepth) );
          }
 
@@ -4958,7 +4958,7 @@ SCIP_RETCODE SCIPtreeCutoff(
          {
             assert(reopt != NULL);
             /* check if the node should be stored for reoptimization */
-            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, SCIPlpGetSolstat(lp),
+            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE, lp, SCIPlpGetSolstat(lp),
                   tree->root == node, tree->focusnode == node, node->lowerbound, tree->effectiverootdepth) );
          }
 

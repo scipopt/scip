@@ -27,6 +27,7 @@
 #include "scip/def.h"
 #include "scip/pub_reopt.h"
 #include "scip/type_primal.h"
+#include "scip/type_sepastore.h"
 #include "scip/type_retcode.h"
 #include "scip/type_reopt.h"
 #include "scip/struct_reopt.h"
@@ -258,6 +259,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
    BMS_BLKMEM*           blkmem,             /**< block memery */
    SCIP_NODE*            node,               /**< node of the search tree */
    SCIP_EVENTTYPE        eventtype,          /**< eventtype */
+   SCIP_LP*              lp,
    SCIP_LPSOLSTAT        lpsolstat,          /**< solution status of the LP */
    SCIP_Bool             isrootnode,         /**< the node is the root */
    SCIP_Bool             isfocusnode,        /**< the node is the current focus node */
@@ -337,6 +339,20 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
+/** add the stored cuts to the separation storage */
+SCIP_RETCODE SCIPreoptApplyCuts(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_NODE*            node,               /**< current focus node */
+   SCIP_SEPASTORE*       sepastore,          /**< separation storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter */
+   SCIP_LP*              lp,                 /**< current LP */
+   SCIP_Bool             root                /**< bool whether the current node is the root */
    );
 
 /** check if the LP of the given node should be solved or not */
@@ -494,6 +510,8 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR**            consvars,           /**< variables which are part of the constraint */
    SCIP_Real*            consvals,           /**< values of the variables */
+   SCIP_Real             lhs,                /**< lhs of the constraint */
+   SCIP_Real             rhs,                /**< rhs of the constraint */
    int                   nvars,              /**< number of variables */
    REOPT_CONSTYPE        constype            /**< type of the constraint */
    );

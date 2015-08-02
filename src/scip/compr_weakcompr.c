@@ -292,7 +292,8 @@ SCIP_RETCODE constructCompression(
       /* create a representative at position 0 with an added constraint corresponding
        * to the branching path of the node*/
       assert(comprdata->representatives[pos_repr_fix-1] != NULL);
-      SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[pos_repr_fix-1], vars[0], vals[0], nvars[0], REOPT_CONSTYPE_STRBRANCHED) );
+      SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[pos_repr_fix-1], vars[0], vals[0], 1.0,
+            SCIPinfinity(scip), nvars[0], REOPT_CONSTYPE_STRBRANCHED) );
 
    }
 
@@ -317,8 +318,8 @@ SCIP_RETCODE constructCompression(
       /* add this constraint to all further representatives */
       for(r = pos_repr_fix+1; r < comprdata->nrepresentatives; r++)
       {
-         SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[r], conss_var[0][k], conss_val[0][k],
-               conss_nvars[0][k], REOPT_CONSTYPE_STRBRANCHED) );
+         SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[r], conss_var[0][k], conss_val[0][k], 1.0,
+               SCIPinfinity(scip), conss_nvars[0][k], REOPT_CONSTYPE_STRBRANCHED) );
       }
 
       pos_repr_fix++;

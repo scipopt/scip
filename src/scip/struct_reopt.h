@@ -56,6 +56,8 @@ struct LogicOrData
 {
    SCIP_VAR**            vars;               /**< array of variables */
    SCIP_Real*            vals;               /**< array of variable bounds */
+   SCIP_Real             lhs;                /**< left hand side of the constraint */
+   SCIP_Real             rhs;                /**< right hand side of the constraint */
    REOPT_CONSTYPE        constype;           /**< type of the constraint */
    int                   varssize;           /**< available sitze in the arrays */
    int                   nvars;              /**< number of enties in the arrays */

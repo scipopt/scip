@@ -17584,6 +17584,8 @@ SCIP_RETCODE SCIPaddReoptnodeCons(
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_Real*            vals,               /**< array of variable bounds */
+   SCIP_Real             lhs,                /**< lhs of the constraint */
+   SCIP_Real             rhs,                /**< rhs of the constraint */
    int                   nvars,              /**< number of variables */
    REOPT_CONSTYPE        constype            /**< type of the constraint */
    );

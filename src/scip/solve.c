@@ -1063,6 +1063,14 @@ SCIP_RETCODE SCIPinitConssLP(
    {
       SCIP_CALL( SCIPconshdlrInitLP(set->conshdlrs[h], blkmem, set, stat, tree, firstsubtreeinit) );
    }
+
+   if( set->reopt_enable && set->reopt_usecuts && firstsubtreeinit )
+   {
+      /* add stored cuts */
+      SCIP_CALL( SCIPreoptApplyCuts(reopt, tree->focusnode, sepastore, blkmem, set, stat, eventqueue, eventfilter, lp,
+            root) );
+   }
+
    SCIP_CALL( SCIPsepastoreApplyCuts(sepastore, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand,
          eventqueue, eventfilter, cliquetable, root, SCIP_EFFICIACYCHOICE_LP, cutoff) );
 
@@ -2793,7 +2801,7 @@ SCIP_RETCODE solveNodeLP(
             if( set->reopt_enable )
             {
                assert(reopt != NULL);
-               SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, tree->focusnode, SCIP_EVENTTYPE_NODEFEASIBLE,
+               SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, tree->focusnode, SCIP_EVENTTYPE_NODEFEASIBLE, lp,
                      SCIPlpGetSolstat(lp), tree->root == tree->focusnode, TRUE, tree->focusnode->lowerbound,
                      tree->effectiverootdepth) );
             }
@@ -4488,7 +4496,7 @@ SCIP_RETCODE SCIPsolveCIP(
                if( set->reopt_enable )
                {
                   assert(reopt != NULL);
-                  SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, focusnode, SCIP_EVENTTYPE_NODEFEASIBLE,
+                  SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, focusnode, SCIP_EVENTTYPE_NODEFEASIBLE, lp,
                         SCIPlpGetSolstat(lp), tree->root == focusnode, tree->focusnode == focusnode, focusnode->lowerbound,
                         tree->effectiverootdepth) );
                }
@@ -4508,7 +4516,7 @@ SCIP_RETCODE SCIPsolveCIP(
                if( set->reopt_enable )
                {
                   assert(reopt != NULL);
-                  SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, focusnode, SCIP_EVENTTYPE_NODEINFEASIBLE,
+                  SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, focusnode, SCIP_EVENTTYPE_NODEINFEASIBLE, lp,
                         SCIPlpGetSolstat(lp), tree->root == focusnode, tree->focusnode == focusnode, focusnode->lowerbound,
                         tree->effectiverootdepth) );
                }
@@ -4528,7 +4536,7 @@ SCIP_RETCODE SCIPsolveCIP(
                if( set->reopt_enable )
                {
                   assert(reopt != NULL);
-                  SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, focusnode, SCIP_EVENTTYPE_NODEBRANCHED,
+                  SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, focusnode, SCIP_EVENTTYPE_NODEBRANCHED, lp,
                         SCIPlpGetSolstat(lp), tree->root == focusnode, tree->focusnode == focusnode, focusnode->lowerbound,
                         tree->effectiverootdepth) );
                }
@@ -4611,7 +4619,7 @@ SCIP_RETCODE SCIPsolveCIP(
          if( set->reopt_enable )
          {
             assert(reopt != NULL);
-            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, focusnode, SCIP_EVENTTYPE_NODEFEASIBLE,
+            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, focusnode, SCIP_EVENTTYPE_NODEFEASIBLE, lp,
                   SCIPlpGetSolstat(lp), tree->root == focusnode, tree->focusnode == focusnode, focusnode->lowerbound,
                   tree->effectiverootdepth) );
          }
@@ -4687,7 +4695,7 @@ SCIP_RETCODE SCIPsolveCIP(
       if( set->reopt_enable )
       {
          assert(reopt != NULL);
-         SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, tree->focusnode, SCIP_EVENTTYPE_NODEINFEASIBLE,
+         SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, tree->focusnode, SCIP_EVENTTYPE_NODEINFEASIBLE, lp,
                SCIPlpGetSolstat(lp), tree->root == focusnode, tree->focusnode == focusnode, tree->focusnode->lowerbound,
                tree->effectiverootdepth) );
       }

@@ -315,6 +315,8 @@
 #define SCIP_DEFAULT_REOPT_REDUCETOFRONTIER TRUE/**< delete stored nodes which were not reoptimized */
 #define SCIP_DEFAULT_REOPT_SAVECONSPROP     FALSE/**< save constraint propagation */
 #define SCIP_DEFAULT_REOPT_USESPLITCONS    TRUE /**< use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node */
+#define SCIP_DEFAULT_REOPT_USECUTS         TRUE /**< reoptimize cuts found at the root node */
+#define SCIP_DEFAULT_REOPT_MAXCUTAGE          0 /**< maximal age of cuts the use them in reoptimization */
 
 /* Propagating */
 
@@ -1883,6 +1885,16 @@ SCIP_RETCODE SCIPsetCreate(
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
          "reoptimization/varorderinterdiction", "use the 'd'efault or a 'r'andom variable order for interdiction branching when applying the reoptimization",
          &(*set)->reopt_varorderinterdiction, TRUE, SCIP_DEFAULT_REOPT_VARORDERINTERDICTION, "dir",
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "reoptimization/usecuts",
+         "reoptimize cuts found at the root node",
+         &(*set)->reopt_usecuts, TRUE, SCIP_DEFAULT_REOPT_USECUTS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "reoptimization/maxcutage",
+         "maximal age of a cut to use them for reoptimization",
+         &(*set)->reopt_maxcutage, TRUE, SCIP_DEFAULT_REOPT_MAXCUTAGE, 0, INT_MAX,
          NULL, NULL) );
 
    /* separation parameters */
