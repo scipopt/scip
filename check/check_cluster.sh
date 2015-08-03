@@ -194,8 +194,9 @@ do
                 sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
             else
                 # -V to copy all environment variables
-                qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} -v SOLVERPATH=$SCIPPATH,EXECNAME=${EXECNAME}, \
-                    BASENAME=$FILENAME,FILENAME=$SCIP_INSTANCEPATH/$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
+                qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N ${JOBNAME} \
+		    -v SOLVERPATH=$SCIPPATH,EXECNAME=${EXECNAME},BASENAME=$FILENAME,FILENAME=$SCIP_INSTANCEPATH/$INSTANCE,CLIENTTMPDIR=$CLIENTTMPDIR \
+		    -V -q $CLUSTERQUEUE -o /dev/null -e /dev/null run.sh
             fi
         done # end for SETNAME
         # after the first termination of the set loop, no file needs to be initialized anymore
