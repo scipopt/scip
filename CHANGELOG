@@ -12,6 +12,7 @@ interface:
 fixed bugs:
 - fixed some problem with reoptimization when the problems are infeasible or have been solved in presolving
 - fixed bug in SOS1 constraint handler with inconsistent data structure after restart
+- fixed wrong handling of loose variables in OBBT
 
 SCIP version 3.2.0
 ==================

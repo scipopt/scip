@@ -1798,7 +1798,13 @@ SCIP_RETCODE applyObbt(
    nvars = SCIPgetNVars(scip);
    for( i = 0; i < nvars; ++i )
    {
-      SCIP_CALL( SCIPchgVarObjProbing(scip, vars[i], 0.0) );
+      /* note that it is not possible to change the objective of non-column variables during probing; we have to take
+       * care of the objective contribution of loose variables in createGenVBound()
+       */
+      if( SCIPvarGetObj(vars[i]) != 0.0 && SCIPvarGetStatus(vars[i]) == SCIP_VARSTATUS_COLUMN )
+      {
+         SCIP_CALL( SCIPchgVarObjProbing(scip, vars[i], 0.0) );
+      }
    }
 
    /* find new bounds for the variables */
