@@ -2610,6 +2610,7 @@ SCIP_RETCODE extendToCover(
    SCIP_Real*            value,              /**< objective value of S */
    SCIP_Bool*            chgupperbound,      /**< Has the upper bound been changed? */
    SCIP_Bool*            error,              /**< output: whether an error occured */
+   SCIP_Bool*            cutoff,             /**< whether we detected a cutoff by an infeasible inequality */
    int*                  nGen                /**< number of generated cuts */
    )
 {
@@ -2628,10 +2629,12 @@ SCIP_RETCODE extendToCover(
    assert( value != NULL );
    assert( chgupperbound != NULL );
    assert( error != NULL );
+   assert( cutoff != NULL );
    assert( nGen != NULL );
 
    *chgupperbound = FALSE;
    *error = FALSE;
+   *cutoff = FALSE;
    *nGen = 0;
 
    SCIP_CALL( SCIPlpiGetNCols(lp, &nCols) );
@@ -2840,7 +2843,6 @@ SCIP_RETCODE extendToCover(
          else
          {
             SCIP_ROW* row;
-            SCIP_Bool rowinfeasible;
 
             /* create row */
 #ifdef SCIP_DEBUG
@@ -2877,8 +2879,12 @@ SCIP_RETCODE extendToCover(
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &rowinfeasible) );
-            assert( ! rowinfeasible );
+            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+            if ( *cutoff )
+            {
+               SCIPfreeBufferArray(scip, &primsol);
+               return SCIP_OKAY;
+            }
 
             /* cut should be violated: */
             assert( SCIPisFeasNegative(scip, SCIPgetRowSolFeasibility(scip, row, sol)) );
@@ -3704,6 +3710,7 @@ SCIP_RETCODE enforceCuts(
    SCIP_CONS**           conss,              /**< indicator constraints */
    SCIP_SOL*             sol,                /**< solution to be enforced */
    SCIP_Bool             genlogicor,         /**< whether logicor constraint should be generated */
+   SCIP_Bool*            cutoff,             /**< whether we detected a cutoff by an infeasible inequality */
    int*                  nGen                /**< number of cuts generated */
    )
 {
@@ -3720,9 +3727,11 @@ SCIP_RETCODE enforceCuts(
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
+   assert( cutoff != NULL );
    assert( nGen != NULL );
 
    SCIPdebugMessage("Enforcing via cuts ...\n");
+   *cutoff = FALSE;
    *nGen = 0;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -3776,7 +3785,7 @@ SCIP_RETCODE enforceCuts(
    error = FALSE;
    do
    {
-      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, genlogicor, nconss, conss, S, &size, &value, &chgupperbound, &error, &nCuts) );
+      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, genlogicor, nconss, conss, S, &size, &value, &chgupperbound, &error, cutoff, &nCuts) );
 
       /* update upper bound */
       if ( chgupperbound )
@@ -3784,7 +3793,7 @@ SCIP_RETCODE enforceCuts(
          SCIP_CALL( updateObjUpperbound(scip, conshdlr, conshdlrdata) );
       }
    }
-   while ( chgupperbound && nCuts == 0 && ! error );
+   while ( chgupperbound && nCuts == 0 && ! error && ! (*cutoff) );
    *nGen = nCuts;
 
    /* return with an error if no cuts have been produced and and error occured in extendToCover() */
@@ -3916,9 +3925,17 @@ SCIP_RETCODE enforceIndicators(
    /* if some constraint has a linear constraint that is not active, we need to check feasibility via the alternative polyhedron */
    if ( (someLinconsNotActive || conshdlrdata->enforcecuts) && conshdlrdata->sepaalternativelp )
    {
+      SCIP_Bool cutoff;
       int ngen;
 
-      SCIP_CALL( enforceCuts(scip, conshdlr, nconss, conss, NULL, genlogicor, &ngen) );
+      SCIP_CALL( enforceCuts(scip, conshdlr, nconss, conss, NULL, genlogicor, &cutoff, &ngen) );
+      if ( cutoff )
+      {
+         conshdlrdata->niiscutsgen += ngen;
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+
       if ( ngen > 0 )
       {
          conshdlrdata->niiscutsgen += ngen;
@@ -4002,6 +4019,7 @@ SCIP_RETCODE separateIISRounding(
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< indicator constraints */
    int                   maxsepacuts,        /**< maximal number of cuts to be generated */
+   SCIP_Bool*            cutoff,             /**< whether we detected a cutoff by an infeasible inequality */
    int*                  nGen                /**< number of domain changes */
    )
 { /*lint --e{850}*/
@@ -4017,11 +4035,13 @@ SCIP_RETCODE separateIISRounding(
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
+   assert( cutoff != NULL );
    assert( nGen != NULL );
 
    if ( *nGen >= maxsepacuts )
       return SCIP_OKAY;
 
+   *cutoff = FALSE;
    rounds = 0;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -4057,7 +4077,7 @@ SCIP_RETCODE separateIISRounding(
    /* loop through the possible thresholds */
    for (threshold = conshdlrdata->roundingmaxthres;
         rounds < conshdlrdata->maxroundingrounds && threshold >= conshdlrdata->roundingminthres && *nGen < maxsepacuts;
-        threshold -= conshdlrdata->roundingoffset)
+        threshold -= conshdlrdata->roundingoffset && ! (*cutoff) )
    {
       SCIP_Bool chgupperbound = FALSE;
       SCIP_Real value = 0.0;
@@ -4145,7 +4165,7 @@ SCIP_RETCODE separateIISRounding(
       SCIP_CALL( fixAltLPVariables(scip, lp, nconss, conss, S) );
 
       /* extend set S to a cover and generate cuts */
-      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, conshdlrdata->genlogicor, nconss, conss, S, &size, &value, &chgupperbound, &error, &nCuts) );
+      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, conshdlrdata->genlogicor, nconss, conss, S, &size, &value, &chgupperbound, &error, cutoff, &nCuts) );
 
       /* we ignore errors in extendToCover */
       if ( nCuts > 0 )
@@ -4299,6 +4319,7 @@ SCIP_RETCODE separateIndicators(
    /* separated cuts from the alternative lp (if required) */
    if ( conshdlrdata->sepaalternativelp && ncuts < SEPAALTTHRESHOLD )
    {
+      SCIP_Bool cutoff;
       int noldcuts;
 
       SCIPdebugMessage("Separating inequalities for indicator constraints.\n");
@@ -4308,10 +4329,12 @@ SCIP_RETCODE separateIndicators(
          *result = SCIP_DIDNOTFIND;
 
       /* start separation */
-      SCIP_CALL( separateIISRounding(scip, conshdlr, sol, nconss, conss, maxsepacuts, &ncuts) );
+      SCIP_CALL( separateIISRounding(scip, conshdlr, sol, nconss, conss, maxsepacuts, &cutoff, &ncuts) );
       SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", ncuts - noldcuts);
 
-      if ( ncuts > noldcuts )
+      if ( cutoff )
+         *result = SCIP_CUTOFF;
+      else if ( ncuts > noldcuts )
       {
          conshdlrdata->niiscutsgen += ncuts;
 

@@ -2,6 +2,7 @@ SCIP version NEXT
 ==================
 
 features:
+- handle cutoffs in cons_indicator detected by infeasible inequalities
 
 parameters:
 - new parameter misc/transsolorig for transfering transformed solutions to the original space (default: true)
