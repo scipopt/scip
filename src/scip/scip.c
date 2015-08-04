@@ -9680,10 +9680,17 @@ SCIP_RETCODE SCIPfreeProb(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
+   SCIP_Bool transsolorig;
+
    SCIP_CALL( checkStage(scip, "SCIPfreeProb", TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, TRUE) );
+
+   /* if we free the problem, we do not have to transfer transformed solutions to the original space, so temporarily disable it */
+   transsolorig = scip->set->misc_transsolsorig;
+   scip->set->misc_transsolsorig = FALSE;
 
    SCIP_CALL( SCIPfreeTransform(scip) );
    assert(scip->set->stage == SCIP_STAGE_INIT || scip->set->stage == SCIP_STAGE_PROBLEM);
+   scip->set->misc_transsolsorig = transsolorig;
 
    /* free all debug data */
    SCIP_CALL( SCIPdebugFreeDebugData(scip->set) ); /*lint !e506 !e774*/
@@ -14043,7 +14050,6 @@ SCIP_RETCODE freeTransform(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-
    assert(scip != NULL);
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);
@@ -14056,7 +14062,7 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPsetExitPlugins(scip->set, scip->mem->probmem, scip->stat) );
 
    /* copy best primal solutions to original solution candidate list */
-   if( scip->set->limit_maxorigsol > 0 )
+   if( scip->set->limit_maxorigsol > 0 && scip->set->misc_transsolsorig )
    {
       SCIP_Bool stored;
       SCIP_Bool hasinfval;

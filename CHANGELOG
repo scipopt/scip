@@ -4,8 +4,10 @@ SCIP version NEXT
 features:
 
 parameters:
+- new parameter misc/transsolorig for transfering transformed solutions to the original space (default: true)
 
 performance improvements:
+- do not transfer solutions to original space, if SCIP is being freed
 
 interface:
 
