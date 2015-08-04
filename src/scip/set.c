@@ -247,7 +247,8 @@
 #define SCIP_DEFAULT_MISC_IMPROVINGSOLS   FALSE /**< should only solutions be checked which improve the primal bound */
 #define SCIP_DEFAULT_MISC_PRINTREASON      TRUE /**< should the reason be printed if a given start solution is infeasible? */
 #define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
-#define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
+#define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the transformed space (after presolving)? */
+#define SCIP_DEFAULT_MISC_TRANSSOLSORIG    TRUE /**< should SCIP try to transfer transformed solutions to the original space (after solving)? */
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
 #define SCIP_DEFAULT_MISC_FINITESOLSTORE  FALSE /**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
 #define SCIP_DEFAULT_MISC_OUTPUTORIGSOL    TRUE /**< should the best solution be transformed to the orignal space and be output in command line run? */
@@ -1589,8 +1590,13 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/transorigsols",
-         "should SCIP try to transfer original solutions to the extended space (after presolving)?",
+         "should SCIP try to transfer original solutions to the transformed space (after presolving)?",
          &(*set)->misc_transorigsols, FALSE, SCIP_DEFAULT_MISC_TRANSORIGSOLS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/transsolsorig",
+         "should SCIP try to transfer transformed solutions to the original space (after solving)?",
+         &(*set)->misc_transsolsorig, FALSE, SCIP_DEFAULT_MISC_TRANSSOLSORIG,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
             "misc/calcintegral",
