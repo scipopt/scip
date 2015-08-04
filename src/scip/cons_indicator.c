@@ -4680,6 +4680,9 @@ SCIP_DECL_CONSEXIT(consExitIndicator)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
+   if ( conshdlrdata->binvarhash != NULL )
+      SCIPhashmapFree(&conshdlrdata->binvarhash);
+
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->addlincons, conshdlrdata->maxaddlincons);
    conshdlrdata->maxaddlincons = 0;
    conshdlrdata->naddlincons = 0;
@@ -5094,8 +5097,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
          }
       }
       SCIPhashmapFree(&conshdlrdata->slackhash);
-      if ( conshdlrdata->binvarhash != NULL )
-         SCIPhashmapFree(&conshdlrdata->binvarhash);
    }
 
    return SCIP_OKAY;
