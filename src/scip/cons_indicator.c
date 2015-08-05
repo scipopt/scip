@@ -4076,8 +4076,8 @@ SCIP_RETCODE separateIISRounding(
 
    /* loop through the possible thresholds */
    for (threshold = conshdlrdata->roundingmaxthres;
-        rounds < conshdlrdata->maxroundingrounds && threshold >= conshdlrdata->roundingminthres && *nGen < maxsepacuts;
-        threshold -= conshdlrdata->roundingoffset && ! (*cutoff) )
+        rounds < conshdlrdata->maxroundingrounds && threshold >= conshdlrdata->roundingminthres && *nGen < maxsepacuts && ! (*cutoff);
+        threshold -= conshdlrdata->roundingoffset )
    {
       SCIP_Bool chgupperbound = FALSE;
       SCIP_Real value = 0.0;
