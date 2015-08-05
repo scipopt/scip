@@ -992,6 +992,25 @@ SCIP_DECL_EVENTEXEC(processVarEvent)
    {
       if( varidx < 0 )
       {
+         SCIP_QUADVARTERM* quadvarterm;
+         SCIP_VAR* var;
+
+         quadvarterm = &consdata->quadvarterms[-varidx-1];
+         var = quadvarterm->var;
+
+         /* if an integer variable x with a x^2 is tightened to [0,1], then we can replace the x^2 by x, which is done in mergeAndCleanQuadVarTerms()
+          * we currently do this only if the binary variable does not show up in any bilinear terms
+          * unfortunately, SCIP does not have an eventtype for vartype changes (nor do they always count as presolve reductions) and the bounds are
+          * not updated yet when this event is processed, so we cannot use SCIPvarIsBinary here to check if the tightened integer variable will be binary
+          */
+         if( SCIPgetStage(scip) < SCIP_STAGE_SOLVING && SCIPvarGetType(var) == SCIP_VARTYPE_INTEGER && quadvarterm->sqrcoef != 0.0 && quadvarterm->nadjbilin == 0 &&
+             ( ((eventtype & SCIP_EVENTTYPE_LBTIGHTENED) && SCIPeventGetNewbound(event) > -0.5 && SCIPvarGetUbGlobal(var) <  1.5) ||
+               ((eventtype & SCIP_EVENTTYPE_UBTIGHTENED) && SCIPeventGetNewbound(event) <  1.5 && SCIPvarGetLbGlobal(var) > -0.5) ) )
+         {
+            consdata->quadvarsmerged = FALSE;
+            consdata->initialmerge = FALSE;
+         }
+
          /* mark activity bounds for quad term as not up to date anymore */
          SCIPintervalSetEmpty(&consdata->quadactivitybounds);
       }
