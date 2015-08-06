@@ -3,8 +3,11 @@ SCIP version NEXT
 
 features:
 - can now solve relaxations within probing
+- can now separate perspective cuts for indicator constraints
 
 parameters:
+- new parameter sepaperspective to turn on separation of perspective cuts for indicator contraints
+- new parameter sepapersplocal to decide whether local cuts can be used for perspective cuts for indicator contraints
 
 performance improvements:
 
