@@ -16200,7 +16200,7 @@ SCIP_RETCODE SCIPparseVar(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
-   char**                endptr,             /**< pointer to store the final string position if successfully */
+   char**                endptr,             /**< pointer to store the final string position if successful */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    )
 {
@@ -16252,7 +16252,7 @@ SCIP_RETCODE SCIPparseVarName(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
    SCIP_VAR**            var,                /**< pointer to store the problem variable, or NULL if it does not exit */
-   char**                endptr              /**< pointer to store the final string position if successfully */
+   char**                endptr              /**< pointer to store the final string position if successful */
    )
 {
    char varname[SCIP_MAXSTRLEN];
@@ -16318,7 +16318,7 @@ SCIP_RETCODE SCIPparseVarName(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  *
- *  @note the pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist
+ *  @note The pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist.
  *
  *  @note If the number of (parsed) variables is greater than the available slots in the variable array, nothing happens
  *        except that the required size is stored in the corresponding integer; the reason for this approach is that we
@@ -16332,22 +16332,26 @@ SCIP_RETCODE SCIPparseVarsList(
    int*                  nvars,              /**< pointer to store number of parsed variables */
    int                   varssize,           /**< size of the variable array */
    int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
-   char**                endptr,             /**< pointer to store the final string position if successfully */
+   char**                endptr,             /**< pointer to store the final string position if successful */
    char                  delimiter,          /**< character which is used for delimitation */
-   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
+   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
    )
 {
    SCIP_VAR** tmpvars;
    SCIP_VAR* var;
-   int ntmpvars;
+   int ntmpvars = 0;
    int v;
+
+   assert( nvars != NULL );
+   assert( requiredsize != NULL );
+   assert( endptr != NULL );
+   assert( success != NULL );
 
    SCIP_CALL( checkStage(scip, "SCIPparseVarsList", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    /* allocate buffer memory for temporary storing the parsed variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &tmpvars, varssize) );
 
-   ntmpvars = 0;
    (*success) = TRUE;
 
    do
@@ -16379,9 +16383,7 @@ SCIP_RETCODE SCIPparseVarsList(
 
    *endptr = (char*)str;
 
-   /* if all variable name searches were successfully and the variable array has enough slots copy the collected
-    * variables
-    */
+   /* if all variable name searches were successful and the variable array has enough slots, copy the collected variables */
    if( (*success) && ntmpvars <= varssize )
    {
       for( v = 0; v < ntmpvars; ++v )
@@ -16415,7 +16417,7 @@ SCIP_RETCODE SCIPparseVarsList(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  *
- *  @note the pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist
+ *  @note The pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist.
  *
  *  @note If the number of (parsed) variables is greater than the available slots in the variable array, nothing happens
  *        except that the required size is stored in the corresponding integer; the reason for this approach is that we
@@ -16430,8 +16432,8 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
    int*                  nvars,              /**< pointer to store number of parsed variables */
    int                   varssize,           /**< size of the variable array */
    int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
-   char**                endptr,             /**< pointer to store the final string position if successfully */
-   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
+   char**                endptr,             /**< pointer to store the final string position if successful */
+   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
    )
 {
    SCIP_VAR*** monomialvars;
@@ -16540,8 +16542,8 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    SCIP_Real**           monomialcoefs,      /**< pointer to store array with monomial coefficients */
    int**                 monomialnvars,      /**< pointer to store array with number of variables for each monomial */
    int*                  nmonomials,         /**< pointer to store number of parsed monomials */
-   char**                endptr,             /**< pointer to store the final string position if successfully */
-   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
+   char**                endptr,             /**< pointer to store the final string position if successful */
+   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
    )
 {
    typedef enum
