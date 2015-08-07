@@ -5705,7 +5705,7 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   /* copy solution if it makes sense (will send solution to trysol heuristic in any case (see below) */
+   /* try to repair solution below, if it makes sense (will send solution to trysol heuristic in any case (see below) */
    if ( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM && SCIPgetStage(scip) < SCIP_STAGE_SOLVED && conshdlrdata->trysolutions && conshdlrdata->heurtrysol != NULL )
    {
       SCIP_CALL( SCIPcreateSolCopy(scip, &trysol, sol) );
