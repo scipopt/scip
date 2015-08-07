@@ -5426,9 +5426,24 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
                if ( j == nvars && foundslackvar )
                {
                   SCIP_Bool infeasible;
+                  SCIP_Real lb;
+                  SCIP_Real ub;
 
-                  SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
-                  /* don't assert feasibility here because the presolver should detect infeasibility */
+                  lb = SCIPvarGetLbGlobal(consdata->slackvar);
+                  ub = SCIPvarGetUbGlobal(consdata->slackvar);
+                  if ( (SCIPisInfinity(scip, -lb) || SCIPisIntegral(scip, lb)) && (SCIPisInfinity(scip, ub) || SCIPisIntegral(scip, ub)) )
+                  {
+                     SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
+                     /* don't assert feasibility here because the presolver should detect infeasibility */
+                  }
+                  else
+                  {
+                     /* It can happen that the bounds of the slack variable have been changed to be non-integral in
+                      * previous presolving steps. We then might get a problem with tightening the bounds. In this case,
+                      * we just leave the slack variable to be continuous. */
+                     SCIPdebugMessage("Cannot change type of slack variable (<%s>) to IMPLINT, since global bound is non-integral: (%g, %g).\n",
+                        SCIPvarGetName(consdata->slackvar), SCIPvarGetLbGlobal(consdata->slackvar), SCIPvarGetUbGlobal(consdata->slackvar));
+                  }
                }
             }
          }

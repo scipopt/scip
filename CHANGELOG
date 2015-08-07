@@ -19,6 +19,7 @@ fixed bugs:
 - fixed freeing of hash for binary variables
 - squares of binary variables might not have been replaced by the binary variable itself in presolve,
   if the variable was originally general integer and only became binary during presolve (due to bound tightening)
+- fixed late change of type of slack variables in cons_indicator, if the bounds are not integral
 
 SCIP version 3.2.0
 ==================
