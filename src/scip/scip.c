@@ -14843,8 +14843,6 @@ SCIP_RETCODE SCIPenableReoptimization(
 {
    assert(scip != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPenableReoptimization", TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
-
    /* we want to skip if nothing has changed */
    if( (enable && scip->reopt != NULL) || (!enable && scip->reopt == NULL) )
       return SCIP_OKAY;
@@ -14902,9 +14900,6 @@ SCIP_RETCODE SCIPenableReoptimization(
 
          /* fix all parameters */
          SCIP_CALL( SCIPfixParam(scip, "branching/nodereopt/priority") );
-         SCIP_CALL( SCIPfixParam(scip, "heuristics/ofins/freq") );
-         SCIP_CALL( SCIPfixParam(scip, "heuristics/reoptsols/freq") );
-         SCIP_CALL( SCIPfixParam(scip, "heuristics/trivialnegation/freq") );
       }
       /* exit and free all reoptimization data structures */
       else if( !enable && scip->reopt != NULL)
