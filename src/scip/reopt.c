@@ -3065,8 +3065,8 @@ SCIP_RETCODE fixBounds(
       }
       else if(boundtype != SCIP_BOUNDTYPE_LOWER && boundtype != SCIP_BOUNDTYPE_UPPER)
       {
-         printf("** Unknown boundtype: %d **\n", boundtype);
-         assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
+         SCIPerrorMessage("** Unknown boundtype: %d **\n", boundtype);
+         return SCIP_INVALIDDATA;
       }
 #ifdef SCIP_MORE_DEBUG
       SCIPdebugMessage("  (dual) <%s> %s %g\n", SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", val);
@@ -3195,8 +3195,8 @@ SCIP_RETCODE fixInterdiction(
       }
       else if(boundtype != SCIP_BOUNDTYPE_LOWER && boundtype != SCIP_BOUNDTYPE_UPPER)
       {
-         printf("** Unknown boundtype: %d **\n", boundtype);
-         assert(boundtype == SCIP_BOUNDTYPE_LOWER || boundtype == SCIP_BOUNDTYPE_UPPER);
+         SCIPerrorMessage("** Unknown boundtype: %d **\n", boundtype);
+         return SCIP_INVALIDDATA;
       }
 #ifdef SCIP_MORE_DEBUG
       SCIPdebugMessage("  (dual) <%s> %s %g\n", SCIPvarGetName(var), boundtype == SCIP_BOUNDTYPE_LOWER ? ">=" : "<=", val);
@@ -3755,9 +3755,7 @@ SCIP_RETCODE reoptSaveNewObj(
       /* calculate similarity to last objective */
       reopt->simtolastobj = reoptSimilarity(reopt, set, reopt->run-1, reopt->run-2, transvars, ntransvars);
 
-      SCIPdebugMessage("new objective has similarity of %g/%g compared to first/previous.\n", reopt->simtofirstobj,
-         reopt->simtolastobj);
-      SCIPverbMessage(set->scip, SCIP_VERBLEVEL_MINIMAL, NULL, "new objective has similarity of %g/%g compared to first/previous.\n", reopt->simtofirstobj,
+      SCIPverbMessage(set->scip, SCIP_VERBLEVEL_MINIMAL, NULL, "new objective has similarity of %g compared to previous.\n",
          reopt->simtolastobj);
    }
 
