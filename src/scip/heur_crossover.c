@@ -470,7 +470,6 @@ SCIP_RETCODE setupSubproblem(
    int nusedsols;                           /* number of solutions to use in crossover     */
 
    int i;
-   char consname[SCIP_MAXSTRLEN];
 
    /* get solutions' data */
    nsols = SCIPgetNSols(scip);
@@ -530,9 +529,6 @@ SCIP_RETCODE setupSubproblem(
    /* no acceptable solution tuple could be created */
    if( !(*success) )
       return SCIP_OKAY;
-
-   /* get name of the original problem and add the string "_crossoversub" */
-   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_crossoversub", SCIPgetProbName(scip));
 
    /* set up the variables of the subproblem */
    SCIP_CALL( fixVariables(scip, subscip, subvars, selection, heurdata, success) );
