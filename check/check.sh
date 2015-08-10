@@ -139,8 +139,8 @@ do
         export SOLVERPATH=$SCIPPATH
         EXECNAME=$BINNAME
 
-        if test "$SOLVER" = "scip"
-        then
+	if test -e $SCIPPATH/../$BINNAME
+	then
             export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
         else
             export EXECNAME=$BINNAME

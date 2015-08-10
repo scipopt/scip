@@ -35,6 +35,7 @@ function stripversion {
     NAMENOPATH=`basename $1`
     # by '%%', Trim the longest match from the end
     NAMENOVERSION=${NAMENOPATH%%-*}
+    NAMENOVERSION=${NAMENOVERSION%%\.*}
     echo $NAMENOVERSION
 }
 
