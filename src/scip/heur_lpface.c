@@ -33,7 +33,7 @@
 #define HEUR_DESC             "LNS heuristic that fixes all variables that are identic in a couple of solutions"
 #define HEUR_DISPCHAR         '_'
 #define HEUR_PRIORITY         -1104000
-#define HEUR_FREQ             30
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
