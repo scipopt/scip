@@ -351,6 +351,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/heur_intshifting.o \
 			scip/heur_linesearchdiving.o \
 			scip/heur_localbranching.o \
+			scip/heur_lpface.o \
 			scip/heur_mutation.o \
 			scip/heur_nlpdiving.o \
 			scip/heur_objpscostdiving.o \
