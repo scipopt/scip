@@ -4736,6 +4736,10 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
 
+   if ( SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE ||
+        SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED || SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+      return SCIP_OKAY;
+
    SCIPdebugMessage("Initsol for indicator constraints.\n");
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -5052,13 +5056,14 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
 
    if ( conshdlrdata->sepaalternativelp )
    {
-      assert( conshdlrdata->altlp != NULL || nconss == 0 );
-      assert( conshdlrdata->slackhash != NULL );
-
+      if ( conshdlrdata->slackhash != NULL )
+      {
 #ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "\nStatistics for slack hash:\n");
-      SCIPhashmapPrintStatistics(conshdlrdata->slackhash, SCIPgetMessagehdlr(scip));
+         SCIPinfoMessage(scip, NULL, "\nStatistics for slack hash:\n");
+         SCIPhashmapPrintStatistics(conshdlrdata->slackhash, SCIPgetMessagehdlr(scip));
 #endif
+         SCIPhashmapFree(&conshdlrdata->slackhash);
+      }
 
       if ( conshdlrdata->altlp != NULL )
       {
@@ -5069,8 +5074,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
 #ifdef SCIP_DEBUG
          SCIPinfoMessage(scip, NULL, "\nStatistics for var hash:\n");
          SCIPhashmapPrintStatistics(conshdlrdata->varhash, SCIPgetMessagehdlr(scip));
-         SCIPinfoMessage(scip, NULL, "\nStatistics for slack hash:\n");
-         SCIPhashmapPrintStatistics(conshdlrdata->slackhash, SCIPgetMessagehdlr(scip));
          SCIPinfoMessage(scip, NULL, "\nStatistics for lower bound hash:\n");
          SCIPhashmapPrintStatistics(conshdlrdata->lbhash, SCIPgetMessagehdlr(scip));
          SCIPinfoMessage(scip, NULL, "\nStatistics for upper bound hash:\n");
@@ -5096,7 +5099,13 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
             consdata->colindex = -1;
          }
       }
-      SCIPhashmapFree(&conshdlrdata->slackhash);
+   }
+   else
+   {
+      assert( conshdlrdata->slackhash == NULL );
+      assert( conshdlrdata->varhash == NULL );
+      assert( conshdlrdata->lbhash == NULL );
+      assert( conshdlrdata->ubhash == NULL );
    }
 
    return SCIP_OKAY;

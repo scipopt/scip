@@ -20,6 +20,7 @@ fixed bugs:
 - squares of binary variables might not have been replaced by the binary variable itself in presolve,
   if the variable was originally general integer and only became binary during presolve (due to bound tightening)
 - fixed late change of type of slack variables in cons_indicator, if the bounds are not integral
+- fixed	initsol and exitsol of cons_indicator, if problem has already been solved
 
 SCIP version 3.2.0
 ==================
