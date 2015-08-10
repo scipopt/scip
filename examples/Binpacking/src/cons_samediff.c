@@ -238,7 +238,8 @@ static
 SCIP_Bool consdataCheck(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
-   SCIP_CONSDATA*        consdata            /**< constraint data */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_Bool             beforeprop          /**< is this check performed before propagation? */
    )
 {
    SCIP_VAR** vars;
@@ -257,7 +258,8 @@ SCIP_Bool consdataCheck(
    int v;
 
    vars = SCIPprobdataGetVars(probdata);
-   nvars = SCIPprobdataGetNVars(probdata);
+   nvars = (beforeprop ? consdata->npropagatedvars : SCIPprobdataGetNVars(probdata));
+   assert(nvars <= SCIPprobdataGetNVars(probdata));
 
    for( v = 0; v < nvars; ++v )
    {
@@ -433,7 +435,7 @@ SCIP_DECL_CONSPROP(consPropSamediff)
       }
 
       /* check if constraint is completely propagated */
-      assert( consdataCheck(scip, probdata, consdata) );
+      assert( consdataCheck(scip, probdata, consdata, FALSE) );
    }
 
    return SCIP_OKAY;
@@ -447,6 +449,7 @@ static
 SCIP_DECL_CONSACTIVE(consActiveSamediff)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   SCIP_PROBDATA* probdata;
 
    assert(scip != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -455,6 +458,9 @@ SCIP_DECL_CONSACTIVE(consActiveSamediff)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->npropagatedvars <= SCIPprobdataGetNVars(SCIPgetProbData(scip)));
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
 
    SCIPdebugMessage("activate constraint <%s> at node <%"SCIP_LONGINT_FORMAT"> in depth <%d>: ",
       SCIPconsGetName(cons), SCIPnodeGetNumber(consdata->node), SCIPnodeGetDepth(consdata->node));
@@ -466,6 +472,9 @@ SCIP_DECL_CONSACTIVE(consActiveSamediff)
       consdata->propagated = FALSE;
       SCIP_CALL( SCIPrepropagateNode(scip, consdata->node) );
    }
+
+   /* check if all previously generated variables are valid for this constraint */
+   assert( consdataCheck(scip, probdata, consdata, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -488,18 +497,12 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSamediff)
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
-   /* check if all variables which are not fixed locally to zero are valid for this constraint/node */
-   assert( consdataCheck(scip, probdata, consdata) );
-
    SCIPdebugMessage("deactivate constraint <%s> at node <%"SCIP_LONGINT_FORMAT"> in depth <%d>: ",
       SCIPconsGetName(cons), SCIPnodeGetNumber(consdata->node), SCIPnodeGetDepth(consdata->node));
    SCIPdebug( consdataPrint(scip, consdata, NULL) );
 
    /* set the number of propagated variables to current number of variables is SCIP */
    consdata->npropagatedvars = SCIPprobdataGetNVars(probdata);
-
-   /* check if all variables are valid for this constraint */
-   assert( consdataCheck(scip, probdata, consdata) );
 
    return SCIP_OKAY;
 }
