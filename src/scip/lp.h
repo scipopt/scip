@@ -1665,6 +1665,12 @@ void SCIPlpUnmarkDivingObjChanged(
    SCIP_LP*              lp                  /**< current LP data */
    );
 
+/* returns TRUE if at least one left/right hand side of an LP row was changed during diving mode */
+extern
+SCIP_Bool SCIPlpDivingRowsChanged(
+   SCIP_LP*              lp                  /**< current LP data */
+   );
+
 
 #ifdef NDEBUG
 
@@ -1693,6 +1699,7 @@ void SCIPlpUnmarkDivingObjChanged(
 #define SCIPlpDivingObjChanged(lp)      (lp)->divingobjchg
 #define SCIPlpMarkDivingObjChanged(lp)  ((lp)->divingobjchg = TRUE)
 #define SCIPlpUnmarkDivingObjChanged(lp) ((lp)->divingobjchg = FALSE)
+#define SCIPlpDivingRowsChanged(lp)     ((lp)->ndivesidechgs > 0)
 
 #endif
 
