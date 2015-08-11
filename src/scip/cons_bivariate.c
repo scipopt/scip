@@ -5545,6 +5545,10 @@ SCIP_RETCODE proposeFeasibleSolution(
 
    *success = FALSE;
 
+   /* don't propose new solutions if not in presolve or solving */
+   if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) >= SCIP_STAGE_SOLVED )
+      return SCIP_OKAY;
+
    if( sol != NULL )
    {
       SCIP_CALL( SCIPcreateSolCopy(scip, &newsol, sol) );

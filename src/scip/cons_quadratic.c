@@ -10481,6 +10481,10 @@ SCIP_RETCODE proposeFeasibleSolution(
 
    *success = FALSE;
 
+   /* don't propose new solutions if not in presolve or solving */
+   if( SCIPgetStage(scip) < SCIP_STAGE_INITPRESOLVE || SCIPgetStage(scip) >= SCIP_STAGE_SOLVED )
+      return SCIP_OKAY;
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -12443,8 +12447,8 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
 
          if( maypropfeasible )
          {
-            /* update information on linear variables that may be in- or decreased */
-            if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+            /* update information on linear variables that may be in- or decreased, if initsolve has not done so yet */
+            if( SCIPgetStage(scip) >= SCIP_STAGE_TRANSFORMED && SCIPgetStage(scip) < SCIP_STAGE_INITSOLVE )
                consdataFindUnlockedLinearVar(scip, consdata);
 
             if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) )
