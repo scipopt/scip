@@ -205,13 +205,16 @@ SCIP_RETCODE createRows(
          consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
 
       dualsol = SCIProwGetDualsol(rows[i]);
-      rowsolactivity = SCIPgetRowSolActivity(scip, rows[i], NULL);
+      rowsolactivity = SCIPgetRowActivity(scip, rows[i]);
 
-/*       transform into equation if the row is sharp and has a nonzero dual solution
-      if( SCIPisFeasEQ(scip, rowsolactivity, lhs) && !SCIPisZero(scip, dualsol) )
-         rhs = lhs;
-      else if( SCIPisFeasEQ(scip, rowsolactivity, rhs) && !SCIPisZero(scip, dualsol) )
-         lhs = rhs;*/
+      /* transform into equation if the row is sharp and has a nonzero dual solution */
+      if( !SCIPisFeasZero(scip, dualsol) )
+      {
+         if( dualsol > 0.0 && SCIPisFeasEQ(scip, rowsolactivity, lhs) )
+            rhs = lhs;
+         else if( dualsol < 0.0 && SCIPisFeasEQ(scip, rowsolactivity, rhs) )
+            lhs = rhs;
+      }
 
       /* create a new linear constraint and add it to the subproblem */
       SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
