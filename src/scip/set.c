@@ -315,7 +315,7 @@
 #define SCIP_DEFAULT_REOPT_REDUCETOFRONTIER TRUE/**< delete stored nodes which were not reoptimized */
 #define SCIP_DEFAULT_REOPT_SAVECONSPROP     FALSE/**< save constraint propagation */
 #define SCIP_DEFAULT_REOPT_USESPLITCONS    TRUE /**< use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node */
-#define SCIP_DEFAULT_REOPT_USECUTS         TRUE /**< reoptimize cuts found at the root node */
+#define SCIP_DEFAULT_REOPT_USECUTS        FALSE /**< reoptimize cuts found at the root node */
 #define SCIP_DEFAULT_REOPT_MAXCUTAGE          0 /**< maximal age of cuts the use them in reoptimization */
 
 /* Propagating */
