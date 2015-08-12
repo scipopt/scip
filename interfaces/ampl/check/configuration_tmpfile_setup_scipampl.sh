@@ -61,6 +61,7 @@ then
    # create empty settings file
    test -e $SETTINGS || touch $SETTINGS
 fi
+cat $SETTINGS >> $SETFILE
 
 # set non-default feasibility tolerance
 if test $FEASTOL != "default"
