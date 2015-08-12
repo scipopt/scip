@@ -409,10 +409,13 @@ SCIP_RETCODE SCIPvisualUpdateChild(
          /* the focus node is updated to a branch node */
          nodeinfo = "branched";
 
-         /* calculate infeasibility information */
-         SCIP_CALL( SCIPgetLPBranchCands(set->scip, NULL, NULL, &lpcandsfrac, &nlpcands, NULL, NULL) );
-         for (j = 0; j < nlpcands; ++j)
-            sum += lpcandsfrac[j];
+         /* calculate infeasibility information only if the LP was solved to optimality */
+         if( SCIPgetLPSolstat(set->scip) == SCIP_LPSOLSTAT_OPTIMAL )
+         {
+            SCIP_CALL( SCIPgetLPBranchCands(set->scip, NULL, NULL, &lpcandsfrac, &nlpcands, NULL, NULL) );
+            for( j = 0; j < nlpcands; ++j )
+               sum += lpcandsfrac[j];
+         }
 
          break;
       default:
