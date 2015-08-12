@@ -413,7 +413,7 @@ SCIP_RETCODE SCIPvisualUpdateChild(
          if( SCIPgetLPSolstat(set->scip) == SCIP_LPSOLSTAT_OPTIMAL )
          {
             SCIP_CALL( SCIPgetLPBranchCands(set->scip, NULL, NULL, &lpcandsfrac, &nlpcands, NULL, NULL) );
-            for (j = 0; j < nlpcands; ++j)
+            for( j = 0; j < nlpcands; ++j )
                sum += lpcandsfrac[j];
          }
 
