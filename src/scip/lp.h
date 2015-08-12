@@ -1699,7 +1699,7 @@ SCIP_Bool SCIPlpDivingRowsChanged(
 #define SCIPlpDivingObjChanged(lp)      (lp)->divingobjchg
 #define SCIPlpMarkDivingObjChanged(lp)  ((lp)->divingobjchg = TRUE)
 #define SCIPlpUnmarkDivingObjChanged(lp) ((lp)->divingobjchg = FALSE)
-#define SCIPlpDivingRowsChanged(lp)     ((lp)->ndivesidechgs > 0)
+#define SCIPlpDivingRowsChanged(lp)     ((lp)->ndivechgsides > 0)
 
 #endif
 
