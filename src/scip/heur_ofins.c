@@ -350,7 +350,7 @@ SCIP_RETCODE applyOfins(
    }
 
 #ifdef SCIP_DEBUG
-   /* for debugging RENS, enable MIP output */
+   /* for debugging OFINS, enable MIP output */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 100000000) );
 #endif
@@ -562,7 +562,7 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
        */
       else if( SCIPisPositive(scip, newcoef) == SCIPisPositive(scip, oldcoef) )
       {
-         frac = MIN(newcoefabs, oldcoefabs)/MAX(newcoefabs, oldcoefabs);
+         frac = 1.0 - MIN(newcoefabs, oldcoefabs)/MAX(newcoefabs, oldcoefabs);
       }
       /* if both coefficients have a different sign, we set frac = 1 */
       else
