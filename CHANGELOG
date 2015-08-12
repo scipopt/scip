@@ -13,6 +13,7 @@ performance improvements:
 interface:
 
 fixed bugs:
+- do not analyse an infeasible LP for conflicts during diving mode when LHS/RHS of rows were changed
 - fixed some problem with reoptimization when the problems are infeasible or have been solved in presolving
 - fixed bug in SOS1 constraint handler with inconsistent data structure after restart
 - fixed wrong handling of loose variables in OBBT
