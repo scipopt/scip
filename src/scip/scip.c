@@ -31645,7 +31645,7 @@ SCIP_RETCODE SCIPsolveDiveLP(
       /* analyze the infeasible LP (only if the objective was not changed, all columns are in the LP, and no external
        * pricers exist)
        */
-      if( !scip->set->misc_exactsolve && !SCIPlpDivingObjChanged(scip->lp)
+      if( !scip->set->misc_exactsolve && !(SCIPlpDivingObjChanged(scip->lp) || SCIPlpDivingRowsChanged(scip->lp))
          && SCIPprobAllColsInLP(scip->transprob, scip->set, scip->lp) )
       {
          SCIP_CALL( SCIPconflictAnalyzeLP(scip->conflict, scip->mem->probmem, scip->set, scip->stat, scip->transprob,
