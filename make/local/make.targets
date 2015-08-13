@@ -11,7 +11,7 @@ testcluster:
 		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) false $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
 .PHONY: testclustercpx
 testclustercpx:
