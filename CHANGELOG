@@ -22,6 +22,7 @@ fixed bugs:
   if the variable was originally general integer and only became binary during presolve (due to bound tightening)
 - fixed late change of type of slack variables in cons_indicator, if the bounds are not integral
 - fixed	initsol and exitsol of cons_indicator, if problem has already been solved
+- fixed bug in parsing emphasis parameters which formerly led to completely wrong results
 
 SCIP version 3.2.0
 ==================

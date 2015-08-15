@@ -2359,15 +2359,15 @@ SCIP_RETCODE emphasisParse(
    }
 
    /* check which kind of emphasis we want to set */
-   if ( strcmp(paramname, "heuristics") )
+   if ( strcmp(paramname, "heuristics") == 0 )
    {
       SCIP_CALL( SCIPsetSetHeuristics(set, messagehdlr, paramsetting, FALSE) );
    }
-   else if ( strcmp(paramname, "presolving") )
+   else if ( strcmp(paramname, "presolving") == 0 )
    {
       SCIP_CALL( SCIPsetSetPresolving(set, messagehdlr, paramsetting, FALSE) );
    }
-   else if ( strcmp(paramname, "separating") )
+   else if ( strcmp(paramname, "separating") == 0 )
    {
       SCIP_CALL( SCIPsetSetSeparating(set, messagehdlr, paramsetting, FALSE) );
    }
