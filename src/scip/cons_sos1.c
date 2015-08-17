@@ -5979,7 +5979,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
    SCIP_Bool             global,             /**< in any case produce a global cut */
    SCIP_Bool             strengthen,         /**< whether trying to strengthen bound constraint */
    SCIP_Bool             removable,          /**< should the inequality be removed from the LP due to aging or cleanup? */
-   const char *          nameext,            /**< part of name of bound constraints */
+   const char*           nameext,            /**< part of name of bound constraints */
    SCIP_ROW**            rowlb,              /**< output: row for lower bounds (or NULL if not needed) */
    SCIP_ROW**            rowub               /**< output: row for upper bounds (or NULL if not needed) */
    )
@@ -6541,9 +6541,10 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
       {
          SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], TRUE, FALSE, TRUE, FALSE, &consdata->rowlb, &consdata->rowub) );
       }
-      else if ( consdata->rowub == NULL && consdata->rowlb == NULL )
+      else if ( consdata->rowub == NULL || consdata->rowlb == NULL )
       {
-         SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], FALSE, TRUE, TRUE, FALSE, &consdata->rowlb, &consdata->rowub) );
+         SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], FALSE, TRUE, TRUE, FALSE,
+               (consdata->rowlb == NULL) ? &consdata->rowlb : NULL, (consdata->rowub == NULL) ? &consdata->rowub : NULL) );
       }
 
       /* put corresponding rows into LP */
