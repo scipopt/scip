@@ -4811,7 +4811,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
       }
 
       /* allocate buffer array */
-      SCIP_CALL( SCIPallocBufferArray(scip, &coverarray, nsuccarray) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &coverarray, nsos1vars) );
 
       /* mark all the vertices with FALSE */
       for (i = 0; i < nsos1vars; ++i)
@@ -5193,96 +5193,66 @@ SCIP_RETCODE enforceConflictgraph(
    conflictgraph = conshdlrdata->conflictgraph;
    assert( ! conshdlrdata->isconflocal ); /* conflictgraph should be the one of the root node */
 
-   /* check each constraint and update conflict graph if necessary */
-   for (c = 0; c < nconss; ++c)
+
+   /* update globally valid conflict graph to the local one; note that the local constraints are
+    * positioned at the end of array 'conss' */
+   for (c = nconss-1; c >= 0; --c)
    {
       SCIP_CONSDATA* consdata;
-      SCIP_CONS* cons;
-      SCIP_Bool cutoff;
-      int ngen;
+      SCIP_VAR** vars;
+      int nvars;
 
-      cons = conss[c];
-      assert( cons != NULL );
-      consdata = SCIPconsGetData(cons);
+      assert( conss[c] != NULL );
+      consdata = SCIPconsGetData(conss[c]);
       assert( consdata != NULL );
+
+      /* break, if the considered constraint is not local;
+       * the next constraints in the for-loop are known to be not local as well */
+      if ( ! consdata->local )
+         break;
 
       /* do nothing if there are not enough variables - this is usually eliminated by preprocessing */
       if ( consdata->nvars < 2 )
          continue;
 
-      /* first perform propagation (it might happen that standard propagation is turned off) */
-      ngen = 0;
-      SCIP_CALL( propConsSOS1(scip, cons, consdata, &cutoff, &ngen) );
-      SCIPdebugMessage("propagating <%s> in enforcing (cutoff: %u, domain reductions: %d).\n", SCIPconsGetName(cons), cutoff, ngen);
-      if ( cutoff )
+      /* create a local conflict graph to store local conflicts if not done already */
+      if ( conshdlrdata->localconflicts == NULL )
       {
-         *result = SCIP_CUTOFF;
-
-         /* remove local conflicts from conflict graph */
-         if ( conshdlrdata->isconflocal )
-         {
-            SCIP_CALL( resetConflictgraphSOS1(conflictgraph, conshdlrdata->localconflicts, nsos1vars) );
-            conshdlrdata->isconflocal = FALSE;
-         }
-         return SCIP_OKAY;
+         SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, nsos1vars) );
       }
-      if ( ngen > 0 )
-      {
-         *result = SCIP_REDUCEDDOM;
 
-         /* remove local conflicts from conflict graph */
-         if ( conshdlrdata->isconflocal )
-         {
-            SCIP_CALL( resetConflictgraphSOS1(conflictgraph, conshdlrdata->localconflicts, nsos1vars) );
-            conshdlrdata->isconflocal = FALSE;
-         }
-         return SCIP_OKAY;
-      }
-      assert( ngen == 0 );
-
-      /* add local conflicts to conflict graph and save them in 'localconflicts' */
-      if ( consdata->local )
+      /* add local conflicts to the (standard) conflict graph and the local conflict graph */
+      vars = consdata->vars;
+      nvars = consdata->nvars;
+      for (i = 0; i < nvars-1; ++i)
       {
-         SCIP_VAR** vars;
-         int nvars;
+         SCIP_VAR* var;
          int indi;
          int indj;
 
-         if ( conshdlrdata->localconflicts == NULL )
+         var = vars[i];
+         indi =  varGetNodeSOS1(conshdlrdata, var);
+         assert( indi >= 0 );
+
+         if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
          {
-            SCIP_CALL( SCIPdigraphCreate(&conshdlrdata->localconflicts, nsos1vars ) );
-         }
-
-         vars = consdata->vars;
-         nvars = consdata->nvars;
-         for (i = 0; i < nvars-1; ++i)
-         {
-            SCIP_VAR* var;
-
-            var = vars[i];
-            indi =  varGetNodeSOS1(conshdlrdata, var);
-            assert( indi >= 0 );
-
-            if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
+            for (j = i+1; j < nvars; ++j)
             {
-               for (j = i+1; j < nvars; ++j)
+               var = vars[j];
+               indj = varGetNodeSOS1(conshdlrdata, var);
+               assert( indj >= 0 );
+
+               if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
                {
-                  var = vars[j];
-                  indj = varGetNodeSOS1(conshdlrdata, var);
-                  assert( indj >= 0 );
-
-                  if ( indj >= 0 )
+                  if ( ! isConnectedSOS1(NULL, conflictgraph, indi, indj) )
                   {
-                     if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
-                     {
-                        SCIP_CALL( SCIPdigraphAddArcSafe(conflictgraph, indi, indj, NULL) );
-                        SCIP_CALL( SCIPdigraphAddArcSafe(conflictgraph, indj, indi, NULL) );
+                     SCIP_CALL( SCIPdigraphAddArc(conflictgraph, indi, indj, NULL) );
+                     SCIP_CALL( SCIPdigraphAddArc(conflictgraph, indj, indi, NULL) );
 
-                        SCIP_CALL( SCIPdigraphAddArcSafe(conshdlrdata->localconflicts, indi, indj, NULL) );
-                        SCIP_CALL( SCIPdigraphAddArcSafe(conshdlrdata->localconflicts, indj, indi, NULL) );
+                     SCIP_CALL( SCIPdigraphAddArc(conshdlrdata->localconflicts, indi, indj, NULL) );
+                     SCIP_CALL( SCIPdigraphAddArc(conshdlrdata->localconflicts, indj, indi, NULL) );
 
-                        conshdlrdata->isconflocal = TRUE;
-                     }
+                     conshdlrdata->isconflocal = TRUE;
                   }
                }
             }
@@ -5305,6 +5275,7 @@ SCIP_RETCODE enforceConflictgraph(
          }
       }
    }
+
 
    /* detect fixed variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &verticesarefixed, nsos1vars) );
@@ -6564,8 +6535,13 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
       else
          SCIPdebugMessage("Checking for initial rows for SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
-      /* possibly generate rows if not yet done */
-      if ( consdata->rowub == NULL || consdata->rowlb == NULL )
+      /* in case that the SOS1 constraint is local, we always generate new rows - the former rows might be invalid;
+       * otherwise if the SOS1 constraint is global, we only generate rows if not yet done */
+      if ( consdata->local )
+      {
+         SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], TRUE, FALSE, TRUE, FALSE, &consdata->rowlb, &consdata->rowub) );
+      }
+      else if ( consdata->rowub == NULL && consdata->rowlb == NULL )
       {
          SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], FALSE, TRUE, TRUE, FALSE, &consdata->rowlb, &consdata->rowub) );
       }
@@ -6767,7 +6743,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                   bound2lower = FALSE;
 
                /* determine left/right hand side of bound inequality */
-               lhsrhs = (bound2-impl) * bound1 + impl * bound1;
+               lhsrhs = bound1 * bound2;
 
                /* create cut */
                if ( bound1lower == bound2lower )
@@ -8072,6 +8048,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
 
    /* free stack of variables fixed to nonzero */
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->fixnonzerovars, conshdlrdata->maxnfixnonzerovars); /*lint !e737*/
+   conshdlrdata->nfixnonzerovars = 0;
+   conshdlrdata->maxnfixnonzerovars = 0;
 
    /* free graph for storing local conflicts */
    if ( conshdlrdata->localconflicts != NULL )
@@ -9860,7 +9838,7 @@ SCIP_Bool SCIPvarIsSOS1(
 }
 
 
-/** returns SOS1 index of variable or -1 if variable is part of the SOS1 conflict graph */
+/** returns SOS1 index of variable or -1 if variable is not part of the SOS1 conflict graph */
 int SCIPvarGetNodeSOS1(
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
    SCIP_VAR*             var                 /**< variable */
