@@ -139,6 +139,12 @@ do
                 break
             fi
         done
+
+        # skip the instance if the file was not found
+        if test "$SKIPINSTANCE" = "true"
+        then
+            continue
+        fi
         # the cluster queue has an upper bound of 2000 jobs; if this limit is
         # reached the submitted jobs are dumped; to avoid that we check the total
         # load of the cluster and wait until it is save (total load not more than
@@ -156,7 +162,7 @@ do
             # infer the names of all involved files from the arguments
             . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SETNAME $TSTNAME $CONTINUE $QUEUE  $p
 
-            # copy the basename into eval-file for invokation of evalcheck_cluster
+            # skip instance if log file is present and we want to continue a previously launched test run
             if test "$SKIPINSTANCE" = "true"
             then
                 continue
