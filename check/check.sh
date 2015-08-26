@@ -93,8 +93,6 @@ do
         p=0 # currently, noone uses permutations here
         PERMUTE=0
         QUEUE=`hostname`
-        # infer the names of all involved files from the arguments
-        . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SETNAME $TSTNAME $CONTINUE $QUEUE  $p
 
         if test "$INSTANCE" = "DONE"
         then
@@ -119,6 +117,14 @@ do
             fi
 
         done
+
+        if test "$SKIPINSTANCE" = "true"
+        then
+            continue
+        fi
+
+        # infer the names of all involved files from the arguments
+        . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SETNAME $TSTNAME $CONTINUE $QUEUE  $p
 
         if test "$SKIPINSTANCE" = "true"
         then
