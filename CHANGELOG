@@ -8,6 +8,7 @@ parameters:
 performance improvements:
 
 interface:
+- made debug solution functionality thread safe (see debug.h for further information)
 
 fixed bugs:
 - fixed some problem with reoptimization when the problems are infeasible or have been solved in presolving
