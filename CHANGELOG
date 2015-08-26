@@ -11,6 +11,7 @@ performance improvements:
 - do not transfer solutions to original space, if SCIP is being freed
 
 interface:
+- made debug solution functionality thread safe (see debug.h for further information)
 
 fixed bugs:
 - do not analyse an infeasible LP for conflicts during diving mode when LHS/RHS of rows were changed
