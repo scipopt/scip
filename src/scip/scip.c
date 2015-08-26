@@ -9067,7 +9067,6 @@ SCIP_RETCODE setReoptimizationParams(
    return SCIP_OKAY;
 }
 
-
 /*
  * global problem methods
  */
@@ -9114,10 +9113,6 @@ SCIP_RETCODE SCIPcreateProb(
    scip->set->stage = SCIP_STAGE_PROBLEM;
 
    SCIP_CALL( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set, scip->messagehdlr) );
-
-   assert(scip->set->debugsoldata == NULL);
-   SCIP_CALL( SCIPdebugSolDataCreate(&((scip->set)->debugsoldata)));
-   SCIPdebugSetMainscipset(scip->set);
 
    SCIP_CALL( SCIPprobCreate(&scip->origprob, scip->mem->probmem, scip->set, name,
          probdelorig, probtrans, probdeltrans, probinitsol, probexitsol, probcopy, probdata, FALSE) );
@@ -9686,9 +9681,6 @@ SCIP_RETCODE SCIPfreeProb(
 
    SCIP_CALL( SCIPfreeTransform(scip) );
    assert(scip->set->stage == SCIP_STAGE_INIT || scip->set->stage == SCIP_STAGE_PROBLEM);
-
-   /* free all debug data */
-   SCIP_CALL( SCIPdebugFreeDebugData(scip->set) ); /*lint !e506 !e774*/
 
    if( scip->set->stage == SCIP_STAGE_PROBLEM )
    {
@@ -12883,8 +12875,6 @@ SCIP_RETCODE SCIPtransformProb(
       SCIPdebugMessage("external memory usage estimated to %" SCIP_LONGINT_FORMAT " byte\n", scip->set->mem_externestim);
    }
 
-   SCIPdebugSetMainscipset(scip->set);
-
    return SCIP_OKAY;
 }
 
@@ -14050,9 +14040,6 @@ SCIP_RETCODE freeTransform(
    assert(scip->mem != NULL);
    assert(scip->stat != NULL);
    assert(scip->set->stage == SCIP_STAGE_TRANSFORMED || scip->set->stage == SCIP_STAGE_PRESOLVING);
-
-   /* free all debug data */
-   SCIP_CALL( SCIPdebugFreeDebugData(scip->set) ); /*lint !e506 !e774*/
 
    /* call exit methods of plugins */
    SCIP_CALL( SCIPsetExitPlugins(scip->set, scip->mem->probmem, scip->stat) );

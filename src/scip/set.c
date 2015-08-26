@@ -879,6 +879,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->conflicthdlrsnamesorted = FALSE;
 
    (*set)->debugsoldata = NULL;
+   SCIP_CALL( SCIPdebugSolDataCreate(&(*set)->debugsoldata) );
 
    (*set)->presols = NULL;
    (*set)->npresols = 0;
@@ -2223,6 +2224,9 @@ SCIP_RETCODE SCIPsetFree(
    }
    BMSfreeMemoryArrayNull(&(*set)->extcodenames);
    BMSfreeMemoryArrayNull(&(*set)->extcodedescs);
+
+   /* free all debug data */
+   SCIP_CALL( SCIPdebugFreeDebugData(*set) ); /*lint !e506 !e774*/
 
    BMSfreeMemory(set);
 

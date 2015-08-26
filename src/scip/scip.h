@@ -4378,9 +4378,6 @@ SCIP_RETCODE SCIPstartInteraction(
 
 /**@} */
 
-
-
-
 /*
  * global problem methods
  */
