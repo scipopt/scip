@@ -4343,7 +4343,7 @@ SCIP_RETCODE SCIPparamSetChar(
    SCIP_CALL_QUIET( paramCheckChar(param, messagehdlr, value) );
 
    /* return if the new value is equal to the current value */
-   if( strcmp(&value, &param->data.charparam.curvalue) == 0 )
+   if( value == param->data.charparam.curvalue )
       return SCIP_OKAY;
 
    SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
@@ -4383,7 +4383,7 @@ SCIP_RETCODE SCIPparamSetString(
    SCIP_CALL_QUIET( paramCheckString(param, messagehdlr, value) );
 
    /* return if the new value is equal to the current value */
-   if( strcmp(value, param->data.stringparam.curvalue) == 0 )
+   if( param->data.stringparam.curvalue != NULL && strcmp(value, param->data.stringparam.curvalue) == 0 )
       return SCIP_OKAY;
 
    SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
