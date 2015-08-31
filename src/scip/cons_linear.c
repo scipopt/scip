@@ -5452,7 +5452,6 @@ SCIP_RETCODE rangedRowPropagation(
    int nunfixedvars;
    int nfixedconsvars;
    int ncontvars;
-   int contvarpos;
    int nposbinvars;
    int nnegbinvars;
    int pos;
@@ -5529,7 +5528,6 @@ SCIP_RETCODE rangedRowPropagation(
    nposbinvars = 0;
    nnegbinvars = 0;
    ncontvars = 0;
-   contvarpos = -1;
    gcdisone = TRUE;
    possiblegcd = TRUE;
 
@@ -5562,7 +5560,6 @@ SCIP_RETCODE rangedRowPropagation(
             if( SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
             {
                ++ncontvars;
-               contvarpos = v;
             }
             else if( SCIPvarIsBinary(consdata->vars[v]) )
             {
@@ -5631,10 +5628,7 @@ SCIP_RETCODE rangedRowPropagation(
          SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0) )
       {
          if( SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
-         {
             ++ncontvars;
-            contvarpos = v;
-         }
 
          gcdisone = gcdisone && SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0);
          possiblegcd = FALSE;
