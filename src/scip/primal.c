@@ -679,6 +679,7 @@ SCIP_RETCODE primalAddOrigSol(
    assert(prob != NULL);
    assert(sol != NULL);
    assert(0 <= insertpos && insertpos < set->limit_maxorigsol);
+   assert(!set->reopt_enable);
 
    SCIPdebugMessage("insert primal solution candidate %p with obj %g at position %d:\n", (void*)sol, SCIPsolGetOrigObj(sol), insertpos);
 
@@ -985,7 +986,7 @@ SCIP_Bool origsolOfInterest(
    /* find insert position for the solution */
    (*insertpos) = primalSearchOrigSolPos(primal, sol);
 
-   if( (*insertpos) < set->limit_maxorigsol && !primalExistsOrigSol(primal, set, stat, origprob, sol, *insertpos) )
+   if( !set->reopt_enable && (*insertpos) < set->limit_maxorigsol && !primalExistsOrigSol(primal, set, stat, origprob, sol, *insertpos) )
       return TRUE;
 
    return FALSE;
@@ -1129,6 +1130,7 @@ SCIP_RETCODE SCIPprimalAddOrigSol(
       SCIP_SOL* solcopy;
 
       assert(insertpos >= 0 && insertpos < set->limit_maxorigsol);
+      assert(!set->reopt_enable);
 
       /* create a copy of the solution */
       SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
@@ -1168,6 +1170,7 @@ SCIP_RETCODE SCIPprimalAddOrigSolFree(
    if( origsolOfInterest(primal, set, stat, prob, *sol, &insertpos) )
    {
       assert(insertpos >= 0 && insertpos < set->limit_maxorigsol);
+      assert(!set->reopt_enable);
 
       /* insert solution into solution storage */
       SCIP_CALL( primalAddOrigSol(primal, blkmem, set, prob, *sol, insertpos) );

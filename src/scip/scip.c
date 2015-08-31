@@ -8973,63 +8973,31 @@ SCIP_RETCODE setReoptimizationParams(
 
    if( scip->set->reopt_enable )
    {
-      /* set size of original solution storage to 0 because we use the solution tree for reoptimization */
-      if( SCIPisParamFixed(scip, "limits/maxorigsol") )
-      {
-         SCIP_CALL( SCIPunfixParam(scip, "limits/maxorigsol") );
-      }
-      SCIP_CALL( SCIPsetSetIntParam(scip->set, scip->messagehdlr, "limits/maxorigsol", 0) );
-
-      /* disable conflict analysis */
+      /* disable conflict analysis
+       *
+       * TODO we may want to enable conflict analysis but disable it for bound exceeding LPs. hence, we have
+       * to ensure that conflict analysis based on dual information is not performed, therefore we have treat the case
+       * usesb = TRUE and useboundlp = FALSE with special care.
+       */
       if( SCIPisParamFixed(scip, "conflict/enable") )
       {
          SCIP_CALL( SCIPunfixParam(scip, "conflict/enable") );
       }
       SCIP_CALL( SCIPsetSetBoolParam(scip->set, scip->messagehdlr, "conflict/enable", FALSE) );
 
-      /* change presolving settings */
-      if( SCIPisParamFixed(scip, "presolving/maxrestarts") )
-      {
-         SCIP_CALL( SCIPunfixParam(scip, "presolving/maxrestarts") );
-      }
-      SCIP_CALL( SCIPsetSetIntParam(scip->set, scip->messagehdlr, "presolving/maxrestarts", 0) );
-
+      /* TODO check wheather multi aggregation can be enabled in reoptimization */
       if( SCIPisParamFixed(scip, "presolving/donotmultaggr") )
       {
          SCIP_CALL( SCIPunfixParam(scip, "presolving/donotmultaggr") );
       }
       SCIP_CALL( SCIPsetSetBoolParam(scip->set, scip->messagehdlr, "presolving/donotmultaggr", TRUE) );
 
-      /* disable dual reductions and objective propagation */
-      if( SCIPisParamFixed(scip, "misc/allowobjprop") )
-      {
-         SCIP_CALL( SCIPunfixParam(scip, "misc/allowobjprop") );
-      }
-      SCIP_CALL( SCIPsetSetBoolParam(scip->set, scip->messagehdlr, "misc/allowobjprop", FALSE) );
-
-      if( SCIPisParamFixed(scip, "misc/allowdualreds") )
-      {
-         SCIP_CALL( SCIPunfixParam(scip, "misc/allowdualreds") );
-      }
-      SCIP_CALL( SCIPsetSetBoolParam(scip->set, scip->messagehdlr, "misc/allowdualreds", FALSE) );
-
       /* fix paramters */
-      SCIP_CALL( SCIPfixParam(scip, "limits/maxorigsol") );
       SCIP_CALL( SCIPfixParam(scip, "conflict/enable") );
-      SCIP_CALL( SCIPfixParam(scip, "presolving/maxrestarts") );
       SCIP_CALL( SCIPfixParam(scip, "presolving/donotmultaggr") );
-      SCIP_CALL( SCIPfixParam(scip, "misc/allowobjprop") );
-      SCIP_CALL( SCIPfixParam(scip, "misc/allowdualreds") );
    }
    else
    {
-      /* set size of original solution storage to 0 because we use the solution tree for reoptimization */
-      if( SCIPisParamFixed(scip, "limits/maxorigsol") )
-      {
-         SCIP_CALL( SCIPunfixParam(scip, "limits/maxorigsol") );
-      }
-      SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "limits/maxorigsol") );
-
       /* disable conflict analysis */
       if( SCIPisParamFixed(scip, "conflict/enable") )
       {
@@ -9037,31 +9005,12 @@ SCIP_RETCODE setReoptimizationParams(
       }
       SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "conflict/enable") );
 
-      /* change presolving settings */
-      if( SCIPisParamFixed(scip, "presolving/maxrestarts") )
-      {
-         SCIP_CALL( SCIPunfixParam(scip, "presolving/maxrestarts") );
-      }
-      SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "presolving/maxrestarts") );
-
+      /* TODO check wheather multi aggregation can be enabled in reoptimization */
       if( SCIPisParamFixed(scip, "presolving/donotmultaggr") )
       {
          SCIP_CALL( SCIPunfixParam(scip, "presolving/donotmultaggr") );
       }
       SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "presolving/donotmultaggr") );
-
-      /* disable dual reductions and objective propagation */
-      if( SCIPisParamFixed(scip, "misc/allowobjprop") )
-      {
-         SCIP_CALL( SCIPunfixParam(scip, "misc/allowobjprop") );
-      }
-      SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "misc/allowobjprop") );
-
-      if( SCIPisParamFixed(scip, "misc/allowdualreds") )
-      {
-         SCIP_CALL( SCIPunfixParam(scip, "misc/allowdualreds") );
-      }
-      SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "misc/allowdualreds") );
    }
 
    return SCIP_OKAY;
@@ -12730,7 +12679,7 @@ SCIP_RETCODE SCIPtransformProb(
    oldnsolsfound = 0;
 
    /* set varlocks to ensure that no dual reduction can be performed */
-   if( !scip->set->misc_allowdualreds )
+   if( scip->set->reopt_enable || !scip->set->misc_allowdualreds )
    {
       int v;
 
@@ -14051,7 +14000,7 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPsetExitPlugins(scip->set, scip->mem->probmem, scip->stat) );
 
    /* copy best primal solutions to original solution candidate list */
-   if( scip->set->limit_maxorigsol > 0 && scip->set->misc_transsolsorig )
+   if( !scip->set->reopt_enable && scip->set->limit_maxorigsol > 0 && scip->set->misc_transsolsorig )
    {
       SCIP_Bool stored;
       SCIP_Bool hasinfval;
@@ -14130,7 +14079,7 @@ SCIP_RETCODE freeTransform(
    scip->set->stage = SCIP_STAGE_FREETRANS;
 
    /* remove var locks set to avoid dual reductions */
-   if( !scip->set->misc_allowdualreds )
+   if( scip->set->reopt_enable || !scip->set->misc_allowdualreds )
    {
       int v;
 
@@ -23091,7 +23040,7 @@ SCIP_Bool SCIPallowDualReds(
 {
    assert(scip != NULL);
 
-   return scip->set->misc_allowdualreds;
+   return !scip->set->reopt_enable && scip->set->misc_allowdualreds;
 }
 
 /** returns whether propagation w.r.t. current objective is allowed */
@@ -23101,7 +23050,7 @@ SCIP_Bool SCIPallowObjProp(
 {
    assert(scip != NULL);
 
-   return scip->set->misc_allowobjprop;
+   return !scip->set->reopt_enable && scip->set->misc_allowobjprop;
 }
 
 /** marks the variable that it must not be multi-aggregated
