@@ -14843,6 +14843,20 @@ SCIP_RETCODE SCIPenableReoptimization(
       return SCIP_INVALIDCALL;
    }
 
+   if( enable && SCIPfindBranchrule(scip, "nodereopt") == NULL )
+   {
+      if( scip->set->reopt_enable && scip->reopt == NULL )
+      {
+         scip->set->reopt_enable = FALSE;
+         SCIP_CALL( setReoptimizationParams(scip) );
+      }
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
+            "Branching rule <nodereopt> not found, reoptimization cannot be enabled.\n");
+
+      return SCIP_OKAY;
+   }
+
    /* set enable flag */
    scip->set->reopt_enable = enable;
 
@@ -14855,7 +14869,6 @@ SCIP_RETCODE SCIPenableReoptimization(
          SCIP_CALL( SCIPreoptCreate(&scip->reopt, scip->set, scip->mem->probmem) );
          SCIP_CALL( setReoptimizationParams(scip) );
 
-         /* change priority of branching rule for reoptimization */
          assert(SCIPfindBranchrule(scip, "nodereopt") != NULL);
 
          if( SCIPisParamFixed(scip, "branching/nodereopt/priority") )
@@ -14863,32 +14876,35 @@ SCIP_RETCODE SCIPenableReoptimization(
             SCIP_CALL( SCIPunfixParam(scip, "branching/nodereopt/priority") );
          }
          SCIP_CALL( SCIPsetIntParam(scip, "branching/nodereopt/priority", 9000000) );
-
-         /* change priority od heuristics */
-         assert(SCIPfindHeur(scip, "ofins") != NULL);
-         assert(SCIPfindHeur(scip, "reoptsols") != NULL);
-         assert(SCIPfindHeur(scip, "trivialnegation") != NULL);
-
-         if( SCIPisParamFixed(scip, "heuristics/ofins/freq") )
-         {
-            SCIP_CALL( SCIPunfixParam(scip, "heuristics/ofins/freq") );
-         }
-         SCIP_CALL( SCIPsetIntParam(scip, "heuristics/ofins/freq", 0) );
-
-         if( SCIPisParamFixed(scip, "heuristics/reoptsols/freq") )
-         {
-            SCIP_CALL( SCIPunfixParam(scip, "heuristics/reoptsols/freq") );
-         }
-         SCIP_CALL( SCIPsetIntParam(scip, "heuristics/reoptsols/freq", 0) );
-
-         if( SCIPisParamFixed(scip, "heuristics/trivialnegation/freq") )
-         {
-            SCIP_CALL( SCIPunfixParam(scip, "heuristics/trivialnegation/freq") );
-         }
-         SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trivialnegation/freq", 0) );
-
-         /* fix all parameters */
          SCIP_CALL( SCIPfixParam(scip, "branching/nodereopt/priority") );
+
+         /* change priorities of reoptimization heuristics */
+         if( SCIPfindHeur(scip, "ofins") != NULL )
+         {
+            if( SCIPisParamFixed(scip, "heuristics/ofins/freq") )
+            {
+               SCIP_CALL( SCIPunfixParam(scip, "heuristics/ofins/freq") );
+            }
+            SCIP_CALL( SCIPsetIntParam(scip, "heuristics/ofins/freq", 0) );
+         }
+
+         if( SCIPfindHeur(scip, "reoptsols") != NULL )
+         {
+            if( SCIPisParamFixed(scip, "heuristics/reoptsols/freq") )
+            {
+               SCIP_CALL( SCIPunfixParam(scip, "heuristics/reoptsols/freq") );
+            }
+            SCIP_CALL( SCIPsetIntParam(scip, "heuristics/reoptsols/freq", 0) );
+         }
+
+         if( SCIPfindHeur(scip, "trivialnegation") != NULL )
+         {
+            if( SCIPisParamFixed(scip, "heuristics/trivialnegation/freq") )
+            {
+               SCIP_CALL( SCIPunfixParam(scip, "heuristics/trivialnegation/freq") );
+            }
+            SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trivialnegation/freq", 0) );
+         }
       }
       /* exit and free all reoptimization data structures */
       else if( !enable && scip->reopt != NULL)
@@ -14897,6 +14913,8 @@ SCIP_RETCODE SCIPenableReoptimization(
          assert(scip->reopt == NULL);
          SCIP_CALL( setReoptimizationParams(scip) );
 
+         assert(SCIPfindBranchrule(scip, "nodereopt") != NULL);
+
          /* set the priorities to defeault */
          if( SCIPisParamFixed(scip, "branching/nodereopt/priority") )
          {
@@ -14904,28 +14922,33 @@ SCIP_RETCODE SCIPenableReoptimization(
          }
          SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "branching/nodereopt/priority") );
 
-         /* change priority od heuristics */
-         assert(SCIPfindHeur(scip, "ofins") != NULL);
-         assert(SCIPfindHeur(scip, "reoptsols") != NULL);
-         assert(SCIPfindHeur(scip, "trivialnegation") != NULL);
-
-         if( SCIPisParamFixed(scip, "heuristics/ofins/freq") )
+         /* change priorities of reoptimization heuristics */
+         if( SCIPfindHeur(scip, "ofins") != NULL )
          {
-            SCIP_CALL( SCIPunfixParam(scip, "heuristics/ofins/freq") );
+            if( SCIPisParamFixed(scip, "heuristics/ofins/freq") )
+            {
+               SCIP_CALL( SCIPunfixParam(scip, "heuristics/ofins/freq") );
+            }
+            SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "heuristics/ofins/freq") );
          }
-         SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "heuristics/ofins/freq") );
 
-         if( SCIPisParamFixed(scip, "heuristics/reoptsols/freq") )
+         if( SCIPfindHeur(scip, "reoptsols") != NULL )
          {
-            SCIP_CALL( SCIPunfixParam(scip, "heuristics/reoptsols/freq") );
+            if( SCIPisParamFixed(scip, "heuristics/reoptsols/freq") )
+            {
+               SCIP_CALL( SCIPunfixParam(scip, "heuristics/reoptsols/freq") );
+            }
+            SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "heuristics/reoptsols/freq") );
          }
-         SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "heuristics/reoptsols/freq") );
 
-         if( SCIPisParamFixed(scip, "heuristics/trivialnegation/freq") )
+         if( SCIPfindHeur(scip, "trivialnegation") != NULL )
          {
-            SCIP_CALL( SCIPunfixParam(scip, "heuristics/trivialnegation/freq") );
+            if( SCIPisParamFixed(scip, "heuristics/trivialnegation/freq") )
+            {
+               SCIP_CALL( SCIPunfixParam(scip, "heuristics/trivialnegation/freq") );
+            }
+            SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "heuristics/trivialnegation/freq") );
          }
-         SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "heuristics/trivialnegation/freq") );
       }
    }
 

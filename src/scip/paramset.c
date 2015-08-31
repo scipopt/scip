@@ -4106,7 +4106,7 @@ SCIP_RETCODE SCIPparamsetCopyParams(
    }
 
    /* disable reoptimization explicitly */
-   SCIP_CALL( SCIPparamsetSetBool(targetparamset, set, messagehdlr, "reoptimization/enable", FALSE) );
+   SCIP_CALL( SCIPenableReoptimization(set->scip, FALSE) );
 
    return SCIP_OKAY;
 }
