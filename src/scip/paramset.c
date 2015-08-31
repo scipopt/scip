@@ -4179,11 +4179,6 @@ SCIP_RETCODE SCIPparamSetBool(
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
    SCIP_CALL_QUIET( paramCheckBool(param, messagehdlr, value) );
-
-   /* return if the new value is equal to the current value */
-   if( value == param->data.boolparam.curvalue )
-      return SCIP_OKAY;
-
    SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
 
    /* set the parameter's current value */
@@ -4219,11 +4214,6 @@ SCIP_RETCODE SCIPparamSetInt(
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
    SCIP_CALL_QUIET( paramCheckInt(param, messagehdlr, value) );
-
-   /* return if the new value is equal to the current value */
-   if( value == param->data.intparam.curvalue )
-      return SCIP_OKAY;
-
    SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
 
    /* set the parameter's current value */
@@ -4259,11 +4249,6 @@ SCIP_RETCODE SCIPparamSetLongint(
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
    SCIP_CALL_QUIET( paramCheckLongint(param, messagehdlr, value) );
-
-   /* return if the new value is equal to the current value */
-   if( value == param->data.longintparam.curvalue )
-      return SCIP_OKAY;
-
    SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
 
    /* set the parameter's current value */
@@ -4301,11 +4286,6 @@ SCIP_RETCODE SCIPparamSetReal(
    value = MAX(value, SCIP_REAL_MIN);
    value = MIN(value, SCIP_REAL_MAX);
    SCIP_CALL_QUIET( paramCheckReal(param, messagehdlr, value) );
-
-   /* return if the new value is equal to the current value */
-   if( value == param->data.realparam.curvalue )
-      return SCIP_OKAY;
-
    SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
 
    /* set the parameter's current value */
@@ -4341,11 +4321,6 @@ SCIP_RETCODE SCIPparamSetChar(
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
    SCIP_CALL_QUIET( paramCheckChar(param, messagehdlr, value) );
-
-   /* return if the new value is equal to the current value */
-   if( value == param->data.charparam.curvalue )
-      return SCIP_OKAY;
-
    SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
 
    /* set the parameter's current value */
@@ -4381,11 +4356,6 @@ SCIP_RETCODE SCIPparamSetString(
 
    /* check, if value is possible for the parameter and the parameter is not fixed */
    SCIP_CALL_QUIET( paramCheckString(param, messagehdlr, value) );
-
-   /* return if the new value is equal to the current value */
-   if( param->data.stringparam.curvalue != NULL && strcmp(value, param->data.stringparam.curvalue) == 0 )
-      return SCIP_OKAY;
-
    SCIP_CALL_QUIET( paramCheckFixed(param, messagehdlr) );
 
    /* set the parameter's current value */

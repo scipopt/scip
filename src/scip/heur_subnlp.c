@@ -282,7 +282,10 @@ SCIP_RETCODE createSubSCIP(
    SCIP_CALL( SCIPsetBoolParam(heurdata->subscip, "misc/catchctrlc", FALSE) );
 
    /* disable keeping solutions from one subscip solve for next solve (with usually different fixings) */
-   SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "limits/maxorigsol", 0) );
+   if( !SCIPisParamFixed(scip, "limits/maxorigsol") )
+   {
+      SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "limits/maxorigsol", 0) );
+   }
 
    /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(heurdata->subscip, "display/verblevel", 0) );
