@@ -24,6 +24,7 @@ fixed bugs:
 - fixed late change of type of slack variables in cons_indicator, if the bounds are not integral
 - fixed	initsol and exitsol of cons_indicator, if problem has already been solved
 - fixed bug in parsing emphasis parameters which formerly led to completely wrong results
+- fixed bug in the computation of the Wilcoxon test
 
 SCIP version 3.2.0
 ==================
