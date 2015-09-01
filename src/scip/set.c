@@ -557,6 +557,133 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
    return SCIP_OKAY;
 }
 
+/** set parameters for reoptimization */
+SCIP_RETCODE SCIPsetSetReoptimizationParams(
+   SCIP_SET*             set,                     /**< SCIP data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr              /**< message handler */
+   )
+{
+   assert(set != NULL);
+   assert(messagehdlr != NULL);
+
+   if( set->reopt_enable )
+   {
+      /* disable conflict analysis
+       *
+       * TODO we may want to enable conflict analysis but disable it for bound exceeding LPs. hence, we have
+       * to ensure that conflict analysis based on dual information is not performed, therefore we have treat the case
+       * usesb = TRUE and useboundlp = FALSE with special care.
+       */
+      if( SCIPsetIsParamFixed(set, "conflict/enable") )
+      {
+         SCIP_CALL( SCIPsetChgParamFixed(set, "conflict/enable", FALSE) );
+      }
+      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/enable", FALSE) );
+
+      /* TODO check wheather multi aggregation can be enabled in reoptimization */
+      if( SCIPsetIsParamFixed(set, "presolving/donotmultaggr") )
+      {
+         SCIP_CALL( SCIPsetChgParamFixed(set, "presolving/donotmultaggr", FALSE) );
+      }
+      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "presolving/donotmultaggr", TRUE) );
+
+      /* fix paramters */
+      SCIP_CALL( SCIPsetChgParamFixed(set, "conflict/enable", TRUE) );
+      SCIP_CALL( SCIPsetChgParamFixed(set, "presolving/donotmultaggr", TRUE) );
+
+      if( SCIPsetIsParamFixed(set, "branching/nodereopt/priority") )
+      {
+         SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", FALSE) );
+      }
+      SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "branching/nodereopt/priority", 9000000) );
+      SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", TRUE) );
+
+      /* change priorities of reoptimization heuristics */
+      if( SCIPsetFindHeur(set, "ofins") != NULL )
+      {
+         if( SCIPsetIsParamFixed(set, "heuristics/ofins/freq") )
+         {
+            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/ofins/freq", FALSE) );
+         }
+         SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "heuristics/ofins/freq", 0) );
+      }
+
+      if( SCIPsetFindHeur(set, "reoptsols") != NULL )
+      {
+         if( SCIPsetIsParamFixed(set, "heuristics/reoptsols/freq") )
+         {
+            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/reoptsols/freq", FALSE) );
+         }
+         SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "heuristics/reoptsols/freq", 0) );
+      }
+
+      if( SCIPsetFindHeur(set, "trivialnegation") != NULL )
+      {
+         if( SCIPsetIsParamFixed(set, "heuristics/trivialnegation/freq") )
+         {
+            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/trivialnegation/freq", FALSE) );
+         }
+         SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "heuristics/trivialnegation/freq", 0) );
+      }
+   }
+   else
+   {
+      /* disable conflict analysis */
+      if( SCIPsetIsParamFixed(set, "conflict/enable") )
+      {
+         SCIP_CALL( SCIPsetChgParamFixed(set, "conflict/enable", FALSE) );
+      }
+      SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "conflict/enable") );
+
+      /* TODO check wheather multi aggregation can be enabled in reoptimization */
+      if( SCIPsetIsParamFixed(set, "presolving/donotmultaggr") )
+      {
+         SCIP_CALL( SCIPsetChgParamFixed(set, "presolving/donotmultaggr", FALSE) );
+      }
+      SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "presolving/donotmultaggr") );
+
+      /* set the priorities to defeault */
+      if( SCIPsetFindBranchrule(set, "nodereopt") != NULL )
+      {
+         if( SCIPsetIsParamFixed(set, "branching/nodereopt/priority") )
+         {
+            SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", FALSE) );
+         }
+         SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "branching/nodereopt/priority") );
+      }
+
+      /* change priorities of reoptimization heuristics */
+      if( SCIPsetFindHeur(set, "ofins") != NULL )
+      {
+         if( SCIPsetIsParamFixed(set, "heuristics/ofins/freq") )
+         {
+            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/ofins/freq", FALSE) );
+         }
+         SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "heuristics/ofins/freq") );
+      }
+
+      if( SCIPsetFindHeur(set, "reoptsols") != NULL )
+      {
+         if( SCIPsetIsParamFixed(set, "heuristics/reoptsols/freq") )
+         {
+            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/reoptsols/freq", FALSE) );
+         }
+         SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "heuristics/reoptsols/freq") );
+      }
+
+      if( SCIPsetFindHeur(set, "trivialnegation") != NULL )
+      {
+         if( SCIPsetIsParamFixed(set, "heuristics/trivialnegation/freq") )
+         {
+            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/trivialnegation/freq", FALSE) );
+         }
+         SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "heuristics/trivialnegation/freq") );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** enable or disable all plugin timers depending on the value of the flag \p enabled */
 void SCIPsetEnableOrDisablePluginClocks(
    SCIP_SET*             set,                /**< SCIP settings */

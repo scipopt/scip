@@ -95,7 +95,9 @@ SCIP_DECL_EVENTINITSOL(eventInitsolReopt)
    assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
-   assert(SCIPisReoptEnabled(scip));
+
+   if( !SCIPisReoptEnabled(scip) )
+      return SCIP_OKAY;
 
    vars = SCIPgetVars(scip);
    for(varnr = 0; varnr < SCIPgetNVars(scip); ++varnr)
@@ -119,7 +121,9 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolReopt)
    assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
-   assert(SCIPisReoptEnabled(scip));
+
+   if( !SCIPisReoptEnabled(scip) )
+      return SCIP_OKAY;
 
    vars = SCIPgetVars(scip);
 

@@ -8961,61 +8961,6 @@ SCIP_RETCODE SCIPstartInteraction(
    return SCIP_OKAY;
 }
 
-/** set parameters for reoptimization */
-static
-SCIP_RETCODE setReoptimizationParams(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-   assert(scip->messagehdlr != NULL);
-
-   if( scip->set->reopt_enable )
-   {
-      /* disable conflict analysis
-       *
-       * TODO we may want to enable conflict analysis but disable it for bound exceeding LPs. hence, we have
-       * to ensure that conflict analysis based on dual information is not performed, therefore we have treat the case
-       * usesb = TRUE and useboundlp = FALSE with special care.
-       */
-      if( SCIPisParamFixed(scip, "conflict/enable") )
-      {
-         SCIP_CALL( SCIPunfixParam(scip, "conflict/enable") );
-      }
-      SCIP_CALL( SCIPsetSetBoolParam(scip->set, scip->messagehdlr, "conflict/enable", FALSE) );
-
-      /* TODO check wheather multi aggregation can be enabled in reoptimization */
-      if( SCIPisParamFixed(scip, "presolving/donotmultaggr") )
-      {
-         SCIP_CALL( SCIPunfixParam(scip, "presolving/donotmultaggr") );
-      }
-      SCIP_CALL( SCIPsetSetBoolParam(scip->set, scip->messagehdlr, "presolving/donotmultaggr", TRUE) );
-
-      /* fix paramters */
-      SCIP_CALL( SCIPfixParam(scip, "conflict/enable") );
-      SCIP_CALL( SCIPfixParam(scip, "presolving/donotmultaggr") );
-   }
-   else
-   {
-      /* disable conflict analysis */
-      if( SCIPisParamFixed(scip, "conflict/enable") )
-      {
-         SCIP_CALL( SCIPunfixParam(scip, "conflict/enable") );
-      }
-      SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "conflict/enable") );
-
-      /* TODO check wheather multi aggregation can be enabled in reoptimization */
-      if( SCIPisParamFixed(scip, "presolving/donotmultaggr") )
-      {
-         SCIP_CALL( SCIPunfixParam(scip, "presolving/donotmultaggr") );
-      }
-      SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "presolving/donotmultaggr") );
-   }
-
-   return SCIP_OKAY;
-}
-
 /*
  * global problem methods
  */
@@ -14782,7 +14727,8 @@ SCIP_RETCODE SCIPenableReoptimization(
    assert(scip != NULL);
 
    /* we want to skip if nothing has changed */
-   if( (enable && scip->reopt != NULL) || (!enable && scip->reopt == NULL) )
+   if( (enable && scip->set->reopt_enable && scip->reopt != NULL)
+    || (!enable && !scip->set->reopt_enable && scip->reopt == NULL) )
       return SCIP_OKAY;
 
    /* check stage */
@@ -14792,23 +14738,6 @@ SCIP_RETCODE SCIPenableReoptimization(
       return SCIP_INVALIDCALL;
    }
 
-   if( enable && SCIPfindBranchrule(scip, "nodereopt") == NULL )
-   {
-      if( scip->set->reopt_enable && scip->reopt == NULL )
-      {
-         scip->set->reopt_enable = FALSE;
-         SCIP_CALL( setReoptimizationParams(scip) );
-      }
-
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
-            "Branching rule <nodereopt> not found, reoptimization cannot be enabled.\n");
-
-      return SCIP_OKAY;
-   }
-
-   /* set enable flag */
-   scip->set->reopt_enable = enable;
-
    /* if the current stage is SCIP_STAGE_PROBLEM we have to include the heuristics and branching rule */
    if( scip->set->stage == SCIP_STAGE_PROBLEM )
    {
@@ -14816,90 +14745,24 @@ SCIP_RETCODE SCIPenableReoptimization(
       if( enable && scip->reopt == NULL )
       {
          SCIP_CALL( SCIPreoptCreate(&scip->reopt, scip->set, scip->mem->probmem) );
-         SCIP_CALL( setReoptimizationParams(scip) );
+         SCIP_CALL( SCIPsetSetReoptimizationParams(scip->set, scip->messagehdlr) );
 
          assert(SCIPfindBranchrule(scip, "nodereopt") != NULL);
-
-         if( SCIPisParamFixed(scip, "branching/nodereopt/priority") )
-         {
-            SCIP_CALL( SCIPunfixParam(scip, "branching/nodereopt/priority") );
-         }
-         SCIP_CALL( SCIPsetIntParam(scip, "branching/nodereopt/priority", 9000000) );
-         SCIP_CALL( SCIPfixParam(scip, "branching/nodereopt/priority") );
-
-         /* change priorities of reoptimization heuristics */
-         if( SCIPfindHeur(scip, "ofins") != NULL )
-         {
-            if( SCIPisParamFixed(scip, "heuristics/ofins/freq") )
-            {
-               SCIP_CALL( SCIPunfixParam(scip, "heuristics/ofins/freq") );
-            }
-            SCIP_CALL( SCIPsetIntParam(scip, "heuristics/ofins/freq", 0) );
-         }
-
-         if( SCIPfindHeur(scip, "reoptsols") != NULL )
-         {
-            if( SCIPisParamFixed(scip, "heuristics/reoptsols/freq") )
-            {
-               SCIP_CALL( SCIPunfixParam(scip, "heuristics/reoptsols/freq") );
-            }
-            SCIP_CALL( SCIPsetIntParam(scip, "heuristics/reoptsols/freq", 0) );
-         }
-
-         if( SCIPfindHeur(scip, "trivialnegation") != NULL )
-         {
-            if( SCIPisParamFixed(scip, "heuristics/trivialnegation/freq") )
-            {
-               SCIP_CALL( SCIPunfixParam(scip, "heuristics/trivialnegation/freq") );
-            }
-            SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trivialnegation/freq", 0) );
-         }
       }
-      /* exit and free all reoptimization data structures */
-      else if( !enable && scip->reopt != NULL)
+      /* disable all reoptimization plugins and free the structure if necessary */
+      else if( (!enable && scip->reopt != NULL) || (!enable && scip->set->reopt_enable && scip->reopt == NULL) )
       {
-         SCIP_CALL( SCIPreoptFree(&(scip->reopt), scip->set, scip->origprimal, scip->mem->probmem) );
-         assert(scip->reopt == NULL);
-         SCIP_CALL( setReoptimizationParams(scip) );
-
-         assert(SCIPfindBranchrule(scip, "nodereopt") != NULL);
-
-         /* set the priorities to defeault */
-         if( SCIPisParamFixed(scip, "branching/nodereopt/priority") )
+         if( scip->reopt != NULL )
          {
-            SCIP_CALL( SCIPunfixParam(scip, "branching/nodereopt/priority") );
+            SCIP_CALL( SCIPreoptFree(&(scip->reopt), scip->set, scip->origprimal, scip->mem->probmem) );
+            assert(scip->reopt == NULL);
          }
-         SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "branching/nodereopt/priority") );
-
-         /* change priorities of reoptimization heuristics */
-         if( SCIPfindHeur(scip, "ofins") != NULL )
-         {
-            if( SCIPisParamFixed(scip, "heuristics/ofins/freq") )
-            {
-               SCIP_CALL( SCIPunfixParam(scip, "heuristics/ofins/freq") );
-            }
-            SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "heuristics/ofins/freq") );
-         }
-
-         if( SCIPfindHeur(scip, "reoptsols") != NULL )
-         {
-            if( SCIPisParamFixed(scip, "heuristics/reoptsols/freq") )
-            {
-               SCIP_CALL( SCIPunfixParam(scip, "heuristics/reoptsols/freq") );
-            }
-            SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "heuristics/reoptsols/freq") );
-         }
-
-         if( SCIPfindHeur(scip, "trivialnegation") != NULL )
-         {
-            if( SCIPisParamFixed(scip, "heuristics/trivialnegation/freq") )
-            {
-               SCIP_CALL( SCIPunfixParam(scip, "heuristics/trivialnegation/freq") );
-            }
-            SCIP_CALL( SCIPsetResetParam(scip->set, scip->messagehdlr, "heuristics/trivialnegation/freq") );
-         }
+         SCIP_CALL( SCIPsetSetReoptimizationParams(scip->set, scip->messagehdlr) );
       }
    }
+
+   /* set enable flag */
+   scip->set->reopt_enable = enable;
 
    return SCIP_OKAY;
 }
