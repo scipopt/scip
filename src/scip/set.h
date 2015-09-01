@@ -462,6 +462,13 @@ SCIP_RETCODE SCIPsetSetEmphasis(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
+/** set parameters for reoptimization */
+extern
+SCIP_RETCODE SCIPsetSetReoptimizationParams(
+   SCIP_SET*             set,                     /**< SCIP data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr              /**< message handler */
+   );
+
 /** enable or disable all plugin timers depending on the value of the flag \p enabled */
 extern
 void SCIPsetEnableOrDisablePluginClocks(
