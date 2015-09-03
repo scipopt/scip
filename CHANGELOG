@@ -25,6 +25,7 @@ fixed bugs:
 - fixed	initsol and exitsol of cons_indicator, if problem has already been solved
 - fixed bug in parsing emphasis parameters which formerly led to completely wrong results
 - fixed bug in the computation of the Wilcoxon test
+- do not use the relative and absolute gap limit if no primal solution has been found so far
 
 SCIP version 3.2.0
 ==================
