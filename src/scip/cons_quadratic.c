@@ -7652,7 +7652,7 @@ SCIP_RETCODE computeGauge(
     * fortunately, sepabilinvar2pos in consdata gives us all the information that we need
     */
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(consdata->gaugecoefs), consdata->nquadvars) );
+   SCIP_CALL( SCIPallocClearMemoryArray(scip, &(consdata->gaugecoefs), consdata->nquadvars) );
 
    /* compute value of quadratic part at interior point, build map and compute gaugeconst (c_gauge) */
    consdata->interiorpointval = 0;
@@ -7688,15 +7688,12 @@ SCIP_RETCODE computeGauge(
       }
    }
 
-   /* compute gaugecoefs (b_gauge) */
+   /* compute gaugecoefs (b_gauge = b + 2 * A * interiorpoint) */
    for( i = 0; i < consdata->nquadvars; i++ )
    {
-      SCIP_Real val;
-
       quadvarterm = &consdata->quadvarterms[i];
+      consdata->gaugecoefs[i] += quadvarterm->lincoef + 2.0 * quadvarterm->sqrcoef * consdata->interiorpoint[i];
 
-      val = consdata->interiorpoint[i];
-      consdata->gaugecoefs[i] = quadvarterm->lincoef + 2.0 * quadvarterm->sqrcoef * val;
       for( j = 0; j < quadvarterm->nadjbilin; j++ )
       {
          int varpos;
@@ -7707,17 +7704,14 @@ SCIP_RETCODE computeGauge(
 
          if( bilinterm->var1 == quadvarterm->var )
          {
-            /* the index of the variable associated with var2 in bilinterm should be given by sepabilinvar2pos */
-            assert(consdata->quadvarterms[consdata->sepabilinvar2pos[bilintermidx]].var == bilinterm->var2);
             varpos = consdata->sepabilinvar2pos[bilintermidx];
-         }
-         else
-         {
-            assert(bilinterm->var2 == quadvarterm->var);
-            varpos = i;
-         }
 
-         consdata->gaugecoefs[i] += bilinterm->coef * consdata->interiorpoint[varpos];
+            /* the index of the variable associated with var2 in bilinterm should be given by sepabilinvar2pos */
+            assert(consdata->quadvarterms[varpos].var == bilinterm->var2);
+
+            consdata->gaugecoefs[i] += bilinterm->coef * consdata->interiorpoint[varpos];
+            consdata->gaugecoefs[varpos] += bilinterm->coef * consdata->interiorpoint[i];
+         }
       }
    }
 
