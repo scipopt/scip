@@ -2067,7 +2067,7 @@ SCIP_RETCODE checkCurvature(
 
          if( consdata->curvatures[i] == SCIP_EXPRCURV_UNKNOWN && SCIPconshdlrGetData(SCIPconsGetHdlr(cons))->isreformulated )
          {
-            SCIPwarningMessage(scip, "indefinite expression tree in constraint <%s>\n", SCIPconsGetName(cons));
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, "indefinite expression tree in constraint <%s>\n", SCIPconsGetName(cons));
             SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(consdata->exprtrees[i], SCIPgetMessagehdlr(scip), NULL) ) );
             SCIPdebugPrintf("\n");
          }
