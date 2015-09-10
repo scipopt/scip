@@ -111,7 +111,7 @@ SCIP_DECL_PARAMCHGD(paramChgdRandomseed)
 }
 
 
-#if 0
+#if 1
 /** for debug purposes only */
 static
 SCIP_RETCODE printGraph(
@@ -172,7 +172,6 @@ SCIP_RETCODE printGraph(
             (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Node %d", n, n + 1 - e - m);
             SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#336699", NULL);
          }
-
       }
    }
 
@@ -456,6 +455,14 @@ SCIP_RETCODE SCIPheurPruneSteinerTree(
             }
             if( g->stp_type == STP_UNDIRECTED )
             {
+	      if( j == EAT_LAST )
+	      {
+	       printf("prune isolated: %d\n", i);
+	        char varname[SCIP_MAXSTRLEN];
+   (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "AAAA%d.gml", 0);
+   SCIP_CALL( printGraph(scip, g, varname, result) );
+	       printf("j %d\n", j);
+	      }
                assert(j != EAT_LAST);
             }
          }
@@ -605,6 +612,7 @@ SCIP_RETCODE computeSteinerTreeDijk(
    int*                  result,             /**< solution array (on edges) */
    int*                  dijkedge,           /**< predecessor edge array */
    int                   start,              /**< start vertex*/
+   unsigned int*         randseed,           /**< random seed */
    char*                 connected           /**< array marking all solution vertices*/
    )
 {
@@ -614,7 +622,7 @@ SCIP_RETCODE computeSteinerTreeDijk(
    nnodes = g->knots;
    for( k = 0; k < nnodes; k++ )
       g->mark[k] = (g->grad[k] > 0);
-   graph_path_st(scip, g, cost, dijkdist, dijkedge, start, connected);
+   graph_path_st(scip, g, cost, dijkdist, dijkedge, start, randseed, connected);
 
    SCIP_CALL( prune(scip, g, cost, costrev, result, connected) );
 
@@ -1505,7 +1513,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
    else
    {
       /* graph very large? */
-      if( nterms > 500 && nedges > 10000 && 3 * nterms < nnodes )
+      if( nterms > 50 && nedges > 1000 && 3 * nterms < nnodes )
       {
          mode = TM_DIJKSTRA;
       }
@@ -1874,7 +1882,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
          else
          {
             assert(mode == TM_DIJKSTRA);
-            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, root, connected) );
+            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, root, &(heurdata->randseed), connected) );
          }
          if( SCIPisStopped(scip) )
             break;
@@ -1946,7 +1954,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
                result[e] = UNKNOWN;
             }
 
-            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, root, connected) );
+            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, root, &(heurdata->randseed), connected) );
 
             obj = 0.0;
             edgecount = 0;
@@ -2021,7 +2029,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
          }
          else if( mode == TM_DIJKSTRA )
          {
-            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, start[r], connected) );
+            SCIP_CALL( computeSteinerTreeDijk(scip, graph, cost, costrev, dijkdist, result, dijkedge, start[r], &(heurdata->randseed), connected) );
          }
          else if( graph->stp_type == STP_DEG_CONS )
          {

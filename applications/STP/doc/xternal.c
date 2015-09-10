@@ -27,6 +27,11 @@
 
 /**@mainpage Overview
  * @author Daniel Rehfeldt
+ * @author Gerald Gamrath
+ * @author Thorsten Koch
+ * @author Stephen Maher
+ * @author Yuji Shinano
+ * @author Michael Winkler
  *
  * This application contains a (by default) branch-and-cut based solver for Steiner problems, realized within the framework
  * \SCIP, see: "SCIP-Jack - A solver for STP and variants with parallelization extensions" by G. Gamrath et al. The following plugins are implemented:
@@ -42,7 +47,7 @@
  * - a propagator which attempts to fix (edge) variables to zero utilizing their reduced costs (prop_stp.c)
  * - an event handler which simple writes each incumbent solution to a file, if activated (event_bestsol.c)
  *
- * In the following the problem is introduced and the solving process delineated. Afterwards, two plugins are
+ * In the following the problem is introduced and the solving process delineated. Afterwards, the two main plugins are
  * sketched.
  *
  * -# \ref PROBLEM "Problem description and solving approach"
@@ -79,8 +84,8 @@
  * The problem can be formulated using the directed equivalent of the STP, the Steiner arborescence problem (SAP):
  * Given a directed graph \f$ D=(V,A) \f$, a root \f$ r \in V \f$, costs \f$ c: A \rightarrow \mathcal{Q}^+ \f$
  * and a set \f$ T \subset V \f$ of terminals, a directed tree \f$ S\subseteq D \f$ is required such that
- * for all \f$ t \in T \f$, \f$ (V_S,A_S) \f$ contains exactly one directed path from \f$ r \f$ to \f$ t \f$.  Each STP can be
- * transformed to an SAP replacing each edge by two anti-parallel arcs of the same cost and distinguishing an arbirtrary
+ * for all \f$ t \in T \f$, \f$ S \f$ contains exactly one directed path from \f$ r \f$ to \f$ t \f$.  Each STP can be
+ * transformed to an SAP replacing each edge by two anti-parallel arcs of the same cost and distinguishing an arbitrary
  * terminal as the root. This results in a one-to-one correspondence between the respective solution sets
  * Introducing variables \f$y_a\f$ for \f$a\in A\f$ with the interpretation \f$y_a:=1\f$, if \f$a\f$ is in the
  * Steiner arborecence, and \f$y_a:=0\f$ otherwise, we obtain the integer program:

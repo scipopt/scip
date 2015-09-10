@@ -39,6 +39,7 @@
 #include "probdata_stp.h"
 #include "dialog_stp.h"
 #include "prop_stp.h"
+#include "branch_stp.h"
 
 /** creates a SCIP instance with default plugins, evaluates command line parameters, runs SCIP appropriately,
  *  and frees the SCIP instance
@@ -85,6 +86,9 @@ SCIP_RETCODE runShell(
 
    /* include event handler for printing primal solution development */
    SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
+
+   /* include branching rule */
+   SCIP_CALL( SCIPincludeBranchruleStp(scip) );
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropStp(scip) );

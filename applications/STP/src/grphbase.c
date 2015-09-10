@@ -877,14 +877,15 @@ SCIP_RETCODE graph_prize_transform(
          graph_edge_add(scip, graph, root, node, prize[k], FARAWAY);
          graph_edge_add(scip, graph, k, node, 0.0, FARAWAY);
       }
-      else
+      else if( graph->stp_type != STP_MAX_NODE_WEIGHT )
       {
          prize[k] = 0;
       }
    }
    graph->source[0] = root;
    assert((nterms + 1) == graph->terms);
-   graph->stp_type = STP_PRIZE_COLLECTING;
+   if( graph->stp_type != STP_MAX_NODE_WEIGHT )
+      graph->stp_type = STP_PRIZE_COLLECTING;
 
    return SCIP_OKAY;
 }
@@ -992,23 +993,22 @@ SCIP_RETCODE graph_maxweight_transform(
    nterms = 0;
    for( i = 0; i < nnodes; i++ )
    {
+      graph->prize[i] = maxweights[i];
       if( Is_term(graph->term[i]) )
       {
          assert(SCIPisGE(scip, maxweights[i], 0.0));
-         graph->prize[i] = maxweights[i];
          nterms++;
       }
       else
       {
          assert(SCIPisLT(scip, maxweights[i], 0.0));
-         graph->prize[i] = 0.0;
       }
    }
    assert(nterms == graph->terms);
+   graph->stp_type = STP_MAX_NODE_WEIGHT;
 
    SCIP_CALL( graph_prize_transform(scip, graph) );
-
-   graph->stp_type = STP_MAX_NODE_WEIGHT;
+   assert(graph->stp_type == STP_MAX_NODE_WEIGHT);
    return SCIP_OKAY;
 }
 
@@ -1118,7 +1118,7 @@ SCIP_RETCODE graph_copy(
 
    SCIP_CALL( graph_init(scip, copygraph, p->ksize, p->esize, p->layers, p->flags) );
    g = *copygraph;
-
+printf("COPY\n");
    g->norgmodeledges = p->norgmodeledges;
    g->norgmodelknots = p->norgmodelknots;
    g->knots = p->knots;
@@ -1553,7 +1553,7 @@ void prize_subtract(
 
    g->cost[e] -= cost;
 
-   assert(SCIPisGE(scip, g->prize[i], 0.0));
+   assert(g->stp_type == STP_MAX_NODE_WEIGHT || SCIPisGE(scip, g->prize[i], 0.0));
    assert(SCIPisEQ(scip, g->prize[i], g->cost[e]));
 }
 
@@ -1617,17 +1617,20 @@ SCIP_RETCODE graph_knot_contractpc(
       SCIP_CALL( graph_knot_contract(scip, g, t, s) );
 
       SCIPdebugMessage("PC contract: %d, %d \n", t, s);
-
+#if 0
       for( e = g->inpbeg[t]; e != EAT_LAST; e = g->ieat[e] )
 	 SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e]), etsancestors) );
       for( e = g->outbeg[t]; e != EAT_LAST; e = g->oeat[e] )
 	 SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e]), etsancestors) );
-
+#endif
       SCIPintListNodeFree(scip, &etsancestors);
    }
    else
    {
-      prize_subtract(scip, g, g->cost[ets], i);
+      if( g->stp_type != STP_MAX_NODE_WEIGHT )
+         prize_subtract(scip, g, g->cost[ets], i);
+      else
+	 prize_subtract(scip, g, -(g->prize[s]), i);
       SCIP_CALL( graph_knot_contract(scip, g, t, s) );
    }
    return SCIP_OKAY;
@@ -1779,37 +1782,38 @@ void graph_edge_add(
 }
 
 inline static void edge_remove(
-   GRAPH* p,
-   int    e)
+   GRAPH*                g,                  /**< the graph */
+   int                   e                   /**< the edge to be removed */
+			      )
 {
    int    i;
    int    head;
    int    tail;
 
-   assert(p          != NULL);
+   assert(g          != NULL);
    assert(e          >= 0);
-   assert(e          <  p->edges);
+   assert(e          <  g->edges);
 
-   head = p->head[e];
-   tail = p->tail[e];
-
-   if (p->inpbeg[head] == e)
-      p->inpbeg[head] = p->ieat[e];
+   head = g->head[e];
+   tail = g->tail[e];
+//printf("remove: %d %d->%d \n", e,  g->tail[e], g->head[e]);
+   if( g->inpbeg[head] == e )
+      g->inpbeg[head] = g->ieat[e];
    else
    {
-      for(i = p->inpbeg[head]; p->ieat[i] != e; i = p->ieat[i])
+      for( i = g->inpbeg[head]; g->ieat[i] != e; i = g->ieat[i] )
          assert(i >= 0);
 
-      p->ieat[i] = p->ieat[e];
+      g->ieat[i] = g->ieat[e];
    }
-   if (p->outbeg[tail] == e)
-      p->outbeg[tail] = p->oeat[e];
+   if( g->outbeg[tail] == e )
+      g->outbeg[tail] = g->oeat[e];
    else
    {
-      for(i = p->outbeg[tail]; p->oeat[i] != e; i = p->oeat[i])
+      for( i = g->outbeg[tail]; g->oeat[i] != e; i = g->oeat[i] )
          assert(i >= 0);
 
-      p->oeat[i] = p->oeat[e];
+      g->oeat[i] = g->oeat[e];
    }
 }
 
@@ -2205,6 +2209,7 @@ SCIP_RETCODE graph_pack(
    int    i;
    int    nnodes;
    int    nedges;
+   SCIP_Bool pcmw;
 
    assert(scip      != NULL);
    assert(graph      != NULL);
@@ -2277,10 +2282,16 @@ SCIP_RETCODE graph_pack(
    }
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &(q->ancestors), nedges) );
+   pcmw = (g->stp_type == STP_MAX_NODE_WEIGHT || g->stp_type == STP_ROOTED_PRIZE_COLLECTING || g->stp_type == STP_PRIZE_COLLECTING);
+   if( pcmw )
+   {
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(q->prize), nnodes) );
+   }
+
    for( i = 0; i < nedges; i++ )
       q->ancestors[i] = NULL;
 #if 0
-   if( pc )
+   if( pcmw )
    {
       SCIP_CALL( SCIPallocMemoryArray(scip, &(q->pcancestors), nedges) );
       for( i = 0; i < nnodes; i++ )
@@ -2295,9 +2306,16 @@ SCIP_RETCODE graph_pack(
       if( g->grad[i] > 0 )
       {
 #if 0
-         if( pc )
+         if( pcmw )
             SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(q->pcancestors[q->knots]), g->pcancestors[i]) );
 #endif
+	 if( pcmw )
+	 {
+	    if( !Is_term(g->term[i]) )
+               q->prize[q->knots] = g->prize[i];
+	    else
+               q->prize[q->knots] = 0.0;
+	 }
          graph_knot_add(q, g->term[i]);
       }
    }
@@ -2330,7 +2348,8 @@ SCIP_RETCODE graph_pack(
    /* add root */
    assert(q->term[new[g->source[0]]] == 0);
    q->source[0] = new[g->source[0]];
-
+   if( g->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+      q->prize[q->source[0]] = FARAWAY;
    SCIPfreeBufferArray(scip, &new);
 
    g->stp_type = UNKNOWN;
@@ -2546,7 +2565,6 @@ char graph_valid2(
    SCIP_Real* cost
    )
 {
-
    SCIP_QUEUE* queue;
 
    char* terminal;

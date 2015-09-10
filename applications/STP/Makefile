@@ -56,6 +56,7 @@ CMAINOBJ	=	cmain.o \
 			dirreduce.o \
 			sdtest.o \
 			prop_stp.o \
+			branch_stp.o \
 			validate.o
 CXXMAINOBJ	=
 

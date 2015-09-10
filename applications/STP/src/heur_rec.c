@@ -395,7 +395,7 @@ SCIP_RETCODE selectsols(
 	 if( *newsol == sols[i] )
             break;
       assert(i < nsols);
-      if( nsols >= nsols )
+      if( i >= nsols )
 	 i = 0;
       solselected[i] = TRUE;
       selection[nselectedsols++] = i;
@@ -472,6 +472,7 @@ SCIP_RETCODE buildsolgraph(
    int    nsolnodes;
    int*   dnodemap;
    int*   solselection;          /* pool of solutions rec will use */
+   SCIP_Bool pcmw;
    char*  solnode;               /* marks nodes contained in at least one solution */
    char*  soledge;               /* marks edges contained in at least one solution */
 
@@ -487,7 +488,7 @@ SCIP_RETCODE buildsolgraph(
    *edgeweight = NULL;
    *edgeancestor = NULL;
    newgraph = NULL;
-
+   pcmw = (graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING);
    assert(sols != NULL);
 
    vars = SCIPprobdataGetEdgeVars(scip);
@@ -507,8 +508,7 @@ SCIP_RETCODE buildsolgraph(
    }
 
    /* select solutions to be merged */
-   if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING
-      || graph->stp_type == STP_DEG_CONS )
+   if( pcmw || graph->stp_type == STP_DEG_CONS )
       SCIP_CALL( selectdiffsols(scip, graph, heurdata, vars, newsol, solselection, success) );
    else
       SCIP_CALL( selectsols(scip, heurdata, newsol, solselection, randomize) );
@@ -543,14 +543,19 @@ SCIP_RETCODE buildsolgraph(
             }
          }
       }
-      if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+      if( pcmw )
       {
          for( i = graph->outbeg[graph->source[0]]; i != EAT_LAST; i = graph->oeat[i] )
          {
-            if( soledge[i / 2] == FALSE && Is_term(graph->term[graph->head[i]]) )
+            if( soledge[i / 2] == FALSE && Is_gterm(graph->term[graph->head[i]]) )
             {
                nsoledges++;
                soledge[i / 2] = TRUE;
+	       if( !solnode[graph->head[i]] && SCIPisEQ(scip, graph->cost[flipedge(i)], FARAWAY) )
+               {
+                  solnode[graph->head[i]] = TRUE;
+		  nsolnodes++;
+	       }
                assert(solnode[graph->head[i]]);
             }
          }
@@ -582,21 +587,32 @@ SCIP_RETCODE buildsolgraph(
       else
          newgraph->stp_type = graph->stp_type;
 
+      if( pcmw )
+	SCIP_CALL( SCIPallocMemoryArray(scip, &(newgraph->prize), nsolnodes) );
+
       newgraph->hoplimit = graph->hoplimit;
       j = 0;
       for( i = 0; i < nnodes; i++ )
       {
          if( solnode[i] )
          {
-            dnodemap[i] = j++;
-            if( Is_term(graph->term[i]) )
-               graph_knot_add(newgraph, 0);
-            else
-               graph_knot_add(newgraph, -1);
+	    if( pcmw )
+	    {
+	      if( (!Is_term(graph->term[i])) )
+	         newgraph->prize[j] = graph->prize[i];
+	      else
+		 newgraph->prize[j] = 0.0;
+	    }
+
+	    graph_knot_add(newgraph, graph->term[i]);
+	    dnodemap[i] = j++;
          }
       }
+
       /* set root */
       newgraph->source[0] = dnodemap[graph->source[0]];
+      if( newgraph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+	newgraph->prize[newgraph->source[0]] = FARAWAY;
       assert(newgraph->source[0] >= 0);
 
       /* copy max degrees*/
@@ -635,11 +651,32 @@ SCIP_RETCODE buildsolgraph(
                   (*edgeweight)[j - 1]++;
                }
             }
-
          }
       }
       for( i = 0; i < 2 * nsoledges; i++ )
          assert((*edgeweight)[i] >= 1);
+
+#if 0
+      int e;
+           for( i = 0; i < graph->knots; i++ )
+	if( !Is_term(graph->term[i]) && !Is_pterm(graph->term[i]) )
+	   for( e = graph->inpbeg[i]; e != EAT_LAST; e = graph->ieat[e] )
+	      if( !SCIPisEQ(scip, -graph->prize[i], graph->cost[e]) && !Is_term(graph->term[graph->tail[e]]) )
+		 printf("org neq: %d %f %f termi: %d termtail %d \n", i, graph->prize[i], graph->cost[e], graph->term[i], graph->term[graph->tail[e]]);
+
+      for( i = 0; i < nsolnodes; i++ )
+	if( !Is_term(newgraph->term[i]) && !Is_pterm(newgraph->term[i]) )
+	   for( e = newgraph->inpbeg[i]; e != EAT_LAST; e = newgraph->ieat[e] )
+	      if( !SCIPisEQ(scip, -newgraph->prize[i], newgraph->cost[e]) && !Is_term(newgraph->term[newgraph->tail[e]]) )
+		 printf("neq: %d %f %f termi: %d termtail %d \n", i, newgraph->prize[i], newgraph->cost[e], newgraph->term[i], newgraph->term[newgraph->tail[e]]);
+
+	   for( i = 0; i < nsolnodes; i++ )
+	if( Is_pterm(newgraph->term[i]) )
+	   for( e = newgraph->inpbeg[i]; e != EAT_LAST; e = newgraph->ieat[e] )
+	      if( !SCIPisEQ(scip, 0.0, newgraph->cost[e]) && !Is_term(newgraph->term[newgraph->tail[e]]) )
+		 printf("pterm neq: %d %f %f termi: %d termtail %d \n", i, newgraph->prize[i], newgraph->cost[e], newgraph->term[i], newgraph->term[newgraph->tail[e]]);
+
+#endif
       assert(j == 2 * nsoledges);
    }
 
@@ -745,6 +782,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    SCIP_Real maxcost = 0.0;
    SCIP_Real hopfactor = 0.1;
    SCIP_Longint nsols;
+   SCIP_Bool pcmw;
    SCIP_Bool success;
    SCIP_Bool fixed;
    SCIP_Bool randomize;
@@ -828,13 +866,12 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    nnodes = graph->knots;
    results = NULL;
    randomize = TRUE;
-
+   pcmw = (probtype == STP_PRIZE_COLLECTING || probtype == STP_MAX_NODE_WEIGHT || probtype == STP_ROOTED_PRIZE_COLLECTING);
 
    heurdata->ncalls++;
    *result = SCIP_DIDNOTRUN;
 
-   if( probtype == STP_PRIZE_COLLECTING || probtype == STP_MAX_NODE_WEIGHT || probtype == STP_ROOTED_PRIZE_COLLECTING
-      || probtype == STP_HOP_CONS )
+   if( pcmw || probtype == STP_HOP_CONS )
       runs = 8;
    else
       runs = 8;
@@ -933,8 +970,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
          /* presolve new graph */
 
          /* reduce new graph */
-         if( probtype == STP_PRIZE_COLLECTING || probtype == STP_MAX_NODE_WEIGHT || probtype == STP_ROOTED_PRIZE_COLLECTING
-            || probtype == STP_HOP_CONS || probtype == STP_DEG_CONS )
+         if( probtype == STP_ROOTED_PRIZE_COLLECTING || probtype == STP_HOP_CONS || probtype == STP_DEG_CONS )
             SCIP_CALL( reduce(scip, &solgraph, &pobj, 0, 2) );
          else
             SCIP_CALL( reduce(scip, &solgraph, &pobj, 1, 2) );
@@ -991,8 +1027,8 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                }
                else
                {
-                  nodepriority[solgraph->head[e]] += avg - 1;
-                  nodepriority[solgraph->tail[e]] += avg - 1;
+                  nodepriority[solgraph->head[e]] += avg - 1.0;
+                  nodepriority[solgraph->tail[e]] += avg - 1.0;
                   if( modcost )
                   {
                      mult = costMultiplier(scip, heurdata, avg);
@@ -1018,6 +1054,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
             if( !success )
             {
+	      printf("fail \n");
                graph_path_exit(scip, solgraph);
                SCIPfreeBufferArrayNull(scip, &nodepriority);
                SCIPfreeBufferArrayNull(scip, &costrev);
@@ -1033,7 +1070,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             assert(graph_sol_valid(scip, solgraph, results));
 
             /* run local heuristic */
-            if( solgraph->stp_type != STP_HOP_CONS && solgraph->stp_type != STP_MAX_NODE_WEIGHT && probtype != STP_DEG_CONS )
+            if( solgraph->stp_type != STP_HOP_CONS && probtype != STP_DEG_CONS ) //&& solgraph->stp_type != STP_MAX_NODE_WEIGHT
                SCIP_CALL( SCIPheurImproveSteinerTree(scip, solgraph, cost, costrev, results) );
 
             if( probtype == STP_UNDIRECTED )
@@ -1091,7 +1128,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
             curr = curr->parent;
          }
          /* prune solution (in the original graph) */
-         if( probtype == STP_PRIZE_COLLECTING || probtype == STP_MAX_NODE_WEIGHT || probtype == STP_ROOTED_PRIZE_COLLECTING )
+         if( pcmw )
             SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, orgresults, stnodes) );
          else if( probtype == STP_DEG_CONS )
             SCIP_CALL( SCIPheurPruneDegConsSteinerTree(scip, graph, orgresults, stnodes) );
@@ -1116,11 +1153,13 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
          if( SCIPisGT(scip, SCIPgetSolOrigObj(scip, newsol) - SCIPprobdataGetOffset(scip), pobj) )
          {
+	   printf("better! \n");
             sol = NULL;
             SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
 
             if( success )
             {
+	       printf("success! \n");
                *result = SCIP_FOUNDSOL;
                solfound = TRUE;
                nsols = SCIPgetNSols(scip);

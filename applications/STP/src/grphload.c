@@ -1277,7 +1277,7 @@ SCIP_RETCODE graph_load(
                   stp_type = STP_ROOTED_PRIZE_COLLECTING;
                   if( g->prize == NULL )
                      SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), nodes) );
-                  g->prize[(int)para[0].n - 1] = 0;
+                  g->prize[(int)para[0].n - 1] = FARAWAY;
                   break;
                case KEY_TERMINALS_T :
                   if( stp_type == STP_MAX_NODE_WEIGHT )

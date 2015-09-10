@@ -191,7 +191,44 @@ void SCIPlinkcuttreeCut(
    v->parent = NULL;
 }
 
-/** finds the max value between node 'v' and the root of the tree **/
+/** finds minimal non-key-node value between node 'v' and the root of the tree **/
+NODE* SCIPlinkcuttreeFindMinMW(
+   SCIP*                 scip,               /**< SCIP data structure */
+      SCIP_Real*            nodeweight,         /**< node weight array */
+   int*                  tail,               /**< tail of an arc */
+   int*                  stdeg,              /**< degree in Steiner tree */
+   NODE*                 v                   /**< the node */
+   )
+{
+   NODE* p = v;
+   NODE* q = v;
+   int node;
+   SCIP_Real min = 0.0;
+
+   assert(scip != NULL);
+   assert(tail != NULL);
+   assert(nodeweight != NULL);
+   assert(stdeg != NULL);
+   assert(v != NULL);
+
+   while( p->parent != NULL )
+   {
+      assert(p->edge >= 0);
+      node = tail[p->edge];
+      //printf(" %d(%f, %d), \n", node, nodeweight[node], stdeg[node]);
+      if( SCIPisLT(scip, nodeweight[node], min) && stdeg[node] == 2 )
+      {
+         min = nodeweight[node];
+         q = p;
+      }
+      p = p->parent;
+   }
+   return q;
+}
+
+
+
+/** finds the max edge value between node 'v' and the root of the tree **/
 NODE* SCIPlinkcuttreeFindMax(
    SCIP*                 scip,               /**< SCIP data structure */
    const SCIP_Real*      cost,               /**< edge cost array */
