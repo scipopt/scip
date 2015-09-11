@@ -6586,7 +6586,8 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
-      SCIP_ROW* row;
+      SCIP_ROW* rowub;
+      SCIP_ROW* rowlb;
 
       assert( conss != NULL );
       assert( conss[c] != NULL );
@@ -6602,22 +6603,24 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
        * otherwise if the SOS1 constraint is global, we only generate rows if not yet done */
       if ( consdata->local )
       {
-         SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], TRUE, FALSE, TRUE, FALSE, &consdata->rowlb, &consdata->rowub) );
+         SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], TRUE, FALSE, TRUE, FALSE, &rowlb, &rowub) );
       }
-      else if ( consdata->rowub == NULL || consdata->rowlb == NULL )
+      else
       {
-         SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], FALSE, TRUE, TRUE, FALSE,
-               (consdata->rowlb == NULL) ? &consdata->rowlb : NULL, (consdata->rowub == NULL) ? &consdata->rowub : NULL) );
+         if ( consdata->rowub == NULL || consdata->rowlb == NULL )
+         {
+            SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], FALSE, TRUE, TRUE, FALSE,
+                  (consdata->rowlb == NULL) ? &consdata->rowlb : NULL, (consdata->rowub == NULL) ? &consdata->rowub : NULL) );
+         }
+         rowub = consdata->rowub;
+         rowlb = consdata->rowlb;
       }
 
       /* put corresponding rows into LP */
-      row = consdata->rowub;
-      if ( row != NULL && ! SCIProwIsInLP(row) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, row) ) )
+      if ( rowub != NULL && ! SCIProwIsInLP(rowub) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowub) ) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
-         if ( *cutoff )
-            break;
-         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, rowub, FALSE, cutoff) );
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowub, NULL) ) );
 
          if ( solvedinitlp )
          {
@@ -6626,13 +6629,10 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
          ++cnt;
       }
 
-      row = consdata->rowlb;
-      if ( row != NULL && ! SCIProwIsInLP(row) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, row) ) )
+      if ( ! (*cutoff) && rowlb != NULL && ! SCIProwIsInLP(rowlb) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowlb) ) )
       {
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
-         if ( *cutoff )
-            break;
-         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, rowlb, FALSE, cutoff) );
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowlb, NULL) ) );
 
          if ( solvedinitlp )
          {
@@ -6641,7 +6641,16 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
          ++cnt;
       }
 
-      if ( maxboundcuts >= 0 && cnt >= maxboundcuts )
+      /* release rows if they are local */
+      if ( consdata->local )
+      {
+         if ( rowlb != NULL )
+            SCIPreleaseRow(scip, &rowlb);
+         if ( rowub != NULL )
+            SCIPreleaseRow(scip, &rowub);
+      }
+
+      if ( *cutoff || ( maxboundcuts >= 0 && cnt >= maxboundcuts ) )
          break;
    }
 
