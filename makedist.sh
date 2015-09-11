@@ -68,7 +68,6 @@ $NAME/applications/Coloring/* $NAME/applications/Coloring/doc/* $NAME/applicatio
 $NAME/applications/Coloring/check/testset/short.test $NAME/applications/Coloring/check/testset/short.solu \
 $NAME/applications/Coloring/src/depend.* \
 $NAME/applications/Coloring/src/*.c $NAME/applications/Coloring/src/*.h \
-$NAME/applications/Coloring/Makefile \
 $NAME/applications/Scheduler/doc/* \
 $NAME/applications/Scheduler/check/testset/short.test $NAME/applications/Scheduler/check/testset/short.solu \
 $NAME/applications/Scheduler/src/depend.* \
