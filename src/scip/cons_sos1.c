@@ -6586,8 +6586,9 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
-      SCIP_ROW* rowub;
-      SCIP_ROW* rowlb;
+      SCIP_ROW* rowub = NULL;
+      SCIP_ROW* rowlb = NULL;
+      SCIP_Bool release = FALSE;
 
       assert( conss != NULL );
       assert( conss[c] != NULL );
@@ -6604,6 +6605,7 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
       if ( consdata->local )
       {
          SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], TRUE, FALSE, TRUE, FALSE, &rowlb, &rowub) );
+         release = TRUE;
       }
       else
       {
@@ -6642,7 +6644,7 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
       }
 
       /* release rows if they are local */
-      if ( consdata->local )
+      if ( release )
       {
          if ( rowlb != NULL )
             SCIPreleaseRow(scip, &rowlb);
