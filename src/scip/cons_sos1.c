@@ -6075,13 +6075,30 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
          if ( ! SCIPisInfinity(scip, val) && ! SCIPisZero(scip, val) )
          {
             vars[cnt] = var;
-            vals[cnt++] = 1.0/val;
+
+            /* if only two nodes then we scale the cut differently */
+            if ( nnodes == 2 )
+               vals[cnt++] = val;
+            else
+               vals[cnt++] = 1.0/val;
          }
       }
 
       /* if cut is meaningful */
       if ( j == nnodes && cnt >= 2 )/*lint !e850*/
       {
+         /* if only two nodes then we scale the cut differently */
+         if ( nnodes == 2 )
+         {
+            SCIP_Real save;
+
+            save = vals[0];
+            vals[0] = vals[1];
+            vals[1] = save;
+            rhs = rhs * vals[0] * vals[1];
+            assert( (! useboundvar && cnt == 2 ) || (useboundvar && cnt == 3 ) );
+         }
+
          if ( useboundvar )
          {
             /* add bound variable to array */
@@ -6183,13 +6200,30 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
          if ( ! SCIPisInfinity(scip, val) && ! SCIPisZero(scip, val) )
          {
             vars[cnt] = var;
-            vals[cnt++] = 1.0/val;
+
+            /* if only two nodes then we scale the cut differently */
+            if ( nnodes == 2 )
+               vals[cnt++] = val;
+            else
+               vals[cnt++] = 1.0/val;
          }
       }
 
       /* if cut is meaningful */
       if ( j == nnodes && cnt >= 2 )/*lint !e850*/
       {
+         /* if only two nodes then we scale the cut differently */
+         if ( nnodes == 2 )
+         {
+            SCIP_Real save;
+
+            save = vals[0];
+            vals[0] = vals[1];
+            vals[1] = save;
+            rhs = rhs * vals[0] * vals[1];
+            assert( (! useboundvar && cnt == 2 ) || (useboundvar && cnt == 3 ) );
+         }
+
          if ( useboundvar )
          {
             /* add bound variable to array */
@@ -6551,8 +6585,6 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
       row = consdata->rowub;
       if ( row != NULL && ! SCIProwIsInLP(row) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, row) ) )
       {
-         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && ( SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) || SCIPisEQ(scip, SCIProwGetRhs(row), 0.0) ) );
-
          SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
          if ( *cutoff )
             break;
@@ -6568,8 +6600,6 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
       row = consdata->rowlb;
       if ( row != NULL && ! SCIProwIsInLP(row) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, row) ) )
       {
-         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && ( SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) || SCIPisEQ(scip, SCIProwGetRhs(row), 0.0) ) );
-
          SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
          if ( *cutoff )
             break;
