@@ -309,7 +309,7 @@ SCIP_RETCODE runBenders(
          SCIPdebugMessage("Solving separation problem ...\n");
       }
 
-      /* free solving data */
+      /* free solving data in order to add constraints */
       SCIP_CALL( SCIPfreeTransform(masterscip) );
 
       /* check for Benders cuts */
@@ -337,10 +337,11 @@ SCIP_RETCODE runBenders(
          return SCIP_ERROR;
       }
 
+      /* if not cuts could be found, the master problem is solved optimally */
       if ( success )
          break;
 
-      /* --------- solve Benders maser problem */
+      /* --------- solve Benders master problem */
 
       /* set current time limit */
       currenttime = SCIPgetClockTime(masterscip, totaltimeclock);
