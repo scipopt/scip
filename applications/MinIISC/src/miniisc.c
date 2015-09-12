@@ -516,9 +516,9 @@ SCIP_RETCODE createAltLPColumn(
    {
       assert( vars[v] != NULL );
       if ( vals != NULL )
-         matval[cnt] = vals[v];
+         matval[cnt] = vals[v] * sign;
       else
-         matval[cnt] = 1.0;
+         matval[cnt] = sign;
       matind[cnt++] = SCIPvarGetIndex(vars[v]) + 1;
    }
 
