@@ -675,7 +675,11 @@ SCIP_RETCODE solveMinIISC(
    /* create master SCIP */
    SCIP_CALL( SCIPcreate(&masterscip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(masterscip) );
-   SCIP_CALL( SCIPcreateProb(masterscip, filename, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
+   if ( getProblemName(filename, name, SCIP_MAXSTRLEN) == 0 )
+   {
+      SCIPerrorMessage("Cannot extract problem name for filename <%s>.\n", filename);
+   }
+   SCIP_CALL( SCIPcreateProb(masterscip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPsetObjsense(masterscip, SCIP_OBJSENSE_MINIMIZE) );
 
    SCIPinfoMessage(masterscip, NULL, "Finding a minimum IIS cover using a set covering approach.\n");
@@ -698,6 +702,9 @@ SCIP_RETCODE solveMinIISC(
          SCIPerrorMessage("parameter file <%s> not found - using default parameters.\n", settingsname);
       }
    }
+
+   SCIPinfoMessage(masterscip, NULL, "Input file:\t%s\n", filename);
+   SCIPinfoMessage(masterscip, NULL, "Problem name:\t%s\n\n", name);
 
    /* ----------------------------------------------------------------------------------------*/
 
