@@ -703,6 +703,9 @@ SCIP_RETCODE solveMinIISC(
       }
    }
 
+   if ( ! SCIPisInfinity(masterscip, timelimit) )
+      SCIPinfoMessage(masterscip, NULL, "limits/time = %f\n\n", timelimit);
+
    SCIPinfoMessage(masterscip, NULL, "Input file:\t%s\n", filename);
    SCIPinfoMessage(masterscip, NULL, "Problem name:\t%s\n\n", name);
 
