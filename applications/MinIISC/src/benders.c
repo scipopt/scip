@@ -40,7 +40,7 @@ SCIP_RETCODE runBenders(
    SCIP_VERBLEVEL        verblevel,          /**< verbosity level for output */
    SCIP_STATUS*          status              /**< status of optimization */
    )
-{
+{  /*lint --e{788}*/
    SCIP_CLOCK* totaltimeclock;
    SCIP_CLOCK* oracletimeclock;
    SCIP_CLOCK* mastertimeclock;

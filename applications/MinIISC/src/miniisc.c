@@ -27,11 +27,8 @@
 
 /* default parameters */
 #define DEFAULT_SOLVE_MASTER_APPROX     TRUE      /**< solve master problem approximately */
-#define DEFAULT_COMPUTE_HEUR_SOL       FALSE      /**< compute heuristic solution for master problem */
 #define DEFAULT_MASTER_GAP               0.1      /**< gap bound for approximately solving the master problem */
 #define DEFAULT_REOPTIMIZATION         FALSE      /**< Use reoptimization to solve master problem? */
-
-#define DEFAULT_MAXSTALLNODES            50L      /**< maximal number of stalling nodes in solving the separation problem */
 #define DEFAULT_MASTERSTALLNODES       5000L      /**< stall nodes for the master problem */
 
 /** data needed for cut generation */
@@ -304,10 +301,12 @@ SCIP_RETCODE checkAltLPInfeasible(
  *  output:
  *   - ncuts:            number of cuts added
  *   - status:           status
+ *
+ *  @todo apply time limit
  */
 static
 BENDERS_CUTORACLE(cutoracle)
-{
+{  /*lint --e{715}*/
 #ifdef SCIP_DEBUG
    char name[SCIP_MAXSTRLEN];
 #endif
@@ -598,6 +597,9 @@ SCIP_RETCODE createAltLP(
       }
       else if ( strcmp(origconshdlrname, "logicor") == 0 )
       {
+         origconsvars = SCIPgetVarsLogicor(origscip, origcons);
+         norigconsvars = SCIPgetNVarsLogicor(origscip, origcons);
+
          SCIP_CALL( createAltLPColumn(origscip, lp, norigconsvars, origconsvars, NULL, 1.0, -1.0) );
       }
       else if ( strcmp(origconshdlrname, "knapsack") == 0 )
@@ -664,7 +666,7 @@ SCIP_RETCODE solveMinIISC(
    SCIP_Real obj = 1.0;
    SCIP_Real lb = 0.0;
    SCIP_Real ub;
-   int norigvars = 0;
+   int norigvars;
    int nrows = 0;
    int ncols = 0;
    int m = 0;
