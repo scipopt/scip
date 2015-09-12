@@ -209,6 +209,7 @@ SCIP_RETCODE runBenders(
    SCIP_Real* mastersolution;
    SCIP_Real primalbound = 1e20;
    SCIP_Real dualbound = -1e20;
+   SCIP_Real mastersolobj = 0.0;
    int nmastervars;
    int niter = 0;
 
@@ -286,7 +287,6 @@ SCIP_RETCODE runBenders(
       SCIP_Real currenttime;
       SCIP_Real subtimelimit;
       SCIP_SOL* mastersol = NULL;
-      SCIP_Real mastersolobj;
       SCIP_Real mastergap = 1e20;
       int ncuts = 0;
       int v;
