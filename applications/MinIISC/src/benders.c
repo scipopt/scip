@@ -437,9 +437,9 @@ SCIP_RETCODE runBenders(
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|");
          SCIPdispInt(SCIPgetMessagehdlr(masterscip), NULL, iter, 7);
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|");
-         SCIPdispInt(SCIPgetMessagehdlr(masterscip), NULL, SCIPgetNConss(masterscip), 7);
+         SCIPdispInt(SCIPgetMessagehdlr(masterscip), NULL, SCIPgetNOrigConss(masterscip), 7);
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|");
-         SCIPdispInt(SCIPgetMessagehdlr(masterscip), NULL, SCIPgetNVars(masterscip), 7);
+         SCIPdispInt(SCIPgetMessagehdlr(masterscip), NULL, SCIPgetNOrigVars(masterscip), 7);
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|");
          SCIPdispTime(SCIPgetMessagehdlr(masterscip), NULL, SCIPgetClockTime(masterscip, mastertimeclock), 6);
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|");
