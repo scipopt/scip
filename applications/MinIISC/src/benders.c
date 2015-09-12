@@ -193,7 +193,7 @@ SCIP_RETCODE runBenders(
    SCIP_Bool             usereopt,           /**< Use reoptimization? */
    SCIP_Bool             solvemasterapprox,  /**< Solve master problem approximately? */
    SCIP_Longint          masterstallnodes,   /**< stall nodes for master problem if solvemasterapprox is true */
-   SCIP_Real             mastergap,          /**< gap limit for master problem if solvemasterapprox is true */
+   SCIP_Real             mastergaplimit,     /**< gap limit for master problem if solvemasterapprox is true */
    SCIP_VERBLEVEL        verblevel,          /**< verbosity level for output */
    SCIP_STATUS*          status              /**< status of optimization */
    )
@@ -256,14 +256,14 @@ SCIP_RETCODE runBenders(
       if ( solvemasterapprox )
       {
          if ( ! SCIPisInfinity(masterscip, timelimit) )
-            SCIPinfoMessage(masterscip, NULL, "\nApproximately solving master problem with time limit: %f ...\n", timelimit);
+            SCIPinfoMessage(masterscip, NULL, "\nApproximately solving master problem with time limit %.1f and gap limit %.2f%% ...\n", timelimit, 100.0 * mastergaplimit);
          else
-            SCIPinfoMessage(masterscip, NULL, "\nApproximately solving master problem ...\n");
+            SCIPinfoMessage(masterscip, NULL, "\nApproximately solving master problem with gap limit %.2f%% ...\n", 100.0 * mastergaplimit);
       }
       else
       {
          if ( ! SCIPisInfinity(masterscip, timelimit) )
-            SCIPinfoMessage(masterscip, NULL, "\nOptimally solving master problem with time limit: %f ...\n", timelimit);
+            SCIPinfoMessage(masterscip, NULL, "\nOptimally solving master problem with time limit: %.1f ...\n", timelimit);
          else
             SCIPinfoMessage(masterscip, NULL, "\nOptimally solving master problem ...\n");
       }
@@ -271,7 +271,7 @@ SCIP_RETCODE runBenders(
 
    /* print banner */
    if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
-      SCIPinfoMessage(masterscip, NULL, "  time | niter | nconss| nvars |master|totalnodes|oracle| ncuts | dualbnd\n");
+      SCIPinfoMessage(masterscip, NULL, "  time | niter |nconss | nvars |master|totalnodes|oracle| ncuts |    dualbound |   gap\n");
 
    /* iterate */
    do
@@ -283,6 +283,7 @@ SCIP_RETCODE runBenders(
       SCIP_Real subtimelimit;
       SCIP_SOL* mastersol = NULL;
       SCIP_Real mastersolobj;
+      SCIP_Real mastergap = 1e20;
       int ncuts = 0;
       int v;
 
@@ -345,6 +346,9 @@ SCIP_RETCODE runBenders(
             break;
          /* otherwise, we have to resolve the master to optimality */
          solvemasterapprox = FALSE;
+
+         if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
+            SCIPinfoMessage(masterscip, NULL, "Switching to optimal solution of the master problem.\n");
       }
 
       /* --------- solve Benders master problem */
@@ -371,7 +375,7 @@ SCIP_RETCODE runBenders(
       if ( solvemasterapprox )
       {
          SCIP_CALL( SCIPsetLongintParam(masterscip, "limits/stallnodes", masterstallnodes) );
-         SCIP_CALL( SCIPsetRealParam(masterscip, "limits/gap", mastergap) );
+         SCIP_CALL( SCIPsetRealParam(masterscip, "limits/gap", mastergaplimit) );
       }
 
       /* solve master problem */
@@ -405,18 +409,21 @@ SCIP_RETCODE runBenders(
          break;
 
       case SCIP_STATUS_INFEASIBLE:
-         SCIPinfoMessage(masterscip, NULL, "Master problem infeasible.\n");
+         if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
+            SCIPinfoMessage(masterscip, NULL, "Master problem infeasible.\n");
          *status = SCIP_STATUS_INFEASIBLE;
          goto TERMINATE;
 
       case SCIP_STATUS_TIMELIMIT:
          *status = SCIP_STATUS_TIMELIMIT;
-         SCIPinfoMessage(masterscip, NULL, "Time limit exceeded.\n");
+         if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
+            SCIPinfoMessage(masterscip, NULL, "Time limit exceeded.\n");
          goto TERMINATE;
 
       case SCIP_STATUS_USERINTERRUPT:
          *status = SCIP_STATUS_USERINTERRUPT;
-         SCIPinfoMessage(masterscip, NULL, "User interrupt.\n");
+         if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
+            SCIPinfoMessage(masterscip, NULL, "User interrupt.\n");
          goto TERMINATE;
 
       default:
@@ -431,6 +438,7 @@ SCIP_RETCODE runBenders(
          return SCIP_ERROR;
       }
       mastersolobj = SCIPgetSolOrigObj(masterscip, mastersol);
+      mastergap = SCIPgetGap(masterscip);
 
       dualbound = MAX(dualbound, SCIPgetDualbound(masterscip));
 
@@ -462,7 +470,10 @@ SCIP_RETCODE runBenders(
          SCIPdispTime(SCIPgetMessagehdlr(masterscip), NULL, SCIPgetClockTime(masterscip, oracletimeclock), 6);
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|");
          SCIPdispInt(SCIPgetMessagehdlr(masterscip), NULL, ncuts, 7);
-         SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|%13.6e\n", mastersolobj);
+         SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|%13.6e", mastersolobj);
+         if ( solvemasterapprox )
+            SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, " | %6.2f%%", 100.0 * mastergap);
+         SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "\n");
       }
    }
    while ( niter < maxIters );
@@ -472,7 +483,8 @@ SCIP_RETCODE runBenders(
    if ( niter >= maxIters )
    {
       *status = SCIP_STATUS_TOTALNODELIMIT;
-      SCIPinfoMessage(masterscip, NULL, "Reached iteration limit.\n");
+      if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
+         SCIPinfoMessage(masterscip, NULL, "Reached iteration limit.\n");
    }
 
    if ( masteroptimal )
@@ -483,8 +495,11 @@ SCIP_RETCODE runBenders(
 
  TERMINATE:
 
-   SCIP_CALL( printShortStatistics(masterscip, *status, totaltimeclock, primalbound, dualbound, ntotalnodes) );
-   SCIP_CALL( printLongStatistics(masterscip, *status, totaltimeclock, oracletimeclock, mastertimeclock, primalbound, dualbound, ntotalnodes, ntotalcuts, niter) );
+   if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
+   {
+      SCIP_CALL( printShortStatistics(masterscip, *status, totaltimeclock, primalbound, dualbound, ntotalnodes) );
+      SCIP_CALL( printLongStatistics(masterscip, *status, totaltimeclock, oracletimeclock, mastertimeclock, primalbound, dualbound, ntotalnodes, ntotalcuts, niter) );
+   }
 
    SCIPfreeBlockMemoryArray(masterscip, &mastersolution, nmastervars);
 
