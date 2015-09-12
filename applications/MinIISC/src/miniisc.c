@@ -296,6 +296,7 @@ SCIP_RETCODE checkAltLPInfeasible(
  *   - mastersolution:   solution of Benders master problem
  *   - data:             user data for oracle
  *   - timelimit:        time limit for subproblem
+ *   - ntotalcuts:       total number of cuts
  *  output:
  *   - ncuts:            number of cuts added
  *   - status:           status
@@ -435,7 +436,7 @@ BENDERS_CUTORACLE(cutoracle)
       assert( cnt == sizeIIS );
 
 #ifdef SCIP_DEBUG
-      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "iis%d", *ncuts);
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "iis%d", (int) ntotalcuts + *ncuts);
       SCIP_CALL( SCIPcreateConsLogicor(masterscip, &cons, name, cnt, vars, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
 #else
       SCIP_CALL( SCIPcreateConsLogicor(masterscip, &cons, "", cnt, vars, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );

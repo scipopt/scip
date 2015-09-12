@@ -45,13 +45,14 @@ typedef struct BENDERS_Data BENDERS_DATA;    /**< user defined data to pass to t
  *   - mastersolution:   solution of Benders master problem
  *   - data:             user data for oracle
  *   - timelimit:        time limit for subproblem
+ *   - ntotalcuts:       total number of cuts
  *  output:
  *   - ncuts:            number of cuts added
  *   - status:           status
  *
  *  The oracle should take the given solution and possibly add a Benders Cut to the master problem.
  */
-#define BENDERS_CUTORACLE(x) SCIP_RETCODE x (SCIP* masterscip, int nmastervars, SCIP_VAR** mastervars, SCIP_Real* mastersolution, BENDERS_DATA* data, SCIP_Real timelimit, int* ncuts, BENDERS_STATUS* status)
+#define BENDERS_CUTORACLE(x) SCIP_RETCODE x (SCIP* masterscip, int nmastervars, SCIP_VAR** mastervars, SCIP_Real* mastersolution, BENDERS_DATA* data, SCIP_Real timelimit, SCIP_Longint ntotalcuts, int* ncuts, BENDERS_STATUS* status)
 
 
 

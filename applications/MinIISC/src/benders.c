@@ -199,6 +199,7 @@ SCIP_RETCODE runBenders(
    SCIP_Bool masteroptimal = TRUE;
    const int maxIters = MAXITERATIONS;
    SCIP_Longint ntotalnodes = 0LL;
+   SCIP_Longint ntotalcuts = 0LL;
    SCIP_VAR** mastervars;
    SCIP_Real* mastersolution;
    SCIP_Real primalbound = 1e20;
@@ -277,7 +278,7 @@ SCIP_RETCODE runBenders(
       SCIP_Real subtimelimit;
       SCIP_SOL* mastersol = NULL;
       SCIP_Real mastersolobj;
-      int ncuts;
+      int ncuts = 0;
       int v;
 
       ++iter;
@@ -308,8 +309,9 @@ SCIP_RETCODE runBenders(
 
       /* check for Benders cuts */
       SCIP_CALL( SCIPstartClock(masterscip, oracletimeclock) );
-      SCIP_CALL( Oracle(masterscip, nmastervars, mastervars, mastersolution, data, timelimit, &ncuts, &substatus) );
+      SCIP_CALL( Oracle(masterscip, nmastervars, mastervars, mastersolution, data, timelimit, ntotalcuts, &ncuts, &substatus) );
       SCIP_CALL( SCIPstopClock(masterscip, oracletimeclock) );
+      ntotalcuts += (SCIP_Longint) ncuts;
 
       switch ( substatus )
       {
