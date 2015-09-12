@@ -85,9 +85,7 @@ SCIP_RETCODE printShortStatistics(
    SCIP_Real gap = 1e20;
 
    if ( ! SCIPisInfinity(masterscip, primalbound) && ! SCIPisInfinity(masterscip, -dualbound) )
-   {
       gap = fabs(primalbound - dualbound)/(MAX3(fabs(primalbound), fabs(dualbound), 1.0));
-   }
 
    /* start output */
    SCIPinfoMessage(masterscip, NULL, "\n");
@@ -118,15 +116,14 @@ SCIP_RETCODE printLongStatistics(
    SCIP_Real             primalbound,        /**< primal bound */
    SCIP_Real             dualbound,          /**< dual bound */
    SCIP_Longint          ntotalnodes,        /**< total number of nodes */
+   SCIP_Longint          ntotalcuts,         /**< total number of cuts */
    int                   iter                /**< number of iterations */
    )
 {
    SCIP_Real gap = 1e20;
 
    if ( ! SCIPisInfinity(masterscip, primalbound) && ! SCIPisInfinity(masterscip, -dualbound) )
-   {
       gap = fabs(primalbound - dualbound)/(MAX3(fabs(primalbound), fabs(dualbound), 1.0));
-   }
 
    /* start output */
    SCIPinfoMessage(masterscip, NULL, "\n");
@@ -153,6 +150,14 @@ SCIP_RETCODE printLongStatistics(
    SCIPinfoMessage(masterscip, NULL, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       SCIPgetNVars(masterscip), SCIPgetNOrigVars(masterscip), 0, 0, 0);
    SCIPinfoMessage(masterscip, NULL, "  Constraints      : %d initial, %d maximal\n", 0, SCIPgetNOrigConss(masterscip));
+
+   SCIPinfoMessage(masterscip, NULL, "Constraints        :     Number  MaxNumber  #Separate #Propagate    #EnfoLP    #EnfoPS     #Check   #ResProp    Cutoffs    DomReds       Cuts    Applied      Conss   Children\n");
+   SCIPinfoMessage(masterscip, NULL, "  %-17.17s: %10d %10d %10d %10d %10d %10d %10d %10d %10d %10d %10d %10d %10" SCIP_LONGINT_FORMAT " %10d\n",
+      "benders", 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, ntotalcuts, 0);
+
+   SCIPinfoMessage(masterscip, NULL, "Constraint Timings :  TotalTime  SetupTime   Separate  Propagate     EnfoLP     EnfoPS      Check    ResProp    SB-Prop\n");
+   SCIPinfoMessage(masterscip, NULL, "  %-17.17s: %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f %10.2f\n", "benders",
+      SCIPgetClockTime(masterscip, oracletimeclock), 0.0, SCIPgetClockTime(masterscip, oracletimeclock), 0.0, 0.0, 0.0, 0.0, 0.0);
 
    SCIPinfoMessage(masterscip, NULL, "B&B Tree           :\n");
    SCIPinfoMessage(masterscip, NULL, "  number of runs   : %10d\n", iter);
@@ -472,7 +477,7 @@ SCIP_RETCODE runBenders(
  TERMINATE:
 
    SCIP_CALL( printShortStatistics(masterscip, *status, totaltimeclock, primalbound, dualbound, ntotalnodes) );
-   SCIP_CALL( printLongStatistics(masterscip, *status, totaltimeclock, oracletimeclock, mastertimeclock, primalbound, dualbound, ntotalnodes, iter) );
+   SCIP_CALL( printLongStatistics(masterscip, *status, totaltimeclock, oracletimeclock, mastertimeclock, primalbound, dualbound, ntotalnodes, ntotalcuts, iter) );
 
    SCIPfreeBlockMemoryArray(masterscip, &mastersolution, nmastervars);
 
