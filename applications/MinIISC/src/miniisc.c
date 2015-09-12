@@ -39,7 +39,7 @@ struct BENDERS_Data
 };
 
 
-/* Macro for parameters */
+/* Macro for setting parameters in LPI */
 #define SCIP_CALL_PARAM(x) /*lint -e527 */ do                                                   \
 {                                                                                               \
    SCIP_RETCODE _restat_;                                                                       \
@@ -70,7 +70,7 @@ SCIP_RETCODE fixAltLPVariable(
 }
 
 
-/** fix variables given by solution to 0 */
+/** fix variables in @a S to 0 */
 static
 SCIP_RETCODE fixAltLPVariables(
    SCIP*                 masterscip,         /**< SCIP pointer */
@@ -118,7 +118,7 @@ SCIP_RETCODE fixAltLPVariables(
    return SCIP_OKAY;
 }
 
-/** unfix variables */
+/** unfix variables in @a S */
 static
 SCIP_RETCODE unfixAltLPVariables(
    SCIP*                 masterscip,         /**< SCIP pointer */
@@ -199,6 +199,7 @@ SCIP_RETCODE checkAltLPInfeasible(
       retcode = SCIPlpiSolvePrimal(lp);  /* use primal simplex */
    else
       retcode = SCIPlpiSolveDual(lp);    /* use dual simplex */
+
    if ( retcode == SCIP_LPERROR )
    {
       *error = TRUE;
@@ -219,20 +220,16 @@ SCIP_RETCODE checkAltLPInfeasible(
       else
          retcode = SCIPlpiSolveDual(lp);    /* use dual simplex */
 
+      /* reset parameters */
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
+
       if ( retcode == SCIP_LPERROR )
       {
-         /* reset parameters */
-         SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
-         SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
-
          *error = TRUE;
          return SCIP_OKAY;
       }
       SCIP_CALL( retcode );
-
-      /* reset parameters */
-      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
-      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
    }
 
    /* check whether we are in the paradoxical situation that
@@ -243,9 +240,10 @@ SCIP_RETCODE checkAltLPInfeasible(
     *
     * If we ran the dual simplex algorithm, then we run again with the primal simplex
     */
-   if ( ! SCIPlpiIsPrimalInfeasible(lp) && ! SCIPlpiIsPrimalUnbounded(lp) && ! SCIPlpiIsOptimal(lp) && SCIPlpiExistsPrimalRay(lp) && !primal )
+   if ( ! SCIPlpiIsPrimalInfeasible(lp) && ! SCIPlpiIsPrimalUnbounded(lp) && ! SCIPlpiIsOptimal(lp) && SCIPlpiExistsPrimalRay(lp) && ! primal )
    {
       SCIPwarningMessage(masterscip, "The dual simplex produced a primal ray. Retrying with primal ...\n");
+
       /* the following settings might be changed: */
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, TRUE) );
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
@@ -317,7 +315,6 @@ BENDERS_CUTORACLE(cutoracle)
    int size = 0;
    int step = 0;
    int ncols;
-   int m;
    int j;
 
    assert( masterscip != NULL );
@@ -325,21 +322,23 @@ BENDERS_CUTORACLE(cutoracle)
    assert( mastersolution != NULL );
    assert( ncuts != NULL );
    assert( status != NULL );
-
    assert( data->lp != NULL );
+   assert( data->m == nmastervars );
+
    lp = data->lp;
-   m = data->m;
 
    *ncuts = 0;
    *status = BENDERS_STATUS_UNKNOWN;
 
    SCIP_CALL( SCIPlpiGetNCols(lp, &ncols) );
    SCIP_CALL( SCIPallocBufferArray(masterscip, &primsol, ncols) );
+   assert( nmastervars <= ncols );
 
    /* init set S */
-   SCIP_CALL( SCIPallocClearBufferArray(masterscip, &S, ncols) );
-   for (j = 0; j < m; ++j)
+   SCIP_CALL( SCIPallocClearBufferArray(masterscip, &S, nmastervars) );
+   for (j = 0; j < nmastervars; ++j)
    {
+      assert( SCIPisFeasIntegral(masterscip, mastersolution[j]) );
       if ( mastersolution[j] > 0.5 )
       {
          S[j] = TRUE;
@@ -353,12 +352,12 @@ BENDERS_CUTORACLE(cutoracle)
    {
       SCIP_CONS* cons;
       SCIP_VAR** vars;
-      int cnt = 0;
       SCIP_Bool infeasible;
       SCIP_Real candobj = -1.0;
+      SCIP_Bool error;
       int sizeIIS = 0;
       int candidate = -1;
-      SCIP_Bool error;
+      int cnt = 0;
 
       if ( step == 0 )
       {
@@ -380,16 +379,15 @@ BENDERS_CUTORACLE(cutoracle)
          if ( step == 0 )
             *status = BENDERS_STATUS_SUCESS;
 
-         /* Note: checking for a primal solution is done in extendToCover(). */
-         SCIPdebugMessage("   size: %4d  produced possible cover with indicator variable objective value %f.\n", size, value);
+         SCIPdebugMessage("   size: %4d  produced possible cover with objective value %f.\n", size, value);
          break;
       }
 
       /* get solution of alternative LP */
       SCIP_CALL( SCIPlpiGetSol(lp, NULL, primsol, NULL, NULL, NULL) );
 
-      /* get value of cut and find candidate for variable to add */
-      for (j = 0; j < m; ++j)
+      /* find candidate for variable to add */
+      for (j = 0; j < nmastervars; ++j)
       {
          /* check support of the solution, i.e., the corresponding IIS */
          if ( ! SCIPisFeasZero(masterscip, primsol[j]) )
@@ -417,18 +415,18 @@ BENDERS_CUTORACLE(cutoracle)
       assert( ! S[candidate] );
       assert( sizeIIS > 0 );
 
-      /* update new set S */
       SCIPdebugMessage("   size: %4d  add %4d with objective value %6g and alt-LP solution value %-8.4g  (IIS size: %4d).\n",
          size, candidate, candobj, primsol[candidate], sizeIIS);
 
+      /* update new set S */
       S[candidate] = TRUE;
       ++size;
       value += candobj;
 
-      SCIP_CALL( SCIPallocBufferArray(masterscip, &vars, ncols) );
+      SCIP_CALL( SCIPallocBufferArray(masterscip, &vars, nmastervars) );
 
       /* collect variables corresponding to support to cut */
-      for (j = 0; j < m; ++j)
+      for (j = 0; j < nmastervars; ++j)
       {
          /* check support of the solution, i.e., the corresponding IIS */
          if ( ! SCIPisFeasZero(masterscip, primsol[j]) )
@@ -452,6 +450,7 @@ BENDERS_CUTORACLE(cutoracle)
       SCIP_CALL( SCIPreleaseCons(masterscip, &cons) );
 
       SCIPfreeBufferArray(masterscip, &vars);
+
       ++(*ncuts);
       *status = BENDERS_STATUS_ADDEDCUT;
 
@@ -460,7 +459,7 @@ BENDERS_CUTORACLE(cutoracle)
 
       ++step;
    }
-   while (step < m);
+   while (step < nmastervars);
 
    SCIP_CALL( unfixAltLPVariables(masterscip, nmastervars, S, lp) );
 
@@ -488,7 +487,7 @@ SCIP_RETCODE createAltLPColumn(
    SCIP_Real ub;
    SCIP_Real* matval;
    int* matind;
-   int matbeg;
+   int matbeg = 0;
    int cnt = 0;
    int v;
 
@@ -524,12 +523,11 @@ SCIP_RETCODE createAltLPColumn(
 
    /* now add column */
    ub = SCIPlpiInfinity(lp);
-   matbeg = 0;
 
    SCIP_CALL( SCIPlpiAddCols(lp, 1, &obj, &lb, &ub, NULL, cnt, &matbeg, matind, matval) );
 
-   SCIPfreeBufferArray(origscip, &matind);
    SCIPfreeBufferArray(origscip, &matval);
+   SCIPfreeBufferArray(origscip, &matind);
 
    return SCIP_OKAY;
 }
@@ -555,10 +553,10 @@ SCIP_RETCODE createAltLP(
 
    for (c = 0; c < norigconss; ++c)
    {
-      SCIP_CONS* origcons;
-      SCIP_CONSHDLR* origconshdlr;
       const char* origconshdlrname;
+      SCIP_CONSHDLR* origconshdlr;
       SCIP_VAR** origconsvars;
+      SCIP_CONS* origcons;
       int norigconsvars;
 
       origcons = origconss[c];
@@ -615,7 +613,7 @@ SCIP_RETCODE createAltLP(
          SCIP_CALL( SCIPallocBufferArray(origscip, &consvals, norigconsvars) );
 
          for ( v = 0; v < norigconsvars; ++v )
-            consvals[v] = origweights[v];
+            consvals[v] = (SCIP_Real) origweights[v];
 
          SCIP_CALL( createAltLPColumn(origscip, lp, norigconsvars, origconsvars, consvals, (SCIP_Real) SCIPgetCapacityKnapsack(origscip, origcons), 1.0) );
 
@@ -668,7 +666,6 @@ SCIP_RETCODE solveMinIISC(
    SCIP_Real ub;
    int norigvars;
    int nrows = 0;
-   int ncols = 0;
    int m = 0;
    int v;
 
@@ -678,6 +675,7 @@ SCIP_RETCODE solveMinIISC(
    if ( getProblemName(filename, name, SCIP_MAXSTRLEN) == 0 )
    {
       SCIPerrorMessage("Cannot extract problem name for filename <%s>.\n", filename);
+      return SCIP_ERROR;
    }
    SCIP_CALL( SCIPcreateProb(masterscip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
    SCIP_CALL( SCIPsetObjsense(masterscip, SCIP_OBJSENSE_MINIMIZE) );
@@ -699,7 +697,7 @@ SCIP_RETCODE solveMinIISC(
       }
       else
       {
-         SCIPerrorMessage("parameter file <%s> not found - using default parameters.\n", settingsname);
+         SCIPerrorMessage("\nparameter file <%s> not found - using default parameters.\n", settingsname);
       }
    }
 
@@ -725,7 +723,7 @@ SCIP_RETCODE solveMinIISC(
    /* init alternative polyhedron */
    SCIP_CALL( SCIPlpiCreate(&lp, SCIPgetMessagehdlr(masterscip), "altlp", SCIP_OBJSEN_MINIMIZE) );
 
-   /* set parameters */
+   /* init parameters */
    SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
    SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
    SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_SCALING, TRUE) );
@@ -761,7 +759,7 @@ SCIP_RETCODE solveMinIISC(
       SCIP_VAR* var;
       SCIP_Real matval[2];
       int matind[2];
-      int matbeg;
+      int matbeg = 0;
       int cnt = 0;
 
       var = origvars[v];
@@ -772,7 +770,6 @@ SCIP_RETCODE solveMinIISC(
       val = SCIPvarGetLbGlobal(var);
       if ( ! SCIPisInfinity(origscip, -val) )
       {
-         matbeg = 0;
          if ( ! SCIPisZero(origscip, val) )
          {
             matind[cnt] = 0;
@@ -788,7 +785,6 @@ SCIP_RETCODE solveMinIISC(
       val = SCIPvarGetUbGlobal(var);
       if ( ! SCIPisInfinity(origscip, val) )
       {
-         matbeg = 0;
          if ( ! SCIPisZero(origscip, val) )
          {
             matind[cnt] = 0;
@@ -807,8 +803,6 @@ SCIP_RETCODE solveMinIISC(
    SCIP_CALL( SCIPlpiWriteLP(lp, "alt.lp") );
 #endif
 
-   SCIP_CALL( SCIPlpiGetNCols(lp, &ncols) );
-
    /* ----------------------------------------------------------------------------------------*/
    /* initialize master problem */
    for (v = 0; v < m; ++v)
@@ -820,6 +814,7 @@ SCIP_RETCODE solveMinIISC(
       SCIP_CALL( SCIPaddVar(masterscip, var) );
    }
 
+   /* run Benders algorithm */
    data.lp = lp;
    data.m = m;
    SCIP_CALL( runBenders(masterscip, cutoracle, &data, timelimit, memlimit, dispfreq, DEFAULT_REOPTIMIZATION, DEFAULT_SOLVE_MASTER_APPROX,
