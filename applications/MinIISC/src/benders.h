@@ -68,7 +68,7 @@ SCIP_RETCODE runBenders(
    SCIP_Bool             usereopt,           /**< use reoptimization */
    SCIP_Bool             solvemasterapprox,  /**< Solve master problem approximately? */
    SCIP_Longint          masterstallnodes,   /**< stall nodes for master problem if solvemasterapprox is true */
-   SCIP_Real             mastergap,          /**< gap limit for master problem if solvemasterapprox is true */
+   SCIP_Real             mastergaplimit,     /**< gap limit for master problem if solvemasterapprox is true */
    SCIP_VERBLEVEL        verblevel,          /**< verbosity level for output */
    SCIP_STATUS*          status              /**< status of optimization */
    );

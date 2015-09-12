@@ -26,8 +26,8 @@
 #include "readargs.h"
 
 /* default parameters */
-#define DEFAULT_SOLVEMASTERAPPROX      TRUE      /**< solve master problem approximately */
-#define DEFAULT_MASTERGAP              0.1      /**< gap bound for approximately solving the master problem */
+#define DEFAULT_SOLVEMASTERAPPROX      TRUE       /**< solve master problem approximately */
+#define DEFAULT_MASTERGAPLIMIT         0.1        /**< gap bound for approximately solving the master problem */
 #define DEFAULT_REOPTIMIZATION         FALSE      /**< Use reoptimization to solve master problem? */
 #define DEFAULT_MASTERSTALLNODES       5000L      /**< stall nodes for the master problem */
 
@@ -673,7 +673,7 @@ SCIP_RETCODE solveMinIISC(
    /* parameters */
    SCIP_Bool solvemasterapprox;
    SCIP_Longint masterstallnodes;
-   SCIP_Real mastergap;
+   SCIP_Real mastergaplimit;
    SCIP_Bool reoptimization;
 
    /* create master SCIP */
@@ -700,9 +700,9 @@ SCIP_RETCODE solveMinIISC(
          &solvemasterapprox, TRUE, DEFAULT_SOLVEMASTERAPPROX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(masterscip,
-         "miniisc/mastergap",
+         "miniisc/mastergaplimit",
          "gap bound for approximately solving the master problem",
-         &mastergap, TRUE, DEFAULT_MASTERGAP, 0.0, SCIP_REAL_MAX, NULL, NULL) );
+         &mastergaplimit, TRUE, DEFAULT_MASTERGAPLIMIT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(masterscip,
          "miniisc/masterstallnodes",
@@ -846,7 +846,7 @@ SCIP_RETCODE solveMinIISC(
    data.lp = lp;
    data.m = m;
    SCIP_CALL( runBenders(masterscip, cutoracle, &data, timelimit, memlimit, dispfreq, reoptimization, solvemasterapprox,
-         masterstallnodes, mastergap, SCIP_VERBLEVEL_NORMAL, &status) );
+         masterstallnodes, mastergaplimit, SCIP_VERBLEVEL_NORMAL, &status) );
 
    SCIP_CALL( SCIPlpiFree(&lp) );
 
