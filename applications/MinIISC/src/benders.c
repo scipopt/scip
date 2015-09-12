@@ -20,16 +20,6 @@
 
 #include "benders.h"
 
-/* default parameters */
-#define DEFAULT_SOLVE_MASTER_APPROX     TRUE      /**< solve master problem approximately */
-#define DEFAULT_COMPUTE_HEUR_SOL       FALSE      /**< compute heuristic solution for master problem */
-#define DEFAULT_MASTER_GAP               0.1      /**< gap bound for approximately solving the master problem */
-#define DEFAULT_REOPTIMIZATION          TRUE      /**< Use reoptimization to solve master problem? */
-
-#define DEFAULT_MAXSTALLNODES            50L      /**< maximal number of stalling nodes in solving the separation problem */
-#define DEFAULT_MASTERSTALLNODES       5000L      /**< stall nodes for the master problem */
-#define DEFAULT_HEURSTALLNODES         1000L      /**< stall nodes for the heuristic */
-
 /* other parameters */
 #define MAXITERATIONS                   1000      /**< maximal number of iterations of main loop */
 
