@@ -746,6 +746,13 @@ SCIP_RETCODE solveMinIISC(
    /* read problem */
    SCIP_CALL( SCIPreadProb(origscip, filename, NULL) );
 
+   /* check that we have an LP */
+   if ( SCIPgetNOrigBinVars(origscip) + SCIPgetNOrigIntVars(origscip) > 0 )
+   {
+      SCIPinfoMessage(masterscip, NULL, "ERROR: input file contains integer variables. The code only works for LPs.\n");
+      return SCIP_ERROR;
+   }
+
    /* ----------------------------------------------------------------------------------------*/
 
    /* init alternative polyhedron */
