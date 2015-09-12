@@ -210,12 +210,11 @@ SCIP_RETCODE runBenders(
    SCIP_Real primalbound = 1e20;
    SCIP_Real dualbound = -1e20;
    int nmastervars;
-   int iter = 0;
+   int niter = 0;
 
    assert( status != NULL );
    *status = SCIP_STATUS_UNKNOWN;
 
-   SCIP_CALL( SCIPtransformProb(masterscip) );
    SCIP_CALL( SCIPgetOrigVarsData(masterscip, &mastervars, &nmastervars, NULL, NULL, NULL, NULL) );
 
    SCIP_CALL( SCIPallocClearBlockMemoryArray(masterscip, &mastersolution, nmastervars) );
@@ -240,10 +239,11 @@ SCIP_RETCODE runBenders(
       assert( SCIPgetNIntVars(masterscip) == 0 );
       if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
          SCIPinfoMessage(masterscip, NULL, "\nUsing reoptimization.\n");
+      SCIP_CALL( SCIPtransformProb(masterscip) );
       SCIP_CALL( SCIPenableReoptimization(masterscip, TRUE) );
    }
 
-   /* we use the time limit of the original SCIP version */
+   /* set up clocks */
    SCIP_CALL( SCIPcreateClock(masterscip, &totaltimeclock) );
    SCIP_CALL( SCIPstartClock(masterscip, totaltimeclock) );
 
@@ -271,13 +271,13 @@ SCIP_RETCODE runBenders(
 
    /* print banner */
    if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
-      SCIPinfoMessage(masterscip, NULL, "  time |  iter | nconss| nvars |master|totalnodes|oracle| ncuts | dualbnd\n");
+      SCIPinfoMessage(masterscip, NULL, "  time | niter | nconss| nvars |master|totalnodes|oracle| ncuts | dualbnd\n");
 
    /* iterate */
    do
    {
-      SCIP_STATUS masterstatus = SCIP_STATUS_UNKNOWN;
       BENDERS_STATUS substatus = BENDERS_STATUS_UNKNOWN;
+      SCIP_STATUS masterstatus = SCIP_STATUS_UNKNOWN;
       SCIP_Bool success = FALSE;
       SCIP_Real currenttime;
       SCIP_Real subtimelimit;
@@ -286,8 +286,8 @@ SCIP_RETCODE runBenders(
       int ncuts = 0;
       int v;
 
-      ++iter;
-      SCIPdebugMessage("\n\nIteration %d:\n", iter);
+      ++niter;
+      SCIPdebugMessage("\n\nIteration %d:\n", niter);
 
       /* --------- solve Benders subproblem */
 
@@ -442,7 +442,7 @@ SCIP_RETCODE runBenders(
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, " ");
          SCIPdispTime(SCIPgetMessagehdlr(masterscip), NULL, SCIPgetClockTime(masterscip, totaltimeclock), 6);
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|");
-         SCIPdispInt(SCIPgetMessagehdlr(masterscip), NULL, iter, 7);
+         SCIPdispInt(SCIPgetMessagehdlr(masterscip), NULL, niter, 7);
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|");
          SCIPdispInt(SCIPgetMessagehdlr(masterscip), NULL, SCIPgetNOrigConss(masterscip), 7);
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|");
@@ -458,11 +458,11 @@ SCIP_RETCODE runBenders(
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|%13.6e\n", mastersolobj);
       }
    }
-   while ( iter < maxIters );
+   while ( niter < maxIters );
 
    SCIPdebugMessage("Solution process finished.\n");
 
-   if ( iter >= maxIters )
+   if ( niter >= maxIters )
    {
       *status = SCIP_STATUS_TOTALNODELIMIT;
       SCIPinfoMessage(masterscip, NULL, "Reached iteration limit.\n");
@@ -477,7 +477,7 @@ SCIP_RETCODE runBenders(
  TERMINATE:
 
    SCIP_CALL( printShortStatistics(masterscip, *status, totaltimeclock, primalbound, dualbound, ntotalnodes) );
-   SCIP_CALL( printLongStatistics(masterscip, *status, totaltimeclock, oracletimeclock, mastertimeclock, primalbound, dualbound, ntotalnodes, ntotalcuts, iter) );
+   SCIP_CALL( printLongStatistics(masterscip, *status, totaltimeclock, oracletimeclock, mastertimeclock, primalbound, dualbound, ntotalnodes, ntotalcuts, niter) );
 
    SCIPfreeBlockMemoryArray(masterscip, &mastersolution, nmastervars);
 
