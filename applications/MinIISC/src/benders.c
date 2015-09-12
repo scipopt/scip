@@ -46,8 +46,12 @@ SCIP_RETCODE runBenders(
    SCIP_CLOCK* mastertimeclock;
    SCIP_Bool masteroptimal = TRUE;
    const int maxIters = MAXITERATIONS;
+   SCIP_Longint ntotalnodes = 0LL;
    SCIP_VAR** mastervars;
    SCIP_Real* mastersolution;
+   SCIP_Real primalbound = 1e20;
+   SCIP_Real dualbound = -1e20;
+   SCIP_Real gap = 1e20;
    int nmastervars;
    int iter = 0;
 
@@ -120,12 +124,12 @@ SCIP_RETCODE runBenders(
       SCIP_Bool success = FALSE;
       SCIP_Real currenttime;
       SCIP_Real subtimelimit;
-
       SCIP_SOL* mastersol = NULL;
       SCIP_Real mastersolobj;
       int ncuts;
       int v;
 
+      ++iter;
       SCIPdebugMessage("\n\nIteration %d:\n", iter);
 
       /* set current time limit */
@@ -156,6 +160,8 @@ SCIP_RETCODE runBenders(
       /* solve master problem */
       SCIP_CALL( SCIPstartClock(masterscip, mastertimeclock) );
       SCIP_CALL( SCIPsolve(masterscip) );
+
+      ntotalnodes += SCIPgetNTotalNodes(masterscip);
 
       /* possibly reset gap limit */
       if ( solvemasterapprox )
@@ -194,7 +200,7 @@ SCIP_RETCODE runBenders(
       case SCIP_STATUS_USERINTERRUPT:
          *status = SCIP_STATUS_USERINTERRUPT;
          SCIPinfoMessage(masterscip, NULL, "User interrupt.\n");
-         return SCIP_OKAY;
+         goto TERMINATE;
 
       default:
          SCIPerrorMessage("Master problem returned with status %d. Exiting ...\n", masterstatus);
@@ -208,6 +214,8 @@ SCIP_RETCODE runBenders(
          return SCIP_ERROR;
       }
       mastersolobj = SCIPgetSolOrigObj(masterscip, mastersol);
+
+      dualbound = MAX(dualbound, SCIPgetDualbound(masterscip));
 
       /* copy solution */
       for (v = 0; v < nmastervars; ++v)
@@ -271,6 +279,7 @@ SCIP_RETCODE runBenders(
 
       case BENDERS_STATUS_SUCESS:
          success = TRUE;
+         primalbound = mastersolobj;
          break;
 
       case BENDERS_STATUS_TIMELIMIT:
@@ -284,8 +293,6 @@ SCIP_RETCODE runBenders(
 
       if ( success )
          break;
-
-      ++iter;
    }
    while ( iter < maxIters );
 
@@ -304,6 +311,89 @@ SCIP_RETCODE runBenders(
    }
 
  TERMINATE:
+
+   if ( ! SCIPisInfinity(masterscip, primalbound) && ! SCIPisInfinity(masterscip, -dualbound) )
+   {
+      gap = fabs(primalbound - dualbound)/(MAX3(fabs(primalbound), fabs(dualbound), 1.0));
+   }
+
+   SCIPinfoMessage(masterscip, NULL, "\n");
+   SCIPinfoMessage(masterscip, NULL, "SCIP Status        : ");
+   switch( *status )
+   {
+   case SCIP_STATUS_UNKNOWN:
+      SCIPinfoMessage(masterscip, NULL, "unknown");
+      break;
+   case SCIP_STATUS_USERINTERRUPT:
+      SCIPinfoMessage(masterscip, NULL, "user interrupt");
+      break;
+   case SCIP_STATUS_NODELIMIT:
+      SCIPinfoMessage(masterscip, NULL, "node limit reached");
+      break;
+   case SCIP_STATUS_TOTALNODELIMIT:
+      SCIPinfoMessage(masterscip, NULL, "total node limit reached");
+      break;
+   case SCIP_STATUS_STALLNODELIMIT:
+      SCIPinfoMessage(masterscip, NULL, "stall node limit reached");
+      break;
+   case SCIP_STATUS_TIMELIMIT:
+      SCIPinfoMessage(masterscip, NULL, "time limit reached");
+      break;
+   case SCIP_STATUS_MEMLIMIT:
+      SCIPinfoMessage(masterscip, NULL, "memory limit reached");
+      break;
+   case SCIP_STATUS_GAPLIMIT:
+      SCIPinfoMessage(masterscip, NULL, "gap limit reached");
+      break;
+   case SCIP_STATUS_SOLLIMIT:
+      SCIPinfoMessage(masterscip, NULL, "solution limit reached");
+      break;
+   case SCIP_STATUS_BESTSOLLIMIT:
+      SCIPinfoMessage(masterscip, NULL, "solution improvement limit reached");
+      break;
+   case SCIP_STATUS_RESTARTLIMIT:
+      SCIPinfoMessage(masterscip, NULL, "restart limit reached");
+      break;
+   case SCIP_STATUS_OPTIMAL:
+      SCIPinfoMessage(masterscip, NULL, "optimal solution found");
+      break;
+   case SCIP_STATUS_INFEASIBLE:
+      SCIPinfoMessage(masterscip, NULL, "infeasible");
+      break;
+   case SCIP_STATUS_UNBOUNDED:
+      SCIPinfoMessage(masterscip, NULL, "unbounded");
+      break;
+   case SCIP_STATUS_INFORUNBD:
+      SCIPinfoMessage(masterscip, NULL, "infeasible or unbounded");
+      break;
+   default:
+      SCIPerrorMessage("invalid status code <%d>\n", *status);
+      return SCIP_INVALIDDATA;
+   }
+   SCIPinfoMessage(masterscip, NULL, "\n");
+
+   SCIPinfoMessage(masterscip, NULL, "Solving Time (sec) : %.2f\n", SCIPgetClockTime(masterscip, totaltimeclock));
+   SCIPinfoMessage(masterscip, NULL, "Solving Nodes      : %" SCIP_LONGINT_FORMAT " (total of %" SCIP_LONGINT_FORMAT " nodes in %d runs)\n",
+      ntotalnodes, ntotalnodes, iter);
+
+   SCIPinfoMessage(masterscip, NULL, "Total Time         : %10.2f\n", SCIPgetClockTime(masterscip, totaltimeclock));
+   SCIPinfoMessage(masterscip, NULL, "  solving          : %10.2f\n", SCIPgetClockTime(masterscip, mastertimeclock));
+   SCIPinfoMessage(masterscip, NULL, "  oracle           : %10.2f\n", SCIPgetClockTime(masterscip, oracletimeclock));
+
+   SCIPinfoMessage(masterscip, NULL, "Original Problem   :\n");
+   SCIPinfoMessage(masterscip, NULL, "  Problem name     : %s\n", SCIPgetProbName(masterscip));
+   SCIPinfoMessage(masterscip, NULL, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
+      SCIPgetNVars(masterscip), SCIPgetNVars(masterscip), 0, 0, 0);
+   SCIPinfoMessage(masterscip, NULL, "  Constraints      : %d initial, %d maximal\n", 0, SCIPgetNConss(masterscip));
+
+   SCIPinfoMessage(masterscip, NULL, "Solution           :\n");
+   SCIPinfoMessage(masterscip, NULL, "  Primal Bound     : %+21.14e\n", primalbound);
+   SCIPinfoMessage(masterscip, NULL, "  Dual Bound       : %+21.14e\n", dualbound);
+   if ( SCIPisInfinity(masterscip, gap) )
+      SCIPinfoMessage(masterscip, NULL, "  Gap              :   infinite\n");
+   else
+      SCIPinfoMessage(masterscip, NULL, "  Gap              : %10.2f %%\n", 100.0 * gap);
+
    SCIPinfoMessage(masterscip, NULL, "\nTotal used time:\t %f\n", SCIPgetClockTime(masterscip, totaltimeclock));
    SCIPinfoMessage(masterscip, NULL, "Oracle time:\t\t %f\n", SCIPgetClockTime(masterscip, oracletimeclock));
    SCIPinfoMessage(masterscip, NULL, "Master problem time:\t %f\n", SCIPgetClockTime(masterscip, mastertimeclock));
