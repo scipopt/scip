@@ -61,7 +61,7 @@ SCIP_RETCODE runBenders(
    SCIP_CALL( SCIPtransformProb(masterscip) );
    SCIP_CALL( SCIPgetOrigVarsData(masterscip, &mastervars, &nmastervars, NULL, NULL, NULL, NULL) );
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(masterscip, &mastersolution, nmastervars) );
+   SCIP_CALL( SCIPallocClearBlockMemoryArray(masterscip, &mastersolution, nmastervars) );
 
    /* set output to console */
 #ifdef SCIP_DEBUG
@@ -131,6 +131,58 @@ SCIP_RETCODE runBenders(
 
       ++iter;
       SCIPdebugMessage("\n\nIteration %d:\n", iter);
+
+      /* --------- solve Benders subproblem */
+
+      /* compute current time limit */
+      currenttime = SCIPgetClockTime(masterscip, totaltimeclock);
+      if ( ! SCIPisInfinity(masterscip, timelimit) )
+      {
+         subtimelimit = timelimit - currenttime;
+         if ( subtimelimit <= 0.1 )
+         {
+            SCIPdebugMessage("Time limit exceeded.\n");
+            goto TERMINATE;
+         }
+         SCIPdebugMessage("Solving separation problem ... (time limit: %g)\n", subtimelimit);
+      }
+      else
+      {
+         subtimelimit = SCIPinfinity(masterscip);
+         SCIPdebugMessage("Solving separation problem ...\n");
+      }
+
+      /* free solving data */
+      SCIP_CALL( SCIPfreeTransform(masterscip) );
+
+      /* check for Benders cuts */
+      SCIP_CALL( SCIPstartClock(masterscip, oracletimeclock) );
+      SCIP_CALL( Oracle(masterscip, nmastervars, mastervars, mastersolution, data, timelimit, &ncuts, &substatus) );
+      SCIP_CALL( SCIPstopClock(masterscip, oracletimeclock) );
+
+      switch ( substatus )
+      {
+      case BENDERS_STATUS_ADDEDCUT:
+         break;
+
+      case BENDERS_STATUS_SUCESS:
+         success = TRUE;
+         primalbound = mastersolobj;
+         break;
+
+      case BENDERS_STATUS_TIMELIMIT:
+         *status = SCIP_STATUS_TIMELIMIT;
+         goto TERMINATE;
+
+      default:
+         SCIPerrorMessage("Subproblem returned with status %d. Exiting ...\n", substatus);
+         return SCIP_ERROR;
+      }
+
+      if ( success )
+         break;
+
+      /* --------- solve Benders maser problem */
 
       /* set current time limit */
       currenttime = SCIPgetClockTime(masterscip, totaltimeclock);
@@ -227,33 +279,7 @@ SCIP_RETCODE runBenders(
          mastersolution[v] = val;
       }
 
-      /* compute current time limit */
-      currenttime = SCIPgetClockTime(masterscip, totaltimeclock);
-      if ( ! SCIPisInfinity(masterscip, timelimit) )
-      {
-         subtimelimit = timelimit - currenttime;
-         if ( subtimelimit <= 0.1 )
-         {
-            SCIPdebugMessage("Time limit exceeded.\n");
-            goto TERMINATE;
-         }
-         SCIPdebugMessage("Solving separation problem ... (time limit: %g)\n", subtimelimit);
-      }
-      else
-      {
-         subtimelimit = SCIPinfinity(masterscip);
-         SCIPdebugMessage("Solving separation problem ...\n");
-      }
-
-      /* free solving data */
-      SCIP_CALL( SCIPfreeTransform(masterscip) );
-
-      /* check for Benders cuts */
-      SCIP_CALL( SCIPstartClock(masterscip, oracletimeclock) );
-      SCIP_CALL( Oracle(masterscip, nmastervars, mastervars, mastersolution, data, timelimit, &ncuts, &substatus) );
-      SCIP_CALL( SCIPstopClock(masterscip, oracletimeclock) );
-
-      if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
+         if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
       {
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, " ");
          SCIPdispTime(SCIPgetMessagehdlr(masterscip), NULL, SCIPgetClockTime(masterscip, totaltimeclock), 6);
@@ -271,28 +297,6 @@ SCIP_RETCODE runBenders(
          SCIPdispInt(SCIPgetMessagehdlr(masterscip), NULL, ncuts, 7);
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|%13.6e\n", mastersolobj);
       }
-
-      switch ( substatus )
-      {
-      case BENDERS_STATUS_ADDEDCUT:
-         break;
-
-      case BENDERS_STATUS_SUCESS:
-         success = TRUE;
-         primalbound = mastersolobj;
-         break;
-
-      case BENDERS_STATUS_TIMELIMIT:
-         *status = SCIP_STATUS_TIMELIMIT;
-         goto TERMINATE;
-
-      default:
-         SCIPerrorMessage("Subproblem returned with status %d. Exiting ...\n", substatus);
-         return SCIP_ERROR;
-      }
-
-      if ( success )
-         break;
    }
    while ( iter < maxIters );
 
