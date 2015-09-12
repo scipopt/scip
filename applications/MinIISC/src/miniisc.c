@@ -693,7 +693,7 @@ SCIP_RETCODE solveMinIISC(
    {
       if ( SCIPfileExists(settingsname) )
       {
-         SCIPinfoMessage(masterscip, NULL, "\nreading parameter file <%s> ...\n\n", settingsname);
+         SCIPinfoMessage(masterscip, NULL, "\nreading user parameter file <%s> ...\n\n", settingsname);
          SCIP_CALL( SCIPreadParams(masterscip, settingsname) );
          SCIP_CALL( SCIPwriteParams(masterscip, NULL, FALSE, TRUE) );
       }
