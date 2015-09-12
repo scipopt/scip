@@ -265,7 +265,7 @@ SCIP_RETCODE runBenders(
 
    /* print banner */
    if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
-      SCIPinfoMessage(masterscip, NULL, "  time |  iter | nconss| nvars |master|oracle| ncuts | dualbnd\n");
+      SCIPinfoMessage(masterscip, NULL, "  time |  iter | nconss| nvars |master|totalnodes|oracle| ncuts | dualbnd\n");
 
    /* iterate */
    do
@@ -442,6 +442,8 @@ SCIP_RETCODE runBenders(
          SCIPdispInt(SCIPgetMessagehdlr(masterscip), NULL, SCIPgetNVars(masterscip), 7);
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|");
          SCIPdispTime(SCIPgetMessagehdlr(masterscip), NULL, SCIPgetClockTime(masterscip, mastertimeclock), 6);
+         SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|");
+         SCIPdispLongint(SCIPgetMessagehdlr(masterscip), NULL, ntotalnodes, 10);
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|");
          SCIPdispTime(SCIPgetMessagehdlr(masterscip), NULL, SCIPgetClockTime(masterscip, oracletimeclock), 6);
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, "|");
