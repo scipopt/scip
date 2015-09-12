@@ -270,7 +270,12 @@ SCIP_RETCODE runBenders(
 
    /* print banner */
    if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
-      SCIPinfoMessage(masterscip, NULL, "  time | niter |nconss | nvars |master|totalnodes|oracle| ncuts |    dualbound |   gap\n");
+   {
+      if ( solvemasterapprox )
+         SCIPinfoMessage(masterscip, NULL, "  time | niter |nconss | nvars |master|totalnodes|oracle| ncuts |    dualbound |   gap\n");
+      else
+         SCIPinfoMessage(masterscip, NULL, "  time | niter |nconss | nvars |master|totalnodes|oracle| ncuts |    dualbound\n");
+   }
 
    /* iterate */
    do
