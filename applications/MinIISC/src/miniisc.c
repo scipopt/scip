@@ -695,7 +695,7 @@ SCIP_RETCODE solveMinIISC(
 
    /* add parameters */
    SCIP_CALL( SCIPaddBoolParam(masterscip,
-         "miniisc/solveMasterApprox",
+         "miniisc/solvemasterapprox",
          "Solve master problem approximately?",
          &solvemasterapprox, TRUE, DEFAULT_SOLVEMASTERAPPROX, NULL, NULL) );
 
