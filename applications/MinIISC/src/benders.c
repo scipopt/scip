@@ -239,7 +239,6 @@ SCIP_RETCODE runBenders(
       assert( SCIPgetNIntVars(masterscip) == 0 );
       if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
          SCIPinfoMessage(masterscip, NULL, "\nUsing reoptimization.\n");
-      SCIP_CALL( SCIPtransformProb(masterscip) );
       SCIP_CALL( SCIPenableReoptimization(masterscip, TRUE) );
    }
 
