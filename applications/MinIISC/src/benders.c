@@ -24,6 +24,158 @@
 #define MAXITERATIONS                   1000      /**< maximal number of iterations of main loop */
 
 
+/** output status */
+static
+SCIP_RETCODE printStatus(
+   SCIP*                 masterscip,         /**< master problem SCIP instance */
+   SCIP_STATUS           status              /**< solution status */
+   )
+{
+   SCIPinfoMessage(masterscip, NULL, "SCIP Status        : ");
+   switch ( status )
+   {
+   case SCIP_STATUS_UNKNOWN:
+      SCIPinfoMessage(masterscip, NULL, "unknown");
+      break;
+   case SCIP_STATUS_USERINTERRUPT:
+      SCIPinfoMessage(masterscip, NULL, "solving was interrupted [user interrupt]");
+      break;
+   case SCIP_STATUS_NODELIMIT:
+      SCIPinfoMessage(masterscip, NULL, "solving was interrupted [node limit reached]");
+      break;
+   case SCIP_STATUS_TIMELIMIT:
+      SCIPinfoMessage(masterscip, NULL, "solving was interrupted [time limit reached]");
+      break;
+   case SCIP_STATUS_MEMLIMIT:
+      SCIPinfoMessage(masterscip, NULL, "solving was interrupted [memory limit reached]");
+      break;
+   case SCIP_STATUS_GAPLIMIT:
+      SCIPinfoMessage(masterscip, NULL, "solving was interrupted [gap limit reached]");
+      break;
+   case SCIP_STATUS_OPTIMAL:
+      SCIPinfoMessage(masterscip, NULL, "problem is solved [optimal solution found]");
+      break;
+   case SCIP_STATUS_INFEASIBLE:
+      SCIPinfoMessage(masterscip, NULL, "problem is solved [infeasible]");
+      break;
+   case SCIP_STATUS_UNBOUNDED:
+      SCIPinfoMessage(masterscip, NULL, "problem is solved [unbounded]");
+      break;
+   default:
+      SCIPerrorMessage("invalid status code <%d>\n", status);
+      return SCIP_INVALIDDATA;
+   }
+   SCIPinfoMessage(masterscip, NULL, "\n");
+
+   return SCIP_OKAY;
+}
+
+
+/** output short statistics */
+static
+SCIP_RETCODE printShortStatistics(
+   SCIP*                 masterscip,         /**< master problem SCIP instance */
+   SCIP_STATUS           status,             /**< solution status */
+   SCIP_CLOCK*           totaltimeclock,     /**< clock for total time */
+   SCIP_Real             primalbound,        /**< primal bound */
+   SCIP_Real             dualbound,          /**< dual bound */
+   SCIP_Longint          ntotalnodes         /**< total number of nodes */
+   )
+{
+   SCIP_Real gap = 1e20;
+
+   if ( ! SCIPisInfinity(masterscip, primalbound) && ! SCIPisInfinity(masterscip, -dualbound) )
+   {
+      gap = fabs(primalbound - dualbound)/(MAX3(fabs(primalbound), fabs(dualbound), 1.0));
+   }
+
+   /* start output */
+   SCIPinfoMessage(masterscip, NULL, "\n");
+
+   SCIP_CALL( printStatus(masterscip, status) );
+   SCIPinfoMessage(masterscip, NULL, "Solving Time (sec) : %.2f\n", SCIPgetClockTime(masterscip, totaltimeclock));
+   SCIPinfoMessage(masterscip, NULL, "Solving Nodes      : %" SCIP_LONGINT_FORMAT "\n", ntotalnodes);
+   SCIPinfoMessage(masterscip, NULL, "Primal Bound       : %+21.14e\n", primalbound);
+   SCIPinfoMessage(masterscip, NULL, "Dual Bound         : %+21.14e\n", dualbound);
+   if ( SCIPisInfinity(masterscip, gap) )
+      SCIPinfoMessage(masterscip, NULL, "Gap                :   infinite\n");
+   else
+      SCIPinfoMessage(masterscip, NULL, "Gap                : %10.2f %%\n", 100.0 * gap);
+   SCIPinfoMessage(masterscip, NULL, "\n");
+
+   return SCIP_OKAY;
+}
+
+
+/** output long statistics */
+static
+SCIP_RETCODE printLongStatistics(
+   SCIP*                 masterscip,         /**< master problem SCIP instance */
+   SCIP_STATUS           status,             /**< solution status */
+   SCIP_CLOCK*           totaltimeclock,     /**< clock for total time */
+   SCIP_CLOCK*           oracletimeclock,    /**< clock for oracle */
+   SCIP_CLOCK*           mastertimeclock,    /**< clock for master problem */
+   SCIP_Real             primalbound,        /**< primal bound */
+   SCIP_Real             dualbound,          /**< dual bound */
+   SCIP_Longint          ntotalnodes,        /**< total number of nodes */
+   int                   iter                /**< number of iterations */
+   )
+{
+   SCIP_Real gap = 1e20;
+
+   if ( ! SCIPisInfinity(masterscip, primalbound) && ! SCIPisInfinity(masterscip, -dualbound) )
+   {
+      gap = fabs(primalbound - dualbound)/(MAX3(fabs(primalbound), fabs(dualbound), 1.0));
+   }
+
+   /* start output */
+   SCIPinfoMessage(masterscip, NULL, "\n");
+
+   /* print main part of statistics */
+   SCIP_CALL( printStatus(masterscip, status) );
+   SCIPinfoMessage(masterscip, NULL, "Solving Time (sec) : %.2f\n", SCIPgetClockTime(masterscip, totaltimeclock));
+   SCIPinfoMessage(masterscip, NULL, "Solving Nodes      : %" SCIP_LONGINT_FORMAT " (total of %" SCIP_LONGINT_FORMAT " nodes in %d runs)\n",
+      ntotalnodes, ntotalnodes, iter);
+
+   SCIPinfoMessage(masterscip, NULL, "Total Time         : %10.2f\n", SCIPgetClockTime(masterscip, totaltimeclock));
+   SCIPinfoMessage(masterscip, NULL, "  solving          : %10.2f\n", SCIPgetClockTime(masterscip, mastertimeclock));
+   SCIPinfoMessage(masterscip, NULL, "  oracle           : %10.2f\n", SCIPgetClockTime(masterscip, oracletimeclock));
+
+   SCIPinfoMessage(masterscip, NULL, "Original Problem   :\n");
+   SCIPinfoMessage(masterscip, NULL, "  Problem name     : %s\n", SCIPgetProbName(masterscip));
+   SCIPinfoMessage(masterscip, NULL, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
+      SCIPgetNVars(masterscip), SCIPgetNOrigVars(masterscip), 0, 0, 0);
+   SCIPinfoMessage(masterscip, NULL, "  Constraints      : %d initial, %d maximal\n", 0, SCIPgetNOrigConss(masterscip));
+   SCIPinfoMessage(masterscip, NULL, "  Objective sense  : minimize\n");
+
+   SCIPinfoMessage(masterscip, NULL, "Presolved Problem  :\n");
+   SCIPinfoMessage(masterscip, NULL, "  Problem name     : %s\n", SCIPgetProbName(masterscip));
+   SCIPinfoMessage(masterscip, NULL, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
+      SCIPgetNVars(masterscip), SCIPgetNOrigVars(masterscip), 0, 0, 0);
+   SCIPinfoMessage(masterscip, NULL, "  Constraints      : %d initial, %d maximal\n", 0, SCIPgetNOrigConss(masterscip));
+
+   SCIPinfoMessage(masterscip, NULL, "B&B Tree           :\n");
+   SCIPinfoMessage(masterscip, NULL, "  number of runs   : %10d\n", iter);
+   SCIPinfoMessage(masterscip, NULL, "  nodes (total)    : %10" SCIP_LONGINT_FORMAT "\n", ntotalnodes);
+
+   SCIPinfoMessage(masterscip, NULL, "Solution           :\n");
+   SCIPinfoMessage(masterscip, NULL, "  Primal Bound     : %+21.14e\n", primalbound);
+   SCIPinfoMessage(masterscip, NULL, "  Dual Bound       : %+21.14e\n", dualbound);
+   if ( SCIPisInfinity(masterscip, gap) )
+      SCIPinfoMessage(masterscip, NULL, "  Gap              :   infinite\n");
+   else
+      SCIPinfoMessage(masterscip, NULL, "  Gap              : %10.2f %%\n", 100.0 * gap);
+
+#if 0
+   SCIPinfoMessage(masterscip, NULL, "\nTotal used time:\t %f\n", SCIPgetClockTime(masterscip, totaltimeclock));
+   SCIPinfoMessage(masterscip, NULL, "Oracle time:\t\t %f\n", SCIPgetClockTime(masterscip, oracletimeclock));
+   SCIPinfoMessage(masterscip, NULL, "Master problem time:\t %f\n", SCIPgetClockTime(masterscip, mastertimeclock));
+   SCIPinfoMessage(masterscip, NULL, "Number of iterations:\t %d\n", iter);
+#endif
+
+   return SCIP_OKAY;
+}
+
 
 /** find minimum cardinality infeasible subsystem */
 SCIP_RETCODE runBenders(
@@ -51,7 +203,6 @@ SCIP_RETCODE runBenders(
    SCIP_Real* mastersolution;
    SCIP_Real primalbound = 1e20;
    SCIP_Real dualbound = -1e20;
-   SCIP_Real gap = 1e20;
    int nmastervars;
    int iter = 0;
 
@@ -279,7 +430,7 @@ SCIP_RETCODE runBenders(
          mastersolution[v] = val;
       }
 
-         if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
+      if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
       {
          SCIPmessageFPrintInfo(SCIPgetMessagehdlr(masterscip), NULL, " ");
          SCIPdispTime(SCIPgetMessagehdlr(masterscip), NULL, SCIPgetClockTime(masterscip, totaltimeclock), 6);
@@ -316,92 +467,8 @@ SCIP_RETCODE runBenders(
 
  TERMINATE:
 
-   if ( ! SCIPisInfinity(masterscip, primalbound) && ! SCIPisInfinity(masterscip, -dualbound) )
-   {
-      gap = fabs(primalbound - dualbound)/(MAX3(fabs(primalbound), fabs(dualbound), 1.0));
-   }
-
-   SCIPinfoMessage(masterscip, NULL, "\n");
-   SCIPinfoMessage(masterscip, NULL, "SCIP Status        : ");
-   switch( *status )
-   {
-   case SCIP_STATUS_UNKNOWN:
-      SCIPinfoMessage(masterscip, NULL, "unknown");
-      break;
-   case SCIP_STATUS_USERINTERRUPT:
-      SCIPinfoMessage(masterscip, NULL, "user interrupt");
-      break;
-   case SCIP_STATUS_NODELIMIT:
-      SCIPinfoMessage(masterscip, NULL, "node limit reached");
-      break;
-   case SCIP_STATUS_TOTALNODELIMIT:
-      SCIPinfoMessage(masterscip, NULL, "total node limit reached");
-      break;
-   case SCIP_STATUS_STALLNODELIMIT:
-      SCIPinfoMessage(masterscip, NULL, "stall node limit reached");
-      break;
-   case SCIP_STATUS_TIMELIMIT:
-      SCIPinfoMessage(masterscip, NULL, "time limit reached");
-      break;
-   case SCIP_STATUS_MEMLIMIT:
-      SCIPinfoMessage(masterscip, NULL, "memory limit reached");
-      break;
-   case SCIP_STATUS_GAPLIMIT:
-      SCIPinfoMessage(masterscip, NULL, "gap limit reached");
-      break;
-   case SCIP_STATUS_SOLLIMIT:
-      SCIPinfoMessage(masterscip, NULL, "solution limit reached");
-      break;
-   case SCIP_STATUS_BESTSOLLIMIT:
-      SCIPinfoMessage(masterscip, NULL, "solution improvement limit reached");
-      break;
-   case SCIP_STATUS_RESTARTLIMIT:
-      SCIPinfoMessage(masterscip, NULL, "restart limit reached");
-      break;
-   case SCIP_STATUS_OPTIMAL:
-      SCIPinfoMessage(masterscip, NULL, "optimal solution found");
-      break;
-   case SCIP_STATUS_INFEASIBLE:
-      SCIPinfoMessage(masterscip, NULL, "infeasible");
-      break;
-   case SCIP_STATUS_UNBOUNDED:
-      SCIPinfoMessage(masterscip, NULL, "unbounded");
-      break;
-   case SCIP_STATUS_INFORUNBD:
-      SCIPinfoMessage(masterscip, NULL, "infeasible or unbounded");
-      break;
-   default:
-      SCIPerrorMessage("invalid status code <%d>\n", *status);
-      return SCIP_INVALIDDATA;
-   }
-   SCIPinfoMessage(masterscip, NULL, "\n");
-
-   SCIPinfoMessage(masterscip, NULL, "Solving Time (sec) : %.2f\n", SCIPgetClockTime(masterscip, totaltimeclock));
-   SCIPinfoMessage(masterscip, NULL, "Solving Nodes      : %" SCIP_LONGINT_FORMAT " (total of %" SCIP_LONGINT_FORMAT " nodes in %d runs)\n",
-      ntotalnodes, ntotalnodes, iter);
-
-   SCIPinfoMessage(masterscip, NULL, "Total Time         : %10.2f\n", SCIPgetClockTime(masterscip, totaltimeclock));
-   SCIPinfoMessage(masterscip, NULL, "  solving          : %10.2f\n", SCIPgetClockTime(masterscip, mastertimeclock));
-   SCIPinfoMessage(masterscip, NULL, "  oracle           : %10.2f\n", SCIPgetClockTime(masterscip, oracletimeclock));
-
-   SCIPinfoMessage(masterscip, NULL, "Original Problem   :\n");
-   SCIPinfoMessage(masterscip, NULL, "  Problem name     : %s\n", SCIPgetProbName(masterscip));
-   SCIPinfoMessage(masterscip, NULL, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
-      SCIPgetNVars(masterscip), SCIPgetNVars(masterscip), 0, 0, 0);
-   SCIPinfoMessage(masterscip, NULL, "  Constraints      : %d initial, %d maximal\n", 0, SCIPgetNConss(masterscip));
-
-   SCIPinfoMessage(masterscip, NULL, "Solution           :\n");
-   SCIPinfoMessage(masterscip, NULL, "  Primal Bound     : %+21.14e\n", primalbound);
-   SCIPinfoMessage(masterscip, NULL, "  Dual Bound       : %+21.14e\n", dualbound);
-   if ( SCIPisInfinity(masterscip, gap) )
-      SCIPinfoMessage(masterscip, NULL, "  Gap              :   infinite\n");
-   else
-      SCIPinfoMessage(masterscip, NULL, "  Gap              : %10.2f %%\n", 100.0 * gap);
-
-   SCIPinfoMessage(masterscip, NULL, "\nTotal used time:\t %f\n", SCIPgetClockTime(masterscip, totaltimeclock));
-   SCIPinfoMessage(masterscip, NULL, "Oracle time:\t\t %f\n", SCIPgetClockTime(masterscip, oracletimeclock));
-   SCIPinfoMessage(masterscip, NULL, "Master problem time:\t %f\n", SCIPgetClockTime(masterscip, mastertimeclock));
-   SCIPinfoMessage(masterscip, NULL, "Number of iterations:\t %d\n", iter);
+   SCIP_CALL( printShortStatistics(masterscip, *status, totaltimeclock, primalbound, dualbound, ntotalnodes) );
+   SCIP_CALL( printLongStatistics(masterscip, *status, totaltimeclock, oracletimeclock, mastertimeclock, primalbound, dualbound, ntotalnodes, iter) );
 
    SCIPfreeBlockMemoryArray(masterscip, &mastersolution, nmastervars);
 
