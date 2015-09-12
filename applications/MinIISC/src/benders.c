@@ -339,7 +339,13 @@ SCIP_RETCODE runBenders(
 
       /* if not cuts could be found, the master problem is solved optimally */
       if ( success )
-         break;
+      {
+         /* if last master problem was solved to optimality, we are done */
+         if ( masteroptimal )
+            break;
+         /* otherwise, we have to resolve the master to optimality */
+         solvemasterapprox = FALSE;
+      }
 
       /* --------- solve Benders master problem */
 
