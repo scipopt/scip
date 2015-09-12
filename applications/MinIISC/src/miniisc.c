@@ -750,6 +750,7 @@ SCIP_RETCODE solveMinIISC(
    SCIP_CALL( SCIPlpiGetNCols(lp, &m) );
 
    /* add columns for bounds */
+   obj = 0.0;
    ub = SCIPlpiInfinity(lp);
    for (v = 0; v < norigvars; ++v)
    {
