@@ -35193,17 +35193,24 @@ SCIP_RETCODE printDualSol(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
+   SCIP_VAR** vars;
    int c;
 
    assert(scip->lp != NULL);
    assert(scip->lp->solved);
    assert(scip->lp->dualfeasible);
 
+   /* allocate buffer memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, 1) );
+
    /* print dual solution values of all constraints */
    for( c = 0; c < scip->transprob->nconss; ++c )
    {
       SCIP_CONS* cons;
       SCIP_Real solval;
+      SCIP_Bool success;
+
+      int nvars;
 #ifndef NDEBUG
       SCIP_CONSHDLR* conshdlr;
 #endif
@@ -35216,7 +35223,28 @@ SCIP_RETCODE printDualSol(
       assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear" ) == 0);
 #endif
 
-      solval = SCIPgetDualsolLinear(scip, cons);
+      SCIP_CALL( SCIPconsGetNVars(cons, scip->set, &nvars, &success) );
+
+      if( nvars > 1 )
+         solval = SCIPgetDualsolLinear(scip, cons);
+      /* the constraint is a bound constraint */
+      else
+      {
+         SCIP_Real varsolval;
+
+         assert(vars != NULL);
+         SCIP_CALL( SCIPconsGetVars(cons, scip->set, vars, 1, &success) );
+
+         varsolval = SCIPvarGetLPSol(vars[0]);
+
+         /* return the reduced cost of the variable if the constraint would be tight */
+         if( SCIPsetIsEQ(scip->set, varsolval, SCIPgetRhsLinear(scip, cons))
+          || SCIPsetIsEQ(scip->set, varsolval, SCIPgetLhsLinear(scip, cons)) )
+            solval = SCIPgetVarRedcost(scip, vars[0]);
+         else
+            solval = 0.0;
+
+      }
       assert(solval != SCIP_INVALID); /*lint !e777*/
 
       if( printzeros || !SCIPisZero(scip, solval) )
@@ -35230,9 +35258,18 @@ SCIP_RETCODE printDualSol(
          else if( SCIPisInfinity(scip, -solval) )
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity\n");
          else
-            SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g\n", solval);
+         {
+            if( nvars > 1 )
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g\n", solval);
+            else
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g*\n", solval);
+         }
       }
+
    }
+
+   /* free buffer memory */
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
