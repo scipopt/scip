@@ -12624,7 +12624,8 @@ SCIP_Real SCIPvarGetRootSol(
 }
 
 /** returns for given variable the reduced cost */
-SCIP_Real SCIPvarGetRedcost(
+static
+SCIP_Real getImplVarRedcost(
    SCIP_VAR*             var,                /**< problem variable */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             varfixing,          /**< FALSE if for x == 0, TRUE for x == 1 */
@@ -12694,7 +12695,7 @@ SCIP_Real SCIPvarGetImplRedcost(
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
    /* get reduced cost of given variable */
-   implredcost = SCIPvarGetRedcost(var, set, varfixing, stat, lp);
+   implredcost = getImplVarRedcost(var, set, varfixing, stat, lp);
 
 #ifdef SCIP_MORE_DEBUG
    SCIPdebugMessage("variable <%s> itself has reduced cost of %g\n", SCIPvarGetName(var), implredcost);
@@ -12796,9 +12797,9 @@ SCIP_Real SCIPvarGetImplRedcost(
          assert(SCIPvarGetLbLocal(probvars[id - 1]) < 0.5 && SCIPvarGetUbLocal(probvars[id - 1]) > 0.5);
 
          if( (entries[id] > 0) != varfixing )
-            redcost = SCIPvarGetRedcost(probvars[id - 1], set, (entries[id] < 0), stat, lp);
+            redcost = getImplVarRedcost(probvars[id - 1], set, (entries[id] < 0), stat, lp);
          else
-            redcost = -SCIPvarGetRedcost(probvars[id - 1], set, (entries[id] < 0), stat, lp);
+            redcost = -getImplVarRedcost(probvars[id - 1], set, (entries[id] < 0), stat, lp);
 
          if( (varfixing && SCIPsetIsDualfeasPositive(set, redcost)) || (!varfixing && SCIPsetIsDualfeasNegative(set, redcost)) )
             implredcost += redcost;
