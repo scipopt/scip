@@ -1633,11 +1633,10 @@ static
 SCIP_RETCODE lockRoundingAndCons(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< pseudoboolean constraint */
-   CONSANDDATA*const     consanddata,        /**< CONSANDDATA object for which we want to delete the locks and the
-                                              *   capture of the corresponding and-constraint */
+   CONSANDDATA*const     consanddata,        /**< CONSANDDATA object for which we want to add the locks */
    SCIP_Real const       coef,               /**< coefficient which led to old locks */
-   SCIP_Real const       lhs,                /**< left hand side which led to old locks */
-   SCIP_Real const       rhs                 /**< right hand side which led to old locks */
+   SCIP_Real const       lhs,                /**< left hand side */
+   SCIP_Real const       rhs                 /**< right hand side */
    )
 {
    SCIP_VAR** vars;
@@ -1702,8 +1701,7 @@ static
 SCIP_RETCODE unlockRoundingAndCons(
    SCIP*const            scip,               /**< SCIP data structure */
    SCIP_CONS*const       cons,               /**< pseudoboolean constraint */
-   CONSANDDATA*const     consanddata,        /**< CONSANDDATA object for which we want to delete the locks and the
-                                              *   capture of the corresponding and-constraint */
+   CONSANDDATA*const     consanddata,        /**< CONSANDDATA object for which we want to delete the locks */
    SCIP_Real const       coef,               /**< coefficient which led to old locks */
    SCIP_Real const       lhs,                /**< left hand side which led to old locks */
    SCIP_Real const       rhs                 /**< right hand side which led to old locks */
@@ -3537,6 +3535,8 @@ SCIP_RETCODE checkOrigPbCons(
    }
    assert(nandress == consdata->nconsanddatas);
 
+   SCIPsortPtrReal((void**)andress, andcoefs, SCIPvarComp, nandress);
+
    SCIPdebugMessage("nlinvars = %d, nandress = %d\n", nlinvars, nandress);
    SCIPdebugMessage("linear activity = %g\n", activity);
 
@@ -4164,7 +4164,7 @@ SCIP_RETCODE correctLocksAndCaptures(
    assert(consdata != NULL);
 
    /* sort and-constraints after indices of corresponding and-resultants */
-   SCIPsortPtrReal((void**)(consdata->consanddatas), consdata->andcoefs, resvarCompWithInactive, consdata->nconsanddatas);
+   SCIPsortPtrRealBool((void**)(consdata->consanddatas), consdata->andcoefs, consdata->andnegs, resvarCompWithInactive, consdata->nconsanddatas);
 
    consanddatas = consdata->consanddatas;
    oldandcoefs = consdata->andcoefs;
@@ -4460,7 +4460,7 @@ SCIP_RETCODE correctLocksAndCaptures(
    /* we need to re-sort and-constraints after indices of corresponding and-resultants, since we might have replaced
     * negated variables
     */
-   SCIPsortPtrReal((void**)(consdata->consanddatas), consdata->andcoefs, resvarCompWithInactive, consdata->nconsanddatas);
+   SCIPsortPtrRealBool((void**)(consdata->consanddatas), consdata->andcoefs, consdata->andnegs, resvarCompWithInactive, consdata->nconsanddatas);
 
 #ifndef NDEBUG
    consanddatas = consdata->consanddatas;
