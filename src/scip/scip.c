@@ -21575,12 +21575,20 @@ SCIP_RETCODE SCIPaddVarImplication(
       {
          if( impltype == SCIP_BOUNDTYPE_LOWER )
          {
+            /* we return if the lower bound is infinity */
+            if( -SCIPisInfinity(scip, lby) )
+               return SCIP_OKAY;
+
             SCIP_CALL( SCIPvarAddVlb(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
                   scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
                   implbound - lby, lby, TRUE, infeasible, nbdchgs) );
          }
          else
          {
+            /* we return if the upper bound is infinity */
+            if( SCIPisInfinity(scip, uby) )
+               return SCIP_OKAY;
+
             SCIP_CALL( SCIPvarAddVub(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
                   scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
                   implbound - uby, uby, TRUE, infeasible, nbdchgs) );
@@ -21588,18 +21596,26 @@ SCIP_RETCODE SCIPaddVarImplication(
       }
       else
       {
-      if( impltype == SCIP_BOUNDTYPE_LOWER )
-      {
-         SCIP_CALL( SCIPvarAddVlb(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
-               lby - implbound, implbound, TRUE, infeasible, nbdchgs) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPvarAddVub(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
-               uby - implbound, implbound, TRUE, infeasible, nbdchgs) );
-      }
+         if( impltype == SCIP_BOUNDTYPE_LOWER )
+         {
+            /* we return if the lower bound is infinity */
+            if( -SCIPisInfinity(scip, lby) )
+               return SCIP_OKAY;
+
+            SCIP_CALL( SCIPvarAddVlb(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+                  scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
+                  lby - implbound, implbound, TRUE, infeasible, nbdchgs) );
+         }
+         else
+         {
+            /* we return if the upper bound is infinity */
+            if( SCIPisInfinity(scip, uby) )
+               return SCIP_OKAY;
+
+            SCIP_CALL( SCIPvarAddVub(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+                  scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
+                  uby - implbound, implbound, TRUE, infeasible, nbdchgs) );
+         }
       }
    }
    else
