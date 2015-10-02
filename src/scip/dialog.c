@@ -428,7 +428,83 @@ SCIP_Bool SCIPdialoghdlrIsBufferEmpty(
    return (dialoghdlr->buffer[dialoghdlr->bufferpos] == '\0');
 }
 
-/** returns the next word in the handler's command buffer; if the buffer is empty, displays the given prompt or the 
+/** returns the next line in the handler's command buffer; if the buffer is empty, displays the given prompt or the
+ *  current dialog's path and asks the user for further input; the user must not free or modify the returned string
+ */
+SCIP_RETCODE SCIPdialoghdlrGetLine(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_DIALOG*          dialog,             /**< current dialog */
+   const char*           prompt,             /**< prompt to display, or NULL to display the current dialog's path */
+   char**                inputline           /**< pointer to store the complete line in the handler's command buffer */
+   )
+{
+   char path[SCIP_MAXSTRLEN];
+   char p[SCIP_MAXSTRLEN];
+   char line[SCIP_MAXSTRLEN];
+   SCIP_Bool endoffile;
+   int pos;
+
+   assert(dialoghdlr != NULL);
+   assert(dialoghdlr->buffer != NULL);
+   assert(dialoghdlr->bufferpos < dialoghdlr->buffersize);
+   assert(inputline != NULL);
+
+   /* get input from the user, if the buffer is empty */
+   if( SCIPdialoghdlrIsBufferEmpty(dialoghdlr) )
+   {
+      int len;
+
+      /* clear the buffer */
+      SCIPdialoghdlrClearBuffer(dialoghdlr);
+
+      if( prompt == NULL )
+      {
+         /* use current dialog's path as prompt */
+         SCIPdialogGetPath(dialog, '/', path);
+         (void) SCIPsnprintf(p, SCIP_MAXSTRLEN, "%s> ", path);
+         prompt = p;
+      }
+
+      /* read command line from stdin or from the input line list */
+      SCIP_CALL( readInputLine(dialoghdlr, prompt, &endoffile) );
+
+      /* strip trailing spaces */
+      len = (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
+      if( len > 0 )
+      {
+         while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1]) )
+         {
+            dialoghdlr->buffer[dialoghdlr->bufferpos + len - 1] = '\0';
+            len--;
+         }
+      }
+
+      /* insert command in command history */
+      if( dialoghdlr->buffer[dialoghdlr->bufferpos] != '\0' )
+      {
+         SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, NULL, &dialoghdlr->buffer[dialoghdlr->bufferpos], FALSE) );
+      }
+   }
+
+   /* the last character in the buffer must be a '\0' */
+   dialoghdlr->buffer[dialoghdlr->buffersize-1] = '\0';
+
+
+   /* skip leading spaces: find start of first word */
+   while( isspace((unsigned char)dialoghdlr->buffer[dialoghdlr->bufferpos]) )
+      dialoghdlr->bufferpos++;
+
+   /* copy the complete line */
+   *inputline = &dialoghdlr->buffer[dialoghdlr->bufferpos];
+
+   /* go to the end of the line */
+   dialoghdlr->bufferpos += (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
+
+   return SCIP_OKAY;
+}
+
+
+/** returns the next word in the handler's command buffer; if the buffer is empty, displays the given prompt or the
  *  current dialog's path and asks the user for further input; the user must not free or modify the returned string
  */
 SCIP_RETCODE SCIPdialoghdlrGetWord(

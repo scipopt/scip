@@ -56,6 +56,17 @@ SCIP_Bool SCIPdialoghdlrIsBufferEmpty(
    SCIP_DIALOGHDLR*      dialoghdlr          /**< dialog handler */
    );
 
+/** returns the next line in the handler's command buffer; if the buffer is empty, displays the given prompt or the
+ *  current dialog's path and asks the user for further input; the user must not free or modify the returned string
+ */
+EXTERN
+SCIP_RETCODE SCIPdialoghdlrGetLine(
+   SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
+   SCIP_DIALOG*          dialog,             /**< current dialog */
+   const char*           prompt,             /**< prompt to display, or NULL to display the current dialog's path */
+   char**                inputline           /**< pointer to store the complete line in the handler's command buffer */
+   );
+
 /** returns the next word in the handler's command buffer; if the buffer is empty, displays the given prompt or the 
  *  current dialog's path and asks the user for further input; the user must not free or modify the returned string
  */
