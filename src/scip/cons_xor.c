@@ -5535,6 +5535,27 @@ SCIP_VAR** SCIPgetVarsXor(
    return consdata->vars;
 }
 
+/** gets integer variable in xor constraint */
+SCIP_VAR* SCIPgetIntVarXor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not an xor constraint\n");
+      SCIPABORT();
+      return NULL;  /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->intvar;
+}
+
 /** gets the right hand side of the xor constraint */
 SCIP_Bool SCIPgetRhsXor(
    SCIP*                 scip,               /**< SCIP data structure */
