@@ -21529,6 +21529,9 @@ SCIP_RETCODE SCIPaddVarImplication(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddVarImplication", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   if ( nbdchgs != NULL )
+      *nbdchgs = 0;
+
    if( !SCIPvarIsBinary(var) )
    {
       SCIPerrorMessage("can't add implication for nonbinary variable\n");
