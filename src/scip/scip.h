@@ -11262,7 +11262,7 @@ SCIP_RETCODE SCIPgetConsVars(
    SCIP_Bool*            success             /**< pointer to store whether the variables are successfully copied */
    );
 
-/** methed to collect the number of variables of a constraint
+/** method to collect the number of variables of a constraint
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
