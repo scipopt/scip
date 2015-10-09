@@ -318,7 +318,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons)
 
       cons = NULL;
 
-      SCIP_CALL( SCIPdialoghdlrGetLine(dialoghdlr, dialog, "write constraint in <cip> format\n", &str) );
+      SCIP_CALL( SCIPdialoghdlrGetLine(dialoghdlr, dialog, "write constraint in <cip> format\n", &str, &endoffile) );
 
       if( str[0] != '\0' )
       {

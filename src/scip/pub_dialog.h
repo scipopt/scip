@@ -64,7 +64,8 @@ SCIP_RETCODE SCIPdialoghdlrGetLine(
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    SCIP_DIALOG*          dialog,             /**< current dialog */
    const char*           prompt,             /**< prompt to display, or NULL to display the current dialog's path */
-   char**                inputline           /**< pointer to store the complete line in the handler's command buffer */
+   char**                inputline,          /**< pointer to store the complete line in the handler's command buffer */
+   SCIP_Bool*            endoffile           /**< pointer to store whether the end of the input file was reached */
    );
 
 /** returns the next word in the handler's command buffer; if the buffer is empty, displays the given prompt or the 

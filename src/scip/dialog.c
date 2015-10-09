@@ -435,14 +435,12 @@ SCIP_RETCODE SCIPdialoghdlrGetLine(
    SCIP_DIALOGHDLR*      dialoghdlr,         /**< dialog handler */
    SCIP_DIALOG*          dialog,             /**< current dialog */
    const char*           prompt,             /**< prompt to display, or NULL to display the current dialog's path */
-   char**                inputline           /**< pointer to store the complete line in the handler's command buffer */
+   char**                inputline,          /**< pointer to store the complete line in the handler's command buffer */
+   SCIP_Bool*            endoffile           /**< pointer to store whether the end of the input file was reached */
    )
 {
    char path[SCIP_MAXSTRLEN];
    char p[SCIP_MAXSTRLEN];
-   char line[SCIP_MAXSTRLEN];
-   SCIP_Bool endoffile;
-   int pos;
 
    assert(dialoghdlr != NULL);
    assert(dialoghdlr->buffer != NULL);
@@ -499,6 +497,9 @@ SCIP_RETCODE SCIPdialoghdlrGetLine(
 
    /* go to the end of the line */
    dialoghdlr->bufferpos += (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
+
+   if( dialoghdlr->buffer[dialoghdlr->buffersize-1] == '\0' )
+      *endoffile = TRUE;
 
    return SCIP_OKAY;
 }
