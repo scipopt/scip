@@ -136,6 +136,12 @@ do
 
         CONFFILE="configuration_tmpfile_setup_${SOLVER}.sh"
 
+        # we don't have separate configuration files for most examples and applications, use SCIP configuration file instead
+        if ! test -f "$CONFFILE"
+        then
+            CONFFILE="configuration_tmpfile_setup_scip.sh"
+        fi
+
         # overwrite the tmp file now
         # call tmp file configuration for SCIP
         . ./$CONFFILE $INSTANCE $SCIPPATH $SCIP_INSTANCEPATH $TMPFILE $SETNAME $SETFILE $THREADS $SETCUTOFF \

@@ -34,7 +34,7 @@ include $(SCIPDIR)/make/make.project
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAME	=	scip
+MAINNAME	=	scheduler
 MAINOBJ		=	cons_optcumulative.o \
 			heur_listscheduling.o \
 			heur_optcumulative.o \
