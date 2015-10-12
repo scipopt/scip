@@ -464,7 +464,7 @@ SCIP_RETCODE SCIPdialoghdlrGetLine(
       }
 
       /* read command line from stdin or from the input line list */
-      SCIP_CALL( readInputLine(dialoghdlr, prompt, &endoffile) );
+      SCIP_CALL( readInputLine(dialoghdlr, prompt, endoffile) );
 
       /* strip trailing spaces */
       len = (int)strlen(&dialoghdlr->buffer[dialoghdlr->bufferpos]);
