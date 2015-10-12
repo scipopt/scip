@@ -114,9 +114,9 @@
 #define DEFAULT_SOSCONSPROP      FALSE /**< whether to use SOS1 constraint propagation */
 
 /* branching rules */
-#define DEFAULT_NEIGHBRANCH        TRUE /**< if TRUE turn neighborhood branching method on (note: an automatic switching to SOS1 branching is possible) */
-#define DEFAULT_BIPBRANCH         FALSE /**< if TRUE turn bipartite branching method on (note: an automatic switching to SOS1 branching is possible) */
-#define DEFAULT_SOS1BRANCH        FALSE /**< if TRUE turn SOS1 branching method on */
+#define DEFAULT_BRANCHSTRATEGIES  "nbs" /**< possible branching strategies (see parameter DEFAULT_BRANCHINGRULE) */
+#define DEFAULT_BRANCHINGRULE       'n' /**< which branching rule should be applied ? ('n': neighborhood, 'b': bipartite, 's': SOS1/clique)
+                                         *   (note: in some cases an automatic switching to SOS1 branching is possible) */
 #define DEFAULT_AUTOSOS1BRANCH     TRUE /**< if TRUE then automatically switch to SOS1 branching if the SOS1 constraints do not overlap */
 #define DEFAULT_FIXNONZERO        FALSE /**< if neighborhood branching is used, then fix the branching variable (if positive in sign) to the value of the
                                          *   feasibility tolerance */
@@ -243,9 +243,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             implprop;           /**< whether to use implication graph propagation */
    SCIP_Bool             sosconsprop;        /**< whether to use SOS1 constraint propagation */
    /* branching */
-   SCIP_Bool             neighbranch;        /**< if TRUE turn neighborhood branching method on (note: an automatic switching to SOS1 branching is possible) */
-   SCIP_Bool             bipbranch;          /**< if TRUE turn bipartite branching method on (note: an automatic switching to SOS1 branching is possible) */
-   SCIP_Bool             sos1branch;         /**< if TRUE turn SOS1 branching method on */
+   char                  branchingrule;      /**< which branching rule should be applied ? ('n': neighborhood, 'b': bipartite, 's': SOS1/clique)
+                                              *   (note: in some cases an automatic switching to SOS1 branching is possible) */
    SCIP_Bool             autosos1branch;     /**< if TRUE then automatically switch to SOS1 branching if the SOS1 constraints do not overlap */
    SCIP_Bool             fixnonzero;         /**< if neighborhood branching is used, then fix the branching variable (if positive in sign) to the value of the
                                               *   feasibility tolerance */
@@ -5295,7 +5294,7 @@ SCIP_RETCODE enforceConflictgraph(
    }
 
    /* should bipartite branching be used? */
-   if ( conshdlrdata->bipbranch )
+   if ( conshdlrdata->branchingrule == 'b' )
       bipbranch = TRUE;
 
    /* determine number of strong branching iterations */
@@ -7964,7 +7963,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
        /* add data to conflict graph nodes */
        SCIP_CALL( computeNodeDataSOS1(scip, conshdlrdata, conshdlrdata->nsos1vars) );
 
-       if ( (! conshdlrdata->sos1branch || ! conshdlrdata->boundcutsfromsos1 )
+       if ( ( conshdlrdata->branchingrule != 's' || ! conshdlrdata->boundcutsfromsos1 )
           && ( conshdlrdata->autosos1branch || conshdlrdata->autocutsfromsos1 )
           && ( ! conshdlrdata->switchsos1branch || ! conshdlrdata->switchcutsfromsos1 )
           )
@@ -8405,37 +8404,37 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOS1)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   if ( conshdlrdata->sos1branch + conshdlrdata->neighbranch + conshdlrdata->bipbranch != 1 )
-   {
-      SCIPerrorMessage("Branching rule needs to be defined clearly.\n");
-      return SCIP_PARAMETERWRONGVAL;
-   }
-
    if ( conshdlrdata->addcomps && conshdlrdata->fixnonzero )
    {
       SCIPerrorMessage("Incompatible parameter setting: addcomps = TRUE and fixnonzero = TRUE.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   if ( conshdlrdata->fixnonzero && ( conshdlrdata->bipbranch || conshdlrdata->sos1branch ) )
+   if ( conshdlrdata->fixnonzero && ( conshdlrdata->branchingrule == 'b' || conshdlrdata->branchingrule == 's' ) )
    {
-      SCIPerrorMessage("Incompatible parameter setting: nonzero fixing is not compatible with bipartite or sos1 branching.\n");
+      SCIPerrorMessage("Incompatible parameter setting: nonzero fixing is not compatible with bipartite or SOS1 branching.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   if ( conshdlrdata->sos1branch && conshdlrdata->nstrongrounds != 0 )
+   if ( conshdlrdata->branchingrule == 's' && conshdlrdata->nstrongrounds != 0 )
    {
       SCIPerrorMessage("Strong branching is not available for SOS1 branching.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   if ( conshdlrdata->sos1branch || conshdlrdata->switchsos1branch )
+   if ( conshdlrdata->branchingrule == 's' || conshdlrdata->switchsos1branch )
    {
       /* enforce SOS1 constraints */
       SCIP_CALL( enforceConssSOS1(scip, conshdlr, nconss, conss, result) );
    }
    else
    {
+      if ( conshdlrdata->branchingrule != 'n' && conshdlrdata->branchingrule != 'b' )
+      {
+         SCIPerrorMessage("branching rule %c unknown\n", conshdlrdata->branchingrule);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+
       /* enforce conflict graph */
       SCIP_CALL( enforceConflictgraph(scip, conshdlrdata, conshdlr, nconss, conss, result) );
    }
@@ -8460,37 +8459,37 @@ SCIP_DECL_CONSENFOPS(consEnfopsSOS1)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   if ( conshdlrdata->sos1branch + conshdlrdata->neighbranch + conshdlrdata->bipbranch != 1 )
-   {
-      SCIPerrorMessage("Branching rule needs to be defined clearly.\n");
-      return SCIP_PARAMETERWRONGVAL;
-   }
-
    if ( conshdlrdata->addcomps && conshdlrdata->fixnonzero )
    {
       SCIPerrorMessage("Incompatible parameter setting: addcomps = TRUE and fixnonzero = TRUE.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   if ( conshdlrdata->fixnonzero && ( conshdlrdata->bipbranch || conshdlrdata->sos1branch ) )
+   if ( conshdlrdata->fixnonzero && ( conshdlrdata->branchingrule == 'b' || conshdlrdata->branchingrule == 's' ) )
    {
       SCIPerrorMessage("Incompatible parameter setting: nonzero fixing is not compatible with bipartite or sos1 branching.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   if ( conshdlrdata->sos1branch && conshdlrdata->nstrongrounds != 0 )
+   if ( conshdlrdata->branchingrule == 's' && conshdlrdata->nstrongrounds != 0 )
    {
       SCIPerrorMessage("Strong branching is not available for SOS1 branching.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   if ( conshdlrdata->sos1branch || conshdlrdata->switchsos1branch )
+   if ( conshdlrdata->branchingrule == 's' || conshdlrdata->switchsos1branch )
    {
       /* enforce SOS1 constraints */
       SCIP_CALL( enforceConssSOS1(scip, conshdlr, nconss, conss, result) );
    }
    else
    {
+      if ( conshdlrdata->branchingrule != 'n' && conshdlrdata->branchingrule != 'b' )
+      {
+         SCIPerrorMessage("branching rule %c unknown\n", conshdlrdata->branchingrule);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+
       /* enforce conflict graph */
       SCIP_CALL( enforceConflictgraph(scip, conshdlrdata, conshdlr, nconss, conss, result) );
    }
@@ -9365,17 +9364,9 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
          &conshdlrdata->sosconsprop, TRUE, DEFAULT_SOSCONSPROP, NULL, NULL) );
 
    /* branching parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/neighbranch",
-         "if TRUE turn neighborhood branching method on (note: an automatic switching to SOS1 branching is possible)",
-         &conshdlrdata->neighbranch, TRUE, DEFAULT_NEIGHBRANCH, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/bipbranch",
-         "if TRUE turn bipartite branching method on (note: an automatic switching to SOS1 branching is possible)",
-         &conshdlrdata->bipbranch, TRUE, DEFAULT_BIPBRANCH, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/sos1branch",
-         "if TRUE turn SOS1 branching method on",
-         &conshdlrdata->sos1branch, TRUE, DEFAULT_SOS1BRANCH, NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branchingrule",
+         "which branching rule should be applied ? ('n': neighborhood, 'b': bipartite, 's': SOS1/clique) (note: in some cases an automatic switching to SOS1 branching is possible)",
+         &conshdlrdata->branchingrule, TRUE, DEFAULT_BRANCHINGRULE, DEFAULT_BRANCHSTRATEGIES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/autosos1branch",
          "if TRUE then automatically switch to SOS1 branching if the SOS1 constraints do not overlap",
