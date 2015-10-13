@@ -127,6 +127,20 @@ SCIP_RETCODE removeHistory(
    return SCIP_OKAY;
 }
 
+/** writes command history into file of the specified name */
+static
+SCIP_RETCODE writeHistory(
+   const char*           filename            /**< name of file to (over)write history to */
+   )
+{
+   int retval = write_history(filename);
+
+   if( retval == 0 )
+      return SCIP_OKAY;
+   else
+      return SCIP_FILECREATEERROR;
+}
+
 #else
 
 /** reads a line of input from stdin */
@@ -193,6 +207,17 @@ int getHistoryLength(
 static
 SCIP_RETCODE removeHistory(
    int                   pos                 /**< list position of history entry to remove */
+   )
+{  /*lint --e{715}*/
+   /* nothing to do here */
+   return SCIP_OKAY;
+}
+
+
+/** writes command history into file of the specified name */
+static
+SCIP_RETCODE writeHistory(
+   const char*           filename            /**< name of file to (over)write history to */
    )
 {  /*lint --e{715}*/
    /* nothing to do here */
@@ -1220,4 +1245,12 @@ void SCIPdialogSetData(
    assert(dialog != NULL);
 
    dialog->dialogdata = dialogdata;
+}
+
+/** writes command history to specified filename */
+SCIP_RETCODE SCIPdialogWriteHistory(
+   const char*           filename            /**< file name for (over)writing history */
+   )
+{
+   return writeHistory(filename);
 }

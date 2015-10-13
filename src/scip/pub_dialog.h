@@ -206,6 +206,12 @@ void SCIPdialogSetData(
    SCIP_DIALOGDATA*      dialogdata          /**< new dialog user data */
    );
 
+/** writes command history to specified filename */
+EXTERN
+SCIP_RETCODE SCIPdialogWriteHistory(
+   const char*           filename            /**< file name for (over)writing history */
+   );
+
 #ifdef __cplusplus
 }
 #endif

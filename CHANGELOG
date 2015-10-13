@@ -3,6 +3,7 @@ SCIP version 3.2.1
 
 features:
 - handle cutoffs in cons_indicator detected by infeasible inequalities
+- new interactive shell command "write history" to write the command line history (only when compiled with Readline)
 
 parameters:
 - new parameter misc/transsolorig for transfering transformed solutions to the original space (default: true)
