@@ -255,7 +255,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             addcompsfeas;       /**< minimal feasibility value for complementarity constraints in order to be added to the branching node */
    SCIP_Real             addbdsfeas;         /**< minimal feasibility value for bound inequalities in order to be added to the branching node */
    SCIP_Bool             addextendedbds;     /**< should added complementarity constraints be extended to SOS1 constraints to get tighter bound inequalities */
-   SCIP_Bool             branchsos;          /**< Branch on SOS condition in enforcing? */
+   SCIP_Bool             branchsos;          /**< Branch on SOS condition in enforcing? This value can only be set to false if all SOS1 variables are binary */
    SCIP_Bool             branchnonzeros;     /**< Branch on SOS cons. with most number of nonzeros? */
    SCIP_Bool             branchweight;       /**< Branch on SOS cons. with highest nonzero-variable weight for branching - needs branchnonzeros to be false */
    SCIP_Bool             switchsos1branch;   /**< whether to switch to SOS1 branching */
@@ -5376,6 +5376,21 @@ SCIP_RETCODE enforceConflictgraph(
       }
    }
 
+   /* if we shouldleave branching decision to branching rules */
+   if ( ! conshdlrdata->branchsos )
+   {
+      if ( SCIPvarIsBinary(SCIPnodeGetVarSOS1(conflictgraph, branchvertex)) )
+      {
+         *result = SCIP_INFEASIBLE;
+         return SCIP_OKAY;
+      }
+      else
+      {
+         SCIPerrorMessage("Incompatible parameter setting: branchsos can only be set to false if all SOS1 variables are binary.\n");
+         return SCIP_PARAMETERWRONGVAL;
+      }
+   }
+
    /* create branching nodes */
 
    /* get vertices of variables that will be fixed to zero for each node */
@@ -5648,8 +5663,25 @@ SCIP_RETCODE enforceConssSOS1(
    /* if we should leave branching decision to branching rules */
    if ( ! conshdlrdata->branchsos )
    {
-      *result = SCIP_INFEASIBLE;
-      return SCIP_OKAY;
+      int j;
+
+      consdata = SCIPconsGetData(branchCons);
+      for (j = 0; j < consdata->nvars; ++j)
+      {
+         if ( ! SCIPvarIsBinary(consdata->vars[j]) )
+            break;
+      }
+
+      if ( j == consdata->nvars )
+      {
+         *result = SCIP_INFEASIBLE;
+         return SCIP_OKAY;
+      }
+      else
+      {
+         SCIPerrorMessage("Incompatible parameter setting: branchsos can only be set to false if all SOS1 variables are binary.\n");
+         return SCIP_PARAMETERWRONGVAL;
+      }
    }
 
    /* otherwise create branches */
@@ -9397,7 +9429,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
          &conshdlrdata->addextendedbds, TRUE, DEFAULT_ADDEXTENDEDBDS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branchsos",
-         "Use SOS1 branching in enforcing (otherwise leave decision to branching rules)?",
+         "Use SOS1 branching in enforcing (otherwise leave decision to branching rules)? This value can only be set to false if all SOS1 variables are binary",
          &conshdlrdata->branchsos, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branchnonzeros",
