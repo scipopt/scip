@@ -4,6 +4,7 @@ SCIP version NEXT
 features:
 - can now solve relaxations within probing
 - can now separate perspective cuts for indicator constraints
+- added write callback for reader_bnd
 
 parameters:
 - new parameter sepaperspective to turn on separation of perspective cuts for indicator contraints
