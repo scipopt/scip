@@ -3787,7 +3787,10 @@ SCIP_RETCODE freeImplGraphSOS1(
 
    /* free whole memory of implication graph */
    if ( conshdlrdata->implgraph == NULL )
+   {
+      assert( conshdlrdata->nimplnodes = 0 );
       return SCIP_OKAY;
+   }
 
    /* free arc data */
    for (j = conshdlrdata->nimplnodes-1; j >= 0; --j)
@@ -3818,7 +3821,6 @@ SCIP_RETCODE freeImplGraphSOS1(
 
    /* free implication graph */
    SCIPdigraphFree(&conshdlrdata->implgraph);
-
    conshdlrdata->nimplnodes = 0;
 
    return SCIP_OKAY;
@@ -7976,7 +7978,10 @@ SCIP_RETCODE freeConflictgraph(
    int j;
 
    if ( conshdlrdata->conflictgraph == NULL )
+   {
+      assert( conshdlrdata->nsos1vars == 0 );
       return SCIP_OKAY;
+   }
 
    /* for every SOS1 variable */
    assert( conshdlrdata->nsos1vars > 0 );
@@ -7998,6 +8003,10 @@ SCIP_RETCODE freeConflictgraph(
    assert( conshdlrdata->varhash != NULL );
    SCIPhashmapFree(&conshdlrdata->varhash);
    SCIPdigraphFree(&conshdlrdata->conflictgraph);
+   conshdlrdata->nsos1vars = 0;
+
+   assert( conshdlrdata->varhash == NULL );
+   assert( conshdlrdata->conflictgraph = NULL );
 
    return SCIP_OKAY;
 }
@@ -8137,6 +8146,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
    {
       SCIP_CALL( freeImplGraphSOS1(scip, conshdlrdata) );
    }
+   assert( conshdlrdata->implgraph == NULL );
 
    /* free tclique graph and tclique data */
    if ( conshdlrdata->tcliquegraph != NULL )
