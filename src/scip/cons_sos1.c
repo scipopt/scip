@@ -1720,7 +1720,7 @@ SCIP_RETCODE presolRoundConsSOS1(
    else
    {
       /* if all variables are binary create a set packing constraint */
-      if ( allvarsbinary )
+      if ( allvarsbinary && SCIPfindConshdlr(scip, "setppc") != NULL )
       {
          SCIP_CONS* setpackcons;
 
@@ -3635,6 +3635,7 @@ SCIP_RETCODE initImplGraphSOS1(
    assert( scip != NULL );
    assert( conshdlrdata != NULL );
    assert( conflictgraph != NULL );
+   assert( conshdlrdata->implgraph == NULL );
    assert( conshdlrdata->nimplnodes == 0 );
    assert( cutoff != NULL );
    assert( nchgbds != NULL );
@@ -3768,6 +3769,8 @@ SCIP_RETCODE initImplGraphSOS1(
    else if ( *nchgbds > 0 )
       SCIPdebugMessage("found %d bound changes\n", *nchgbds);
 #endif
+
+   assert( conshdlrdata->implgraph != NULL );
 
    return SCIP_OKAY;
 }
@@ -8006,7 +8009,7 @@ SCIP_RETCODE freeConflictgraph(
    conshdlrdata->nsos1vars = 0;
 
    assert( conshdlrdata->varhash == NULL );
-   assert( conshdlrdata->conflictgraph = NULL );
+   assert( conshdlrdata->conflictgraph == NULL );
 
    return SCIP_OKAY;
 }
