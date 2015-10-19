@@ -2228,13 +2228,21 @@ SCIP_RETCODE updateArcData(
          assert( data != NULL );
          if ( lower && SCIPisFeasLT(scip, data->lbimpl, newbound) )
          {
-            data->lbimpl = newbound;
+            if ( SCIPvarIsIntegral(varw) )
+               data->lbimpl = SCIPceil(scip, newbound);
+            else
+               data->lbimpl = newbound;
+
             *update = TRUE;
             SCIPdebugMessage("updated to implication %s != 0 -> %s >= %f\n", SCIPvarGetName(varv), SCIPvarGetName(varw), newbound);
          }
          else if ( ! lower && SCIPisFeasGT(scip, data->ubimpl, newbound) )
          {
-            data->ubimpl = newbound;
+            if ( SCIPvarIsIntegral(varw) )
+               data->ubimpl = SCIPfloor(scip, newbound);
+            else
+               data->ubimpl = newbound;
+
             *update = TRUE;
             SCIPdebugMessage("updated to implication %s != 0 -> %s >= %f\n", SCIPvarGetName(varv), SCIPvarGetName(varw), newbound);
          }
@@ -4209,13 +4217,27 @@ SCIP_RETCODE performStrongbranchSOS1(
       {
          if ( SCIPisZero(scip, lb) )
          {
-            /* fix variable to some small positive number */
-            SCIP_CALL( SCIPchgVarLbProbing(scip, var, 1.5 * SCIPfeastol(scip)) );
+            /* fix variable to some very small, but positive number or to 1.0 if variable is integral */
+            if (SCIPvarIsIntegral(var) )
+            {
+               SCIP_CALL( SCIPchgVarLbProbing(scip, var, 1.0) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPchgVarLbProbing(scip, var, 1.5 * SCIPfeastol(scip)) );
+            }
          }
          else if ( SCIPisZero(scip, ub) )
          {
-            /* fix variable to some negative number with small absolute value */
-            SCIP_CALL( SCIPchgVarUbProbing(scip, var, -1.5 * SCIPfeastol(scip)) );
+            /* fix variable to some negative number with small absolute value or to -1.0 if variable is integral */
+            if (SCIPvarIsIntegral(var) )
+            {
+               SCIP_CALL( SCIPchgVarUbProbing(scip, var, -1.0) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPchgVarUbProbing(scip, var, -1.5 * SCIPfeastol(scip)) );
+            }
          }
       }
    }
@@ -5445,13 +5467,28 @@ SCIP_RETCODE enforceConflictgraph(
       {
          if ( SCIPisZero(scip, lb) )
          {
-            /* fix variable to some very small, but positive number */
-            SCIP_CALL( SCIPchgVarLbNode(scip, node1, var, 1.5 * SCIPfeastol(scip)) );
+            /* fix variable to some very small, but positive number or to 1.0 if variable is integral */
+            if (SCIPvarIsIntegral(var) )
+            {
+               SCIP_CALL( SCIPchgVarLbNode(scip, node1, var, 1.0) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPchgVarLbNode(scip, node1, var, 1.5 * SCIPfeastol(scip)) );
+            }
          }
          else if ( SCIPisZero(scip, ub) )
          {
-            /* fix variable to some negative number with small absolute value */
-            SCIP_CALL( SCIPchgVarUbNode(scip, node1, var, -1.5 * SCIPfeastol(scip)) );
+            if (SCIPvarIsIntegral(var) )
+            {
+               /* fix variable to some negative number with small absolute value to -1.0 if variable is integral */
+               SCIP_CALL( SCIPchgVarUbNode(scip, node1, var, -1.0) )
+            }
+            else
+            {
+               /* fix variable to some negative number with small absolute value to -1.0 if variable is integral */
+               SCIP_CALL( SCIPchgVarUbNode(scip, node1, var, -1.5 * SCIPfeastol(scip)) );
+            }
          }
       }
    }
