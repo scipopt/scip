@@ -32,7 +32,6 @@
 #include "scip/cons_xor.h"
 #include "scip/nlp.h"
 #include "tclique/tclique.h"
-#include "nlpi/nlpi_ipopt.h"
 
 #define SEPA_NAME                            "eccuts"
 #define SEPA_DESC                            "separator for edge-concave functions"
