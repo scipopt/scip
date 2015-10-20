@@ -18,11 +18,9 @@
  * @author Benjamin Müller
  */
 
-/**@todo solveFacetEquality() copy the array and this array will be copied in SCIPsolveLinearProb() => unify methods to
- * solve linear problems in nlpi_ipopt.c and nlpi_ipopt_dummy.c and do not copy array there */
 /**@todo only count number of fixed variables in the edge concave terms */
 /**@todo only add nonlinear row aggregations where at least ...% of the variables (bilinear terms?) are in edge concave
- * terms? */
+ * terms */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
