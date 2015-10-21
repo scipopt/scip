@@ -2172,7 +2172,8 @@ SCIP_RETCODE updateArcData(
    SCIP_Real             newbound,           /**< new bound of \f$x_w\f$ */
    SCIP_Bool             lower,              /**< whether to consider lower bound implication (otherwise upper bound) */
    int*                  nchgbds,            /**< pointer to store number of changed bounds */
-   SCIP_Bool*            update              /**< pointer to store whether implication graph has been updated */
+   SCIP_Bool*            update,             /**< pointer to store whether implication graph has been updated */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility has been detected */
    )
 {
    SCIP_SUCCDATA** succdatas;
@@ -2193,14 +2194,19 @@ SCIP_RETCODE updateArcData(
    /* if x_v != 0 turns out to be infeasible then fix x_v = 0 */
    if ( ( lower && SCIPisFeasLT(scip, ub, newbound) ) || ( ! lower && SCIPisFeasGT(scip, lb, newbound) ) )
    {
-      SCIP_Bool infeasible;
+      SCIP_Bool infeasible1;
+      SCIP_Bool infeasible2;
       SCIP_Bool tightened1;
       SCIP_Bool tightened2;
 
-      SCIP_CALL( SCIPtightenVarLb(scip, varv, 0.0, FALSE, &infeasible, &tightened1) );
-      assert( !infeasible );
-      SCIP_CALL( SCIPtightenVarUb(scip, varv, 0.0, FALSE, &infeasible, &tightened2) );
-      assert( !infeasible );
+      SCIP_CALL( SCIPtightenVarLb(scip, varv, 0.0, FALSE, &infeasible1, &tightened1) );
+      SCIP_CALL( SCIPtightenVarUb(scip, varv, 0.0, FALSE, &infeasible2, &tightened2) );
+
+      if ( infeasible1 || infeasible2 )
+      {
+         SCIPdebugMessage("detected infeasibility while trying to fix variable <%s> to zero\n", SCIPvarGetName(varv));
+         *infeasible = TRUE;
+      }
 
       if ( tightened1 || tightened2 )
       {
@@ -2294,7 +2300,8 @@ SCIP_RETCODE updateImplicationGraphSOS1(
    int                   ninftynonzero,      /**< number of times infinity/-infinity has to be summarized to boundnonzero */
    SCIP_Bool             lower,              /**< TRUE if lower bounds are consideres; FALSE for upper bounds */
    int*                  nchgbds,            /**< pointer to store number of changed bounds */
-   SCIP_Bool*            update              /**< pointer to store whether implication graph has been updated */
+   SCIP_Bool*            update,             /**< pointer to store whether implication graph has been updated */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility has been detected */
    )
 {
    int nodev;
@@ -2304,6 +2311,7 @@ SCIP_RETCODE updateImplicationGraphSOS1(
 
    /* update implication graph if possible */
    *update = FALSE;
+   *infeasible = FALSE;
    nodev = varGetNodeSOS1(conshdlrdata, var); /* possibly -1 if var is not involved in an SOS1 constraint */
 
    /* if nodev is an index of an SOS1 variable and at least one lower bound of a variable that is not x_v is infinity */
@@ -2393,22 +2401,22 @@ SCIP_RETCODE updateImplicationGraphSOS1(
             {
                if ( SCIPisFeasPositive(scip, coef) && SCIPisFeasLT(scip, lb, newbound) )
                {
-                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, TRUE, nchgbds, update) );
+                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, TRUE, nchgbds, update, infeasible) );
                }
                else if ( SCIPisFeasNegative(scip, coef) && SCIPisFeasGT(scip, ub, newbound) )
                {
-                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, FALSE, nchgbds, update) );
+                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, FALSE, nchgbds, update, infeasible) );
                }
             }
             else
             {
                if ( SCIPisFeasPositive(scip, coef) && SCIPisFeasGT(scip, ub, newbound) )
                {
-                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, FALSE, nchgbds, update) );
+                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, FALSE, nchgbds, update, infeasible) );
                }
                else if ( SCIPisFeasNegative(scip, coef) && SCIPisFeasLT(scip, lb, newbound) )
                {
-                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, TRUE, nchgbds, update) );
+                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, TRUE, nchgbds, update, infeasible) );
                }
             }
          }
@@ -3002,8 +3010,10 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
 
          /* update implication graph if possible */
          SCIP_CALL( updateImplicationGraphSOS1(scip, conshdlrdata, conflictgraph, adjacencymatrix, implgraph, implhash, implnodes, totalvars, cliquecovers, cliquecoversizes, varincover,
-               trafolinvars, trafolinvals, ntrafolinvars, trafoubs, var, trafoubv, newboundnonzero, ninftynonzero, TRUE, nchgbds, &update) );
-         if ( update )
+               trafolinvars, trafolinvals, ntrafolinvars, trafoubs, var, trafoubv, newboundnonzero, ninftynonzero, TRUE, nchgbds, &update, &infeasible) );
+         if ( infeasible )
+            *cutoff = TRUE;
+         else if ( update )
             *implupdate = TRUE;
       }
 
@@ -3199,8 +3209,10 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
 
          /* update implication graph if possible */
          SCIP_CALL( updateImplicationGraphSOS1(scip, conshdlrdata, conflictgraph, adjacencymatrix, implgraph, implhash, implnodes, totalvars, cliquecovers, cliquecoversizes, varincover,
-               trafolinvars, trafolinvals, ntrafolinvars, trafolbs, var, trafolbv, newboundnonzero, ninftynonzero, FALSE, nchgbds, &update) );
-         if ( update )
+               trafolinvars, trafolinvals, ntrafolinvars, trafolbs, var, trafolbv, newboundnonzero, ninftynonzero, FALSE, nchgbds, &update, &infeasible) );
+         if ( infeasible )
+            *cutoff = TRUE;
+         else if ( update )
             *implupdate = TRUE;
       }
 
