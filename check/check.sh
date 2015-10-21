@@ -103,6 +103,8 @@ do
         fi
         # check if problem instance exists
         SCIP_INSTANCEPATH=$SCIPPATH
+        SKIPINSTANCE="false"
+
         for IPATH in ${POSSIBLEPATHS[@]}
         do
             echo $IPATH
