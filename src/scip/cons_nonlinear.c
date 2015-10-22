@@ -5996,6 +5996,17 @@ SCIP_RETCODE replaceViolatedByLinearConstraints(
          }
          SCIPdebugMessage("Linear constraint is a bound: %g <= <%s> <= %g\n", lhs, SCIPvarGetName(*consdata->linvars), rhs);
 
+         /* cut off the node if SCIP needs to tight the lb/ub to +/-inf */
+         if( SCIPisInfinity(scip, lhs) || SCIPisInfinity(scip, -rhs) )
+         {
+            *infeasible = TRUE;
+            assert(consdata->linvars[0] != NULL);
+            SCIPwarningMessage(scip, "Activity of nonlinear part is beyond SCIP's value for infinity. To enforce "
+               "the constraint %s SCIP needs to tight bounds of %s to a value beyond +/- infinity. Please check if "
+               "finite bounds can be added.\n", SCIPconsGetName(conss[c]), SCIPvarGetName(consdata->linvars[0]));
+            return SCIP_OKAY;
+         }
+
          if ( ! SCIPisInfinity(scip, -lhs) )
          {
             SCIP_CALL( SCIPtightenVarLb(scip, *consdata->linvars, lhs, TRUE, infeasible, &tightened) );
