@@ -524,6 +524,18 @@ void SCIPprobPrintStatistics(
  * type validity.
  */
 
+/** is the problem permuted */
+extern
+SCIP_Bool SCIPprobIsPermuted(
+   SCIP_PROB*            prob
+   );
+
+/** mark the problem as permuted */
+extern
+void SCIPprobMarkPermuted(
+   SCIP_PROB*            prob
+   );
+
 /** is the problem data transformed */
 extern
 SCIP_Bool SCIPprobIsTransformed(

@@ -319,6 +319,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->objisintegral = FALSE;
    (*prob)->transformed = transformed;
    (*prob)->nlpenabled = FALSE;
+   (*prob)->permuted = FALSE;
 
    return SCIP_OKAY;
 }
@@ -571,6 +572,9 @@ SCIP_RETCODE SCIPprobTransform(
 
    /* copy the nlpenabled flag */
    (*target)->nlpenabled = source->nlpenabled;
+
+   /* mark the transformed problem to be permuted iff the source problem is permuted */
+   (*target)->permuted = source->permuted;
 
    return SCIP_OKAY;
 }
@@ -2087,6 +2091,26 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNContVars
 #undef SCIPprobGetVars
 #undef SCIPprobGetObjoffset
+
+/** is the problem permuted */
+SCIP_Bool SCIPprobIsPermuted(
+   SCIP_PROB*            prob
+   )
+{
+   assert(prob != NULL);
+
+   return prob->permuted;
+}
+
+/** mark the problem as permuted */
+void SCIPprobMarkPermuted(
+   SCIP_PROB*            prob
+   )
+{
+   assert(prob != NULL);
+
+   prob->permuted = TRUE;
+}
 
 /** is the problem data transformed */
 SCIP_Bool SCIPprobIsTransformed(
