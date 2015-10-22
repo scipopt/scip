@@ -5603,6 +5603,14 @@ SCIP_Bool generateCutLTIfindIntersection(
       }
    }
 
+   /* do not use the computed points if one of the components is infinite */
+   if( (xu != NULL && SCIPisInfinity(scip, *xu)) || (xl != NULL && SCIPisInfinity(scip, -*xl)) ||
+      (yu != NULL && SCIPisInfinity(scip, *yu)) || (yl != NULL && SCIPisInfinity(scip, -*yl)) )
+   {
+      SCIPdebugMessage("probable numerical difficulties, give up\n");
+      return TRUE;
+   }
+
    return FALSE;
 }
 

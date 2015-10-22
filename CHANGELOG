@@ -15,6 +15,7 @@ interface:
 - made debug solution functionality thread safe (see debug.h for further information)
 
 fixed bugs:
+- fixed bug in quadratic constraint handler when computation lifted-tangent inequalities
 - fixed bug in nonlinear constraint handler when replacing a violated nonlinear constraint leads to an infinite
   bound tightening of a single variable
 - do not analyse an infeasible LP for conflicts during diving mode when LHS/RHS of rows were changed
