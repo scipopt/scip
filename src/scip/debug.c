@@ -115,6 +115,7 @@ SCIP_RETCODE readSolfile(
    int nonvalues;
    int nfound;
    int i;
+   SCIP_Bool unknownvariablemessage;
 
    assert(set != NULL);
    assert(solfilename != NULL);
@@ -139,12 +140,15 @@ SCIP_RETCODE readSolfile(
    /* read data */
    nonvalues = 0;
    *valssize = 0;
+   unknownvariablemessage = FALSE;
 
    while( !feof(file) )
    {
       char buf[SCIP_MAXSTRLEN];
       char name[SCIP_MAXSTRLEN];
       char objstring[SCIP_MAXSTRLEN];
+      char valuestring[SCIP_MAXSTRLEN];
+      SCIP_VAR* var;
       SCIP_Real val;
       int nread;
 
@@ -166,12 +170,45 @@ SCIP_RETCODE readSolfile(
          continue;
       }
 
-      nread = sscanf(buf, "%s %lf %s\n", name, &val, objstring);
+      nread = sscanf(buf, "%s %s %s\n", name, valuestring, objstring);
       if( nread < 2 )
       {
          printf("invalid input line %d in solution file <%s>: <%s>\n", *nvals + nonvalues, SCIP_DEBUG_SOLUTION, name);
          fclose(file);
          return SCIP_READERROR;
+      }
+
+      /* find the variable */
+      var = SCIPfindVar(set->scip, name);
+      if( var == NULL )
+      {
+         if( !unknownvariablemessage )
+         {
+            SCIPverbMessage(set->scip, SCIP_VERBLEVEL_NORMAL, NULL, "unknown variable <%s> in line %d of solution file <%s>\n",
+               name, *nvals + nonvalues, SCIP_DEBUG_SOLUTION);
+            SCIPverbMessage(set->scip, SCIP_VERBLEVEL_NORMAL, NULL, "  (further unknown variables are ignored)\n");
+            unknownvariablemessage = TRUE;
+         }
+         continue;
+      }
+
+      /* cast the value, check first for inv(alid) or inf(inite) ones that need special treatment */
+      if( strncasecmp(valuestring, "inv", 3) == 0 )
+         continue;
+      else if( strncasecmp(valuestring, "+inf", 4) == 0 || strncasecmp(valuestring, "inf", 3) == 0 )
+         val = SCIPsetInfinity(set);
+      else if( strncasecmp(valuestring, "-inf", 4) == 0 )
+         val = -SCIPsetInfinity(set);
+      else
+      {
+         nread = sscanf(valuestring, "%lf", &val);
+         if( nread != 1 )
+         {
+            SCIPerrorMessage("Invalid solution value <%s> for variable <%s> in line %d of solution file <%s>.\n",
+                             valuestring, name, *nvals + nonvalues, SCIP_DEBUG_SOLUTION);
+            fclose(file);
+            return SCIP_READERROR;
+         }
       }
 
       /* allocate memory */
