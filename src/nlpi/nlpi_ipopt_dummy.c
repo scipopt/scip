@@ -105,44 +105,43 @@ SCIP_RETCODE LapackDsyev(
    return SCIP_ERROR;
 }  /*lint !e715*/
 
-/* solves a linear problem of the form Ax = b */
+/* easier access to the entries of A */
+#define ENTRY(i,j) (N * (j) + (i))
+
+/* solves a linear problem of the form Ax = b for a regular matrix A */
 SCIP_RETCODE SCIPsolveLinearProb(
    int                   N,                  /**< dimension */
-   SCIP_Real**           a,                  /**< matrix data on input (size N*N) */
+   SCIP_Real*            A,                  /**< matrix data on input (size N*N); filled column-wise */
    SCIP_Real*            b,                  /**< right hand side vector (size N) */
    SCIP_Real*            x,                  /**< buffer to store solution (size N) */
    SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
    )
 {
-   SCIP_Real** LU;
+   SCIP_Real* LU;
    SCIP_Real* y;
    int* pivot;
    int k;
 
    assert(N > 0);
-   assert(a != NULL);
+   assert(A != NULL);
    assert(b != NULL);
    assert(x != NULL);
    assert(success != NULL);
 
    *success = TRUE;
 
+   LU = NULL;
+   y = NULL;
+   pivot = NULL;
+
    /* copy arrays */
-   SCIP_ALLOC( BMSallocMemoryArray(&LU, N) );
-   SCIP_ALLOC( BMSallocMemoryArray(&y, N) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&LU, A, N*N) ); /*lint !e647*/
+   SCIP_ALLOC( BMSduplicateMemoryArray(&y, b, N) );
    SCIP_ALLOC( BMSallocMemoryArray(&pivot, N) );
 
    /* initialize values */
    for( k = 0; k < N; ++k )
-   {
-      int j;
-      SCIP_ALLOC( BMSallocMemoryArray(&LU[k], N) ); /*lint !e866*/
-      for( j = 0; j < N; ++j )
-         LU[k][j] = a[k][j];
-
-      y[k] = b[k];
       pivot[k] = k;
-   }
 
    /* first step: compute LU factorization */
    for( k = 0; k < N; ++k )
@@ -153,11 +152,11 @@ SCIP_RETCODE SCIPsolveLinearProb(
       p = k;
       for( i = k+1; i < N; ++i )
       {
-         if( ABS( LU[pivot[i]][k] ) > ABS( LU[pivot[p]][k] ) )
+         if( ABS(LU[ ENTRY(pivot[i],k) ]) > ABS( LU[ ENTRY(pivot[p],k) ]) )
             p = i;
       }
 
-      if( ABS(LU[pivot[p]][k]) < 1e-08 )
+      if( ABS(LU[ ENTRY(pivot[p],k) ]) < 1e-08 )
       {
          SCIPerrorMessage("Error in nlpi_ipopt_dummy - matrix is singular!\n");
          *success = FALSE;
@@ -178,12 +177,12 @@ SCIP_RETCODE SCIPsolveLinearProb(
          SCIP_Real m;
          int j;
 
-         m = LU[pivot[i]][k] / LU[pivot[k]][k];
+         m = LU[ ENTRY(pivot[i],k) ] / LU[ ENTRY(pivot[k],k) ];
 
          for( j = k+1; j < N; ++j )
-            LU[pivot[i]][j] -= m * LU[pivot[k]][j];
+            LU[ ENTRY(pivot[i],j) ] -= m * LU[ ENTRY(pivot[k],j) ];
 
-         LU[pivot[i]][k] = m;
+         LU[ ENTRY(pivot[i],k) ] = m;
       }
    }
 
@@ -198,13 +197,13 @@ SCIP_RETCODE SCIPsolveLinearProb(
       s = b[pivot[k]];
       for( j = 0; j < k; ++j )
       {
-         s -= LU[pivot[k]][j] * y[j];
+         s -= LU[ ENTRY(pivot[k],j) ] * y[j];
       }
       y[k] = s;
    }
 
    /* third step: backward substitution */
-   x[N-1] = y[N-1] / LU[pivot[N-1]][N-1];
+   x[N-1] = y[N-1] / LU[ ENTRY(pivot[N-1],N-1) ];
    for( k = N-2; k >= 0; --k )
    {
       SCIP_Real s;
@@ -213,19 +212,16 @@ SCIP_RETCODE SCIPsolveLinearProb(
       s = y[k];
       for( j = k+1; j < N; ++j )
       {
-         s -= LU[pivot[k]][j] * x[j];
+         s -= LU[ ENTRY(pivot[k],j) ] * x[j];
       }
-      x[k] = s / LU[pivot[k]][k];
+      x[k] = s / LU[ ENTRY(pivot[k],k) ];
    }
 
    TERMINATE:
    /* free arrays */
-   for( k = 0; k < N; ++k )
-      BMSfreeMemoryArray(&LU[k]);
-
    BMSfreeMemoryArray(&pivot);
-   BMSfreeMemoryArray(&LU);
    BMSfreeMemoryArray(&y);
+   BMSfreeMemoryArray(&LU);
 
    return SCIP_OKAY;
 }

@@ -2810,7 +2810,7 @@ SCIP_RETCODE LapackDsyev(
    return SCIP_OKAY;
 }
 
-/** solves a linear problem of the form Ax = b
+/** solves a linear problem of the form Ax = b for a regular matrix A
  *
  *  Calls Lapacks IpLapackDgetrf routine to calculate a LU factorization and uses this factorization to solve
  *  the linear problem Ax = b.
@@ -2818,17 +2818,16 @@ SCIP_RETCODE LapackDsyev(
  */
 SCIP_RETCODE SCIPsolveLinearProb(
    int                   N,                  /**< dimension */
-   SCIP_Real**           A,                  /**< matrix data on input (size N*N) */
+   SCIP_Real*            A,                  /**< matrix data on input (size N*N); filled column-wise */
    SCIP_Real*            b,                  /**< right hand side vector (size N) */
    SCIP_Real*            x,                  /**< buffer to store solution (size N) */
    SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
    )
 {
-   SCIP_Real* tmp_A;
-   SCIP_Real* tmp_b;
-   int* tmp_pivot;
+   SCIP_Real* A_;
+   SCIP_Real* b_;
+   int* pivot_;
    int info;
-   int i;
 
    assert(N > 0);
    assert(A != NULL);
@@ -2836,47 +2835,36 @@ SCIP_RETCODE SCIPsolveLinearProb(
    assert(x != NULL);
    assert(success != NULL);
 
-   SCIP_ALLOC( BMSallocMemoryArray(&tmp_A, N*N) );
-   SCIP_ALLOC( BMSallocMemoryArray(&tmp_b, N) );
-   SCIP_ALLOC( BMSallocMemoryArray(&tmp_pivot, N) );
+   A_ = NULL;
+   b_ = NULL;
+   pivot_ = NULL;
 
-   /* copy values from A into the tmp_A array */
-   for( i = 0; i < N; ++i)
-   {
-      int j;
-      for( j = 0; j < N; ++j )
-         tmp_A[N*i+j] = A[j][i]; /* note that we have to fill tmp_A column wise */
-
-      tmp_b[i] = b[i];
-   }
+   SCIP_ALLOC( BMSduplicateMemoryArray(&A_, A, N*N) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&b_, b, N*N) );
+   SCIP_ALLOC( BMSallocMemoryArray(&pivot_, N) );
 
    /* compute the LU factorization */
-   IpLapackDgetrf(N, tmp_A, tmp_pivot, N, info);
+   IpLapackDgetrf(N, A_, pivot_, N, info);
 
    if( info != 0 )
    {
-      BMSfreeMemoryArray(&tmp_pivot);
-      BMSfreeMemoryArray(&tmp_b);
-      BMSfreeMemoryArray(&tmp_A);
-
       SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
       *success = FALSE;
+   }
+   else
+   {
+      *success = TRUE;
 
-      return SCIP_OKAY;
+      /* solve linear problem */
+      IpLapackDgetrs(N, 1, A_, N, pivot_, b_, N);
+
+      /* copy the solution */
+      BMScopyMemoryArray(x, b_, N);
    }
 
-   /* solve linear problem */
-   IpLapackDgetrs(N, 1, tmp_A, N, tmp_pivot, tmp_b, N);
-
-   /* copy the solution */
-   for( i = 0; i < N; ++i )
-      x[i] = tmp_b[i];
-
-   BMSfreeMemoryArray(&tmp_pivot);
-   BMSfreeMemoryArray(&tmp_b);
-   BMSfreeMemoryArray(&tmp_A);
-
-   *success = TRUE;
+   BMSfreeMemoryArray(&pivot_);
+   BMSfreeMemoryArray(&b_);
+   BMSfreeMemoryArray(&A_);
 
    return SCIP_OKAY;
 }
