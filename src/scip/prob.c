@@ -2078,6 +2078,8 @@ void SCIPprobPrintStatistics(
  * However, we want to have them in the library anyways, so we have to undef the defines.
  */
 
+#undef SCIPprobIsPermuted
+#undef SCIPprobMarkPermuted
 #undef SCIPprobIsTransformed
 #undef SCIPprobIsObjIntegral
 #undef SCIPprobAllColsInLP

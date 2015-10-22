@@ -631,6 +631,8 @@ SCIP_Real SCIPprobGetObjscale(
  * speed up the algorithms.
  */
 
+#define SCIPprobIsPermuted(prob)        ((prob)->permuted)
+#define SCIPprobMarkPermuted(prob)      ((prob)->permuted = TRUE)
 #define SCIPprobIsTransformed(prob)     ((prob)->transformed)
 #define SCIPprobIsObjIntegral(prob)     ((prob)->objisintegral)
 #define SCIPprobAllColsInLP(prob,set,lp) (SCIPlpGetNCols(lp) == (prob)->ncolvars && (set)->nactivepricers == 0)
