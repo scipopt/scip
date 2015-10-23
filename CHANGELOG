@@ -12,9 +12,12 @@ performance improvements:
 - do not transfer solutions to original space, if SCIP is being freed
 
 interface:
+- add SCIPgetAlphaBetaGammaDelta to compute a hyperplane containing three given 3-dimensional points
+- SCIPsolveLinearProb uses now an 1-dimensional matrix representation
 - made debug solution functionality thread safe (see debug.h for further information)
 
 fixed bugs:
+- fixed numerical problems in computation of cuts for bivariate functions in quadratic constraint handler
 - fixed bug in quadratic constraint handler when computation lifted-tangent inequalities
 - fixed bug in nonlinear constraint handler when replacing a violated nonlinear constraint leads to an infinite
   bound tightening of a single variable

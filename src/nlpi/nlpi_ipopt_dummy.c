@@ -108,6 +108,109 @@ SCIP_RETCODE LapackDsyev(
 /* easier access to the entries of A */
 #define ENTRY(i,j) (N * (j) + (i))
 
+/* solves a linear problem of the form Ax = b for a regular 3*3 matrix A */
+static
+SCIP_RETCODE SCIPsolveLinearProb3(
+   SCIP_Real*            A,                  /**< matrix data on input (size 3*3); filled column-wise */
+   SCIP_Real*            b,                  /**< right hand side vector (size 3) */
+   SCIP_Real*            x,                  /**< buffer to store solution (size 3) */
+   SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
+   )
+{
+   SCIP_Real LU[9];
+   SCIP_Real y[3];
+   int pivot[3] = {0, 1, 2};
+   const int N = 3;
+   int k;
+
+   assert(A != NULL);
+   assert(b != NULL);
+   assert(x != NULL);
+   assert(success != NULL);
+
+   *success = TRUE;
+
+   /* copy arrays */
+   BMScopyMemoryArray(LU, A, N*N);
+   BMScopyMemoryArray(y, b, N);
+
+   /* first step: compute LU factorization */
+   for( k = 0; k < N; ++k )
+   {
+      int p;
+      int i;
+
+      p = k;
+      for( i = k+1; i < N; ++i )
+      {
+         if( ABS(LU[ ENTRY(pivot[i],k) ]) > ABS( LU[ ENTRY(pivot[p],k) ]) )
+            p = i;
+      }
+
+      if( ABS(LU[ ENTRY(pivot[p],k) ]) < 1e-08 )
+      {
+         SCIPerrorMessage("Error in nlpi_ipopt_dummy - matrix is singular!\n");
+         *success = FALSE;
+         return SCIP_OKAY;
+      }
+
+      if( p != k )
+      {
+         int tmp;
+
+         tmp = pivot[k];
+         pivot[k] = pivot[p];
+         pivot[p] = tmp;
+      }
+
+      for( i = k+1; i < N; ++i )
+      {
+         SCIP_Real m;
+         int j;
+
+         m = LU[ ENTRY(pivot[i],k) ] / LU[ ENTRY(pivot[k],k) ];
+
+         for( j = k+1; j < N; ++j )
+            LU[ ENTRY(pivot[i],j) ] -= m * LU[ ENTRY(pivot[k],j) ];
+
+         LU[ ENTRY(pivot[i],k) ] = m;
+      }
+   }
+
+   /* second step: forward substitution */
+   y[0] = b[pivot[0]];
+
+   for( k = 1; k < N; ++k )
+   {
+      SCIP_Real s;
+      int j;
+
+      s = b[pivot[k]];
+      for( j = 0; j < k; ++j )
+      {
+         s -= LU[ ENTRY(pivot[k],j) ] * y[j];
+      }
+      y[k] = s;
+   }
+
+   /* third step: backward substitution */
+   x[N-1] = y[N-1] / LU[ ENTRY(pivot[N-1],N-1) ];
+   for( k = N-2; k >= 0; --k )
+   {
+      SCIP_Real s;
+      int j;
+
+      s = y[k];
+      for( j = k+1; j < N; ++j )
+      {
+         s -= LU[ ENTRY(pivot[k],j) ] * x[j];
+      }
+      x[k] = s / LU[ ENTRY(pivot[k],k) ];
+   }
+
+   return SCIP_OKAY;
+}
+
 /* solves a linear problem of the form Ax = b for a regular matrix A */
 SCIP_RETCODE SCIPsolveLinearProb(
    int                   N,                  /**< dimension */
@@ -127,6 +230,13 @@ SCIP_RETCODE SCIPsolveLinearProb(
    assert(b != NULL);
    assert(x != NULL);
    assert(success != NULL);
+
+   /* call SCIPsolveLinearProb3() for performance reasons */
+   if( N == 3 )
+   {
+      SCIP_CALL( SCIPsolveLinearProb3(A, b, x, success) );
+      return SCIP_OKAY;
+   }
 
    *success = TRUE;
 

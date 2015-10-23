@@ -2810,6 +2810,48 @@ SCIP_RETCODE LapackDsyev(
    return SCIP_OKAY;
 }
 
+/** solves a linear problem of the form Ax = b for a regular matrix 3*3 A */
+static
+SCIP_RETCODE SCIPsolveLinearProb3(
+   SCIP_Real*            A,                  /**< matrix data on input (size 3*3); filled column-wise */
+   SCIP_Real*            b,                  /**< right hand side vector (size 3) */
+   SCIP_Real*            x,                  /**< buffer to store solution (size 3) */
+   SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
+   )
+{
+   SCIP_Real A_[9];
+   SCIP_Real b_[3];
+   int pivot_[3];
+   const int N = 3;
+   int info;
+
+   assert(A != NULL);
+   assert(b != NULL);
+   assert(x != NULL);
+   assert(success != NULL);
+
+   /* compute the LU factorization */
+   IpLapackDgetrf(N, A_, pivot_, N, info);
+
+   if( info != 0 )
+   {
+      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      *success = FALSE;
+   }
+   else
+   {
+      *success = TRUE;
+
+      /* solve linear problem */
+      IpLapackDgetrs(N, 1, A_, N, pivot_, b_, N);
+
+      /* copy the solution */
+      BMScopyMemoryArray(x, b_, N);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** solves a linear problem of the form Ax = b for a regular matrix A
  *
  *  Calls Lapacks IpLapackDgetrf routine to calculate a LU factorization and uses this factorization to solve
@@ -2834,6 +2876,13 @@ SCIP_RETCODE SCIPsolveLinearProb(
    assert(b != NULL);
    assert(x != NULL);
    assert(success != NULL);
+
+   /* call SCIPsolveLinearProb3() for performance reasons */
+   if( N == 3 )
+   {
+      SCIP_CALL( SCIPsolveLinearProb3(A, b, x, success) );
+      return SCIP_OKAY;
+   }
 
    A_ = NULL;
    b_ = NULL;
