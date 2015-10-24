@@ -17,6 +17,7 @@ interface:
 - made debug solution functionality thread safe (see debug.h for further information)
 
 fixed bugs:
+- fixed wrong check when computing cuts for factorable quadratic functions
 - fixed numerical problems in computation of cuts for bivariate functions in quadratic constraint handler
 - fixed bug in quadratic constraint handler when computation lifted-tangent inequalities
 - fixed bug in nonlinear constraint handler when replacing a violated nonlinear constraint leads to an infinite

@@ -5211,7 +5211,7 @@ void generateCutFactorableDo(
        */
 
       /* cannot do if unbounded */
-      if( SCIPisInfinity(scip, rightmaxactivity) )
+      if( SCIPisInfinity(scip, rightmaxactivity * multright) )
       {
          *success = FALSE;
          return;
