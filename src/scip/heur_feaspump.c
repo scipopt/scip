@@ -24,7 +24,6 @@
 #include <assert.h>
 #include <string.h>
 
-
 #include "scip/heur_feaspump.h"
 #include "scip/cons_linear.h"
 #include "scip/scipdefplugins.h"
@@ -672,8 +671,6 @@ SCIP_Longint adjustedMaxNLPIterations(
       return maxnlpiterations;
 }
 
-/* TODO think of something better than this static bool */
-static SCIP_Bool wrotesolution = FALSE;
 
 /** execution method of primal heuristic */
 static
@@ -1240,7 +1237,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          *result = SCIP_FOUNDSOL;
    }
    /* store the (infeasible) solution after the last iteration during root node execution */
-   else if( !wrotesolution && !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && heurdata->storelastsol && SCIPgetDepth(scip) == 0 )
+   else if( !lperror && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && heurdata->storelastsol && SCIPgetDepth(scip) == 0 )
    {
       SCIP_SOL* roundedsol;
       SCIP_Bool feasible = FALSE;
@@ -1272,8 +1269,6 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
          if( NULL != solfile )
          {
             SCIP_CALL(SCIPprintSol(scip, heurdata->roundedsol, solfile, FALSE));
-
-            wrotesolution = TRUE;
 
             fclose(solfile);
          }
