@@ -35,6 +35,7 @@ fixed bugs:
 - fixed bug in the computation of the Wilcoxon test
 - do not use the relative and absolute gap limit if no primal solution has been found so far
 - fixed two bugs in pseudoboolean constraint handler with wrong sorting of and constraints
+- use LPi infinity when reverting bound changes in conflict analysis
 
 SCIP version 3.2.0
 ==================
