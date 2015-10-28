@@ -318,7 +318,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons)
 
       cons = NULL;
 
-      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "write constraint in <cip> format\n", &str, &endoffile) );
+      SCIP_CALL( SCIPdialoghdlrGetLine(dialoghdlr, dialog, "write constraint in <cip> format\n", &str, &endoffile) );
 
       if( str[0] != '\0' )
       {
@@ -2896,6 +2896,48 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for writing command line history */
+static
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteCommandHistory)
+{  /*lint --e{715}*/
+   char* filename;
+   SCIP_Bool endoffile;
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
+   if( filename[0] != '\0' )
+   {
+      SCIP_RETCODE retcode;
+
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
+
+      retcode = SCIPdialogWriteHistory(filename);
+
+      if( retcode != SCIP_OKAY )
+      {
+         SCIPdialogMessage(scip, NULL, "error writing to file <%s>\n"
+               "check that the directory exists and that you have correct permissions\n", filename);
+         SCIPdialoghdlrClearBuffer(dialoghdlr);
+      }
+      else
+      {
+         SCIPdialogMessage(scip, NULL, "wrote available command line history to <%s>\n", filename);
+      }
+   }
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the write finitesolution command */
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteFiniteSolution)
@@ -3708,7 +3750,7 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   /* write transproblem */
+   /* write transproblem with generic names */
    if( !SCIPdialogHasEntry(submenu, "gentransproblem") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
@@ -3729,6 +3771,19 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             SCIPdialogExecCliquegraph, NULL, NULL,
             "cliquegraph",
             "write graph of cliques and implications of binary variables to GML file (better call after presolving)",
+            FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* write command line history */
+   if( !SCIPdialogHasEntry(submenu, "history") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecWriteCommandHistory, NULL, NULL,
+            "history",
+            "writes command line history to a file (only works if SCIP was compiled with 'readline')",
             FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );

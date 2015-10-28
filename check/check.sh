@@ -103,6 +103,8 @@ do
         fi
         # check if problem instance exists
         SCIP_INSTANCEPATH=$SCIPPATH
+        SKIPINSTANCE="false"
+
         for IPATH in ${POSSIBLEPATHS[@]}
         do
             echo $IPATH
@@ -135,6 +137,12 @@ do
         SOLVER=`stripversion $BINNAME`
 
         CONFFILE="configuration_tmpfile_setup_${SOLVER}.sh"
+
+        # we don't have separate configuration files for most examples and applications, use SCIP configuration file instead
+        if ! test -f "$CONFFILE"
+        then
+            CONFFILE="configuration_tmpfile_setup_scip.sh"
+        fi
 
         # overwrite the tmp file now
         # call tmp file configuration for SCIP

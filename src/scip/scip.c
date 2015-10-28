@@ -1132,7 +1132,35 @@ SCIP_Bool SCIPisStopped(
 }
 
 
+/** enable debug solution mechanism
+ *
+ *  the debug solution mechanism allows to trace back the invalidation of
+ *  a debug solution during the solution process of SCIP. It must be explicitly
+ *  enabled for the SCIP data structure.
+ *
+ *  @see debug.h for more information on debug solution mechanism
+ */
+void SCIPenableDebugSol(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPdisableDebugSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
 
+   SCIPdebugSolEnable(scip);
+}
+
+/** disable solution debugging mechanism
+ *
+ *  @see debug.h for more information on debug solution mechanism
+ */
+void SCIPdisableDebugSol(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPdisableDebugSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   SCIPdebugSolDisable(scip);
+}
 
 /*
  * message output methods
@@ -9315,14 +9343,13 @@ SCIP_RETCODE SCIPreadProb(
          {
             SCIP_Bool permuteconss;
             SCIP_Bool permutevars;
+            int       permutationseed;
 
             permuteconss = scip->set->misc_permuteconss;
             permutevars = scip->set->misc_permutevars;
+            permutationseed = scip->set->misc_permutationseed;
 
-            SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-               "permute original problem using random seed %d\n", scip->set->misc_permutationseed);
-
-            SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)scip->set->misc_permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
+            SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
          }
 
          /* get reading time */
@@ -9639,6 +9666,8 @@ SCIP_RETCODE SCIPpermuteProb(
 {
    SCIP_VAR** vars;
    SCIP_CONSHDLR** conshdlrs;
+   SCIP_Bool permuted;
+   unsigned int oldrandseed;
    int nconshdlrs;
    int nbinvars;
    int nintvars;
@@ -9665,13 +9694,16 @@ SCIP_RETCODE SCIPpermuteProb(
     * setppc, and knapsack).
     */
 
+   permuted = FALSE;
+   oldrandseed = randseed;
+
    /* for each constraint handler, permute its constraints */
    if( permuteconss )
    {
       int i;
 
       /* we must only permute active constraints */
-      if( SCIPisTransformed(scip) )
+      if( SCIPisTransformed(scip) && !SCIPprobIsPermuted(scip->transprob) )
       {
          /* loop over all constraint handlers */
          for( i = 0; i < nconshdlrs; ++i )
@@ -9689,9 +9721,11 @@ SCIP_RETCODE SCIPpermuteProb(
             /* readjust the mapping of constraints to array positions */
             for( j = 0; j < nconss; ++j )
                conss[j]->consspos = j;
+
+            permuted = TRUE;
          }
       }
-      else
+      else if( !SCIPisTransformed(scip) && !SCIPprobIsPermuted(scip->origprob) )
       {
          SCIP_CONS** conss = scip->origprob->conss;
          int nconss = scip->origprob->nconss;
@@ -9703,47 +9737,78 @@ SCIP_RETCODE SCIPpermuteProb(
             assert(conss[j]->consspos == -1);
             conss[j]->addarraypos = j;
          }
+
+         permuted = TRUE;
       }
    }
 
    /* permute binary variables */
-   if( permutebinvars )
+   if( permutebinvars && !SCIPprobIsPermuted(scip->origprob) )
    {
       SCIPpermuteArray((void**)vars, 0, nbinvars, &randseed);
 
       /* readjust the mapping of variables to array positions */
       for( j = 0; j < nbinvars; ++j )
          vars[j]->probindex = j;
+
+      permuted = TRUE;
    }
 
    /* permute general integer variables */
-   if( permuteintvars )
+   if( permuteintvars && !SCIPprobIsPermuted(scip->origprob) )
    {
       SCIPpermuteArray((void**)vars, nbinvars, nbinvars+nintvars, &randseed);
 
       /* readjust the mapping of variables to array positions */
       for( j = nbinvars; j < nbinvars+nintvars; ++j )
          vars[j]->probindex = j;
+
+      permuted = TRUE;
    }
 
    /* permute general integer variables */
-   if( permuteimplvars )
+   if( permuteimplvars && !SCIPprobIsPermuted(scip->origprob) )
    {
       SCIPpermuteArray((void**)vars, nbinvars+nintvars, nbinvars+nintvars+nimplvars, &randseed);
 
       /* readjust the mapping of variables to array positions */
       for( j = nbinvars+nintvars; j < nbinvars+nintvars+nimplvars; ++j )
          vars[j]->probindex = j;
+
+      permuted = TRUE;
    }
 
    /* permute general integer variables */
-   if( permutecontvars )
+   if( permutecontvars && !SCIPprobIsPermuted(scip->origprob) )
    {
       SCIPpermuteArray((void**)vars, nbinvars+nintvars+nimplvars, nvars, &randseed);
 
       /* readjust the mapping of variables to array positions */
       for( j = nbinvars+nintvars+nimplvars; j < nvars; ++j )
          vars[j]->probindex = j;
+
+      permuted = TRUE;
+   }
+
+   if( permuted && SCIPisTransformed(scip) )
+   {
+      assert(!SCIPprobIsPermuted(scip->transprob));
+
+      /* mark tranformed problem as permuted */
+      SCIPprobMarkPermuted(scip->transprob);
+
+      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+         "permute transformed problem using random seed %u\n", oldrandseed);
+   }
+   else if( permuted && !SCIPisTransformed(scip) )
+   {
+         assert(!SCIPprobIsPermuted(scip->origprob));
+
+         /* mark original problem as permuted */
+         SCIPprobMarkPermuted(scip->origprob);
+
+         SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
+            "permute original problem using random seed %u\n", oldrandseed);
    }
 
    return SCIP_OKAY;
@@ -12752,14 +12817,13 @@ SCIP_RETCODE SCIPtransformProb(
    {
       SCIP_Bool permuteconss;
       SCIP_Bool permutevars;
+      int permutationseed;
 
       permuteconss = scip->set->misc_permuteconss;
       permutevars = scip->set->misc_permutevars;
+      permutationseed = scip->set->misc_permutationseed;
 
-      SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
-         "permute problem using random seed %d\n", scip->set->misc_permutationseed);
-
-      SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)scip->set->misc_permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
+      SCIP_CALL( SCIPpermuteProb(scip, (unsigned int)permutationseed, permuteconss, permutevars, permutevars, permutevars, permutevars) );
    }
 
    if( scip->set->misc_estimexternmem )
@@ -21529,6 +21593,9 @@ SCIP_RETCODE SCIPaddVarImplication(
 {
    SCIP_CALL( checkStage(scip, "SCIPaddVarImplication", FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   if ( nbdchgs != NULL )
+      *nbdchgs = 0;
+
    if( !SCIPvarIsBinary(var) )
    {
       SCIPerrorMessage("can't add implication for nonbinary variable\n");
@@ -21575,12 +21642,20 @@ SCIP_RETCODE SCIPaddVarImplication(
       {
          if( impltype == SCIP_BOUNDTYPE_LOWER )
          {
+            /* we return if the lower bound is infinity */
+            if( -SCIPisInfinity(scip, lby) )
+               return SCIP_OKAY;
+
             SCIP_CALL( SCIPvarAddVlb(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
                   scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
                   implbound - lby, lby, TRUE, infeasible, nbdchgs) );
          }
          else
          {
+            /* we return if the upper bound is infinity */
+            if( SCIPisInfinity(scip, uby) )
+               return SCIP_OKAY;
+
             SCIP_CALL( SCIPvarAddVub(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
                   scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
                   implbound - uby, uby, TRUE, infeasible, nbdchgs) );
@@ -21588,18 +21663,26 @@ SCIP_RETCODE SCIPaddVarImplication(
       }
       else
       {
-      if( impltype == SCIP_BOUNDTYPE_LOWER )
-      {
-         SCIP_CALL( SCIPvarAddVlb(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
-               lby - implbound, implbound, TRUE, infeasible, nbdchgs) );
-      }
-      else
-      {
-         SCIP_CALL( SCIPvarAddVub(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
-               scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
-               uby - implbound, implbound, TRUE, infeasible, nbdchgs) );
-      }
+         if( impltype == SCIP_BOUNDTYPE_LOWER )
+         {
+            /* we return if the lower bound is infinity */
+            if( -SCIPisInfinity(scip, lby) )
+               return SCIP_OKAY;
+
+            SCIP_CALL( SCIPvarAddVlb(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+                  scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
+                  lby - implbound, implbound, TRUE, infeasible, nbdchgs) );
+         }
+         else
+         {
+            /* we return if the upper bound is infinity */
+            if( SCIPisInfinity(scip, uby) )
+               return SCIP_OKAY;
+
+            SCIP_CALL( SCIPvarAddVub(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
+                  scip->tree, scip->reopt, scip->lp, scip->cliquetable, scip->branchcand, scip->eventqueue, var,
+                  uby - implbound, implbound, TRUE, infeasible, nbdchgs) );
+         }
       }
    }
    else

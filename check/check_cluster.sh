@@ -127,6 +127,8 @@ do
 
         # check if problem instance exists
         SCIP_INSTANCEPATH=$SCIPPATH
+        SKIPINSTANCE="false"
+
         for IPATH in ${POSSIBLEPATHS[@]}
         do
             if test "$IPATH" = "DONE"

@@ -60,8 +60,8 @@ void Objectives::addObjective(
 
 /** set objective coefficient corresponding to given variable and objective name */
 void Objectives::addCost(
-   SCIP_VAR*             var                 /**< pointer to SCIP variable */
-   const char*           objname             /**< identifier of objective in mps file */
+   SCIP_VAR*             var,                /**< pointer to SCIP variable */
+   const char*           objname,            /**< identifier of objective in mps file */
    SCIP_Real             val                 /**< cost coefficient */
    )
 {
@@ -90,7 +90,7 @@ void Objectives::addCost(
 
 /** change objective function of scip instance to new weighted objective */
 SCIP_RETCODE Objectives::setWeightedObjective(
-   SCIP*                          scip       /**< SCIP solver */
+   SCIP*                          scip,      /**< SCIP solver */
    const std::vector<SCIP_Real>*  weight     /**< vector containing weight for every objective */
    )
 {

@@ -5211,7 +5211,7 @@ void generateCutFactorableDo(
        */
 
       /* cannot do if unbounded */
-      if( SCIPisInfinity(scip, rightmaxactivity) )
+      if( SCIPisInfinity(scip, rightmaxactivity * multright) )
       {
          *success = FALSE;
          return;
@@ -5601,6 +5601,14 @@ SCIP_Bool generateCutLTIfindIntersection(
          SCIPdebugMessage("probable numerical difficulties, give up\n");
          return TRUE;
       }
+   }
+
+   /* do not use the computed points if one of the components is infinite */
+   if( (xu != NULL && SCIPisInfinity(scip, *xu)) || (xl != NULL && SCIPisInfinity(scip, -*xl)) ||
+      (yu != NULL && SCIPisInfinity(scip, *yu)) || (yl != NULL && SCIPisInfinity(scip, -*yl)) )
+   {
+      SCIPdebugMessage("probable numerical difficulties, give up\n");
+      return TRUE;
    }
 
    return FALSE;

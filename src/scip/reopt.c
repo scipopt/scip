@@ -391,7 +391,7 @@ SCIP_Real reoptSimilarity(
    if( !onediffertozero )
       return -2.0;
    else
-      return similarity;
+      return MIN(similarity, 1.0);
 }
 
 /** delete the given reoptimization node */
@@ -6274,7 +6274,7 @@ SCIP_Bool SCIPreoptGetSolveLP(
       if( reopt->reopttree->reoptnodes[0]->nchilds > 0 )
       {
          /* the objective function has changed only slightly */
-         if( reopt->simtolastobj >= set->reopt_objsimrootlp )
+         if( SCIPsetIsGT(set, reopt->simtolastobj, set->reopt_objsimrootlp) )
             return FALSE;
       }
    }

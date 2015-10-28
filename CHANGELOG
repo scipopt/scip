@@ -3,6 +3,7 @@ SCIP version 3.2.1
 
 features:
 - handle cutoffs in cons_indicator detected by infeasible inequalities
+- new interactive shell command "write history" to write the command line history (only when compiled with Readline)
 
 parameters:
 - new parameter misc/transsolorig for transfering transformed solutions to the original space (default: true)
@@ -11,9 +12,16 @@ performance improvements:
 - do not transfer solutions to original space, if SCIP is being freed
 
 interface:
+- add SCIPgetAlphaBetaGammaDelta to compute a hyperplane containing three given 3-dimensional points
+- SCIPsolveLinearProb uses now an 1-dimensional matrix representation
 - made debug solution functionality thread safe (see debug.h for further information)
 
 fixed bugs:
+- fixed wrong check when computing cuts for factorable quadratic functions
+- fixed numerical problems in computation of cuts for bivariate functions in quadratic constraint handler
+- fixed bug in quadratic constraint handler when computation lifted-tangent inequalities
+- fixed bug in nonlinear constraint handler when replacing a violated nonlinear constraint leads to an infinite
+  bound tightening of a single variable
 - do not analyse an infeasible LP for conflicts during diving mode when LHS/RHS of rows were changed
 - fixed some problem with reoptimization when the problems are infeasible or have been solved in presolving
 - fixed bug in SOS1 constraint handler with inconsistent data structure after restart
@@ -26,6 +34,8 @@ fixed bugs:
 - fixed bug in parsing emphasis parameters which formerly led to completely wrong results
 - fixed bug in the computation of the Wilcoxon test
 - do not use the relative and absolute gap limit if no primal solution has been found so far
+- fixed two bugs in pseudoboolean constraint handler with wrong sorting of and constraints
+- use LPi infinity when reverting bound changes in conflict analysis
 
 SCIP version 3.2.0
 ==================

@@ -370,6 +370,36 @@ SCIP_Bool SCIPisStopped(
 
 /**@} */
 
+/*
+ * debug solution methods
+ */
+
+/**@name Debug Solution Methods */
+/**@{ */
+
+/** enable debug solution mechanism
+ *
+ *  the debug solution mechanism allows to trace back the invalidation of
+ *  a debug solution during the solution process of SCIP. It must be explicitly
+ *  enabled for the SCIP data structure.
+ *
+ *  @see debug.h for more information on debug solution mechanism
+ */
+EXTERN
+void SCIPenableDebugSol(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** disable solution debugging mechanism
+ *
+ *  @see debug.h for more information on debug solution mechanism
+ */
+EXTERN
+void SCIPdisableDebugSol(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@} */
 
 
 /*
@@ -11262,7 +11292,7 @@ SCIP_RETCODE SCIPgetConsVars(
    SCIP_Bool*            success             /**< pointer to store whether the variables are successfully copied */
    );
 
-/** methed to collect the number of variables of a constraint
+/** method to collect the number of variables of a constraint
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

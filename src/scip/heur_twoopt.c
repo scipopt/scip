@@ -180,7 +180,8 @@ SCIP_RETCODE shiftValues(
       rowpos = SCIProwGetLPPos(masterrows[i]);
       assert(rowpos < nrows);
 
-      if( rowpos >= 0 )
+      /* skip local rows */
+      if( rowpos >= 0 && ! SCIProwIsLocal(masterrows[i]) )
          activities[rowpos] += mastercolvals[i] * (int)masterdir * shiftval;
    }
 
@@ -192,7 +193,8 @@ SCIP_RETCODE shiftValues(
       rowpos = SCIProwGetLPPos(slaverows[j]);
       assert(rowpos < nrows);
 
-      if( rowpos >= 0 )
+      /* skip local rows */
+      if( rowpos >= 0 && ! SCIProwIsLocal(slaverows[j]) )
       {
          activities[rowpos] += slavecolvals[j] * (int)slavedir * shiftval;
          assert(SCIPisFeasGE(scip, activities[rowpos], SCIProwGetLhs(slaverows[j])));
@@ -205,6 +207,10 @@ SCIP_RETCODE shiftValues(
 #ifndef NDEBUG
    for( i = 0; i < ncolmasterrows && SCIProwGetLPPos(masterrows[i]) >= 0; ++i )
    {
+      /* local rows can be skipped */
+      if( SCIProwIsLocal(masterrows[i]) )
+         continue;
+
       assert(SCIPisFeasGE(scip, activities[SCIProwGetLPPos(masterrows[i])], SCIProwGetLhs(masterrows[i])));
       assert(SCIPisFeasLE(scip, activities[SCIProwGetLPPos(masterrows[i])], SCIProwGetRhs(masterrows[i])));
    }
