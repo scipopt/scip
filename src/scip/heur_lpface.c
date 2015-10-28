@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+/*#define SCIP_DEBUG*/
 /**@file   heur_lpface.c
  * @brief  lpface primal heuristic
  * @author Gregor Hendel
@@ -30,7 +30,7 @@
 #include "scip/pub_misc.h"
 
 #define HEUR_NAME             "lpface"
-#define HEUR_DESC             "LNS heuristic that fixes all variables that are identic in a couple of solutions"
+#define HEUR_DESC             "LNS heuristic that searches the optimal LP face as sub-MIP by fixing variables and LP rows"
 #define HEUR_DISPCHAR         '_'
 #define HEUR_PRIORITY         -1104000
 #define HEUR_FREQ             -1
@@ -52,6 +52,8 @@
 #define DEFAULT_COPYCUTS      TRUE           /* should all active cuts from the cutpool of the original scip be copied to
                                               * constraints of the subscip? (if uselprows-parameter is FALSE)
                                               */
+#define DEFAULT_DUALBASISEQUATIONS FALSE    /**< should the dually nonbasic rows be turned into equations?        */
+#define DEFAULT_IGNOREOBJECTIVE FALSE       /**< should the objective function of the original problem be ignored? */
 /* event handler properties */
 #define EVENTHDLR_NAME         "Lpface"
 #define EVENTHDLR_DESC         "LP event handler for " HEUR_NAME " heuristic"
@@ -80,6 +82,13 @@ struct SCIP_HeurData
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?      */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?                                     */
+   SCIP_Bool             dualbasisequations; /**< should the dually nonbasic rows be turned into equations?        */
+   SCIP_Bool             ignoreobjective;    /**< should the objective function of the original problem be ignored? */
+
+   SCIP_STATUS           submipstatus;
+   SCIP_Longint          submipnlpiters;
+   SCIP_Real             submippresoltime;
+   int                   nvarsfixed;
 };
 
 /*
@@ -98,17 +107,21 @@ static SCIP_RETCODE fixVariables(
    SCIP_VAR** vars;                          /* original scip variables                */
    SCIP_Real fixingrate;                     /* percentage of variables that are fixed */
    int nvars;
+   int nbinvars;
+   int nintvars;
    int i;
    int fixingcounter;
 
 
    /* get required data of the original problem */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
    fixingcounter = 0;
 
+   assert(nvars >= nbinvars + nintvars);
+
    /* loop over problem variables and fix all with nonzero reduced costs to their solution value */
-   for( i = 0; i < nvars; i++ )
+   for( i = 0; i < nbinvars + nintvars; i++ )
    {
       SCIP_Real solval;
       SCIP_COL* col;
@@ -133,7 +146,9 @@ static SCIP_RETCODE fixVariables(
       }
    }
 
-   fixingrate = (SCIP_Real)fixingcounter / (SCIP_Real)(MAX(nvars, 1));
+   fixingrate = (SCIP_Real)fixingcounter / (SCIP_Real)(MAX(nbinvars + nintvars, 1));
+
+   heurdata->nvarsfixed = fixingcounter;
 
    /* if all variables were fixed or amount of fixed variables is insufficient, skip residual part of
     * subproblem creation and abort immediately */
@@ -149,7 +164,8 @@ static
 SCIP_RETCODE createRows(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
-   SCIP_VAR**            subvars             /**< the variables of the subproblem */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
+   SCIP_Bool             dualbasisequations  /**< should the dually nonbasic rows be turned into equations? */
    )
 {
    SCIP_ROW** rows;                          /* original scip rows                       */
@@ -208,7 +224,7 @@ SCIP_RETCODE createRows(
       rowsolactivity = SCIPgetRowActivity(scip, rows[i]);
 
       /* transform into equation if the row is sharp and has a nonzero dual solution */
-      if( !SCIPisFeasZero(scip, dualsol) )
+      if( dualbasisequations && !SCIPisFeasZero(scip, dualsol) )
       {
          if( dualsol > 0.0 && SCIPisFeasEQ(scip, rowsolactivity, lhs) )
             rhs = lhs;
@@ -246,7 +262,7 @@ SCIP_RETCODE setupSubproblem(
       relaxation of the problem */
    if( *success && heurdata->uselprows )
    {
-      SCIP_CALL( createRows(scip, subscip, subvars) );
+      SCIP_CALL( createRows(scip, subscip, subvars, heurdata->dualbasisequations) );
    }
 
    return SCIP_OKAY;
@@ -400,6 +416,33 @@ SCIP_DECL_HEURINIT(heurInitLpface)
    heurdata->nfailures = 0;
    heurdata->nextnodenumber = 0;
 
+   heurdata->submipstatus = SCIP_STATUS_UNKNOWN;
+   heurdata->submipnlpiters = -1;
+   heurdata->submippresoltime = -1.0;
+   heurdata->nvarsfixed = -1;
+
+   return SCIP_OKAY;
+}
+
+/** deinitialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEUREXIT(heurExitLpface)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* initialize data */
+
+   SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL,
+         "LP Face heuristic stats: Status: %d Nodes: %d LP iters: %d Fixed: %d Presolving time: %.2f\n",
+         heurdata->submipstatus, heurdata->usednodes, heurdata->submipnlpiters, heurdata->nvarsfixed, heurdata->submippresoltime);
+
    return SCIP_OKAY;
 }
 
@@ -539,7 +582,10 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    for( i = 0; i < nvars; i++ )
    {
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
-     SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 0.0) );
+     if( heurdata->ignoreobjective )
+     {
+        SCIP_CALL( SCIPchgVarObj(subscip, subvars[i], 0.0) );
+     }
    }
 
    /* free hash map */
@@ -609,7 +655,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    SCIP_CALL( SCIPsetSeparating(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
 
    /* disable expensive presolving */
-   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_FAST, TRUE) );
+   SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );
 
    /* use best estimate node selection */
    if( SCIPfindNodesel(subscip, "restartdfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/restartdfs/stdpriority") )
@@ -639,7 +685,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    nobjvars = 0;
 #endif
 
-   SCIP_CALL( SCIPcreateConsLinear(subscip, &origobjcons, "objfacet_of_origscip", 0, NULL, NULL, SCIPgetLPObjval(scip), SCIPgetLPObjval(scip),
+   SCIP_CALL( SCIPcreateConsLinear(subscip, &origobjcons, "objfacet_of_origscip", 0, NULL, NULL, -SCIPinfinity(subscip), SCIPgetLPObjval(scip),
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    for( i = 0; i < nvars; ++i)
@@ -691,6 +737,9 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
+   heurdata->submipnlpiters = SCIPgetNLPIterations(subscip);
+   heurdata->submippresoltime = SCIPgetPresolvingTime(subscip);
+   heurdata->submipstatus = SCIPgetStatus(subscip);
 
    /* check, whether a solution was found */
    if( SCIPgetNSols(subscip) > 0 )
@@ -758,6 +807,7 @@ SCIP_RETCODE SCIPincludeHeurLpface(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyLpface) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeLpface) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitLpface) );
+   SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitLpface) );
 
    /* add lpface primal heuristic parameters */
 
@@ -796,6 +846,15 @@ SCIP_RETCODE SCIPincludeHeurLpface(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/uselprows",
          "should subproblem be created out of the rows in the LP rows?",
          &heurdata->uselprows, TRUE, DEFAULT_USELPROWS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/dualbasisequations",
+         "should dually nonbasic rows be turned into equations?",
+         &heurdata->dualbasisequations, TRUE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/ignoreobjective",
+            "should the objective function of the original problem be ignored?",
+            &heurdata->ignoreobjective, TRUE, DEFAULT_IGNOREOBJECTIVE, NULL, NULL) );
+
+
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
