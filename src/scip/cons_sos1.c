@@ -5513,7 +5513,7 @@ SCIP_RETCODE enforceConflictgraph(
             if (SCIPvarIsIntegral(var) )
             {
                /* fix variable to some negative number with small absolute value to -1.0 if variable is integral */
-               SCIP_CALL( SCIPchgVarUbNode(scip, node1, var, -1.0) )
+               SCIP_CALL( SCIPchgVarUbNode(scip, node1, var, -1.0) );
             }
             else
             {

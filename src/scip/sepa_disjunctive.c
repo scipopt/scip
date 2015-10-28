@@ -256,25 +256,16 @@ SCIP_RETCODE generateDisjCutSOS1(
          /* for integer variables we may obtain stronger coefficients */
          if ( strengthen && SCIPcolIsIntegral(col) )
          {
-            SCIP_Real fval;
+            SCIP_Real mval;
+            SCIP_Real mvalfloor;
+            SCIP_Real mvalceil;
 
-            fval = (cutlhs2 * simplexcoefs1[nonbasicnumber] - cutlhs1 * simplexcoefs2[nonbasicnumber]) / (bound1 * bound2);
+            mval = (cutlhs2 * simplexcoefs1[nonbasicnumber] - cutlhs1 * simplexcoefs2[nonbasicnumber]) / (cutlhs2 * bound1 + cutlhs1 * bound2);
+            mvalfloor = SCIPfloor(scip, mval);
+            mvalceil = SCIPceil(scip, mval);
 
-            /* use standard coefficients if fval rounds down to zero */
-            if ( SCIPisFeasZero(scip, SCIPfloor(scip, fval + 0.0001)) )
-            {
-               cutcoefs[ind] = MAX(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber]);
-            }
-            else if ( SCIPisFeasNegative(scip, fval) )
-            {
-               cutcoefs[ind] = MIN(sgn * cutlhs2 * (simplexcoefs1[nonbasicnumber] - SCIPfloor(scip, fval) * bound1), sgn * cutlhs1 * simplexcoefs2[nonbasicnumber]);
-               assert( SCIPisFeasLE(scip, cutcoefs[ind], MAX(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber])) );
-            }
-            else
-            {
-               cutcoefs[ind] = sgn * cutlhs2 * (simplexcoefs1[nonbasicnumber] - SCIPfloor(scip, fval) * bound1);
-               assert( SCIPisFeasLE(scip, cutcoefs[ind], MAX(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber])) );
-            }
+            cutcoefs[ind] = MIN(sgn * cutlhs2 * (simplexcoefs1[nonbasicnumber] - mvalfloor * bound1), sgn * cutlhs1 * (simplexcoefs2[nonbasicnumber] + mvalceil * bound2));
+            assert( SCIPisFeasLE(scip, cutcoefs[ind], MAX(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber])) );
          }
          else
             cutcoefs[ind] = MAX(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber]);
@@ -289,23 +280,16 @@ SCIP_RETCODE generateDisjCutSOS1(
          /* for integer variables we may obtain stronger coefficients */
          if ( strengthen && SCIPcolIsIntegral(col) )
          {
-            SCIP_Real fval;
+            SCIP_Real mval;
+            SCIP_Real mvalfloor;
+            SCIP_Real mvalceil;
 
-            fval = (cutlhs2 * simplexcoefs1[nonbasicnumber] - cutlhs1 * simplexcoefs2[nonbasicnumber]) / (bound1 * bound2);
+            mval = (cutlhs2 * simplexcoefs1[nonbasicnumber] - cutlhs1 * simplexcoefs2[nonbasicnumber]) / (cutlhs2 * bound1 + cutlhs1 * bound2);
+            mvalfloor = SCIPfloor(scip, -mval);
+            mvalceil = SCIPceil(scip, -mval);
 
-            /* use standard coefficients if -fval rounds down to zero */
-            if ( SCIPisFeasZero(scip, SCIPfloor(scip, -fval + 0.0001)) )
-               cutcoefs[ind] = MIN(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber]);
-            else if ( SCIPisFeasPositive(scip, fval) )
-            {
-               cutcoefs[ind] = MAX(sgn * cutlhs2 * (simplexcoefs1[nonbasicnumber] + SCIPfloor(scip, -fval) * bound1), sgn * cutlhs1 * simplexcoefs2[nonbasicnumber]);
-               assert( SCIPisFeasLE(scip, -cutcoefs[ind], -MIN(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber])) );
-            }
-            else
-            {
-               cutcoefs[ind] = sgn * cutlhs2 * (simplexcoefs1[nonbasicnumber] + SCIPfloor(scip, -fval) * bound1);
-               assert( SCIPisFeasLE(scip, -cutcoefs[ind], -MIN(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber])) );
-            }
+            cutcoefs[ind] = MAX(sgn * cutlhs2 * (simplexcoefs1[nonbasicnumber] + mvalfloor * bound1), sgn * cutlhs1 * (simplexcoefs2[nonbasicnumber] - mvalceil * bound2));
+            assert( SCIPisFeasLE(scip, -cutcoefs[ind], -MIN(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber])) );
          }
          else
             cutcoefs[ind] = MIN(sgn * cutlhs2 * simplexcoefs1[nonbasicnumber], sgn * cutlhs1 * simplexcoefs2[nonbasicnumber]);
