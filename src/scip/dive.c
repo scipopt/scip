@@ -455,7 +455,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
             success = FALSE;
             /* try to add solution to SCIP */
-            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, changed, &success) );
 
             /* check, if solution was feasible and good enough */
             if( success )
