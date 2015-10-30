@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_tm.c
- * @brief  shortest paths based primal heuristics for Steiner problems
+ * @brief  Shortest paths based primal heuristics for Steiner problems
  * @author Gerald Gamrath
  * @author Thorsten Koch
  * @author Daniel Rehfeldt
@@ -39,7 +39,7 @@
 #define HEUR_NAME             "TM"
 #define HEUR_DESC             "takahashi matsuyama primal heuristic for steiner trees"
 #define HEUR_DISPCHAR         '+'
-#define HEUR_PRIORITY         1000
+#define HEUR_PRIORITY         10000000
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
@@ -403,6 +403,17 @@ SCIP_RETCODE SCIPheurPruneSteinerTree(
          j++;
       g->mark[i] = connected[i];
    }
+
+   //@todo!!! remove hack
+   if( g->stp_type == STP_DIRECTED &&  j < g->terms )
+   {
+      for( i = 0 ; i < g->edges; i++ )
+         result[i] = CONNECT;
+      SCIPfreeBufferArray(scip, &mst);
+
+      return SCIP_OKAY;
+   }
+
    assert(g->source[layer] >= 0);
    assert(g->source[layer] <  nnodes);
    assert(j >= g->terms);
@@ -455,14 +466,16 @@ SCIP_RETCODE SCIPheurPruneSteinerTree(
             }
             if( g->stp_type == STP_UNDIRECTED )
             {
-	      if( j == EAT_LAST )
-	      {
-	       printf("prune isolated: %d\n", i);
-	        char varname[SCIP_MAXSTRLEN];
-   (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "AAAA%d.gml", 0);
-   SCIP_CALL( printGraph(scip, g, varname, result) );
-	       printf("j %d\n", j);
-	      }
+               if( j == EAT_LAST )
+               {
+                  printf("prune isolated: %d\n", i);
+#if 0
+                  char varname[SCIP_MAXSTRLEN];
+                  (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "AAAA%d.gml", 0);
+                  SCIP_CALL( printGraph(scip, g, varname, result) );
+                  printf("j %d\n", j);
+#endif
+               }
                assert(j != EAT_LAST);
             }
          }
@@ -1478,6 +1491,9 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
 
+#if 0
+   return SCIP_OKAY;
+#endif
    assert(root >= 0);
    assert(nedges > 0);
    assert(nnodes > 0);
@@ -1497,7 +1513,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
    if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING || graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
    {
       /* number of terminals small? */
-      if( nterms <= 100 )
+      if( nterms <= 50 )
          mode = TM_SP;
       else
          mode = TM_DIJKSTRA;
@@ -1510,10 +1526,14 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
    {
       mode = TM_SP;
    }
+   else if( graph->stp_type == STP_DIRECTED )
+   {
+      mode = TM_SP;
+   }
    else
    {
-      /* graph very large? */
-      if( nterms > 50 && nedges > 1000 && 3 * nterms < nnodes )
+      /* graph large? */
+      if( nterms > 50 && nedges > 500 && 3 * nterms < nnodes )
       {
          mode = TM_DIJKSTRA;
       }
@@ -1678,7 +1698,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
          for( k = nnodes - 1; k >= 0 && r < runs; k-- )
 	 {
 	    if( perm[k] == -1 )
-	    continue;
+               continue;
 	    if( graph->stp_type == STP_HOP_CONS )
 	    {
 	       assert(dijkdist != NULL);
@@ -1794,13 +1814,19 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
          runs = nzterms;
       else if( runs < nzterms )
       {
+	 SCIP_Real minp = FARAWAY;
+         for( t = 0; t < nterms - 1; t++ )
+            if( rootedges_t[t] != UNKNOWN && SCIPisGT(scip, minp, graph->cost[flipedge(rootedges_t[t])]) )
+               minp = graph->cost[flipedge(rootedges_t[t])];
+
+
 	 if( nodepriority == NULL )
 	 {
 	    for( t = 0; t < nterms - 1; t++ )
                if( rootedges_z[t] == UNKNOWN )
                   terminalprio[t] = 0.0;
                else
-                  terminalprio[t] = SCIPgetRandomReal(0.0, graph->cost[flipedge(rootedges_t[t])], &(heurdata->randseed));
+		  terminalprio[t] = SCIPgetRandomReal(minp, graph->cost[flipedge(rootedges_t[t])], &(heurdata->randseed));
 	 }
 	 else
 	 {
@@ -2564,6 +2590,23 @@ SCIP_DECL_HEUREXEC(heurExecTM)
                   assert(SCIPisGE(scip, cost[e], 0.0));
                   assert(SCIPisGE(scip, costrev[e], 0.0));
                }
+#if 0
+               if( SCIPisLT(scip, cost[e], BLOCKED) && SCIPisLT(scip, cost[e + 1], BLOCKED) )
+	       {
+		  if( SCIPisLT(scip, cost[e], cost[e + 1]) )
+		  {
+		     cost[e + 1] = cost[e];
+		     costrev[e] = cost[e];
+		     costrev[e + 1] = cost[e];
+		  }
+		  else
+		  {
+		     cost[e] = cost[e + 1];
+		     costrev[e] = cost[e + 1];
+		     costrev[e + 1] = cost[e + 1];
+		  }
+	       }
+#endif
             }
          }
 

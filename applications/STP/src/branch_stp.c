@@ -62,10 +62,9 @@ SCIP_RETCODE selectBranchingVertex(
    )
 {
    SCIP_PROBDATA* probdata;
-   SCIP_SOL* sol;
+   SCIP_VAR** edgevars;
    GRAPH* g;
    SCIP_Real maxflow;
-   SCIP_Real* xval;
    SCIP_Real* inflow;
    int a;
    int k;
@@ -80,18 +79,18 @@ SCIP_RETCODE selectBranchingVertex(
    g = SCIPprobdataGetGraph(probdata);
    assert(g != NULL);
 
-   nnodes = g->knots;
-
    /* LP has not been solved */
    if( !SCIPhasCurrentNodeLP(scip) || SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
    {
-      sol = NULL;
-      xval = NULL;
       *vertex = UNKNOWN;
       return SCIP_OKAY;
-
    }
 
+   edgevars = SCIPprobdataGetEdgeVars(scip);
+   assert(edgevars != NULL);
+
+   nnodes = g->knots;
+#if 0
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 
    /* copy the current LP solution to the working solution */
@@ -102,11 +101,11 @@ SCIP_RETCODE selectBranchingVertex(
    assert(xval != NULL);
 
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
-
+#endif
    SCIP_CALL( SCIPallocBufferArray(scip, &inflow, nnodes) );
 
    branchvert = UNKNOWN;
-   maxflow = -1.0;
+   maxflow = 1.0;
    for( k = 0; k < nnodes; k++ )
    {
       /*
@@ -116,15 +115,22 @@ SCIP_RETCODE selectBranchingVertex(
       */
       inflow[k] = 0.0;
       for( a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
-	 inflow[k] += xval[a];
-
+	 inflow[k] += SCIPvarGetLPSol(edgevars[a]); //xval[a];
+#if 0
       if( !Is_term(g->term[k]) && SCIPisLT(scip, inflow[k], 1.0) && SCIPisGT(scip, inflow[k], maxflow) )
       {
          branchvert = k;
 	 maxflow = inflow[k];
       }
+#endif
+      if( !Is_term(g->term[k]) && SCIPisLT(scip, inflow[k], 1.0) && SCIPisLT(scip, fabs(inflow[k] - 0.5), maxflow) )
+      {
+         branchvert = k;
+	 maxflow = fabs(inflow[k] - 0.5);
+         printf("new maxflow %f on vertex %d \n", inflow[k], branchvert );
+      }
    }
-   printf("maxflow %f on vertex %d \n", maxflow, branchvert );
+   printf("maxflow %f on vertex %d, term? %d \n", maxflow, branchvert, Is_term(g->term[branchvert])  );
    (*vertex) = branchvert;
 
    SCIPfreeBufferArray(scip, &inflow);

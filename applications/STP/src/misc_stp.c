@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   misc_stp.c
- * @brief  miscellaneous methods used for solving Steiner problems
+ * @brief  Miscellaneous methods used for solving Steiner problems
  * @author Daniel Rehfeldt
  *
  * This file includes miscellaneous methods used for solving Steiner problems. For more details see \ref MISCSTP page.

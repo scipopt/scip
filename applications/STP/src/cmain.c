@@ -74,16 +74,18 @@ SCIP_RETCODE runShell(
 
    /* include steiner tree constraint handler */
    SCIP_CALL( SCIPincludeConshdlrStp(scip) );
-
+#if 1
    /* include Takahashi Matsuyama heuristic */
    SCIP_CALL( SCIPincludeHeurTM(scip) );
-
+#endif
+#if 1
    /* include local heuristics */
    SCIP_CALL( SCIPincludeHeurLocal(scip) );
-
+#endif
+#if 1
    /* include recombination heuristic */
    SCIP_CALL( SCIPincludeHeurRec(scip) );
-
+#endif
    /* include event handler for printing primal solution development */
    SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );
 

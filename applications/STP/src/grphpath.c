@@ -561,7 +561,7 @@ void sdpaths(
    int   m;
    int   e;
    int   limit1;
-   int count;
+   int   count;
    int   nchecks;
 
    assert(g      != NULL);
@@ -579,17 +579,24 @@ void sdpaths(
       return;
 
    assert(g->mark[head] && g->mark[tail]);
+
+   count = 0;
    path[tail].dist = 0.0;
    state[tail] = CONNECT;
    memlbl[(*nlbl)++] = tail;
-   count = 0;
+
    if( g->stp_type != STP_MAX_NODE_WEIGHT )
       g->mark[head] = FALSE;
+ //printf("tail : %d \n  ", tail);
+
    for( e = g->outbeg[tail]; e != EAT_LAST; e = g->oeat[e] )
    {
       m = g->head[e];
+
       if( g->mark[m] )
       {
+	//printf("head : %d \n  ", m);
+//	printf(" %f,( %f + %f )\n", path[m].dist, path[tail].dist, cost[e] );
 	 assert(SCIPisGT(scip, path[m].dist, path[tail].dist + cost[e]));
          /* m labelled the first time */
          memlbl[(*nlbl)++] = m;
@@ -1680,7 +1687,7 @@ SCIP_RETCODE voronoi_dist(
    assert(heap != NULL);
    assert(state != NULL);
    assert(distance   != NULL);
-
+//@todo alloc globally
    nnodes = g->knots;
    SCIP_CALL( SCIPallocBufferArray(scip, &minedgepred, g->edges) );
 
@@ -1770,7 +1777,7 @@ SCIP_RETCODE voronoi_dist(
                   }
                }
             }
-
+//@todo in case of equality, uptdate if successor of minedge
             /* check whether the path (to m) including k is shorter than the so far best known */
             if( state[m] && SCIPisGT(scip, path[m].dist, path[k].dist + cost[i]) && g->mark[m] )
             {

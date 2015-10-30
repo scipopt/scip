@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reduce.c
- * @brief  methods for loading Steiner problems in .stp format
+ * @brief  Methods for loading Steiner problems in .stp format
  * @author Thorsten Koch
  * @author Daniel Rehfeldt
  *

@@ -46,7 +46,7 @@
 #define   DEFAULT_EMITGRAPH    FALSE         /**< emit graph? */
 #define   DEFAULT_COUNTPRESOLTIME  TRUE      /**< count presolving time as part of overall solution time? */
 #define   DEFAULT_REDUCTION    1             /**< reduction mode to apply */
-#define   DEFAULT_MINELIMS     5             /**< minimal number of eliminations to be achieved for reiteration of reduction methods */
+#define   DEFAULT_MINELIMS     3             /**< minimal number of eliminations to be achieved for reiteration of reduction methods */
 #define   DEFAULT_PRETIMELIMIT -1.0          /**< presolving time limit */
 
 #define STP_MODES "cfp" /**< valid values for user parameter 'stp/mode' */

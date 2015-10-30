@@ -23,12 +23,12 @@
  *
  * @page CONS Separating violated constraints
  *
- * This file implements a constraint handler checking solutions for feasibility and separating violated model constraints as
+ * In this file a constraint handler checking solutions for feasibility and separating violated model constraints is implemented, as
  * described in: "Solving the Steiner Tree Problem in Graphs to Optimality" by T. Koch and A. Martin.
- * The separation problem for the cut inequalities described in \ref PROBLEM can be solved by a max flow algorithm in
+ * The separation problem for the cut inequalities described in \ref PROBLEM can be solved by a max-flow algorithm in
  * polynomial time.  Regarding the variable values of a given LP solution as capacities on the edges, one can check for each
  * \f$t \in T \setminus {r}\f$, with \f$r\f$ being the root, whether the minimal \f$(r, t)\f$-cut is less than one. In this case,
- * a violated cut inequality has been found, otherwise none exists. In order to calculate such a minimal cut, Hao
+ * a violated cut inequality has been found, otherwise none exists. In order to calculate such a minimal cut Hao
  * and Orlin's preflow-push algorithm is used.
  *
  */
@@ -73,7 +73,7 @@
 
 #define DEFAULT_BACKCUT        FALSE /**< Try Back-Cuts FALSE*/
 #define DEFAULT_CREEPFLOW      TRUE /**< Use Creep-Flow */
-#define DEFAULT_DISJUNCTCUT    FALSE /**< Only disjunct Cuts */
+#define DEFAULT_DISJUNCTCUT    FALSE /**< Only disjunct Cuts FALSE */
 #define DEFAULT_NESTEDCUT      FALSE/**< Try Nested-Cuts FALSE*/
 #define DEFAULT_FLOWSEP        TRUE /**< Try Flow-Cuts */
 
@@ -364,7 +364,8 @@ SCIP_RETCODE sep_flow(
                   goto TERMINATE;
             }
          }
-         /* no flows ? */
+
+         /* flow cuts disabled? */
          if( !flowsep )
             continue;
 
@@ -449,7 +450,7 @@ SCIP_RETCODE sep_flow(
             if( *ncuts + count >= maxcuts )
                goto TERMINATE;
          }
-
+#if 1
          /* incoming flow <= outgoing flow */
          sum   = 0.0;
 
@@ -495,6 +496,7 @@ SCIP_RETCODE sep_flow(
             if( *ncuts + count >= maxcuts )
                goto TERMINATE;
          }
+#endif
       }
    }
 

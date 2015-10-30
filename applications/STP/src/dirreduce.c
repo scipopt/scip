@@ -270,12 +270,19 @@ SCIP_RETCODE trydg1edgepc(
    return SCIP_OKAY;
 }
 
+
+
+
+
+#if 0
+
 /** contract a chain */
 static
-SCIP_RETCODE traverseChain(
+SCIP_RETCODE traverseChain2(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< graph data structure */
    int*                  length,             /**< pointer to store length of chain */
+   int*                  final,              /**< pointer to store final vertex */
    int                   i,                  /**< start vertex */
    int                   i1,                 /**< first vertex */
    int                   i2,                 /**< last vertex */
@@ -287,6 +294,37 @@ SCIP_RETCODE traverseChain(
    int k;
    int e;
    int sum;
+
+   assert(g != NULL);
+   assert(scip != NULL);
+   assert(length != NULL);
+
+   k = i1;
+   e = e1;
+   return SCIP_OKAY;
+}
+
+#endif
+
+/** contract a chain */
+static
+SCIP_RETCODE traverseChain(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int*                  length,             /**< pointer to store length of chain */
+   int*                  final,              /**< pointer to store final vertex */
+   int                   i,                  /**< start vertex */
+   int                   i1,                 /**< first vertex */
+   int                   i2,                 /**< last vertex */
+   int                   e1                  /**< first edge */
+   )
+{
+   IDX* ancestors = NULL;
+   IDX* revancestors = NULL;
+   SCIP_Real sum;
+   int k;
+   int e;
+
 
    assert(g != NULL);
    assert(scip != NULL);
@@ -306,11 +344,13 @@ SCIP_RETCODE traverseChain(
          graph_edge_del(scip, g, e, TRUE);
       sum += g->prize[k];
       e = g->outbeg[k];
+
       (*length)++;
       if( e == flipedge(e1) )
          e = g->oeat[e];
 
       assert(e != EAT_LAST);
+      assert(SCIPisLE(scip, g->prize[k], 0.0));
 
       k = g->head[e];
    }
@@ -348,9 +388,8 @@ SCIP_RETCODE traverseChain(
       else
          g->cost[e1] = -g->prize[k];
       assert(SCIPisLE(scip, g->prize[i], 0.0) );
-
-
    }
+   *final = k;
    return SCIP_OKAY;
 }
 
@@ -361,18 +400,24 @@ SCIP_RETCODE degree_test_dir(
    int*                  count               /**< pointer to number of reductions */
    )
 {
+   SCIP_QUEUE* queue;
    int i;
+   int e;
    int i1;
    int i2;
    int e1;
    int e2;
-   int rerun = TRUE;
+   int root;
    int nnodes;
+   int* pnode;
+   char rerun;
 
    assert(g      != NULL);
    assert(fixed  != NULL);
    assert(count != NULL);
 
+   root = g->source[0];
+   rerun = TRUE;
    nnodes = g->knots;
 
    *count = 0;
@@ -390,8 +435,10 @@ SCIP_RETCODE degree_test_dir(
          {
             e1  = g->inpbeg[i];
             i1  = g->tail[e1];
+#if 0
             if( !g->mark[i1] )
                continue;
+#endif
             assert(e1 >= 0);
             assert(e1 == Edge_anti(g->outbeg[i]));
             assert(g->ieat[e1] == EAT_LAST);
@@ -399,7 +446,6 @@ SCIP_RETCODE degree_test_dir(
 
             if( Is_term(g->term[i]) )
             {
-	       assert(g->stp_type != STP_MAX_NODE_WEIGHT);
                SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e1]) );
                *fixed += g->cost[e1];
                SCIP_CALL( graph_knot_contract(scip, g, i1, i) );
@@ -441,6 +487,10 @@ SCIP_RETCODE degree_test_dir(
                {
                   g->cost[e1] += g->cost[Edge_anti(e2)];
                   g->cost[Edge_anti(e1)] += g->cost[e2];
+		  if( SCIPisGT(scip, g->cost[e1], FARAWAY) )
+                     g->cost[e1] = FARAWAY;
+		  if( SCIPisGT(scip, g->cost[Edge_anti(e1)], FARAWAY) )
+                     g->cost[Edge_anti(e1)] = FARAWAY;
                   SCIP_CALL( graph_knot_contract(scip, g, i2, i) );
                   (*count)++;
                   if( ((i1 < i) && (g->grad[i1] < 3))
@@ -455,9 +505,139 @@ SCIP_RETCODE degree_test_dir(
       }
    }
 
-   SCIPdebugMessage(" %d Knots deleted\n", *count);
+   /* delete all arcs in \delta^-(root) */
+   for( e = g->inpbeg[root]; e != EAT_LAST; e = g->ieat[e] )
+      g->cost[e] = FARAWAY;
+
+   /* delete all arcs in not connected to a terminal other than the root by forward arcs */
+
+   /* BFS until all terminals are reached */
+   SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2.0) );
+
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(g->term[i]) && i != root )
+      {
+         g->mark[i] = TRUE;
+	 SCIP_CALL( SCIPqueueInsert(queue, &(g->tail[g->outbeg[i]])) );
+      }
+      else
+      {
+	 g->mark[i] = FALSE;
+      }
+   }
+
+   g->mark[root] = TRUE;
+
+   while( !SCIPqueueIsEmpty(queue) )
+   {
+      pnode = (SCIPqueueRemove(queue));
+      for( e = g->inpbeg[*pnode]; e != EAT_LAST; e = g->ieat[e] )
+      {
+         if( !g->mark[g->tail[e]] )
+         {
+            g->mark[g->tail[e]] = TRUE;
+            SCIP_CALL( SCIPqueueInsert(queue, &(g->tail[e])) );
+         }
+      }
+   }
+
+   SCIPqueueFree(&queue);
+
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( !g->mark[i] )
+      {
+	 while( g->inpbeg[i] != EAT_LAST )
+	 {
+	    printf("remove edge to node %d \n", i);
+            graph_edge_del(scip, g, g->inpbeg[i], TRUE);
+	 }
+      }
+      for( e = g->outbeg[i]; e != EAT_LAST && 0; e = g->oeat[e] )
+      {
+	 if( SCIPisGE(scip, g->cost[e], FARAWAY) &&  SCIPisGE(scip, g->cost[flipedge(e)], FARAWAY) )
+	 {
+	    printf("remove high cost edge to node %d \n", i);
+            graph_edge_del(scip, g, e, TRUE);
+	 }
+      }
+   }
+
    SCIPdebugMessage("dirdeg %d Knots deleted\n", *count);
    assert(graph_valid(g));
+
+   return SCIP_OKAY;
+}
+
+
+/** Root proximity terminal */
+SCIP_RETCODE rptReduction(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            fixed,              /**< pointer to offset value */
+   int*                  count               /**< pointer to number of reductions */
+   )
+{
+   SCIP_Real pathcost;
+   SCIP_Real* dijkdist;
+   int i;
+   int e;
+   int i1;
+   int e1;
+   int old;
+   int root;
+   int nnodes;
+   int* dijkedge;
+
+   assert(scip != NULL);
+   assert(g != NULL);
+   assert(fixed != NULL);
+   assert(count != NULL);
+
+   root = g->source[0];
+   nnodes = g->knots;
+   *count = 0;
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &dijkdist, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &dijkedge, nnodes) );
+
+   graph_path_execX(scip, g, root, g->cost, dijkdist, dijkedge);
+
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(g->term[i]) && i != root && g->grad[i] > 0 )
+      {
+	 e1 = dijkedge[i];
+	 pathcost = dijkdist[i];
+
+	 for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
+	 {
+	    if( e == e1 )
+               continue;
+
+	    if( SCIPisGT(scip, pathcost, g->cost[e]) )
+               break;
+	 }
+	 if( e == EAT_LAST )
+	 {
+            i1 = g->tail[e1];
+            old = g->grad[i] + g->grad[i1] - 1;
+
+            SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->fixedges), g->ancestors[e1]) );
+            *fixed += g->cost[e1];
+            SCIP_CALL( graph_knot_contract(scip, g, i1, i) );
+
+            assert(old - g->grad[i1] > 0);
+            *count += old - g->grad[i1];
+            printf("contract %d\n", old - g->grad[i] - g->grad[i1]);
+	 }
+
+      }
+   }
+
+   SCIPfreeBufferArray(scip, &dijkedge);
+   SCIPfreeBufferArray(scip, &dijkdist);
 
    return SCIP_OKAY;
 }
@@ -664,10 +844,6 @@ SCIP_RETCODE ansadvReduction(
 
       for( k2 = 0; k2 < nnodes; k2++ )
          assert(marked[k2] == FALSE);
-
-      for( k2 = 0; k2 < nnodes; k2++ )
-         if( marked[k2] )
-            printf("FAIIL \n \n" );
    }
 
    SCIPfreeBufferArray(scip, &neighbarr);
@@ -1183,7 +1359,7 @@ SCIP_RETCODE npvReduction(
 }
 
 
-/** NNP reduction */
+/** chain reduction */
 SCIP_RETCODE chain2Reduction(
    SCIP*                 scip,
    GRAPH*                g,
@@ -1480,7 +1656,9 @@ SCIP_RETCODE degree_test_mw(
          assert(g->grad[i] >= 0);
          if( !g->mark[i] || g->grad[i] == 0 )
             continue;
+
          assert( !SCIPisEQ(scip, g->prize[i], 0.0) );
+
          if( !Is_term(g->term[i]) )
          {
             if( g->grad[i] == 1 )
@@ -1509,24 +1687,47 @@ SCIP_RETCODE degree_test_mw(
             {
 #if 1
 	       int length = 0;
+	       int f1 = -1;
+	       int f2 = -1;
                e1 = g->outbeg[i];
                e2 = g->oeat[e1];
                i1 = g->head[e1];
                i2 = g->head[e2];
+
                assert(e1 >= 0);
                assert(e2 >= 0);
                assert(g->mark[i1]);
                assert(g->mark[i2]);
+               assert(i1 != i2);
 
-	       SCIP_CALL( traverseChain(scip, g, &length, i, i1, i2, e1) );
-	       SCIP_CALL( traverseChain(scip, g, &length, i, i2, i1, e2) );
+	       SCIP_CALL( traverseChain(scip, g, &length, &f1, i, i1, i2, e1) );
+	       SCIP_CALL( traverseChain(scip, g, &length, &f2, i, i2, i1, e2) );
 
+	       if( f1 == f2 )
+	       {
+		  while( g->outbeg[i] != EAT_LAST )
+		     graph_edge_del(scip, g, g->outbeg[i], TRUE);
+	       }
+	       else if( length > 0 )
+	       {
+                  assert(g->grad[i] <= 2);
+                  for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
+                     g->cost[e] = -g->prize[i];
+                  e1 = g->outbeg[i];
+                  e2 = g->oeat[e1];
+
+
+                  //  printf("contract NT %d %d %d length: %d \n ", i1, i, i2, length);
+                  (*count) += length;
+	       }
+# if 0
                assert(g->grad[i] <= 2);
 	       for( e = g->inpbeg[i]; e != EAT_LAST; e = g->ieat[e] )
                   g->cost[e] = -g->prize[i];
                if( length > 1 )
 		  SCIPdebugMessage("contract NT %d %d %d length: %d \n ", i1, i, i2, length);
                (*count) += length;
+#endif
 #endif
 	    }
             continue;
@@ -1559,8 +1760,9 @@ SCIP_RETCODE degree_test_mw(
                continue;
 	    }
          }
+#if 0
          /* contract adjacent terminals */
-         if( 0 && g->grad[i] >= 3 )
+         if( g->grad[i] >= 3 )
          {
 	    edgecount = 0;
             for( e1 = g->outbeg[i]; e1 != EAT_LAST && edgecount++ <= maxnvisits; e1 = g->oeat[e1] )
@@ -1576,6 +1778,7 @@ SCIP_RETCODE degree_test_mw(
 	       break;
             }
          }
+#endif
       }
    }
 
@@ -1609,7 +1812,7 @@ SCIP_RETCODE degree_test_pc(
    assert(count != NULL);
    assert(g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING);
 
-   pc = g->stp_type == STP_PRIZE_COLLECTING;
+   pc = (g->stp_type == STP_PRIZE_COLLECTING);
 
    nnodes = g->knots;
    *count = 0;

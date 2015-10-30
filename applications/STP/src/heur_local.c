@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_local.c
- * @brief  improvement heuristic for STPs
+ * @brief  Improvement heuristic for STPs
  * @author Daniel Rehfeldt
  *
  * This file implements three local heuristics, namely vertex insertion, key-path exchange and key-vertex elimination,
@@ -41,17 +41,18 @@
 #define HEUR_NAME             "local"
 #define HEUR_DESC             "improvement heuristic for STP"
 #define HEUR_DISPCHAR         '-'
-#define HEUR_PRIORITY         10
+#define HEUR_PRIORITY         100
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           (SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)
-#define printDebug
+#define printDebug0
 
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_DURINGROOT    TRUE
-#define DEFAULT_BESTNSOLS     5
+#define DEFAULT_MAXNBESTSOLS  6
+#define DEFAULT_NBESTSOLS     3
 
 /*
  * Data structures
@@ -60,7 +61,9 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   int                   bestnsols;          /**< number of best solutions found */
+   int                   nfails;             /**< number of fails */
+   int                   maxnsols;           /**< maximal number of best solutions to improve */
+   int                   nbestsols;          /**< number of best solutions to improve */
    int*                  lastsolindices;     /**< indices of a number of best solutions already tried */
    SCIP_Bool             duringroot;         /**< should the heuristic be called during the root node? */
 };
@@ -329,7 +332,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
    }
 
    assert(graph_valid(graph));
-   printf("LOCAL \n");
+
    SCIP_CALL( SCIPallocBufferArray(scip, &nodes, nnodes) );
    SCIP_CALL( SCIPallocBufferArray(scip, &steinertree, nnodes) );
 
@@ -412,7 +415,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
             {
                if( Is_pterm(graph->term[i]) )
                {
-                  printf("%d- prize: %f ....%d %d",i, graph->prize[i], graph->tail[insert[0]], graph->head[insert[0]]);
+                 // printf("%d- prize: %f ....%d %d",i, graph->prize[i], graph->tail[insert[0]], graph->head[insert[0]]);
                   printf("ADDED VERTEX \n");
                   v = &nodes[i];
 
@@ -457,8 +460,8 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
 		     {
 		        SCIPlinkcuttreeLink(v, w, insert[k]);
 			diff = 1.0;
-			 printf("(n: %d) minfound: %d of cost %f orgcost %f\n", insertcount, l, graph->prize[l], graph->prize[i]);
-			 break;
+                        printf("(n: %d) minfound: %d of cost %f orgcost %f\n", insertcount, l, graph->prize[l], graph->prize[i]);
+                        break;
 		     }
                   }
 		  else
@@ -485,16 +488,16 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
 	       {
 		  if( SCIPisLT(scip, diff, 0.0) )
 		  {
-                  SCIPlinkcuttreeEvert(v);
-                  SCIPlinkcuttreeCut(&nodes[graph->head[insert[0]]]);
+                     SCIPlinkcuttreeEvert(v);
+                     SCIPlinkcuttreeCut(&nodes[graph->head[insert[0]]]);
 		  }
 		  else
 		  {
 		     steinertree[i] = TRUE;
                      newnverts++;
-		      for( e = graph->outbeg[l]; e != EAT_LAST; e = graph->oeat[e] )
-                  if( best_result[e] == CONNECT || best_result[flipedge(e)] == CONNECT )
-		    printf("%d connect to %d %d \n", l, graph->tail[l], graph->head[l]);
+                     for( e = graph->outbeg[l]; e != EAT_LAST; e = graph->oeat[e] )
+                        if( best_result[e] == CONNECT || best_result[flipedge(e)] == CONNECT )
+                           printf("%d connect to %d %d \n", l, graph->tail[l], graph->head[l]);
 		     printf("2222 (n: %d) minfound: %d of cost %f orgcost %f\n", insertcount, l, graph->prize[l], graph->prize[i]);
 		     steinertree[l] = FALSE;
 		     break;
@@ -566,7 +569,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                         printf("ADDED VERTEX \n");
                      }
 #endif
-//                     printf("%d- prize: %f ....",i, graph->prize[i]);
+                     //                     printf("%d- prize: %f ....",i, graph->prize[i]);
                      printf("ADDED VERTEX \n");
                   }
                }
@@ -582,11 +585,52 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
             break;
       }
 
+      if( pc )
+      {
+	 for( i = 0; i < nnodes; i++ )
+	 {
+	    if( Is_pterm(graph->term[i]) && !steinertree[i] )
+	    {
+	       for( e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
+	       {
+		  if( steinertree[graph->head[e]] && !Is_term(graph->term[graph->head[e]]) && SCIPisLT(scip, graph->cost[e], graph->prize[i] )  )
+		  {
+		    steinertree[i] = TRUE;
+		    newnverts++;
+		     printf("ADDED!!! %d  %f < %f \n\n", i, graph->cost[e], graph->prize[i]);
+		     break;
+		  }
+	       }
+	    }
+	 }
+      }
+
+      if( mw )
+      {
+	 for( i = 0; i < nnodes; i++ )
+	 {
+	    if( Is_pterm(graph->term[i]) && !steinertree[i] )
+	    {
+	       for( e = graph->outbeg[i]; e != EAT_LAST; e = graph->oeat[e] )
+	       {
+		  if( steinertree[graph->head[e]] && !Is_term(graph->term[graph->head[e]])  )
+		  {
+		    steinertree[i] = TRUE;
+		    newnverts++;
+		     printf("MW ADDED!!! %d  %f < %f \n\n", i, graph->cost[e], graph->prize[i]);
+		     break;
+		  }
+	       }
+	    }
+	 }
+      }
+
+
       /* free buffer memory */
-       if( mw )
+      if( mw )
       {
 	 SCIPfreeBufferArray(scip, &stdeg);
-      SCIPfreeBufferArray(scip, &cuts2);
+         SCIPfreeBufferArray(scip, &cuts2);
       }
       SCIPfreeBufferArray(scip, &cuts);
       SCIPfreeBufferArray(scip, &adds);
@@ -630,7 +674,6 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                best_result[flipedge(nodes[i].edge)] = 0;
          }
       }
-
 
 #ifdef printDebug
       obj = 0.0;
@@ -2040,8 +2083,8 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    SCIP_HEURDATA* heurdata;
    SCIP_PROBDATA* probdata;
    GRAPH* graph;                             /* graph structure */
-   SCIP_SOL* newsol;                         /* new (good) solution */
-   SCIP_SOL* sol;                            /* new solution */
+   SCIP_SOL* newsol;                         /* new solution */
+   SCIP_SOL* impsol;                         /* new improved solution */
    SCIP_SOL** sols;                          /* solutions */
    SCIP_VAR** vars;                          /* SCIP variables */
    SCIP_Real pobj;
@@ -2060,6 +2103,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    int* results;
    int* lastsolindices;
    SCIP_Bool feasible;
+
    assert(heur != NULL);
    assert(scip != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -2078,17 +2122,18 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    assert(graph != NULL);
 
    *result = SCIP_DIDNOTRUN;
-
+#if 1
    /* the local heuristics may not work correctly for problems other than undirected STPs */
    if( graph->stp_type != STP_UNDIRECTED && graph->stp_type != STP_GRID && graph->stp_type != STP_OBSTACLES_GRID &&
       graph->stp_type != STP_PRIZE_COLLECTING && graph->stp_type != STP_ROOTED_PRIZE_COLLECTING && graph->stp_type != GSTP
       && graph->stp_type != STP_MAX_NODE_WEIGHT )
       return SCIP_OKAY;
-
+#endif
    /* don't run local in a Subscip */
    if( SCIPgetSubscipDepth(scip) > 0 )
       return SCIP_OKAY;
 
+   /* no solution available? */
    if( SCIPgetBestSol(scip) == NULL )
       return SCIP_OKAY;
 
@@ -2096,8 +2141,10 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    nedges = graph->edges;
    root = graph->source[0];
    sols = SCIPgetSols(scip);
-   assert(heurdata->bestnsols >= 0);
-   min = MIN(heurdata->bestnsols, nsols);
+
+   assert(heurdata->maxnsols >= 0);
+
+   min = MIN(heurdata->maxnsols, nsols);
 
    /* only process each solution once */
    for( v = 0; v < min; v++ )
@@ -2110,13 +2157,84 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 	 break;
       }
    }
-
+#if 1
    /* no new solution available? */
    if( v == min )
       return SCIP_OKAY;
+#endif
+
+
+
+   if( 0  )
+   {
+
+
+
+      FILE *fptr;
+
+#if 0
+      fptr=fopen("redMW.txt","a");
+      if(fptr==NULL){
+         printf("Error!");
+      }
+
+
+      fprintf(fptr," &   %d    &   %d   &   %d   &   %d   &    &    \n", graph->norgmodelknots, graph->norgmodeledges / 2, (graph->knots - graph->terms), ((graph->edges) / 2 - 3 * (graph->terms - 1)));// SCIPgetReadingTime(scip));
+      fclose(fptr);
+#endif
+
+#if 1 //THE USUAL STUFF
+      fptr=fopen("redEVT.txt","a");
+      if(fptr==NULL){
+         printf("Error!");
+      }
+
+      if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+      {
+         fprintf(fptr,"%d       %d      %d      %d     %f  \n", (graph->knots - graph->terms + 1), graph->norgmodelknots, ((graph->edges) / 2 - 2 * (graph->terms - 1)),
+            graph->norgmodeledges / 2, SCIPgetReadingTime(scip));
+      }
+      else if(  graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
+      {
+         fprintf(fptr,"%d       %d      %d      %d     %f  \n", (graph->knots - graph->terms), graph->norgmodelknots, ((graph->edges) / 2 - 3 * (graph->terms - 1)),
+            graph->norgmodeledges / 2, SCIPgetReadingTime(scip));
+      }
+      else
+      {
+         fprintf(fptr,"%d  %d  %d  %d  %f\n", (graph->knots), graph->orgknots, ((graph->edges) / 2 ), graph->orgedges / 2, SCIPgetReadingTime(scip));
+      }
+      fclose(fptr);
+
+
+#endif
+      fclose(fptr);
+
+      return SCIP_ERROR;
+#if 0
+      FILE *fptr;
+      dummy = 1;
+      fptr=fopen("redtime.txt","a");
+      if(fptr==NULL){
+         printf("Error!");
+
+
+
+      }
+
+
+      fprintf(fptr,"%f\n",(SCIPgetReadingTime(scip)));
+      fclose(fptr);
+#endif
+
+   }
+
 
    newsol = sols[v];
    lastsolindices[v] = SCIPsolGetIndex(newsol);
+
+   /* solution not good enough? */
+   if( v > heurdata->nbestsols && graph->stp_type != STP_MAX_NODE_WEIGHT )
+      return SCIP_OKAY;
 
    /* has the new solution been found by this very heuristic? */
    if( SCIPsolGetHeur(newsol) == heur )
@@ -2228,13 +2346,34 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       /* has solution been improved? */
       if( SCIPisGT(scip, SCIPgetSolOrigObj(scip, newsol) - SCIPprobdataGetOffset(scip), pobj) )
       {
-         SCIP_Bool success;
-         sol = NULL;
-         SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
+	 SCIP_SOL* bestsol;
+	 SCIP_Bool success;
+
+	 bestsol = sols[0];
+         impsol = NULL;
+         SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, impsol, heur, &success) );
 
          if( success )
+	 {
             *result = SCIP_FOUNDSOL;
+
+	    if( heurdata->nbestsols < heurdata->maxnsols && SCIPisGT(scip, SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip), pobj) )
+	    {
+	       heurdata->nfails = 0;
+	       heurdata->nbestsols++;
+	    }
+            printf("success in local: old: %f new: %f \n", (SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip)), pobj);
+	 }
       }
+   }
+
+   if( *result != SCIP_FOUNDSOL )
+   {
+      heurdata->nfails++;
+      if( heurdata->nbestsols > 1 && heurdata->nfails > 1 && graph->stp_type != STP_MAX_NODE_WEIGHT )
+         heurdata->nbestsols--;
+
+      printf("fail! %d \n", heurdata->nbestsols);
    }
 
    SCIPfreeBufferArray(scip, &nval);
@@ -2262,11 +2401,13 @@ SCIP_RETCODE SCIPincludeHeurLocal(
    /* create Local primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
-   heurdata->bestnsols = DEFAULT_BESTNSOLS;
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->lastsolindices), heurdata->bestnsols) );
+   heurdata->nfails = 1;
+   heurdata->maxnsols = DEFAULT_MAXNBESTSOLS;
+   heurdata->nbestsols = DEFAULT_NBESTSOLS;
 
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->lastsolindices), heurdata->maxnsols) );
 
-   for( i = 0; i < heurdata->bestnsols; i++ )
+   for( i = 0; i < heurdata->maxnsols; i++ )
       heurdata->lastsolindices[i] = -1;
 
    /* include primal heuristic */

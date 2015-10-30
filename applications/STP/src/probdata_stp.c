@@ -45,6 +45,7 @@
 #include "cons_stp.h"
 #include "grph.h"
 #include "scip/cons_linear.h"
+#include "scip/cons_setppc.h"
 #include "scip/misc.h"
 #include "scip/struct_misc.h"
 
@@ -58,9 +59,9 @@
 #define MODE_FLOW   1           /**< use flow model */
 #define MODE_PRICE  2           /**< branch and price */
 
-#define PRIZEA      0           /**< use 2-cyle inequalities? */
+#define PRIZEA      1           /**< use 2-cyle inequalities? */
 #define PRIZEB      1           /**< use symmetry inequalities in Prize collecting? */
-
+#define FLOWB       0
 
 /** @brief Problem data which is accessible in all places
  *
@@ -75,11 +76,13 @@ struct SCIP_ProbData
    SCIP_CONS**           degcons;            /**< array of (node) degree constraints */
    SCIP_CONS**           edgecons;           /**< array of constraints */
    SCIP_CONS**           pathcons;           /**< array of constraints */
+   SCIP_CONS**           flowbcons;          /**< flow balance constraints */
 #if PRIZEA
    SCIP_CONS**           prizeimplpcons;     /**< prize collecting, improving LP constraints */
 #endif
    SCIP_CONS**           prizesymcons;       /**< prize collecting, improving LP constraints */
    SCIP_CONS*            hopcons;            /**< hop constraint */
+
    SCIP_CONS*            prizecons;          /**< prize constraint */
    SCIP_VAR** 		 edgevars;	     /**< array of edge variables */
    SCIP_VAR**            flowvars;           /**< array of edge variables (needed only in the Flow mode) */
@@ -93,6 +96,7 @@ struct SCIP_ProbData
    int                   realnterms;         /**< number of terminals except the root */
    int                   nlayers;            /**< number of layers */
    int                   nnodes;             /**< number of nodes */
+   int                   nnonterms;          /**< number of nodes */
    int                   nvars;              /**< number of variables */
    int                   stp_type;           /**< STP type */
    int                   minelims;           /**< minimal number of eliminations per reduction method */
@@ -329,12 +333,21 @@ SCIP_RETCODE probdataFree(
    if( (*probdata)->stp_type == STP_PRIZE_COLLECTING || (*probdata)->stp_type == STP_ROOTED_PRIZE_COLLECTING || (*probdata)->stp_type == STP_MAX_NODE_WEIGHT )
    {
       assert((*probdata)->mode == MODE_CUT);
-#if PRIZEA
-      /* release degree constraints */
-      for( e = 0; e < (*probdata)->nedges; e++ )
-         SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->prizeimplpcons[e])) );
+      #if FLOWB
+      for( e = 0; e < (*probdata)->nnonterms; e++ )
+            SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->flowbcons[e])) );
 
-      SCIPfreeMemoryArrayNull(scip, &((*probdata)->prizeimplpcons));
+       SCIPfreeMemoryArrayNull(scip, &((*probdata)->flowbcons));
+#endif
+#if PRIZEA
+      if( (*probdata)->stp_type == STP_PRIZE_COLLECTING  )
+      {
+         /* release degree constraints */
+         for( e = 0; e < (*probdata)->nedges; e++ )
+            SCIP_CALL( SCIPreleaseCons(scip, &((*probdata)->prizeimplpcons[e])) );
+
+         SCIPfreeMemoryArrayNull(scip, &((*probdata)->prizeimplpcons));
+      }
 #endif
 
       if( (*probdata)->stp_type != STP_ROOTED_PRIZE_COLLECTING )
@@ -436,6 +449,7 @@ SCIP_RETCODE probdataPrintGraph(
    m = 0;
    for( n = 0; n < graph->knots; ++n )
    {
+#if 1
       if( n == graph->source[0] )
       {
          (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Root", n);
@@ -453,12 +467,34 @@ SCIP_RETCODE probdataPrintGraph(
          (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "(%d) Node %d", n, n + 1 - e - m);
          SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#336699", NULL);
       }
+#else
+(void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "");
+  if( n == graph->source[0] )
+      {
+
+	 SCIPgmlWriteNode(file, (unsigned int)n, label, "rectangle", "#666666", NULL);
+	 m = 1;
+      }
+      else if( graph->term[n] == 0 )
+      {
+
+	 SCIPgmlWriteNode(file, (unsigned int)n, label, "rectangle", "#666666", NULL);
+	 e += 1;
+      }
+      else
+      {
+         SCIPgmlWriteNode(file, (unsigned int)n, label, "circle", "#666666", NULL);
+      }
+#endif
+
    }
 
    /* write all edges (undirected) */
    for( e = 0; e < graph->edges; e += 2 )
    {
-      (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%8.2f", graph->cost[e]);
+#if 1
+     (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%8.2f", graph->cost[e]);
+#endif
       if( edgemark != NULL && edgemark[e / 2] )
 	 SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, "#ff0000");
       else
@@ -569,9 +605,15 @@ SCIP_RETCODE createPrizeConstraints(
       SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->prizesymcons), ro2) );
       for( r = 0; r < ro2; r++ )
       {
+#if 0
          (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeSymConstraint%d", r);
-         SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizesymcons[r]), consname, 0, NULL, NULL,
+         SCIP_CALL( SCIPcreateConsLinear(scip, &(probdata->prizesymcons[r]), consname, 0, NULL, NULL,
                -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+#endif
+
+	 SCIP_CALL(  SCIPcreateConsSetpack(scip, &(probdata->prizesymcons[r]), consname, 0, NULL, TRUE, TRUE,
+					   TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE ) );
+
          SCIP_CALL( SCIPaddCons(scip, probdata->prizesymcons[r]) );
       }
    }
@@ -586,23 +628,26 @@ SCIP_RETCODE createPrizeConstraints(
    }
 
 #if PRIZEA
-   r = 0;
-   ro2 = 0;
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->prizeimplpcons), nedges) );
-   for( r = 0; r < nedges; r++ )
+   if( graph->stp_type == STP_PRIZE_COLLECTING )
    {
-      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeLPConstraint%d", ro2);
-      if( root == graph->head[r] )
+      r = 0;
+      ro2 = 0;
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->prizeimplpcons), nedges) );
+      for( r = 0; r < nedges; r++ )
       {
-        SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizeimplpcons[ro2]), consname, 0, NULL, NULL,
-            -SCIPinfinity(scip), 1, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "PrizeLPConstraint%d", ro2);
+         if( root == graph->head[r] )
+         {
+            SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizeimplpcons[ro2]), consname, 0, NULL, NULL,
+                  -SCIPinfinity(scip), 1, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizeimplpcons[ro2]), consname, 0, NULL, NULL,
+                  -SCIPinfinity(scip), 0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         }
+         SCIP_CALL( SCIPaddCons(scip, probdata->prizeimplpcons[ro2++]) );
       }
-      else
-      {
-	  SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->prizeimplpcons[ro2]), consname, 0, NULL, NULL,
-            -SCIPinfinity(scip), 0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
-      }
-      SCIP_CALL( SCIPaddCons(scip, probdata->prizeimplpcons[ro2++]) );
    }
 
 #if 0
@@ -618,6 +663,50 @@ SCIP_RETCODE createPrizeConstraints(
    assert(r == realnterms);
 #endif
 #endif
+
+   return SCIP_OKAY;
+}
+
+
+
+/** create Flow Balance constraints (Cut Mode only) */
+static
+SCIP_RETCODE createFlowBalanceConstraints(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PROBDATA*        probdata            /**< problem data */
+   )
+
+{
+   GRAPH* graph;
+   int r;
+   int nnonterms;
+   char consname[SCIP_MAXSTRLEN];
+
+   assert(scip != NULL);
+   assert(probdata != NULL);
+
+   graph = probdata->graph;
+
+   assert(graph != NULL);
+
+   if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING )
+      nnonterms = graph->knots - graph->terms;
+   else
+      nnonterms = graph->knots - graph->terms;
+
+   probdata->nnonterms = nnonterms;
+
+   SCIPdebugMessage("createFlowBalanceConstraints \n");
+
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->flowbcons), nnonterms) );
+   for( r = 0; r < nnonterms; r++ )
+   {
+      (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "FlowBalanceConstraint%d", r);
+      SCIP_CALL( SCIPcreateConsLinear ( scip, &(probdata->flowbcons[r]), consname, 0, NULL, NULL,
+            -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+      SCIP_CALL( SCIPaddCons(scip, probdata->flowbcons[r]) );
+   }
 
    return SCIP_OKAY;
 }
@@ -866,6 +955,28 @@ SCIP_RETCODE createVariables(
 	 {
 	    int a;
 	    int head;
+#if FLOWB
+	    k2 = 0;
+
+	    for( k = 0; k < nnodes; k++ )
+            {
+	       if( !Is_term(graph->term[k]) )
+	       {
+		  /* incoming arcs */
+		 for( a = graph->inpbeg[k]; a != EAT_LAST; a = graph->ieat[a] )
+		 {
+	             SCIP_CALL( SCIPaddCoefLinear(scip, probdata->flowbcons[k2], probdata->edgevars[a], 1.0) );
+		 }
+		 /* outgoing arcs */
+		 for( a = graph->outbeg[k]; a != EAT_LAST; a = graph->oeat[a] )
+		 {
+	             SCIP_CALL( SCIPaddCoefLinear(scip, probdata->flowbcons[k2], probdata->edgevars[a], -1.0) );
+		 }
+		 k2++;
+	       }
+	    }
+#endif
+
 #if PRIZEB
 	    int* pseudoterms;
 	    SCIP_CALL( SCIPallocBufferArray(scip, &pseudoterms, probdata->realnterms) );
@@ -875,19 +986,22 @@ SCIP_RETCODE createVariables(
 
 
 #if PRIZEA
-	    for( e = 0; e < nedges; e++ )
-	    {
-	       head = graph->head[e];
-	       SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizeimplpcons[e], probdata->edgevars[e], 1.0) );
-	       SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizeimplpcons[e], probdata->edgevars[flipedge(e)], 1.0) );
-	       if( root != head )
-	       {
-		  for( a = graph->inpbeg[head]; a != EAT_LAST; a = graph->ieat[a] )
-		  {
-		     SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizeimplpcons[e], probdata->edgevars[a], -1.0) );
-		  }
-	       }
-	    }
+            if( graph->stp_type == STP_PRIZE_COLLECTING )
+            {
+               for( e = 0; e < nedges; e++ )
+               {
+                  head = graph->head[e];
+                  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizeimplpcons[e], probdata->edgevars[e], 1.0) );
+                  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizeimplpcons[e], probdata->edgevars[flipedge(e)], 1.0) );
+                  if( root != head )
+                  {
+                     for( a = graph->inpbeg[head]; a != EAT_LAST; a = graph->ieat[a] )
+                     {
+                        SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizeimplpcons[e], probdata->edgevars[a], -1.0) );
+                     }
+                  }
+               }
+            }
 #endif
 
 	    for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
@@ -908,9 +1022,11 @@ SCIP_RETCODE createVariables(
                      {
                         for( a = graph->inpbeg[pseudoterms[k]]; a != EAT_LAST; a = graph->ieat[a] )
                         {
-                           SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizesymcons[k2], probdata->edgevars[a], 1.0) );
+                         //  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizesymcons[k2], probdata->edgevars[a], 1.0) );
+			  SCIP_CALL( SCIPaddCoefSetppc(scip, probdata->prizesymcons[k2], probdata->edgevars[a]) );
                         }
-                        SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizesymcons[k2], probdata->edgevars[e], 1.0) );
+                      //  SCIP_CALL( SCIPaddCoefLinear(scip, probdata->prizesymcons[k2], probdata->edgevars[e], 1.0) );
+                        SCIP_CALL( SCIPaddCoefSetppc(scip, probdata->prizesymcons[k2], probdata->edgevars[e]) );
                         k2++;
                      }
                      t++;
@@ -1100,6 +1216,7 @@ SCIP_DECL_PROBCOPY(probcopyStp)
    (*targetdata)->nedges = sourcedata->nedges;
    (*targetdata)->nnodes = sourcedata->nnodes;
    (*targetdata)->nterms = sourcedata->nterms;
+   (*targetdata)->nnonterms = sourcedata->nnonterms;
    (*targetdata)->realnterms = sourcedata->realnterms;
    (*targetdata)->emitgraph = sourcedata->emitgraph;
    (*targetdata)->nvars = sourcedata->nvars;
@@ -1167,27 +1284,54 @@ SCIP_DECL_PROBCOPY(probcopyStp)
 
 	 if( sourcedata->stp_type == STP_PRIZE_COLLECTING || sourcedata->stp_type == STP_ROOTED_PRIZE_COLLECTING || sourcedata->stp_type == STP_MAX_NODE_WEIGHT )
 	 {
-#if PRIZEA
-	    SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizeimplpcons, sourcedata->realnterms) );
-            for( c = sourcedata->nedges - 1; c >= 0; --c )
-            {
-               SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcedata->prizeimplpcons[c], &((*targetdata)->prizeimplpcons[c]),
-                     SCIPconsGetHdlr(sourcedata->prizeimplpcons[c]), varmap, consmap,
-                     SCIPconsGetName(sourcedata->prizeimplpcons[c]),
-                     SCIPconsIsInitial(sourcedata->prizeimplpcons[c]),
-                     SCIPconsIsSeparated(sourcedata->prizeimplpcons[c]),
-                     SCIPconsIsEnforced(sourcedata->prizeimplpcons[c]),
-                     SCIPconsIsChecked(sourcedata->prizeimplpcons[c]),
-                     SCIPconsIsPropagated(sourcedata->prizeimplpcons[c]),
-                     SCIPconsIsLocal(sourcedata->prizeimplpcons[c]),
-                     SCIPconsIsModifiable(sourcedata->prizeimplpcons[c]),
-                     SCIPconsIsDynamic(sourcedata->prizeimplpcons[c]),
-                     SCIPconsIsRemovable(sourcedata->prizeimplpcons[c]),
-                     SCIPconsIsStickingAtNode(sourcedata->prizeimplpcons[c]),
-                     global, &success) );
-               assert(success);
+	   #if FLOWB
+               SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->flowbcons, sourcedata->nnonterms) );
+               for( c = sourcedata->nnonterms - 1; c >= 0; --c )
+               {
+                  SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcedata->flowbcons[c], &((*targetdata)->flowbcons[c]),
+                        SCIPconsGetHdlr(sourcedata->flowbcons[c]), varmap, consmap,
+                        SCIPconsGetName(sourcedata->flowbcons[c]),
+                        SCIPconsIsInitial(sourcedata->flowbcons[c]),
+                        SCIPconsIsSeparated(sourcedata->flowbcons[c]),
+                        SCIPconsIsEnforced(sourcedata->flowbcons[c]),
+                        SCIPconsIsChecked(sourcedata->flowbcons[c]),
+                        SCIPconsIsPropagated(sourcedata->flowbcons[c]),
+                        SCIPconsIsLocal(sourcedata->flowbcons[c]),
+                        SCIPconsIsModifiable(sourcedata->flowbcons[c]),
+                        SCIPconsIsDynamic(sourcedata->flowbcons[c]),
+                        SCIPconsIsRemovable(sourcedata->flowbcons[c]),
+                        SCIPconsIsStickingAtNode(sourcedata->flowbcons[c]),
+                        global, &success) );
+                  assert(success);
 
-               SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->prizeimplpcons[c]) );
+                  SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->flowbcons[c]) );
+               }
+#endif
+
+#if PRIZEA
+	    if( sourcedata->stp_type == STP_PRIZE_COLLECTING )
+            {
+               SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizeimplpcons, sourcedata->nedges) );
+               for( c = sourcedata->nedges - 1; c >= 0; --c )
+               {
+                  SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcedata->prizeimplpcons[c], &((*targetdata)->prizeimplpcons[c]),
+                        SCIPconsGetHdlr(sourcedata->prizeimplpcons[c]), varmap, consmap,
+                        SCIPconsGetName(sourcedata->prizeimplpcons[c]),
+                        SCIPconsIsInitial(sourcedata->prizeimplpcons[c]),
+                        SCIPconsIsSeparated(sourcedata->prizeimplpcons[c]),
+                        SCIPconsIsEnforced(sourcedata->prizeimplpcons[c]),
+                        SCIPconsIsChecked(sourcedata->prizeimplpcons[c]),
+                        SCIPconsIsPropagated(sourcedata->prizeimplpcons[c]),
+                        SCIPconsIsLocal(sourcedata->prizeimplpcons[c]),
+                        SCIPconsIsModifiable(sourcedata->prizeimplpcons[c]),
+                        SCIPconsIsDynamic(sourcedata->prizeimplpcons[c]),
+                        SCIPconsIsRemovable(sourcedata->prizeimplpcons[c]),
+                        SCIPconsIsStickingAtNode(sourcedata->prizeimplpcons[c]),
+                        global, &success) );
+                  assert(success);
+
+                  SCIP_CALL( SCIPcaptureCons(scip, (*targetdata)->prizeimplpcons[c]) );
+               }
             }
 #endif
 #if PRIZEB
@@ -1464,6 +1608,7 @@ SCIP_DECL_PROBTRANS(probtransStp)
    (*targetdata)->nnodes = sourcedata->nnodes;
    (*targetdata)->nterms = sourcedata->nterms;
    (*targetdata)->realnterms = sourcedata->realnterms;
+   (*targetdata)->nnonterms = sourcedata->nnonterms;
    (*targetdata)->emitgraph = sourcedata->emitgraph;
    (*targetdata)->nvars = sourcedata->nvars;
    (*targetdata)->mode = sourcedata->mode;
@@ -1504,9 +1649,18 @@ SCIP_DECL_PROBTRANS(probtransStp)
 
 	 if( sourcedata->stp_type == STP_PRIZE_COLLECTING || sourcedata->stp_type == STP_ROOTED_PRIZE_COLLECTING || sourcedata->stp_type == STP_MAX_NODE_WEIGHT )
 	 {
+
+#if FLOWB
+               SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->flowbcons, sourcedata->nnonterms) );
+               SCIP_CALL( SCIPtransformConss(scip, sourcedata->nnonterms, sourcedata->flowbcons, (*targetdata)->flowbcons) );
+#endif
+
 #if PRIZEA
-	    SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizeimplpcons, sourcedata->nedges) );
-            SCIP_CALL( SCIPtransformConss(scip, sourcedata->nedges, sourcedata->prizeimplpcons, (*targetdata)->prizeimplpcons) );
+            if( sourcedata->stp_type == STP_PRIZE_COLLECTING )
+            {
+               SCIP_CALL( SCIPallocMemoryArray(scip, &(*targetdata)->prizeimplpcons, sourcedata->nedges) );
+               SCIP_CALL( SCIPtransformConss(scip, sourcedata->nedges, sourcedata->prizeimplpcons, (*targetdata)->prizeimplpcons) );
+            }
 #endif
 	    if( sourcedata->stp_type != STP_ROOTED_PRIZE_COLLECTING )
 	    {
@@ -1854,7 +2008,7 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* select a root node */
    if( !(graph->stp_type == STP_DIRECTED) && compcentral != CENTER_DEG && graph->stp_type != STP_PRIZE_COLLECTING
-      && graph->stp_type != STP_ROOTED_PRIZE_COLLECTING && graph->stp_type != STP_HOP_CONS )
+      && graph->stp_type != STP_ROOTED_PRIZE_COLLECTING && graph->stp_type != STP_HOP_CONS && (graph->stp_type != STP_MAX_NODE_WEIGHT) )
       SCIP_CALL( central_terminal(scip, graph, &(graph->source[0]), compcentral) );
 
    /* print the graph */
@@ -1863,6 +2017,22 @@ SCIP_RETCODE SCIPprobdataCreate(
 
    /* setting the offest to the fixed value given in the input file */
    probdata->offset = presolinfo.fixed;
+
+   if( graph->stp_type == STP_MAX_NODE_WEIGHT || graph->stp_type == STP_PRIZE_COLLECTING )
+   {
+      SCIP_CALL( SCIPsetIntParam(scip, "separating/gomory/freq", -1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "separating/flowcover/freq", -1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "separating/cmir/freq", -1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "separating/strongcg/freq", -1) );
+     // SCIP_CALL( SCIPsetIntParam(scip, "separating/clique/freq", -1) );
+      // @todo remove later, only for ACTMOD instances
+      SCIP_CALL( SCIPsetIntParam(scip, "heuristics/oneopt/freq", -1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "heuristics/rounding/freq", -1) );
+      SCIP_CALL( SCIPsetIntParam(scip, "heuristics/trivial/freq", -1) );
+
+      ///SCIP_CALL( SCIPsetIntParam(scip, "presolving/maxrounds", 0) );
+
+   }
 
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &oldtimelimit) );
    SCIP_CALL( SCIPgetRealParam(scip, "stp/pretimelimit", &presoltimelimit) );
@@ -1876,11 +2046,56 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( reduce(scip, &graph, &offset, reduction, probdata->minelims) );
 
    SCIP_CALL( graph_pack(scip, graph, &packedgraph, TRUE) );
+
    graph = packedgraph;
+   probdata->graph = graph;
 
    SCIP_CALL( SCIPsetRealParam(scip, "limits/time", oldtimelimit) );
+#if 0
+   FILE *fptr;
 
-   probdata->graph = graph;
+
+   fptr=fopen("redPC.txt","a");
+   if(fptr==NULL){
+      printf("Error!");
+   }
+   fprintf(fptr,"%s ", probname );
+   fclose(fptr);
+
+
+   //
+
+   FILE *fptr;
+
+   fptr=fopen("redEV.txt","a");
+   if(fptr==NULL){
+      printf("Error!");
+   }
+
+
+   fprintf(fptr,"%d  %d  %d  %d\n",((graph->edges) / 2), graph->orgedges / 2, (graph->knots), graph->orgknots);
+   fclose(fptr);
+
+
+
+   fptr=fopen("rededges.txt","a");
+   if(fptr==NULL){
+      printf("Error!");
+   }
+
+
+   fprintf(fptr,"%d\n",((graph->orgedges - graph->edges) / 2));
+   fclose(fptr);
+
+   fptr=fopen("rednodes.txt","a");
+   if(fptr==NULL){
+      printf("Error!");
+   }
+
+
+   fprintf(fptr,"%d\n",(graph->orgknots - graph->knots));
+   fclose(fptr);
+#endif
 
    /* create model */
    if( graph != NULL )
@@ -1939,9 +2154,12 @@ SCIP_RETCODE SCIPprobdataCreate(
 	 if( graph->stp_type == STP_DEG_CONS )
 	    SCIP_CALL( createDegreeConstraints(scip, probdata) );
 
-	 /* if the problem is a Prize-Collecting-STP or a Maximum Weight Connectd Subgraph Problem, additional constraints are required */
+	 /* if the problem is a Prize-Collecting-STP or a Maximum Weight Connected Subgraph Problem, additional constraints are required */
          if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
             SCIP_CALL( createPrizeConstraints(scip, probdata) );
+#if FLOWB
+         SCIP_CALL( createFlowBalanceConstraints(scip, probdata) );
+#endif
       }
       else
       {
@@ -1958,6 +2176,7 @@ SCIP_RETCODE SCIPprobdataCreate(
       probdata->nnodes = 0;
       probdata->nedges = 0;
       probdata->nterms = 0;
+      probdata->nnonterms = 0;
       probdata->realnterms = 0;
       probdata->nedges = 0;
       probdata->nvars = 0;
@@ -2367,7 +2586,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
       orgnodes[k] = FALSE;
    ancestors = graph->ancestors;
    if( graph->stp_type == STP_UNDIRECTED || graph->stp_type == STP_DIRECTED ||graph->stp_type == STP_DEG_CONS
-      || graph->stp_type == STP_NODE_WEIGHTS || graph->stp_type == STP_HOP_CONS || graph->stp_type == GSTP )
+      || graph->stp_type == STP_NODE_WEIGHTS || graph->stp_type == STP_HOP_CONS || graph->stp_type == GSTP || graph->stp_type == STP_GRID  )
    {
       curr = graph->fixedges;
       while( curr != NULL )
@@ -2586,7 +2805,7 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
 	 assert(nsolnodes == 0);
 	 nsolnodes = 1;
       }
-      printf("nsolnodesbef : %d \n", nsolnodes);
+
       if( graph->stp_type == STP_ROOTED_PRIZE_COLLECTING  || graph->stp_type == STP_PRIZE_COLLECTING )
       {
          for( k = 0; k < graph->norgmodelknots; k++ )
@@ -2605,12 +2824,10 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
                   {
                      orgnodes[graph->orgtail[curr->index]] = TRUE;
                      nsolnodes++;
-		     printf("+node : %d \n", graph->orgtail[curr->index]);
                   }
                   if( orgnodes[graph->orghead[curr->index]] == FALSE )
                   {
                      orgnodes[graph->orghead[curr->index]] = TRUE;
-		     printf("+2node : %d \n", graph->orgtail[curr->index]);
                      nsolnodes++;
                   }
                   curr = curr->parent;
@@ -2619,7 +2836,6 @@ SCIP_RETCODE SCIPprobdataWriteSolution(
          }
       }
 
-      printf("nsolnodes after: %d \n", nsolnodes);
       SCIPprobdataWriteLogLine(scip, "Vertices %d\n", nsolnodes);
 
       for( k = 0; k < norgnodes; k++ )
@@ -2994,13 +3210,13 @@ SCIP_RETCODE SCIPprobdataPrintGraph2(
    }
 #endif
 
- /* write all edges (undirected) */
+   /* write all edges (undirected) */
    for( e = 0; e < graph->edges; e += 2 )
    {
       if( graph->oeat[e] == EAT_FREE )
-	continue;
+         continue;
       if( !graph->mark[graph->head[e]] || !graph->mark[graph->tail[e]] )
-	continue;
+         continue;
       (void)SCIPsnprintf(label, SCIP_MAXSTRLEN, "%8.2f", graph->cost[e]);
       if( edgemark != NULL && edgemark[e / 2] == TRUE  )
 	 SCIPgmlWriteEdge(file, (unsigned int)graph->tail[e], (unsigned int)graph->head[e], label, "#ff0000");

@@ -149,7 +149,6 @@ typedef struct shortest_path
    signed int   edge;         /* First edge to go                            */
 } PATH;
 
-
 #define flipedge(edge) (((edge % 2) == 0) ? edge + 1 : edge - 1)
 
 #define PATH_NIL    ((PATH*)0)
@@ -284,6 +283,7 @@ extern SCIP_RETCODE hcrcbound_reduce(SCIP*, GRAPH*, PATH*, SCIP_Real*, SCIP_Real
  */
 extern SCIP_RETCODE    sd_reduction(SCIP*, GRAPH*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, SCIP_Real*, int*, int*, int*, int*, int, unsigned int*);
 extern SCIP_RETCODE    sdsp_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
+extern SCIP_RETCODE    sdsp_sap_reduction(SCIP*, GRAPH*, PATH*, PATH*, int*, int*, int*, int*, int*, int*, int);
 extern SCIP_RETCODE    sd_red(SCIP*, GRAPH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    sdpc_reduction(SCIP*, GRAPH*, PATH*, SCIP_Real*, int*, int*, int*, int*, int*, int*);
 extern SCIP_RETCODE    sd2_reduction(SCIP*, GRAPH*, SCIP_Real*, int*, int*);
@@ -307,6 +307,7 @@ extern SCIP_RETCODE degree_test_dir(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE degree_test_pc(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE degree_test_mw(SCIP*, GRAPH*, SCIP_Real*, int*, int);
 extern SCIP_RETCODE ansReduction(SCIP*, GRAPH*, SCIP_Real*, int*, int*);
+extern SCIP_RETCODE rptReduction(SCIP*, GRAPH*, SCIP_Real*, int*);
 extern SCIP_RETCODE ansadvReduction(SCIP*, GRAPH*, SCIP_Real*, int*, int*);
 extern SCIP_RETCODE ansadv2Reduction(SCIP*, GRAPH*, SCIP_Real*, int*, int*);
 extern SCIP_RETCODE nnpReduction(SCIP*, GRAPH*, SCIP_Real*, int*, int*, int*, int*, int, char*);
