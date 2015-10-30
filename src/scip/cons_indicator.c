@@ -959,7 +959,7 @@ SCIP_RETCODE checkIIS(
          assert( SCIPisInfinity(scip, -linlhs) || SCIPisInfinity(scip, linrhs) );
          if ( SCIPisInfinity(scip, linrhs) )
          {
-            linrhs = linlhs;
+            linrhs = -linlhs;
             assert( linrhs > -SCIPinfinity(scip) );
             sign = -1.0;
          }
