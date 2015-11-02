@@ -9351,7 +9351,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
 
          /* bound may have changed in propagation; ensure that fracval <= 1 */
          if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
-            solval = bound;
+            bound = solval;
 
          /* ensure finiteness */
          bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound)); /*lint !e666*/
