@@ -465,7 +465,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    SCIP_SOL* subsol;
    /*SCIP_SOL* newsol;*/
    SCIP_HEURDATA* heurdata;
-   char solfilename[1024];
+   /*char solfilename[1024];*/
    FILE* solfile;
    SCIP_RETCODE retcode = SCIP_OKAY;
    SCIP_Real timelimit;
@@ -774,9 +774,9 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
    /*sprintf(solfilename, "%s.rsol", heurdata->filename);
    solfile = fopen(solfilename, "w");
-   SCIP_CALL(SCIPprintBestSol(subscip, solfile, 0));*/
+   SCIP_CALL(SCIPprintBestSol(subscip, solfile, 0));
 
-   fclose(solfile);
+   fclose(solfile);*/
 
    assert(SCIPgetNSols(subscip) > 0);
    if( SCIPisFeasZero(scip, SCIPgetPrimalbound(subscip)) )
