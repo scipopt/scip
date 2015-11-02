@@ -466,7 +466,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    /*SCIP_SOL* newsol;*/
    SCIP_HEURDATA* heurdata;
    /*char solfilename[1024];*/
-   FILE* solfile;
+   /*FILE* solfile;*/
    SCIP_RETCODE retcode = SCIP_OKAY;
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
