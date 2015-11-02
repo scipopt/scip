@@ -35,7 +35,7 @@
 #define HEUR_DESC             "repair heuristic"
 #define HEUR_DISPCHAR         '!'
 #define HEUR_PRIORITY         0
-#define HEUR_FREQ             0
+#define HEUR_FREQ             -1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
@@ -400,8 +400,11 @@ SCIP_DECL_HEUREXIT(heurExitRepair)
    time = heurdata->subpresoltime;
    runs = heurdata->runs;
 
-   heurdata->relinvalidvars = (SCIP_Real)heurdata->ninvalidvars/(SCIP_Real)heurdata->norvars;
-   heurdata->relinvalidcons = (SCIP_Real)heurdata->ninvalidcons/(SCIP_Real)heurdata->norcons;
+   /* TODO remove this from heuristic data */
+   heurdata->relinvalidvars = MAX((SCIP_Real)heurdata->norvars, 1.0);
+   heurdata->relinvalidvars = heurdata->ninvalidvars/heurdata->relinvalidvars;
+   heurdata->relinvalidcons = MAX((SCIP_Real)heurdata->norcons, 1.0);
+   heurdata->relinvalidcons = heurdata->ninvalidcons/heurdata->relinvalidcons;
 
    relvars = heurdata->relinvalidvars;
    relcons = heurdata->relinvalidcons;
@@ -465,6 +468,8 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    char solfilename[1024];
    FILE* solfile;
    SCIP_RETCODE retcode = SCIP_OKAY;
+   SCIP_Real timelimit;
+   SCIP_Real memorylimit;
    char probname[SCIP_MAXSTRLEN];
    int i;
    int nbinvars;
@@ -522,6 +527,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    /* initializes the subscip */
    SCIP_CALL( SCIPcreate(&subscip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
+   SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
 
    /* get name of the original problem and add the string "_repairsub" */
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_repairsub",
@@ -576,6 +582,8 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
       {
          ub = orub;
       }
+      if( !SCIPisFeasZero(scip, slack) && SCIP_VARTYPE_BINARY == vartype )
+         vartype = SCIP_VARTYPE_INTEGER;
 
       /* Adds the sub representing variable to the subscip. */
       SCIP_CALL(SCIPcreateVarBasic(subscip, &subvars[i], varname, lb, ub, 0, vartype));
@@ -686,6 +694,30 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    if( !success )
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "Repair was not good enough.\n");
 
+   /* check whether there is enough time and memory left */
+   SCIP_CALL(SCIPgetRealParam(scip, "limits/time", &timelimit));
+   if( !SCIPisInfinity(scip, timelimit) )
+      timelimit -= SCIPgetSolvingTime(scip);
+   SCIP_CALL(SCIPgetRealParam(scip, "limits/memory", &memorylimit));
+
+   /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
+   if( !SCIPisInfinity(scip, memorylimit) )
+   {
+      memorylimit -= SCIPgetMemUsed(scip) / 1048576.0;
+      memorylimit -= SCIPgetMemExternEstim(scip) / 1048576.0;
+   }
+
+   /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
+   if( timelimit <= 0.0
+         || memorylimit <= 2.0 * SCIPgetMemExternEstim(scip) / 1048576.0 )
+      goto TERMINATE;
+
+   /* set limits for the subproblem */
+   /*heurdata->nodelimit = nstallnodes;
+   SCIP_CALL(SCIPsetLongintParam(subscip, "limits/nodes", nstallnodes));*/
+   SCIP_CALL(SCIPsetRealParam(subscip, "limits/time", timelimit));
+   SCIP_CALL(SCIPsetRealParam(subscip, "limits/memory", memorylimit));
+
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL(SCIPsetSubscipsOff(subscip, TRUE));
 
@@ -719,6 +751,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
       return SCIP_OKAY;
    }
 
+   SCIPwriteOrigProblem(subscip,"stein27_inf_friday.cip",NULL,FALSE);
    /* solve the subproblem */
    retcode = SCIPsolve(subscip);
 
@@ -739,21 +772,20 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
 
    /* print solving statistics of subproblem if we are in SCIP's debug mode */
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
-   sprintf(solfilename, "%s.rsol", heurdata->filename);
+   /*sprintf(solfilename, "%s.rsol", heurdata->filename);
    solfile = fopen(solfilename, "w");
-   SCIP_CALL(SCIPprintBestSol(subscip, solfile, 0));
+   SCIP_CALL(SCIPprintBestSol(subscip, solfile, 0));*/
 
    fclose(solfile);
 
    assert(SCIPgetNSols(subscip) > 0);
-
-   if( SCIPisFeasEQ(scip, SCIPgetPrimalbound(subscip), 0.0) )
+   if( SCIPisFeasZero(scip, SCIPgetPrimalbound(subscip)) )
    {
       SCIP_CALL(createNewSol(scip, subscip, subvars, heur, SCIPgetBestSol(subscip), &success));
-      /*SCIP_CALL(SCIPtrySol(scip, newsol, FALSE, FALSE, FALSE, FALSE, &success));*/
-      assert(success || SCIPgetNSols(scip) > 0);
+      /*assert(success || SCIPgetNSols(scip) > 0);*/
 
-      *result = SCIP_FOUNDSOL;
+      if( success )
+         *result = SCIP_FOUNDSOL;
    }
 
    heurdata->subiters = SCIPgetNLPIterations(subscip);
