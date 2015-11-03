@@ -2819,9 +2819,9 @@ SCIP_RETCODE SCIPsolveLinearProb3(
    SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
    )
 {
-   SCIP_Real A_[9];
-   SCIP_Real b_[3];
-   int pivot_[3];
+   SCIP_Real Acopy[9];
+   SCIP_Real copyb[3];
+   int copypivot[3];
    const int N = 3;
    int info;
 
@@ -2831,7 +2831,7 @@ SCIP_RETCODE SCIPsolveLinearProb3(
    assert(success != NULL);
 
    /* compute the LU factorization */
-   IpLapackDgetrf(N, A_, pivot_, N, info);
+   IpLapackDgetrf(N, Acopy, copypivot, N, info);
 
    if( info != 0 )
    {
@@ -2843,10 +2843,10 @@ SCIP_RETCODE SCIPsolveLinearProb3(
       *success = TRUE;
 
       /* solve linear problem */
-      IpLapackDgetrs(N, 1, A_, N, pivot_, b_, N);
+      IpLapackDgetrs(N, 1, Acopy, N, copypivot, copyb, N);
 
       /* copy the solution */
-      BMScopyMemoryArray(x, b_, N);
+      BMScopyMemoryArray(x, copyb, N);
    }
 
    return SCIP_OKAY;
@@ -2866,9 +2866,9 @@ SCIP_RETCODE SCIPsolveLinearProb(
    SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
    )
 {
-   SCIP_Real* A_;
-   SCIP_Real* b_;
-   int* pivot_;
+   SCIP_Real* Acopy;
+   SCIP_Real* bcopy;
+   int* pivotcopy;
    int info;
 
    assert(N > 0);
@@ -2884,16 +2884,16 @@ SCIP_RETCODE SCIPsolveLinearProb(
       return SCIP_OKAY;
    }
 
-   A_ = NULL;
-   b_ = NULL;
-   pivot_ = NULL;
+   Acopy = NULL;
+   bcopy = NULL;
+   pivotcopy = NULL;
 
-   SCIP_ALLOC( BMSduplicateMemoryArray(&A_, A, N*N) );
-   SCIP_ALLOC( BMSduplicateMemoryArray(&b_, b, N*N) );
-   SCIP_ALLOC( BMSallocMemoryArray(&pivot_, N) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&Acopy, A, N*N) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&bcopy, b, N) );
+   SCIP_ALLOC( BMSallocMemoryArray(&pivotcopy, N) );
 
    /* compute the LU factorization */
-   IpLapackDgetrf(N, A_, pivot_, N, info);
+   IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
 
    if( info != 0 )
    {
@@ -2905,15 +2905,15 @@ SCIP_RETCODE SCIPsolveLinearProb(
       *success = TRUE;
 
       /* solve linear problem */
-      IpLapackDgetrs(N, 1, A_, N, pivot_, b_, N);
+      IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
 
       /* copy the solution */
-      BMScopyMemoryArray(x, b_, N);
+      BMScopyMemoryArray(x, bcopy, N);
    }
 
-   BMSfreeMemoryArray(&pivot_);
-   BMSfreeMemoryArray(&b_);
-   BMSfreeMemoryArray(&A_);
+   BMSfreeMemoryArray(&pivotcopy);
+   BMSfreeMemoryArray(&bcopy);
+   BMSfreeMemoryArray(&Acopy);
 
    return SCIP_OKAY;
 }
