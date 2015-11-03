@@ -2820,8 +2820,8 @@ SCIP_RETCODE SCIPsolveLinearProb3(
    )
 {
    SCIP_Real Acopy[9];
-   SCIP_Real copyb[3];
-   int copypivot[3];
+   SCIP_Real bcopy[3];
+   int pivotcopy[3];
    const int N = 3;
    int info;
 
@@ -2831,7 +2831,7 @@ SCIP_RETCODE SCIPsolveLinearProb3(
    assert(success != NULL);
 
    /* compute the LU factorization */
-   IpLapackDgetrf(N, Acopy, copypivot, N, info);
+   IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
 
    if( info != 0 )
    {
@@ -2843,10 +2843,10 @@ SCIP_RETCODE SCIPsolveLinearProb3(
       *success = TRUE;
 
       /* solve linear problem */
-      IpLapackDgetrs(N, 1, Acopy, N, copypivot, copyb, N);
+      IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
 
       /* copy the solution */
-      BMScopyMemoryArray(x, copyb, N);
+      BMScopyMemoryArray(x, bcopy, N);
    }
 
    return SCIP_OKAY;
