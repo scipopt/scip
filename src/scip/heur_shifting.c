@@ -784,21 +784,14 @@ SCIP_DECL_HEUREXEC(heurExecShifting) /*lint --e{715}*/
          int rowpos;
          int direction;
 
-         rowidx = -1;
-
+         assert(nviolfracrows == 0 || nfrac > 0);
          /* violated rows containing fractional variables are preferred; if such a row exists, choose the last one from the list
           * (at position nviolfracrows - 1) because removing this row will cause one swapping operation less than other rows
           */
-         if( nfrac > 0 )
-         {
-            if( nviolfracrows ==  0 )
-               rowidx =  -1;
-            else
-               rowidx =  nviolfracrows - 1;
-         }
-
-         /* there is no violated row containing a fractional variable, select a violated row uniformly at random */
-         if( rowidx == -1 )
+         if( nviolfracrows > 0 )
+            rowidx =  nviolfracrows - 1;
+         else
+            /* there is no violated row containing a fractional variable, select a violated row uniformly at random */
             rowidx = SCIPgetRandomInt(0, nviolrows-1, &heurdata->randseed);
 
          assert(0 <= rowidx && rowidx < nviolrows);
