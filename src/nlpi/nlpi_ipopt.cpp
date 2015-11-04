@@ -595,7 +595,11 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    {
       std::istringstream is(data->defoptions);
 
+#if (IPOPT_VERSION_MAJOR > 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR > 12) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 12 && IPOPT_VERSION_RELEASE >= 5)
+      if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is, true) )
+#else
       if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is) )
+#endif
       {
          SCIPerrorMessage("Error when modifiying Ipopt options using options string\n%s\n", data->defoptions.c_str());
          return SCIP_ERROR;
