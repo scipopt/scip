@@ -8705,7 +8705,6 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsSetpack(scip, &cons, consname, 2, twovars,
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
-      SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
 
       /* if the constraint gets globally added, we also add the clique information */
       if( !SCIPconsIsLocal(cons) )
@@ -8722,7 +8721,9 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
             SCIPdebugMessage("new clique of conflict constraint %s led to infeasibility\n", consname);
          }
       }
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+      /* add conflict to SCIP */
+      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode) );
 
       *result = SCIP_CONSADDED;
 

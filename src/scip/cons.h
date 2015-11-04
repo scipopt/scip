@@ -40,6 +40,7 @@
 #include "scip/type_tree.h"
 #include "scip/type_sepastore.h"
 #include "scip/type_cons.h"
+#include "scip/type_branch.h"
 #include "scip/pub_cons.h"
 
 #ifndef NDEBUG

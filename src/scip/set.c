@@ -94,6 +94,7 @@
                                                  *   conflict graph (-1: use every intermediate constraint) */
 #define SCIP_DEFAULT_CONF_MAXCONSS           10 /**< maximal number of conflict constraints accepted at an infeasible node
                                                  *   (-1: use all generated conflict constraints) */
+#define SCIP_DEFAULT_CONF_MAXSTORESIZE     8192 /**< */
 #define SCIP_DEFAULT_CONF_RECONVLEVELS       -1 /**< number of depth levels up to which UIP reconvergence constraints are
                                                  *   generated (-1: generate reconvergence constraints in all depth levels) */
 #define SCIP_DEFAULT_CONF_ENABLE           TRUE /**< conflict analysis be enabled? */
@@ -1211,6 +1212,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/maxconss",
          "maximal number of conflict constraints accepted at an infeasible node (-1: use all generated conflict constraints)",
          &(*set)->conf_maxconss, TRUE, SCIP_DEFAULT_CONF_MAXCONSS, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "conflict/maxstoresize",
+         "maximal size of conflict storage",
+         &(*set)->conf_maxstoresize, TRUE, SCIP_DEFAULT_CONF_MAXSTORESIZE, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/preferbinary",

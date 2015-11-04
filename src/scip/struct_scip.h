@@ -39,6 +39,7 @@
 #include "scip/type_tree.h"
 #include "scip/type_pricestore.h"
 #include "scip/type_sepastore.h"
+#include "scip/type_conflictstore.h"
 #include "scip/type_cutpool.h"
 #include "scip/type_branch.h"
 #include "scip/type_conflict.h"
@@ -84,6 +85,7 @@ struct Scip
    /* SOLVING */
    SCIP_PRICESTORE*      pricestore;         /**< storage for priced variables */
    SCIP_SEPASTORE*       sepastore;          /**< storage for separated cuts */
+   SCIP_CONFLICTSTORE*   conflictstore;      /**< storage for conflicts */
    SCIP_CUTPOOL*         cutpool;            /**< global cut pool */
    SCIP_CUTPOOL*         delayedcutpool;     /**< global delayed cut pool */
 };

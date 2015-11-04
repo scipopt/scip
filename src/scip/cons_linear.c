@@ -15750,9 +15750,8 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
          cons = upgdcons;
       }
 
-      /* add constraint to SCIP */
-      SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
-      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      /* add conflict to SCIP */
+      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode) );
 
       *result = SCIP_CONSADDED;
    }

@@ -168,6 +168,7 @@ struct SCIP_Set
                                               *   graph (-1: use every intermediate constraint) */
    int                   conf_maxconss;      /**< maximal number of conflict constraints accepted at an infeasible node
                                               *   (-1: use all generated conflict constraints) */
+   int                   conf_maxstoresize;  /**< maximal size of conflict storage */
    int                   conf_reconvlevels;  /**< number of depth levels up to which UIP reconvergence constraints are
                                               *   generated (-1: generate reconvergence constraints in all depth levels) */
    SCIP_Bool             conf_enable;        /**< should conflict analysis be enabled? */

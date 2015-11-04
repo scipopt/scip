@@ -747,12 +747,14 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
          (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
          SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
                FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
-         SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
+
 #ifdef SCIP_OUTPUT
          SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
          SCIPinfoMessage(scip, NULL, ";\n");
 #endif
-         SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+         /* add constraint to SCIP */
+         SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode) );
 
          *result = SCIP_CONSADDED;
       }

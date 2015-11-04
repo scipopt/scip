@@ -64,6 +64,7 @@
 #include "scip/tree.h"
 #include "scip/pricestore.h"
 #include "scip/sepastore.h"
+#include "scip/conflictstore.h"
 #include "scip/cutpool.h"
 #include "scip/solve.h"
 #include "scip/scipgithash.h"
@@ -720,6 +721,7 @@ SCIP_RETCODE SCIPcreate(
    (*scip)->transprob = NULL;
    (*scip)->pricestore = NULL;
    (*scip)->sepastore = NULL;
+   (*scip)->conflictstore = NULL;
    (*scip)->cutpool = NULL;
    (*scip)->delayedcutpool = NULL;
    (*scip)->reopt = NULL;
@@ -11904,6 +11906,50 @@ int SCIPgetNCheckConss(
  * local subproblem methods
  */
 
+/** adds a conflict to the given node or globally to the problem is @p node == NULL.
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPaddConflict(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODE*            node,               /**< node to add conflict (or NULL if global) */
+   SCIP_CONS*            cons,               /**< constraint representing the conflict */
+   SCIP_NODE*            validnode           /**< node at which the constraint is valid (or NULL) */
+   )
+{
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(scip->conflictstore != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPaddConflict", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   /* add a global conflict */
+   if( node == NULL )
+   {
+      SCIP_CALL( SCIPaddCons(scip, cons) );
+   }
+   /* add a local conflict */
+   else
+   {
+      SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
+   }
+
+   /* add the conflict to the conflict storage */
+   SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat,
+         scip->transprob, cons, node == NULL ? SCIPtreeGetRootNode(scip->tree) : node, node == NULL) );
+
+   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   return SCIP_OKAY;
+}
+
 /** adds constraint to the given node (and all of its subnodes), even if it is a global constraint;
  *  It is sometimes desirable to add the constraint to a more local node (i.e., a node of larger depth) even if
  *  the constraint is also valid higher in the tree, for example, if one wants to produce a constraint which is
@@ -13831,6 +13877,7 @@ SCIP_RETCODE initSolve(
    /* initialize solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
+   SCIP_CALL( SCIPconflictstoreCreate(&scip->conflictstore) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, FALSE) );
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
@@ -13965,6 +14012,9 @@ SCIP_RETCODE freeSolve(
     * subroots have to be released
     */
    SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
+
+   /* deinitialize conflict storage */
+   SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->mem->probmem, scip->set) );
 
    /* deinitialize transformed problem */
    SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, restart) );
