@@ -11943,7 +11943,8 @@ SCIP_RETCODE SCIPaddConflict(
 
    /* add the conflict to the conflict storage */
    SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat,
-         scip->transprob, cons, node == NULL ? SCIPtreeGetRootNode(scip->tree) : node, node == NULL) );
+         scip->transprob, cons, node == NULL ? SCIPtreeGetRootNode(scip->tree) : node,
+         validnode == NULL ? SCIPtreeGetRootNode(scip->tree) : validnode, node == NULL) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 

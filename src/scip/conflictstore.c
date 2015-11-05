@@ -30,7 +30,7 @@
 #include "scip/struct_conflictstore.h"
 
 
-#define DEFAULT_CONFLICTSTORE_SIZE        8192 /* maximal size of conflict storage */
+#define DEFAULT_CONFLICTSTORE_SIZE       10000 /* maximal size of conflict storage */
 
 /*
  * dynamic memory arrays
@@ -132,19 +132,19 @@ SCIP_RETCODE cleanDeletedConflicts(
 
    assert(conflictstore != NULL);
 
-   ndeletedconflicts = 0;
-   for( i = 0; i < conflictstore->conflictsize; i++ )
-   {
-      j = (i + conflictstore->firstused) % conflictstore->conflictsize;
-
-      if( j == conflictstore->firstfree )
-         break;
-
-      if( SCIPconsIsDeleted(conflictstore->conflicts[j]) )
-         ++ndeletedconflicts;
-   }
-
-   printf("%d/%d conflicts marked as deleted at node %lld\n", ndeletedconflicts, conflictstore->nconflicts, conflictstore->lastnodenum);
+//   ndeletedconflicts = 0;
+//   for( i = 0; i < conflictstore->conflictsize; i++ )
+//   {
+//      j = (i + conflictstore->firstused) % conflictstore->conflictsize;
+//
+//      if( j == conflictstore->firstfree )
+//         break;
+//
+//      if( SCIPconsIsDeleted(conflictstore->conflicts[j]) )
+//         ++ndeletedconflicts;
+//   }
+//
+//   printf("%d/%d conflicts marked as deleted at node %lld\n", ndeletedconflicts, conflictstore->nconflicts, conflictstore->lastnodenum);
 
    return SCIP_OKAY;
 }
@@ -266,6 +266,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIP_PROB*            transprob,
    SCIP_CONS*            cons,
    SCIP_NODE*            node,
+   SCIP_NODE*            validnode,
    SCIP_Bool             global
    )
 {
@@ -278,6 +279,8 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    assert(transprob != NULL);
    assert(cons != NULL);
    assert(node != NULL);
+   assert(validnode != NULL);
+   assert(set->conf_allowlocal || SCIPnodeGetDepth(validnode) == 0);
 
    nconflicts = conflictstore->nconflicts;
 
@@ -298,7 +301,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIP_CALL( conflictstoreCleanUpStorage(conflictstore, blkmem, set, stat, transprob) );
 
    /* update the last seen node */
-   conflictstore->lastnodenum = SCIPnodeGetNumber(node);
+   conflictstore->lastnodenum = SCIPnodeGetNumber(validnode);
 
    SCIPconsCapture(cons);
    conflictstore->conflicts[conflictstore->firstfree] = cons;
@@ -309,6 +312,8 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
       conflictstore->firstused = 0;
 
    SCIPdebugMessage("add conflict <%s> to conflict store at position %d\n", SCIPconsGetName(cons), conflictstore->firstfree);
+   SCIPdebugMessage(" -> found at node %llu (d: %d), valid at node %llu (d: %d)\n", SCIPnodeGetNumber(node),
+         SCIPnodeGetDepth(node), SCIPnodeGetNumber(validnode), SCIPnodeGetDepth(validnode));
 
    /* update pointer to the first free slot */
    conflictstoreUpdateFirstfree(conflictstore);

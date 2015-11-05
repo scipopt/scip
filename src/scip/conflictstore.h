@@ -62,6 +62,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIP_PROB*            transprob,
    SCIP_CONS*            cons,
    SCIP_NODE*            node,
+   SCIP_NODE*            validnode,
    SCIP_Bool             global
    );
 
