@@ -55,18 +55,18 @@ struct SCIP_HeurData
 {
    char*                 filename;           /**< file name of a solution to be used as infeasible starting point */
    SCIP_Bool             roundit;            /**< if it is True : fractional variables which are not fractional in the given
-                                              *    solution are rounded, if it is FALSE : solvingprocess of this heuristic is stoped*/
-   int                   subnodes;
-   int                   subiters;
-   SCIP_Real             subpresoltime;
-   int                   runs;
+                                              *    solution are rounded, if it is FALSE : solvingprocess of this heuristic is stoped */
+   int                   subnodes;           /** number of nodes which were necessary to solve the subscip */
+   int                   subiters;           /** contains total number of iterations used in primal and dual simplex and barrier algorithm to solve the subscip */
+   SCIP_Real             subpresoltime;      /** time for presolving the subscip */
+   int                   runs;               /** number of branch and bound runs performed to solve the subscip */
 
-   int                   ninvalidvars;
-   int                   norvars;
-   SCIP_Real             relinvalidvars;
-   int                   ninvalidcons;
-   int                   norcons;
-   SCIP_Real             relinvalidcons;
+   int                   ninvalidvars;       /** number of invalid vars in the given solution */
+   int                   norvars;            /** number of all vars in the given problem */
+   SCIP_Real             relinvalidvars;     /** relative number of invalid vars */
+   int                   ninvalidcons;       /** number of invalid cons in the given solution */
+   int                   norcons;            /** number of all cons in the given problem */
+   SCIP_Real             relinvalidcons;     /** relative number of invalid cons */
 };
 
 
