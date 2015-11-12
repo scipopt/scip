@@ -17,7 +17,7 @@
  * @brief  methods for storing conflicts
  * @author Jakob Witzig
  */
-
+#define SCIP_DEBUG
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -26,6 +26,7 @@
 #include "scip/cons.h"
 #include "scip/set.h"
 #include "scip/tree.h"
+#include "scip/misc.h"
 
 #include "scip/struct_conflictstore.h"
 
@@ -55,24 +56,31 @@ SCIP_RETCODE conflictstoreEnsureCutsMem(
    {
       int newsize;
       int i;
-      int j;
 
+      /* initialize the complete data structure */
       if( conflictstore->conflictsize == 0 )
-         newsize = MIN(set->conf_maxstoresize, DEFAULT_CONFLICTSTORE_SIZE);
-      else
-         newsize = MIN(set->conf_maxstoresize, conflictstore->conflictsize * 2);
-
-      SCIP_ALLOC( BMSreallocMemoryArray(&conflictstore->conflicts, newsize) );
-
-      /* move all conflicts stored in slots before firstused to the end */
-      j = conflictstore->conflictsize;
-      conflictstore->firstfree = conflictstore->conflictsize;
-      for( i = 0; i < conflictstore->firstused; i++ )
       {
-         assert(j < newsize);
-         conflictstore->conflicts[j] = conflictstore->conflicts[i];
+         newsize = MIN(set->conf_maxstoresize, DEFAULT_CONFLICTSTORE_SIZE);
+         SCIP_CALL( SCIPqueueCreate(&conflictstore->slotqueue, newsize, 2) );
+         SCIP_CALL( SCIPqueueCreate(&conflictstore->orderqueue, newsize, 2) );
+         SCIP_ALLOC( BMSallocMemoryArray(&conflictstore->conflicts, newsize) );
+         SCIP_ALLOC( BMSallocMemoryArray(&conflictstore->primalbounds, newsize) );
+      }
+      else
+      {
+         newsize = MIN(set->conf_maxstoresize, conflictstore->conflictsize * 2);
+         SCIP_ALLOC( BMSreallocMemoryArray(&conflictstore->conflicts, newsize) );
+         SCIP_ALLOC( BMSreallocMemoryArray(&conflictstore->primalbounds, newsize) );
+      }
+
+      /* add all new slots (oldsize,...,newsize-1) withdeclaration a shift of +1 to the slotqueue */
+      for( i = conflictstore->conflictsize; i < newsize; i++ )
+      {
+#ifdef SCIP_DEBUG
          conflictstore->conflicts[i] = NULL;
-         ++conflictstore->firstfree;
+         conflictstore->primalbounds[i] = SCIP_INVALID;
+#endif
+         SCIP_CALL( SCIPqueueInsert(conflictstore->slotqueue, (void*) (size_t) (i+1)) );
       }
       conflictstore->conflictsize = newsize;
    }
@@ -82,72 +90,18 @@ SCIP_RETCODE conflictstoreEnsureCutsMem(
 }
 
 
-/* update pointer to the first used slot */
-static
-void conflictstoreUpdateFirstused(
-   SCIP_CONFLICTSTORE*   conflictstore
-   )
-{
-   assert(conflictstore != NULL);
-
-   if( conflictstore->nconflicts == 0 )
-      conflictstore->firstused = -1;
-   else
-   {
-      ++conflictstore->firstused;
-      conflictstore->firstused %= conflictstore->conflictsize;
-   }
-}
-
-
-/* update pointer to the first free slot */
-static
-void conflictstoreUpdateFirstfree(
-   SCIP_CONFLICTSTORE*   conflictstore
-   )
-{
-   assert(conflictstore != NULL);
-
-   if( conflictstore->nconflicts == conflictstore->conflictsize )
-      conflictstore->firstfree = -1;
-   else
-   {
-      ++conflictstore->firstfree;
-      conflictstore->firstfree %= conflictstore->conflictsize;
-   }
-}
-
-/** remove all deleted conflicts from the storage
- *
- * TODO currently, this only counts the number of conflicts marked as deleted
- */
+#if 0
+/** remove all deleted conflicts from the storage */
 static
 SCIP_RETCODE cleanDeletedConflicts(
    SCIP_CONFLICTSTORE*   conflictstore
    )
 {
-   int ndeletedconflicts;
-   int i;
-   int j;
-
    assert(conflictstore != NULL);
-
-//   ndeletedconflicts = 0;
-//   for( i = 0; i < conflictstore->conflictsize; i++ )
-//   {
-//      j = (i + conflictstore->firstused) % conflictstore->conflictsize;
-//
-//      if( j == conflictstore->firstfree )
-//         break;
-//
-//      if( SCIPconsIsDeleted(conflictstore->conflicts[j]) )
-//         ++ndeletedconflicts;
-//   }
-//
-//   printf("%d/%d conflicts marked as deleted at node %lld\n", ndeletedconflicts, conflictstore->nconflicts, conflictstore->lastnodenum);
 
    return SCIP_OKAY;
 }
+#endif
 
 /** clean up the storage */
 static
@@ -160,6 +114,8 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    )
 {
    SCIP_CONS* conflict;
+   SCIP_Bool storagecleaned;
+   int ndelconfs;
 
    assert(conflictstore != NULL);
    assert(blkmem != NULL);
@@ -168,38 +124,59 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    assert(transprob != NULL);
 
    /* the storage is empty  */
-   if( conflictstore->firstused == -1 )
+   if( conflictstore->nconflicts == 0 )
+   {
+      assert(SCIPqueueNElems(conflictstore->slotqueue) == conflictstore->conflictsize);
       return SCIP_OKAY;
+   }
 
    assert(conflictstore->nconflicts >= 1);
-
-   SCIP_CALL( cleanDeletedConflicts(conflictstore) );
 
    /* the storage is not full */
    if( conflictstore->nconflicts < conflictstore->conflictsize )
       return SCIP_OKAY;
 
-   conflict = conflictstore->conflicts[conflictstore->firstused];
-   assert(conflict != NULL);
+   ndelconfs = 0;
+   storagecleaned = FALSE;
+   do
+   {
+      int idx;
 
-   SCIPdebugMessage("clean up conflict store\n");
+      idx = ((int) (size_t) SCIPqueueRemove(conflictstore->orderqueue)) - 1;
+      assert(idx >= 0 && idx < conflictstore->conflictsize);
+      assert(conflictstore->conflicts[idx] != NULL);
 
-   SCIP_CALL( SCIPconsDelete(conflict, blkmem, set, stat, transprob) );
-   SCIP_CALL( SCIPconsRelease(&conflict, blkmem, set) );
-   conflictstore->conflicts[conflictstore->firstused] = NULL;
-   --conflictstore->nconflicts;
+      /* get the oldest conflict */
+      conflict = conflictstore->conflicts[idx];
 
-   /* update pointer to the first free and first used slot */
-   conflictstore->firstfree = conflictstore->firstused;
-   conflictstoreUpdateFirstused(conflictstore);
+      /* check whether the constraint is already marked as deleted */
+      if( !SCIPconsIsDeleted(conflict) )
+      {
+         /* mark the constraint as deleted */
+         SCIP_CALL( SCIPconsDelete(conflict, blkmem, set, stat, transprob) );
 
-   assert(conflictstore->firstused != conflictstore->firstfree);
-   assert(conflictstore->firstused >= 0);
-   assert(conflictstore->firstfree >= 0);
-   assert(conflictstore->firstused < conflictstore->firstfree
-       || conflictstore->conflictsize - conflictstore->nconflicts == conflictstore->firstused - conflictstore->firstfree);
-   assert(conflictstore->firstused > conflictstore->firstfree
-       || conflictstore->nconflicts == conflictstore->firstfree - conflictstore->firstused);
+         storagecleaned = TRUE;
+      }
+
+      /* release the constraint */
+      SCIP_CALL( SCIPconsRelease(&conflict, blkmem, set) );
+
+#ifdef SCIP_DEBUG
+      /* clean the conflict and primal bound array */
+      conflictstore->conflicts[idx] = NULL;
+      conflictstore->primalbounds[idx] = SCIP_INVALID;
+#endif
+
+      /* add the id shifted by +1 to the queue of empty slots */
+      SCIP_CALL( SCIPqueueInsert(conflictstore->slotqueue, (void*) (size_t) (idx+1)) );
+
+      ++ndelconfs;
+      --conflictstore->nconflicts;
+   }
+   while( !storagecleaned );
+
+   SCIPdebugMessage("clean up conflict store: removed %d conflicts, %d currently stored\n",
+         ndelconfs, conflictstore->nconflicts);
 
    return SCIP_OKAY;
 }
@@ -214,11 +191,12 @@ SCIP_RETCODE SCIPconflictstoreCreate(
    SCIP_ALLOC( BMSallocMemory(conflictstore) );
 
    (*conflictstore)->conflicts = NULL;
+   (*conflictstore)->primalbounds = NULL;
+   (*conflictstore)->slotqueue = NULL;
+   (*conflictstore)->orderqueue = NULL;
    (*conflictstore)->conflictsize = 0;
    (*conflictstore)->nconflicts = 0;
    (*conflictstore)->nconflictsfound = 0;
-   (*conflictstore)->firstfree = 0;
-   (*conflictstore)->firstused = -1;
    (*conflictstore)->lastnodenum = -1;
 
    return SCIP_OKAY;
@@ -231,27 +209,38 @@ SCIP_RETCODE SCIPconflictstoreFree(
    SCIP_SET*             set                 /**< global SCIP settings */
    )
 {
-   int i;
+   SCIP_CONS* conflict;
 
    assert(conflictstore != NULL);
    assert(*conflictstore != NULL);
 
-   for( i = 0; i < (*conflictstore)->conflictsize; i++ )
+   if( (*conflictstore)->orderqueue != NULL )
    {
-      int j;
+      assert((*conflictstore)->slotqueue != NULL);
 
-      j = (i + (*conflictstore)->firstused) % (*conflictstore)->conflictsize;
+      while( !SCIPqueueIsEmpty((*conflictstore)->orderqueue) )
+      {
+         int idx;
 
-      if( j == (*conflictstore)->firstfree )
-         break;
+         idx = ((int) (size_t) SCIPqueueRemove((*conflictstore)->orderqueue)) - 1;
+         assert(idx >= 0 && idx < (*conflictstore)->conflictsize);
+         assert((*conflictstore)->conflicts[idx] != NULL);
 
-      SCIP_CALL( SCIPconsRelease(&(*conflictstore)->conflicts[j], blkmem, set) );
+         /* get the conflict */
+         conflict = (*conflictstore)->conflicts[idx];
 
-      --(*conflictstore)->nconflicts;
+         SCIP_CALL( SCIPconsRelease(&conflict, blkmem, set) );
+         --(*conflictstore)->nconflicts;
+      }
+
+      /* free the queues */
+      SCIPqueueFree(&(*conflictstore)->slotqueue);
+      SCIPqueueFree(&(*conflictstore)->orderqueue);
    }
    assert((*conflictstore)->nconflicts == 0);
 
    BMSfreeMemoryArrayNull(&(*conflictstore)->conflicts);
+   BMSfreeMemoryArrayNull(&(*conflictstore)->primalbounds);
    BMSfreeMemory(conflictstore);
 
    return SCIP_OKAY;
@@ -267,10 +256,14 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIP_CONS*            cons,
    SCIP_NODE*            node,
    SCIP_NODE*            validnode,
-   SCIP_Bool             global
+   SCIP_Bool             global,
+   SCIP_CONFTYPE         conftype,
+   SCIP_Bool             cutoffinvolved,     /**< is a cutoff bound invaled in this conflict */
+   SCIP_Real             primalbound
    )
 {
    int nconflicts;
+   int idx;
 
    assert(conflictstore != NULL);
    assert(blkmem != NULL);
@@ -281,6 +274,9 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    assert(node != NULL);
    assert(validnode != NULL);
    assert(set->conf_allowlocal || SCIPnodeGetDepth(validnode) == 0);
+   assert(conftype != SCIP_CONFTYPE_UNKNOWN);
+   assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || cutoffinvolved);
+   assert(!cutoffinvolved || (cutoffinvolved && !SCIPsetIsInfinity(set, REALABS(primalbound))));
 
    nconflicts = conflictstore->nconflicts;
 
@@ -290,10 +286,6 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    if( conflictstore->conflictsize == 0 )
    {
       assert(set->conf_maxstoresize == 0);
-
-      /* we need to release the constraint */
-      SCIPconsRelease(&cons, blkmem, set);
-
       return SCIP_OKAY;
    }
 
@@ -303,20 +295,25 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    /* update the last seen node */
    conflictstore->lastnodenum = SCIPnodeGetNumber(validnode);
 
+   /* get a free slot */
+   idx = ((int) (size_t) SCIPqueueRemove(conflictstore->slotqueue)-1);
+   assert(idx >= 0 && idx < conflictstore->conflictsize);
+
    SCIPconsCapture(cons);
-   conflictstore->conflicts[conflictstore->firstfree] = cons;
+   conflictstore->conflicts[idx] = cons;
+   conflictstore->primalbounds[idx] = primalbound;
+
+   /* add idx shifted by +1 to the ordering queue */
+   SCIP_CALL( SCIPqueueInsert(conflictstore->orderqueue, (void*) (size_t) (idx+1)) );
+
    ++conflictstore->nconflicts;
    ++conflictstore->nconflictsfound;
 
-   if( conflictstore->nconflicts == 1 )
-      conflictstore->firstused = 0;
-
-   SCIPdebugMessage("add conflict <%s> to conflict store at position %d\n", SCIPconsGetName(cons), conflictstore->firstfree);
-   SCIPdebugMessage(" -> found at node %llu (d: %d), valid at node %llu (d: %d)\n", SCIPnodeGetNumber(node),
+   SCIPdebugMessage("add conflict <%s> to conflict store at position %d\n", SCIPconsGetName(cons), idx);
+   SCIPdebugMessage(" -> conflict type: %d, cutoff involved = %u\n", conftype, cutoffinvolved);
+   SCIPdebugMessage(" -> current primal bound: %g\n", primalbound);
+   SCIPdebugMessage(" -> found at node %llu (depth: %d), valid at node %llu (depth: %d)\n", SCIPnodeGetNumber(node),
          SCIPnodeGetDepth(node), SCIPnodeGetNumber(validnode), SCIPnodeGetDepth(validnode));
-
-   /* update pointer to the first free slot */
-   conflictstoreUpdateFirstfree(conflictstore);
 
    return SCIP_OKAY;
 }

@@ -3898,6 +3898,9 @@ SCIP_RETCODE analyseInfeasibelCoreInsertion(
    {
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
+      /* change the conflict type */
+      SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
       SCIP_CALL( resolvePropagationCoretimes(scip, nvars, vars, durations, demands, capacity, hmin, hmax,
             infervar, inferdemand, inferpeak, inferpeak, NULL, usebdwidening, NULL, explanation) );
 
@@ -6433,6 +6436,9 @@ SCIP_RETCODE analyzeConflictOverload(
 
    /* initialize conflict analysis */
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+   /* change the conflict type */
+   SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
 
    /* flip earliest start time and latest completion time */
    if( !propest )

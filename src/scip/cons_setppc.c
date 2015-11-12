@@ -1946,6 +1946,10 @@ SCIP_RETCODE analyzeConflictZero(
 
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+   /* change the conflict type */
+   SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
    for( v = 0; v < consdata->nvars; ++v )
    {
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->vars[v]) );
@@ -1981,6 +1985,10 @@ SCIP_RETCODE analyzeConflictOne(
 
    /* initialize conflict analysis, and add the two variables assigned to one to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+   /* change the conflict type */
+   SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
    n = 0;
    for( v = 0; v < consdata->nvars && n < 2; ++v )
    {
@@ -8723,7 +8731,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       }
 
       /* add conflict to SCIP */
-      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode) );
+      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
 
       *result = SCIP_CONSADDED;
 

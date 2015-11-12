@@ -643,6 +643,9 @@ SCIP_RETCODE analyzeConflict(
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
+   /* change the conflict type */
+   SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
    if( lbintvar )
    {
       assert(intvar != NULL);
@@ -1083,6 +1086,9 @@ SCIP_RETCODE tightenedIntvar(
 
          SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
+         /* change the conflict type */
+         SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
          /* ??????????? use resolve method and only add binvars which are needed to exceed the upper bound */
 
          /* add conflicting variables */
@@ -1130,6 +1136,9 @@ SCIP_RETCODE tightenedIntvar(
             SCIPvarGetName(intvar), SCIPvarGetLbLocal(intvar), SCIPvarGetUbLocal(intvar), b, vals[b]);
 
          SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+         /* change the conflict type */
+         SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
 
          /* ??????????? use resolve method and only add binvars which are needed to fall below the lower bound */
 
@@ -1283,6 +1292,10 @@ SCIP_RETCODE processBinvarFixings(
 
          /* initialize conflict analysis, and add the two variables assigned to one to conflict candidate queue */
          SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+         /* change the conflict type */
+         SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
          n = 0;
 
          for( v = 0; v < nvars && n < 2; ++v )
@@ -1330,6 +1343,10 @@ SCIP_RETCODE processBinvarFixings(
 
             /* initialize conflict analysis, add all variables of infeasible constraint to conflict candidate queue */
             SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+            /* change the conflict type */
+            SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
             for( v = 0; v < nvars; ++v )
             {
                assert(SCIPvarGetUbLocal(vars[v]) < 0.5);

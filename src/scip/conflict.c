@@ -580,10 +580,13 @@ SCIP_RETCODE SCIPconflicthdlrExec(
    SCIP_BDCHGINFO**      bdchginfos,         /**< bound change resembling the conflict set */
    SCIP_Real*            relaxedbds,         /**< array with relaxed bounds which are efficient to create a valid conflict */
    int                   nbdchginfos,        /**< number of bound changes in the conflict set */
+   SCIP_CONFTYPE         conftype,           /**< type of the conflict */
+   SCIP_Bool             cutoffinvolved,     /**< depend the conflict on the cutoff bound? */
    SCIP_Bool             resolved,           /**< was the conflict set already used to create a constraint? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    )
 {
+
    assert(conflicthdlr != NULL);
    assert(set != NULL);
    assert(bdchginfos != NULL || nbdchginfos == 0);
@@ -597,7 +600,8 @@ SCIP_RETCODE SCIPconflicthdlrExec(
       SCIPclockStart(conflicthdlr->conflicttime, set);
 
       SCIP_CALL( conflicthdlr->conflictexec(set->scip, conflicthdlr, node, validnode, bdchginfos, relaxedbds, nbdchginfos,
-            set->conf_seperate, (SCIPnodeGetDepth(validnode) > 0), set->conf_dynamic, set->conf_removable, resolved, result) );
+            conftype, cutoffinvolved, set->conf_seperate, (SCIPnodeGetDepth(validnode) > 0), set->conf_dynamic,
+            set->conf_removable, resolved, result) );
 
       /* stop timing */
       SCIPclockStop(conflicthdlr->conflicttime, set);
@@ -925,6 +929,8 @@ void conflictsetClear(
    conflictset->conflictdepth = 0;
    conflictset->repropdepth = 0;
    conflictset->repropagate = TRUE;
+   conflictset->usescutoffbound = FALSE;
+   conflictset->conflicttype = (unsigned int)SCIP_CONFTYPE_UNKNOWN;
 }
 
 /** creates an empty conflict set */
@@ -977,6 +983,8 @@ SCIP_RETCODE conflictsetCopy(
    (*targetconflictset)->insertdepth = sourceconflictset->insertdepth;
    (*targetconflictset)->conflictdepth = sourceconflictset->conflictdepth;
    (*targetconflictset)->repropdepth = sourceconflictset->repropdepth;
+   (*targetconflictset)->usescutoffbound = sourceconflictset->usescutoffbound;
+   (*targetconflictset)->conflicttype = sourceconflictset->conflicttype;
 
    return SCIP_OKAY;
 }
@@ -1990,10 +1998,6 @@ SCIP_RETCODE detectImpliedBounds(
       }
       else if( *nredvars > 0 )
       {
-#ifdef SCIP_DEBUG
-         int nvars;
-#endif
-
          assert(bdchginfos == conflictset->bdchginfos);
          assert(relaxedbds == conflictset->relaxedbds);
          assert(sortvals == conflictset->sortvals);
@@ -2154,8 +2158,11 @@ SCIP_RETCODE conflictAddConflictCons(
       {
          SCIP_RESULT result;
 
+         assert(conflictset->conflicttype != (unsigned int)SCIP_CONFTYPE_UNKNOWN);
+
          SCIP_CALL( SCIPconflicthdlrExec(set->conflicthdlrs[h], set, tree->path[insertdepth],
-               tree->path[conflictset->validdepth], conflictset->bdchginfos, conflictset->relaxedbds, conflictset->nbdchginfos, *success, &result) );
+               tree->path[conflictset->validdepth], conflictset->bdchginfos, conflictset->relaxedbds,
+               conflictset->nbdchginfos, conflictset->conflicttype, conflictset->usescutoffbound, *success, &result) );
          if( result == SCIP_CONSADDED )
          {
             *success = TRUE;
@@ -2494,6 +2501,10 @@ SCIP_Bool SCIPconflictApplicable(
 {
    /* check, if propagation conflict analysis is enabled */
    if( !set->conf_enable || !set->conf_useprop )
+      return FALSE;
+
+   /* check, if the size of the conflict store is larger than 0 */
+   if( set->conf_maxstoresize == 0 )
       return FALSE;
 
    /* check, if there are any conflict handlers to use a conflict set */
@@ -3711,6 +3722,8 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
    )
 {
    SCIP_BDCHGINFO* uip;
+   SCIP_CONFTYPE conftype;
+   SCIP_Bool usescutoffbound;
    int firstuipdepth;
    int focusdepth;
    int currentdepth;
@@ -3736,6 +3749,9 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
 
    firstuipdepth = SCIPbdchginfoGetDepth(firstuip);
 
+   conftype = (SCIP_CONFTYPE) conflict->conflictset->conflicttype;
+   usescutoffbound = conflict->conflictset->usescutoffbound;
+
    /* for each succeeding UIP pair of the last depth level, create one reconvergence constraint */
    uip = firstuip;
    while( uip != NULL && SCIPbdchginfoGetDepth(uip) == SCIPbdchginfoGetDepth(firstuip) && bdchginfoIsResolvable(uip) )
@@ -3756,6 +3772,9 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
 
       /* initialize conflict data */
       SCIP_CALL( SCIPconflictInit(conflict, set, stat, prob) );
+
+      conflict->conflictset->conflicttype = (unsigned int) conftype;
+      conflict->conflictset->usescutoffbound = usescutoffbound;
 
       /* create a temporary bound change information for the negation of the UIP's bound change;
        * this bound change information is freed in the SCIPconflictFlushConss() call;
@@ -3915,6 +3934,10 @@ SCIP_RETCODE conflictCreateReconvergenceConss(
 
       uip = nextuip;
    }
+
+   conflict->conflictset->conflicttype = (unsigned int) conftype;
+   conflict->conflictset->usescutoffbound = usescutoffbound;
+
 
    return SCIP_OKAY;
 }
@@ -4225,12 +4248,11 @@ SCIP_RETCODE SCIPconflictAnalyze(
    assert(set != NULL);
    assert(prob != NULL);
 
-
    if( success != NULL )
       *success = FALSE;
 
    /* check if the conflict analysis is applicable */
-   if( !SCIPconflictApplicable(set) )
+   if( !set->conf_enable || set->conf_maxstoresize == 0 )
       return SCIP_OKAY;
 
    /* check, if the conflict set will get too large with high probability */
@@ -5413,6 +5435,8 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
 {
    SCIP_VAR** vars;
    SCIP_VAR* var;
+   SCIP_CONFTYPE conftype;
+   SCIP_Bool cutoffinvolved;
    int nvars;
    int v;
    int nbdchgs;
@@ -5438,7 +5462,13 @@ SCIP_RETCODE conflictAnalyzeRemainingBdchgs(
    maxsize = 2*conflictCalcMaxsize(set, prob);
 
    /* initialize conflict data */
+   conftype = (SCIP_CONFTYPE) conflict->conflictset->conflicttype;
+   cutoffinvolved = conflict->conflictset->usescutoffbound;
+
    SCIP_CALL( SCIPconflictInit(conflict, set, stat, prob) );
+
+   conflict->conflictset->conflicttype = (unsigned int) conftype;
+   conflict->conflictset->usescutoffbound = cutoffinvolved;
 
    /* add remaining bound changes to conflict queue */
    SCIPdebugMessage("initial conflict set after undoing bound changes:\n");
@@ -6025,6 +6055,10 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    if( !set->conf_enable || !set->conf_useinflp )
       return SCIP_OKAY;
 
+   /* check if the store has a size geater than 0 */
+   if( set->conf_maxstoresize == 0 )
+      return SCIP_OKAY;
+
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
       return SCIP_OKAY;
@@ -6035,6 +6069,8 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    /* start timing */
    SCIPclockStart(conflict->inflpanalyzetime, set);
    conflict->ninflpcalls++;
+
+   conflict->conflictset->conflicttype = (unsigned int) SCIP_CONFTYPE_INFEASLP;
 
    /* perform conflict analysis */
    SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
@@ -6095,6 +6131,10 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    if( !set->conf_enable || !set->conf_useboundlp )
       return SCIP_OKAY;
 
+   /* check if the store hast a maximal size of 0 */
+   if( set->conf_maxstoresize == 0 )
+      return SCIP_OKAY;
+
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
       return SCIP_OKAY;
@@ -6105,6 +6145,10 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    /* start timing */
    SCIPclockStart(conflict->boundlpanalyzetime, set);
    conflict->nboundlpcalls++;
+
+   /* mark the conflict to depend on the cutoff bound */
+   conflict->conflictset->conflicttype = (unsigned int) SCIP_CONFTYPE_BNDEXCEEDING;
+   conflict->conflictset->usescutoffbound = TRUE;
 
    /* perform conflict analysis */
    SCIP_CALL( conflictAnalyzeLP(conflict, blkmem, set, stat, transprob, origprob, tree, reopt, lp, branchcand, eventqueue,
@@ -6155,6 +6199,10 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
 
    if( success != NULL )
       *success = FALSE;
+
+   /* check if the conflict analysis is applicable */
+   if( !set->conf_enable || set->conf_maxstoresize == 0 )
+      return SCIP_OKAY;
 
    /* in rare cases, it might happen that the solution stati of the LP and the LPI are out of sync; in particular this
     * happens when a new incumbent which cuts off the current node is found during the LP solving loop; in this case the
@@ -6488,7 +6536,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
       *upconflict = FALSE;
 
    /* check, if infeasible LP conflict analysis is enabled */
-   if( !set->conf_enable || !set->conf_usesb )
+   if( !set->conf_enable || !set->conf_usesb || set->conf_maxstoresize == 0 )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
@@ -6524,6 +6572,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
             SCIPvarGetName(SCIPcolGetVar(col)), SCIPvarGetLbLocal(SCIPcolGetVar(col)), SCIPvarGetUbLocal(SCIPcolGetVar(col)), 
             SCIPtreeGetCurrentDepth(tree));
 
+         conflict->conflictset->conflicttype = (unsigned int)SCIP_CONFTYPE_INFEASLP;
          conflict->nsbcalls++;
 
          /* change the upper bound */
@@ -6586,6 +6635,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
             SCIPvarGetName(SCIPcolGetVar(col)), SCIPvarGetLbLocal(SCIPcolGetVar(col)), SCIPvarGetUbLocal(SCIPcolGetVar(col)), 
             SCIPtreeGetCurrentDepth(tree));
 
+         conflict->conflictset->conflicttype = (unsigned int)SCIP_CONFTYPE_INFEASLP;
          conflict->nsbcalls++;
 
          /* change the lower bound */
@@ -6800,7 +6850,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       *success = FALSE;
 
    /* check, if pseudo solution conflict analysis is enabled */
-   if( !set->conf_enable || !set->conf_usepseudo )
+   if( !set->conf_enable || !set->conf_usepseudo || set->conf_maxstoresize == 0 )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
@@ -6809,6 +6859,9 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
 
    SCIPdebugMessage("analyzing pseudo solution (obj: %g) that exceeds objective limit (%g)\n",
       SCIPlpGetPseudoObjval(lp, set, transprob), lp->cutoffbound);
+
+   conflict->conflictset->conflicttype = (unsigned int) SCIP_CONFTYPE_BNDEXCEEDING;
+   conflict->conflictset->usescutoffbound = TRUE;
 
    /* start timing */
    SCIPclockStart(conflict->pseudoanalyzetime, set);
@@ -6986,3 +7039,26 @@ void SCIPconflictEnableOrDisableClocks(
    SCIPclockEnableOrDisable(conflict->sbanalyzetime, enable);
 }
 
+/** marg the conflict to depend on the current cutoff bound */
+void SCIPconflictsetSetCutoffInvolved(
+   SCIP_CONFLICT*        conflict
+   )
+{
+   assert(conflict != NULL);
+   assert(conflict->conflictset != NULL);
+
+   conflict->conflictset->usescutoffbound = TRUE;
+}
+
+/** set the type of the conflict */
+void SCIPconflictSetType(
+   SCIP_CONFLICT*        conflict,
+   SCIP_CONFTYPE         conftype
+   )
+{
+   assert(conflict != NULL);
+   assert(conftype == SCIP_CONFTYPE_BNDEXCEEDING || conftype == SCIP_CONFTYPE_INFEASLP
+       || conftype == SCIP_CONFTYPE_PROPAGATION);
+
+   conflict->conflictset->conflicttype = (unsigned int)conftype;
+}

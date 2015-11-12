@@ -1056,6 +1056,9 @@ SCIP_RETCODE analyzeConflictLowerbound(
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
+      /* change the conflict type */
+      SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
       /* adjust lower bound */
       inferlb = SCIPadjustedVarLb(scip, infervar, inferlb);
 
@@ -1090,6 +1093,9 @@ SCIP_RETCODE analyzeConflictLowerbound(
    {
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+      /* change the conflict type */
+      SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
 
       /* add upper bound of the variable for which we tried to change the lower bound */
       SCIP_CALL( SCIPaddConflictUb(scip, infervar, NULL) );
@@ -1165,6 +1171,9 @@ SCIP_RETCODE analyzeConflictUpperbound(
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
+      /* change the conflict type */
+      SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
       /* adjust upper bound */
       inferub = SCIPadjustedVarUb(scip, infervar, inferub);
 
@@ -1199,6 +1208,9 @@ SCIP_RETCODE analyzeConflictUpperbound(
    {
       /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
       SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+      /* change the conflict type */
+      SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
 
       /* add lower bound of the variable for which we tried to change the upper bound */
       SCIP_CALL( SCIPaddConflictLb(scip, infervar, NULL) );

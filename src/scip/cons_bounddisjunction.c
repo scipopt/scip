@@ -895,6 +895,10 @@ SCIP_RETCODE analyzeConflict(
 
    /* initialize conflict analysis, and add all bounds of infeasible constraint to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+   /* change the conflict type */
+   SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
    for( v = 0; v < consdata->nvars; ++v )
    {
       /* the opposite bound is in conflict with this literal */
@@ -2924,7 +2928,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecBounddisjunction)
             FALSE, FALSE, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 
       /* add conflict to SCIP */
-      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode) );
+      SCIP_CALL( SCIPaddConflict(scip, node, cons, validnode, conftype, cutoffinvolved) );
 
       *result = SCIP_CONSADDED;
    }

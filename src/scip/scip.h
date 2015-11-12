@@ -5835,7 +5835,9 @@ SCIP_RETCODE SCIPaddConflict(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node to add conflict (or NULL if global) */
    SCIP_CONS*            cons,               /**< constraint representing the conflict */
-   SCIP_NODE*            validnode           /**< node at which the constraint is valid (or NULL) */
+   SCIP_NODE*            validnode,          /**< node at which the constraint is valid (or NULL) */
+   SCIP_CONFTYPE         conftype,           /**< type of the conflict */
+   SCIP_Bool             cutoffinvolved      /**< is a cutoff bound invaled in this conflict */
    );
 
 /** adds constraint to the given node (and all of its subnodes), even if it is a global constraint;
@@ -10239,6 +10241,35 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint that detected the conflict */
    SCIP_Bool*            success             /**< pointer to store whether a conflict constraint was created, or NULL */
+   );
+
+/** mark the constraint to depend on the current cutoff bound
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPmarkConflictCutoffInvolved(
+   SCIP*                 scip
+   );
+
+/** change the type of the conflict
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPchgConflictType(
+   SCIP*                 scip,
+   SCIP_CONFTYPE         conftype
    );
 
 /**@} */

@@ -71,6 +71,8 @@ struct SCIP_ConflictSet
    unsigned int          repropagate:1;      /**< should the conflict constraint trigger a repropagation? */
    unsigned int          depthcalced:1;      /**< are the conflict and repropagation depth calculated? */
    unsigned int          sorted:1;           /**< is the conflict set sorted */
+   unsigned int          usescutoffbound:1;  /**< is the conflict based on the cutoff bound? */
+   unsigned int          conflicttype:3;     /**< conflict type: infeasible LP, bound exceeding LP, propagation */
 };
 
 /** set of LP bound change */

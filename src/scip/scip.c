@@ -11921,14 +11921,26 @@ SCIP_RETCODE SCIPaddConflict(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node to add conflict (or NULL if global) */
    SCIP_CONS*            cons,               /**< constraint representing the conflict */
-   SCIP_NODE*            validnode           /**< node at which the constraint is valid (or NULL) */
+   SCIP_NODE*            validnode,          /**< node at which the constraint is valid (or NULL) */
+   SCIP_CONFTYPE         conftype,           /**< type of the conflict */
+   SCIP_Bool             cutoffinvolved      /**< is a cutoff bound invaled in this conflict */
    )
 {
+   SCIP_Real primalbound;
+
    assert(scip != NULL);
    assert(cons != NULL);
    assert(scip->conflictstore != NULL);
+   assert(scip->set->conf_maxstoresize > 0);
+   assert(conftype != SCIP_CONFTYPE_UNKNOWN);
+   assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || cutoffinvolved);
 
    SCIP_CALL( checkStage(scip, "SCIPaddConflict", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( cutoffinvolved )
+      primalbound = SCIPgetPrimalbound(scip);
+   else
+      primalbound = -SCIPinfinity(scip);
 
    /* add a global conflict */
    if( node == NULL )
@@ -11944,7 +11956,8 @@ SCIP_RETCODE SCIPaddConflict(
    /* add the conflict to the conflict storage */
    SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat,
          scip->transprob, cons, node == NULL ? SCIPtreeGetRootNode(scip->tree) : node,
-         validnode == NULL ? SCIPtreeGetRootNode(scip->tree) : validnode, node == NULL) );
+         validnode == NULL ? SCIPtreeGetRootNode(scip->tree) : validnode, node == NULL, conftype, cutoffinvolved,
+         primalbound) );
 
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
@@ -13991,6 +14004,9 @@ SCIP_RETCODE freeSolve(
    /* switch stage to EXITSOLVE */
    scip->set->stage = SCIP_STAGE_EXITSOLVE;
 
+   /* deinitialize conflict storage */
+   SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->mem->probmem, scip->set) );
+
    /* inform plugins that the branch and bound process is finished */
    SCIP_CALL( SCIPsetExitsolPlugins(scip->set, scip->mem->probmem, scip->stat, restart) );
 
@@ -14013,9 +14029,6 @@ SCIP_RETCODE freeSolve(
     * subroots have to be released
     */
    SCIP_CALL( SCIPtreeClear(scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
-
-   /* deinitialize conflict storage */
-   SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->mem->probmem, scip->set) );
 
    /* deinitialize transformed problem */
    SCIP_CALL( SCIPprobExitSolve(scip->transprob, scip->mem->probmem, scip->set, scip->eventqueue, scip->lp, restart) );
@@ -24690,8 +24703,50 @@ SCIP_RETCODE SCIPanalyzeConflictCons(
    return SCIP_OKAY;
 }
 
+/** mark the constraint to depend on the current cutoff bound
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPmarkConflictCutoffInvolved(
+   SCIP*                 scip
+   )
+{
+   assert(scip != NULL);
 
+   SCIP_CALL( checkStage(scip, "SCIPmarkConflictCutoffInvolved", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
+   SCIPconflictsetSetCutoffInvolved(scip->conflict);
+
+   return SCIP_OKAY;
+}
+
+/** change the type of the conflict
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPchgConflictType(
+   SCIP*                 scip,
+   SCIP_CONFTYPE         conftype
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPchgConflictType", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIPconflictSetType(scip->conflict, conftype);
+
+   return SCIP_OKAY;
+}
 
 /*
  * constraint methods

@@ -29,6 +29,7 @@
 #include "scip/type_conflictstore.h"
 #include "scip/type_retcode.h"
 #include "scip/type_cons.h"
+#include "scip/type_conflict.h"
 #include "scip/type_prob.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
@@ -63,7 +64,10 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIP_CONS*            cons,
    SCIP_NODE*            node,
    SCIP_NODE*            validnode,
-   SCIP_Bool             global
+   SCIP_Bool             global,
+   SCIP_CONFTYPE         conftype,
+   SCIP_Bool             cutoffinvolved,     /**< is a cutoff bound invaled in this conflict */
+   SCIP_Real             primalbound
    );
 
 #ifdef __cplusplus

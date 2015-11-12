@@ -889,6 +889,9 @@ SCIP_RETCODE propagateCons(
             /* perform conflict analysis */
             SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
+            /* change the conflict type */
+            SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
             if ( ispart )
             {
                /* add bounds (variables fixed to 0) that result in the first nonzero entry */
@@ -970,6 +973,9 @@ SCIP_RETCODE propagateCons(
 
                   /* perform conflict analysis */
                   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+                  /* change the conflict type */
+                  SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
 
                   /* add current bound */
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );

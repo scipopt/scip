@@ -2831,6 +2831,9 @@ SCIP_RETCODE analyzeConflict(
    /* initialize conflict analysis, and add all variables of infeasible constraint to conflict candidate queue */
    SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
+   /* change the conflict type */
+   SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
    /* add bound changes */
    SCIP_CALL( addConflictBounds(scip, cons, infervar, NULL, proprule) );
 

@@ -7271,6 +7271,9 @@ SCIP_RETCODE propagateCons(
                               /* initialize the conflict analysis */
                               SCIP_CALL( SCIPinitConflictAnalysis(scip) );
 
+                              /* change the conflict type */
+                              SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
                               /* add the two variables which are fixed to zero within a negated clique */
                               SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[i]) );
                               SCIP_CALL( SCIPaddConflictBinvar(scip, myvars[v]) );
@@ -7381,6 +7384,10 @@ SCIP_RETCODE propagateCons(
             weight = minweightsum;
 
             SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+            /* change the conflict type */
+            SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
             for( i = 0; i < nvars && weight <= consdata->capacity; i++ )
             {
                if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
@@ -7467,6 +7474,10 @@ SCIP_RETCODE propagateCons(
          weight = 0;
 
          SCIP_CALL( SCIPinitConflictAnalysis(scip) );
+
+         /* change the conflict type */
+         SCIP_CALL( SCIPchgConflictType(scip, SCIP_CONFTYPE_PROPAGATION) );
+
          for( i = 0; i < nvars && weight <= consdata->capacity; i++ )
          {
             if( SCIPvarGetLbLocal(consdata->vars[i]) > 0.5)
