@@ -68,12 +68,14 @@ BEGIN {
    timetobestgeom = 0.0;
    sblpgeom = 0.0;
    conftimegeom = 0.0;
+   confgeom = 0.0;
    basictimegeom = 0.0;
    overheadtimegeom = 0.0;
    shiftednodegeom = nodegeomshift;
    shiftedtimegeom = timegeomshift;
    shiftedsblpgeom = sblpgeomshift;
    shiftedconftimegeom = timegeomshift;
+   shiftedconfgeom = timegeomshift;
    shiftedbasictimegeom = timegeomshift;
    shiftedoverheadtimegeom = timegeomshift;
    shiftedtimetofirstgeom = timegeomshift;
@@ -89,6 +91,7 @@ BEGIN {
    scipversion = "?";
    githash = "?";
    conftottime = 0.0;
+   sumconfs = 0;
    overheadtottime = 0.0;
 
    #initialize paver input file
@@ -752,22 +755,26 @@ BEGIN {
       ssim += simplex;
       ssblp += sblps;
       conftottime += conftime;
+      sumconfs += (conf_infLP + conf_bndEx + conf_prop + conf_pseud + conf_strbr);
       overheadtottime += overheadtime;
       basictime = tottime - conftime - overheadtime;
 
       nodegeom = nodegeom^((nprobs-1)/nprobs) * max(bbnodes, 1.0)^(1.0/nprobs);
       sblpgeom = sblpgeom^((nprobs-1)/nprobs) * max(sblps, 1.0)^(1.0/nprobs);
       timegeom = timegeom^((nprobs-1)/nprobs) * max(tottime, 1.0)^(1.0/nprobs);
-      conftimegeom = conftimegeom^((nprobs-1)/nprobs) * max(conftime, 1.0)^(1.0/nprobs);
       overheadtimegeom = overheadtimegeom^((nprobs-1)/nprobs) * max(overheadtime, 1.0)^(1.0/nprobs);
       basictimegeom = basictimegeom^((nprobs-1)/nprobs) * max(basictime, 1.0)^(1.0/nprobs);
 
       shiftednodegeom = shiftednodegeom^((nprobs-1)/nprobs) * max(bbnodes+nodegeomshift, 1.0)^(1.0/nprobs);
       shiftedsblpgeom = shiftedsblpgeom^((nprobs-1)/nprobs) * max(sblps+sblpgeomshift, 1.0)^(1.0/nprobs);
       shiftedtimegeom = shiftedtimegeom^((nprobs-1)/nprobs) * max(tottime+timegeomshift, 1.0)^(1.0/nprobs);
-      shiftedconftimegeom = shiftedconftimegeom^((nprobs-1)/nprobs) * max(conftime+timegeomshift, 1.0)^(1.0/nprobs);
       shiftedoverheadtimegeom = shiftedoverheadtimegeom^((nprobs-1)/nprobs) * max(overheadtime+timegeomshift, 1.0)^(1.0/nprobs);
       shiftedbasictimegeom = shiftedbasictimegeom^((nprobs-1)/nprobs) * max(basictime+timegeomshift, 1.0)^(1.0/nprobs);
+
+      shiftedconftimegeom = shiftedconftimegeom^((nprobs-1)/nprobs) * max(conftime+timegeomshift, 1.0)^(1.0/nprobs);
+      shiftedconfgeom = shiftedconfgeom^((nprobs-1)/nprobs) * max((conf_infLP + conf_bndEx + conf_prop + conf_pseud + conf_strbr)+timegeomshift, 1.0)^(1.0/nprobs);
+      conftimegeom = conftimegeom^((nprobs-1)/nprobs) * max(conftime, 1.0)^(1.0/nprobs);
+      confgeom = confgeom^((nprobs-1)/nprobs) * max((conf_infLP + conf_bndEx + conf_prop + conf_pseud + conf_strbr), 1.0)^(1.0/nprobs);
 
       timetobestgeom = timetobestgeom^((nprobs-1)/nprobs) * max(timetobest,1.0)^(1.0/nprobs);
       timetofirstgeom = timetofirstgeom^((nprobs-1)/nprobs) * max(timetofirst,1.0)^(1.0/nprobs);
@@ -1084,16 +1091,22 @@ END {
       printf("\\midrule\n")                                                 >TEXFILE;
       printf("%-14s (%2d) &        &        &                &                &        & %9d & %8.1f",
              "Total", nprobs, sbab, stottime) >TEXFILE;
+      if( analyseconf )
+         printf(" & %8.1f & %8.1f", allconfs, conftime) > TEXFILE;
       if( printsoltimes )
          printf(" & %8.1f & %8.1f", stimetofirst, stimetobest) > TEXFILE;
       printf("\\\\\n") > TEXFILE;
       printf("%-14s      &        &        &                &                &        & %9d & %8.1f",
              "Geom. Mean", nodegeom, timegeom) >TEXFILE;
+      if( analyseconf )
+         printf(" & %8.1f & %8.1f", confgeom, conftimegeom) > TEXFILE;
       if( printsoltimes )
          printf(" & %8.1f & %8.1f", timetofirstgeom, timetobestgeom) > TEXFILE;
       printf("\\\\\n") > TEXFILE;
       printf("%-14s      &        &        &                &                &        & %9d & %8.1f ",
              "Shifted Geom.", shiftednodegeom, shiftedtimegeom) >TEXFILE;
+      if( analyseconf )
+         printf(" & %8.1f & %8.1f", shiftedconfgeom, shiftedconftimegeom) > TEXFILE;
       if( printsoltimes )
          printf(" & %8.1f & %8.1f", shiftedtimetofirstgeom, shiftedtimetobestgeom) > TEXFILE;
       printf("\\\\\n") > TEXFILE;
@@ -1104,6 +1117,13 @@ END {
    tablebottom1 = "------------------------------[Nodes]---------------[Time]------";
    tablebottom2 = "  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom.";
    tablebottom3 = "----------------------------------------------------------------";
+
+   if( analyseconf == 1 )
+   {
+      tablebottom1 = tablebottom1"--------[NConf]-----------[ConfTime]-----";
+      tablebottom2 = tablebottom2"     total     geom.     total     geom.";
+      tablebottom3 = tablebottom3"-----------------------------------------";
+   }
 
    if( printsoltimes ) {
       tablebottom1 = tablebottom1"--------[ToFirst]-----------[ToLast]-----";
@@ -1121,12 +1141,18 @@ END {
 
    printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f ",
           nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
+
+   if( analyseconf == 1 )
+     printf("%9d %9.1f %9.1f %9.1f", sumconfs, confgeom, conftottime, conftimegeom);
+
    if( printsoltimes )
-      printf("%9.1f %9.1f %9.1f %9.1f", stimetofirst, timetofirstgeom, stimetobest, timetobestgeom);
+      printf("%9.1f %9.1f %9.1f %9.1f", stimetofirst, timetofirstgeom, stimetobest, timetobestgeoconftimem);
 
    printf("\n");
    printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f ",
           nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);
+   if( analyseconf )
+      printf("          %9.1f           %9.1f ", shiftedconfgeom, shiftedconftimegeom);
    if( printsoltimes )
       printf("          %9.1f           %9.1f ", shiftedtimetofirstgeom, shiftedtimetobestgeom);
    printf("\n");
