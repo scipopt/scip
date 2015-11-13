@@ -48,6 +48,7 @@ BEGIN {
    writesolufile = 0;           # should a solution file be created from the results
    printsoltimes = 0;           # should the times until first and best solution be shown
    checksol = 1;                # should the solution check of SCIP be parsed and counted as a fail if best solution is not feasible?
+   analyseconf = 1;             # should conflict analysis be reported?
    NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
    headerprinted = 0;
@@ -171,6 +172,11 @@ BEGIN {
    confclauses = 0;
    confliterals = 0.0;
    conftime = 0.0;
+   conf_prop  = 0;
+   conf_infLP = 0;
+   conf_bndEx = 0;
+   conf_strbr = 0;
+   conf_pseud = 0;
    overheadtime = 0.0;
    aborted = 1;
    readerror = 0;
@@ -270,21 +276,31 @@ BEGIN {
 /^  propagation      :/ {
    if( inconflict == 1 ) {
       conftime += $3; #confclauses += $5 + $7; confliterals += $5 * $6 + $7 * $8;
+      conf_prop += $7;
    }
 }
 /^  infeasible LP    :/ {
    if( inconflict == 1 ) {
       conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+      conf_infLP += $7;
+   }
+}
+/^  bound exceed. LP :/ {
+   if( inconflict == 1 ) {
+      conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+      conf_bndEx += $7;
    }
 }
 /^  strong branching :/ {
    if( inconflict == 1 ) {
       conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+      conf_strbr += $7;
    }
 }
 /^  pseudo solution  :/ {
    if( inconflict == 1 ) {
       conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
+      conf_pseud += $7;
    }
 }
 /^  applied globally :/ {
@@ -576,6 +592,12 @@ BEGIN {
 	 tablehead3 = tablehead3"+------+-------+-------+-------+-------+-----------+----------------+----------------+---------+--------+-------+";
       }
 
+      if( analyseconf == 1 )
+      {
+         tablehead1 = tablehead1"---------------Conflict Analysis---------------+";
+         tablehead2 = tablehead2"  inf  |  bnd  |  sbr  |  pro  |  psol |  time |";
+         tablehead3 = tablehead3"-------+-------+-------+-------+---------------+";
+      }
 
       if( printsoltimes == 1 )
       {
@@ -585,7 +607,7 @@ BEGIN {
       }
 
       tablehead1 = tablehead1"--------\n";
-      tablehead2 = tablehead2"       \n";
+      tablehead2 = tablehead2"        \n";
       tablehead3 = tablehead3"--------\n";
 
       printf(tablehead1);
@@ -971,6 +993,11 @@ BEGIN {
                       namelength, pprob, cons, vars, niter, db, pb, markersym, bbnodes, markersym, tottime)  >TEXFILE;
 	    }
 
+	    if( analyseconf == 1 )
+            {
+               printf(" & %7d & %7d & %7d & %7d & %7d & %7.1f ", conftime, conf_infLP, conf_bndEx, conf_strbr, conf_prop, conf_pseud)  >TEXFILE;
+            }
+
 	    if( printsoltimes )
                printf(" & %7.1f & %7.1f", timetofirst, timetobest) > TEXFILE;
             printf("\\\\\n") > TEXFILE;
@@ -987,6 +1014,12 @@ BEGIN {
 	    printf("%-*s  %-5s %7d %7d %7d %7d %11d %16.9g %16.9g %9d %8d %7.1f ",
                    namelength, shortprob, probtype, origcons, origvars, cons, vars, niter, db, pb, simpiters, bbnodes, tottime);
 	 }
+
+	 if( analyseconf == 1 )
+         {
+            printf("%7d %7d %7d %7d %7d %7.1f ", conf_infLP, conf_bndEx, conf_strbr, conf_prop, conf_pseud, conftime);
+         }
+
 	 if( printsoltimes )
             printf(" %9.1f %9.1f ", timetofirst, timetobest);
 

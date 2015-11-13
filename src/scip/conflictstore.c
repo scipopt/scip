@@ -142,6 +142,8 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    {
       int idx;
 
+      assert(!SCIPqueueIsEmpty(conflictstore->orderqueue));
+
       idx = ((int) (size_t) SCIPqueueRemove(conflictstore->orderqueue)) - 1;
       assert(idx >= 0 && idx < conflictstore->conflictsize);
       assert(conflictstore->conflicts[idx] != NULL);
@@ -173,7 +175,7 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
       ++ndelconfs;
       --conflictstore->nconflicts;
    }
-   while( !storagecleaned );
+   while( !storagecleaned && conflictstore->nconflicts > 0 );
 
    SCIPdebugMessage("clean up conflict store: removed %d conflicts, %d currently stored\n",
          ndelconfs, conflictstore->nconflicts);
