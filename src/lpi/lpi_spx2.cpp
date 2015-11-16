@@ -1367,7 +1367,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
       {
          assert(0 <= ind[i] && ind[i] < lpi->spx->numColsReal());
          lpi->spx->changeBoundsReal(ind[i], lb[i], ub[i]);
-         assert(lpi->spx->lowerReal(ind[i]) <= lpi->spx->upperReal(ind[i]));
+         assert(lpi->spx->lowerReal(ind[i]) <= lpi->spx->upperReal(ind[i]) + lpi->spx->realParam(SoPlex::EPSILON_ZERO));
       }
    }
    catch(const SPxException& x)
@@ -1411,7 +1411,7 @@ SCIP_RETCODE SCIPlpiChgSides(
       {
          assert(0 <= ind[i] && ind[i] < lpi->spx->numRowsReal());
          lpi->spx->changeRangeReal(ind[i], lhs[i], rhs[i]);
-         assert(lpi->spx->lhsReal(ind[i]) <= lpi->spx->rhsReal(ind[i]));
+         assert(lpi->spx->lhsReal(ind[i]) <= lpi->spx->rhsReal(ind[i]) + lpi->spx->realParam(SoPlex::EPSILON_ZERO));
       }
    }
    catch(const SPxException& x)
