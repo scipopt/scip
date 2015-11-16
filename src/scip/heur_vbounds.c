@@ -684,7 +684,11 @@ SCIP_RETCODE applyVbounds(
       SCIP* subscip;
       SCIP_VAR** subvars;
       SCIP_HASHMAP* varmap;
+      SCIP_HASHMAP* consmap;
+      SCIP_ROW** sourcerows = NULL;
+      SCIP_CONS** targetconss = NULL;
       SCIP_Bool valid;
+      int nsourcerows = 0;
       int i;
 
       valid = FALSE;
@@ -695,21 +699,63 @@ SCIP_RETCODE applyVbounds(
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-      SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "_vbounds", FALSE, FALSE, TRUE, &valid) );
+      if( SCIPuseLPStartBasis(scip) )
+      {
+         /* create the constraint mapping hash map */
+         SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+      }
+      else
+         consmap = NULL;
+
+      SCIP_CALL( SCIPcopy(scip, subscip, varmap, consmap, "_vbounds", FALSE, FALSE, TRUE, &valid) );
 
       if( heurdata->copycuts )
       {
-         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, NULL, NULL, 0, FALSE, NULL) );
+         if( SCIPuseLPStartBasis(scip) )
+         {
+            int sourcerowssize = SCIPgetNLPRows(scip);
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &sourcerows, sourcerowssize) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &targetconss, sourcerowssize) );
+
+            /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+            SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, consmap, sourcerows, targetconss, sourcerowssize, FALSE, &nsourcerows) );
+            assert(nsourcerows <= sourcerowssize);
+         }
+         else
+         {
+            /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+            SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, NULL, NULL, 0, FALSE, NULL) );
+         }
       }
 
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
+
+      if( SCIPuseLPStartBasis(scip) )
+      {
+         /* use the last LP basis as starting basis */
+         SCIP_CALL( SCIPcopyBasis(scip, subscip, varmap, consmap, sourcerows, targetconss, nsourcerows, FALSE) );
+      }
+
+      if( sourcerows != NULL )
+      {
+         assert(targetconss != NULL);
+         SCIPfreeBufferArray(scip, &sourcerows);
+         SCIPfreeBufferArray(scip, &targetconss);
+      }
+      else
+         assert(targetconss == NULL);
 
       for( i = 0; i < nvars; i++ )
          subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
 
       /* free hash map */
       SCIPhashmapFree(&varmap);
+      if( SCIPuseLPStartBasis(scip) )
+      {
+         assert(consmap != NULL);
+         SCIPhashmapFree(&consmap);
+      }
 
       /* do not abort subproblem on CTRL-C */
       SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );

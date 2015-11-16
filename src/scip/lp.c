@@ -12612,7 +12612,7 @@ SCIP_RETCODE checkAndRepairBasis(
    int                   nvars,              /**< number of problem variables */
    int                   nconss,             /**< number of problem constrainst */
    int*                  colstat,            /**< array to store basis status of columns */
-   int*                  rowstat,            /**< array to store basis status of rows */
+   int**                 rowstat,            /**< array to store basis status of rows */
    int                   depth,              /**< current depth */
    SCIP_Bool*            success             /**< success pointer */
    )
@@ -12708,9 +12708,45 @@ SCIP_RETCODE checkAndRepairBasis(
             if( varstat[i] == SCIP_BASESTAT_BASIC )
                nbasicvars++;
             else if( varstat[i] == SCIP_BASESTAT_LOWER )
-               nlowervars++;
+            {
+               /* lower bound is SCIPinfinity */
+               if( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(vars[i])) )
+               {
+                  /* upper bound is SCIPinfinity */
+                  if( SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(vars[i])) )
+                  {
+                     varstat[i] = SCIP_BASESTAT_ZERO;
+                     nzerovars++;
+                  }
+                  else
+                  {
+                     varstat[i] = SCIP_BASESTAT_UPPER;
+                     nuppervars++;
+                  }
+               }
+               else
+                  nlowervars++;
+            }
             else if( varstat[i] == SCIP_BASESTAT_UPPER )
-               nuppervars++;
+            {
+               /* upper bound is SCIPinfinity */
+               if( SCIPsetIsInfinity(set, SCIPvarGetUbGlobal(vars[i])) )
+               {
+                  /* lower bound is SCIPinfinity */
+                  if( SCIPsetIsInfinity(set, -SCIPvarGetLbGlobal(vars[i])) )
+                  {
+                     varstat[i] = SCIP_BASESTAT_ZERO;
+                     nzerovars++;
+                  }
+                  else
+                  {
+                     varstat[i] = SCIP_BASESTAT_LOWER;
+                     nlowervars++;
+                  }
+               }
+               else
+                  nuppervars++;
+            }
             else if( varstat[i] == SCIP_BASESTAT_ZERO )
                nzerovars++;
 
@@ -12936,7 +12972,7 @@ SCIP_RETCODE checkAndRepairBasis(
 #ifndef NDEBUG
    for( i = 0; i < nrows; ++i )
    {
-      if( rowstat[i] == SCIP_BASESTAT_BASIC )
+      if( (*rowstat)[i] == SCIP_BASESTAT_BASIC )
          ++tmpbasicrows;
    }
    assert(nbasicconss == tmpbasicrows);

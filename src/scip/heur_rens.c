@@ -209,6 +209,10 @@ SCIP_RETCODE createSubproblem(
    SCIP*                 scip,               /**< original SCIP data structure                                        */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem                              */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                                     */
+   SCIP_ROW**            sourcerows,
+   SCIP_CONS**           targetconss,
+   int                   sourcerowssize,
+   int*                  nsourcerows,
    char                  startsol,           /**< solution used for fixing values ('l'p relaxation, 'n'lp relaxation) */
    SCIP_Bool             binarybounds,       /**< should general integers get binary bounds [floor(.),ceil(.)] ?      */
    SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?        */
@@ -223,7 +227,6 @@ SCIP_RETCODE createSubproblem(
    assert(scip != NULL);
    assert(subscip != NULL);
    assert(subvars != NULL);
-
    assert(startsol == 'l' || startsol == 'n');
 
    /* get required variable data */
@@ -273,8 +276,21 @@ SCIP_RETCODE createSubproblem(
       SCIP_ROW** rows; /* original scip rows */
       int nrows;
 
+      assert(!SCIPuseLPStartBasis(scip) || nsourcerows != NULL);
+      assert(!SCIPuseLPStartBasis(scip) || sourcerows != NULL);
+      assert(!SCIPuseLPStartBasis(scip) || targetconss != NULL);
+
       /* get the rows and their number */
       SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+      assert(!SCIPuseLPStartBasis(scip) || nrows <= sourcerowssize);
+
+      *nsourcerows = nrows;
+
+      /* return if the array is not large enough */
+      if( *nsourcerows > sourcerowssize )
+         return SCIP_OKAY;
+
+      *nsourcerows = 0;
 
       /* copy all rows to linear constraints */
       for( i = 0; i < nrows; i++ )
@@ -312,10 +328,25 @@ SCIP_RETCODE createSubproblem(
          SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
          SCIP_CALL( SCIPaddCons(subscip, cons) );
-         SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
 
          /* free temporary memory */
          SCIPfreeBufferArray(subscip, &consvars);
+
+         if( SCIPuseLPStartBasis(scip) )
+         {
+            assert(targetconss != NULL);
+
+            /* store the added cons and the corresponding row */
+            sourcerows[(*nsourcerows)] = rows[i];
+            targetconss[(*nsourcerows)] = cons;
+
+            /* capture the row (the constraint was already captured twice: create, add)
+             * both will be released at the end of copyBasis in scip.c
+             */
+            SCIP_CALL( SCIPcaptureRow(scip, sourcerows[(*nsourcerows)]) );
+
+            ++(*nsourcerows);
+         }
       }
    }
 
@@ -424,7 +455,6 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                         */
    SCIP_ROW** sourcerows = NULL;
    SCIP_CONS** targetconss = NULL;
-   int nsourcerows = 0;
 
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                 */
    SCIP_Real timelimit;                      /* time limit for RENS subproblem                      */
@@ -432,6 +462,8 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_Real allfixingrate;                  /* percentage of all variables fixed                   */
    SCIP_Real intfixingrate;                  /* percentage of integer variables fixed               */
 
+   int nsourcerows = 0;
+   int sourcerowssize = 0;
    int nvars;                                /* number of original problem's variables              */
    int i;
 
@@ -495,8 +527,22 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
-   /* create the constraint mapping hash map */
-   SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      sourcerowssize = SCIPgetNLPRows(scip);
+
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &sourcerows, sourcerowssize) );
+      SCIP_CALL( SCIPallocClearBufferArray(scip, &targetconss, sourcerowssize) );
+
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+   }
+   else
+   {
+      consmapfw = NULL;
+      sourcerows = NULL;
+      targetconss = NULL;
+   }
 
    eventhdlr = NULL;
 
@@ -528,19 +574,17 @@ SCIP_RETCODE SCIPapplyRens(
 
       if( heurdata->copycuts )
       {
-#if 0
-         int sourcerowssize = SCIPgetNLPRows(scip);
-
-         SCIP_CALL( SCIPallocBufferArray(scip, &sourcerows, sourcerowssize) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &targetconss, sourcerowssize) );
-
-         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, sourcerowssize, TRUE, &nsourcerows) );
-         assert(nsourcerows <= sourcerowssize);
-#else
-         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE, NULL) );
-#endif
+         if( SCIPuseLPStartBasis(scip) )
+         {
+            /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+            SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, sourcerowssize, TRUE, &nsourcerows) );
+            assert(nsourcerows <= sourcerowssize);
+         }
+         else
+         {
+            /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+            SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE, NULL) );
+         }
       }
 
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
@@ -558,14 +602,14 @@ SCIP_RETCODE SCIPapplyRens(
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   SCIP_CALL( createSubproblem(scip, subscip, subvars, startsol, binarybounds, uselprows) );
+   SCIP_CALL( createSubproblem(scip, subscip, subvars, sourcerows, targetconss, sourcerowssize, &nsourcerows, startsol, binarybounds, uselprows) );
    SCIPdebugMessage("RENS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
-//    if( !uselprows )
-//    {
-//       /* use the last LP basis as starting basis */
-//       SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows) );
-//    }
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      /* use the last LP basis as starting basis */
+      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows, uselprows) );
+   }
 
    if( sourcerows != NULL )
    {
@@ -578,7 +622,11 @@ SCIP_RETCODE SCIPapplyRens(
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
-   SCIPhashmapFree(&consmapfw);
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      assert(consmapfw != NULL);
+      SCIPhashmapFree(&consmapfw);
+   }
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );

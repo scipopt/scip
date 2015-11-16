@@ -387,7 +387,7 @@ public:
    {
       for( int i = 0; i < numColsReal(); ++i )
       {
-         if( lowerReal(i) > upperReal(i) )
+         if( lowerReal(i) > upperReal(i) + Param::epsilon() )
          {
             SCIPerrorMessage("inconsistent bounds on column %d: lower=%.17g, upper=%.17g\n",
                i, lowerReal(i), upperReal(i));
@@ -402,7 +402,7 @@ public:
    {
       for( int i = 0; i < numRowsReal(); ++i )
       {
-         if( lhsReal(i) > rhsReal(i) )
+         if( lhsReal(i) > rhsReal(i) + Param::epsilon() )
          {
             SCIPerrorMessage("inconsistent sides on row %d: lhs=%.17g, rhs=%.17g\n",
                i, lhsReal(i), rhsReal(i));

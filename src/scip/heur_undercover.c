@@ -2112,9 +2112,13 @@ SCIP_RETCODE solveSubproblem(
    SCIP_VAR** subvars;
    SCIP_VAR** vars;
    SCIP_HASHMAP* varmap;
+   SCIP_HASHMAP* consmap;
+   SCIP_ROW** sourcerows = NULL;
+   SCIP_CONS** targetconss = NULL;
 
    SCIP_RETCODE retcode;
 
+   int nsourcerows = 0;
    int nvars;
    int i;
 
@@ -2149,14 +2153,52 @@ SCIP_RETCODE solveSubproblem(
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+   }
+   else
+      consmap = NULL;
+
    /* copy original problem to subproblem; do not copy pricers */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "undercoversub", heurdata->globalbounds, FALSE, TRUE, validsolved) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmap, consmap, "undercoversub", heurdata->globalbounds, FALSE, TRUE, validsolved) );
 
    if( heurdata->copycuts )
    {
-      /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, NULL, NULL, 0, heurdata->globalbounds, NULL) );
+      if( SCIPuseLPStartBasis(scip) )
+      {
+         int sourcerowssize = SCIPgetNLPRows(scip);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &sourcerows, sourcerowssize) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &targetconss, sourcerowssize) );
+
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, consmap, sourcerows, targetconss, sourcerowssize,
+               heurdata->globalbounds, &nsourcerows) );
+         assert(nsourcerows <= sourcerowssize);
+      }
+      else
+      {
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmap, NULL, NULL, NULL, 0, heurdata->globalbounds, NULL) );
+      }
    }
+
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      /* use the last LP basis as starting basis */
+      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmap, consmap, sourcerows, targetconss, nsourcerows, FALSE) );
+   }
+
+   if( sourcerows != NULL )
+   {
+      assert(targetconss != NULL);
+      SCIPfreeBufferArray(scip, &sourcerows);
+      SCIPfreeBufferArray(scip, &targetconss);
+   }
+   else
+      assert(targetconss == NULL);
 
    SCIPdebugMessage("problem copied, copy %svalid\n", *validsolved ? "" : "in");
 
@@ -2318,6 +2360,11 @@ SCIP_RETCODE solveSubproblem(
 
    /* free variable mapping hash map, array of subproblem variables, and subproblem */
    SCIPhashmapFree(&varmap);
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      assert(consmap != NULL);
+      SCIPhashmapFree(&consmap);
+   }
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
 

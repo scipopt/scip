@@ -396,7 +396,11 @@ static
 SCIP_RETCODE createRows(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
-   SCIP_VAR**            subvars             /**< the variables of the subproblem */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
+   SCIP_ROW**            sourcerows,
+   SCIP_CONS**           targetconss,
+   int                   sourcerowssize,
+   int*                  nsourcerows
    )
 {
    SCIP_ROW** rows;                          /* original scip rows                       */
@@ -414,8 +418,15 @@ SCIP_RETCODE createRows(
    int i;
    int j;
 
+   assert(!SCIPuseLPStartBasis(scip) || nsourcerows != NULL);
+   assert(!SCIPuseLPStartBasis(scip) || sourcerows != NULL);
+   assert(!SCIPuseLPStartBasis(scip) || targetconss != NULL);
+
    /* get the rows and their number */
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+   assert(!SCIPuseLPStartBasis(scip) || nrows <= sourcerowssize);
+
+   *nsourcerows = 0;
 
    /* copy all rows to linear constraints */
    for( i = 0; i < nrows; i++ )
@@ -443,7 +454,22 @@ SCIP_RETCODE createRows(
       SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
       SCIP_CALL( SCIPaddCons(subscip, cons) );
-      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+
+      if( SCIPuseLPStartBasis(scip) )
+      {
+         assert(targetconss != NULL);
+
+         /* store the added cons and the corresponding row */
+         sourcerows[(*nsourcerows)] = rows[i];
+         targetconss[(*nsourcerows)] = cons;
+
+         /* capture the row (the constraint was already captured twice: create, add)
+          * both will be released at the end of copyBasis in scip.c
+          */
+         SCIP_CALL( SCIPcaptureRow(scip, sourcerows[(*nsourcerows)]) );
+
+         ++(*nsourcerows);
+      }
 
       /* free temporary memory */
       SCIPfreeBufferArray(scip, &consvars);
@@ -460,6 +486,10 @@ SCIP_RETCODE setupSubproblem(
    SCIP_VAR**            subvars,            /**< the variables of the subproblem */
    int*                  selection,          /**< pool of solutions crossover will use */
    SCIP_HEURDATA*        heurdata,           /**< primal heuristic data */
+   SCIP_ROW**            sourcerows,
+   SCIP_CONS**           targetconss,
+   int                   sourcerowssize,
+   int*                  nsourcerows,
    SCIP_Bool*            success             /**< pointer to store whether the problem was created successfully */
    )
 {
@@ -539,7 +569,7 @@ SCIP_RETCODE setupSubproblem(
       relaxation of the problem */
    if( *success && heurdata->uselprows )
    {
-      SCIP_CALL( createRows(scip, subscip, subvars) );
+      SCIP_CALL( createRows(scip, subscip, subvars, sourcerows, targetconss, sourcerowssize, nsourcerows) );
    }
 
    return SCIP_OKAY;
@@ -746,11 +776,14 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_HEURDATA* heurdata;                  /* primal heuristic data                               */
    SCIP* subscip;                            /* the subproblem created by crossover                 */
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
-   SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
+   SCIP_HASHMAP* consmapfw;                  /* mapping of SCIP constraints to sub-SCIP constraints */
+   SCIP_EVENTHDLR* eventhdlr;                /* event handler for LP events                     */
 
    SCIP_VAR** vars;                          /* original problem's variables                        */
    SCIP_VAR** subvars;                       /* subproblem's variables                              */
    SCIP_SOL** sols;
+   SCIP_ROW** sourcerows = NULL;
+   SCIP_CONS** targetconss = NULL;
 
    SCIP_Real memorylimit;                    /* memory limit for the subproblem                     */
    SCIP_Real timelimit;                      /* time limit for the subproblem                       */
@@ -765,6 +798,8 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    int nbinvars;
    int nintvars;
    int nusedsols;
+   int sourcerowssize = 0;
+   int nsourcerows = 0;
    int i;
 
    SCIP_RETCODE retcode;
@@ -779,6 +814,10 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    nusedsols = heurdata->nusedsols;
 
    *result = SCIP_DELAYED;
+
+   /* return if the node is infeasible and the current LP is not constructed */
+   if( nodeinfeasible && !SCIPisLPConstructed(scip) && heurdata->uselprows )
+      return SCIP_OKAY;
 
    /* only call heuristic, if enough solutions are at hand */
    if( SCIPgetNSols(scip) < nusedsols  )
@@ -845,6 +884,25 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      sourcerowssize = SCIPgetNLPRows(scip);
+
+      /* allocate buffer for lp rows of the original and corresponding constraint in the target scip */
+      SCIP_CALL( SCIPallocBufferArray(scip, &sourcerows, sourcerowssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &targetconss, sourcerowssize) );
+
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+   }
+   else
+   {
+      consmapfw = NULL;
+      sourcerows = NULL;
+      targetconss = NULL;
+   }
+
    success = FALSE;
 
    eventhdlr = NULL;
@@ -867,12 +925,31 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    }
    else
    {
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "crossover", TRUE, FALSE, TRUE, &success) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, consmapfw, "crossover", TRUE, FALSE, TRUE, &success) );
 
       if( heurdata->copycuts )
       {
-         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE, NULL) );
+         if( SCIPuseLPStartBasis(scip) )
+         {
+            /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+            SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, sourcerowssize, TRUE, &nsourcerows) );
+
+            if( nsourcerows > sourcerowssize )
+            {
+               SCIP_CALL( SCIPreallocBufferArray(scip, &sourcerows, nsourcerows) );
+               SCIP_CALL( SCIPreallocBufferArray(scip, &targetconss, nsourcerows) );
+               sourcerowssize = nsourcerows;
+
+               /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+               SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, sourcerowssize, TRUE, &nsourcerows) );
+            }
+            assert(nsourcerows <= sourcerowssize);
+         }
+         else
+         {
+            /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+            SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE, NULL) );
+         }
       }
 
       /* create event handler for LP events */
@@ -890,14 +967,34 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    for( i = 0; i < nvars; i++ )
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
-   /* free hash map */
-   SCIPhashmapFree(&varmapfw);
-
    success = FALSE;
 
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
    /* create a new problem, which fixes variables with same value in a certain set of solutions */
-   SCIP_CALL( setupSubproblem(scip, subscip, subvars, selection, heurdata, &success) );
+   SCIP_CALL( setupSubproblem(scip, subscip, subvars, selection, heurdata, sourcerows, targetconss, sourcerowssize, &nsourcerows, &success) );
+
+   if( success && SCIPuseLPStartBasis(scip) )
+   {
+      /* use the last LP basis as starting basis */
+      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows, heurdata->uselprows) );
+   }
+
+   if( sourcerows != NULL )
+   {
+      assert(targetconss != NULL);
+      SCIPfreeBufferArray(scip, &sourcerows);
+      SCIPfreeBufferArray(scip, &targetconss);
+   }
+   else
+      assert(targetconss == NULL);
+
+   /* free hash map */
+   SCIPhashmapFree(&varmapfw);
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      assert(consmapfw != NULL);
+      SCIPhashmapFree(&consmapfw);
+   }
 
    heurdata->prevbestsol = SCIPgetBestSol(scip);
    heurdata->prevlastsol = sols[heurdata->nusedsols-1];

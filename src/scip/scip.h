@@ -6246,6 +6246,12 @@ SCIP_RETCODE SCIPrestartSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** returns whether LP a starting basis should used */
+EXTERN
+SCIP_Bool SCIPuseLPStartBasis(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** include specific heuristics and branching rules for reoptimization
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -11974,9 +11980,10 @@ SCIP_RETCODE SCIPcopyBasis(
    SCIP*                 targetscip,         /**< target SCIP data structure */
    SCIP_HASHMAP*         varmap,             /**< hashmap mapping source to target variables */
    SCIP_HASHMAP*         consmap,            /**< hashmap mapping source to target constraints */
-   SCIP_ROW**            sourcerows,         /**< array of source rows */
-   SCIP_CONS**           targetconss,        /**< array of target constraints */
-   int                   nsourcerows         /**< number of source rows */
+   SCIP_ROW**            sourcecuts,         /**< array of source rows corresponding to a cut */
+   SCIP_CONS**           targetcuts,         /**< array of target constraints corresponding to a cut */
+   int                   nsourcerows,        /**< number of source rows */
+   SCIP_Bool             uselprows           /**< should the LP basis base on the rows in the LP rows? */
    );
 
 

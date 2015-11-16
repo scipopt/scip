@@ -1155,13 +1155,14 @@ SCIP_RETCODE solveSubMIP(
 {
    SCIP* subscip;
    SCIP_HASHMAP* varmap;
+   SCIP_HASHMAP* consmap;
    SCIP_SOL** subsols;
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
    SCIP_RETCODE retcode;
-   int c;
-   int nsubsols;
    SCIP_Bool valid;
+   int nsubsols;
+   int c;
 
    /* create subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -1169,17 +1170,33 @@ SCIP_RETCODE solveSubMIP(
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNVars(scip))) );
 
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+   }
+   else
+      consmap = NULL;
+
    *success = FALSE;
 
    /* copy original problem to subproblem; do not copy pricers */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmap, NULL, "undercoversub", FALSE, FALSE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmap, consmap, "nlpdiving", FALSE, FALSE, TRUE, &valid) );
 
+#ifndef NDEBUG
    /* assert that cover variables are fixed in source and target SCIP */
    for( c = 0; c < ncovervars; c++)
    {
       assert(SCIPisFeasEQ(scip, SCIPvarGetLbLocal(covervars[c]), SCIPvarGetUbLocal(covervars[c])));
       assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal((SCIP_VAR*) SCIPhashmapGetImage(varmap, covervars[c])),
             SCIPvarGetUbGlobal((SCIP_VAR*) SCIPhashmapGetImage(varmap, covervars[c]))));
+   }
+#endif
+
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      /* use the last LP basis as starting basis */
+      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmap, consmap, NULL, NULL, 0, FALSE) );
    }
 
    /* set parameters for sub-SCIP */
@@ -1321,6 +1338,11 @@ SCIP_RETCODE solveSubMIP(
    /* free sub-SCIP and hash map */
    SCIP_CALL( SCIPfree(&subscip) );
    SCIPhashmapFree(&varmap);
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      assert(consmap != NULL);
+      SCIPhashmapFree(&consmap);
+   }
 
    return SCIP_OKAY;
 }

@@ -106,6 +106,11 @@ SCIP_RETCODE setupProbingSCIP(
    SCIP_Bool*            success             /**< was copying successful? */
    )
 {
+   SCIP_HASHMAP* consmapfw = NULL;
+   SCIP_ROW** sourcerows = NULL;
+   SCIP_CONS** targetconss = NULL;
+   int nsourcerows = 0;
+
    /* initializing the subproblem */
    SCIP_CALL( SCIPcreate(probingscip) );
 
@@ -113,14 +118,51 @@ SCIP_RETCODE setupProbingSCIP(
    SCIP_CALL( SCIPhashmapCreate(varmapfw, SCIPblkmem(*probingscip), SCIPgetNVars(scip)) );
    *success = FALSE;
 
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(*probingscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+   }
+
    /* copy SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, *probingscip, *varmapfw, NULL, "feaspump", FALSE, FALSE, TRUE, success) );
+   SCIP_CALL( SCIPcopy(scip, *probingscip, *varmapfw, consmapfw, "feaspump", FALSE, FALSE, TRUE, success) );
 
    if( copycuts )
    {
-      /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-      SCIP_CALL( SCIPcopyCuts(scip, *probingscip, *varmapfw, NULL, NULL, NULL, 0, FALSE, NULL) );
+      if( SCIPuseLPStartBasis(scip) )
+      {
+         int sourcerowssize = SCIPgetNLPRows(scip);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &sourcerows, sourcerowssize) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &targetconss, sourcerowssize) );
+
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, *probingscip, *varmapfw, consmapfw, sourcerows, targetconss, sourcerowssize, TRUE, &nsourcerows) );
+         assert(nsourcerows <= sourcerowssize);
+      }
+      else
+      {
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, *probingscip, *varmapfw, NULL, NULL, NULL, 0, FALSE, NULL) );
+      }
    }
+
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      /* use the last LP basis as starting basis */
+      SCIP_CALL( SCIPcopyBasis(scip, *probingscip, *varmapfw, consmapfw, sourcerows, targetconss, nsourcerows, FALSE) );
+
+      SCIPhashmapFree(&consmapfw);
+   }
+
+   if( sourcerows != NULL )
+   {
+      assert(targetconss != NULL);
+      SCIPfreeBufferArray(scip, &sourcerows);
+      SCIPfreeBufferArray(scip, &targetconss);
+   }
+   else
+      assert(targetconss == NULL);
 
    return SCIP_OKAY;
 }

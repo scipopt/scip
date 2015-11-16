@@ -271,6 +271,7 @@ SCIP_RETCODE SCIPapplyZeroobj(
 {
    SCIP*                 subscip;            /* the subproblem created by zeroobj              */
    SCIP_HASHMAP*         varmapfw;           /* mapping of SCIP variables to sub-SCIP variables */
+   SCIP_HASHMAP*         consmapfw;          /* mapping of SCIP constraints to sub-SCIP constraints */
    SCIP_VAR**            vars;               /* original problem's variables                    */
    SCIP_VAR**            subvars;            /* subproblem's variables                          */
    SCIP_HEURDATA*        heurdata;           /* heuristic's private data structure              */
@@ -340,13 +341,22 @@ SCIP_RETCODE SCIPapplyZeroobj(
 
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
+
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+   }
+   else
+      consmapfw = NULL;
+
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
    /* different methods to create sub-problem: either copy LP relaxation or the CIP with all constraints */
    valid = FALSE;
 
    /* copy complete SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "zeroobj", TRUE, FALSE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, consmapfw, "zeroobj", TRUE, FALSE, TRUE, &valid) );
    SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
    /* create event handler for LP events */
@@ -395,8 +405,19 @@ SCIP_RETCODE SCIPapplyZeroobj(
       }
    }
 
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      /* use the last LP basis as starting basis */
+      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, NULL, NULL, 0, FALSE) );
+   }
+
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      assert(consmapfw != NULL);
+      SCIPhashmapFree(&consmapfw);
+   }
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );

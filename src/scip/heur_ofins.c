@@ -212,13 +212,17 @@ SCIP_RETCODE applyOfins(
 {
    SCIP* subscip;                                 /* the subproblem created by OFINS */
    SCIP_HASHMAP* varmapfw;                        /* mapping of SCIP variables to sub-SCIP variables */
+   SCIP_HASHMAP* consmapfw;
    SCIP_VAR** vars;                               /* source problem's variables */
    SCIP_VAR** subvars;                            /* subproblem's variables */
    SCIP_EVENTHDLR* eventhdlr;                     /* event handler for LP events */
+   SCIP_ROW** sourcerows = NULL;
+   SCIP_CONS** targetconss = NULL;
 
    SCIP_Real timelimit;                           /* time limit for OFINS subproblem */
    SCIP_Real memorylimit;                         /* memory limit for OFINS subproblem */
 
+   int nsourcerows = 0;
    int nvars;                                     /* number of source problem's variables */
    int i;
 
@@ -274,17 +278,39 @@ SCIP_RETCODE applyOfins(
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+   }
+   else
+      consmapfw = NULL;
+
    eventhdlr = NULL;
 
    valid = FALSE;
 
    /* copy complete SCIP instance */
-   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "ofins", TRUE, FALSE, TRUE, &valid) );
+   SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, consmapfw, "ofins", TRUE, FALSE, TRUE, &valid) );
 
    if( heurdata->copycuts )
    {
-      /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-      SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE, NULL) );
+      if( SCIPuseLPStartBasis(scip) )
+      {
+         int sourcerowssize = SCIPgetNLPRows(scip);
+
+         SCIP_CALL( SCIPallocBufferArray(scip, &sourcerows, sourcerowssize) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &targetconss, sourcerowssize) );
+
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, sourcerowssize, TRUE, &nsourcerows) );
+         assert(nsourcerows <= sourcerowssize);
+      }
+      else
+      {
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE, NULL) );
+      }
    }
 
    SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
@@ -302,12 +328,33 @@ SCIP_RETCODE applyOfins(
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
      assert(subvars[i] != NULL);
    }
-   /* free hash map */
-   SCIPhashmapFree(&varmapfw);
 
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
    SCIP_CALL( createSubproblem(scip, subscip, subvars, chgcoeffs) );
    SCIPdebugMessage("OFINS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
+
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      /* use the last LP basis as starting basis */
+      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows, FALSE) );
+   }
+
+   if( sourcerows != NULL )
+   {
+      assert(targetconss != NULL);
+      SCIPfreeBufferArray(scip, &sourcerows);
+      SCIPfreeBufferArray(scip, &targetconss);
+   }
+   else
+      assert(targetconss == NULL);
+
+   /* free hash map */
+   SCIPhashmapFree(&varmapfw);
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      assert(consmapfw != NULL);
+      SCIPhashmapFree(&consmapfw);
+   }
 
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );

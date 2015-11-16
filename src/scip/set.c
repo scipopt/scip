@@ -253,6 +253,7 @@
 #define SCIP_DEFAULT_MISC_OUTPUTORIGSOL    TRUE /**< should the best solution be transformed to the orignal space and be output in command line run? */
 #define SCIP_DEFAULT_MISC_ALLOWDUALREDS    TRUE /**< should dual reductions in propagation methods and presolver be allowed? */
 #define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
+#define SCIP_DEFAULT_MISC_USESTARTBASIS   FALSE
 
 
 /* Node Selection */
@@ -1616,6 +1617,11 @@ SCIP_RETCODE SCIPsetCreate(
             "misc/allowobjprop",
             "should propagation to the current objective be allowed in propagation methods?",
             &(*set)->misc_allowobjprop, FALSE, SCIP_DEFAULT_MISC_ALLOWOBJPROP,
+            NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/usestartbasis",
+            "should the last used LP basis copied into the sub-SCIP?",
+            &(*set)->misc_usestartbasis, FALSE, SCIP_DEFAULT_MISC_USESTARTBASIS,
             NULL, NULL) );
 
    /* node selection */

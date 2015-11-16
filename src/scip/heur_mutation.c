@@ -84,6 +84,10 @@ SCIP_RETCODE createSubproblem(
    SCIP*                 scip,               /**< original SCIP data structure                                  */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem                        */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                               */
+   SCIP_ROW**            sourcerows,
+   SCIP_CONS**           targetconss,
+   int                   sourcerowssize,
+   int*                  nsourcerows,
    SCIP_Real             minfixingrate,      /**< percentage of integer variables that have to be fixed         */
    unsigned int*         randseed,           /**< a seed value for the random number generator                  */
    SCIP_Bool             uselprows,          /**< should subproblem be created out of the rows in the LP rows?  */
@@ -191,8 +195,15 @@ SCIP_RETCODE createSubproblem(
       SCIP_ROW** rows;   /* original scip rows */
       int nrows;
 
+      assert(!SCIPuseLPStartBasis(scip) || nsourcerows != NULL);
+      assert(!SCIPuseLPStartBasis(scip) || sourcerows != NULL);
+      assert(!SCIPuseLPStartBasis(scip) || targetconss != NULL);
+
       /* get the rows and their number */
       SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+      assert(!SCIPuseLPStartBasis(scip) || nrows <= sourcerowssize);
+
+      *nsourcerows = 0;
 
       /* copy all rows to linear constraints */
       for( i = 0; i < nrows; i++ )
@@ -229,7 +240,22 @@ SCIP_RETCODE createSubproblem(
          SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
          SCIP_CALL( SCIPaddCons(subscip, cons) );
-         SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
+
+         if( SCIPuseLPStartBasis(scip) )
+         {
+            assert(targetconss != NULL);
+
+            /* store the added cons and the corresponding row */
+            sourcerows[(*nsourcerows)] = rows[i];
+            targetconss[(*nsourcerows)] = cons;
+
+            /* capture the row (the constraint was already captured twice: create, add)
+             * both will be released at the end of copyBasis in scip.c
+             */
+            SCIP_CALL( SCIPcaptureRow(scip, sourcerows[(*nsourcerows)]) );
+
+            ++(*nsourcerows);
+         }
 
          /* free temporary memory */
          SCIPfreeBufferArray(scip, &consvars);
@@ -358,6 +384,9 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_VAR** vars;                          /* original problem's variables                        */
    SCIP_VAR** subvars;                       /* subproblem's variables                              */
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
+   SCIP_HASHMAP* consmapfw;
+   SCIP_ROW** sourcerows = NULL;
+   SCIP_CONS** targetconss = NULL;
 
    SCIP_Real cutoff;                         /* objective cutoff for the subproblem                 */
    SCIP_Real maxnnodesr;
@@ -365,6 +394,8 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_Real timelimit;                      /* timelimit for the subproblem                        */
    SCIP_Real upperbound;
 
+   int sourcerowssize = 0;
+   int nsourcerows = 0;
    int nvars;                                /* number of original problem's variables              */
    int i;
 
@@ -381,6 +412,10 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    assert( heurdata != NULL );
 
    *result = SCIP_DELAYED;
+
+   /* return if the node is infeasible and the current LP is not constructed */
+   if( nodeinfeasible && !SCIPisLPConstructed(scip) && heurdata->uselprows )
+      return SCIP_OKAY;
 
    /* only call heuristic, if feasible solution is available */
    if( SCIPgetNSols(scip) <= 0 )
@@ -431,6 +466,23 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      sourcerowssize = SCIPgetNLPRows(scip);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &sourcerows, sourcerowssize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &targetconss, sourcerowssize) );
+
+      /* create the constraint mapping hash map */
+      SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
+   }
+   else
+   {
+      consmapfw = NULL;
+      sourcerows = NULL;
+      targetconss = NULL;
+   }
+
    if( heurdata->uselprows )
    {
       char probname[SCIP_MAXSTRLEN];
@@ -452,12 +504,21 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
       SCIP_Bool valid;
       valid = FALSE;
 
-      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "rens", TRUE, FALSE, TRUE, &valid) );
+      SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, consmapfw, "mutation", TRUE, FALSE, TRUE, &valid) );
 
       if( heurdata->copycuts )
       {
-         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
-         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE, NULL) );
+         if( SCIPuseLPStartBasis(scip) )
+         {
+            /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+            SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, sourcerowssize, TRUE, &nsourcerows) );
+            assert(nsourcerows <= sourcerowssize);
+         }
+         else
+         {
+            /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+            SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE, NULL) );
+         }
       }
 
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
@@ -466,12 +527,32 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    for( i = 0; i < nvars; i++ )
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
+   /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
+   SCIP_CALL( createSubproblem(scip, subscip, subvars, sourcerows, targetconss, sourcerowssize, &nsourcerows,
+         heurdata->minfixingrate, &heurdata->randseed, heurdata->uselprows, &success) );
+
+   if( success && SCIPuseLPStartBasis(scip) )
+   {
+      /* use the last LP basis as starting basis */
+      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows, heurdata->uselprows) );
+   }
+
+   if( sourcerows != NULL )
+   {
+      assert(targetconss != NULL);
+      SCIPfreeBufferArray(scip, &sourcerows);
+      SCIPfreeBufferArray(scip, &targetconss);
+   }
+   else
+      assert(targetconss == NULL);
+
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
-
-   /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   SCIP_CALL( createSubproblem(scip, subscip, subvars, heurdata->minfixingrate, &heurdata->randseed,
-         heurdata->uselprows, &success) );
+   if( SCIPuseLPStartBasis(scip) )
+   {
+      assert(consmapfw != NULL);
+      SCIPhashmapFree(&consmapfw);
+   }
 
    /* terminate if it was not possible to create the subproblem */
    if( !success )

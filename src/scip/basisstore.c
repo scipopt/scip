@@ -43,7 +43,7 @@ SCIP_RETCODE initializeBasisstore(
    assert(basisstore->basessize == 0);
    assert(blkmem != NULL);
 
-   SCIPdebugMessage("initialize basisstore\n");
+   SCIPdebugMessage("initialize basisstore %p\n", (void*) basisstore);
 
    SCIP_ALLOC( BMSallocMemoryArray(&basisstore->bases, 1) );
    basisstore->basessize = 1;
@@ -83,6 +83,8 @@ SCIP_RETCODE SCIPbasisstoreCreate(
    (*basisstore)->basessize = 0;
    (*basisstore)->nbases = 0;
 
+   SCIPdebugMessage("create basisstore %p\n", (void*)(*basisstore));
+
    return SCIP_OKAY;
 }
 
@@ -95,21 +97,9 @@ SCIP_RETCODE SCIPbasisstoreFree(
    assert(basisstore != NULL);
    assert(*basisstore != NULL);
 
-   if( *basisstore == NULL)
-      return SCIP_OKAY;
-
-   SCIPdebugMessage("free %d basis.\n", (*basisstore)->nbases);
-
-   while( (*basisstore)->nbases > 0 )
+   if( (*basisstore)->nbases > 0 )
    {
-      int b = (*basisstore)->nbases-1;
-
-      BMSfreeMemoryArray(&(*basisstore)->bases[b]->consstat);
-      BMSfreeMemoryArray(&(*basisstore)->bases[b]->varstat);
-      BMSfreeMemoryArray(&(*basisstore)->bases[b]->conss);
-      BMSfreeMemoryArray(&(*basisstore)->bases[b]->vars);
-      BMSfreeMemoryArrayNull(&(*basisstore)->bases[b]);
-      (*basisstore)->nbases--;
+      SCIPbasistoreRemoveBasis(*basisstore);
    }
    assert((*basisstore)->nbases == 0);
 
@@ -118,6 +108,7 @@ SCIP_RETCODE SCIPbasisstoreFree(
       BMSfreeMemoryArray(&(*basisstore)->bases);
    }
 
+   SCIPdebugMessage("free basisstore %p.\n", (void*)(*basisstore));
    BMSfreeMemoryNull(&(*basisstore));
 
    return SCIP_OKAY;
@@ -154,7 +145,8 @@ SCIP_RETCODE SCIPbasisstoreAddBasis(
       SCIP_CALL( checkMem(basisstore, blkmem) );
    }
 
-   SCIPdebugMessage("add basis: pos %d, nvars %d, nconss %d\n", basisstore->nbases, nvars, nconss);
+   SCIPdebugMessage("add basis to basisstore %p: pos %d, nvars %d, nconss %d\n", (void*) basisstore, basisstore->nbases,
+         nvars, nconss);
 
    /* store the basis */
    SCIP_ALLOC( BMSallocMemory(&basisstore->bases[basisstore->nbases]) );
@@ -203,7 +195,7 @@ SCIP_RETCODE SCIPbasisstoreCopy(
    assert(basisstore != NULL);
    assert(targetbasisstore != NULL);
 
-   SCIPdebugMessage("copy basis %p to %p\n", (void*) basisstore, (void*) targetbasisstore);
+   SCIPdebugMessage("copy basisstore: %p -> %p\n", (void*) basisstore, (void*) targetbasisstore);
 
    for(b = 0; b < basisstore->nbases; b++)
    {
@@ -227,7 +219,7 @@ void SCIPbasistoreRemoveBasis(
    assert(basisstore->nbases > 0);
 
    basisstore->nbases--;
-   SCIPdebugMessage("delete last basis at position %d\n", basisstore->nbases);
+   SCIPdebugMessage("delete last basis at position %d in basisstore %p\n", basisstore->nbases, (void*) basisstore);
 
    BMSfreeMemoryArray(&basisstore->bases[basisstore->nbases]->consstat);
    BMSfreeMemoryArray(&basisstore->bases[basisstore->nbases]->varstat);
