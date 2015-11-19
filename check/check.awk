@@ -42,7 +42,7 @@ BEGIN {
    sblpgeomshift = 0.0;
    pavshift = 0.0;
    onlyinsolufile = 0;          # should only instances be reported that are included in the .solu file?
-   onlyintestfile = 0;          # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
+   onlyintestfile = 1;          # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
    useshortnames = 1;           # should problem name be truncated to fit into column?
    writesolufile = 0;           # should a solution file be created from the results
@@ -285,35 +285,35 @@ BEGIN {
 /^  infeasible LP    :/ {
    if( inconflict == 1 ) {
       conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
-      conf_infLP += $7;
+      conf_infLP += $8;
    }
 }
 /^  bound exceed. LP :/ {
    if( inconflict == 1 ) {
       conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
-      conf_bndEx += $7;
+      conf_bndEx += $9;
    }
 }
 /^  strong branching :/ {
    if( inconflict == 1 ) {
       conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
-      conf_strbr += $7;
+      conf_strbr += $8;
    }
 }
 /^  pseudo solution  :/ {
    if( inconflict == 1 ) {
       conftime += $4; #confclauses += $6 + $8; confliterals += $6 * $7 + $8 * $9;
-      conf_pseud += $7;
+      conf_pseud += $8;
    }
 }
 /^  applied globally :/ {
    if( inconflict == 1 ) {
-      confclauses += $7; confliterals += $7 * $8;
+      confclauses += $8; confliterals += $8 * $9;
    }
 }
 /^  applied locally  :/ {
    if( inconflict == 1 ) {
-      confclauses += $7; confliterals += $7 * $8;
+      confclauses += $8; confliterals += $8 * $9;
    }
 }
 /^Separators         :/ { inconflict = 0; }
@@ -1002,7 +1002,7 @@ BEGIN {
 
 	    if( analyseconf == 1 )
             {
-               printf(" & %7d & %7d & %7d & %7d & %7d & %7.1f ", conftime, conf_infLP, conf_bndEx, conf_strbr, conf_prop, conf_pseud)  >TEXFILE;
+               printf(" & %7d & %7d & %7d & %7d & %7d & %7.1f ", conf_infLP, conf_bndEx, conf_strbr, conf_prop, conf_pseud, conftime)  >TEXFILE;
             }
 
 	    if( printsoltimes )
