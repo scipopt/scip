@@ -67,6 +67,8 @@ struct SCIP_HeurData
    int                   ninvalidcons;       /** number of invalid cons in the given solution */
    int                   norcons;            /** number of all cons in the given problem */
    SCIP_Real             relinvalidcons;     /** relative number of invalid cons */
+
+   SCIP_Real             orsolval;           /** value of the solution find by repair, in the original Problem*/
 };
 
 
@@ -108,7 +110,7 @@ SCIP_RETCODE readSol(
          SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
                "Warning: Solution to repair not found!\n");
       }
-      return SCIP_OKAY;
+      return SCIP_NOFILE;
    }
 
    /* read the file */
@@ -266,6 +268,7 @@ SCIP_RETCODE checkCands(
 /** creates a new solution for the original problem by copying the solution of the subproblem */
 static
 SCIP_RETCODE createNewSol(
+   SCIP_HEURDATA*         heurdata,           /**< repairs heurdata                                    */
    SCIP*                 scip,               /**< original SCIP data structure                        */
    SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
@@ -278,6 +281,7 @@ SCIP_RETCODE createNewSol(
    int        nvars;                         /* the original problem's number of variables      */
    SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
+   SCIP_Real  valuetmp;                      /* var to save the original value of the solution temporally*/
 
    assert(scip != NULL);
    assert(subscip != NULL);
@@ -300,9 +304,12 @@ SCIP_RETCODE createNewSol(
    /* create new solution for the original problem */
    SCIP_CALL( SCIPcreateSol(scip, &newsol, heur) );
    SCIP_CALL( SCIPsetSolVals(scip, newsol, nvars, vars, subsolvals) );
-
+   valuetmp = SCIPgetSolOrigObj(scip, newsol);
    /* try to add new solution to scip and free it immediately */
    SCIP_CALL( SCIPtrySolFree(scip, &newsol, FALSE, TRUE, TRUE, TRUE, success) );
+
+   if( success )
+      heurdata->orsolval = valuetmp;
 
    SCIPfreeBufferArray(scip, &subsolvals);
 
@@ -367,6 +374,8 @@ SCIP_DECL_HEURINIT(heurInitRepair)
    heurdata->norcons = 0;
    heurdata->relinvalidcons = 0;
 
+   heurdata->orsolval = SCIP_INVALID;
+
    return SCIP_OKAY;
 }
 
@@ -379,6 +388,7 @@ SCIP_DECL_HEUREXIT(heurExitRepair)
    SCIP_Real time;
    SCIP_Real relvars;
    SCIP_Real relcons;
+   char solval[1024];
    char message[1024];
    int invalids;
    int ninvars;
@@ -400,6 +410,15 @@ SCIP_DECL_HEUREXIT(heurExitRepair)
    time = heurdata->subpresoltime;
    runs = heurdata->runs;
 
+   if( SCIP_INVALID == heurdata->orsolval )
+   {
+      sprintf(solval,"--");
+   }
+   else
+   {
+      sprintf(solval,"%15.9g",heurdata->orsolval);
+   }
+
    /* TODO remove this from heuristic data */
    heurdata->relinvalidvars = MAX((SCIP_Real)heurdata->norvars, 1.0);
    heurdata->relinvalidvars = heurdata->ninvalidvars/heurdata->relinvalidvars;
@@ -412,9 +431,10 @@ SCIP_DECL_HEUREXIT(heurExitRepair)
 
    /* Prints all statistic data for an user*/
    SCIPstatistic(
-      sprintf(message, "Repair: \n\t total invalids: %d\n\n\t invalid variables: %d\n\t total variables: %d\n\t relative invalid variables: %.2f%%\n", invalids, ninvars, nvars, 100 * relvars);
+      sprintf(message, "<repair> \n\t total invalids: %d\n\n\t invalid variables: %d\n\t total variables: %d\n\t relative invalid variables: %.2f%%\n", invalids, ninvars, nvars, 100 * relvars);
       sprintf(message, "%s  \n\n\t invalid constraints: %d\n\t total constraints: %d\n\t relative invalid constraints: %.2f%%\n", message, ninvcons, ncons, 100* relcons);
       sprintf(message, "%s  \n\n\t iterations: %d\n\t nodes: %d\n\t number of runs: %d\n\t presolve time: %.2f s\n", message,iterations,nodes,runs,time);
+      sprintf(message, "%s  \n\n\t Value of repairs best solution: %s\n</repair>\n\n", message,solval);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, message);
    )
    return SCIP_OKAY;
@@ -457,7 +477,7 @@ SCIP_DECL_HEUREXITSOL(heurExitsolRepair)
 static
 SCIP_DECL_HEUREXEC(heurExecRepair)
 { /*lint --e{715}*/
-   SCIP* subscip;
+   SCIP* subscip = NULL;
    SCIP_VAR** vars;
    SCIP_VAR** subvars = NULL;
    SCIP_ROW** rows;
@@ -494,7 +514,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    }
 
    /* create zero solution */
-   SCIP_CALL(SCIPcreateOrigSol(scip, &sol, heur));
+   SCIP_CALL( SCIPcreateOrigSol(scip, &sol, heur) );
 
    heurdata = SCIPheurGetData(heur);
 
@@ -528,6 +548,12 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    SCIP_CALL( SCIPcreate(&subscip) );
    SCIP_CALL( SCIPincludeDefaultPlugins(subscip) );
    SCIP_CALL( SCIPcopyParamSettings(scip, subscip) );
+
+   /* use inference branching */
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+    }
 
    /* get name of the original problem and add the string "_repairsub" */
    (void) SCIPsnprintf(probname, SCIP_MAXSTRLEN, "%s_repairsub",
@@ -781,7 +807,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    assert(SCIPgetNSols(subscip) > 0);
    if( SCIPisFeasZero(scip, SCIPgetPrimalbound(subscip)) )
    {
-      SCIP_CALL(createNewSol(scip, subscip, subvars, heur, SCIPgetBestSol(subscip), &success));
+      SCIP_CALL(createNewSol(heurdata, scip, subscip, subvars, heur, SCIPgetBestSol(subscip), &success));
       /*assert(success || SCIPgetNSols(scip) > 0);*/
 
       if( success )
@@ -797,9 +823,13 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
 TERMINATE:
    SCIPfreeSol(scip, &sol);
    /*SCIPfreeSol(subscip, &subsol);*/
-   SCIPfreeBufferArray(scip, &subvars);
-   SCIPfree(&subscip);
-   return retcode;
+   SCIPfreeBufferArrayNull(scip, &subvars);
+   if( NULL != subscip )
+   {
+      SCIPfree(&subscip);
+   }
+
+   return SCIP_OKAY;
 }
 
 
