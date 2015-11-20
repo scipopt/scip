@@ -2045,12 +2045,11 @@ SCIP_DECL_EXPREVAL( exprevalSin )
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntSin )
 {   /*lint --e{715}*/
-   assert(result  != NULL);
+   assert(result != NULL);
    assert(argvals != NULL);
+   assert(nargs == 1);
 
-   /* @todo implement SCIPintervalSin */
-   SCIPerrorMessage("exprevalSinInt gives only trivial bounds so far\n");
-   SCIPintervalSetBounds(result, -1.0, 1.0);
+   SCIPintervalSin(infinity, result, *argvals);
 
    return SCIP_OKAY;
 }
@@ -2074,12 +2073,11 @@ SCIP_DECL_EXPREVAL( exprevalCos )
 static
 SCIP_DECL_EXPRINTEVAL( exprevalIntCos )
 {   /*lint --e{715}*/
-   assert(result  != NULL);
+   assert(result != NULL);
    assert(argvals != NULL);
+   assert(nargs == 1);
 
-   /* @todo implement SCIPintervalCos */
-   SCIPerrorMessage("exprevalCosInt gives only trivial bounds so far\n");
-   SCIPintervalSetBounds(result, -1.0, 1.0);
+   SCIPintervalCos(infinity, result, *argvals);
 
    return SCIP_OKAY;
 }

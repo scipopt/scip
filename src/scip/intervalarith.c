@@ -2647,6 +2647,159 @@ void SCIPintervalAbs(
    }
 }
 
+/** stores sine value of operand in resultant */
+void SCIPintervalSin(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   )
+{
+   SCIP_Real intervallen;
+   SCIP_Real modinf;
+   SCIP_Real modsup;
+   SCIP_Real finf;
+   SCIP_Real fsup;
+   int a;
+   int b;
+   int nbetween;
+   /* first one is 1 so even indices are the maximum points */
+   static SCIP_Real extremepoints[] = {0.5*M_PI, 1.5*M_PI, 2.5*M_PI, 3.5*M_PI};
+
+   assert(resultant != NULL);
+   assert(!SCIPintervalIsEmpty(infinity, operand));
+
+   intervallen = operand.sup - operand.inf;
+   if(intervallen >= 2*M_PI)
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      return;
+   }
+
+   modinf = fmod(operand.inf, 2*M_PI);
+   if(modinf < 0.0)
+      modinf += 2*M_PI;
+   modsup = modinf + intervallen;
+
+   for(b = 0; TRUE; ++b)
+   {
+      if(modinf <= extremepoints[b])
+      {
+         a = b;
+         break;
+      }
+   }
+   for(; b < 4; ++b)
+   {
+      if(modsup <= extremepoints[b])
+         break;
+   }
+
+   nbetween = b-a;
+
+   if(nbetween > 1)
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      return;
+   }
+
+   finf = sin(operand.inf);
+   fsup = sin(operand.sup);
+
+   if(nbetween == 0)
+   {
+      if(a & 1) /* next extremepoint is minimum -> decreasing -> finf < fsup */
+         SCIPintervalSetBounds(resultant, fsup, finf);
+      else
+         SCIPintervalSetBounds(resultant, finf, fsup);
+   }
+   else /* 1 extremepoint in between */
+   {
+       if(a & 1) /* extremepoint is minimum */
+          SCIPintervalSetBounds(resultant, -1.0, MAX(finf,fsup));
+       else
+          SCIPintervalSetBounds(resultant, MIN(finf,fsup), 1.0);
+   }
+
+   assert(resultant->inf <= resultant->sup);
+}
+
+
+/** stores cosine value of operand in resultant */
+void SCIPintervalCos(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   )
+{
+   SCIP_Real intervallen;
+   SCIP_Real modinf;
+   SCIP_Real modsup;
+   SCIP_Real finf;
+   SCIP_Real fsup;
+   int a;
+   int b;
+   int nbetween;
+   /* first one is -1 so even indices are the minimum points */
+   static SCIP_Real extremepoints[] = {M_PI, 2*M_PI, 3*M_PI};
+
+   assert(resultant != NULL);
+   assert(!SCIPintervalIsEmpty(infinity, operand));
+
+   intervallen = operand.sup - operand.inf;
+   if(intervallen >= 2*M_PI)
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      return;
+   }
+
+   modinf = fmod(operand.inf, 2*M_PI);
+   if(modinf < 0.0)
+      modinf += 2*M_PI;
+   modsup = modinf + intervallen;
+
+   for(b = 0; TRUE; ++b)
+   {
+      if(modinf <= extremepoints[b])
+      {
+         a = b;
+         break;
+      }
+   }
+   for(; b < 3; ++b)
+   {
+      if(modsup <= extremepoints[b])
+         break;
+   }
+
+   nbetween = b-a;
+
+   if(nbetween > 1)
+   {
+      SCIPintervalSetBounds(resultant, -1.0, 1.0);
+      return;
+   }
+
+   finf = cos(operand.inf);
+   fsup = cos(operand.sup);
+
+   if(nbetween == 0)
+   {
+      if(a & 1) /* next extremepoint is maximum -> increasing -> finf < fsup */
+         SCIPintervalSetBounds(resultant, finf, fsup);
+      else
+         SCIPintervalSetBounds(resultant, fsup, finf);
+   }
+   else /* 1 extremepoint in between */
+   {
+       if(a & 1) /* extremepoint is maximum */
+          SCIPintervalSetBounds(resultant, MIN(finf,fsup), 1.0);
+       else
+          SCIPintervalSetBounds(resultant, -1.0, MAX(finf,fsup));
+   }
+
+   assert(resultant->inf <= resultant->sup);
+}
+
 /** stores sign of operand in resultant */
 void SCIPintervalSign(
    SCIP_Real             infinity,           /**< value for infinity */

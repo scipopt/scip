@@ -561,6 +561,22 @@ void SCIPintervalAbs(
    SCIP_INTERVAL         operand             /**< operand of operation */
    );
 
+/** stores sine value of operand in resultant */
+extern
+void SCIPintervalSin(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   );
+
+/** stores cosine value of operand in resultant */
+extern
+void SCIPintervalCos(
+   SCIP_Real             infinity,           /**< value for infinity */
+   SCIP_INTERVAL*        resultant,          /**< resultant interval of operation */
+   SCIP_INTERVAL         operand             /**< operand of operation */
+   );
+
 /** stores sign of operand in resultant */
 extern
 void SCIPintervalSign(
