@@ -818,12 +818,13 @@ SCIP_RETCODE lpbdchgsCreate(
 /** reset conflict LP bound change data structure */
 static
 void lpbdchgsReset(
-   SCIP_LPBDCHGS*        lpbdchgs            /**< conflict LP bound change data structure */
+   SCIP_LPBDCHGS*        lpbdchgs,           /**< conflict LP bound change data structure */
+   int                   ncols               /**< number of columns */
    )
 {
    assert(lpbdchgs != NULL);
 
-   BMSclearMemoryArray(lpbdchgs->usedcols, lpbdchgs->nbdchgs);
+   BMSclearMemoryArray(lpbdchgs->usedcols, ncols);
    lpbdchgs->nbdchgs = 0;
 }
 
@@ -5855,7 +5856,7 @@ SCIP_RETCODE conflictAnalyzeLP(
                   relaxedlpbdchgs->bdchginds, relaxedlpbdchgs->bdchglbs, relaxedlpbdchgs->bdchgubs) );
 
             /* reset conflict LP bound change data structure */
-            lpbdchgsReset(relaxedlpbdchgs);
+            lpbdchgsReset(relaxedlpbdchgs, ncols);
          }
 
          /* start LP timer */
