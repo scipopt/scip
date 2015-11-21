@@ -4987,6 +4987,10 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    /* get LP solver interface */
    lpi = SCIPlpGetLPI(lp);
 
+   /* if solve for some reason did not produce a dual ray, e.g. because of numerical instabilities, abort conflict analysis */
+   if( ! SCIPlpiHasDualRay(lpi) )
+      return SCIP_OKAY;
+
    /* get LP rows and problem variables */
    rows = SCIPlpGetRows(lp);
    nrows = SCIPlpGetNRows(lp);
@@ -4998,10 +5002,6 @@ SCIP_RETCODE undoBdchgsDualfarkas(
    /* allocate temporary memory */
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualfarkas, nrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &farkascoefs, nvars) );
-
-   /* if solve for some reason did not produce a dual ray, e.g. because of numerical instabilities, abort conflict analysis */
-   if( ! SCIPlpiHasDualRay(lpi) )
-      goto TERMINATE;
 
    /* get dual Farkas values of rows */
    retcode = SCIPlpiGetDualfarkas(lpi, dualfarkas);
