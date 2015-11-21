@@ -2486,20 +2486,16 @@ SCIP_RETCODE checkAltLPInfeasible(
       else
          retcode = SCIPlpiSolveDual(lp);    /* use dual simplex */
 
+      /* reset parameters */
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
+
       if ( retcode == SCIP_LPERROR )
       {
-         /* reset parameters */
-         SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
-         SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
-
          *error = TRUE;
          return SCIP_OKAY;
       }
       SCIP_CALL( retcode );
-
-      /* reset parameters */
-      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
-      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
    }
 
    /* check whether we want to ignore the result, because the condition number is too large */
@@ -2534,9 +2530,10 @@ SCIP_RETCODE checkAltLPInfeasible(
     * If we ran the dual simplex algorithm, then we run again with the primal simplex
     */
    if ( ! SCIPlpiIsPrimalInfeasible(lp) && ! SCIPlpiIsPrimalUnbounded(lp) &&
-        ! SCIPlpiIsOptimal(lp) && SCIPlpiExistsPrimalRay(lp) && !primal )
+        ! SCIPlpiIsOptimal(lp) && SCIPlpiExistsPrimalRay(lp) && ! primal )
    {
       SCIPwarningMessage(scip, "The dual simplex produced a primal ray. Retrying with primal ...\n");
+
       /* the following settings might be changed: */
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, TRUE) );
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
@@ -2555,6 +2552,7 @@ SCIP_RETCODE checkAltLPInfeasible(
    {
       assert( ! SCIPlpiIsPrimalUnbounded(lp) );   /* can't be unbounded or optimal */
       assert( ! SCIPlpiIsOptimal(lp) );           /* if it is infeasible! */
+
       *infeasible = TRUE;                         /* LP is infeasible */
       return SCIP_OKAY;
    }
@@ -2566,13 +2564,10 @@ SCIP_RETCODE checkAltLPInfeasible(
       {
          /* We have a status different from unbounded or optimal. This should not be the case ... */
          if (primal)
-         {
             SCIPwarningMessage(scip, "Primal simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
-         }
          else
-         {
             SCIPwarningMessage(scip, "Dual simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
-         }
+
          /* SCIP_CALL( SCIPlpiWriteLP(lp, "debug.lp") ); */
          *error = TRUE;
          return SCIP_OKAY;
@@ -2762,10 +2757,10 @@ SCIP_RETCODE extendToCover(
          norm = 1.0; /*lint !e527*/
       }
 
-      /* update new set S */
       SCIPdebugMessage("   size: %4d  add %4d with objective value %6g and alt-LP solution value %-8.4g  (IIS size: %4d, eff.: %g).\n",
          *size, candidate, candObj, primsol[SCIPconsGetData(conss[candidate])->colindex], sizeIIS, (sum - (SCIP_Real) (sizeIIS - 1))/norm);
 
+      /* update new set S */
       S[candidate] = TRUE;
       ++(*size);
       *value += candObj;
