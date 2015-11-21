@@ -1990,10 +1990,6 @@ SCIP_RETCODE detectImpliedBounds(
       }
       else if( *nredvars > 0 )
       {
-#ifdef SCIP_DEBUG
-         int nvars;
-#endif
-
          assert(bdchginfos == conflictset->bdchginfos);
          assert(relaxedbds == conflictset->relaxedbds);
          assert(sortvals == conflictset->sortvals);
