@@ -27,6 +27,7 @@
 #include "scip/set.h"
 #include "scip/tree.h"
 #include "scip/misc.h"
+#include "scip/prob.h"
 
 #include "scip/struct_conflictstore.h"
 
@@ -49,7 +50,7 @@ SCIP_RETCODE conflictstoreEnsureCutsMem(
    assert(set != NULL);
 
    /* we do not allocate more memory as allowed */
-   if( conflictstore->conflictsize == set->conf_maxstoresize )
+   if( conflictstore->conflictsize == conflictstore->maxstoresize )
       return SCIP_OKAY;
 
    if( num > conflictstore->conflictsize )
@@ -60,7 +61,7 @@ SCIP_RETCODE conflictstoreEnsureCutsMem(
       /* initialize the complete data structure */
       if( conflictstore->conflictsize == 0 )
       {
-         newsize = MIN(set->conf_maxstoresize, DEFAULT_CONFLICTSTORE_SIZE);
+         newsize = MIN(conflictstore->maxstoresize, DEFAULT_CONFLICTSTORE_SIZE);
          SCIP_CALL( SCIPqueueCreate(&conflictstore->slotqueue, newsize, 2) );
          SCIP_CALL( SCIPqueueCreate(&conflictstore->orderqueue, newsize, 2) );
          SCIP_ALLOC( BMSallocMemoryArray(&conflictstore->conflicts, newsize) );
@@ -68,7 +69,7 @@ SCIP_RETCODE conflictstoreEnsureCutsMem(
       }
       else
       {
-         newsize = MIN(set->conf_maxstoresize, conflictstore->conflictsize * 2);
+         newsize = MIN(conflictstore->maxstoresize, conflictstore->conflictsize * 2);
          SCIP_ALLOC( BMSreallocMemoryArray(&conflictstore->conflicts, newsize) );
          SCIP_ALLOC( BMSreallocMemoryArray(&conflictstore->primalbounds, newsize) );
       }
@@ -199,6 +200,7 @@ SCIP_RETCODE SCIPconflictstoreCreate(
    (*conflictstore)->conflictsize = 0;
    (*conflictstore)->nconflicts = 0;
    (*conflictstore)->nconflictsfound = 0;
+   (*conflictstore)->maxstoresize = -1;
    (*conflictstore)->lastnodenum = -1;
 
    return SCIP_OKAY;
@@ -282,12 +284,35 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
 
    nconflicts = conflictstore->nconflicts;
 
+   /* calculate the maximal size of the conflict storage */
+   if( conflictstore->maxstoresize == -1 )
+   {
+      /* the size should be dynamic wrt number of variables after presolving */
+      if( set->conf_maxstoresize == -1 )
+      {
+         int nvars;
+
+         nvars = SCIPprobGetNVars(transprob);
+
+         if( nvars/2 <= 500 )
+            conflictstore->maxstoresize = 500;
+         else if( nvars/2 <= 5000 )
+            conflictstore->maxstoresize = 5000;
+         else
+            conflictstore->maxstoresize = 50000;
+      }
+      else
+         conflictstore->maxstoresize = set->conf_maxstoresize;
+
+      SCIPdebugMessage("maximal size of conflict pool is %d.\n", conflictstore->maxstoresize);
+   }
+
    SCIP_CALL( conflictstoreEnsureCutsMem(conflictstore, set, nconflicts+1) );
 
    /* return if the store has size zero */
    if( conflictstore->conflictsize == 0 )
    {
-      assert(set->conf_maxstoresize == 0);
+      assert(conflictstore->maxstoresize == 0);
       return SCIP_OKAY;
    }
 

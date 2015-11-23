@@ -11921,7 +11921,7 @@ SCIP_RETCODE SCIPaddConflict(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_NODE*            node,               /**< node to add conflict (or NULL if global) */
    SCIP_CONS*            cons,               /**< constraint representing the conflict */
-   SCIP_NODE*            validnode,          /**< node at which the constraint is valid (or NULL) */
+   SCIP_NODE*            validnode,          /**< node at whichaddConf the constraint is valid (or NULL) */
    SCIP_CONFTYPE         conftype,           /**< type of the conflict */
    SCIP_Bool             cutoffinvolved      /**< is a cutoff bound invaled in this conflict */
    )
@@ -11931,7 +11931,7 @@ SCIP_RETCODE SCIPaddConflict(
    assert(scip != NULL);
    assert(cons != NULL);
    assert(scip->conflictstore != NULL);
-   assert(scip->set->conf_maxstoresize > 0);
+   assert(scip->set->conf_maxstoresize != 0 );
    assert(conftype != SCIP_CONFTYPE_UNKNOWN);
    assert(conftype != SCIP_CONFTYPE_BNDEXCEEDING || cutoffinvolved);
 

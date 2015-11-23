@@ -43,6 +43,7 @@ struct SCIP_ConflictStore
    int                   conflictsize;       /**< size of conflict array (boundes by conflict->maxpoolsize) */
    int                   nconflicts;         /**< number of stored conflicts */
    int                   nconflictsfound;    /**< total number of conflicts found so far */
+   int                   maxstoresize;       /**< maximal size of the storage */
 };
 
 #ifdef __cplusplus
