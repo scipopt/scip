@@ -5452,8 +5452,6 @@ SCIP_RETCODE rangedRowPropagation(
    int nunfixedvars;
    int nfixedconsvars;
    int ncontvars;
-   int nposbinvars;
-   int nnegbinvars;
    int pos;
    int v;
 
@@ -5525,8 +5523,6 @@ SCIP_RETCODE rangedRowPropagation(
    SCIP_CALL( SCIPallocBufferArray(scip, &infcheckvals, nunfixedvars) );
 
    absminbincoef = SCIP_REAL_MAX;
-   nposbinvars = 0;
-   nnegbinvars = 0;
    ncontvars = 0;
    gcdisone = TRUE;
    possiblegcd = TRUE;
@@ -5563,12 +5559,9 @@ SCIP_RETCODE rangedRowPropagation(
             }
             else if( SCIPvarIsBinary(consdata->vars[v]) )
             {
-               SCIP_Real absval = REALABS(consdata->vals[v]);
+               SCIP_Real absval;
 
-               if( consdata->vals[v] > 0.0 )
-                  ++nposbinvars;
-               else
-                  ++nnegbinvars;
+               absval = REALABS(consdata->vals[v]);
 
                if( absminbincoef > absval )
                   absminbincoef = absval;
@@ -5613,12 +5606,9 @@ SCIP_RETCODE rangedRowPropagation(
 
       if( SCIPvarIsBinary(consdata->vars[v]) )
       {
-         SCIP_Real absval = REALABS(consdata->vals[v]);
+         SCIP_Real absval;
 
-         if( consdata->vals[v] > 0.0 )
-            ++nposbinvars;
-         else
-            ++nnegbinvars;
+         absval = REALABS(consdata->vals[v]);
 
          if( absminbincoef > absval )
             absminbincoef = absval;
