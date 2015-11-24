@@ -90,19 +90,71 @@ SCIP_RETCODE conflictstoreEnsureCutsMem(
    return SCIP_OKAY;
 }
 
-
-#if 0
 /** remove all deleted conflicts from the storage */
 static
 SCIP_RETCODE cleanDeletedConflicts(
-   SCIP_CONFLICTSTORE*   conflictstore
+   SCIP_CONFLICTSTORE*   conflictstore,
+   int*                  ndelconfs,
+   BMS_BLKMEM*           blkmem,
+   SCIP_SET*             set
    )
 {
+   int firstidx;
+   int nconfs;
+
    assert(conflictstore != NULL);
+   assert(SCIPqueueNElems(conflictstore->orderqueue) <= conflictstore->conflictsize);
+
+   (*ndelconfs) = 0;
+   firstidx = -1;
+   nconfs = conflictstore->nconflicts;
+
+   while( firstidx != ((int) (size_t) SCIPqueueFirst(conflictstore->orderqueue)-1) )
+   {
+      SCIP_CONS* conflict;
+      int idx;
+
+      assert(!SCIPqueueIsEmpty(conflictstore->orderqueue));
+
+      idx = ((int) (size_t) SCIPqueueRemove(conflictstore->orderqueue)) - 1;
+      assert(idx >= 0 && idx < conflictstore->conflictsize);
+
+      if( conflictstore->conflicts[idx] == NULL )
+         continue;
+
+      /* get the oldest conflict */
+      conflict = conflictstore->conflicts[idx];
+
+      /* check whether the constraint is already marked as deleted */
+      if( SCIPconsIsDeleted(conflict) )
+      {
+         /* release the constraint */
+         SCIP_CALL( SCIPconsRelease(&conflict, blkmem, set) );
+
+         /* clean the conflict and primal bound array */
+         conflictstore->conflicts[idx] = NULL;
+         conflictstore->primalbounds[idx] = SCIP_INVALID;
+
+         /* add the id shifted by +1 to the queue of empty slots */
+         SCIP_CALL( SCIPqueueInsert(conflictstore->slotqueue, (void*) (size_t) (idx+1)) );
+
+         ++(*ndelconfs);
+         --conflictstore->nconflicts;
+      }
+      else
+      {
+         /* remember the first conflict that is not deleted */
+         if( firstidx == -1 )
+            firstidx = idx;
+
+         SCIP_CALL( SCIPqueueInsert(conflictstore->orderqueue, (void*) (size_t) (idx+1)) );
+      }
+   }
+
+   SCIPdebugMessage("removed %d/%d as deleted marked conflicts.\n", *ndelconfs, nconfs);
 
    return SCIP_OKAY;
 }
-#endif
 
 /** clean up the storage */
 static
@@ -115,8 +167,13 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
    )
 {
    SCIP_CONS* conflict;
+   SCIP_Real maxage;
    SCIP_Bool storagecleaned;
+   int idx;
    int ndelconfs;
+   int nseenconfs;
+   int tmpidx;
+   int nimpr;
 
    assert(conflictstore != NULL);
    assert(blkmem != NULL);
@@ -138,48 +195,96 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
       return SCIP_OKAY;
 
    ndelconfs = 0;
+   nseenconfs = 0;
    storagecleaned = FALSE;
-   do
+
+   /* remove all as deleted marked conflicts */
+   SCIP_CALL( cleanDeletedConflicts(conflictstore, &ndelconfs, blkmem, set) );
+
+   /* we have deleted enough conflicts */
+   if( ndelconfs >= set->conf_maxconss || conflictstore->nconflicts == 0 )
+      return SCIP_OKAY;
+
+   assert(!SCIPqueueIsEmpty(conflictstore->orderqueue));
+
+   nimpr = 0;
+   tmpidx = -1;
+   maxage = -SCIPsetInfinity(set);
+
+   while( nimpr < 0.05*conflictstore->maxstoresize && nseenconfs < conflictstore->nconflicts )
    {
-      int idx;
-
-      assert(!SCIPqueueIsEmpty(conflictstore->orderqueue));
-
+      /* get the oldest conflict */
       idx = ((int) (size_t) SCIPqueueRemove(conflictstore->orderqueue)) - 1;
       assert(idx >= 0 && idx < conflictstore->conflictsize);
-      assert(conflictstore->conflicts[idx] != NULL);
+
+      if( conflictstore->conflicts[idx] == NULL )
+         continue;
 
       /* get the oldest conflict */
       conflict = conflictstore->conflicts[idx];
+      assert(!SCIPconsIsDeleted(conflict));
 
-      /* check whether the constraint is already marked as deleted */
-      if( !SCIPconsIsDeleted(conflict) )
+      ++nseenconfs;
+
+      if( SCIPconsGetAge(conflict) == 0 )
       {
+         SCIP_CALL( SCIPqueueInsert(conflictstore->orderqueue, (void*) (size_t) (idx+1)) );
+      }
+      else if( SCIPsetIsLT(set, maxage, SCIPconsGetAge(conflict)) )
+      {
+         if( tmpidx >= 0 )
+         {
+            SCIP_CALL( SCIPqueueInsert(conflictstore->orderqueue, (void*) (size_t) (tmpidx+1)) );
+         }
+         maxage = SCIPconsGetAge(conflict);
+         tmpidx = idx;
+         ++nimpr;
+      }
+      else if( SCIPsetIsEQ(set, maxage, SCIPconsGetAge(conflict)) )
+      {
+         SCIPdebugMessage("removed conflict at pos=%d with age=%g\n", idx, maxage);
+
          /* mark the constraint as deleted */
          SCIP_CALL( SCIPconsDelete(conflict, blkmem, set, stat, transprob) );
+         SCIP_CALL( SCIPconsRelease(&conflict, blkmem, set) );
 
-         storagecleaned = TRUE;
+         /* clean the conflict and primal bound array */
+         conflictstore->conflicts[idx] = NULL;
+         conflictstore->primalbounds[idx] = SCIP_INVALID;
+
+         /* add the id shifted by +1 to the queue of empty slots */
+         SCIP_CALL( SCIPqueueInsert(conflictstore->slotqueue, (void*) (size_t) (idx+1)) );
+
+         ++ndelconfs;
+         --conflictstore->nconflicts;
       }
-
-      /* release the constraint */
-      SCIP_CALL( SCIPconsRelease(&conflict, blkmem, set) );
-
-#ifdef SCIP_DEBUG
-      /* clean the conflict and primal bound array */
-      conflictstore->conflicts[idx] = NULL;
-      conflictstore->primalbounds[idx] = SCIP_INVALID;
-#endif
-
-      /* add the id shifted by +1 to the queue of empty slots */
-      SCIP_CALL( SCIPqueueInsert(conflictstore->slotqueue, (void*) (size_t) (idx+1)) );
-
-      ++ndelconfs;
-      --conflictstore->nconflicts;
+      else
+      {
+         SCIP_CALL( SCIPqueueInsert(conflictstore->orderqueue, (void*) (size_t) (idx+1)) );
+      }
    }
-   while( !storagecleaned && conflictstore->nconflicts > 0 );
 
-   SCIPdebugMessage("clean up conflict store: removed %d conflicts, %d currently stored\n",
-         ndelconfs, conflictstore->nconflicts);
+   idx = tmpidx;
+   conflict = conflictstore->conflicts[idx];
+   assert(conflict != NULL);
+
+   SCIPdebugMessage("removed conflict at pos=%d with age=%g\n", idx, maxage);
+
+   /* mark the constraint as deleted */
+   SCIP_CALL( SCIPconsDelete(conflict, blkmem, set, stat, transprob) );
+   SCIP_CALL( SCIPconsRelease(&conflict, blkmem, set) );
+
+   /* clean the conflict and primal bound array */
+   conflictstore->conflicts[idx] = NULL;
+   conflictstore->primalbounds[idx] = SCIP_INVALID;
+
+   /* add the id shifted by +1 to the queue of empty slots */
+   SCIP_CALL( SCIPqueueInsert(conflictstore->slotqueue, (void*) (size_t) (idx+1)) );
+
+   ++ndelconfs;
+   --conflictstore->nconflicts;
+
+   assert(SCIPqueueNElems(conflictstore->orderqueue) <= conflictstore->maxstoresize);
 
    return SCIP_OKAY;
 }
