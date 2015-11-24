@@ -3811,7 +3811,7 @@ SCIP_RETCODE freeImplGraphSOS1(
    /* free whole memory of implication graph */
    if ( conshdlrdata->implgraph == NULL )
    {
-      assert( conshdlrdata->nimplnodes = 0 );
+      assert( conshdlrdata->nimplnodes == 0 );
       return SCIP_OKAY;
    }
 
@@ -6697,7 +6697,8 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
          if ( consdata->rowub == NULL || consdata->rowlb == NULL )
          {
             SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], FALSE, TRUE, TRUE, FALSE,
-                  (consdata->rowlb == NULL) ? &consdata->rowlb : NULL, (consdata->rowub == NULL) ? &consdata->rowub : NULL) );
+                  (consdata->rowlb == NULL) ? &consdata->rowlb : NULL,
+                  (consdata->rowub == NULL) ? &consdata->rowub : NULL) ); /*lint !e826*/
          }
          rowub = consdata->rowub;
          rowlb = consdata->rowlb;
@@ -6732,9 +6733,13 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
       if ( release )
       {
          if ( rowlb != NULL )
-            SCIPreleaseRow(scip, &rowlb);
+         {
+            SCIP_CALL( SCIPreleaseRow(scip, &rowlb) );
+         }
          if ( rowub != NULL )
-            SCIPreleaseRow(scip, &rowub);
+         {
+            SCIP_CALL( SCIPreleaseRow(scip, &rowub) );
+         }
       }
 
       if ( *cutoff || ( maxboundcuts >= 0 && cnt >= maxboundcuts ) )
