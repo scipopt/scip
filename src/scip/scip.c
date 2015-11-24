@@ -21643,7 +21643,7 @@ SCIP_RETCODE SCIPaddVarImplication(
          if( impltype == SCIP_BOUNDTYPE_LOWER )
          {
             /* we return if the lower bound is infinity */
-            if( -SCIPisInfinity(scip, lby) )
+            if( SCIPisInfinity(scip, -lby) )
                return SCIP_OKAY;
 
             SCIP_CALL( SCIPvarAddVlb(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
@@ -21666,7 +21666,7 @@ SCIP_RETCODE SCIPaddVarImplication(
          if( impltype == SCIP_BOUNDTYPE_LOWER )
          {
             /* we return if the lower bound is infinity */
-            if( -SCIPisInfinity(scip, lby) )
+            if( SCIPisInfinity(scip, -lby) )
                return SCIP_OKAY;
 
             SCIP_CALL( SCIPvarAddVlb(implvar, scip->mem->probmem, scip->set, scip->stat, scip->transprob, scip->origprob,
