@@ -212,6 +212,7 @@ void SCIPstatReset(
    stat->ndivinglpiterations = 0;
    stat->nsbdivinglpiterations = 0;
    stat->nsblpiterations = 0;
+   stat->nsbtimesiterlimhit = 0L;
    stat->nrootsblpiterations = 0;
    stat->nconflictlpiterations = 0;
    stat->ntotalnodes = 0;
