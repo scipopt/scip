@@ -264,6 +264,12 @@ SCIP_RETCODE conflictstoreCleanUpStorage(
       }
    }
 
+   if( tmpidx == -1 )
+   {
+      tmpidx = ((int) (size_t) SCIPqueueRemove(conflictstore->orderqueue)) - 1;
+      assert(idx >= 0 && idx < conflictstore->conflictsize);
+   }
+
    idx = tmpidx;
    conflict = conflictstore->conflicts[idx];
    assert(conflict != NULL);
