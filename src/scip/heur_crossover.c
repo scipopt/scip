@@ -57,7 +57,7 @@
                                               */
 #define DEFAULT_PERMUTE       FALSE          /* should the subproblem be permuted to increase diversification?        */
 #define HASHSIZE_SOLS         11113          /* size of hash table for solution tuples in crossover heuristic         */
-
+#define DEFAULT_BESTSOLLIMIT   -1            /* limit on number of improving incumbent solutions in sub-CIP            */
 /* event handler properties */
 #define EVENTHDLR_NAME         "Crossover"
 #define EVENTHDLR_DESC         "LP event handler for " HEUR_NAME " heuristic"
@@ -98,6 +98,7 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?                                     */
    SCIP_Bool             permute;            /**< should the subproblem be permuted to increase diversification?    */
+   int                   bestsollimit;       /**< limit on number of improving incumbent solutions in sub-CIP       */
 };
 
 /** n-tuple of solutions and their hashkey */
@@ -931,6 +932,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    if( !SCIPisInfinity(scip, timelimit) )
       timelimit -= SCIPgetSolvingTime(scip);
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->bestsollimit) );
 
    /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
    if( !SCIPisInfinity(scip, memorylimit) )
@@ -1224,6 +1226,10 @@ SCIP_RETCODE SCIPincludeHeurCrossover(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/permute",
          "should the subproblem be permuted to increase diversification?",
          &heurdata->permute, TRUE, DEFAULT_PERMUTE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/bestsollimit",
+         "limit on number of improving incumbent solutions in sub-CIP",
+         &heurdata->bestsollimit, FALSE, DEFAULT_BESTSOLLIMIT, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }
