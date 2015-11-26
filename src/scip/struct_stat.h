@@ -35,6 +35,7 @@
 #include "scip/type_clock.h"
 #include "scip/type_visual.h"
 #include "scip/type_history.h"
+#include "scip/type_lp.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -139,6 +140,7 @@ struct SCIP_Stat
    SCIP_HEUR*            firstprimalheur;    /**< heuristic which found the first primal solution */
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
+   SCIP_LPSOLSTAT        lastsblpsolstats[2];/**< last LP solving statuses for variable strong branching */
    SCIP_Longint          lpcount;            /**< internal counter, where all lp calls are counted; this includes the restored lps after diving and probing */
    SCIP_Longint          nlps;               /**< total number of LPs solved with at least 1 iteration */
    SCIP_Longint          nrootlps;           /**< number of LPs solved at the root node with at least 1 iteration */

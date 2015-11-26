@@ -1122,12 +1122,20 @@ SCIP_RETCODE execRelpscost(
           * depending on the user parameter choice of storesemiinitcosts, pseudo costs are also updated in single directions,
           * if the node in the other direction was infeasible or cut off
           */
-         if( !downinf && (!upinf || branchruledata->storesemiinitcosts) )
+         if( !downinf
+#ifdef WITH_LPSOLSTAT
+               && SCIPgetLastStrongbranchLPSolStat(scip, SCIP_BRANCHDIR_DOWNWARDS) != SCIP_LPSOLSTAT_ITERLIMIT
+#endif
+               && (!upinf || branchruledata->storesemiinitcosts) )
          {
             /* update pseudo cost values */
             SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 0.0 - branchcandsfrac[c], downgain, 1.0) );
          }
-         if( !upinf && (!downinf || branchruledata->storesemiinitcosts)  )
+         if( !upinf
+#ifdef WITH_LPSOLSTAT
+               && SCIPgetLastStrongbranchLPSolStat(scip, SCIP_BRANCHDIR_DOWNWARDS) != SCIP_LPSOLSTAT_ITERLIMIT
+#endif
+               && (!downinf || branchruledata->storesemiinitcosts)  )
          {
             SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 1.0 - branchcandsfrac[c], upgain, 1.0) );
          }

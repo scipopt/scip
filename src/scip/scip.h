@@ -7586,6 +7586,13 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
                                               *   solving process should be stopped (e.g., due to a time limit) */
    );
 
+/** get LP solution status of last strong branching call (currently only works for strong branching with propagation) */
+EXTERN
+SCIP_LPSOLSTAT SCIPgetLastStrongbranchLPSolStat(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHDIR        branchdir           /**< branching direction for which LP solution status is requested */
+   );
+
 /** gets strong branching information on COLUMN variable of the last SCIPgetVarStrongbranch() call;
  *  returns values of SCIP_INVALID, if strong branching was not yet called on the given variable;
  *  keep in mind, that the returned old values may have nothing to do with the current LP solution

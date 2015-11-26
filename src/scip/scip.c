@@ -18087,6 +18087,9 @@ SCIP_RETCODE SCIPstartStrongbranch(
       SCIP_CALL( SCIPlpStartStrongbranch(scip->lp) );
    }
 
+   /* reset local strong branching info */
+   scip->stat->lastsblpsolstats[0] = scip->stat->lastsblpsolstats[1] = SCIP_LPSOLSTAT_NOTSOLVED;
+
    return SCIP_OKAY;
 }
 
@@ -18508,6 +18511,9 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       }
       else if( !(*lperror) )
       {
+         /* save the lp solution status */
+         scip->stat->lastsblpsolstats[down ? 0 : 1] = SCIPgetLPSolstat(scip);
+
          switch( SCIPgetLPSolstat(scip) )
          {
          case SCIP_LPSOLSTAT_OPTIMAL:
@@ -18791,6 +18797,8 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
 
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
+
+   scip->stat->lastsblpsolstats[0] = scip->stat->lastsblpsolstats[1] = SCIP_LPSOLSTAT_NOTSOLVED;
 
    /* check if the solving process should be aborted */
    if( SCIPsolveIsStopped(scip->set, scip->stat, FALSE) )
@@ -19318,6 +19326,18 @@ SCIP_RETCODE SCIPgetVarsStrongbranchesInt(
    SCIPfreeBufferArray(scip, &cols);
 
    return SCIP_OKAY;
+}
+
+/** get LP solution status of last strong branching call (currently only works for strong branching with propagation) */
+SCIP_LPSOLSTAT SCIPgetLastStrongbranchLPSolStat(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHDIR        branchdir           /**< branching direction for which LP solution status is requested */
+   )
+{
+   assert(NULL != scip);
+   assert(branchdir == SCIP_BRANCHDIR_DOWNWARDS || branchdir == SCIP_BRANCHDIR_UPWARDS);
+
+   return scip->stat->lastsblpsolstats[branchdir == SCIP_BRANCHDIR_DOWNWARDS ? 0 : 1];
 }
 
 /** gets strong branching information on COLUMN variable of the last SCIPgetVarStrongbranch() call;

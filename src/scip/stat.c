@@ -196,6 +196,8 @@ void SCIPstatReset(
 
    SCIPhistoryReset(stat->glbhistory);
 
+   stat->lastsblpsolstats[0] = stat->lastsblpsolstats[1] = SCIP_LPSOLSTAT_NOTSOLVED;
+
    stat->vsidsweight = 1.0;
    stat->nlpiterations = 0;
    stat->nrootlpiterations = 0;
