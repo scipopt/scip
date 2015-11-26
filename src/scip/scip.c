@@ -18881,14 +18881,25 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
    cutoff = FALSE;
 
    /* @todo: decide the branch to look at first based on the cutoffs in previous calls? */
-   if( scip->set->branch_firstsbchild == 'u' )
-      downchild = FALSE;
-   else if( scip->set->branch_firstsbchild == 'a' )
-      downchild = SCIPvarGetNLocksDown(var) > SCIPvarGetNLocksUp(var);
-   else
+   switch( scip->set->branch_firstsbchild )
    {
-      assert(scip->set->branch_firstsbchild == 'd');
-      downchild = TRUE;
+      case 'u':
+         downchild = FALSE;
+         break;
+      case 'd':
+         downchild = TRUE;
+         break;
+      case 'a':
+         downchild = SCIPvarGetNLocksDown(var) > SCIPvarGetNLocksUp(var);
+         break;
+      case 'h':
+         downchild = (SCIPgetVarAvgCutoffs(scip, var, SCIP_BRANCHDIR_DOWNWARDS) > SCIPgetVarAvgCutoffs(scip, var, SCIP_BRANCHDIR_UPWARDS));
+         break;
+      default:
+         SCIPerrorMessage("Error: Unknown parameter value <%c> for branching/firstsbchild parameter:\n",scip->set->branch_firstsbchild);
+         SCIPABORT();
+         return SCIP_PARAMETERWRONGVAL;
+      break;
    }
 
    downvalidlocal = FALSE;
