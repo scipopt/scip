@@ -495,15 +495,23 @@ void addFracCounter(
    nrows = SCIPcolGetNLPNonz(col);
    for( r = 0; r < nrows; ++r )
    {
-      int rowidx;
+      int rowlppos;
       int theviolrowpos;
+      SCIP_ROW* row;
 
-      rowidx = SCIProwGetLPPos(rows[r]);
-      assert(0 <= rowidx && rowidx < nlprows);
-      nfracsinrow[rowidx] += incval;
-      assert(nfracsinrow[rowidx] >= 0);
+      row = rows[r];
+      assert(NULL != row);
+      rowlppos = SCIProwGetLPPos(row);
+      assert(0 <= rowlppos && rowlppos < nlprows);
+      assert(!SCIProwIsLocal(row) || violrowpos[rowlppos] == -1);
 
-      theviolrowpos = violrowpos[rowidx];
+      if( SCIProwIsLocal(row) )
+         continue;
+
+      nfracsinrow[rowlppos] += incval;
+      assert(nfracsinrow[rowlppos] >= 0);
+
+      theviolrowpos = violrowpos[rowlppos];
 
       /* swap positions in violrows array if fractionality has changed to 0 */
       if( theviolrowpos >= 0 )
@@ -511,7 +519,7 @@ void addFracCounter(
          /* first case: the number of fractional variables has become zero: swap row in violrows array to the
           * second part, containing only violated rows without fractional variables
           */
-         if( nfracsinrow[rowidx] == 0 )
+         if( nfracsinrow[rowlppos] == 0 )
          {
             assert(theviolrowpos <= *nviolfracrows - 1);
 
@@ -520,18 +528,18 @@ void addFracCounter(
             if( theviolrowpos < *nviolfracrows - 1 )
             {
                violrows[theviolrowpos] = violrows[*nviolfracrows - 1];
-               violrows[*nviolfracrows - 1] = rows[r];
+               violrows[*nviolfracrows - 1] = row;
 
 
                violrowpos[SCIProwGetLPPos(violrows[theviolrowpos])] = theviolrowpos;
-               violrowpos[rowidx] = *nviolfracrows - 1;
+               violrowpos[rowlppos] = *nviolfracrows - 1;
             }
             (*nviolfracrows)--;
          }
          /* second interesting case: the number of fractional variables was zero before, swap it with the first
           * violated row without fractional variables
           */
-         else if( nfracsinrow[rowidx] == incval )
+         else if( nfracsinrow[rowlppos] == incval )
          {
             assert(theviolrowpos >= *nviolfracrows);
 
@@ -539,11 +547,11 @@ void addFracCounter(
             if( theviolrowpos > *nviolfracrows )
             {
                violrows[theviolrowpos] = violrows[*nviolfracrows];
-               violrows[*nviolfracrows] = rows[r];
+               violrows[*nviolfracrows] = row;
 
 
                violrowpos[SCIProwGetLPPos(violrows[theviolrowpos])] = theviolrowpos;
-               violrowpos[rowidx] = *nviolfracrows;
+               violrowpos[rowlppos] = *nviolfracrows;
             }
             (*nviolfracrows)++;
          }
@@ -820,6 +828,9 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          else
             violrowpos[r] = -1;
       }
+      else
+         /* if row is a local row */
+         violrowpos[r] = -1;
    }
 
    nviolfracrows = 0;
