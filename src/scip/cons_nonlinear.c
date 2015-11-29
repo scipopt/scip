@@ -4987,7 +4987,7 @@ SCIP_RETCODE getCoeffsAndConstantFromLinearExpr(
       break;
    } /*lint !e788*/
 
-   SCIPerrorMessage( "Cannot extract linear coefficients from expressions with operator %d\n", SCIPexprGetOperator( expr ) );
+   SCIPerrorMessage( "Cannot extract linear coefficients from expressions with operator %d %s\n", SCIPexprGetOperator( expr ), SCIPexpropGetName(SCIPexprGetOperator( expr )));
    SCIPABORT();
    return SCIP_ERROR; /*lint !e527*/
 }
