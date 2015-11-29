@@ -39273,6 +39273,7 @@ void printHeuristicStatistics(
    FILE*                 file                /**< output file */
    )
 {
+   int ndivesets = 0;
    int i;
 
    assert(scip != NULL);
@@ -39301,40 +39302,47 @@ void printHeuristicStatistics(
          SCIPheurGetSetupTime(scip->set->heurs[i]),
          SCIPheurGetNCalls(scip->set->heurs[i]),
          SCIPheurGetNSolsFound(scip->set->heurs[i]));
+
+      /* count heuristics that use diving; needed to determine output later */
+      ndivesets += SCIPheurGetNDivesets(scip->set->heurs[i]);
    }
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  other solutions  :          -          -          - %10" SCIP_LONGINT_FORMAT "\n",
       scip->stat->nexternalsolsfound);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Diving Statistics  :      Calls      Nodes   LP Iters Backtracks   MinDepth   MaxDepth   AvgDepth  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n");
-   for( i = 0; i < scip->set->nheurs; ++i )
+   if ( ndivesets > 0 )
    {
-      int s;
-      for( s = 0; s < SCIPheurGetNDivesets(scip->set->heurs[i]); ++s )
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "Diving Statistics  :      Calls      Nodes   LP Iters Backtracks   MinDepth   MaxDepth   AvgDepth  NLeafSols  MinSolDpt  MaxSolDpt  AvgSolDpt\n");
+      for( i = 0; i < scip->set->nheurs; ++i )
       {
-         SCIP_DIVESET* diveset = SCIPheurGetDivesets(scip->set->heurs[i])[s];
-         SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10d", SCIPdivesetGetName(diveset), SCIPdivesetGetNCalls(diveset));
-         if( SCIPdivesetGetNCalls(diveset) > 0 )
+         int s;
+         for( s = 0; s < SCIPheurGetNDivesets(scip->set->heurs[i]); ++s )
          {
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10d %10d %10.1f",
+            SCIP_DIVESET* diveset = SCIPheurGetDivesets(scip->set->heurs[i])[s];
+            SCIPmessageFPrintInfo(scip->messagehdlr, file, "  %-17.17s: %10d", SCIPdivesetGetName(diveset), SCIPdivesetGetNCalls(diveset));
+            if( SCIPdivesetGetNCalls(diveset) > 0 )
+            {
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT " %10d %10d %10.1f",
                   SCIPdivesetGetNProbingNodes(diveset),
                   SCIPdivesetGetNLPIterations(diveset),
                   SCIPdivesetGetNBacktracks(diveset),
                   SCIPdivesetGetMinDepth(diveset),
                   SCIPdivesetGetMaxDepth(diveset),
                   SCIPdivesetGetAvgDepth(diveset));
-            if( SCIPdivesetGetNSolutionCalls(diveset) > 0 )
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d %10d %10d %10.1f\n",
+               if( SCIPdivesetGetNSolutionCalls(diveset) > 0 )
+               {
+                  SCIPmessageFPrintInfo(scip->messagehdlr, file, " %10d %10d %10d %10.1f\n",
                      SCIPdivesetGetNSolutionCalls(diveset),
                      SCIPdivesetGetMinSolutionDepth(diveset),
                      SCIPdivesetGetMaxSolutionDepth(diveset),
                      SCIPdivesetGetAvgSolutionDepth(diveset));
+               }
+               else
+                  SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -\n");
+            }
             else
-               SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -\n");
+               SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -          -          -          -          -          -          -\n");
          }
-         else
-            SCIPmessageFPrintInfo(scip->messagehdlr, file, "          -          -          -          -          -          -          -          -          -          -\n");
-
       }
    }
 }
