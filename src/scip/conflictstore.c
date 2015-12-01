@@ -32,7 +32,8 @@
 #include "scip/struct_conflictstore.h"
 
 
-#define DEFAULT_CONFLICTSTORE_SIZE       10000 /* maximal size of conflict storage */
+#define DEFAULT_CONFLICTSTORE_SIZE       10000 /* default size of conflict storage */
+#define DEFAULT_CONFLICTSTORE_MAXSIZE    50000 /* maximal size of conflict storage */
 
 /*
  * dynamic memory arrays
@@ -401,21 +402,28 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
       /* the size should be dynamic wrt number of variables after presolving */
       if( set->conf_maxstoresize == -1 )
       {
+         int nconss;
          int nvars;
 
+         nconss = SCIPprobGetNConss(transprob);
          nvars = SCIPprobGetNVars(transprob);
 
+         conflictstore->maxstoresize += 2*nconss;
+
          if( nvars/2 <= 500 )
-            conflictstore->maxstoresize = 500;
+            conflictstore->maxstoresize += (int) DEFAULT_CONFLICTSTORE_MAXSIZE/100;
          else if( nvars/2 <= 5000 )
-            conflictstore->maxstoresize = 5000;
+            conflictstore->maxstoresize += (int) DEFAULT_CONFLICTSTORE_MAXSIZE/10;
          else
-            conflictstore->maxstoresize = 50000;
+            conflictstore->maxstoresize += DEFAULT_CONFLICTSTORE_MAXSIZE;
+
+         conflictstore->maxstoresize = MIN(conflictstore->maxstoresize, DEFAULT_CONFLICTSTORE_MAXSIZE);
       }
       else
          conflictstore->maxstoresize = set->conf_maxstoresize;
 
       SCIPdebugMessage("maximal size of conflict pool is %d.\n", conflictstore->maxstoresize);
+      printf("maximal size of conflict pool is %d.\n", conflictstore->maxstoresize);
    }
 
    SCIP_CALL( conflictstoreEnsureCutsMem(conflictstore, set, nconflicts+1) );

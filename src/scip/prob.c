@@ -2091,6 +2091,7 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNIntVars
 #undef SCIPprobGetNImplVars
 #undef SCIPprobGetNContVars
+#undef SCIPprobGetNConss
 #undef SCIPprobGetVars
 #undef SCIPprobGetObjoffset
 
@@ -2231,6 +2232,15 @@ SCIP_VAR** SCIPprobGetVars(
 {
    assert(prob != NULL);
    return prob->vars;
+}
+
+/** gets number of problem constraints */
+int SCIPprobGetNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   )
+{
+   assert(prob != NULL);
+   return prob->nconss;
 }
 
 /** gets the objective offset */

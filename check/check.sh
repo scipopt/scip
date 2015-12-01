@@ -31,10 +31,11 @@ LPS=${14}
 VALGRIND=${15}
 CLIENTTMPDIR=${16}
 REOPT=${17}
-OPTCOMMAND=${18}
-SETCUTOFF=${19}
-MAXJOBS=${20}
-VISUALIZE=${21}
+PERMUTE=${18}
+OPTCOMMAND=${19}
+SETCUTOFF=${20}
+MAXJOBS=${21}
+VISUALIZE=${22}
 
 # check if all variables defined (by checking the last one)
 if test -z $VISUALIZE
@@ -57,6 +58,7 @@ then
     echo "VALGRIND      = $VALGRIND"
     echo "CLIENTTMPDIR  = $CLIENTTMPDIR"
     echo "REOPT         = $REOPT"
+    echo "PERMUTE       = $PERMUTE"
     echo "OPTCOMMAND    = $OPTCOMMAND"
     echo "SETCUTOFF     = $SETCUTOFF"
     echo "MAXJOBS       = $MAXJOBS"
@@ -72,26 +74,28 @@ MEMFORMAT="kB"
 
 INIT="true"
 COUNT=0
+# loop over testset
 for INSTANCE in `cat testset/$TSTNAME.test` DONE
 do
-    COUNT=`expr $COUNT + 1`
-
-    # loop over settings
-    for SETNAME in ${SETTINGSLIST[@]}
+    # loop over permutations
+    for ((p = -1; $p <= $PERMUTE; p++))
     do
-       # waiting while the number of jobs has reached the maximum
-       if [ $MAXJOBS -ne 1 ]
-       then
-            while [ `jobs -r|wc -l` -ge $MAXJOBS ]
-            do
-                sleep 10
-                echo "Waiting for jobs to finish."
-            done
-       fi
+      COUNT=`expr $COUNT + 1`
 
-    # infer the names of all involved files from the arguments
-        p=0 # currently, noone uses permutations here
-        PERMUTE=0
+      # loop over settings
+      for SETNAME in ${SETTINGSLIST[@]}
+      do
+        # waiting while the number of jobs has reached the maximum
+        if [ $MAXJOBS -ne 1 ]
+        then
+              while [ `jobs -r|wc -l` -ge $MAXJOBS ]
+              do
+                  sleep 10
+                  echo "Waiting for jobs to finish."
+              done
+        fi
+
+        # infer the names of all involved files from the arguments
         QUEUE=`hostname`
 
         if test "$INSTANCE" = "DONE"
@@ -126,7 +130,7 @@ do
         fi
 
         # infer the names of all involved files from the arguments
-        . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SETNAME $TSTNAME $CONTINUE $QUEUE  $p
+        . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SETNAME $TSTNAME $CONTINUE $QUEUE $p
 
         if test "$SKIPINSTANCE" = "true"
         then
@@ -153,8 +157,8 @@ do
         export SOLVERPATH=$SCIPPATH
         EXECNAME=$BINNAME
 
-	if test -e $SCIPPATH/../$BINNAME
-	then
+        if test -e $SCIPPATH/../$BINNAME
+        then
             export EXECNAME=${VALGRINDCMD}$SCIPPATH/../$BINNAME
         else
             export EXECNAME=$BINNAME
@@ -171,7 +175,7 @@ do
         else
             bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh" &
         fi
-        #./run.sh
-    done
-    INIT="false"
-done
+      done # end for SETNAME
+      INIT="false"
+  done # end for PERMUTE
+done # end for TSTNAME

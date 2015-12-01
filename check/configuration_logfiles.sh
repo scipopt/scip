@@ -41,7 +41,7 @@ TSTNAME=$7   # the name of the testset
 CONTINUE=$8  # should test continue an existing run
 # optional variables
 QUEUE=$9     # the queue name
-p=${10}         # the index of the current permutation - only needed if permutations are used
+p=${10}      # the index of the current permutation - only needed if permutations are used
 
 if test "$QUEUE" = ""
 then
@@ -52,7 +52,7 @@ OUTFILE=results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.out
 ERRFILE=results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.err
 
 # if number of permutations is positive, add postfix
-if test $PERMUTE -gt 0
+if test $PERMUTE -gt -1
 then
     EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"#p"$p.eval
 else

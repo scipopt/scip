@@ -613,6 +613,12 @@ SCIP_VAR** SCIPprobGetVars(
    SCIP_PROB*            prob                /**< problem data */
    );
 
+/** gets number of problem constraints */
+extern
+int SCIPprobGetNConss(
+   SCIP_PROB*            prob                /**< problem data */
+   );
+
 /** gets the objective offset */
 extern
 SCIP_Real SCIPprobGetObjoffset(
@@ -647,6 +653,7 @@ SCIP_Real SCIPprobGetObjscale(
 #define SCIPprobGetNImplVars(prob)      ((prob)->nimplvars)
 #define SCIPprobGetNContVars(prob)      ((prob)->ncontvars)
 #define SCIPprobGetVars(prob)           ((prob)->vars)
+#define SCIPprobGetNConss(prob)         ((prob)->nconss)
 #define SCIPprobGetObjoffset(prob)      ((prob)->objoffset)
 #define SCIPprobGetObjscale(prob)       ((prob)->objscale)
 #endif
