@@ -2741,9 +2741,10 @@ SCIP_RETCODE reformulate(
                   SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_MINUS &&
                   SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_SUM   &&
                   SCIPexprgraphGetNodeOperator(node) != SCIP_EXPR_LINEAR) )
-               assert(SCIPexprgraphGetNodeCurvature(children[j]) != SCIP_EXPRCURV_UNKNOWN);  /*lint !e613*/
+               assert(SCIPexprgraphGetNodeCurvature(children[j]) != SCIP_EXPRCURV_UNKNOWN || SCIPexprgraphGetNodeOperator(children[j]) == SCIP_EXPR_USER);  /*lint !e613*/
          }
 #endif
+
 
          switch( SCIPexprgraphGetNodeOperator(node) )
          {
