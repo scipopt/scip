@@ -533,7 +533,6 @@ SCIP_RETCODE SCIPchgRhsQuadratic(
    SCIP_Real             rhs                 /**< new right hand side */
    );
 
-/** gets the feasibility of the quadratic constraint in the given solution */
 EXTERN
 /** gets the feasibility of the quadratic constraint in the given solution */
 SCIP_RETCODE SCIPgetFeasibilityQuadratic(
