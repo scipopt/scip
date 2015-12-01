@@ -28,7 +28,6 @@
 
 #include "scip/scipdefplugins.h"
 #include "scip/sepa_eccuts.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_xor.h"
 #include "scip/nlp.h"
 #include "tclique/tclique.h"
