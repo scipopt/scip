@@ -92,7 +92,8 @@ EXTERN
 void SCIPreoptnodeGetConss(
    SCIP_REOPTNODE*       reoptnode,          /**< reoptimization data structure */
    SCIP_VAR***           vars,               /**< 2-dim array of variables */
-   SCIP_Real**           vals,               /**< 2-dim array of values */
+   SCIP_Real**           bounds,             /**< 2-dim array of bounds */
+   SCIP_BOUNDTYPE**      boundtypes,         /**< 2-dim array of boundtypes */
    int                   mem,                /**< allocated memory for constraints */
    int*                  nconss,             /**< pointer to store the number of constraints */
    int*                  nvars               /**< pointer to store the number of variables */

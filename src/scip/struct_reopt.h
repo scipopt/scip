@@ -52,25 +52,26 @@ struct SCIP_SolTree
 };
 
 /** data for constraints to split nodes during reoptimization */
-struct LogicOrData
+struct SCIP_ReoptConsData
 {
    SCIP_VAR**            vars;               /**< array of variables */
-   SCIP_Real*            vals;               /**< array of variable bounds */
+   SCIP_Real*            bounds;             /**< array of variable bounds */
+   SCIP_BOUNDTYPE*       boundtypes;         /**< array of variable bounds */
    SCIP_Real             lhs;                /**< left hand side of the constraint */
    SCIP_Real             rhs;                /**< right hand side of the constraint */
    REOPT_CONSTYPE        constype;           /**< type of the constraint */
-   int                   varssize;           /**< available sitze in the arrays */
-   int                   nvars;              /**< number of enties in the arrays */
+   int                   varssize;           /**< available size in the arrays */
+   int                   nvars;              /**< number of entries in the arrays */
 };
 
 /** nodes of SCIP_ReoptTree */
 struct SCIP_ReoptNode
 {
-   LOGICORDATA**         conss;                   /**< array of constraints added to the node, i.e., logic-or constraints */
+   SCIP_REOPTCONSDATA**  conss;                   /**< array of constraints added to the node, i.e., logic-or constraints */
    SCIP_VAR**            vars;                    /**< variables along the branching path up to the next stored node */
    SCIP_VAR**            afterdualvars;           /**< variables along the branching path after the first decision based on dual information */
-   LOGICORDATA*          dualconscur;             /**< dual constraint that need to be added the current round */
-   LOGICORDATA*          dualconsnex;             /**< dual constraint that need to be added the next round */
+   SCIP_REOPTCONSDATA*   dualconscur;             /**< dual constraint that need to be added the current round */
+   SCIP_REOPTCONSDATA*   dualconsnex;             /**< dual constraint that need to be added the next round */
    SCIP_BOUNDTYPE*       varboundtypes;           /**< boundtypes along the branching path up to the next stored node */
    SCIP_BOUNDTYPE*       afterdualvarboundtypes;  /**< boundtypes along the branching path after the first dual information */
    SCIP_Real*            varbounds;               /**< bounds along the branching path up to the next stored node */
@@ -117,8 +118,8 @@ struct SCIP_Reopt
    SCIP_SOL**            prevbestsols;            /**< list of best solutions of all previous rounds */
    SCIP_Real**           objs;                    /**< list of objective coefficients */
    SCIP_HISTORY**        varhistory;              /**< collected variable history */
-   LOGICORDATA**         glbconss;                /**< global constraints that need to be added at the beginning of the next iteration */
-   LOGICORDATA*          dualcons;                /**< constraint describing bound changes based on dual information */
+   SCIP_REOPTCONSDATA**  glbconss;                /**< global constraints that need to be added at the beginning of the next iteration */
+   SCIP_REOPTCONSDATA*   dualcons;                /**< constraint describing bound changes based on dual information */
    SCIP_REOPTTREE*       reopttree;               /**< data structure to store the current reoptimization search tree */
    SCIP_SOLTREE*         soltree;                 /**< tree to handle all saved solutions */
    SCIP_CLOCK*           savingtime;              /**< time needed to store the nodes */

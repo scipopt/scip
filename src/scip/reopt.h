@@ -507,9 +507,11 @@ SCIP_RETCODE SCIPreoptnodeAddBndchg(
 extern
 SCIP_RETCODE SCIPreoptnodeAddCons(
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reopttree */
+   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_VAR**            consvars,           /**< variables which are part of the constraint */
-   SCIP_Real*            consvals,           /**< values of the variables */
+   SCIP_VAR**            vars,               /**< variables which are part of the constraint */
+   SCIP_Real*            bounds,             /**< bounds of the variables */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< boundtypes of the varibales (or NULL is the constraint is a cut) */
    SCIP_Real             lhs,                /**< lhs of the constraint */
    SCIP_Real             rhs,                /**< rhs of the constraint */
    int                   nvars,              /**< number of variables */

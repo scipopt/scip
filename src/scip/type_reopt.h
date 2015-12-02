@@ -39,8 +39,8 @@ typedef struct SCIP_ReoptNode SCIP_REOPTNODE;      /**< nodes of SCIP_REOPTTREE 
 
 typedef struct SCIP_ReoptNode SCIP_REPRESENTATIVE; /**< representatives of the search frontier */
 
-typedef struct LogicOrData LOGICORDATA;            /**< data for constraints to handle dual information \
-                                                     *  within (mixed) binary programs */
+typedef struct SCIP_ReoptConsData SCIP_REOPTCONSDATA; /**< data for constraints to handle dual information \
+                                                        *  within (mixed) binary programs */
 /* type of nodes during reoptimization */
 enum SCIP_ReoptType
 {
@@ -58,7 +58,7 @@ typedef enum SCIP_ReoptType SCIP_REOPTTYPE;     /**< type nodes during reoptimiz
 enum Reopt_ConsType
 {
    REOPT_CONSTYPE_INFSUBTREE   = 0,
-   REOPT_CONSTYPE_STRBRANCHED  = 1,
+   REOPT_CONSTYPE_DUALREDS     = 1,
    REOPT_CONSTYPE_CUT          = 2
 };
 typedef enum Reopt_ConsType REOPT_CONSTYPE;

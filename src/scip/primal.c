@@ -474,6 +474,44 @@ SCIP_Bool SCIPprimalUpperboundIsSol(
    return (primal->nsols > 0 && SCIPsetIsEQ(set, primal->upperbound, SCIPsolGetObj(primal->sols[0], set, transprob, origprob)));
 }
 
+/** returns the primal ray thats proves unboundedness */
+SCIP_SOL* SCIPprimalGetRay(
+   SCIP_PRIMAL*          primal              /**< primal data */
+   )
+{
+   assert(primal != NULL);
+
+   return primal->primalray;
+}
+
+/** update the primal ray thats proves unboundedness */
+SCIP_RETCODE SCIPprimalUpdateRay(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_SOL*             primalray,          /**< the new primal ray */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   assert(primal != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(primalray != NULL);
+   assert(blkmem != NULL);
+
+   /* clear previously stored primal ray, if any */
+   if( primal->primalray != NULL )
+   {
+      SCIP_CALL( SCIPsolFree(&primal->primalray, blkmem, primal) );
+   }
+
+   assert(primal->primalray == NULL);
+
+   SCIP_CALL( SCIPsolCopy(&primal->primalray, blkmem, set, stat, primal, primalray) );
+
+   return SCIP_OKAY;
+}
+
 /** adds primal solution to solution storage at given position */
 static
 SCIP_RETCODE primalAddSol(

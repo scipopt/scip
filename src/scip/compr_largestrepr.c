@@ -511,8 +511,8 @@ SCIP_RETCODE constructCompression(
             SCIPgetReoptnodePath(scip, comprdata->representatives[k], pathvars, pathvals, pathboundtypes, pathvarssize,
                   &npathvars, &npathafterdualvars);
 
-            SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[r], pathvars, pathvals, 1.0,
-                  SCIPinfinity(scip), npathvars, REOPT_CONSTYPE_STRBRANCHED) );
+            SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[r], pathvars, pathvals, pathboundtypes, 1.0,
+                  SCIPinfinity(scip), npathvars, REOPT_CONSTYPE_DUALREDS) );
 
             /* free buffer */
             SCIPfreeBufferArray(scip, &pathboundtypes);

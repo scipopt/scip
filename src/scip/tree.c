@@ -7197,8 +7197,12 @@ int SCIPnodeGetNDualBndchgs(
     */
    for( i = nboundchgs-1; i >= 0; i--)
    {
-      if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY
-       && ((boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
+      SCIP_Bool isint;
+
+      isint = boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY || boundchgs[i].var->vartype == SCIP_VARTYPE_INTEGER
+           || boundchgs[i].var->vartype == SCIP_VARTYPE_IMPLINT;
+
+      if( isint && ((boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
             && boundchgs[i].data.inferencedata.reason.cons == NULL)
         || (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_PROPINFER
             && boundchgs[i].data.inferencedata.reason.prop == NULL)) )
@@ -7215,6 +7219,7 @@ void SCIPnodeGetDualBoundchgs(
    SCIP_NODE*            node,               /**< node data */
    SCIP_VAR**            vars,               /**< array of variables on which the bound change is based on dual information */
    SCIP_Real*            bounds,             /**< array of bounds which are based on dual information */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which are based on dual information */
    int*                  nvars,              /**< number of variables on which the bound change is based on dual information
                                               *   if this is larger than the array size, arrays should be reallocated and method
                                               *   should be called again */
@@ -7228,6 +7233,7 @@ void SCIPnodeGetDualBoundchgs(
    assert(node != NULL);
    assert(vars != NULL);
    assert(bounds != NULL);
+   assert(boundtypes != NULL);
    assert(nvars != NULL);
    assert(varssize >= 0);
 
@@ -7247,7 +7253,8 @@ void SCIPnodeGetDualBoundchgs(
     */
    for( i = nboundchgs-1; i >= 0; i--)
    {
-      if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+      if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY || boundchgs[i].var->vartype == SCIP_VARTYPE_INTEGER
+       || boundchgs[i].var->vartype == SCIP_VARTYPE_IMPLINT )
       {
          if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
                && boundchgs[i].data.inferencedata.reason.cons == NULL)
@@ -7267,7 +7274,8 @@ void SCIPnodeGetDualBoundchgs(
       for( i = i+1; i < nboundchgs; i++)
       {
          assert( boundchgs[i].boundchgtype != SCIP_BOUNDCHGTYPE_BRANCHING );
-         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY )
+         if( boundchgs[i].var->vartype == SCIP_VARTYPE_BINARY || boundchgs[i].var->vartype == SCIP_VARTYPE_INTEGER
+          || boundchgs[i].var->vartype == SCIP_VARTYPE_IMPLINT )
          {
             if( (boundchgs[i].boundchgtype == SCIP_BOUNDCHGTYPE_CONSINFER
                   && boundchgs[i].data.inferencedata.reason.cons == NULL)
@@ -7276,6 +7284,7 @@ void SCIPnodeGetDualBoundchgs(
             {
                vars[j] = boundchgs[i].var;
                bounds[j] = boundchgs[i].newbound;
+               boundtypes[j] = boundchgs[i].boundtype;
                j++;
             }
          }

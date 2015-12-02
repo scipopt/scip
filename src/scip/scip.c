@@ -14622,21 +14622,6 @@ SCIP_RETCODE SCIPsolve(
 
          if( scip->set->reopt_enable )
          {
-            /* currently reoptimization works for (mixed) binary problems only. hence, we have to disable reoptimization
-             * if there exist integer variables after presolving
-             */
-            if( scip->transprob->nintvars > 0 )
-            {
-               if( SCIPisParamFixed(scip, "reoptimization/enable") )
-               {
-                  SCIP_CALL( SCIPunfixParam(scip, "reoptimization/enable") );
-               }
-               SCIP_CALL( SCIPsetBoolParam(scip, "reoptimization/enable", FALSE) );
-
-               SCIPwarningMessage(scip, "reoptimization needs to be disabled because the problem contains %d general integer variables.\n",
-                     scip->transprob->nintvars);
-            }
-
             /* increase number of reopt_runs */
             ++scip->stat->nreoptruns;
 
@@ -14913,9 +14898,6 @@ SCIP_RETCODE SCIPenableReoptimization(
 
          /* fix all parameters */
          SCIP_CALL( SCIPfixParam(scip, "branching/nodereopt/priority") );
-         SCIP_CALL( SCIPfixParam(scip, "heuristics/ofins/freq") );
-         SCIP_CALL( SCIPfixParam(scip, "heuristics/reoptsols/freq") );
-         SCIP_CALL( SCIPfixParam(scip, "heuristics/trivialnegation/freq") );
       }
       /* exit and free all reoptimization data structures */
       else if( !enable && scip->reopt != NULL)
@@ -15029,8 +15011,7 @@ SCIP_RETCODE SCIPgetReoptOldObjCoef(
    if( !SCIPvarIsOriginal(var) )
    {
       assert(SCIPvarIsTransformed(var));
-      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetProbindex(var));
-      return SCIP_OKAY;
+      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetIndex(var));
    }
    else
    {
@@ -15041,9 +15022,9 @@ SCIP_RETCODE SCIPgetReoptOldObjCoef(
       assert(transvar != NULL);
       assert(SCIPvarIsActive(transvar));
 
-      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetProbindex(transvar));
-      return SCIP_OKAY;
+      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetIndex(transvar));
    }
+   return SCIP_OKAY;
 }
 
 /** return the ids of child nodes stored in the reoptimization tree
@@ -15167,7 +15148,7 @@ SCIP_RETCODE SCIPaddReoptnodeBndchg(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
    SCIP_VAR*             var,                /**< variable pointer */
-   SCIP_Real             val,                /**< value of the variable */
+   SCIP_Real             bound,              /**< value of the variable */
    SCIP_BOUNDTYPE        boundtype           /**< bound type of the variable value */
    )
 {
@@ -15178,7 +15159,7 @@ SCIP_RETCODE SCIPaddReoptnodeBndchg(
 
    SCIP_CALL( checkStage(scip, "SCIPaddReoptnodeBndchg", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPreoptnodeAddBndchg(reoptnode, scip->mem->probmem, var, val, boundtype) );
+   SCIP_CALL( SCIPreoptnodeAddBndchg(reoptnode, scip->mem->probmem, var, bound, boundtype) );
 
    return SCIP_OKAY;
 }
@@ -15224,6 +15205,7 @@ SCIP_RETCODE SCIPaddReoptnodeCons(
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reoptimization tree */
    SCIP_VAR**            vars,               /**< array of variables */
    SCIP_Real*            vals,               /**< array of variable bounds */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of variable boundtypes */
    SCIP_Real             lhs,                /**< lhs of the constraint */
    SCIP_Real             rhs,                /**< rhs of the constraint */
    int                   nvars,              /**< number of variables */
@@ -15238,7 +15220,7 @@ SCIP_RETCODE SCIPaddReoptnodeCons(
 
    SCIP_CALL( checkStage(scip, "SCIPaddReoptnodeCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPreoptnodeAddCons(reoptnode, scip->mem->probmem, vars, vals, lhs, rhs, nvars, constype) );
+   SCIP_CALL( SCIPreoptnodeAddCons(reoptnode, scip->set, scip->mem->probmem, vars, vals, boundtypes, lhs, rhs, nvars, constype) );
 
    return SCIP_OKAY;
 }
@@ -27027,6 +27009,61 @@ SCIP_RETCODE SCIPgetLPBInvACol(
    return SCIP_OKAY;
 }
 
+/** returns the primal ray thats proves unboundedness
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPgetPrimalRay(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            primalray           /**< solution to store the primal ray */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPgetPrimalRay", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPsolCopy(primalray, scip->mem->probmem, scip->set, scip->stat, scip->primal, SCIPprimalGetRay(scip->primal)) );
+
+   return SCIP_OKAY;
+}
+
+/** updates the primal ray thats proves unboundedness
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if @p scip is in one of the following stages:
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
+ */
+SCIP_RETCODE SCIPupdatePrimalRay(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             primalray           /**< the new primal ray */
+   )
+{
+   assert(scip != NULL);
+   assert(primalray != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPupdatePrimalRay", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPprimalUpdateRay(scip->primal, scip->set, scip->stat, primalray, scip->mem->probmem) );
+
+   return SCIP_OKAY;
+}
+
 /** calculates a weighted sum of all LP rows; for negative weights, the left and right hand side of the corresponding
  *  LP row are swapped in the summation
  *
@@ -27407,13 +27444,23 @@ SCIP_RETCODE SCIPcomputeLPRelIntPoint(
  *
  *  @pre this method can be called in one of the following stages of the SCIP solving process:
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *
+ *  @note calling this method in SCIP_STAGE_SOLVED is only recommended to experienced users and should only be called
+ *        for pure LP instances (without presolving)
  */
 SCIP_Real SCIPgetColRedcost(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_COL*             col                 /**< LP column */
    )
 {
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetColRedcost", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetColRedcost", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* if the instance is a pure LP the current node should be the root node */
+   if( scip->set->stage == SCIP_STAGE_SOLVED )
+   {
+      SCIP_CALL_ABORT( SCIPtreeGetCurrentNode(scip->tree) == SCIPtreeGetRootNode(scip->tree) );
+   }
 
    if( !SCIPtreeHasCurrentNodeLP(scip->tree) )
    {
@@ -35140,17 +35187,24 @@ SCIP_RETCODE printDualSol(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
+   SCIP_VAR** vars;
    int c;
 
    assert(scip->lp != NULL);
    assert(scip->lp->solved);
    assert(scip->lp->dualfeasible);
 
+   /* allocate buffer memory */
+   SCIP_CALL( SCIPallocBufferArray(scip, &vars, 1) );
+
    /* print dual solution values of all constraints */
    for( c = 0; c < scip->transprob->nconss; ++c )
    {
       SCIP_CONS* cons;
       SCIP_Real solval;
+      SCIP_Bool success;
+
+      int nvars;
 #ifndef NDEBUG
       SCIP_CONSHDLR* conshdlr;
 #endif
@@ -35163,7 +35217,28 @@ SCIP_RETCODE printDualSol(
       assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear" ) == 0);
 #endif
 
-      solval = SCIPgetDualsolLinear(scip, cons);
+      SCIP_CALL( SCIPconsGetNVars(cons, scip->set, &nvars, &success) );
+
+      if( nvars > 1 )
+         solval = SCIPgetDualsolLinear(scip, cons);
+      /* the constraint is a bound constraint */
+      else
+      {
+         SCIP_Real varsolval;
+
+         assert(vars != NULL);
+         SCIP_CALL( SCIPconsGetVars(cons, scip->set, vars, 1, &success) );
+
+         varsolval = SCIPvarGetLPSol(vars[0]);
+
+         /* return the reduced cost of the variable if the constraint would be tight */
+         if( SCIPsetIsEQ(scip->set, varsolval, SCIPgetRhsLinear(scip, cons))
+          || SCIPsetIsEQ(scip->set, varsolval, SCIPgetLhsLinear(scip, cons)) )
+            solval = SCIPgetVarRedcost(scip, vars[0]);
+         else
+            solval = 0.0;
+
+      }
       assert(solval != SCIP_INVALID); /*lint !e777*/
 
       if( printzeros || !SCIPisZero(scip, solval) )
@@ -35177,9 +35252,18 @@ SCIP_RETCODE printDualSol(
          else if( SCIPisInfinity(scip, -solval) )
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity\n");
          else
-            SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g\n", solval);
+         {
+            if( nvars > 1 )
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g\n", solval);
+            else
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g*\n", solval);
+         }
       }
+
    }
+
+   /* free buffer memory */
+   SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
 }
@@ -40056,6 +40140,10 @@ SCIP_RETCODE SCIPprintReoptStatistics(
    solving = SCIPclockGetTime(scip->stat->solvingtimeoverall);
    presolving = SCIPclockGetTime(scip->stat->presolvingtimeoverall);
    updatetime = SCIPclockGetTime(scip->stat->reoptupdatetime);
+
+   /* only for testing: do not commit/push */
+   solving -= (scip->stat->nreoptruns - 1.0)/(SCIP_Real)scip->stat->nreoptruns * presolving;
+   presolving *= 1.0/(SCIP_Real)scip->stat->nreoptruns;
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Reopt Status  : finish after %d runs.\n", scip->stat->nreoptruns);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Time         (sec) :\n");

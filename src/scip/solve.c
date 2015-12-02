@@ -322,6 +322,13 @@ SCIP_RETCODE SCIPprimalHeuristics(
       if( (result == SCIP_FOUNDSOL && lowerbound > primal->cutoffbound) || SCIPsolveIsStopped(set, stat, FALSE) )
          break;
 
+      /* check if the problem is proven to be unbounded, currently this happens only in reoptimization */
+      if( result == SCIP_UNBOUNDED )
+      {
+         stat->status = SCIP_STATUS_UNBOUNDED;
+         break;
+      }
+
       /* make sure that heuristic did not change probing or diving status */
       assert(tree == NULL || inprobing == SCIPtreeProbing(tree));
       assert(lp == NULL || indiving == SCIPlpDiving(lp));
@@ -3724,8 +3731,15 @@ SCIP_RETCODE solveNode(
    SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_BEFORENODE, FALSE, &foundsol) );
    assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
+   /* check if the problem is proven to be unbounded, currently this only happens during reoptimization */
+   if( stat->status == SCIP_STATUS_UNBOUNDED )
+   {
+      assert(tree->focusnode == tree->root);
+      *unbounded = TRUE;
+      *cutoff = TRUE;
+   }
    /* check if primal heuristics found a solution and we therefore reached a solution limit */
-   if( SCIPsolveIsStopped(set, stat, FALSE) )
+   else if( SCIPsolveIsStopped(set, stat, FALSE) )
    {
       SCIP_NODE* node;
 
@@ -4596,6 +4610,14 @@ SCIP_RETCODE SCIPsolveCIP(
                   cutoff, &foundsol) );
             assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
+            /* check if the problem is proven to be unbounded, currently this only happens during reoptimization */
+            if( stat->status == SCIP_STATUS_UNBOUNDED )
+            {
+               assert(tree->focusnode == tree->root);
+               unbounded = TRUE;
+               cutoff = TRUE;
+            }
+
             stopped = SCIPsolveIsStopped(set, stat, FALSE);
          }
 
@@ -4710,6 +4732,9 @@ SCIP_RETCODE SCIPsolveCIP(
    {
       /* no restart necessary */
       *restart = FALSE;
+
+      /* maybe we have found a solution that is unbounded */
+      unbounded = (unbounded || (primal->nsols > 0 && SCIPsetIsInfinity(set, -SCIPsolGetObj(primal->sols[0], set, transprob, origprob))));
 
       /* set the solution status */
       if( unbounded )

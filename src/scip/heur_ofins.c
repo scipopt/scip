@@ -109,7 +109,8 @@ SCIP_RETCODE createSubproblem(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem */
-   SCIP_Bool*            chgcoeffs           /**< array indicating which coefficients have changed */
+   SCIP_Bool*            chgcoeffs,          /**< array indicating which coefficients have changed */
+   SCIP_Bool*            success
    )
 {
    SCIP_VAR** vars;
@@ -127,8 +128,13 @@ SCIP_RETCODE createSubproblem(
 
    /* get optimal solution of the last iteration */
    sol = SCIPgetReoptLastOptSol(scip);
-   assert(sol != NULL);
 
+   /* if the solution is NULL the last problem was infeasible */
+   if( sol == NULL )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
    /* change bounds of variables of the subproblem */
    for( i = 0; i < nvars; i++ )
    {
@@ -149,6 +155,8 @@ SCIP_RETCODE createSubproblem(
    /* set an objective limit */
    SCIPdebugMessage("set objective limit of %g to sub-SCIP\n", SCIPgetUpperbound(scip));
    SCIP_CALL( SCIPsetObjlimit(subscip, SCIPgetUpperbound(scip)) );
+
+   *success = TRUE;
 
    return SCIP_OKAY;
 }
@@ -228,6 +236,7 @@ SCIP_RETCODE applyOfins(
    SCIP_Bool valid;
    SCIP_Bool success;
    SCIP_RETCODE retcode;
+   SCIP_STATUS status;
 
    assert(scip != NULL);
    assert(heur != NULL);
@@ -306,7 +315,11 @@ SCIP_RETCODE applyOfins(
    SCIPhashmapFree(&varmapfw);
 
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   SCIP_CALL( createSubproblem(scip, subscip, subvars, chgcoeffs) );
+   SCIP_CALL( createSubproblem(scip, subscip, subvars, chgcoeffs, &success) );
+
+   if( !success )
+      goto TERMINATE;
+
    SCIPdebugMessage("OFINS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
    /* do not abort subproblem on CTRL-C */
@@ -401,23 +414,69 @@ SCIP_RETCODE applyOfins(
    /* print solving statistics of subproblem if we are in SCIP's debug mode */
    SCIPdebug( SCIP_CALL( SCIPprintStatistics(subscip, NULL) ) );
 
-   /* check, whether a solution was found;
-    * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
-    */
-   nsubsols = SCIPgetNSols(subscip);
-   subsols = SCIPgetSols(subscip);
-   success = FALSE;
-   for( i = 0; i < nsubsols && (!success || heurdata->addallsols); i++ )
+   status = SCIPgetStatus(subscip);
+
+   switch (status) {
+   case SCIP_STATUS_INFEASIBLE:
+      break;
+   case SCIP_STATUS_INFORUNBD:
+   case SCIP_STATUS_UNBOUNDED:
    {
-      SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
-      if( success )
-         *result = SCIP_FOUNDSOL;
+      SCIP_SOL* subprimalray;
+      int nsubvars;
+
+      nsubvars = SCIPgetNOrigVars(subscip);
+
+      /* get the primal ray of the subscip */
+      SCIP_CALL( SCIPgetPrimalRay(subscip, &subprimalray) );
+
+      if( subprimalray != NULL )
+      {
+         SCIP_SOL* primalray;
+
+         SCIP_CALL( SCIPcreateSol(scip, &primalray, heur) );
+
+         /* transform the ray into the space of the source scip */
+         for( i = 0; i < nsubvars; i++ )
+         {
+            SCIP_CALL( SCIPsetSolVal(scip, primalray, vars[SCIPvarGetProbindex(subvars[i])],
+                  SCIPgetSolVal(subscip, subprimalray, subvars[i])) );
+         }
+
+         SCIPdebug( SCIP_CALL( SCIPprintRay(scip, primalray, 0, FALSE) ); );
+
+         /* update the primal ray of the source scip */
+         SCIP_CALL( SCIPupdatePrimalRay(scip, primalray) );
+         SCIP_CALL( SCIPfreeSol(scip, &primalray) );
+
+         SCIP_CALL( SCIPfreeSol(subscip, &subprimalray) );
+
+         *result = SCIP_UNBOUNDED;
+      }
+
+      break;
+   }
+   default:
+      /* check, whether a solution was found;
+       * due to numerics, it might happen that not all solutions are feasible -> try all solutions until one was accepted
+       */
+      nsubsols = SCIPgetNSols(subscip);
+      subsols = SCIPgetSols(subscip);
+      success = FALSE;
+      for( i = 0; i < nsubsols && (!success || heurdata->addallsols); i++ )
+      {
+         SCIP_CALL( createNewSol(scip, subscip, subvars, heur, subsols[i], &success) );
+         if( success )
+            *result = SCIP_FOUNDSOL;
+      }
+      break;
    }
 
    SCIPstatisticPrintf("%s statistic: fixed %6.3f integer variables, needed %6.1f seconds, %" SCIP_LONGINT_FORMAT " nodes, solution %10.4f found at node %" SCIP_LONGINT_FORMAT "\n",
       HEUR_NAME, 0.0, SCIPgetSolvingTime(subscip), SCIPgetNNodes(subscip), success ? SCIPgetPrimalbound(scip) : SCIPinfinity(scip),
       nsubsols > 0 ? SCIPsolGetNodenum(SCIPgetBestSol(subscip)) : -1 );
 
+  TERMINATE:
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
    SCIP_CALL( SCIPfree(&subscip) );
@@ -511,16 +570,13 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
 
    /* get variable data and check which coefficient has changed  */
    vars = SCIPgetVars(scip);
-   nvars = SCIPgetNBinVars(scip);
+   nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) + SCIPgetNImplVars(scip);
    nchgcoefs = 0;
 
    SCIP_CALL( SCIPallocBufferArray(scip, &chgcoeffs, nvars) );
 
    for( v = 0; v < nvars; v++ )
    {
-      SCIP_VAR* origvar;
-      SCIP_Real constant;
-      SCIP_Real scalar;
       SCIP_Real newcoef;
       SCIP_Real oldcoef;
       SCIP_Real newcoefabs;
@@ -531,15 +587,10 @@ SCIP_DECL_HEUREXEC(heurExecOfins)
       assert(SCIPvarGetStatus(vars[v]) != SCIP_VARSTATUS_ORIGINAL);
       assert(SCIPvarIsActive(vars[v]));
 
-      origvar = vars[v];
-      scalar = 1.0;
-      constant = 0.0;
-      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
-
-      newcoef = SCIPvarGetObj(origvar);
-      SCIP_CALL( SCIPgetReoptOldObjCoef(scip, origvar, SCIPgetNReoptRuns(scip)-1, &oldcoef) );
-      newcoefabs = fabs(newcoef);
-      oldcoefabs = fabs(oldcoef);
+      SCIP_CALL( SCIPgetReoptOldObjCoef(scip, vars[v], SCIPgetNReoptRuns(scip), &newcoef) );
+      SCIP_CALL( SCIPgetReoptOldObjCoef(scip, vars[v], SCIPgetNReoptRuns(scip)-1, &oldcoef) );
+      newcoefabs = REALABS(newcoef);
+      oldcoefabs = REALABS(oldcoef);
 
       frac = SCIP_INVALID;
 

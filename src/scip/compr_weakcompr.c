@@ -122,7 +122,8 @@ SCIP_RETCODE constructCompression(
    SCIP_VAR*** vars;
    SCIP_Real*** conss_val;
    SCIP_Real** vals;
-   SCIP_BOUNDTYPE** bounds;
+   SCIP_BOUNDTYPE** boundtypes;
+   SCIP_BOUNDTYPE*** conss_boundtypes;
    int** conss_nvars;
    unsigned int* leaveids;
    int* nconss;
@@ -185,9 +186,10 @@ SCIP_RETCODE constructCompression(
    /* allocate memory to store the old tree */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, size) );
    SCIP_CALL( SCIPallocBufferArray(scip, &vals, size) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &bounds, size) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes, size) );
    SCIP_CALL( SCIPallocBufferArray(scip, &conss_var, size) );
    SCIP_CALL( SCIPallocBufferArray(scip, &conss_val, size) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &conss_boundtypes, size) );
    SCIP_CALL( SCIPallocBufferArray(scip, &conss_nvars, size) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nvars, size) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nconss, size) );
@@ -207,13 +209,13 @@ SCIP_RETCODE constructCompression(
       /* allocate memory */
       SCIP_CALL( SCIPallocBufferArray(scip, &vars[k], mem_vars) ); /*lint !e866*/
       SCIP_CALL( SCIPallocBufferArray(scip, &vals[k], mem_vars) ); /*lint !e866*/
-      SCIP_CALL( SCIPallocBufferArray(scip, &bounds[k], mem_vars) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &boundtypes[k], mem_vars) ); /*lint !e866*/
 
       /* get the branching path */
       reoptnode = SCIPgetReoptnode(scip, leaveids[k]);
       assert(reoptnode != NULL);
 
-      SCIPgetReoptnodePath(scip, reoptnode, vars[k], vals[k], bounds[k], mem_vars, &nvars2, &nafterdualvars);
+      SCIPgetReoptnodePath(scip, reoptnode, vars[k], vals[k], boundtypes[k], mem_vars, &nvars2, &nafterdualvars);
 
       /* reallocate memory */
       if( mem_vars < nvars2 + nafterdualvars )
@@ -221,10 +223,10 @@ SCIP_RETCODE constructCompression(
          mem_vars = nvars2 + nafterdualvars;
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars[k], mem_vars) ); /*lint !e866*/
          SCIP_CALL( SCIPreallocBufferArray(scip, &vals[k], mem_vars) ); /*lint !e866*/
-         SCIP_CALL( SCIPreallocBufferArray(scip, &bounds[k], mem_vars) ); /*lint !e866*/
+         SCIP_CALL( SCIPreallocBufferArray(scip, &boundtypes[k], mem_vars) ); /*lint !e866*/
 
          /* get the branching path */
-         SCIPgetReoptnodePath(scip, reoptnode, vars[k], vals[k], bounds[k], mem_vars, &nvars2, &nafterdualvars);
+         SCIPgetReoptnodePath(scip, reoptnode, vars[k], vals[k], boundtypes[k], mem_vars, &nvars2, &nafterdualvars);
       }
 
       nvars[k] = nvars2 + nafterdualvars;
@@ -234,14 +236,16 @@ SCIP_RETCODE constructCompression(
 
       SCIP_CALL( SCIPallocBufferArray(scip, &conss_var[k], mem_conss) ); /*lint !e866*/
       SCIP_CALL( SCIPallocBufferArray(scip, &conss_val[k], mem_conss) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocBufferArray(scip, &conss_boundtypes[k], mem_conss) ); /*lint !e866*/
       SCIP_CALL( SCIPallocBufferArray(scip, &conss_nvars[k], mem_conss) ); /*lint !e866*/
 
-      SCIPreoptnodeGetConss(reoptnode, conss_var[k], conss_val[k], mem_conss, &nconss[k], conss_nvars[k]);
+      SCIPreoptnodeGetConss(reoptnode, conss_var[k], conss_val[k], conss_boundtypes[k], mem_conss, &nconss[k],
+         conss_nvars[k]);
       assert(mem_conss == nconss[k]);
 
 #ifdef SCIP_DEBUG
       for(c = 0; c < mem_conss; c++)
-         assert(conss_nvars[k][c] <= SCIPgetNBinVars(scip));
+         assert(conss_nvars[k][c] <= SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip));
 #endif
 
 #ifndef NDEBUG
@@ -291,10 +295,11 @@ SCIP_RETCODE constructCompression(
       }
 
       /* create a representative at position 0 with an added constraint corresponding
-       * to the branching path of the node*/
+       * to the branching path of the node
+       */
       assert(comprdata->representatives[pos_repr_fix-1] != NULL);
-      SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[pos_repr_fix-1], vars[0], vals[0], 1.0,
-            SCIPinfinity(scip), nvars[0], REOPT_CONSTYPE_STRBRANCHED) );
+      SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[pos_repr_fix-1], vars[0], vals[0], boundtypes[k],
+            1.0, SCIPinfinity(scip), nvars[0], REOPT_CONSTYPE_DUALREDS) );
 
    }
 
@@ -312,15 +317,15 @@ SCIP_RETCODE constructCompression(
       /* fix the branching path */
       for(v = 0; v < conss_nvars[0][k]; v++)
       {
-         SCIP_CALL( SCIPaddReoptnodeBndchg(scip, comprdata->representatives[pos_repr_fix], conss_var[0][k][v], conss_val[0][k][v],
-               SCIPisFeasEQ(scip, conss_val[0][k][v], 1.0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER) );
+         SCIP_CALL( SCIPaddReoptnodeBndchg(scip, comprdata->representatives[pos_repr_fix], conss_var[0][k][v],
+               conss_val[0][k][v], SCIPisFeasEQ(scip, conss_val[0][k][v], 1.0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER) );
       }
 
       /* add this constraint to all further representatives */
       for(r = pos_repr_fix+1; r < comprdata->nrepresentatives; r++)
       {
-         SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[r], conss_var[0][k], conss_val[0][k], 1.0,
-               SCIPinfinity(scip), conss_nvars[0][k], REOPT_CONSTYPE_STRBRANCHED) );
+         SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[r], conss_var[0][k], conss_val[0][k],
+               conss_boundtypes[0][k], 1.0, SCIPinfinity(scip), conss_nvars[0][k], REOPT_CONSTYPE_DUALREDS) );
       }
 
       pos_repr_fix++;
@@ -338,7 +343,7 @@ SCIP_RETCODE constructCompression(
       SCIPfreeBufferArray(scip, &conss_nvars[k]);
       SCIPfreeBufferArray(scip, &conss_val[k]);
       SCIPfreeBufferArray(scip, &conss_var[k]);
-      SCIPfreeBufferArray(scip, &bounds[k]);
+      SCIPfreeBufferArray(scip, &boundtypes[k]);
       SCIPfreeBufferArray(scip, &vals[k]);
       SCIPfreeBufferArray(scip, &vars[k]);
    }
@@ -348,7 +353,7 @@ SCIP_RETCODE constructCompression(
    SCIPfreeBufferArray(scip, &conss_nvars);
    SCIPfreeBufferArray(scip, &conss_val);
    SCIPfreeBufferArray(scip, &conss_var);
-   SCIPfreeBufferArray(scip, &bounds);
+   SCIPfreeBufferArray(scip, &boundtypes);
    SCIPfreeBufferArray(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
 

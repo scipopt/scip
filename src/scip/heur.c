@@ -1016,7 +1016,8 @@ SCIP_RETCODE SCIPheurExec(
       if( *result != SCIP_FOUNDSOL
          && *result != SCIP_DIDNOTFIND
          && *result != SCIP_DIDNOTRUN
-         && *result != SCIP_DELAYED )
+         && *result != SCIP_DELAYED
+         && *result != SCIP_UNBOUNDED )
       {
          SCIPerrorMessage("execution method of primal heuristic <%s> returned invalid result <%d>\n", 
             heur->name, *result);
@@ -1034,7 +1035,7 @@ SCIP_RETCODE SCIPheurExec(
          set->heurssorted = FALSE;
       }
    }
-   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_DELAYED || heur->delaypos == -1);
+   assert(*result == SCIP_DIDNOTRUN || *result == SCIP_DELAYED || *result == SCIP_UNBOUNDED || heur->delaypos == -1);
 
    /* check if the heuristic was (still) delayed */
    if( *result == SCIP_DELAYED || heur->delaypos >= 0 )
