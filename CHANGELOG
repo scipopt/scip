@@ -9,13 +9,15 @@ features:
 parameters:
 - new parameter sepaperspective to turn on separation of perspective cuts for indicator contraints
 - new parameter sepapersplocal to decide whether local cuts can be used for perspective cuts for indicator contraints
+- new parameter branching/relpscost/usesmallweightsitlim to use smaller weights for pseudo cost updates when LP iteration limit was hit
+
 
 performance improvements:
 
 interface:
 - new function SCIPsolveProbingRelax() to solve a relaxation within probing
 - new function SCIPgetIntVarXor() to access integer variable of XOR constraints
-
+- new function SCIPgetLastStrongbranchingLPSolstat() to query the LP statuses after strong branching on a variable 
 fixed bugs:
 
 

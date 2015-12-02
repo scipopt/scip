@@ -64,6 +64,7 @@
                                           *  better than the best strong-branching or pseudo-candidate? */
 #define DEFAULT_STARTRANDSEED  12345    /**< start random seed for random number generation */
 #define DEFAULT_RANDINITORDER  FALSE    /**< should candidates be initialized in randomized order? */
+#define DEFAULT_USESMALLWEIGHTSITLIM FALSE /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
 
 /** branching rule data */
 struct SCIP_BranchruleData
@@ -102,6 +103,7 @@ struct SCIP_BranchruleData
    SCIP_Bool             randinitorder;      /**< should init candidates be processed in a random order? */
    unsigned int          randseed;           /**< random seed for random number generation */
    int                   startrandseed;      /**< start random seed for random number generation */
+   SCIP_Bool             usesmallweightsitlim; /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
 };
 
 /*
@@ -1128,16 +1130,32 @@ SCIP_RETCODE execRelpscost(
 #endif
                && (!upinf || branchruledata->storesemiinitcosts) )
          {
+            SCIP_Real weight;
+
+            /* smaller weights are given if the strong branching hit the time limit in the corresponding direction */
+            if( branchruledata->usesmallweightsitlim )
+               weight = SCIPgetLastStrongbranchLPSolStat(scip, SCIP_BRANCHDIR_DOWNWARDS) != SCIP_LPSOLSTAT_ITERLIMIT ? 1.0 : 0.5;
+            else
+               weight = 1.0;
+
             /* update pseudo cost values */
-            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 0.0 - branchcandsfrac[c], downgain, 1.0) );
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 0.0 - branchcandsfrac[c], downgain, weight) );
          }
          if( !upinf
 #ifdef WITH_LPSOLSTAT
-               && SCIPgetLastStrongbranchLPSolStat(scip, SCIP_BRANCHDIR_DOWNWARDS) != SCIP_LPSOLSTAT_ITERLIMIT
+               && SCIPgetLastStrongbranchLPSolStat(scip, SCIP_BRANCHDIR_UPWARDS) != SCIP_LPSOLSTAT_ITERLIMIT
 #endif
                && (!downinf || branchruledata->storesemiinitcosts)  )
          {
-            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 1.0 - branchcandsfrac[c], upgain, 1.0) );
+            SCIP_Real weight;
+
+            /* smaller weights are given if the strong branching hit the time limit in the corresponding direction */
+            if( branchruledata->usesmallweightsitlim )
+               weight = SCIPgetLastStrongbranchLPSolStat(scip, SCIP_BRANCHDIR_UPWARDS) != SCIP_LPSOLSTAT_ITERLIMIT ? 1.0 : 0.5;
+            else
+               weight = 1.0;
+
+            SCIP_CALL( SCIPupdateVarPseudocost(scip, branchcands[c], 1.0 - branchcandsfrac[c], upgain, weight) );
          }
 
          /* the minimal lower bound of both children is a proved lower bound of the current subtree */
@@ -1660,6 +1678,12 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          "should candidates be initialized in randomized order?",
          &branchruledata->randinitorder, TRUE, DEFAULT_RANDINITORDER,
          NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/usesmallweightsitlim",
+         "should smaller weights be used for pseudo cost updates after hitting the LP iteration limit?",
+         &branchruledata->usesmallweightsitlim, TRUE, DEFAULT_USESMALLWEIGHTSITLIM,
+         NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/startrandseed", "start seed for random number generation",
          &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );
 
