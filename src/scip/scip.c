@@ -40141,10 +40141,6 @@ SCIP_RETCODE SCIPprintReoptStatistics(
    presolving = SCIPclockGetTime(scip->stat->presolvingtimeoverall);
    updatetime = SCIPclockGetTime(scip->stat->reoptupdatetime);
 
-   /* only for testing: do not commit/push */
-   solving -= (scip->stat->nreoptruns - 1.0)/(SCIP_Real)scip->stat->nreoptruns * presolving;
-   presolving *= 1.0/(SCIP_Real)scip->stat->nreoptruns;
-
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "SCIP Reopt Status  : finish after %d runs.\n", scip->stat->nreoptruns);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Time         (sec) :\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  solving          : %10.2f\n", solving);
