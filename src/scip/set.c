@@ -309,7 +309,7 @@
 #define SCIP_DEFAULT_REOPT_ENABLE         FALSE /**< enable reoptimization */
 #define SCIP_DEFAULT_REOPT_SEPAGLBINFSUBTREES TRUE/**< save global constraints to separate infeasible subtrees */
 #define SCIP_DEFAULT_REOPT_SEPABESTSOL    FALSE /**< separate the optimal solution, i.e., for constraint shortest path problems */
-#define SCIP_DEFAULT_REOPT_COMMONTIMELIMIT TRUE /**< is the given time limit for all reoptimization round? */
+#define SCIP_DEFAULT_REOPT_COMMONTIMELIMIT FALSE/**< is the given time limit for all reoptimization round? */
 #define SCIP_DEFAULT_REOPT_SHRINKINNER     TRUE /**< replace branched transit nodes by their child nodes, if the number of bound changes is not to large */
 #define SCIP_DEFAULT_REOPT_STRONGBRANCHINIT TRUE/**< try to fix variables before reoptimizing by probing like strong branching */
 #define SCIP_DEFAULT_REOPT_REDUCETOFRONTIER TRUE/**< delete stored nodes which were not reoptimized */
