@@ -198,16 +198,19 @@ SCIP_RETCODE performRandRounding(
          /* enter a new probing node if the variable was not already fixed before */
          if( lbadjust || ubadjust )
          {
-            SCIP_RETCODE retcode;
-
             if( SCIPisStopped(scip) )
                break;
 
-            retcode = SCIPnewProbingNode(scip);
-            if( retcode == SCIP_MAXDEPTHLEVEL )
+            /* we only want to create a new probing node if we do nit exceeed the maximal tree depth,
+             * otherwise we finish at this point
+             * @todo: maybe we want to continue with the same node becasue we do not backtrack
+             */
+            if( SCIPgetDepthLimit(scip) > SCIPgetDepth(scip) )
+            {
+               SCIP_CALL( SCIPnewProbingNode(scip) );
+            }
+            else
                break;
-
-            SCIP_CALL( retcode );
 
             /* tighten the bounds to fix the variable for the probing node */
             if( lbadjust )

@@ -18329,24 +18329,41 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       }
    }
 
-   /* create a new probing node for the strong branching child and apply the new bound for the variable */
-   SCIP_CALL( SCIPnewProbingNode(scip) );
-
-   if( down )
+   /* we need to ensure that we can create at least one new probing node without exceeding the maximal tree depth */
+   if( SCIPtreeGetDepthLimit(scip->tree) > SCIPtreeGetProbingDepth(scip->tree) )
    {
-      assert(SCIPisGE(scip, newbound, SCIPvarGetLbLocal(var)));
-      if( SCIPisLT(scip, newbound, SCIPvarGetUbLocal(var)) )
+      /* create a new probing node for the strong branching child and apply the new bound for the variable */
+      SCIP_CALL( SCIPnewProbingNode(scip) );
+
+      if( down )
       {
-         SCIP_CALL( SCIPchgVarUbProbing(scip, var, newbound) );
+         assert(SCIPisGE(scip, newbound, SCIPvarGetLbLocal(var)));
+         if( SCIPisLT(scip, newbound, SCIPvarGetUbLocal(var)) )
+         {
+            SCIP_CALL( SCIPchgVarUbProbing(scip, var, newbound) );
+         }
+      }
+      else
+      {
+         assert(SCIPisLE(scip, newbound, SCIPvarGetUbLocal(var)));
+         if( SCIPisGT(scip, newbound, SCIPvarGetLbLocal(var)) )
+         {
+            SCIP_CALL( SCIPchgVarLbProbing(scip, var, newbound) );
+         }
       }
    }
    else
    {
-      assert(SCIPisLE(scip, newbound, SCIPvarGetUbLocal(var)));
-      if( SCIPisGT(scip, newbound, SCIPvarGetLbLocal(var)) )
-      {
-         SCIP_CALL( SCIPchgVarLbProbing(scip, var, newbound) );
-      }
+      if( valid != NULL )
+         *valid = FALSE;
+
+      if( cutoff != NULL )
+         *cutoff = FALSE;
+
+      if( conflict != NULL )
+         *conflict = FALSE;
+
+      return SCIP_OKAY;
    }
 
    /* propagate domains at the probing node */
@@ -38070,6 +38087,30 @@ int SCIPgetFocusDepth(
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetFocusDepth", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    return SCIPtreeGetFocusDepth(scip->tree);
+}
+
+/** gets maximal allowed tree depth
+ *
+ *  @return gets maximal allowed tree depth
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+int SCIPgetDepthLimit(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetTreeMaxDepth", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
+
+   return SCIPtreeGetDepthLimit(scip->tree);
 }
 
 /** gets maximal depth of all processed nodes in current branch and bound run (excluding probing nodes)

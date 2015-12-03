@@ -292,6 +292,10 @@ SCIP_RETCODE applyCliqueFixings(
       assert(bestpos < nbinvars);
       assert(c == cliquepartition[bestpos]);
 
+      /* stop if we reached the depth limit */
+      if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+         break;
+
       SCIP_CALL( SCIPnewProbingNode(scip) );
 
       v = bestpos;

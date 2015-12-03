@@ -551,6 +551,13 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             assert(bdchgdirs != NULL);
             assert(bdchgvals != NULL);
 
+            /* return if we reached the depth limit */
+            if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+            {
+               SCIPdebugMessage("depth limit reached, we stop diving immediately.\n");
+               goto TERMINATE;
+            }
+
             /* dive deeper into the tree */
             SCIP_CALL( SCIPnewProbingNode(scip) );
             ++totalnprobingnodes;
@@ -794,6 +801,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       SCIPgetNNodes(scip), SCIPdivesetGetName(diveset), nlpcands, SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
       SCIPretransformObj(scip, SCIPgetLPObjval(scip)), SCIPretransformObj(scip, searchbound), SCIPgetLPSolstat(scip), cutoff);
 
+  TERMINATE:
    /* end probing mode */
    SCIP_CALL( SCIPendProbing(scip) );
 

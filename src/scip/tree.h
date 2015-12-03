@@ -872,6 +872,12 @@ int SCIPtreeGetCurrentDepth(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
+/** gets the maximal allowed tree depth */
+extern
+int SCIPtreeGetDepthLimit(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
 /** returns, whether the LP was or is to be solved in the current node */
 extern
 SCIP_Bool SCIPtreeHasCurrentNodeLP(
