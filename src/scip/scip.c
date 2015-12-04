@@ -14586,16 +14586,25 @@ SCIP_RETCODE SCIPsolve(
                }
                SCIP_CALL( SCIPsetBoolParam(scip, "reoptimization/enable", FALSE) );
 
-               SCIPwarningMessage(scip, "reoptimization needs to be disabled because the problem contains %d general integer variables.\n",
-                     scip->transprob->nintvars);
+               SCIPwarningMessage(scip, "reoptimization needs to be disabled because the problem contains %d general "
+                     "integer variables after presolving.\n", scip->transprob->nintvars);
             }
 
-            /* increase number of reopt_runs */
-            ++scip->stat->nreoptruns;
+            /* it could happen that we need to disable reoptimization
+             *
+             * @note this can only happen in the current (3.2) and the upcomming bugfix release (3.2.1).
+             *
+             * @note in the next major release reoptimization will be available for general MIPs.
+             */
+            if( scip->set->reopt_enable )
+            {
+               /* increase number of reopt_runs */
+               ++scip->stat->nreoptruns;
 
-            /* inform the reoptimization plugin that a new iteration starts */
-            SCIP_CALL( SCIPreoptAddRun(scip->reopt, scip->set, scip->mem->probmem, scip->transprob->vars,
-                  scip->transprob->nvars, scip->set->limit_maxsol) );
+               /* inform the reoptimization plugin that a new iteration starts */
+               SCIP_CALL( SCIPreoptAddRun(scip->reopt, scip->set, scip->mem->probmem, scip->transprob->vars,
+                     scip->transprob->nvars, scip->set->limit_maxsol) );
+            }
          }
 
          if( scip->set->stage == SCIP_STAGE_SOLVED || scip->set->stage == SCIP_STAGE_PRESOLVING )
@@ -14795,15 +14804,22 @@ SCIP_RETCODE SCIPenableReoptimization(
     || (!enable && !scip->set->reopt_enable && scip->reopt == NULL) )
       return SCIP_OKAY;
 
-   /* check stage */
-   if( scip->set->stage > SCIP_STAGE_PROBLEM )
+   /* check stage and throw an error if we try to disable reoptimization during the solving process.
+    *
+    * @note the case that we will disable the reoptimization and have already performed presolving can only happen if
+    *       we are try to solve a general MIP
+    *
+    * @note this fix is only for the bugfix release 3.2.1, in the next major release reoptimization can be used for
+    *       general MIPs, too.
+    */
+   if( scip->set->stage > SCIP_STAGE_PROBLEM && !(!enable && scip->set->stage == SCIP_STAGE_PRESOLVED) )
    {
       SCIPerrorMessage("reoptimization cannot be %s after starting the (pre)solving process\n", enable ? "enabled" : "disabled");
       return SCIP_INVALIDCALL;
    }
 
    /* if the current stage is SCIP_STAGE_PROBLEM we have to include the heuristics and branching rule */
-   if( scip->set->stage == SCIP_STAGE_PROBLEM )
+   if( scip->set->stage == SCIP_STAGE_PROBLEM || (!enable && scip->set->stage == SCIP_STAGE_PRESOLVED) )
    {
       /* initialize all reoptimization data structures */
       if( enable && scip->reopt == NULL )
