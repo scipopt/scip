@@ -233,7 +233,7 @@ SCIP_RETCODE performRelaxSimpleRounding(
       SCIP_Real val;
 
       val = SCIPgetRelaxSolVal(scip, vars[v]);
-      if ( ! SCIPisFeasZero(scip, val) )
+      if ( ! SCIPisFeasIntegral(scip, val) )
       {
          relaxcands[nrelaxcands] = vars[v];
          relaxcandssol[nrelaxcands++] = val;
