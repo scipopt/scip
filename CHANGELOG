@@ -38,6 +38,7 @@ fixed bugs:
 - use LPi infinity when reverting bound changes in conflict analysis
 - fixed bug in dive.c avoiding a check of constraints in the presence of indicator constraints
 - fixed bug in conflict.c with wrong reset of bounds used
+- fixed bug in heur_simplerounding in connection with relaxators
 
 SCIP version 3.2.0
 ==================
