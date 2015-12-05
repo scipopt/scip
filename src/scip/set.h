@@ -465,8 +465,8 @@ SCIP_RETCODE SCIPsetSetEmphasis(
 /** set parameters for reoptimization */
 extern
 SCIP_RETCODE SCIPsetSetReoptimizationParams(
-   SCIP_SET*             set,                     /**< SCIP data structure */
-   SCIP_MESSAGEHDLR*     messagehdlr              /**< message handler */
+   SCIP_SET*             set,                /**< SCIP data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** enable or disable all plugin timers depending on the value of the flag \p enabled */

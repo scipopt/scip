@@ -559,8 +559,8 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
 
 /** set parameters for reoptimization */
 SCIP_RETCODE SCIPsetSetReoptimizationParams(
-   SCIP_SET*             set,                     /**< SCIP data structure */
-   SCIP_MESSAGEHDLR*     messagehdlr              /**< message handler */
+   SCIP_SET*             set,                /**< SCIP data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
    assert(set != NULL);
