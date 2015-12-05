@@ -1908,8 +1908,8 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       SCIP_VAR* var;
       SCIP_Bool updatepscost;
 
-      /* open a new probing node if this will node exceed the maximal tree depth, otherwise stop here */
-      if( SCIPgetDepthLimit(scip) > SCIPgetDepth(scip) )
+      /* open a new probing node if this will not exceed the maximal tree depth, otherwise stop here */
+      if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
       {
          SCIP_CALL( SCIPnewProbingNode(scip) );
          divedepth++;
@@ -2402,7 +2402,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                SCIPdebugMessage("  *** cutoff detected at level %d - backtracking one step\n", SCIPgetProbingDepth(scip));
                SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
 
-               /* after backtracking there has to be at least one node to open without exceeding the maximal tree depth */
+               /* after backtracking there has to be at least one open node without exceeding the maximal tree depth */
                assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
 
                SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -2413,7 +2413,7 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                SCIPdebugMessage("  *** cutoff detected at level %d - backtracking to depth %d\n", SCIPgetProbingDepth(scip), backtrackdepth);
                SCIP_CALL( SCIPbacktrackProbing(scip, backtrackdepth-1) );
 
-               /* after backtracking there has to be at least one node to open without exceeding the maximal tree depth */
+               /* after backtracking there has to be at least one open node without exceeding the maximal tree depth */
                assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
 
                SCIP_CALL( SCIPnewProbingNode(scip) );

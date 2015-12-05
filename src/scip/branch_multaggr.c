@@ -203,7 +203,7 @@ SCIP_RETCODE selectVarMultAggrBranching(
    /* check if we would exceed the depth limit */
    if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
    {
-      SCIPdebugMessage(" cannot perform probing in selectVarMultAggrBranching, depth limit reached.\n");
+      SCIPdebugMessage("cannot perform probing in selectVarMultAggrBranching, depth limit reached.\n");
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }

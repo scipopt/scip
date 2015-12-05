@@ -2369,8 +2369,8 @@ SCIP_RETCODE performFixing(
    *infeas = FALSE;
    if( SCIPisUbBetter(scip, val, oldlb, oldub) )
    {
-      /* we only want to open a new probing node if we do not exceed maximal tree depth */
-      if( SCIPgetDepthLimit(scip) > SCIPgetDepth(scip) )
+      /* we only want to open a new probing node if we do not exceed the maximal tree depth */
+      if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
       {
          /* create next probing node */
          SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -2414,8 +2414,8 @@ SCIP_RETCODE performFixing(
    *infeas = FALSE;
    if( SCIPisLbBetter(scip, val, oldlb, oldub) )
    {
-      /* we only want to open a new probing node if we do not exceed maximal tree depth */
-      if( SCIPgetDepthLimit(scip) > SCIPgetDepth(scip) )
+      /* we only want to open a new probing node if we do not exceed the maximal tree depth */
+      if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
       {
          /* create next probing node */
          SCIP_CALL( SCIPnewProbingNode(scip) );

@@ -201,11 +201,11 @@ SCIP_RETCODE performRandRounding(
             if( SCIPisStopped(scip) )
                break;
 
-            /* we only want to create a new probing node if we do nit exceeed the maximal tree depth,
-             * otherwise we finish at this point
-             * @todo: maybe we want to continue with the same node becasue we do not backtrack
+            /* We only want to create a new probing node if we do not exceeed the maximal tree depth,
+             * otherwise we finish at this point.
+             * @todo: Maybe we want to continue with the same node because we do not backtrack.
              */
-            if( SCIPgetDepthLimit(scip) > SCIPgetDepth(scip) )
+            if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
             {
                SCIP_CALL( SCIPnewProbingNode(scip) );
             }
