@@ -1175,11 +1175,83 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators)
 /** dialog execution method for the display solution command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
 {  /*lint --e{715}*/
+   SCIP_VAR** fixedvars;
+   SCIP_VAR* var;
+   int nfixedvars;
+   int v;
+
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
    SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
+
+   /* check if there are infinite fixings and print a reference to 'display finitesolution', if needed */
+   fixedvars = SCIPgetFixedVars(scip);
+   nfixedvars = SCIPgetNFixedVars(scip);
+   assert(fixedvars != NULL || nfixedvars == 0);
+
+   /* check whether there are variables fixed to an infinite value */
+   for( v = 0; v < nfixedvars; ++v )
+   {
+      var = fixedvars[v]; /*lint !e613*/
+
+      /* skip (multi-)aggregated variables */
+      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
+         continue;
+
+      if( (SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var))) )
+      {
+         SCIPdialogMessage(scip, NULL, "The primal solution contains variables fixed to infinite values.\n\
+If you want SCIP to display an optimal solution without infinite values, use 'display finitesolution'.\n");
+         SCIPdialogMessage(scip, NULL, "\n");
+         break;
+      }
+   }
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display finitesolution command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayFiniteSolution)
+{  /*lint --e{715}*/
+   SCIP_SOL* bestsol = SCIPgetBestSol(scip);
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+   if( bestsol != NULL )
+   {
+      SCIP_SOL* sol;
+      SCIP_Bool success;
+      SCIP_Bool retcode;
+
+      /* create copy of solution with finite values */
+      retcode = SCIPcreateFiniteSolCopy(scip, &sol, bestsol, &success);
+
+      if( retcode == SCIP_OKAY && success )
+      {
+         retcode = SCIPprintSol(scip, sol, NULL, FALSE);
+         SCIPdialogMessage(scip, NULL, "\n");
+      }
+      else
+      {
+         SCIPdialogMessage(scip, NULL, "error while creating finite solution\n");
+      }
+
+      /* free solution copy */
+      if( retcode == SCIP_OKAY )
+      {
+         SCIP_CALL( SCIPfreeSol(scip, &sol) );
+      }
+   }
+   else
+   {
+      SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+      SCIPdialogMessage(scip, NULL, "\n");
+   }
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -3430,6 +3502,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             NULL,
             SCIPdialogExecDisplaySolution, NULL, NULL,
             "solution", "display best primal solution", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* display finite solution */
+   if( !SCIPdialogHasEntry(submenu, "finitesolution") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplayFiniteSolution, NULL, NULL,
+            "finitesolution", "display best primal solution (try to make solution values finite, first)", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

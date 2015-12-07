@@ -15,6 +15,8 @@ interface:
 - add SCIPgetAlphaBetaGammaDelta to compute a hyperplane containing three given 3-dimensional points
 - SCIPsolveLinearProb uses now an 1-dimensional matrix representation
 - made debug solution functionality thread safe (see debug.h for further information)
+- added interactive shell command 'display finitesolution' to print solution with infinite fixings removed,
+  added reference to that method to 'display solution' output if there are infinite fixings
 
 fixed bugs:
 - fixed wrong check when computing cuts for factorable quadratic functions

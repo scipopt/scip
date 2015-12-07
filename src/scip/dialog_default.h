@@ -135,6 +135,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution);
 
+/** dialog execution method for the display finitesolution command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayFiniteSolution);
+
 /** dialog execution method for the display dual solution command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDualSolution);
