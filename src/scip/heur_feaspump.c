@@ -106,6 +106,13 @@ SCIP_RETCODE setupProbingSCIP(
    SCIP_Bool*            success             /**< was copying successful? */
    )
 {
+   /* check if we are already at the maximal tree depth */
+   if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
    /* initializing the subproblem */
    SCIP_CALL( SCIPcreate(probingscip) );
 
@@ -840,6 +847,10 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
          /* set SCIP into probing mode and create root node of the probing tree */
          SCIP_CALL( SCIPstartProbing(probingscip) );
+
+         /* this should always be fulfilled */
+         assert(SCIPgetDepthLimit(probingscip) > SCIPgetDepth(probingscip));
+
          SCIP_CALL( SCIPnewProbingNode(probingscip) );
 
          SCIPdebugMessage("successfully copied SCIP instance -> feasibility pump 2.0 can be used.\n");

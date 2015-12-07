@@ -370,6 +370,36 @@ SCIP_Bool SCIPisStopped(
 
 /**@} */
 
+/*
+ * debug solution methods
+ */
+
+/**@name Debug Solution Methods */
+/**@{ */
+
+/** enable debug solution mechanism
+ *
+ *  the debug solution mechanism allows to trace back the invalidation of
+ *  a debug solution during the solution process of SCIP. It must be explicitly
+ *  enabled for the SCIP data structure.
+ *
+ *  @see debug.h for more information on debug solution mechanism
+ */
+EXTERN
+void SCIPenableDebugSol(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** disable solution debugging mechanism
+ *
+ *  @see debug.h for more information on debug solution mechanism
+ */
+EXTERN
+void SCIPdisableDebugSol(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/**@} */
 
 
 /*
@@ -4378,9 +4408,6 @@ SCIP_RETCODE SCIPstartInteraction(
 
 /**@} */
 
-
-
-
 /*
  * global problem methods
  */
@@ -6254,7 +6281,7 @@ SCIP_RETCODE SCIPenableReoptimization(
    SCIP_Bool             enable              /**< enable reoptimization */
    );
 
-/** returns whether reoptimization is enabledor not */
+/** returns whether reoptimization is enabled or not */
 EXTERN
 SCIP_Bool SCIPisReoptEnabled(
    SCIP*                 scip                /**< SCIP data structure */
@@ -6602,7 +6629,7 @@ SCIP_RETCODE SCIPparseVar(
    SCIP_DECL_VARTRANS    ((*vartrans)),      /**< creates transformed user data by transforming original user data */
    SCIP_DECL_VARDELTRANS ((*vardeltrans)),   /**< frees user data of transformed variable */
    SCIP_VARDATA*         vardata,            /**< user data for this specific variable */
-   char**                endptr,             /**< pointer to store the final string position if successfully */
+   char**                endptr,             /**< pointer to store the final string position if successful */
    SCIP_Bool*            success             /**< pointer store if the paring process was successful */
    );
 
@@ -6626,7 +6653,7 @@ SCIP_RETCODE SCIPparseVarName(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           str,                /**< string to parse */
    SCIP_VAR**            var,                /**< pointer to store the problem variable, or NULL if it does not exit */
-   char**                endptr              /**< pointer to store the final string position if successfully */
+   char**                endptr              /**< pointer to store the final string position if successful */
    );
 
 /** parse the given string as variable list (here ',' is the delimiter)) (\<x1\>, \<x2\>, ..., \<xn\>) (see
@@ -6644,7 +6671,7 @@ SCIP_RETCODE SCIPparseVarName(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  *
- *  @note the pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist
+ *  @note The pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist.
  *
  *  @note If the number of (parsed) variables is greater than the available slots in the variable array, nothing happens
  *        except that the required size is stored in the corresponding integer; the reason for this approach is that we
@@ -6659,9 +6686,9 @@ SCIP_RETCODE SCIPparseVarsList(
    int*                  nvars,              /**< pointer to store number of parsed variables */
    int                   varssize,           /**< size of the variable array */
    int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
-   char**                endptr,             /**< pointer to store the final string position if successfully */
+   char**                endptr,             /**< pointer to store the final string position if successful */
    char                  delimiter,          /**< character which is used for delimitation */
-   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
+   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
    );
 
 /** parse the given string as linear sum of variables and coefficients (c1 \<x1\> + c2 \<x2\> + ... + cn \<xn\>)
@@ -6679,7 +6706,7 @@ SCIP_RETCODE SCIPparseVarsList(
  *       - \ref SCIP_STAGE_PRESOLVED
  *       - \ref SCIP_STAGE_SOLVING
  *
- *  @note the pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist
+ *  @note The pointer success in only set to FALSE in the case that a variable with a parsed variable name does not exist.
  *
  *  @note If the number of (parsed) variables is greater than the available slots in the variable array, nothing happens
  *        except that the required size is stored in the corresponding integer; the reason for this approach is that we
@@ -6695,8 +6722,8 @@ SCIP_RETCODE SCIPparseVarsLinearsum(
    int*                  nvars,              /**< pointer to store number of parsed variables */
    int                   varssize,           /**< size of the variable array */
    int*                  requiredsize,       /**< pointer to store the required array size for the active variables */
-   char**                endptr,             /**< pointer to store the final string position if successfully */
-   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
+   char**                endptr,             /**< pointer to store the final string position if successful */
+   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
    );
 
 /** parse the given string as polynomial of variables and coefficients
@@ -6732,8 +6759,8 @@ SCIP_RETCODE SCIPparseVarsPolynomial(
    SCIP_Real**           monomialcoefs,      /**< pointer to store array with monomial coefficients */
    int**                 monomialnvars,      /**< pointer to store array with number of variables for each monomial */
    int*                  nmonomials,         /**< pointer to store number of parsed monomials */
-   char**                endptr,             /**< pointer to store the final string position if successfully */
-   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successfully or not */
+   char**                endptr,             /**< pointer to store the final string position if successful */
+   SCIP_Bool*            success             /**< pointer to store the whether the parsing was successful or not */
    );
 
 /** frees memory allocated when parsing a polynomial from a string
@@ -10987,9 +11014,9 @@ SCIP_RETCODE SCIPcheckCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows (both local and global) to be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result of the callback method */
    );
 
@@ -11269,7 +11296,7 @@ SCIP_RETCODE SCIPgetConsVars(
    SCIP_Bool*            success             /**< pointer to store whether the variables are successfully copied */
    );
 
-/** methed to collect the number of variables of a constraint
+/** method to collect the number of variables of a constraint
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -13963,6 +13990,77 @@ SCIP_RETCODE SCIPevalExprtreeLocalBounds(
 /**@} */
 
 
+
+
+/*
+ * nonlinear methods
+ */
+
+/**@name Nonlinear Methods */
+/**@{ */
+
+
+/** computes coefficients of linearization of a square term in a reference point */
+EXTERN
+void SCIPaddSquareLinearization(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             sqrcoef,            /**< coefficient of square term */
+   SCIP_Real             refpoint,           /**< point where to linearize */
+   SCIP_Bool             isint,              /**< whether corresponding variable is a discrete variable, and thus linearization could be moved */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of linearization */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
+   );
+
+/** computes coefficients of secant of a square term */
+EXTERN
+void SCIPaddSquareSecant(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             sqrcoef,            /**< coefficient of square term */
+   SCIP_Real             lb,                 /**< lower bound on variable */
+   SCIP_Real             ub,                 /**< upper bound on variable */
+   SCIP_Real             refpoint,           /**< point for which to compute value of linearization */
+   SCIP_Real*            lincoef,            /**< buffer to add coefficient of secant */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of secant */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if secant has failed due to large numbers or unboundedness */
+   );
+
+/** computes coefficients of linearization of a bilinear term in a reference point */
+EXTERN
+void SCIPaddBilinLinearization(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             refpointx,          /**< point where to linearize first  variable */
+   SCIP_Real             refpointy,          /**< point where to linearize second variable */
+   SCIP_Real*            lincoefx,           /**< buffer to add coefficient of first  variable in linearization */
+   SCIP_Real*            lincoefy,           /**< buffer to add coefficient of second variable in linearization */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
+   );
+
+/** computes coefficients of McCormick under- or overestimation of a bilinear term */
+EXTERN
+void SCIPaddBilinMcCormick(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real             bilincoef,          /**< coefficient of bilinear term */
+   SCIP_Real             lbx,                /**< lower bound on first variable */
+   SCIP_Real             ubx,                /**< upper bound on first variable */
+   SCIP_Real             refpointx,          /**< reference point for first variable */
+   SCIP_Real             lby,                /**< lower bound on second variable */
+   SCIP_Real             uby,                /**< upper bound on second variable */
+   SCIP_Real             refpointy,          /**< reference point for second variable */
+   SCIP_Bool             overestimate,       /**< whether to compute an overestimator instead of an underestimator */
+   SCIP_Real*            lincoefx,           /**< buffer to add coefficient of first  variable in linearization */
+   SCIP_Real*            lincoefy,           /**< buffer to add coefficient of second variable in linearization */
+   SCIP_Real*            linconstant,        /**< buffer to add constant of linearization */
+   SCIP_Bool*            success             /**< buffer to set to FALSE if linearization has failed due to large numbers */
+   );
+
+/**@} */
+
+
+
+
 /*
  * cutting plane methods
  */
@@ -15195,7 +15293,7 @@ int SCIPgetNPrioLPBranchCands(
    );
 
 /** gets external branching candidates along with solution values, scores, and number of branching candidates;
- *  these branching candidates can be used by relaxations or nonlinear constraint handlers
+ *  these branching candidates can be used by relaxations or nonlinear constraint handlers;
  *  branching rules should always select the branching candidate among the first nprioexterncands of the candidate
  *  list
  *
@@ -16838,10 +16936,10 @@ EXTERN
 SCIP_RETCODE SCIPtrySol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
-   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows (both local and global) to be checked? */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    );
 
@@ -16864,10 +16962,10 @@ EXTERN
 SCIP_RETCODE SCIPtrySolFree(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
-   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
-   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows (both local and global) to be checked? */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
    );
 
@@ -16884,9 +16982,9 @@ EXTERN
 SCIP_RETCODE SCIPtryCurrentSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution */
-   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows (both local and global) to be checked? */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    );
 
@@ -16910,10 +17008,10 @@ EXTERN
 SCIP_RETCODE SCIPcheckSol(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
-   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows (both local and global) to be checked? */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            feasible            /**< stores whether given solution is feasible */
    );
 
@@ -17535,8 +17633,8 @@ SCIP_RETCODE SCIPgetReoptLeaveIDs(
    int*                  nids                /**< number of child nodes */
    );
 
-/** returns the number of nodes in the reoptimization tree induced by @p node. if @p node == NULL, the method
- *  method returns the number of nodes of the whole reoptimization tree.
+/** returns the number of nodes in the reoptimization tree induced by @p node; if @p node == NULL, the method
+ *  returns the number of nodes of the whole reoptimization tree.
  */
 EXTERN
 int SCIPgetNReoptnodes(
@@ -17544,8 +17642,8 @@ int SCIPgetNReoptnodes(
    SCIP_NODE*            node                /**< node of the search tree */
    );
 
-/** returns the number of leave nodes of the subtree induced by @p node. if @p node == NULL, the method
- *  method returns the number of leaf nodes of the whole reoptimization tree.
+/** returns the number of leave nodes of the subtree induced by @p node; if @p node == NULL, the method
+ *  returns the number of leaf nodes of the whole reoptimization tree.
  */
 EXTERN
 int SCIPgetNReoptLeaves(
@@ -18455,6 +18553,26 @@ int SCIPgetDepth(
  */
 EXTERN
 int SCIPgetFocusDepth(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
+/** gets maximal allowed tree depth
+ *
+ *  @return gets maximal allowed tree depth
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ */
+EXTERN
+int SCIPgetDepthLimit(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

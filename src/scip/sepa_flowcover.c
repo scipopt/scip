@@ -1150,7 +1150,7 @@ void buildFlowCover(
    int*                  flowcoverstatus,    /**< pointer to store whether variable is in flow cover (+1) or not (-1) */ 
    SCIP_Real*            flowcoverweight,    /**< pointer to store weight of flow cover */
    SCIP_Real*            lambda              /**< pointer to store lambda */
-)
+   )
 {
    int j; 
 

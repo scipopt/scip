@@ -2452,7 +2452,7 @@ SCIP_RETCODE SCIPcliquetableAdd(
       /* create the clique data structure */
       SCIP_CALL( cliqueCreateWithData(&clique, blkmem, size, clqvars, clqvalues, nvars, cliquetable->ncreatedcliques, isequation) );
 
-      sameclique = SCIPhashtableRetrieve(cliquetable->hashtable, (void*)clique);
+      sameclique = (SCIP_CLIQUE*)SCIPhashtableRetrieve(cliquetable->hashtable, (void*)clique);
 
       if( sameclique == NULL )
       {
@@ -2900,7 +2900,7 @@ SCIP_RETCODE SCIPcliquetableCleanup(
       }
 #endif
 
-      sameclique = SCIPhashtableRetrieve(cliquetable->hashtable, (void*)clique);
+      sameclique = (SCIP_CLIQUE*)SCIPhashtableRetrieve(cliquetable->hashtable, (void*)clique);
 
       /* check if the clique is already contained in the clique table, or if it is redundant (too small) */
       if( clique->nvars <= 1 || sameclique != NULL )

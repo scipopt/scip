@@ -595,7 +595,11 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    {
       std::istringstream is(data->defoptions);
 
+#if (IPOPT_VERSION_MAJOR > 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR > 12) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 12 && IPOPT_VERSION_RELEASE >= 5)
+      if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is, true) )
+#else
       if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is) )
+#endif
       {
          SCIPerrorMessage("Error when modifiying Ipopt options using options string\n%s\n", data->defoptions.c_str());
          return SCIP_ERROR;
@@ -2810,7 +2814,49 @@ SCIP_RETCODE LapackDsyev(
    return SCIP_OKAY;
 }
 
-/** solves a linear problem of the form Ax = b
+/** solves a linear problem of the form Ax = b for a regular matrix 3*3 A */
+static
+SCIP_RETCODE SCIPsolveLinearProb3(
+   SCIP_Real*            A,                  /**< matrix data on input (size 3*3); filled column-wise */
+   SCIP_Real*            b,                  /**< right hand side vector (size 3) */
+   SCIP_Real*            x,                  /**< buffer to store solution (size 3) */
+   SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
+   )
+{
+   SCIP_Real Acopy[9];
+   SCIP_Real bcopy[3];
+   int pivotcopy[3];
+   const int N = 3;
+   int info;
+
+   assert(A != NULL);
+   assert(b != NULL);
+   assert(x != NULL);
+   assert(success != NULL);
+
+   /* compute the LU factorization */
+   IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
+
+   if( info != 0 )
+   {
+      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      *success = FALSE;
+   }
+   else
+   {
+      *success = TRUE;
+
+      /* solve linear problem */
+      IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+
+      /* copy the solution */
+      BMScopyMemoryArray(x, bcopy, N);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** solves a linear problem of the form Ax = b for a regular matrix A
  *
  *  Calls Lapacks IpLapackDgetrf routine to calculate a LU factorization and uses this factorization to solve
  *  the linear problem Ax = b.
@@ -2818,17 +2864,16 @@ SCIP_RETCODE LapackDsyev(
  */
 SCIP_RETCODE SCIPsolveLinearProb(
    int                   N,                  /**< dimension */
-   SCIP_Real**           A,                  /**< matrix data on input (size N*N) */
+   SCIP_Real*            A,                  /**< matrix data on input (size N*N); filled column-wise */
    SCIP_Real*            b,                  /**< right hand side vector (size N) */
    SCIP_Real*            x,                  /**< buffer to store solution (size N) */
    SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
    )
 {
-   SCIP_Real* tmp_A;
-   SCIP_Real* tmp_b;
-   int* tmp_pivot;
+   SCIP_Real* Acopy;
+   SCIP_Real* bcopy;
+   int* pivotcopy;
    int info;
-   int i;
 
    assert(N > 0);
    assert(A != NULL);
@@ -2836,47 +2881,43 @@ SCIP_RETCODE SCIPsolveLinearProb(
    assert(x != NULL);
    assert(success != NULL);
 
-   SCIP_ALLOC( BMSallocMemoryArray(&tmp_A, N*N) );
-   SCIP_ALLOC( BMSallocMemoryArray(&tmp_b, N) );
-   SCIP_ALLOC( BMSallocMemoryArray(&tmp_pivot, N) );
-
-   /* copy values from A into the tmp_A array */
-   for( i = 0; i < N; ++i)
+   /* call SCIPsolveLinearProb3() for performance reasons */
+   if( N == 3 )
    {
-      int j;
-      for( j = 0; j < N; ++j )
-         tmp_A[N*i+j] = A[j][i]; /* note that we have to fill tmp_A column wise */
-
-      tmp_b[i] = b[i];
-   }
-
-   /* compute the LU factorization */
-   IpLapackDgetrf(N, tmp_A, tmp_pivot, N, info);
-
-   if( info != 0 )
-   {
-      BMSfreeMemoryArray(&tmp_pivot);
-      BMSfreeMemoryArray(&tmp_b);
-      BMSfreeMemoryArray(&tmp_A);
-
-      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
-      *success = FALSE;
-
+      SCIP_CALL( SCIPsolveLinearProb3(A, b, x, success) );
       return SCIP_OKAY;
    }
 
-   /* solve linear problem */
-   IpLapackDgetrs(N, 1, tmp_A, N, tmp_pivot, tmp_b, N);
+   Acopy = NULL;
+   bcopy = NULL;
+   pivotcopy = NULL;
 
-   /* copy the solution */
-   for( i = 0; i < N; ++i )
-      x[i] = tmp_b[i];
+   SCIP_ALLOC( BMSduplicateMemoryArray(&Acopy, A, N*N) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&bcopy, b, N) );
+   SCIP_ALLOC( BMSallocMemoryArray(&pivotcopy, N) );
 
-   BMSfreeMemoryArray(&tmp_pivot);
-   BMSfreeMemoryArray(&tmp_b);
-   BMSfreeMemoryArray(&tmp_A);
+   /* compute the LU factorization */
+   IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
 
-   *success = TRUE;
+   if( info != 0 )
+   {
+      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      *success = FALSE;
+   }
+   else
+   {
+      *success = TRUE;
+
+      /* solve linear problem */
+      IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+
+      /* copy the solution */
+      BMScopyMemoryArray(x, bcopy, N);
+   }
+
+   BMSfreeMemoryArray(&pivotcopy);
+   BMSfreeMemoryArray(&bcopy);
+   BMSfreeMemoryArray(&Acopy);
 
    return SCIP_OKAY;
 }

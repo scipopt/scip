@@ -114,9 +114,9 @@
 #define DEFAULT_SOSCONSPROP      FALSE /**< whether to use SOS1 constraint propagation */
 
 /* branching rules */
-#define DEFAULT_NEIGHBRANCH        TRUE /**< if TRUE turn neighborhood branching method on (note: an automatic switching to SOS1 branching is possible) */
-#define DEFAULT_BIPBRANCH         FALSE /**< if TRUE turn bipartite branching method on (note: an automatic switching to SOS1 branching is possible) */
-#define DEFAULT_SOS1BRANCH        FALSE /**< if TRUE turn SOS1 branching method on */
+#define DEFAULT_BRANCHSTRATEGIES  "nbs" /**< possible branching strategies (see parameter DEFAULT_BRANCHINGRULE) */
+#define DEFAULT_BRANCHINGRULE       'n' /**< which branching rule should be applied ? ('n': neighborhood, 'b': bipartite, 's': SOS1/clique)
+                                         *   (note: in some cases an automatic switching to SOS1 branching is possible) */
 #define DEFAULT_AUTOSOS1BRANCH     TRUE /**< if TRUE then automatically switch to SOS1 branching if the SOS1 constraints do not overlap */
 #define DEFAULT_FIXNONZERO        FALSE /**< if neighborhood branching is used, then fix the branching variable (if positive in sign) to the value of the
                                          *   feasibility tolerance */
@@ -243,9 +243,8 @@ struct SCIP_ConshdlrData
    SCIP_Bool             implprop;           /**< whether to use implication graph propagation */
    SCIP_Bool             sosconsprop;        /**< whether to use SOS1 constraint propagation */
    /* branching */
-   SCIP_Bool             neighbranch;        /**< if TRUE turn neighborhood branching method on (note: an automatic switching to SOS1 branching is possible) */
-   SCIP_Bool             bipbranch;          /**< if TRUE turn bipartite branching method on (note: an automatic switching to SOS1 branching is possible) */
-   SCIP_Bool             sos1branch;         /**< if TRUE turn SOS1 branching method on */
+   char                  branchingrule;      /**< which branching rule should be applied ? ('n': neighborhood, 'b': bipartite, 's': SOS1/clique)
+                                              *   (note: in some cases an automatic switching to SOS1 branching is possible) */
    SCIP_Bool             autosos1branch;     /**< if TRUE then automatically switch to SOS1 branching if the SOS1 constraints do not overlap */
    SCIP_Bool             fixnonzero;         /**< if neighborhood branching is used, then fix the branching variable (if positive in sign) to the value of the
                                               *   feasibility tolerance */
@@ -256,7 +255,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             addcompsfeas;       /**< minimal feasibility value for complementarity constraints in order to be added to the branching node */
    SCIP_Real             addbdsfeas;         /**< minimal feasibility value for bound inequalities in order to be added to the branching node */
    SCIP_Bool             addextendedbds;     /**< should added complementarity constraints be extended to SOS1 constraints to get tighter bound inequalities */
-   SCIP_Bool             branchsos;          /**< Branch on SOS condition in enforcing? */
+   SCIP_Bool             branchsos;          /**< Branch on SOS condition in enforcing? This value can only be set to false if all SOS1 variables are binary */
    SCIP_Bool             branchnonzeros;     /**< Branch on SOS cons. with most number of nonzeros? */
    SCIP_Bool             branchweight;       /**< Branch on SOS cons. with highest nonzero-variable weight for branching - needs branchnonzeros to be false */
    SCIP_Bool             switchsos1branch;   /**< whether to switch to SOS1 branching */
@@ -1721,7 +1720,7 @@ SCIP_RETCODE presolRoundConsSOS1(
    else
    {
       /* if all variables are binary create a set packing constraint */
-      if ( allvarsbinary )
+      if ( allvarsbinary && SCIPfindConshdlr(scip, "setppc") != NULL )
       {
          SCIP_CONS* setpackcons;
 
@@ -2173,7 +2172,8 @@ SCIP_RETCODE updateArcData(
    SCIP_Real             newbound,           /**< new bound of \f$x_w\f$ */
    SCIP_Bool             lower,              /**< whether to consider lower bound implication (otherwise upper bound) */
    int*                  nchgbds,            /**< pointer to store number of changed bounds */
-   SCIP_Bool*            update              /**< pointer to store whether implication graph has been updated */
+   SCIP_Bool*            update,             /**< pointer to store whether implication graph has been updated */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility has been detected */
    )
 {
    SCIP_SUCCDATA** succdatas;
@@ -2194,14 +2194,19 @@ SCIP_RETCODE updateArcData(
    /* if x_v != 0 turns out to be infeasible then fix x_v = 0 */
    if ( ( lower && SCIPisFeasLT(scip, ub, newbound) ) || ( ! lower && SCIPisFeasGT(scip, lb, newbound) ) )
    {
-      SCIP_Bool infeasible;
+      SCIP_Bool infeasible1;
+      SCIP_Bool infeasible2;
       SCIP_Bool tightened1;
       SCIP_Bool tightened2;
 
-      SCIP_CALL( SCIPtightenVarLb(scip, varv, 0.0, FALSE, &infeasible, &tightened1) );
-      assert( !infeasible );
-      SCIP_CALL( SCIPtightenVarUb(scip, varv, 0.0, FALSE, &infeasible, &tightened2) );
-      assert( !infeasible );
+      SCIP_CALL( SCIPtightenVarLb(scip, varv, 0.0, FALSE, &infeasible1, &tightened1) );
+      SCIP_CALL( SCIPtightenVarUb(scip, varv, 0.0, FALSE, &infeasible2, &tightened2) );
+
+      if ( infeasible1 || infeasible2 )
+      {
+         SCIPdebugMessage("detected infeasibility while trying to fix variable <%s> to zero\n", SCIPvarGetName(varv));
+         *infeasible = TRUE;
+      }
 
       if ( tightened1 || tightened2 )
       {
@@ -2228,13 +2233,21 @@ SCIP_RETCODE updateArcData(
          assert( data != NULL );
          if ( lower && SCIPisFeasLT(scip, data->lbimpl, newbound) )
          {
-            data->lbimpl = newbound;
+            if ( SCIPvarIsIntegral(varw) )
+               data->lbimpl = SCIPceil(scip, newbound);
+            else
+               data->lbimpl = newbound;
+
             *update = TRUE;
             SCIPdebugMessage("updated to implication %s != 0 -> %s >= %f\n", SCIPvarGetName(varv), SCIPvarGetName(varw), newbound);
          }
          else if ( ! lower && SCIPisFeasGT(scip, data->ubimpl, newbound) )
          {
-            data->ubimpl = newbound;
+            if ( SCIPvarIsIntegral(varw) )
+               data->ubimpl = SCIPfloor(scip, newbound);
+            else
+               data->ubimpl = newbound;
+
             *update = TRUE;
             SCIPdebugMessage("updated to implication %s != 0 -> %s >= %f\n", SCIPvarGetName(varv), SCIPvarGetName(varw), newbound);
          }
@@ -2295,7 +2308,8 @@ SCIP_RETCODE updateImplicationGraphSOS1(
    int                   ninftynonzero,      /**< number of times infinity/-infinity has to be summarized to boundnonzero */
    SCIP_Bool             lower,              /**< TRUE if lower bounds are consideres; FALSE for upper bounds */
    int*                  nchgbds,            /**< pointer to store number of changed bounds */
-   SCIP_Bool*            update              /**< pointer to store whether implication graph has been updated */
+   SCIP_Bool*            update,             /**< pointer to store whether implication graph has been updated */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility has been detected */
    )
 {
    int nodev;
@@ -2305,6 +2319,7 @@ SCIP_RETCODE updateImplicationGraphSOS1(
 
    /* update implication graph if possible */
    *update = FALSE;
+   *infeasible = FALSE;
    nodev = varGetNodeSOS1(conshdlrdata, var); /* possibly -1 if var is not involved in an SOS1 constraint */
 
    /* if nodev is an index of an SOS1 variable and at least one lower bound of a variable that is not x_v is infinity */
@@ -2394,22 +2409,22 @@ SCIP_RETCODE updateImplicationGraphSOS1(
             {
                if ( SCIPisFeasPositive(scip, coef) && SCIPisFeasLT(scip, lb, newbound) )
                {
-                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, TRUE, nchgbds, update) );
+                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, TRUE, nchgbds, update, infeasible) );
                }
                else if ( SCIPisFeasNegative(scip, coef) && SCIPisFeasGT(scip, ub, newbound) )
                {
-                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, FALSE, nchgbds, update) );
+                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, FALSE, nchgbds, update, infeasible) );
                }
             }
             else
             {
                if ( SCIPisFeasPositive(scip, coef) && SCIPisFeasGT(scip, ub, newbound) )
                {
-                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, FALSE, nchgbds, update) );
+                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, FALSE, nchgbds, update, infeasible) );
                }
                else if ( SCIPisFeasNegative(scip, coef) && SCIPisFeasLT(scip, lb, newbound) )
                {
-                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, TRUE, nchgbds, update) );
+                  SCIP_CALL( updateArcData(scip, implgraph, implhash, totalvars, var, vars[w], lb, ub, newbound, TRUE, nchgbds, update, infeasible) );
                }
             }
          }
@@ -3003,8 +3018,10 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
 
          /* update implication graph if possible */
          SCIP_CALL( updateImplicationGraphSOS1(scip, conshdlrdata, conflictgraph, adjacencymatrix, implgraph, implhash, implnodes, totalvars, cliquecovers, cliquecoversizes, varincover,
-               trafolinvars, trafolinvals, ntrafolinvars, trafoubs, var, trafoubv, newboundnonzero, ninftynonzero, TRUE, nchgbds, &update) );
-         if ( update )
+               trafolinvars, trafolinvals, ntrafolinvars, trafoubs, var, trafoubv, newboundnonzero, ninftynonzero, TRUE, nchgbds, &update, &infeasible) );
+         if ( infeasible )
+            *cutoff = TRUE;
+         else if ( update )
             *implupdate = TRUE;
       }
 
@@ -3200,8 +3217,10 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
 
          /* update implication graph if possible */
          SCIP_CALL( updateImplicationGraphSOS1(scip, conshdlrdata, conflictgraph, adjacencymatrix, implgraph, implhash, implnodes, totalvars, cliquecovers, cliquecoversizes, varincover,
-               trafolinvars, trafolinvals, ntrafolinvars, trafolbs, var, trafolbv, newboundnonzero, ninftynonzero, FALSE, nchgbds, &update) );
-         if ( update )
+               trafolinvars, trafolinvals, ntrafolinvars, trafolbs, var, trafolbv, newboundnonzero, ninftynonzero, FALSE, nchgbds, &update, &infeasible) );
+         if ( infeasible )
+            *cutoff = TRUE;
+         else if ( update )
             *implupdate = TRUE;
       }
 
@@ -3636,6 +3655,7 @@ SCIP_RETCODE initImplGraphSOS1(
    assert( scip != NULL );
    assert( conshdlrdata != NULL );
    assert( conflictgraph != NULL );
+   assert( conshdlrdata->implgraph == NULL );
    assert( conshdlrdata->nimplnodes == 0 );
    assert( cutoff != NULL );
    assert( nchgbds != NULL );
@@ -3770,6 +3790,8 @@ SCIP_RETCODE initImplGraphSOS1(
       SCIPdebugMessage("found %d bound changes\n", *nchgbds);
 #endif
 
+   assert( conshdlrdata->implgraph != NULL );
+
    return SCIP_OKAY;
 }
 
@@ -3788,7 +3810,10 @@ SCIP_RETCODE freeImplGraphSOS1(
 
    /* free whole memory of implication graph */
    if ( conshdlrdata->implgraph == NULL )
+   {
+      assert( conshdlrdata->nimplnodes == 0 );
       return SCIP_OKAY;
+   }
 
    /* free arc data */
    for (j = conshdlrdata->nimplnodes-1; j >= 0; --j)
@@ -3819,6 +3844,7 @@ SCIP_RETCODE freeImplGraphSOS1(
 
    /* free implication graph */
    SCIPdigraphFree(&conshdlrdata->implgraph);
+   conshdlrdata->nimplnodes = 0;
 
    return SCIP_OKAY;
 }
@@ -4207,13 +4233,27 @@ SCIP_RETCODE performStrongbranchSOS1(
       {
          if ( SCIPisZero(scip, lb) )
          {
-            /* fix variable to some small positive number */
-            SCIP_CALL( SCIPchgVarLbProbing(scip, var, 1.5 * SCIPfeastol(scip)) );
+            /* fix variable to some very small, but positive number or to 1.0 if variable is integral */
+            if (SCIPvarIsIntegral(var) )
+            {
+               SCIP_CALL( SCIPchgVarLbProbing(scip, var, 1.0) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPchgVarLbProbing(scip, var, 1.5 * SCIPfeastol(scip)) );
+            }
          }
          else if ( SCIPisZero(scip, ub) )
          {
-            /* fix variable to some negative number with small absolute value */
-            SCIP_CALL( SCIPchgVarUbProbing(scip, var, -1.5 * SCIPfeastol(scip)) );
+            /* fix variable to some negative number with small absolute value or to -1.0 if variable is integral */
+            if (SCIPvarIsIntegral(var) )
+            {
+               SCIP_CALL( SCIPchgVarUbProbing(scip, var, -1.0) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPchgVarUbProbing(scip, var, -1.5 * SCIPfeastol(scip)) );
+            }
          }
       }
    }
@@ -4809,7 +4849,7 @@ SCIP_RETCODE addBranchingComplementaritiesSOS1(
       }
 
       /* allocate buffer array */
-      SCIP_CALL( SCIPallocBufferArray(scip, &coverarray, nsuccarray) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &coverarray, nsos1vars) );
 
       /* mark all the vertices with FALSE */
       for (i = 0; i < nsos1vars; ++i)
@@ -5196,8 +5236,7 @@ SCIP_RETCODE enforceConflictgraph(
    {
       SCIP_CONSDATA* consdata;
       SCIP_CONS* cons;
-      SCIP_Bool cutoff;
-      int ngen;
+      SCIP_Bool cutoff;int ngen;
 
       cons = conss[c];
       assert( cons != NULL );
@@ -5269,9 +5308,9 @@ SCIP_RETCODE enforceConflictgraph(
                   indj = varGetNodeSOS1(conshdlrdata, var);
                   assert( indj >= 0 );
 
-                  if ( indj >= 0 )
+                  if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
                   {
-                     if ( ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
+                     if ( ! isConnectedSOS1(NULL, conflictgraph, indi, indj) )
                      {
                         SCIP_CALL( SCIPdigraphAddArcSafe(conflictgraph, indi, indj, NULL) );
                         SCIP_CALL( SCIPdigraphAddArcSafe(conflictgraph, indj, indi, NULL) );
@@ -5304,6 +5343,7 @@ SCIP_RETCODE enforceConflictgraph(
       }
    }
 
+
    /* detect fixed variables */
    SCIP_CALL( SCIPallocBufferArray(scip, &verticesarefixed, nsos1vars) );
    for (j = 0; j < nsos1vars; ++j)
@@ -5322,7 +5362,7 @@ SCIP_RETCODE enforceConflictgraph(
    }
 
    /* should bipartite branching be used? */
-   if ( conshdlrdata->bipbranch )
+   if ( conshdlrdata->branchingrule == 'b' )
       bipbranch = TRUE;
 
    /* determine number of strong branching iterations */
@@ -5404,6 +5444,21 @@ SCIP_RETCODE enforceConflictgraph(
       }
    }
 
+   /* if we shouldleave branching decision to branching rules */
+   if ( ! conshdlrdata->branchsos )
+   {
+      if ( SCIPvarIsBinary(SCIPnodeGetVarSOS1(conflictgraph, branchvertex)) )
+      {
+         *result = SCIP_INFEASIBLE;
+         return SCIP_OKAY;
+      }
+      else
+      {
+         SCIPerrorMessage("Incompatible parameter setting: branchsos can only be set to false if all SOS1 variables are binary.\n");
+         return SCIP_PARAMETERWRONGVAL;
+      }
+   }
+
    /* create branching nodes */
 
    /* get vertices of variables that will be fixed to zero for each node */
@@ -5443,13 +5498,28 @@ SCIP_RETCODE enforceConflictgraph(
       {
          if ( SCIPisZero(scip, lb) )
          {
-            /* fix variable to some very small, but positive number */
-            SCIP_CALL( SCIPchgVarLbNode(scip, node1, var, 1.5 * SCIPfeastol(scip)) );
+            /* fix variable to some very small, but positive number or to 1.0 if variable is integral */
+            if (SCIPvarIsIntegral(var) )
+            {
+               SCIP_CALL( SCIPchgVarLbNode(scip, node1, var, 1.0) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPchgVarLbNode(scip, node1, var, 1.5 * SCIPfeastol(scip)) );
+            }
          }
          else if ( SCIPisZero(scip, ub) )
          {
-            /* fix variable to some negative number with small absolute value */
-            SCIP_CALL( SCIPchgVarUbNode(scip, node1, var, -1.5 * SCIPfeastol(scip)) );
+            if (SCIPvarIsIntegral(var) )
+            {
+               /* fix variable to some negative number with small absolute value to -1.0 if variable is integral */
+               SCIP_CALL( SCIPchgVarUbNode(scip, node1, var, -1.0) );
+            }
+            else
+            {
+               /* fix variable to some negative number with small absolute value to -1.0 if variable is integral */
+               SCIP_CALL( SCIPchgVarUbNode(scip, node1, var, -1.5 * SCIPfeastol(scip)) );
+            }
          }
       }
    }
@@ -5676,8 +5746,25 @@ SCIP_RETCODE enforceConssSOS1(
    /* if we should leave branching decision to branching rules */
    if ( ! conshdlrdata->branchsos )
    {
-      *result = SCIP_INFEASIBLE;
-      return SCIP_OKAY;
+      int j;
+
+      consdata = SCIPconsGetData(branchCons);
+      for (j = 0; j < consdata->nvars; ++j)
+      {
+         if ( ! SCIPvarIsBinary(consdata->vars[j]) )
+            break;
+      }
+
+      if ( j == consdata->nvars )
+      {
+         *result = SCIP_INFEASIBLE;
+         return SCIP_OKAY;
+      }
+      else
+      {
+         SCIPerrorMessage("Incompatible parameter setting: branchsos can only be set to false if all SOS1 variables are binary.\n");
+         return SCIP_PARAMETERWRONGVAL;
+      }
    }
 
    /* otherwise create branches */
@@ -6006,7 +6093,7 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
    SCIP_Bool             global,             /**< in any case produce a global cut */
    SCIP_Bool             strengthen,         /**< whether trying to strengthen bound constraint */
    SCIP_Bool             removable,          /**< should the inequality be removed from the LP due to aging or cleanup? */
-   const char *          nameext,            /**< part of name of bound constraints */
+   const char*           nameext,            /**< part of name of bound constraints */
    SCIP_ROW**            rowlb,              /**< output: row for lower bounds (or NULL if not needed) */
    SCIP_ROW**            rowub               /**< output: row for upper bounds (or NULL if not needed) */
    )
@@ -6102,13 +6189,30 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
          if ( ! SCIPisInfinity(scip, val) && ! SCIPisZero(scip, val) )
          {
             vars[cnt] = var;
-            vals[cnt++] = 1.0/val;
+
+            /* if only two nodes then we scale the cut differently */
+            if ( nnodes == 2 )
+               vals[cnt++] = val;
+            else
+               vals[cnt++] = 1.0/val;
          }
       }
 
       /* if cut is meaningful */
       if ( j == nnodes && cnt >= 2 )/*lint !e850*/
       {
+         /* if only two nodes then we scale the cut differently */
+         if ( nnodes == 2 )
+         {
+            SCIP_Real save;
+
+            save = vals[0];
+            vals[0] = vals[1];
+            vals[1] = save;
+            rhs = rhs * vals[0] * vals[1];
+            assert( (! useboundvar && cnt == 2 ) || (useboundvar && cnt == 3 ) );
+         }
+
          if ( useboundvar )
          {
             /* add bound variable to array */
@@ -6210,13 +6314,30 @@ SCIP_RETCODE generateBoundInequalityFromSOS1Nodes(
          if ( ! SCIPisInfinity(scip, val) && ! SCIPisZero(scip, val) )
          {
             vars[cnt] = var;
-            vals[cnt++] = 1.0/val;
+
+            /* if only two nodes then we scale the cut differently */
+            if ( nnodes == 2 )
+               vals[cnt++] = val;
+            else
+               vals[cnt++] = 1.0/val;
          }
       }
 
       /* if cut is meaningful */
       if ( j == nnodes && cnt >= 2 )/*lint !e850*/
       {
+         /* if only two nodes then we scale the cut differently */
+         if ( nnodes == 2 )
+         {
+            SCIP_Real save;
+
+            save = vals[0];
+            vals[0] = vals[1];
+            vals[1] = save;
+            rhs = rhs * vals[0] * vals[1];
+            assert( (! useboundvar && cnt == 2 ) || (useboundvar && cnt == 3 ) );
+         }
+
          if ( useboundvar )
          {
             /* add bound variable to array */
@@ -6550,7 +6671,9 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
    for (c = 0; c < nconss; ++c)
    {
       SCIP_CONSDATA* consdata;
-      SCIP_ROW* row;
+      SCIP_ROW* rowub = NULL;
+      SCIP_ROW* rowlb = NULL;
+      SCIP_Bool release = FALSE;
 
       assert( conss != NULL );
       assert( conss[c] != NULL );
@@ -6562,22 +6685,30 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
       else
          SCIPdebugMessage("Checking for initial rows for SOS1 constraint <%s>.\n", SCIPconsGetName(conss[c]) );
 
-      /* possibly generate rows if not yet done */
-      if ( consdata->rowub == NULL || consdata->rowlb == NULL )
+      /* in case that the SOS1 constraint is local, we always generate new rows - the former rows might be invalid;
+       * otherwise if the SOS1 constraint is global, we only generate rows if not yet done */
+      if ( consdata->local )
       {
-         SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], FALSE, TRUE, TRUE, FALSE, &consdata->rowlb, &consdata->rowub) );
+         SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], TRUE, FALSE, TRUE, FALSE, &rowlb, &rowub) );
+         release = TRUE;
+      }
+      else
+      {
+         if ( consdata->rowub == NULL || consdata->rowlb == NULL )
+         {
+            SCIP_CALL( generateBoundInequalityFromSOS1Cons(scip, conshdlr, conss[c], FALSE, TRUE, TRUE, FALSE,
+                  (consdata->rowlb == NULL) ? &consdata->rowlb : NULL,
+                  (consdata->rowub == NULL) ? &consdata->rowub : NULL) ); /*lint !e826*/
+         }
+         rowub = consdata->rowub;
+         rowlb = consdata->rowlb;
       }
 
       /* put corresponding rows into LP */
-      row = consdata->rowub;
-      if ( row != NULL && ! SCIProwIsInLP(row) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, row) ) )
+      if ( rowub != NULL && ! SCIProwIsInLP(rowub) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowub) ) )
       {
-         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && ( SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) || SCIPisEQ(scip, SCIProwGetRhs(row), 0.0) ) );
-
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
-         if ( *cutoff )
-            break;
-         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, rowub, FALSE, cutoff) );
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowub, NULL) ) );
 
          if ( solvedinitlp )
          {
@@ -6586,15 +6717,10 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
          ++cnt;
       }
 
-      row = consdata->rowlb;
-      if ( row != NULL && ! SCIProwIsInLP(row) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, row) ) )
+      if ( ! (*cutoff) && rowlb != NULL && ! SCIProwIsInLP(rowlb) && ( solvedinitlp || SCIPisCutEfficacious(scip, sol, rowlb) ) )
       {
-         assert( SCIPisInfinity(scip, -SCIProwGetLhs(row)) && ( SCIPisEQ(scip, SCIProwGetRhs(row), 1.0) || SCIPisEQ(scip, SCIProwGetRhs(row), 0.0) ) );
-
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, cutoff) );
-         if ( *cutoff )
-            break;
-         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, rowlb, FALSE, cutoff) );
+         SCIPdebug( SCIP_CALL( SCIPprintRow(scip, rowlb, NULL) ) );
 
          if ( solvedinitlp )
          {
@@ -6603,7 +6729,20 @@ SCIP_RETCODE initsepaBoundInequalityFromSOS1Cons(
          ++cnt;
       }
 
-      if ( maxboundcuts >= 0 && cnt >= maxboundcuts )
+      /* release rows if they are local */
+      if ( release )
+      {
+         if ( rowlb != NULL )
+         {
+            SCIP_CALL( SCIPreleaseRow(scip, &rowlb) );
+         }
+         if ( rowub != NULL )
+         {
+            SCIP_CALL( SCIPreleaseRow(scip, &rowub) );
+         }
+      }
+
+      if ( *cutoff || ( maxboundcuts >= 0 && cnt >= maxboundcuts ) )
          break;
    }
 
@@ -6765,7 +6904,7 @@ SCIP_RETCODE sepaImplBoundCutsSOS1(
                   bound2lower = FALSE;
 
                /* determine left/right hand side of bound inequality */
-               lhsrhs = (bound2-impl) * bound1 + impl * bound1;
+               lhsrhs = bound1 * bound2;
 
                /* create cut */
                if ( bound1lower == bound2lower )
@@ -7896,7 +8035,10 @@ SCIP_RETCODE freeConflictgraph(
    int j;
 
    if ( conshdlrdata->conflictgraph == NULL )
+   {
+      assert( conshdlrdata->nsos1vars == 0 );
       return SCIP_OKAY;
+   }
 
    /* for every SOS1 variable */
    assert( conshdlrdata->nsos1vars > 0 );
@@ -7918,6 +8060,10 @@ SCIP_RETCODE freeConflictgraph(
    assert( conshdlrdata->varhash != NULL );
    SCIPhashmapFree(&conshdlrdata->varhash);
    SCIPdigraphFree(&conshdlrdata->conflictgraph);
+   conshdlrdata->nsos1vars = 0;
+
+   assert( conshdlrdata->varhash == NULL );
+   assert( conshdlrdata->conflictgraph == NULL );
 
    return SCIP_OKAY;
 }
@@ -7985,7 +8131,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
        /* add data to conflict graph nodes */
        SCIP_CALL( computeNodeDataSOS1(scip, conshdlrdata, conshdlrdata->nsos1vars) );
 
-       if ( (! conshdlrdata->sos1branch || ! conshdlrdata->boundcutsfromsos1 )
+       if ( ( conshdlrdata->branchingrule != 's' || ! conshdlrdata->boundcutsfromsos1 )
           && ( conshdlrdata->autosos1branch || conshdlrdata->autocutsfromsos1 )
           && ( ! conshdlrdata->switchsos1branch || ! conshdlrdata->switchcutsfromsos1 )
           )
@@ -8057,6 +8203,7 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
    {
       SCIP_CALL( freeImplGraphSOS1(scip, conshdlrdata) );
    }
+   assert( conshdlrdata->implgraph == NULL );
 
    /* free tclique graph and tclique data */
    if ( conshdlrdata->tcliquegraph != NULL )
@@ -8070,6 +8217,8 @@ SCIP_DECL_CONSEXITSOL(consExitsolSOS1)
 
    /* free stack of variables fixed to nonzero */
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->fixnonzerovars, conshdlrdata->maxnfixnonzerovars); /*lint !e737*/
+   conshdlrdata->nfixnonzerovars = 0;
+   conshdlrdata->maxnfixnonzerovars = 0;
 
    /* free graph for storing local conflicts */
    if ( conshdlrdata->localconflicts != NULL )
@@ -8424,37 +8573,37 @@ SCIP_DECL_CONSENFOLP(consEnfolpSOS1)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   if ( conshdlrdata->sos1branch + conshdlrdata->neighbranch + conshdlrdata->bipbranch != 1 )
-   {
-      SCIPerrorMessage("Branching rule needs to be defined clearly.\n");
-      return SCIP_PARAMETERWRONGVAL;
-   }
-
    if ( conshdlrdata->addcomps && conshdlrdata->fixnonzero )
    {
       SCIPerrorMessage("Incompatible parameter setting: addcomps = TRUE and fixnonzero = TRUE.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   if ( conshdlrdata->fixnonzero && ( conshdlrdata->bipbranch || conshdlrdata->sos1branch ) )
+   if ( conshdlrdata->fixnonzero && ( conshdlrdata->branchingrule == 'b' || conshdlrdata->branchingrule == 's' ) )
    {
-      SCIPerrorMessage("Incompatible parameter setting: nonzero fixing is not compatible with bipartite or sos1 branching.\n");
+      SCIPerrorMessage("Incompatible parameter setting: nonzero fixing is not compatible with bipartite or SOS1 branching.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   if ( conshdlrdata->sos1branch && conshdlrdata->nstrongrounds != 0 )
+   if ( conshdlrdata->branchingrule == 's' && conshdlrdata->nstrongrounds != 0 )
    {
       SCIPerrorMessage("Strong branching is not available for SOS1 branching.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   if ( conshdlrdata->sos1branch || conshdlrdata->switchsos1branch )
+   if ( conshdlrdata->branchingrule == 's' || conshdlrdata->switchsos1branch )
    {
       /* enforce SOS1 constraints */
       SCIP_CALL( enforceConssSOS1(scip, conshdlr, nconss, conss, result) );
    }
    else
    {
+      if ( conshdlrdata->branchingrule != 'n' && conshdlrdata->branchingrule != 'b' )
+      {
+         SCIPerrorMessage("branching rule %c unknown\n", conshdlrdata->branchingrule);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+
       /* enforce conflict graph */
       SCIP_CALL( enforceConflictgraph(scip, conshdlrdata, conshdlr, nconss, conss, result) );
    }
@@ -8479,37 +8628,37 @@ SCIP_DECL_CONSENFOPS(consEnfopsSOS1)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   if ( conshdlrdata->sos1branch + conshdlrdata->neighbranch + conshdlrdata->bipbranch != 1 )
-   {
-      SCIPerrorMessage("Branching rule needs to be defined clearly.\n");
-      return SCIP_PARAMETERWRONGVAL;
-   }
-
    if ( conshdlrdata->addcomps && conshdlrdata->fixnonzero )
    {
       SCIPerrorMessage("Incompatible parameter setting: addcomps = TRUE and fixnonzero = TRUE.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   if ( conshdlrdata->fixnonzero && ( conshdlrdata->bipbranch || conshdlrdata->sos1branch ) )
+   if ( conshdlrdata->fixnonzero && ( conshdlrdata->branchingrule == 'b' || conshdlrdata->branchingrule == 's' ) )
    {
       SCIPerrorMessage("Incompatible parameter setting: nonzero fixing is not compatible with bipartite or sos1 branching.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   if ( conshdlrdata->sos1branch && conshdlrdata->nstrongrounds != 0 )
+   if ( conshdlrdata->branchingrule == 's' && conshdlrdata->nstrongrounds != 0 )
    {
       SCIPerrorMessage("Strong branching is not available for SOS1 branching.\n");
       return SCIP_PARAMETERWRONGVAL;
    }
 
-   if ( conshdlrdata->sos1branch || conshdlrdata->switchsos1branch )
+   if ( conshdlrdata->branchingrule == 's' || conshdlrdata->switchsos1branch )
    {
       /* enforce SOS1 constraints */
       SCIP_CALL( enforceConssSOS1(scip, conshdlr, nconss, conss, result) );
    }
    else
    {
+      if ( conshdlrdata->branchingrule != 'n' && conshdlrdata->branchingrule != 'b' )
+      {
+         SCIPerrorMessage("branching rule %c unknown\n", conshdlrdata->branchingrule);
+         return SCIP_PARAMETERWRONGVAL;
+      }
+
       /* enforce conflict graph */
       SCIP_CALL( enforceConflictgraph(scip, conshdlrdata, conshdlr, nconss, conss, result) );
    }
@@ -9207,7 +9356,7 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
 
          /* bound may have changed in propagation; ensure that fracval <= 1 */
          if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
-            solval = bound;
+            bound = solval;
 
          /* ensure finiteness */
          bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound)); /*lint !e666*/
@@ -9384,17 +9533,9 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
          &conshdlrdata->sosconsprop, TRUE, DEFAULT_SOSCONSPROP, NULL, NULL) );
 
    /* branching parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/neighbranch",
-         "if TRUE turn neighborhood branching method on (note: an automatic switching to SOS1 branching is possible)",
-         &conshdlrdata->neighbranch, TRUE, DEFAULT_NEIGHBRANCH, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/bipbranch",
-         "if TRUE turn bipartite branching method on (note: an automatic switching to SOS1 branching is possible)",
-         &conshdlrdata->bipbranch, TRUE, DEFAULT_BIPBRANCH, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/sos1branch",
-         "if TRUE turn SOS1 branching method on",
-         &conshdlrdata->sos1branch, TRUE, DEFAULT_SOS1BRANCH, NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip, "constraints/" CONSHDLR_NAME "/branchingrule",
+         "which branching rule should be applied ? ('n': neighborhood, 'b': bipartite, 's': SOS1/clique) (note: in some cases an automatic switching to SOS1 branching is possible)",
+         &conshdlrdata->branchingrule, TRUE, DEFAULT_BRANCHINGRULE, DEFAULT_BRANCHSTRATEGIES, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/autosos1branch",
          "if TRUE then automatically switch to SOS1 branching if the SOS1 constraints do not overlap",
@@ -9425,7 +9566,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
          &conshdlrdata->addextendedbds, TRUE, DEFAULT_ADDEXTENDEDBDS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branchsos",
-         "Use SOS1 branching in enforcing (otherwise leave decision to branching rules)?",
+         "Use SOS1 branching in enforcing (otherwise leave decision to branching rules)? This value can only be set to false if all SOS1 variables are binary",
          &conshdlrdata->branchsos, FALSE, TRUE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/branchnonzeros",
@@ -9858,7 +9999,7 @@ SCIP_Bool SCIPvarIsSOS1(
 }
 
 
-/** returns SOS1 index of variable or -1 if variable is part of the SOS1 conflict graph */
+/** returns SOS1 index of variable or -1 if variable is not part of the SOS1 conflict graph */
 int SCIPvarGetNodeSOS1(
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
    SCIP_VAR*             var                 /**< variable */

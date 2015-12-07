@@ -610,7 +610,7 @@ public:
    {
       for( int i = 0; i < nCols(); ++i )
       {
-         if( lower(i) > upper(i) )
+         if( lower(i) > upper(i) + Param::epsilon() )
          {
             SCIPerrorMessage("inconsistent bounds on column %d: lower=%.17g, upper=%.17g\n",
                i, lower(i), upper(i));
@@ -625,7 +625,7 @@ public:
    {
       for( int i = 0; i < nRows(); ++i )
       {
-         if( lhs(i) > rhs(i) )
+         if( lhs(i) > rhs(i) + Param::epsilon() )
          {
             SCIPerrorMessage("inconsistent sides on row %d: lhs=%.17g, rhs=%.17g\n",
                i, lhs(i), rhs(i));
@@ -2036,7 +2036,7 @@ SCIP_RETCODE SCIPlpiChgBounds(
       {
          assert(0 <= ind[i] && ind[i] < lpi->spx->nCols());
          lpi->spx->changeBounds(ind[i], lb[i], ub[i]);
-         assert(lpi->spx->lower(ind[i]) <= lpi->spx->upper(ind[i]));
+         assert(lpi->spx->lower(ind[i]) <= lpi->spx->upper(ind[i]) + Param::epsilon());
       }
    }
    catch( const SPxException& x )
@@ -2080,7 +2080,7 @@ SCIP_RETCODE SCIPlpiChgSides(
       {
          assert(0 <= ind[i] && ind[i] < lpi->spx->nRows());
          lpi->spx->changeRange(ind[i], lhs[i], rhs[i]);
-         assert(lpi->spx->lhs(ind[i]) <= lpi->spx->rhs(ind[i]));
+         assert(lpi->spx->lhs(ind[i]) <= lpi->spx->rhs(ind[i]) + Param::epsilon());
       }
    }
    catch( const SPxException& x )

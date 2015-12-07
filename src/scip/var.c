@@ -2181,7 +2181,7 @@ SCIP_RETCODE parseValue(
    const char*           str,                /**< string to parse */
    SCIP_Real*            value,              /**< pointer to store the parsed value */
    char**                endptr              /**< pointer to store the final string position if successfully parsed */
-  )
+   )
 {
    /* first check for infinity value */
    if( strncmp(str, "+inf", 4) == 0 )

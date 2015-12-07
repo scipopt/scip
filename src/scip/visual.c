@@ -177,7 +177,7 @@ void SCIPvisualExit(
    SCIP_VISUAL*          visual,             /**< visualization information */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
-  )
+   )
 {
    assert( visual != NULL );
    assert( set != NULL );
@@ -413,7 +413,7 @@ SCIP_RETCODE SCIPvisualUpdateChild(
          if( SCIPgetLPSolstat(set->scip) == SCIP_LPSOLSTAT_OPTIMAL )
          {
             SCIP_CALL( SCIPgetLPBranchCands(set->scip, NULL, NULL, &lpcandsfrac, &nlpcands, NULL, NULL) );
-            for (j = 0; j < nlpcands; ++j)
+            for( j = 0; j < nlpcands; ++j )
                sum += lpcandsfrac[j];
          }
 

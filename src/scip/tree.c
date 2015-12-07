@@ -7219,7 +7219,7 @@ void SCIPnodeGetDualBoundchgs(
                                               *   if this is larger than the array size, arrays should be reallocated and method
                                               *   should be called again */
    int                   varssize            /**< available slots in arrays */
-)
+   )
 {  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;
@@ -7968,6 +7968,16 @@ int SCIPtreeGetCurrentDepth(
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
    return tree->pathlen-1;
+}
+
+/** gets the maximal allowed tree depth */
+int SCIPtreeGetDepthLimit(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return (int)MAXDEPTH;
 }
 
 /** returns, whether the LP was or is to be solved in the current node */

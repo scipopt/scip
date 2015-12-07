@@ -264,7 +264,7 @@ static
 SCIP_Bool sepastoreIsBdchgApplicable(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_ROW*             cut                 /**< cut with a single variable */
-)
+   )
 {
    SCIP_COL** cols;
    SCIP_Real* vals;

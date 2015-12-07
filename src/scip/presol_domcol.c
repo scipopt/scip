@@ -594,7 +594,7 @@ SCIP_RETCODE calcVarBoundsDominated(
    SCIP_Real*            calculatedlb,       /**< predicted lower bound */
    SCIP_Bool*            wcubcalculated,     /**< was a worst case upper bound calculated? */
    SCIP_Real*            calculatedwcub      /**< calculated worst case upper bound */
-  )
+   )
 {
    SCIP_Real minresactivity;
    SCIP_Real maxresactivity;
@@ -769,7 +769,7 @@ SCIP_RETCODE calcVarBoundsDominating(
    SCIP_Real*            calculatedlb,       /**< predicted lower bound */
    SCIP_Bool*            wcubcalculated,     /**< was a worst case upper bound calculated? */
    SCIP_Real*            calculatedwcub      /**< calculated worst case upper bound */
-  )
+   )
 {
    SCIP_Real minresactivity;
    SCIP_Real maxresactivity;

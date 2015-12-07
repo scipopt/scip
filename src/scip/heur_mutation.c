@@ -251,7 +251,7 @@ SCIP_RETCODE createNewSol(
    SCIP_HEUR*            heur,               /**< mutation heuristic structure                        */
    SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
    SCIP_Bool*            success             /**< used to store whether new solution was found or not */
-)
+   )
 {
    SCIP_VAR** vars;                          /* the original problem's variables                */
    int        nvars;

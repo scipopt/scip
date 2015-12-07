@@ -5399,21 +5399,23 @@ SCIP_RETCODE analyzeConflictRangedRow(
    return SCIP_OKAY;
 }
 
-/* checks ranged rows for possible solutions, it may detect infeasibility, fixings due to having only one possible
- * solution, boundtightening if having only two possible solutions or adds constraints which propagate a subset of
- * variables better
+/** propagate ranged rows
  *
- * e.g.
- * c1: 12 x1 + 9  x2 - x3 = 0  with x1, x2 free and 1 <= x3 <= 2
+ *  Check ranged rows for possible solutions, possibly detect infeasibility, fix variables due to having only one possible
+ *  solution, tighten bounds if having only two possible solutions or add constraints which propagate a subset of
+ *  variables better.
  *
- * x3 needs to be a multiple of 3, so it follows infeasibility
+ *  Example:
+ *  c1: 12 x1 + 9  x2 - x3 = 0  with x1, x2 free and 1 <= x3 <= 2
  *
- * e.g.
- * c1: 12 x1 + 9  x2 - x3 = 1  with x1, x2 free and 1 <= x3 <= 2
+ *  x3 needs to be a multiple of 3, so the instance is infeasibile.
  *
- * only posible value for x3 is 2, so the variable will be fixed
+ *  Example:
+ *  c1: 12 x1 + 9  x2 - x3 = 1  with x1, x2 free and 1 <= x3 <= 2
  *
- * @todo add holes if possible
+ *  The only posible value for x3 is 2, so the variable will be fixed.
+ *
+ *  @todo add holes if possible
  */
 static
 SCIP_RETCODE rangedRowPropagation(
@@ -5450,9 +5452,6 @@ SCIP_RETCODE rangedRowPropagation(
    int nunfixedvars;
    int nfixedconsvars;
    int ncontvars;
-   int contvarpos;
-   int nposbinvars;
-   int nnegbinvars;
    int pos;
    int v;
 
@@ -5483,7 +5482,7 @@ SCIP_RETCODE rangedRowPropagation(
       return SCIP_OKAY;
 
    /* do nothing on normal inequalities */
-   if( SCIPisInfinity(scip, -consdata->lhs) ||  SCIPisInfinity(scip, consdata->rhs) )
+   if( SCIPisInfinity(scip, -consdata->lhs) || SCIPisInfinity(scip, consdata->rhs) )
       return SCIP_OKAY;
 
    /* get constraint handler data */
@@ -5520,14 +5519,11 @@ SCIP_RETCODE rangedRowPropagation(
    nunfixedvars = consdata->nvars - nfixedconsvars;
 
    /* allocate temporary memory for variables and coefficients which may lead to infeasibility */
-   SCIP_CALL( SCIPallocBufferArray(scip, &infcheckvars, nunfixedvars ));
-   SCIP_CALL( SCIPallocBufferArray(scip, &infcheckvals, nunfixedvars ));
+   SCIP_CALL( SCIPallocBufferArray(scip, &infcheckvars, nunfixedvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &infcheckvals, nunfixedvars) );
 
    absminbincoef = SCIP_REAL_MAX;
-   nposbinvars = 0;
-   nnegbinvars = 0;
    ncontvars = 0;
-   contvarpos = -1;
    gcdisone = TRUE;
    possiblegcd = TRUE;
 
@@ -5560,16 +5556,12 @@ SCIP_RETCODE rangedRowPropagation(
             if( SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
             {
                ++ncontvars;
-               contvarpos = v;
             }
             else if( SCIPvarIsBinary(consdata->vars[v]) )
             {
-               SCIP_Real absval = REALABS(consdata->vals[v]);
+               SCIP_Real absval;
 
-               if( consdata->vals[v] > 0.0 )
-                  ++nposbinvars;
-               else
-                  ++nnegbinvars;
+               absval = REALABS(consdata->vals[v]);
 
                if( absminbincoef > absval )
                   absminbincoef = absval;
@@ -5586,7 +5578,8 @@ SCIP_RETCODE rangedRowPropagation(
          }
          ++v;
       }
-   } while( v < consdata->nvars && SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])) );
+   }
+   while( v < consdata->nvars && SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])) );
 
    /* if the first group of variables is empty, we stop */
    /* @todo try to propagate/split up a constraint of the form:
@@ -5603,9 +5596,9 @@ SCIP_RETCODE rangedRowPropagation(
 
    gcd = (SCIP_Longint)(REALABS(consdata->vals[v]) + feastol);
    assert(gcd >= 2);
+
    /* go on to partition the variables, do not change the order of collection, because it might be used later on;
-    * calculate gcd over the first part of variables
-    */
+    * calculate gcd over the first part of variables */
    for( ; v < consdata->nvars; ++v )
    {
       if( SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])) )
@@ -5613,12 +5606,9 @@ SCIP_RETCODE rangedRowPropagation(
 
       if( SCIPvarIsBinary(consdata->vars[v]) )
       {
-         SCIP_Real absval = REALABS(consdata->vals[v]);
+         SCIP_Real absval;
 
-         if( consdata->vals[v] > 0.0 )
-            ++nposbinvars;
-         else
-            ++nnegbinvars;
+         absval = REALABS(consdata->vals[v]);
 
          if( absminbincoef > absval )
             absminbincoef = absval;
@@ -5628,10 +5618,7 @@ SCIP_RETCODE rangedRowPropagation(
          SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0) )
       {
          if( SCIPvarGetType(consdata->vars[v]) == SCIP_VARTYPE_CONTINUOUS )
-         {
             ++ncontvars;
-            contvarpos = v;
-         }
 
          gcdisone = gcdisone && SCIPisEQ(scip, REALABS(consdata->vals[v]), 1.0);
          possiblegcd = FALSE;
@@ -5667,8 +5654,7 @@ SCIP_RETCODE rangedRowPropagation(
    assert(gcd >= 2);
 
    /* it should not happen that all variables are of integral type and have a gcd >= 2, this should be done by
-    * normalizeCons()
-    */
+    * normalizeCons() */
    if( ninfcheckvars == 0 )
       goto TERMINATE;
 
@@ -5726,7 +5712,8 @@ SCIP_RETCODE rangedRowPropagation(
    }
    assert(!minactinfvarsinvalid && !maxactinfvarsinvalid);
 
-   SCIPdebugMessage("minactinfvarsinvalid = %u, minactinfvars = %g, maxactinfvarsinvalid = %u, maxactinfvars = %g, gcd = %lld, ninfcheckvars = %d, ncontvars = %d\n", minactinfvarsinvalid, minactinfvars, maxactinfvarsinvalid, maxactinfvars, gcd, ninfcheckvars, ncontvars);
+   SCIPdebugMessage("minactinfvarsinvalid = %u, minactinfvars = %g, maxactinfvarsinvalid = %u, maxactinfvars = %g, gcd = %lld, ninfcheckvars = %d, ncontvars = %d\n",
+      minactinfvarsinvalid, minactinfvars, maxactinfvarsinvalid, maxactinfvars, gcd, ninfcheckvars, ncontvars);
 
    /* @todo maybe we took the wrong variables as infcheckvars we could try to exchange integer variables */
    /* @todo if minactinfvarsinvalid or maxactinfvarsinvalid are true, try to exchange both partitions to maybe get valid
@@ -5753,9 +5740,7 @@ SCIP_RETCODE rangedRowPropagation(
    }
    else if( ncontvars == 0 )
    {
-      SCIP_Longint gcdinfvars;
-
-      gcdinfvars = -1;
+      SCIP_Longint gcdinfvars = -1;
 
       /* check for gcd over all infcheckvars */
       if( possiblegcd )
@@ -5779,14 +5764,11 @@ SCIP_RETCODE rangedRowPropagation(
       {
          SCIP_Real value;
          SCIP_Real value2;
-         SCIP_Real minvalue;
-         SCIP_Real maxvalue;
-         int nsols;
+         SCIP_Real minvalue = SCIP_INVALID;
+         SCIP_Real maxvalue = SCIP_INVALID;
+         int nsols = 0;
 
-         nsols = 0;
          value = minactinfvars;
-         minvalue = SCIP_INVALID;
-         maxvalue = SCIP_INVALID;
 
          /* check how many possible solutions exist */
          while( SCIPisLE(scip, value, maxactinfvars) )
@@ -5883,14 +5865,11 @@ SCIP_RETCODE rangedRowPropagation(
                if( ninfcheckvars == nunfixedvars - 1 )
                {
                   SCIP_Real bound;
-                  SCIP_Bool foundvar;
+                  SCIP_Bool foundvar = FALSE;
                   SCIP_Bool fixed;
-		  int w;
+		  int w = 0;
 
                   assert(ninfcheckvars > 0);
-
-                  foundvar = FALSE;
-		  w = 0;
 
                   /* find variable which is not an infcheckvar and fix it */
                   for( v = 0; v < consdata->nvars - 1; ++v )
@@ -6085,17 +6064,14 @@ SCIP_RETCODE rangedRowPropagation(
             /* check if we have only one not infcheckvars, if so we can tighten this variable */
             else if( ninfcheckvars == nunfixedvars - 1 )
             {
-               SCIP_Bool foundvar;
+               SCIP_Bool foundvar = FALSE;
                SCIP_Bool tightened;
                SCIP_Real newlb;
                SCIP_Real newub;
-	       int w;
+	       int w = 0;
 
                assert(ninfcheckvars > 0);
                assert(minvalue < maxvalue);
-
-               foundvar = FALSE;
-	       w = 0;
 
                /* find variable which is not an infcheckvar and fix it */
                for( v = 0; v < consdata->nvars - 1; ++v )
@@ -6219,8 +6195,7 @@ SCIP_RETCODE rangedRowPropagation(
 		     {
 			/* start conflict analysis */
                         /* @todo improve conflict analysis by adding relaxed bounds */
-                        SCIP_CALL( analyzeConflictRangedRow(scip, cons, infcheckvars, ninfcheckvars, consdata->vars[v],
-                              newlb) );
+                        SCIP_CALL( analyzeConflictRangedRow(scip, cons, infcheckvars, ninfcheckvars, consdata->vars[v], newlb) );
 		     }
 
 		     if( tightened )
@@ -6241,8 +6216,7 @@ SCIP_RETCODE rangedRowPropagation(
 		     {
 			/* start conflict analysis */
                         /* @todo improve conflict analysis by adding relaxed bounds */
-                        SCIP_CALL( analyzeConflictRangedRow(scip, cons, infcheckvars, ninfcheckvars, consdata->vars[v],
-                              newub) );
+                        SCIP_CALL( analyzeConflictRangedRow(scip, cons, infcheckvars, ninfcheckvars, consdata->vars[v], newub) );
 		     }
 
 		     if( tightened )
@@ -6291,127 +6265,8 @@ SCIP_RETCODE rangedRowPropagation(
 		  ++(*naddconss);
 	       }
                /* @todo maybe add constraint for all variables which are not infcheckvars, lhs should be minvalue, rhs
-                *       should be maxvalue
-                */
+                *       should be maxvalue */
             }
-         }
-      }
-   }
-   else if( ncontvars == 1 )
-   {
-      /* try to improve bounds on the only continuous variable */
-      if( nposbinvars + nnegbinvars == consdata->nvars - 1 )
-      {
-         SCIP_VAR* contvar;
-         SCIP_Real contval;
-         SCIP_Bool tightened;
-         SCIP_Bool multiplied = FALSE;
-         SCIP_Real binact = 0.0;
-
-         assert(contvarpos >= 0 && contvarpos < consdata->nvars);
-
-         contval = consdata->vals[contvarpos];
-         contvar = consdata->vars[contvarpos];
-         assert(SCIPvarGetType(contvar) == SCIP_VARTYPE_CONTINUOUS);
-
-         /* convert representation to: lhs <= sum_i=1^n a_i*x_i - by <= rhs, b > 0 */
-         if( contval > 0.0 )
-         {
-            SCIP_Real tmp;
-
-            tmp = -lhs;
-            lhs = -rhs;
-            rhs = tmp;
-            multiplied = TRUE;
-         }
-
-         contval = REALABS(contval);
-
-         /* convert representation to: lhs <= sum_i=1^n a_i*x_i - by <= rhs, b > 0, for all i : a_i > 0 */
-         if( nposbinvars != consdata->nvars - 1 || multiplied )
-         {
-            for( v = consdata->nvars - 1; v >= 0; --v )
-            {
-               if( v != contvarpos && !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])) )
-               {
-                  if( !multiplied && consdata->vals[v] < 0.0 )
-                  {
-                     lhs -= consdata->vals[v];
-                     rhs -= consdata->vals[v];
-                  }
-                  else if( multiplied && consdata->vals[v] > 0.0 )
-                  {
-                     lhs += consdata->vals[v];
-                     rhs += consdata->vals[v];
-                  }
-               }
-            }
-         }
-
-         /* can we improve the lower bound? */
-         if( SCIPisFeasNegative(scip, contval * SCIPvarGetLbLocal(contvar) + lhs) ||
-            (SCIPisFeasPositive(scip, contval * SCIPvarGetLbLocal(contvar) + lhs) &&
-               SCIPisFeasLT(scip, contval * SCIPvarGetLbLocal(contvar) + lhs, absminbincoef)) )
-         {
-            SCIP_Real newlb = SCIPisFeasNegative(scip, SCIPvarGetLbLocal(contvar) + lhs) ? -lhs : absminbincoef - lhs;
-
-            newlb /= REALABS(contval);
-
-            /* update lower bound of continuous variable */
-            SCIPdebugMessage("tightening lower bound of variable <%s> from %g to %g\n",
-               SCIPvarGetName(contvar), SCIPvarGetLbLocal(contvar), newlb);
-
-            /* tighten variable lower bound to minimal possible value */
-            SCIP_CALL( SCIPinferVarLbCons(scip, contvar, newlb, cons,
-                  getInferInt(PROPRULE_1_RANGEDROW, contvarpos), TRUE, cutoff, &tightened) );
-
-            if( *cutoff )
-            {
-               /* start conflict analysis */
-               /* @todo improve conflict analysis by adding relaxed bounds */
-               SCIP_CALL( analyzeConflictRangedRow(scip, cons, NULL, 0, contvar,
-                     newlb) );
-            }
-
-            if( tightened )
-               ++(*nchgbds);
-         }
-
-         /* compute binary activities in absolute value */
-         for( v = consdata->nvars - 1; v >= 0; --v )
-         {
-            if( v != contvarpos && !SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])) )
-            {
-               binact += REALABS(consdata->vals[v]);
-            }
-         }
-
-         /* can we improve the upper bound? */
-         if( SCIPisFeasLT(scip, contval * SCIPvarGetUbLocal(contvar), binact - rhs) &&
-            SCIPisFeasGT(scip, contval * SCIPvarGetUbLocal(contvar), binact - absminbincoef - rhs) )
-         {
-            SCIP_Real newub = binact - absminbincoef - rhs;
-
-            newub /= REALABS(contval);
-
-            /* update lower bound of continuous variable */
-            SCIPdebugMessage("tightening upper bound of variable <%s> from %g to %g\n",
-               SCIPvarGetName(contvar), SCIPvarGetUbLocal(contvar), newub);
-
-            /* tighten variable lower bound to minimal possible value */
-            SCIP_CALL( SCIPinferVarUbCons(scip, contvar, newub, cons,
-                  getInferInt(PROPRULE_1_RANGEDROW, contvarpos), TRUE, cutoff, &tightened) );
-
-            if( *cutoff )
-            {
-               /* start conflict analysis */
-               /* @todo improve conflict analysis by adding relaxed bounds */
-               SCIP_CALL( analyzeConflictRangedRow(scip, cons, NULL, 0, contvar,
-                     newub) );
-            }
-
-            if( tightened )
-               ++(*nchgbds);
          }
       }
    }
@@ -6940,8 +6795,8 @@ SCIP_RETCODE checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< linear constraint */
    SCIP_SOL*             sol,                /**< solution to be checked, or NULL for current solution */
-   SCIP_Bool             checklprows,        /**< has linear constraint to be checked, if it is already in current LP? */
-   SCIP_Bool             checkrelmaxabs,     /**< should the violation for a constraint with side 0.0 be checked relative
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             checkrelmaxabs,     /**< Should the violation for a constraint with side 0.0 be checked relative
                                               *   to 1.0 (FALSE) or to the maximum absolute value in the activity (TRUE)? */
    SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
@@ -7486,7 +7341,7 @@ SCIP_RETCODE fixVariables(
          {
             SCIP_Real fixval;
 
-            fixval = SCIPselectSimpleValue(lb - 0.9 * SCIPepsilon(scip), ub + 0.9 * SCIPepsilon(scip), MAXDNOM);
+            fixval = SCIPselectSimpleValue(lb, ub, MAXDNOM);
             SCIPdebugMessage("converting variable <%s> with fixed bounds [%.15g,%.15g] into fixed variable fixed at %.15g\n",
                SCIPvarGetName(var), lb, ub, fixval);
             SCIP_CALL( SCIPfixVar(scip, var, fixval, &infeasible, &fixed) );

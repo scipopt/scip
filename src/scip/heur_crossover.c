@@ -142,7 +142,7 @@ SCIP_DECL_HASHKEYEQ(hashKeyEqSols)
    assert(indices2 != NULL);
    assert(((SOLTUPLE*)key1)->size == ((SOLTUPLE*)key2)->size);
 
-   size  = ((SOLTUPLE*)key1)->size;
+   size = ((SOLTUPLE*)key1)->size;
 
    /* compare arrays by components, return TRUE, iff equal */
    for( i = 0; i < size; i++ )
@@ -221,7 +221,7 @@ SCIP_RETCODE createSolTuple(
 {
    /* memory allocation */
    SCIP_CALL( SCIPallocBlockMemory(scip, elem) );
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*elem)->indices,size) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*elem)->indices, size) );
    BMScopyMemoryArray((*elem)->indices, indices, size);
 
    /* data input */
@@ -235,21 +235,24 @@ SCIP_RETCODE createSolTuple(
    return SCIP_OKAY;
 }
 
-/* checks whether the new solution was found at the same node by the same heuristic as an already selected one */
+
+/** checks whether the new solution was found at the same node by the same heuristic as an already selected one */
 static
 SCIP_Bool solHasNewSource(
    SCIP_SOL**            sols,               /**< feasible SCIP solutions */
    int*                  selection,          /**< pool of solutions crossover uses */
    int                   selectionsize,      /**< size of solution pool */
    int                   newsol              /**< candidate solution */
-)
+   )
 {
    int i;
 
-   for( i = 0; i < selectionsize; i++)
+   for( i = 0; i < selectionsize; i++ )
+   {
       if( SCIPsolGetHeur(sols[selection[i]]) == SCIPsolGetHeur(sols[newsol])
          && SCIPsolGetNodenum(sols[selection[i]]) == SCIPsolGetNodenum(sols[newsol]) )
          return FALSE;
+   }
 
    return TRUE;
 }
@@ -263,7 +266,6 @@ SCIP_RETCODE selectSolsRandomized(
    SCIP_Bool*            success             /**< pointer to store whether the process was successful */
    )
 {
-
    int i;
    int j;
    int lastsol;          /* the worst solution possible to choose */
@@ -271,6 +273,8 @@ SCIP_RETCODE selectSolsRandomized(
 
    SOLTUPLE* elem;
    SCIP_SOL** sols;
+
+   assert( success != NULL );
 
    /* initialization */
    nusedsols = heurdata->nusedsols;
@@ -340,15 +344,13 @@ static SCIP_RETCODE fixVariables(
 
    int i;
    int j;
-   int fixingcounter;
+   int fixingcounter = 0;
 
    sols = SCIPgetSols(scip);
    assert(sols != NULL);
 
    /* get required data of the original problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-
-   fixingcounter = 0;
 
    /* create the binary and general integer variables of the subproblem */
    for( i = 0; i < nbinvars + nintvars; i++ )
@@ -467,9 +469,7 @@ SCIP_RETCODE setupSubproblem(
    SCIP_SOL** sols;                         /* array of all solutions found so far         */
    int nsols;                               /* number of all solutions found so far        */
    int nusedsols;                           /* number of solutions to use in crossover     */
-
    int i;
-   char consname[SCIP_MAXSTRLEN];
 
    /* get solutions' data */
    nsols = SCIPgetNSols(scip);
@@ -530,9 +530,6 @@ SCIP_RETCODE setupSubproblem(
    if( !(*success) )
       return SCIP_OKAY;
 
-   /* get name of the original problem and add the string "_crossoversub" */
-   (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "%s_crossoversub", SCIPgetProbName(scip));
-
    /* set up the variables of the subproblem */
    SCIP_CALL( fixVariables(scip, subscip, subvars, selection, heurdata, success) );
 
@@ -572,8 +569,7 @@ SCIP_RETCODE createNewSol(
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
    /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
-    * since constraint copying may have required the copy of variables that are fixed in the main SCIP
-    */
+    * since constraint copying may have required the copy of variables that are fixed in the main SCIP */
    assert(nvars <= SCIPgetNOrigVars(subscip));
 
    SCIP_CALL( SCIPallocBufferArray(scip, &subsolvals, nvars) );
@@ -631,7 +627,7 @@ SCIP_DECL_EVENTEXEC(eventExecCrossover)
    /* interrupt solution process of sub-SCIP */
    if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
    {
-      SCIPdebugMessage("interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
+      SCIPdebugMessage("interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n", SCIPgetNLPs(scip));
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -702,7 +698,7 @@ SCIP_DECL_HEURINIT(heurInitCrossover)
    /* initialize hash table */
    SCIP_CALL( SCIPhashtableCreate(&heurdata->hashtable, SCIPblkmem(scip), HASHSIZE_SOLS,
          hashGetKeySols, hashKeyEqSols, hashKeyValSols, NULL) );
-   assert(heurdata->hashtable != NULL );
+   assert(heurdata->hashtable != NULL);
 
    return SCIP_OKAY;
 }
@@ -727,13 +723,13 @@ SCIP_DECL_HEUREXIT(heurExitCrossover)
    {
       SOLTUPLE* tmp;
       tmp = soltuple->prev;
-      SCIPfreeBlockMemoryArray(scip,&soltuple->indices,soltuple->size);
-      SCIPfreeBlockMemory(scip,&soltuple);
+      SCIPfreeBlockMemoryArray(scip, &soltuple->indices, soltuple->size);
+      SCIPfreeBlockMemory(scip, &soltuple);
       soltuple = tmp;
    }
 
    /* free hash table */
-   assert(heurdata->hashtable != NULL );
+   assert(heurdata->hashtable != NULL);
    SCIPhashtableFree(&heurdata->hashtable);
 
    return SCIP_OKAY;
@@ -747,7 +743,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    SCIP_HEURDATA* heurdata;                  /* primal heuristic data                               */
    SCIP* subscip;                            /* the subproblem created by crossover                 */
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
-   SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
+   SCIP_EVENTHDLR* eventhdlr;                /* event handler for LP events                     */
 
    SCIP_VAR** vars;                          /* original problem's variables                        */
    SCIP_VAR** subvars;                       /* subproblem's variables                              */
@@ -804,7 +800,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
       return SCIP_OKAY;
 
    /* only call heuristic, if enough nodes were processed since last incumbent */
-   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip,SCIPgetBestSol(scip))  < heurdata->nwaitingnodes
+   if( SCIPgetNNodes(scip) - SCIPgetSolNodenum(scip, SCIPgetBestSol(scip)) < heurdata->nwaitingnodes
       && (SCIPgetDepth(scip) > 0 || !heurdata->dontwaitatroot) )
       return SCIP_OKAY;
 

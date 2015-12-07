@@ -1001,15 +1001,36 @@ SCIP_RETCODE SCIPsolSetVal(
          if( !SCIPsetIsEQ(set, val, oldval) )
          {
             SCIP_Real obj;
+            SCIP_Real objcont;
 
             SCIP_CALL( solSetArrayVal(sol, set, var, val) );
 
             /* update objective: an unknown solution value does not count towards the objective */
             obj = SCIPvarGetObj(var);
             if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
-               sol->obj -= obj * oldval;
+            {
+               objcont = obj * oldval;
+
+               /* we want to use a clean infinity */
+               if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, sol->obj-objcont) )
+                  sol->obj = SCIPsetInfinity(set);
+               else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj-objcont)) )
+                  sol->obj = -SCIPsetInfinity(set);
+               else
+                  sol->obj -= objcont;
+            }
             if( val != SCIP_UNKNOWN ) /*lint !e777*/
-               sol->obj += obj * val;
+            {
+               objcont = obj * val;
+
+               /* we want to use a clean infinity */
+               if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, sol->obj+objcont) )
+                  sol->obj = SCIPsetInfinity(set);
+               else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj+objcont)) )
+                  sol->obj = -SCIPsetInfinity(set);
+               else
+                  sol->obj += objcont;
+            }
 
             solStamp(sol, stat, tree, FALSE);
 
@@ -1026,6 +1047,7 @@ SCIP_RETCODE SCIPsolSetVal(
       if( !SCIPsetIsEQ(set, val, oldval) )
       {
          SCIP_Real obj;
+         SCIP_Real objcont;
 
          SCIP_CALL( solSetArrayVal(sol, set, var, val) );
 
@@ -1033,9 +1055,29 @@ SCIP_RETCODE SCIPsolSetVal(
          obj = SCIPvarGetUnchangedObj(var);
 
          if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
-            sol->obj -= obj * oldval;
+         {
+            objcont = obj * oldval;
+
+            /* we want to use a clean infinity */
+            if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, sol->obj-objcont) )
+               sol->obj = SCIPsetInfinity(set);
+            else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj-objcont)) )
+               sol->obj = -SCIPsetInfinity(set);
+            else
+               sol->obj -= objcont;
+         }
          if( val != SCIP_UNKNOWN ) /*lint !e777*/
-            sol->obj += obj * val;
+         {
+            objcont = obj * val;
+
+            /* we want to use a clean infinity */
+            if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, sol->obj+objcont) )
+               sol->obj = SCIPsetInfinity(set);
+            else if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, -(sol->obj+objcont)) )
+               sol->obj = -SCIPsetInfinity(set);
+            else
+               sol->obj += objcont;
+         }
 
          solStamp(sol, stat, tree, FALSE);
       }
@@ -1421,10 +1463,10 @@ SCIP_RETCODE SCIPsolCheck(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem data */
-   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
-   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            feasible            /**< stores whether solution is feasible */
    )
 {

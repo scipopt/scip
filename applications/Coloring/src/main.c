@@ -47,6 +47,9 @@ SCIP_RETCODE SCIPrunColoringShell(
    /* include coloring plugins */
    SCIP_CALL( SCIPincludeColoringPlugins(scip) );
 
+   /* we explicitly enable the use of a debug solution for this main SCIP instance */
+   SCIPenableDebugSol(scip);
+
    /**********************************
     * Process command line arguments *
     **********************************/

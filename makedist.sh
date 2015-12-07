@@ -76,6 +76,7 @@ $NAME/applications/Scheduler/data/*.sm \
 $NAME/applications/Scheduler/data/*.cmin \
 $NAME/applications/Scheduler/Makefile \
 $NAME/applications/MultiObjective/doc/* \
+$NAME/applications/MultiObjective/doc/images/*.png \
 $NAME/applications/MultiObjective/src/depend.* \
 $NAME/applications/MultiObjective/src/*.c $NAME/applications/MultiObjective/src/*.cpp $NAME/applications/MultiObjective/src/*.h \
 $NAME/applications/MultiObjective/data/*.mop \

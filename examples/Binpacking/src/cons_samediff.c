@@ -55,13 +55,12 @@
  * Data structures
  */
 
-/** @brief Constraint data for  \ref cons_samediff.c "SameDiff" constraints */
+/** Constraint data for  \ref cons_samediff.c "SameDiff" constraints */
 struct SCIP_ConsData
 {
-   int                   itemid1;           /**< item id one */
-   int                   itemid2;           /**< item id two */
+   int                   itemid1;            /**< item id one */
+   int                   itemid2;            /**< item id two */
    CONSTYPE              type;               /**< stores whether the items have to be in the SAME or DIFFER packing */
-
    int                   npropagatedvars;    /**< number of variables that existed, the last time, the related node was
                                               *   propagated, used to determine whether the constraint should be
                                               *   repropagated*/
@@ -69,13 +68,6 @@ struct SCIP_ConsData
    unsigned int          propagated:1;       /**< is constraint already propagated? */
    SCIP_NODE*            node;               /**< the node in the B&B-tree at which the cons is sticking */
 };
-
-#ifdef SCIP_DISABLED_CODE
-/** @brief Constraint handler data for \ref cons_samediff.c "SameDiff" constraint handler */
-struct SCIP_ConshdlrData
-{
-};
-#endif
 
 /**@name Local methods
  *
@@ -238,7 +230,8 @@ static
 SCIP_Bool consdataCheck(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_PROBDATA*        probdata,           /**< problem data */
-   SCIP_CONSDATA*        consdata            /**< constraint data */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   SCIP_Bool             beforeprop          /**< is this check performed before propagation? */
    )
 {
    SCIP_VAR** vars;
@@ -257,7 +250,8 @@ SCIP_Bool consdataCheck(
    int v;
 
    vars = SCIPprobdataGetVars(probdata);
-   nvars = SCIPprobdataGetNVars(probdata);
+   nvars = (beforeprop ? consdata->npropagatedvars : SCIPprobdataGetNVars(probdata));
+   assert(nvars <= SCIPprobdataGetNVars(probdata));
 
    for( v = 0; v < nvars; ++v )
    {
@@ -291,7 +285,7 @@ SCIP_Bool consdataCheck(
 }
 #endif
 
-/** frees a logic or constraint data */
+/** frees samediff constraint data */
 static
 SCIP_RETCODE consdataFree(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -323,7 +317,7 @@ SCIP_DECL_CONSDELETE(consDeleteSamediff)
    assert(consdata != NULL);
    assert(*consdata != NULL);
 
-   /* free LP row and logic or constraint */
+   /* free samediff constraint */
    SCIP_CALL( consdataFree(scip, consdata) );
 
    return SCIP_OKAY;
@@ -381,6 +375,7 @@ SCIP_DECL_CONSPROP(consPropSamediff)
 
    assert(scip != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(result != NULL);
 
    SCIPdebugMessage("propagation constraints of constraint handler <"CONSHDLR_NAME">\n");
 
@@ -433,7 +428,7 @@ SCIP_DECL_CONSPROP(consPropSamediff)
       }
 
       /* check if constraint is completely propagated */
-      assert( consdataCheck(scip, probdata, consdata) );
+      assert( consdataCheck(scip, probdata, consdata, FALSE) );
    }
 
    return SCIP_OKAY;
@@ -447,6 +442,7 @@ static
 SCIP_DECL_CONSACTIVE(consActiveSamediff)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
+   SCIP_PROBDATA* probdata;
 
    assert(scip != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
@@ -455,6 +451,9 @@ SCIP_DECL_CONSACTIVE(consActiveSamediff)
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
    assert(consdata->npropagatedvars <= SCIPprobdataGetNVars(SCIPgetProbData(scip)));
+
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
 
    SCIPdebugMessage("activate constraint <%s> at node <%"SCIP_LONGINT_FORMAT"> in depth <%d>: ",
       SCIPconsGetName(cons), SCIPnodeGetNumber(consdata->node), SCIPnodeGetDepth(consdata->node));
@@ -466,6 +465,9 @@ SCIP_DECL_CONSACTIVE(consActiveSamediff)
       consdata->propagated = FALSE;
       SCIP_CALL( SCIPrepropagateNode(scip, consdata->node) );
    }
+
+   /* check if all previously generated variables are valid for this constraint */
+   assert( consdataCheck(scip, probdata, consdata, TRUE) );
 
    return SCIP_OKAY;
 }
@@ -488,18 +490,12 @@ SCIP_DECL_CONSDEACTIVE(consDeactiveSamediff)
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
 
-   /* check if all variables which are not fixed locally to zero are valid for this constraint/node */
-   assert( consdataCheck(scip, probdata, consdata) );
-
    SCIPdebugMessage("deactivate constraint <%s> at node <%"SCIP_LONGINT_FORMAT"> in depth <%d>: ",
       SCIPconsGetName(cons), SCIPnodeGetNumber(consdata->node), SCIPnodeGetDepth(consdata->node));
    SCIPdebug( consdataPrint(scip, consdata, NULL) );
 
    /* set the number of propagated variables to current number of variables is SCIP */
    consdata->npropagatedvars = SCIPprobdataGetNVars(probdata);
-
-   /* check if all variables are valid for this constraint */
-   assert( consdataCheck(scip, probdata, consdata) );
 
    return SCIP_OKAY;
 }
@@ -530,14 +526,9 @@ SCIP_RETCODE SCIPincludeConshdlrSamediff(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata = NULL;
+   SCIP_CONSHDLR* conshdlr = NULL;
 
-   /* create samediff constraint handler data */
-   conshdlrdata = NULL;
-   /* TODO: (optional) create constraint handler specific data here */
-
-   conshdlr = NULL;
    /* include constraint handler */
    SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
@@ -561,8 +552,8 @@ SCIP_RETCODE SCIPcreateConsSamediff(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   int                   itemid1,           /**< item id one */
-   int                   itemid2,           /**< item id two */
+   int                   itemid1,            /**< item id one */
+   int                   itemid2,            /**< item id two */
    CONSTYPE              type,               /**< stores whether the items have to be in the SAME or DIFFER packing */
    SCIP_NODE*            node,               /**< the node in the B&B-tree at which the cons is sticking */
    SCIP_Bool             local               /**< is constraint only valid locally? */

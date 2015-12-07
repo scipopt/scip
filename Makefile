@@ -680,7 +680,7 @@ testcplex:
 .PHONY: testxpress
 testxpress:
 		cd check; \
-		$(SHELL) ./check_xpress.sh $(TEST) $(XPRESS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+		$(SHELL) ./check_xpress.sh $(TEST) $(XPRESS_BIN) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testmosek
 testmosek:

@@ -24,6 +24,7 @@
 #    SETCUTOFF - should optimal solution value (from solu file) be passed as objective limit?
 #    SOLUFILE - .solu file for this test set, for parsing optimal solution values
 #    VALGRINDCMD - the valgrind command to use
+#    INSTANCELIST - list of all instances with complete path
 
 # function to capitalize a whole string
 function capitalize {
@@ -35,7 +36,7 @@ function stripversion {
     NAMENOPATH=`basename $1`
     # by '%%', Trim the longest match from the end
     NAMENOVERSION=${NAMENOPATH%%-*}
-    NAMENOVERSION=${NAMENOVERSION%%.*}
+    NAMENOVERSION=${NAMENOVERSION%%\.*}
     echo $NAMENOVERSION
 }
 
@@ -159,4 +160,22 @@ then
     POSSIBLEPATHS="${POSSIBLEPATHS} `cat paths.txt`"
 fi
 POSSIBLEPATHS="${POSSIBLEPATHS} / DONE"
-echo $POSSIBLEPATHS
+# echo $POSSIBLEPATHS
+
+INSTANCELIST=""
+for INSTANCE in `cat testset/$TSTNAME.test`
+do
+    # check if problem instance exists
+    for IPATH in ${POSSIBLEPATHS[@]}
+    do
+        #echo $IPATH
+        if test "$IPATH" = "DONE"
+        then
+            echo "input file $INSTANCE not found!"
+        elif test -f $IPATH/$INSTANCE
+        then
+            INSTANCELIST="${INSTANCELIST} ${IPATH}/${INSTANCE}"
+            break
+        fi
+    done
+done

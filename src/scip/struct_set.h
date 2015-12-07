@@ -46,6 +46,7 @@
 #include "scip/type_sepa.h"
 #include "scip/type_prop.h"
 #include "nlpi/type_nlpi.h"
+#include "scip/debug.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,6 +80,7 @@ struct SCIP_Set
    SCIP_DISP**           disps;              /**< display columns */
    SCIP_DIALOG**         dialogs;            /**< dialogs */
    SCIP_NLPI**           nlpis;              /**< interfaces to NLP solvers */
+   SCIP_DEBUGSOLDATA*    debugsoldata;       /**< data for debug solutions */
    char**                extcodenames;       /**< names of externals codes */
    char**                extcodedescs;       /**< descriptions of external codes */
    int                   nreaders;           /**< number of file readers */
@@ -321,7 +323,8 @@ struct SCIP_Set
    SCIP_Bool             misc_improvingsols; /**< should only solutions be checked which improve the primal bound */
    SCIP_Bool             misc_printreason;   /**< should the reason be printed if a given start solution is infeasible? */
    SCIP_Bool             misc_estimexternmem;/**< should the usage of external memory be estimated? */
-   SCIP_Bool             misc_transorigsols; /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
+   SCIP_Bool             misc_transorigsols; /**< should SCIP try to transfer original solutions to the transformed space (after presolving)? */
+   SCIP_Bool             misc_transsolsorig; /**< should SCIP try to transfer transformed solutions to the original space (after solving)? */
    SCIP_Bool             misc_calcintegral;  /**< should SCIP calculate the primal dual integral value which may require
                                               *   a large number of additional clock calls (and decrease the performance)? */
    SCIP_Bool             misc_finitesolstore;/**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */

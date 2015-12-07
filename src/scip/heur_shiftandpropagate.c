@@ -1524,6 +1524,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    else
       SCIPdisableVarHistory(scip);
 
+   /* this should always be fulfilled becase we perform shift and propagate only at the root node */
+   assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
+
    /* @todo check if this node is necessary (I don't think so) */
    SCIP_CALL( SCIPnewProbingNode(scip) );
    ncutoffs = 0;
@@ -1947,7 +1950,9 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       }
       assert(SCIPisFeasGE(scip, origsolval, lb) && SCIPisFeasLE(scip, origsolval, ub));
 
-      /* check if propagation should still be performed */
+      /* check if propagation should still be performed
+       * @todo do we need the hard coded value? we could use SCIPgetDepthLimit
+       */
       if( nprobings > DEFAULT_PROPBREAKER )
          probing = FALSE;
 
@@ -1956,6 +1961,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
        */
       if( !marksuspicious && probing )
       {
+         /* this assert should be always fulfilled because we run this heuristic at the root node only and do not
+          * perform probing if nprobings is less than DEFAULT_PROPBREAKER (currently: 65000)
+          */
+         assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
+
          SCIP_CALL( SCIPnewProbingNode(scip) );
          SCIP_CALL( SCIPfixVarProbing(scip, var, origsolval) );
          ndomredsfound = 0;
@@ -1987,6 +1997,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          assert(SCIPgetProbingDepth(scip) >= 1);
          SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
          marksuspicious = TRUE;
+
+         /* this assert should be always fulfilled because we run this heuristic at the root node only and do not
+          * perform probing if nprobings is less than DEFAULT_PROPBREAKER (currently: 65000)
+          */
+         assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
 
          /* if the variable were to be set to one of its bounds, repropagate by tightening this bound by 1.0
           * into the direction of the other bound, if possible */

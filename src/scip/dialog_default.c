@@ -318,7 +318,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecChangeAddCons)
 
       cons = NULL;
 
-      SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "write constraint in <cip> format\n", &str, &endoffile) );
+      SCIP_CALL( SCIPdialoghdlrGetLine(dialoghdlr, dialog, "write constraint in <cip> format\n", &str, &endoffile) );
 
       if( str[0] != '\0' )
       {
@@ -1175,11 +1175,83 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators)
 /** dialog execution method for the display solution command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
 {  /*lint --e{715}*/
+   SCIP_VAR** fixedvars;
+   SCIP_VAR* var;
+   int nfixedvars;
+   int v;
+
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
 
    SCIPdialogMessage(scip, NULL, "\n");
    SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
+
+   /* check if there are infinite fixings and print a reference to 'display finitesolution', if needed */
+   fixedvars = SCIPgetFixedVars(scip);
+   nfixedvars = SCIPgetNFixedVars(scip);
+   assert(fixedvars != NULL || nfixedvars == 0);
+
+   /* check whether there are variables fixed to an infinite value */
+   for( v = 0; v < nfixedvars; ++v )
+   {
+      var = fixedvars[v]; /*lint !e613*/
+
+      /* skip (multi-)aggregated variables */
+      if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_FIXED )
+         continue;
+
+      if( (SCIPisInfinity(scip, SCIPvarGetLbGlobal(var)) || SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var))) )
+      {
+         SCIPdialogMessage(scip, NULL, "The primal solution contains variables fixed to infinite values.\n\
+If you want SCIP to display an optimal solution without infinite values, use 'display finitesolution'.\n");
+         SCIPdialogMessage(scip, NULL, "\n");
+         break;
+      }
+   }
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the display finitesolution command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayFiniteSolution)
+{  /*lint --e{715}*/
+   SCIP_SOL* bestsol = SCIPgetBestSol(scip);
+
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   SCIPdialogMessage(scip, NULL, "\n");
+   if( bestsol != NULL )
+   {
+      SCIP_SOL* sol;
+      SCIP_Bool success;
+      SCIP_Bool retcode;
+
+      /* create copy of solution with finite values */
+      retcode = SCIPcreateFiniteSolCopy(scip, &sol, bestsol, &success);
+
+      if( retcode == SCIP_OKAY && success )
+      {
+         retcode = SCIPprintSol(scip, sol, NULL, FALSE);
+         SCIPdialogMessage(scip, NULL, "\n");
+      }
+      else
+      {
+         SCIPdialogMessage(scip, NULL, "error while creating finite solution\n");
+      }
+
+      /* free solution copy */
+      if( retcode == SCIP_OKAY )
+      {
+         SCIP_CALL( SCIPfreeSol(scip, &sol) );
+      }
+   }
+   else
+   {
+      SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+      SCIPdialogMessage(scip, NULL, "\n");
+   }
 
    *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
 
@@ -2896,6 +2968,48 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for writing command line history */
+static
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteCommandHistory)
+{  /*lint --e{715}*/
+   char* filename;
+   SCIP_Bool endoffile;
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   SCIP_CALL( SCIPdialoghdlrGetWord(dialoghdlr, dialog, "enter filename: ", &filename, &endoffile) );
+   if( endoffile )
+   {
+      *nextdialog = NULL;
+      return SCIP_OKAY;
+   }
+   if( filename[0] != '\0' )
+   {
+      SCIP_RETCODE retcode;
+
+      SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, filename, TRUE) );
+
+      retcode = SCIPdialogWriteHistory(filename);
+
+      if( retcode != SCIP_OKAY )
+      {
+         SCIPdialogMessage(scip, NULL, "error writing to file <%s>\n"
+               "check that the directory exists and that you have correct permissions\n", filename);
+         SCIPdialoghdlrClearBuffer(dialoghdlr);
+      }
+      else
+      {
+         SCIPdialogMessage(scip, NULL, "wrote available command line history to <%s>\n", filename);
+      }
+   }
+
+   SCIPdialogMessage(scip, NULL, "\n");
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the write finitesolution command */
 static
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteFiniteSolution)
@@ -3392,6 +3506,17 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+   /* display finite solution */
+   if( !SCIPdialogHasEntry(submenu, "finitesolution") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecDisplayFiniteSolution, NULL, NULL,
+            "finitesolution", "display best primal solution (try to make solution values finite, first)", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    /* display solution */
    if( !SCIPdialogHasEntry(submenu, "dualsolution") )
    {
@@ -3708,7 +3833,7 @@ SCIP_RETCODE SCIPincludeDialogDefault(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
-   /* write transproblem */
+   /* write transproblem with generic names */
    if( !SCIPdialogHasEntry(submenu, "gentransproblem") )
    {
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
@@ -3729,6 +3854,19 @@ SCIP_RETCODE SCIPincludeDialogDefault(
             SCIPdialogExecCliquegraph, NULL, NULL,
             "cliquegraph",
             "write graph of cliques and implications of binary variables to GML file (better call after presolving)",
+            FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* write command line history */
+   if( !SCIPdialogHasEntry(submenu, "history") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL,
+            SCIPdialogExecWriteCommandHistory, NULL, NULL,
+            "history",
+            "writes command line history to a file (only works if SCIP was compiled with 'readline')",
             FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, submenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
