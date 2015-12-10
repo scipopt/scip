@@ -79,6 +79,7 @@ NOBLKBUFMEM	=	false
 PARASCIP	=	false
 
 #third party compiling parameters
+OPENSOURCE   =         true
 READLINE	=	true
 ZLIB		=	true
 GMP		=	true
@@ -391,8 +392,14 @@ LIBBUILD	=	$(LINKCXX)
 else
 LIBBUILD	=	$(LINKCC)
 endif
+
+ifeq ($(COMP),msvc)
+LIBBUILDFLAGS	+=      -dll
+LIBBUILD_o	= 	-out:
+else
 LIBBUILDFLAGS	+=      -shared
 LIBBUILD_o	= 	-o # the trailing space is important
+endif
 ARFLAGS		=
 RANLIB		=
 endif

@@ -33,6 +33,16 @@ endif
 
 INSTALLDIR	=
 
+# do not use other open source projects; needs to be set before including make.project
+ifeq ($(OPENSOURCE),false)
+	override EXPRINT	=	none
+	override GMP	=	false
+	override READLINE	=	false
+	override ZLIB	=	false
+	override ZIMPL	=	false
+	override IPOPT	=	false
+endif
+
 #-----------------------------------------------------------------------------
 # load default settings and detect host architecture
 #-----------------------------------------------------------------------------
@@ -574,6 +584,8 @@ MAINLINK	=	$(BINDIR)/$(MAINSHORTNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINSHORTLINK	=	$(BINDIR)/$(MAINSHORTNAME)$(EXEEXTENSION)
 ALLSRC		+=	$(MAINSRC)
 
+DLLFILENAME	=	lib$(MAINNAME).$(BASE).$(LPS).dll
+
 LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(GAMS)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
@@ -992,6 +1004,17 @@ endif
 
 -include $(LASTSETTINGS)
 
+.PHONY: dll
+dll: $(SCIPLIBOBJFILES) $(MAINOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(OBJSCIPLIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)
+ifeq ($(COMP),msvc)
+		@echo "-> generating library $@"
+		$(LINKCC) $(LIBBUILDFLAGS) $(LINKCC_L)$(LIBDIR) -dll $(LIBBUILD_o)$(LIBDIR)/$(DLLFILENAME) \
+			$(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(NLPILIBOBJFILES) $(LPILIBOBJFILES) \
+			$(LPSLDFLAGS)
+else
+		@echo "can not use 'make dll' without MSVC"
+endif
+
 .PHONY: touchexternal
 touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(GAMSDEP) $(LPSCHECKDEP) $(PARASCIPDEP) | $(LIBOBJDIR)
 ifeq ($(TOUCHLINKS),true)
@@ -1184,6 +1207,11 @@ endif
 ifneq ($(PARASCIP),true)
 ifneq ($(PARASCIP),false)
 		$(error invalid PARASCIP flag selected: PARASCIP=$(PARASCIP). Possible options are: true false)
+endif
+endif
+ifeq ($(SHARED),true)
+ifeq ($(COMP),msvc)
+		$(error invalid flags selected: SHARED=$(SHARED) and COMP=$(COMP). Please use 'make dll' to generate a dynamic library with MSVC)
 endif
 endif
 

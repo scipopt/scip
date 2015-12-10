@@ -10,10 +10,10 @@ LINKCXX		=	link -nologo
 LINKCXX_L	=	-LIBPATH:
 LINKCXX_l	=	lib
 LINKCXX_o	=	-out:
-FLAGS	+=	-DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R -DNDEBUG -DNO_STRERROR_R -DROUNDING_MS -D_CRT_SECURE_NO_WARNINGS -wd4274
+FLAGS	+=	-DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R -DNDEBUG -DNO_STRERROR_R -DROUNDING_MS -D_CRT_SECURE_NO_WARNINGS -wd4274 -D_WIN64
 OFLAGS	+=	
-CFLAGS	+=	-Ox -Oi -fp:precise
-CXXFLAGS	+=	-Ox -Oi -fp:precise -EHsc -GR
+CFLAGS	+=	-Zi -Od -fp:precise
+CXXFLAGS	+=	-Zi -Od -fp:precise -EHsc -GR
 LDFLAGS		=	
 LINKRPATH =
 ZLIB_FLAGS	=	
@@ -34,5 +34,5 @@ SHAREDLIBEXT	=	dll
 LINKLIBSUFFIX	=	.lib
 
 # NOTE: use this flag throughout the whole compilation process
-CFLAGS  +=      -MD
-CXXFLAGS  +=      -MD
+CFLAGS  +=      -MDd
+CXXFLAGS  +=      -MDd

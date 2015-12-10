@@ -5,6 +5,7 @@ features:
 - can now solve relaxations within probing
 - can now separate perspective cuts for indicator constraints
 - added write callback for reader_bnd
+- new target "dll" to build Windows dlls with MSVC
 
 parameters:
 - new parameter sepaperspective to turn on separation of perspective cuts for indicator contraints
