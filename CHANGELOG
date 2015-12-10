@@ -28,6 +28,10 @@ interface:
 - renamed MIP matrix structure to SCIP_MATRIX
 - changed the numeric values for PRESOLTIMING flags
 
+Makefile:
+- new target "dll" to build Windows dlls with MSVC
+- add new compiling flag OPENSOURCE to allow/forbid the usage of third party software
+
 fixed bugs:
 - fixed a bug in merge step of cliques during clean up phase; method did not correctly handle infeasibility in the case of multiple variable-negation pairs
 - fixed a previously untreated case in the linear cons simplification where coefficients only differ by slightly more than an epsilon
