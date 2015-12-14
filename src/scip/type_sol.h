@@ -36,7 +36,10 @@ enum SCIP_SolOrigin
    SCIP_SOLORIGIN_NLPSOL    = 3,        /**< all non-cached elements in solution are equal to current NLP solution */
    SCIP_SOLORIGIN_RELAXSOL  = 4,        /**< all non-cached elements in solution are equal to current relaxation solution */
    SCIP_SOLORIGIN_PSEUDOSOL = 5,        /**< all non-cached elements in solution are equal to current pseudo solution */
-   SCIP_SOLORIGIN_UNKNOWN   = 6         /**< all non-cached elements in solution are unknown; they have to be treated
+   SCIP_SOLORIGIN_PARTIAL   = 6,        /**< solution describes a partial solution; all non-cached elements in solution
+                                         *   are equal to zero
+                                         */
+   SCIP_SOLORIGIN_UNKNOWN   = 7         /**< all non-cached elements in solution are unknown; they have to be treated
                                          *   as being an arbitrary value in the variable's bounds
                                          */
 };

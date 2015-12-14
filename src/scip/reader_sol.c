@@ -52,6 +52,7 @@ SCIP_RETCODE readSol(
    SCIP_Bool unknownvariablemessage;
    SCIP_Bool stored;
    SCIP_Bool usevartable;
+   SCIP_Bool partial;
    int lineno;
 
    assert(scip != NULL);
@@ -133,6 +134,11 @@ SCIP_RETCODE readSol(
          value = SCIPinfinity(scip);
       else if( strncasecmp(valuestring, "-inf", 4) == 0 )
          value = -SCIPinfinity(scip);
+      else if( strncasecmp(valuestring, "unknown", 7) == 0 )
+      {
+         value = SCIP_UNKNOWN;
+         partial = TRUE;
+      }
       else
       {
          nread = sscanf(valuestring, "%lf", &value);
@@ -183,6 +189,8 @@ SCIP_RETCODE readSol(
       /* add and free the solution */
       if( SCIPisTransformed(scip) )
       {
+         assert(!partial);
+
          SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
 
          /* display result */

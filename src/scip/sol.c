@@ -85,6 +85,9 @@ SCIP_RETCODE solSetArrayVal(
    /* store whether the solution has infinite values assigned to variables */
    if( val != SCIP_UNKNOWN ) /*lint !e777*/
       sol->hasinfval = (sol->hasinfval || SCIPsetIsInfinity(set, val) || SCIPsetIsInfinity(set, -val));
+   /* mark the solution as partial */
+   else if( sol->solorigin == SCIP_SOLORIGIN_ZERO )
+      sol->solorigin = SCIP_SOLORIGIN_PARTIAL;
 
    return SCIP_OKAY;
 }

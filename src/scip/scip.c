@@ -9275,7 +9275,7 @@ SCIP_RETCODE SCIPreadProb(
    for( i = 0; i < scip->set->nreaders && result == SCIP_DIDNOTRUN; ++i )
    {
       retcode = SCIPreaderRead(scip->set->readers[i], scip->set, filename,
-         extension != NULL ? extension : fileextension, &result);
+            extension != NULL ? extension : fileextension, &result);
 
       /* check for reader errors */
       if( retcode == SCIP_NOFILE || retcode == SCIP_READERROR )
