@@ -12427,6 +12427,7 @@ SCIP_RETCODE checkSolOrig(
    )
 {
    SCIP_RESULT result;
+   SCIP_Bool messageprinted;
    int v;
    int c;
    int h;
@@ -12438,6 +12439,7 @@ SCIP_RETCODE checkSolOrig(
    SCIP_CALL( checkStage(scip, "checkSolOrig", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    *feasible = TRUE;
+   messageprinted = FALSE;
 
    /* check bounds */
    if( checkbounds )
@@ -12451,6 +12453,19 @@ SCIP_RETCODE checkSolOrig(
 
          var = scip->origprob->vars[v];
          solval = SCIPsolGetVal(sol, scip->set, scip->stat, var);
+
+         /* skip unknown variables in partial solutions, this is a partial check */
+         if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
+         {
+            if( !messageprinted )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Note: The current solution is only partial, we skip "
+                     "checking bound of variables with unknown solution values. (This is only reported once per solution)\n");
+               messageprinted = TRUE;
+            }
+            continue;
+         }
+
          lb = SCIPvarGetLbOriginal(var);
          ub = SCIPvarGetUbOriginal(var);
          if( SCIPsetIsFeasLT(scip->set, solval, lb) || SCIPsetIsFeasGT(scip->set, solval, ub) )
