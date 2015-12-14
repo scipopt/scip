@@ -52,6 +52,12 @@ SCIP_RETCODE SCIPdebugSolDataCreate(
    SCIP_DEBUGSOLDATA**   debugsoldata        /**< pointer to debug solution data */
    );
 
+/** resets the data structure after restart */
+extern
+SCIP_RETCODE SCIPdebugReset(
+   SCIP_SET*             set
+   );
+
 /** frees debugging data */
 extern
 SCIP_RETCODE SCIPdebugFreeDebugData(
