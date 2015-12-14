@@ -85,8 +85,8 @@
 /* constraint handler properties */
 #define CONSHDLR_NAME          "SOS1"
 #define CONSHDLR_DESC          "SOS1 constraint handler"
-#define CONSHDLR_SEPAPRIORITY       100 /**< priority of the constraint handler for separation */
-#define CONSHDLR_ENFOPRIORITY       100 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_SEPAPRIORITY   -900000 /**< priority of the constraint handler for separation */
+#define CONSHDLR_ENFOPRIORITY   -900000 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY      -10 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_SEPAFREQ            10 /**< frequency for separating cuts; zero means to separate only in the root node */
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
@@ -2730,8 +2730,9 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             trafolinvars[1] = var;
             trafolinvals[0] = 1.0;
             trafolinvals[1] = 1.0;
-            trafolhs = -negcons;
-            traforhs = -negcons;
+            trafolhs = negcons;
+            traforhs = negcons;
+            ntrafolinvars = 2;
          }
          else
             continue;
