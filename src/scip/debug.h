@@ -240,6 +240,7 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 #else
 
 #define SCIPdebugSolDataCreate(debugsoldata) SCIP_OKAY
+#define SCIPdebugReset(set) SCIP_OKAY
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
 #define SCIPdebugCheckConss(scip,conss,nconss) SCIP_OKAY
 #define SCIPdebugCheckRow(set,row) SCIP_OKAY
