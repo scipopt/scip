@@ -2066,7 +2066,7 @@ SCIP_RETCODE checkCurvature(
          SCIP_CALL( SCIPexprtreeCheckCurvature(consdata->exprtrees[i], INTERVALINFTY, varbounds, &consdata->curvatures[i], NULL) );
          consdata->curvatures[i] = SCIPexprcurvMultiply(consdata->nonlincoefs[i], consdata->curvatures[i]);
 
-         if( consdata->curvatures[i] == SCIP_EXPRCURV_UNKNOWN && SCIPconshdlrGetData(SCIPconsGetHdlr(cons))->isreformulated )
+         if( consdata->curvatures[i] == SCIP_EXPRCURV_UNKNOWN && SCIPconshdlrGetData(SCIPconsGetHdlr(cons))->isreformulated && SCIPexprGetOperator(SCIPexprtreeGetRoot(consdata->exprtrees[i])) != SCIP_EXPR_USER )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "indefinite expression tree in constraint <%s>\n", SCIPconsGetName(cons));
             SCIPdebug( SCIP_CALL( SCIPexprtreePrintWithNames(consdata->exprtrees[i], SCIPgetMessagehdlr(scip), NULL) ) );
@@ -3044,6 +3044,7 @@ SCIP_RETCODE reformulate(
             SCIP_INTERVAL childbounds;
             SCIP_EXPRCURV childcurv;
             SCIP_Bool modified;
+            int c;
 
             monomials  = SCIPexprgraphGetNodePolynomialMonomials(node);
             nmonomials = SCIPexprgraphGetNodePolynomialNMonomials(node);
@@ -3261,6 +3262,26 @@ SCIP_RETCODE reformulate(
                expcurvpos = TRUE; /* whether exp_j * f_j''(x) >= 0 for all factors (assuming f_j >= 0) */
                expcurvneg = TRUE; /* whether exp_j * f_j''(x) <= 0 for all factors (assuming f_j >= 0) */
 
+               /* ensure that none of the children have unknown curvature */
+               for( c = 0; c < SCIPexprgraphGetNodeNChildren(node); ++c )
+               {
+                  childcurv = SCIPexprgraphGetNodeCurvature(children[c]);  /*lint !e613*/
+                  if( childcurv == SCIP_EXPRCURV_UNKNOWN )
+                  {
+                     SCIPdebugMessage("reform child %d with unknown curvature into var\n", c);
+                     SCIP_CALL( reformNode2Var(scip, exprgraph, children[c], conss, nconss, naddcons, FALSE) );  /*lint !e613*/
+                     modified = TRUE;
+                  }
+               }
+               if( modified )
+               {
+                  /* refresh curvature information in node, since we changed children */
+                  SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(node, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
+                  assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(node)));
+
+                  modified = FALSE;
+               }
+
                for( f = 0; f < nfactors; ++f )
                {
                   childcurv = SCIPexprgraphGetNodeCurvature(children[childidxs[f]]);  /*lint !e613*/
@@ -3353,7 +3374,8 @@ SCIP_RETCODE reformulate(
                      }
                   }
                }
-            }
+	    }
+
 
             if( modified )
             {
