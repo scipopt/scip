@@ -41,6 +41,7 @@ fixed bugs:
 - fixed bug in dive.c avoiding a check of constraints in the presence of indicator constraints
 - fixed bug in conflict.c with wrong reset of bounds used
 - fixed bug in heur_simplerounding in connection with relaxators
+- fixed wrong objective sense when copying the original problem
 
 SCIP version 3.2.0
 ==================

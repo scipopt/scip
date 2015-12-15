@@ -1736,6 +1736,9 @@ SCIP_RETCODE SCIPcopyOrigProb(
 
    SCIP_CALL( copyProb(sourcescip, targetscip, varmap, consmap, TRUE, TRUE, name) );
 
+   /* set the correct objective sense; necessary if we maximize in the original problem */
+   SCIP_CALL( SCIPsetObjsense(targetscip, SCIPgetObjsense(sourcescip)) );
+
    return SCIP_OKAY;
 }
 
