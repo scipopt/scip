@@ -111,16 +111,16 @@ LPIINSTMSG	+=	" -> \"libmosek.*\" is the path to the Mosek library, e.g., \"<Mos
 LPIINSTMSG	+=	" -> \"libiomp5.*\" is the path to the libiomp5, e.g., \"<Mosek-path>/lib/libiomp5.a\""
 endif
 
-LPSOPTIONS	+=	spx
-ifeq ($(LPS),spx)
+LPSOPTIONS	+=	spx1
+ifeq ($(LPS),spx1)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc
 ifeq ($(SPX_LEGACY),true)
 CFLAGS		+= -DSOPLEX_LEGACY
 CXXFLAGS		+= -DSOPLEX_LEGACY
 endif
-LPILIBOBJ	=	lpi/lpi_spx.o scip/bitencode.o blockmemshell/memory.o scip/message.o
-LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
+LPILIBOBJ	=	lpi/lpi_spx1.o scip/bitencode.o blockmemshell/memory.o scip/message.o
+LPILIBSRC	=	$(SRCDIR)/lpi/lpi_spx1.cpp $(SRCDIR)/scip/bitencode.c $(SRCDIR)/blockmemshell/memory.c $(SRCDIR)/scip/message.c
 SOFTLINKS	+=	$(LIBDIR)/spxinc
 SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(STATICLIBEXT)
 SOFTLINKS	+=	$(LIBDIR)/libsoplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT).$(SHAREDLIBEXT)
@@ -136,7 +136,7 @@ LPIINSTMSG	+=	" -> \"libcplex.*\" is the path to the CPLEX library, e.g., \"<CPL
 endif
 endif
 
-LPSOPTIONS	+=	spx2
+LPSOPTIONS	+=	spx ( = spx2)
 ifeq ($(LPS),spx2)
 LINKER		=	CPP
 FLAGS		+=	-I$(LIBDIR)/spxinc
@@ -1227,8 +1227,8 @@ ifeq ($(GMP),true)
 		@echo "build failed with GMP=true: if GMP is not available, try building with GMP=false (note that this will deactivate Zimpl support)"
 endif
 ifeq ($(GMP),false)
-ifeq ($(LPS),spx)
-		@echo "build failed with GMP=false and LPS=spx: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
+ifeq ($(LPS),spx1)
+		@echo "build failed with GMP=false and LPS=spx1: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"
 endif
 ifeq ($(LPS),spx2)
 		@echo "build failed with GMP=false and LPS=spx2: use GMP=true or make sure that SoPlex is also built without GMP support (make GMP=false)"

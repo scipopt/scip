@@ -11,7 +11,7 @@ parameters:
 - new parameter sepaperspective to turn on separation of perspective cuts for indicator contraints
 - new parameter sepapersplocal to decide whether local cuts can be used for perspective cuts for indicator contraints
 - new parameter branching/relpscost/usesmallweightsitlim to use smaller weights for pseudo cost updates when LP iteration limit was hit
-
+- spx2 is the new default LP solver interface
 
 performance improvements:
 
