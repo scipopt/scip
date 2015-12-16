@@ -2774,8 +2774,41 @@ SCIP_RETCODE reformulate(
          case SCIP_EXPR_MUL:
          case SCIP_EXPR_QUADRATIC:
          {
-            /* ensure all children are linear, so next simplifier run makes sure all children will be variables */
+            SCIP_EXPRGRAPHNODE* child;
+            SCIP_Bool needupdate;
+            int c;
+
+            /* ensure all children are linear, so next simplifier run makes sure all children will be variables (by distributing the product)
+             * however, that will not work for user-expressions, so we should also ensure that they are none (@todo as they are linear, they could actually be replaced by a regular linear expression)
+             */
+            SCIPdebugMessage("ensure children are linear\n");
             SCIP_CALL( reformEnsureChildrenMinCurvature(scip, exprgraph, node, SCIP_EXPRCURV_LINEAR, conss, nconss, naddcons) );
+
+            needupdate = FALSE;  /* whether we need to update curvature of node */
+            for( c = 0; c < SCIPexprgraphGetNodeNChildren(node); ++c )
+            {
+               child = SCIPexprgraphGetNodeChildren(node)[c];
+               assert(child != NULL);
+
+               if( SCIPexprgraphGetNodeCurvature(child) != SCIP_EXPRCURV_LINEAR || SCIPexprgraphGetNodeOperator(child) == SCIP_EXPR_USER )
+               {
+                  SCIPdebugMessage("add auxiliary variable for child %p(%d,%d) with curvature %s operator %s\n",
+                     (void*)child, SCIPexprgraphGetNodeDepth(child), SCIPexprgraphGetNodePosition(child), SCIPexprcurvGetName(SCIPexprgraphGetNodeCurvature(child)), SCIPexpropGetName(SCIPexprgraphGetNodeOperator(child)) );
+
+                  SCIP_CALL( reformNode2Var(scip, exprgraph, child, conss, nconss, naddcons, FALSE) );
+                  needupdate = TRUE;
+
+                  /* c'th child of node should now be a variable */
+                  assert(SCIPexprgraphGetNodeChildren(node)[c] != child);
+                  assert(SCIPexprgraphGetNodeOperator(SCIPexprgraphGetNodeChildren(node)[c]) == SCIP_EXPR_VARIDX);
+               }
+            }
+            if( needupdate )
+            {
+               SCIP_CALL( SCIPexprgraphUpdateNodeBoundsCurvature(node, INTERVALINFTY, BOUNDTIGHTENING_MINSTRENGTH, TRUE) );
+               assert(!SCIPintervalIsEmpty(INTERVALINFTY, SCIPexprgraphGetNodeBounds(node)));
+            }
+
             if( SCIPexprgraphGetNodeCurvature(node) != SCIP_EXPRCURV_UNKNOWN )
             {
                /* if curvature is now known then we are done */
@@ -2783,7 +2816,7 @@ SCIP_RETCODE reformulate(
                break;
             }
 
-            /* if we have nonlinear parents or a sibling, then add add auxiliary variable for this node, so an upgrade to cons_quadratic should take place
+            /* if we have nonlinear parents or a sibling, then add auxiliary variable for this node, so an upgrade to cons_quadratic should take place
              * we assume that siblings are non-linear and non-quadratic, which should be the case if simplifier was run, and also if this node was created during reformulating a polynomial
              * @todo we could also add auxvars for the sibling nodes, e.g., if there is only one
              * @todo if sibling nodes are quadratic (or even linear) due to reformulation, then we do not need to reform here... (-> nvs16)
