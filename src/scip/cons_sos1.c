@@ -2865,8 +2865,8 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
       /* for every variable in transformed constraint: try lower bound tightening */
       for (v = 0; v < ntrafolinvars + nsos1linvars; ++v)
       {
-         SCIP_Real newboundnonzero; /* new bound of a_v*x_v if we assume that x_v != 0 */
-         SCIP_Real newboundnores;   /* new bound of a_v*x_v if we assume that x_v = 0 is possible */
+         SCIP_Real newboundnonzero; /* new bound of a_v * x_v if we assume that x_v != 0 */
+         SCIP_Real newboundnores;   /* new bound of a_v * x_v if we assume that x_v = 0 is possible */
          SCIP_Real newbound;        /* resulting new bound of x_v */
          SCIP_VAR* var;
          SCIP_Real trafoubv;
@@ -2920,7 +2920,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             indcliq = cliquecovers[i][0];
             assert( 0 <= indcliq && indcliq < ntrafolinvars );
 
-            /* determine maximum without index v (note that trafoub is sorted non-increasingly) */
+            /* determine maximum without index v (note that the array 'cliquecovers' is sorted by the values of trafoub in non-increasing order) */
             if ( v != indcliq )
             {
                if ( SCIPisInfinity(scip, trafoubs[indcliq]) )
@@ -2937,6 +2937,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
                   newboundnores -= trafoubs[cliquecovers[i][1]];/*lint --e{679}*/
             }
 
+            /* determine maximum without index v and if x_v is nonzero (note that the array 'cliquecovers' is sorted by the values of trafoub in non-increasing order) */
             for (j = 0; j < cliquecoversizes[i]; ++j)
             {
                indcliq = cliquecovers[i][j];
@@ -2954,7 +2955,8 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
                         ++ninftynonzero;
                      else
                         newboundnonzero -= trafoubs[indcliq];
-                     break;
+                     break; /* break since we are only interested in the maximum upper bound among the variables in the clique cover;
+                             * the variables in the clique cover form an SOS1 constraint, thus only one of them can be nonzero */
                   }
                }
             }
@@ -3113,7 +3115,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
             indcliq = cliquecovers[i][0];
             assert( 0 <= indcliq && indcliq < ntrafolinvars );
 
-            /* determine maximum without index v (note that trafolbs is sorted non-increasingly) */
+            /* determine minimum without index v (note that the array 'cliquecovers' is sorted by the values of trafolb in increasing order) */
             if ( v != indcliq )
             {
                /* if bound would be infinity */
@@ -3131,7 +3133,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
                   newboundnores -= trafolbs[cliquecovers[i][1]]; /*lint --e{679}*/
             }
 
-            /* determine maximum without index v and if x_v is nonzero (note that trafolbs is sorted non-increasingly) */
+            /* determine minimum without index v and if x_v is nonzero (note that the array 'cliquecovers' is sorted by the values of trafolb in increasing order) */
             for (j = 0; j < cliquecoversizes[i]; ++j)
             {
                indcliq = cliquecovers[i][j];
@@ -3150,7 +3152,8 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
                         ++ninftynonzero;
                      else
                         newboundnonzero -= trafolbs[indcliq];
-                     break;
+                     break; /* break since we are only interested in the minimum lower bound among the variables in the clique cover;
+                             * the variables in the clique cover form an SOS1 constraint, thus only one of them can be nonzero */
                   }
                }
             }
@@ -3158,7 +3161,7 @@ SCIP_RETCODE tightenVarsBoundsSOS1(
          assert( ninftynonzero == 0 || inftynores );
 
 
-         /* if computed upper bound is not infinity and variable is contained in linear constraint */
+         /* if computed bound is not infinity and variable is contained in linear constraint */
          if ( ninftynonzero == 0 && v < ntrafolinvars )
          {
             linval = trafolinvals[v];
