@@ -220,7 +220,7 @@ struct SCIP_ConshdlrData
    SCIP_HASHMAP*         varhash;            /**< hash map from variable to node in the conflict graph */
    int                   nsos1vars;          /**< number of problem variables that are part of the SOS1 conflict graph */
    /* adjacency matrix */
-   int                   maxsosadjacency;    /**< do not create an adjacency matrix in if number of SOS1 variables is larger than predefined
+   int                   maxsosadjacency;    /**< do not create an adjacency matrix if number of SOS1 variables is larger than predefined
                                               *   value (-1: no limit) */
    /* implication graph */
    SCIP_DIGRAPH*         implgraph;          /**< implication graph (@p j is successor of @p i if and only if \f$ x_i\not = 0 \Rightarrow x_j\not = 0\f$) */
@@ -7402,6 +7402,242 @@ SCIP_RETCODE maxWeightIndSetHeuristic(
 }
 
 
+/** based on solution values of the variables, fixes variables of the conflict graph to zero to turn all SOS1 constraints feasible
+ *
+ *  if the SOS1 constraints do not overlap, the method makeSOS1constraintsFeasible() may be faster
+ */
+static
+SCIP_RETCODE makeSOS1conflictgraphFeasible(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Bool*            changed,            /**< pointer to store whether the solution has been changed */
+   SCIP_Bool*            allroundable        /**< pointer to store whether all variables are roundable */
+   )
+{
+   SCIP_DIGRAPH* conflictgraph;  /* conflict graph for SOS1 constraints */
+   SCIP_Bool* indicatorzero;     /* indicates which solution values are zero */
+   SCIP_Bool* indset;            /* indicator vector of feasible solution; i.e., an independent set */
+   int nsos1vars;
+   int j;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( sol != NULL );
+   assert( changed != NULL );
+
+   *allroundable = TRUE;
+   *changed = FALSE;
+
+   /* get number of SOS1 variables */
+   nsos1vars = SCIPgetNSOS1Vars(conshdlr);
+   assert( nsos1vars >= 0 );
+
+   /* get conflict graph */
+   conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
+   assert( conflictgraph != NULL );
+
+   /* allocate buffer arrays */
+   SCIP_CALL( SCIPallocBufferArray(scip, &indset, nsos1vars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &indicatorzero, nsos1vars) );
+
+   /* determine if variables with nonzero solution value are roundable */
+   for (j = 0; j < nsos1vars && *allroundable; ++j)
+   {
+      SCIP_VAR* var;
+
+      var = SCIPnodeGetVarSOS1(conflictgraph, j);
+      indset[j] = 0;
+
+      if ( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, var)) || ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) && SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) ) )
+         indicatorzero[j] = TRUE;
+      else
+      {
+         indicatorzero[j] = FALSE;
+
+         if ( ! SCIPvarMayRoundDown(var) && ! SCIPvarMayRoundUp(var) )
+            *allroundable = FALSE;
+      }
+   }
+
+   /* return if at least one SOS1 variable is not roundable */
+   if ( ! (*allroundable) )
+   {
+      SCIPfreeBufferArray(scip, &indicatorzero);
+      SCIPfreeBufferArray(scip, &indset);
+      return SCIP_OKAY;
+   }
+
+   /* call greedy algorithm for the maximum weighted independent set problem */
+   SCIP_CALL( maxWeightIndSetHeuristic(scip, sol, conshdlr, conflictgraph, nsos1vars, indicatorzero, indset) );
+
+   /* make solution feasible */
+   for (j = 0; j < nsos1vars; ++j)
+   {
+      if ( indset[j] == 0 )
+      {
+         SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, j), 0.0) );
+         *changed = TRUE;
+      }
+   }
+
+   /* free buffer arrays */
+   SCIPfreeBufferArray(scip, &indicatorzero);
+   SCIPfreeBufferArray(scip, &indset);
+
+#ifdef SCIP_NDEBUG
+   {
+      SCIP_CONSDATA* consdata;
+      SCIP_CONS** conss;
+      int nconss;
+      int c;
+
+      conss = SCIPconshdlrGetConss(conshdlr);
+      nconss = SCIPconshdlrGetNConss(conshdlr);
+      for (c = 0; c < nconss; ++c)
+      {
+         int cnt = 0;
+         consdata = SCIPconsGetData(conss[c]);
+         assert( consdata != NULL );
+
+         for (j = 0; j < consdata->nvars; ++j)
+         {
+            if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vars[j])) )
+            {
+               ++cnt;
+            }
+         }
+         assert( cnt < 2 );
+      }
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
+
+/** based on solution values of the variables, fixes variables of the SOS1 constraints to zero to turn these constraints feasible
+ *
+ *  if the SOS1 constraints overlap, the method makeSOS1constraintsFeasible() may result in better primal solutions
+ */
+static
+SCIP_RETCODE makeSOS1constraintsFeasible(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Bool*            changed,            /**< pointer to store whether the solution has been changed */
+   SCIP_Bool*            allroundable        /**< pointer to store whether all variables are roundable */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_CONS** conss;
+   int nconss;
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( sol != NULL );
+   assert( changed != NULL );
+
+   *allroundable = TRUE;
+   *changed = FALSE;
+
+   /* get SOS1 constraints and number of SOS1 constraints */
+   conss = SCIPconshdlrGetConss(conshdlr);
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+   assert( nconss > 0 );
+
+   /* loop through all SOS1 constraints */
+   for (c = 0; c < nconss && *allroundable; ++c)
+   {
+      SCIP_CONS* cons;
+      SCIP_VAR** vars;
+      SCIP_Real maxval = 0.0;
+      int pos = -1;
+      int nvars;
+      int j;
+
+      cons = conss[c];
+      assert( cons != NULL );
+      consdata = SCIPconsGetData(cons);
+      assert( consdata != NULL );
+
+      nvars = consdata->nvars;
+      vars = consdata->vars;
+
+      /* search for maximum solution value */
+      for (j = 0; j < nvars; ++j)
+      {
+         SCIP_VAR* var;
+
+         var = vars[j];
+
+         if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, var)) )
+         {
+            /* it is possible that the bounds were proagated to zero although the current solution value is nonzero
+             * in this case fix the solution value to zero */
+            if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) && SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
+            {
+               SCIP_CALL( SCIPsetSolVal(scip, sol, var, 0.0) );
+               *changed = TRUE;
+            }
+            else
+            {
+               if ( ! SCIPvarMayRoundDown(var) && ! SCIPvarMayRoundUp(var) )
+               {
+                  *allroundable = FALSE;
+                  break;
+               }
+
+               if ( SCIPisFeasGT(scip, REALABS(SCIPgetSolVal(scip, sol, var)), REALABS(maxval)) )
+               {
+                  maxval = SCIPgetSolVal(scip, sol, var);
+                  pos = j;
+               }
+
+               /* fix variable to zero; the solution value of the variable with maximum solution value
+                * will be restored in a later step */
+               SCIP_CALL( SCIPsetSolVal(scip, sol, var, 0.0) );
+               *changed = TRUE;
+            }
+         }
+      }
+
+      if ( ! (*allroundable) )
+         break;
+      else if ( pos >= 0 ) /* restore solution of variable with maximum solution value */
+      {
+         SCIP_CALL( SCIPsetSolVal(scip, sol, vars[pos], maxval) );
+      }
+   }
+
+#ifdef SCIP_NDEBUG
+   if ( *allroundable )
+   {
+      for (c = 0; c < nconss; ++c)
+      {
+         int cnt = 0;
+         int j;
+
+         consdata = SCIPconsGetData(conss[c]);
+         assert( consdata != NULL );
+
+         for (j = 0; j < consdata->nvars; ++j)
+         {
+            if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vars[j])) )
+            {
+               ++cnt;
+            }
+         }
+         assert( cnt < 2 );
+      }
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
+
 /* --------------------initialization/deinitialization ------------------------*/
 
 /** check whether \f$x_1\f$ is a bound variable of \f$x_0\f$; i.e., \f$x_0 \leq c\cdot x_1\f$ or \f$x_0 \geq d\cdot x_1\f$
@@ -8135,8 +8371,7 @@ SCIP_DECL_CONSINITSOL(consInitsolSOS1)
        /* add data to conflict graph nodes */
        SCIP_CALL( computeNodeDataSOS1(scip, conshdlrdata, conshdlrdata->nsos1vars) );
 
-       if ( ( conshdlrdata->branchingrule != 's' || ! conshdlrdata->boundcutsfromsos1 )
-          && ( conshdlrdata->autosos1branch || conshdlrdata->autocutsfromsos1 )
+       if ( ( conshdlrdata->autosos1branch || conshdlrdata->autocutsfromsos1 )
           && ( ! conshdlrdata->switchsos1branch || ! conshdlrdata->switchcutsfromsos1 )
           )
        {
@@ -10069,104 +10304,48 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
                                               *   solution was good enough */
    )
 {
-   SCIP_DIGRAPH* conflictgraph;  /* conflict graph for SOS1 constraints */
-   SCIP_Bool* indicatorzero;     /* indicates which solution values are zero */
-   SCIP_Bool* indset;            /* indicator vector of feasible solution; i.e., an independent set */
-   SCIP_Bool allroundable;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_Real roundobjval;
-   int nsos1vars;
-   int j;
+   SCIP_Bool allroundable;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( sol != NULL );
    assert( changed != NULL );
+   assert( success != NULL );
+
+   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("Not an SOS1 constraint handler.\n");
+      SCIPABORT();
+      return -1;  /*lint !e527*/
+   }
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
 
    *changed = FALSE;
    *success = FALSE;
+   allroundable = FALSE;
 
-   /* get number of SOS1 variables */
-   nsos1vars = SCIPgetNSOS1Vars(conshdlr);
-   if ( nsos1vars < 1 )
+   /* check number of SOS1 constraints */
+   if ( SCIPconshdlrGetNConss(conshdlr) < 1 )
    {
       *success = TRUE;
       return SCIP_OKAY;
    }
 
-   /* get conflict graph */
-   conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
-   assert( conflictgraph != NULL );
-
-   /* determine if variables with nonzero solution value are roundable */
-   allroundable = TRUE;
-   for (j = 0; j < nsos1vars && allroundable; ++j)
+   /* if the SOS1 constraints do not overlap, we apply a faster method that does not make use of the conflict graph */
+   if ( conshdlrdata->switchsos1branch )
    {
-      SCIP_VAR* var;
-
-      var = SCIPnodeGetVarSOS1(conflictgraph, j);
-
-      if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, var)) )
-      {
-         assert( ! SCIPvarMayRoundUp(var) || ! SCIPisFeasPositive(scip, SCIPgetSolVal(scip, sol, var)) );
-         assert( ! SCIPvarMayRoundDown(var) || ! SCIPisFeasNegative(scip, SCIPgetSolVal(scip, sol, var)) );
-
-         if ( ! SCIPvarMayRoundDown(var) && ! SCIPvarMayRoundUp(var) )
-            allroundable = FALSE;
-      }
+      SCIP_CALL( makeSOS1constraintsFeasible(scip, conshdlr, sol, changed, &allroundable) );
    }
+   else
+   {
+      SCIP_CALL( makeSOS1conflictgraphFeasible(scip, conshdlr, sol, changed, &allroundable) );
+   }
+
    if ( ! allroundable )
       return SCIP_OKAY;
-
-   /* allocate buffer arrays */
-   SCIP_CALL( SCIPallocBufferArray(scip, &indset, nsos1vars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &indicatorzero, nsos1vars) );
-
-   /* get array that indicates which solution values are zero */
-   for (j = 0; j < nsos1vars; ++j)
-   {
-      indset[j] = 0;
-      if ( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, j))) )
-         indicatorzero[j] = TRUE;
-      else
-         indicatorzero[j] = FALSE;
-   }
-
-   /* call greedy algorithm for the maximum weighted independent set problem */
-   SCIP_CALL( maxWeightIndSetHeuristic(scip, sol, conshdlr, conflictgraph, nsos1vars, indicatorzero, indset) );
-
-   /* make solution feasible */
-   for (j = 0; j < nsos1vars; ++j)
-   {
-      if ( indset[j] == 0 )
-      {
-         SCIP_CALL( SCIPsetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, j), 0.0) );
-         *changed = TRUE;
-      }
-   }
-
-#ifdef SCIP_NDEBUG
-   for (j = 0; j < nsos1vars; ++j)
-   {
-      SCIP_Real solval;
-      int* succ;
-      int nsucc;
-
-      solval = SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, j));
-
-      if ( ! SCIPisFeasZero(scip, solval) )
-      {
-         int s;
-         nsucc = SCIPdigraphGetNSuccessors(conflictgraph, j);
-         succ = SCIPdigraphGetSuccessors(conflictgraph, j);
-
-         for (s = 0; s < nsucc; ++s)
-         {
-            solval = SCIPgetSolVal(scip, sol, SCIPnodeGetVarSOS1(conflictgraph, succ[s]));
-            assert( ! SCIPisFeasZero(scip, solval) );
-         }
-      }
-   }
-#endif
 
    /* check whether objective value of rounded solution is good enough */
    roundobjval = SCIPgetSolOrigObj(scip, sol);
@@ -10175,10 +10354,6 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
 
    if ( SCIPisLT(scip, roundobjval, SCIPgetUpperbound(scip) ) )
       *success = TRUE;
-
-   /* free buffer arrays */
-   SCIPfreeBufferArray(scip, &indicatorzero);
-   SCIPfreeBufferArray(scip, &indset);
 
    return SCIP_OKAY;
 }
