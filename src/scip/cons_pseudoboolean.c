@@ -3508,9 +3508,21 @@ SCIP_RETCODE checkOrigPbCons(
 
       if( !SCIPhashmapExists(conshdlrdata->hashmap, (void*)(hashmapvar)) )
       {
+         SCIP_Real solval;
+
          assert(!SCIPhashmapExists(conshdlrdata->hashmap, (void*)(vars[v])));
 
-         activity += coefs[v] * SCIPgetSolVal(scip, sol, vars[v]);
+         solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+         /* we cannot check constraints that contain variables with unknown solution values in partial solutions */
+         if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
+         {
+            *violated = FALSE;
+            activity = SCIP_UNKNOWN;
+            goto TERMINATE;
+         }
+
+         activity += coefs[v] * solval;
 
          linvars[nlinvars] = vars[v];
          lincoefs[nlinvars] = coefs[v];
@@ -3555,7 +3567,7 @@ SCIP_RETCODE checkOrigPbCons(
        */
       if( andcons == NULL )
       {
-	 andcons = consdata->consanddatas[c]->cons;
+         andcons = consdata->consanddatas[c]->cons;
       }
       assert(andcons != NULL);
 
@@ -3572,7 +3584,19 @@ SCIP_RETCODE checkOrigPbCons(
       /* check if the and-constraint is violated */
       for( v = nandvars - 1; v >= 0; --v )
       {
-         andvalue *= SCIPgetSolVal(scip, sol, andvars[v]);
+         SCIP_Real solval;
+
+         solval = SCIPgetSolVal(scip, sol, andvars[v]);
+
+         /* we cannot check constraints that contain variables with unknown solution values in partial solutions */
+         if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
+         {
+            *violated = FALSE;
+            activity = SCIP_UNKNOWN;
+            goto TERMINATE;
+         }
+
+         andvalue *= solval;
          if( SCIPisFeasZero(scip, andvalue) )
             break;
       }
@@ -3609,6 +3633,7 @@ SCIP_RETCODE checkOrigPbCons(
       *violated = TRUE;
    }
 
+  TERMINATE:
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &andcoefs);
    SCIPfreeBufferArray(scip, &andress);
@@ -3665,11 +3690,29 @@ SCIP_RETCODE checkAndConss(
       res = SCIPgetResultantAnd(scip, andcons);
       assert(nvars == 0 || (vars != NULL && res != NULL));
 
+      /* we cannot check constraints that contain variables with unknown solution values in partial solutions */
+      if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && SCIPgetSolVal(scip, sol, res) == SCIP_UNKNOWN )
+      {
+         *violated = FALSE;
+         return SCIP_OKAY;
+      }
+
       andvalue = 1;
       /* check if the and-constraint is violated */
       for( v = nvars - 1; v >= 0; --v )
       {
-         andvalue *= SCIPgetSolVal(scip, sol, vars[v]);
+         SCIP_Real solval;
+
+         solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+         /* we cannot check constraints that contain variables with unknown solution values in partial solutions */
+         if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
+         {
+            *violated = FALSE;
+            return SCIP_OKAY;
+         }
+
+         andvalue *= solval;
          if( SCIPisFeasZero(scip, andvalue) )
             break;
       }
@@ -8015,8 +8058,14 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
 
             if( consdata->issoftcons )
             {
+               SCIP_Real solval;
+
                assert(consdata->indvar != NULL);
-               if( SCIPisEQ(scip, SCIPgetSolVal(scip, sol, consdata->indvar), 1.0) )
+
+               solval = SCIPgetSolVal(scip, sol, consdata->indvar);
+
+               /* we cannot check constraints that contain variables with unknown solution values in partial solutions */
+               if( (sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN) || SCIPisEQ(scip, solval, 1.0) )
                   continue;
             }
 

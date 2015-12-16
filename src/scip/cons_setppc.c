@@ -2242,6 +2242,7 @@ SCIP_Bool checkCons(
    SCIP_Real solval;
    SCIP_Real sum;
    SCIP_Real sumbound;
+   SCIP_Bool hashunknownvar;
    int nvars;
    int v;
 
@@ -2250,15 +2251,26 @@ SCIP_Bool checkCons(
    nvars = consdata->nvars;
    sum = 0.0;
    sumbound = ((SCIP_SETPPCTYPE)consdata->setppctype == SCIP_SETPPCTYPE_COVERING ? 1.0 : 1.0 + 2*SCIPfeastol(scip));
+   hashunknownvar = FALSE;
    for( v = 0; v < nvars && sum < sumbound; ++v )  /* if sum >= sumbound, the feasibility is clearly decided */
    {
       assert(SCIPvarIsBinary(vars[v]));
 
       solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+      if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
+      {
+         hashunknownvar = TRUE;
+         break;
+      }
+
       assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
 
       sum += solval;
    }
+
+   if( hashunknownvar )
+      return TRUE;
 
    switch( consdata->setppctype )
    {

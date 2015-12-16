@@ -1216,6 +1216,13 @@ SCIP_RETCODE checkCons(
    for( v = 0; v < nvars; ++v )
    {
       solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+      if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
+      {
+         *violated = FALSE;
+         break;
+      }
+
       if( (boundtypes[v] == SCIP_BOUNDTYPE_LOWER && isFeasGE(scip, vars[v], solval, bounds[v]))
          || (boundtypes[v] == SCIP_BOUNDTYPE_UPPER && isFeasLE(scip, vars[v], solval, bounds[v])) )
       {

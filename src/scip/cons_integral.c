@@ -125,6 +125,11 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
       for( v = 0; v < ninteger; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+         /* cannot check varibales with unknown solution value in a partial solution */
+         if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
+            continue;
+
          if( !SCIPisFeasIntegral(scip, solval) )
          {
             *result = SCIP_INFEASIBLE;
@@ -144,6 +149,11 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
       for( v = 0; v < ninteger; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+         /* cannot check varibales with unknown solution value in a partial solution */
+         if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
+            continue;
+
          assert(SCIPisFeasIntegral(scip, solval));
       }
    }
@@ -153,6 +163,11 @@ SCIP_DECL_CONSCHECK(consCheckIntegral)
    for( v = ninteger; v < nallinteger; ++v )
    {
       solval = SCIPgetSolVal(scip, sol, vars[v]);
+
+      /* cannot check varibales with unknown solution value in a partial solution */
+      if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
+         continue;
+
       if( !SCIPisFeasIntegral(scip, solval) )
       {
          *result = SCIP_INFEASIBLE;

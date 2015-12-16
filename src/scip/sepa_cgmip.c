@@ -523,6 +523,7 @@ SCIP_DECL_CONSCHECK(consCheckViolatedCuts)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( sol != NULL );
+   assert( SCIPsolGetOrigin(sol) != SCIP_SOLORIGIN_PARTIAL );
    assert( result != NULL );
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);

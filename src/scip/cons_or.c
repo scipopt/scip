@@ -1566,6 +1566,12 @@ SCIP_DECL_CONSCHECK(consCheckOr)
    SCIP_Bool violated;
    int i;
 
+   *result = SCIP_FEASIBLE;
+
+   /* we cannot check constraints that contain variables with unknown solution values in partial solutions */
+   if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL )
+      return SCIP_OKAY;
+
    /* method is called only for integral solutions, because the enforcing priority is negative */
    for( i = 0; i < nconss; i++ )
    {
@@ -1575,8 +1581,7 @@ SCIP_DECL_CONSCHECK(consCheckOr)
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
       }
-   } 
-   *result = SCIP_FEASIBLE;
+   }
 
    return SCIP_OKAY;
 }

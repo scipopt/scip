@@ -849,6 +849,7 @@ SCIP_RETCODE checkCons(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Bool hasunknownval;
 
    assert(violated != NULL);
 
@@ -859,6 +860,7 @@ SCIP_RETCODE checkCons(
       SCIPconsGetName(cons), (void*)sol, checklprows);
 
    *violated = FALSE;
+   hasunknownval = FALSE;
 
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {
@@ -885,8 +887,18 @@ SCIP_RETCODE checkCons(
          /* sum over all weight times the corresponding solution value */
          for( v = consdata->nvars - 1; v >= 0; --v )
          {
+            SCIP_Real solval;
+
             assert(SCIPvarIsBinary(consdata->vars[v]));
-            sum += consdata->weights[v] * SCIPgetSolVal(scip, sol, consdata->vars[v]);
+
+            solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
+            if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
+            {
+               hasunknownval = TRUE;
+               break;
+            }
+
+            sum += consdata->weights[v] * solval;
          }
       }
       else
@@ -896,12 +908,24 @@ SCIP_RETCODE checkCons(
          /* sum over all weight for which the variable has a solution value of 1 in feastol */
          for( v = consdata->nvars - 1; v >= 0; --v )
          {
+            SCIP_Real solval;
+
             assert(SCIPvarIsBinary(consdata->vars[v]));
 
-            if( SCIPgetSolVal(scip, sol, consdata->vars[v]) > 0.5 )
+            solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
+            if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
+            {
+               hasunknownval = TRUE;
+               break;
+            }
+
+            if( solval > 0.5 )
                integralsum += consdata->weights[v];
          }
       }
+
+      if( sol != NULL && ((!ishuge && hasunknownval) || (ishuge && hasunknownval)) )
+         return SCIP_OKAY;
 
       if( (!ishuge && integralsum > consdata->capacity) || (ishuge && SCIPisFeasGT(scip, sum, (SCIP_Real)consdata->capacity)) )
       {

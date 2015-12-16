@@ -2272,12 +2272,22 @@ SCIP_RETCODE checkCumulativeCondition(
    /* assign variables, start and endpoints to arrays */
    for ( j = 0; j < nvars; ++j )
    {
+      SCIP_Real val;
       int solvalue;
 
-      /* the constraint of the cumulative constraint handler should be called after the integrality check */
-      assert(SCIPisFeasIntegral(scip, SCIPgetSolVal(scip, sol, vars[j])));
+      val = SCIPgetSolVal(scip, sol, vars[j]);
 
-      solvalue = SCIPconvertRealToInt(scip, SCIPgetSolVal(scip, sol, vars[j]));
+      /* cannot check constraint that contain variables with unknown solution value in a partial solution */
+      if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && val == SCIP_UNKNOWN )
+      {
+         *violated = FALSE;
+         goto TERMINATE;
+      }
+
+      /* the constraint of the cumulative constraint handler should be called after the integrality check */
+      assert(SCIPisFeasIntegral(scip, val));
+
+      solvalue = SCIPconvertRealToInt(scip, val);
 
       /* we need to ensure that we check at least one time point during the effective horizon; therefore we project all
        * jobs which start before hmin to hmin
@@ -2355,6 +2365,7 @@ SCIP_RETCODE checkCumulativeCondition(
       }
    } /*lint --e{850}*/
 
+  TERMINATE:
    /* free all buffer arrays */
    SCIPfreeBufferArray(scip, &endindices);
    SCIPfreeBufferArray(scip, &startindices);

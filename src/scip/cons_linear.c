@@ -2821,17 +2821,26 @@ SCIP_Real consdataGetActivity(
       SCIP_Real solval;
       int nposinf;
       int nneginf;
+      int nunknown;
       SCIP_Bool negsign;
       int v;
 
       activity = 0.0;
       nposinf = 0;
       nneginf = 0;
-      negsign = 0;
+      nunknown = 0;
+      negsign = FALSE;
 
       for( v = 0; v < consdata->nvars; ++v )
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[v]);
+
+         /* we cannot check constraints that contain variables with unknown solution values */
+         if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
+         {
+            ++nunknown;
+            continue;
+         }
 
          if( consdata->vals[v] < 0 )
             negsign = TRUE;
@@ -2856,11 +2865,13 @@ SCIP_Real consdataGetActivity(
          activity = SCIPinfinity(scip);
       else if( nneginf > 0 )
          activity = -SCIPinfinity(scip);
+      else if( nunknown > 0 )
+         activity = SCIP_UNKNOWN;
 
       SCIPdebugMessage("corrected activity of linear constraint: %.15g\n", activity);
    }
 
-   if( activity == SCIP_INVALID ) /*lint !e777*/
+   if( activity == SCIP_INVALID || activity == SCIP_UNKNOWN ) /*lint !e777*/
       return activity;
    else if( activity < 0 )
       activity = MAX(activity, -SCIPinfinity(scip)); /*lint !e666*/
@@ -2887,6 +2898,9 @@ SCIP_Real consdataGetFeasibility(
 
    if( activity == SCIP_INVALID ) /*lint !e777*/
       return -SCIPinfinity(scip);
+
+   if( activity == SCIP_UNKNOWN ) /*lint !e777*/
+      return activity;
 
    return MIN(consdata->rhs - activity, activity - consdata->lhs);
 }
@@ -6843,6 +6857,12 @@ SCIP_RETCODE checkCons(
 
       /* reset constraint age since we are in enforcement */
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
+   }
+   /* we cannot check constraints that contain variables with unknown solution value */
+   if( activity == SCIP_UNKNOWN ) /*lint !e777*/
+   {
+      *violated = FALSE;
+      return SCIP_OKAY;
    }
    else if( SCIPisFeasLT(scip, activity, consdata->lhs) || SCIPisFeasGT(scip, activity, consdata->rhs) )
    {
@@ -14649,6 +14669,7 @@ SCIP_DECL_CONSCHECK(consCheckLinear)
          assert( consdata != NULL);
 
          activity = consdataGetActivity(scip, consdata, sol);
+         assert(activity != SCIP_UNKNOWN);
 
          SCIP_CALL( SCIPprintCons(scip, conss[c-1], NULL ) );
          SCIPinfoMessage(scip, NULL, ";\n");

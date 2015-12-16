@@ -437,9 +437,13 @@ SCIP_Bool checkCons(
 
    solval = SCIPgetSolVal(scip, sol, consdata->var);
 
+   /* we cannot check variables with unknown solution values in partial solutions */
+   if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL
+    && (solval == SCIP_UNKNOWN || SCIPgetSolVal(scip, sol, consdata->vbdvar) == SCIP_UNKNOWN))
+      return TRUE;
+
    if( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vbdvar)) && (!SCIPisFeasLE(scip, solval, consdata->rhs) || !SCIPisFeasGE(scip, solval, consdata->lhs)) )
       return FALSE;
-
 
    if( checklprows || consdata->row == NULL || !SCIProwIsInLP(consdata->row) )
    {

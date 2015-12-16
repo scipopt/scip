@@ -5966,6 +5966,14 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
+   if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Cannot check indicator constraints <%s> for partial solutions %p.\n",
+            SCIPconshdlrGetName(conshdlr), sol);
+      *result = SCIP_FEASIBLE;
+      return SCIP_OKAY;
+   }
+
    /* try to repair solution below, if it makes sense (will send solution to trysol heuristic in any case (see below) */
    if ( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM && SCIPgetStage(scip) < SCIP_STAGE_SOLVED && conshdlrdata->trysolutions && conshdlrdata->heurtrysol != NULL )
    {

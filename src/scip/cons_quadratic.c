@@ -4993,6 +4993,15 @@ SCIP_RETCODE computeViolation(
       var = consdata->linvars[i];
       varval = SCIPgetSolVal(scip, sol, var);
 
+      /* we cannot check constraints that contain variables with unknown solution value */
+      if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && varval == SCIP_UNKNOWN )
+      {
+         consdata->lhsviol = SCIP_UNKNOWN;
+         consdata->rhsviol = SCIP_UNKNOWN;
+         consdata->activity = SCIP_UNKNOWN;
+         return SCIP_OKAY;
+      }
+
       if( SCIPisInfinity(scip, REALABS(varval)) )
       {
          consdata->activity = SCIPinfinity(scip);
@@ -5153,6 +5162,10 @@ SCIP_RETCODE computeViolations(
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
+
+      /* we cannot check constraints that contain variables with unknown solution value */
+      if( consdata->lhsviol == SCIP_UNKNOWN || consdata->rhsviol == SCIP_UNKNOWN )
+         continue;
 
       viol = MAX(consdata->lhsviol, consdata->rhsviol);
       if( viol > maxviol && SCIPisGT(scip, viol, SCIPfeastol(scip)) )
@@ -12060,6 +12073,10 @@ SCIP_DECL_CONSCHECK(consCheckQuadratic)
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
+
+      /* we cannot check constraints that contain variables with unknown solution value */
+      if( consdata->lhsviol == SCIP_UNKNOWN || consdata->rhsviol == SCIP_UNKNOWN )
+         continue;
 
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
