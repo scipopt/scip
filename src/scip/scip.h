@@ -16988,6 +16988,38 @@ SCIP_RETCODE SCIPtryCurrentSol(
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    );
 
+/** marks a solution as partial
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPmarkSolPartial(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
+/** returns all partial solutions
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPgetPartialSols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            partialsols,        /**< primal partial CIP solution array */
+   int                   partialsolssize,    /**< size of partialsols array */
+   int*                  npartialsols        /**< pointer to store the number of partial solutions */
+   );
+
 /** checks solution for feasibility without adding it to the solution store
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

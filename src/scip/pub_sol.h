@@ -50,6 +50,12 @@ SCIP_Bool SCIPsolIsOriginal(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** returns whether the given solution is defined on original variables */
+EXTERN
+SCIP_Bool SCIPsolIsPartial(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
 /** gets objective value of primal CIP solution which lives in the original problem space */
 EXTERN
 SCIP_Real SCIPsolGetOrigObj(

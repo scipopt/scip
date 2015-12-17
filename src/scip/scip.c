@@ -36213,7 +36213,7 @@ SCIP_RETCODE SCIPaddSolFree(
    {
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_FREETRANS:
-      assert(SCIPsolIsOriginal(*sol));
+      assert(SCIPsolIsOriginal(*sol) || SCIPsolIsPartial(*sol));
       SCIP_CALL( SCIPprimalAddOrigSolFree(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
       return SCIP_OKAY;
 
@@ -36423,7 +36423,7 @@ SCIP_RETCODE SCIPtrySolFree(
       SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
    }
 
-   if( SCIPsolIsOriginal(*sol) )
+   if( SCIPsolIsOriginal(*sol) || SCIPsolIsPartial(*sol))
    {
       SCIP_Bool feasible;
 
@@ -36498,6 +36498,66 @@ SCIP_RETCODE SCIPtryCurrentSol(
       if( bestsol != SCIPgetBestSol(scip) )
          SCIPstoreSolutionGap(scip);
    }
+
+   return SCIP_OKAY;
+}
+
+/** marks a solution as partial
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPmarkSolPartial(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(scip != NULL);
+   assert(sol != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPmarkSolPartial", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   switch ( scip->set->stage) {
+      case SCIP_STAGE_PROBLEM:
+         SCIP_CALL( SCIPsolMarkPartial(sol, scip->set, scip->stat, scip->origprob->vars, scip->origprob->nvars) );
+         break;
+      case SCIP_STAGE_PRESOLVING:
+      case SCIP_STAGE_SOLVING:
+         SCIP_CALL( SCIPsolMarkPartial(sol, scip->set, scip->stat, scip->transprob->vars, scip->transprob->nvars) );
+         break;
+      default:
+         break;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** returns all partial solutions
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPgetPartialSols(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            partialsols,        /**< primal partial CIP solution array */
+   int                   partialsolssize,    /**< size of partialsols array */
+   int*                  npartialsols        /**< pointer to store the number of partial solutions */
+   )
+{
+   assert(scip != NULL);
+   assert(partialsols != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPgetPartialSols", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPprimalGetPartialSols(scip->origprimal, partialsols, partialsolssize, npartialsols) );
 
    return SCIP_OKAY;
 }

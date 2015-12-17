@@ -329,6 +329,16 @@ void SCIPsolUpdateVarObj(
    SCIP_Real             newobj              /**< new objective value */
    );
 
+/* mark the given solution as partial solution */
+extern
+SCIP_RETCODE SCIPsolMarkPartial(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VAR**            vars,               /**< problem variables */
+   int                   nvars               /**< number of problem variables */
+   );
+
 /** checks primal CIP solution for feasibility */
 extern
 SCIP_RETCODE SCIPsolCheck(

@@ -201,6 +201,15 @@ SCIP_RETCODE SCIPprimalAddOrigSolFree(
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    );
 
+/** return all partial solutions */
+extern
+SCIP_RETCODE SCIPprimalGetPartialSols(
+   SCIP_PRIMAL*          primal,
+   SCIP_SOL**            partialsols,
+   int                   partialsolssize,
+   int*                  npartialsols
+   );
+
 /** adds current LP/pseudo solution to solution storage */
 extern
 SCIP_RETCODE SCIPprimalAddCurrentSol(

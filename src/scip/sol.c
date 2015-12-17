@@ -1249,6 +1249,7 @@ SCIP_Real SCIPsolGetVal(
    assert(sol != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
       || sol->solorigin == SCIP_SOLORIGIN_ZERO
+      || sol->solorigin == SCIP_SOLORIGIN_PARTIAL
       || sol->solorigin == SCIP_SOLORIGIN_UNKNOWN
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(var != NULL);
@@ -1256,7 +1257,7 @@ SCIP_Real SCIPsolGetVal(
    /* if the value of a transformed variable in an original solution is requested, we need to project the variable back
     * to the original space, the opposite case is handled below
     */
-   if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
+   if( (SCIPsolIsOriginal(sol) || SCIPsolIsPartial(sol)) && SCIPvarIsTransformed(var) )
    {
       SCIP_RETCODE retcode;
       SCIP_VAR* origvar;
@@ -1285,7 +1286,7 @@ SCIP_Real SCIPsolGetVal(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( SCIPsolIsOriginal(sol) )
+      if( SCIPsolIsOriginal(sol) || SCIPsolIsPartial(sol) )
          return solGetArrayVal(sol, var);
       else
          return SCIPsolGetVal(sol, set, stat, SCIPvarGetTransVar(var));
@@ -1293,10 +1294,12 @@ SCIP_Real SCIPsolGetVal(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       assert(!SCIPsolIsOriginal(sol));
+      assert(!SCIPsolIsPartial(sol));
       return solGetArrayVal(sol, var);
 
    case SCIP_VARSTATUS_FIXED:
       assert(!SCIPsolIsOriginal(sol));
+      assert(!SCIPsolIsPartial(sol));
       assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var)); /*lint !e777*/
       assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var)); /*lint !e777*/
       assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var)); /*lint !e777*/
@@ -1456,6 +1459,55 @@ void SCIPsolUpdateVarObj(
    solval = solGetArrayVal(sol, var);
    if( solval != SCIP_UNKNOWN ) /*lint !e777*/
       sol->obj += (newobj - oldobj) * solval;
+}
+
+/* mark the given solution as partial solution */
+SCIP_RETCODE SCIPsolMarkPartial(
+   SCIP_SOL*             sol,                /**< primal CIP solution */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_VAR**            vars,               /**< problem variables */
+   int                   nvars               /**< number of problem variables */
+   )
+{
+   int v;
+
+   assert(sol != NULL);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || sol->solorigin == SCIP_SOLORIGIN_ZERO);
+   assert(nvars == 0 || vars != NULL);
+
+   if( nvars == 0 )
+      return SCIP_OKAY;;
+
+   for( v = 0; v < nvars; v++ )
+   {
+      int idx;
+
+      if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(vars[v]) )
+      {
+         SCIPerrorMessage("cannot set value of transformed variable <%s> in original space solution\n",
+            SCIPvarGetName(vars[v]));
+         return SCIP_INVALIDCALL;
+      }
+
+      idx = SCIPvarGetIndex(vars[v]);
+
+      if( SCIPsetIsEQ(set, SCIPsolGetVal(sol, set, stat, vars[v]), 0.0) )
+      {
+         /* from now on, variable must not be deleted */
+         SCIPvarMarkNotDeletable(vars[v]);
+
+         /* mark the variable valid */
+         SCIP_CALL( SCIPboolarraySetVal(sol->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
+
+         /* set the value in the solution array */
+         SCIP_CALL( SCIPrealarraySetVal(sol->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, 0.0) );
+      }
+   }
+
+   sol->solorigin = SCIP_SOLORIGIN_PARTIAL;
+
+   return SCIP_OKAY;
 }
 
 /** checks primal CIP solution for feasibility */
@@ -2169,6 +2221,16 @@ SCIP_Bool SCIPsolIsOriginal(
    assert(sol != NULL);
 
    return (sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
+}
+
+/** returns whether the given solution is defined on original variables */
+SCIP_Bool SCIPsolIsPartial(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(sol != NULL);
+
+   return (sol->solorigin == SCIP_SOLORIGIN_PARTIAL);
 }
 
 /** gets objective value of primal CIP solution which lives in the original problem space */

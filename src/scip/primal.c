@@ -65,6 +65,29 @@ SCIP_RETCODE ensureSolsSize(
    return SCIP_OKAY;
 }
 
+/** ensures, that partinfsols array can store at least num entries */
+static
+SCIP_RETCODE ensurePartinfsolsSize(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(primal->npartinfsols <= primal->partinfsolssize);
+
+   if( num > primal->partinfsolssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      SCIP_ALLOC( BMSreallocMemoryArray(&primal->partinfsols, newsize) );
+      primal->partinfsolssize = newsize;
+   }
+   assert(num <= primal->partinfsolssize);
+
+   return SCIP_OKAY;
+}
+
 /** ensures, that existingsols array can store at least num entries */
 static
 SCIP_RETCODE ensureExistingsolsSize(
@@ -97,11 +120,14 @@ SCIP_RETCODE SCIPprimalCreate(
 
    SCIP_ALLOC( BMSallocMemory(primal) );
    (*primal)->sols = NULL;
+   (*primal)->partinfsols = NULL;
    (*primal)->existingsols = NULL;
    (*primal)->currentsol = NULL;
    (*primal)->primalray = NULL;
    (*primal)->solssize = 0;
+   (*primal)->partinfsolssize = 0;
    (*primal)->nsols = 0;
+   (*primal)->npartinfsols = 0;
    (*primal)->existingsolssize = 0;
    (*primal)->nexistingsols = 0;
    (*primal)->nsolsfound = 0;
@@ -142,9 +168,15 @@ SCIP_RETCODE SCIPprimalFree(
    {
       SCIP_CALL( SCIPsolFree(&(*primal)->sols[s], blkmem, *primal) );
    }
+   /* free partial and infeasible CIP solutions */
+   for( s = 0; s < (*primal)->npartinfsols; ++s )
+   {
+      SCIP_CALL( SCIPsolFree(&(*primal)->partinfsols[s], blkmem, *primal) );
+   }
    assert((*primal)->nexistingsols == 0);
 
    BMSfreeMemoryArrayNull(&(*primal)->sols);
+   BMSfreeMemoryArrayNull(&(*primal)->partinfsols);
    BMSfreeMemoryArrayNull(&(*primal)->existingsols);
    BMSfreeMemory(primal);
 
@@ -663,6 +695,80 @@ SCIP_RETCODE primalAddSol(
 
 /** adds primal solution to solution storage at given position */
 static
+SCIP_RETCODE primalAddPartinfsol(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
+   SCIP_SOL**            solptr              /**< pointer to primal CIP solution */
+   )
+{
+   SCIP_SOL* sol;
+   SCIP_EVENT event;
+   int pos;
+
+   assert(primal != NULL);
+   assert(set != NULL);
+   assert(solptr != NULL);
+   assert(stat != NULL);
+   assert(transprob != NULL);
+   assert(origprob != NULL);
+   assert(tree == NULL || !SCIPtreeInRepropagation(tree));
+
+   sol = *solptr;
+   assert(sol != NULL);
+
+   SCIPdebugMessage("insert partial/infeasible solution %p:\n", (void*)sol);
+   SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE) ) );
+
+   printf("insert partial/infeasible solution %p:\n", (void*)sol);
+   SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE) );
+
+   /* completely fill the solution's own value array to unlink it from the LP or pseudo solution */
+   SCIP_CALL( SCIPsolUnlink(sol, set, transprob) );
+
+   /* allocate memory for solution storage */
+   SCIP_CALL( ensurePartinfsolsSize(primal, set, set->limit_maxsol) );
+
+   /* if set->limit_maxsol was decreased in the meantime, free all solutions exceeding the limit */
+   for( pos = set->limit_maxsol; pos < primal->npartinfsols; ++pos )
+   {
+      SCIP_CALL( SCIPsolFree(&primal->partinfsols[pos], blkmem, primal) );
+   }
+   primal->npartinfsols = MIN(primal->nsols, set->limit_maxsol);
+
+   if( primal->npartinfsols == set->limit_maxsol )
+   {
+      SCIP_CALL( SCIPsolFree(&primal->sols[set->limit_maxsol - 1], blkmem, primal) );
+   }
+   else
+   {
+      primal->nsols = primal->nsols + 1;
+      assert(primal->nsols <= set->limit_maxsol);
+   }
+
+   /* insert solution at correct position */
+   primal->sols[primal->npartinfsols] = sol;
+   ++primal->npartinfsols;
+
+   /* issue SOLFOUND event */
+   SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_SOLFOUND) );
+   SCIP_CALL( SCIPeventChgSol(&event, sol) );
+   SCIP_CALL( SCIPeventProcess(&event, set, NULL, NULL, NULL, eventfilter) );
+
+   return SCIP_OKAY;
+}
+
+/** adds primal solution to solution storage at given position */
+static
 SCIP_RETCODE primalAddOrigSol(
    SCIP_PRIMAL*          primal,             /**< primal data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -709,6 +815,44 @@ SCIP_RETCODE primalAddOrigSol(
 
    SCIPdebugMessage(" -> stored at position %d of %d solutions, found %" SCIP_LONGINT_FORMAT " solutions\n",
       insertpos, primal->nsols, primal->nsolsfound);
+
+   return SCIP_OKAY;
+}
+
+/** adds primal solution to solution storage at given position */
+static
+SCIP_RETCODE primalAddOrigPartialSol(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< original problem data */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   int pos;
+
+   assert(primal != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(sol != NULL);
+   assert(!set->reopt_enable);
+
+   SCIPdebugMessage("insert partial solution candidate %p:\n", (void*)sol);
+
+   /* allocate memory for solution storage */
+   SCIP_CALL( ensurePartinfsolsSize(primal, set, set->limit_maxorigsol) );
+
+   /* if the solution storage is full, free the last solution(s)
+    * more than one solution may be freed, if set->limit_maxorigsol was decreased in the meantime
+    */
+   for( pos = set->limit_maxorigsol-1; pos < primal->npartinfsols; ++pos )
+   {
+      SCIP_CALL( SCIPsolFree(&primal->partinfsols[pos], blkmem, primal) );
+   }
+   primal->npartinfsols = MIN(primal->npartinfsols, set->limit_maxorigsol-1);
+
+   primal->partinfsols[primal->npartinfsols] = sol;
+   ++primal->npartinfsols;
 
    return SCIP_OKAY;
 }
@@ -1010,6 +1154,7 @@ SCIP_RETCODE SCIPprimalAddSol(
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
+   SCIP_SOL* solcopy;
    SCIP_Bool replace;
    int insertpos;
 
@@ -1021,9 +1166,18 @@ SCIP_RETCODE SCIPprimalAddSol(
 
    insertpos = -1;
 
-   if( solOfInterest(primal, set, stat, origprob, transprob, sol, &insertpos, &replace) )
+   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL )
    {
-      SCIP_SOL* solcopy;
+      /* create a copy of the solution */
+      SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
+
+      SCIP_CALL( primalAddPartinfsol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
+            tree, reopt, lp, eventqueue, eventfilter, &solcopy) );
+
+      *stored = TRUE;
+   }
+   else if( solOfInterest(primal, set, stat, origprob, transprob, sol, &insertpos, &replace) )
+   {
 #ifdef SCIP_MORE_DEBUG
       int i;
 #endif
@@ -1162,12 +1316,22 @@ SCIP_RETCODE SCIPprimalAddOrigSolFree(
    assert(primal != NULL);
    assert(sol != NULL);
    assert(*sol != NULL);
-   assert(SCIPsolIsOriginal(*sol));
+   assert(SCIPsolIsOriginal(*sol) || SCIPsolIsPartial(*sol));
    assert(stored != NULL);
 
    insertpos = -1;
 
-   if( origsolOfInterest(primal, set, stat, prob, *sol, &insertpos) )
+   if( SCIPsolGetOrigin(*sol) == SCIP_SOLORIGIN_PARTIAL )
+   {
+      /* insert solution into solution storage */
+      SCIP_CALL( primalAddOrigPartialSol(primal, blkmem, set, prob, *sol) );
+
+      /* clear the pointer, such that the user cannot access the solution anymore */
+      *sol = NULL;
+
+      *stored = TRUE;
+   }
+   else if( origsolOfInterest(primal, set, stat, prob, *sol, &insertpos) )
    {
       assert(insertpos >= 0 && insertpos < set->limit_maxorigsol);
       assert(!set->reopt_enable);
@@ -1188,6 +1352,39 @@ SCIP_RETCODE SCIPprimalAddOrigSolFree(
       *stored = FALSE;
    }
    assert(*sol == NULL);
+
+   return SCIP_OKAY;
+}
+
+/** return all partial solutions */
+SCIP_RETCODE SCIPprimalGetPartialSols(
+   SCIP_PRIMAL*          primal,
+   SCIP_SOL**            partialsols,
+   int                   partialsolssize,
+   int*                  npartialsols
+   )
+{
+   int s;
+
+   assert(primal != NULL);
+   assert(partialsols != NULL);
+
+   *npartialsols = 0;
+
+   for( s = 0; s < primal->npartinfsols; s++ )
+   {
+      if( SCIPsolGetOrigin(primal->partinfsols[s]) == SCIP_SOLORIGIN_PARTIAL )
+         ++(*npartialsols);
+   }
+
+   if( *npartialsols > partialsolssize )
+      return SCIP_OKAY;
+
+   for( s = 0; s < primal->npartinfsols; s++ )
+   {
+      if( SCIPsolGetOrigin(primal->partinfsols[s]) == SCIP_SOLORIGIN_PARTIAL )
+         partialsols[s] = primal->partinfsols[s];
+   }
 
    return SCIP_OKAY;
 }

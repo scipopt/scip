@@ -184,6 +184,12 @@ SCIP_RETCODE readSol(
    /* close input file */
    SCIPfclose(file);
 
+   if( partial )
+   {
+      SCIP_CALL( SCIPmarkSolPartial(scip, sol) );
+   }
+
+
    if( !error )
    {
       /* add and free the solution */
@@ -203,8 +209,8 @@ SCIP_RETCODE readSol(
          SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
 
          /* display result */
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal solution from solution file <%s> was %s\n",
-            fname, stored ? "accepted as candidate, will be checked when solving starts" : "rejected - solution objective too poor");
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal%s solution from solution file <%s> was %s\n",
+            partial ? " partial" : "", fname, stored ? "accepted as candidate, will be checked when solving starts" : "rejected - solution objective too poor");
       }
 
       return SCIP_OKAY;
