@@ -7638,6 +7638,315 @@ SCIP_RETCODE makeSOS1constraintsFeasible(
 }
 
 
+/** determine a diving variables and boundchanges of diving variables by analyzing the conflict graph
+ *
+ *  if the SOS1 constraints do not overlap, the method getDiveBdChgsSOS1constraints() may be faster
+ */
+static
+SCIP_RETCODE getDiveBdChgsSOS1conflictgraph(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Bool*            success             /**< pointer to store */
+   )
+{
+   SCIP_DIGRAPH* conflictgraph;
+   SCIP_VAR* bestvar = NULL;
+   SCIP_Bool bestvarfixneigh = FALSE;
+   SCIP_Real bestscore = SCIP_REAL_MIN;
+   int bestnode = -1;
+   int nsos1vars;
+   int v;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( diveset != NULL );
+   assert( success != NULL );
+
+   *success = FALSE;
+
+   /* get number of SOS1 variables */
+   nsos1vars = SCIPgetNSOS1Vars(conshdlr);
+
+   /* get conflict graph of SOS1 constraints */
+   conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
+
+   /* loop over SOS1 variables  */
+   for (v = 0; v < nsos1vars; ++v)
+   {
+      /* check whether the variable violates an SOS1 constraint together with at least one other variable */
+      if ( isViolatedSOS1(scip, conflictgraph, v, sol) )
+      {
+         SCIP_VAR* var;
+         SCIP_Real solval;
+         SCIP_Real score;
+         SCIP_Real bound;
+         SCIP_Real fracval;
+         SCIP_Bool fixneigh;
+
+         var = SCIPnodeGetVarSOS1(conflictgraph, v);
+         solval = SCIPgetSolVal(scip, sol, var);
+
+         /* compute (variable) bound of candidate */
+         if ( SCIPisFeasNegative(scip, solval) )
+            bound = nodeGetSolvalVarboundLbSOS1(scip, conflictgraph, sol, v);
+         else
+            bound = nodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, v);
+
+         /* bound may have changed in propagation; ensure that fracval <= 1 */
+         if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
+            bound = solval;
+
+         /* ensure finiteness */
+         bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound)); /*lint !e666*/
+         fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval)); /*lint !e666*/
+         assert( ! SCIPisInfinity(scip, bound) );
+         assert( ! SCIPisInfinity(scip, fracval) );
+         assert( SCIPisFeasPositive(scip, bound + SCIPsumepsilon(scip)) );
+
+         /* get fractionality of candidate */
+         fracval /= (bound + SCIPsumepsilon(scip));
+
+         /* should SOS1 variables be scored by the diving heuristics specific score function;
+          *  otherwise use the score function of the SOS1 constraint handler */
+         if ( SCIPdivesetSupportsType(diveset, SCIP_DIVETYPE_SOS1VARIABLE) )
+         {
+            SCIP_Bool roundup;
+
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval, &score, &roundup) );
+
+            fixneigh = roundup;
+            if ( SCIPisFeasNegative(scip, solval) )
+               fixneigh = !fixneigh;
+         }
+         else
+         {
+            /* we always fix the candidates neighbors in the conflict graph to zero */
+            fixneigh = TRUE;
+
+            /* score fractionality of candidate */
+            score = fracval;
+         }
+
+         /* best candidate maximizes the score */
+         if ( score > bestscore )
+         {
+            bestscore = score;
+
+            *success = TRUE;
+            bestvar = var;
+            bestnode = v;
+            bestvarfixneigh = fixneigh;
+         }
+      }
+   }
+   assert( !(*success) || bestvar != NULL );
+
+   if ( *success )
+   {
+      int* succ;
+      int nsucc;
+      int s;
+
+      assert( bestnode >= 0 && bestnode < nsos1vars );
+
+      nsucc = SCIPdigraphGetNSuccessors(conflictgraph, bestnode);
+      succ = SCIPdigraphGetSuccessors(conflictgraph, bestnode);
+
+      /* if the diving score voted for fixing the best variable to 0.0, we add this as the preferred bound change;
+       * otherwise, fixing the neighbors in the conflict graph to 0.0 is the preferred bound change.
+       */
+      assert( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(bestvar)) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(bestvar)) );
+      SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_FIXED, 0.0, !bestvarfixneigh) );
+      for (s = 0; s < nsucc; ++s)
+      {
+         SCIP_VAR* var;
+
+         var = SCIPnodeGetVarSOS1(conflictgraph, succ[s]);
+
+         /* if variable is not already fixed */
+         if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
+         {
+            SCIP_CALL( SCIPaddDiveBoundChange(scip, var, SCIP_BRANCHDIR_FIXED, 0.0, bestvarfixneigh) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
+/** determine a diving variables and boundchanges of diving variables by analyzing the SOS1 constraints
+ *
+ *  if the SOS1 constraints overlap, the method getDiveBdChgsSOS1conflictgraph() may produce better results (e.g., due to more
+ *  diving candidates)
+ */
+static
+SCIP_RETCODE getDiveBdChgsSOS1constraints(
+   SCIP*                 scip,               /**< SCIP pointer */
+   SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_SOL*             sol,                /**< solution */
+   SCIP_Bool*            success             /**< pointer to store */
+   )
+{
+   SCIP_VAR* bestvar = NULL;
+   SCIP_Bool bestvarfixcomp = FALSE;
+   SCIP_Real bestscore = SCIP_REAL_MIN;
+   SCIP_CONSDATA* consdata;
+   SCIP_CONS** conss;
+   int nconss;
+   int bestcons = -1;
+   int c;
+
+   assert( scip != NULL );
+   assert( conshdlr != NULL );
+   assert( diveset != NULL );
+   assert( success != NULL );
+
+   *success = FALSE;
+
+   /* get SOS1 constraints and number of SOS1 constraints */
+   conss = SCIPconshdlrGetConss(conshdlr);
+   nconss = SCIPconshdlrGetNConss(conshdlr);
+
+   /* loop through all SOS1 constraints */
+   for (c = 0; c < nconss; ++c)
+   {
+      SCIP_VAR** vars;
+      int nvars;
+      int cnt = 0;
+      int j;
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert( consdata != NULL );
+
+      nvars = consdata->nvars;
+      vars = consdata->vars;
+
+      /* check whether SOS1 constraint is violated */
+      for (j = 0; j < nvars && cnt < 2; ++j)
+      {
+         SCIP_VAR* var;
+
+         var = vars[j];
+
+         /* check whether variable is nonzero w.r.t. sol and the bounds have not been fixed to zero by propagation */
+         if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, var)) && ( ! SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) || ! SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) ) )
+            ++cnt;
+      }
+
+      /* if SOS1 constraint is not violated then continue with the next SOS1 constraint */
+      if ( cnt < 2 )
+         continue;
+
+      /* get diving score of every variable in constraint */
+      for (j = 0; j < nvars; ++j)
+      {
+         SCIP_VAR* var;
+         SCIP_Real solval;
+         SCIP_Real score;
+         SCIP_Real bound;
+         SCIP_Real fracval;
+         SCIP_Bool fixcomp;  /* whether to fix the complementary variables of the candidate in the SOS1 constraint to zero */
+
+         var = vars[j];
+         solval = SCIPgetSolVal(scip, sol, var);
+
+         /* compute (variable) bound of candidate */
+         if ( SCIPisFeasNegative(scip, solval) )
+            bound = SCIPvarGetLbLocal(var);
+         else
+            bound = SCIPvarGetUbLocal(var);
+
+         /* bound may have changed in propagation; ensure that fracval <= 1 */
+         if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
+            bound = solval;
+
+         /* ensure finiteness */
+         bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound)); /*lint !e666*/
+         fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval)); /*lint !e666*/
+         assert( ! SCIPisInfinity(scip, bound) );
+         assert( ! SCIPisInfinity(scip, fracval) );
+         assert( SCIPisFeasPositive(scip, bound + SCIPsumepsilon(scip)) );
+
+         /* get fractionality of candidate */
+         fracval /= (bound + SCIPsumepsilon(scip));
+
+         /* should SOS1 variables be scored by the diving heuristics specific score function;
+          *  otherwise use the score function of the SOS1 constraint handler */
+         if ( SCIPdivesetSupportsType(diveset, SCIP_DIVETYPE_SOS1VARIABLE) )
+         {
+            SCIP_Bool roundup;
+
+            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval, &score, &roundup) );
+
+            fixcomp = roundup;
+            if ( SCIPisFeasNegative(scip, solval) )
+               fixcomp = !fixcomp;
+         }
+         else
+         {
+            /* we always fix the complementary variables of the candidate in the SOS1 constraint to zero */
+            fixcomp = TRUE;
+
+            /* score fractionality of candidate */
+            score = fracval;
+         }
+
+         /* best candidate maximizes the score */
+         if ( score > bestscore )
+         {
+            bestscore = score;
+
+            *success = TRUE;
+            bestvar = var;
+            bestcons = c;
+            bestvarfixcomp = fixcomp;
+         }
+      }
+   }
+   assert( !(*success) || bestvar != NULL );
+
+   if ( *success )
+   {
+      SCIP_VAR** vars;
+      int nvars;
+      int j;
+
+      consdata = SCIPconsGetData(conss[bestcons]);
+      assert( consdata != NULL );
+
+      nvars = consdata->nvars;
+      vars = consdata->vars;
+
+      assert( bestcons >= 0 && bestcons < nconss );
+
+      /* if the diving score voted for fixing the best variable to 0.0, we add this as the preferred bound change;
+       * otherwise, fixing the complementary variables of the candidate in the SOS1 constraint to 0.0 is the preferred bound change.
+       */
+      assert( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(bestvar)) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(bestvar)) );
+
+      SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_FIXED, 0.0, !bestvarfixcomp) );
+      for (j = 0; j < nvars; ++j)
+      {
+         SCIP_VAR* var;
+
+         var = vars[j];
+
+         /* if variable is not already fixed and is not the candidate variable */
+         if ( var != bestvar && ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) ) )
+         {
+            SCIP_CALL( SCIPaddDiveBoundChange(scip, var, SCIP_BRANCHDIR_FIXED, 0.0, bestvarfixcomp) );
+         }
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /* --------------------initialization/deinitialization ------------------------*/
 
 /** check whether \f$x_1\f$ is a bound variable of \f$x_0\f$; i.e., \f$x_0 \leq c\cdot x_1\f$ or \f$x_0 \geq d\cdot x_1\f$
@@ -9547,13 +9856,7 @@ SCIP_DECL_EVENTEXEC(eventExecSOS1)
 static
 SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
 {
-   SCIP_DIGRAPH* conflictgraph;
-   SCIP_VAR* bestvar = NULL;
-   SCIP_Bool bestvarfixneigh = FALSE;
-   SCIP_Real bestscore = SCIP_REAL_MIN;
-   int bestnode = -1;
-   int nsos1vars;
-   int v;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert( scip != NULL );
    assert( conshdlr != NULL );
@@ -9565,111 +9868,24 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsSOS1)
    *infeasible = FALSE;
    *success = FALSE;
 
-   /* get number of SOS1 variables */
-   nsos1vars = SCIPgetNSOS1Vars(conshdlr);
-
-   /* get conflict graph of SOS1 constraints */
-   conflictgraph = SCIPgetConflictgraphSOS1(conshdlr);
-
-   /* loop over SOS1 variables  */
-   for (v = 0; v < nsos1vars; ++v)
+   if ( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) != 0 )
    {
-      /* check whether the variable violates an SOS1 constraint together with at least one other variable */
-      if ( isViolatedSOS1(scip, conflictgraph, v, sol) )
-      {
-         SCIP_VAR* var;
-         SCIP_Real solval;
-         SCIP_Real score;
-         SCIP_Real bound;
-         SCIP_Real fracval;
-         SCIP_Bool fixneigh;
-
-         var = SCIPnodeGetVarSOS1(conflictgraph, v);
-         solval = SCIPgetSolVal(scip, sol, var);
-
-         /* compute (variable) bound of candidate */
-         if ( SCIPisFeasNegative(scip, solval) )
-            bound = nodeGetSolvalVarboundLbSOS1(scip, conflictgraph, sol, v);
-         else
-            bound = nodeGetSolvalVarboundUbSOS1(scip, conflictgraph, sol, v);
-
-         /* bound may have changed in propagation; ensure that fracval <= 1 */
-         if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
-            bound = solval;
-
-         /* ensure finiteness */
-         bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound)); /*lint !e666*/
-         fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval)); /*lint !e666*/
-         assert( ! SCIPisInfinity(scip, bound) );
-         assert( ! SCIPisInfinity(scip, fracval) );
-         assert( SCIPisFeasPositive(scip, bound + SCIPsumepsilon(scip)) );
-
-         /* get fractionality of candidate */
-         fracval /= (bound + SCIPsumepsilon(scip));
-
-         /* should SOS1 variables be scored by the diving heuristics specific score function;
-          *  otherwise use the score function of the SOS1 constraint handler */
-         if ( SCIPdivesetSupportsType(diveset, SCIP_DIVETYPE_SOS1VARIABLE) )
-         {
-            SCIP_Bool roundup;
-
-            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval, &score, &roundup) );
-
-            fixneigh = roundup;
-            if ( SCIPisFeasNegative(scip, solval) )
-               fixneigh = !fixneigh;
-         }
-         else
-         {
-            /* we always fix the candidates neighbors in the conflict graph to zero */
-            fixneigh = TRUE;
-
-            /* score fractionality of candidate */
-            score = fracval;
-         }
-
-         /* best candidate maximizes the score */
-         if ( score > bestscore )
-         {
-            bestscore = score;
-
-            *success = TRUE;
-            bestvar = var;
-            bestnode = v;
-            bestvarfixneigh = fixneigh;
-         }
-      }
+      SCIPerrorMessage("not an SOS1 constraint handler.\n");
+      return SCIP_INVALIDDATA;
    }
-   assert( !(*success) || bestvar != NULL );
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
 
-   if ( *success )
+   /* if the SOS1 constraints do not overlap, we apply a faster method getDiveBdChgsSOS1constraints() that does not make use of the conflict graph;
+    * for overlapping SOS1 constraints we apply the method getDiveBdChgsSOS1conflictgraph(), which then may produce better results (e.g. due to more
+    * diving candidates) */
+   if ( conshdlrdata->switchsos1branch )
    {
-      int* succ;
-      int nsucc;
-      int s;
-
-      assert( bestnode >= 0 && bestnode < nsos1vars );
-
-      nsucc = SCIPdigraphGetNSuccessors(conflictgraph, bestnode);
-      succ = SCIPdigraphGetSuccessors(conflictgraph, bestnode);
-
-      /* if the diving score voted for fixing the best variable to 0.0, we add this as the preferred bound change;
-       * otherwise, fixing the neighbors in the conflict graph to 0.0 is the preferred bound change.
-       */
-      assert( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(bestvar)) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(bestvar)) );
-      SCIP_CALL( SCIPaddDiveBoundChange(scip, bestvar, SCIP_BRANCHDIR_FIXED, 0.0, !bestvarfixneigh) );
-      for (s = 0; s < nsucc; ++s)
-      {
-         SCIP_VAR* var;
-
-         var = SCIPnodeGetVarSOS1(conflictgraph, succ[s]);
-
-         /* if variable is not already fixed */
-         if ( SCIPisFeasNegative(scip, SCIPvarGetLbLocal(var)) || SCIPisFeasPositive(scip, SCIPvarGetUbLocal(var)) )
-         {
-            SCIP_CALL( SCIPaddDiveBoundChange(scip, var, SCIP_BRANCHDIR_FIXED, 0.0, bestvarfixneigh) );
-         }
-      }
+      SCIP_CALL( getDiveBdChgsSOS1constraints(scip, conshdlr, diveset, sol, success) );
+   }
+   else
+   {
+      SCIP_CALL( getDiveBdChgsSOS1conflictgraph(scip, conshdlr, diveset, sol, success) );
    }
 
    return SCIP_OKAY;
@@ -10334,7 +10550,8 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
       return SCIP_OKAY;
    }
 
-   /* if the SOS1 constraints do not overlap, we apply a faster method that does not make use of the conflict graph */
+   /* if the SOS1 constraints do not overlap, we apply a faster method makeSOS1constraintsFeasible() that does not make use of the conflict graph;
+    * for overlapping SOS1 constraints we apply the method makeSOS1conflictgraphFeasible(), which then may produce better feasible solutions */
    if ( conshdlrdata->switchsos1branch )
    {
       SCIP_CALL( makeSOS1constraintsFeasible(scip, conshdlr, sol, changed, &allroundable) );
