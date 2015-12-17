@@ -6,6 +6,8 @@ features:
 - can now separate perspective cuts for indicator constraints
 - added write callback for reader_bnd
 - new target "dll" to build Windows dlls with MSVC
+- can now read partial/incomplete solutions
+- new heuristic that tries to complete partial/incomplete solutions
 
 parameters:
 - new parameter sepaperspective to turn on separation of perspective cuts for indicator contraints
