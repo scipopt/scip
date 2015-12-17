@@ -7202,6 +7202,7 @@ SCIP_RETCODE markNeighborsMWISHeuristic(
       int succj;
 
       succj = succ[j];
+      assert( indset[succj] == 0 );
       if( ! mark[succj] )
       {
          SCIP_VARSTATUS varstatus;
@@ -7365,8 +7366,13 @@ SCIP_RETCODE maxWeightIndSetHeuristic(
       }
       else
       {
+         SCIP_Bool cutoff;
+
          ++k;
          mark[i] = TRUE;
+
+         SCIP_CALL( markNeighborsMWISHeuristic(scip, conshdlr, conflictgraph, i, mark, indset, &k, &cutoff) );
+         assert( ! cutoff );
       }
    }
 
@@ -7442,21 +7448,36 @@ SCIP_RETCODE makeSOS1conflictgraphFeasible(
    SCIP_CALL( SCIPallocBufferArray(scip, &indicatorzero, nsos1vars) );
 
    /* determine if variables with nonzero solution value are roundable */
-   for (j = 0; j < nsos1vars && *allroundable; ++j)
+   for (j = 0; j < nsos1vars; ++j)
    {
       SCIP_VAR* var;
+      SCIP_Real lb;
+      SCIP_Real ub;
 
       var = SCIPnodeGetVarSOS1(conflictgraph, j);
+      lb = SCIPvarGetLbLocal(var);
+      ub = SCIPvarGetUbLocal(var);
       indset[j] = 0;
 
-      if ( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, var)) || ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) && SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) ) )
+      /* if solution value of variable is zero */
+      if ( SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, var)) )
          indicatorzero[j] = TRUE;
       else
       {
          indicatorzero[j] = FALSE;
 
+         /* if variable is not roundable */
          if ( ! SCIPvarMayRoundDown(var) && ! SCIPvarMayRoundUp(var) )
+         {
             *allroundable = FALSE;
+            break;
+         }
+
+         /* if bounds of variable are fixed to zero */
+         if ( SCIPisFeasZero(scip, ub) && SCIPisFeasZero(scip, lb) )
+            indicatorzero[j] = TRUE;
+         else if ( SCIPisFeasPositive(scip, lb) || SCIPisFeasNegative(scip, ub) ) /* if variable is fixed to be nonzero */
+            indset[j] = 1;
       }
    }
 
@@ -7552,6 +7573,7 @@ SCIP_RETCODE makeSOS1constraintsFeasible(
    {
       SCIP_CONS* cons;
       SCIP_VAR** vars;
+      SCIP_Bool varisfixed = FALSE;
       SCIP_Real maxval = 0.0;
       int pos = -1;
       int nvars;
@@ -7574,32 +7596,43 @@ SCIP_RETCODE makeSOS1constraintsFeasible(
 
          if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, var)) )
          {
+            SCIP_Real lb;
+            SCIP_Real ub;
+
+            lb = SCIPvarGetLbLocal(var);
+            ub = SCIPvarGetUbLocal(var);
+
+            /* if variable is not roundable */
+            if ( ! SCIPvarMayRoundDown(var) && ! SCIPvarMayRoundUp(var) )
+            {
+               *allroundable = FALSE;
+               break;
+            }
+
             /* it is possible that the bounds were proagated to zero although the current solution value is nonzero
              * in this case fix the solution value to zero */
-            if ( SCIPisFeasZero(scip, SCIPvarGetUbLocal(var)) && SCIPisFeasZero(scip, SCIPvarGetLbLocal(var)) )
+            if ( SCIPisFeasZero(scip, ub) && SCIPisFeasZero(scip, lb) )
             {
                SCIP_CALL( SCIPsetSolVal(scip, sol, var, 0.0) );
                *changed = TRUE;
             }
-            else
+            else if ( SCIPisFeasPositive(scip, lb) || SCIPisFeasNegative(scip, ub) ) /* if variable is fixed to be nonzero */
             {
-               if ( ! SCIPvarMayRoundDown(var) && ! SCIPvarMayRoundUp(var) )
-               {
-                  *allroundable = FALSE;
-                  break;
-               }
-
-               if ( SCIPisFeasGT(scip, REALABS(SCIPgetSolVal(scip, sol, var)), REALABS(maxval)) )
-               {
-                  maxval = SCIPgetSolVal(scip, sol, var);
-                  pos = j;
-               }
-
-               /* fix variable to zero; the solution value of the variable with maximum solution value
-                * will be restored in a later step */
-               SCIP_CALL( SCIPsetSolVal(scip, sol, var, 0.0) );
-               *changed = TRUE;
+               assert( ! varisfixed );
+               varisfixed = TRUE;
+               maxval = SCIPgetSolVal(scip, sol, var);
+               pos = j;
             }
+            else if ( ! varisfixed && SCIPisFeasGT(scip, REALABS(SCIPgetSolVal(scip, sol, var)), REALABS(maxval)) ) /* search for variable with maximum solution value */
+            {
+               maxval = SCIPgetSolVal(scip, sol, var);
+               pos = j;
+            }
+
+            /* fix variable to zero; the solution value of the variable with maximum solution value
+             * will be restored in a later step */
+            SCIP_CALL( SCIPsetSolVal(scip, sol, var, 0.0) );
+            *changed = TRUE;
          }
       }
 
