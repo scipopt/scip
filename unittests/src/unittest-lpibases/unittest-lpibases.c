@@ -180,10 +180,10 @@ SCIP_RETCODE runUnittest(void)
 
    /* use the following LP:
     * max 1 x1 + 1 x2 + 1 x3
-    *       -8 <= x1 +          x3 <= -1
-    *       -7 <= x1 +   x2        <= -1
-    *             x1 + 2 x2        <= 12
-    *             x1,    x2,    x3 >= 0
+    *       -8 <= -x1 -          x3 <= -1
+    *       -7 <= -x1 -   x2        <= -1
+    *              x1 + 2 x2        <= 12
+    *              x1,    x2,    x3 >= 0
     */
 
    /* create LPI */
