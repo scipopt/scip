@@ -346,8 +346,8 @@ SCIP_Bool getGMIFromRow(
       /* Integer variables */
       if( SCIPcolIsIntegral(col) )
       {
+         /* if cutelem < 0, then we know SCIPisZero(scip, cutelem) is true and hope it doesn't do much damage */
          cutelem = SCIPfrac(scip, rowelem);
-         assert(1 >= cutelem && cutelem >= 0);
 
          if( cutelem > f0 )
          {
@@ -426,8 +426,8 @@ SCIP_Bool getGMIFromRow(
        * coefficient */
       if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) )
       {
+         /* if cutelem < 0, then we know SCIPisZero(scip, cutelem) is true and hope it doesn't do much damage */
          cutelem = SCIPfrac(scip, rowelem);
-         assert(1 >= cutelem && cutelem >= 0);
 
          if( cutelem > f0 )
          {
