@@ -80,6 +80,9 @@ SCIP_RETCODE runUnittest(void)
    assert( nrows == 1 );
    assert( ncols == 1 );
 
+   /* debugging output */
+   /* SCIP_CALL( SCIPlpiWriteLP(lpi, "debug.lp") ); */
+
    /* solve problem */
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
 
@@ -126,6 +129,9 @@ SCIP_RETCODE runUnittest(void)
    rhs = SCIPlpiInfinity(lpi);
    SCIP_CALL( SCIPlpiChgSides(lpi, 1, &ind, &lhs, &rhs) );
 
+   /* debugging output */
+   /* SCIP_CALL( SCIPlpiWriteLP(lpi, "debug.lp") ); */
+
    /* solve problem */
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
 
@@ -152,6 +158,9 @@ SCIP_RETCODE runUnittest(void)
    lhs = -SCIPlpiInfinity(lpi);
    rhs = 1.0;
    SCIP_CALL( SCIPlpiChgSides(lpi, 1, &ind, &lhs, &rhs) );
+
+   /* debugging output */
+   /* SCIP_CALL( SCIPlpiWriteLP(lpi, "debug.lp") ); */
 
    /* solve problem */
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
@@ -221,7 +230,7 @@ SCIP_RETCODE runUnittest(void)
    assert( ncols == 3 );
 
    /* debugging output */
-   SCIP_CALL( SCIPlpiWriteLP(lpi, "debug.lp") );
+   /* SCIP_CALL( SCIPlpiWriteLP(lpi, "debug.lp") ); */
 
    /* solve problem */
    SCIP_CALL( SCIPlpiSolvePrimal(lpi) );
@@ -253,13 +262,18 @@ SCIP_RETCODE runUnittest(void)
    /* check basis inverse */
    SCIP_CALL( SCIPlpiGetBInvRow(lpi, i, binvrow, NULL, NULL) );
 
+   /* row of basis inverse should be (0, 1, 0.5) */
    assert( fabs(binvrow[0]) < 10e-6 );
    assert( fabs(binvrow[1] - 1.0) < 10e-6 );
    assert( fabs(binvrow[2] - 0.5) < 10e-6 );
 
    /* check basis inverse times nonbasic matrix */
    SCIP_CALL( SCIPlpiGetBInvARow(lpi, i, binvrow, coef, NULL, NULL) );
+
+   /* row of basis inverse times nonbasic matrix should be (0.5, 0, 0) */
    assert( fabs(coef[0] + 0.5) < 10e-6 );
+   assert( fabs(coef[1]) < 10e-6 );
+   assert( fabs(coef[2]) < 10e-6 );
 
    printf("Test 5 passed.\n");
 
