@@ -26,7 +26,7 @@
 #include "readargs.h"
 
 /* default parameters */
-#define DEFAULT_SOLVEMASTERAPPROX      FALSE      /**< solve master problem approximately */
+#define DEFAULT_SOLVEMASTERAPPROX      FALSE      /**< Solve master problem approximately? */
 #define DEFAULT_MASTERGAPLIMIT         0.1        /**< gap bound for approximately solving the master problem */
 #define DEFAULT_REOPTIMIZATION         FALSE      /**< Use reoptimization to solve master problem? */
 #define DEFAULT_MASTERSTALLNODES       5000L      /**< stall nodes for the master problem */
@@ -289,10 +289,12 @@ SCIP_RETCODE checkAltLPInfeasible(
 }
 
 
-/** produce benders cuts from the alternative polyhedron
+/** produce Benders cuts from the alternative polyhedron
  *
  *  input:
  *   - masterscip:       SCIP pointer of Benders master problem
+ *   - nmastervars:      number of variables in master problem
+ *   - mastervars:       variables in master problem
  *   - mastersolution:   solution of Benders master problem
  *   - data:             user data for oracle
  *   - timelimit:        time limit for subproblem
@@ -371,7 +373,10 @@ BENDERS_CUTORACLE(cutoracle)
          SCIP_CALL( checkAltLPInfeasible(masterscip, lp, FALSE, &infeasible, &error) );
 
       if ( error )
+      {
+         *status = BENDERS_STATUS_ERROR;
          break;
+      }
 
       /* if the alternative polyhedron is infeasible, we found a cover */
       if ( infeasible )
@@ -725,7 +730,7 @@ SCIP_RETCODE solveMinIISC(
       }
       else
       {
-         SCIPerrorMessage("\nparameter file <%s> not found - using default parameters.\n", settingsname);
+         SCIPwarningMessage(masterscip, NULL, "\nparameter file <%s> not found - using default parameters.\n", settingsname);
       }
    }
 
