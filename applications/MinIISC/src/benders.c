@@ -16,12 +16,14 @@
 /**@file   benders.c
  * @brief  run Benders algorithm
  * @author Marc Pfetsch
+ *
+ * The algorithm uses an oracle for solving the subproblems and solves the master problem to optimality.
  */
 
 #include "benders.h"
 
 /* other parameters */
-#define MAXITERATIONS                   1000      /**< maximal number of iterations of main loop */
+#define MAXITERATIONS    1000                /**< maximal number of iterations of main loop */
 
 
 /** output status */
@@ -182,10 +184,10 @@ SCIP_RETCODE printLongStatistics(
 }
 
 
-/** find minimum cardinality infeasible subsystem */
+/** run Benders algorithm using an oracle for the subproblems */
 SCIP_RETCODE runBenders(
    SCIP*                 masterscip,         /**< master SCIP instance */
-   BENDERS_CUTORACLE((*Oracle)),             /**< oracle for generation of a Benders cut */
+   BENDERS_CUTORACLE((*Oracle)),             /**< oracle for Benders subproblem */
    BENDERS_DATA*         data,               /**< user data for oracle */
    SCIP_Real             timelimit,          /**< time limit read from arguments */
    SCIP_Real             memlimit,           /**< memory limit read from arguments */
@@ -292,7 +294,7 @@ SCIP_RETCODE runBenders(
       int v;
 
       ++niter;
-      SCIPdebugMessage("\n\nIteration %d:\n", niter);
+      SCIPdebugMessage("Iteration %d.\n", niter);
 
       /* --------- solve Benders subproblem */
 
@@ -337,6 +339,10 @@ SCIP_RETCODE runBenders(
          *status = SCIP_STATUS_TIMELIMIT;
          goto TERMINATE;
 
+      case BENDERS_STATUS_USERINTERRUPT:
+         *status = SCIP_STATUS_USERINTERRUPT;
+         goto TERMINATE;
+
       default:
          SCIPerrorMessage("Subproblem returned with status %d. Exiting ...\n", substatus);
          return SCIP_ERROR;
@@ -352,7 +358,7 @@ SCIP_RETCODE runBenders(
          solvemasterapprox = FALSE;
 
          if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
-            SCIPinfoMessage(masterscip, NULL, "Switching to optimal solution of the master problem.\n");
+            SCIPinfoMessage(masterscip, NULL, "Switching to optimally solving the master problem.\n");
       }
 
       /* --------- solve Benders master problem */

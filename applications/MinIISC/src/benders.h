@@ -16,6 +16,8 @@
 /**@file   benders.c
  * @brief  run Benders algorithm
  * @author Marc Pfetsch
+ *
+ * The algorithm uses an oracle for solving the subproblems and solves the master problem to optimality.
  */
 
 #ifndef __BENDERS_H__
@@ -27,21 +29,25 @@
 extern "C" {
 #endif
 
-/** Benders cut oracle solving status */
+/** Benders subproblem oracle solving status */
 enum BENDERS_Status
 {
    BENDERS_STATUS_UNKNOWN          =  0,     /**< the solving status is not yet known */
    BENDERS_STATUS_ADDEDCUT         =  1,     /**< a Benders cut has been added */
    BENDERS_STATUS_SUCESS           =  2,     /**< the solution is optimal, no further Benders cut has to be generated */
-   BENDERS_STATUS_TIMELIMIT        =  3      /**< the time limit has been reached */
+   BENDERS_STATUS_TIMELIMIT        =  3,     /**< the time limit has been reached */
+   BENDERS_STATUS_USERINTERRUPT    =  4,     /**< the user has interrupted the solution of the subproblem */
+   BENDERS_STATUS_ERROR            =  5      /**< an error occured during the solution of the subproblem */
 };
 typedef enum BENDERS_Status BENDERS_STATUS;
 
 typedef struct BENDERS_Data BENDERS_DATA;    /**< user defined data to pass to the oracle */
 
-/** user callback method for a Benders cut oracle
+/** user callback method for a Benders subproblem oracle
  *  input:
  *   - masterscip:       SCIP pointer of Benders master problem
+ *   - nmastervars:      number of variables in master problem
+ *   - mastervars:       variables in master problem
  *   - mastersolution:   solution of Benders master problem
  *   - data:             user data for oracle
  *   - timelimit:        time limit for subproblem
@@ -56,11 +62,11 @@ typedef struct BENDERS_Data BENDERS_DATA;    /**< user defined data to pass to t
 
 
 
-/** run Benders algorithm */
+/** run Benders algorithm using an oracle for the subproblems */
 extern
 SCIP_RETCODE runBenders(
    SCIP*                 masterscip,         /**< master SCIP instance */
-   BENDERS_CUTORACLE((*Oracle)),             /**< oracle for generation of a Benders cut */
+   BENDERS_CUTORACLE((*Oracle)),             /**< oracle for the Benders subproblem */
    BENDERS_DATA*         data,               /**< user data for oracle */
    SCIP_Real             timelimit,          /**< time limit read from arguments */
    SCIP_Real             memlimit,           /**< memory limit read from arguments */
