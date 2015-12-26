@@ -89,7 +89,8 @@ SCIP_RETCODE printShortStatistics(
    SCIP_CLOCK*           totaltimeclock,     /**< clock for total time */
    SCIP_Real             primalbound,        /**< primal bound */
    SCIP_Real             dualbound,          /**< dual bound */
-   SCIP_Longint          ntotalnodes         /**< total number of nodes */
+   SCIP_Longint          ntotalnodes,        /**< total number of nodes */
+   int                   niter               /**< number of iterations */
    )
 {
    SCIP_Real gap = 1e20;
@@ -102,13 +103,14 @@ SCIP_RETCODE printShortStatistics(
 
    SCIP_CALL( printStatus(masterscip, status) );
    SCIPinfoMessage(masterscip, NULL, "Solving Time (sec) : %.2f\n", SCIPgetClockTime(masterscip, totaltimeclock));
-   SCIPinfoMessage(masterscip, NULL, "Solving Nodes      : %" SCIP_LONGINT_FORMAT "\n", ntotalnodes);
+   SCIPinfoMessage(masterscip, NULL, "Solving Nodes      : %" SCIP_LONGINT_FORMAT " (total of %" SCIP_LONGINT_FORMAT " nodes in %d runs)\n",
+      ntotalnodes, ntotalnodes, niter);
    SCIPinfoMessage(masterscip, NULL, "Primal Bound       : %+21.14e\n", primalbound);
    SCIPinfoMessage(masterscip, NULL, "Dual Bound         : %+21.14e\n", dualbound);
    if ( SCIPisInfinity(masterscip, gap) )
-      SCIPinfoMessage(masterscip, NULL, "Gap                :   infinite\n");
+      SCIPinfoMessage(masterscip, NULL, "Gap                : infinite\n");
    else
-      SCIPinfoMessage(masterscip, NULL, "Gap                : %10.2f %%\n", 100.0 * gap);
+      SCIPinfoMessage(masterscip, NULL, "Gap                : %.2f %%\n", 100.0 * gap);
    SCIPinfoMessage(masterscip, NULL, "\n");
 
    return SCIP_OKAY;
@@ -127,7 +129,7 @@ SCIP_RETCODE printLongStatistics(
    SCIP_Real             dualbound,          /**< dual bound */
    SCIP_Longint          ntotalnodes,        /**< total number of nodes */
    SCIP_Longint          ntotalcuts,         /**< total number of cuts */
-   int                   iter                /**< number of iterations */
+   int                   niter               /**< number of iterations */
    )
 {
    SCIP_Real gap = 1e20;
@@ -140,13 +142,11 @@ SCIP_RETCODE printLongStatistics(
 
    /* print main part of statistics */
    SCIP_CALL( printStatus(masterscip, status) );
-   SCIPinfoMessage(masterscip, NULL, "Solving Time (sec) : %.2f\n", SCIPgetClockTime(masterscip, totaltimeclock));
-   SCIPinfoMessage(masterscip, NULL, "Solving Nodes      : %" SCIP_LONGINT_FORMAT " (total of %" SCIP_LONGINT_FORMAT " nodes in %d runs)\n",
-      ntotalnodes, ntotalnodes, iter);
 
    SCIPinfoMessage(masterscip, NULL, "Total Time         : %10.2f\n", SCIPgetClockTime(masterscip, totaltimeclock));
-   SCIPinfoMessage(masterscip, NULL, "  solving          : %10.2f\n", SCIPgetClockTime(masterscip, mastertimeclock));
-   SCIPinfoMessage(masterscip, NULL, "  oracle           : %10.2f\n", SCIPgetClockTime(masterscip, oracletimeclock));
+   SCIPinfoMessage(masterscip, NULL, "  solving          : %10.2f\n", SCIPgetClockTime(masterscip, totaltimeclock));
+   SCIPinfoMessage(masterscip, NULL, "  master           : %10.2f (included in solving)\n", SCIPgetClockTime(masterscip, mastertimeclock));
+   SCIPinfoMessage(masterscip, NULL, "  oracle           : %10.2f (included in solving)\n", SCIPgetClockTime(masterscip, oracletimeclock));
 
    SCIPinfoMessage(masterscip, NULL, "Original Problem   :\n");
    SCIPinfoMessage(masterscip, NULL, "  Problem name     : %s\n", SCIPgetProbName(masterscip));
@@ -170,7 +170,7 @@ SCIP_RETCODE printLongStatistics(
       SCIPgetClockTime(masterscip, oracletimeclock), 0.0, SCIPgetClockTime(masterscip, oracletimeclock), 0.0, 0.0, 0.0, 0.0, 0.0);
 
    SCIPinfoMessage(masterscip, NULL, "B&B Tree           :\n");
-   SCIPinfoMessage(masterscip, NULL, "  number of runs   : %10d\n", iter);
+   SCIPinfoMessage(masterscip, NULL, "  number of runs   : %10d\n", niter);
    SCIPinfoMessage(masterscip, NULL, "  nodes (total)    : %10" SCIP_LONGINT_FORMAT "\n", ntotalnodes);
 
    SCIPinfoMessage(masterscip, NULL, "Solution           :\n");
@@ -185,7 +185,7 @@ SCIP_RETCODE printLongStatistics(
    SCIPinfoMessage(masterscip, NULL, "\nTotal used time:\t %f\n", SCIPgetClockTime(masterscip, totaltimeclock));
    SCIPinfoMessage(masterscip, NULL, "Oracle time:\t\t %f\n", SCIPgetClockTime(masterscip, oracletimeclock));
    SCIPinfoMessage(masterscip, NULL, "Master problem time:\t %f\n", SCIPgetClockTime(masterscip, mastertimeclock));
-   SCIPinfoMessage(masterscip, NULL, "Number of iterations:\t %d\n", iter);
+   SCIPinfoMessage(masterscip, NULL, "Number of iterations:\t %d\n", niter);
 #endif
 
    return SCIP_OKAY;
@@ -515,7 +515,7 @@ SCIP_RETCODE runBenders(
 
    if ( verblevel >= SCIP_VERBLEVEL_NORMAL )
    {
-      SCIP_CALL( printShortStatistics(masterscip, *status, totaltimeclock, primalbound, dualbound, ntotalnodes) );
+      SCIP_CALL( printShortStatistics(masterscip, *status, totaltimeclock, primalbound, dualbound, ntotalnodes, niter) );
       SCIP_CALL( printLongStatistics(masterscip, *status, totaltimeclock, oracletimeclock, mastertimeclock, primalbound, dualbound, ntotalnodes, ntotalcuts, niter) );
    }
 
