@@ -63,6 +63,14 @@ SCIP_RETCODE printStatus(
    case SCIP_STATUS_UNBOUNDED:
       SCIPinfoMessage(masterscip, NULL, "problem is solved [unbounded]");
       break;
+   case SCIP_STATUS_TOTALNODELIMIT:
+   case SCIP_STATUS_STALLNODELIMIT:
+   case SCIP_STATUS_SOLLIMIT:
+   case SCIP_STATUS_BESTSOLLIMIT:
+   case SCIP_STATUS_RESTARTLIMIT:
+   case SCIP_STATUS_INFORUNBD:
+      SCIPerrorMessage("unexpected status code <%d>\n", status);
+      return SCIP_INVALIDDATA;
    default:
       SCIPerrorMessage("invalid status code <%d>\n", status);
       return SCIP_INVALIDDATA;
