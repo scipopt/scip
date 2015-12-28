@@ -23,7 +23,7 @@
 #include "benders.h"
 
 /* other parameters */
-#define MAXITERATIONS    1000                /**< maximal number of iterations of main loop */
+#define MAXITERATIONS    10000               /**< maximal number of iterations of main loop */
 
 
 /** output status */
@@ -64,6 +64,8 @@ SCIP_RETCODE printStatus(
       SCIPinfoMessage(masterscip, NULL, "problem is solved [unbounded]");
       break;
    case SCIP_STATUS_TOTALNODELIMIT:
+      SCIPinfoMessage(masterscip, NULL, "solving was interrupted [iteration limit reached]");
+      break;
    case SCIP_STATUS_STALLNODELIMIT:
    case SCIP_STATUS_SOLLIMIT:
    case SCIP_STATUS_BESTSOLLIMIT:
