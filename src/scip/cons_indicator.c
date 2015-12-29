@@ -850,8 +850,8 @@ SCIP_DECL_PARAMCHGD(paramChangedIndicator)
 #ifdef SCIP_ENABLE_IISCHECK
 /** Check that indicator constraints corresponding to nonnegative entries in @a vector are infeasible in original problem
  *
- *  This function will probably fail if the has been presolved by the cons_linear presolver - to
- *  make it complete we would have to substitute active variables.
+ *  @note This function will probably fail if the has been presolved by the cons_linear presolver. To make it complete
+ *  we would have to substitute active variables.
  */
 static
 SCIP_RETCODE checkIIS(
@@ -861,6 +861,7 @@ SCIP_RETCODE checkIIS(
    SCIP_Real*            vector              /**< vector */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_HASHMAP* varhash;   /* hash map from variable to column index in auxiliary LP */
    SCIP_LPI* lp;
@@ -875,6 +876,9 @@ SCIP_RETCODE checkIIS(
    /* now check indicator constraints */
    conshdlr = SCIPfindConshdlr(scip, "indicator");
    assert( conshdlr != NULL );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
 
    conss = SCIPconshdlrGetConss(conshdlr);
    nconss = SCIPconshdlrGetNConss(conshdlr);
@@ -906,8 +910,8 @@ SCIP_RETCODE checkIIS(
          int matbeg;
          int* matind;
          SCIP_Real* matval;
-         SCIP_VAR** newVars;
-         int nNewVars;
+         SCIP_VAR** newvars;
+         int nnewvars;
          SCIP_Real lhs;
          SCIP_Real rhs;
          int cnt;
@@ -966,10 +970,10 @@ SCIP_RETCODE checkIIS(
 
          SCIP_CALL( SCIPallocBufferArray(scip, &matind, 4*nlinvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &matval, 4*nlinvars) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &newVars, nlinvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &newvars, nlinvars) );
 
          /* set up row */
-         nNewVars = 0;
+         nnewvars = 0;
          for (v = 0; v < nlinvars; ++v)
          {
             SCIP_VAR* var;
@@ -990,28 +994,28 @@ SCIP_RETCODE checkIIS(
                nvars++;
 
                /* store new variables */
-               newVars[nNewVars++] = var;
+               newvars[nnewvars++] = var;
             }
             assert( SCIPhashmapExists(varhash, var) );
          }
 
          /* add new columns */
-         if ( nNewVars > 0 )
+         if ( nnewvars > 0 )
          {
             SCIP_Real* lb;
             SCIP_Real* ub;
             SCIP_Real* obj;
             char** colnames;
 
-            SCIP_CALL( SCIPallocBufferArray(scip, &lb, nNewVars) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &ub, nNewVars) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &obj, nNewVars) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &colnames, nNewVars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &lb, nnewvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &ub, nnewvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &obj, nnewvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &colnames, nnewvars) );
 
-            for (v = 0; v < nNewVars; ++v)
+            for (v = 0; v < nnewvars; ++v)
             {
                SCIP_VAR* var;
-               var = newVars[v];
+               var = newvars[v];
                obj[v] = 0.0;
                lb[v] = SCIPvarGetLbLocal(var);
                ub[v] = SCIPvarGetUbLocal(var);
@@ -1020,9 +1024,9 @@ SCIP_RETCODE checkIIS(
             }
 
             /* now add columns */
-            SCIP_CALL( SCIPlpiAddCols(lp, nNewVars, obj, lb, ub, colnames, 0, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPlpiAddCols(lp, nnewvars, obj, lb, ub, colnames, 0, NULL, NULL, NULL) );
 
-            for (v = nNewVars - 1; v >= 0; --v)
+            for (v = nnewvars - 1; v >= 0; --v)
             {
                SCIPfreeBufferArray(scip, &(colnames[v]));
             }
@@ -1059,7 +1063,7 @@ SCIP_RETCODE checkIIS(
 
          SCIPfreeBufferArray(scip, &matind);
          SCIPfreeBufferArray(scip, &matval);
-         SCIPfreeBufferArray(scip, &newVars);
+         SCIPfreeBufferArray(scip, &newvars);
 
          assert( slackvar != NULL );
          if ( SCIPvarGetStatus(slackvar) == SCIP_VARSTATUS_AGGREGATED )
@@ -1070,17 +1074,144 @@ SCIP_RETCODE checkIIS(
       }
    }
 
+   /* possibly handle additional linear constraints */
+   if ( conshdlrdata->useotherconss )
+   {
+      /* get all linear constraints */
+      conss = SCIPgetConss(scip);
+      nconss = SCIPgetNConss(scip);
+
+      /* loop through constraints */
+      for (c = 0; c < nconss; ++c)
+      {
+         SCIP_CONS* cons;
+         SCIP_VAR** linvars;
+         SCIP_Real* linvals;
+         SCIP_Real linrhs;
+         SCIP_Real linlhs;
+         SCIP_Real* matval;
+         SCIP_VAR** newvars;
+         int nnewvars = 0;
+         int* matind;
+         int nlinvars;
+         int matbeg = 0;
+         int cnt = 0;
+         int v;
+
+         cons = conss[c];
+         assert( cons != NULL );
+
+         /* avoid non-active, local constraints */
+         if ( ! SCIPconsIsEnabled(cons) || ! SCIPconsIsActive(cons) || SCIPconsIsLocal(cons) )
+            continue;
+
+         /* check type of constraint (only take linear constraints) */
+         if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear") != 0 )
+            continue;
+
+         /* avoid adding linear constraints that correspond to indicator constraints */
+         if ( strncmp(SCIPconsGetName(cons), "indlin", 6) == 0 )
+            continue;
+
+         /* get data of linear constraint */
+         linvars = SCIPgetVarsLinear(scip, cons);
+         linvals = SCIPgetValsLinear(scip, cons);
+         nlinvars = SCIPgetNVarsLinear(scip, cons);
+         linlhs = SCIPgetLhsLinear(scip, cons);
+         linrhs = SCIPgetRhsLinear(scip, cons);
+
+         /* reserve space */
+         SCIP_CALL( SCIPallocBufferArray(scip, &matind, 4*nlinvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &matval, 4*nlinvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &newvars, nlinvars) );
+
+         /* collect possibly new variables */
+         for (v = 0; v < nlinvars; ++v)
+         {
+            SCIP_VAR* var;
+            var = linvars[v];
+            assert( var != NULL );
+
+            /* if variable is new */
+            if ( ! SCIPhashmapExists(varhash, var) )
+            {
+               /* add variable in map */
+               SCIP_CALL( SCIPhashmapInsert(varhash, var, (void*) (size_t) nvars) );
+               assert( nvars == (int) (size_t) SCIPhashmapGetImage(varhash, var) );
+               /* SCIPdebugMessage("Inserted variable <%s> into hashmap (%d).\n", SCIPvarGetName(var), nvars); */
+               nvars++;
+
+               /* store new variables */
+               newvars[nnewvars++] = var;
+            }
+            assert( SCIPhashmapExists(varhash, var) );
+         }
+
+         /* add new columns */
+         if ( nnewvars > 0 )
+         {
+            SCIP_Real* lb;
+            SCIP_Real* ub;
+            SCIP_Real* obj;
+            char** colnames;
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &lb, nnewvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &ub, nnewvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &obj, nnewvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &colnames, nnewvars) );
+
+            for (v = 0; v < nnewvars; ++v)
+            {
+               SCIP_VAR* var;
+               var = newvars[v];
+               obj[v] = 0.0;
+               lb[v] = SCIPvarGetLbLocal(var);
+               ub[v] = SCIPvarGetUbLocal(var);
+               SCIP_CALL( SCIPallocBufferArray(scip, &(colnames[v]), SCIP_MAXSTRLEN) ); /*lint !e866*/
+               (void) SCIPsnprintf(colnames[v], SCIP_MAXSTRLEN, "%s", SCIPvarGetName(var));
+            }
+
+            /* now add columns */
+            SCIP_CALL( SCIPlpiAddCols(lp, nnewvars, obj, lb, ub, colnames, 0, NULL, NULL, NULL) );
+
+            for (v = nnewvars - 1; v >= 0; --v)
+            {
+               SCIPfreeBufferArray(scip, &(colnames[v]));
+            }
+            SCIPfreeBufferArray(scip, &colnames);
+            SCIPfreeBufferArray(scip, &obj);
+            SCIPfreeBufferArray(scip, &ub);
+            SCIPfreeBufferArray(scip, &lb);
+         }
+
+         /* set up row */
+         for (v = 0; v < nlinvars; ++v)
+         {
+            SCIP_VAR* var;
+            var = linvars[v];
+            assert( var != NULL );
+
+            assert( SCIPhashmapExists(varhash, var) );
+            matind[cnt] = (int) (size_t) SCIPhashmapGetImage(varhash, var);
+            matval[cnt] = linvals[v];
+            ++cnt;
+         }
+
+         /* add new row */
+         SCIP_CALL( SCIPlpiAddRows(lp, 1, &linlhs, &linrhs, NULL, cnt, &matbeg, matind, matval) );
+
+         SCIPfreeBufferArray(scip, &matind);
+         SCIPfreeBufferArray(scip, &matval);
+         SCIPfreeBufferArray(scip, &newvars);
+      }
+   }
+
    /* solve LP and check status */
    SCIP_CALL( SCIPlpiSolvePrimal(lp) );
 
    if ( ! SCIPlpiIsPrimalInfeasible(lp) )
    {
-      SCIP_CONSHDLRDATA* conshdlrdata;
-
       SCIPerrorMessage("Detected IIS is not infeasible in original problem!\n");
-
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert( conshdlrdata != NULL );
 
       SCIP_CALL( SCIPlpiWriteLP(lp, "check.lp") );
       SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altlp, "altdebug.lp") );
