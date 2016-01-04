@@ -106,7 +106,8 @@
 /* presolving */
 #define DEFAULT_MAXEXTENSIONS         1 /**< maximal number of extensions that will be computed for each SOS1 constraint */
 #define DEFAULT_MAXTIGHTENBDS         5 /**< maximal number of bound tightening rounds per presolving round (-1: no limit) */
-#define DEFAULT_UPDATECONFLPRESOL FALSE /**< if TRUE then update conflict graph during presolving procedure */
+#define DEFAULT_PERFIMPLANALYSIS   TRUE /**< if TRUE then perform implication graph analysis (might add additional SOS1 constraints) */
+#define DEFAULT_DEPTHIMPLANALYSIS    -1 /**< maximal depth for implication graph analysis (-1: no limit) */
 
 /* propagation */
 #define DEFAULT_CONFLICTPROP      TRUE /**< whether to use conflict graph propagation */
@@ -237,7 +238,8 @@ struct SCIP_ConshdlrData
    int                   cntextsos1;         /**< counts number of extended SOS1 constraints */
    int                   maxextensions;      /**< maximal number of extensions that will be computed for each SOS1 constraint */
    int                   maxtightenbds;      /**< maximal number of bound tightening rounds per presolving round (-1: no limit) */
-   SCIP_Bool             updateconflpresol;  /**< if TRUE then update conflict graph during presolving procedure */
+   SCIP_Bool             perfimplanalysis;   /**< if TRUE then perform implication graph analysis (might add additional SOS1 constraints) */
+   int                   depthimplanalysis;  /**< maximal depth for implication graph analysis (-1: no limit) */
    /* propagation */
    SCIP_Bool             conflictprop;       /**< whether to use conflict graph propagation */
    SCIP_Bool             implprop;           /**< whether to use implication graph propagation */
@@ -2027,20 +2029,29 @@ SCIP_RETCODE presolRoundConssSOS1(
 }
 
 
-/** updates conflict graph based on the information of an implication graph */
+/** performs implication graph analysis
+ *
+ *  Tentatively fixes a variable to nonzeero and extracts consequences from it:
+ *  - adds (possibly new) complementarity constraints to the problem if variables are implied to be zero
+ *  - returns that the subproblem is infeasible if the domain of a variable turns out to be empty
+ */
 static
-SCIP_RETCODE updateConflictGraphSOS1(
+SCIP_RETCODE performImplicationGraphAnalysis(
    SCIP*                 scip,               /**< SCIP pointer */
    SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
    SCIP_VAR**            totalvars,          /**< problem and SOS1 variables */
    SCIP_DIGRAPH*         implgraph,          /**< implication graph (@p j is successor of @p i if and only if \f$ x_i\not = 0 \Rightarrow x_j\not = 0\f$) */
    SCIP_HASHMAP*         implhash,           /**< hash map from variable to node in implication graph */
-   SCIP_Bool*            implnodes,          /**< implnodes[i] = TRUE if the SOS1 variable corresponding to a given node i in the implication graph is implied to be nonzero */
    SCIP_Bool**           adjacencymatrix,    /**< adjacencymatrix of the conflict graph (only lower half filled) */
    int                   givennode,          /**< node of the conflict graph */
    int                   nonznode,           /**< node of the conflict graph that is implied to be nonzero if given node is nonzero */
-   int*                  naddconss           /**< number of added SOS1 constraints */
+   SCIP_Real*            impllbs,            /**< current lower variable bounds if given node is nonzero (update possible) */
+   SCIP_Real*            implubs,             /**< current upper variable bounds if given node is nonzero (update possible) */
+   SCIP_Bool*            implnodes,          /**< indicates which variables are currently implied to be nonzero if given node is nonzero (update possible) */
+   int*                  naddconss,          /**< pointer to store number of added SOS1 constraints */
+   int*                  probingdepth,       /**< pointer to store current probing depth */
+   SCIP_Bool*            infeasible          /**< pointer to store whether the subproblem gets infeasible if variable to 'nonznode' is nonzero */
    )
 {
    SCIP_SUCCDATA** succdatas;
@@ -2051,57 +2062,75 @@ SCIP_RETCODE updateConflictGraphSOS1(
 
    assert( nonznode >= 0 && nonznode < SCIPdigraphGetNNodes(conflictgraph) );
 
+   /* check probing depth */
+   if ( conshdlrdata->depthimplanalysis >= 0 && *probingdepth >= conshdlrdata->depthimplanalysis )
+      return SCIP_OKAY;
+   ++(*probingdepth);
+
+   /* get successors of 'nonznode' in the conflict graph */
    nsucc = SCIPdigraphGetNSuccessors(conflictgraph, nonznode);
    succ = SCIPdigraphGetSuccessors(conflictgraph, nonznode);
 
-   /* update conflict graph */
+   /* loop through neighbors of 'nonznode' in the conflict graph; these variables are implied to be zero */
    for (s = 0; s < nsucc; ++s)
    {
       succnode = succ[s];
 
-      if ( givennode != succnode )
+      /* if the current variable domain of the successor node does not contain the value zero then return that the problem is infeasible
+       * else if 'succnode' is not already complementary to 'givennode' then add a new complementarity constraint */
+      if ( givennode == succnode || SCIPisFeasPositive(scip, impllbs[succnode]) || SCIPisFeasNegative(scip, implubs[succnode]) )
       {
-         if ( ! isConnectedSOS1(adjacencymatrix, NULL, givennode, succnode) )
-         {
-            char namesos[SCIP_MAXSTRLEN];
-            SCIP_CONS* soscons = NULL;
-            SCIP_VAR* var1;
-            SCIP_VAR* var2;
+	*infeasible = TRUE;
+	return SCIP_OKAY;
+      }
+      else if ( ! isConnectedSOS1(adjacencymatrix, NULL, givennode, succnode) )
+      {
+	char namesos[SCIP_MAXSTRLEN];
+	SCIP_CONS* soscons = NULL;
+	SCIP_VAR* var1;
+	SCIP_VAR* var2;
 
-            /* add arcs to the conflict graph */
-            SCIP_CALL( SCIPdigraphAddArc(conflictgraph, givennode, succnode, NULL) );
-            SCIP_CALL( SCIPdigraphAddArc(conflictgraph, succnode, givennode, NULL) );
+	/* update implied bounds of succnode */
+	impllbs[succnode] = 0;
+	implubs[succnode] = 0;
 
-            /* update adjacencymatrix */
-            if ( givennode > succnode )
-               adjacencymatrix[givennode][succnode] = 1;
-            else
-               adjacencymatrix[succnode][givennode] = 1;
+	/* add arcs to the conflict graph */
+	SCIP_CALL( SCIPdigraphAddArcSafe(conflictgraph, givennode, succnode, NULL) );
+	SCIP_CALL( SCIPdigraphAddArcSafe(conflictgraph, succnode, givennode, NULL) );
 
-            var1 = SCIPnodeGetVarSOS1(conflictgraph, givennode);
-            var2 = SCIPnodeGetVarSOS1(conflictgraph, succnode);
+	/* resort successors */
+	SCIPsortInt(SCIPdigraphGetSuccessors(conflictgraph, givennode), SCIPdigraphGetNSuccessors(conflictgraph, givennode));
+	SCIPsortInt(SCIPdigraphGetSuccessors(conflictgraph, succnode), SCIPdigraphGetNSuccessors(conflictgraph, succnode));
 
-            /* create SOS1 constraint */
-            (void) SCIPsnprintf(namesos, SCIP_MAXSTRLEN, "presolved_sos1_%s_%s", SCIPvarGetName(var1), SCIPvarGetName(var2) );
-            SCIP_CALL( SCIPcreateConsSOS1(scip, &soscons, namesos, 0, NULL, NULL, TRUE, TRUE, TRUE, FALSE, TRUE,
-                  TRUE, FALSE, FALSE, FALSE) );
+	/* update adjacencymatrix */
+	if ( givennode > succnode )
+	  adjacencymatrix[givennode][succnode] = 1;
+	else
+	  adjacencymatrix[succnode][givennode] = 1;
 
-            /* add variables to SOS1 constraint */
-            SCIP_CALL( addVarSOS1(scip, soscons, conshdlrdata, var1, 1.0) );
-            SCIP_CALL( addVarSOS1(scip, soscons, conshdlrdata, var2, 2.0) );
+	var1 = SCIPnodeGetVarSOS1(conflictgraph, givennode);
+	var2 = SCIPnodeGetVarSOS1(conflictgraph, succnode);
 
-            /* add constraint */
-            SCIP_CALL( SCIPaddCons(scip, soscons) );
+	/* create SOS1 constraint */
+	(void) SCIPsnprintf(namesos, SCIP_MAXSTRLEN, "presolved_sos1_%s_%s", SCIPvarGetName(var1), SCIPvarGetName(var2) );
+	SCIP_CALL( SCIPcreateConsSOS1(scip, &soscons, namesos, 0, NULL, NULL, TRUE, TRUE, TRUE, FALSE, TRUE,
+				      TRUE, FALSE, FALSE, FALSE) );
 
-            /* release constraint */
-            SCIP_CALL( SCIPreleaseCons(scip, &soscons) );
+	/* add variables to SOS1 constraint */
+	SCIP_CALL( addVarSOS1(scip, soscons, conshdlrdata, var1, 1.0) );
+	SCIP_CALL( addVarSOS1(scip, soscons, conshdlrdata, var2, 2.0) );
 
-            ++(*naddconss);
-         }
+	/* add constraint */
+	SCIP_CALL( SCIPaddCons(scip, soscons) );
+
+	/* release constraint */
+	SCIP_CALL( SCIPreleaseCons(scip, &soscons) );
+
+	++(*naddconss);
       }
    }
 
-   /* by constr.: nodes of SOS1 variables are equal for conflict graph and implication graph */
+   /* by construction: nodes of SOS1 variables are equal for conflict graph and implication graph */
    assert( nonznode == (int) (size_t) SCIPhashmapGetImage(implhash, SCIPnodeGetVarSOS1(conflictgraph, nonznode)) );
    succdatas = (SCIP_SUCCDATA**) SCIPdigraphGetSuccessorsData(implgraph, nonznode);
    nsucc = SCIPdigraphGetNSuccessors(implgraph, nonznode);
@@ -2110,19 +2139,52 @@ SCIP_RETCODE updateConflictGraphSOS1(
    /* go further in implication graph */
    for (s = 0; s < nsucc; ++s)
    {
-      SCIP_SUCCDATA* data;
+     SCIP_SUCCDATA* data;
+     int oldprobingdepth;
 
-      succnode = succ[s];
-      data = succdatas[s];
+     succnode = succ[s];
+     data = succdatas[s];
+     oldprobingdepth = *probingdepth;
 
-      /* if node is SOS1 and not already known to be an implication node */
-      if ( varGetNodeSOS1(conshdlrdata, totalvars[succnode]) >= 0 && ! implnodes[succnode] && ( SCIPisFeasPositive(scip, data->lbimpl) || SCIPisFeasNegative(scip, data->ubimpl) ) )
-      {
-         /* by construction: nodes of SOS1 variables are equal for conflict graph and implication graph */
-         assert( succnode == (int) (size_t) SCIPhashmapGetImage(implhash, SCIPnodeGetVarSOS1(conflictgraph, succnode)) );
-         implnodes[succnode] = TRUE; /* in order to avoid cycling */
-         SCIP_CALL( updateConflictGraphSOS1(scip, conshdlrdata, conflictgraph, totalvars, implgraph, implhash, implnodes, adjacencymatrix, givennode, succnode, naddconss) );
-      }
+     /* if current lower bound is smaller than implied lower bound */
+     if ( SCIPisFeasLT(scip, impllbs[succnode], data->lbimpl) )
+     {
+	impllbs[succnode] = data->lbimpl;
+	
+	/* if node is SOS1 and implied to be nonzero for the first time, then this recursively may imply further bound changes */
+	if ( varGetNodeSOS1(conshdlrdata, totalvars[succnode]) >= 0 && ! implnodes[succnode] && SCIPisFeasPositive(scip, data->lbimpl) )
+	{
+	   /* by construction: nodes of SOS1 variables are equal for conflict graph and implication graph */
+	   assert( succnode == (int) (size_t) SCIPhashmapGetImage(implhash, SCIPnodeGetVarSOS1(conflictgraph, succnode)) );
+	   implnodes[succnode] = TRUE; /* in order to avoid cycling */
+	   SCIP_CALL( performImplicationGraphAnalysis(scip, conshdlrdata, conflictgraph, totalvars, implgraph, implhash, adjacencymatrix, givennode, succnode, impllbs, implubs, implnodes, naddconss, probingdepth, infeasible) );
+	   *probingdepth = oldprobingdepth;
+
+	   /* return if the subproblem is known to be infeasible */
+	   if ( *infeasible )
+	      return SCIP_OKAY;
+	}
+     }
+
+     /* if current upper bound is larger than implied upper bound */
+     if ( SCIPisFeasGT(scip, implubs[succnode], data->ubimpl) )
+     {
+	impllbs[succnode] = data->ubimpl;
+	
+	/* if node is SOS1 and implied to be nonzero for the first time, then this recursively may imply further bound changes */
+	if ( varGetNodeSOS1(conshdlrdata, totalvars[succnode]) >= 0 && ! implnodes[succnode] && SCIPisFeasNegative(scip, data->ubimpl) )
+	{
+	   /* by construction: nodes of SOS1 variables are equal for conflict graph and implication graph */
+	   assert( succnode == (int) (size_t) SCIPhashmapGetImage(implhash, SCIPnodeGetVarSOS1(conflictgraph, succnode)) );
+	   implnodes[succnode] = TRUE; /* in order to avoid cycling */
+	   SCIP_CALL( performImplicationGraphAnalysis(scip, conshdlrdata, conflictgraph, totalvars, implgraph, implhash, adjacencymatrix, givennode, succnode, impllbs, implubs, implnodes, naddconss, probingdepth, infeasible) );
+	   *probingdepth = oldprobingdepth;
+
+	   /* return if the subproblem is known to be infeasible */
+	   if ( *infeasible )
+	      return SCIP_OKAY;
+	}
+     }
    }
 
    return SCIP_OKAY;
@@ -3267,6 +3329,7 @@ SCIP_RETCODE presolRoundVarsSOS1(
    SCIP_DIGRAPH*         conflictgraph,      /**< conflict graph */
    SCIP_Bool**           adjacencymatrix,    /**< adjacencymatrix of conflict graph */
    int                   nsos1vars,          /**< number of SOS1 variables */
+   int*                  nfixedvars,         /**< pointer to store number of fixed variables */
    int*                  nchgbds,            /**< pointer to store number of changed bounds */
    int*                  naddconss,          /**< pointer to store number of addded constraints */
    SCIP_RESULT*          result              /**< result */
@@ -3274,7 +3337,6 @@ SCIP_RETCODE presolRoundVarsSOS1(
 {
    SCIP_DIGRAPH* implgraph;
    SCIP_HASHMAP* implhash;
-   SCIP_Bool* implnodes;
 
    SCIP_Bool cutoff = FALSE;
    SCIP_Bool updateconfl;
@@ -3320,7 +3382,6 @@ SCIP_RETCODE presolRoundVarsSOS1(
 
    /* create implication graph */
    SCIP_CALL( SCIPdigraphCreate(&implgraph, ntotalvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &implnodes, nsos1vars) );
 
    /* try to tighten the lower and upper bounds of the variables */
    updateconfl = FALSE;
@@ -3345,28 +3406,70 @@ SCIP_RETCODE presolRoundVarsSOS1(
          break;
    }
 
+   /* perform conflict graph analysis */
+   if ( updateconfl && conshdlrdata->perfimplanalysis && ! cutoff )
+   {
+      SCIP_Real* implubs;
+      SCIP_Real* impllbs;
+      SCIP_Bool* implnodes;
+      SCIP_Bool infeasible;
+      SCIP_Bool fixed;
+      int naddconsssave;
+      int probingdepth;
+
+      /* allocate buffer arrays */
+      SCIP_CALL( SCIPallocBufferArray(scip, &implnodes, nsos1vars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &impllbs, ntotalvars) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &implubs, ntotalvars) );
+
+      naddconsssave = *naddconss;
+      for (i = 0; i < nsos1vars; ++i)
+      {
+	 /* initialize data for implication graph analysis */
+	 infeasible = FALSE;
+	 probingdepth = 0;
+         for (j = 0; j < nsos1vars; ++j)
+            implnodes[j] = FALSE;
+	 for (j = 0; j < ntotalvars; ++j)
+	 {
+	    impllbs[j] = SCIPvarGetLbLocal(totalvars[j]);
+	    implubs[j] = SCIPvarGetUbLocal(totalvars[j]);
+	 }
+
+	 /* try to update the conflict graph based on the information of the implication graph */
+	 SCIP_CALL( performImplicationGraphAnalysis(scip, conshdlrdata, conflictgraph, totalvars, implgraph, implhash, adjacencymatrix, i, i, impllbs, implubs, implnodes, naddconss, &probingdepth, &infeasible) );
+
+	 /* if the subproblem turned out to be infeasible then fix variable to zero */
+	 if ( infeasible )
+	 {
+	    SCIP_CALL( SCIPfixVar(scip, totalvars[i], 0.0, &infeasible, &fixed) );
+
+	    if ( fixed )
+	    {
+	       SCIPdebugMessage("fixed variable %s with lower bound %f and upper bound %f to zero\n",
+				SCIPvarGetName(totalvars[i]), SCIPvarGetLbLocal(totalvars[i]), SCIPvarGetUbLocal(totalvars[i]));
+	       ++(*nfixedvars);
+	    }
+
+	    if ( infeasible )
+	       cutoff = TRUE;
+	 }
+      }
+
+      if ( *naddconss > naddconsssave )
+         *result = SCIP_SUCCESS;
+
+      /* free buffer arrays */
+      SCIPfreeBufferArrayNull(scip, &implubs);
+      SCIPfreeBufferArrayNull(scip, &impllbs);
+      SCIPfreeBufferArrayNull(scip, &implnodes);
+   }
+
    /* if an infeasibility has been detected */
    if ( cutoff )
    {
       SCIPdebugMessage("cutoff \n");
       *result = SCIP_CUTOFF;
-   }
-
-   /* try to update the conflict graph based on the information of the implication graph */
-   if ( updateconfl && conshdlrdata->updateconflpresol && ! cutoff )
-   {
-      int naddconsssave;
-
-      naddconsssave = *naddconss;
-      for (i = 0; i < nsos1vars; ++i)
-      {
-         for (j = 0; j < nsos1vars; ++j)
-            implnodes[j] = FALSE;
-         SCIP_CALL( updateConflictGraphSOS1(scip, conshdlrdata, conflictgraph, totalvars, implgraph, implhash, implnodes, adjacencymatrix, i, i, naddconss) );
-      }
-
-      if ( *naddconss > naddconsssave )
-         *result = SCIP_SUCCESS;
    }
 
    /* free memory */;
@@ -3382,7 +3485,6 @@ SCIP_RETCODE presolRoundVarsSOS1(
       for (s = nsucc-1; s >= 0; --s)
          SCIPfreeMemory(scip, &succdatas[s]);
    }
-   SCIPfreeBufferArrayNull(scip, &implnodes);
    SCIPdigraphFree(&implgraph);
    SCIPfreeBufferArrayNull(scip, &totalvars);
    SCIPhashmapFree(&implhash);
@@ -8966,6 +9068,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
    int oldnfixedvars;
+   int oldnchgbds;
    int oldndelconss;
    int oldnupgdconss;
    int nremovedvars;
@@ -8983,6 +9086,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    *result = SCIP_DIDNOTRUN;
 
    oldnfixedvars = *nfixedvars;
+   oldnchgbds = *nchgbds;
    oldndelconss = *ndelconss;
    oldnupgdconss = *nupgdconss;
    nremovedvars = 0;
@@ -9060,7 +9164,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
          /* perform one presolving round for SOS1 variables */
          if ( conshdlrdata->maxtightenbds != 0 && *result != SCIP_CUTOFF )
          {
-            SCIP_CALL( presolRoundVarsSOS1(scip, conshdlrdata, conflictgraph, adjacencymatrix, nsos1vars, nchgbds, naddconss, result) );
+            SCIP_CALL( presolRoundVarsSOS1(scip, conshdlrdata, conflictgraph, adjacencymatrix, nsos1vars, nfixedvars, nchgbds, naddconss, result) );
          }
 
          /* free adjacency matrix */
@@ -9074,8 +9178,8 @@ SCIP_DECL_CONSPRESOL(consPresolSOS1)
    }
    (*nchgcoefs) += nremovedvars;
 
-   SCIPdebugMessage("presolving fixed %d variables, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
-      *nfixedvars - oldnfixedvars, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss);
+   SCIPdebugMessage("presolving fixed %d variables, changed %d bounds, removed %d variables, deleted %d constraints, and upgraded %d constraints.\n",
+		    *nfixedvars - oldnfixedvars, *nchgbds - oldnchgbds, nremovedvars, *ndelconss - oldndelconss, *nupgdconss - oldnupgdconss);
 
    return SCIP_OKAY;
 }
@@ -10003,9 +10107,13 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
          "maximal number of bound tightening rounds per presolving round (-1: no limit)",
          &conshdlrdata->maxtightenbds, TRUE, DEFAULT_MAXTIGHTENBDS, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/updateconflpresol",
-         "if TRUE then update conflict graph during presolving procedure",
-         &conshdlrdata->updateconflpresol, TRUE, DEFAULT_UPDATECONFLPRESOL, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/perfimplanalysis",
+         "if TRUE then perform implication graph analysis (might add additional SOS1 constraints)",
+         &conshdlrdata->perfimplanalysis, TRUE, DEFAULT_PERFIMPLANALYSIS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/depthimplanalysis",
+         "maximal depth for implication graph analysis (-1: no limit)",
+         &conshdlrdata->depthimplanalysis, TRUE, DEFAULT_DEPTHIMPLANALYSIS, -1, INT_MAX, NULL, NULL) );
 
    /* propagation parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/conflictprop",
