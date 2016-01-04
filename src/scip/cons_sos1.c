@@ -10567,7 +10567,7 @@ SCIP_RETCODE SCIPmakeSOS1sFeasible(
    {
       SCIPerrorMessage("Not an SOS1 constraint handler.\n");
       SCIPABORT();
-      return -1;  /*lint !e527*/
+      return SCIP_PARAMETERWRONGVAL;
    }
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
