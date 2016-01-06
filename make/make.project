@@ -239,7 +239,7 @@ endif
 #-----------------------------------------------------------------------------
 
 ifeq ($(LPS),spx)
-LPS		=	spx2
+override LPS	=	spx2
 endif
 
 LPILIBNAME	=	lpi$(LPS)
