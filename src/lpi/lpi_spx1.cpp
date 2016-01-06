@@ -4945,6 +4945,11 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = (int) lpi->spx->getTiming();
       break;
 #endif
+#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
+   case SCIP_LPPAR_RANDOMSEED:
+      *ival = (int) lpi->spx->random.getSeed();
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -5019,6 +5024,12 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->spx->setTiming((Timer::TYPE) ival);
       break;
 #endif
+#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
+   case SCIP_LPPAR_RANDOMSEED:
+      lpi->spx->random.setSeed((unsigned int) ival);
+      break;
+#endif
+
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
