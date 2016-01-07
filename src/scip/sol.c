@@ -254,7 +254,12 @@ void solStamp(
    assert(stat != NULL);
 
    if( checktime )
+   {
       sol->time = SCIPclockGetTime(stat->solvingtime);
+#ifndef NDEBUG
+      sol->lpcount = stat->lpcount;
+#endif
+   }
    else
       sol->time = SCIPclockGetLastTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
@@ -1043,6 +1048,8 @@ SCIP_RETCODE SCIPsolSetVal(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       assert(!SCIPsolIsOriginal(sol));
+      assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
+         || sol->lpcount == stat->lpcount);
       oldval = solGetArrayVal(sol, var);
       if( !SCIPsetIsEQ(set, val, oldval) )
       {
@@ -1180,6 +1187,9 @@ SCIP_RETCODE SCIPsolIncVal(
    if( SCIPsetIsZero(set, incval) )
       return SCIP_OKAY;
 
+   assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
+      || sol->lpcount == stat->lpcount);
+
    oldval = solGetArrayVal(sol, var);
    if( SCIPsetIsInfinity(set, oldval) || SCIPsetIsInfinity(set, -oldval) )
       return SCIP_OKAY;
@@ -1290,6 +1300,8 @@ SCIP_Real SCIPsolGetVal(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       assert(!SCIPsolIsOriginal(sol));
+      assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
+         || sol->lpcount == stat->lpcount);
       return solGetArrayVal(sol, var);
 
    case SCIP_VARSTATUS_FIXED:
@@ -1616,6 +1628,8 @@ SCIP_RETCODE SCIPsolRound(
 
       var = prob->vars[v];
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+      assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
+         || sol->lpcount == stat->lpcount);
       solval = solGetArrayVal(sol, var);
 
       /* solutions with unknown entries cannot be rounded */

@@ -42,6 +42,7 @@ fixed bugs:
 - fixed bug in conflict.c with wrong reset of bounds used
 - fixed bug in heur_simplerounding in connection with relaxators
 - fixed wrong objective sense when copying the original problem
+- fixed bug in feaspump heuristic where last solution candidates were not updated correctly
 
 SCIP version 3.2.0
 ==================

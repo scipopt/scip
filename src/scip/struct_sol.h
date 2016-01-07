@@ -52,6 +52,11 @@ struct SCIP_Sol
    SCIP_Real             obj;                /**< objective value of solution */
    SCIP_Real             time;               /**< clock time, when the solution was discovered */
    SCIP_Longint          nodenum;            /**< last node number of current run, where this solution was modified */
+#ifndef NDEBUG
+   SCIP_Longint          lpcount;            /**< number of LPs solved when this solution was created, needed for debug checks
+                                              *   concerning solutions linked to the LP solution
+                                              */
+#endif
    SCIP_REALARRAY*       vals;               /**< solution values for variables */
    SCIP_BOOLARRAY*       valid;              /**< is value in vals array valid? otherwise it has to be retrieved from
                                               *   origin */
