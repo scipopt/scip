@@ -43,6 +43,8 @@ fixed bugs:
 - fixed bug in heur_simplerounding in connection with relaxators
 - fixed wrong objective sense when copying the original problem
 - fixed bug in feaspump heuristic where last solution candidates were not updated correctly
+- fixed bug with transferring solutions to new runs (need to recompute objective before checking)
+
 
 SCIP version 3.2.0
 ==================

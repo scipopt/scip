@@ -12711,9 +12711,12 @@ SCIP_RETCODE SCIPtransformProb(
       for( s = scip->origprimal->nsols - 1; s >= 0; --s )
       {
          SCIP_Bool feasible;
-         SCIP_SOL* sol ;
+         SCIP_SOL* sol;
 
          sol =  scip->origprimal->sols[s];
+
+         /* recompute objective function, since the objective might have changed in the meantime */
+         SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
 
          /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
           * including modifiable constraints
@@ -12725,8 +12728,6 @@ SCIP_RETCODE SCIPtransformProb(
          if( feasible )
          {
             SCIP_Real abssolobj;
-
-            SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
 
             abssolobj = REALABS(SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
 
