@@ -44,6 +44,7 @@ fixed bugs:
 - fixed wrong objective sense when copying the original problem
 - fixed bug in feaspump heuristic where last solution candidates were not updated correctly
 - fixed bug with transferring solutions to new runs (need to recompute objective before checking)
+- fixed bug in cons_indicator with changing type of slackvariable
 
 
 SCIP version 3.2.0
