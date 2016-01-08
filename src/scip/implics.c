@@ -1907,8 +1907,7 @@ SCIP_RETCODE sortAndMergeClique(
    var = NULL;
    noldbdchgs = *nbdchgs;
    /* check for multiple occurences or pairs of negations in the variable array, this should be very rare when creating a
-    * new clique
-    */
+    * new clique */
    startidx = *nclqvars - 1;
    while( startidx >= 0 )
    {
@@ -1918,8 +1917,7 @@ SCIP_RETCODE sortAndMergeClique(
 
       var = clqvars[startidx];
        /* only column and loose variables can exist now */
-      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN
-         || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
+      assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE);
       assert(SCIPvarIsBinary(var));
 
       /* the counters denote the occurrences of the variable var with value TRUE and FALSE as clqvalues, respectively */
@@ -1951,7 +1949,6 @@ SCIP_RETCODE sortAndMergeClique(
 
          --curr;
       }
-
 
       /* single occurrence of the variable */
       if( nones + nzeros == 1 )
@@ -2006,10 +2003,12 @@ SCIP_RETCODE sortAndMergeClique(
       {
          SCIPdebugMessage("var %s is paired with its negation in one clique -> fix all other variables\n", SCIPvarGetName(var));
 
-         /* a pair of negated variable in one clique forces all other variables in the clique to be zero */
+         /* a pair of negated variables in one clique forces all other variables in the clique to be zero */
          if( nzeros + nones < *nclqvars )
          {
-            int w = *nclqvars - 1;
+            int w;
+
+            w = *nclqvars - 1;
             while( w >= 0 )
             {
                /* skip all occurrences of variable var itself, these are between curr and startidx */
