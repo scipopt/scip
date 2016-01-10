@@ -2746,9 +2746,9 @@ SCIP_RETCODE solveNodeLP(
       stat->ninitlps += stat->nlps - nlps;
       stat->ninitlpiterations += stat->nlpiterations - nlpiterations;
 
-      /* in the root node, we try if initial LP solution is feasible to avoid expensive setup of data structures in
-       * separators; in case the root LP is aborted, e.g, by hitting the time limit, we do not check the LP solution
-       * since the corresponding data structures have not been updated 
+      /* In the root node, we try if the initial LP solution is feasible to avoid expensive setup of data structures in
+       * separators; in case the root LP is aborted, e.g., by hitting the time limit, we do not check the LP solution
+       * since the corresponding data structures have not been updated.
        */
       if( SCIPtreeGetCurrentDepth(tree) == 0 && !(*cutoff) && !(*lperror)
          && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)

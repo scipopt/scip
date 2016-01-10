@@ -9628,11 +9628,9 @@ SCIP_Bool checkEqualObjective(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    SCIP_Real*            scale,              /**< pointer to store the scaling factor between the constraint and the
-					      *   objective function
-					      */
+					      *   objective function */
    SCIP_Real*            offset              /**< pointer to store the offset of the objective function resulting by
-					      *   this constraint
-					      */
+					      *   this constraint */
    )
 {
    SCIP_VAR** vars;
@@ -9768,7 +9766,7 @@ SCIP_RETCODE checkPartialObjective(
    return SCIP_OKAY;
 }
 
-/** updates the cutoff if the given primal bound  (which is implied by the given constraint) is better */
+/** updates the cutoff if the given primal bound (which is implied by the given constraint) is better */
 static
 SCIP_RETCODE updateCutoffbound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9836,7 +9834,7 @@ SCIP_RETCODE checkParallelObjective(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* ignore equalities since these are covert by the method checkPartialObjective() */
+   /* ignore equalities since these are covered by the method checkPartialObjective() */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
       return SCIP_OKAY;
 
