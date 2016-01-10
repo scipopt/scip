@@ -600,7 +600,7 @@ BEGIN {
    {
       # if sol file could not be read, fix status to be "unkown"
       if ( ! (prob in solstatus) )
-         solstatus[prob] = "unkown";
+         solstatus[prob] = "unkn";
 
       #avoid problems when comparing floats and integer (make everything float)
       temp = pb;
@@ -932,7 +932,7 @@ BEGIN {
             pass++;
          }
          else {
-               status = "unknown";
+	    status = "unknown";
          }
       }
 
