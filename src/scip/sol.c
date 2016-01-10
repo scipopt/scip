@@ -355,6 +355,9 @@ SCIP_RETCODE SCIPsolCopy(
    (*sol)->obj = sourcesol->obj;
    (*sol)->primalindex = -1;
    (*sol)->time = sourcesol->time;
+#ifndef NDEBUG
+   (*sol)->lpcount = sourcesol->lpcount;
+#endif
    (*sol)->nodenum = sourcesol->nodenum;
    (*sol)->solorigin = sourcesol->solorigin;
    (*sol)->runnum = sourcesol->runnum;
