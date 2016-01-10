@@ -74,6 +74,8 @@ void getUplockRowIdx(
    int* colend;
    SCIP_Real* valpnt;
 
+   assert(rowidx != NULL);
+   assert(coef != NULL);
    assert(SCIPmatrixGetColNUplocks(matrix, aggvaridx) == 1);
 
    /* get nonzero entries of the variable in the matrix */
@@ -87,9 +89,7 @@ void getUplockRowIdx(
    {
       /* currently we support only >= relation */
       if( !SCIPmatrixIsRowRhsInfinity(matrix, *colpnt) )
-      {
          break;
-      }
 
       /* coef < 0 for >= relation: this row provides an uplock for the variable */
       if( *valpnt < 0.0 )
@@ -123,6 +123,8 @@ void getDownlockRowIdx(
    int* colend;
    SCIP_Real* valpnt;
 
+   assert(rowidx != NULL);
+   assert(coef != NULL);
    assert(SCIPmatrixGetColNDownlocks(matrix, aggvaridx) == 1);
 
    /* get nonzero entries of the variable in the matrix */
@@ -136,9 +138,7 @@ void getDownlockRowIdx(
    {
       /* currently we support only >= relation */
       if( !SCIPmatrixIsRowRhsInfinity(matrix, *colpnt) )
-      {
          break;
-      }
 
       /* coef > 0 for >= relation: this row provides a downlock for the variable */
       if( *valpnt > 0.0 )
