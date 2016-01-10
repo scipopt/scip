@@ -5531,7 +5531,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
          {
             consdata->slacktypechecked = TRUE;
             /* check if slack variable can be made implicit integer. */
-            if ( SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_IMPLINT && SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_BINARY )
+            if ( SCIPvarGetType(consdata->slackvar) == SCIP_VARTYPE_CONTINUOUS )
             {
                SCIP_Real* vals;
                SCIP_VAR** vars;
