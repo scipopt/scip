@@ -14515,7 +14515,7 @@ SCIP_RETCODE SCIPsolve(
       return SCIP_PLUGINNOTFOUND;
    }
 
-   /* check, if a integrality constraint handler exists if there are integral variables */
+   /* check, if an integrality constraint handler exists if there are integral variables */
    if( (SCIPgetNBinVars(scip) >= 0 || SCIPgetNIntVars(scip) >= 0) && SCIPfindConshdlr(scip, "integral") == NULL )
    {
       SCIPwarningMessage(scip, "integrality constraint handler not available\n");

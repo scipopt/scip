@@ -1084,7 +1084,7 @@ SCIP_RETCODE solveIteratively(
          lowerbound += presoldata->lastdualbound[comp];
          upperbound += presoldata->lastprimalbound[comp];
 
-         printf("upperbound = %g\n", upperbound);
+         //printf("upperbound = %g\n", upperbound);
       }
 
       assert(SCIPisFeasEQ(scip, SCIPgetSolOrigObj(scip, presoldata->bestsol), SCIPretransformObj(scip, upperbound)));
@@ -1092,7 +1092,13 @@ SCIP_RETCODE solveIteratively(
       printf("round %d: found feasible solution for %d/%d components\n", c, presoldata->nfeascomps, ncomponents);
       printf("round %d: %d/%d components solved to optimality\n", c, presoldata->nsolvedcomps, ncomponents);
 
-      printf("dualbound: %16.9g; primalbound: %16.9g\n", SCIPretransformObj(scip, lowerbound), presoldata->nfeascomps == ncomponents ? SCIPretransformObj(scip, upperbound) : SCIPinfinity(scip));
+      printf("dualbound: %16.9g; primalbound: %16.9g; gap: %16.9g; absgap: %16.9g\n",
+         SCIPretransformObj(scip, lowerbound),
+         presoldata->nfeascomps == ncomponents ? SCIPretransformObj(scip, upperbound) : SCIPinfinity(scip),
+         presoldata->nfeascomps == ncomponents ?
+            (SCIPretransformObj(scip, upperbound) - SCIPretransformObj(scip, lowerbound)) / MAX(ABS(SCIPretransformObj(scip, lowerbound)),SCIPretransformObj(scip, upperbound)) : SCIPinfinity(scip),
+         presoldata->nfeascomps == ncomponents ?
+            SCIPretransformObj(scip, upperbound) - SCIPretransformObj(scip, lowerbound) : SCIPinfinity(scip));
 
       SCIP_CALL( SCIPupdateLocalLowerbound(scip, lowerbound) );
 
@@ -1120,9 +1126,9 @@ SCIP_RETCODE solveIteratively(
             continue;
 
          /* if the gap is too small, skip this component (except for every fifth round) */
-         if( c % 5 != 0 && SCIPgetNSols(presoldata->components[comp]) > 0 &&
+         if( (c % 5 != 0) && (SCIPgetNSols(presoldata->components[comp]) > 0) &&
             SCIPgetPrimalbound(presoldata->components[comp]) - SCIPgetDualbound(presoldata->components[comp])
-            < (SCIPgetPrimalbound(scip) - SCIPgetDualbound(scip)) / (2.0 * (ncomponents - *nsolvedprobs)) )
+            < (upperbound - lowerbound) / (2.0 * (ncomponents - *nsolvedprobs)) )
             continue;
 
          nodelimit = 2 * SCIPgetNNodes(presoldata->components[comp]);
