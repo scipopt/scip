@@ -13638,10 +13638,12 @@ SCIP_RETCODE presolve(
       if( *infeasible )
       {
          /* switch status to OPTIMAL */
-         if( scip->primal->nsols > 0
-            && SCIPsetIsLT(scip->set, SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob, scip->origprob),
-               SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, SCIPprobGetObjlim(scip->transprob, scip->set))) )
+         if( scip->primal->nlimsolsfound > 0 )
+         {
+            assert(scip->primal->nsols > 0 && SCIPsetIsFeasLE(scip->set, SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob, scip->origprob),
+                  SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, SCIPprobGetObjlim(scip->transprob, scip->set))));
             scip->stat->status = SCIP_STATUS_OPTIMAL;
+         }
          else /* switch status to INFEASIBLE */
             scip->stat->status = SCIP_STATUS_INFEASIBLE;
       }

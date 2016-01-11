@@ -4717,15 +4717,19 @@ SCIP_RETCODE SCIPsolveCIP(
             stat->status = SCIP_STATUS_INFORUNBD;
          }
       }
-      else if( primal->nsols == 0
-         || SCIPsetIsGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
-            SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))) )
+      else if( primal->nlimsolsfound == 0 )
       {
+         assert(primal->nsols == 0 || SCIPsetIsFeasGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
+               SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))));
+
          /* switch status to INFEASIBLE */
          stat->status = SCIP_STATUS_INFEASIBLE;
       }
       else
       {
+         assert(primal->nsols > 0 && SCIPsetIsFeasLE(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
+               SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))));
+
          /* switch status to OPTIMAL */
          stat->status = SCIP_STATUS_OPTIMAL;
       }

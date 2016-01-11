@@ -45,6 +45,7 @@ fixed bugs:
 - fixed bug in feaspump heuristic where last solution candidates were not updated correctly
 - fixed bug with transferring solutions to new runs (need to recompute objective before checking)
 - fixed bug in cons_indicator with changing type of slackvariable
+- fixed issue: constraints being parallel to objective function (after restart) sometimes led to wrongly stating infeasible
 
 
 SCIP version 3.2.0
