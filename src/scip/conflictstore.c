@@ -41,7 +41,7 @@
 
 /** resizes cuts and score arrays to be able to store at least num entries */
 static
-SCIP_RETCODE conflictstoreEnsureCutsMem(
+SCIP_RETCODE conflictstoreEnsureMem(
    SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   num                 /**< minimal number of slots in array */
@@ -400,7 +400,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    if( conflictstore->maxstoresize == -1 )
    {
       /* the size should be dynamic wrt number of variables after presolving */
-      if( set->conf_maxstoresize == -1 )
+      if( set->conf_maxstoresize == 0 )
       {
          int nconss;
          int nvars;
@@ -408,6 +408,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
          nconss = SCIPprobGetNConss(transprob);
          nvars = SCIPprobGetNVars(transprob);
 
+         conflictstore->maxstoresize = 1000;
          conflictstore->maxstoresize += 2*nconss;
 
          if( nvars/2 <= 500 )
@@ -415,18 +416,28 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
          else if( nvars/2 <= 5000 )
             conflictstore->maxstoresize += (int) DEFAULT_CONFLICTSTORE_MAXSIZE/10;
          else
-            conflictstore->maxstoresize += DEFAULT_CONFLICTSTORE_MAXSIZE;
+            conflictstore->maxstoresize += DEFAULT_CONFLICTSTORE_MAXSIZE/2;
 
          conflictstore->maxstoresize = MIN(conflictstore->maxstoresize, DEFAULT_CONFLICTSTORE_MAXSIZE);
       }
+      else if( set->conf_maxstoresize == -1 )
+         conflictstore->maxstoresize = INT_MAX;
       else
          conflictstore->maxstoresize = set->conf_maxstoresize;
 
       SCIPdebugMessage("maximal size of conflict pool is %d.\n", conflictstore->maxstoresize);
       printf("maximal size of conflict pool is %d.\n", conflictstore->maxstoresize);
-   }
 
-   SCIP_CALL( conflictstoreEnsureCutsMem(conflictstore, set, nconflicts+1) );
+      /* get the clean-up frequency */
+      if( conflictstore->cleanupfreq == -1 )
+      {
+         SCIP_CALL( SCIPsetGetIntParam(set, "conflict/cleanupfreq", &(conflictstore->cleanupfreq)) );
+      }
+   }
+   assert(conflictstore->maxstoresize >= 1);
+   assert(conflictstore->cleanupfreq >= 0);
+
+   SCIP_CALL( conflictstoreEnsureMem(conflictstore, set, nconflicts+1) );
 
    /* return if the store has size zero */
    if( conflictstore->conflictsize == 0 )

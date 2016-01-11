@@ -2503,10 +2503,6 @@ SCIP_Bool SCIPconflictApplicable(
    if( !set->conf_enable || !set->conf_useprop )
       return FALSE;
 
-   /* check, if the size of the conflict store is larger than 0 */
-   if( set->conf_maxstoresize == 0 )
-      return FALSE;
-
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
       return FALSE;
@@ -4252,7 +4248,7 @@ SCIP_RETCODE SCIPconflictAnalyze(
       *success = FALSE;
 
    /* check if the conflict analysis is applicable */
-   if( !set->conf_enable || set->conf_maxstoresize == 0 )
+   if( !set->conf_enable )
       return SCIP_OKAY;
 
    /* check, if the conflict set will get too large with high probability */
@@ -6055,10 +6051,6 @@ SCIP_RETCODE conflictAnalyzeInfeasibleLP(
    if( !set->conf_enable || !set->conf_useinflp )
       return SCIP_OKAY;
 
-   /* check if the store has a size geater than 0 */
-   if( set->conf_maxstoresize == 0 )
-      return SCIP_OKAY;
-
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
       return SCIP_OKAY;
@@ -6131,10 +6123,6 @@ SCIP_RETCODE conflictAnalyzeBoundexceedingLP(
    if( !set->conf_enable || !set->conf_useboundlp )
       return SCIP_OKAY;
 
-   /* check if the store hast a maximal size of 0 */
-   if( set->conf_maxstoresize == 0 )
-      return SCIP_OKAY;
-
    /* check, if there are any conflict handlers to use a conflict set */
    if( set->nconflicthdlrs == 0 )
       return SCIP_OKAY;
@@ -6201,7 +6189,7 @@ SCIP_RETCODE SCIPconflictAnalyzeLP(
       *success = FALSE;
 
    /* check if the conflict analysis is applicable */
-   if( !set->conf_enable || set->conf_maxstoresize == 0 )
+   if( !set->conf_enable )
       return SCIP_OKAY;
 
    /* in rare cases, it might happen that the solution stati of the LP and the LPI are out of sync; in particular this
@@ -6536,7 +6524,7 @@ SCIP_RETCODE SCIPconflictAnalyzeStrongbranch(
       *upconflict = FALSE;
 
    /* check, if infeasible LP conflict analysis is enabled */
-   if( !set->conf_enable || !set->conf_usesb || set->conf_maxstoresize == 0 )
+   if( !set->conf_enable || !set->conf_usesb )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
@@ -6850,7 +6838,7 @@ SCIP_RETCODE SCIPconflictAnalyzePseudo(
       *success = FALSE;
 
    /* check, if pseudo solution conflict analysis is enabled */
-   if( !set->conf_enable || !set->conf_usepseudo || set->conf_maxstoresize == 0 )
+   if( !set->conf_enable || !set->conf_usepseudo )
       return SCIP_OKAY;
 
    /* check, if there are any conflict handlers to use a conflict set */
