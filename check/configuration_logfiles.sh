@@ -52,7 +52,7 @@ OUTFILE=results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.out
 ERRFILE=results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.err
 
 # if number of permutations is positive, add postfix
-if test $PERMUTE -gt -1
+if test $PERMUTE -gt 0
 then
     EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"#p"$p.eval
 else

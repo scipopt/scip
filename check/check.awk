@@ -48,7 +48,7 @@ BEGIN {
    writesolufile = 0;           # should a solution file be created from the results
    printsoltimes = 0;           # should the times until first and best solution be shown
    checksol = 1;                # should the solution check of SCIP be parsed and counted as a fail if best solution is not feasible?
-   analyseconf = 0;             # should conflict analysis be reported?
+   analyseconf = 1;             # should conflict analysis be reported?
    NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
    headerprinted = 0;

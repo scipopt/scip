@@ -78,7 +78,7 @@ COUNT=0
 for INSTANCE in `cat testset/$TSTNAME.test` DONE
 do
     # loop over permutations
-    for ((p = -1; $p <= $PERMUTE; p++))
+    for ((p = 0; $p <= $PERMUTE; p++))
     do
       COUNT=`expr $COUNT + 1`
 
