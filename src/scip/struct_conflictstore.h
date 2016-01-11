@@ -40,9 +40,11 @@ struct SCIP_ConflictStore
    SCIP_QUEUE*           slotqueue;          /**< queue of empty slots in the conflicts and primalbounds array */
    SCIP_QUEUE*           orderqueue;         /**< queue of conflict pointer preserving the order of generation */
    SCIP_Longint          lastnodenum;        /**< number of the last seen node */
+   SCIP_Longint          ncleanups;          /**< number of storage cleanups */
    int                   conflictsize;       /**< size of conflict array (boundes by conflict->maxpoolsize) */
    int                   nconflicts;         /**< number of stored conflicts */
    int                   nconflictsfound;    /**< total number of conflicts found so far */
+   int                   cleanupfreq;        /**< frequency to cleanup the storage if the storage is not full */
    int                   maxstoresize;       /**< maximal size of the storage */
 };
 

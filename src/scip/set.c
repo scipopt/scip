@@ -95,6 +95,7 @@
 #define SCIP_DEFAULT_CONF_MAXCONSS           10 /**< maximal number of conflict constraints accepted at an infeasible node
                                                  *   (-1: use all generated conflict constraints) */
 #define SCIP_DEFAULT_CONF_MAXSTORESIZE    10000 /**< */
+#define SCIP_DEFAULT_CONF_CLEANUPFREQ         5 /**< frequency to clean up the storage if it is not full */
 #define SCIP_DEFAULT_CONF_RECONVLEVELS       -1 /**< number of depth levels up to which UIP reconvergence constraints are
                                                  *   generated (-1: generate reconvergence constraints in all depth levels) */
 #define SCIP_DEFAULT_CONF_ENABLE           TRUE /**< conflict analysis be enabled? */
@@ -1217,6 +1218,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/maxstoresize",
          "maximal size of conflict storage (-1: no limit, 0: auto)",
          &(*set)->conf_maxstoresize, TRUE, SCIP_DEFAULT_CONF_MAXSTORESIZE, -1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "conflict/cleanupfreq",
+         "frequency to clean up the storage if it is not full. (0: do not clean up)",
+         &(*set)->conf_cleanupfreq, TRUE, SCIP_DEFAULT_CONF_CLEANUPFREQ, 0, INT_MAX,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/preferbinary",

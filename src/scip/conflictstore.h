@@ -60,6 +60,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    BMS_BLKMEM*           blkmem,
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            transprob,
    SCIP_CONS*            cons,
    SCIP_NODE*            node,
