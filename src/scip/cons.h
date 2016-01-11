@@ -1088,6 +1088,12 @@ SCIP_RETCODE SCIPconsDisablePropagation(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** marks the constraint to be a conflict */
+extern
+void SCIPconsMarkConflict(
+   SCIP_CONS*            cons                /**< constraint */
+   );
+
 /** marks the constraint to be propagated (update might be delayed) */
 extern
 SCIP_RETCODE SCIPconsMarkPropagate(

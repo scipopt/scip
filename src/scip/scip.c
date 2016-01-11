@@ -11959,6 +11959,7 @@ SCIP_RETCODE SCIPaddConflict(
          validnode == NULL ? SCIPtreeGetRootNode(scip->tree) : validnode, node == NULL, conftype, cutoffinvolved,
          primalbound) );
 
+   SCIPconsMarkConflict(cons);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    return SCIP_OKAY;

@@ -5551,6 +5551,7 @@ SCIP_RETCODE SCIPconsCreate(
    (*cons)->original = original;
    (*cons)->deleteconsdata = deleteconsdata;
    (*cons)->active = FALSE;
+   (*cons)->conflict = FALSE;
    (*cons)->enabled = FALSE;
    (*cons)->obsolete = FALSE;
    (*cons)->markpropagate = FALSE;
@@ -6639,6 +6640,16 @@ SCIP_RETCODE SCIPconsDisablePropagation(
    return SCIP_OKAY;
 }
 
+/** marks the constraint to be a conflict */
+void SCIPconsMarkConflict(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   cons->conflict = TRUE;
+}
+
 /** marks the constraint to be propagated (update might be delayed) */
 SCIP_RETCODE SCIPconsMarkPropagate(
    SCIP_CONS*            cons,               /**< constraint */
@@ -7591,6 +7602,7 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 #undef SCIPconsIsPropagationEnabled
 #undef SCIPconsIsDeleted
 #undef SCIPconsIsObsolete
+#undef SCIPconsIsConflict
 #undef SCIPconsGetAge
 #undef SCIPconsIsInitial
 #undef SCIPconsIsSeparated
@@ -7755,6 +7767,16 @@ SCIP_Bool SCIPconsIsObsolete(
    assert(cons != NULL);
 
    return cons->updateobsolete || cons->obsolete;
+}
+
+/** returns TRUE iff constraint is marked conflict */
+SCIP_Bool SCIPconsIsConflict(
+   SCIP_CONS*            cons                /**< constraint */
+   )
+{
+   assert(cons != NULL);
+
+   return cons->conflict;
 }
 
 /** gets age of constraint */
@@ -7985,7 +8007,7 @@ void SCIPconsAddUpgradeLocks(
 {
    assert(cons != NULL);
 
-   assert(cons->nupgradelocks < (1 << 29) - nlocks); /*lint !e574*/
+   assert(cons->nupgradelocks < (1 << 28) - nlocks); /*lint !e574*/
    cons->nupgradelocks += (unsigned int) nlocks;
 }
 
