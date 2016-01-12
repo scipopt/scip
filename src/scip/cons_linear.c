@@ -9850,6 +9850,12 @@ SCIP_RETCODE checkParallelObjective(
    offset = 0.0;
    scale = 1.0;
 
+   /* There are no variables in the ojective function and in the constraint. Thus, the constraint is redundant or proves
+    * infeasibility. Since we have a pure feasibility problem, we do not want to set a cutoff or lower bound.
+    */
+   if( nobjvars == 0 )
+      return SCIP_OKAY;
+
    /* checks if the variables and their coefficients are equal (w.r.t. scaling factor) to the objective function */
    applicable = checkEqualObjective(scip, consdata, &scale, &offset);
 

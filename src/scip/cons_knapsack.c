@@ -6849,6 +6849,12 @@ SCIP_RETCODE checkParallelObjective(
    if( nvars != nobjvars || (!SCIPconsIsInitial(cons) && !SCIPconsIsSeparated(cons)) )
       return SCIP_OKAY;
 
+   /* There are no variables in the ojective function and in the constraint. Thus, the constraint is redundant. Since we
+    * have a pure feasibility problem, we do not want to set a cutoff or lower bound.
+    */
+   if( nobjvars == 0 )
+      return SCIP_OKAY;
+
    vars = consdata->vars;
    applicable = TRUE;
    offset = 0.0;
