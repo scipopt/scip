@@ -450,20 +450,19 @@ SCIP_RETCODE SCIPconflictstoreFree(
 
 /** adds a conflict to the conflict storage */
 SCIP_RETCODE SCIPconflictstoreAddConflict(
-   SCIP_CONFLICTSTORE*   conflictstore,
-   BMS_BLKMEM*           blkmem,
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_PROB*            transprob,
-   SCIP_EVENTFILTER*     eventfilter,
-   SCIP_CONS*            cons,
-   SCIP_NODE*            node,
-   SCIP_NODE*            validnode,
-   SCIP_Bool             global,
-   SCIP_CONFTYPE         conftype,
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_EVENTFILTER*     eventfilter,        /**< eventfiler */
+   SCIP_CONS*            cons,               /**< constraint representing the conflict */
+   SCIP_NODE*            node,               /**< node to add conflict (or NULL if global) */
+   SCIP_NODE*            validnode,          /**< node at whichaddConf the constraint is valid (or NULL) */
+   SCIP_CONFTYPE         conftype,           /**< type of the conflict */
    SCIP_Bool             cutoffinvolved,     /**< is a cutoff bound invaled in this conflict */
-   SCIP_Real             primalbound
+   SCIP_Real             primalbound         /**< primal bound the conflict depend on (or -SCIPinfinity) */
    )
 {
    int nconflicts;
@@ -576,13 +575,14 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    return SCIP_OKAY;
 }
 
+/** delete all conflicts depending a cutoff bound larger than the given bound */
 SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
-   SCIP_CONFLICTSTORE*   conflictstore,
-   SCIP_SET*             set,
-   SCIP_STAT*            stat,
-   BMS_BLKMEM*           blkmem,
-   SCIP_PROB*            transprob,
-   SCIP_Real             cutoffbound
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_PROB*            transprob,          /**< transformed problem*/
+   SCIP_Real             cutoffbound         /**< current cutoff bound */
    )
 {
    SCIP_CONS* conflict;

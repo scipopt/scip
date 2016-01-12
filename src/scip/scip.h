@@ -5840,6 +5840,20 @@ SCIP_RETCODE SCIPaddConflict(
    SCIP_Bool             cutoffinvolved      /**< is a cutoff bound invaled in this conflict */
    );
 
+/** remove all conflicts stored in the conflict storage that depend on a cutoff bound that is larger than the current
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+EXTERN
+SCIP_RETCODE SCIPcleanConflictStoreBoundexceeding(
+   SCIP*                 scip,
+   SCIP_EVENT*           event
+   );
+
 /** adds constraint to the given node (and all of its subnodes), even if it is a global constraint;
  *  It is sometimes desirable to add the constraint to a more local node (i.e., a node of larger depth) even if
  *  the constraint is also valid higher in the tree, for example, if one wants to produce a constraint which is

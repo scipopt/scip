@@ -11956,7 +11956,7 @@ SCIP_RETCODE SCIPaddConflict(
    /* add the conflict to the conflict storage */
    SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
          scip->transprob, scip->eventfilter, cons, node == NULL ? SCIPtreeGetRootNode(scip->tree) : node,
-         validnode == NULL ? SCIPtreeGetRootNode(scip->tree) : validnode, node == NULL, conftype, cutoffinvolved,
+         validnode == NULL ? SCIPtreeGetRootNode(scip->tree) : validnode, conftype, cutoffinvolved,
          primalbound) );
 
    SCIPconsMarkConflict(cons);
