@@ -7838,7 +7838,7 @@ SCIP_RETCODE getDiveBdChgsSOS1conflictgraph(
          fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval)); /*lint !e666*/
          assert( ! SCIPisInfinity(scip, bound) );
          assert( ! SCIPisInfinity(scip, fracval) );
-         assert( SCIPisFeasPositive(scip, bound + SCIPsumepsilon(scip)) );
+         assert( SCIPisPositive(scip, bound) );
 
          /* get fractionality of candidate */
          fracval /= (bound + SCIPsumepsilon(scip));
@@ -7984,62 +7984,70 @@ SCIP_RETCODE getDiveBdChgsSOS1constraints(
          SCIP_Real score;
          SCIP_Real bound;
          SCIP_Real fracval;
+	 SCIP_Real lb;
+	 SCIP_Real ub;
          SCIP_Bool fixcomp;  /* whether to fix the complementary variables of the candidate in the SOS1 constraint to zero */
 
          var = vars[j];
          solval = SCIPgetSolVal(scip, sol, var);
+	 lb = SCIPvarGetLbLocal(var);
+	 ub = SCIPvarGetUbLocal(var);
 
-         /* compute (variable) bound of candidate */
-         if ( SCIPisFeasNegative(scip, solval) )
-            bound = SCIPvarGetLbLocal(var);
-         else
-            bound = SCIPvarGetUbLocal(var);
+         /* check whether variable is nonzero w.r.t. sol and the bounds have not been fixed to zero by propagation */
+         if ( ! SCIPisFeasZero(scip, solval) && ( ! SCIPisFeasZero(scip, lb) || ! SCIPisFeasZero(scip, ub) ) )
+	 {
+	    /* compute (variable) bound of candidate */
+	    if ( SCIPisFeasNegative(scip, solval) )
+	       bound = lb;
+	    else
+	       bound = ub;
 
-         /* bound may have changed in propagation; ensure that fracval <= 1 */
-         if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
-            bound = solval;
+	    /* bound may have changed in propagation; ensure that fracval <= 1 */
+	    if ( SCIPisFeasLT(scip, REALABS(bound), REALABS(solval)) )
+	       bound = solval;
 
-         /* ensure finiteness */
-         bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound)); /*lint !e666*/
-         fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval)); /*lint !e666*/
-         assert( ! SCIPisInfinity(scip, bound) );
-         assert( ! SCIPisInfinity(scip, fracval) );
-         assert( SCIPisFeasPositive(scip, bound + SCIPsumepsilon(scip)) );
+	    /* ensure finiteness */
+	    bound = MIN(DIVINGCUTOFFVALUE, REALABS(bound)); /*lint !e666*/
+	    fracval = MIN(DIVINGCUTOFFVALUE, REALABS(solval)); /*lint !e666*/
+	    assert( ! SCIPisInfinity(scip, bound) );
+	    assert( ! SCIPisInfinity(scip, fracval) );
+	    assert( SCIPisPositive(scip, bound) );
 
-         /* get fractionality of candidate */
-         fracval /= (bound + SCIPsumepsilon(scip));
+	    /* get fractionality of candidate */
+	    fracval /= (bound + SCIPsumepsilon(scip));
 
-         /* should SOS1 variables be scored by the diving heuristics specific score function;
-          *  otherwise use the score function of the SOS1 constraint handler */
-         if ( SCIPdivesetSupportsType(diveset, SCIP_DIVETYPE_SOS1VARIABLE) )
-         {
-            SCIP_Bool roundup;
+	    /* should SOS1 variables be scored by the diving heuristics specific score function;
+	     *  otherwise use the score function of the SOS1 constraint handler */
+	    if ( SCIPdivesetSupportsType(diveset, SCIP_DIVETYPE_SOS1VARIABLE) )
+	    {
+	       SCIP_Bool roundup;
 
-            SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval, &score, &roundup) );
+	       SCIP_CALL( SCIPgetDivesetScore(scip, diveset, SCIP_DIVETYPE_SOS1VARIABLE, var, solval, fracval, &score, &roundup) );
 
-            fixcomp = roundup;
-            if ( SCIPisFeasNegative(scip, solval) )
-               fixcomp = !fixcomp;
-         }
-         else
-         {
-            /* we always fix the complementary variables of the candidate in the SOS1 constraint to zero */
-            fixcomp = TRUE;
+	       fixcomp = roundup;
+	       if ( SCIPisFeasNegative(scip, solval) )
+		  fixcomp = !fixcomp;
+	    }
+	    else
+	    {
+	       /* we always fix the complementary variables of the candidate in the SOS1 constraint to zero */
+	       fixcomp = TRUE;
 
-            /* score fractionality of candidate */
-            score = fracval;
-         }
+	       /* score fractionality of candidate */
+	       score = fracval;
+	    }
 
-         /* best candidate maximizes the score */
-         if ( score > bestscore )
-         {
-            bestscore = score;
+	    /* best candidate maximizes the score */
+	    if ( score > bestscore )
+	    {
+	       bestscore = score;
 
-            *success = TRUE;
-            bestvar = var;
-            bestcons = c;
-            bestvarfixcomp = fixcomp;
-         }
+	       *success = TRUE;
+	       bestvar = var;
+	       bestcons = c;
+	       bestvarfixcomp = fixcomp;
+	    }
+	 }
       }
    }
    assert( !(*success) || bestvar != NULL );
