@@ -34,6 +34,7 @@ extern "C" {
 /** storage for conflicts */
 struct SCIP_ConflictStore
 {
+   SCIP_EVENTHDLR*       eventhdlr;          /**< event handler to catch improving solutions */
    SCIP_CONS**           conflicts;          /**< array with conflicts */
    SCIP_Real*            primalbounds;       /**< array of primal bounds valid at the time the corresponding bound exceeding
                                                *   conflict was found (-infinity if the conflict as based on an infeasible LP) */
@@ -43,6 +44,7 @@ struct SCIP_ConflictStore
    SCIP_Longint          ncleanups;          /**< number of storage cleanups */
    int                   conflictsize;       /**< size of conflict array (boundes by conflict->maxpoolsize) */
    int                   nconflicts;         /**< number of stored conflicts */
+   int                   ncbconflicts;       /**< number of conflicts depending on cutoff bound */
    int                   nconflictsfound;    /**< total number of conflicts found so far */
    int                   cleanupfreq;        /**< frequency to cleanup the storage if the storage is not full */
    int                   maxstoresize;       /**< maximal size of the storage */

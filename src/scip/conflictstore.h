@@ -29,6 +29,7 @@
 #include "scip/type_conflictstore.h"
 #include "scip/type_retcode.h"
 #include "scip/type_cons.h"
+#include "scip/type_event.h"
 #include "scip/type_conflict.h"
 #include "scip/type_prob.h"
 #include "scip/type_set.h"
@@ -42,7 +43,8 @@ extern "C" {
 /** creates separation storage */
 extern
 SCIP_RETCODE SCIPconflictstoreCreate(
-   SCIP_CONFLICTSTORE**  conflictstore       /**< pointer to store conflict storage */
+   SCIP_CONFLICTSTORE**  conflictstore,      /**< pointer to store conflict storage */
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** frees separation storage */
@@ -50,7 +52,8 @@ extern
 SCIP_RETCODE SCIPconflictstoreFree(
    SCIP_CONFLICTSTORE**  conflictstore,      /**< pointer to store conflict storage */
    BMS_BLKMEM*           blkmem,
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_EVENTFILTER*     eventfilter
    );
 
 /** adds a conflict to the conflict storage */
@@ -62,6 +65,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_PROB*            transprob,
+   SCIP_EVENTFILTER*     eventfilter,
    SCIP_CONS*            cons,
    SCIP_NODE*            node,
    SCIP_NODE*            validnode,

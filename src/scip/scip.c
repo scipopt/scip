@@ -11955,12 +11955,37 @@ SCIP_RETCODE SCIPaddConflict(
 
    /* add the conflict to the conflict storage */
    SCIP_CALL( SCIPconflictstoreAddConflict(scip->conflictstore, scip->mem->probmem, scip->set, scip->stat, scip->tree,
-         scip->transprob, cons, node == NULL ? SCIPtreeGetRootNode(scip->tree) : node,
+         scip->transprob, scip->eventfilter, cons, node == NULL ? SCIPtreeGetRootNode(scip->tree) : node,
          validnode == NULL ? SCIPtreeGetRootNode(scip->tree) : validnode, node == NULL, conftype, cutoffinvolved,
          primalbound) );
 
    SCIPconsMarkConflict(cons);
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   return SCIP_OKAY;
+}
+
+/**
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre this method can be called in one of the following stages of the SCIP solving process:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPcleanConflictStoreBoundexceeding(
+   SCIP*                 scip,
+   SCIP_EVENT*           event
+   )
+{
+   assert(scip != NULL);
+   assert(event != NULL);
+   assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND);
+   assert(SCIPeventGetSol(event) != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPaddConsNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPconflictstoreCleanBoundexceeding(scip->conflictstore, scip->set, scip->stat, scip->mem->probmem,
+         scip->transprob, SCIPsolGetObj(SCIPeventGetSol(event), scip->set, scip->transprob, scip->origprob)) );
 
    return SCIP_OKAY;
 }
@@ -13892,7 +13917,7 @@ SCIP_RETCODE initSolve(
    /* initialize solution process data structures */
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
-   SCIP_CALL( SCIPconflictstoreCreate(&scip->conflictstore) );
+   SCIP_CALL( SCIPconflictstoreCreate(&scip->conflictstore, scip->set) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, FALSE) );
    SCIP_CALL( SCIPtreeCreateRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
@@ -14006,7 +14031,7 @@ SCIP_RETCODE freeSolve(
    scip->set->stage = SCIP_STAGE_EXITSOLVE;
 
    /* deinitialize conflict storage */
-   SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->mem->probmem, scip->set) );
+   SCIP_CALL( SCIPconflictstoreFree(&scip->conflictstore, scip->mem->probmem, scip->set, scip->eventfilter) );
 
    /* inform plugins that the branch and bound process is finished */
    SCIP_CALL( SCIPsetExitsolPlugins(scip->set, scip->mem->probmem, scip->stat, restart) );
