@@ -318,21 +318,27 @@ int soltreeNInducedSols(
    SCIP_SOLNODE*         solnode             /**< node within the solution tree */
    )
 {
+   SCIP_SOLNODE* sibling;
+   int nsols;
+
    assert(solnode != NULL);
 
-   if( solnode->father == NULL && solnode->rchild == NULL && solnode->lchild == NULL )
+   if( solnode->child == NULL && solnode->sol == NULL )
       return 0;
-   else if( solnode->rchild == NULL && solnode->lchild == NULL )
+   if( solnode->child == NULL && solnode->sol != NULL )
       return 1;
-   else
+
+   nsols = 0;
+   sibling = solnode->child;
+
+   /* travers through the list */
+   while( sibling != NULL )
    {
-      if( solnode->rchild == NULL )
-         return soltreeNInducedSols(solnode->lchild);
-      else if( solnode->lchild == NULL )
-         return soltreeNInducedSols(solnode->rchild);
-      else
-         return soltreeNInducedSols(solnode->rchild) + soltreeNInducedSols(solnode->lchild);
+      nsols += soltreeNInducedSols(sibling);
+      sibling = sibling->sibling;
    }
+
+   return nsols;
 }
 
 /** returns the similarity of the objective functions of two given iterations */
@@ -630,10 +636,11 @@ SCIP_RETCODE createSolTree(
    /* allocate the root node */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, &soltree->root) );
    soltree->root->sol = NULL;
+   soltree->root->value = SCIP_INVALID;
    soltree->root->updated = FALSE;
    soltree->root->father = NULL;
-   soltree->root->rchild = NULL;
-   soltree->root->lchild = NULL;
+   soltree->root->child = NULL;
+   soltree->root->sibling = NULL;
 
    return SCIP_OKAY;
 }
@@ -648,25 +655,27 @@ SCIP_RETCODE soltreefreeNode(
    SCIP_SOLNODE**        solnode             /**< node within the solution tree */
    )
 {
+   SCIP_SOLNODE* child;
+   SCIP_SOLNODE* sibling;
+
    assert(reopt != NULL);
    assert(set != NULL);
    assert(primal != NULL || set->stage == SCIP_STAGE_INIT);
    assert(solnode != NULL);
    assert(blkmem != NULL);
 
-   /* free recursive right subtree */
-   if( (*solnode)->rchild != NULL )
-   {
-      SCIP_CALL( soltreefreeNode(reopt, set, primal, blkmem, &(*solnode)->rchild) );
-   }
-   assert((*solnode)->rchild == NULL);
+   child = (*solnode)->child;
 
-   /* free recursive left subtree */
-   if( (*solnode)->lchild != NULL )
+   /* travers through the list and free recursive all subtree */
+   while( child != NULL )
    {
-      SCIP_CALL( soltreefreeNode(reopt, set, primal, blkmem, &(*solnode)->lchild) );
+      SCIP_CALL( soltreefreeNode(reopt, set, primal, blkmem, &child) );
+      assert(child != NULL);
+
+      sibling = child->sibling;
+      BMSfreeBlockMemoryNull(blkmem, &child);
+      child = sibling;
    }
-   assert((*solnode)->lchild == NULL);
 
    if( (*solnode)->sol != NULL )
    {
@@ -674,9 +683,6 @@ SCIP_RETCODE soltreefreeNode(
 
       SCIP_CALL( SCIPsolFree(&(*solnode)->sol, blkmem, primal) );
    }
-
-   /* free this nodes */
-   BMSfreeBlockMemoryNull(blkmem, solnode);
 
    return SCIP_OKAY;
 }
@@ -698,6 +704,7 @@ SCIP_RETCODE freeSolTree(
 
    /* free all nodes recursive */
    SCIP_CALL( soltreefreeNode(reopt, set, origprimal, blkmem, &reopt->soltree->root) );
+   BMSfreeBlockMemoryNull(blkmem, &reopt->soltree->root);
 
    BMSfreeBlockMemoryArray(blkmem, &reopt->soltree->sols, reopt->runsize);
    BMSfreeBlockMemoryArray(blkmem, &reopt->soltree->nsols, reopt->runsize);
@@ -711,30 +718,156 @@ SCIP_RETCODE freeSolTree(
 /** creates and adds a solution node to the solution tree */
 static
 SCIP_RETCODE solnodeAddChild(
+   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SOLNODE*         father,             /**< father of the node to add */
-   SCIP_Bool             rchild,             /**< 0-branch? */
-   SCIP_Bool             lchild              /**< 1-branch? */
+   SCIP_SOLNODE*         curnode,            /**< current node in the solution tree */
+   SCIP_SOLNODE**        child,              /**< pointer to store the node representing the solution value */
+   SCIP_Real             val,                /**< value the child shell represent */
+   SCIP_Bool*            added               /**< TRUE iff we created a new node, i.e, we have not seen this solution so far */
    )
 {
    SCIP_SOLNODE* solnode;
 
-   assert(father != NULL);
-   assert(rchild == !lchild);
-   assert((rchild && father->rchild == NULL) || (lchild && father->lchild == NULL));
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(curnode != NULL);
+   assert(child != NULL && *child == NULL);
+   assert(!SCIPsetIsInfinity(set, -val) && !SCIPsetIsInfinity(set, val));
 
-   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &solnode) );
-   solnode->sol = NULL;
-   solnode->updated = FALSE;
-   solnode->father = father;
-   solnode->rchild = NULL;
-   solnode->lchild = NULL;
+   /* get the first node of the child node list */
+   *child = curnode->child;
 
-   if( rchild )
-      father->rchild = solnode;
+   /* this is the first solution in the subtree induced by the current node */
+   if( *child == NULL )
+   {
+      assert(soltreeNInducedSols(curnode) == 0);
+
+      SCIP_ALLOC( BMSallocBlockMemory(blkmem, &solnode) );
+      solnode->sol = NULL;
+      solnode->updated = FALSE;
+      solnode->father = curnode;
+      solnode->child = NULL;
+      solnode->sibling = NULL;
+      solnode->value = val;
+
+      *added = TRUE;
+      *child = solnode;
+
+      curnode->child = *child;
+
+      SCIPdebugMessage("-> create new node %p: value=%g, sibling=%p\n", (void*) solnode, solnode->value,
+            (void*) solnode->sibling);
+   }
    else
-      father->lchild = solnode;
+   {
+      /* we traverse through all children */
+      while( *child != NULL )
+      {
+         SCIPdebugMessage("-> check %p: father=%p, value=%g, sibling=%p\n", (void*) *child, (void*) (*child)->father,
+               (*child)->value, (void*) (*child)->sibling);
 
+         /* we found a node repesenting this solution value */
+         if( SCIPsetIsEQ(set, val, (*child)->value) )
+            break;
+
+         /* we are at the end of the list */
+         if( (*child)->sibling == NULL )
+         {
+            /* create a new solnode */
+            SCIP_ALLOC( BMSallocBlockMemory(blkmem, &solnode) );
+            solnode->sol = NULL;
+            solnode->updated = FALSE;
+            solnode->father = curnode;
+            solnode->child = NULL;
+            solnode->value = val;
+            *added = TRUE;
+
+            /* we have to append the new node at the end of the list. but we have to check whether the insertion before
+             * the current node would be correct. in that case, we switch the values, the child pointer, and the solution */
+            solnode->sibling = NULL;
+            (*child)->sibling = solnode;
+
+            SCIPdebugMessage("-> create new node %p: value=%g, sibling=%p\n", (void*) solnode, solnode->value,
+                  (void*) solnode->sibling);
+
+            /* the given value is lower than the current, insertion before the current node would be correct
+             * in this case we do not have to change the child pointer
+             */
+            if( SCIPsetIsLT(set, val, (*child)->value) )
+            {
+               SCIPdebugMessage("-> need to switch:");
+               SCIPdebugMessage("   before switching: node %p witch child=%p, sibling=%p, sol=%p, value=%g\n",
+                     (void*) (*child), (void*) (*child)->child, (void*) (*child)->sibling, (void*) (*child)->sol, (*child)->value);
+               SCIPdebugMessage("                     node %p witch child=%p, sibling=%p, sol=%p, value=%g\n",
+                     (void*) solnode, (void*) solnode->child, (void*) solnode->sibling, (void*) solnode->sol, solnode->value);
+
+               /* switch child pointer */
+               solnode->child = (*child)->child;
+               (*child)->child = NULL;
+
+               /* switch solution values */
+               solnode->value = (*child)->value;
+               (*child)->value = val;
+               assert(SCIPsetIsLT(set, (*child)->value, solnode->value));
+
+               /* switch solution pointer */
+               solnode->sol = (*child)->sol;
+               (*child)->sol = NULL;
+
+               SCIPdebugMessage("    after switching: node %p witch child=%p, sibling=%p, sol=%p, value=%g\n",
+                     (void*) (*child), (void*) (*child)->child, (void*) (*child)->sibling, (void*) (*child)->sol, (*child)->value);
+               SCIPdebugMessage("                     node %p witch child=%p, sibling=%p, sol=%p, value=%g\n",
+                     (void*) solnode, (void*) solnode->child, (void*) solnode->sibling, (void*) solnode->sol, solnode->value);
+            }
+            /* set the child pointer to the new created solnode */
+            else
+               (*child) = solnode;
+
+            break;
+         }
+
+         /* the next sibling represents a solution value of larger size.
+          * we insert a new node between the current child and the next sibling.
+          */
+         if( SCIPsetIsLT(set, val, (*child)->sibling->value) )
+         {
+            /* create a new solnode that points to the sibling of the current child */
+            SCIP_ALLOC( BMSallocBlockMemory(blkmem, &solnode) );
+            solnode->sol = NULL;
+            solnode->updated = FALSE;
+            solnode->father = curnode;
+            solnode->child = NULL;
+            solnode->sibling = (*child)->sibling;
+            solnode->value = val;
+            *added = TRUE;
+
+            /* change the poiter of the next sibling to the new node */
+            (*child)->sibling = solnode;
+
+            *child = solnode;
+
+            SCIPdebugMessage("-> create new node %p: value=%g, sibling=%p\n", (void*) solnode, solnode->value,
+                  (void*) solnode->sibling);
+
+            break;
+         }
+
+         /* go to the next sibling */
+         *child = (*child)->sibling;
+      }
+
+#ifdef SCIP_DEBUG
+      /* check whether the insert was correct and the list is increasing */
+      solnode = curnode->child;
+      assert(solnode != NULL);
+
+      while( solnode->sibling != NULL )
+      {
+         assert(SCIPsetIsLT(set, solnode->value, solnode->sibling->value));
+         solnode = solnode->sibling;
+      }
+#endif
+   }
    return SCIP_OKAY;
 }
 
@@ -755,7 +888,6 @@ SCIP_RETCODE soltreeAddSol(
    )
 {
    SCIP_SOLNODE* cursolnode;
-   SCIP_Bool binvars;
    int varid;
 
    assert(reopt != NULL);
@@ -768,50 +900,31 @@ SCIP_RETCODE soltreeAddSol(
    assert(solnode != NULL);
 
    cursolnode = reopt->soltree->root;
-   binvars = FALSE;
-   (*added) = FALSE;
+   *added = FALSE;
 
    if( set->reopt_savesols > 0 )
    {
+      SCIPdebugMessage("try to add solution found by <%s>\n", SCIPsolGetHeur(sol) == NULL ? "relaxation" : SCIPheurGetName(SCIPsolGetHeur(sol)));
+
       for( varid = 0; varid < nvars; varid++ )
       {
-         /* TODO we want to handle general integer solutions */
-         if( SCIPvarGetType(vars[varid]) == SCIP_VARTYPE_BINARY )
+         if( SCIPvarGetType(vars[varid]) != SCIP_VARTYPE_CONTINUOUS )
          {
-            SCIP_Real objval;
+            SCIP_SOLNODE* child;
 
-            binvars = TRUE;
-            objval = SCIPsolGetVal(sol, set, stat, vars[varid]);
-            if( SCIPsetIsFeasEQ(set, objval, 0.0) )
-            {
-               if( cursolnode->rchild == NULL )
-               {
-                  SCIP_CALL( solnodeAddChild(blkmem, cursolnode, TRUE, FALSE) );
-                  assert(cursolnode->rchild != NULL);
-                  (*added) = TRUE;
-               }
-               cursolnode = cursolnode->rchild;
-            }
-            else
-            {
-               assert(SCIPsetIsFeasEQ(set, objval, 1.0));
-               if( cursolnode->lchild == NULL )
-               {
-                  SCIP_CALL( solnodeAddChild(blkmem, cursolnode, FALSE, TRUE) );
-                  assert(cursolnode->lchild != NULL);
-                  (*added) = TRUE;
-               }
-               cursolnode = cursolnode->lchild;
-            }
+            child = NULL;
+            SCIP_CALL( solnodeAddChild(set, blkmem, cursolnode, &child, SCIPsolGetVal(sol, set, stat, vars[varid]), added) );
+            assert(child != NULL);
+            cursolnode = child;
          }
       }
 
       /* the solution was added or is an optimal solution */
-      if( *added || (bestsol && binvars) )
+      if( *added || bestsol )
       {
          SCIP_SOL* copysol;
 
-         assert(cursolnode->lchild == NULL && cursolnode->rchild == NULL);
+         assert(cursolnode->child == NULL);
 
          if( *added )
          {
@@ -847,16 +960,22 @@ void soltreeResetMarks(
 {
    assert(node != NULL);
 
-   if( node->rchild != NULL || node->lchild != NULL )
+   if( node->child != NULL )
    {
+      SCIP_SOLNODE* child;
+
       /* the node is no leaf */
       assert(node->sol == NULL);
       assert(!node->updated);
 
-      if( node->rchild != NULL )
-         soltreeResetMarks(node->rchild);
-      if( node->lchild != NULL )
-         soltreeResetMarks(node->lchild);
+      child = node->child;
+
+      /* travers through the list of siblings */
+      while( child != NULL )
+      {
+         soltreeResetMarks(child);
+         child = child->sibling;
+      }
    }
    else
    {
@@ -4786,8 +4905,7 @@ int SCIPreoptGetNSavedSols(
 
    nsavedsols = 0;
 
-   if( reopt->soltree->root->lchild != NULL
-    || reopt->soltree->root->rchild != NULL)
+   if( reopt->soltree->root->child != NULL )
       nsavedsols = soltreeNInducedSols(reopt->soltree->root);
 
    return nsavedsols;
@@ -4962,19 +5080,57 @@ SCIP_SOL* SCIPreoptGetBestSolRun(
    return reopt->prevbestsols[run-1];
 }
 
+/** reset solving specific paramters */
+SCIP_RETCODE SCIPreoptReset(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   )
+{
+   int c;
+
+   assert(reopt != NULL);
+   assert(set != NULL);
+   assert(blkmem != NULL);
+
+   /* clean addedconss array */
+   for( c = 0; c < reopt->naddedconss; c++)
+   {
+      SCIP_CONS* cons;
+
+      cons = reopt->addedconss[c];
+      assert(cons != NULL);
+
+      SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
+      reopt->addedconss[c] = 0;
+   }
+
+   reopt->naddedconss = 0;
+   reopt->consadded = FALSE;
+   reopt->objhaschanged = FALSE;
+
+   return SCIP_OKAY;
+}
+
 /** reset marks of stored solutions to not updated */
 void SCIPreoptResetSolMarks(
    SCIP_REOPT*           reopt               /**< reoptimization data structure */
    )
 {
+   SCIP_SOLNODE* child;
+
    assert(reopt != NULL);
    assert(reopt->soltree != NULL);
    assert(reopt->soltree->root != NULL);
 
-   if( reopt->soltree->root->rchild != NULL )
-      soltreeResetMarks(reopt->soltree->root->rchild);
-   if( reopt->soltree->root->lchild )
-      soltreeResetMarks(reopt->soltree->root->lchild);
+   child = reopt->soltree->root->child;
+
+   /* travers through the list */
+   while( child != NULL )
+   {
+      soltreeResetMarks(child);
+      child = child->sibling;
+   }
 }
 
 /** returns the number of stored nodes in the subtree induced by @p node */

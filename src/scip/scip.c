@@ -14776,6 +14776,10 @@ SCIP_RETCODE SCIPsolve(
             /* add solution to solution tree */
             else
             {
+               SCIPdebugMessage("try to add solution to the solution tree:\n");
+               SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob,
+                     scip->transprob, NULL, FALSE) ); );
+
                SCIP_CALL( SCIPreoptAddSol(scip->reopt, scip->set, scip->stat, scip->origprimal, scip->mem->probmem,
                      sol, s == 0, &added, scip->origprob->vars, scip->origprob->nvars, scip->stat->nreoptruns) );
             }

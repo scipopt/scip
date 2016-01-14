@@ -36,8 +36,11 @@ struct SCIP_SolNode
 {
    SCIP_SOL*             sol;                /**< the stored solution */
    SCIP_SOLNODE*         father;             /**< pointer to the parent node */
-   SCIP_SOLNODE*         rchild;             /**< pointer to the right child node (0-branch) */
-   SCIP_SOLNODE*         lchild;             /**< pointer to the left child node (1-branch) */
+   SCIP_SOLNODE*         child;              /**< pointer to left most child node, i.e., node representing the variable
+                                               *  with smallest solution value
+                                               */
+   SCIP_SOLNODE*         sibling;            /**< pointer to next child node */
+   SCIP_Real             value;              /**< solution value represented by this node */
    SCIP_Bool             updated;            /**< flag if the solution is already updated
                                               *   w.r.t. the new objective function */
 };
