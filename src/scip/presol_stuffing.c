@@ -104,8 +104,10 @@ SCIP_RETCODE singletonColumnStuffing(
    for( col = 0; col < ncols; col++ )
    {
       /* consider only rows with minimal one continuous singleton column */
-      if( SCIPmatrixGetColNNonzs(matrix, col) == 1 &&
-          SCIPvarGetType(SCIPmatrixGetVar(matrix, col)) == SCIP_VARTYPE_CONTINUOUS )
+      if( SCIPmatrixGetColNNonzs(matrix, col) == 1
+         && SCIPvarGetType(SCIPmatrixGetVar(matrix, col)) == SCIP_VARTYPE_CONTINUOUS
+         && SCIPvarGetNLocksUp(SCIPmatrixGetVar(matrix, col)) == SCIPmatrixGetColNUplocks(matrix, col)
+         && SCIPvarGetNLocksDown(SCIPmatrixGetVar(matrix, col)) == SCIPmatrixGetColNDownlocks(matrix, col) )
       {
          row = *(SCIPmatrixGetColIdxPtr(matrix, col));
          if( rowprocessed[row] )
@@ -137,7 +139,9 @@ SCIP_RETCODE singletonColumnStuffing(
                lb = SCIPvarGetLbGlobal(var);
                ub = SCIPvarGetUbGlobal(var);
 
-               if( SCIPmatrixGetColNNonzs(matrix, idx) == 1 && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
+               if( SCIPmatrixGetColNNonzs(matrix, idx) == 1 && SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS
+                  && SCIPvarGetNLocksUp(SCIPmatrixGetVar(matrix, idx)) == SCIPmatrixGetColNUplocks(matrix, idx)
+                  && SCIPvarGetNLocksDown(SCIPmatrixGetVar(matrix, idx)) == SCIPmatrixGetColNDownlocks(matrix, idx) )
                {
                   /* need obj > 0 and coef > 0 */
                   if( SCIPvarGetObj(var) > 0 && coef > 0 )
@@ -366,16 +370,12 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
 
             var = SCIPmatrixGetVar(matrix, v);
 
-            if( SCIPvarGetNLocksUp(var) != SCIPmatrixGetColNUplocks(matrix, v) ||
-               SCIPvarGetNLocksDown(var) != SCIPmatrixGetColNDownlocks(matrix, v) )
-            {
-               /* no fixing, locks not consistent */
-               continue;
-            }
-
             if( varstofix[v] == FIXATLB )
             {
                SCIP_Real lb;
+
+               assert(SCIPvarGetNLocksUp(var) == SCIPmatrixGetColNUplocks(matrix, v) &&
+                  SCIPvarGetNLocksDown(var) == SCIPmatrixGetColNDownlocks(matrix, v));
 
                lb = SCIPvarGetLbGlobal(var);
                assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
@@ -400,6 +400,9 @@ SCIP_DECL_PRESOLEXEC(presolExecStuffing)
             else if( varstofix[v] == FIXATUB )
             {
                SCIP_Real ub;
+
+               assert(SCIPvarGetNLocksUp(var) == SCIPmatrixGetColNUplocks(matrix, v) &&
+                  SCIPvarGetNLocksDown(var) == SCIPmatrixGetColNDownlocks(matrix, v));
 
                ub = SCIPvarGetUbGlobal(var);
                assert(SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS);
