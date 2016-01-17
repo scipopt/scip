@@ -7710,10 +7710,15 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
             SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, val) );
             *changed = TRUE;
          }
-         if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+         /* check whether binary variable is fixed or its negated variable is fixed */
+         if ( SCIPvarGetStatus(binvar) != SCIP_VARSTATUS_FIXED &&
+            ( SCIPvarGetStatus(binvar) != SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(SCIPvarGetNegationVar(binvar)) != SCIP_VARSTATUS_FIXED ) )
          {
-            SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
-            *changed = TRUE;
+            if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+            {
+               SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
+               *changed = TRUE;
+            }
          }
       }
       else
