@@ -5845,7 +5845,6 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    {
       SCIP_CALL( SCIPcreateSolCopy(scip, &trysol, sol) );
       assert( trysol != NULL );
-      SCIP_CALL( SCIPunlinkSol(scip, trysol) );
    }
 
    /* check each constraint */
