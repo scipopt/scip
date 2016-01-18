@@ -78,6 +78,9 @@ struct SCIP_Stat
    SCIP_Longint          nlpsolsfound;       /**< number of CIP-feasible LP solutions found so far */
    SCIP_Longint          npssolsfound;       /**< number of CIP-feasible pseudo solutions found so far */
    SCIP_Longint          nsbsolsfound;       /**< number of CIP-feasible solutions found during strong branching so far */
+   SCIP_Longint          nlpbestsolsfound;   /**< number of new best CIP-feasible LP solutions found so far, */
+   SCIP_Longint          npsbestsolsfound;   /**< number of new best CIP-feasible pseudo solutions found so far */
+   SCIP_Longint          nsbbestsolsfound;   /**< number of new best CIP-feasible solutions found during strong branching so far */
    SCIP_Longint          nexternalsolsfound; /**< number of externally given CIP-feasible solutions (or new solutions found when transforming old ones) */
    SCIP_Longint          lastdispnode;       /**< last node for which an information line was displayed */
    SCIP_Longint          lastdivenode;       /**< last node where LP diving was applied */
