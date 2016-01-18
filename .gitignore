@@ -43,3 +43,4 @@ interfaces/python/.cache/
 interfaces/python/build/
 interfaces/python/include/
 interfaces/python/pyscipopt/scip.c
+/interfaces/python/tests/check
