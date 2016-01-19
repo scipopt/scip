@@ -110,7 +110,6 @@ struct SCIP_ReoptTree
    int                   ntotalprunednodes;       /**< number of pruned nodes over all runs */
    int                   ncutoffreoptnodes;       /**< number of cut off reoptimized nodes in the current run */
    int                   ntotalcutoffreoptnodes;  /**< number of cut off reoptimized nodes over all runs */
-   int                   ninfsubtrees;            /**< number of found infeasible subtrees */
    SCIP_Bool             initialized;             /**< is the data structure initialized? */
    unsigned int          reoptnodessize;          /**< size of allocated memory for the reoptnodes array and the openid queue */
 };

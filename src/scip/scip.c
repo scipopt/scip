@@ -40126,8 +40126,6 @@ SCIP_RETCODE SCIPprintReoptStatistics(
    FILE*                 file                /**< output file (or NULL for standard output) */
    )
 {
-   int nsolsupdated;
-   int nimprovingsols;
    SCIP_Real solving;
    SCIP_Real presolving;
    SCIP_Real updatetime;
@@ -40137,9 +40135,6 @@ SCIP_RETCODE SCIPprintReoptStatistics(
    /* skip if reoptimization is disabled */
    if( !scip->set->reopt_enable )
       return SCIP_OKAY;
-
-   nsolsupdated = SCIPreoptGetNCheckedSols(scip->reopt);
-   nimprovingsols = SCIPreoptGetNImprovingSols(scip->reopt);
 
    solving = SCIPclockGetTime(scip->stat->solvingtimeoverall);
    presolving = SCIPclockGetTime(scip->stat->presolvingtimeoverall);
@@ -40161,11 +40156,6 @@ SCIP_RETCODE SCIPprintReoptStatistics(
          (SCIP_Real)SCIPreoptGetNTotalPrunedNodes(scip->reopt)/scip->stat->nreoptruns,
          (SCIP_Real)SCIPreoptGetNTotalCutoffReoptnodes(scip->reopt)/scip->stat->nreoptruns);
 
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Solutions          :    updated  improving\n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  total            : %10d %10d\n", nsolsupdated, nimprovingsols);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  avg              : %10.2f %10.2f\n",
-         (SCIP_Real)nsolsupdated/scip->stat->nreoptruns, (SCIP_Real)nimprovingsols/scip->stat->nreoptruns);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "Inf Subtrees       : %10d\n", SCIPreoptGetNInfSubtrees(scip->reopt));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Restarts           :     global      local\n");
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  first            : %10d         --\n", SCIPreoptGetFirstRestarts(scip->reopt));
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  last             : %10d         --\n", SCIPreoptGetLastRestarts(scip->reopt));

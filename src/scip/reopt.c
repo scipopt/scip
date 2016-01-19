@@ -1071,7 +1071,6 @@ SCIP_RETCODE createReopttree(
    assert(SCIPqueueNElems(reopttree->openids) == (int)(reopttree->reoptnodessize)-1);
 
    reopttree->nreoptnodes = 0;
-   reopttree->ninfsubtrees = 0;
    reopttree->ntotalfeasnodes = 0;
    reopttree->nfeasnodes = 0;
    reopttree->ninfnodes = 0;
@@ -4472,17 +4471,6 @@ int SCIPreoptGetNTotalInfNodes(
 
    return reopt->reopttree->ntotalinfnodes;
 }
-
-/** returns the number of found infeasible subtrees */
-int SCIPreoptGetNInfSubtrees(
-   SCIP_REOPT*           reopt               /**< reoptimization data structure */
-   )
-{
-   assert(reopt != NULL);
-
-   return reopt->reopttree->ninfsubtrees;
-}
-
 
 /** constructor for the reoptimization data */
 SCIP_RETCODE SCIPreoptCreate(

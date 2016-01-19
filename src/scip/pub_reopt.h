@@ -186,12 +186,6 @@ int SCIPreoptGetNTotalInfNodes(
    SCIP_REOPT*           reopt               /*< reoptimization data structure */
    );
 
-/** returns the number of found infeasible subtrees */
-EXTERN
-int SCIPreoptGetNInfSubtrees(
-   SCIP_REOPT*           reopt               /*< reoptimization data structure */
-   );
-
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -218,7 +212,6 @@ int SCIPreoptGetNInfSubtrees(
 #define SCIPreoptGetNTotalCutoffReoptnodes(reopt) (reopt->reopttree->ntotalcutoffreoptnodes)
 #define SCIPreoptGetNInfNodes(reopt)              (reopt->reopttree->ninfsubtrees)
 #define SCIPreoptGetNTotalInfNodes(reopt)         (reopt->reopttree->ntotalinfnodes)
-#define SCIPreoptGetNInfSubtrees(reopt)           (reopt->reopttree->ninfsubtrees)
 
 #endif
 
