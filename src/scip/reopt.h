@@ -79,7 +79,7 @@ SCIP_RETCODE SCIPreoptAddSol(
 /** add optimal solution */
 extern
 SCIP_RETCODE SCIPreoptAddOptSol(
-   SCIP_REOPT*           reopt,              /**< reopt data */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SOL*             sol,                /**< solution to add */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */

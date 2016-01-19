@@ -2725,6 +2725,180 @@ SCIP_RETCODE reoptnodeResetDualConss(
    return SCIP_OKAY;
 }
 
+
+/** transform given set of variables, bounds and boundtypes into a global cut.
+ *  note: boundtypes can be NULL if all variables are binary or a MIP solution should be separated.
+ *  note: continouse variables will be skiped if boundtypes is NULL
+ */
+static
+SCIP_RETCODE addGlobalCut(
+   SCIP_REOPT*           reopt,
+   BMS_BLKMEM*           blkmem,
+   SCIP_SET*             set,
+   SCIP_VAR**            vars,
+   SCIP_Real*            vals,
+   SCIP_BOUNDTYPE*       boundtypes,
+   int                   nvars,
+   int                   nbinvars,
+   int                   nintvars
+   )
+{
+   int nglbconss;
+   int nvarsadded;
+   int v;
+
+   assert(reopt != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(vars != NULL);
+   assert(vals != NULL);
+   assert(nbinvars + nintvars == nvars);
+
+   nglbconss = reopt->nglbconss;
+   nvarsadded = 0;
+
+   /* check whether we have enough memory allocated */
+   SCIP_CALL( checkMemGlbCons(reopt, blkmem, nglbconss+1) );
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, &reopt->glbconss[nglbconss]) ); /*lint !e866*/
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->vars, (int)(nbinvars+2*nintvars)) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->bounds, (int)(nbinvars+2*nintvars)) );
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->boundtypes, (int)(nbinvars+2*nintvars)) );
+   reopt->glbconss[nglbconss]->constype = REOPT_CONSTYPE_CUT;
+   reopt->glbconss[nglbconss]->varssize = (int)(nbinvars+2*nintvars);
+   reopt->glbconss[nglbconss]->lhs = 1.0;
+   reopt->glbconss[nglbconss]->rhs = SCIPsetInfinity(set);
+   reopt->glbconss[nglbconss]->nvars = 0;
+
+   for( v = 0; v < nvars; v++ )
+   {
+      assert(nvarsadded < reopt->glbconss[nglbconss]->varssize);
+      assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS || SCIPsetIsIntegral(set, vals[v]));
+
+      /* if no boundtypes are given we skip continuous variables, otherwise we would add trivial clauses:
+       * a)       x <= ub
+       * b) lb <= x
+       * c) (x <= val) or (x >= val)
+       */
+      if( boundtypes == NULL && SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+         continue;
+
+      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY )
+      {
+         assert(SCIPvarIsOriginal(vars[v]));
+
+         reopt->glbconss[nglbconss]->vars[nvarsadded] = vars[v];
+
+         if( SCIPsetIsEQ(set, vals[v], 1.0) )
+         {
+            assert(boundtypes == NULL || boundtypes[v] == SCIP_BOUNDTYPE_LOWER);
+            reopt->glbconss[nglbconss]->bounds[nvarsadded] = 0.0;
+            reopt->glbconss[nglbconss]->boundtypes[nvarsadded] = SCIP_BOUNDTYPE_UPPER;
+         }
+         else
+         {
+            assert(SCIPsetIsEQ(set, vals[v], 0.0));
+            assert(boundtypes == NULL || boundtypes[v] == SCIP_BOUNDTYPE_UPPER);
+            reopt->glbconss[nglbconss]->bounds[nvarsadded] = 1.0;
+            reopt->glbconss[nglbconss]->boundtypes[nvarsadded] = SCIP_BOUNDTYPE_LOWER;
+         }
+         ++nvarsadded;
+      }
+      else if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS)
+      {
+         assert(boundtypes != NULL);
+
+         reopt->glbconss[nglbconss]->bounds[nvarsadded] = vals[v];
+         reopt->glbconss[nglbconss]->boundtypes[nvarsadded] = (SCIP_BOUNDTYPE)(1-boundtypes[v]);
+         ++nvarsadded;
+      }
+      else
+      {
+         SCIP_Real roundedval;
+         SCIP_Real ubglb;
+         SCIP_Real lbglb;
+
+         assert(SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_IMPLINT);
+
+         reopt->glbconss[nglbconss]->vars[nvarsadded] = vars[v];
+
+         ubglb = SCIPvarGetUbGlobal(vars[v]);
+         lbglb = SCIPvarGetLbGlobal(vars[v]);
+
+         /* case 1  :      x == val == ub -> x <= ub-1
+          * case 2  :      x == val == lb -> x >= lb+1
+          * case 3.1:      x <= val <  ub -> x >= y+1
+          * case 3.2:      x >= val >  lb -> x <= y-1
+          * case 4  : lb < x == val <  ub -> (x <= y-1) or (x >= y+1)
+          */
+
+         /* case 1 */
+         if( SCIPsetIsEQ(set, vals[v], ubglb) )
+         {
+            assert(boundtypes == NULL || boundtypes[v] == SCIP_BOUNDTYPE_LOWER);
+            reopt->glbconss[nglbconss]->bounds[nvarsadded] = ubglb - 1.0;
+            reopt->glbconss[nglbconss]->boundtypes[nvarsadded] = SCIP_BOUNDTYPE_UPPER;
+            ++nvarsadded;
+         }
+         /* case 2 */
+         else if( SCIPsetIsEQ(set, vals[v], lbglb) )
+         {
+            assert(boundtypes == NULL || boundtypes[v] == SCIP_BOUNDTYPE_UPPER);
+            reopt->glbconss[nglbconss]->bounds[nvarsadded] = lbglb + 1.0;
+            reopt->glbconss[nglbconss]->boundtypes[nvarsadded] = SCIP_BOUNDTYPE_LOWER;
+            ++nvarsadded;
+         }
+         else if( boundtypes != NULL )
+         {
+            /* we round the solution value to get a 'clean' bound */
+            assert(SCIPsetIsIntegral(set, vals[v]));
+            roundedval = SCIPsetRound(set, vals[v]);
+
+            /* case 3.1 */
+            if( boundtypes[v] == SCIP_BOUNDTYPE_UPPER )
+            {
+               reopt->glbconss[nglbconss]->bounds[nvarsadded] = roundedval + 1.0;
+               reopt->glbconss[nglbconss]->boundtypes[nvarsadded] = SCIP_BOUNDTYPE_LOWER;
+               ++nvarsadded;
+            }
+            /* case 3.2 */
+            else
+            {
+               assert(boundtypes[v] == SCIP_BOUNDTYPE_LOWER);
+               reopt->glbconss[nglbconss]->bounds[nvarsadded] = roundedval - 1.0;
+               reopt->glbconss[nglbconss]->boundtypes[nvarsadded] = SCIP_BOUNDTYPE_UPPER;
+               ++nvarsadded;
+            }
+         }
+         /* case 4: in this case we have to add two clauses: (x <= val-1) and (x >= val+1) */
+         else
+         {
+            /* we round the solution value to get a 'clean' bound */
+            assert(SCIPsetIsIntegral(set, vals[v]));
+            roundedval = SCIPsetRound(set, vals[v]);
+
+            /* first clause: x <= val-1 */
+            reopt->glbconss[nglbconss]->bounds[nvarsadded] = roundedval - 1.0;
+            reopt->glbconss[nglbconss]->boundtypes[nvarsadded] = SCIP_BOUNDTYPE_UPPER;
+            ++nvarsadded;
+
+            /* second clause:  x >= val+1 */
+            reopt->glbconss[nglbconss]->vars[nvarsadded] = vars[v];
+            reopt->glbconss[nglbconss]->bounds[nvarsadded] = roundedval + 1.0;
+            reopt->glbconss[nglbconss]->boundtypes[nvarsadded] = SCIP_BOUNDTYPE_LOWER;
+            ++nvarsadded;
+         }
+      }
+   }
+   assert(nvars <= nvarsadded);
+   assert(nvarsadded == nbinvars + 2*nintvars);
+
+   reopt->glbconss[nglbconss]->nvars = nvarsadded;
+   ++reopt->nglbconss;
+
+   return SCIP_OKAY;
+}
+
 /** generate a global constraint to separate an infeasible subtree */
 static
 SCIP_RETCODE saveGlobalCons(
@@ -2740,74 +2914,52 @@ SCIP_RETCODE saveGlobalCons(
 
    if( consttype == REOPT_CONSTYPE_INFSUBTREE )
    {
+      SCIP_VAR** vars;
+      SCIP_Real* vals;
       SCIP_BOUNDTYPE* boundtypes;
+      int allocmem;
       int nbranchvars;
-      int conssize;
-      int nglbconss;
+      int nbinvars;
+      int nintvars;
       int v;
 
-      nglbconss = reopt->nglbconss;
-      conssize = SCIPnodeGetDepth(node)+1;
+      /* allocate memory to store the infeasible path */
+      allocmem = SCIPnodeGetDepth(node);
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &vars, allocmem) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &vals, allocmem) );
+      SCIP_CALL( SCIPsetAllocBufferArray(set, &boundtypes, allocmem) );
 
-      /* check if enough memory to store the global constraint is available */
-      SCIP_CALL( checkMemGlbCons(reopt, blkmem, nglbconss+1) );
+      /* get the branching path */
+      SCIPnodeGetAncestorBranchings(node, vars, vals, boundtypes, &nbranchvars, allocmem);
 
-      /* allocate memory to store the infeasible path
-       * we use the permanent allocated array consbounds to store the boundtypes */
-      SCIP_ALLOC( BMSallocBlockMemory(blkmem, &reopt->glbconss[nglbconss]) ); /*lint !e866*/
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->vars, conssize) );
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->bounds, conssize) );
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->boundtypes, conssize) );
-
-      /* allocate buffer */
-      SCIP_CALL( SCIPsetAllocBufferArray(set, &boundtypes, conssize) );
-
-      reopt->glbconss[nglbconss]->varssize = conssize;
-      reopt->glbconss[nglbconss]->lhs = 1.0;
-      reopt->glbconss[nglbconss]->rhs = SCIPsetInfinity(set);
-      reopt->glbconss[nglbconss]->constype = REOPT_CONSTYPE_INFSUBTREE;
-
-      SCIPnodeGetAncestorBranchings(node,
-            reopt->glbconss[nglbconss]->vars,
-            reopt->glbconss[nglbconss]->bounds,
-            boundtypes,
-            &nbranchvars,
-            conssize);
-
-      if( conssize < nbranchvars )
+      if( allocmem < nbranchvars )
       {
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->vars, conssize, nbranchvars) );
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->glbconss[nglbconss]->bounds, conssize, nbranchvars) );
-         conssize = nbranchvars;
-         reopt->glbconss[nglbconss]->varssize = conssize;
+         SCIP_CALL( SCIPsetReallocBufferArray(set, &vars, nbranchvars) );
+         SCIP_CALL( SCIPsetReallocBufferArray(set, &vals, nbranchvars) );
+         SCIP_CALL( SCIPsetReallocBufferArray(set, &boundtypes, nbranchvars) );
+         allocmem = nbranchvars;
 
-         SCIPnodeGetAncestorBranchings(node, reopt->glbconss[nglbconss]->vars, reopt->glbconss[nglbconss]->bounds,
-               boundtypes, &nbranchvars, conssize);
+         SCIPnodeGetAncestorBranchings(node, vars, vals, boundtypes, &nbranchvars, allocmem);
       }
 
-      reopt->glbconss[nglbconss]->nvars = nbranchvars;
-
-      /* transform into original variables */
-      for(v = 0; v < nbranchvars; v++)
+      /* we count the number of binary and (impl) integer variables */
+      nbinvars = 0;
+      nintvars = 0;
+      for( v = 0; v < nbranchvars; v++ )
       {
-         SCIP_Real constant;
-         SCIP_Real scalar;
-
-         constant = 0;
-         scalar = 1;
-
-         SCIP_CALL( SCIPvarGetOrigvarSum(&reopt->glbconss[nglbconss]->vars[v], &scalar, &constant) );
-         reopt->glbconss[nglbconss]->bounds[v] = (reopt->glbconss[nglbconss]->bounds[v] - constant)/scalar;
-
-         assert(SCIPsetIsFeasEQ(set, reopt->glbconss[nglbconss]->bounds[v], 0.0) || SCIPsetIsFeasEQ(set,
-               reopt->glbconss[nglbconss]->bounds[v], 1.0));
+         if( SCIPvarIsBinary(vars[v]) == SCIP_VARTYPE_BINARY )
+            ++nbinvars;
+         if( SCIPvarIsBinary(vars[v]) == SCIP_VARTYPE_INTEGER || SCIPvarIsBinary(vars[v]) == SCIP_VARTYPE_IMPLINT )
+            ++nintvars;
       }
+      assert(nbinvars + nintvars == nbranchvars);
+
+      SCIP_CALL( addGlobalCut(reopt, blkmem, set, vars, vals, boundtypes, nbranchvars, nbinvars, nintvars) );
 
       /* free buffer */
       SCIPsetFreeBufferArray(set, &boundtypes);
-
-      /* increase the number of global constraints */
-      ++reopt->nglbconss;
+      SCIPsetFreeBufferArray(set, &vals);
+      SCIPsetFreeBufferArray(set, &vars);
    }
 
    return SCIP_OKAY;
@@ -4259,6 +4411,72 @@ void permuteRandom(
    }
 }
 
+static
+SCIP_RETCODE separateSolution(
+   SCIP_REOPT*           reopt,
+   BMS_BLKMEM*           blkmem,
+   SCIP_SET*             set,
+   SCIP_STAT*            stat,
+   SCIP_SOL*             sol,                /**< solution to separate */
+   SCIP_VAR**            vars,               /**< array of original problem variables */
+   int                   nvars               /**< number of original problem variables */
+   )
+{
+   SCIP_VAR** origvars;
+   SCIP_Real* vals;
+   int nintvars;
+   int nbinvars;
+   int v;
+   int w;
+
+   assert(reopt != NULL);
+   assert(sol != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(vars != NULL);
+   assert(nvars != 0);
+   assert(SCIPsolIsOriginal(sol));
+
+   /* allocate buffer memory */
+   SCIP_ALLOC( BMSallocMemoryArray(&origvars, nvars) );
+   SCIP_ALLOC( BMSallocMemoryArray(&vals, nvars) );
+
+   nbinvars = 0;
+   nintvars = 0;
+
+   /* get the solution values of the variables */
+   for( v = 0, w = 0; v < nvars; v++ )
+   {
+      assert(SCIPvarIsOriginal(vars[v]));
+      assert(nbinvars + nintvars == w);
+
+      /* we do not want to create cuts for continous variables */
+      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
+         continue;
+
+      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_BINARY )
+         ++nbinvars;
+      if( SCIPvarGetType(vars[v]) == SCIP_VARTYPE_INTEGER || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_IMPLINT )
+         ++nintvars;
+
+      origvars[v] = vars[v];
+      assert(origvars[v] != NULL);
+      assert(SCIPvarIsOriginal(origvars[v]));
+
+      vals[w] = SCIPsolGetVal(sol, set, stat, origvars[v]);
+      ++w;
+   }
+
+   SCIP_CALL( addGlobalCut(reopt, blkmem, set, origvars, vals, NULL, w, nbinvars, nintvars) );
+
+   /* free buffer memory */
+   BMSfreeMemoryArray(&vals);
+   BMSfreeMemoryArray(&origvars);
+
+   return SCIP_OKAY;
+}
+
 /*
  * public methods
  */
@@ -4535,6 +4753,7 @@ SCIP_RETCODE SCIPreoptFree(
    {
       if( (*reopt)->dualcons->varssize > 0 )
       {
+         BMSfreeBlockMemoryArray(blkmem, &(*reopt)->dualcons->boundtypes, (*reopt)->dualcons->varssize);
          BMSfreeBlockMemoryArray(blkmem, &(*reopt)->dualcons->bounds, (*reopt)->dualcons->varssize);
          BMSfreeBlockMemoryArray(blkmem, &(*reopt)->dualcons->vars, (*reopt)->dualcons->varssize);
          BMSfreeBlockMemory(blkmem, &(*reopt)->dualcons);
@@ -4556,6 +4775,7 @@ SCIP_RETCODE SCIPreoptFree(
          {
             if( (*reopt)->glbconss[c]->varssize > 0 )
             {
+               BMSfreeBlockMemoryArray(blkmem, &(*reopt)->glbconss[c]->boundtypes, (*reopt)->glbconss[c]->varssize);
                BMSfreeBlockMemoryArray(blkmem, &(*reopt)->glbconss[c]->bounds, (*reopt)->glbconss[c]->varssize);
                BMSfreeBlockMemoryArray(blkmem, &(*reopt)->glbconss[c]->vars, (*reopt)->glbconss[c]->varssize);
                (*reopt)->glbconss[c]->varssize = 0;
@@ -4667,7 +4887,9 @@ SCIP_RETCODE SCIPreoptAddOptSol(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PRIMAL*          origprimal          /**< original primal */
+   SCIP_PRIMAL*          origprimal,         /**< original primal */
+   SCIP_VAR**            vars,               /**< original problem variables */
+   int                   nvars               /**< number of original problem variables */
    )
 {
    SCIP_SOL* solcopy;
@@ -4682,6 +4904,12 @@ SCIP_RETCODE SCIPreoptAddOptSol(
 
    SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, origprimal, sol) );
    reopt->prevbestsols[reopt->run-1] = solcopy;
+
+   /* store a global constraint that cutsoff the solution */
+   if( set->reopt_sepabestsol )
+   {
+      SCIP_CALL( separateSolution(reopt, blkmem, set, stat, sol, vars, nvars) );
+   }
 
    return SCIP_OKAY;
 }
@@ -5319,8 +5547,7 @@ SCIP_RETCODE SCIPreoptAddInfNode(
 
    if( set->reopt_sepaglbinfsubtrees )
    {
-//      SCIP_CALL( saveGlobalCons(reopt, set, blkmem, node, REOPT_CONSTYPE_INFSUBTREE) );
-      ++reopt->reopttree->ninfsubtrees;
+      SCIP_CALL( saveGlobalCons(reopt, set, blkmem, node, REOPT_CONSTYPE_CUT) );
    }
 
    ++reopt->reopttree->ninfnodes;
@@ -6009,7 +6236,7 @@ SCIP_RETCODE SCIPreoptUpdateVarHistory(
    /* optimal solution of the current run */
    lastoptsol = reopt->prevbestsols[reopt->run-1];
 
-   /* bst objective value of the previous run */
+   /* best objective value of the previous run */
    if( reopt->run == 1 )
       oldobj = 0;
    else
@@ -6944,6 +7171,7 @@ SCIP_Real SCIPreoptGetSavingtime(
    return SCIPclockGetTime(reopt->savingtime);
 }
 
+#ifdef SCIP_DISABLED_CODE
 /** store a global constraint that should be added at the beginning of the next iteration */
 SCIP_RETCODE SCIPreoptAddGlbCons(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
@@ -6980,6 +7208,7 @@ SCIP_RETCODE SCIPreoptAddGlbCons(
 
    return SCIP_OKAY;
 }
+#endif
 
 /** add the stored constraints globally to the problem */
 SCIP_RETCODE SCIPreoptApplyGlbConss(
@@ -6990,6 +7219,7 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
+   char name[SCIP_MAXSTRLEN];
    int c;
 
    assert(scip != NULL);
@@ -7007,42 +7237,87 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    {
       SCIP_CONS* cons;
       SCIP_VAR** consvars;
+      int nbinvars;
+      int nintvars;
       int v;
 
       assert(reopt->glbconss[c]->nvars > 0);
 
-      /* allocate buffer */
-      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, reopt->glbconss[c]->nvars) );
+      cons = NULL;
+      consvars = NULL;
+      nbinvars = 0;
+      nintvars = 0;
 
-      SCIPdebugMessage("-> add constraints with %d vars\n", reopt->glbconss[c]->nvars);
-
+      /* check if we can use a logic-or or if we have to use a bounddisjuction constraint */
       for(v = 0; v < reopt->glbconss[c]->nvars; v++)
       {
-         consvars[v] = SCIPvarGetTransVar(reopt->glbconss[c]->vars[v]);
-
-         /* negate the variable if it was fixed to 1 */
-         if( SCIPsetIsFeasEQ(set, reopt->glbconss[c]->bounds[v], 1.0) )
+         if( SCIPvarGetType(reopt->glbconss[c]->vars[v]) == SCIP_VARTYPE_BINARY )
+            ++nbinvars;
+         else if( SCIPvarGetType(reopt->glbconss[c]->vars[v]) == SCIP_VARTYPE_INTEGER
+               || SCIPvarGetType(reopt->glbconss[c]->vars[v]) == SCIP_VARTYPE_IMPLINT )
+            ++nintvars;
+         else
          {
-            SCIP_CALL( SCIPvarNegate(consvars[v], blkmem, set, stat, &consvars[v]) );
+            SCIPerrorMessage("Expected variable type binary or (impl.) integer for variable <%s> in global constraint at pos. %d.\n",
+                  SCIPvarGetName(reopt->glbconss[c]->vars[v]), c);
+            return SCIP_INVALIDDATA;
          }
       }
 
-      /* create the logic-or constraint and add them to the problem */
-      SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, "glblogicor", reopt->glbconss[c]->nvars,
-            consvars, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, TRUE) );
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "glb_%s_%d", reopt->glbconss[c]->constype == REOPT_CONSTYPE_CUT ? "cut" : "inf", reopt->run);
 
+      /* all variables are binary, we can create a logic-or constraint */
+      if( nbinvars == reopt->glbconss[c]->nvars )
+      {
+         SCIPdebugMessage("-> add logic-or constraints with %d binvars\n", nbinvars);
+
+         /* allocate buffer */
+         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, reopt->glbconss[c]->nvars) );
+
+         for(v = 0; v < reopt->glbconss[c]->nvars; v++)
+         {
+            consvars[v] = reopt->glbconss[c]->vars[v];
+            assert(SCIPvarIsOriginal(consvars[v]));
+
+            /* negate the variable if it was fixed to 1 */
+            if( SCIPsetIsFeasEQ(set, reopt->glbconss[c]->bounds[v], 0.0) )
+            {
+               assert(reopt->glbconss[c]->boundtypes[v] == SCIP_BOUNDTYPE_UPPER);
+               SCIP_CALL( SCIPvarNegate(reopt->glbconss[c]->vars[v], blkmem, set, stat, &consvars[v]) );
+            }
+         }
+
+         /* create the logic-or constraint */
+         SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, name, reopt->glbconss[c]->nvars,
+               consvars, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+         /* free buffer */
+         SCIPfreeBufferArray(scip, &consvars);
+      }
+      /* not all variables are binary, we need a bounddisjunction constraint */
+      else
+      {
+         assert(reopt->glbconss[c]->nvars = nbinvars + 2*nintvars);
+
+         SCIPdebugMessage("-> add bounddisjuction constraints with %d binvars, %d intvars\n", nbinvars, (int) (2*nintvars));
+
+         /* create the bounddisjuction constraint */
+         SCIP_CALL( SCIPcreateConsBasicBounddisjunction(scip, &cons, name, reopt->glbconss[c]->nvars, reopt->glbconss[c]->vars,
+               reopt->glbconss[c]->boundtypes, reopt->glbconss[c]->bounds) );
+      }
+
+#ifdef SCIP_MORE_DEBUG
       SCIPdebugPrintCons(scip, cons, NULL);
+#endif
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
       /* delete the global constraints data */
+      SCIPfreeBlockMemoryArrayNull(scip, &reopt->glbconss[c]->boundtypes, reopt->glbconss[c]->nvars);
       SCIPfreeBlockMemoryArrayNull(scip, &reopt->glbconss[c]->bounds, reopt->glbconss[c]->nvars);
       SCIPfreeBlockMemoryArrayNull(scip, &reopt->glbconss[c]->vars, reopt->glbconss[c]->nvars);
       SCIPfreeBlockMemoryNull(scip, &reopt->glbconss[c]); /*lint !e866*/
-
-      /* free buffer */
-      SCIPfreeBufferArray(scip, &consvars);
    }
 
    /* reset the number of global constraints */
@@ -7384,5 +7659,59 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
       reoptnode->conss[nconss]->constype = constype;
       ++reoptnode->nconss;
    }
+   return SCIP_OKAY;
+}
+
+/** add a consraint to the reoptimization data structure */
+SCIP_RETCODE SCIPreoptAddCons(
+   SCIP_REOPT*           reopt,
+   SCIP_SET*             set,
+   BMS_BLKMEM*           blkmem,
+   SCIP_CONS*            cons
+   )
+{
+   int i;
+
+   assert(reopt != NULL);
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(cons != NULL);
+
+   /* check memory */
+   if( reopt->addedconsssize == 0 )
+   {
+      assert(reopt->addedconss == NULL);
+
+      reopt->addedconsssize = 10;
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->addedconss, reopt->addedconsssize) );
+
+      /* clear the array */
+      for( i = 0; i < reopt->addedconsssize; i++ )
+         reopt->addedconss[i] = NULL;
+   }
+   else if( reopt->naddedconss == reopt->addedconsssize )
+   {
+      int oldsize;
+
+      oldsize = reopt->addedconsssize;
+      reopt->addedconsssize *= 2;
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->addedconss, oldsize, reopt->addedconsssize) );
+
+      /* clear the array */
+      for( i = oldsize; i < reopt->addedconsssize; i++ )
+         reopt->addedconss[i] = NULL;
+   }
+   assert(reopt->naddedconss < reopt->addedconsssize);
+   assert(reopt->addedconss[reopt->naddedconss] == NULL);
+
+   reopt->addedconss[reopt->naddedconss] = cons;
+   reopt->consadded = TRUE;
+   ++reopt->naddedconss;
+
+   printf("added cons <%s>\n", SCIPconsGetName(cons));
+
+   /* capture the constraint */
+   SCIPconsCapture(cons);
+
    return SCIP_OKAY;
 }

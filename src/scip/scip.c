@@ -11523,7 +11523,14 @@ SCIP_RETCODE SCIPaddCons(
    switch( scip->set->stage )
    {
    case SCIP_STAGE_PROBLEM:
+   {
       SCIP_CALL( SCIPprobAddCons(scip->origprob, scip->set, scip->stat, cons) );
+
+      if( scip->set->reopt_enable )
+      {
+         SCIP_CALL( SCIPreoptAddCons(scip->reopt, scip->set, scip->mem->probmem, cons) );
+      }
+   }
       return SCIP_OKAY;
 
    case SCIP_STAGE_TRANSFORMED:
@@ -14613,6 +14620,11 @@ SCIP_RETCODE SCIPsolve(
       case SCIP_STAGE_PROBLEM:
       case SCIP_STAGE_TRANSFORMED:
       case SCIP_STAGE_PRESOLVING:
+         if( scip->set->stage == SCIP_STAGE_PROBLEM && (scip->set->reopt_sepaglbinfsubtrees || scip->set->reopt_sepabestsol) )
+         {
+            SCIP_CALL( SCIPreoptApplyGlbConss(scip, scip->reopt, scip->set, scip->stat, scip->mem->probmem) );
+         }
+
          /* initialize solving data structures, transform and problem */
          SCIP_CALL( SCIPpresolve(scip) );
 
@@ -14651,11 +14663,6 @@ SCIP_RETCODE SCIPsolve(
 
             SCIP_CALL( SCIPreoptCheckRestart(scip->reopt, scip->set, scip->mem->probmem, NULL, scip->transprob->vars,
                   scip->transprob->nvars, &reoptrestart) );
-
-            if( scip->set->reopt_sepaglbinfsubtrees || scip->set->reopt_sepabestsol )
-            {
-               SCIP_CALL( SCIPreoptApplyGlbConss(scip, scip->reopt, scip->set, scip->stat, scip->mem->probmem) );
-            }
          }
 
          /* try to compress the search tree if reoptimization is enabled */
@@ -14771,7 +14778,8 @@ SCIP_RETCODE SCIPsolve(
             /* if the best solution should be separated, we must not store it in the solution tree */
             if( s == 0 && scip->set->reopt_sepabestsol )
             {
-               SCIP_CALL( SCIPreoptAddOptSol(scip->reopt, sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal) );
+               SCIP_CALL( SCIPreoptAddOptSol(scip->reopt, sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal,
+                     scip->origprob->vars, scip->origprob->nvars) );
             }
             /* add solution to solution tree */
             else
