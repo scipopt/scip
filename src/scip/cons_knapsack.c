@@ -58,10 +58,6 @@
 
 #define LINCONSUPGD_PRIORITY    +100000 /**< priority of the constraint handler for upgrading of linear constraints */
 
-#if 0
-#define MAX_DYNPROG_CAPACITY      10000 /**< maximal capacity of knapsack to apply dynamic programming */
-#endif
-
 #define MAX_USECLIQUES_SIZE        1000 /**< maximal number of items in knapsack where clique information is used */
 #define MAX_ZEROITEMS_SIZE        10000 /**< maximal number of items to store in the zero list in preprocessing */
 
@@ -488,7 +484,7 @@ SCIP_RETCODE catchEvents(
    {
       SCIP_CALL( eventdataCreate(scip, &consdata->eventdata[i], consdata, consdata->weights[i]) );
       SCIP_CALL( SCIPcatchVarEvent(scip, consdata->vars[i], 
-            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
+            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_VARFIXED
             | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
             eventhdlr, consdata->eventdata[i], &consdata->eventdata[i]->filterpos) );
    }
@@ -514,7 +510,7 @@ SCIP_RETCODE dropEvents(
    for( i = 0; i < consdata->nvars; i++)
    {
       SCIP_CALL( SCIPdropVarEvent(scip, consdata->vars[i],
-            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
+            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_VARFIXED
             | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
             eventhdlr, consdata->eventdata[i], consdata->eventdata[i]->filterpos) );
       SCIP_CALL( eventdataFree(scip, &consdata->eventdata[i]) );
@@ -1248,7 +1244,7 @@ SCIP_RETCODE SCIPsolveKnapsackExactly(
    }
 
    /* allocate temporary memory and check for memory exceeding */
-   /* @note we do allocate normal memory instead of buffer memory, because the buffer, will not be deleted directly and
+   /* @note we do allocate normal memory instead of buffer memory, because the buffer will not be deleted directly and
     *       might be a really huge block of memory which we will not use later on
     */
    retcode = SCIPallocMemoryArray(scip, &optvalues, nmyitems * intcap);
@@ -6241,7 +6237,7 @@ SCIP_RETCODE addCoef(
          assert(conshdlrdata != NULL);
          SCIP_CALL( eventdataCreate(scip, &consdata->eventdata[consdata->nvars-1], consdata, weight) );
          SCIP_CALL( SCIPcatchVarEvent(scip, var,
-               SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
+               SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_VARFIXED
                | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
                conshdlrdata->eventhdlr, consdata->eventdata[consdata->nvars-1],
                &consdata->eventdata[consdata->nvars-1]->filterpos) );
@@ -6303,7 +6299,7 @@ SCIP_RETCODE delCoefPos(
       conshdlrdata = SCIPconshdlrGetData(SCIPconsGetHdlr(cons));
       assert(conshdlrdata != NULL);
       SCIP_CALL( SCIPdropVarEvent(scip, var,
-            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBRELAXED | SCIP_EVENTTYPE_VARFIXED
+            SCIP_EVENTTYPE_LBCHANGED | SCIP_EVENTTYPE_UBTIGHTENED | SCIP_EVENTTYPE_VARFIXED
             | SCIP_EVENTTYPE_VARDELETED | SCIP_EVENTTYPE_IMPLADDED,
             conshdlrdata->eventhdlr, consdata->eventdata[pos], consdata->eventdata[pos]->filterpos) );
       SCIP_CALL( eventdataFree(scip, &consdata->eventdata[pos]) );
@@ -7135,7 +7131,7 @@ SCIP_RETCODE propagateCons(
       SCIP_CALL( SCIPincConsAge(scip, cons) );
    }
 
-   /* we need a merged constraint cause without it the negated clique information could be invalid */
+   /* we need a merged constraint since otherwise the negated clique information could be invalid */
    usenegatedclique = usenegatedclique && consdata->merged;
    nnegcliques = -1;
 
@@ -12909,9 +12905,6 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
 
    switch( SCIPeventGetType(event) )
    {
-      SCIP_CONSHDLR* conshdlr;
-      SCIP_CONSHDLRDATA* conshdlrdata;
-
    case SCIP_EVENTTYPE_LBTIGHTENED:
       eventdata->consdata->onesweightsum += eventdata->weight;
       eventdata->consdata->propagated = FALSE;
@@ -12919,21 +12912,11 @@ SCIP_DECL_EVENTEXEC(eventExecKnapsack)
       break;
    case SCIP_EVENTTYPE_LBRELAXED:
       eventdata->consdata->onesweightsum -= eventdata->weight;
-
-      conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
-      assert(conshdlr != NULL);
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert(conshdlrdata != NULL);
-
-      if( conshdlrdata->negatedclique )
-      {
-         /* if a variable fixed to 1 is unfixed, it is possible, that it can be fixed to 1 again */
-         eventdata->consdata->propagated = FALSE;
-      }
-
       break;
-   case SCIP_EVENTTYPE_UBRELAXED:
-      /* if a variable fixed to 0 is unfixed, it is possible, that it can be fixed to 0 again */
+   case SCIP_EVENTTYPE_UBTIGHTENED:
+      /* if a variable is fixed to 0, it is possible, that the constraint gets redundant
+       * or that we can propagate based on negated clique information
+       */
       eventdata->consdata->propagated = FALSE;
       break;
    case SCIP_EVENTTYPE_VARFIXED:  /* the variable should be removed from the constraint in presolving */
