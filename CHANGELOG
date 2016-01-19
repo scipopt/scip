@@ -10,11 +10,14 @@ features:
 parameters:
 - new parameter sepaperspective to turn on separation of perspective cuts for indicator contraints
 - new parameter sepapersplocal to decide whether local cuts can be used for perspective cuts for indicator contraints
-- new parameter branching/relpscost/usesmallweightsitlim to use smaller weights for pseudo cost updates when LP iteration limit was hit
+- new parameter branching/relpscost/usesmallweightsitlim to use smaller weights for pseudo cost updates when LP
+  iteration limit was hit
 - spx2 is the new default LP solver interface
 - new parameter lp/randomseed to set the initial seed of the LP solver
 
 performance improvements:
+- successful propagation with DURINGLPLOOP timing now triggers a new round of node solving, starting with BEFORELP
+  propagation
 
 interface:
 - new function SCIPsolveProbingRelax() to solve a relaxation within probing
@@ -24,6 +27,8 @@ interface:
   (and relaxation solutions) in the statistics in the "Primal Heuristic" section.
 
 fixed bugs:
+- fixed bug in event system: bound change events of the new focus node must be processed, even if the bound
+  is the same as at the last focus node
 
 SCIP version 3.2.1
 ==================
