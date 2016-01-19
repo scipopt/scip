@@ -24,6 +24,8 @@ interface:
   (and relaxation solutions) in the statistics in the "Primal Heuristic" section.
 
 fixed bugs:
+- fixed bug in event system: bound change events of the new focus node must be processed, even if the bound
+  is the same as at the last focus node
 
 SCIP version 3.2.1
 ==================
