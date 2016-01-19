@@ -18445,6 +18445,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          {
          case SCIP_LPSOLSTAT_OPTIMAL:
          {
+            SCIP_Longint oldnbestsolsfound = scip->primal->nbestsolsfound;
             *value = SCIPgetLPObjval(scip);
             assert(SCIPisLT(scip, *value, SCIPgetCutoffbound(scip)));
 
@@ -18485,6 +18486,11 @@ SCIP_RETCODE performStrongbranchWithPropagation(
                   SCIPdebugMessage("found new solution in strong branching\n");
 
                   scip->stat->nsbsolsfound++;
+
+                  if( scip->primal->nbestsolsfound != oldnbestsolsfound )
+                  {
+                     scip->stat->nsbbestsolsfound++;
+                  }
 
                   if( SCIPisGE(scip, *value, SCIPgetCutoffbound(scip)) )
                      *cutoff = TRUE;
@@ -39878,15 +39884,15 @@ void printHeuristicStatistics(
    assert(scip->tree != NULL);
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Primal Heuristics  :   ExecTime  SetupTime      Calls      Found       Best\n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  LP solutions     : %10.2f          -          - %10" SCIP_LONGINT_FORMAT "          -\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  LP solutions     : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPclockGetTime(scip->stat->lpsoltime),
-      scip->stat->nlpsolsfound);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  pseudo solutions : %10.2f          -          - %10" SCIP_LONGINT_FORMAT "          -\n",
+      scip->stat->nlpsolsfound, scip->stat->nlpbestsolsfound);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  pseudo solutions : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPclockGetTime(scip->stat->pseudosoltime),
-      scip->stat->npssolsfound);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  strong branching : %10.2f          -          - %10" SCIP_LONGINT_FORMAT "          -\n",
+      scip->stat->npssolsfound, scip->stat->npsbestsolsfound);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  strong branching : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPclockGetTime(scip->stat->sbsoltime),
-      scip->stat->nsbsolsfound);
+      scip->stat->nsbsolsfound, scip->stat->nsbbestsolsfound);
 
    /* sort heuristics w.r.t. their names */
    SCIPsetSortHeursName(scip->set);

@@ -892,6 +892,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    success = FALSE;
 
+   /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
    /* create a new problem, which fixes variables with same value in a certain set of solutions */
    SCIP_CALL( setupSubproblem(scip, subscip, subvars, selection, heurdata, &success) );
@@ -915,12 +916,15 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-   /* disable output to console */
+   /* disable statistic timing inside sub SCIP */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 
 #ifdef SCIP_DEBUG
    /* for debugging crossover, enable MIP output */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", TRUE) );
+
 #endif
 
    /* check whether there is enough time and memory left */
@@ -940,9 +944,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* abort if no time is left or not enough memory to create a copy of SCIP, including external memory usage */
    if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
-
-   /* disable statistic timing inside sub SCIP */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 
    /* set limits for the subproblem */
    heurdata->nodelimit = nstallnodes;

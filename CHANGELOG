@@ -19,7 +19,10 @@ performance improvements:
 interface:
 - new function SCIPsolveProbingRelax() to solve a relaxation within probing
 - new function SCIPgetIntVarXor() to access integer variable of XOR constraints
-- new function SCIPgetLastStrongbranchingLPSolstat() to query the LP statuses after strong branching on a variable 
+- new function SCIPgetLastStrongbranchingLPSolstat() to query the LP statuses after strong branching on a variable
+- next to the number of found solution, also the number of new best solutions is now printed for each heuristic
+  (and relaxation solutions) in the statistics in the "Primal Heuristic" section.
+
 fixed bugs:
 
 SCIP version 3.2.1

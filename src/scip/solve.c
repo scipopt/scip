@@ -2757,7 +2757,7 @@ SCIP_RETCODE solveNodeLP(
          SCIP_Bool checklprows;
          SCIP_Bool stored;
          SCIP_SOL* sol;
-         SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
+         SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
 
          SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
 
@@ -2786,8 +2786,13 @@ SCIP_RETCODE solveNodeLP(
 #endif
          if( stored )
          {
-            if( bestsol != SCIPgetBestSol(set->scip) )
+            stat->nlpsolsfound++;
+
+            if( primal->nbestsolsfound != oldnbestsolsfound )
+            {
+               stat->nlpbestsolsfound++;
                SCIPstoreSolutionGap(set->scip);
+            }
 
             if( set->reopt_enable )
             {
@@ -2796,8 +2801,6 @@ SCIP_RETCODE solveNodeLP(
                      SCIPlpGetSolstat(lp), tree->root == tree->focusnode, TRUE, tree->focusnode->lowerbound,
                      tree->effectiverootdepth) );
             }
-
-            stat->nlpsolsfound++;
          }
 
          if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
@@ -3913,7 +3916,7 @@ SCIP_RETCODE solveNode(
        */
       if( pricingaborted && !(*infeasible) && !(*cutoff) )
       {
-         SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
+         SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
          SCIP_SOL* sol;
          SCIP_Bool stored;
 
@@ -3923,8 +3926,13 @@ SCIP_RETCODE solveNode(
 
          if( stored )
          {
-            if( bestsol != SCIPgetBestSol(set->scip) )
+            stat->nlpsolsfound++;
+
+            if( primal->nbestsolsfound != oldnbestsolsfound )
+            {
+               stat->nlpbestsolsfound++;
                SCIPstoreSolutionGap(set->scip);
+            }
          }
 
          *infeasible = TRUE;
@@ -4199,7 +4207,7 @@ SCIP_RETCODE addCurrentSolution(
    SCIP_Bool             checksol            /**< should the solution be checked? */
    )
 {
-   SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
+   SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
    SCIP_SOL* sol;
    SCIP_Bool foundsol;
 
@@ -4229,8 +4237,11 @@ SCIP_RETCODE addCurrentSolution(
       {
          stat->nlpsolsfound++;
 
-         if( bestsol != SCIPgetBestSol(set->scip) )
+         if( primal->nbestsolsfound != oldnbestsolsfound )
+         {
+            stat->nlpbestsolsfound++;
             SCIPstoreSolutionGap(set->scip);
+         }
       }
 
       /* stop clock for LP solutions */
@@ -4262,8 +4273,11 @@ SCIP_RETCODE addCurrentSolution(
       {
          stat->npssolsfound++;
 
-         if( bestsol != SCIPgetBestSol(set->scip) )
+         if( primal->nbestsolsfound != oldnbestsolsfound )
+         {
+            stat->npsbestsolsfound++;
             SCIPstoreSolutionGap(set->scip);
+         }
       }
    }
 
