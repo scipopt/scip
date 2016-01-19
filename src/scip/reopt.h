@@ -84,17 +84,19 @@ SCIP_RETCODE SCIPreoptAddOptSol(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_PRIMAL*          origprimal          /**< original primal */
+   SCIP_PRIMAL*          origprimal,         /**< original primal */
+   SCIP_VAR**            vars,               /**< original problem variables */
+   int                   nvars               /**< number of original problem variables */
    );
 
 /** add a run */
 extern
 SCIP_RETCODE SCIPreoptAddRun(
-   SCIP_REOPT*           reopt,              /**< reopt data */
+   SCIP_REOPT*           reopt,              /**< reoptimization data sturcture */
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_VAR**            vars,               /**< trnasformed variables */
-   int                   nvars,              /**< number of transformed variables */
+   SCIP_VAR**            origvars,           /**< original problem variables */
+   int                   norigvars,          /**< number of original variables */
    int                   size                /**< number of expected solutions */
    );
 
@@ -191,12 +193,12 @@ SCIP_Real SCIPreoptGetSimToFirst(
 /** return the similarity between two of objective functions of two given runs */
 extern
 SCIP_Real SCIPreoptGetSimilarity(
-   SCIP_REOPT*           reopt,              /**< reopt data */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   run1,               /**< number of the first run */
    int                   run2,               /**< number of the second run */
-   SCIP_VAR**            transvars,          /**< transformed problem variables */
-   int                   ntransvars          /**< number of transformed problem variables */
+   SCIP_VAR**            origvars,           /**< original problem variables */
+   int                   norigvars           /**< number of original problem variables */
    );
 
 /** returns the best solution of the last run */

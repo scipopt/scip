@@ -348,57 +348,78 @@ SCIP_Real reoptSimilarity(
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   obj1_id,            /**< id of one objective function */
    int                   obj2_id,            /**< id of the other objective function */
-   SCIP_VAR**            transvars,          /**< transformed problem variables */
-   int                   ntransvars          /**< number of transformed problem variables */
+   SCIP_VAR**            vars,               /**< problem variables */
+   int                   nvars               /**< number of problem variables */
    )
 {
    SCIP_Real similarity;
-   SCIP_Bool onediffertozero;
+   SCIP_Real norm_obj1;
+   SCIP_Real norm_obj2;
    int v;
 
    assert(reopt != NULL);
-   assert(transvars != NULL);
-   assert(ntransvars >= 0);
+   assert(vars != NULL);
+   assert(nvars >= 0);
 
-   onediffertozero = FALSE;
+   similarity = 0.0;
+   norm_obj1 = 0.0;
+   norm_obj2 = 0.0;
 
    /* calc similarity */
-   similarity = 0.0;
-   for(v = 0; v < ntransvars; v++)
+   for(v = 0; v < nvars; v++)
    {
+      SCIP_VAR* origvar;
+      SCIP_VAR* transvar;
       SCIP_Real c1;
       SCIP_Real c2;
       SCIP_Real lb;
       SCIP_Real ub;
+      SCIP_Real constant;
+      SCIP_Real scalar;
 
-      assert(SCIPvarIsActive(transvars[v]));
-      assert(!SCIPvarIsOriginal(transvars[v]));
+      origvar = vars[v];
 
-      lb = SCIPvarGetLbLocal(transvars[v]);
-      ub = SCIPvarGetUbLocal(transvars[v]);
+      /* get the original variable */
+      if( !SCIPvarIsOriginal(origvar) )
+      {
+         SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+      }
+      assert(origvar != NULL && SCIPvarIsOriginal(origvar));
+
+      /* get the transformed variable, we skip globally fixed variables */
+      transvar = SCIPvarGetTransVar(origvar);
+      assert(transvar != NULL);
+
+      lb = SCIPvarGetLbLocal(transvar);
+      ub = SCIPvarGetUbLocal(transvar);
 
       if( SCIPsetIsFeasLT(set, lb, ub) )
       {
-         int idx;
+         int probidx;
 
-         idx = SCIPvarGetIndex(transvars[v]);
-         assert(0 <= idx);
+         probidx = SCIPvarGetProbindex(origvar);
+         assert(0 <= probidx && probidx <= nvars);
 
-         c1 = reopt->objs[obj1_id][idx];
-         c2 = reopt->objs[obj2_id][idx];
-
-         if( c1 != 0 || c2 != 0 )
-            onediffertozero = TRUE;
+         c1 = reopt->objs[obj1_id][probidx];
+         c2 = reopt->objs[obj2_id][probidx];
 
          /* vector product */
          similarity += c1*c2;
+         norm_obj1 += SQR(c1);
+         norm_obj2 += SQR(c2);
       }
    }
 
-   if( !onediffertozero )
-      return -2.0;
+   /* divide similarity by norms of the objective vectors */
+   norm_obj1 = SQRT(norm_obj1);
+   norm_obj2 = SQRT(norm_obj2);
+
+   if( !SCIPsetIsZero(set, norm_obj1) && !SCIPsetIsZero(set, norm_obj2) )
+      similarity /= (norm_obj1 * norm_obj2);
    else
-      return similarity;
+      similarity = 0.0;
+
+   return similarity;
 }
 
 /** delete the given reoptimization node */
@@ -1779,36 +1800,11 @@ SCIP_RETCODE reoptCheckLocalRestart(
    if( set->reopt_objsimdelay > -1 )
    {
       SCIP_Real sim;
-      SCIP_Real lb;
-      SCIP_Real ub;
-      SCIP_Real oldcoef;
-      SCIP_Real newcoef;
-      int v;
-      int idx;
 
       if( id == 0 )
          reopt->nlocrestarts = 0;
 
-      sim = 0.0;
-
-      /* since the stored objective functions are already normalize the dot-product is equivalent to the similarity */
-      for(v = 0; v < ntransvars; v++)
-      {
-         lb = SCIPvarGetLbLocal(transvars[v]);
-         ub = SCIPvarGetUbLocal(transvars[v]);
-
-         /* skip already fixed variables */
-         if( SCIPsetIsFeasLT(set, lb, ub) )
-         {
-            idx = SCIPvarGetIndex(transvars[v]);
-            assert(0 <= idx);
-
-            oldcoef = SCIPreoptGetOldObjCoef(reopt, reopt->run-1, idx);
-            newcoef = SCIPreoptGetOldObjCoef(reopt, reopt->run, idx);
-
-            sim += (oldcoef * newcoef);
-         }
-      }
+      sim = reoptSimilarity(reopt, set, reopt->run, reopt->run-1, transvars, ntransvars);
 
       /* delete the stored subtree and information about bound changes
        * based on dual information */
@@ -4115,104 +4111,53 @@ SCIP_RETCODE reoptSaveNewObj(
    SCIP_REOPT*           reopt,              /**< reoptimization data */
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_VAR**            transvars,          /**< transformed problem variables */
-   int                   ntransvars          /**< number of transformed problem variables */
+   SCIP_VAR**            origvars,           /**< original problem variables */
+   int                   norigvars           /**< number of original problem variables */
    )
 {
-   SCIP_Real norm;
-   int memsize;
+   int probidx;
    int v;
-   int idx;
 
    assert(reopt != NULL);
+   assert(set != NULL);
+   assert(blkmem != NULL);
+   assert(origvars != NULL);
+   assert(norigvars >= 0);
 
    /* check memory */
    SCIP_CALL( ensureRunSize(reopt, reopt->run, blkmem) );
 
-   norm = 0;
-
    /* get memory */
-   memsize = ntransvars;
-   SCIP_ALLOC( BMSallocClearMemoryArray(&reopt->objs[reopt->run-1], memsize) ); /*lint !e866*/
+   SCIP_ALLOC( BMSallocClearMemoryArray(&reopt->objs[reopt->run-1], norigvars) ); /*lint !e866*/
 
    /* save coefficients */
-   for( v = 0; v < ntransvars; v++ )
+   for( v = 0; v < norigvars; v++ )
    {
-      SCIP_Real glblb;
-      SCIP_Real glbub;
+      assert(SCIPvarIsOriginal(origvars[v]));
 
-      assert(SCIPvarIsActive(transvars[v]));
-      assert(!SCIPvarIsOriginal(transvars[v]));
+      probidx = SCIPvarGetProbindex(origvars[v]);
+      assert(0 <= probidx && probidx <= norigvars);
 
-      idx = SCIPvarGetIndex(transvars[v]);
-      assert(0 <= idx);
+      reopt->objs[reopt->run-1][probidx] = SCIPvarGetObj(origvars[v]);
 
-      if( idx >= memsize )
-      {
-         int newsize;
-         int i;
-
-         newsize = SCIPsetCalcMemGrowSize(set, idx)+1;
-         SCIP_ALLOC( BMSreallocMemoryArray(&reopt->objs[reopt->run-1], newsize) );
-
-         for( i = memsize; i < newsize; i++ )
-            reopt->objs[reopt->run-1][i] = 0.0;
-
-         memsize = newsize;
-      }
-      assert(idx < memsize);
-
-      reopt->objs[reopt->run-1][idx] = SCIPvarGetObj(transvars[v]);
-
-      /* we skip global fixed variables */
-      glblb = SCIPvarGetLbGlobal(transvars[v]);
-      glbub = SCIPvarGetUbGlobal(transvars[v]);
-
-      if( SCIPsetIsFeasLT(set, glblb, glbub) )
-         norm += SQR(reopt->objs[reopt->run-1][idx]);
+      /* update flag to remember if the objective function has changed */
+      if( !reopt->objhaschanged && reopt->run >= 2
+          && SCIPsetIsEQ(set, reopt->objs[reopt->run-2][probidx], reopt->objs[reopt->run-1][probidx]) )
+         reopt->objhaschanged = TRUE;
 
       /* mark this objective as the first non empty */
-      if( reopt->firstobj == -1 && reopt->objs[reopt->run-1][idx] != 0 )
+      if( reopt->firstobj == -1 && reopt->objs[reopt->run-1][probidx] != 0 )
          reopt->firstobj = reopt->run-1;
-   }
-   assert(norm >= 0);
-   norm = SQRT(norm);
-
-   /* we cannot normalize the zero-objective */
-   if( norm > 0 )
-   {
-      /* normalize the coefficients */
-      for( v = 0; v < ntransvars; v++ )
-      {
-         idx = SCIPvarGetIndex(transvars[v]);
-         assert(0 <= idx);
-
-         reopt->objs[reopt->run-1][idx] /= norm;
-      }
    }
 
    /* calculate similarity to last objective */
-   if( reopt->run-1 > 1 )
+   if( reopt->run-1 >= 1 )
    {
-      if( norm > 0 )
-      {
-         /* calculate similarity to first objective */
-         if( reopt->run-1 > 1 && reopt->firstobj < reopt->run-1 && reopt->firstobj >= 0 )
-            reopt->simtofirstobj = reoptSimilarity(reopt, set, reopt->run-1, reopt->firstobj, transvars, ntransvars);
+      /* calculate similarity to last objective */
+      reopt->simtolastobj = reoptSimilarity(reopt, set, reopt->run-1, reopt->run-2, origvars, norigvars);
 
-         /* calculate similarity to last objective */
-         reopt->simtolastobj = reoptSimilarity(reopt, set, reopt->run-1, reopt->run-2, transvars, ntransvars);
-      }
-      else
-      {
-         reopt->simtofirstobj = 0.0;
-         reopt->simtolastobj = 0.0;
-      }
-
-      SCIPdebugMessage("new objective has similarity of %g/%g compared to first/previous.\n", reopt->simtofirstobj,
-            reopt->simtolastobj);
-      printf("new objective has similarity of %g/%g compared to first/previous.\n", reopt->simtofirstobj,
-            reopt->simtolastobj);
+      SCIPdebugMessage("new objective has similarity of %g.\n", reopt->simtolastobj);
+      printf("new objective has similarity of %g.\n", reopt->simtolastobj);
    }
 
    SCIPdebugMessage("saved obj for run %d.\n", reopt->run);
@@ -4568,6 +4513,14 @@ SCIP_RETCODE SCIPreoptFree(
             (*reopt)->soltree->sols[p] = NULL;
          }
 
+         /* we have to free all optimal solution separatly, because those solutions are not stored in the
+          * solution reopt_sepabestsol = TRUE
+          */
+         if( set->reopt_sepabestsol )
+         {
+            SCIP_CALL( SCIPsolFree(&(*reopt)->prevbestsols[p], blkmem, origprimal) );
+         }
+
          if( (*reopt)->objs[p] != NULL )
          {
             BMSfreeMemoryArray(&(*reopt)->objs[p]);
@@ -4738,15 +4691,15 @@ SCIP_RETCODE SCIPreoptAddRun(
    SCIP_REOPT*           reopt,              /**< reoptimization data sturcture */
    SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_VAR**            transvars,          /**< transformed variables */
-   int                   ntransvars,         /**< number of transformed variables */
+   SCIP_VAR**            origvars,           /**< original problem variables */
+   int                   norigvars,          /**< number of original variables */
    int                   size                /**< number of expected solutions */
    )
 {
    assert(reopt != NULL);
    assert(set != NULL);
    assert(blkmem !=  NULL);
-   assert(transvars != NULL);
+   assert(origvars != NULL);
 
    /* increase number of runs */
    ++reopt->run;
@@ -4757,8 +4710,12 @@ SCIP_RETCODE SCIPreoptAddRun(
    /* allocate memory */
    reopt->soltree->solssize[reopt->run-1] = size;
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->soltree->sols[reopt->run-1], size) ); /*lint !e866*/
+
+   /* reset flag */
+   reopt->objhaschanged = FALSE;
+
    /* save the objective function */
-   SCIP_CALL( reoptSaveNewObj(reopt, set, blkmem, transvars, ntransvars) );
+   SCIP_CALL( reoptSaveNewObj(reopt, set, blkmem, origvars, norigvars) );
 
    resetStats(reopt);
 
@@ -4999,17 +4956,17 @@ SCIP_Real SCIPreoptGetSimilarity(
    SCIP_SET*             set,                /**< global SCIP settings */
    int                   run1,               /**< number of the first run */
    int                   run2,               /**< number of the second run */
-   SCIP_VAR**            transvars,          /**< original problem variables */
-   int                   ntransvars          /**< number of original problem variables */
+   SCIP_VAR**            origvars,           /**< original problem variables */
+   int                   norigvars           /**< number of original problem variables */
    )
 {
    assert(reopt != NULL);
    assert(run1 > 0 && run1 <= reopt->run);
    assert(run2 > 0 && run2 <= reopt->run);
-   assert(transvars != NULL);
-   assert(ntransvars >= 0);
+   assert(origvars != NULL);
+   assert(norigvars >= 0);
 
-   return reoptSimilarity(reopt, set, run1-1, run2-1, transvars, ntransvars);
+   return reoptSimilarity(reopt, set, run1-1, run2-1, origvars, norigvars);
 }
 
 /** returns the best solution of the last run */
@@ -6062,15 +6019,26 @@ SCIP_RETCODE SCIPreoptUpdateVarHistory(
       oldobj = 0;
       for( v = 0; v < nvars; v++ )
       {
-         SCIP_Real objval;
+         SCIP_VAR* origvar;
          SCIP_Real solval;
-         int idx;
+         int probidx;
 
-         idx = SCIPvarGetProbindex(vars[v]);
-         solval = SCIPsolGetVal(lastoptsol, set, stat, vars[v]);
-         objval = reopt->objs[reopt->run-2][idx];
+         origvar = vars[v];
+         if( !SCIPvarIsOriginal(origvar) )
+         {
+            SCIP_Real constant;
+            SCIP_Real scalar;
 
-         oldobj += objval * solval;
+            constant = 0.0;
+            scalar = 1.0;
+
+            SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+         }
+         assert(origvar != NULL && SCIPvarIsOriginal(origvar));
+
+         probidx = SCIPvarGetProbindex(origvar);
+         solval = SCIPsolGetVal(lastoptsol, set, stat, origvar);
+         oldobj += reopt->objs[reopt->run-2][probidx] * solval;
       }
    }
 

@@ -14626,8 +14626,8 @@ SCIP_RETCODE SCIPsolve(
             ++scip->stat->nreoptruns;
 
             /* inform the reoptimization plugin that a new iteration starts */
-            SCIP_CALL( SCIPreoptAddRun(scip->reopt, scip->set, scip->mem->probmem, scip->transprob->vars,
-                  scip->transprob->nvars, scip->set->limit_maxsol) );
+            SCIP_CALL( SCIPreoptAddRun(scip->reopt, scip->set, scip->mem->probmem, scip->origprob->vars,
+                  scip->origprob->nvars, scip->set->limit_maxsol) );
 
             if( scip->stat->nreoptruns >= 2 )
             {
@@ -15012,21 +15012,25 @@ SCIP_RETCODE SCIPgetReoptOldObjCoef(
 
    SCIP_CALL( checkStage(scip, "SCIPgetReoptOldObjCoef", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   if( !SCIPvarIsOriginal(var) )
-   {
-      assert(SCIPvarIsTransformed(var));
-      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetIndex(var));
-   }
+   if( SCIPvarIsOriginal(var) )
+      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetProbindex(var));
    else
    {
-      SCIP_VAR* transvar;
+      SCIP_VAR* origvar;
+      SCIP_Real constant;
+      SCIP_Real scalar;
 
-      assert(SCIPvarIsOriginal(var) || SCIPvarIsNegated(var));
-      SCIP_CALL( SCIPvarGetTransformed(var, scip->mem->probmem, scip->set, scip->stat, &transvar) );
-      assert(transvar != NULL);
-      assert(SCIPvarIsActive(transvar));
+      assert(SCIPvarIsActive(var));
 
-      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetIndex(transvar));
+      origvar = var;
+      constant = 0.0;
+      scalar = 1.0;
+
+      SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
+      assert(origvar != NULL);
+      assert(SCIPvarIsOriginal(origvar));
+
+      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetProbindex(origvar));
    }
    return SCIP_OKAY;
 }
@@ -15664,7 +15668,7 @@ SCIP_Real SCIPgetReoptSimilarity(
    if( run1 == scip->stat->nreoptruns && run2 == run1-1 )
       return SCIPreoptGetSimToPrevious(scip->reopt);
    else
-      return SCIPreoptGetSimilarity(scip->reopt, scip->set, run1, run2, scip->transprob->vars, scip->transprob->nvars);
+      return SCIPreoptGetSimilarity(scip->reopt, scip->set, run1, run2, scip->origprob->vars, scip->origprob->nvars);
 }
 
 /** returns if a node should be reoptimized */
