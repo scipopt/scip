@@ -66,7 +66,6 @@ typedef struct Component
    SCIP*                 subscip;            /** sub-SCIP representing the component */
    SCIP_VAR**            vars;               /** variables belonging to this component (in complete problem) */
    SCIP_VAR**            subvars;            /** variables belonging to this component (in subscip) */
-   SCIP_HASHMAP*         varmap;             /** hash map mapping complete problem variables to subscip variables */
    SCIP_Real             lastdualbound;      /** dual bound after last optimization call for this component */
    SCIP_Real             lastprimalbound;    /** primal bound after last optimization call for this component */
    SCIP_Longint          lastnodelimit;      /** node limit of last optimization call for this component */
@@ -131,7 +130,7 @@ SCIP_DECL_SORTPTRCOMP(componentSort)
 
    if( comp1->ncalls == 0 )
       if( comp2->ncalls == 0 )
-         return comp1->nvars - comp2->nvars;
+         return comp1->number - comp2->number;
       else
          return -1;
    else if( comp2->ncalls == 0 )
@@ -145,7 +144,7 @@ SCIP_DECL_SORTPTRCOMP(componentSort)
    else if( SCIPisFeasLT(scip, gap1, gap2) )
       return +1;
    else
-      return comp1->nvars - comp2->nvars;
+      return comp1->number - comp2->number;
 }
 
 /** initialize component structure */
@@ -168,7 +167,6 @@ SCIP_RETCODE initComponent(
    component->subscip = NULL;
    component->vars = NULL;
    component->subvars = NULL;
-   component->varmap = NULL;
    component->lastdualbound = -SCIPinfinity(scip);
    component->lastprimalbound = SCIPinfinity(scip);
    component->lastnodelimit = 0LL;
@@ -213,11 +211,6 @@ SCIP_RETCODE freeComponent(
       SCIPfreeMemoryArray(scip, &(*component)->subvars);
    }
 
-   if( (*component)->varmap != NULL )
-   {
-      SCIPhashmapFree(&(*component)->varmap);
-   }
-
    SCIPfreeMemory(scip, component);
 
    return SCIP_OKAY;
@@ -250,7 +243,7 @@ SCIP_RETCODE solveComponent(
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebugMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "solve sub-SCIP for component %d (ncalls=%d, absgap=%16.9g)\n",
+   SCIPdebugMessage("solve sub-SCIP for component %d (ncalls=%d, absgap=%16.9g)\n",
       component->number, component->ncalls, component->lastprimalbound - component->lastdualbound);
 
    subscip = component->subscip;
@@ -317,8 +310,6 @@ SCIP_RETCODE solveComponent(
       SCIPgetPrimalbound(subscip) - SCIPgetDualbound(subscip));
 
    *result = SCIP_SUCCESS;
-
-   SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 
    switch( status )
    {
@@ -389,8 +380,6 @@ SCIP_RETCODE solveComponent(
             subvar = component->subvars[v];
             assert(var != NULL);
             assert(subvar != NULL);
-
-            assert(subvar == (SCIP_VAR*)SCIPhashmapGetImage(component->varmap, (void*)var));
 
             SCIP_CALL( SCIPsetSolVal(scip, problem->bestsol, var,
                   SCIPgetSolVal(subscip, sol, subvar)) );
@@ -728,7 +717,7 @@ SCIP_RETCODE copyComponent(
 
 #ifndef SCIP_MORE_DEBUG
    /* disable output */
-   //SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
 #endif
 
    /* create problem in sub-SCIP */
@@ -737,8 +726,7 @@ SCIP_RETCODE copyComponent(
    SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* create variable hashmap */
-   SCIP_CALL( SCIPhashmapCreate(&component->varmap, SCIPblkmem(scip), 10 * nvars) );
-   varmap = component->varmap;
+   SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(scip), 10 * nvars) );
 
    /* copy variables */
    for( v = 0; v < component->nvars; ++v )
@@ -774,6 +762,9 @@ SCIP_RETCODE copyComponent(
       SCIP_CALL( SCIPaddCons(subscip, newcons) );
       SCIP_CALL( SCIPreleaseCons(subscip, &newcons) );
    }
+
+   SCIPhashmapFree(&varmap);
+
    /* write the problem, if requested */
    if( presoldata->writeproblems )
    {
@@ -1200,13 +1191,8 @@ SCIP_RETCODE splitProblem(
          }
 #endif
 
-#ifndef SCIP_DEBUG
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "build sub-SCIP for component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
-            component->number, component->nvars, nbinvars, nintvars, component->nvars - nintvars - nbinvars, ncompconss);
-#else
          SCIPdebugMessage("build sub-SCIP for component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
             component->number, component->nvars, nbinvars, nintvars, component->nvars - nintvars - nbinvars, ncompconss);
-#endif
 
          /* build subscip for one component and try to solve it */
          SCIP_CALL( copyComponent(problem, component, presoldata, consmap, compconss, ncompconss, &subscipresult) );
@@ -1278,6 +1264,14 @@ SCIP_RETCODE solveIteratively(
          nodelimit = 1LL;
          gaplimit = 0.0;
       }
+      else if( problem->nsolvedcomps == ncomponents - 1 )
+      {
+         /* enable output */
+         SCIP_CALL( SCIPsetIntParam(component->subscip, "display/verblevel", 4) );
+
+         nodelimit = INT_MAX;
+         gaplimit = 0.0;
+      }
       else
       {
          nodelimit = 2 * SCIPgetNNodes(component->subscip);
@@ -1307,64 +1301,6 @@ SCIP_RETCODE solveIteratively(
       timelimit = timelimit && (component->laststatus == SCIP_STATUS_TIMELIMIT);
    }
 
-
-#if 0
-   /* iteration */
-   for( c = 0; ; ++c )
-   {
-      upperbound = 0.0;
-      lowerbound = 0.0;
-
-
-      assert(SCIPisFeasEQ(scip, SCIPgetSolOrigObj(scip, problem->bestsol), SCIPretransformObj(scip, upperbound)));
-
-      printf("round %d: found feasible solution for %d/%d components\n", c, problem->nfeascomps, ncomponents);
-      printf("round %d: %d/%d components solved to optimality\n", c, problem->nsolvedcomps, ncomponents);
-
-      printf("dualbound: %16.9g; primalbound: %16.9g; gap: %16.9g; absgap: %16.9g\n",
-         SCIPretransformObj(scip, lowerbound),
-         problem->nfeascomps == ncomponents ? SCIPretransformObj(scip, upperbound) : SCIPinfinity(scip),
-         problem->nfeascomps == ncomponents ?
-            (SCIPretransformObj(scip, upperbound) - SCIPretransformObj(scip, lowerbound)) / MAX(ABS(SCIPretransformObj(scip, lowerbound)),SCIPretransformObj(scip, upperbound)) : SCIPinfinity(scip),
-         problem->nfeascomps == ncomponents ?
-            SCIPretransformObj(scip, upperbound) - SCIPretransformObj(scip, lowerbound) : SCIPinfinity(scip));
-
-      SCIP_CALL( SCIPupdateLocalLowerbound(scip, lowerbound) );
-
-      if( SCIPisStopped(scip) || timelimit || SCIPisEQ(scip, lowerbound, upperbound) )
-         break;
-
-      timelimit = TRUE;
-
-      /* solve sub-SCIPs alternatingly */
-      for( comp = 0; comp < ncomponents && !SCIPisStopped(scip); ++comp )
-      {
-
-         /* component was already solved */
-         if( problem->components[comp]->laststatus == SCIP_STATUS_OPTIMAL )
-         {
-            assert(problem->components[comp]->subscip == NULL);
-            continue;
-         }
-
-         /* first, we want to reach feasibility for all components */
-         if( problem->nfeascomps < ncomponents && SCIPgetNSols(problem->components[comp]->subscip) > 0 )
-            continue;
-
-         /* if the gap is too small, skip this component (except for every fifth round) */
-         if( (c % 5 != 0) && (SCIPgetNSols(problem->components[comp]->subscip) > 0) &&
-            SCIPgetPrimalbound(problem->components[comp]->subscip) - SCIPgetDualbound(problem->components[comp]->subscip)
-            < (upperbound - lowerbound) / (2.0 * (ncomponents - problem->nsolvedcomps)) )
-            continue;
-
-      }
-
-      if( *result == SCIP_CUTOFF || *result == SCIP_UNBOUNDED )
-      {
-         break;
-      }
-   }
-#endif
    return SCIP_OKAY;
 }
 
@@ -1575,6 +1511,7 @@ SCIP_RETCODE presolComponents(
     */
    if( (*result) == SCIP_DIDNOTFIND )
       *result = SCIP_SUCCESS;
+
 
    /* print statistics */
    SCIPstatistic( printStatistics(presoldata) );
