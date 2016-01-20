@@ -12537,7 +12537,7 @@ void SCIPvarUpdateBestRootSol(
       /* check if an improving root solution, root reduced cost, and root LP objective value is at hand */
       if( cutoffbound > currcutoffbound )
       {
-         SCIPdebugMessage("-> <%s> update potetial cutoff bound <%g> -> <%g>\n",
+         SCIPdebugMessage("-> <%s> update potential cutoff bound <%g> -> <%g>\n",
             SCIPvarGetName(var), currcutoffbound, cutoffbound);
 
          var->bestrootsol = rootsol;
