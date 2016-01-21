@@ -786,6 +786,7 @@ SCIP_RETCODE nodeAssignParent(
       node->lowerbound = parent->lowerbound;
       node->estimate = parent->estimate;
       node->depth = parent->depth+1; /*lint !e732*/
+      node->ncomponents = parent->ncomponents;
       if( parent->depth >= MAXDEPTH-1 )
       {
          SCIPerrorMessage("maximal depth level exceeded\n");
@@ -941,6 +942,7 @@ SCIP_RETCODE nodeCreate(
    (*node)->estimate = -SCIPsetInfinity(set);
    (*node)->reoptid = 0;
    (*node)->reopttype = (unsigned int) SCIP_REOPTTYPE_NONE;
+   (*node)->ncomponents = 1;
    (*node)->depth = 0;
    (*node)->active = FALSE;
    (*node)->cutoff = FALSE;
@@ -8063,4 +8065,26 @@ void SCIPtreeMarkProbingObjChanged(
    assert(SCIPtreeProbing(tree));
 
    tree->probingobjchanged = TRUE;
+}
+
+
+/** ?????????????????? */
+int SCIPnodeGetNComponents(
+   SCIP_NODE*            node                /**< node */
+   )
+{
+   assert(node != NULL);
+
+   return node->ncomponents;
+}
+
+/** ?????????????????? */
+void SCIPnodeSetNComponents(
+   SCIP_NODE*            node,               /**< node */
+   int                   ncomponents
+   )
+{
+   assert(node != NULL);
+
+   node->ncomponents = ncomponents;
 }
