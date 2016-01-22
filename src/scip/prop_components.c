@@ -13,6 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define SCIP_DEBUG
+#define SCIP_MORE_DEBUG
 /**@file   prop_components.c
  * @brief  identify and solve independent components
  * @author Gerald Gamrath
@@ -28,7 +29,7 @@
 
 #define PROP_NAME            "components"
 #define PROP_DESC            "components propagator"
-#define PROP_TIMING                 SCIP_PROPTIMING_BEFORELP
+#define PROP_TIMING                 (SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP)
 
 
 #define PROP_PRIORITY               -8000000 /**< propagation priority */
@@ -337,9 +338,9 @@ SCIP_RETCODE componentCreateSubscip(
     * handler could do something more clever.
     */
 #ifdef SCIP_MORE_DEBUG
-   if( nvars > SCIPgetNVars(subscip) )
+   if( component->nvars > SCIPgetNVars(subscip) )
    {
-      SCIPinfoMessage(scip, NULL, "copying component %d reduced number of variables: %d -> %d\n", compnr, nvars,
+      SCIPinfoMessage(scip, NULL, "copying component %d reduced number of variables: %d -> %d\n", component->number, component->nvars,
          SCIPgetNVars(subscip));
    }
 #endif
@@ -430,7 +431,7 @@ SCIP_RETCODE solveComponent(
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
    /* set gap limit */
-   SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", gaplimit) );
+   //SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", gaplimit) );
 
    /* set node limit */
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nodelimit) );
@@ -632,6 +633,8 @@ SCIP_RETCODE freeProblem(
       SCIPfreeMemoryArray(scip, &(*problem)->components);
    }
 
+   SCIPfreeMemoryArray(scip, &(*problem)->name);
+
    SCIPfreeMemory(scip, problem);
 
    return SCIP_OKAY;
@@ -803,7 +806,6 @@ SCIP_RETCODE splitProblem(
       /* decide if this component should be created (see above) ?????????? */
       if( v - compvarsstart > 0 )
       {
-         int i;
          SCIP_CALL( initComponent(problem, ncreatedcomps) );
          assert(problem->components[ncreatedcomps] != NULL);
          component = problem->components[ncreatedcomps];
@@ -825,10 +827,13 @@ SCIP_RETCODE splitProblem(
          SCIPdebugMessage("build sub-SCIP for component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
             component->number, component->nvars, nbinvars, nintvars, component->nvars - nintvars - nbinvars, ncompconss);
 #if 0
-         for( i = 0; i < component->nvars; ++i )
-            printf("var %d: <%s>\n", i, SCIPvarGetName(component->vars[i]));
-         for( i = 0; i < ncompconss; ++i )
-            printf("cons %d: <%s>\n", i, SCIPconsGetName(compconss[i]));
+         {
+            int i;
+            for( i = 0; i < component->nvars; ++i )
+               printf("var %d: <%s>\n", i, SCIPvarGetName(component->vars[i]));
+            for( i = 0; i < ncompconss; ++i )
+               printf("cons %d: <%s>\n", i, SCIPconsGetName(compconss[i]));
+         }
 #endif
          /* build subscip for component */
          SCIP_CALL( componentCreateSubscip(component, varmap, consmap, compconss, ncompconss, &success) );
@@ -847,6 +852,97 @@ SCIP_RETCODE splitProblem(
    SCIPhashmapFree(&consmap);
  TERMINATE:
    SCIPfreeBufferArray(scip, &conscomponent);
+
+   return SCIP_OKAY;
+}
+
+
+/** solve a problem by iteratively continuing the solving process of its components */
+static
+SCIP_RETCODE solveIteratively(
+   PROBLEM*              problem,
+   SCIP_RESULT*          result              /**< pointer to store the result of the presolving call */
+   )
+{
+   SCIP* scip;
+   COMPONENT* component;
+   SCIP_PQUEUE* pqueue;
+   SCIP_Bool timelimit = FALSE;
+   SCIP_Longint nodelimit;
+   SCIP_Real gaplimit;
+   SCIP_RESULT subscipresult;
+   int ncomponents;
+   int comp;
+
+   assert(problem != NULL);
+
+   scip = problem->scip;
+   assert(scip != NULL);
+
+   ncomponents = problem->ncomponents;
+
+   *result = SCIP_SUCCESS;
+
+   SCIP_CALL( SCIPpqueueCreate(&pqueue, (int)(1.1*ncomponents), 1.2, componentSort) );
+
+   /* compute upper and lower bound */
+   for( comp = 0; comp < ncomponents; ++comp )
+   {
+      assert(problem->components[comp]->subscip != NULL || problem->components[comp]->laststatus == SCIP_STATUS_OPTIMAL);
+
+      if( problem->components[comp]->laststatus != SCIP_STATUS_OPTIMAL )
+      {
+         SCIP_CALL( SCIPpqueueInsert(pqueue, problem->components[comp]) );
+      }
+   }
+
+   while( SCIPpqueueNElems(pqueue) > 0 && !timelimit && (*result) == SCIP_SUCCESS && !SCIPisStopped(scip) )
+   {
+      component = (COMPONENT*)SCIPpqueueRemove(pqueue);
+
+      if( component->ncalls == 0 )
+      {
+         nodelimit = 1LL;
+         gaplimit = 0.0;
+      }
+      else if( problem->nsolvedcomps == ncomponents - 1 )
+      {
+         /* enable output */
+         SCIP_CALL( SCIPsetIntParam(component->subscip, "display/verblevel", 4) );
+
+         nodelimit = INT_MAX;
+         gaplimit = 0.0;
+      }
+      else
+      {
+         nodelimit = 2 * SCIPgetNNodes(component->subscip);
+         nodelimit = MAX(nodelimit, 500LL);
+
+         /* set a gap limit of half the current gap (at most 10%) */
+         if( SCIPgetGap(component->subscip) < 0.2 )
+            gaplimit = 0.5 * SCIPgetGap(component->subscip);
+         else
+            gaplimit = 0.1;
+      }
+
+      /* continue solving the component */
+      SCIP_CALL( solveComponent(component, nodelimit, gaplimit, &subscipresult) );
+
+      if( subscipresult == SCIP_CUTOFF || subscipresult == SCIP_UNBOUNDED )
+      {
+         *result = subscipresult;
+         break;
+      }
+
+      if( component->laststatus != SCIP_STATUS_OPTIMAL )
+      {
+         SCIP_CALL( SCIPpqueueInsert(pqueue, component) );
+      }
+
+      timelimit = timelimit && (component->laststatus == SCIP_STATUS_TIMELIMIT);
+   }
+
+   SCIPpqueueFree(&pqueue);
 
    return SCIP_OKAY;
 }
@@ -1243,16 +1339,18 @@ SCIP_RETCODE propComponents(
          if( success )
          {
             int* varcomponent;
-            int i;
 
             SCIP_CALL( SCIPallocBufferArray(scip, &varcomponent, nunfixedvars) );
 
             /* compute independent components */
             SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, varcomponent, &ncomponents) );
 #if 0
-            for( i = 0; i < nunfixedvars; ++i )
             {
-               printf("var <%s>: comp %d\n", SCIPvarGetName(vars[i]), varcomponent[i]);
+               int i;
+               for( i = 0; i < nunfixedvars; ++i )
+               {
+                  printf("var <%s>: comp %d\n", SCIPvarGetName(vars[i]), varcomponent[i]);
+               }
             }
 #endif
 #ifndef NDEBUG
@@ -1269,7 +1367,8 @@ SCIP_RETCODE propComponents(
                SCIPnodeSetNComponents(SCIPgetCurrentNode(scip), ncomponents);
 
                /* create subproblems from independent components and solve them in dependence of their size */
-               SCIP_CALL( splitProblem(scip, propdata, digraph, conss, vars, varcomponent, nconss, nunfixedvars, firstvaridxpercons) );
+               SCIP_CALL( splitProblem(scip, propdata, digraph, conss, vars, varcomponent, nconss, nunfixedvars,
+                     firstvaridxpercons) );
             }
 
             SCIPfreeBufferArray(scip, &varcomponent);
@@ -1286,6 +1385,13 @@ SCIP_RETCODE propComponents(
 
    SCIPfreeBufferArray(scip, &conss);
 
+   if( propdata->problem != NULL )
+   {
+      SCIP_CALL( solveIteratively(propdata->problem, result) );
+
+      SCIP_CALL( freeProblem(&propdata->problem) );
+   }
+
    /* print statistics */
    SCIPstatistic( printStatistics(propdata) );
 
@@ -1296,6 +1402,20 @@ SCIP_RETCODE propComponents(
 /*
  * Callback methods of propagator
  */
+
+/** copy method for constraint handler plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_PROPCOPY(propCopyComponents)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(prop != NULL);
+   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+
+   /* call inclusion method of propagator */
+   SCIP_CALL( SCIPincludePropComponents(scip) );
+
+   return SCIP_OKAY;
+}
 
 /** destructor of propagator to free user data (called when SCIP is exiting) */
 static
@@ -1368,6 +1488,10 @@ SCIP_DECL_PROPEXEC(propExecComponents)
    if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
+   /* only at the root node do we want to run after the node */
+   if( proptiming == SCIP_PROPTIMING_AFTERLPLOOP && SCIPgetDepth(scip) > 0 )
+      return SCIP_OKAY;
+
    cutoff = FALSE;
    unbounded = FALSE;
    nfixedvars = 0;
@@ -1414,6 +1538,7 @@ SCIP_RETCODE SCIPincludePropComponents(
 
    SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeComponents) );
    SCIP_CALL( SCIPsetPropInit(scip, prop, propInitComponents) );
+   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyComponents) );
    SCIPstatistic( SCIP_CALL( SCIPsetPropExit(scip, prop, propExitComponents) ) );
 
    return SCIP_OKAY;
