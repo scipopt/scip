@@ -759,6 +759,7 @@ SCIP_RETCODE splitProblem(
    SCIPsortIntPtr(conscomponent, (void**)conss, nconss);
 
    /* init subproblem data structure */
+   assert(propdata->problem == NULL);
    SCIP_CALL( initProblem(scip, &problem) );
    propdata->problem = problem;
 
@@ -823,12 +824,12 @@ SCIP_RETCODE splitProblem(
 
          SCIPdebugMessage("build sub-SCIP for component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
             component->number, component->nvars, nbinvars, nintvars, component->nvars - nintvars - nbinvars, ncompconss);
-
+#if 0
          for( i = 0; i < component->nvars; ++i )
             printf("var %d: <%s>\n", i, SCIPvarGetName(component->vars[i]));
          for( i = 0; i < ncompconss; ++i )
             printf("cons %d: <%s>\n", i, SCIPconsGetName(compconss[i]));
-
+#endif
          /* build subscip for component */
          SCIP_CALL( componentCreateSubscip(component, varmap, consmap, compconss, ncompconss, &success) );
 
@@ -1248,12 +1249,12 @@ SCIP_RETCODE propComponents(
 
             /* compute independent components */
             SCIP_CALL( SCIPdigraphComputeUndirectedComponents(digraph, 1, varcomponent, &ncomponents) );
-
+#if 0
             for( i = 0; i < nunfixedvars; ++i )
             {
                printf("var <%s>: comp %d\n", SCIPvarGetName(vars[i]), varcomponent[i]);
             }
-
+#endif
 #ifndef NDEBUG
             SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "prop components found %d undirected components\n", ncomponents);
 #else
@@ -1404,6 +1405,7 @@ SCIP_RETCODE SCIPincludePropComponents(
 
    /* create components propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
+   propdata->problem = NULL;
 
    /* include propagator */
    SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
