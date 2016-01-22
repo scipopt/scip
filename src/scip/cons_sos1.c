@@ -7332,7 +7332,10 @@ SCIP_RETCODE markNeighborsMWISHeuristic(
                if ( SCIPisFeasZero(scip, SCIPvarGetAggrConstant(var)) )
                {
                   if ( ! mark[aggrnode] )
+                  {
                      mark[aggrnode] = TRUE;
+                     ++(*cnt);
+                  }
                   else if ( indset[aggrnode] == 1 )
                   {
                      *cutoff = TRUE;
