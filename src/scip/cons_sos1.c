@@ -2150,7 +2150,7 @@ SCIP_RETCODE performImplicationGraphAnalysis(
      if ( SCIPisFeasLT(scip, impllbs[succnode], data->lbimpl) )
      {
 	impllbs[succnode] = data->lbimpl;
-	
+
 	/* if node is SOS1 and implied to be nonzero for the first time, then this recursively may imply further bound changes */
 	if ( varGetNodeSOS1(conshdlrdata, totalvars[succnode]) >= 0 && ! implnodes[succnode] && SCIPisFeasPositive(scip, data->lbimpl) )
 	{
@@ -2169,8 +2169,8 @@ SCIP_RETCODE performImplicationGraphAnalysis(
      /* if current upper bound is larger than implied upper bound */
      if ( SCIPisFeasGT(scip, implubs[succnode], data->ubimpl) )
      {
-	impllbs[succnode] = data->ubimpl;
-	
+	impubs[succnode] = data->ubimpl;
+
 	/* if node is SOS1 and implied to be nonzero for the first time, then this recursively may imply further bound changes */
 	if ( varGetNodeSOS1(conshdlrdata, totalvars[succnode]) >= 0 && ! implnodes[succnode] && SCIPisFeasNegative(scip, data->ubimpl) )
 	{
