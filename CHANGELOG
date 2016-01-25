@@ -29,6 +29,7 @@ fixed bugs:
 - fixed bug in SOS1 constraint handler with inconsistent data structure after restart
 - fixed wrong handling of loose variables in OBBT
 - fixed freeing of hash for binary variables
+- fixed endless loop in knapsack constraint handler when continuous variables change their types to binary during presolving
 - squares of binary variables might not have been replaced by the binary variable itself in presolve,
   if the variable was originally general integer and only became binary during presolve (due to bound tightening)
 - fixed late change of type of slack variables in cons_indicator, if the bounds are not integral

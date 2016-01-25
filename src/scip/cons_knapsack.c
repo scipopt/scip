@@ -5802,6 +5802,16 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
 
       SCIP_CALL( SCIPallocBufferArray(scip, &tmpindices, nknapvars) );
 
+      /* increase array size to avoid an endless loop in the next block; this might happen if continuous variables
+       * change their types to SCIP_VARTYPE_BINARY during presolving
+       */
+      if( conshdlrdata->reals1size == 0 )
+      {
+         conshdlrdata->reals1size = 1;
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->reals1, 1) );
+         conshdlrdata->reals1[0] = 0.0;
+      }
+
       assert(conshdlrdata->reals1size > 0);
 
       /* next if condition should normally not be true, because it means that presolving has created more binary
