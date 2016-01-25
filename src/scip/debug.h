@@ -52,6 +52,11 @@ SCIP_RETCODE SCIPdebugSolDataCreate(
    SCIP_DEBUGSOLDATA**   debugsoldata        /**< pointer to debug solution data */
    );
 
+/** frees the debug solution */
+SCIP_RETCODE SCIPdebugFreeSol(
+   SCIP_SET*             set
+   );
+
 /** resets the data structure after restart */
 extern
 SCIP_RETCODE SCIPdebugReset(
@@ -240,6 +245,7 @@ SCIP_Bool SCIPdebugSolIsEnabled(
 #else
 
 #define SCIPdebugSolDataCreate(debugsoldata) SCIP_OKAY
+#define SCIPdebugFreeSol(set) SCIP_OKAY
 #define SCIPdebugReset(set) SCIP_OKAY
 #define SCIPdebugFreeDebugData(set) SCIP_OKAY
 #define SCIPdebugCheckConss(scip,conss,nconss) SCIP_OKAY

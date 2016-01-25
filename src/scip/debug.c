@@ -263,7 +263,7 @@ SCIP_RETCODE readSolfile(
    }
 #endif
 
-   if( debugsol == NULL )
+   if( debugsolptr != NULL )
    {
       /* create SCIP solution */
       SCIP_CALL( SCIPcreateOrigSol(set->scip, &debugsol, NULL) );
@@ -602,6 +602,25 @@ SCIP_RETCODE isSolutionInNode(
    return SCIP_OKAY;
 }
 
+/** frees the debug solution */
+SCIP_RETCODE SCIPdebugFreeSol(
+   SCIP_SET*             set
+   )
+{
+   SCIP_DEBUGSOLDATA* debugsoldata;
+
+   debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
+
+   if( debugsoldata->debugsol != NULL && ((SCIPgetStage(set->scip) > SCIP_STAGE_PROBLEM && debugsoldata->debugsolstage > SCIP_STAGE_PROBLEM)
+         || (SCIPgetStage(set->scip) <= SCIP_STAGE_PROBLEM && debugsoldata->debugsolstage <= SCIP_STAGE_PROBLEM)) )
+   {
+      SCIP_CALL( SCIPfreeSol(set->scip, &debugsoldata->debugsol) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** resets the data structure after restart */
 SCIP_RETCODE SCIPdebugReset(
    SCIP_SET*             set
@@ -648,11 +667,8 @@ SCIP_RETCODE SCIPdebugFreeDebugData(
    if( debugsoldata->solinnode != NULL)
       SCIPhashmapFree(&debugsoldata->solinnode);
 
-   if( debugsoldata->debugsol != NULL && ((SCIPgetStage(set->scip) > SCIP_STAGE_PROBLEM && debugsoldata->debugsolstage > SCIP_STAGE_PROBLEM)
-         || (SCIPgetStage(set->scip) <= SCIP_STAGE_PROBLEM && debugsoldata->debugsolstage <= SCIP_STAGE_PROBLEM)) )
-   {
-      SCIP_CALL( SCIPfreeSol(set->scip, &debugsoldata->debugsol) );
-   }
+   /* free the debug solution */
+   SCIP_CALL( SCIPdebugFreeSol(set) );
 
    BMSfreeMemoryNull(&debugsoldata);
 

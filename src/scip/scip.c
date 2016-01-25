@@ -14116,7 +14116,11 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
    SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->probmem) );
    SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
+
+   /* free the debug solution which might live in transformed primal data structure */
+   SCIP_CALL( SCIPdebugFreeSol(scip->set) );
    SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->probmem) );
+
    SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
    SCIP_CALL( SCIPlpFree(&scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter) );
    SCIP_CALL( SCIPbranchcandFree(&scip->branchcand) );
