@@ -13964,7 +13964,7 @@ SCIP_RETCODE freeSolve(
    SCIPlpInvalidateRootObjval(scip->lp);
 
    /* resets the debug environment */
-   SCIP_CALL( SCIPdebugReset(scip->set) );
+   SCIP_CALL( SCIPdebugReset(scip->set) ); /*lint !e506 !e774*/
 
    /* clear all row references in internal data structures */
    SCIP_CALL( SCIPcutpoolClear(scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
@@ -14118,7 +14118,7 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
 
    /* free the debug solution which might live in transformed primal data structure */
-   SCIP_CALL( SCIPdebugFreeSol(scip->set) );
+   SCIP_CALL( SCIPdebugFreeSol(scip->set) ); /*lint !e506 !e774*/
    SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->probmem) );
 
    SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
@@ -18381,7 +18381,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       if( valid != NULL )
          *valid = FALSE;
 
-      if( cutoff != NULL )
+      if( cutoff != NULL ) /*lint !e774*/
          *cutoff = FALSE;
 
       if( conflict != NULL )
