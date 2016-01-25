@@ -6278,7 +6278,7 @@ SCIP_RETCODE SCIPrestartSolve(
 EXTERN
 SCIP_RETCODE SCIPenableReoptimization(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             enable              /**< enable reoptimization */
+   SCIP_Bool             enable              /**< enable reoptimization (TRUE) or disable it (FALSE) */
    );
 
 /** returns whether reoptimization is enabled or not */

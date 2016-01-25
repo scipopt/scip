@@ -78,11 +78,20 @@ then
     mkdir $SCIPPATH/../settings
 fi
 
+# figure out the correct settings file extension
+if test $BINNAME = cplex
+then
+    SETEXTEXTENSION="prm"
+else
+    SETEXTEXTENSION="set"
+fi
+
+
 # check if all settings files exist
 SETTINGSLIST=(${SETNAMES//,/ })
 for SETNAME in ${SETTINGSLIST[@]}
 do
-    SETTINGS=$SCIPPATH/../settings/$SETNAME.set
+    SETTINGS="${SCIPPATH}/../settings/${SETNAME}.${SETEXTEXTENSION}"
     if test $SETNAME != "default" && test ! -e $SETTINGS
     then
         echo Skipping test since the settings file $SETTINGS does not exist.

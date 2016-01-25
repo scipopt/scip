@@ -602,6 +602,26 @@ SCIP_RETCODE isSolutionInNode(
    return SCIP_OKAY;
 }
 
+/** resets the data structure after restart */
+SCIP_RETCODE SCIPdebugReset(
+   SCIP_SET*             set
+   )
+{
+   SCIP_DEBUGSOLDATA* debugsoldata;
+
+   assert(set != NULL);
+
+   debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
+
+   if( debugsoldata->solinnode != NULL )
+   {
+      SCIP_CALL( SCIPhashmapRemoveAll(debugsoldata->solinnode) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** frees all debugging solution data */
 SCIP_RETCODE SCIPdebugFreeDebugData(
    SCIP_SET*             set                 /**< global SCIP settings */

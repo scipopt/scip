@@ -3484,7 +3484,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
       CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &rowsense, basicrow, basicrow) );
 
-      if( rowsense == 'G' )
+      /* slacks for 'G' and 'R' rows are added with -1 in CPLEX */
+      if( rowsense == 'G' || rowsense == 'R' )
       {
          int i;
 
@@ -3560,7 +3561,8 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
          assert(basicrow >= 0);
          assert(basicrow < nrows);
 
-         if( basicrow >= 0 && basicrow < nrows && lpi->senarray[basicrow] == 'G' )
+         /* slacks for 'G' and 'R' rows are added with -1 in CPLEX */
+         if( basicrow >= 0 && basicrow < nrows && (lpi->senarray[basicrow] == 'G' || lpi->senarray[basicrow] == 'R') )
             coef[r] *= -1.0;
       }
    }
@@ -3627,7 +3629,8 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
       CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &rowsense, basicrow, basicrow) );
 
-      if( rowsense == 'G' )
+      /* slacks for 'G' and 'R' rows are added with -1 in CPLEX */
+      if( rowsense == 'G' || rowsense == 'R' )
       {
          int i;
 
@@ -3699,7 +3702,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
          assert(basicrow >= 0);
          assert(basicrow < nrows);
 
-         if( basicrow >= 0 && basicrow < nrows && lpi->senarray[basicrow] == 'G' )
+         /* slacks for 'G' and 'R' rows are added with -1 in CPLEX */
+         if( basicrow >= 0 && basicrow < nrows && (lpi->senarray[basicrow] == 'G' || lpi->senarray[basicrow] == 'R') )
             coef[r] *= -1.0;
       }
    }

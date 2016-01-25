@@ -57,6 +57,7 @@ fixed bugs:
 - fixed bug in SOS1 constraint handler with inconsistent data structure after restart
 - fixed wrong handling of loose variables in OBBT
 - fixed freeing of hash for binary variables
+- fixed endless loop in knapsack constraint handler when continuous variables change their types to binary during presolving
 - squares of binary variables might not have been replaced by the binary variable itself in presolve,
   if the variable was originally general integer and only became binary during presolve (due to bound tightening)
 - fixed late change of type of slack variables in cons_indicator, if the bounds are not integral
@@ -69,6 +70,12 @@ fixed bugs:
 - fixed bug in dive.c avoiding a check of constraints in the presence of indicator constraints
 - fixed bug in conflict.c with wrong reset of bounds used
 - fixed bug in heur_simplerounding in connection with relaxators
+- fixed wrong objective sense when copying the original problem
+- fixed bug in feaspump heuristic where last solution candidates were not updated correctly
+- fixed bug with transferring solutions to new runs (need to recompute objective before checking)
+- fixed bug in cons_indicator with changing type of slackvariable
+- fixed issue: constraints being parallel to objective function (after restart) sometimes led to wrongly stating infeasible
+
 
 SCIP version 3.2.0
 ==================

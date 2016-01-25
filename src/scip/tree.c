@@ -47,7 +47,6 @@
 #include "lpi/lpi.h"
 
 
-#define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
 #define MAXREPROPMARK       511  /**< maximal subtree repropagation marker; must correspond to node data structure */
 
 
@@ -6985,6 +6984,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeGetNSiblings
 #undef SCIPtreeGetNNodes
 #undef SCIPtreeIsPathComplete
+#undef SCIPtreeGetDepthLimit
 #undef SCIPtreeProbing
 #undef SCIPtreeGetProbingRoot
 #undef SCIPtreeGetProbingDepth

@@ -1736,6 +1736,9 @@ SCIP_RETCODE SCIPcopyOrigProb(
 
    SCIP_CALL( copyProb(sourcescip, targetscip, varmap, consmap, TRUE, TRUE, name) );
 
+   /* set the correct objective sense; necessary if we maximize in the original problem */
+   SCIP_CALL( SCIPsetObjsense(targetscip, SCIPgetObjsense(sourcescip)) );
+
    return SCIP_OKAY;
 }
 
@@ -12708,9 +12711,12 @@ SCIP_RETCODE SCIPtransformProb(
       for( s = scip->origprimal->nsols - 1; s >= 0; --s )
       {
          SCIP_Bool feasible;
-         SCIP_SOL* sol ;
+         SCIP_SOL* sol;
 
          sol =  scip->origprimal->sols[s];
+
+         /* recompute objective function, since the objective might have changed in the meantime */
+         SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
 
          /* SCIPprimalTrySol() can only be called on transformed solutions; therefore check solutions in original problem
           * including modifiable constraints
@@ -12722,8 +12728,6 @@ SCIP_RETCODE SCIPtransformProb(
          if( feasible )
          {
             SCIP_Real abssolobj;
-
-            SCIPsolRecomputeObj(sol, scip->set, scip->stat, scip->origprob);
 
             abssolobj = REALABS(SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
 
@@ -13634,10 +13638,12 @@ SCIP_RETCODE presolve(
       if( *infeasible )
       {
          /* switch status to OPTIMAL */
-         if( scip->primal->nsols > 0
-            && SCIPsetIsLT(scip->set, SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob, scip->origprob),
-               SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, SCIPprobGetObjlim(scip->transprob, scip->set))) )
+         if( scip->primal->nlimsolsfound > 0 )
+         {
+            assert(scip->primal->nsols > 0 && SCIPsetIsFeasLE(scip->set, SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob, scip->origprob),
+                  SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, SCIPprobGetObjlim(scip->transprob, scip->set))));
             scip->stat->status = SCIP_STATUS_OPTIMAL;
+         }
          else /* switch status to INFEASIBLE */
             scip->stat->status = SCIP_STATUS_INFEASIBLE;
       }
@@ -13956,6 +13962,9 @@ SCIP_RETCODE freeSolve(
    /* clear the LP, and flush the changes to clear the LP of the solver */
    SCIP_CALL( SCIPlpReset(scip->lp, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->eventfilter) );
    SCIPlpInvalidateRootObjval(scip->lp);
+
+   /* resets the debug environment */
+   SCIP_CALL( SCIPdebugReset(scip->set) );
 
    /* clear all row references in internal data structures */
    SCIP_CALL( SCIPcutpoolClear(scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
@@ -14785,16 +14794,11 @@ SCIP_RETCODE SCIPsolve(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPenableReoptimization(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             enable              /**< enable reoptimization */
+   SCIP_Bool             enable              /**< enable reoptimization (TRUE) or disable it (FALSE) */
    )
 {
    assert(scip != NULL);
@@ -38680,7 +38684,7 @@ SCIP_RETCODE SCIPupdateCutoffbound(
    assert(cutoffbound <= SCIPgetCutoffbound(scip));
 
    SCIP_CALL( SCIPprimalSetCutoffbound(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, cutoffbound, TRUE) );
+         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp, cutoffbound, FALSE) );
 
    return SCIP_OKAY;
 }

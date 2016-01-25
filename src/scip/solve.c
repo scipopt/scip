@@ -2746,9 +2746,9 @@ SCIP_RETCODE solveNodeLP(
       stat->ninitlps += stat->nlps - nlps;
       stat->ninitlpiterations += stat->nlpiterations - nlpiterations;
 
-      /* in the root node, we try if initial LP solution is feasible to avoid expensive setup of data structures in
-       * separators; in case the root LP is aborted, e.g, by hitting the time limit, we do not check the LP solution
-       * since the corresponding data structures have not been updated 
+      /* In the root node, we try if the initial LP solution is feasible to avoid expensive setup of data structures in
+       * separators; in case the root LP is aborted, e.g., by hitting the time limit, we do not check the LP solution
+       * since the corresponding data structures have not been updated.
        */
       if( SCIPtreeGetCurrentDepth(tree) == 0 && !(*cutoff) && !(*lperror)
          && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
@@ -4731,15 +4731,19 @@ SCIP_RETCODE SCIPsolveCIP(
             stat->status = SCIP_STATUS_INFORUNBD;
          }
       }
-      else if( primal->nsols == 0
-         || SCIPsetIsGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
-            SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))) )
+      else if( primal->nlimsolsfound == 0 )
       {
+         assert(primal->nsols == 0 || SCIPsetIsFeasGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
+               SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))));
+
          /* switch status to INFEASIBLE */
          stat->status = SCIP_STATUS_INFEASIBLE;
       }
       else
       {
+         assert(primal->nsols > 0 && SCIPsetIsFeasLE(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
+               SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))));
+
          /* switch status to OPTIMAL */
          stat->status = SCIP_STATUS_OPTIMAL;
       }

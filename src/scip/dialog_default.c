@@ -2396,6 +2396,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsAggressive)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the set heuristics default command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsDefault)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the set heuristics fast command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsFast)
 {  /*lint --e{715}*/
@@ -2420,7 +2432,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsOff)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the set heuristics aggressive command */
+/** dialog execution method for the set presolving aggressive command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingAggressive)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -2432,7 +2444,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingAggressive)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the set heuristics fast command */
+/** dialog execution method for the set presolving default command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingDefault)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_DEFAULT, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set presolving fast command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingFast)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -2444,7 +2468,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingFast)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the set heuristics off command */
+/** dialog execution method for the set presolving off command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingOff)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -2456,7 +2480,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingOff)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the set heuristics aggressive command */
+/** dialog execution method for the set separating aggressive command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingAggressive)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -2468,7 +2492,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingAggressive)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the set heuristics fast command */
+/** dialog execution method for the set separating default command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingDefault)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_DEFAULT, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set separating fast command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingFast)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -2480,7 +2516,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingFast)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the set heuristics off command */
+/** dialog execution method for the set separating off command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingOff)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -4427,6 +4463,16 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+   /* set heuristics emphasis default */
+   if( !SCIPdialogHasEntry(emphasismenu, "default") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL, SCIPdialogExecSetHeuristicsDefault, NULL, NULL,
+            "default", "sets heuristics settings to <default> ", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, emphasismenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    /* set heuristics emphasis fast */
    if( !SCIPdialogHasEntry(emphasismenu, "fast") )
    {
@@ -4630,6 +4676,16 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+   /* set presolving emphasis default */
+   if( !SCIPdialogHasEntry(emphasismenu, "default") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL, SCIPdialogExecSetPresolvingDefault, NULL, NULL,
+            "default", "sets presolving settings to <default>", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, emphasismenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    /* set presolving emphasis fast */
    if( !SCIPdialogHasEntry(emphasismenu, "fast") )
    {
@@ -4765,6 +4821,16 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL, SCIPdialogExecSetSeparatingAggressive, NULL, NULL,
             "aggressive", "sets separating <aggressive>", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, emphasismenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* set separating emphasis default */
+   if( !SCIPdialogHasEntry(emphasismenu, "default") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL, SCIPdialogExecSetSeparatingDefault, NULL, NULL,
+            "default", "sets separating settings to <default>", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, emphasismenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
