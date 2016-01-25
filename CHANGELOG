@@ -2,6 +2,7 @@ SCIP version NEXT
 ==================
 
 features:
+- new presolving step for variables contained in a single quadratic constraint with proper square coefficients
 - can now solve relaxations within probing
 - can now separate perspective cuts for indicator constraints
 - added write callback for reader_bnd
