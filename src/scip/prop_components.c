@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define SCIP_DEBUG
-#define SCIP_MORE_DEBUG
+//#define SCIP_MORE_DEBUG
 /**@file   prop_components.c
  * @brief  identify and solve independent components
  * @author Gerald Gamrath
@@ -209,7 +209,7 @@ SCIP_RETCODE freeComponent(
    scip = problem->scip;
    assert(scip != NULL);
 
-   SCIPdebugMessage("freeing component %d\n", (*component)->number);
+   SCIPdebugMessage("freeing component %d of problem <%s>\n", (*component)->number, (*component)->problem->name);
 
    if( (*component)->subscip != NULL )
    {
@@ -242,9 +242,22 @@ SCIP_RETCODE componentAddSubproblem(
       SCIP_CALL( SCIPpqueueCreate(&component->subproblemqueue, 5, 1.2, subproblemSort) );
    }
 
+   SCIPdebugMessage("add problem <%s> to component <%s>\n", problem->name, SCIPgetProbName(component->subscip));
+
    SCIP_CALL( SCIPpqueueInsert(component->subproblemqueue, problem) );
 
    return SCIP_OKAY;
+}
+
+/** has component stored any subproblems? */
+static
+SCIP_Bool componentHasSubproblems(
+   COMPONENT*            component           /**< component */
+   )
+{
+   assert(component != NULL);
+
+   return (component->subproblemqueue != NULL) && (SCIPpqueueNElems(component->subproblemqueue) > 0);
 }
 
 
@@ -470,7 +483,7 @@ SCIP_RETCODE solveComponent(
    assert(subscip != NULL);
 
    /* check if we rather want to continue solving one of the subproblems */
-   if( SCIPpqueueNElems(component->subproblemqueue) > 0 )
+   if( componentHasSubproblems(component) )
    {
       PROBLEM* bestproblem;
 
@@ -533,14 +546,6 @@ SCIP_RETCODE solveComponent(
       nodelimit = 1LL;
       gaplimit = 0.0;
    }
-   else if( lastcomponent && SCIPpqueueNElems(component->subproblemqueue) == 0 )
-   {
-      /* enable output */
-      SCIP_CALL( SCIPsetIntParam(component->subscip, "display/verblevel", 4) );
-
-      nodelimit = INT_MAX;
-      gaplimit = 0.0;
-   }
    else
    {
       nodelimit = 2 * SCIPgetNNodes(component->subscip);
@@ -551,6 +556,14 @@ SCIP_RETCODE solveComponent(
          gaplimit = 0.5 * SCIPgetGap(component->subscip);
       else
          gaplimit = 0.1;
+
+      if( lastcomponent && !componentHasSubproblems(component) )
+      {
+         /* enable output */
+         SCIP_CALL( SCIPsetIntParam(component->subscip, "display/verblevel", 4) );
+
+         gaplimit = 0.0;
+      }
    }
 
    /* set gap limit */
@@ -634,6 +647,8 @@ SCIP_RETCODE solveComponent(
       /* update primal solution of problem */
       if( sol != NULL && component->lastsolindex != SCIPsolGetIndex(sol) )
       {
+         SCIP_Bool feasible;
+
          component->lastsolindex = SCIPsolGetIndex(sol);
 
          /* increase counter for feasible problems if no solution was known before */
@@ -648,16 +663,27 @@ SCIP_RETCODE solveComponent(
             assert(var != NULL);
             assert(subvar != NULL);
 
+            printf("### var: %s subvar: %s\n", SCIPvarGetName(var), SCIPvarGetName(subvar));
+
             SCIP_CALL( SCIPsetSolVal(scip, problem->bestsol, var,
                   SCIPgetSolVal(subscip, sol, subvar)) );
          }
 
+         SCIP_CALL( SCIPprintSol(subscip, sol, NULL, FALSE) );
+
+         SCIP_CALL( SCIPcheckSolOrig(subscip, sol, &feasible, TRUE, TRUE) );
+         SCIPdebugMessage("checkSolOrig (subscip): %u\n", feasible);
+
          /* if we have a feasible solution for each component, add the working solution to the main problem */
          if( problem->nfeascomps == problem->ncomponents )
          {
-            SCIP_Bool feasible;
+            SCIP_CALL( SCIPprintSol(scip, problem->bestsol, NULL, FALSE) );
+
+            SCIP_CALL( SCIPcheckSol(scip, problem->bestsol, TRUE, TRUE, TRUE, TRUE, &feasible) );
+            SCIPdebugMessage("checkSol: %u\n", feasible);
 
             SCIP_CALL( SCIPcheckSolOrig(scip, problem->bestsol, &feasible, TRUE, TRUE) );
+            SCIPdebugMessage("checkSolOrig: %u\n", feasible);
 
             SCIP_CALL( SCIPaddSol(scip, problem->bestsol, &feasible) );
 
@@ -723,6 +749,8 @@ SCIP_RETCODE initProblem(
 
    SCIP_CALL( SCIPcreateSol(scip, &(*problem)->bestsol, NULL) );
 
+   SCIPdebugMessage("initialized problem <%s>\n", (*problem)->name);
+
    return SCIP_OKAY;
 }
 
@@ -740,6 +768,8 @@ SCIP_RETCODE freeProblem(
 
    scip = (*problem)->scip;
    assert(scip != NULL);
+
+   SCIPdebugMessage("freeing problem <%s>\n", (*problem)->name);
 
    if( (*problem)->bestsol != NULL )
    {
@@ -777,7 +807,8 @@ SCIP_RETCODE splitProblem(
    int*                  varcomponent,       /**< component numbers for the variables */
    int                   nconss,             /**< number of constraints */
    int                   nvars,              /**< number of variables */
-   int*                  firstvaridxpercons  /**< array with index of first variable in vars array for each constraint */
+   int*                  firstvaridxpercons, /**< array with index of first variable in vars array for each constraint */
+   SCIP_RESULT*          result
    )
 {
    PROBLEM* problem;
@@ -809,6 +840,7 @@ SCIP_RETCODE splitProblem(
    assert(conss != NULL);
    assert(vars != NULL);
    assert(firstvaridxpercons != NULL);
+   assert(result != NULL);
 
    ncomponents = SCIPdigraphGetNComponents(digraph);
    nrealcomponents = 0;
@@ -887,9 +919,18 @@ SCIP_RETCODE splitProblem(
    SCIPsortIntPtr(conscomponent, (void**)conss, nconss);
 
    /* init subproblem data structure */
-   assert(propdata->problem == NULL);
    SCIP_CALL( initProblem(scip, &problem) );
-   propdata->problem = problem;
+
+   if( propdata->component == NULL )
+   {
+      assert(propdata->problem == NULL);
+      propdata->problem = problem;
+   }
+   else
+   {
+      SCIP_CALL( componentAddSubproblem(propdata->component, problem) );
+      *result = SCIP_CUTOFF;
+   }
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &problem->components, nrealcomponents) );
    SCIP_CALL( SCIPpqueueCreate(&problem->compqueue, (int)(1.1*nrealcomponents), 1.2, componentSort) );
@@ -976,6 +1017,7 @@ SCIP_RETCODE splitProblem(
       compvarsstart = v;
       compconssstart = c;
    }
+   assert(ncreatedcomps == nrealcomponents);
 
    SCIPhashmapFree(&consmap);
  TERMINATE:
@@ -999,6 +1041,8 @@ SCIP_RETCODE solveProblem(
    assert(problem != NULL);
 
    *result = SCIP_SUCCESS;
+
+   SCIPdebugMessage("solving problem <%s>: %d components left\n", problem->name, SCIPpqueueNElems(problem->compqueue));
 
    component = (COMPONENT*)SCIPpqueueRemove(problem->compqueue);
 
@@ -1462,7 +1506,7 @@ SCIP_RETCODE propComponents(
 
                /* create subproblems from independent components and solve them in dependence of their size */
                SCIP_CALL( splitProblem(scip, propdata, digraph, conss, vars, varcomponent, nconss, nunfixedvars,
-                     firstvaridxpercons) );
+                     firstvaridxpercons, result) );
             }
 
             SCIPfreeBufferArray(scip, &varcomponent);
