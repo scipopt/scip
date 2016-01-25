@@ -1198,22 +1198,22 @@ END {
          if( o > 0 && printconfs )
          {
             if( !processed )
-               line = sprintf("%s      -", line);
+               line = sprintf("%s        -", line);
             else if( confs[s,pidx] == confsoffirst )
                line = sprintf("%s %8.2f", line, 1.0);
             else if( confsoffirst == 0 )
-               line = sprintf("%s      -", line);
+               line = sprintf("%s        -", line);
             else if( confs[s,pidx]/confsoffirst > 999.99 )
                line = sprintf("%s  Large", line);
             else
                line = sprintf("%s %8.2f", line, confs[s,pidx]/confsoffirst);
             
             if( !processed )
-               line = sprintf("%s      -", line);
+               line = sprintf("%s        -", line);
             else if( conftime[s,pidx] == conftimeoffirst )
                line = sprintf("%s %7.2f", line, 1.0);
             else if( conftimeoffirst == 0 )
-               line = sprintf("%s      -", line);
+               line = sprintf("%s        -", line);
             else if( conftime[s,pidx]/conftimeoffirst> 999.99 )
                line = sprintf("%s  Large", line);
             else
