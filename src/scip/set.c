@@ -99,6 +99,7 @@
 #define SCIP_DEFAULT_CONF_RECONVLEVELS       -1 /**< number of depth levels up to which UIP reconvergence constraints are
                                                  *   generated (-1: generate reconvergence constraints in all depth levels) */
 #define SCIP_DEFAULT_CONF_ENABLE           TRUE /**< conflict analysis be enabled? */
+#define SCIP_DEFAULT_CONF_CLEANBOUNDEXCEEDINGS TRUE /**< should conflicts based on an old cutoff bound removed? */
 #define SCIP_DEFAULT_CONF_USEPROP          TRUE /**< should propagation conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USEINFLP         TRUE /**< should infeasible LP conflict analysis be used? */
 #define SCIP_DEFAULT_CONF_USEBOUNDLP      FALSE /**< should bound exceeding LP conflict analysis be used? */
@@ -1148,6 +1149,11 @@ SCIP_RETCODE SCIPsetCreate(
          "conflict/enable",
          "should conflict analysis be enabled?",
          &(*set)->conf_enable, FALSE, SCIP_DEFAULT_CONF_ENABLE,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "conflict/cleanboundexceedings",
+         "should conflicts based on an old cutoff bound removed?",
+         &(*set)->conf_cleanboundexeedings, TRUE, SCIP_DEFAULT_CONF_CLEANBOUNDEXCEEDINGS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "conflict/useprop",

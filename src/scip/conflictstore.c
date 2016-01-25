@@ -603,6 +603,10 @@ SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
    if( set->conf_maxstoresize == -1 )
       return SCIP_OKAY;
 
+   /* return if we do not want to remove conflicts related to an older cutoff bound */
+   if( !set->conf_cleanboundexeedings )
+      return SCIP_OKAY;
+
    /* remove al conflicts depending on the cutoffbound */
    while( nseenconfs < conflictstore->nconflicts )
    {
