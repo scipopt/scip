@@ -68,8 +68,8 @@ typedef struct Component
    int                   lastsolindex;       /** index of best solution after last optimization call for this component */
    int                   nvars;              /** number of variables belonging to this component */
    int                   number;             /** component number */
-   /* PROBLEM**            subproblems etc.*/
 
+   SCIP_PQUEUE*          subproblemqueue;    /** subproblems (nodes of the branch and bound tree of the component) treated individually */
 } COMPONENT;
 
 /** data related to one problem */
@@ -77,6 +77,7 @@ struct Problem
 {
    SCIP*                 scip;               /** the SCIP instance this problem belongs to */
    COMPONENT**           components;         /** independent components into which the problem can be divided */
+   SCIP_PQUEUE*          compqueue;          /** priority queue for components */
    SCIP_SOL*             bestsol;            /** best solution found so far for the problem */
    char*                 name;               /** name of the problem */
    SCIP_Real             lowerbound;         /** lower bound of the problem */
@@ -92,6 +93,7 @@ struct Problem
 struct SCIP_PropData
 {
    PROBLEM*              problem;            /** the main problem */
+   COMPONENT*            component;          /** component the current SCIP instance belongs to */
 #ifdef SCIP_STATISTIC
    int*                  compspercat;        /** number of components of the different categories */
    SCIP_Real             subsolvetime;       /** total solving time of the subproblems */
@@ -137,6 +139,22 @@ SCIP_DECL_SORTPTRCOMP(componentSort)
       return comp1->number - comp2->number;
 }
 
+/** comparison method for sorting subproblems */
+static
+SCIP_DECL_SORTPTRCOMP(subproblemSort)
+{
+   PROBLEM* prob1;
+   PROBLEM* prob2;
+
+   assert(elem1 != NULL);
+   assert(elem2 != NULL);
+
+   prob1 = (PROBLEM*)elem1;
+   prob2 = (PROBLEM*)elem2;
+
+   return prob1->lowerbound - prob2->lowerbound;
+}
+
 /** initialize component structure */
 static
 SCIP_RETCODE initComponent(
@@ -160,6 +178,7 @@ SCIP_RETCODE initComponent(
    component->subscip = NULL;
    component->vars = NULL;
    component->subvars = NULL;
+   component->subproblemqueue = NULL;
    component->lastdualbound = -SCIPinfinity(scip);
    component->lastprimalbound = SCIPinfinity(scip);
    component->lastnodelimit = 0LL;
@@ -209,6 +228,47 @@ SCIP_RETCODE freeComponent(
    return SCIP_OKAY;
 }
 
+/** add subproblem to component structure */
+static
+SCIP_RETCODE componentAddSubproblem(
+   COMPONENT*            component,          /**< component */
+   PROBLEM*              problem             /**< subproblem structure */
+   )
+{
+   assert(component != NULL);
+
+   if( component->subproblemqueue == NULL )
+   {
+      SCIP_CALL( SCIPpqueueCreate(&component->subproblemqueue, 5, 1.2, subproblemSort) );
+   }
+
+   SCIP_CALL( SCIPpqueueInsert(component->subproblemqueue, problem) );
+
+   return SCIP_OKAY;
+}
+
+
+static
+void SCIPpropComponentsSetComponent(
+   SCIP*                 scip,               /**< SCIP data structure */
+   COMPONENT*            component           /**< component */
+   )
+{
+   SCIP_PROP* prop;
+   SCIP_PROPDATA* propdata;
+
+   assert(scip != NULL);
+
+   prop = SCIPfindProp(scip, PROP_NAME);
+   assert(prop != NULL);
+
+   propdata = SCIPpropGetData(prop);
+   assert(propdata != NULL);
+
+   propdata->component = component;
+}
+
+
 /** create the sub-SCIP for a given component
  */
 static
@@ -251,6 +311,8 @@ SCIP_RETCODE componentCreateSubscip(
    /* copy plugins, we omit pricers (because we do not run if there are active pricers) and dialogs */
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, success) );
+
+   SCIPpropComponentsSetComponent(subscip, component);
 
    /* abort if the plugins were not successfully copied */
    if( !(*success) )
@@ -359,19 +421,33 @@ SCIP_RETCODE componentCreateSubscip(
    return SCIP_OKAY;
 }
 
+/* forward declaration */
+static
+SCIP_RETCODE solveProblem(PROBLEM*, SCIP_Bool, SCIP_RESULT*);
+
+/** returns whether problem was solved */
+static
+SCIP_RETCODE problemIsSolved(
+   PROBLEM*              problem             /**< pointer to problem */
+   )
+{
+   return (SCIPpqueueNElems(problem->compqueue) == 0);
+}
+
 
 /** (continues) solving a connected component */
 static
 SCIP_RETCODE solveComponent(
    COMPONENT*            component,
-   SCIP_Longint          nodelimit,          /**< node limit for the solving */
-   SCIP_Real             gaplimit,           /**< gap limit for the solving */
+   SCIP_Bool             lastcomponent,
    SCIP_RESULT*          result              /**< pointer to store the result of the solving process */
    )
 {
    PROBLEM* problem;
    SCIP* scip;
    SCIP* subscip;
+   SCIP_Longint nodelimit;
+   SCIP_Real gaplimit;
    SCIP_Real timelimit;
    SCIP_Real softtimelimit;
    SCIP_Real memorylimit;
@@ -393,6 +469,29 @@ SCIP_RETCODE solveComponent(
    subscip = component->subscip;
    assert(subscip != NULL);
 
+   /* check if we rather want to continue solving one of the subproblems */
+   if( SCIPpqueueNElems(component->subproblemqueue) > 0 )
+   {
+      PROBLEM* bestproblem;
+
+      bestproblem = (PROBLEM*)SCIPpqueueRemove(component->subproblemqueue);
+
+      /* best subproblems has better lowerbound than main SCIP, solve it */
+      if( subscip == NULL || SCIPgetLowerbound(subscip) > bestproblem->lowerbound )
+      {
+         SCIP_Bool lastproblem = lastcomponent && (component->laststatus == SCIP_STATUS_OPTIMAL) && (SCIPpqueueNElems(component->subproblemqueue) == 0);
+         SCIP_CALL( solveProblem(bestproblem, lastproblem, result) );
+
+         /* evaluate result */
+         if( !problemIsSolved(bestproblem) )
+         {
+            SCIPpqueueInsert(component->subproblemqueue, bestproblem);
+         }
+
+         return SCIP_OKAY;
+      }
+   }
+
    /* update time limit */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
    if( !SCIPisInfinity(scip, timelimit) )
@@ -407,7 +506,6 @@ SCIP_RETCODE solveComponent(
       softtimelimit += SCIPgetSolvingTime(subscip);
       softtimelimit = MAX(softtimelimit, 0.0);
    }
-
 
    /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
    SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
@@ -429,6 +527,31 @@ SCIP_RETCODE solveComponent(
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/softtime", softtimelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+
+   if( component->ncalls == 0 )
+   {
+      nodelimit = 1LL;
+      gaplimit = 0.0;
+   }
+   else if( lastcomponent && SCIPpqueueNElems(component->subproblemqueue) == 0 )
+   {
+      /* enable output */
+      SCIP_CALL( SCIPsetIntParam(component->subscip, "display/verblevel", 4) );
+
+      nodelimit = INT_MAX;
+      gaplimit = 0.0;
+   }
+   else
+   {
+      nodelimit = 2 * SCIPgetNNodes(component->subscip);
+      nodelimit = MAX(nodelimit, 500LL);
+
+      /* set a gap limit of half the current gap (at most 10%) */
+      if( SCIPgetGap(component->subscip) < 0.2 )
+         gaplimit = 0.5 * SCIPgetGap(component->subscip);
+      else
+         gaplimit = 0.1;
+   }
 
    /* set gap limit */
    //SCIP_CALL( SCIPsetRealParam(subscip, "limits/gap", gaplimit) );
@@ -633,6 +756,8 @@ SCIP_RETCODE freeProblem(
       SCIPfreeMemoryArray(scip, &(*problem)->components);
    }
 
+   SCIPpqueueFree(&(*problem)->compqueue);
+
    SCIPfreeMemoryArray(scip, &(*problem)->name);
 
    SCIPfreeMemory(scip, problem);
@@ -767,6 +892,7 @@ SCIP_RETCODE splitProblem(
    propdata->problem = problem;
 
    SCIP_CALL( SCIPallocMemoryArray(scip, &problem->components, nrealcomponents) );
+   SCIP_CALL( SCIPpqueueCreate(&problem->compqueue, (int)(1.1*nrealcomponents), 1.2, componentSort) );
    problem->ncomponents = nrealcomponents;
    problem->nlowerboundinf = nrealcomponents;
 
@@ -838,6 +964,8 @@ SCIP_RETCODE splitProblem(
          /* build subscip for component */
          SCIP_CALL( componentCreateSubscip(component, varmap, consmap, compconss, ncompconss, &success) );
 
+         SCIP_CALL( SCIPpqueueInsert(problem->compqueue, problem->components[comp]) );
+
          SCIPhashmapFree(&varmap);
 
          if( !success )
@@ -857,6 +985,39 @@ SCIP_RETCODE splitProblem(
 }
 
 
+/** continue solving a problem  */
+static
+SCIP_RETCODE solveProblem(
+   PROBLEM*              problem,
+   SCIP_Bool             lastproblem,
+   SCIP_RESULT*          result              /**< ??? */
+   )
+{
+   COMPONENT* component;
+   SCIP_RESULT subscipresult;
+
+   assert(problem != NULL);
+
+   *result = SCIP_SUCCESS;
+
+   component = (COMPONENT*)SCIPpqueueRemove(problem->compqueue);
+
+   /* continue solving the component */
+   SCIP_CALL( solveComponent(component, lastproblem && SCIPpqueueNElems(problem->compqueue) == 0, &subscipresult) );
+
+   if( subscipresult == SCIP_CUTOFF || subscipresult == SCIP_UNBOUNDED )
+   {
+      *result = subscipresult;
+   }
+   else if( component->laststatus != SCIP_STATUS_OPTIMAL )
+   {
+      SCIP_CALL( SCIPpqueueInsert(problem->compqueue, component) );
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /** solve a problem by iteratively continuing the solving process of its components */
 static
 SCIP_RETCODE solveIteratively(
@@ -865,88 +1026,21 @@ SCIP_RETCODE solveIteratively(
    )
 {
    SCIP* scip;
-   COMPONENT* component;
-   SCIP_PQUEUE* pqueue;
-   SCIP_Bool timelimit = FALSE;
-   SCIP_Longint nodelimit;
-   SCIP_Real gaplimit;
-   SCIP_RESULT subscipresult;
-   int ncomponents;
-   int comp;
 
    assert(problem != NULL);
 
    scip = problem->scip;
    assert(scip != NULL);
 
-   ncomponents = problem->ncomponents;
-
    *result = SCIP_SUCCESS;
 
-   SCIP_CALL( SCIPpqueueCreate(&pqueue, (int)(1.1*ncomponents), 1.2, componentSort) );
-
-   /* compute upper and lower bound */
-   for( comp = 0; comp < ncomponents; ++comp )
+   while( SCIPpqueueNElems(problem->compqueue) > 0 && (*result) == SCIP_SUCCESS && !SCIPisStopped(scip) )
    {
-      assert(problem->components[comp]->subscip != NULL || problem->components[comp]->laststatus == SCIP_STATUS_OPTIMAL);
-
-      if( problem->components[comp]->laststatus != SCIP_STATUS_OPTIMAL )
-      {
-         SCIP_CALL( SCIPpqueueInsert(pqueue, problem->components[comp]) );
-      }
+      SCIP_CALL( solveProblem(problem, TRUE, result) );
    }
-
-   while( SCIPpqueueNElems(pqueue) > 0 && !timelimit && (*result) == SCIP_SUCCESS && !SCIPisStopped(scip) )
-   {
-      component = (COMPONENT*)SCIPpqueueRemove(pqueue);
-
-      if( component->ncalls == 0 )
-      {
-         nodelimit = 1LL;
-         gaplimit = 0.0;
-      }
-      else if( problem->nsolvedcomps == ncomponents - 1 )
-      {
-         /* enable output */
-         SCIP_CALL( SCIPsetIntParam(component->subscip, "display/verblevel", 4) );
-
-         nodelimit = INT_MAX;
-         gaplimit = 0.0;
-      }
-      else
-      {
-         nodelimit = 2 * SCIPgetNNodes(component->subscip);
-         nodelimit = MAX(nodelimit, 500LL);
-
-         /* set a gap limit of half the current gap (at most 10%) */
-         if( SCIPgetGap(component->subscip) < 0.2 )
-            gaplimit = 0.5 * SCIPgetGap(component->subscip);
-         else
-            gaplimit = 0.1;
-      }
-
-      /* continue solving the component */
-      SCIP_CALL( solveComponent(component, nodelimit, gaplimit, &subscipresult) );
-
-      if( subscipresult == SCIP_CUTOFF || subscipresult == SCIP_UNBOUNDED )
-      {
-         *result = subscipresult;
-         break;
-      }
-
-      if( component->laststatus != SCIP_STATUS_OPTIMAL )
-      {
-         SCIP_CALL( SCIPpqueueInsert(pqueue, component) );
-      }
-
-      timelimit = timelimit && (component->laststatus == SCIP_STATUS_TIMELIMIT);
-   }
-
-   SCIPpqueueFree(&pqueue);
 
    return SCIP_OKAY;
 }
-
 
 
 /*
@@ -1529,6 +1623,7 @@ SCIP_RETCODE SCIPincludePropComponents(
 
    /* create components propagator data */
    SCIP_CALL( SCIPallocMemory(scip, &propdata) );
+   propdata->component = NULL;
    propdata->problem = NULL;
 
    /* include propagator */

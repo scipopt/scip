@@ -3890,6 +3890,8 @@ SCIP_RETCODE SCIPparamsetSetToSubscipsOff(
       }
    }
 
+   SCIP_CALL( paramSetInt(paramset, set, messagehdlr, "propagating/components/freq", -1, quiet) );
+
    return SCIP_OKAY;
 }
 
