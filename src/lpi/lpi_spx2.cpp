@@ -2896,6 +2896,8 @@ SCIP_RETCODE SCIPlpiGetSol(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
+   bool success = true;
+
    if( objval != NULL )
       *objval = lpi->spx->objValueReal();
 
@@ -2904,22 +2906,26 @@ SCIP_RETCODE SCIPlpiGetSol(
       if( primsol != NULL )
       {
          Vector tmp(lpi->spx->numColsReal(), primsol);
-         (void)lpi->spx->getPrimalReal(tmp);
+         success &= lpi->spx->getPrimalReal(tmp);
+         assert(success);
       }
       if( dualsol != NULL )
       {
          Vector tmp(lpi->spx->numRowsReal(), dualsol);
-         (void)lpi->spx->getDualReal(tmp);
+         success &= lpi->spx->getDualReal(tmp);
+         assert(success);
       }
       if( activity != NULL )
       {
          Vector tmp(lpi->spx->numRowsReal(), activity);
-         (void)lpi->spx->getSlacksReal(tmp);  /* in SoPlex, the activities are called "slacks" */
+         success &= lpi->spx->getSlacksReal(tmp);  /* in SoPlex, the activities are called "slacks" */
+         assert(success);
       }
       if( redcost != NULL )
       {
          Vector tmp(lpi->spx->numColsReal(), redcost);
-         (void)lpi->spx->getRedCostReal(tmp);
+         success &= lpi->spx->getRedCostReal(tmp);
+         assert(success);
       }
    }
    catch(const SPxException& x)
@@ -2930,6 +2936,9 @@ SCIP_RETCODE SCIPlpiGetSol(
 #endif
       return SCIP_LPERROR;
    }
+
+   if( !success )
+      return SCIP_INVALIDCALL;
 
    return SCIP_OKAY;
 }
