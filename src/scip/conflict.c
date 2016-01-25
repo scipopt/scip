@@ -4458,7 +4458,7 @@ SCIP_RETCODE addSideRemoval(
    else
    {
       (*sidechgoldlhss)[*nsidechgs] = lhs - constant;
-      (*sidechgnewlhss)[*nsidechgs] = -lpiinfinity/2;
+      (*sidechgnewlhss)[*nsidechgs] = -lpiinfinity;
    }
    if( SCIPsetIsInfinity(set, rhs) )
    {
@@ -4468,7 +4468,7 @@ SCIP_RETCODE addSideRemoval(
    else
    {
       (*sidechgoldrhss)[*nsidechgs] = rhs - constant;
-      (*sidechgnewrhss)[*nsidechgs] = lpiinfinity/2;
+      (*sidechgnewrhss)[*nsidechgs] = lpiinfinity;
    }
    (*nsidechgs)++;
 
