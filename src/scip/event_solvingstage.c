@@ -13,100 +13,107 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   event_solvingstage.c
- * @brief  eventhdlr for solving stage dependent parameter adjustment
+/**@file   event_solvingphase.c
+ * @brief  event handler for solving phase dependent parameter adjustment
  * @author Gregor Hendel
  *
- * this event handler is used to apply dynamic parameter adjustment depending on the
- * progress of the solving process.
+ * this event handler provides methods to support parameter adjustment at every new of the three solving phases:
+ *   - Feasibility phase - before the first solution is found
+ *   - Improvement phase - after the first solution was found until an optimal solution is found or believed to be found
+ *   - Proof phase - the remaining time of the solution process after an optimal or believed-to-be optimal incumbent has been found.
+ *
+ * Of course, this event handler cannot detect by itself whether a given incumbent is optimal prior to termination of the
+ * solution process. It rather uses heuristic transitions based on properties of the search tree in order to
+ * determine the appropriate stage. Settings files can be passed to this event handler for each of the three phases.
+ *
+ * This approach of phase-based parameter adjustment was first presented in
+ *
+ * Gregor Hendel
+ * Empirical Analysis of Solving Phases in Mixed-Integer Programming
+ * Master thesis, Technical University Berlin (2014)
+ *
+ * with the main results also available from
+ *
+ * Gregor Hendel
+ * Exploiting solving phases in mixed-integer programs (2015)
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#include "scip/event_solvingstage.h"
+#include "scip/event_solvingphase.h"
 #include "string.h"
 #include "scip/event_treeinfos.h"
 #include "scip/event_logregression.h"
 
-#define EVENTHDLR_NAME         "solvingstage"
-#define EVENTHDLR_DESC         "event handler for events which influence the solving stage"
+#define EVENTHDLR_NAME         "solvingphase"
+#define EVENTHDLR_DESC         "event handler to adjust settings depending on current stage"
 
+#define MAXLINELEN 1024           /**< limit for line length */
+#define DEFAULT_SOLUFILENAME "myshort.solu"/**< default filename to read solution value from */
+#define DEFAULT_SOLUFILEPATH "//nfs//optimi//kombadon//bzfhende//projects//scip-git//check//testset//" /**< default solution file path */
+#define DEFAULT_SETTINGFILEPATH "/nfs/optimi/kombadon/bzfhende/projects/scip-git/settings/%s"/**< default settings file path */
+#define DEFAULT_SETNAME "default.set" /**< default settings file name */
+#define EVENTHDLR_EVENT SCIP_EVENTTYPE_BESTSOLFOUND | SCIP_EVENTTYPE_NODESOLVED /**< the actual event to be caught */
+#define TRANSITIONMETHODS "elor" /**< which heuristic transition method: (e)stimate based, (l)ogarithmic regression based, (o)ptimal value based (cheat!),
+                                      (r)ank-1 node based? */
+#define DEFAULT_TRANSITIONMETHOD 'r' /**< the default transition method */
+#define DEFAULT_NODEOFFSET 50          /**< default node offset before transition to proof phase is active */
+#define DEFAULT_FALLBACK FALSE         /**< should the phase transition fall back to suboptimal phase? */
+#define DEFAULT_INTERRUPTOPTIMAL FALSE /**< should solving process be interrupted if optimal solution was found? */
+#define DEFAULT_ADJUSTRELPSWEIGHTS FALSE /**< should the scoring weights of the hybrid reliability pseudo cost branching rule be adjusted? */
+#define DEFAULT_USEFILEWEIGHTS   FALSE /**< should weights from a weight file be used to adjust branching score weights? */
+#define DEFAULT_USEWEIGHTEDQUOTIENTS TRUE /**< should weighted quotients be used to adjust branching score weights? */
+
+#define DEFAULT_ENABLED FALSE     /**< should the event handler be executed? */
+#define DEFAULT_TESTMODE FALSE    /**< should the event handler test the criteria? */
 /*
  * Data structures
  */
-#define MAXLINELEN 1024   /**< limit for line length */
-#define DEFAULT_ENABLED FALSE /**< should the event handler be executed? */
-#define DEFAULT_TESTMODE FALSE /**< should the event handler test the criteria? */
-#define DEFAULT_SOLUFILENAME "myshort.solu" /**< default filename to read solution value from */
-#define DEFAULT_SOLUFILEPATH "//nfs//optimi//kombadon//bzfhende//projects//scip-git//check//testset//"
-#define DEFAULT_SETTINGFILEPATH "/nfs/optimi/kombadon/bzfhende/projects/scip-git/settings/%s"
-#define DEFAULT_SETNAME "default.set"
-#define EVENTHDLR_EVENT SCIP_EVENTTYPE_BESTSOLFOUND | SCIP_EVENTTYPE_NODESOLVED /**< the actual event to be caught */
-#define DEFAULT_LAMBA12 0.6 /* gap to reach for phase transition phase 1 -> phase 2 */
-#define DEFAULT_LAMBA23 0.03 /* gap to reach for phase transition phase 2 -> phase 3 */
-#define MAXGAP 1
-#define TRANSITIONMETHODS "celor" /**< how to do the transition from phase2 -> phase3? (c)orrected estimate based,
-                                      (e)stimate beased, (l)ogarithmic regression based, (o)ptimal value based (cheat!),
-                                      (r)ank1 node based */
-#define DEFAULT_TRANSITIONMETHOD 'r' /**< the default transition method */
-#define DEFAULT_NODEOFFSET 50        /**< default node offset */
-#define DEFAULT_FALLBACK FALSE       /**< should the phase transition fall back to suboptimal stage? */
-#define DEFAULT_INTERRUPTOPTIMAL FALSE /**< should solving process be interrupted if optimal solution was found? */
-#define DEFAULT_ADJUSTRELPSWEIGHTS FALSE
-#define DEFAULT_USEFILEWEIGHTS       FALSE
-#define DEFAULT_USEWEIGHTEDQUOTIENTS TRUE
-
-/** enumerator to represent the event handler solving stage */
-enum SolvingStage
+/** enumerator to represent the current solving phase */
+enum SolvingPhase
 {
-   SOLVINGSTAGE_UNINITIALIZED = -1,         /**< solving stage has not been initialized yet */
-   SOLVINGSTAGE_NOSOLUTION = 0,             /**< no solution was found until now */
-   SOLVINGSTAGE_SUBOPTIMAL = 1,             /**< current incumbent solution is suboptimal */
-   SOLVINGSTAGE_OPTIMAL    = 2,             /**< current incumbent is optimal */
-   SOLVINGSTAGE_INFEASIBLE = 3              /**< the problem is allegedly infeasible */
+   SOLVINGPHASE_UNINITIALIZED = -1,          /**< solving phase has not been initialized yet */
+   SOLVINGPHASE_FEASIBILITY   = 0,           /**< no solution was found until now */
+   SOLVINGPHASE_IMPROVEMENT   = 1,           /**< current incumbent solution is suboptimal */
+   SOLVINGPHASE_PROOF         = 2            /**< current incumbent is optimal */
 };
-typedef enum SolvingStage SOLVINGSTAGE;
+typedef enum SolvingPhase SOLVINGPHASE;
 
 /** event handler data */
 struct SCIP_EventhdlrData
 {
    SCIP_Bool            enabled;             /**< should the event handler be executed? */
    char*                solufilename;        /**< file to parse solution information from */
-   char*                nosolsetnameparam;
-   char*                suboptsetnameparam;
-   char*                optsetnameparam;
-   char*                infeasiblesetnameparam;
-   char*                nosolsetname;
-   char*                suboptsetname;
-   char*                optsetname;
-   char*                infeasiblesetname;
+   char*                feassetparam;        /**< settings file parameter for the feasibility phase */
+   char*                improvesetparam;     /**< settings file parameter for the improvement phase */
+   char*                proofsetparam;       /**< settings file parameter for the proof phase */
    SCIP_Real            optimalvalue;        /**< value of optimal solution of the problem */
-   SCIP_Real            lambda12;            /**< gap to reach for phase transition phase 1 -> phase 2 */
-   SCIP_Real            lambda23;            /**< gap to reach for phase transition phase 2 -> phase 3 */
-   SOLVINGSTAGE         solvingstage;        /**< the current solving stage */
+   SCIP_Real            lambda12;            /**< gap to reach for phase transition feasibility phase -> improvement phase */
+   SCIP_Real            lambda23;            /**< gap to reach for phase transition improvement phase -> proof phase */
+   SOLVINGPHASE         solvingphase;        /**< the current solving phase */
    char                 transitionmethod;    /**< how to do the transition from phase2 -> phase3? (c)orrected estimate based,
-                                                  (e)stimate beased, (l)ogarithmic regression based, (o)ptimal value based (cheat!),
-                                                  (r)ank1 node based */
-   SCIP_Longint         nodeoffset;           /**< node offset for triggering rank1 node based phased transition */
-   SCIP_Bool            fallback;             /**< should the phase transition fall back to suboptimal stage? */
+                                                  (e)stimate based, (l)ogarithmic regression based, (o)ptimal value based (cheat!),
+                                                  (r)ank-1 node based */
+   SCIP_Longint         nodeoffset;           /**< node offset for triggering rank-1 node based phased transition */
+   SCIP_Bool            fallback;             /**< should the phase transition fall back to improvement phase? */
    SCIP_Bool            interruptoptimal;     /**< interrupt after optimal solution was found */
    SCIP_Bool            adjustrelpsweights;   /**< should the relpscost cutoff weights be adjusted? */
-   SCIP_Bool            usefileweights;
-   SCIP_Bool            useweightedquotients;
-   SCIP_EVENTHDLR*      linregeventhdlr;
-   SCIP_Bool            testmode;
-   SCIP_Bool            rank1reached;
-   SCIP_Bool            estimatereached;
-   SCIP_Bool            optimalreached;
-   SCIP_Bool            logreached;
+   SCIP_Bool            useweightedquotients; /**< should weighted quotients between infeasible and pruned leaf nodes be considered? */
+   SCIP_EVENTHDLR*      linregeventhdlr;      /**< pointer to the linear regression event handler */
+   SCIP_Bool            testmode;             /**< should transitions be tested only, but not triggered? */
+   SCIP_Bool            rank1reached;         /**< has the rank-1 transition into proof phase been reached? */
+   SCIP_Bool            estimatereached;      /**< has the best-estimate transition been reached? */
+   SCIP_Bool            optimalreached;       /**< is the incumbent already optimal? */
+   SCIP_Bool            logreached;           /**< has a logarithmic phase transition been reached? */
 };
 
 /*
  * Local methods
  */
 
+/** returns the optimal value for this instance (as passed to the event handler) */
 SCIP_Real SCIPgetOptimalSolutionValue(
-   SCIP*                 scip
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EVENTHDLR* eventhdlr;
@@ -119,144 +126,23 @@ SCIP_Real SCIPgetOptimalSolutionValue(
    return eventhdlrdata->optimalvalue;
 }
 
+/** checks if rank-1 transition has been reached, that is, when all open nodes have a best-estimate higher than the best
+ *  previously checked node at this depth
+ */
 static
-SCIP_RETCODE readLeaveFile(
-   SCIP*                scip,
-   SCIP_Real*           nobjleaves,
-   SCIP_Real*           ninfleaves
-   )
-{
-   SCIP_FILE* file;
-      char linebuf[MAXLINELEN];
-      const char* probname = SCIPgetProbName(scip);
-      file = NULL;
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Trying to open leaves file\n");
-      file = SCIPfopen("/optimi/kombadon/bzfhende/projects/scip-git/check/testset/myMMM.leaves", "r");
-
-      if( file == NULL )
-      {
-         return SCIP_NOFILE;
-      }
-      while( SCIPfgets(linebuf, (int)sizeof(linebuf), file) != NULL )
-      {
-         char* name;
-         char* firstint;
-         char* secondint;
-         char* endofptr;
-
-         name = strtok(linebuf, " ");
-
-         if( strcasecmp(name, probname) != 0 )
-            continue;
-
-         firstint = strtok(NULL, " ");
-         secondint = strtok(NULL, " ");
-         *nobjleaves = strtod(firstint, &endofptr);
-         *ninfleaves = strtod(secondint, &endofptr);
-
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Leaf statistics for problem: %g obj, %g inf\n", *nobjleaves, *ninfleaves);
-         break;
-
-      }
-      SCIPfclose(file);
-
-      return SCIP_OKAY;
-}
-static
-SCIP_RETCODE searchSolufileForProbname(
-   SCIP*                scip,
-   const char*          probname,
-   SCIP_EVENTHDLRDATA*  eventhdlrdata
-   )
-{
-   SCIP_FILE* file;
-   char linebuf[MAXLINELEN];
-   char solufilename[256];
-   sprintf(solufilename, "/optimi/kombadon/bzfhende/projects/scip-git/check/testset/%s", eventhdlrdata->solufilename);
-   file = NULL;
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Trying to open %s\n", solufilename);
-   file = SCIPfopen(solufilename, "r");
-
-   if( file == NULL )
-   {
-      return SCIP_NOFILE;
-   }
-   while( SCIPfgets(linebuf, (int)sizeof(linebuf), file) != NULL )
-   {
-      char* status;
-      char* name;
-      char* obj;
-
-      status = strtok(linebuf, " ");
-      name = strtok(NULL, " ");
-
-      if( strcasecmp(name, probname) != 0 )
-         continue;
-
-      if( strcmp(status, "=opt=") != 0 )
-      {
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "No optimal solution value known for this problem!\n");
-         break;
-      }
-      else
-      {
-         char* endofptr;
-         double val;
-         obj = strtok(NULL, " ");
-         val = strtod(obj, &endofptr);
-         eventhdlrdata->optimalvalue = val;
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Optimal value for problem: %16.9g\n", eventhdlrdata->optimalvalue);
-         break;
-      }
-   }
-   SCIPfclose(file);
-
-   return SCIP_OKAY;
-}
-
-/* gap function to compare values, returns a value between 0.0 and MAXGAP */
-static
-SCIP_Real getGap(
+SCIP_Bool checkRankOneTransition(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             val1,               /**< first for gap */
-   SCIP_Real             val2                /**< second value for gap */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
-   assert(scip != NULL);
-
-   /* if one value is infinite return the maximum gap */
-   if( SCIPisInfinity(scip, REALABS(val1)) || SCIPisInfinity(scip, REALABS(val2)) )
-      return MAXGAP;
-   /* feasibly equal values have zero gap */
-   if( SCIPisFeasEQ(scip, val1,val2) )
-      return 0.0;
-   else
-   {
-      /* calculate the gap as |val1 - val2|/max(|val1|,|val2|), and bound it by MAXGAP (if val1, val2 have different signs)*/
-      SCIP_Real absdiff;
-      SCIP_Real maxabs;
-      SCIP_Real gap;
-      absdiff = REALABS(val1 - val2);
-      maxabs = MAX(REALABS(val1), REALABS(val2));
-
-      gap = absdiff / maxabs;
-
-      return MIN(gap, MAXGAP);
-   }
-}
-
-static
-SCIP_Bool checkRankOneCriterion(
-   SCIP*                 scip,
-   SCIP_EVENTHDLRDATA*   eventhdlrdata
-   )
-{
+   /* at least one solution is required for the transition */
    if( SCIPgetNSols(scip) > 0 )
-      return SCIPgetNNodes(scip) > eventhdlrdata->nodeoffset && SCIPgetNRank1Nodes(scip) == 0;
+      return (SCIPgetNNodes(scip) > eventhdlrdata->nodeoffset && SCIPgetNRank1Nodes(scip) == 0);
    else
       return FALSE;
 }
 
+/** check if Best-Estimate criterion was reached, that is, when the active estimate is not better than the current incumbent solution */
 static
 SCIP_Bool checkEstimateCriterion(
    SCIP*                 scip,
@@ -269,6 +155,7 @@ SCIP_Bool checkEstimateCriterion(
       return FALSE;
 }
 
+/** check if logarithmic phase transition has been reached */
 static
 SCIP_Bool checkLogCriterion(
    SCIP*                 scip,
@@ -292,6 +179,7 @@ SCIP_Bool checkLogCriterion(
    return FALSE;
 }
 
+/** check if incumbent solution is optimal with respect to a slightly modified gap definition */
 static
 SCIP_Bool checkOptimalSolution(
    SCIP*                 scip,
@@ -312,26 +200,32 @@ SCIP_Bool checkOptimalSolution(
    return FALSE;
 }
 
+/** check if we are in the proof phase */
 static
 SCIP_Bool transitionPhase3(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata
    )
 {
-   if( eventhdlrdata->solvingstage == SOLVINGSTAGE_OPTIMAL && !eventhdlrdata->fallback )
+   if( eventhdlrdata->solvingphase == SOLVINGPHASE_PROOF && !eventhdlrdata->fallback )
       return TRUE;
 
+   /* check criterion based on selected transition method */
    switch( eventhdlrdata->transitionmethod )
    {
       case 'r':
-         if( checkRankOneCriterion(scip, eventhdlrdata) )
+
+         /* check rank-1 transition */
+         if( checkRankOneTransition(scip, eventhdlrdata) )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "triggering a rank 1 transition: nodes: %lld, rank1: %d bound: %9.5g time: %.2f\n",
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "reached rank-1 transition: nodes: %lld, rank-1: %d bound: %9.5g time: %.2f\n",
                   SCIPgetNNodes(scip), SCIPgetNRank1Nodes(scip), SCIPgetPrimalbound(scip), SCIPgetSolvingTime(scip));
             return TRUE;
          }
          break;
       case 'o':
+
+         /* cheat and use knowledge about optimal solution */
          if( checkOptimalSolution(scip, eventhdlrdata) )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "optimal solution found: %lld, bound: %9.5g time: %.2f\n",
@@ -339,22 +233,23 @@ SCIP_Bool transitionPhase3(
             return TRUE;
          }
          break;
-      case 'c':
-         return FALSE;
-         break;
       case 'e':
+
+         /* check best-estimate transition */
          if( checkEstimateCriterion(scip, eventhdlrdata) )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "triggering an estimate transition: nodes: %lld, estimate: %d bound: %9.5g time: %.2f\n",
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "reached best-estimate transition: nodes: %lld, estimate: %d bound: %9.5g time: %.2f\n",
                   SCIPgetNNodes(scip), SCIPgetNNodesBelowIncumbent(scip), SCIPgetPrimalbound(scip), SCIPgetSolvingTime(scip));
             return TRUE;
          }
          return FALSE;
          break;
       case 'l':
+
+         /* check logarithmic transition */
          if( checkLogCriterion(scip, eventhdlrdata) )
          {
-            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "triggering a log regression phase transition: %.2f", SCIPgetSolvingTime(scip));
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "reached a logarithmic phase transition: %.2f", SCIPgetSolvingTime(scip));
             return TRUE;
          }
          break;
@@ -366,67 +261,65 @@ SCIP_Bool transitionPhase3(
    return FALSE;
 }
 
-/* determine the solving phase -> phase 1: gap > lambda12, phase2: lambda12 > gap > lambda23, phase 3: gap <= lambda23 */
+/* determine the solving phase: feasibility phase if no solution was found yet, otherwise improvement phase or proof phase
+ * depending on whether selected transition criterion was already reached */
 static
-void determineSolvingStage(
+void determineSolvingPhase(
    SCIP* scip,
    SCIP_EVENTHDLRDATA* eventhdlrdata
    )
 {
-   /* use the optimal value as reference value unless it is not available in which case we take the dual bound instead */
+   /* without solution, we are in the feasibility phase */
    if( SCIPgetNSols(scip) == 0 )
-      eventhdlrdata->solvingstage = SOLVINGSTAGE_NOSOLUTION;
-   else if( eventhdlrdata->solvingstage != SOLVINGSTAGE_OPTIMAL || eventhdlrdata->fallback )
-      eventhdlrdata->solvingstage = SOLVINGSTAGE_SUBOPTIMAL;
+      eventhdlrdata->solvingphase = SOLVINGPHASE_FEASIBILITY;
+   else if( eventhdlrdata->solvingphase != SOLVINGPHASE_PROOF || eventhdlrdata->fallback )
+      eventhdlrdata->solvingphase = SOLVINGPHASE_IMPROVEMENT;
 
-   if( eventhdlrdata->solvingstage == SOLVINGSTAGE_SUBOPTIMAL && transitionPhase3(scip, eventhdlrdata) )
-      eventhdlrdata->solvingstage = SOLVINGSTAGE_OPTIMAL;
+   if( eventhdlrdata->solvingphase == SOLVINGPHASE_IMPROVEMENT && transitionPhase3(scip, eventhdlrdata) )
+      eventhdlrdata->solvingphase = SOLVINGPHASE_PROOF;
 }
 
 /* apply the phase based settings: A phase transition invokes completely new parameters */
 static
-SCIP_RETCODE applySolvingStage(
+SCIP_RETCODE applySolvingPhase(
    SCIP* scip,
    SCIP_EVENTHDLRDATA* eventhdlrdata
    )
 {
    FILE* file;
-   SOLVINGSTAGE stagebefore;
+   SOLVINGPHASE phasebefore;
    char paramfilename[256];
 
-   if( eventhdlrdata->solvingstage == SOLVINGSTAGE_OPTIMAL && !eventhdlrdata->fallback )
+   if( eventhdlrdata->solvingphase == SOLVINGPHASE_PROOF && !eventhdlrdata->fallback )
       return SCIP_OKAY;
 
-   stagebefore = eventhdlrdata->solvingstage;
-   determineSolvingStage(scip, eventhdlrdata);
+   phasebefore = eventhdlrdata->solvingphase;
+   determineSolvingPhase(scip, eventhdlrdata);
 
-   if( eventhdlrdata->solvingstage == SOLVINGSTAGE_OPTIMAL && eventhdlrdata->transitionmethod == 'o' &&
+   if( eventhdlrdata->solvingphase == SOLVINGPHASE_PROOF && eventhdlrdata->transitionmethod == 'o' &&
          eventhdlrdata->interruptoptimal )
    {
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Solution is optimal. Calling user interruption\n");
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
-   if( stagebefore == eventhdlrdata->solvingstage )
+   if( phasebefore == eventhdlrdata->solvingphase )
       return SCIP_OKAY;
 
 
-   switch (eventhdlrdata->solvingstage)
+   switch (eventhdlrdata->solvingphase)
    {
-   case SOLVINGSTAGE_NOSOLUTION:
+   case SOLVINGPHASE_FEASIBILITY:
       sprintf(paramfilename, DEFAULT_SETTINGFILEPATH, eventhdlrdata->nosolsetname);
       break;
-   case SOLVINGSTAGE_SUBOPTIMAL:
+   case SOLVINGPHASE_IMPROVEMENT:
       sprintf(paramfilename, DEFAULT_SETTINGFILEPATH, eventhdlrdata->suboptsetname);
       break;
-   case SOLVINGSTAGE_OPTIMAL:
+   case SOLVINGPHASE_PROOF:
       sprintf(paramfilename, DEFAULT_SETTINGFILEPATH, eventhdlrdata->optsetname);
       break;
-   case SOLVINGSTAGE_INFEASIBLE:
-      sprintf(paramfilename, DEFAULT_SETTINGFILEPATH, eventhdlrdata->infeasiblesetname);
-      break;
    default:
-      SCIPdebugMessage("Unknown solving stage: %d -> ABORT!\n ", eventhdlrdata->solvingstage);
+      SCIPdebugMessage("Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
       SCIPABORT();
       break;
    }
@@ -436,7 +329,7 @@ SCIP_RETCODE applySolvingStage(
 
    if( file == NULL )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Changed solving stage to %d \n", eventhdlrdata->solvingstage);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Changed solving phase to %d \n", eventhdlrdata->solvingphase);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Parameter file %s not found--keeping settings as before \n", paramfilename);
    }
    else
@@ -445,7 +338,10 @@ SCIP_RETCODE applySolvingStage(
       SCIP_Bool interruptoptimal;
 
       fclose(file);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Changed solving stage to %d -- \n", eventhdlrdata->solvingstage);
+      SCIPduplicateMemoryArray(scip, &eventhdlrdata->nosolsetname, eventhdlrdata->feassetparam, strlen(eventhdlrdata->feassetparam) + 1);
+      SCIPduplicateMemoryArray(scip, &eventhdlrdata->suboptsetname, eventhdlrdata->improvesetparam, strlen(eventhdlrdata->improvesetparam) + 1);
+      SCIPduplicateMemoryArray(scip, &eventhdlrdata->optsetname, eventhdlrdata->proofsetparam, strlen(eventhdlrdata->proofsetparam) + 1);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Changed solving phase to %d -- \n", eventhdlrdata->solvingphase);
       //SCIP_CALL( SCIPresetParams(scip) );
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Reading parameters from file %s\n", paramfilename);
       interruptoptimal = eventhdlrdata->interruptoptimal;
@@ -458,7 +354,7 @@ SCIP_RETCODE applySolvingStage(
       eventhdlrdata->interruptoptimal = interruptoptimal;
    }
 
-   if( eventhdlrdata->solvingstage == SOLVINGSTAGE_OPTIMAL && eventhdlrdata->adjustrelpsweights && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+   if( eventhdlrdata->solvingphase == SOLVINGPHASE_PROOF && eventhdlrdata->adjustrelpsweights && SCIPgetPhase(scip) == SCIP_STAGE_SOLVING )
    {
       SCIP_Longint objleaves;
       SCIP_Real quotient;
@@ -468,24 +364,10 @@ SCIP_RETCODE applySolvingStage(
       SCIP_Real conflictweight;
       SCIP_Longint cutoffleaves;
 
-      if( eventhdlrdata->usefileweights )
-      {
-         SCIP_Real nobjleaves;
-         SCIP_Real ninfleaves;
-
-         ninfleaves = nobjleaves = 0.0;
-         SCIP_CALL( readLeaveFile(scip, &nobjleaves, &ninfleaves) );
-
-         objleaves = (SCIP_Longint)MAX(1, nobjleaves);
-         cutoffleaves = (SCIP_Longint)MAX(1, ninfleaves);
-      }
-      else
-      {
-         objleaves = SCIPgetNObjLeaves(scip);
-         cutoffleaves = SCIPgetNInfeasLeaves(scip);
-         objleaves = MAX(objleaves, 1);
-         cutoffleaves = MAX(cutoffleaves, 1);
-      }
+      objleaves = SCIPgetNObjLeaves(scip);
+      cutoffleaves = SCIPgetNInfeasLeaves(scip);
+      objleaves = MAX(objleaves, 1);
+      cutoffleaves = MAX(cutoffleaves, 1);
 
       quotient = cutoffleaves / (SCIP_Real)objleaves;
 
@@ -512,46 +394,26 @@ SCIP_RETCODE applySolvingStage(
    return SCIP_OKAY;
 }
 
-/* frees strings from the eventhandler data */
-static
-void dataFreeStrings(
-   SCIP*                 scip,
-   SCIP_EVENTHDLRDATA*   eventhdlrdata
-   )
-{
-   /* read solufile information for problem */
-   /* free memory from previous run first (can happen if several problems are consecutively read in one session) */
-   if (eventhdlrdata->nosolsetname != NULL )
-   {
-      assert(eventhdlrdata->suboptsetname != NULL);
-      assert(eventhdlrdata->optsetname != NULL);
-      assert(eventhdlrdata->infeasiblesetname != NULL);
-      SCIPfreeMemoryArray(scip, &eventhdlrdata->nosolsetname);
-      SCIPfreeMemoryArray(scip, &eventhdlrdata->suboptsetname);
-      SCIPfreeMemoryArray(scip, &eventhdlrdata->optsetname);
-      SCIPfreeMemoryArray(scip, &eventhdlrdata->infeasiblesetname);
-   }
-}
 /*
  * Callback methods of event handler
  */
 
 /** copy method for node selector plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_EVENTCOPY(eventCopySolvingstage)
+SCIP_DECL_EVENTCOPY(eventCopySolvingphase)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
    /* call inclusion method of node selector */
-   SCIP_CALL( SCIPincludeEventHdlrSolvingstage(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrSolvingphase(scip) );
 
    return SCIP_OKAY;
 }
 /** destructor of event handler to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_EVENTFREE(eventFreeSolvingstage)
+SCIP_DECL_EVENTFREE(eventFreeSolvingphase)
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
@@ -574,7 +436,7 @@ SCIP_DECL_EVENTFREE(eventFreeSolvingstage)
 /** initialization method of event handler (called after problem was transformed) */
 
 static
-SCIP_DECL_EVENTINIT(eventInitSolvingstage)
+SCIP_DECL_EVENTINIT(eventInitSolvingphase)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    const char* probname;
@@ -590,12 +452,8 @@ SCIP_DECL_EVENTINIT(eventInitSolvingstage)
    /* free memory from previous run first (can happen if several problems are consecutively read in one session) */
    dataFreeStrings(scip, eventhdlrdata);
 
-   eventhdlrdata->solvingstage = SOLVINGSTAGE_UNINITIALIZED;
+   eventhdlrdata->solvingphase = SOLVINGPHASE_UNINITIALIZED;
 
-   SCIPduplicateMemoryArray(scip, &eventhdlrdata->nosolsetname, eventhdlrdata->nosolsetnameparam, strlen(eventhdlrdata->nosolsetnameparam) + 1);
-   SCIPduplicateMemoryArray(scip, &eventhdlrdata->suboptsetname, eventhdlrdata->suboptsetnameparam, strlen(eventhdlrdata->suboptsetnameparam) + 1);
-   SCIPduplicateMemoryArray(scip, &eventhdlrdata->optsetname, eventhdlrdata->optsetnameparam, strlen(eventhdlrdata->optsetnameparam) + 1);
-   SCIPduplicateMemoryArray(scip, &eventhdlrdata->infeasiblesetname, eventhdlrdata->infeasiblesetnameparam, strlen(eventhdlrdata->infeasiblesetnameparam) + 1);
 
    probname = SCIPstringGetBasename(SCIPgetProbName(scip));
    eventhdlrdata->optimalvalue = SCIPinfinity(scip);
@@ -604,7 +462,7 @@ SCIP_DECL_EVENTINIT(eventInitSolvingstage)
 
    if( eventhdlrdata->enabled )
    {
-      SCIP_CALL( applySolvingStage(scip, eventhdlrdata) );
+      SCIP_CALL( applySolvingPhase(scip, eventhdlrdata) );
    }
 
    if( eventhdlrdata->enabled || eventhdlrdata->testmode )
@@ -622,14 +480,14 @@ SCIP_DECL_EVENTINIT(eventInitSolvingstage)
 
 /** solving process initialization method of event handler (called when branch and bound process is about to begin) */
 static
-SCIP_DECL_EVENTINITSOL(eventInitsolSolvingstage)
+SCIP_DECL_EVENTINITSOL(eventInitsolSolvingphase)
 {  /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
 /** execution method of event handler */
 static
-SCIP_DECL_EVENTEXEC(eventExecSolvingstage)
+SCIP_DECL_EVENTEXEC(eventExecSolvingphase)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
@@ -642,12 +500,12 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingstage)
 
    if( eventhdlrdata->enabled )
    {
-      SCIP_CALL( applySolvingStage(scip, eventhdlrdata) );
+      SCIP_CALL( applySolvingPhase(scip, eventhdlrdata) );
    }
 
    if( eventhdlrdata->testmode )
    {
-      if( !eventhdlrdata->rank1reached && checkRankOneCriterion(scip, eventhdlrdata) )
+      if( !eventhdlrdata->rank1reached && checkRankOneTransition(scip, eventhdlrdata) )
       {
          eventhdlrdata->rank1reached = TRUE;
          SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Rank 1 criterion reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
@@ -675,29 +533,24 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingstage)
    return SCIP_OKAY;
 }
 
-/** creates event handler for Solvingstage event */
-SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
+/** creates event handler for Solvingphase event */
+SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_EVENTHDLR* eventhdlr;
 
-   /* create Solvingstage event handler data */
+   /* create Solvingphase event handler data */
    eventhdlrdata = NULL;
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
    assert(eventhdlrdata != NULL);
 
    eventhdlrdata->solufilename = NULL;
-   eventhdlrdata->nosolsetnameparam = NULL;
-   eventhdlrdata->suboptsetnameparam = NULL;
-   eventhdlrdata->optsetnameparam = NULL;
-   eventhdlrdata->infeasiblesetnameparam = NULL;
+   eventhdlrdata->feassetparam = NULL;
+   eventhdlrdata->improvesetparam = NULL;
+   eventhdlrdata->proofsetparam = NULL;
 
-   eventhdlrdata->nosolsetname = NULL;
-   eventhdlrdata->suboptsetname= NULL;
-   eventhdlrdata->optsetname= NULL;
-   eventhdlrdata->infeasiblesetname= NULL;
    eventhdlrdata->linregeventhdlr = NULL;
 
    eventhdlr = NULL;
@@ -705,20 +558,16 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
 
    /* include event handler into SCIP */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
-         eventExecSolvingstage, eventhdlrdata) );
+         eventExecSolvingphase, eventhdlrdata) );
    assert(eventhdlr != NULL);
 
    /* set non fundamental callbacks via setter functions */
-   SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventCopySolvingstage) );
-   SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeSolvingstage) );
-   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitSolvingstage) );
-   SCIP_CALL( SCIPsetEventhdlrInitsol(scip, eventhdlr, eventInitsolSolvingstage) );
+   SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventCopySolvingphase) );
+   SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeSolvingphase) );
+   SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitSolvingphase) );
+   SCIP_CALL( SCIPsetEventhdlrInitsol(scip, eventhdlr, eventInitsolSolvingphase) );
 
-   /* add Solvingstage event handler parameters */
-   SCIP_CALL( SCIPaddRealParam(scip, "eventhdlr/"EVENTHDLR_NAME"/lambda12", "gap for phase transition 1->2",
-            &eventhdlrdata->lambda12, FALSE, DEFAULT_LAMBA12, 0,MAXGAP, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "eventhdlr/"EVENTHDLR_NAME"/lambda23", "gap for phase transition 2->3",
-               &eventhdlrdata->lambda23, FALSE, DEFAULT_LAMBA23, 0,MAXGAP, NULL, NULL) );
+   /* add Solvingphase event handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/enabled", "should the event handler be executed?",
          &eventhdlrdata->enabled, FALSE, DEFAULT_ENABLED, NULL, NULL) );
 
@@ -729,23 +578,21 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
          &eventhdlrdata->solufilename, FALSE, DEFAULT_SOLUFILENAME, NULL, NULL) );
 
    SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/nosolsetname", "bla",
-            &eventhdlrdata->nosolsetnameparam, FALSE, DEFAULT_SETNAME, NULL, NULL) );
+            &eventhdlrdata->feassetparam, FALSE, DEFAULT_SETNAME, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/suboptsetname", "settings file for suboptimal solving stage",
-               &eventhdlrdata->suboptsetnameparam, FALSE, DEFAULT_SETNAME, NULL, NULL) );
+   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/suboptsetname", "settings file for suboptimal solving phase",
+               &eventhdlrdata->improvesetparam, FALSE, DEFAULT_SETNAME, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/optsetname", "settings file for optimal solving stage",
-               &eventhdlrdata->optsetnameparam, FALSE, DEFAULT_SETNAME, NULL, NULL) );
+   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/optsetname", "settings file for optimal solving phase",
+               &eventhdlrdata->proofsetparam, FALSE, DEFAULT_SETNAME, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddStringParam(scip, "eventhdlr/"EVENTHDLR_NAME"/infeasiblesetname", "settings file for infeasible solving stage",
-               &eventhdlrdata->infeasiblesetnameparam, FALSE, DEFAULT_SETNAME, NULL, NULL) );
 
 
    SCIP_CALL( SCIPaddLongintParam(scip, "eventhdlr/"EVENTHDLR_NAME"/nodeoffset", "node offset", &eventhdlrdata->nodeoffset,
          FALSE, DEFAULT_NODEOFFSET, 1, SCIP_LONGINT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/fallback", "should the event handler fall back from optimal stage?",
+   SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/fallback", "should the event handler fall back from optimal phase?",
             &eventhdlrdata->fallback, FALSE, DEFAULT_FALLBACK, NULL, NULL) );
-   SCIP_CALL( SCIPaddCharParam(scip ,"eventhdlr/"EVENTHDLR_NAME"/transitionmethod", "transition method 'c','e','l','o','r'",
+   SCIP_CALL( SCIPaddCharParam(scip ,"eventhdlr/"EVENTHDLR_NAME"/transitionmethod", "transition method 'e','l','o','r'",
          &eventhdlrdata->transitionmethod, FALSE, DEFAULT_TRANSITIONMETHOD, TRANSITIONMETHODS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/interruptoptimal", "should the event handler interrupt after optimal solution was found?",
                &eventhdlrdata->interruptoptimal, FALSE, DEFAULT_INTERRUPTOPTIMAL, NULL, NULL) );
@@ -754,8 +601,6 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingstage(
                "conflicts be adjusted after optimal solution was found?", &eventhdlrdata->adjustrelpsweights, FALSE,
                DEFAULT_ADJUSTRELPSWEIGHTS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/usefileweights", "use file weights?", &eventhdlrdata->usefileweights,
-         FALSE, DEFAULT_USEFILEWEIGHTS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/useweightedquotients", "use weighted quotients?", &eventhdlrdata->useweightedquotients,
            FALSE, DEFAULT_USEWEIGHTEDQUOTIENTS, NULL, NULL) );
 
