@@ -456,23 +456,23 @@ SCIP_RETCODE SCIPreoptSaveOpenNodes(
 /** merges the variable history of the current run with the stored history */
 extern
 SCIP_RETCODE SCIPreoptMergeVarHistory(
-   SCIP_REOPT*           reopt,
-   SCIP_STAT*            stat,
-   SCIP_VAR**            vars,
-   int                   nvars
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_VAR**            vars,               /**< variable array */
+   int                   nvars               /**< number of variables */
    );
 
 /** updates the variable history */
 extern
 SCIP_RETCODE SCIPreoptUpdateVarHistory(
-   SCIP_REOPT*           reopt,
-   SCIP_SET*             set,
-   SCIP_STAT*            stat,
-   SCIP_PROB*            origprob,
-   SCIP_PROB*            transprob,
-   BMS_BLKMEM*           blkmem,
-   SCIP_VAR**            vars,
-   int                   nvars
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR**            vars,               /**< variable array */
+   int                   nvars               /**< number of variables */
    );
 
 /*
@@ -539,6 +539,15 @@ void SCIPreoptnodeGetPath(
    int*                  nbndchgs,           /**< pointer to store the number of bound changes */
    int*                  nbndchgsafterdual   /**< pointer to store the number of bound changes applied after
                                               *  the first dual reduction at the given node */
+   );
+
+/** add a consraint to the reoptimization data structure */
+extern
+SCIP_RETCODE SCIPreoptAddCons(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CONS*            cons                /**< constraint to add */
    );
 
 #ifdef __cplusplus

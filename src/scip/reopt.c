@@ -6218,14 +6218,14 @@ SCIP_RETCODE SCIPreoptMergeVarHistory(
 
 /** updates the variable history */
 SCIP_RETCODE SCIPreoptUpdateVarHistory(
-   SCIP_REOPT*           reopt,
-   SCIP_SET*             set,
-   SCIP_STAT*            stat,
-   SCIP_PROB*            origprob,
-   SCIP_PROB*            transprob,
-   BMS_BLKMEM*           blkmem,
-   SCIP_VAR**            vars,
-   int                   nvars
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR**            vars,               /**< variable array */
+   int                   nvars               /**< number of variables */
    )
 {
    SCIP_SOL* lastoptsol;
@@ -6551,7 +6551,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    {
       reopttree->reoptnodes[id]->vars[v] = reopttree->reoptnodes[0]->dualconscur->vars[v];
       reopttree->reoptnodes[id]->varbounds[v] = reopttree->reoptnodes[0]->dualconscur->bounds[v];
-      reopttree->reoptnodes[id]->varboundtypes[v] = SCIPsetIsFeasEQ(set, reopttree->reoptnodes[0]->dualconscur->bounds[v], 1.0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER; // ???????????????????????
+      reopttree->reoptnodes[id]->varboundtypes[v] = SCIPsetIsFeasEQ(set, reopttree->reoptnodes[0]->dualconscur->bounds[v], 1.0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER; /* ??????????????????????? */
       ++reopttree->reoptnodes[id]->nvars;
    }
    assert(reopttree->reoptnodes[id]->nvars == reopttree->reoptnodes[0]->dualconscur->nvars);
@@ -7700,10 +7700,10 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
 
 /** add a consraint to the reoptimization data structure */
 SCIP_RETCODE SCIPreoptAddCons(
-   SCIP_REOPT*           reopt,
-   SCIP_SET*             set,
-   BMS_BLKMEM*           blkmem,
-   SCIP_CONS*            cons
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CONS*            cons                /**< constraint to add */
    )
 {
    int i;
