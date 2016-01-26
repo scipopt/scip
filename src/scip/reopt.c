@@ -5696,6 +5696,9 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
          /* delete saved dual information which would lead to split the node in a further iteration */
          SCIP_CALL( SCIPreoptResetDualBndchgs(reopt, node, blkmem) );
 
+         if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+            lowerbound = MIN(lowerbound, SCIPlpGetCutoffbound(lp));
+
          /* store or update the information */
          SCIP_CALL( addNode(reopt, set, blkmem, node, reopt->currentnode == 1 ? SCIP_REOPTTYPE_INFSUBTREE : SCIP_REOPTTYPE_PRUNED, FALSE,
                isrootnode, lowerbound) );
