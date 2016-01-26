@@ -15030,7 +15030,7 @@ SCIP_RETCODE SCIPgetReoptOldObjCoef(
    SCIP_CALL( checkStage(scip, "SCIPgetReoptOldObjCoef", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( SCIPvarIsOriginal(var) )
-      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetProbindex(var));
+      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetIndex(var));
    else
    {
       SCIP_VAR* origvar;
@@ -15047,7 +15047,7 @@ SCIP_RETCODE SCIPgetReoptOldObjCoef(
       assert(origvar != NULL);
       assert(SCIPvarIsOriginal(origvar));
 
-      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetProbindex(origvar));
+      *objcoef = SCIPreoptGetOldObjCoef(scip->reopt, run, SCIPvarGetIndex(origvar));
    }
    return SCIP_OKAY;
 }

@@ -398,7 +398,7 @@ SCIP_Real reoptSimilarity(
       {
          int probidx;
 
-         probidx = SCIPvarGetProbindex(origvar);
+         probidx = SCIPvarGetIndex(origvar);
          assert(0 <= probidx && probidx <= nvars);
 
          c1 = reopt->objs[obj1_id][probidx];
@@ -4299,7 +4299,7 @@ SCIP_RETCODE reoptSaveNewObj(
    {
       assert(SCIPvarIsOriginal(origvars[v]));
 
-      probidx = SCIPvarGetProbindex(origvars[v]);
+      probidx = SCIPvarGetIndex(origvars[v]);
       assert(0 <= probidx && probidx <= norigvars);
 
       reopt->objs[reopt->run-1][probidx] = SCIPvarGetObj(origvars[v]);
@@ -5245,7 +5245,7 @@ SCIP_REOPTNODE* SCIPreoptGetReoptnode(
 SCIP_Real SCIPreoptGetOldObjCoef(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    int                   run,                /**< number of the run (1,2,...) */
-   int                   idx                 /**< index of variable */
+   int                   idx                 /**< index of original variable */
    )
 {
    assert(reopt != NULL);
@@ -6282,7 +6282,7 @@ SCIP_RETCODE SCIPreoptUpdateVarHistory(
          }
          assert(origvar != NULL && SCIPvarIsOriginal(origvar));
 
-         probidx = SCIPvarGetProbindex(origvar);
+         probidx = SCIPvarGetIndex(origvar);
          solval = SCIPsolGetVal(lastoptsol, set, stat, origvar);
          oldobj += reopt->objs[reopt->run-2][probidx] * solval;
       }
