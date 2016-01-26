@@ -14141,6 +14141,13 @@ SCIP_RETCODE freeTransform(
    /* switch stage to FREETRANS */
    scip->set->stage = SCIP_STAGE_FREETRANS;
 
+   /* reset solving specific paramters */
+   if( scip->set->reopt_enable )
+   {
+      assert(scip->reopt != NULL);
+      SCIP_CALL( SCIPreoptReset(scip->reopt, scip->set, scip->mem->probmem) );
+   }
+
    /* remove var locks set to avoid dual reductions */
    if( !scip->set->misc_allowdualreds )
    {

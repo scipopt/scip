@@ -125,10 +125,15 @@ struct SCIP_Reopt
    SCIP_REOPTTREE*       reopttree;               /**< data structure to store the current reoptimization search tree */
    SCIP_SOLTREE*         soltree;                 /**< tree to handle all saved solutions */
    SCIP_CLOCK*           savingtime;              /**< time needed to store the nodes */
+   SCIP_CONS**           addedconss;              /**< array of added constraints */
    SCIP_Real             simtolastobj;            /**< similarity to the last objective function */
    SCIP_Real             simtofirstobj;           /**< similarity to the first objective function */
    SCIP_Longint          lastbranched;            /**< number of the last branched node */
    SCIP_Longint          lastseennode;            /**< node number of the last caught event */
+   int                   addedconsssize;          /**< size of addedconss array */
+   int                   naddedconss;             /**< number of constraints added */
+   SCIP_Bool             objhaschanged;           /**< TRUE iff the objective fucntion has changd */
+   SCIP_Bool             consadded;               /**< TRUE iff a constraint was added */
 
    /* data structure to track decisions based on dual information */
    SCIP_Longint          currentnode;             /**< number of the current node */

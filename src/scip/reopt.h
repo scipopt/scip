@@ -231,6 +231,13 @@ SCIP_SOL* SCIPreoptGetBestSolRun(
    int                   run                 /**< number of the run (1,2,...) */
    );
 
+/** reset solving specific paramters */
+SCIP_RETCODE SCIPreoptReset(
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
+   );
+
 /** reset marks of stored solutions to not updated */
 extern
 void SCIPreoptResetSolMarks(

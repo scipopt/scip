@@ -4678,6 +4678,11 @@ SCIP_RETCODE SCIPreoptCreate(
    (*reopt)->firstrestart = 0;
    (*reopt)->lastrestart = 0;
    (*reopt)->varhistory = NULL;
+   (*reopt)->objhaschanged = FALSE;
+   (*reopt)->consadded = FALSE;
+   (*reopt)->addedconss = NULL;
+   (*reopt)->naddedconss = 0;
+   (*reopt)->addedconsssize = 0;
 
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*reopt)->prevbestsols, (*reopt)->runsize) );
    SCIP_ALLOC( BMSallocMemoryArray(&(*reopt)->objs, (*reopt)->runsize) );
@@ -4803,6 +4808,7 @@ SCIP_RETCODE SCIPreoptFree(
    SCIPclockFree(&(*reopt)->savingtime);
 
    BMSfreeBlockMemoryArray(blkmem, &(*reopt)->prevbestsols, (*reopt)->runsize);
+   BMSfreeBlockMemoryArray(blkmem, &(*reopt)->addedconss, (*reopt)->addedconsssize);
    BMSfreeMemoryArray(&(*reopt)->objs);
    BMSfreeMemory(reopt);
 
@@ -5283,7 +5289,7 @@ SCIP_RETCODE SCIPreoptReset(
       assert(cons != NULL);
 
       SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
-      reopt->addedconss[c] = 0;
+      reopt->addedconss[c] = NULL;
    }
 
    reopt->naddedconss = 0;
@@ -7232,7 +7238,9 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
+   SCIP_Real lastoptsolval;
    char name[SCIP_MAXSTRLEN];
+   int naddedconss;
    int c;
 
    assert(scip != NULL);
