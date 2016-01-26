@@ -441,6 +441,7 @@ SCIP_RETCODE reoptnodeDelete(
 
       for(c = 0; c < (*reoptnode)->nconss; c++)
       {
+         BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->conss[c]->boundtypes, (*reoptnode)->conss[c]->varssize);
          BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->conss[c]->bounds, (*reoptnode)->conss[c]->varssize);
          BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->conss[c]->vars, (*reoptnode)->conss[c]->varssize);
          BMSfreeBlockMemory(blkmem, &(*reoptnode)->conss[c]); /*lint !e866*/
@@ -464,6 +465,7 @@ SCIP_RETCODE reoptnodeDelete(
    if( (*reoptnode)->dualconscur != NULL )
    {
       assert((*reoptnode)->dualconscur->varssize > 0);
+      BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->dualconscur->boundtypes, (*reoptnode)->dualconscur->varssize);
       BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->dualconscur->bounds, (*reoptnode)->dualconscur->varssize);
       BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->dualconscur->vars, (*reoptnode)->dualconscur->varssize);
       BMSfreeBlockMemory(blkmem, &(*reoptnode)->dualconscur);
@@ -473,6 +475,7 @@ SCIP_RETCODE reoptnodeDelete(
    if( (*reoptnode)->dualconsnex != NULL )
    {
       assert((*reoptnode)->dualconsnex->varssize > 0);
+      BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->dualconsnex->boundtypes, (*reoptnode)->dualconsnex->varssize);
       BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->dualconsnex->bounds, (*reoptnode)->dualconsnex->varssize);
       BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->dualconsnex->vars, (*reoptnode)->dualconsnex->varssize);
       BMSfreeBlockMemory(blkmem, &(*reoptnode)->dualconsnex);
@@ -576,6 +579,7 @@ SCIP_RETCODE reoptnodeReset(
    if( reoptnode->dualconscur != NULL )
    {
       assert(reoptnode->dualconscur->varssize > 0);
+      BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualconscur->boundtypes, reoptnode->dualconscur->varssize);
       BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualconscur->bounds, reoptnode->dualconscur->varssize);
       BMSfreeBlockMemoryArray(blkmem ,&reoptnode->dualconscur->vars, reoptnode->dualconscur->varssize);
       BMSfreeBlockMemory(blkmem, &reoptnode->dualconscur);
@@ -585,6 +589,7 @@ SCIP_RETCODE reoptnodeReset(
    if( reoptnode->dualconsnex != NULL )
    {
       assert(reoptnode->dualconsnex->varssize > 0);
+      BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualconsnex->boundtypes, reoptnode->dualconsnex->varssize);
       BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualconsnex->bounds, reoptnode->dualconsnex->varssize);
       BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualconsnex->vars, reoptnode->dualconsnex->varssize);
       BMSfreeBlockMemory(blkmem, &reoptnode->dualconsnex);
@@ -1059,6 +1064,8 @@ SCIP_RETCODE createReoptnode(
    /* increase the counter */
    ++reopttree->nreoptnodes;
 
+   assert(reopttree->nreoptnodes + SCIPqueueNElems(reopttree->openids) == (int)reopttree->reoptnodessize);
+
    return SCIP_OKAY;
 }
 
@@ -1236,7 +1243,6 @@ SCIP_RETCODE checkMemGlbCons(
       else if( reopt->allocmemglbconss < mem )
       {
          SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->glbconss, reopt->allocmemglbconss, mem) );
-
          reopt->allocmemglbconss = mem;
       }
    }
@@ -1747,6 +1753,7 @@ SCIP_RETCODE reoptnodeUpdateDualConss(
    {
       SCIPdebugMessage("reset dual (1) information\n");
 
+      BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualconscur->boundtypes, reoptnode->dualconscur->varssize);
       BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualconscur->bounds, reoptnode->dualconscur->varssize);
       BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualconscur->vars, reoptnode->dualconscur->varssize);
       BMSfreeBlockMemory(blkmem, &reoptnode->dualconscur);
@@ -2704,6 +2711,7 @@ SCIP_RETCODE reoptnodeResetDualConss(
    {
       SCIPdebugMessage("reset dual (1) information\n");
 
+      BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualconscur->boundtypes, reoptnode->dualconscur->varssize);
       BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualconscur->bounds, reoptnode->dualconscur->varssize);
       BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualconscur->vars, reoptnode->dualconscur->varssize);
       BMSfreeBlockMemory(blkmem, &reoptnode->dualconscur);
@@ -2714,6 +2722,7 @@ SCIP_RETCODE reoptnodeResetDualConss(
    {
       SCIPdebugMessage("reset dual (2) information\n");
 
+      BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualconsnex->boundtypes, reoptnode->dualconsnex->varssize);
       BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualconsnex->bounds, reoptnode->dualconsnex->varssize);
       BMSfreeBlockMemoryArray(blkmem, &reoptnode->dualconsnex->vars, reoptnode->dualconsnex->varssize);
       BMSfreeBlockMemory(blkmem, &reoptnode->dualconsnex);
@@ -4081,6 +4090,7 @@ SCIP_RETCODE dryBranch(
 
          /* delete the redundant node */
          SCIP_CALL( reopttreeDeleteNode(reopt->reopttree, set, blkmem, redchilds[nredchilds-1], TRUE) );
+         SCIP_CALL( SCIPqueueInsert(reopt->reopttree->openids, (void*) (size_t) redchilds[nredchilds-1]) );
 
          /* decrease the number of redundant nodes */
          --nredchilds;
@@ -4734,7 +4744,7 @@ SCIP_RETCODE SCIPreoptFree(
          /* we have to free all optimal solution separatly, because those solutions are not stored in the
           * solution reopt_sepabestsol = TRUE
           */
-         if( set->reopt_sepabestsol )
+         if( set->reopt_sepabestsol && (*reopt)->prevbestsols[p] != NULL )
          {
             SCIP_CALL( SCIPsolFree(&(*reopt)->prevbestsols[p], blkmem, origprimal) );
          }
@@ -4763,8 +4773,6 @@ SCIP_RETCODE SCIPreoptFree(
 
    if( (*reopt)->glbconss != NULL && (*reopt)->allocmemglbconss > 0 )
    {
-      --(*reopt)->nglbconss;
-
       /* free all constraint */
       while( (*reopt)->nglbconss > 0 )
       {
@@ -6532,7 +6540,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    {
       reopttree->reoptnodes[id]->vars[v] = reopttree->reoptnodes[0]->dualconscur->vars[v];
       reopttree->reoptnodes[id]->varbounds[v] = reopttree->reoptnodes[0]->dualconscur->bounds[v];
-      reopttree->reoptnodes[id]->varboundtypes[v] = SCIPsetIsFeasEQ(set, reopttree->reoptnodes[0]->dualconscur->bounds[v], 1.0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER;
+      reopttree->reoptnodes[id]->varboundtypes[v] = SCIPsetIsFeasEQ(set, reopttree->reoptnodes[0]->dualconscur->bounds[v], 1.0) ? SCIP_BOUNDTYPE_LOWER : SCIP_BOUNDTYPE_UPPER; // ???????????????????????
       ++reopttree->reoptnodes[id]->nvars;
    }
    assert(reopttree->reoptnodes[id]->nvars == reopttree->reoptnodes[0]->dualconscur->nvars);
@@ -6653,6 +6661,7 @@ SCIP_RETCODE SCIPreoptSplitRoot(
    /* free the current dualconscur and assign dualconsnex */
    assert(reopttree->reoptnodes[0]->dualconscur->vars != NULL);
    assert(reopttree->reoptnodes[0]->dualconscur->bounds != NULL);
+   assert(reopttree->reoptnodes[0]->dualconscur->boundtypes != NULL);
 
    /* free the current dualconscur and assign dualconsnex */
    SCIP_CALL( reoptnodeUpdateDualConss(reopttree->reoptnodes[0], blkmem) );
@@ -6760,6 +6769,7 @@ SCIP_RETCODE SCIPreoptDeleteNode(
    assert(blkmem != NULL);
 
    SCIP_CALL( reopttreeDeleteNode(reopt->reopttree, set, blkmem, id, TRUE) );
+   SCIP_CALL( SCIPqueueInsert(reopt->reopttree->openids, (void*) (size_t) id) );
 
    return SCIP_OKAY;
 }
@@ -7707,8 +7717,6 @@ SCIP_RETCODE SCIPreoptAddCons(
    reopt->addedconss[reopt->naddedconss] = cons;
    reopt->consadded = TRUE;
    ++reopt->naddedconss;
-
-   printf("added cons <%s>\n", SCIPconsGetName(cons));
 
    /* capture the constraint */
    SCIPconsCapture(cons);

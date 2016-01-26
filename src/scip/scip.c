@@ -14620,7 +14620,7 @@ SCIP_RETCODE SCIPsolve(
       case SCIP_STAGE_PROBLEM:
       case SCIP_STAGE_TRANSFORMED:
       case SCIP_STAGE_PRESOLVING:
-         if( scip->set->stage == SCIP_STAGE_PROBLEM && (scip->set->reopt_sepaglbinfsubtrees || scip->set->reopt_sepabestsol) )
+         if( scip->set->stage == SCIP_STAGE_PROBLEM && (scip->set->reopt_sepaglbinfsubtrees || scip->set->reopt_sepabestsol) && scip->set->reopt_enable )
          {
             SCIP_CALL( SCIPreoptApplyGlbConss(scip, scip->reopt, scip->set, scip->stat, scip->mem->probmem) );
          }
