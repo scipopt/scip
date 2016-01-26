@@ -37,6 +37,7 @@
 #include "scip/sepastore.h"
 #include "scip/prob.h"
 #include "scip/cons.h"
+#include "scip/cons_linear.h"
 #include "scip/cons_logicor.h"
 #include "scip/cons_bounddisjunction.h"
 #include "scip/clock.h"
@@ -562,6 +563,7 @@ SCIP_RETCODE reoptnodeReset(
 
       for(c = 0; c < reoptnode->nconss; c++)
       {
+         BMSfreeBlockMemoryArray(blkmem, &reoptnode->conss[c]->boundtypes, reoptnode->conss[c]->varssize);
          BMSfreeBlockMemoryArray(blkmem, &reoptnode->conss[c]->bounds, reoptnode->conss[c]->varssize);
          BMSfreeBlockMemoryArray(blkmem, &reoptnode->conss[c]->vars, reoptnode->conss[c]->varssize);
          BMSfreeBlockMemory(blkmem, &reoptnode->conss[c]); /*lint !e866 */
@@ -4782,7 +4784,7 @@ SCIP_RETCODE SCIPreoptFree(
       while( (*reopt)->nglbconss > 0 )
       {
          int c;
-         c = (*reopt)->nglbconss;
+         c = (*reopt)->nglbconss-1;
 
          if( (*reopt)->glbconss[c] != NULL )
          {
@@ -7248,19 +7250,46 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    assert(set != NULL);
    assert(stat != NULL);
    assert(blkmem != NULL);
+   assert(SCIPisTransformed(scip));
 
    if( reopt->glbconss == NULL || reopt->nglbconss == 0 )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("try to add %d glb constraints\n", reopt->nglbconss);
-
-   for(c = 0; c < reopt->nglbconss; c++)
+   lastoptsolval = SCIPgetSolOrigObj(scip, reopt->prevbestsols[reopt->nglbconss-1]);
+   naddedconss = 0;
+   for(c = reopt->nglbconss-1; c >= 0; c--)
    {
       SCIP_CONS* cons;
       SCIP_VAR** consvars;
       int nbinvars;
       int nintvars;
       int v;
+
+      /* add constraints separating all solution that have the same objective values as the last optimal solution. */
+      if( c == reopt->nglbconss-1 )
+      {
+         SCIP_CONS* cons_obj;
+         SCIP_VAR** vars;
+         char nameobj[SCIP_MAXSTRLEN];
+         int nvars;
+
+         (void)SCIPsnprintf(nameobj, SCIP_MAXSTRLEN, "obj_lb");
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons_obj, nameobj, 0, NULL, NULL, lastoptsolval, SCIPinfinity(scip)) );
+
+         vars = SCIPgetVars(scip);
+         nvars = SCIPgetNVars(scip);
+
+         for( v = 0; v < nvars; v++ )
+         {
+            assert(SCIPvarIsTransformed(vars[v]));
+            SCIP_CALL( SCIPaddCoefLinear(scip, cons_obj, vars[v], SCIPvarGetObj(vars[v])) );
+         }
+
+         SCIP_CALL( SCIPaddCons(scip, cons_obj) );
+         SCIP_CALL( SCIPreleaseCons(scip, &cons_obj) );
+      }
+      else if( SCIPisLT(scip, SCIPgetSolOrigObj(scip, reopt->prevbestsols[c]), lastoptsolval) )
+         break;
 
       assert(reopt->glbconss[c]->nvars > 0);
 
@@ -7333,24 +7362,10 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
 
       SCIP_CALL( SCIPaddCons(scip, cons) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
-
-      /* delete the global constraints data */
-      SCIPfreeBlockMemoryArrayNull(scip, &reopt->glbconss[c]->boundtypes, reopt->glbconss[c]->nvars);
-      SCIPfreeBlockMemoryArrayNull(scip, &reopt->glbconss[c]->bounds, reopt->glbconss[c]->nvars);
-      SCIPfreeBlockMemoryArrayNull(scip, &reopt->glbconss[c]->vars, reopt->glbconss[c]->nvars);
-      SCIPfreeBlockMemoryNull(scip, &reopt->glbconss[c]); /*lint !e866*/
+      ++naddedconss;
    }
 
-   /* reset the number of global constraints */
-#ifdef SCIP_DEBUG
-   for(c = 0; c < reopt->nglbconss; c++)
-   {
-      assert(reopt->glbconss[c]->nvars == 0);
-      assert(reopt->glbconss[c]->vars == NULL);
-      assert(reopt->glbconss[c]->bounds == NULL);
-   }
-#endif
-   reopt->nglbconss = 0;
+   SCIPdebugMessage("added %d/%d gobal constraints\n", naddedconss, reopt->nglbconss);
 
    return SCIP_OKAY;
 }

@@ -3061,85 +3061,85 @@ SCIP_RETCODE SCIPvarAddLocks(
       switch( SCIPvarGetStatus(lockvar) )
       {
       case SCIP_VARSTATUS_ORIGINAL:
-	 if( lockvar->data.original.transvar != NULL )
-	 {
-	    lockvar = lockvar->data.original.transvar;
-	    break;
-	 }
-	 else
-	 {
-	    lockvar->nlocksdown += addnlocksdown;
-	    lockvar->nlocksup += addnlocksup;
+         if( lockvar->data.original.transvar != NULL )
+         {
+            lockvar = lockvar->data.original.transvar;
+            break;
+         }
+         else
+         {
+            lockvar->nlocksdown += addnlocksdown;
+            lockvar->nlocksup += addnlocksup;
 
-	    assert(lockvar->nlocksdown >= 0);
-	    assert(lockvar->nlocksup >= 0);
+            assert(lockvar->nlocksdown >= 0);
+            assert(lockvar->nlocksup >= 0);
 
-	    return SCIP_OKAY;
-	 }
+            return SCIP_OKAY;
+         }
       case SCIP_VARSTATUS_LOOSE:
       case SCIP_VARSTATUS_COLUMN:
       case SCIP_VARSTATUS_FIXED:
-	 lockvar->nlocksdown += addnlocksdown;
-	 lockvar->nlocksup += addnlocksup;
+         lockvar->nlocksdown += addnlocksdown;
+         lockvar->nlocksup += addnlocksup;
 
-	 assert(lockvar->nlocksdown >= 0);
-	 assert(lockvar->nlocksup >= 0);
+         assert(lockvar->nlocksdown >= 0);
+         assert(lockvar->nlocksup >= 0);
 
-	 if( lockvar->nlocksdown <= 1 && lockvar->nlocksup <= 1 )
-	 {
-	    SCIP_CALL( varEventVarUnlocked(lockvar, blkmem, set, eventqueue) );
-	 }
+         if( lockvar->nlocksdown <= 1 && lockvar->nlocksup <= 1 )
+         {
+            SCIP_CALL( varEventVarUnlocked(lockvar, blkmem, set, eventqueue) );
+         }
 
-	 return SCIP_OKAY;
+         return SCIP_OKAY;
       case SCIP_VARSTATUS_AGGREGATED:
-	 if( lockvar->data.aggregate.scalar < 0.0 )
-	 {
-	    int tmp = addnlocksup;
+         if( lockvar->data.aggregate.scalar < 0.0 )
+         {
+            int tmp = addnlocksup;
 
-	    addnlocksup = addnlocksdown;
-	    addnlocksdown = tmp;
-	 }
+            addnlocksup = addnlocksdown;
+            addnlocksdown = tmp;
+         }
 
-	 lockvar = lockvar->data.aggregate.var;
-	 break;
+         lockvar = lockvar->data.aggregate.var;
+         break;
       case SCIP_VARSTATUS_MULTAGGR:
       {
-	 int v;
+         int v;
 
-	 assert(!lockvar->donotmultaggr);
+         assert(!lockvar->donotmultaggr);
 
-	 for( v = lockvar->data.multaggr.nvars - 1; v >= 0; --v )
-	 {
-	    if( lockvar->data.multaggr.scalars[v] > 0.0 )
-	    {
-	       SCIP_CALL( SCIPvarAddLocks(lockvar->data.multaggr.vars[v], blkmem, set, eventqueue,
-		     addnlocksdown, addnlocksup) );
-	    }
-	    else
-	    {
-	       SCIP_CALL( SCIPvarAddLocks(lockvar->data.multaggr.vars[v], blkmem, set, eventqueue,
-		     addnlocksup, addnlocksdown) );
-	    }
-	 }
-	 return SCIP_OKAY;
+         for( v = lockvar->data.multaggr.nvars - 1; v >= 0; --v )
+         {
+            if( lockvar->data.multaggr.scalars[v] > 0.0 )
+            {
+               SCIP_CALL( SCIPvarAddLocks(lockvar->data.multaggr.vars[v], blkmem, set, eventqueue, addnlocksdown,
+                     addnlocksup) );
+            }
+            else
+            {
+               SCIP_CALL( SCIPvarAddLocks(lockvar->data.multaggr.vars[v], blkmem, set, eventqueue, addnlocksup,
+                     addnlocksdown) );
+            }
+         }
+         return SCIP_OKAY;
       }
       case SCIP_VARSTATUS_NEGATED:
       {
-	 int tmp = addnlocksup;
+         int tmp = addnlocksup;
 
-	 assert(lockvar->negatedvar != NULL);
-	 assert(SCIPvarGetStatus(lockvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
-	 assert(lockvar->negatedvar->negatedvar == lockvar);
+         assert(lockvar->negatedvar != NULL);
+         assert(SCIPvarGetStatus(lockvar->negatedvar) != SCIP_VARSTATUS_NEGATED);
+         assert(lockvar->negatedvar->negatedvar == lockvar);
 
-	 addnlocksup = addnlocksdown;
-	 addnlocksdown = tmp;
+         addnlocksup = addnlocksdown;
+         addnlocksdown = tmp;
 
-	 lockvar = lockvar->negatedvar;
-	 break;
+         lockvar = lockvar->negatedvar;
+         break;
       }
       default:
-	 SCIPerrorMessage("unknown variable status\n");
-	 return SCIP_INVALIDDATA;
+         SCIPerrorMessage("unknown variable status\n");
+         return SCIP_INVALIDDATA;
       }
    }
 }

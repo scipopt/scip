@@ -14629,9 +14629,11 @@ SCIP_RETCODE SCIPsolve(
       case SCIP_STAGE_PRESOLVING:
          if( scip->set->stage == SCIP_STAGE_PROBLEM && (scip->set->reopt_sepaglbinfsubtrees || scip->set->reopt_sepabestsol) && scip->set->reopt_enable )
          {
+            SCIP_CALL( SCIPtransformProb(scip) );
+            assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
+
             SCIP_CALL( SCIPreoptApplyGlbConss(scip, scip->reopt, scip->set, scip->stat, scip->mem->probmem) );
          }
-
          /* initialize solving data structures, transform and problem */
          SCIP_CALL( SCIPpresolve(scip) );
 
@@ -19554,7 +19556,7 @@ SCIP_RETCODE SCIPlockVarCons(
    int nlocksdown;
    int nlocksup;
 
-   SCIP_CALL( checkStage(scip, "SCIPlockVarCons", FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPlockVarCons", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
 
    assert( var->scip == scip );
 
@@ -19581,6 +19583,7 @@ SCIP_RETCODE SCIPlockVarCons(
       assert(!SCIPvarIsTransformed(var));
       /*lint -fallthrough*/
    case SCIP_STAGE_TRANSFORMING:
+   case SCIP_STAGE_TRANSFORMED:
    case SCIP_STAGE_INITPRESOLVE:
    case SCIP_STAGE_PRESOLVING:
    case SCIP_STAGE_EXITPRESOLVE:
