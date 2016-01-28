@@ -822,13 +822,14 @@ SCIP_RETCODE lpbdchgsCreate(
 /** reset conflict LP bound change data structure */
 static
 void lpbdchgsReset(
-   SCIP_LPBDCHGS*        lpbdchgs            /**< conflict LP bound change data structure */
+   SCIP_LPBDCHGS**       lpbdchgs,           /**< conflict LP bound change data structure */
+   int                   ncols               /**< number of columns */
    )
 {
    assert(lpbdchgs != NULL);
 
-   BMSclearMemoryArray(lpbdchgs->usedcols, lpbdchgs->nbdchgs);
-   lpbdchgs->nbdchgs = 0;
+   BMSclearMemoryArray((*lpbdchgs)->usedcols, ncols);
+   (*lpbdchgs)->nbdchgs = 0;
 }
 
 /** free conflict LP bound change data structure */
@@ -4488,7 +4489,7 @@ SCIP_RETCODE addBdchg(
    )
 {
    assert(newlb <= newub);
-   assert(oldlpbdchgs != NULL);
+   assert(oldlpbdchgs != NULL); /* ?????? this can be NULL, see comment above */
    assert(relaxedlpbdchgs != NULL);
 
    if( SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN )
@@ -4502,7 +4503,7 @@ SCIP_RETCODE addBdchg(
 
       if( c >= 0 )
       {
-         /* store old bound change for reseting the LP later */
+         /* store old bound change for resetting the LP later */
          if( !oldlpbdchgs->usedcols[c] )
          {
             idx = oldlpbdchgs->nbdchgs;
@@ -5188,7 +5189,6 @@ SCIP_RETCODE undoBdchgsDualsol(
    SCIP_VAR** vars;
    SCIP_ROW* row;
    SCIP_VAR* var;
-   SCIP_Real* primsols;
    SCIP_Real* dualsols;
    SCIP_Real* redcosts;
    SCIP_Real* dualcoefs;
@@ -5232,14 +5232,13 @@ SCIP_RETCODE undoBdchgsDualsol(
    assert(nrows == lp->nlpirows);
 
    /* get temporary memory */
-   SCIP_CALL( SCIPsetAllocBufferArray(set, &primsols, ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualsols, nrows) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &redcosts, ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &dualcoefs, nvars) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &varredcosts, nvars) );
 
    /* get solution from LPI */
-   retcode = SCIPlpiGetSol(lpi, NULL, primsols, dualsols, NULL, redcosts);
+   retcode = SCIPlpiGetSol(lpi, NULL, NULL, dualsols, NULL, redcosts);
    if( retcode == SCIP_LPERROR ) /* on an error in the LP solver, just abort the conflict analysis */
       goto TERMINATE;
    SCIP_CALL( retcode );
@@ -5359,8 +5358,8 @@ SCIP_RETCODE undoBdchgsDualsol(
          varredcosts[v] = (c >= 0 ? redcosts[c] : SCIPcolCalcRedcost(col, dualsols));
 
          /* check dual feasibility */
-         if( (SCIPsetIsGT(set, primsols[c], curvarlbs[v]) && SCIPsetIsDualfeasPositive(set, varredcosts[v]))
-            || (SCIPsetIsLT(set, primsols[c], curvarubs[v]) && SCIPsetIsDualfeasNegative(set, varredcosts[v])) )
+         if( (SCIPsetIsInfinity(set, curvarubs[v]) && SCIPsetIsDualfeasNegative(set, varredcosts[v]))
+          || (SCIPsetIsInfinity(set, -curvarlbs[v]) && SCIPsetIsDualfeasPositive(set, varredcosts[v])) )
          {
             SCIPdebugMessage(" -> infeasible reduced costs %g in var <%s>: lb=%g, ub=%g\n",
                varredcosts[v], SCIPvarGetName(var), curvarlbs[v], curvarubs[v]);
@@ -5404,7 +5403,6 @@ SCIP_RETCODE undoBdchgsDualsol(
    SCIPsetFreeBufferArray(set, &dualcoefs);
    SCIPsetFreeBufferArray(set, &redcosts);
    SCIPsetFreeBufferArray(set, &dualsols);
-   SCIPsetFreeBufferArray(set, &primsols);
 
    return SCIP_OKAY;
 }
@@ -5885,7 +5883,7 @@ SCIP_RETCODE conflictAnalyzeLP(
                   relaxedlpbdchgs->bdchginds, relaxedlpbdchgs->bdchglbs, relaxedlpbdchgs->bdchgubs) );
 
             /* reset conflict LP bound change data structure */
-            lpbdchgsReset(relaxedlpbdchgs);
+            lpbdchgsReset(&relaxedlpbdchgs, ncols);
          }
 
          /* start LP timer */
