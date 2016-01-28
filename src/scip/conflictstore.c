@@ -153,7 +153,7 @@ SCIP_RETCODE cleanDeletedConflicts(
          /* release the constraint */
          SCIP_CALL( SCIPconsRelease(&conflict, blkmem, set) );
 
-         conflictstore->ncbconflicts -= (SCIPsetIsInfinity(set, -conflictstore->primalbounds[idx]) ? 0 : 1);
+         conflictstore->ncbconflicts -= (SCIPsetIsInfinity(set, REALABS(conflictstore->primalbounds[idx])) ? 0 : 1);
 
          /* clean the conflict and primal bound array */
          conflictstore->conflicts[idx] = NULL;
@@ -557,7 +557,7 @@ SCIP_RETCODE SCIPconflictstoreAddConflict(
    SCIPconsCapture(cons);
    conflictstore->conflicts[idx] = cons;
    conflictstore->primalbounds[idx] = primalbound;
-   conflictstore->ncbconflicts += (SCIPsetIsInfinity(set, -primalbound) ? 0 : 1);
+   conflictstore->ncbconflicts += (SCIPsetIsInfinity(set, REALABS(primalbound)) ? 0 : 1);
 
    /* add idx shifted by +1 to the ordering queue */
    SCIP_CALL( SCIPqueueInsert(conflictstore->orderqueue, (void*) (size_t) (idx+1)) );
@@ -588,6 +588,7 @@ SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
    SCIP_CONS* conflict;
    int nseenconfs;
    int ndelconfs;
+   int ndelconfs_del;
    int idx;
 
    assert(conflictstore != NULL);
@@ -598,6 +599,7 @@ SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
 
    nseenconfs = 0;
    ndelconfs = 0;
+   ndelconfs_del = 0;
 
    /* return if we do not want to use the storage */
    if( set->conf_maxstoresize == -1 )
@@ -628,7 +630,7 @@ SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
       ++nseenconfs;
 
       /* check if the conflict epends on the cutofbound */
-      if( SCIPconsIsDeleted(conflict) || SCIPsetIsGT(set, conflictstore->primalbounds[idx], cutoffbound) )
+      if( SCIPsetIsGT(set, conflictstore->primalbounds[idx], cutoffbound) )
       {
          SCIP_CALL( SCIPconsDelete(conflict, blkmem, set, stat, transprob) );
          SCIP_CALL( SCIPconsRelease(&conflict, blkmem, set) );
@@ -641,16 +643,33 @@ SCIP_RETCODE SCIPconflictstoreCleanBoundexceeding(
 
          SCIP_CALL( SCIPqueueInsert(conflictstore->slotqueue, (void*) (size_t) (idx+1)) );
       }
+      /* we remove all as deleted marked constraints too */
+      else if( SCIPconsIsDeleted(conflict) )
+      {
+         /* release the constraint */
+         SCIP_CALL( SCIPconsRelease(&conflict, blkmem, set) );
+
+         conflictstore->ncbconflicts -= (SCIPsetIsInfinity(set, REALABS(conflictstore->primalbounds[idx])) ? 0 : 1);
+
+         /* clean the conflict and primal bound array */
+         conflictstore->conflicts[idx] = NULL;
+         conflictstore->primalbounds[idx] = -SCIPsetInfinity(set);
+
+         /* add the id shifted by +1 to the queue of empty slots */
+         SCIP_CALL( SCIPqueueInsert(conflictstore->slotqueue, (void*) (size_t) (idx+1)) );
+
+         ++ndelconfs_del;
+      }
       else
       {
          /* reinsert the id */
          SCIP_CALL( SCIPqueueInsert(conflictstore->orderqueue, (void*) (size_t) (idx+1)) );
       }
    }
-   assert(conflictstore->ncbconflicts == 0);
+   assert(conflictstore->ncbconflicts >= 0);
 
-   SCIPdebugMessage("-> removed %d/%d conflicts depending on cutoff bound\n", ndelconfs, conflictstore->nconflicts);
-   conflictstore->nconflicts -= ndelconfs;
+   SCIPdebugMessage("-> removed %d/%d conflicts, %d depending on cutoff bound\n", ndelconfs+ndelconfs_del, conflictstore->nconflicts, ndelconfs);
+   conflictstore->nconflicts -= (ndelconfs+ndelconfs_del);
 
    return SCIP_OKAY;
 }

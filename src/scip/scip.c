@@ -11938,7 +11938,7 @@ SCIP_RETCODE SCIPaddConflict(
    SCIP_CALL( checkStage(scip, "SCIPaddConflict", FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    if( cutoffinvolved )
-      primalbound = SCIPgetPrimalbound(scip);
+      primalbound = SCIPgetCutoffbound(scip);
    else
       primalbound = -SCIPinfinity(scip);
 
@@ -11985,7 +11985,7 @@ SCIP_RETCODE SCIPcleanConflictStoreBoundexceeding(
    SCIP_CALL( checkStage(scip, "SCIPaddConsNode", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPconflictstoreCleanBoundexceeding(scip->conflictstore, scip->set, scip->stat, scip->mem->probmem,
-         scip->transprob, SCIPsolGetObj(SCIPeventGetSol(event), scip->set, scip->transprob, scip->origprob)) );
+         scip->transprob, scip->primal->cutoffbound) );
 
    return SCIP_OKAY;
 }
