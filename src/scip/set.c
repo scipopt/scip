@@ -254,6 +254,8 @@
 #define SCIP_DEFAULT_MISC_OUTPUTORIGSOL    TRUE /**< should the best solution be transformed to the orignal space and be output in command line run? */
 #define SCIP_DEFAULT_MISC_ALLOWDUALREDS    TRUE /**< should dual reductions in propagation methods and presolver be allowed? */
 #define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
+#define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
+#define SCIP_DEFAULT_MISC_ALWAYSGETDUALS  FALSE /**< should the Farkas duals always be collected when an LP is infeasible? */
 
 
 /* Node Selection */
@@ -1753,6 +1755,11 @@ SCIP_RETCODE SCIPsetCreate(
             "misc/allowobjprop",
             "should propagation to the current objective be allowed in propagation methods?",
             &(*set)->misc_allowobjprop, FALSE, SCIP_DEFAULT_MISC_ALLOWOBJPROP,
+            NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+            "misc/alwaysgetduals",
+            "should the Farkas duals always be collected when an LP is found to be infeasible?",
+            &(*set)->misc_alwaysgetduals, FALSE, SCIP_DEFAULT_MISC_ALWAYSGETDUALS,
             NULL, NULL) );
 
    /* node selection */
