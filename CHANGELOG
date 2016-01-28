@@ -17,6 +17,7 @@ interface:
 - made debug solution functionality thread safe (see debug.h for further information)
 - added interactive shell command 'display finitesolution' to print solution with infinite fixings removed,
   added reference to that method to 'display solution' output if there are infinite fixings
+- renamed MIP matrix structure to SCIP_MATRIX
 
 fixed bugs:
 - fixed wrong check when computing cuts for factorable quadratic functions

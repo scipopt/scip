@@ -56,7 +56,7 @@ typedef enum Fixingdirection FIXINGDIRECTION;
 static
 SCIP_RETCODE singletonColumnStuffing(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    FIXINGDIRECTION*      varstofix,          /**< array holding fixing information */
    int*                  nfixings            /**< number of possible fixings */
    )
@@ -338,7 +338,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyStuffing)
 static
 SCIP_DECL_PRESOLEXEC(presolExecStuffing)
 {  /*lint --e{715}*/
-   SCIPMILPMATRIX* matrix;
+   SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
 

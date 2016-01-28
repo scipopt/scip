@@ -64,7 +64,7 @@ typedef enum AggrType AGGRTYPE;
 /** find row which leads to the uplock of the given variable */
 static
 void getUplockRowIdx(
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
    int                   aggvaridx,          /**< index of variable which should be aggregated */
    int*                  rowidx,             /**< pointer to store row index of uplock */
    SCIP_Real*            coef                /**< pointer to store coefficient of variable */
@@ -113,7 +113,7 @@ void getUplockRowIdx(
 /** find row which leads to the downlock of the given variable */
 static
 void getDownlockRowIdx(
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
    int                   aggvaridx,          /**< index of variable which should be aggregated */
    int*                  rowidx,             /**< pointer to store row index of downlock */
    SCIP_Real*            coef                /**< pointer to store coefficient of variable */
@@ -162,7 +162,7 @@ void getDownlockRowIdx(
 static
 void getBinVarIdxInUplockRow(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
    int                   aggvaridx,          /**< index of variable which should be aggregated */
    int*                  binvaridx,          /**< pointer to store index of binary variable */
    AGGRTYPE*             aggtype             /**< pointer to store type of aggregation */
@@ -260,7 +260,7 @@ void getBinVarIdxInUplockRow(
 static
 void getBinVarIdxInDownlockRow(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
    int                   aggvaridx,          /**< index of variable which should be aggregated */
    int*                  binvaridx,          /**< pointer to store index of binary variable */
    AGGRTYPE*             aggtype             /**< pointer to store type of aggregation */
@@ -360,7 +360,7 @@ void getBinVarIdxInDownlockRow(
 static
 SCIP_RETCODE findUplockAggregations(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
    int*                  nvaragg,            /**< number of redundant variables */
    AGGRTYPE*             aggtypes,           /**< type of aggregations (in same order as variables in matrix) */
    SCIP_VAR**            binvars             /**< pointers to the binary variables (in same order as variables in matrix) */
@@ -416,7 +416,7 @@ SCIP_RETCODE findUplockAggregations(
 static
 SCIP_RETCODE findDownlockAggregations(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
    int*                  nvaragg,            /**< number of redundant variables */
    AGGRTYPE*             aggtypes,           /**< type of aggregations (in same order as variables in matrix) */
    SCIP_VAR**            binvars             /**< pointers to the binary variables (in same order as variables in matrix) */
@@ -479,7 +479,7 @@ SCIP_RETCODE findDownlockAggregations(
 static
 SCIP_DECL_PRESOLEXEC(presolExecDualagg)
 {  /*lint --e{715}*/
-   SCIPMILPMATRIX* matrix;
+   SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
 
