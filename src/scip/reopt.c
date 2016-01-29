@@ -7495,13 +7495,17 @@ SCIP_Bool SCIPreoptGetSolveLP(
    if( SCIPnodeGetDepth(node) > 0 && id == 0 )
       return TRUE;
 
+   /* return always true if the parameter is set to 1.0 */
+   if( SCIPsetIsEQ(set, set->reopt_objsimrootlp, 1.0) )
+      return TRUE;
+
    /* current node is the root */
    if( id == 0 )
    {
       if( reopt->reopttree->reoptnodes[0]->nchilds > 0 )
       {
          /* the objective function has changed only slightly */
-         if( reopt->simtolastobj >= set->reopt_objsimrootlp )
+         if( SCIPsetIsGE(set, reopt->simtolastobj, set->reopt_objsimrootlp) )
             return FALSE;
       }
    }
