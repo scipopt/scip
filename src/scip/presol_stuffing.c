@@ -142,13 +142,14 @@ SCIP_RETCODE singletonColumnStuffing(
                ub = SCIPvarGetUbGlobal(var);
 
                /* we need to check if this is a singleton continuous variable and
-                  all constraints containing this variable are present inside
-                  the mixed integer linear matrix */
+                * all constraints containing this variable are present inside
+                * the mixed integer linear matrix
+                */
                if( SCIPmatrixGetColNNonzs(matrix, idx) == 1 &&
                    (SCIPvarGetNLocksUp(var) + SCIPvarGetNLocksDown(var)) == 1 &&
                    SCIPvarGetType(var) == SCIP_VARTYPE_CONTINUOUS )
                {
-                  if( SCIPvarGetObj(var) < 0 && coef > 0 )
+                  if( SCIPisLT(scip, SCIPvarGetObj(var), 0.0) && SCIPisGT(scip, coef, 0.0) )
                   {
                      /* case 1: obj < 0 and coef > 0 */
                      if( SCIPisInfinity(scip, -lb) )
@@ -164,7 +165,7 @@ SCIP_RETCODE singletonColumnStuffing(
                      colcoeffs[fillcnt] = coef;
                      fillcnt++;
                   }
-                  else if( SCIPvarGetObj(var) > 0 && coef < 0 )
+                  else if( SCIPisGT(scip, SCIPvarGetObj(var), 0.0) && SCIPisLT(scip, coef, 0.0) )
                   {
                      /* case 2: obj > 0 and coef < 0 */
                      if( SCIPisInfinity(scip, ub) )
@@ -174,7 +175,8 @@ SCIP_RETCODE singletonColumnStuffing(
                      }
 
                      /* multiply column by (-1) to become case 1.
-                        now bounds are swapped: ub := -lb, lb := -ub */
+                      * now bounds are swapped: ub := -lb, lb := -ub
+                      */
                      swapped[idx] = TRUE;
                      upperconst += coef * ub;
                      lowerconst += coef * ub;
@@ -183,10 +185,11 @@ SCIP_RETCODE singletonColumnStuffing(
                      colcoeffs[fillcnt] = -coef;
                      fillcnt++;
                   }
-                  else if( SCIPvarGetObj(var) >= 0 && coef >= 0 )
+                  else if( SCIPisGE(scip, SCIPvarGetObj(var), 0.0) && SCIPisGE(scip, coef, 0.0) )
                   {
                      /* case 3: obj >= 0 and coef >= 0 is handled by duality fixing.
-                        we only consider the lower bound for the constants */
+                      *  we only consider the lower bound for the constants
+                      */
                      if( SCIPisInfinity(scip, -lb) )
                      {
                         /* maybe unbounded */
@@ -200,7 +203,11 @@ SCIP_RETCODE singletonColumnStuffing(
                   else
                   {
                      /* case 4: obj <= 0 and coef <= 0 is also handled by duality fixing.
-                        we only consider the upper bound for the constants */
+                      * we only consider the upper bound for the constants
+                      */
+                     assert(SCIPisLE(scip, SCIPvarGetObj(var), 0.0));
+                     assert(SCIPisLE(scip, coef, 0.0));
+
                      if( SCIPisInfinity(scip, ub) )
                      {
                         /* maybe unbounded */
@@ -215,7 +222,8 @@ SCIP_RETCODE singletonColumnStuffing(
                else
                {
                   /* consider contribution of discrete variables, non-singleton
-                     continuous variables and variables with more than one lock */
+                   * continuous variables and variables with more than one lock
+                   */
                   if( SCIPisInfinity(scip, -lb) || SCIPisInfinity(scip, ub) )
                   {
                      tryfixing = FALSE;
@@ -262,7 +270,8 @@ SCIP_RETCODE singletonColumnStuffing(
                   assert(colcoeffs[k] >= 0);
 
                   /* calculate the change in the row activities if this variable changes
-                     its value from to its other bound */
+                   * its value from to its other bound
+                   */
                   if( swapped[idx] )
                      delta = -(lb - ub) * colcoeffs[k];
                   else
