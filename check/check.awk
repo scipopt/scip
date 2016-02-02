@@ -52,6 +52,7 @@ BEGIN {
    infty = +1e+20;
    headerprinted = 0;
    namelength = 18;             # maximal length of instance names (can be increased)
+   usetimestamps = 0;
 
    nprobs = 0;
    sbab = 0;
@@ -426,11 +427,11 @@ BEGIN {
 /problem is solved/ { timeout = 0; }
 /best solution is not feasible in original problem/  { bestsolfeas = 0; }
 
-/Check SOL:/ { 
+/Check SOL:/ {
    intcheck = $4;
    conscheck = $6;
    objcheck = $8;
-   if( !intcheck || !conscheck || !objcheck ) 
+   if( !intcheck || !conscheck || !objcheck )
       bestsolfeas = 0;
 }
 
@@ -714,6 +715,9 @@ BEGIN {
          tottime = timelimit;
       if( timelimit > 0.0 )
          tottime = min(tottime, timelimit);
+
+      if( usetimestamps != 0 )
+         tottime = endtime - starttime;
 
       if( aborted || timetobest < 0.0 ) {
          timetofirst = tottime;
