@@ -190,10 +190,12 @@ SCIP_RETCODE ensureRunSize(
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->soltree->nsols, reopt->runsize, newsize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->soltree->solssize, reopt->runsize, newsize) );
       SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->prevbestsols, reopt->runsize, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->varhistory, reopt->runsize, newsize) );
       SCIP_ALLOC( BMSreallocMemoryArray(&reopt->objs, newsize) );
 
       for(s = reopt->runsize; s < newsize; s++)
       {
+         reopt->varhistory[s] = NULL;
          reopt->prevbestsols[s] = NULL;
          reopt->objs[s] = NULL;
          reopt->soltree->solssize[s] = 0;
@@ -442,7 +444,11 @@ SCIP_RETCODE reoptnodeDelete(
 
       for(c = 0; c < (*reoptnode)->nconss; c++)
       {
-         BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->conss[c]->boundtypes, (*reoptnode)->conss[c]->varssize);
+         if( (*reoptnode)->conss[c]->constype != REOPT_CONSTYPE_CUT )
+         {
+            BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->conss[c]->boundtypes, (*reoptnode)->conss[c]->varssize);
+         }
+
          BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->conss[c]->bounds, (*reoptnode)->conss[c]->varssize);
          BMSfreeBlockMemoryArray(blkmem, &(*reoptnode)->conss[c]->vars, (*reoptnode)->conss[c]->varssize);
          BMSfreeBlockMemory(blkmem, &(*reoptnode)->conss[c]); /*lint !e866*/
@@ -4679,13 +4685,13 @@ SCIP_RETCODE SCIPreoptCreate(
    (*reopt)->ntotallocrestarts = 0;
    (*reopt)->firstrestart = 0;
    (*reopt)->lastrestart = 0;
-   (*reopt)->varhistory = NULL;
    (*reopt)->objhaschanged = FALSE;
    (*reopt)->consadded = FALSE;
    (*reopt)->addedconss = NULL;
    (*reopt)->naddedconss = 0;
    (*reopt)->addedconsssize = 0;
 
+   SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*reopt)->varhistory, (*reopt)->runsize) );
    SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &(*reopt)->prevbestsols, (*reopt)->runsize) );
    SCIP_ALLOC( BMSallocMemoryArray(&(*reopt)->objs, (*reopt)->runsize) );
 
@@ -4693,6 +4699,7 @@ SCIP_RETCODE SCIPreoptCreate(
    {
       (*reopt)->objs[i] = NULL;
       (*reopt)->prevbestsols[i] = NULL;
+      (*reopt)->varhistory[i] = NULL;
    }
 
    /* clocks */
@@ -4809,6 +4816,7 @@ SCIP_RETCODE SCIPreoptFree(
    /* clocks */
    SCIPclockFree(&(*reopt)->savingtime);
 
+   BMSfreeBlockMemoryArray(blkmem, &(*reopt)->varhistory, (*reopt)->runsize);
    BMSfreeBlockMemoryArray(blkmem, &(*reopt)->prevbestsols, (*reopt)->runsize);
    BMSfreeBlockMemoryArray(blkmem, &(*reopt)->addedconss, (*reopt)->addedconsssize);
    BMSfreeMemoryArray(&(*reopt)->objs);
@@ -6176,41 +6184,91 @@ SCIP_RETCODE SCIPreoptSaveOpenNodes(
 
 /** merges the variable history of the current run with the stored history */
 SCIP_RETCODE SCIPreoptMergeVarHistory(
-   SCIP_REOPT*           reopt,
-   SCIP_STAT*            stat,
-   SCIP_VAR**            vars,
-   int                   nvars
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_VAR**            vars,               /**< original problem variables */
+   int                   nvars               /**< number of original problem variables */
    )
 {
+   SCIP_VAR* transvar;
+   SCIP_Real avginference[2];
+   SCIP_Real avgcutoff[2];
+   SCIP_Real bestsim;
+   int bestrun;
    int idx;
+   int d;
+   int r;
    int v;
 
    assert(reopt != NULL);
    assert(stat != NULL);
    assert(nvars >= 0);
 
-   if( reopt->simtolastobj < 0.975 || reopt->varhistory == NULL )
-   {
-      if( reopt->varhistory != NULL )
-      {
-         for( v = 0; v < nvars; v++ )
-         {
-            idx = SCIPvarGetProbindex(vars[v]);
-            assert(idx >= 0 && idx < nvars);
-
-            SCIPhistoryReset(reopt->varhistory[idx]);
-         }
-      }
-
+   if( !set->reopt_storevarhistory )
       return SCIP_OKAY;
-   }
 
+   SCIPdebugMessage("start merging variable histories:\n");
+
+   bestrun = reopt->run-2;
+   bestsim = reopt->simtolastobj;
+
+   /* find the run with the most simlar objectve */
+   for(r = reopt->run-3; r >= 0 && reopt->objhaschanged && set->reopt_usepscost; r-- )
+   {
+      SCIP_Real sim;
+      sim = reoptSimilarity(reopt, set, r, reopt->run-1, vars, nvars);
+
+      if( SCIPsetIsGT(set, sim, bestsim) )
+      {
+         bestsim = sim;
+         bestrun = r;
+      }
+   }
+   printf("run %d has best similarity=%g\n", bestrun, bestsim);
+
+   /* iterate through all variables and scale the histories */
    for( v = 0; v < nvars; v++ )
    {
-      idx = SCIPvarGetProbindex(vars[v]);
+      assert(SCIPvarIsOriginal(vars[v]));
+
+      transvar = SCIPvarGetTransVar(vars[v]);
+      assert(transvar != NULL);
+
+      /* skip variable that are not active */
+      if( !SCIPvarIsActive(transvar) )
+         continue;
+
+      idx = SCIPvarGetIndex(vars[v]);
       assert(0 <= idx && idx <= nvars);
 
-      SCIPvarSetHistory(vars[v], reopt->varhistory[idx], stat);
+      /* set the updated history for both directions */
+      for( d = 0; d <= 1; d++ )
+      {
+         if( set->reopt_usepscost && !SCIPsetIsZero(set, reopt->varhistory[bestrun][idx]->pscostcount[d]) && SCIPsetIsGT(set, bestsim, 0.985) )
+         {
+            transvar->history->pscostcount[d] = 1.0;
+            transvar->history->pscostweightedmean[d] = reopt->varhistory[bestrun][idx]->pscostweightedmean[d];
+            transvar->history->pscostvariance[d] = 0.0;
+            SCIPdebugMessage("-> <%s> pscosts %4s: count=%g weightedmean=%g variance=%g\n", SCIPvarGetName(transvar), d == 0 ? "down" : "up",
+                  transvar->history->pscostcount[d], transvar->history->pscostweightedmean[d], transvar->history->pscostvariance[d]);
+         }
+
+         SCIPhistoryIncNBranchings(transvar->history, (SCIP_BRANCHDIR)d, 1);
+
+         /* inference score */
+         avginference[d] = SCIPhistoryGetAvgInferences(reopt->varhistory[reopt->run-2][idx], (SCIP_BRANCHDIR)d);
+         SCIPhistoryIncInferenceSum(transvar->history, (SCIP_BRANCHDIR)d, avginference[d]);
+
+         /* cutoff score */
+         avgcutoff[d] = SCIPhistoryGetAvgCutoffs(reopt->varhistory[reopt->run-2][idx], (SCIP_BRANCHDIR)d);
+         SCIPhistoryIncCutoffSum(transvar->history, (SCIP_BRANCHDIR)d, avgcutoff[d]);
+
+         SCIPdebugMessage("-> <%s> %4s scores: inf=%g cutoff=%g\n", SCIPvarGetName(transvar), d == 0 ? "down" : "up", avginference[d], avgcutoff[d]);
+         printf("-> <%s> %4s scores: inf=%g cutoff=%g\n", SCIPvarGetName(transvar), d == 0 ? "down" : "up", avginference[d], avgcutoff[d]);
+      }
    }
 
    return SCIP_OKAY;
@@ -6224,13 +6282,10 @@ SCIP_RETCODE SCIPreoptUpdateVarHistory(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem */
    BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_VAR**            vars,               /**< variable array */
-   int                   nvars               /**< number of variables */
+   SCIP_VAR**            vars,               /**< original variable array */
+   int                   nvars               /**< number of original variables */
    )
 {
-   SCIP_SOL* lastoptsol;
-   SCIP_Real objdelta;
-   SCIP_Real oldobj;
    int v;
 
    assert(reopt != NULL);
@@ -6238,107 +6293,56 @@ SCIP_RETCODE SCIPreoptUpdateVarHistory(
    assert(blkmem != NULL);
    assert(nvars >= 0);
 
+   if( !set->reopt_storevarhistory )
+      return SCIP_OKAY;
+
    SCIPdebugMessage("updating variable history\n");
    printf("updating variable history\n");
 
-   if( reopt->varhistory == NULL )
+   if( reopt->varhistory[reopt->run-1] == NULL )
    {
       /* allocate memory */
-      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->varhistory, nvars) );
+      SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->varhistory[reopt->run-1], nvars) );
 
       for( v = 0; v < nvars; v++ )
       {
-         SCIP_CALL( SCIPhistoryCreate(&(reopt->varhistory[v]), blkmem) );
+         SCIP_CALL( SCIPhistoryCreate(&(reopt->varhistory[reopt->run-1][v]), blkmem) );
       }
    }
 
+#if 0
    /* optimal solution of the current run */
    lastoptsol = reopt->prevbestsols[reopt->run-1];
-
-   /* best objective value of the previous run */
-   if( reopt->run == 1 )
-      oldobj = 0;
-   else
-   {
-      assert(reopt->run >= 2);
-
-      oldobj = 0;
-      for( v = 0; v < nvars; v++ )
-      {
-         SCIP_VAR* origvar;
-         SCIP_Real solval;
-         int probidx;
-
-         origvar = vars[v];
-         if( !SCIPvarIsOriginal(origvar) )
-         {
-            SCIP_Real constant;
-            SCIP_Real scalar;
-
-            constant = 0.0;
-            scalar = 1.0;
-
-            SCIP_CALL( SCIPvarGetOrigvarSum(&origvar, &scalar, &constant) );
-         }
-         assert(origvar != NULL && SCIPvarIsOriginal(origvar));
-
-         probidx = SCIPvarGetIndex(origvar);
-         solval = SCIPsolGetVal(lastoptsol, set, stat, origvar);
-         oldobj += reopt->objs[reopt->run-2][probidx] * solval;
-      }
-   }
 
    /* the objective delta is defined as: new LP obj - old LP obj and has to be non-negative. for the reoptimization we
     * are interested in the obj value of the best solution of the current iteration wrt the objective function of the
     * previous iteration instead of the old LP obj.
-    * hence, c_{i}(x_{i}) <= c_{i-1}(x_{i}) <==> c_{i}(x_{i}) - c_{i-1}(x_{i}) <= 0 we multiply with -1.
+    * hence, c_{i}(s_{i-1}) <= c_{i-1}(s_{i-1}) <==> c_{i}(s_{i-1}) - c_{i-1}(s_{i-1}) <= 0 we multiply with -1.
     */
    objdelta = SCIPsolGetObj(lastoptsol, set, transprob, origprob) - oldobj;
    objdelta *= -1.0;
    assert(!SCIPsetIsNegative(set, objdelta));
+#endif
 
    /* update the history and scale them */
    for( v = 0; v < nvars; v++ )
    {
-      SCIP_Real solvedelta;
-      SCIP_Real avginference[2];
-      SCIP_Real avgcutoff[2];
+      SCIP_VAR* transvar;
       int idx;
-      int d;
 
-      idx = SCIPvarGetProbindex(vars[v]);
+      assert(SCIPvarIsOriginal(vars[v]));
+      idx = SCIPvarGetIndex(vars[v]);
       assert(idx >= 0 && idx < nvars);
 
-      solvedelta = SCIPvarGetAvgSol(vars[v]);
+      transvar = SCIPvarGetTransVar(vars[v]);
+      assert(transvar != NULL);
 
-      /* get and scale stored data and data from the current iteration for both directions */
-      for( d = 0; d <= 1; d++ )
-      {
-         /* inference score */
-         avginference[d] = SCIPvarGetAvgInferences(vars[v], stat, (SCIP_BRANCHDIR)d);
-         avginference[d] += SCIPhistoryGetAvgInferences(reopt->varhistory[idx], (SCIP_BRANCHDIR)d);
-         avginference[d] /= 2;
+      if( !SCIPvarIsActive(transvar) )
+         continue;
 
-         /* cutoff score */
-         avgcutoff[d] = SCIPvarGetAvgCutoffs(vars[v], stat, (SCIP_BRANCHDIR)d);
-         avgcutoff[d] += SCIPhistoryGetAvgCutoffs(reopt->varhistory[idx], (SCIP_BRANCHDIR)d);
-         avgcutoff[d] /= 2;
-      }
-
-      /* reset the history */
-      SCIPhistoryReset(reopt->varhistory[idx]);
-
-      /* set the updated history for both directions */
-      for( d = 0; d <= 1; d++ )
-      {
-         SCIPhistoryIncNBranchings(reopt->varhistory[idx], (SCIP_BRANCHDIR)d, 1);
-
-         if( d == 1 )
-            SCIPhistoryUpdatePseudocost(reopt->varhistory[idx], set, solvedelta, 0, 1);
-
-         SCIPhistoryIncInferenceSum(reopt->varhistory[idx], (SCIP_BRANCHDIR)d, avginference[d]);
-         SCIPhistoryIncCutoffSum(reopt->varhistory[idx], (SCIP_BRANCHDIR)d, avgcutoff[d]);
-      }
+      /* we store the complete history */
+      SCIPhistoryReset(reopt->varhistory[reopt->run-1][idx]);
+      SCIPhistoryUnite(reopt->varhistory[reopt->run-1][idx], transvar->history, FALSE);
    }
 
    return SCIP_OKAY;
@@ -7240,7 +7244,6 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
-   SCIP_Real lastoptsolval;
    char name[SCIP_MAXSTRLEN];
    int naddedconss;
    int c;
@@ -7250,12 +7253,10 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
    assert(set != NULL);
    assert(stat != NULL);
    assert(blkmem != NULL);
-   assert(SCIPisTransformed(scip));
 
    if( reopt->glbconss == NULL || reopt->nglbconss == 0 )
       return SCIP_OKAY;
 
-   lastoptsolval = SCIPgetSolOrigObj(scip, reopt->prevbestsols[reopt->nglbconss-1]);
    naddedconss = 0;
    for(c = reopt->nglbconss-1; c >= 0; c--)
    {
@@ -7264,32 +7265,6 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
       int nbinvars;
       int nintvars;
       int v;
-
-      /* add constraints separating all solution that have the same objective values as the last optimal solution. */
-      if( c == reopt->nglbconss-1 )
-      {
-         SCIP_CONS* cons_obj;
-         SCIP_VAR** vars;
-         char nameobj[SCIP_MAXSTRLEN];
-         int nvars;
-
-         (void)SCIPsnprintf(nameobj, SCIP_MAXSTRLEN, "obj_lb");
-         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &cons_obj, nameobj, 0, NULL, NULL, lastoptsolval, SCIPinfinity(scip)) );
-
-         vars = SCIPgetVars(scip);
-         nvars = SCIPgetNVars(scip);
-
-         for( v = 0; v < nvars; v++ )
-         {
-            assert(SCIPvarIsTransformed(vars[v]));
-            SCIP_CALL( SCIPaddCoefLinear(scip, cons_obj, vars[v], SCIPvarGetObj(vars[v])) );
-         }
-
-         SCIP_CALL( SCIPaddCons(scip, cons_obj) );
-         SCIP_CALL( SCIPreleaseCons(scip, &cons_obj) );
-      }
-      else if( SCIPisLT(scip, SCIPgetSolOrigObj(scip, reopt->prevbestsols[c]), lastoptsolval) )
-         break;
 
       assert(reopt->glbconss[c]->nvars > 0);
 
@@ -7333,7 +7308,7 @@ SCIP_RETCODE SCIPreoptApplyGlbConss(
             if( SCIPsetIsFeasEQ(set, reopt->glbconss[c]->bounds[v], 0.0) )
             {
                assert(reopt->glbconss[c]->boundtypes[v] == SCIP_BOUNDTYPE_UPPER);
-               SCIP_CALL( SCIPvarNegate(reopt->glbconss[c]->vars[v], blkmem, set, stat, &consvars[v]) );
+               SCIP_CALL( SCIPvarNegate(consvars[v], blkmem, set, stat, &consvars[v]) );
             }
          }
 
@@ -7454,6 +7429,8 @@ SCIP_RETCODE SCIPreoptApplyCuts(
                SCIP_ROWORIGINTYPE_REOPT, NULL, TRUE, TRUE, TRUE) );
 
          SCIPdebugMessage("add cut <%s> of size %d, [lhs, rhs] = [%g,%g] to node %lld\n", cutname, ncols, cons->lhs,
+               cons->rhs, SCIPnodeGetNumber(node));
+         printf("add cut <%s> of size %d, [lhs, rhs] = [%g,%g] to node %lld\n", cutname, ncols, cons->lhs,
                cons->rhs, SCIPnodeGetNumber(node));
 
          SCIPsetFreeBufferArray(set, &vals);
@@ -7684,13 +7661,14 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
       /* create the constraint */
       SCIP_ALLOC( BMSallocBlockMemory(blkmem, &reoptnode->conss[nconss]) ); /*lint !e866*/
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptnode->conss[nconss]->vars, vars, nvars) );
+      SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptnode->conss[nconss]->bounds, bounds, nvars) );
 
       if( constype != REOPT_CONSTYPE_CUT )
       {
-         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptnode->conss[nconss]->bounds, bounds, nvars) );
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptnode->conss[nconss]->bounds, boundtypes, nvars) );
       }
       else
-         reoptnode->conss[nconss]->bounds = NULL;
+         reoptnode->conss[nconss]->boundtypes = NULL;
 
       reoptnode->conss[nconss]->varssize = nvars;
       reoptnode->conss[nconss]->nvars = nvars;

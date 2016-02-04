@@ -119,7 +119,7 @@ struct SCIP_Reopt
 {
    SCIP_SOL**            prevbestsols;            /**< list of best solutions of all previous rounds */
    SCIP_Real**           objs;                    /**< list of objective coefficients */
-   SCIP_HISTORY**        varhistory;              /**< collected variable history */
+   SCIP_HISTORY***       varhistory;              /**< collected variable history */
    SCIP_REOPTCONSDATA**  glbconss;                /**< global constraints that need to be added at the beginning of the next iteration */
    SCIP_REOPTCONSDATA*   dualcons;                /**< constraint describing bound changes based on dual information */
    SCIP_REOPTTREE*       reopttree;               /**< data structure to store the current reoptimization search tree */

@@ -1059,6 +1059,7 @@ SCIP_RETCODE SCIPlpFreeNorms(
    );
 
 /** return the current cutoff bound of the lp */
+extern
 SCIP_Real SCIPlpGetCutoffbound(
    SCIP_LP*              lp                  /**< current LP data */
    );
@@ -1678,7 +1679,6 @@ void SCIPlpUnmarkDivingObjChanged(
  */
 
 #define SCIPlpGetCols(lp)               ((lp)->cols)
-#define SCIPlpGetCutoffbound(lp)        ((lp)->cutoffbound)
 #define SCIPlpGetNCols(lp)              ((lp)->ncols)
 #define SCIPlpGetRows(lp)               ((lp)->rows)
 #define SCIPlpGetNRows(lp)              ((lp)->nrows)

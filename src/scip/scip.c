@@ -14629,11 +14629,9 @@ SCIP_RETCODE SCIPsolve(
       case SCIP_STAGE_PRESOLVING:
          if( scip->set->stage == SCIP_STAGE_PROBLEM && (scip->set->reopt_sepaglbinfsubtrees || scip->set->reopt_sepabestsol) && scip->set->reopt_enable )
          {
-            SCIP_CALL( SCIPtransformProb(scip) );
-            assert(scip->set->stage == SCIP_STAGE_TRANSFORMED);
-
             SCIP_CALL( SCIPreoptApplyGlbConss(scip, scip->reopt, scip->set, scip->stat, scip->mem->probmem) );
          }
+
          /* initialize solving data structures, transform and problem */
          SCIP_CALL( SCIPpresolve(scip) );
 
@@ -14653,7 +14651,7 @@ SCIP_RETCODE SCIPsolve(
             if( scip->stat->nreoptruns >= 2 )
             {
                assert(scip->transprob != NULL);
-               SCIP_CALL( SCIPreoptMergeVarHistory(scip->reopt, scip->stat, scip->transprob->vars, scip->transprob->nvars) );
+               SCIP_CALL( SCIPreoptMergeVarHistory(scip->reopt, scip->set, scip->stat, scip->origprob, scip->transprob, scip->origprob->vars, scip->origprob->nvars) );
             }
          }
 
@@ -14809,7 +14807,7 @@ SCIP_RETCODE SCIPsolve(
       if( scip->set->reopt_storevarhistory )
       {
          SCIP_CALL( SCIPreoptUpdateVarHistory(scip->reopt, scip->set, scip->stat, scip->origprob, scip->transprob,
-               scip->mem->probmem, scip->transprob->vars, scip->transprob->nvars) );
+               scip->mem->probmem, scip->origprob->vars, scip->origprob->nvars) );
       }
    }
 
@@ -15682,7 +15680,7 @@ SCIP_Real SCIPgetReoptSimilarity(
    assert(run1 > 0 && run1 <= scip->stat->nreoptruns);
    assert(run2 > 0 && run2 <= scip->stat->nreoptruns);
 
-   if( run1 == scip->stat->nreoptruns && run2 == run1-1 )
+   if( (run1 == scip->stat->nreoptruns && run2 == run1-1) || (run2 == scip->stat->nreoptruns && run1 == run2-1) )
       return SCIPreoptGetSimToPrevious(scip->reopt);
    else
       return SCIPreoptGetSimilarity(scip->reopt, scip->set, run1, run2, scip->origprob->vars, scip->origprob->nvars);

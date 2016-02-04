@@ -31,6 +31,8 @@
 #include "scip/type_retcode.h"
 #include "scip/type_reopt.h"
 #include "scip/struct_reopt.h"
+#include "scip/struct_var.h"
+#include "scip/struct_history.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -457,9 +459,12 @@ SCIP_RETCODE SCIPreoptSaveOpenNodes(
 extern
 SCIP_RETCODE SCIPreoptMergeVarHistory(
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
-   SCIP_VAR**            vars,               /**< variable array */
-   int                   nvars               /**< number of variables */
+   SCIP_PROB*            origprob,           /**< original problem */
+   SCIP_PROB*            transprob,          /**< transformed problem */
+   SCIP_VAR**            vars,               /**< original problem variables */
+   int                   nvars               /**< number of original problem variables */
    );
 
 /** updates the variable history */

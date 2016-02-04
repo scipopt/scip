@@ -402,6 +402,7 @@ struct SCIP_Set
    SCIP_Bool             reopt_sepaglbinfsubtrees;/**< save global constraints to separate infeasible subtrees */
    SCIP_Bool             reopt_sepabestsol;  /**< separate only the best solution, i.e., for constrained shortest path */
    SCIP_Bool             reopt_storevarhistory;/**< use variable history of the previouse solve if the objctive function has changed only slightly */
+   SCIP_Bool             reopt_usepscost;    /**< reuse pseudo costs if the objective function changed only slightly */
    SCIP_Bool             reopt_usecuts;      /**< reoptimize cuts found at the root node */
    SCIP_Bool             reopt_usesplitcons; /**< use constraints to reconstruct the subtree pruned be dual reduction when reactivating the node */
 
