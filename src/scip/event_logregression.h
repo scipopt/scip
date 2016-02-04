@@ -38,7 +38,7 @@ SCIP_RETCODE SCIPincludeEventHdlrLogregression(
 
 /** get axis intercept of current tangent to logarithmic regression curve */
 extern
-SCIP_Real SCIPgetCurrentTangentAxisIntercept(
+SCIP_Real getCurrentRegressionTangentAxisIntercept(
   SCIP*                 scip,
   SCIP_EVENTHDLR*       eventhdlr
 );

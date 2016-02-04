@@ -67,7 +67,7 @@
 #include "scip/cons_varbound.h"
 #include "scip/cons_xor.h"
 #include "scip/disp_default.h"
-#include "scip/event_solvingstage.h"
+#include "scip/event_solvingphase.h"
 #include "scip/event_nodeevent.h"
 #include "scip/event_estimation.h"
 #include "scip/event_logregression.h"

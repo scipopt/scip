@@ -36,12 +36,12 @@
 #define EVENTHDLR_EVENT SCIP_EVENTTYPE_BESTSOLFOUND /**< the actual event to be caught */
 #define DEFAULT_XTYPE    'n' /**< default type to use for log regression - (t)ime, (n)odes, (l)p iterations */
 #define XTYPES           "lnt"
-#define SQUARED(x) (x * x)
+#define SQUARED(x) ((x) * (x))
 /** event handler data */
 struct SCIP_EventhdlrData
 {
    SCIP_Bool            enabled;             /**< should the event handler be executed? */
-   char                 xtype;               /**< type to use for log regression - (t)ime, (n)odes, (l)p iterations */
+   char                 logregression_xtype;               /**< type to use for log regression - (t)ime, (n)odes, (l)p iterations */
    SCIP_Real            lastx;
    SCIP_Real            lasty;
    int                  n;
@@ -65,7 +65,7 @@ SCIP_Real getX(
    )
 {
 
-   switch( eventhdlrdata->xtype )
+   switch( eventhdlrdata->logregression_xtype )
    {
    case 'l':
       if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING || SCIPgetStage(scip) == SCIP_STAGE_SOLVED )
@@ -90,7 +90,7 @@ SCIP_Real getX(
 }
 
 /** get axis intercept of current tangent to logarithmic regression curve */
-SCIP_Real SCIPgetCurrentTangentAxisIntercept(
+SCIP_Real getCurrentRegressionTangentAxisIntercept(
    SCIP*                 scip,
    SCIP_EVENTHDLR*       eventhdlr
    )
@@ -316,7 +316,7 @@ SCIP_RETCODE SCIPincludeEventHdlrLogregression(
          &eventhdlrdata->enabled, FALSE, DEFAULT_ENABLED, NULL, NULL) );
 
    SCIP_CALL( SCIPaddCharParam(scip, "eventhdlr/"EVENTHDLR_NAME"/xtype", "x type for log regression - (t)ime, (n)odes, (l)p iterations",
-                 &eventhdlrdata->xtype, FALSE, DEFAULT_XTYPE, XTYPES, NULL, NULL) );
+                 &eventhdlrdata->logregression_xtype, FALSE, DEFAULT_XTYPE, XTYPES, NULL, NULL) );
 
    return SCIP_OKAY;
 }

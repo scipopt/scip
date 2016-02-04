@@ -35,7 +35,7 @@
 #include "scip/nodesel.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/event_solvingstage.h"
+#include "scip/event_solvingphase.h"
 
 #include "scip/struct_nodesel.h"
 
@@ -988,7 +988,6 @@ SCIP_RETCODE SCIPnodeselSelect(
                if( (objsense == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsFeasLE(set, bestnodebound, aspirationvalue))
                      ||  (objsense == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsFeasGE(set, bestnodebound, aspirationvalue)))
                *selnode = bestnode;
-               //SCIPverbMessage(set->scip, SCIP_VERBLEVEL_NORMAL, NULL, "Backtracking 'cause of aspiration\n");
             }
          }
       }

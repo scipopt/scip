@@ -27,8 +27,7 @@
 #define EVENTHDLR_DESC         "event handler for treeinfos event"
 #define EVENT_TYPE_TREEINFOS  SCIP_EVENTTYPE_NODESOLVED | SCIP_EVENTTYPE_BESTSOLFOUND
 #define DEFAULT_ENABLED        TRUE
-#define HEADER "NUMBER  PRIMAL LOWER ESTIM ROOTLPPSESTIM DEPTH NCANDS NODELOWER LPSTAT"
-#define DEFAULT_FILEOUTPUT FALSE
+
 /*
  * Data structures
  */
@@ -310,10 +309,10 @@ void updateDepthinfo(
    if( SCIPisLT(scip, SCIPnodeGetEstimate(node), depthinfo->minestimate) )
       depthinfo->minestimate = SCIPnodeGetEstimate(node);
 
-   if( SCIPisLT(scip, SCIPnodeGetEstimate(node), SCIPgetUpperbound(scip) ) && SCIPnodeGetDepth(node) > 0 )
+   if( SCIPisLT(scip, SCIPnodeGetEstimate(node), SCIPgetUpperbound(scip)) && SCIPnodeGetDepth(node) > 0 )
       eventhdlrdata->nnodesbelowincumbent--;
    /* loop over remaining, unsolved nodes and decide whether they are still rank1 nodes */
-   while(  depthinfo->nminnodes > 0 && SCIPisGT(scip, SCIPnodeGetEstimate(depthinfo->minnodes[depthinfo->nminnodes - 1]), depthinfo->minestimate) )
+   while( depthinfo->nminnodes > 0 && SCIPisGT(scip, SCIPnodeGetEstimate(depthinfo->minnodes[depthinfo->nminnodes - 1]), depthinfo->minestimate) )
    {
       /* forget about node */
       --(depthinfo->nminnodes);
@@ -445,7 +444,7 @@ SCIP_DECL_EVENTCOPY(eventCopyTreeinfos)
 }
 /** initialization method of event handler (called after problem was transformed) */
 static
-SCIP_DECL_EVENTINITSOL(eventInitsolTreeinfos)
+SCIP_DECL_EVENTINITSOL(eventInitsolSolvingphase)
 {  /*lint --e{715}*/
 
    SCIP_EVENTHDLRDATA* eventhdlrdata;

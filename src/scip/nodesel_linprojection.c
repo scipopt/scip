@@ -24,7 +24,7 @@
 #include <string.h>
 
 #include "scip/nodesel_linprojection.h"
-#include "scip/event_solvingstage.h"
+#include "scip/event_solvingphase.h"
 
 #define NODESEL_NAME            "linprojection"
 #define NODESEL_DESC            "uses a linear projection method to estimate the best MIP solution in the nodes subtree"

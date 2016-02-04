@@ -329,10 +329,9 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_xor.o \
 			scip/dialog_default.o \
 			scip/disp_default.o \
-			scip/event_solvingstage.o \
+			scip/event_solvingphase.o \
 			scip/event_nodeevent.o \
 			scip/event_estimation.o \
-			scip/event_logregression.o \
 			scip/event_treeinfos.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_clique.o \
