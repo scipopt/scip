@@ -245,16 +245,17 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpnodereopt)
       SCIP_VAR** branchcands;
       SCIP_Real* branchcandssol;
       SCIP_Real* branchcandsfrac;
+      SCIP_Real objsimrootlp;
+      SCIP_Bool sbinit;
       int nbranchcands;
 
-      SCIP_Bool sbinit;
-      SCIP_Real objsimrootlp;
+      assert(SCIPgetNReoptRuns(scip) > 1);
 
       SCIP_CALL( SCIPgetBoolParam(scip, "reoptimization/strongbranchinginit", &sbinit) );
       SCIP_CALL( SCIPgetRealParam(scip, "reoptimization/objsimrootLP", &objsimrootlp) );
 
       if( sbinit && SCIPgetCurrentNode(scip) == SCIPgetRootNode(scip)
-       && SCIPgetReoptSimilarity(scip, SCIPgetNReoptRuns(scip), SCIPgetNReoptRuns(scip)) <= objsimrootlp ) /* check objsimrootlp */
+       && SCIPgetReoptSimilarity(scip, SCIPgetNReoptRuns(scip)-1, SCIPgetNReoptRuns(scip)) <= objsimrootlp ) /* check objsimrootlp */
       {
          /* get branching candidates */
          SCIP_CALL( SCIPgetLPBranchCands(scip, &branchcands, &branchcandssol, &branchcandsfrac, NULL, &nbranchcands, NULL) );
@@ -287,7 +288,7 @@ static SCIP_DECL_BRANCHEXECEXT(branchExecextnodereopt)
 
    *result = SCIP_DIDNOTRUN;
 
-   if ( SCIPisReoptEnabled(scip) && SCIPreoptimizeNode(scip, SCIPgetCurrentNode(scip)) )
+   if( SCIPisReoptEnabled(scip) && SCIPreoptimizeNode(scip, SCIPgetCurrentNode(scip)) )
    {
       assert((SCIPnodeGetReoptID(SCIPgetCurrentNode(scip)) == 0 && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
            || 1 <= SCIPnodeGetReoptID(SCIPgetCurrentNode(scip)));
