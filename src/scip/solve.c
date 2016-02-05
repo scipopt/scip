@@ -56,7 +56,7 @@
 #include "scip/prop.h"
 #include "scip/pub_misc.h"
 #include "scip/debug.h"
-#include "scip/event_treeinfos.h"
+#include "scip/event_solvingphase.h"
 
 #define MAXNLPERRORS  10                /**< maximal number of LP error loops in a single node */
 

@@ -42,7 +42,6 @@
 
 #include "scip/event_solvingphase.h"
 #include "string.h"
-#include "scip/event_treeinfos.h"
 
 #define EVENTHDLR_NAME         "solvingphase"
 #define EVENTHDLR_DESC         "event handler to adjust settings depending on current stage"
@@ -144,7 +143,6 @@ struct SCIP_EventhdlrData
    SCIP_Bool            useweightedquotients;/**< should weighted quotients between infeasible and pruned leaf nodes be considered? */
    SCIP_Bool            userestart1to2;      /**< should a restart be applied between the feasibility and improvement phase? */
    SCIP_Bool            userestart2to3;      /**< should a restart be applied between the improvement and the proof phase? */
-   SCIP_EVENTHDLR*      linregeventhdlr;     /**< pointer to the linear regression event handler */
    SCIP_Bool            testmode;            /**< should transitions be tested only, but not triggered? */
    SCIP_Bool            rank1reached;        /**< has the rank-1 transition into proof phase been reached? */
    SCIP_Bool            estimatereached;     /**< has the best-estimate transition been reached? */
@@ -289,6 +287,7 @@ void removeNode(
 }
 
 /** returns the current number of rank 1 nodes in the tree */
+static
 int SCIPgetNRank1Nodes(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -307,6 +306,7 @@ int SCIPgetNRank1Nodes(
 }
 
 /** returns the current number of open nodes which have an estimate lower than the incumbent solution */
+static
 int SCIPgetNNodesBelowIncumbent(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -325,6 +325,7 @@ int SCIPgetNNodesBelowIncumbent(
 }
 
 /** returns the number of leaves which hit the objective limit */
+static
 SCIP_Longint SCIPgetNObjLeaves(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -341,6 +342,7 @@ SCIP_Longint SCIPgetNObjLeaves(
 }
 
 /** returns the number of leaves which happened to be infeasible */
+static
 SCIP_Longint SCIPgetNInfeasLeaves(
    SCIP*                 scip                /**< SCIP data structure */
    )
@@ -1296,9 +1298,7 @@ SCIP_DECL_EVENTINIT(eventInitSolvingphase)
       SCIP_CALL( SCIPcatchEvent(scip, EVENTHDLR_EVENT, eventhdlr, NULL, &eventhdlrdata->eventfilterpos) );
    }
 
-   /* find the log regression event handler and store it */
-   eventhdlrdata->linregeventhdlr = SCIPfindEventhdlr(scip, "logregression");
-
+   /* reset solving regression */
    regressionReset(eventhdlrdata->regression);
 
    return SCIP_OKAY;
@@ -1309,13 +1309,37 @@ static
 SCIP_DECL_EVENTEXEC(eventExecSolvingphase)
 {  /*lint --e{715}*/
    SCIP_EVENTHDLRDATA* eventhdlrdata;
+   SCIP_EVENTTYPE eventtype;
 
    assert(scip != NULL);
    assert(eventhdlr != NULL);
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+   eventtype = SCIPeventGetType(event);
 
-   assert(SCIPeventGetType(event) & (EVENTHDLR_EVENT));
+   assert(eventtype & (EVENTHDLR_EVENT));
+
+   assert((eventtype & SCIP_EVENTTYPE_BESTSOLFOUND) || eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
+
+   if( eventtype & SCIP_EVENTTYPE_BESTSOLFOUND )
+   {
+      SCIP_CALL( storeRank1Nodes(scip, eventhdlrdata) );
+   }
+   else if( eventtype & SCIP_EVENTTYPE_NODEBRANCHED )
+   {
+      SCIP_NODE** children;
+      int nchildren;
+      SCIP_CALL( SCIPgetChildren(scip, &children, &nchildren) );
+      SCIP_CALL ( nodesUpdateRank1Nodes(scip, eventhdlrdata, children, nchildren) );
+   }
+   else if( eventtype & SCIP_EVENTTYPE_NODESOLVED )
+   {
+      updateLeafInfo(scip, eventhdlrdata->leafinfo, eventtype);
+   }
+
+   assert(eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
+   assert(eventhdlrdata->nnodesbelowincumbent == checkLeavesBelowIncumbent(scip));
+
 
    if( SCIPeventGetType(event) & SCIP_EVENTTYPE_BESTSOLFOUND )
    {
@@ -1360,6 +1384,102 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingphase)
    return SCIP_OKAY;
 }
 
+/*
+ * displays that come with this event handler
+ */
+
+/* defines for the rank 1 node display */
+#define DISP_NAME_NRANK1NODES         "nrank1nodes"
+#define DISP_DESC_NRANK1NODES         "current number of rank1 nodes left"
+#define DISP_HEAD_NRANK1NODES         "rank1"
+#define DISP_WIDT_NRANK1NODES         7
+#define DISP_PRIO_NRANK1NODES         40000
+#define DISP_POSI_NRANK1NODES         500
+#define DISP_STRI_NRANK1NODES         TRUE
+
+/** output method of display column to output file stream 'file' */
+static
+SCIP_DECL_DISPOUTPUT(dispOutputNRank1Nodes)
+{
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NRANK1NODES) == 0);
+   assert(scip != NULL);
+
+   /* ouput number of rank 1 nodes */
+   SCIPdispInt(SCIPgetMessagehdlr(scip), file, SCIPgetNRank1Nodes(scip), DISP_WIDT_NRANK1NODES);
+
+   return SCIP_OKAY;
+}
+
+/* display for the number of leaves passing the objective limit */
+#define DISP_NAME_NOBJLEAVES         "nobjleaves"
+#define DISP_DESC_NOBJLEAVES         "current number of encountered objective limit leaves"
+#define DISP_HEAD_NOBJLEAVES         "leavO"
+#define DISP_WIDT_NOBJLEAVES         6
+#define DISP_PRIO_NOBJLEAVES         40000
+#define DISP_POSI_NOBJLEAVES         600
+#define DISP_STRI_NOBJLEAVES         TRUE
+
+/** output method of display column to output file stream 'file' */
+static
+SCIP_DECL_DISPOUTPUT(dispOutputNObjLeaves)
+{
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NOBJLEAVES) == 0);
+   assert(scip != NULL);
+
+   /* ouput number of leaves that hit the objective */
+   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNObjLeaves(scip), DISP_WIDT_NOBJLEAVES);
+
+   return SCIP_OKAY;
+}
+
+/* display for number of encountered infeasible leaf nodes */
+#define DISP_NAME_NINFEASLEAVES         "ninfeasleaves"
+#define DISP_DESC_NINFEASLEAVES         "number of encountered infeasible leaves"
+#define DISP_HEAD_NINFEASLEAVES         "leavI"
+#define DISP_WIDT_NINFEASLEAVES         6
+#define DISP_PRIO_NINFEASLEAVES         40000
+#define DISP_POSI_NINFEASLEAVES         800
+#define DISP_STRI_NINFEASLEAVES         TRUE
+
+/** output method of display column to output file stream 'file' */
+static
+SCIP_DECL_DISPOUTPUT(dispOutputNInfeasLeaves)
+{
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NINFEASLEAVES) == 0);
+   assert(scip != NULL);
+
+   /* output number of encountered infeasible leaf nodes */
+   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNInfeasLeaves(scip), DISP_WIDT_NINFEASLEAVES);
+
+   return SCIP_OKAY;
+}
+
+/* display for the number of nodes below the current incumbent */
+#define DISP_NAME_NNODESBELOWINC         "nnodesbelowinc"
+#define DISP_DESC_NNODESBELOWINC         "current number of nodes with an estimate better than the current incumbent"
+#define DISP_HEAD_NNODESBELOWINC         "nbInc"
+#define DISP_WIDT_NNODESBELOWINC         6
+#define DISP_PRIO_NNODESBELOWINC         40000
+#define DISP_POSI_NNODESBELOWINC         550
+#define DISP_STRI_NNODESBELOWINC         TRUE
+
+/** output method of display column to output file stream 'file' */
+static
+SCIP_DECL_DISPOUTPUT(dispOutputNnodesbelowinc)
+{
+   assert(disp != NULL);
+   assert(strcmp(SCIPdispGetName(disp), DISP_NAME_NNODESBELOWINC) == 0);
+   assert(scip != NULL);
+
+   /* display the number of nodes with an estimate below the the current incumbent */
+   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, SCIPgetNNodesBelowIncumbent(scip), DISP_WIDT_NNODESBELOWINC);
+
+   return SCIP_OKAY;
+}
+
 /** creates event handler for Solvingphase event */
 SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
    SCIP*                 scip                /**< SCIP data structure */
@@ -1377,23 +1497,45 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
    eventhdlrdata->setfileimprove = NULL;
    eventhdlrdata->setfileproof = NULL;
 
-   eventhdlrdata->linregeventhdlr = NULL;
 
+   eventhdlrdata->depthinfos = NULL;
+   eventhdlrdata->maxdepth = 0;
+   eventhdlrdata->leafinfo = NULL;
+
+   /* create leaf information */
+   SCIP_CALL( createLeafInfo(scip, &eventhdlrdata->leafinfo) );
+
+   /* create a regression */
+   eventhdlrdata->regression = NULL;
    SCIP_CALL( regressionCreate(scip, &eventhdlrdata->regression) );
 
    eventhdlr = NULL;
-
 
    /* include event handler into SCIP */
    SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
          eventExecSolvingphase, eventhdlrdata) );
    assert(eventhdlr != NULL);
 
+   /* include the new displays into scip */
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NRANK1NODES, DISP_DESC_NRANK1NODES, DISP_HEAD_NRANK1NODES, SCIP_DISPSTATUS_ON,
+         NULL, NULL, NULL, NULL, NULL, NULL, dispOutputNRank1Nodes, NULL, DISP_WIDT_NRANK1NODES, DISP_PRIO_NRANK1NODES, DISP_POSI_NRANK1NODES,
+         DISP_STRI_NRANK1NODES) );
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NOBJLEAVES, DISP_DESC_NOBJLEAVES, DISP_HEAD_NOBJLEAVES, SCIP_DISPSTATUS_ON,
+         NULL, NULL, NULL, NULL, NULL, NULL, dispOutputNObjLeaves, NULL, DISP_WIDT_NOBJLEAVES, DISP_PRIO_NOBJLEAVES, DISP_POSI_NOBJLEAVES,
+         DISP_STRI_NOBJLEAVES) );
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NINFEASLEAVES, DISP_DESC_NINFEASLEAVES, DISP_HEAD_NINFEASLEAVES, SCIP_DISPSTATUS_ON,
+         NULL, NULL, NULL, NULL, NULL, NULL, dispOutputNInfeasLeaves, NULL, DISP_WIDT_NINFEASLEAVES, DISP_PRIO_NINFEASLEAVES, DISP_POSI_NINFEASLEAVES,
+         DISP_STRI_NINFEASLEAVES) );
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NNODESBELOWINC, DISP_DESC_NNODESBELOWINC, DISP_HEAD_NNODESBELOWINC, SCIP_DISPSTATUS_ON,
+         NULL, NULL, NULL, NULL, NULL, NULL, dispOutputNnodesbelowinc, NULL, DISP_WIDT_NNODESBELOWINC, DISP_PRIO_NNODESBELOWINC, DISP_POSI_NNODESBELOWINC,
+         DISP_STRI_NNODESBELOWINC) );
+
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetEventhdlrCopy(scip, eventhdlr, eventCopySolvingphase) );
    SCIP_CALL( SCIPsetEventhdlrFree(scip, eventhdlr, eventFreeSolvingphase) );
    SCIP_CALL( SCIPsetEventhdlrInit(scip, eventhdlr, eventInitSolvingphase) );
    SCIP_CALL( SCIPsetEventhdlrInitsol(scip, eventhdlr, eventInitsolSolvingphase) );
+   SCIP_CALL( SCIPsetEventhdlrExitsol(scip, eventhdlr, eventExitsolSolvingphase) );
 
    /* add Solvingphase event handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/enabled", "should the event handler be executed?",
@@ -1441,7 +1583,6 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
    /* add parameter for logarithmic regression */
    SCIP_CALL( SCIPaddCharParam(scip, "eventhdlr/"EVENTHDLR_NAME"/xtype", "x type for log regression - (t)ime, (n)odes, (l)p iterations",
         &eventhdlrdata->logregression_xtype, FALSE, DEFAULT_LOGREGRESSION_XTYPE, LOGREGRESSION_XTYPES, NULL, NULL) );
-
 
    return SCIP_OKAY;
 }
