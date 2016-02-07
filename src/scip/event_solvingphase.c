@@ -1222,7 +1222,6 @@ SCIP_DECL_EVENTINITSOL(eventInitsolSolvingphase)
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    assert(scip != NULL);
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-   assert(eventhdlrdata->eventfilterpos == -1);
    eventhdlrdata->depthinfos = NULL;
    eventhdlrdata->maxdepth = 0;
    eventhdlrdata->nnodesbelowincumbent = 0;
@@ -1321,24 +1320,27 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingphase)
 
    assert((eventtype & SCIP_EVENTTYPE_BESTSOLFOUND) || eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
 
-   if( eventtype & SCIP_EVENTTYPE_BESTSOLFOUND )
+   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
-      SCIP_CALL( storeRank1Nodes(scip, eventhdlrdata) );
-   }
-   else if( eventtype & SCIP_EVENTTYPE_NODEBRANCHED )
-   {
-      SCIP_NODE** children;
-      int nchildren;
-      SCIP_CALL( SCIPgetChildren(scip, &children, &nchildren) );
-      SCIP_CALL ( nodesUpdateRank1Nodes(scip, eventhdlrdata, children, nchildren) );
-   }
-   else if( eventtype & SCIP_EVENTTYPE_NODESOLVED )
-   {
-      updateLeafInfo(scip, eventhdlrdata->leafinfo, eventtype);
+      if( eventtype & SCIP_EVENTTYPE_BESTSOLFOUND )
+      {
+         SCIP_CALL( storeRank1Nodes(scip, eventhdlrdata) );
+      }
+      else if( eventtype & SCIP_EVENTTYPE_NODEBRANCHED )
+      {
+         SCIP_NODE** children;
+         int nchildren;
+         SCIP_CALL( SCIPgetChildren(scip, &children, &nchildren) );
+         SCIP_CALL ( nodesUpdateRank1Nodes(scip, eventhdlrdata, children, nchildren) );
+      }
+      else if( eventtype & SCIP_EVENTTYPE_NODESOLVED )
+      {
+         updateLeafInfo(scip, eventhdlrdata->leafinfo, eventtype);
+      }
+      assert(eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
+      assert(eventhdlrdata->nnodesbelowincumbent == checkLeavesBelowIncumbent(scip));
    }
 
-   assert(eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
-   assert(eventhdlrdata->nnodesbelowincumbent == checkLeavesBelowIncumbent(scip));
 
 
    if( SCIPeventGetType(event) & SCIP_EVENTTYPE_BESTSOLFOUND )
@@ -1501,6 +1503,7 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
    eventhdlrdata->depthinfos = NULL;
    eventhdlrdata->maxdepth = 0;
    eventhdlrdata->leafinfo = NULL;
+   eventhdlrdata->eventfilterpos = -1;
 
    /* create leaf information */
    SCIP_CALL( createLeafInfo(scip, &eventhdlrdata->leafinfo) );
