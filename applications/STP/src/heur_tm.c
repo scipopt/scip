@@ -321,6 +321,7 @@ SCIP_RETCODE SCIPheurPrunePCSteinerTree(
          result[e1] = CONNECT;
       }
    }
+
 #if 0
    char varname[SCIP_MAXSTRLEN];
    (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "A%d.gml", 0);
@@ -1144,9 +1145,6 @@ SCIP_RETCODE computeSteinerTreeVnoi(
             assert(vbase[i] == i);
 
       for( k = 0; k < nnodes; k++ )
-         assert(termsmark[vbase[k]]);
-
-      for( k = 0; k < nnodes; k++ )
       {
          connected[k] = FALSE;
          vcount[k] = 0;
@@ -1533,17 +1531,14 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
    else
    {
       /* graph large? */
-      if( nterms > 50 && nedges > 500 && 3 * nterms < nnodes )
+      if( 2 * nterms < nnodes )
       {
          mode = TM_DIJKSTRA;
       }
       else if( mode == AUTO )
       {
-         /* are there enough terminals for the voronoi based variant to (expectably) be advantageous? */
-         if( SCIPisGE(scip, ((double) nterms) / ((double) nnodes ), 0.05) )
-            mode = TM_VORONOI;
-         else
-            mode = TM_SP;
+         /* enough terminals for the voronoi based variant to (expectably) be advantageous */
+         mode = TM_DIJKSTRA;
       }
    }
 
@@ -2152,7 +2147,6 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
          SCIPfreeBufferArray(scip, &orgcost);
       }
    }
-
 
    /* free allocated memory */
    SCIPfreeBufferArrayNull(scip, &perm);

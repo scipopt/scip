@@ -302,9 +302,9 @@ char* strlower(
 /*--- Returns  : Nothing                                                  ---*/
 /*---------------------------------------------------------------------------*/
 static void message(
-   unsigned int type,
-   const CURF*  curf,
-   const char*  msg,
+   unsigned int          type,
+   const CURF*           curf,
+   const char*           msg,
    ...)
 {
    va_list params;
@@ -338,8 +338,8 @@ static void message(
 /*--- Returns  : <0 : key<elem, =0 : key=elem, >0 : key>elem              ---*/
 /*---------------------------------------------------------------------------*/
 static int key_cmp(
-   const void* key,
-   const void* elem)
+   const void*           key,
+   const void*           elem)
 {
    assert(key                                != NULL);
    assert(elem                               != NULL);
@@ -358,8 +358,8 @@ static int key_cmp(
 /*--- Returns  : <0 : key<sec, =0 : key=sec, >0 : key>sec                 ---*/
 /*---------------------------------------------------------------------------*/
 static int sec_cmp(
-   const void* key,
-   const void* section)
+   const void*          key,
+   const void*          section)
 {
    assert(key                                    != NULL);
    assert(section                                != NULL);
@@ -376,10 +376,10 @@ static int sec_cmp(
 /*--- Returns  : 0 for success and < 0 for failure.                       ---*/
 /*---------------------------------------------------------------------------*/
 static int get_arguments(
-   const CURF* curf,
-   const char* format,
-   const char* s,
-   PARA*       para)
+   const CURF*           curf,
+   const char*           format,
+   const char*           s,
+   PARA*                 para)
 {
    const char* err_missmatch_v = "Wrong Syntax";
    const char* msg_hello_ss    = "get_arguments(\"%s\", \"%s\")";
@@ -1212,7 +1212,11 @@ SCIP_RETCODE graph_load(
                         assert(nodes == termcount);
                         if( g != NULL )
                         {
-                           SCIP_CALL( graph_maxweight_transform(scip, g, g->prize) );
+#if 1
+                          SCIP_CALL( graph_maxweight_transform(scip, g, g->prize) );
+#else
+			  SCIP_CALL( graph_MwcsToSap(scip, g, g->prize) );
+#endif
                         }
                         else
                         {
@@ -1224,7 +1228,11 @@ SCIP_RETCODE graph_load(
                      }
                      else if( stp_type == STP_PRIZE_COLLECTING )
                      {
-                        SCIP_CALL( graph_prize_transform(scip, g) );
+#if 1
+                       SCIP_CALL( graph_prize_transform(scip, g) );
+#else
+		       SCIP_CALL( graph_PcToSap(scip, g) );
+#endif
                      }
                      else if( stp_type == STP_ROOTED_PRIZE_COLLECTING )
                      {

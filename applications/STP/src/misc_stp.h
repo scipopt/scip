@@ -107,7 +107,7 @@ void SCIPintListNodeFree(
    IDX**                 node                /**< pointer to the last list node */
    );
 
-/* compares distances of two GNODE structures */
+/** compares distances of two GNODE structures */
 extern
 int GNODECmpByDist(
    void                  *first_arg,         /**< first argument */

@@ -18,17 +18,13 @@
  * @author Thorsten Koch
  * @author Daniel Rehfeldt
  *
- * Das Nachfolgende ist eine Implementierung von Dijkstras Algorithmus
- * mit einem Heap zur Verwaltung der aktiven Knoten.
+ * This file encompasses various (heap-based) shortest path based algorithms inluding
+ * Dijkstra's algorithm and Voronoi diagram algorithms
  *
- * Heaproutinen siehe:
+ * The underlying heap routines can be found in Jon Bentley, Programming Pearls, Addison-Wesley 1989
  *
- *       Jon Bentley, Programming Pearls, Addison-Wesley 1989
- *
- * Die Heaptabelle wird mit n (Knoten) Elementen initialisiert, aber erst ab
- * Element 1 benutzt, da aber Knoten 0 als Erster in die Tabelle aufgenommen
- * und dann sofort wieder entfernt wird, koennen maximal n-1 Knoten
- * in der Tabelle sein.
+ * The heap array is initialized with n elements (nodes), but only at most n-1 nodes can be included
+ * in the array, since element 0 is not used for storing.
  */
 #include <stdlib.h>
 #include <stdio.h>
@@ -542,12 +538,13 @@ void graph_path_exec(
    }
 }
 
-/** limited Dijkstra, stoping at terminals */
+/** limited Dijkstra, stopping at terminals */
 void sdpaths(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    PATH*                 path,               /**< shortest paths data structure */
    SCIP_Real*            cost,               /**< edge costs */
+   SCIP_Real             distlimit,          /**< distance limit of the search */
    int*                  heap,               /**< array representing a heap */
    int*                  state,              /**< array to indicate whether a node has been scanned during SP calculation */
    int*                  memlbl,             /**< array to save labelled nodes */
@@ -614,6 +611,10 @@ void sdpaths(
 
       /* scanned */
       state[k] = CONNECT;
+
+      /* distance limit reached? */
+      if( SCIPisGT(scip, path[k].dist, distlimit) )
+        break;
 
       /* stop at terminals */
       if( Is_term(g->term[k]) || k == head )
@@ -741,8 +742,6 @@ void graph_path_st(
    heap = g->path_heap;
    state = g->path_state;
 
-   if( start == 3029 )
-      printf("start 3029 \n");
    /* initialize */
    for( k = 0; k < nnodes; k++ )
    {
@@ -1120,7 +1119,101 @@ void voronoi(
    }
 }
 
-/* 2th next terminal to all non terminal nodes */
+
+/** Voronoi Steiner tree extension for RPC, PC and MW */
+void voronoiSteinerTreeExt(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const GRAPH*          g,                  /**< graph data structure */
+   SCIP_Real*            costrev,            /**< reversed edge costs */
+   int*                  vbase,              /**< voronoi base to each vertex */
+   char*                 stvertex,           /**< array to indicate whether a vertex is a Voronoi base */
+   PATH*                 path                /**< path data struture (leading to respective Voronoi base) */
+   )
+{
+   int k;
+   int m;
+   int i;
+   int count;
+   int nnodes;
+   int nbases;
+   int* heap;
+   int* state;
+
+   assert(scip != NULL);
+   assert(g      != NULL);
+   assert(g->path_heap   != NULL);
+   assert(g->path_state  != NULL);
+   assert(path   != NULL);
+   assert(costrev   != NULL);
+   assert(stvertex   != NULL);
+
+   heap = g->path_heap;
+   count = 0;
+   state = g->path_state;
+   nbases = 0;
+   nnodes = g->knots;
+
+   /* initialize */
+   for( i = 0; i < nnodes; i++ )
+   {
+      /* set the base of vertex i */
+      if( !stvertex[i] && Is_pterm(g->term[i]) )
+      {
+         nbases++;
+         if( nnodes > 1 )
+            heap[++count] = i;
+         vbase[i] = i;
+         path[i].dist = -(g->prize[i]);
+         path[i].edge = UNKNOWN;
+         state[i] = count;
+      }
+      else
+      {
+         vbase[i] = UNKNOWN;
+         path[i].dist = FARAWAY;
+         path[i].edge = UNKNOWN;
+         state[i]     = UNKNOWN;
+      }
+   }
+
+   if( nbases == 0)
+      return;
+
+   if( nnodes > 1 )
+   {
+      /* until the heap is empty */
+      while( count > 0 )
+      {
+         /* get the next (i.e. a nearest) vertex of the heap */
+         k = nearest(heap, state, &count, path);
+
+         /* mark vertex k as scanned */
+         state[k] = CONNECT;
+
+	 if( SCIPisGT(scip, path[k].dist, 0.0) )
+	    break;
+
+	 /* stop at Steiner tree */
+	 if( stvertex[k] )
+	    continue;
+
+         /* iterate over all outgoing edges of vertex k */
+         for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
+         {
+            m = g->head[i];
+
+            /* check whether the path (to m) including k is shorter than the so far best known */
+            if( vbase[m] != m && (state[m]) && SCIPisGT(scip, path[m].dist, path[k].dist + costrev[i]) && !Is_term(g->term[m]) )
+            {
+               correct(scip, heap, state, &count, path, m, k, i, costrev[i], FSP_MODE);
+               vbase[m] = vbase[k];
+            }
+         }
+      }
+   }
+}
+
+/** 2th next terminal to all non terminal nodes */
 void get2next(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
@@ -1580,13 +1673,13 @@ void getnext4tterms(
    return;
 }
 
-/** build a voronoi region in presolving, w.r.t. shortest paths, for all terminals*/
+/** build a Voronoi region in presolving, w.r.t. shortest paths, for all terminals */
 void voronoi_terms(
    SCIP*                 scip,               /**< SCIP data structure */
    const GRAPH*          g,                  /**< graph data structure */
    SCIP_Real*            cost,               /**< edge costs */
    PATH*                 path,               /**< path data struture (leading to respective Voronoi base) */
-   int*                  vbase,              /**< Voronoi base to each vertex*/
+   int*                  vbase,              /**< Voronoi base to each vertex */
    int*                  heap,               /**< array representing a heap */
    int*                  state               /**< array to mark the state of each node during calculation */
    )
@@ -1612,6 +1705,7 @@ void voronoi_terms(
          nbases++;
          if( g->knots > 1 )
             heap[++count] = i;
+	 //printf("add %d\n",i);
          vbase[i] = i;
          path[i].dist = 0.0;
          path[i].edge = UNKNOWN;
@@ -1637,16 +1731,21 @@ void voronoi_terms(
 
          /* mark vertex k as scanned */
          state[k] = CONNECT;
-
+//printf("check: %d\n", k);
          /* iterate over all outgoing edges of vertex k */
          for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
          {
-            m = g->head[i];
+	    m = g->head[i];
+	    if( m == 13 )
+	     printf("scrutinize %d: %f from %d\n", m, path[k].dist + cost[i], k);
+
             /* check whether the path (to m) including k is shorter than the so far best known */
             if( (state[m]) && SCIPisGT(scip, path[m].dist, path[k].dist + cost[i]) && g->mark[m] )
             {
                correct(scip, heap, state, &count, path, m, k, i, cost[i], FSP_MODE);
                vbase[m] = vbase[k];
+//	       	   printf("%d vbase: %d\n", m, vbase[m]);
+
             }
          }
       }

@@ -33,7 +33,6 @@
 #include "heur_tm.h"
 #include "heur_local.h"
 #include "heur_rec.h"
-#include "heur_rs.h"
 #include "pricer_stp.h"
 #include "event_bestsol.h"
 #include "probdata_stp.h"
@@ -77,14 +76,13 @@ SCIP_RETCODE runShell(
 #if 1
    /* include Takahashi Matsuyama heuristic */
    SCIP_CALL( SCIPincludeHeurTM(scip) );
-#endif
-#if 1
+
    /* include local heuristics */
    SCIP_CALL( SCIPincludeHeurLocal(scip) );
-#endif
 #if 1
    /* include recombination heuristic */
    SCIP_CALL( SCIPincludeHeurRec(scip) );
+#endif
 #endif
    /* include event handler for printing primal solution development */
    SCIP_CALL( SCIPincludeEventHdlrBestsol(scip) );

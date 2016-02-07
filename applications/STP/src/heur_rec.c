@@ -37,6 +37,7 @@
 #include "heur_local.h"
 #include "grph.h"
 #include "heur_tm.h"
+#include "cons_stp.h"
 #include "scip/pub_misc.h"
 #include "probdata_stp.h"
 
@@ -978,7 +979,7 @@ SCIP_DECL_HEUREXEC(heurExecRec)
          if( probtype == STP_ROOTED_PRIZE_COLLECTING || probtype == STP_HOP_CONS || probtype == STP_DEG_CONS || probtype == STP_MAX_NODE_WEIGHT )
             SCIP_CALL( reduce(scip, &solgraph, &pobj, 0, 2) );
          else
-            SCIP_CALL( reduce(scip, &solgraph, &pobj, 1, 2) );
+            SCIP_CALL( reduce(scip, &solgraph, &pobj, 1, 10) );
 
          SCIP_CALL( graph_pack(scip, solgraph, &psolgraph, FALSE) );
 	 solgraph = psolgraph;
@@ -1036,23 +1037,24 @@ SCIP_DECL_HEUREXEC(heurExecRec)
                   nodepriority[solgraph->tail[e]] += avg - 1.0;
                   if( modcost )
                   {
-                     mult = costMultiplier(scip, heurdata, avg);
-                     cost[e] = cost[e] * mult;
+                    mult = costMultiplier(scip, heurdata, avg);
+                    cost[e] = cost[e] * mult;
                   }
                }
 
                if( probtype == STP_HOP_CONS && SCIPisLT(scip, cost[e], BLOCKED) && SCIPisGT(scip, cost[e], maxcost) )
                   maxcost = cost[e];
             }
-            for( e = 0; e < nsoledges; e++)
+
+            for( e = 0; e < nsoledges; e++ )
+	    {
                costrev[e] = cost[flipedge(e)];
+	       results[e] = UNKNOWN;
+	    }
 
             /* init shortest path algorithm */
             SCIP_CALL( graph_path_init(scip, solgraph) );
 
-            /* set (edge) result array to default */
-            for( e = 0; e < nsoledges; e++ )
-               results[e] = UNKNOWN;
             /* run TM heuristic */
             SCIP_CALL( SCIPheurComputeSteinerTree(scip, tmheurdata, solgraph, NULL, &best_start, results, heurdata->ntmruns,
                   solgraph->source[0], cost, costrev, &hopfactor, nodepriority, maxcost, &success) );
@@ -1086,7 +1088,6 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
          for( i = 0; i < nedges; i++ )
             orgresults[i] = UNKNOWN;
-
 
          /* allocate memory */
          SCIP_CALL( SCIPallocBufferArray(scip, &stnodes, nedges) );
@@ -1199,7 +1200,6 @@ SCIP_DECL_HEUREXEC(heurExecRec)
          SCIPfreeMemoryArray(scip, &edgeancestor);
          SCIPfreeMemoryArray(scip, &edgeweight);
          graph_free(scip, solgraph, TRUE);
-
       }
       else
       {
@@ -1209,8 +1209,6 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
    if( *result != SCIP_FOUNDSOL )
       heurdata->nfailures++;
- /*  else
-      heurdata->nfailures = 0;*/
 
    heurdata->lastsolindex = lastsolindex;
    heurdata->bestsolindex = SCIPsolGetIndex(SCIPgetBestSol(scip));

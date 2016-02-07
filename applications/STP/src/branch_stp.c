@@ -13,10 +13,13 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /**@file   branch_stp.c
- * @brief  branch
+ * @brief  Steiner vertex branching rule
  * @author Daniel Rehfeldt
-
- blaaaaaaaaa bla bla blaaa bl
+ *
+ * The Steiner branching rule implemented in this file is described in
+ * "A Generic Approach to Solving the Steiner Tree Problem and Variants" by Daniel Rehfeldt.
+ * It includes and exludes Steiner vertices during branching.
+ *
 */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
@@ -35,7 +38,7 @@
 
 #define BRANCHRULE_NAME            "stp"
 #define BRANCHRULE_DESC            "stp branching on vertices"
-#define BRANCHRULE_PRIORITY        1000000
+#define BRANCHRULE_PRIORITY        -1000000
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
@@ -90,39 +93,17 @@ SCIP_RETCODE selectBranchingVertex(
    assert(edgevars != NULL);
 
    nnodes = g->knots;
-#if 0
-   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 
-   /* copy the current LP solution to the working solution */
-   SCIP_CALL( SCIPlinkLPSol(scip, sol) );
-
-   xval = SCIPprobdataGetXval(scip, sol);
-
-   assert(xval != NULL);
-
-   SCIP_CALL( SCIPfreeSol(scip, &sol) );
-#endif
    SCIP_CALL( SCIPallocBufferArray(scip, &inflow, nnodes) );
 
    branchvert = UNKNOWN;
    maxflow = 1.0;
    for( k = 0; k < nnodes; k++ )
    {
-      /*
-
-        if( Is_term(graph->term[k]) )
-        continue;
-      */
       inflow[k] = 0.0;
       for( a = g->inpbeg[k]; a != EAT_LAST; a = g->ieat[a] )
-	 inflow[k] += SCIPvarGetLPSol(edgevars[a]); //xval[a];
-#if 0
-      if( !Is_term(g->term[k]) && SCIPisLT(scip, inflow[k], 1.0) && SCIPisGT(scip, inflow[k], maxflow) )
-      {
-         branchvert = k;
-	 maxflow = inflow[k];
-      }
-#endif
+	 inflow[k] += SCIPvarGetLPSol(edgevars[a]);
+
       if( !Is_term(g->term[k]) && SCIPisLT(scip, inflow[k], 1.0) && SCIPisLT(scip, fabs(inflow[k] - 0.5), maxflow) )
       {
          branchvert = k;
@@ -204,7 +185,6 @@ SCIP_DECL_BRANCHEXIT(branchExitStp)
 static
 SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
 {  /*lint --e{715}*/
-   SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_PROBDATA* probdata;
    SCIP_CONS* consin;
    SCIP_CONS* consout;
@@ -223,14 +203,9 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    assert(result != NULL);
 
    SCIPdebugMessage("Execlp method of Stp branching\n ");
-   estimatein = 0.0;
-   estimateout = 0.0;
+   estimatein = SCIPgetUpperbound(scip);
+   estimateout = SCIPgetUpperbound(scip);
    *result = SCIP_DIDNOTRUN;
-
-   /* get branching rule data */
-   branchruledata = SCIPbranchruleGetData(branchrule);
-
-   assert(branchruledata != NULL);
 
    /* get problem data */
    probdata = SCIPgetProbData(scip);
@@ -246,7 +221,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
 
    if( branchvertex == UNKNOWN )
    {
-      printf("branch did not run \n");
+      SCIPdebugMessage("Branching did not run \n");
       return SCIP_OKAY;
    }
 
@@ -270,10 +245,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
 
    /* create the child nodes */
    SCIP_CALL( SCIPcreateChild(scip, &vertexin, 1.0, estimatein) );
-   //      SCIPdebugMessage(" down node: lowerbound %f estimate %f\n", SCIPnodeGetLowerbound(vertexin), SCIPnodeGetEstimate(vertexin));
 
    SCIP_CALL( SCIPcreateChild(scip, &vertexout, 1.0, estimateout) );
-   //    SCIPdebugMessage(" up node: lowerbound %f estimate %f\n", SCIPnodeGetLowerbound(vertexout), SCIPnodeGetEstimate(vertexout));
 
    assert(vertexin != NULL);
    assert(vertexout != NULL);

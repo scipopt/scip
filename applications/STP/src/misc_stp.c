@@ -38,7 +38,7 @@
 #include "portab.h"
 #include "scip/misc.h"
 
-/* compares distances of two GNODE structures */
+/** compares distances of two GNODE structures */
 SCIP_DECL_SORTPTRCOMP(GNODECmpByDist)
 {
    SCIP_Real first = ((GNODE*)elem1)->dist;

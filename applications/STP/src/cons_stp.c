@@ -40,10 +40,13 @@
 
 #include "cons_stp.h"
 #include "probdata_stp.h"
-
-#include "scip/scip.h"
 #include "grph.h"
 #include "portab.h"
+
+#include "scip/scip.h"
+#include "scip/misc.h"
+#include "scip/cons_linear.h"
+
 
 /**@name Constraint handler properties
  *
@@ -72,10 +75,12 @@
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
 
 #define DEFAULT_BACKCUT        FALSE /**< Try Back-Cuts FALSE*/
-#define DEFAULT_CREEPFLOW      TRUE /**< Use Creep-Flow */
+#define DEFAULT_CREEPFLOW      TRUE  /**< Use Creep-Flow */
 #define DEFAULT_DISJUNCTCUT    FALSE /**< Only disjunct Cuts FALSE */
-#define DEFAULT_NESTEDCUT      FALSE/**< Try Nested-Cuts FALSE*/
-#define DEFAULT_FLOWSEP        TRUE /**< Try Flow-Cuts */
+#define DEFAULT_NESTEDCUT      FALSE /**< Try Nested-Cuts FALSE*/
+#define DEFAULT_FLOWSEP        TRUE  /**< Try Flow-Cuts */
+
+#define DEFAULT_DAMAXDEVIATION 0.25  /**< max deviation for dual ascent */
 
 #define FLOW_FACTOR     100000
 #define CREEP_VALUE     1
@@ -103,7 +108,6 @@ struct SCIP_ConshdlrData
    int                   maxroundsroot;      /**< maximal number of separation rounds in the root node (-1: unlimited) */
    int                   maxsepacuts;        /**< maximal number of cuts separated per separation round */
    int                   maxsepacutsroot;    /**< maximal number of cuts separated per separation round in the root node */
-
 };
 
 
@@ -184,7 +188,7 @@ SCIP_RETCODE cut_add(
 
    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
 
-   /* checks, if cut is sufficiently violated */
+   /* checks whether cut is sufficiently violated */
    if( SCIPisCutEfficacious(scip, NULL, row) )
    {
       SCIP_Bool infeasible;
@@ -761,6 +765,24 @@ SCIP_DECL_CONSFREE(consFreeStp)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_CONSINITSOL(consInitsolStp)
+{  /*lint --e{715}*/
+#if 0
+   SCIP_PROBDATA* probdata;
+   GRAPH* graph;
+   printf("init \n\n");
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   graph = SCIPprobdataGetGraph(probdata);
+   assert(graph != NULL);
+
+   SCIP_CALL( SCIPdualAscentStp(scip, graph, 10) );
+#endif
+   return SCIP_OKAY;
+}
 
 /** frees specific constraint data */
 static
@@ -807,6 +829,28 @@ SCIP_DECL_CONSTRANS(consTransStp)
    return SCIP_OKAY;
 }
 
+#if 1
+/** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */
+static
+SCIP_DECL_CONSINITLP(consInitlpStp)
+{  /*lint --e{715}*/
+   SCIP_PROBDATA* probdata;
+   GRAPH* graph;
+   SCIP_Real lpobjval;
+
+   printf("init \n\n");
+   probdata = SCIPgetProbData(scip);
+   assert(probdata != NULL);
+
+   graph = SCIPprobdataGetGraph(probdata);
+   assert(graph != NULL);
+#if 0
+   SCIP_CALL( SCIPdualAscentPcStp(scip, graph, NULL, &lpobjval, TRUE, 1) );
+#endif
+
+   return SCIP_OKAY;
+}
+#endif
 /** separation method of constraint handler for LP solutions */
 static
 SCIP_DECL_CONSSEPALP(consSepalpStp)
@@ -1040,6 +1084,8 @@ SCIP_RETCODE SCIPincludeConshdlrStp(
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyStp, consCopyStp) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteStp) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransStp) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolStp) );
+   SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpStp) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropStp, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpStp, NULL, CONSHDLR_SEPAFREQ,
@@ -1104,6 +1150,860 @@ SCIP_RETCODE SCIPcreateConsStp(
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, FALSE, TRUE, TRUE, TRUE, TRUE,
          FALSE, FALSE, FALSE, FALSE, FALSE) );
 
+   return SCIP_OKAY;
+}
+
+/** dual ascent heuristic */
+SCIP_RETCODE SCIPdualAscentStp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            redcost,            /**< array to store reduced costs or NULL */
+   SCIP_Real*            objval,             /**< pointer to store objective value */
+   SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
+   GNODE**               gnodearrterms,      /**< gnode terminals array for internal computations or NULL */
+   int*                  edgearrint,         /**< int edges array for internal computations or NULL */
+   int*                  nodearrint,         /**< int vertices array for internal computations or NULL */
+   int                   root,               /**< the root */
+   int                   nruns,              /**< number of dual ascent runs */
+   char*                 edgearrchar,        /**< char edges array for internal computations or NULL */
+   char*                 nodearrchar         /**< char vertices array for internal computations or NULL */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_QUEUE* queue;
+   SCIP_PQUEUE* pqueue;
+   SCIP_VAR** vars;
+   SCIP_Real min;
+   SCIP_Real prio1;
+   SCIP_Real prio2;
+   SCIP_Real score;
+   SCIP_Real dualobj;
+   SCIP_Real currscore;
+   SCIP_Real maxdeviation;
+   SCIP_Real* rescap;
+   SCIP_Bool infeasible;
+   GNODE* gnodeact;
+   GNODE** gnodearr;
+   int i;
+   int k;
+   int v;
+   int a;
+   int tail;
+   int nnodes;
+   int nterms;
+   int nedges;
+   int ncutverts;
+   int nunsatarcs;
+   int* pnode;
+   int* cutverts;
+   int* unsatarcs;
+   char firstrun;
+   char* sat;
+   char* active;
+
+   assert(g != NULL);
+   assert(scip != NULL);
+   assert(nruns >= 0);
+   assert(objval != NULL);
+   assert(Is_term(g->term[root]));
+
+   if( g->knots == 1 )
+      return SCIP_OKAY;
+
+   if( addcuts )
+   {
+      vars = SCIPprobdataGetVars(scip);
+      assert(vars != NULL);
+   }
+   else
+   {
+      vars = NULL;
+   }
+
+   nnodes = g->knots;
+   nedges = g->edges;
+   nterms = g->terms;
+   dualobj = 0.0;
+   conshdlr = SCIPfindConshdlr(scip, "stp");
+   maxdeviation = DEFAULT_DAMAXDEVIATION;
+
+   /* if specified root is not a terminal, take default root */
+   if( !Is_term(g->term[root]) )
+      root = g->source[0];
+
+   /* allocate memory if not available */
+
+   if( redcost == NULL )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &rescap, nedges) );
+   }
+   else
+   {
+      rescap = redcost;
+   }
+
+   if( edgearrchar == NULL )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &sat, nedges) );
+   }
+   else
+   {
+      sat = edgearrchar;
+   }
+
+   if( nodearrchar == NULL )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &active, nnodes) );
+   }
+   else
+   {
+      active = nodearrchar;
+   }
+
+   if( nodearrint == NULL )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &cutverts, nnodes) );
+   }
+   else
+   {
+      cutverts = nodearrint;
+   }
+
+   if( edgearrint == NULL )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &unsatarcs, nedges) );
+   }
+   else
+   {
+      unsatarcs = edgearrint;
+   }
+
+
+   if( gnodearrterms == NULL )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
+       for( i = 0; i < nterms - 1; i++ )
+      {
+      SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
+      }
+   }
+   else
+   {
+      gnodearr = gnodearrterms;
+   }
+
+
+   SCIP_CALL( SCIPqueueCreate(&queue, nnodes - nterms + 1, 2.0) );
+   SCIP_CALL( SCIPpqueueCreate( &pqueue, nterms, 2.0, GNODECmpByDist) );
+
+   k = 0;
+
+   /* mark terminals as active, add all except root to pqueue */
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(g->term[i]) )
+      {
+	 active[i] = TRUE;
+	 assert(g->grad[i] > 0);
+         if( i != root  )
+         {
+            gnodearr[k]->number = i;
+	    gnodearr[k]->dist = g->grad[i];
+	    if( g->grad[i] == 2 )
+	    {
+	    for( a = g->inpbeg[i]; a != EAT_LAST; a = g->ieat[a] )
+	      if( SCIPisEQ(scip, g->cost[a], 0.0) )
+		break;
+
+	      if( a != EAT_LAST )
+	      gnodearr[k]->dist += g->grad[g->tail[a]] - 1;
+
+	 //     printf("%d grad: %d grad2 %d, score %f\n", i, g->grad[i], g->grad[g->tail[a]], gnodearr[k]->dist);
+	   assert(gnodearr[k]->dist > 0);
+	    }
+
+#if 0
+	    gnodearr[k]->dist = g->grad[i] - 1;
+
+	    for( a = g->inpbeg[i]; a != EAT_LAST; a = g->ieat[a] )
+	      if( SCIPisEQ(scip, g->cost[a], 0.0) )
+		gnodearr[k]->dist += g->grad[g->tail[a]] - 2;
+#endif
+            SCIP_CALL( SCIPpqueueInsert(pqueue, gnodearr[k++]) );
+         }
+      }
+      else
+      {
+         active[i] = FALSE;
+      }
+      g->mark[i] = FALSE;
+   }
+
+   for( i = 0; i < nedges; i++ )
+   {
+     rescap[i] = g->cost[i];
+      if( SCIPisZero(scip, rescap[i]) )
+	sat[i] = TRUE;
+	else
+      sat[i] = FALSE;
+   }
+
+   /* dual ascent loop */
+   while( SCIPpqueueNElems(pqueue) > 0 && !SCIPisStopped(scip) )
+   {
+      /* get active vertex of minimum score */
+      gnodeact = (GNODE*) SCIPpqueueRemove(pqueue);
+
+      v = gnodeact->number;
+      prio1 = gnodeact->dist;
+
+      if( SCIPpqueueNElems(pqueue) > 0 )
+         prio2 = ((GNODE*) SCIPpqueueFirst(pqueue))->dist;
+      else
+         prio2 = FARAWAY;
+
+      firstrun = TRUE;
+      nunsatarcs = 0;
+
+      /* perform augmentation as long as ... */
+      while( !SCIPisStopped(scip) && nunsatarcs != -1 )
+      {
+         /* 1. pass: bfs from v on saturated, incoming arcs */
+         score = g->grad[v];
+         ncutverts = 0;
+         nunsatarcs = 0;
+         g->mark[v] = TRUE;
+         cutverts[ncutverts++] = v;
+         SCIP_CALL( SCIPqueueInsert(queue, &(g->tail[g->outbeg[v]])) );
+
+         while( !SCIPqueueIsEmpty(queue) )
+         {
+            pnode = (SCIPqueueRemove(queue));
+
+            /* traverse incoming arcs */
+            for( a = g->inpbeg[*pnode]; a != EAT_LAST; a = g->ieat[a] )
+            {
+               tail = g->tail[a];
+               if( sat[a] )
+               {
+                  if( !g->mark[tail] )
+                  {
+                     /* if an active vertex has been hit, break */
+                     if( active[tail] )
+                     {
+                        nunsatarcs = -1;
+                        active[v] = FALSE;
+                        SCIPqueueClear(queue);
+                        goto ENDOFLOOP;
+                     }
+
+                     score += g->grad[tail];
+                     g->mark[tail] = TRUE;
+                     cutverts[ncutverts++] = tail;
+                     SCIP_CALL( SCIPqueueInsert(queue, &(g->tail[a])) );
+                  }
+               }
+               else if( !g->mark[tail] )
+               {
+                  unsatarcs[nunsatarcs++] = a;
+               }
+            }
+         }
+
+         /* 2. pass: get minimum residual capacity among cut-arcs */
+         min = FARAWAY;
+         for( i = 0; i < nunsatarcs; i++ )
+         {
+            a = unsatarcs[i];
+            if( g->mark[g->tail[a]] )
+               unsatarcs[i] = -1;
+            else if( SCIPisLT(scip, rescap[a], min) )
+               min = rescap[a];
+         }
+
+         currscore = score - (ncutverts - 1);
+//printf("%d curr: %f prio: %f \n", v, currscore, prio1);
+         assert(SCIPisGE(scip, currscore, prio1));
+
+         /* augmentation criteria met? */
+         if( SCIPisLE(scip, currscore, prio2) || (firstrun && SCIPisLT(scip, (currscore - prio1) / prio1, maxdeviation)) )
+         {
+            //SCIP_ROW* row;
+            SCIP_CONS* cons;
+
+	    firstrun = FALSE;
+
+            /* 3. pass: perform augmentation */
+            // SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "dualascentcut", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
+            // SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+            /* create constraint */
+
+            if( addcuts )
+            {
+               SCIP_CALL( SCIPcreateConsLinear ( scip, &cons, "da", 0, NULL, NULL,
+                     1.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+            }
+
+            dualobj += min;
+            for( i = 0; i < nunsatarcs; i++ )
+            {
+               a = unsatarcs[i];
+               if( a == -1 )
+                  continue;
+               //    SCIP_CALL( SCIPaddVarToRow(scip, row, vars[a], 1.0) );
+               if( addcuts )
+               {
+                  SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[a], 1.0) );
+               }
+               rescap[a] -= min;
+
+               assert(SCIPisGE(scip, rescap[a], 0.0));
+
+               if( SCIPisEQ(scip, rescap[a], 0.0) )
+               {
+                  sat[a] = TRUE;
+                  if( !(g->mark[g->tail[a]]) )
+                  {
+                     tail = g->tail[a];
+                     score += g->grad[tail];
+                     g->mark[tail] = TRUE;
+                     cutverts[ncutverts++] = tail;
+                  }
+               }
+            }
+            //    SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+            //   SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+            //   SCIP_CALL( SCIPreleaseRow(scip, &row) );
+            if( addcuts )
+            {
+               SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+            }
+            score -= ncutverts - 1;
+            gnodeact->dist = score;
+         }
+         else
+         {
+            /* reinsert active vertex */
+            gnodeact->dist = currscore;
+            SCIP_CALL( SCIPpqueueInsert(pqueue, gnodeact) );
+            nunsatarcs = -1;
+            goto ENDOFLOOP;
+         }
+
+      ENDOFLOOP:
+         for( i = 0; i < ncutverts; i++ )
+            g->mark[cutverts[i]] = FALSE;
+      } /* augmentation loop */
+
+   } /* dual ascent loop */
+
+    printf("dualglobal: %f \n", dualobj);
+   *objval = dualobj;
+
+   /* free memory */
+
+   SCIPpqueueFree(&pqueue);
+   SCIPqueueFree(&queue);
+
+   if( gnodearrterms == NULL )
+   {
+   for( i = nterms - 2; i >= 0; i-- )
+      SCIPfreeBuffer(scip, &gnodearr[i]);
+SCIPfreeBufferArray(scip, &gnodearr);
+   }
+
+   if( edgearrint == NULL )
+   SCIPfreeBufferArray(scip, &unsatarcs);
+
+   if( nodearrint == NULL )
+   SCIPfreeBufferArray(scip, &cutverts);
+
+   if( nodearrchar == NULL )
+   SCIPfreeBufferArray(scip, &active);
+
+   if( edgearrchar == NULL )
+   SCIPfreeBufferArray(scip, &sat);
+
+   if( redcost == NULL )
+      SCIPfreeBufferArray(scip, &rescap);
+
+   return SCIP_OKAY;
+
+}
+
+
+/** dual ascent heuristic */
+SCIP_RETCODE SCIPdualAscentPcStp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   SCIP_Real*            redcost,            /**< array to store reduced costs or NULL */
+   SCIP_Real*            objval,             /**< pointer to store objective value */
+   SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
+   int                   nruns               /**< number of dual ascent runs */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_QUEUE* queue;
+   SCIP_PQUEUE* pqueue;
+   SCIP_VAR** vars;
+   GRAPH* transgraph;
+   SCIP_Real min;
+   SCIP_Real prio1;
+   SCIP_Real prio2;
+   SCIP_Real score;
+   SCIP_Real offset;
+   SCIP_Real dualobj;
+   SCIP_Real currscore;
+   SCIP_Real maxdeviation;
+   SCIP_Real* rescap;
+   SCIP_Bool infeasible;
+   GNODE* gnodeact;
+   GNODE** gnodearr;
+   int i;
+   int k;
+   int v;
+   int a;
+   int tail;
+   int root;
+   int nnodes;
+   int nterms;
+   int nedges;
+   int ncutverts;
+   int pseudoroot;
+   int nunsatarcs;
+   int* pnode;
+   int* cutverts;
+   char* origedge;
+   int* unsatarcs;
+   char firstrun;
+   char* sat;
+   char* active;
+
+   assert(g != NULL);
+   assert(scip != NULL);
+   assert(nruns >= 0);
+   assert(objval != NULL);
+
+   if( g->knots == 1 )
+      return SCIP_OKAY;
+
+   if( addcuts )
+   {
+      vars = SCIPprobdataGetVars(scip);
+      assert(vars != NULL);
+   }
+   else
+   {
+      vars = NULL;
+   }
+
+   offset = 0.0;
+   dualobj = 0.0;
+   conshdlr = SCIPfindConshdlr(scip, "stp");
+   maxdeviation = 0.25;
+
+   root = g->source[0];
+
+   SCIP_CALL( graph_PcSapCopy(scip, g, &transgraph, &offset) );
+
+   nnodes = transgraph->knots;
+   nedges = transgraph->edges;
+   nterms = transgraph->terms;
+   pseudoroot = nnodes - 1;
+
+   if( redcost == NULL )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &rescap, nedges) );
+   }
+   else
+   {
+      rescap = redcost;
+   }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &sat, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &active, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &cutverts, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &unsatarcs, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &origedge, nedges) );
+
+       /* @todo add FARAWAY arcs? */
+   for( i = 0; i < nedges; i++ )
+     if( !Is_term(transgraph->term[transgraph->tail[i]]) && transgraph->head[i] == pseudoroot )
+        origedge[i] = FALSE;
+     else if( transgraph->tail[i] == pseudoroot && !Is_term(transgraph->term[transgraph->head[i]])  )
+        origedge[i] = FALSE;
+     else
+        origedge[i] = TRUE;
+
+#if 0
+printf("psroot: %d \n", pseudoroot );
+      for( i = 0; i < nedges; i++ )
+     if( transgraph->head[i] == pseudoroot )
+     {
+     //   origedge[i] = FALSE;
+     }
+     else if( transgraph->tail[i] == pseudoroot && !Is_term(transgraph->term[transgraph->head[i]])  )
+     {
+       // origedge[i] = FALSE;
+     }
+     else
+     {
+        if( !(g->tail[i] == transgraph->tail[i] && g->head[i] == transgraph->head[i] ) )
+	{
+	   printf("org: %d %d trans: %d %d \n", g->tail[i], g->head[i], transgraph->tail[i], transgraph->head[i] );
+	   assert(SCIPisEQ(scip, g->cost[i], transgraph->cost[i]));
+	}
+     }
+#endif
+   for( i = 0; i < nterms - 1; i++ )
+   {
+      SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
+   }
+
+   SCIP_CALL( SCIPqueueCreate(&queue, nnodes, 2.0) );
+   SCIP_CALL( SCIPpqueueCreate( &pqueue, nnodes, 2.0, GNODECmpByDist) );
+
+   k = 0;
+   /* mark terminals as active, add all except root to pqueue */
+   for( i = 0; i < nnodes; i++ )
+   {
+      if( Is_term(transgraph->term[i]) )
+      {
+	 active[i] = TRUE;
+	 assert(transgraph->grad[i] > 0);
+         if( i != root  )
+         {
+            gnodearr[k]->number = i;
+	    gnodearr[k]->dist = transgraph->grad[i];
+
+	    for( a = transgraph->inpbeg[i]; a != EAT_LAST; a = transgraph->ieat[a] )
+	      if( SCIPisEQ(scip, transgraph->cost[a], 0.0) )
+		break;
+
+	      if( a != EAT_LAST )
+	      gnodearr[k]->dist += transgraph->grad[transgraph->tail[a]] - 1;
+
+	   //   printf("%d grad: %d grad2 %d, score %f\n", i, transgraph->grad[i], transgraph->grad[transgraph->tail[a]], gnodearr[k]->dist);
+	   assert(gnodearr[k]->dist > 0);
+
+            SCIP_CALL( SCIPpqueueInsert(pqueue, gnodearr[k++]) );
+         }
+      }
+      else
+      {
+         active[i] = FALSE;
+      }
+      transgraph->mark[i] = FALSE;
+   }
+
+   for( i = 0; i < nedges; i++ )
+   {
+      rescap[i] = transgraph->cost[i];
+      if( SCIPisZero(scip, rescap[i]) )
+	sat[i] = TRUE;
+	else
+      sat[i] = FALSE;
+   }
+
+   /* dual ascent loop */
+   while( SCIPpqueueNElems(pqueue) > 0 && !SCIPisStopped(scip) )
+   {
+      /* get active vertex of minimum score */
+      gnodeact = (GNODE*) SCIPpqueueRemove(pqueue);
+
+      v = gnodeact->number;
+      prio1 = gnodeact->dist;
+
+      if( SCIPpqueueNElems(pqueue) > 0 )
+         prio2 = ((GNODE*) SCIPpqueueFirst(pqueue))->dist;
+      else
+         prio2 = FARAWAY;
+
+      firstrun = TRUE;
+      nunsatarcs = 0;
+
+      /* perform augmentation as long as ... */
+      while( !SCIPisStopped(scip) && nunsatarcs != -1 )
+      {
+         /* 1. pass: bfs from v on saturated, incoming arcs */
+         score = transgraph->grad[v];
+         ncutverts = 0;
+         nunsatarcs = 0;
+         transgraph->mark[v] = TRUE;
+         cutverts[ncutverts++] = v;
+         SCIP_CALL( SCIPqueueInsert(queue, &(transgraph->tail[transgraph->outbeg[v]])) );
+
+         while( !SCIPqueueIsEmpty(queue) )
+         {
+            pnode = (SCIPqueueRemove(queue));
+
+            /* traverse incoming arcs */
+            for( a = transgraph->inpbeg[*pnode]; a != EAT_LAST; a = transgraph->ieat[a] )
+            {
+               tail = transgraph->tail[a];
+               if( sat[a] )
+               {
+                  if( !transgraph->mark[tail] )
+                  {
+                     /* if an active vertex has been hit, break */
+                     if( active[tail] )
+                     {
+                        nunsatarcs = -1;
+                        active[v] = FALSE;
+                        SCIPqueueClear(queue);
+                        goto ENDOFLOOP;
+                     }
+
+                     score += transgraph->grad[tail];
+                     transgraph->mark[tail] = TRUE;
+                     cutverts[ncutverts++] = tail;
+                     SCIP_CALL( SCIPqueueInsert(queue, &(transgraph->tail[a])) );
+                  }
+               }
+               else if( !transgraph->mark[tail] )
+               {
+                  unsatarcs[nunsatarcs++] = a;
+               }
+            }
+         }
+
+         /* 2. pass: get minimum residual capacity among cut-arcs */
+         min = FARAWAY;
+         for( i = 0; i < nunsatarcs; i++ )
+         {
+            a = unsatarcs[i];
+            if( transgraph->mark[transgraph->tail[a]] )
+               unsatarcs[i] = -1;
+            else if( SCIPisLT(scip, rescap[a], min) )
+               min = rescap[a];
+         }
+
+         currscore = score - (ncutverts - 1);
+//printf("%d currscore: %f prio1 %f \n", v, currscore, prio1);
+
+         assert(SCIPisGE(scip, currscore, prio1));
+         /* augmentation criteria met? */
+         if( SCIPisLE(scip, currscore, prio2) || (firstrun && SCIPisLT(scip, (currscore - prio1) / prio1, maxdeviation)) )
+         {
+	    int in = FALSE;
+            //SCIP_ROW* row;
+            SCIP_CONS* cons;
+
+            /* 3. pass: perform augmentation */
+
+
+            /* create constraint */
+
+            if( addcuts )
+            {
+#if 1
+               SCIP_CALL( SCIPcreateConsLinear ( scip, &cons, "da", 0, NULL, NULL,
+                     1.0, SCIPinfinity(scip), TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+               SCIP_CALL( SCIPaddCons(scip, cons) );
+#else
+	       SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, "dualascentcut", 1.0, SCIPinfinity(scip), FALSE, FALSE, TRUE) );
+	       SCIP_CALL( SCIPflushRowExtensions(scip, row) );
+	       SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+	       SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
+#endif
+
+            }
+
+            dualobj += min;
+            for( i = 0; i < nunsatarcs; i++ )
+            {
+               a = unsatarcs[i];
+               if( a == -1 )
+                  continue;
+
+               if( addcuts && origedge[a] )
+               {
+		  if( g->tail[a] == root && g->head[a ] == v )
+		    in = TRUE;
+#if 1
+                  SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[a], 1.0) );
+#else
+		  SCIP_CALL( SCIPaddVarToRow(scip, row, vars[a], 1.0) );
+#endif
+               }
+               rescap[a] -= min;
+
+               assert(SCIPisGE(scip, rescap[a], 0.0));
+
+               if( SCIPisEQ(scip, rescap[a], 0.0) )
+               {
+                  sat[a] = TRUE;
+                  if( !(transgraph->mark[transgraph->tail[a]]) )
+                  {
+                     tail = transgraph->tail[a];
+                     score += transgraph->grad[tail];
+                     transgraph->mark[tail] = TRUE;
+                     cutverts[ncutverts++] = tail;
+                  }
+               }
+            }
+
+            if( addcuts )
+            {
+	      if( !in )
+	      {
+		for( i = g->outbeg[root]; i != EAT_LAST; i = g->oeat[i] )
+	       {
+		  if( g->head[i] == v )
+		  {
+		     SCIP_CALL( SCIPaddCoefLinear(scip, cons, vars[i], 1.0) );
+		  }
+	       }
+	      }
+#if 1
+	       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+#else
+	       SCIP_CALL( SCIPreleaseRow(scip, &row) );
+#endif
+
+            }
+            score -= ncutverts - 1;
+            gnodeact->dist = score;
+         }
+         else
+         {
+            /* reinsert active vertex */
+            gnodeact->dist = currscore;
+            SCIP_CALL( SCIPpqueueInsert(pqueue, gnodeact) );
+            nunsatarcs = -1;
+            goto ENDOFLOOP;
+         }
+         firstrun = FALSE;
+
+      ENDOFLOOP:
+         for( i = 0; i < ncutverts; i++ )
+            transgraph->mark[cutverts[i]] = FALSE;
+      } /* augmentation loop */
+
+   } /* dual ascent loop */
+
+
+   *objval = dualobj + offset;
+   printf("dualglobal: %f \n", *objval + SCIPprobdataGetOffset(scip));
+
+   /* free memory */
+   SCIPpqueueFree(&pqueue);
+   SCIPqueueFree(&queue);
+
+   for( i = nterms - 2; i >= 0; i-- )
+      SCIPfreeBuffer(scip, &gnodearr[i]);
+
+   SCIPfreeBufferArray(scip, &origedge);
+   SCIPfreeBufferArray(scip, &unsatarcs);
+   SCIPfreeBufferArray(scip, &cutverts);
+   SCIPfreeBufferArray(scip, &gnodearr);
+   SCIPfreeBufferArray(scip, &active);
+   SCIPfreeBufferArray(scip, &sat);
+
+   if( redcost == NULL )
+      SCIPfreeBufferArray(scip, &rescap);
+
+   graph_free(scip, transgraph, TRUE);
+
+   return SCIP_OKAY;
+
+}
+
+/** dual ascent heuristic */
+SCIP_RETCODE SCIPdualAscentAddCutsStp(
+   SCIP*                 scip,               /**< SCIP data structure */
+   GRAPH*                g,                  /**< graph data structure */
+   int                   nruns               /**< number of dual ascent runs */
+   )
+{
+   GNODE** gnodearr;
+   SCIP_Real max;
+   SCIP_Real objval;
+   SCIP_Real* redcost;
+   int i;
+   int r;
+   int k;
+   int nterms;
+   int nedges;
+   int nnodes;
+   int maxroot;
+   int* root;
+   int* degs;
+   int* nodearrint;
+   int* edgearrint;
+   char* edgearrchar;
+   char* nodearrchar;
+
+   assert(scip != NULL);
+   assert(g != NULL);
+   assert(nruns > 0);
+
+   k = 0;
+   max = -1.0;
+   nnodes = g->knots;
+   nedges = g->edges;
+   nterms = g->terms;
+   maxroot = -1;
+
+   if( nterms <= 1 )
+    return SCIP_OKAY;
+
+    SCIP_CALL( SCIPallocBufferArray(scip, &gnodearr, nterms - 1) );
+       for( i = 0; i < nterms - 1; i++ )
+      {
+      SCIP_CALL( SCIPallocBuffer(scip, &gnodearr[i]) ); /*lint !e866*/
+      }
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &root, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &degs, nterms) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &redcost, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgearrint, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrint, nnodes) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &edgearrchar, nedges) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &nodearrchar, nnodes) );
+
+      for( i = 0; i < nnodes; i++ )
+      {
+         if( Is_term(g->term[i]) && (g->grad[i] > 0) )
+         {
+            degs[k] = g->grad[i];
+            root[k++] = i;
+         }
+      }
+       nruns = MIN(nruns, k);
+      SCIPsortIntInt(degs, root, nterms);
+
+   for( i = 0; i < nruns; i++ )
+   {
+      r = root[k - i - 1];
+      printf("newroot: %d \n ", r);
+      SCIP_CALL( SCIPdualAscentStp(scip, g, redcost, &objval, FALSE, gnodearr, edgearrint, nodearrint, r, 1, edgearrchar, nodearrchar) );
+
+      if( SCIPisGT(scip, objval, max ) )
+      {
+	 max = objval;
+	 maxroot = r;
+      }
+   }
+
+   g->source[0] = maxroot;
+    SCIP_CALL( SCIPdualAscentStp(scip, g, redcost, &objval, TRUE, gnodearr, edgearrint, nodearrint, maxroot, 1, edgearrchar, nodearrchar) );
+printf("newroot: %d, obj: %f \n", g->source[0] , objval);
+    SCIPfreeBufferArray(scip, &nodearrchar);
+    SCIPfreeBufferArray(scip, &edgearrchar);
+    SCIPfreeBufferArray(scip, &nodearrint);
+    SCIPfreeBufferArray(scip, &edgearrint);
+    SCIPfreeBufferArray(scip, &redcost);
+    SCIPfreeBufferArray(scip, &degs);
+    SCIPfreeBufferArray(scip, &root);
+
+      for( i = nterms - 2; i >= 0; i-- )
+      SCIPfreeBuffer(scip, &gnodearr[i]);
+SCIPfreeBufferArray(scip, &gnodearr);
    return SCIP_OKAY;
 }
 

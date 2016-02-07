@@ -12,23 +12,15 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
-/**@file   branch_multaggr.h
- * @ingroup BRANCHINGRULES
- * @brief  fullstrong branching on fractional and multi-aggregated variables
- * @author Anna Melchiori
- * @author Gerald Gamrath
+/**@file   branch_stp.h
+ * @brief  Steiner vertex branching rule
+ * @author Daniel Rehfeldt
  *
- * This branching rule uses all fractional binary and integer variables as candidates,
- * as well as fractional multiaggregated binary and integer variables. Although not
- * directly contained in the presolved problem anymore, the multi-aggregation provides
- * an affine linear sum of integer variables, on which branching can be performed.
+ * The Steiner branching rule implemented in this file is described in
+ * "A Generic Approach to Solving the Steiner Tree Problem and Variants" by Daniel Rehfeldt.
+ * It removes includes and exludes Steiner vertices during branching.
  *
- * For more details, see
- * G.Gamrath, A.Melchiori, T.Berthold, A.M.Gleixner, D.Salvagnin: Branching on Multi-aggregated Variables
- * (http://dx.doi.org/10.1007/978-3-319-18008-3_10)
- */
-
+*/
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #ifndef __SCIP_BRANCH_STP_H__

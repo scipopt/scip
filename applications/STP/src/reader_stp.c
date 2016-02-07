@@ -45,7 +45,7 @@
 #define   DEFAULT_COMPCENTRAL  1             /**< selection type for the root (for undirected STPs) */
 #define   DEFAULT_EMITGRAPH    FALSE         /**< emit graph? */
 #define   DEFAULT_COUNTPRESOLTIME  TRUE      /**< count presolving time as part of overall solution time? */
-#define   DEFAULT_REDUCTION    1             /**< reduction mode to apply */
+#define   DEFAULT_REDUCTION    2             /**< reduction mode to apply */
 #define   DEFAULT_MINELIMS     3             /**< minimal number of eliminations to be achieved for reiteration of reduction methods */
 #define   DEFAULT_PRETIMELIMIT -1.0          /**< presolving time limit */
 
@@ -164,7 +164,7 @@ SCIP_RETCODE SCIPincludeReaderStp(
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "stp/reduction",
-         "Reduction: 0 disable, 1 default, 2 maximum",
+         "Reduction: 0 disable, 1 diminish, 2 default",
          NULL, FALSE, DEFAULT_REDUCTION, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
