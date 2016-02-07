@@ -576,10 +576,7 @@ SCIP_DECL_NODESELINITSOL(nodeselInitsolLinprojection)
 
    nodeseldata->optsolvalue = SCIPgetOptimalSolutionValue(scip);
 
-   if( SCIPisInfinity(scip, REALABS(nodeseldata->optsolvalue)) && SCIPgetNRuns(scip) <= 1 )
-   {
-      SCIPwarningMessage(scip, "Optimal solution value is infinite!\n");
-   }
+   SCIPdebugMessage("Reference solution value read: %16.9f\n", nodeseldata->optsolvalue);
 
    if( nodeseldata->addnodedata && nodeseldata->eventfilterpos == -1 )
    {
