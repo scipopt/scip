@@ -1556,7 +1556,11 @@ SCIP_RETCODE SCIPlpiChgObjsen(
 
    invalidateSolution(lpi);
 
+#if (CPX_VERSION >= 12050000)
    CHECK_ZERO( lpi->messagehdlr, CPXchgobjsen(lpi->cpxenv, lpi->cpxlp, cpxObjsen(objsen)) );
+#else
+   CPXchgobjsen(lpi->cpxenv, lpi->cpxlp, cpxObjsen(objsen));
+#endif
 
    return SCIP_OKAY;
 }
