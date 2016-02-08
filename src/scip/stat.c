@@ -44,6 +44,8 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_STAT**           stat,               /**< pointer to problem statistics data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL */
+   SCIP_PROB*            origprob,           /**< original problem, or NULL */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    )
 {
@@ -91,7 +93,7 @@ SCIP_RETCODE SCIPstatCreate(
    (*stat)->subscipdepth = 0;
    (*stat)->nreoptruns = 0;
 
-   SCIPstatReset(*stat, set);
+   SCIPstatReset(*stat, set, transprob, origprob);
 
    return SCIP_OKAY;
 }
@@ -169,7 +171,9 @@ void SCIPstatMark(
 /** reset statistics to the data before solving started */
 void SCIPstatReset(
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL */
+   SCIP_PROB*            origprob            /**< original problem, or NULL */
    )
 {
    assert(stat != NULL);
@@ -296,7 +300,7 @@ void SCIPstatReset(
    stat->totaldivesetdepth = 0;
 
    SCIPstatResetImplications(stat);
-   SCIPstatResetPresolving(stat);
+   SCIPstatResetPresolving(stat, set, transprob, origprob);
    SCIPstatResetPrimalDualIntegral(stat, set, FALSE);
 }
 
@@ -312,7 +316,10 @@ void SCIPstatResetImplications(
 
 /** reset presolving and current run specific statistics */
 void SCIPstatResetPresolving(
-   SCIP_STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL if not yet existing */
+   SCIP_PROB*            origprob            /**< original problem, or NULL */
    )
 {
    assert(stat != NULL);
@@ -332,7 +339,7 @@ void SCIPstatResetPresolving(
    stat->npresolchgcoefs = 0;
    stat->npresolchgsides = 0;
 
-   SCIPstatResetCurrentRun(stat, FALSE);
+   SCIPstatResetCurrentRun(stat, set, transprob, origprob, FALSE);
 }
 
 /** reset primal-dual integral */
@@ -455,6 +462,9 @@ void SCIPstatUpdatePrimalDualIntegral(
 /** reset current branch and bound run specific statistics */
 void SCIPstatResetCurrentRun(
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL */
+   SCIP_PROB*            origprob,           /**< original problem, or NULL */
    SCIP_Bool             solved              /**< is problem already solved? */
    )
 {
@@ -483,6 +493,17 @@ void SCIPstatResetCurrentRun(
    stat->nseparounds = 0;
    stat->maxdepth = -1;
    stat->plungedepth = 0;
+
+   stat->nearlybacktracks = 0;
+   stat->nnodesaboverefbound = 0;
+
+   assert(transprob == NULL || origprob != NULL);
+   /* calculate the reference bound in transformed space from the reference value */
+   if( transprob != NULL && !SCIPsetIsInfinity(set, SCIPsetGetReferencevalue(set)) )
+      stat->referencebound = SCIPprobInternObjval(transprob, origprob, set, SCIPsetGetReferencevalue(set));
+   else
+      stat->referencebound = SCIPsetInfinity(set);
+
 
    if( !solved )
       stat->status = SCIP_STATUS_UNKNOWN;

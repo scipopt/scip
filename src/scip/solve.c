@@ -4436,6 +4436,10 @@ SCIP_RETCODE SCIPsolveCIP(
       stat->nnodes++;
       stat->ntotalnodes++;
 
+      /* update reference bound statistic, if available */
+      if( SCIPsetIsGE(set, SCIPnodeGetLowerbound(focusnode), stat->referencebound) )
+         stat->nnodesaboverefbound++;
+
       /* issue NODEFOCUSED event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFOCUSED) );
       SCIP_CALL( SCIPeventChgNode(&event, focusnode) );

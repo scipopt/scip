@@ -254,7 +254,7 @@
 #define SCIP_DEFAULT_MISC_OUTPUTORIGSOL    TRUE /**< should the best solution be transformed to the orignal space and be output in command line run? */
 #define SCIP_DEFAULT_MISC_ALLOWDUALREDS    TRUE /**< should dual reductions in propagation methods and presolver be allowed? */
 #define SCIP_DEFAULT_MISC_ALLOWOBJPROP     TRUE /**< should propagation to the current objective be allowed in propagation methods? */
-
+#define SCIP_DEFAULT_MISC_REFERENCEVALUE   1e99 /**< objective value for reference purposes */
 
 /* Node Selection */
 
@@ -1759,6 +1759,12 @@ SCIP_RETCODE SCIPsetCreate(
             "should propagation to the current objective be allowed in propagation methods?",
             &(*set)->misc_allowobjprop, FALSE, SCIP_DEFAULT_MISC_ALLOWOBJPROP,
             NULL, NULL) );
+
+   SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,
+         "misc/referencevalue",
+         "objective value for reference purposes",
+         &(*set)->misc_referencevalue, FALSE, SCIP_DEFAULT_MISC_REFERENCEVALUE, SCIP_REAL_MIN, SCIP_REAL_MAX,
+         NULL, NULL) );
 
    /* node selection */
    SCIP_CALL( SCIPsetAddCharParam(*set, messagehdlr, blkmem,
@@ -4883,6 +4889,17 @@ int SCIPsetGetSepaMaxcuts(
    else
       return set->sepa_maxcuts;
 }
+
+/** returns user defined objective value (in original space) for reference purposes */
+SCIP_Real SCIPsetGetReferencevalue(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(NULL != set);
+
+   return set->misc_referencevalue;
+}
+
 
 /** returns debug solution data */
 SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(

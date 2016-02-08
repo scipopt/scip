@@ -4447,6 +4447,21 @@ SCIP_RETCODE SCIPnodeFocus(
          SCIP_CALL( treeNodesToQueue(tree, reopt, blkmem, set, stat, eventqueue, lp, tree->siblings, &tree->nsiblings, tree->focuslpstatefork,
                primal->cutoffbound) );
 
+         /* encounter an early backtrack if there is a child which does not exceed given reference bound */
+         if( !SCIPsetIsInfinity(set, stat->referencebound) )
+         {
+            int c;
+
+            /* loop over children and stop if we find a child with a lower bound below given reference bound */
+            for( c = 0; c < tree->nchildren; ++c )
+            {
+               if( SCIPsetIsLT(set, SCIPnodeGetLowerbound(tree->children[c]), stat->referencebound) )
+               {
+                  ++stat->nearlybacktracks;
+                  break;
+               }
+            }
+         }
          /* move children to the queue, make them LEAFs */
          SCIP_CALL( treeNodesToQueue(tree, reopt, blkmem, set, stat, eventqueue, lp, tree->children, &tree->nchildren, childrenlpstatefork,
                primal->cutoffbound) );

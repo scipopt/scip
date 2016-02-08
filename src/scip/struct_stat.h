@@ -70,6 +70,8 @@ struct SCIP_Stat
    SCIP_Longint          ncreatednodesrun;   /**< number of nodes created in current run */
    SCIP_Longint          nactivatednodes;    /**< number of times, a node got activated in current run */
    SCIP_Longint          ndeactivatednodes;  /**< number of times, a node got deactivated in current run */
+   SCIP_Longint          nearlybacktracks;   /**< counter for early switches (if children dual bound is below reference value) */
+   SCIP_Longint          nnodesaboverefbound;/**< counter for the number of focus nodes exceeding the reference bound */
    SCIP_Longint          nbacktracks;        /**< number of times, the new node was chosen from the leaves queue */
    SCIP_Longint          ndelayedcutoffs;    /**< number of times, the selected node was from a cut off subtree */
    SCIP_Longint          nreprops;           /**< number of times, a solved node is repropagated again */
@@ -117,6 +119,7 @@ struct SCIP_Stat
    SCIP_Real             lastdualbound;      /**< last (non-infinite) dual bound (in transformed space) for integral evaluation */
    SCIP_Real             lastlowerbound;     /**< last lower bound (in transformed space) for integral evaluation */
    SCIP_Real             lastupperbound;     /**< last upper bound (in transformed space) for integral evaluation */
+   SCIP_Real             referencebound;     /**< objective bound for reference purposes */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           solvingtimeoverall; /**< total time used for solving (including presolving) during reoptimization */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */

@@ -45,6 +45,8 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_STAT**           stat,               /**< pointer to problem statistics data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL */
+   SCIP_PROB*            origprob,           /**< original problem, or NULL */
    SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
@@ -77,7 +79,9 @@ void SCIPstatMark(
 extern
 void SCIPstatReset(
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL */
+   SCIP_PROB*            origprob            /**< original problem, or NULL */
    );
 
 /** reset implication counter */
@@ -89,7 +93,10 @@ void SCIPstatResetImplications(
 /** reset presolving and current run specific statistics */
 extern
 void SCIPstatResetPresolving(
-   SCIP_STAT*            stat                /**< problem statistics data */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL */
+   SCIP_PROB*            origprob            /**< original problem, or NULL */
    );
 
 /* reset primal-dual integral */
@@ -118,6 +125,9 @@ void SCIPstatUpdatePrimalDualIntegral(
 extern
 void SCIPstatResetCurrentRun(
    SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            transprob,          /**< transformed problem, or NULL */
+   SCIP_PROB*            origprob,           /**< original problem, or NULL */
    SCIP_Bool             solved              /**< is problem already solved? */
    );
 

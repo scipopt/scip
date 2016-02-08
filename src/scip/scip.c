@@ -1608,7 +1608,7 @@ SCIP_RETCODE copyProb(
       sourceprob = sourcescip->origprob;
 
    /* create the statistics data structure */
-   SCIP_CALL( SCIPstatCreate(&targetscip->stat, targetscip->mem->probmem, targetscip->set, targetscip->messagehdlr) );
+   SCIP_CALL( SCIPstatCreate(&targetscip->stat, targetscip->mem->probmem, targetscip->set, targetscip->transprob, targetscip->origprob, targetscip->messagehdlr) );
    targetscip->stat->subscipdepth = sourcescip->stat->subscipdepth + 1;
 
    /* create the problem by copying the source problem */
@@ -9037,7 +9037,7 @@ SCIP_RETCODE SCIPcreateProb(
    /* switch stage to PROBLEM */
    scip->set->stage = SCIP_STAGE_PROBLEM;
 
-   SCIP_CALL( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set, scip->messagehdlr) );
+   SCIP_CALL( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set, NULL, NULL, scip->messagehdlr) );
 
    SCIP_CALL( SCIPprobCreate(&scip->origprob, scip->mem->probmem, scip->set, name,
          probdelorig, probtrans, probdeltrans, probinitsol, probexitsol, probcopy, probdata, FALSE) );
@@ -12866,7 +12866,7 @@ SCIP_RETCODE initPresolve(
    SCIP_CALL( SCIPprimalRetransformSolutions(scip->primal, scip->set, scip->stat, scip->origprob, scip->transprob) );
 
    /* reset statistics for presolving and current branch and bound run */
-   SCIPstatResetPresolving(scip->stat);
+   SCIPstatResetPresolving(scip->stat, scip->set, scip->transprob, scip->origprob);
 
    /* increase number of branch and bound runs */
    scip->stat->nruns++;
@@ -13806,7 +13806,7 @@ SCIP_RETCODE initSolve(
    if( !solved )
    {
       /* reset statistics for current branch and bound run */
-      SCIPstatResetCurrentRun(scip->stat, solved);
+      SCIPstatResetCurrentRun(scip->stat, scip->set, scip->transprob, scip->origprob, solved);
       SCIPstatEnforceLPUpdates(scip->stat);
 
       /* LP is empty anyway; mark empty LP to be solved and update validsollp counter */
@@ -13989,9 +13989,9 @@ SCIP_RETCODE freeSolve(
 
    /* reset statistics for current branch and bound run */
    if( scip->stat->status == SCIP_STATUS_INFEASIBLE || scip->stat->status == SCIP_STATUS_OPTIMAL || scip->stat->status == SCIP_STATUS_UNBOUNDED || scip->stat->status == SCIP_STATUS_INFORUNBD )
-      SCIPstatResetCurrentRun(scip->stat, TRUE);
+      SCIPstatResetCurrentRun(scip->stat, scip->set, scip->transprob, scip->origprob, TRUE);
    else
-      SCIPstatResetCurrentRun(scip->stat, FALSE);
+      SCIPstatResetCurrentRun(scip->stat, scip->set, scip->transprob, scip->origprob, FALSE);
 
    /* switch stage to TRANSFORMED */
    scip->set->stage = SCIP_STAGE_TRANSFORMED;
@@ -14126,7 +14126,7 @@ SCIP_RETCODE freeTransform(
    if( scip->set->misc_resetstat )
    {
       /* reset statistics to the point before the problem was transformed */
-      SCIPstatReset(scip->stat, scip->set);
+      SCIPstatReset(scip->stat, scip->set, scip->transprob, scip->origprob);
    }
    else
    {
@@ -40141,6 +40141,11 @@ void printTreeStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  max depth (total): %10d\n", scip->stat->maxtotaldepth);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  backtracks       : %10" SCIP_LONGINT_FORMAT " (%.1f%%)\n", scip->stat->nbacktracks,
       scip->stat->nnodes > 0 ? 100.0 * (SCIP_Real)scip->stat->nbacktracks / (SCIP_Real)scip->stat->nnodes : 0.0);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  early backtracks : %10" SCIP_LONGINT_FORMAT " (%.1f%%)\n", scip->stat->nearlybacktracks,
+       scip->stat->nbacktracks > 0 ? 100.0 * (SCIP_Real)scip->stat->nearlybacktracks / (SCIP_Real)scip->stat->nbacktracks : 0.0);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  nodes exc. ref.  : %10" SCIP_LONGINT_FORMAT " (%.1f%%)\n", scip->stat->nnodesaboverefbound,
+       scip->stat->nnodes > 0 ? 100.0 * (SCIP_Real)scip->stat->nnodesaboverefbound / (SCIP_Real)scip->stat->nnodes : 0.0);
+
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  delayed cutoffs  : %10" SCIP_LONGINT_FORMAT "\n", scip->stat->ndelayedcutoffs);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  repropagations   : %10" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT " domain reductions, %" SCIP_LONGINT_FORMAT " cutoffs)\n",
       scip->stat->nreprops, scip->stat->nrepropboundchgs, scip->stat->nrepropcutoffs);

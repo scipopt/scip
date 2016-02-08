@@ -99,18 +99,19 @@ do
     fi
 done
 
-# if cutoff should be passed, check for solu file
+SOLUFILE=""
+for SOLU in testset/$TSTNAME.solu testset/all.solu
+do
+    if test -e $SOLU
+    then
+        SOLUFILE=$SOLU
+        break
+    fi
+done
+
+# if cutoff should be passed, solu file must exist
 if test $SETCUTOFF = 1
 then
-    SOLUFILE=""
-    for SOLU in testset/$TSTNAME.solu testset/all.solu
-    do
-        if test -e $SOLU
-        then
-            SOLUFILE=$SOLU
-            break
-        fi
-    done
     if test $SOLUFILE = ""
     then
         echo "Skipping test: SETCUTOFF=1 set, but no .solu file (testset/$TSTNAME.solu or testset/all.solu) available"
