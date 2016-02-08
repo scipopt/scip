@@ -17142,7 +17142,8 @@ SCIP_RETCODE SCIPgetTransformedVars(
    return SCIP_OKAY;
 }
 
-/** gets negated variable x' = lb + ub - x of variable x; negated variable is created, if not yet existing
+/** gets negated variable x' = lb + ub - x of variable x; negated variable is created, if not yet existing;
+ *  in difference to \ref SCIPcreateVar, the negated variable must not be released (unless captured explicitly)
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.

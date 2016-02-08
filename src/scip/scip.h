@@ -6986,7 +6986,8 @@ SCIP_RETCODE SCIPgetNegatedVar(
    SCIP_VAR**            negvar              /**< pointer to store the negated variable */
    );
 
-/** gets negated variables x' = lb + ub - x of variables x; negated variables are created, if not yet existing
+/** gets negated variables x' = lb + ub - x of variables x; negated variables are created, if not yet existing;
+ *  in difference to \ref SCIPcreateVar, the negated variable must not be released (unless captured explicitly)
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
