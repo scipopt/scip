@@ -1007,7 +1007,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->conflicthdlrsnamesorted = FALSE;
 
    (*set)->debugsoldata = NULL;
-   SCIP_CALL( SCIPdebugSolDataCreate(&(*set)->debugsoldata) );
+   SCIP_CALL( SCIPdebugSolDataCreate(&(*set)->debugsoldata) ); /*lint !e506 !e774*/
 
    (*set)->presols = NULL;
    (*set)->npresols = 0;

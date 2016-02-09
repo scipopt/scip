@@ -1226,7 +1226,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayFiniteSolution)
    {
       SCIP_SOL* sol;
       SCIP_Bool success;
-      SCIP_Bool retcode;
+      SCIP_RETCODE retcode;
 
       /* create copy of solution with finite values */
       retcode = SCIPcreateFiniteSolCopy(scip, &sol, bestsol, &success);
