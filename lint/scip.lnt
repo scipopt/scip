@@ -3,7 +3,7 @@
 //*                  This file is part of the program and library             */
 //*         SCIP --- Solving Constraint Integer Programs                      */
 //*                                                                           */
-//*    Copyright (C) 2002-2010 Konrad-Zuse-Zentrum                            */
+//*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 //*                            fuer Informationstechnik Berlin                */
 //*                                                                           */
 //*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,97 +14,159 @@
 //* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 -passes(1)
-// esoteric size settings to find erros.
-//-si4    // int's are 4 bytes
-//-sl6    // long's are 6 bytes
-//-sp8    // ptr's are 8 bytes
 
--fdc       // do not Distinguish plain Char as a unique type.
+-fdc       // do not distinguish plain char as a unique type.
            // i.e. char is either signed char or unsigned char
-           
-            // while processing library headers
--wlib(1)    // sets the warning level within library headers to 1
-            // (no warnings, just syntax errors).  Comment out if you
-            // are actually linting library headers.  This
-            // option makes obsolete options of the form -elib(aXYZ) where
-            // XYZ >= 400 which may be retained for historical reasons.
 
--i./lint/posix
--i./lint/cpp
-//-i/usr/include
++fzl       // make size_t long unsined int
++fzu
 
-+libh(cplex.h)
-+fll
++libh(cplex.h) // declare CPLEX file as library
++fll           // permit long lont int
 
+// turn off error 39 in libraries
+-elib(39)
 
 //  The following functions exhibit variable return modes.
 //  That is, they may equally-usefully be called for a value
 //  as called just for their effects.  Accordingly we inhibit
 //  Warning 534 for these functions.
 //  Feel free to add to or subtract from this list.
-
--esym(534,close,creat,fclose,fflush,fprintf,vfprintf,fputc,fgets)
--esym(534,fputs,fscanf,fseek,fwrite,lseek,memcpy,memmove,memset)
--esym(534,printf,vprintf,puts,scanf,sprintf,snprintf,sscanf,strcat,strcpy)
--esym(534,strncat,strncpy,unlink,write)
+-esym(534,fflush,vfprintf,fgets)
+-esym(534,vprintf,snprintf)
 -esym(534,free_history_entry)
 -esym(534,SCIPfclose,SCIPfflush,SCIPfprintf,SCIPfputc,SCIPfputs,SCIPfseek,SCIPfwrite)
 
 -function(exit,__assertfail)
 
--emacro(506,debugMessage) // Constant value Boolean
--emacro(681,debugMessage) // Loop is not entered
--emacro(506,debugPrintf) // Constant value Boolean
--emacro(681,debugPrintf) // Loop is not entered
--emacro(506,SCIPdebugMessage) // Constant value Boolean
--emacro(681,SCIPdebugMessage) // Loop is not entered
--emacro(506,SCIPdebugPrintf) // Constant value Boolean
--emacro(681,SCIPdebugPrintf) // Loop is not entered
+// turn off all errors for va_* functions:
+-emacro((*),va_*)
+
+// ---------------------------------------------------------
+// treat particular messages:
+-emacro(506,debugMessage)         // Constant value Boolean
+-emacro(681,debugMessage)         // Loop is not entered
+-emacro(506,debugPrintf)          // Constant value Boolean
+-emacro(681,debugPrintf)          // Loop is not entered
+-emacro(506,SCIPdebugMessage)     // Constant value Boolean
+-emacro(681,SCIPdebugMessage)     // Loop is not entered
+-emacro(506,SCIPdebugPrintf)      // Constant value Boolean
+-emacro(681,SCIPdebugPrintf)      // Loop is not entered
 -emacro(506,SCIPstatisticMessage) // Constant value Boolean
 -emacro(681,SCIPstatisticMessage) // Loop is not entered
--emacro(506,SCIPstatisticPrintf) // Constant value Boolean
--emacro(681,SCIPstatisticPrintf) // Loop is not entered
--emacro(506,SCIPdebugCheckRow) // Constant value Boolean
+-emacro(506,SCIPstatisticPrintf)  // Constant value Boolean
+-emacro(681,SCIPstatisticPrintf)  // Loop is not entered
+-emacro(506,SCIPdebugCheckRow)    // Constant value Boolean
 -emacro(506,SCIPdebugCheckImplic) // Constant value Boolean
--emacro(506,assert)       // Constant value Boolean
--emacro(685,BMSallocMemoryArray) // Relational operator always evaluates to 'false'
--emacro(685,BMSreallocMemoryArray) // Relational operator always evaluates to 'false'
--emacro(685,BMSallocMemoryArrayCPP) // Relational operator always evaluates to 'false'
--emacro(685,BMSallocClearMemoryArray) // Relational operator always evaluates to 'false'
--emacro(685,BMSallocBlockMemoryArray) // Relational operator always evaluates to 'false'
--emacro(685,BMSreallocBlockMemoryArray) // Relational operator always evaluates to 'false'
+-emacro(506,assert)               // Constant value Boolean
+
+-emacro(506,isfinite)       // turn off all messages for isfinite
+-emacro(686,isfinite)       // turn off all messages for isfinite
+-emacro(736,isfinite)       // turn off all messages for isfinite
+-emacro(747,isfinite)       // turn off all messages for isfinite
+-emacro(866,isfinite)       // turn off all messages for isfinite
 
 -esym(578,clock)          // Declaration of symbol hides symbol
 -esym(578,scip)           // Declaration of symbol hides symbol
 -esym(715,scip)           // Symbol not referenced
 -esym(528,consdataPrint)  // Symbol not referenced
--esym(1712,Obj*)          // default constructor not defined for class
+-esym(1712,Obj*)          // Default constructor not defined for class
+
+-esym(1740,"*::scip_")
 
 -e537  // Repeated include file
--e631  // tag defined differently
+-e631  // Tag defined differently
 -e717  // do ... while(0);
 -e730  // Boolean argument to function
 -e731  // Boolean argument to equal/not equal
 -e737  // Loss of sign in promotion from int to unsigned int
--e767  // macro was defined differently in another module
--e770  // tag defined identically
+-e767  // Macro was defined differently in another module
+-e770  // Tag defined identically
 -e773  // Expression-like macro not parenthesized
 -e793  // ANSI limit of 31 'function parameters' exceeded / ANSI limit of 8 '#include levels' exceeded
--e834  // Operator followed by operator ist confusing
--e655  // bit-wise operation uses (compatible) enum's
+-e834  // Operator followed by operator is confusing
+-e655  // Bit-wise operation uses (compatible) enum's
+
+// The following happens quite often (and might be useful), but clutters the output
+-e679  // Suspicious Truncation in arithmetic expression combining with pointer
+-e451  // Header file repeatedly included but does not have a standard include guard
 
 // temporary
 -e818  // Pointer parameter could be declared as pointing to const
 -e801  // Use of goto is deprecated
 -e740  // Unusual pointer cast (incompatible indirect types)
 
+// turning off the following might help to reduce output further
+//-e679  // Suspicious Truncation in arithmetic expression combining with pointer
+//-e507  // Size incompatibility, converting 8 byte pointer to 4 byte integral
+
 //-e506  // Constant value Boolean
 //-e534  // Ignoring return value of function
-//-e713  // loss of precision
+//-e713  // Loss of precision
 //-e715  // Symbol not referenced
 //-e774  // Boolean within 'if' always evaluates to False
 //-e777  // Testing floats for equality
-//-e759  // header declaration for symbol could be moved from header to module
-//-e765  // external could be made static
-//-e788  // enum constant not used within defaulted switch
+//-e759  // Header declaration for symbol could be moved from header to module
+//-e765  // External could be made static
+//-e788  // Enum constant not used within defaulted switch
 //-e1065 // Symbol ... not declared as "C" conflicts with ...
+
+// avoid significant prototype coercion (this is usually happening
+// because the length of the string is given by an integer constant,
+// while the argument is unsigned long):
+-ecall(747,strncasecmp)
+-ecall(747,strncpy)
+-ecall(747,strncat)
+-ecall(747,strncpy)
+-ecall(747,strncmp)
+-ecall(747,vsnprintf)
+-ecall(747,snprintf)
+-ecall(747,getcwd)
+-ecall(747,strerror_r)
+
+// ------------------------------------------------------------------
+// turn off several warnings for memory functions, since they usually are false positive and clutter the output
+
+// Suspicious truncation:
+-emacro(647,BMSclearMemoryArray)
+-emacro(647,BMSallocMemorySize)
+-emacro(647,BMSallocClearMemoryArray)
+-emacro(647,SCIPallocMemoryArray)
+-emacro(647,SCIPallocBlockMemoryArray)
+-emacro(647,SCIPallocBufferArray)
+-emacro(647,SCIPreallocBufferArray)
+
+// Avoid "Possible truncation of addition" - this might give interesting information, but clutters the output
+-emacro(776,BMSmoveMemoryArray)
+-emacro(776,BMSallocMemorySize)
+-emacro(776,BMSclearMemoryArray)
+-emacro(776,BMSallocMemoryArray)
+-emacro(776,BMSfreeBlockMemoryArray)
+-emacro(776,BMSallocBlockMemoryArray)
+-emacro(776,BMSallocBufferMemoryArray)
+-emacro(776,BMSreallocBlockMemoryArray)
+-emacro(776,BMSreallocBufferMemoryArray)
+-emacro(776,BMSduplicateBlockMemoryArray)
+-emacro(776,BMSduplicateBufferMemoryArray)
+-emacro(776,SCIPallocMemoryArray)
+-emacro(776,SCIPallocBlockMemoryArray)
+-emacro(776,SCIPreallocBlockMemoryArray)
+-emacro(776,SCIPfreeBlockMemoryArrayNull)
+-emacro(776,SCIPduplicateMemoryArray)
+
+-ecall(776,SCIPhashmapInsert)
+-ecall(776,SCIPhashmapExists)
+
+// turn off "Suspicious cast" messages involving size_t in SCIPhashmap*
+-ecall(571,SCIPhashmapInsert)
+-ecall(571,SCIPhashmapGetImage)
+-ecall(571,SCIPhashmapSetImage)
+-ecall(571,SCIPhashmapExists)
+
+// ------------------------------------------------------------------
+// turn off some warnings about C++ classes:
+-e1768    // Virtual function has an access different from the access in the base class
+-e1784    // Symbol 'Symbol' previously declared as "C", compare with Location XX
+
+-ecall(747, std::vector::operator[])  // Significant prototype coercion
+

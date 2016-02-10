@@ -1,9 +1,9 @@
-/* $Id: forward.hpp 2991 2013-10-22 16:25:15Z bradbell $ */
+/* $Id: forward.hpp 3098 2014-02-18 03:19:39Z bradbell $ */
 # ifndef CPPAD_FORWARD_INCLUDED
 # define CPPAD_FORWARD_INCLUDED
 
 /* --------------------------------------------------------------------------
-CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-13 Bradley M. Bell
+CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-14 Bradley M. Bell
 
 CppAD is distributed under multiple licenses. This distribution is under
 the terms of the 
@@ -170,6 +170,7 @@ Vector ADFun<Base>::Forward(
 			ok = ! hasnan(y_p);
 		else if( n_order != 1 )
 		{	for(i = 0; i < m; i++)
+			// on MS Visual Studio 2012, CppAD required in front of isnan ?
 			ok &= ! CppAD::isnan( y_p[ i * n_order + 0 ] );
 		} 
 		CPPAD_ASSERT_KNOWN(ok,
@@ -181,6 +182,7 @@ Vector ADFun<Base>::Forward(
 		else if( n_order != 1 )
 		{	for(i = 0; i < m; i++)
 			{	for(k = 1; k < n_order; k++)
+					// Studio 2012, CppAD required in front of isnan ?
 					ok &= ! CppAD::isnan( y_p[ i * n_order + k ] );
 			}
 		}

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -50,18 +50,18 @@ void updateBestCandidate(
    )
 {
    SCIP_Real obj;
-   
+
    assert(scip != NULL);
    assert(bestvar != NULL);
    assert(bestscore != NULL);
    assert(bestobj != NULL);
    assert(*bestobj >= 0.0);
    assert(cand != NULL);
-   
+
    /* a branching variable candidate should either be an active problem variable or a multi-aggregated variable */
    assert(SCIPvarIsActive(SCIPvarGetProbvar(cand)) ||
       SCIPvarGetStatus(SCIPvarGetProbvar(cand)) == SCIP_VARSTATUS_MULTAGGR);
-   
+
    if( SCIPvarGetStatus(SCIPvarGetProbvar(cand)) == SCIP_VARSTATUS_MULTAGGR )
    {
       /* for a multi-aggregated variable, we call updateBestCandidate function recursively with all variables in the multi-aggregation */
@@ -180,10 +180,10 @@ void updateBestCandidate(
          }
 
       assert(*bestvar != NULL); /* if all variables were fixed, something is strange */
-      
+
       return;
    }
-   
+
    candscore *= SCIPvarGetBranchFactor(cand);
    obj = SCIPvarGetObj(cand);
    obj = REALABS(obj);
@@ -330,7 +330,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextLeastinf)
    SCIPdebugMessage(" -> %d candidates, selected variable <%s> (infeas=%g, obj=%g, factor=%g, score=%g), branching point=%g\n",
       nexterncands, SCIPvarGetName(bestcand), bestsol, bestobj,
       SCIPvarGetBranchFactor(bestcand), bestscore, brpoint);
-   
+
    /* perform the branching */
    SCIP_CALL( SCIPbranchVarVal(scip, bestcand, brpoint, &downchild, &eqchild, &upchild) );
 

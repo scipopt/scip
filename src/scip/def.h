@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,8 +23,12 @@
 #ifndef __SCIP_DEF_H__
 #define __SCIP_DEF_H__
 
+#ifdef __cplusplus
+#define __STDC_LIMIT_MACROS
+#endif
 
 #include <stdio.h>
+#include <stdint.h>
 #include <math.h>
 #include <limits.h>
 #include <float.h>
@@ -81,9 +85,10 @@
 extern "C" {
 #endif
 
-#define SCIP_VERSION                310 /**< SCIP version number (multiplied by 100 to get integer number) */
+
+#define SCIP_VERSION                321 /**< SCIP version number (multiplied by 100 to get integer number) */
 #define SCIP_SUBVERSION               1 /**< SCIP sub version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2014 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_COPYRIGHT   "Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*
@@ -115,7 +120,6 @@ extern "C" {
 #endif
 #endif
 
-
 /*
  * Floating point values
  */
@@ -129,6 +133,7 @@ extern "C" {
 #define SCIP_DEFAULT_EPSILON          1e-09  /**< default upper bound for floating points to be considered zero */
 #define SCIP_DEFAULT_SUMEPSILON       1e-06  /**< default upper bound for sums of floating points to be considered zero */
 #define SCIP_DEFAULT_FEASTOL          1e-06  /**< default feasibility tolerance for constraints */
+#define SCIP_DEFAULT_CHECKFEASTOLFAC    1.0  /**< default factor to change the feasibility tolerance when testing the best solution for feasibility (after solving process) */
 #define SCIP_DEFAULT_LPFEASTOL        1e-06  /**< default primal feasibility tolerance of LP solver */
 #define SCIP_DEFAULT_DUALFEASTOL      1e-07  /**< default feasibility tolerance for reduced costs */
 #define SCIP_DEFAULT_BARRIERCONVTOL   1e-10  /**< default convergence tolerance used in barrier algorithm */
@@ -199,6 +204,9 @@ extern "C" {
  * Memory settings
  */
 
+/* we use SIZE_MAX / 2 to detect negative sizes which got a very large value when casting to size_t */
+#define SCIP_MAXMEMSIZE              (SIZE_MAX/2) /**< maximum size of allocated memory (array) */
+
 #define SCIP_HASHSIZE_PARAMS         4099 /**< size of hash table in parameter name tables */
 #define SCIP_HASHSIZE_NAMES          131101 /**< size of hash table in name tables */
 #define SCIP_HASHSIZE_CUTPOOLS       131101 /**< size of hash table in cut pools */
@@ -208,8 +216,8 @@ extern "C" {
 #define SCIP_HASHSIZE_CLIQUES_SMALL  8011   /**< size of hash table in clique tables for small problems */
 #define SCIP_HASHSIZE_VBC            131101 /**< size of hash map for node -> nodenum mapping used for VBC output */
 
-/*#define BMS_NOBLOCKMEM*/
-
+#define SCIP_DEFAULT_MEM_ARRAYGROWFAC   1.2 /**< memory growing factor for dynamically allocated arrays */
+#define SCIP_DEFAULT_MEM_ARRAYGROWINIT    4 /**< initial size of dynamically allocated arrays */
 
 /*
  * Global debugging settings
@@ -275,6 +283,28 @@ extern "C" {
                           }                                                                                   \
                        }                                                                                      \
                        while( FALSE )
+
+#define SCIP_CALL_TERMINATE(retcode, x, TERM)   do                                                            \
+                       {                                                                                      \
+                          if( ((retcode) = (x)) != SCIP_OKAY )                                                \
+                          {                                                                                   \
+                             SCIPerrorMessage("Error <%d> in function call\n", retcode);                      \
+                             goto TERM;                                                                       \
+                          }                                                                                   \
+                       }                                                                                      \
+                       while( FALSE )
+
+#define SCIP_ALLOC_TERMINATE(retcode, x, TERM)   do                                                           \
+                       {                                                                                      \
+                          if( NULL == (x) )                                                                   \
+                          {                                                                                   \
+                             SCIPerrorMessage("No memory in function call\n");                                \
+                             retcode = SCIP_NOMEMORY;                                                         \
+                             goto TERM;                                                                       \
+                          }                                                                                   \
+                       }                                                                                      \
+                       while( FALSE )
+
 
 /*
  * Define to mark deprecated API functions

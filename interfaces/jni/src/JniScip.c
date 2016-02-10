@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,6 +30,7 @@
 #include "scip/scipdefplugins.h"
 
 #include <string.h>
+#include <locale.h>
 
 #ifndef NDEBUG
 #include "JniScipBoundchgtype.h"
@@ -261,6 +262,8 @@ jlong JNISCIP(create)(
    /* check all eumns of SCIP against the JNI enums */
    checkEnums();
 #endif
+   setlocale(LC_ALL,"C");
+
    JNISCIP_CALL( SCIPcreate(&scip) );
 
    return (jlong)(size_t)scip;
@@ -12593,139 +12596,6 @@ jint JNISCIP(getLPBasisInd)(
    return (jint) basisind;
 }
 
-/** gets a row from the inverse basis matrix B^-1
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-jdouble JNISCIP(getLPBInvRow)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jint                  jr                  /**< row number */
-   )
-{
-   SCIP* scip;
-   SCIP_Real coef;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   JNISCIP_CALL( SCIPgetLPBInvRow(scip, (int)jr, &coef) );
-
-   return (jdouble) coef;
-}
-
-/** gets a column from the inverse basis matrix B^-1
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-jdouble JNISCIP(getLPBInvCol)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jint                  jc                  /**< column number of B^-1; this is NOT the number of the column in the LP
-					      *   returned by SCIPcolGetLPPos(); you have to call SCIPgetBasisInd()
-					      *   to get the array which links the B^-1 column numbers to the row and
-					      *   column numbers of the LP! c must be between 0 and nrows-1, since the
-					      *   basis has the size nrows * nrows */
-   )
-{
-   SCIP* scip;
-   SCIP_Real coef;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   JNISCIP_CALL( SCIPgetLPBInvCol(scip, (int)jc, &coef) );
-
-   return (jdouble) coef;
-}
-
-/** TODO: length of binvrow? */
-/** gets a row from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A)
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-#if 0
-jdouble JNISCIP(getLPBInvARow)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jint                  r,                  /**< row number */
-   jdoubleArray          jbinvrow,           /**< row in B^-1 from prior call to SCIPgetLPBInvRow(), or NULL */
-   )
-{
-   SCIP* scip;
-   SCIP_Real* binvrow;
-   SCIP_Real coef;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-
-   JNISCIP_CALL( SCIPallocBufferArray(scip, &binvrow, ?length?) );
-
-   (*env)->GetDoubleArrayRegion(env, jvals, 0, ?length?, (jdouble*)binvrow);
-
-   JNISCIP_CALL( SCIPgetLPBInvARow(scip, (int)r, binvrow, &coef) );
-
-   SCIPfreeBufferArray(scip, &binvrow);
-
-   return (jdouble) coef;
-}
-#endif
-
-/** gets a column from the product of inverse basis matrix B^-1 and coefficient matrix A (i.e. from B^-1 * A),
- *  i.e., it computes B^-1 * A_c with A_c being the c'th column of A
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_SOLVING
- *
- *  See \ref SCIP_Stage "SCIP_STAGE" for a complete list of all possible solving stages.
- */
-jdouble JNISCIP(getLPBInvACol)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jint                  jc                  /**< column number which can be accessed by SCIPcolGetLPPos() */
-   )
-{
-   SCIP* scip;
-   SCIP_Real coef;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   JNISCIP_CALL( SCIPgetLPBInvACol(scip, (int)jc, &coef) );
-
-   return (jdouble) coef;
-}
-
 /** writes current LP to a file
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -23081,49 +22951,6 @@ jint JNISCIP(getNImplications)(
    return (jint) SCIPgetNImplications(scip);
 }
 
-/** stores conflict graph of binary variables' implications into a file, which can be used as input for the DOT tool
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_INITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_EXITPRESOLVE
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_INITSOLVE
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
- *       - \ref SCIP_STAGE_EXITSOLVE
- */
-JNIEXPORT
-void JNISCIP(writeImplicationConflictGraph)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jstring               jfilename           /**< file name, or NULL for stdout */
-   )
-{
-   SCIP* scip;
-   const char* filename;
-   jboolean iscopy;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   /* convert JNI string into C const char* */
-   if( jfilename != NULL )
-      filename = (*env)->GetStringUTFChars(env, jfilename, &iscopy);
-   else
-      filename = NULL;
-
-   JNISCIP_CALL( SCIPwriteImplicationConflictGraph(scip, filename) );
-
-   (*env)->ReleaseStringUTFChars(env, jfilename, filename);
-}
-
 /** gets current time of day in seconds (standard time zone)
  *
  *  @return the current time of day in seconds (standard time zone).
@@ -24886,111 +24713,6 @@ jint JNISCIP(calcMemGrowSize)(
 
    return (jint)  SCIPcalcMemGrowSize(scip, (int)num);
 }
-
-/** gets a memory buffer with at least the given size
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-JNIEXPORT
-jlong JNISCIP(allocBufferSize)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jint                  size                /**< required size in bytes of buffer */
-   )
-{
-   SCIP* scip;
-   void* ptr;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   JNISCIP_CALL( SCIPallocBufferSize(scip, &ptr, (int)size) );
-
-   return (jlong) (size_t) ptr;
-}
-
-/** reallocates a memory buffer to at least the given size
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-JNIEXPORT
-jlong JNISCIP(duplicateBufferSize)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jlong                 jsource,            /**< memory block to copy into the buffer */
-   jint                  size                /**< required size in bytes of buffer */
-   )
-{
-   SCIP* scip;
-   const void* source;
-   void* ptr;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   source = (const void*) (size_t) jsource;
-   assert(source != NULL);
-
-   JNISCIP_CALL( SCIPduplicateBufferSize(scip, &ptr, source, (int)size) );
-
-   return (jlong) (size_t) ptr;
-}
-
-/** reallocates a memory buffer to at least the given size
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- */
-JNIEXPORT
-jlong JNISCIP(reallocBufferSize)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jint                  size                /**< required size in bytes of buffer */
-   )
-{
-   SCIP* scip;
-   void* ptr;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   JNISCIP_CALL( SCIPreallocBufferSize(scip, &ptr, (int)size) );
-
-   return (jlong) (size_t) ptr;
-}
-
-/** frees a memory buffer */
-#if 0
-JNIEXPORT
-void JNISCIP(freeBufferSize)(
-   JNIEnv*               env,                /**< JNI environment variable */
-   jobject               jobj,               /**< JNI class pointer */
-   jlong                 jscip,              /**< SCIP data structure */
-   jlong                 jptr,               /**< pointer to the buffer */
-   jint                  size                /**< used to get a safer define for SCIPfreeBuffer() and SCIPfreeBufferArray() */
-   )
-{
-   SCIP* scip;
-   void* ptr;
-
-   /* convert JNI pointer into C pointer */
-   scip = (SCIP*) (size_t) jscip;
-   assert(scip != NULL);
-
-   ptr = (void*) (size_t) jptr;
-   assert(ptr != NULL);
-
-   SCIPfreeBufferSize(scip, &ptr, (int)size);
-}
-#endif
 
 /** prints output about used memory */
 JNIEXPORT

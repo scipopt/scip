@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,8 +33,9 @@
 #include "scip/def.h"
 #include "scip/type_stat.h"
 #include "scip/type_clock.h"
-#include "scip/type_vbc.h"
+#include "scip/type_visual.h"
 #include "scip/type_history.h"
+#include "scip/type_lp.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -56,6 +57,7 @@ struct SCIP_Stat
    SCIP_Longint          nnodelpiterations;  /**< number of iterations for totally solving node relaxations */
    SCIP_Longint          ninitlpiterations;  /**< number of iterations for solving nodes' initial relaxations */
    SCIP_Longint          ndivinglpiterations;/**< number of iterations in diving and probing */
+   SCIP_Longint          ndivesetlpiterations; /**< total number of LP iterations performed by divesets */
    SCIP_Longint          nsbdivinglpiterations;/**< number of iterations in probing mode for strong branching */
    SCIP_Longint          nsblpiterations;    /**< number of simplex iterations used in strong branching */
    SCIP_Longint          nrootsblpiterations;/**< number of simplex iterations used in strong branching at the root node */
@@ -88,7 +90,8 @@ struct SCIP_Stat
    SCIP_Longint          nprobholechgs;      /**< total number of hole changes generated in the tree  during probing */
    SCIP_Longint          nsbdowndomchgs;     /**< total number of domain changes generated at down children during strong branching */
    SCIP_Longint          nsbupdomchgs;       /**< total number of domain changes generated at up children during strong branching */
-   SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */
+   SCIP_Longint          nsbtimesiterlimhit; /**< total number of times that the strong branching iteration limit was hit */
+   SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */   
    SCIP_Longint          ninitconssadded;    /**< total number of initial constraints added during the solve */
    SCIP_Real             firstlpdualbound;   /**< dual bound of root node computed by first LP solve (without cuts) */
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */
@@ -112,7 +115,9 @@ struct SCIP_Stat
    SCIP_Real             lastlowerbound;     /**< last lower bound (in transformed space) for integral evaluation */
    SCIP_Real             lastupperbound;     /**< last upper bound (in transformed space) for integral evaluation */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
+   SCIP_CLOCK*           solvingtimeoverall; /**< total time used for solving (including presolving) during reoptimization */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */
+   SCIP_CLOCK*           presolvingtimeoverall;/**< total time used for presolving during reoptimization */
    SCIP_CLOCK*           primallptime;       /**< primal LP solution time */
    SCIP_CLOCK*           duallptime;         /**< dual LP solution time */
    SCIP_CLOCK*           lexduallptime;      /**< lexicographic dual LP solution time */
@@ -127,13 +132,15 @@ struct SCIP_Stat
    SCIP_CLOCK*           nlpsoltime;         /**< time needed for solving NLPs */
    SCIP_CLOCK*           copyclock;          /**< time needed for copying problems */
    SCIP_CLOCK*           strongpropclock;    /**< time needed for propagation during strong branching */
+   SCIP_CLOCK*           reoptupdatetime;    /**< time needed for storing and recreating nodes and solutions for reoptimization */
    SCIP_HISTORY*         glbhistory;         /**< global history information over all variables */
    SCIP_HISTORY*         glbhistorycrun;     /**< global history information over all variables for current run */
    SCIP_VAR*             lastbranchvar;      /**< last variable, that was branched on */
-   SCIP_VBC*             vbc;                /**< VBC Tool information */
+   SCIP_VISUAL*          visual;             /**< visualization information */
    SCIP_HEUR*            firstprimalheur;    /**< heuristic which found the first primal solution */
    SCIP_STATUS           status;             /**< SCIP solving status */
    SCIP_BRANCHDIR        lastbranchdir;      /**< direction of the last branching */
+   SCIP_LPSOLSTAT        lastsblpsolstats[2];/**< last LP solving statuses for variable strong branching */
    SCIP_Longint          lpcount;            /**< internal counter, where all lp calls are counted; this includes the restored lps after diving and probing */
    SCIP_Longint          nlps;               /**< total number of LPs solved with at least 1 iteration */
    SCIP_Longint          nrootlps;           /**< number of LPs solved at the root node with at least 1 iteration */
@@ -150,12 +157,16 @@ struct SCIP_Stat
    SCIP_Longint          nnodelps;           /**< number of LPs solved for node relaxations */
    SCIP_Longint          ninitlps;           /**< number of LPs solved for nodes' initial relaxations */
    SCIP_Longint          ndivinglps;         /**< number of LPs solved during diving and probing */
+   SCIP_Longint          ndivesetlps;        /**< total number of diveset LPs */
    SCIP_Longint          nsbdivinglps;       /**< number of LPs solved during strong branching probing mode */
    SCIP_Longint          nstrongbranchs;     /**< number of strong branching calls */
    SCIP_Longint          nrootstrongbranchs; /**< number of strong branching calls at the root node */
    SCIP_Longint          nconflictlps;       /**< number of LPs solved during conflict analysis */
    SCIP_Longint          nnlps;              /**< number of NLPs solved */
+   SCIP_Longint          nisstoppedcalls;    /**< number of calls to SCIPsolveIsStopped() */
+   SCIP_Longint          totaldivesetdepth;  /**< the total probing depth over all diveset calls */
    int                   subscipdepth;       /**< depth of current scip instance (increased by each copy call) */
+   int                   ndivesetcalls;      /**< total number of diveset diving calls */
    int                   nruns;              /**< number of branch and bound runs on current problem, including current run */
    int                   nconfrestarts;      /**< number of restarts performed due to conflict analysis */
    int                   nrootboundchgs;     /**< total number of bound changes generated in the root node */
@@ -179,6 +190,9 @@ struct SCIP_Stat
    int                   nenabledconss;      /**< total number of currently enabled constraints */
    int                   nimplications;      /**< total number of implications stored in the implication graph */
    int                   npresolrounds;      /**< number of presolving rounds in current run */
+   int                   npresolroundsfast;  /**< number of fast presolving rounds in current run */
+   int                   npresolroundsmed;   /**< number of medium presolving rounds in current run */
+   int                   npresolroundsext;   /**< number of exhaustive presolving rounds in current run */
    int                   npresolfixedvars;   /**< number of presolving fixings in current run */
    int                   npresolaggrvars;    /**< number of presolving aggregations in current run */
    int                   npresolchgvartypes; /**< number of presolving variable type changes in current run */
@@ -189,20 +203,26 @@ struct SCIP_Stat
    int                   npresolupgdconss;   /**< number of presolving constraint upgrades in current run */
    int                   npresolchgcoefs;    /**< number of presolving coefficient changes in current run */
    int                   npresolchgsides;    /**< number of presolving side changes in current run */
-   int                   lastnpresolfixedvars;/**< number of presolving fixings in current run */
-   int                   lastnpresolaggrvars;/**< number of presolving aggregations in current run */
-   int                   lastnpresolchgvartypes;/**< number of presolving variable type changes in current run */
-   int                   lastnpresolchgbds;  /**< number of presolving bound changes in current run */
-   int                   lastnpresoladdholes;/**< number of presolving hole additions in current run */
-   int                   lastnpresoldelconss;/**< number of presolving constraint deletions in current run */
-   int                   lastnpresoladdconss;/**< number of presolving constraint additions in current run */
-   int                   lastnpresolupgdconss;/**< number of presolving constraint upgrades in current run */
-   int                   lastnpresolchgcoefs;/**< number of presolving coefficient changes in current run */
-   int                   lastnpresolchgsides;/**< number of presolving side changes in current run */
+   int                   lastnpresolfixedvars;/**< number of presolving fixings before presolving round */
+   int                   lastnpresolaggrvars;/**< number of presolving aggregations before presolving round */
+   int                   lastnpresolchgvartypes;/**< number of presolving variable type changes before presolving round */
+   int                   lastnpresolchgbds;  /**< number of presolving bound changes before presolving round */
+   int                   lastnpresoladdholes;/**< number of presolving hole additions before presolving round */
+   int                   lastnpresoldelconss;/**< number of presolving constraint deletions before presolving round */
+   int                   lastnpresoladdconss;/**< number of presolving constraint additions before presolving round */
+   int                   lastnpresolupgdconss;/**< number of presolving constraint upgrades before presolving round */
+   int                   lastnpresolchgcoefs;/**< number of presolving coefficient changes before presolving round */
+   int                   lastnpresolchgsides;/**< number of presolving side changes before presolving round */
+#ifdef SCIP_DISABLED_CODE
+   int                   lastnpresolimplications;/**< number of implications before presolving round */
+   int                   lastnpresolcliques; /**< number of cliques before presolving round */
+#endif
    int                   solindex;           /**< consecutively numbered solution index */
    int                   nrunsbeforefirst;   /**< number of runs until first primal solution */
    int                   firstprimaldepth;   /**< depth in which first primal solution was found */
    int                   ncopies;            /**< counter how often SCIPcopy() was performed */
+   int                   nreoptruns;         /**< number of reoptimization runs */
+   int                   nclockskipsleft;    /**< how many times the timing should be skipped in SCIPsolveIsStopped() */
    SCIP_Bool             memsavemode;        /**< should algorithms be switched to memory saving mode? */
    SCIP_Bool             userinterrupt;      /**< has the user asked to interrupt the solving process? */
    SCIP_Bool             userrestart;        /**< has the user asked to restart the solving process? */

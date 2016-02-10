@@ -147,21 +147,11 @@ bool GamsSolver::checkCplexLicense(
    struct palRec*     pal                 /**< GAMS audit and license object */
 )
 {
-   assert(gmo != NULL);
 #ifdef GAMS_BUILD
-   gevRec* gev = (gevRec*)gmoEnvironment(gmo);
-
-   if( !palLicenseIsDemoCheckout(pal) )
-   {
-      if( palLicenseCheckSubSys(pal, const_cast<char*>("OCCPCL")) )
-      {
-         gevLogStat(gev,"***");
-         gevLogStat(gev,"*** LICENSE ERROR:");
-         gevLogStat(gev,"*** See http://www.gams.com/osicplex/ for OsiCplex licensing information.");
-         gevLogStat(gev,"***");
-         return false;
-      }
-   }
+   assert(pal != NULL);
+   
+   if( !palLicenseIsDemoCheckout(pal) && palLicenseCheckSubSys(pal, const_cast<char*>("OCCPCL")) )
+      return false;
 #endif
    return true;
 }
@@ -172,16 +162,11 @@ bool GamsSolver::checkIpoptLicense(
 )
 {
 #ifdef GAMS_BUILD
-   assert(gmo != NULL);
-   if( !palLicenseIsDemoCheckout(pal) )
-   {
-      if( palLicenseCheckSubSys(pal, const_cast<char*>("IP")) )
-         return false;
-      else
-         return true;
-   }
+   assert(pal != NULL);
+   
+   if( !palLicenseIsDemoCheckout(pal) && palLicenseCheckSubSys(pal, const_cast<char*>("IP")) )
+      return false;
 #endif
-
    return true;
 }
 
@@ -191,15 +176,10 @@ bool GamsSolver::checkScipLicense(
 )
 {
 #ifdef GAMS_BUILD
-   assert(gmo != NULL);
-   if( !palLicenseIsDemoCheckout(pal) && !palLicenseIsAcademic(pal) )
-   {
-      if( palLicenseCheckSubSys(pal, const_cast<char*>("SC")) )
-         return false;
-      else
-         return true;
-   }
+   assert(pal != NULL);
+   
+   if( !palLicenseIsDemoCheckout(pal) && !palLicenseIsAcademic(pal) && palLicenseCheckSubSys(pal, const_cast<char*>("SC")) )
+      return false;
 #endif
-
    return true;
 }

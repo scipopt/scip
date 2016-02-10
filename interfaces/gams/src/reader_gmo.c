@@ -1169,13 +1169,15 @@ SCIP_RETCODE makeExprtree(
                         SCIP_EXPRDATA_MONOMIAL** monomials;
                         SCIP_Real exponent;
                         SCIP_Real constant;
+                        int nmonomials;
                         int zero;
 
+                        nmonomials = nargs-1;
                         SCIP_CALL( SCIPallocBufferArray(scip, &monomials, nargs-1) );
 
                         zero = 0;
                         constant = 0.0;
-                        while( nargs > 0 )
+                        for( ; nargs > 0; --nargs )
                         {
                            assert(stackpos > 0);
 
@@ -1198,8 +1200,7 @@ SCIP_RETCODE makeExprtree(
                         term1 = stack[stackpos-1];
                         --stackpos;
 
-                        SCIP_CALL( SCIPexprCreatePolynomial(blkmem, &e, 1, &term1, nargs-1, monomials, constant, FALSE) );
-
+                        SCIP_CALL( SCIPexprCreatePolynomial(blkmem, &e, 1, &term1, nmonomials, monomials, constant, FALSE) );
                         SCIPfreeBufferArray(scip, &monomials);
                      }
                   }
@@ -1236,7 +1237,7 @@ SCIP_RETCODE makeExprtree(
                default :
                {
                   SCIPdebugPrintf("nr. %d - unsupported. Error.\n", (int)func);
-                  SCIPerrorMessage("GAMS function %d not supported\n", func);
+                  SCIPinfoMessage(scip, NULL, "Error: GAMS function %s not supported.\n", GamsFuncCodeName[func]);
                   return SCIP_READERROR;
                }
             } /*lint !e788*/
@@ -1246,7 +1247,7 @@ SCIP_RETCODE makeExprtree(
          case nlEnd: /* end of instruction list */
          default:
          {
-            SCIPerrorMessage("GAMS opcode %d not supported - Error.\n", opcode);
+            SCIPinfoMessage(scip, NULL, "Error: GAMS opcode %s not supported.\n", GamsOpCodeName[opcode]);
             return SCIP_READERROR;
          }
       } /*lint !e788*/
@@ -1292,10 +1293,10 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
    SCIP_Real minprior;
    SCIP_Real maxprior;
    int i;
-   SCIP_Real* coefs;
-   int* indices;
+   SCIP_Real* coefs = NULL;
+   int* indices = NULL;
    int* nlflag;
-   SCIP_VAR** consvars;
+   SCIP_VAR** consvars = NULL;
    SCIP_VAR** quadvars1;
    SCIP_VAR** quadvars2;
    SCIP_Real* quadcoefs;
@@ -1313,6 +1314,7 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
    int* indiconvals;
    int indicidx;
    size_t namemem;
+   SCIP_RETCODE rc = SCIP_OKAY;
    
    assert(scip != NULL);
    assert(gmo != NULL);
@@ -1342,7 +1344,8 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
    SCIP_CALL( SCIPallocMemory(scip, &probdata) );
    BMSclearMemory(probdata);
 
-   SCIP_CALL( SCIPcreateProb(scip, "gamsprob",
+   (void) gmoNameInput(gmo, buffer);
+   SCIP_CALL( SCIPcreateProb(scip, buffer,
       probdataDelOrigGmo, probdataTransGmo, probdataDelTransGmo,
       probdataInitSolGmo, probdataExitSolGmo, probdataCopyGmo,
       probdata) );
@@ -1805,7 +1808,13 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
             }
 
             (void) gmoDirtyGetRowFNLInstr(gmo, i, &codelen, opcodes, fields);
-            SCIP_CALL( makeExprtree(scip, gmo, codelen, opcodes, fields, constants, &exprtree) );
+            rc = makeExprtree(scip, gmo, codelen, opcodes, fields, constants, &exprtree);
+            if( rc == SCIP_READERROR )
+            {
+               SCIPinfoMessage(scip, NULL, "Error processing nonlinear instructions of equation %s.\n", buffer);
+               goto TERMINATE;
+            }
+            SCIP_CALL( rc );
 
             SCIP_CALL( SCIPcreateConsNonlinear(scip, &con, buffer, linnz, consvars, coefs, 1, &exprtree, NULL, lhs, rhs,
                   TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
@@ -1918,7 +1927,13 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
          objfactor = -1.0 / gmoObjJacVal(gmo);
 
          (void) gmoDirtyGetObjFNLInstr(gmo, &codelen, opcodes, fields);
-         SCIP_CALL( makeExprtree(scip, gmo, codelen, opcodes, fields, constants, &exprtree) );
+         rc = makeExprtree(scip, gmo, codelen, opcodes, fields, constants, &exprtree);
+         if( rc == SCIP_READERROR )
+         {
+            SCIPinfoMessage(scip, NULL, "Error processing nonlinear instructions of objective %s.\n", gmoGetObjName(gmo, buffer));
+            goto TERMINATE;
+         }
+         SCIP_CALL( rc );
 
          if( gmoSense(gmo) == (int) gmoObj_Min )
          {
@@ -1953,22 +1968,6 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
 
    if( gmoSense(gmo) == (int) gmoObj_Max )
       SCIP_CALL( SCIPsetObjsense(scip, SCIP_OBJSENSE_MAXIMIZE) );
-
-   SCIPfreeBufferArray(scip, &coefs);
-   SCIPfreeBufferArray(scip, &indices);
-   SCIPfreeBufferArray(scip, &consvars);
-   SCIPfreeBufferArrayNull(scip, &nlflag);
-   SCIPfreeBufferArrayNull(scip, &quadvars1);
-   SCIPfreeBufferArrayNull(scip, &quadvars2);
-   SCIPfreeBufferArrayNull(scip, &quadcoefs);
-   SCIPfreeBufferArrayNull(scip, &qrow);
-   SCIPfreeBufferArrayNull(scip, &qcol);
-   SCIPfreeBufferArrayNull(scip, &opcodes);
-   SCIPfreeBufferArrayNull(scip, &fields);
-   SCIPfreeBufferArrayNull(scip, &constants);
-   SCIPfreeBufferArrayNull(scip, &indicrows);
-   SCIPfreeBufferArrayNull(scip, &indiccols);
-   SCIPfreeBufferArrayNull(scip, &indiconvals);
    
    /* set objective limit, if enabled */
    if( gevGetIntOpt(gev, gevUseCutOff) )
@@ -2013,17 +2012,34 @@ SCIP_RETCODE SCIPcreateProblemReaderGmo(
       SCIPfreeBufferArray(scip, &vals);
    }
 
+   if( namemem > 1024 * 1024 && nindics == 0 )
+   {
+      namemem <<= 1;  /* transformed problem has copy of names, so duplicate estimate */
+      SCIPinfoMessage(scip, NULL, "Space for names approximately %0.2f MB. Use statement '<modelname>.dictfile=0;' to turn dictionary off.\n", namemem/(1024.0*1024.0));
+   }
+
+TERMINATE:
+   SCIPfreeBufferArrayNull(scip, &coefs);
+   SCIPfreeBufferArrayNull(scip, &indices);
+   SCIPfreeBufferArrayNull(scip, &consvars);
+   SCIPfreeBufferArrayNull(scip, &nlflag);
+   SCIPfreeBufferArrayNull(scip, &quadvars1);
+   SCIPfreeBufferArrayNull(scip, &quadvars2);
+   SCIPfreeBufferArrayNull(scip, &quadcoefs);
+   SCIPfreeBufferArrayNull(scip, &qrow);
+   SCIPfreeBufferArrayNull(scip, &qcol);
+   SCIPfreeBufferArrayNull(scip, &opcodes);
+   SCIPfreeBufferArrayNull(scip, &fields);
+   SCIPfreeBufferArrayNull(scip, &constants);
+   SCIPfreeBufferArrayNull(scip, &indicrows);
+   SCIPfreeBufferArrayNull(scip, &indiccols);
+   SCIPfreeBufferArrayNull(scip, &indiconvals);
+
    /* deinitialize QMaker, if nonlinear */
    if( gmoNLNZ(gmo) > 0 || objnonlinear )
       gmoUseQSet(gmo, 0);
 
-   if( namemem > 1024 * 1024 && nindics == 0 )
-   {
-      namemem <<= 1;  /* transformed problem has copy of names, so duplicate estimate */
-      SCIPinfoMessage(scip, NULL, "Space for names approximately %0.2f MB.\nUse statement '<modelname>.dictfile=0;' to turn dictionary off.\n", namemem/(1024.0*1024.0));
-   }
-
-   return SCIP_OKAY;
+   return rc;
 }
 
 /** check solution for feasibility and resolves by NLP solver, if necessary and possible */
@@ -2328,6 +2344,7 @@ SCIP_RETCODE writeGmoSolution(
             int origmaxorigsol;
             int orignlpverblevel;
             int origmaxpresolrounds;
+            char origsolvetracefile[SCIP_MAXSTRLEN];
             /* SCIP_Real origfeastol; */
             SCIP_Bool resolvenlp;
             SCIP_Real** solvals;
@@ -2372,6 +2389,8 @@ SCIP_RETCODE writeGmoSolution(
             /* adapt some parameter values for possible resolve's */
             if( resolvenlp )
             {
+               char* tmp;
+
                /* don't store solutions in original problem, so they don't get in a way when transforming for resolve */
                SCIP_CALL( SCIPgetIntParam(scip, "limits/maxorigsol", &origmaxorigsol) );
                SCIP_CALL( SCIPsetIntParam(scip, "limits/maxorigsol", 0) );
@@ -2384,6 +2403,10 @@ SCIP_RETCODE writeGmoSolution(
 
                SCIP_CALL( SCIPgetIntParam(scip, "heuristics/subnlp/maxpresolverounds", &origmaxpresolrounds) );
                SCIP_CALL( SCIPsetIntParam(scip, "heuristics/subnlp/maxpresolverounds", 0) );
+
+               SCIP_CALL( SCIPgetStringParam(scip, "gams/solvetrace/file", &tmp) );
+               strcpy(origsolvetracefile, tmp);
+               SCIP_CALL( SCIPsetStringParam(scip, "gams/solvetrace/file", "") );
             }
 
             SCIP_CALL( SCIPcreateClock(scip, &resolveclock) );
@@ -2466,6 +2489,7 @@ SCIP_RETCODE writeGmoSolution(
                SCIP_CALL( SCIPsetIntParam(scip, "heuristics/subnlp/nlpverblevel", orignlpverblevel) ); /*lint !e644*/
                /* SCIP_CALL( SCIPsetRealParam(scip, "numerics/feastol", origfeastol) ); */
                SCIP_CALL( SCIPsetIntParam(scip, "heuristics/subnlp/maxpresolverounds", origmaxpresolrounds) ); /*lint !e644*/
+               SCIP_CALL( SCIPsetStringParam(scip, "gams/solvetrace/file", origsolvetracefile) );
             }
 
             for( s = 0; s < nsols; ++s )

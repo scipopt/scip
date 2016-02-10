@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -193,7 +193,7 @@ SCIP_RETCODE SCIPrelaxInit(
       relax->ncalls = 0;
       relax->lastsolvednode = -1;
    }
-   
+
    if( relax->relaxinit != NULL )
    {
       /* start timing */
@@ -308,7 +308,7 @@ SCIP_RETCODE SCIPrelaxExec(
    *result = SCIP_DIDNOTRUN;
 
    /* check, if the relaxation is already solved */
-   if( relax->lastsolvednode == stat->ntotalnodes )
+   if( relax->lastsolvednode == stat->ntotalnodes && ! SCIPinProbing(set->scip) )
       return SCIP_OKAY;
 
    relax->lastsolvednode = stat->ntotalnodes;
@@ -476,7 +476,7 @@ void SCIPrelaxSetPriority(
 {
    assert(relax != NULL);
    assert(set != NULL);
-   
+
    relax->priority = priority;
    set->relaxssorted = FALSE;
 }
@@ -499,6 +499,18 @@ SCIP_Real SCIPrelaxGetSetupTime(
    assert(relax != NULL);
 
    return SCIPclockGetTime(relax->setuptime);
+}
+
+/** enables or disables all clocks of \p relax, depending on the value of the flag */
+void SCIPrelaxEnableOrDisableClocks(
+   SCIP_RELAX*           relax,              /**< the relaxation handler for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the relaxation handler be enabled? */
+   )
+{
+   assert(relax != NULL);
+
+   SCIPclockEnableOrDisable(relax->setuptime, enable);
+   SCIPclockEnableOrDisable(relax->relaxclock, enable);
 }
 
 /** gets time in seconds used in this relaxation handler */

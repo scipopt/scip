@@ -30,6 +30,10 @@
 #   checkStage (only for scip.c).
 #   [checkstage, default: false, option: -s]
 #
+# - Check whether two comments occur in one line; this sometimes indicates
+#   bad style
+#   [checkcomments, default: false]
+#
 # Note the this will not give a complete check. The checks are also
 # heuristic in order to avoid to be flooded with warnings. To
 # guarantee correct indentation of the code, one should use the
@@ -41,23 +45,25 @@ my $narg = @ARGV;
 
 if ( $narg < 1 || $ARGV[0] eq "-h" )
 {
-   printf("usage: <.> [-t] [-o] [-b] [-h] [-s] <files>\n");
+   printf("usage: <.> [-h] [-t] [-b] [-n] [-o] <files>\n");
    printf("-t: output if tabs are present.\n");
-   printf("-o: only output if tabs are present.\n");
    printf("-b: output possible positions of badly placed brackets.\n");
-   printf("-n: do not warn about missing newlines in debug messages.\n");
-   printf("-s: warn about differences between function name and checkStage name (for scip.c).\n");
+   printf("-n: warn about missing newlines in debug messages.\n");
+   printf("-o: warn about SCIP_CALL_ABORT and printfs.\n");
    exit(1);
 }
 
 # determine which part to check
-my $checktabs = 0;
-my $checkbrackets = 0;
-my $checkindent = 1;
-my $checkothers = 1;
-my $checkdebug = 1;
-my $checkstage = 1;
-my $checkdocinbody = 1;
+my $checktabs = 0;       # check whether tabs are present
+my $checkbrackets = 0;   # check whether brackets are badly placed
+my $checkdebug = 0;      # check whether debug messages contain a newline at end
+my $checkothers = 0;     # check for SCIP_CALL_ABORT and printfs
+my $checkcomments = 0;   # check for two comments in a line
+
+my $checkindent = 1;     # check for correct indentation
+my $checktabsparam = 1;  # check whether tabs in parameter lists are present
+my $checkstage = 1;      # check whether names of functions for checkstage are correct in scip.c
+my $checkdocinbody = 1;  # check whether doxygen documentation appears within code
 
 my $nfiles = 0;
 
@@ -78,26 +84,17 @@ for (my $i = 0; $i < $narg; ++$i)
       next;
    }
 
-   # check for only tab option
-   if ( $ARGV[$i] eq "-o" )
-   {
-      $checktabs = 1;
-      $checkbrackets = 0;
-      $checkindent = 0;
-      next;
-   }
-
    # check for debug message
    if ( $ARGV[$i] eq "-n" )
    {
-      $checkdebug = 0;
+      $checkdebug = 1;
       next;
    }
 
-   # check for checkStage
-   if ( $ARGV[$i] eq "-s" )
+   # check for checkothers
+   if ( $ARGV[$i] eq "-o" )
    {
-      $checkstage = 1;
+      $checkothers = 1;
       next;
    }
 
@@ -132,11 +129,26 @@ for (my $i = 0; $i < $narg; ++$i)
       # ---------------------------------------------------------
       # handle comments
 
-      # make sure that no comment ends and afterwards starts on the same line
-      if ( $str =~ /\*\/(.*)\/\*/ )
+      # remove comments within string constants: to only consider "\*"
+      # within string, the first '"' should appear without a '"'
+      # appearing before (by excluding [^\"]).
+      if ( $str =~ /^[^\"]*\"[^\"]*\/\*/ )
       {
-	 # simply warn, but continue (parsing might not be correct, however)
-	 printf("%d: line contains two comments - merge into one?\n%s\n\n", $line, $_);
+         printf("%d: removing comment within string:<%s>\n", $line, $str);
+         $str =~ s/\/\*//g;
+      }
+
+      # make sure that no comment ends and afterwards starts on the same line
+      if ( $checkcomments == 1 && $str =~ /\*\/(.*)\/\*/ )
+      {
+	 if ( $str =~ /\*lint/ )
+	 {
+	 }
+	 else
+	 {
+	    # simply warn, but continue (parsing might not be correct, however)
+	    printf("%d: line contains two comments - merge into one?\n%s\n\n", $line, $_);
+	 }
       }
 
       # if we are in a comment that started in previous lines, we search for the end of the comment
@@ -310,6 +322,19 @@ for (my $i = 0; $i < $narg; ++$i)
          }
       }
 
+      # check tabs in parameter lists
+      if ( $checktabsparam == 1 && $documentationpos >= 0 && $inenumstruct == 0 )
+      {
+         if ( $str =~ /\t/ )
+         {
+            # replace '\t' by "********"
+            my $s = $str;
+            $s =~ s/\t/\*\*\*\*\*\*\*\*/g;
+            # output modified line
+            printf("%d: found tabs:\n%s\n\n", $line, $s);
+         }
+      }
+
       # ----------------------------------------
       # check brackets
       if ( $checkbrackets && $incomment == 0 )
@@ -372,82 +397,101 @@ for (my $i = 0; $i < $narg; ++$i)
 	 }
       }
 
+      # ------------------------------------------------------------
+      # check indentation of function parameters closing parenthesis
+      if ( $checkindent == 1 && $documentationpos <= 0 && $depth == 0 && $inenumstruct == 0 )
+      {
+	 if ( ! (($str =~ /SCIP_DECL_/) || ($str =~ /TCLIQUE_/) || ($str =~ /SORTTPL\_/) || ($str =~ /define/) ) )
+	 {
+	    # check for ")"
+	    my $pos = index($str, ")");
+
+	    if ( $pos >= 0 && $pos != 3 )
+	    {
+	       printf("%d: wrong indentation of function closing parenthesis: <%s>\n", $line, $str);
+	    }
+	 }
+      }
+
       # ----------------------------------------
       # check indentation of function parameters
       if ( $checkindent == 1 && $documentationpos >= 0 && $inenumstruct == 0 )
       {
-	 # make sure that there is a space before "/**<" (needed below)
-	 my $s = $_;
-	 $s =~ s/\/\*\*</ \/\*\*</g;
-
-	 # split into components
-	 @array = split(/\s+/, $s);
-
-	 # check for first component
-	 my $pos = index($_, $array[1]);
-
-	 # first component should always start at column 3
-	 if ( $pos != 3 )
+	 if ( ! ($str =~ /SORTTPL\_/) )
 	 {
-	    printf("%s\n", $_);
-	    for (my $j = 0; $j < $pos; ++$j)
-	    {
-	       printf(" ");
-	    }
-	    printf("^  (pos: %d, line: %d)\n\n", $pos, $line);
-	    next;
-	 }
+	    # make sure that there is a space before "/**<" (needed below)
+	    my $s = $_;
+	    $s =~ s/\/\*\*</ \/\*\*</g;
 
-	 # try to find variable name = last component before comment (may not exist)
-	 my $ind = 1;
-	 while ( $ind < $#array && $array[$ind] !~ /\/\*\*</ )
-	 {
-	    ++$ind;
-	    $pos = index($_, $array[$ind], $pos+1);
-	 }
+	    # split into components
+	    @array = split(/\s+/, $s);
 
-	 # check whether variable name is aligned
-	 if ( $ind >= 2 )
-	 {
-	    $pos = index($_, $array[$ind-1], 22);
-	    # make sure previous names are not too long
-	    my $l = 3;
-	    for (my $k = 1; $k < $ind-1; ++$k)
-	    {
-	       $l = $l + length($array[$k]) + 1;
-	    }
-	    if ( $l == $pos )
-	    {
-	       next;
-	    }
+	    # check for first component
+	    my $pos = index($_, $array[1]);
 
-	    if ( $pos != 25 && $pos > 3 )
+	    # first component should always start at column 3
+	    if ( $pos != 3 )
 	    {
-	       printf("%d %s %s\n", $ind, $array[1], $array[2]);
 	       printf("%s\n", $_);
-	       printf("%-5d: pos: %2d", $line, $pos);
-	       for (my $j = 14; $j < $pos; ++$j)
+	       for (my $j = 0; $j < $pos; ++$j)
 	       {
 		  printf(" ");
 	       }
-	       printf("^\n\n");
+	       printf("^  (pos: %d, line: %d)\n\n", $pos, $line);
 	       next;
 	    }
-	 }
 
-	 # check for comment
-	 if ( $documentationpos != 45 )
-	 {
-	    # skip too long variable types
-	    if ( 25 + length($array[$ind-1]) <= 42 )
+	    # try to find variable name = last component before comment (may not exist)
+	    my $ind = 1;
+	    while ( $ind < $#array && $array[$ind] !~ /\/\*\*</ )
 	    {
-	       printf("%s\n", $_);
-	       printf("%-5d: pos: %2d", $line, $documentationpos);
-	       for (my $j = 14; $j < $documentationpos; ++$j)
+	       ++$ind;
+	       $pos = index($_, $array[$ind], $pos+1);
+	    }
+
+	    # check whether variable name is aligned
+	    if ( $ind >= 2 )
+	    {
+	       $pos = index($_, $array[$ind-1], 22);
+	       # make sure previous names are not too long
+	       my $l = 3;
+	       for (my $k = 1; $k < $ind-1; ++$k)
 	       {
-		  printf(" ");
+		  $l = $l + length($array[$k]) + 1;
 	       }
-	       printf("^\n\n");
+	       if ( $l == $pos )
+	       {
+		  next;
+	       }
+
+	       if ( $pos != 25 && $pos > 3 )
+	       {
+		  printf("%d %s %s\n", $ind, $array[1], $array[2]);
+		  printf("%s\n", $_);
+		  printf("%-5d: pos: %2d", $line, $pos);
+		  for (my $j = 14; $j < $pos; ++$j)
+		  {
+		     printf(" ");
+		  }
+		  printf("^\n\n");
+		  next;
+	       }
+	    }
+
+	    # check for comment
+	    if ( $documentationpos != 45 )
+	    {
+	       # skip too long variable types
+	       if ( 25 + length($array[$ind-1]) <= 42 )
+	       {
+		  printf("%s\n", $_);
+		  printf("%-5d: pos: %2d", $line, $documentationpos);
+		  for (my $j = 14; $j < $documentationpos; ++$j)
+		  {
+		     printf(" ");
+		  }
+		  printf("^\n\n");
+	       }
 	    }
 	 }
       }
@@ -471,23 +515,24 @@ for (my $i = 0; $i < $narg; ++$i)
 	       printf("%d: SCIP_CALL_ABORT found: %s\n\n", $line, $_);
 	    }
 	 }
+      }
 
-	 # check for SCIPdebugMessage without "\n"
-	 if ( $checkdebug == 1 && $str =~ /SCIPdebugMessage/ )
+      # ----------------------------------------
+      # check for SCIPdebugMessage without "\n"
+      if ( $checkdebug == 1 && $str =~ /SCIPdebugMessage/ )
+      {
+	 my $s = $str;
+
+	 # remove "SCIP_LONGINT_FORMAT"
+	 $s =~ s/\"SCIP_LONGINT_FORMAT\"//g;
+
+	 my $debpos = index($s, "SCIPdebugMessage");
+	 my $enddebpos = index($s, "\",", $debpos + 18);
+	 if ( $enddebpos >= 0 )
 	 {
-	    my $s = $str;
-
-	    # remove "SCIP_LONGINT_FORMAT"
-	    $s =~ s/\"SCIP_LONGINT_FORMAT\"//g;
-
-            my $debpos = index($s, "SCIPdebugMessage");
-	    my $enddebpos = index($s, "\",", $debpos + 18);
-	    if ( $enddebpos >= 0 )
+	    if ( substr($s, $enddebpos-2, 2) ne "\\n" )
 	    {
-	       if ( substr($s, $enddebpos-2, 2) ne "\\n" )
-	       {
-		  printf("%d: possible SCIPdebugMessage() without finializing '\\n':\n%s\n\n", $line, $_);
-	       }
+	       printf("%d: possible SCIPdebugMessage() without finializing '\\n':\n%s\n\n", $line, $_);
 	    }
 	 }
       }

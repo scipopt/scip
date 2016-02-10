@@ -24,6 +24,7 @@ IP/Bugs/Counting/bug_503.lp
 #IP/Bugs/ZimplRead/bug486.zpl
 IP/Bugs/Bug479/je2A.mps
 IP/Bugs/HardLP/bug490.lp.gz
+IP/Google/problematic.lp
 IP/Bugs/Siemens/SfoLP60.lp.gz
 IP/Bugs/Siemens/monotonic.lp.gz
 IP/Bugs/Siemens/Segfaults-09-08/PPMIP156.lp.gz

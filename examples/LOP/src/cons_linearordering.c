@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -43,10 +43,8 @@
 #define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                          *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
-#define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
@@ -86,7 +84,7 @@ SCIP_RETCODE LinearOrderingSeparate(
    {
       for (j = 0; j < n && ! (*cutoff); ++j)
       {
-	 SCIP_Real valIJ = 0.0;
+	 SCIP_Real valIJ;
 	 if (j == i)
 	    continue;
 
@@ -198,7 +196,7 @@ SCIP_DECL_CONSDELETE(consDeleteLinearOrdering)
 
    n = (*consdata)->n;
    for (i = 0; i < n; ++i)
-      SCIPfreeBlockMemoryArray(scip, &((*consdata)->vars[i]), n);
+      SCIPfreeBlockMemoryArray(scip, &((*consdata)->vars[i]), n); /*lint !e866*/
    SCIPfreeBlockMemoryArray(scip, &((*consdata)->vars), n);
    SCIPfreeBlockMemory(scip, consdata);
 
@@ -235,10 +233,10 @@ SCIP_DECL_CONSTRANS(consTransLinearOrdering)
    consdata->n = n;
 
    /* transform variables */
-   SCIPallocBlockMemoryArray(scip, &consdata->vars, n);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars, n) );
    for (i = 0; i < n; ++i)
    {
-      SCIPallocBlockMemoryArray(scip, &(consdata->vars[i]), n);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->vars[i]), n) ); /*lint !e866*/
       for (j = 0; j < n; ++j)
       {
 	 if (j != i)
@@ -451,7 +449,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpLinearOrdering)
       {
 	 for (j = 0; j < n; ++j)
 	 {
-	    SCIP_Real valIJ = 0.0;
+	    SCIP_Real valIJ;
 	    if (j == i)
 	       continue;
 
@@ -727,6 +725,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
    assert( conss != NULL );
    assert( result != NULL );
+
    *result = SCIP_DIDNOTRUN;
 
    /* loop through all constraints */
@@ -745,9 +744,11 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
       SCIPdebugMessage("propagating linear ordering constraint <%s>.\n", SCIPconsGetName(cons));
 
       *result = SCIP_DIDNOTFIND;
+
       consdata = SCIPconsGetData(cons);
       assert( consdata != NULL );
       assert( consdata->vars != NULL );
+
       vars = consdata->vars;
       n = consdata->n;
 
@@ -760,7 +761,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 	       continue;
 
 	    /* if x[i][j] == 1 then x[j][i] = 0 */
-	    if ( (SCIPvarGetLbLocal(vars[i][j]) > 0.5) )
+	    if ( SCIPvarGetLbLocal(vars[i][j]) > 0.5 )
 	    {
 	       SCIP_Bool infeasible, tightened;
 	       SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][i], FALSE, cons, i*n + j, &infeasible, &tightened) );
@@ -769,6 +770,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 		  SCIPdebugMessage(" -> node infeasible.\n");
                   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][i]) );
                   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 		  *result = SCIP_CUTOFF;
 		  return SCIP_OKAY;
@@ -778,7 +780,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 	    }
 
 	    /* if x[i][j] == 0 then x[j][i] = 1 */
-	    if ( (SCIPvarGetUbLocal(vars[i][j]) < 0.5) )
+	    if ( SCIPvarGetUbLocal(vars[i][j]) < 0.5 )
 	    {
 	       SCIP_Bool infeasible, tightened;
 	       SCIP_CALL( SCIPinferBinvarCons(scip, vars[j][i], TRUE, cons, i*n + j, &infeasible, &tightened) );
@@ -787,6 +789,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 		  SCIPdebugMessage(" -> node infeasible.\n");
                   SCIP_CALL( SCIPinitConflictAnalysis(scip) );
                   SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
+                  SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][i]) );
                   SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 		  *result = SCIP_CUTOFF;
 		  return SCIP_OKAY;
@@ -801,7 +804,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
 		  continue;
 
 	       /* if x[i][j] == 1 and x[j][k] == 1 then x[k][i] = 0 */
-	       if ( (SCIPvarGetLbLocal(vars[i][j]) > 0.5) && (SCIPvarGetLbLocal(vars[j][k]) > 0.5))
+	       if ( SCIPvarGetLbLocal(vars[i][j]) > 0.5 && SCIPvarGetLbLocal(vars[j][k]) > 0.5 )
 	       {
 		  SCIP_Bool infeasible, tightened;
 		  SCIP_CALL( SCIPinferBinvarCons(scip, vars[k][i], FALSE, cons, n*n + i*n*n + j*n + k, &infeasible, &tightened) );
@@ -811,6 +814,7 @@ SCIP_DECL_CONSPROP(consPropLinearOrdering)
                      SCIP_CALL( SCIPinitConflictAnalysis(scip) );
                      SCIP_CALL( SCIPaddConflictBinvar(scip, vars[i][j]) );
                      SCIP_CALL( SCIPaddConflictBinvar(scip, vars[j][k]) );
+                     SCIP_CALL( SCIPaddConflictBinvar(scip, vars[k][i]) );
                      SCIP_CALL( SCIPanalyzeConflictCons(scip, cons, NULL) );
 		     *result = SCIP_CUTOFF;
 		     return SCIP_OKAY;
@@ -912,7 +916,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinearOrdering)
       assert( SCIPvarGetUbAtIndex(infervar, bdchgidx, FALSE) > 0.5 && SCIPvarGetUbAtIndex(infervar, bdchgidx, TRUE) < 0.5 );
 
       /* the reason was that x[index1][index2] and x[index2][index3] were fixed to 1 */
-      SCIPdebugMessage(" -> reason for x[%d][%d] == 0 was x[%d][%d] = x[%d][%d] = 0.\n", index3, index1, index1, index2, index2, index3);
+      SCIPdebugMessage(" -> reason for x[%d][%d] == 0 was x[%d][%d] = x[%d][%d] = 1.\n", index3, index1, index1, index2, index2, index3);
       SCIP_CALL( SCIPaddConflictLb(scip, vars[index1][index2], bdchgidx) );
       SCIP_CALL( SCIPaddConflictLb(scip, vars[index2][index3], bdchgidx) );
       *result = SCIP_SUCCESS;
@@ -1038,7 +1042,7 @@ SCIP_DECL_CONSCOPY(consCopyLinearOrdering)
 
    for (i = 0; i < n; ++i)
    {
-      SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), n) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &(vars[i]), n) ); /*lint !e866*/
 
       for (j = 0; j < n && *valid; ++j)
       {
@@ -1133,10 +1137,10 @@ SCIP_RETCODE SCIPcreateConsLinearOrdering(
    SCIP_CALL( SCIPallocBlockMemory(scip, &consdata) );
 
    consdata->n = n;
-   SCIPallocBlockMemoryArray(scip, &consdata->vars, n);
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &consdata->vars, n) );
    for (i = 0; i < n; ++i)
    {
-      SCIPallocBlockMemoryArray(scip, &(consdata->vars[i]), n);
+      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(consdata->vars[i]), n) ); /*lint !e866*/
       for (j = 0; j < n; ++j)
       {
 	 if (j != i)

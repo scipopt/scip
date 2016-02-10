@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,7 +24,6 @@
 #ifndef __SCIP_SCIPDEFPLUGINS_H__
 #define __SCIP_SCIPDEFPLUGINS_H__
 
-
 #include "scip/scip.h"
 
 /* include header files here, such that the user only has to include
@@ -37,9 +36,13 @@
 #include "scip/branch_inference.h"
 #include "scip/branch_leastinf.h"
 #include "scip/branch_mostinf.h"
+#include "scip/branch_multaggr.h"
+#include "scip/branch_nodereopt.h"
 #include "scip/branch_pscost.h"
 #include "scip/branch_random.h"
 #include "scip/branch_relpscost.h"
+#include "scip/compr_largestrepr.h"
+#include "scip/compr_weakcompr.h"
 #include "scip/cons_abspower.h"
 #include "scip/cons_and.h"
 #include "scip/cons_bivariate.h"
@@ -70,8 +73,9 @@
 #include "scip/event_solvingphase.h"
 #include "scip/event_nodeevent.h"
 #include "scip/event_estimation.h"
-#include "scip/event_logregression.h"
+#include "scip/event_softtimelimit.h"
 #include "scip/heur_actconsdiving.h"
+#include "scip/heur_bound.h"
 #include "scip/heur_clique.h"
 #include "scip/heur_coefdiving.h"
 #include "scip/heur_crossover.h"
@@ -82,7 +86,7 @@
 #include "scip/heur_fixandinfer.h"
 #include "scip/heur_fracdiving.h"
 #include "scip/heur_guideddiving.h"
-#include "scip/heur_zeroobj.h"
+#include "scip/heur_indicator.h"
 #include "scip/heur_intdiving.h"
 #include "scip/heur_intshifting.h"
 #include "scip/heur_linesearchdiving.h"
@@ -91,11 +95,13 @@
 #include "scip/heur_nlpdiving.h"
 #include "scip/heur_objpscostdiving.h"
 #include "scip/heur_octane.h"
+#include "scip/heur_ofins.h"
 #include "scip/heur_oneopt.h"
 #include "scip/heur_pscostdiving.h"
 #include "scip/heur_proximity.h"
 #include "scip/heur_randrounding.h"
 #include "scip/heur_rens.h"
+#include "scip/heur_reoptsols.h"
 #include "scip/heur_rins.h"
 #include "scip/heur_rootsoldiving.h"
 #include "scip/heur_rounding.h"
@@ -104,11 +110,13 @@
 #include "scip/heur_simplerounding.h"
 #include "scip/heur_subnlp.h"
 #include "scip/heur_trivial.h"
+#include "scip/heur_trivialnegation.h"
 #include "scip/heur_trysol.h"
 #include "scip/heur_twoopt.h"
 #include "scip/heur_undercover.h"
 #include "scip/heur_vbounds.h"
 #include "scip/heur_veclendiving.h"
+#include "scip/heur_zeroobj.h"
 #include "scip/heur_zirounding.h"
 #include "scip/nodesel_bfs.h"
 #include "scip/nodesel_breadthfirst.h"
@@ -122,11 +130,16 @@
 #include "scip/presol_components.h"
 #include "scip/presol_convertinttobin.h"
 #include "scip/presol_domcol.h"
+#include "scip/presol_implfree.h"
+#include "scip/presol_dualagg.h"
 #include "scip/presol_dualinfer.h"
 #include "scip/presol_gateextraction.h"
 #include "scip/presol_implics.h"
 #include "scip/presol_inttobinary.h"
+#include "scip/presol_redvub.h"
 #include "scip/presol_trivial.h"
+#include "scip/presol_tworowbnd.h"
+#include "scip/presol_stuffing.h"
 #include "scip/prop_dualfix.h"
 #include "scip/prop_genvbounds.h"
 #include "scip/prop_obbt.h"
@@ -139,6 +152,7 @@
 #include "scip/reader_ccg.h"
 #include "scip/reader_cip.h"
 #include "scip/reader_cnf.h"
+#include "scip/reader_diff.h"
 #include "scip/reader_fix.h"
 #include "scip/reader_fzn.h"
 #include "scip/reader_gms.h"
@@ -153,10 +167,12 @@
 #include "scip/reader_sol.h"
 #include "scip/reader_wbo.h"
 #include "scip/reader_zpl.h"
+#include "scip/sepa_eccuts.h"
 #include "scip/sepa_cgmip.h"
 #include "scip/sepa_clique.h"
 #include "scip/sepa_closecuts.h"
 #include "scip/sepa_cmir.h"
+#include "scip/sepa_disjunctive.h"
 #include "scip/sepa_flowcover.h"
 #include "scip/sepa_gomory.h"
 #include "scip/sepa_impliedbounds.h"

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -102,7 +102,7 @@ SCIP_RETCODE getActiveVariables(
       {
          SCIP_CALL( SCIPreallocBufferArray(scip, &vars, requiredsize) );
          SCIP_CALL( SCIPreallocBufferArray(scip, &scalars, requiredsize) );
-         
+
          SCIP_CALL( SCIPgetProbvarLinearSum(scip, vars, scalars, nvars, requiredsize, constant, &requiredsize, TRUE) );
          assert( requiredsize <= *nvars );
       }
@@ -110,7 +110,9 @@ SCIP_RETCODE getActiveVariables(
    else
    {
       for( v = 0; v < *nvars; ++v )
+      {
          SCIP_CALL( SCIPvarGetOrigvarSum(&vars[v], &scalars[v], constant) );
+      }
    }
    return SCIP_OKAY;
 }
@@ -171,17 +173,17 @@ void appendLine(
    assert( linebuffer != NULL );
    assert( linecnt != NULL );
    assert( extension != NULL );
-   
+
    if( *linecnt + strlen(extension) > PPM_MAX_LINELEN - 1 )
       endLine(scip, file, readerdata, linebuffer, linecnt);
-   
+
    /* append extension to linebuffer */
    strncat(linebuffer, extension, PPM_MAX_LINELEN - (unsigned int)(*linecnt) - 1);
    (*linecnt) += (int) strlen(extension);
 }
 
 
-/* calculates the color value for a given coefficient */
+/** calculates the color value for a given coefficient */
 static
 void calcColorValue(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -195,10 +197,12 @@ void calcColorValue(
 {
    SCIP_Real coeflog;
 
-   assert (scip != NULL);
-   assert (readerdata != NULL);
+   assert(scip != NULL);
+   assert(readerdata != NULL);
+   assert(readerdata->rgb_limit >= 0);
+   assert(coef > 0);
 
-   coeflog = SCIPfloor(scip,log10(coef));
+   coeflog = SCIPfloor(scip, log10(coef));
 
    if(!(readerdata->rgb_relativ))
    {
@@ -241,7 +245,7 @@ void calcColorValue(
 }
 
 
-/* print row in PPM format to file stream */
+/** print row in PPM format to file stream */
 static
 void printRow(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -317,7 +321,7 @@ void printRow(
       }
 
 
-      calcColorValue(scip, readerdata, vals[indexvar], &red, &green, &blue, maxcoef);
+      calcColorValue(scip, readerdata, REALABS(vals[indexvar]), &red, &green, &blue, maxcoef);
       if(readerdata->rgb_ascii)
       {
          if(red == 35 || red == 0) red++;
@@ -327,7 +331,7 @@ void printRow(
       }
       else
          (void) SCIPsnprintf(buffer, PPM_MAX_LINELEN, " %d %d %d ", red, green, blue);
-      
+
       appendLine(scip, file, readerdata, linebuffer, &linecnt, buffer);
       i++;
    }
@@ -375,7 +379,9 @@ SCIP_RETCODE printLinearCons(
    nactivevars = nvars;
    SCIP_CALL( SCIPduplicateBufferArray(scip, &activevars, vars, nactivevars ) );
    if( vals != NULL )
+   {
       SCIP_CALL( SCIPduplicateBufferArray(scip, &activevals, vals, nactivevars ) );
+   }
    else
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &activevals, nactivevars) );

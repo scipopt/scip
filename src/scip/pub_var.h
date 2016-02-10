@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -81,7 +81,7 @@ int SCIPvarCompareActiveAndNegated(
    SCIP_VAR*             var1,               /**< first problem variable */
    SCIP_VAR*             var2                /**< second problem variable */
    );
-   
+
 /** comparison method for sorting active and negated variables by non-decreasing index, active and negated 
  *  variables are handled as the same variables
  */
@@ -437,7 +437,7 @@ SCIP_Bool SCIPvarIsDeleted(
  */
 EXTERN
 void SCIPvarMarkDeletable(
-   SCIP_VAR*             var
+   SCIP_VAR*             var                 /**< problem variable */
    );
 
 /** marks the variable to be not deletable from the problem */
@@ -551,6 +551,12 @@ SCIP_Real SCIPvarGetNegationConstant(
 /** gets objective function value of variable */
 EXTERN
 SCIP_Real SCIPvarGetObj(
+   SCIP_VAR*             var                 /**< problem variable */
+   );
+
+/** gets the unchanged objective function value of variable (ignoring temproray changes performed in probing mode) */
+EXTERN
+SCIP_Real SCIPvarGetUnchangedObj(
    SCIP_VAR*             var                 /**< problem variable */
    );
 
@@ -739,15 +745,6 @@ int SCIPvarGetNImpls(
    SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
    );
 
-/** gets number of implications  y <= 0 or y >= 1 for x == 0 or x == 1 of given active problem variable x with binary y, 
- *  there are no implications for nonbinary variable x
- */
-EXTERN
-int SCIPvarGetNBinImpls(
-   SCIP_VAR*             var,                /**< active problem variable */
-   SCIP_Bool             varfixing           /**< FALSE for implications for x == 0, TRUE for x == 1 */
-   );
-
 /** gets array with implication variables y of implications  y <= b or y >= b for x == 0 or x == 1 of given active
  *  problem variable x, there are no implications for nonbinary variable x;
  *  the implications are sorted such that implications with binary implied variables precede the ones with non-binary
@@ -930,7 +927,6 @@ SCIP_VALUEHISTORY* SCIPvarGetValuehistory(
 #define SCIPvarGetVubCoefs(var)         (SCIPvboundsGetCoefs((var)->vubs))
 #define SCIPvarGetVubConstants(var)     (SCIPvboundsGetConstants((var)->vubs))
 #define SCIPvarGetNImpls(var, fix)      (SCIPimplicsGetNImpls((var)->implics, fix))
-#define SCIPvarGetNBinImpls(var, fix)   (SCIPimplicsGetNBinImpls((var)->implics, fix))
 #define SCIPvarGetImplVars(var, fix)    (SCIPimplicsGetVars((var)->implics, fix))
 #define SCIPvarGetImplTypes(var, fix)   (SCIPimplicsGetTypes((var)->implics, fix))
 #define SCIPvarGetImplBounds(var, fix)  (SCIPimplicsGetBounds((var)->implics, fix))

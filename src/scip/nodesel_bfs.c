@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -176,7 +176,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
    {
       SCIP_NODE* node;
       SCIP_Real maxbound;
-         
+
       /* check, if plunging is forced at the current depth */
       if( plungedepth < minplungedepth )
       {
@@ -191,7 +191,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectBfs)
          /* get global lower and cutoff bound */
          lowerbound = SCIPgetLowerbound(scip);
          cutoffbound = SCIPgetCutoffbound(scip);
-         
+
          /* if we didn't find a solution yet, the cutoff bound is usually very bad:
           * use only 20% of the gap as cutoff bound
           */
@@ -304,7 +304,7 @@ SCIP_DECL_NODESELCOMP(nodeselCompBfs)
          {
             int depth1;
             int depth2;
-         
+
             depth1 = SCIPnodeGetDepth(node1);
             depth2 = SCIPnodeGetDepth(node2);
             if( depth1 < depth2 )
@@ -363,8 +363,9 @@ SCIP_RETCODE SCIPincludeNodeselBfs(
          "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where plunging is performed",
          &nodeseldata->maxplungequot, TRUE, MAXPLUNGEQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddLongintParam(scip, "nodeselection/"NODESEL_NAME"/nodelimit",
-            "maximum number of nodes before switching to default rule (-1 for no limit)",
-            &nodeseldata->nodelimit, TRUE, -1, -1, SCIP_LONGINT_MAX, NULL, NULL) );
+         "maximum number of nodes before switching to default rule (-1 for no limit)",
+         &nodeseldata->nodelimit, TRUE, -1, -1, SCIP_LONGINT_MAX, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -198,7 +198,7 @@ SCIP_DECL_SEPACOPY(sepaCopyStrongcg)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaStrongcg(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -238,6 +238,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    SCIP_Real maxscale;
    SCIP_Longint maxdnom;
    int* basisind;
+   int* inds;
+   int ninds;
    int nvars;
    int ncols;
    int nrows;
@@ -348,6 +350,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &inds, nrows) );
    varsolvals = NULL; /* allocate this later, if needed */
 
    /* get basis indices */
@@ -359,7 +362,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
    else
       maxsepacuts = sepadata->maxsepacuts;
 
-   SCIPdebugMessage("searching strong CG cuts: %d cols, %d rows, maxdnom=%"SCIP_LONGINT_FORMAT", maxscale=%g, maxcuts=%d\n",
+   SCIPdebugMessage("searching strong CG cuts: %d cols, %d rows, maxdnom=%" SCIP_LONGINT_FORMAT ", maxscale=%g, maxcuts=%d\n",
       ncols, nrows, maxdnom, maxscale, maxsepacuts);
 
    /* for all basic columns belonging to integer variables, try to generate a strong CG cut */
@@ -395,7 +398,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
       {
          SCIP_ROW* row;
 
-         assert(0 <= -c-1 && -c-1 < nrows); 
+         assert(0 <= -c-1 && -c-1 < nrows);
          row = rows[-c-1];
          if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) )
          {
@@ -414,7 +417,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
       if( tryrow )
       {
          /* get the row of B^-1 for this basic integer variable with fractional solution value */
-         SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow) );
+         SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, inds, &ninds) );
 
 #ifdef SCIP_DEBUG
          /* initialize variables, that might not have been initialized in SCIPcalcMIR if success == FALSE */
@@ -423,10 +426,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 #endif
          /* create a strong CG cut out of the weighted LP rows using the B^-1 row as weights */
          SCIP_CALL( SCIPcalcStrongCG(scip, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, MINFRAC, MAXFRAC,
-               binvrow, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
+               binvrow, inds, ninds, 1.0, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
          assert(ALLOWLOCAL || !cutislocal);
          SCIPdebugMessage(" -> success=%u: %g <= %g\n", success, cutact, cutrhs);
-               
+
          /* if successful, convert dense cut into sparse row, and add the row as a cut */
          if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
          {
@@ -556,6 +559,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpStrongcg)
 
    /* free temporary memory */
    SCIPfreeBufferArrayNull(scip, &varsolvals);
+   SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &binvrow);
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutcoefs);

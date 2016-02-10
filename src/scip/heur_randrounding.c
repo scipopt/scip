@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -198,16 +198,19 @@ SCIP_RETCODE performRandRounding(
          /* enter a new probing node if the variable was not already fixed before */
          if( lbadjust || ubadjust )
          {
-            SCIP_RETCODE retcode;
-
             if( SCIPisStopped(scip) )
                break;
 
-            retcode = SCIPnewProbingNode(scip);
-            if( retcode == SCIP_MAXDEPTHLEVEL )
+            /* We only want to create a new probing node if we do not exceeed the maximal tree depth,
+             * otherwise we finish at this point.
+             * @todo: Maybe we want to continue with the same node because we do not backtrack.
+             */
+            if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+            {
+               SCIP_CALL( SCIPnewProbingNode(scip) );
+            }
+            else
                break;
-
-            SCIP_CALL( retcode );
 
             /* tighten the bounds to fix the variable for the probing node */
             if( lbadjust )
@@ -489,15 +492,15 @@ SCIP_RETCODE SCIPincludeHeurRandrounding(
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolRandrounding) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeRandrounding) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/oncepernode",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/oncepernode",
          "should the heuristic only be called once per node?",
          &heurdata->oncepernode, TRUE, DEFAULT_ONCEPERNODE, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/usesimplerounding", "should the heuristic apply the variable lock strategy of simple rounding, if possible?",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usesimplerounding", "should the heuristic apply the variable lock strategy of simple rounding, if possible?",
          &heurdata->usesimplerounding, TRUE, DEFAULT_USESIMPLEROUNDING, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/propagateonlyroot",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/propagateonlyroot",
          "should the probing part of the heuristic be applied exclusively at the root node?",
          &heurdata->propagateonlyroot, TRUE, DEFAULT_PROPAGATEONLYROOT, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxproprounds",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxproprounds",
          "limit of rounds for each propagation call",
          &heurdata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS,
          -1, INT_MAX, NULL, NULL) );

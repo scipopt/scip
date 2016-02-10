@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -35,8 +35,9 @@
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
                                               *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
+
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_FAST
 
 /*
  * Data structures
@@ -210,9 +211,9 @@ SCIP_RETCODE checkAllConss(
    SCIP_CONS**           conss,              /**< active conjunction constraints */
    int                   nconss,             /**< number of active conjunction constraints */
    SCIP_SOL*             sol,                /**< solution to check */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -236,7 +237,8 @@ SCIP_RETCODE checkAllConss(
 
       if( printreason && *result == SCIP_INFEASIBLE )
       {
-	 SCIPinfoMessage(scip, NULL, "conjunction constraint %s is violated, at least the sub-constraint %s is violated by this given solution\n", SCIPconsGetName(conss[c]), SCIPconsGetName(consdata->conss[i-1]));
+	 SCIPinfoMessage(scip, NULL, "conjunction constraint %s is violated, at least the sub-constraint %s is violated by this given solution\n",
+            SCIPconsGetName(conss[c]), SCIPconsGetName(consdata->conss[i-1]));
 	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
       }
    }
@@ -250,7 +252,6 @@ SCIP_RETCODE checkAllConss(
  */
 
 
-#if 0
  /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyConjunction)
@@ -266,7 +267,6 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyConjunction)
 
    return SCIP_OKAY;
 }
-#endif
 
 
 /** frees specific constraint data */
@@ -656,6 +656,70 @@ SCIP_DECL_CONSPARSE(consParseConjunction)
    return SCIP_OKAY;
 }
 
+/** constraint copying method of constraint handler */
+static
+SCIP_DECL_CONSCOPY(consCopyConjunction)
+{  /*lint --e{715}*/
+   SCIP_CONSDATA* sourcedata;
+   SCIP_CONS** sourceconss;
+   SCIP_CONS** conss;
+   int nconss;
+   int c;
+
+   *valid = TRUE;
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert(sourcedata != NULL);
+
+   sourceconss = sourcedata->conss;
+   nconss = sourcedata->nconss;
+
+   if( nconss > 0 )
+   {
+      assert(sourceconss != NULL);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &conss, nconss) );
+
+      /* copy each constraint one by one */
+      for( c = 0; c < nconss && (*valid); ++c )
+      {
+         SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourceconss[c], &conss[c], SCIPconsGetHdlr(sourceconss[c]),
+               varmap, consmap, SCIPconsGetName(sourceconss[c]),
+               SCIPconsIsInitial(sourceconss[c]), SCIPconsIsSeparated(sourceconss[c]), SCIPconsIsEnforced(sourceconss[c]),
+               SCIPconsIsChecked(sourceconss[c]), SCIPconsIsPropagated(sourceconss[c]),
+               SCIPconsIsLocal(sourceconss[c]), SCIPconsIsModifiable(sourceconss[c]),
+               SCIPconsIsDynamic(sourceconss[c]), SCIPconsIsRemovable(sourceconss[c]), SCIPconsIsStickingAtNode(sourceconss[c]),
+               global, valid) );
+         assert(!(*valid) || conss[c] != NULL);
+      }
+
+      if( *valid )
+      {
+         if( name == NULL )
+         {
+            SCIP_CALL( SCIPcreateConsConjunction(scip, cons, SCIPconsGetName(sourcecons), nconss, conss,
+                  enforce, check, local, modifiable, dynamic) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateConsConjunction(scip, cons, name, nconss, conss,
+                  enforce, check, local, modifiable, dynamic) );
+         }
+      }
+
+      /* release the copied constraints */
+      for( c = (*valid ? c - 1 : c - 2); c >= 0; --c )
+      {
+         assert(conss[c] != NULL);
+         SCIP_CALL( SCIPreleaseCons(scip, &conss[c]) );
+      }
+
+      SCIPfreeBufferArray(scip, &conss);
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * constraint specific interface methods
@@ -680,10 +744,11 @@ SCIP_RETCODE SCIPincludeConshdlrConjunction(
    assert(conshdlr != NULL);
 
    /* set non-fundamental callbacks via specific setter functions */
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyConjunction, consCopyConjunction) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteConjunction) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseConjunction) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolConjunction, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYPRESOL) );
+         CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintConjunction) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransConjunction) );
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,10 +32,79 @@
 #include "scip/type_primal.h"
 #include "scip/type_heur.h"
 #include "scip/pub_heur.h"
+#include "scip/stat.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+/** create a set of diving heuristic settings */
+extern
+SCIP_RETCODE SCIPdivesetCreate(
+   SCIP_DIVESET**        diveset,            /**< pointer to the freshly created diveset */
+   SCIP_HEUR*            heur,               /**< the heuristic to which this dive setting belongs */
+   const char*           name,               /**< name for the diveset, or NULL if the name of the heuristic should be used */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
+   BMS_BLKMEM*           blkmem,             /**< block memory for parameter settings */
+   SCIP_Real             minreldepth,        /**< minimal relative depth to start diving */
+   SCIP_Real             maxreldepth,        /**< maximal relative depth to start diving */
+   SCIP_Real             maxlpiterquot,      /**< maximal fraction of diving LP iterations compared to node LP iterations */
+   SCIP_Real             maxdiveubquot,      /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
+                                              *   where diving is performed (0.0: no limit) */
+   SCIP_Real             maxdiveavgquot,     /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
+                                              *   where diving is performed (0.0: no limit) */
+   SCIP_Real             maxdiveubquotnosol, /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Real             maxdiveavgquotnosol,/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
+   SCIP_Real             lpresolvedomchgquot,/**< percentage of immediate domain changes during probing to trigger LP resolve */
+   int                   lpsolvefreq,        /**< LP solve frequency for (0: only if enough domain reductions are found by propagation)*/
+   int                   maxlpiterofs,       /**< additional number of allowed LP iterations */
+   SCIP_Bool             backtrack,          /**< use one level of backtracking if infeasibility is encountered? */
+   SCIP_Bool             onlylpbranchcands,  /**< should only LP branching candidates be considered instead of the slower but
+                                              *   more general constraint handler diving variable selection? */
+   SCIP_DIVETYPE         divetypemask,       /**< bit mask that represents the supported dive types by this dive set */
+   SCIP_DECL_DIVESETGETSCORE((*divesetgetscore))  /**< method for candidate score and rounding direction */
+   );
+
+/** resets diving settings counters */
+extern
+void SCIPdivesetReset(
+   SCIP_DIVESET*         diveset             /**< diveset to be reset */
+   );
+
+/** update diveset statistics and global diveset statistics */
+extern
+void SCIPdivesetUpdateStats(
+   SCIP_DIVESET*         diveset,            /**< diveset to be reset */
+   SCIP_STAT*            stat,               /**< global SCIP statistics */
+   int                   depth,              /**< the depth reached this time */
+   int                   nprobingnodes,      /**< the number of probing nodes explored this time */
+   int                   nbacktracks,        /**< the number of backtracks during probing this time */
+   SCIP_Longint          nsolsfound,         /**< number of new solutions found this time */
+   SCIP_Longint          nbestsolsfound,     /**< number of new best solutions found this time */
+   SCIP_Bool             leavesol            /**< has the diving heuristic reached a feasible leaf */
+   );
+
+/** get the candidate score and preferred rounding direction for a candidate variable */
+extern
+SCIP_RETCODE SCIPdivesetGetScore(
+   SCIP_DIVESET*         diveset,            /**< general diving settings */
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_DIVETYPE         divetype,           /**< the type of diving that should be applied */
+   SCIP_VAR*             divecand,           /**< the candidate for which the branching direction is requested */
+   SCIP_Real             divecandsol,        /**< LP solution value of the candidate */
+   SCIP_Real             divecandfrac,       /**< fractionality of the candidate */
+   SCIP_Real*            candscore,          /**< pointer to store the candidate score */
+   SCIP_Bool*            roundup             /**< pointer to store whether preferred direction for diving is upwards */
+   );
+
+/** update diveset LP statistics, should be called after every LP solved by this diving heuristic */
+extern
+void SCIPdivesetUpdateLPStats(
+   SCIP_DIVESET*         diveset,            /**< diving settings */
+   SCIP_STAT*            stat,               /**< global SCIP statistics */
+   SCIP_Longint          niterstoadd         /**< additional number of LP iterations to be added */
+   );
 
 /** copies the given primal heuristic to a new scip */
 extern
@@ -59,7 +128,7 @@ SCIP_RETCODE SCIPheurCreate(
    int                   freqofs,            /**< frequency offset for calling primal heuristic */
    int                   maxdepth,           /**< maximal depth level to call heuristic at (-1: no limit) */
    unsigned int          timingmask,         /**< positions in the node solving loop where heuristic should be executed */
-   SCIP_Bool             usessubscip,        /**< does the separator use a secondary SCIP instance? */
+   SCIP_Bool             usessubscip,        /**< does the heuristic use a secondary SCIP instance? */
    SCIP_DECL_HEURCOPY    ((*heurcopy)),      /**< copy method of primal heuristic or NULL if you don't want to copy your plugin into sub-SCIPs */
    SCIP_DECL_HEURFREE    ((*heurfree)),      /**< destructor of primal heuristic */
    SCIP_DECL_HEURINIT    ((*heurinit)),      /**< initialize primal heuristic */
@@ -177,6 +246,13 @@ extern
 void SCIPheurSetExitsol(
    SCIP_HEUR*            heur,               /**< primal heuristic */
    SCIP_DECL_HEUREXITSOL ((*heurexitsol))    /**< solving process deinitialization callback of primal heuristic */
+   );
+
+/** enables or disables all clocks of \p heur, depending on the value of the flag */
+extern
+void SCIPheurEnableOrDisableClocks(
+   SCIP_HEUR*            heur,               /**< the heuristic for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the heuristic be enabled? */
    );
 
 #ifdef __cplusplus

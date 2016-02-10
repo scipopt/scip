@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -65,8 +65,8 @@ lint:		$(MAINSRC)
 		$(SHELL) -ec 'for i in $^; \
 			do \
 			echo $$i; \
-			$(LINT) lint/$(MAINNAME).lnt +os\(lint.out\) -u -zero \
-			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE $$i; \
+			$(LINT) -I$(SCIPDIR) lint/main-gcc.lnt +os\(lint.out\) -u -zero \
+			$(FLAGS) -UNDEBUG -UWITH_READLINE -UROUNDING_FE -D_BSD_SOURCE $$i; \
 			done'
 
 .PHONY: scip
@@ -74,7 +74,7 @@ scip:
 		@$(MAKE) -C $(SCIPDIR) libs $^
 
 .PHONY: doc
-doc:		
+doc:
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
 		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
@@ -85,7 +85,7 @@ $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@
 		cd $(dir $@) && ln -s $(notdir $(MAINFILE)) $(notdir $@)
 
-$(OBJDIR):	
+$(OBJDIR):
 		@-mkdir -p $(OBJDIR)
 
 $(BINDIR):
@@ -111,7 +111,8 @@ ifeq ($(TEST), short)
 		@-(cd check/testset && ln -fs ../../$(SCIPDIR)/check/testset/short.solu);
 endif
 		cd check; \
-		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND);
+		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+			$(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE);
 
 .PHONY: clean
 clean:		$(OBJDIR)

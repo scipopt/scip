@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,9 +39,9 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in
                                          *   (-1: no limit) */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_FAST
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 
@@ -268,9 +268,9 @@ SCIP_RETCODE checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< active disjunction constraint */
    SCIP_SOL*             sol,                /**< solution to check */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -928,27 +928,41 @@ SCIP_DECL_CONSCOPY(consCopyDisjunction)
 
    if( *valid )
    {
-      SCIP_CONS* relaxcons;
+      SCIP_CONS* sourcerelaxcons;
+      SCIP_CONS* targetrelaxcons;
 
-      relaxcons = sourcedata->relaxcons;
+      sourcerelaxcons = sourcedata->relaxcons;
+      targetrelaxcons = NULL;
 
-      if( relaxcons != NULL )
+      if( sourcerelaxcons != NULL )
       {
-         SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, relaxcons, &relaxcons, SCIPconsGetHdlr(relaxcons),
-               varmap, consmap, SCIPconsGetName(relaxcons),
-               SCIPconsIsInitial(relaxcons), SCIPconsIsSeparated(relaxcons), SCIPconsIsEnforced(relaxcons),
-               SCIPconsIsChecked(relaxcons), SCIPconsIsPropagated(relaxcons),
-               SCIPconsIsLocal(relaxcons), SCIPconsIsModifiable(relaxcons),
-               SCIPconsIsDynamic(relaxcons), SCIPconsIsRemovable(relaxcons), SCIPconsIsStickingAtNode(relaxcons),
+         SCIP_CALL( SCIPgetConsCopy(sourcescip, scip, sourcerelaxcons, &targetrelaxcons, SCIPconsGetHdlr(sourcerelaxcons),
+               varmap, consmap, SCIPconsGetName(sourcerelaxcons),
+               SCIPconsIsInitial(sourcerelaxcons), SCIPconsIsSeparated(sourcerelaxcons), SCIPconsIsEnforced(sourcerelaxcons),
+               SCIPconsIsChecked(sourcerelaxcons), SCIPconsIsPropagated(sourcerelaxcons),
+               SCIPconsIsLocal(sourcerelaxcons), SCIPconsIsModifiable(sourcerelaxcons),
+               SCIPconsIsDynamic(sourcerelaxcons), SCIPconsIsRemovable(sourcerelaxcons),
+               SCIPconsIsStickingAtNode(sourcerelaxcons),
                global, valid) );
       }
 
       if( *valid )
       {
-	 SCIP_CALL( SCIPcreateConsDisjunction(scip, cons, name, nconss, conss, relaxcons,
-	       initial, enforce, check, local, modifiable, dynamic) );
+         if( name == NULL )
+         {
+            SCIP_CALL( SCIPcreateConsDisjunction(scip, cons, SCIPconsGetName(sourcecons), nconss, conss, targetrelaxcons,
+                  initial, enforce, check, local, modifiable, dynamic) );
+         }
+         else
+         {
+            SCIP_CALL( SCIPcreateConsDisjunction(scip, cons, name, nconss, conss, targetrelaxcons,
+                  initial, enforce, check, local, modifiable, dynamic) );
+         }
 
-         SCIP_CALL( SCIPreleaseCons(scip, &relaxcons) );
+         if( targetrelaxcons != NULL )
+         {
+            SCIP_CALL( SCIPreleaseCons(scip, &targetrelaxcons) );
+         }
       }
    }
 
@@ -995,7 +1009,7 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpDisjunction) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseDisjunction) );
    SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolDisjunction, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYPRESOL) );
+         CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintDisjunction) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropDisjunction, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
@@ -1003,7 +1017,7 @@ SCIP_RETCODE SCIPincludeConshdlrDisjunction(
 
 
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/alwaysbranch",
+         "constraints/" CONSHDLR_NAME "/alwaysbranch",
          "alawys perform branching if one of the constraints is violated, otherwise only if all integers are fixed",
          &conshdlrdata->alwaysbranch, FALSE, DEFAULT_ALWAYSBRANCH, NULL, NULL) );
 

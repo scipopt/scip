@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -390,21 +390,13 @@ SCIP_Bool isNeighbor(
        */
       else
       {
-         SCIP_Bool originala;
-         SCIP_Bool originalb;
-
-         unsigned int nbinimpls;
-         SCIP_VAR** implvars;
-         SCIP_BOUNDTYPE* impltypes;
-#ifndef NDEBUG
-         SCIP_Real* implbounds;
-#endif
-         unsigned int ncliques;
          SCIP_CLIQUE** cliques;
-         unsigned int ncliquevars;
          SCIP_VAR** cliquevars;
          SCIP_Bool* cliquevals;
-
+         SCIP_Bool originala;
+         SCIP_Bool originalb;
+         unsigned int ncliques;
+         unsigned int ncliquevars;
          unsigned int j;
 
          /* get original variables */
@@ -425,17 +417,12 @@ SCIP_Bool isNeighbor(
          assert(b < nbinvars);
 
          /* nodes cannot be connected by trivial observations */
-         if( ( SCIPvarGetNBinImpls(vars[a], originala) + SCIPvarGetNCliques(vars[a], originala) == 0 )
-            || ( SCIPvarGetNBinImpls(vars[b], originalb) + SCIPvarGetNCliques(vars[b], originalb) == 0 ) )
-            return FALSE;
-         if( ( SCIPvarGetNBinImpls(vars[b], originalb) == 0 && SCIPvarGetNCliques(vars[a], originala) == 0 )
-            || ( SCIPvarGetNBinImpls(vars[a], originala) == 0 && SCIPvarGetNCliques(vars[b], originalb) == 0 ) )
+         if( SCIPvarGetNCliques(vars[a], originala) == 0 || SCIPvarGetNCliques(vars[b], originalb) == 0 )
             return FALSE;
 
          /* @todo later: possible improvement: do this test for implications and cliques separately if this here is time consuming */
          /* one of the nodes seems to have more arcs than the other, we swap them (since adjacency is symmetric) */
-         if( SCIPvarGetNBinImpls(vars[a], originala) + 2 * SCIPvarGetNCliques(vars[a], originala) >
-            SCIPvarGetNBinImpls(vars[b], originalb) + 2 * SCIPvarGetNCliques(vars[b], originalb) )
+         if( SCIPvarGetNCliques(vars[a], originala) > SCIPvarGetNCliques(vars[b], originalb) )
          {
             unsigned int temp;
             SCIP_Bool varfixingtemp;
@@ -446,36 +433,6 @@ SCIP_Bool isNeighbor(
             originalb = originala;
             a = temp;
             originala = varfixingtemp;
-         }
-
-         /* check whether there is an implication a = 1 -> b = 0 */
-         nbinimpls = (unsigned int) SCIPvarGetNBinImpls(vars[a], originala);
-         implvars = SCIPvarGetImplVars(vars[a], originala);
-         impltypes = SCIPvarGetImplTypes(vars[a], originala);
-#ifndef NDEBUG
-         implbounds = SCIPvarGetImplBounds(vars[a], originala);
-#endif
-
-         assert(implvars != NULL || nbinimpls == 0);
-         assert(impltypes != NULL || nbinimpls == 0);
-         assert(implbounds != NULL || nbinimpls == 0);
-
-         for( i = 0; i < nbinimpls; ++i )
-         {
-            assert( implvars != NULL && impltypes != NULL && implbounds != NULL ); /* for lint */
-            if( SCIPvarGetProbindex(vars[b]) == SCIPvarGetProbindex(implvars[i]) )
-            {
-               if( impltypes[i] == SCIP_BOUNDTYPE_UPPER && originalb == TRUE )
-               {
-                  assert(implbounds[i] == 0.0);
-                  return TRUE;
-               }
-               if( impltypes[i] == SCIP_BOUNDTYPE_LOWER && originalb == FALSE )
-               {
-                  assert(implbounds[i] == 1.0);
-                  return TRUE;
-               }
-            }
          }
 
          /* check whether a and b are contained in a clique */
@@ -1402,146 +1359,6 @@ SCIP_RETCODE addArc(
    return SCIP_OKAY;
 }
 
-/** add binary implications of the given node u @see createNextLevel() */
-static
-SCIP_RETCODE addNextLevelBinImpls(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SEPADATA*        sepadata,           /**< separator data structure */
-   SCIP_VAR**            vars,               /**< problem variables */
-   SCIP_Real*            vals,               /**< values of the binary variables in the current LP relaxation */
-   unsigned int          u,                  /**< current node */
-   LEVELGRAPH*           graph,              /**< LEVELGRAPH data structure */
-   unsigned int          level,              /**< number of current level */
-   SCIP_Bool*            inlevelgraph,       /**< flag array if node is already inserted in level graph */
-   unsigned int*         newlevel,           /**< array of nodes of the next level */
-   unsigned int*         nnewlevel,          /**< number of nodes of the next level */
-   unsigned int*         nAdj,               /**< array of numbers of arcs inside levels */
-   SCIP_Bool*            success             /**< FALSE, iff memory reallocation fails */
-   )
-{
-   SCIP_Bool varfixing;
-   unsigned int nbinimpls;
-   unsigned int nbinvars;
-   unsigned int varsidx;
-   SCIP_VAR** implvars;
-   SCIP_BOUNDTYPE* impltypes;
-   unsigned int j;
-
-   assert(scip != NULL);
-   assert(vars != NULL);
-   assert(vals != NULL);
-   assert(graph != NULL);
-   assert(graph->targetForward != NULL);
-   assert(graph->weightForward != NULL);
-   assert(graph->targetBackward != NULL);
-   assert(graph->weightBackward != NULL);
-   assert(graph->sourceAdj != NULL);
-   assert(graph->targetAdj != NULL);
-   assert(graph->weightAdj != NULL);
-   assert(inlevelgraph != NULL);
-   assert(newlevel != NULL);
-   assert(nnewlevel != NULL);
-   assert(nAdj != NULL);
-   assert(success != NULL);
-
-   assert(u < graph->maxnodes);
-
-   nbinvars = (graph->maxnodes)/2;
-
-   /* current node signifies a problem variable */
-   if( u < nbinvars )
-   {
-      varfixing = TRUE;
-      varsidx = u;
-   }
-   /* current node signifies a negated variable */
-   else
-   {
-      varfixing = FALSE;
-      varsidx = u - nbinvars;
-   }
-   assert(varsidx < nbinvars);
-   assert(! SCIPisFeasIntegral(scip, vals[varsidx]) );
-
-   /* get binary implications of the current variable */
-   nbinimpls = (unsigned int) SCIPvarGetNBinImpls(vars[varsidx], varfixing);
-   implvars = SCIPvarGetImplVars(vars[varsidx], varfixing);
-   impltypes = SCIPvarGetImplTypes(vars[varsidx], varfixing);
-
-   assert(implvars != NULL || nbinimpls == 0);
-   assert(impltypes != NULL || nbinimpls == 0);
-
-   for( j = 0; j < nbinimpls; ++j )
-   {
-      unsigned int k;
-      unsigned int v;
-      unsigned int weight;
-
-      assert( implvars != NULL && impltypes != NULL );
-      assert( SCIPvarIsBinary(implvars[j]) );
-
-      k = sepadata->mapping[SCIPvarGetProbindex(implvars[j])];
-      assert(k < nbinvars);
-
-      /* skip integral neighbors */
-      if( SCIPisFeasIntegral(scip, vals[k]) )
-         continue;
-
-      /* consider implication to negated variable (x = 1 -> y >= 1 <=>  x = 1 -> neg(y) <= 0) */
-      if( impltypes[j] == SCIP_BOUNDTYPE_LOWER )
-         v = k + nbinvars;
-      /* x = 1 -> y <= 0 */
-      else
-      {
-         assert(impltypes[j] == SCIP_BOUNDTYPE_UPPER);
-         v = k;
-      }
-      assert(v < graph->maxnodes);
-
-      /* if variable is a new node, it will be assigned to the next level, but if the level contains
-       * more nodes than allowed (defined by percent per level plus offset), we skip the rest of the
-       * nodes
-       */
-      if( !inlevelgraph[v] && (*nnewlevel) <= sepadata->maxlevelsize )
-      {
-         ++(graph->nnodes);
-         graph->level[v] = level+1;
-         inlevelgraph[v] = TRUE;
-         newlevel[*nnewlevel] = v;
-         ++(*nnewlevel);
-      }
-      assert((*nnewlevel) > sepadata->maxlevelsize || inlevelgraph[v]);
-
-      /* calculate arc weight and add arc, if the neighbor node is on the same or a neighbor level */
-      if( inlevelgraph[v] && (graph->level[v] == level+1 || graph->level[v] == level || graph->level[v] == level-1))
-      {
-         int tmp;
-
-         /* the computation of 1.0 - vals[v] if v is negated is ensured by the fact that v > nbinvars in this case */
-         /* set weight of arc (x,y) to 1 - x* -y* */
-         if( varfixing )
-         {
-            /* x = 1 -> y <= 0  or y >= 1, i.e., x + y <= 1  or  x + (1-y) <= 1 */
-            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - vals[v]));
-            weight = (unsigned int) MAX(tmp, sepadata->maxreference);
-         }
-         else
-         {
-            /* x = 0 <-> neg(x) = 1 -> y <= 0  or  y >= 1, i.e., (1-x) + y <= 1  or  (1-x) + (1-y) <= 1 */
-            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1.0 - vals[varsidx]) - vals[v]));
-            weight = (unsigned int) MAX(tmp, sepadata->maxreference);
-         }
-
-         /* add arc from current to neighbor node */
-         SCIP_CALL( addArc(scip, graph, u, v, level, weight, nAdj, success) );
-         if( !(*success) )
-            return SCIP_OKAY;
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
 /** add implications from cliques of the given node u
  *
  *  @see createNextLevel()
@@ -1738,11 +1555,6 @@ SCIP_RETCODE insertSortedRootNeighbors(
    SCIP_Bool varfixing;
    unsigned int varsidx;
 
-   /* storage for implications to the neighbors of the root node */
-   unsigned int nbinimpls;
-   SCIP_VAR** implvars;
-   SCIP_BOUNDTYPE* impltypes;
-
    /* storage for cliques to the neighbors of the root node */
    unsigned int ncliques;
    SCIP_CLIQUE** cliques;
@@ -1778,47 +1590,6 @@ SCIP_RETCODE insertSortedRootNeighbors(
    assert(varsidx < nbinvars);
    assert(! SCIPisFeasIntegral(scip, vals[varsidx]));
    nneighbors = 0;
-
-   /* count implications of the root */
-   nbinimpls = (unsigned int) SCIPvarGetNBinImpls(vars[varsidx], varfixing);
-   if( nbinimpls > 0 )
-   {
-      unsigned int jidx;
-
-      implvars = SCIPvarGetImplVars(vars[varsidx], varfixing);
-      impltypes = SCIPvarGetImplTypes(vars[varsidx], varfixing);
-      assert(implvars != NULL);
-      assert(impltypes != NULL);
-
-      for( j = 0; j < nbinimpls ; ++j )
-      {
-         jidx = sepadata->mapping[SCIPvarGetProbindex(implvars[j])];
-         assert(jidx < nbinvars);
-
-         if( SCIPisFeasIntegral(scip, vals[jidx]))
-            continue;
-
-         /* implication x + y <= 1  or  (1-x) + y <= 1 */
-         if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
-         {
-            if ( ! isneighbor[jidx] )
-            {
-               ++nneighbors;
-               isneighbor[jidx] = TRUE;
-            }
-         }
-         /* implication x + (1-y) <= 1  or  (1-x) + (1-y) <= 1 */
-         else
-         {
-            assert(impltypes[j] == SCIP_BOUNDTYPE_LOWER);
-            if ( ! isneighbor[jidx + nbinvars] )
-            {
-               ++nneighbors;
-               isneighbor[jidx + nbinvars] = TRUE;
-            }
-         }
-      }
-   }
 
    /* count cliques of the root */
    ncliques = (unsigned int) SCIPvarGetNCliques(vars[varsidx], varfixing);
@@ -2374,13 +2145,6 @@ SCIP_RETCODE createNextLevel(
       }
       else
       {
-         /* add arc from u to all other neighbors of variable implication graph */
-         SCIP_CALL( addNextLevelBinImpls(scip, sepadata, vars, vals, u, graph, level, inlevelgraph,
-               newlevel, nnewlevel, &nAdj, success) );
-
-         if( !(*success) )
-            return SCIP_OKAY;
-
          SCIP_CALL( addNextLevelCliques(scip, sepadata, vars, vals, u, graph, level, inlevelgraph,
                newlevel, nnewlevel, &nAdj, success) );
       }
@@ -2661,27 +2425,23 @@ SCIP_RETCODE separateHeur(
          continue;
 
       /* consider original and negated variable pair and skip variable if there is only one edge leaving the pair */
-      if( (SCIPvarGetNBinImpls(vars[i % nbinvars], TRUE) + SCIPvarGetNBinImpls(vars[i % nbinvars], FALSE) < 2)
-         && (SCIPvarGetNCliques(vars[i % nbinvars], TRUE) + SCIPvarGetNCliques(vars[i % nbinvars], FALSE) < 1) )
+      if( SCIPvarGetNCliques(vars[i % nbinvars], TRUE) + SCIPvarGetNCliques(vars[i % nbinvars], FALSE) == 0 )
          continue;
 
       /* skip variable having too less implics and cliques itself */
       if( i < nbinvars )
       {
-         if( SCIPvarGetNBinImpls(vars[i % nbinvars], TRUE ) < 1 && SCIPvarGetNCliques(vars[i % nbinvars], TRUE ) < 1 )
+         if( SCIPvarGetNCliques(vars[i % nbinvars], TRUE ) == 0 )
             continue;
-
-         if( !(sepadata->addselfarcs) && SCIPvarGetNBinImpls(vars[i % nbinvars], TRUE ) < 2
-            && SCIPvarGetNCliques(vars[i % nbinvars], TRUE ) < 1 )
+         if( !(sepadata->addselfarcs) && SCIPvarGetNCliques(vars[i % nbinvars], TRUE ) == 0 )
             continue;
       }
       else
       {
-         if( SCIPvarGetNBinImpls(vars[i % nbinvars], FALSE) < 1 && SCIPvarGetNCliques(vars[i % nbinvars], FALSE) < 1 )
+         if( SCIPvarGetNCliques(vars[i % nbinvars], FALSE) == 0 )
             continue;
 
-         if( !(sepadata->addselfarcs) && SCIPvarGetNBinImpls(vars[i % nbinvars], FALSE) < 2
-            && SCIPvarGetNCliques(vars[i % nbinvars], FALSE) < 1 )
+         if( !(sepadata->addselfarcs) && SCIPvarGetNCliques(vars[i % nbinvars], FALSE) == 0 )
             continue;
       }
 
@@ -3013,145 +2773,6 @@ SCIP_RETCODE checkArraySizesGLS(
    return SCIP_OKAY;
 }
 
-/** add binary implications of the given node */
-static
-SCIP_RETCODE addGLSBinImpls(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SEPADATA*        sepadata,           /**< separator data structure */
-   SCIP_VAR**            vars,               /**< problem variables */
-   unsigned int          varsidx,            /**< index of current variable inside the problem variables */
-   unsigned int          dijkindex,          /**< index of current variable inside the Dijkstra Graph */
-   SCIP_Real*            vals,               /**< value of the variables in the given solution */
-   unsigned int          nbinvars,           /**< number of binary problem variables */
-   unsigned int          nbinimpls,          /**< number of binary implications of the current node */
-   DIJKSTRA_GRAPH*       graph,              /**< Dijkstra Graph data structure */
-   unsigned int*         narcs,              /**< current number of arcs inside the Dijkstra Graph */
-   unsigned int          maxarcs,            /**< maximal number of arcs inside the Dijkstra Graph */
-   SCIP_Bool             original,           /**< TRUE, iff variable is a problem variable */
-   SCIP_Bool*            emptygraph,         /**< TRUE, iff there is no arc in the implication graph of the binary variables of SCIP */
-   unsigned int*         arraysize,          /**< current size of graph->head and graph->weight */
-   SCIP_Bool*            success             /**< FALSE, iff memory reallocation fails */
-   )
-{
-   SCIP_VAR** implvars;         /* implications of the current variable             */
-   SCIP_BOUNDTYPE* impltypes;   /* type of the implications of the current variable */
-   unsigned int m;
-   SCIP_VAR* neighbor;          /* current neighbor of the current variable         */
-   unsigned int neighindex;
-#ifndef NDEBUG
-   SCIP_Real* implbounds;
-#endif
-
-   assert(scip != NULL);
-   assert(sepadata != NULL);
-   assert(vars != NULL);
-   assert(graph != NULL);
-   assert(graph->head != NULL);
-   assert(graph->weight != NULL);
-   assert(narcs != NULL);
-   assert(emptygraph != NULL);
-   assert(arraysize != NULL);
-   assert(success != NULL);
-
-   /* get implication data */
-   implvars = SCIPvarGetImplVars(vars[varsidx], original);
-   impltypes = SCIPvarGetImplTypes(vars[varsidx], original);
-#ifndef NDEBUG
-   implbounds = SCIPvarGetImplBounds(vars[varsidx], original);
-#endif
-
-   assert(implvars != NULL || nbinimpls == 0);
-   assert(impltypes != NULL || nbinimpls == 0);
-   assert(implbounds != NULL || nbinimpls == 0);
-
-   /* add all implications to the graph */
-   for( m = 0; m < nbinimpls; ++m )
-   {
-      int tmp;
-
-      assert( implvars != NULL && impltypes != NULL && implbounds != NULL ); /* for lint */
-      assert( SCIPvarIsBinary(implvars[m]) );
-
-      neighbor = implvars[m];
-      neighindex = sepadata->mapping[SCIPvarGetProbindex(neighbor)];
-      assert(neighindex < nbinvars);
-
-      /* we use only variables with fractional LP-solution values */
-      if( SCIPisFeasIntegral(scip, vals[neighindex]) )
-         continue;
-
-      /* forward direction (the backward is created at the occurrence of the current variable in the cliquevars of the neighbor) */
-      /* add implication for x==1 */
-      if( original )
-      {
-         /* implication to y=0 (I->III), i.e., x + y <= 1 */
-         if( impltypes[m] == SCIP_BOUNDTYPE_UPPER )
-         {
-            assert( SCIPisEQ(scip, implbounds[m], 0.0) );
-
-            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - vals[neighindex]));
-            graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
-            graph->head[*narcs] = neighindex + 2 * nbinvars;
-         }
-         /* implication to y=1 (I->IV), i.e., x + (1-y) <= 1 */
-         else
-         {
-            assert( impltypes[m] == SCIP_BOUNDTYPE_LOWER && SCIPisEQ(scip, implbounds[m], 1.0) );
-
-            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - vals[varsidx] - (1.0 - vals[neighindex])) );
-            graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
-            graph->head[*narcs] = neighindex + 3 * nbinvars;
-         }
-      }
-      else       /* add implication for x==0 */
-      {
-         /* implication to y=0 (II->III), i.e., (1-x) + y <= 1 */
-         if( impltypes[m] == SCIP_BOUNDTYPE_UPPER )
-         {
-            assert(implbounds[m] == 0.0);
-
-            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1.0 - vals[varsidx]) - vals[neighindex]) );
-            graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
-            graph->head[*narcs] = neighindex + 2 * nbinvars;
-         }
-         /* implication to y=1 (II->IV), i.e., (1-x) + (1-y) <= 1 */
-         else
-         {
-            assert(impltypes[m] == SCIP_BOUNDTYPE_LOWER && implbounds[m] == 1.0 );
-
-            tmp = (int) SCIPfeasCeil(scip, sepadata->scale * (1.0 - (1.0 - vals[varsidx]) - (1.0 - vals[neighindex])) );
-            graph->weight[*narcs] = (unsigned int) MAX(0, tmp);
-            graph->head[*narcs] = neighindex + 3 * nbinvars;
-         }
-      }
-
-      /* update minimum and maximum weight values */
-      if( graph->weight[*narcs] < graph->minweight )
-         graph->minweight = graph->weight[*narcs];
-
-      if( graph->weight[*narcs] > graph->maxweight )
-         graph->maxweight = graph->weight[*narcs];
-
-      assert(graph->head[*narcs] >= 2*nbinvars);
-      assert(graph->head[*narcs] < 4*nbinvars);
-      ++(*narcs);
-
-      if( *arraysize == *narcs )
-      {
-         SCIP_CALL( checkArraySizesGLS(scip, maxarcs, arraysize, graph, success) );
-
-         if( !(*success) )
-            return SCIP_OKAY;
-      }
-      assert((*narcs) < maxarcs);
-      ++(graph->outcnt[dijkindex]);
-
-      *emptygraph = FALSE;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** add implications from cliques of the given node */
 static
 SCIP_RETCODE addGLSCliques(
@@ -3334,7 +2955,6 @@ SCIP_RETCODE separateGLS(
    unsigned int nbinvars;                    /* number of binary problem variables */
    SCIP_Bool original;                       /* flag if the current variable is original or negated */
 
-   unsigned int nbinimpls;                   /* number of binary implications of the current variable */
    unsigned int ncliques;                    /* number of cliques of the current variable */
 
    DIJKSTRA_GRAPH graph;                     /* Dijkstra graph data structure */
@@ -3546,20 +3166,7 @@ SCIP_RETCODE separateGLS(
       /* if the variable has a fractional value we add it to the graph */
       if( ! SCIPisFeasIntegral(scip, vals[i]) )
       {
-         nbinimpls = (unsigned int) SCIPvarGetNBinImpls(vars[i], original);
          ncliques =  (unsigned int) SCIPvarGetNCliques(vars[i], original);
-
-         /* insert arcs for binary implications (take var => getImpl(Bin) => getImplVar => add forward-arc) */
-         /* add implications of implication-type "original" if current variable has them */
-         if( nbinimpls >= 1 )
-         {
-            /* implications from x = 1/0 to y = 0/1 (I/II -> III/IV) */
-            SCIP_CALL( addGLSBinImpls(scip, sepadata, vars, i, dijkindex, vals, nbinvars, nbinimpls, &graph,
-                  &narcs, maxarcs, original, &emptygraph, &arraysize, &success) );
-
-            if( !success )
-               goto TERMINATE;
-         }
 
          /* insert arcs for cliques (take var => getCliques => take cliquevar => add forward-arc) */
          /* add clique arcs of clique-type "original" if current variable has them */

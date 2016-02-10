@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -542,7 +542,7 @@ void SCIPdispLongint(
          decpower++;
          val /= 1000;
       }
-      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d"SCIP_LONGINT_FORMAT"%c", width-1, decpowerchar[decpower]);
+      (void) SCIPsnprintf(format, SCIP_MAXSTRLEN, "%%%d" SCIP_LONGINT_FORMAT "%c", width-1, decpowerchar[decpower]);
 
       if( width == 2 && val < 0 )
          SCIPmessageFPrintInfo(messagehdlr, file, "-%c", decpowerchar[decpower]);

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -180,6 +180,13 @@ extern
 void SCIPsepaSetExitsol(
    SCIP_SEPA*            sepa,               /**< separator */
    SCIP_DECL_SEPAEXITSOL ((*sepaexitsol))    /**< solving process deinitialization method of separator */
+   );
+
+/** enables or disables all clocks of \p sepa, depending on the value of the flag */
+extern
+void SCIPsepaEnableOrDisableClocks(
+   SCIP_SEPA*            sepa,               /**< the separator for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the separator be enabled? */
    );
 
 /** increase count of applied cuts */

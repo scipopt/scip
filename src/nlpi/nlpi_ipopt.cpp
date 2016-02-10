@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,7 @@
  * @ingroup NLPIS
  * @brief   Ipopt NLP interface
  * @author  Stefan Vigerske
+ * @author  Benjamin Müller
  *
  * @todo warm starts
  * @todo use new_x: Ipopt sets new_x = false if any function has been evaluated for the current x already, while oracle allows new_x to be false only if the current function has been evaluated for the current x before
@@ -350,8 +351,7 @@ public:
       );
 };
 
-/** A particular Ipopt::Journal implementation that uses the SCIP message routines for output.
- */
+/** A particular Ipopt::Journal implementation that uses the SCIP message routines for output. */
 class ScipJournal : public Ipopt::Journal {
 private:
    /** reference to message handler pointer in NLPI data */
@@ -453,7 +453,7 @@ void setFeastol(
 
 /** copy method of NLP interface (called when SCIP copies plugins)
  *
- * input:
+ *  input:
  *  - blkmem block memory of target SCIP
  *  - sourcenlpi the NLP interface to copy
  *  - targetnlpi buffer to store pointer to copy of NLP interface
@@ -504,14 +504,12 @@ SCIP_DECL_NLPIFREE(nlpiFreeIpopt)
    return SCIP_OKAY;
 }
 
-/** gets pointer for NLP solver
- * 
- *  to do dirty stuff
- * 
- * input:
+/** gets pointer for NLP solver to do dirty stuff
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
- *  
- * return: void pointer to solver
+ *
+ *  return: void pointer to solver
  */
 static
 SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerIpopt)
@@ -522,8 +520,8 @@ SCIP_DECL_NLPIGETSOLVERPOINTER(nlpiGetSolverPointerIpopt)
 }
 
 /** creates a problem instance
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem pointer to store the problem data
  *  - name name of problem, can be NULL
@@ -597,7 +595,11 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
    {
       std::istringstream is(data->defoptions);
 
+#if (IPOPT_VERSION_MAJOR > 3) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR > 12) || (IPOPT_VERSION_MAJOR == 3 && IPOPT_VERSION_MINOR == 12 && IPOPT_VERSION_RELEASE >= 5)
+      if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is, true) )
+#else
       if( !(*problem)->ipopt->Options()->ReadFromStream(*(*problem)->ipopt->Jnlst(), is) )
+#endif
       {
          SCIPerrorMessage("Error when modifiying Ipopt options using options string\n%s\n", data->defoptions.c_str());
          return SCIP_ERROR;
@@ -616,8 +618,8 @@ SCIP_DECL_NLPICREATEPROBLEM(nlpiCreateProblemIpopt)
 }
 
 /** free a problem instance
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem pointer where problem data is stored 
  */
@@ -645,15 +647,13 @@ SCIP_DECL_NLPIFREEPROBLEM(nlpiFreeProblemIpopt)
    return SCIP_OKAY;
 }
 
-/** gets pointer to solver-internal problem instance
- * 
- *  to do dirty stuff
- * 
- * input:
+/** gets pointer to solver-internal problem instance to do dirty stuff
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- *  
- * return: void pointer to problem instance
+ *
+ *  return: void pointer to problem instance
  */
 SCIP_DECL_NLPIGETPROBLEMPOINTER(nlpiGetProblemPointerIpopt)
 {
@@ -690,6 +690,7 @@ SCIP_DECL_NLPIADDVARS(nlpiAddVarsIpopt)
 }
 
 /** add constraints
+ *
  * quadratic coefficiens: row oriented matrix for each constraint
  * 
  * input:
@@ -737,8 +738,9 @@ SCIP_DECL_NLPIADDCONSTRAINTS(nlpiAddConstraintsIpopt)
 }
 
 /** sets or overwrites objective, a minimization problem is expected
+ *
  *  May change sparsity pattern.
- * 
+ *
  * input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
@@ -775,8 +777,8 @@ SCIP_DECL_NLPISETOBJECTIVE(nlpiSetObjectiveIpopt)
 }
 
 /** change variable bounds
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - nvars number of variables to change bounds
@@ -800,7 +802,7 @@ SCIP_DECL_NLPICHGVARBOUNDS(nlpiChgVarBoundsIpopt)
 
 /** change constraint bounds
  *
- * input:
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - nconss number of constraints to change sides
@@ -823,14 +825,14 @@ SCIP_DECL_NLPICHGCONSSIDES(nlpiChgConsSidesIpopt)
 }
 
 /** delete a set of variables
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - nlpi datastructure for solver interface
  *  - dstats deletion status of vars; 1 if var should be deleted, 0 if not
- * 
- * output:
+ *
+ *  output:
  *  - dstats new position of var, -1 if var was deleted
  */
 static
@@ -851,13 +853,13 @@ SCIP_DECL_NLPIDELVARSET(nlpiDelVarSetIpopt)
 }
 
 /** delete a set of constraints
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - dstats deletion status of rows; 1 if row should be deleted, 0 if not
- * 
- * output:
+ *
+ *  output:
  *  - dstats new position of row, -1 if row was deleted
  */
 static
@@ -877,8 +879,8 @@ SCIP_DECL_NLPIDELCONSSET(nlpiDelConstraintSetIpopt)
 }
 
 /** change one linear coefficient in a constraint or objective
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - idx index of constraint or -1 for objective
@@ -886,7 +888,7 @@ SCIP_DECL_NLPIDELCONSSET(nlpiDelConstraintSetIpopt)
  *  - varidxs indices of variable
  *  - vals new values for coefficient
  *
- * return: Error if coefficient did not exist before
+ *  return: Error if coefficient did not exist before
  */
 static
 SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsIpopt)
@@ -902,15 +904,15 @@ SCIP_DECL_NLPICHGLINEARCOEFS(nlpiChgLinearCoefsIpopt)
 }
 
 /** change one coefficient in the quadratic part of a constraint or objective
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - idx index of constraint or -1 for objective
  *  - nquadelems number of entries in quadratic matrix to change
  *  - quadelems new elements in quadratic matrix (replacing already existing ones or adding new ones)
  *
- * return: Error if coefficient did not exist before
+ *  return: Error if coefficient did not exist before
  */
 static
 SCIP_DECL_NLPICHGQUADCOEFS(nlpiChgQuadraticCoefsIpopt)
@@ -927,7 +929,7 @@ SCIP_DECL_NLPICHGQUADCOEFS(nlpiChgQuadraticCoefsIpopt)
 
 /** replaces the expression tree of a constraint or objective
  *
- * input:
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - idxcons index of constraint or -1 for objective
@@ -947,15 +949,15 @@ SCIP_DECL_NLPICHGEXPRTREE(nlpiChgExprtreeIpopt)
 }
 
 /** change the value of one parameter in the nonlinear part
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - idxcons index of constraint or -1 for objective
  *  - idxparam index of parameter
  *  - value new value for nonlinear parameter
- * 
- * return: Error if parameter does not exist
+ *
+ *  return: Error if parameter does not exist
  */
 static
 SCIP_DECL_NLPICHGNONLINCOEF(nlpiChgNonlinCoefIpopt)
@@ -972,7 +974,7 @@ SCIP_DECL_NLPICHGNONLINCOEF(nlpiChgNonlinCoefIpopt)
 
 /** change the constant offset in the objective
  *
- * input:
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - objconstant new value for objective constant
@@ -990,8 +992,8 @@ SCIP_DECL_NLPICHGOBJCONSTANT( nlpiChgObjConstantIpopt )
 }
 
 /** sets initial guess for primal variables
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - primalvalues initial primal values for variables, or NULL to clear previous values
@@ -1027,8 +1029,8 @@ SCIP_DECL_NLPISETINITIALGUESS(nlpiSetInitialGuessIpopt)
 }
 
 /** tries to solve NLP
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  */
@@ -1056,13 +1058,17 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
 
       if( problem->firstrun )
       {
-         /* if the expression interpreter does not support function values and gradients and hessians, and the problem is not at most quadratic,
+         SCIP_EXPRINTCAPABILITY cap;
+
+         cap = SCIPexprintGetCapability() & SCIPnlpiOracleGetEvalCapability(problem->oracle);
+
+         /* if the expression interpreter or some user expression do not support function values and gradients and Hessians, and the problem is not at most quadratic,
           * change NLP parameters or give an error
           */
-         if( (SCIPexprintGetCapability() & (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN)) != (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN)
+         if( (cap & (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN)) != (SCIP_EXPRINTCAPABILITY_FUNCVALUE | SCIP_EXPRINTCAPABILITY_GRADIENT | SCIP_EXPRINTCAPABILITY_HESSIAN)
             && SCIPnlpiOracleGetMaxDegree(problem->oracle) > 2 )
          {
-            /* @todo could enable jacobian approximation in Ipopt */
+            /* @todo could enable Jacobian approximation in Ipopt */
             if( !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_FUNCVALUE) ||
                ! (SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_GRADIENT) )
             {
@@ -1072,8 +1078,8 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
                return SCIP_OKAY;
             }
 
-            /* enable hessian approximation if we are nonquadratic and the expression interpreter does not support hessians */
-            if( !(SCIPexprintGetCapability() & SCIP_EXPRINTCAPABILITY_HESSIAN) )
+            /* enable Hessian approximation if we are nonquadratic and the expression interpreter or user expression do not support Hessians */
+            if( !(cap & SCIP_EXPRINTCAPABILITY_HESSIAN) )
             {
                problem->ipopt->Options()->SetStringValue("hessian_approximation", "limited-memory");
                problem->nlp->approxhessian = true;
@@ -1133,12 +1139,12 @@ SCIP_DECL_NLPISOLVE(nlpiSolveIpopt)
 }
 
 /** gives solution status
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- * 
- * return: Solution Status
+ *
+ *  return: Solution Status
  */
 static
 SCIP_DECL_NLPIGETSOLSTAT(nlpiGetSolstatIpopt)
@@ -1150,12 +1156,12 @@ SCIP_DECL_NLPIGETSOLSTAT(nlpiGetSolstatIpopt)
 }
 
 /** gives termination reason
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
- * 
- * return: Termination Status
+ *
+ *  return: Termination Status
  */
 static
 SCIP_DECL_NLPIGETTERMSTAT(nlpiGetTermstatIpopt)
@@ -1167,8 +1173,8 @@ SCIP_DECL_NLPIGETTERMSTAT(nlpiGetTermstatIpopt)
 }
 
 /** gives primal and dual solution values
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - primalvalues buffer to store pointer to array to primal values, or NULL if not needed
@@ -1198,13 +1204,13 @@ SCIP_DECL_NLPIGETSOLUTION(nlpiGetSolutionIpopt)
 }
 
 /** gives solve statistics
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - statistics pointer to store statistics
- * 
- * output:
+ *
+ *  output:
  *  - statistics solve statistics
  */
 static
@@ -1220,13 +1226,13 @@ SCIP_DECL_NLPIGETSTATISTICS(nlpiGetStatisticsIpopt)
 }
 
 /** gives required size of a buffer to store a warmstart object
- * 
+ *
  *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - size pointer to store required size for warmstart buffer
- * 
- * output:
+ *
+ *  output:
  *  - size required size for warmstart buffer
  */
 static
@@ -1237,15 +1243,15 @@ SCIP_DECL_NLPIGETWARMSTARTSIZE(nlpiGetWarmstartSizeIpopt)
 }
 
 /** stores warmstart information in buffer
- * 
- * required size of buffer should have been obtained by SCIPnlpiGetWarmstartSize before
- * 
- * input:
+ *
+ *  Required size of buffer should have been obtained by SCIPnlpiGetWarmstartSize before.
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - buffer memory to store warmstart information
- * 
- * output:
+ *
+ *  output:
  *  - buffer warmstart information in solver specific data structure
  */
 static
@@ -1256,10 +1262,10 @@ SCIP_DECL_NLPIGETWARMSTARTMEMO(nlpiGetWarmstartMemoIpopt)
 }
 
 /** sets warmstart information in solver
- * 
- * write warmstart to buffer
- * 
- * input:
+ *
+ *  Write warmstart to buffer.
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - buffer warmstart information
@@ -1273,14 +1279,14 @@ SCIP_DECL_NLPISETWARMSTARTMEMO(nlpiSetWarmstartMemoIpopt)
 }
 
 /** gets integer parameter of NLP
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - type parameter number
  *  - ival pointer to store the parameter value
- * 
- * output:
+ *
+ *  output:
  *  - ival parameter value
  */
 static
@@ -1372,8 +1378,8 @@ SCIP_DECL_NLPIGETINTPAR(nlpiGetIntParIpopt)
 }
 
 /** sets integer parameter of NLP
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance
  *  - type parameter number
@@ -1511,14 +1517,14 @@ SCIP_DECL_NLPISETINTPAR(nlpiSetIntParIpopt)
 }
 
 /** gets floating point parameter of NLP
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance, can be NULL only if type == SCIP_NLPPAR_INFINITY
  *  - type parameter number
  *  - dval pointer to store the parameter value
- * 
- * output:
+ *
+ *  output:
  *  - dval parameter value
  */
 static
@@ -1611,8 +1617,8 @@ SCIP_DECL_NLPIGETREALPAR(nlpiGetRealParIpopt)
 }
 
 /** sets floating point parameter of NLP
- * 
- * input:
+ *
+ *  input:
  *  - nlpi datastructure for solver interface
  *  - problem datastructure for problem instance, can be NULL only if type == SCIP_NLPPAR_INFINITY
  *  - type parameter number
@@ -1741,14 +1747,14 @@ SCIP_DECL_NLPISETREALPAR(nlpiSetRealParIpopt)
 }
 
 /** gets string parameter of NLP
- * 
- * input:
+ *
+ *  input:
  *  - nlpi NLP interface structure
  *  - problem datastructure for problem instance
  *  - type parameter number
  *  - sval pointer to store the string value, the user must not modify the string
- * 
- * output:
+ *
+ *  output:
  *  - sval parameter value
  */
 static
@@ -1833,8 +1839,8 @@ SCIP_DECL_NLPIGETSTRINGPAR( nlpiGetStringParIpopt )
 }
 
 /** sets string parameter of NLP
- * 
- * input:
+ *
+ *  input:
  *  - nlpi NLP interface structure
  *  - problem datastructure for problem instance
  *  - type parameter number
@@ -1932,7 +1938,7 @@ SCIP_DECL_NLPISETSTRINGPAR( nlpiSetStringParIpopt )
 
 /** sets message handler for message output
  *
- * input:
+ *  input:
  *  - nlpi NLP interface structure
  *  - messagehdlr SCIP message handler, or NULL to suppress all output
  */
@@ -2021,7 +2027,7 @@ void* SCIPgetNlpiOracleIpopt(
 
 /** sets modified default settings that are used when setting up an Ipopt problem
  *
- * Do not forget to add a newline after the last option in optionsstring.
+ *  Do not forget to add a newline after the last option in optionsstring.
  */
 void SCIPsetModifiedDefaultSettingsIpopt(
    SCIP_NLPI*            nlpi,               /**< Ipopt NLP interface */
@@ -2203,7 +2209,6 @@ bool ScipNLP::get_constraints_linearity(
 
    return true;
 }
-
 
 /** Method to return the number of nonlinear variables. */
 Index ScipNLP::get_number_of_nonlinear_variables()
@@ -2610,8 +2615,7 @@ bool ScipNLP::intermediate_callback(
    return (SCIPinterrupted() == FALSE);
 }
 
-/** This method is called when the algorithm is complete so the TNLP can store/write the solution.
- */
+/** This method is called when the algorithm is complete so the TNLP can store/write the solution. */
 void ScipNLP::finalize_solution(
    SolverReturn       status,             /**< solve and solution status */ 
    Index              n,                  /**< number of variables */ 
@@ -2787,7 +2791,8 @@ void ScipNLP::finalize_solution(
 #include "IpLapack.hpp"
 
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix.
- * It's here, because we use Ipopt's interface to Lapack.
+ *
+ *  It's here, because we use Ipopt's interface to Lapack.
  */
 SCIP_RETCODE LapackDsyev(
    SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */
@@ -2805,6 +2810,114 @@ SCIP_RETCODE LapackDsyev(
       SCIPerrorMessage("There was an error when calling DSYEV. INFO = %d\n", info);
       return SCIP_ERROR;
    }
+
+   return SCIP_OKAY;
+}
+
+/** solves a linear problem of the form Ax = b for a regular matrix 3*3 A */
+static
+SCIP_RETCODE SCIPsolveLinearProb3(
+   SCIP_Real*            A,                  /**< matrix data on input (size 3*3); filled column-wise */
+   SCIP_Real*            b,                  /**< right hand side vector (size 3) */
+   SCIP_Real*            x,                  /**< buffer to store solution (size 3) */
+   SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
+   )
+{
+   SCIP_Real Acopy[9];
+   SCIP_Real bcopy[3];
+   int pivotcopy[3];
+   const int N = 3;
+   int info;
+
+   assert(A != NULL);
+   assert(b != NULL);
+   assert(x != NULL);
+   assert(success != NULL);
+
+   /* compute the LU factorization */
+   IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
+
+   if( info != 0 )
+   {
+      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      *success = FALSE;
+   }
+   else
+   {
+      *success = TRUE;
+
+      /* solve linear problem */
+      IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+
+      /* copy the solution */
+      BMScopyMemoryArray(x, bcopy, N);
+   }
+
+   return SCIP_OKAY;
+}
+
+/** solves a linear problem of the form Ax = b for a regular matrix A
+ *
+ *  Calls Lapacks IpLapackDgetrf routine to calculate a LU factorization and uses this factorization to solve
+ *  the linear problem Ax = b.
+ *  It's here, because Ipopt is linked against Lapack.
+ */
+SCIP_RETCODE SCIPsolveLinearProb(
+   int                   N,                  /**< dimension */
+   SCIP_Real*            A,                  /**< matrix data on input (size N*N); filled column-wise */
+   SCIP_Real*            b,                  /**< right hand side vector (size N) */
+   SCIP_Real*            x,                  /**< buffer to store solution (size N) */
+   SCIP_Bool*            success             /**< pointer to store if the solving routine was successful */
+   )
+{
+   SCIP_Real* Acopy;
+   SCIP_Real* bcopy;
+   int* pivotcopy;
+   int info;
+
+   assert(N > 0);
+   assert(A != NULL);
+   assert(b != NULL);
+   assert(x != NULL);
+   assert(success != NULL);
+
+   /* call SCIPsolveLinearProb3() for performance reasons */
+   if( N == 3 )
+   {
+      SCIP_CALL( SCIPsolveLinearProb3(A, b, x, success) );
+      return SCIP_OKAY;
+   }
+
+   Acopy = NULL;
+   bcopy = NULL;
+   pivotcopy = NULL;
+
+   SCIP_ALLOC( BMSduplicateMemoryArray(&Acopy, A, N*N) );
+   SCIP_ALLOC( BMSduplicateMemoryArray(&bcopy, b, N) );
+   SCIP_ALLOC( BMSallocMemoryArray(&pivotcopy, N) );
+
+   /* compute the LU factorization */
+   IpLapackDgetrf(N, Acopy, pivotcopy, N, info);
+
+   if( info != 0 )
+   {
+      SCIPerrorMessage("There was an error when calling Dgetrf. INFO = %d\n", info);
+      *success = FALSE;
+   }
+   else
+   {
+      *success = TRUE;
+
+      /* solve linear problem */
+      IpLapackDgetrs(N, 1, Acopy, N, pivotcopy, bcopy, N);
+
+      /* copy the solution */
+      BMScopyMemoryArray(x, bcopy, N);
+   }
+
+   BMSfreeMemoryArray(&pivotcopy);
+   BMSfreeMemoryArray(&bcopy);
+   BMSfreeMemoryArray(&Acopy);
 
    return SCIP_OKAY;
 }
@@ -2827,7 +2940,8 @@ extern "C" {
 }
 
 /** Calls Lapacks Dsyev routine to compute eigenvalues and eigenvectors of a dense matrix. 
- * It's here, because Ipopt is linked against Lapack.
+ *
+ *  It's here, because Ipopt is linked against Lapack.
  */
 SCIP_RETCODE LapackDsyev(
    SCIP_Bool             computeeigenvectors,/**< should also eigenvectors should be computed ? */

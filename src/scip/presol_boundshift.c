@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,7 +33,7 @@
 #define PRESOL_DESC            "converts variables with domain [a,b] to variables with domain [0,b-a]"
 #define PRESOL_PRIORITY         7900000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS              0 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolver (fast, medium, or exhaustive) */
 
 
 /*
@@ -88,7 +88,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyBoundshift)
 
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolBoundshift(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -131,7 +131,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
    /* get presolver data */
    presoldata = SCIPpresolGetData(presol);
    assert(presoldata != NULL);
-   
+
    /* get the problem variables */
    scipvars = SCIPgetVars(scip);
    nbinvars = SCIPgetNBinVars(scip);
@@ -139,7 +139,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
 
    if( nvars == 0 )
       return SCIP_OKAY;
-   
+
    if( SCIPdoNotAggr(scip) )
       return SCIP_OKAY;
 
@@ -149,7 +149,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
     * the array and thereby interferes with our search loop
     */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &vars, &scipvars[nbinvars], nvars) );
-   
+
    /* scan the integer, implicit, and continuous variables for possible conversion */
    for( v = nvars - 1; v >= 0; --v )
    {
@@ -217,7 +217,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
 
          /* release variable */
          SCIP_CALL( SCIPreleaseVar(scip, &newvar) );
-         
+
          /* take care of statistic */
          (*naggrvars)++;
          *result = SCIP_SUCCESS;
@@ -226,7 +226,7 @@ SCIP_DECL_PRESOLEXEC(presolExecBoundshift)
 
    /* free temporary memory */
    SCIPfreeBufferArray(scip, &vars);
-   
+
    return SCIP_OKAY;
 }
 
@@ -248,7 +248,7 @@ SCIP_RETCODE SCIPincludePresolBoundshift(
    initPresoldata(presoldata);
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
          presolExecBoundshift,
          presoldata) );
 
@@ -270,6 +270,6 @@ SCIP_RETCODE SCIPincludePresolBoundshift(
          "presolving/boundshift/integer", 
          "shift only integer ranges?",
          &presoldata->integer, TRUE, DEFAULT_INTEGER, NULL, NULL) );
-   
+
    return SCIP_OKAY;
 }

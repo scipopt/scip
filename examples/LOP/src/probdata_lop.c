@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -92,8 +92,8 @@ SCIP_DECL_PROBCOPY(probcopyLOP)
 
    for( i = 0; i < n; ++i )
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->W[i]), n) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->vars[i]), n) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->W[i]), n) ); /*lint !e866*/
+      SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->vars[i]), n) ); /*lint !e866*/
 
       for( j = 0; j < n; ++j )
       {
@@ -174,7 +174,7 @@ SCIP_RETCODE LOPreadFile(
    /* set up matrix */
    SCIP_CALL( SCIPallocMemoryArray(scip, &W, n) );
    for (i = 0; i < n; ++i)
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(W[i]), n) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(W[i]), n) ); /*lint !e866*/
    probdata->W = W;
 
    /* read matrix */
@@ -297,7 +297,7 @@ SCIP_RETCODE LOPgenerateModel(
    SCIP_CALL( SCIPallocMemoryArray(scip, &probdata->vars, probdata->n) );
    for (i = 0; i < probdata->n; ++i)
    {
-      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->vars[i]), probdata->n) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->vars[i]), probdata->n) ); /*lint !e866*/
       for (j = 0; j < probdata->n; ++j)
       {
 	 if (j != i)
@@ -362,7 +362,7 @@ SCIP_RETCODE LOPevalSolution(
 	 int deg = 0;
 	 for (j = 0; j < n; ++j)
 	 {
-	    SCIP_Real val = 0.0;
+	    SCIP_Real val;
 	    if (j == i)
 	       continue;
 

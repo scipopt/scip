@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -91,6 +91,13 @@ SCIP_RETCODE SCIPreaderWrite(
 extern
 SCIP_Real SCIPreaderGetReadingTime(
    SCIP_READER*          reader              /**< reader */
+   );
+
+/** enables or disables all clocks of \p reader, depending on the value of the flag */
+extern
+void SCIPreaderEnableOrDisableClocks(
+   SCIP_READER*          reader,             /**< the reader for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks be enabled? */
    );
 
 /** resets reading time of reader */

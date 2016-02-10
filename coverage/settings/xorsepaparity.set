@@ -1,0 +1,6 @@
+# SCIP version 3.1.0.1
+
+# should parity inequalities be separated?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+constraints/xor/separateparity = TRUE
+

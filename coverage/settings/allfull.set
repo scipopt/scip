@@ -1,0 +1,6 @@
+# SCIP version 2.1.1.6
+
+# priority of branching rule <allfullstrong>
+# [type: int, range: [-536870912,536870911], default: -1000]
+branching/allfullstrong/priority = 10000000
+

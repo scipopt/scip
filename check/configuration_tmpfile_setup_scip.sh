@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -28,13 +28,17 @@ THREADS=$6       # - the number of LP solver threads to use
 SETCUTOFF=$7     # - should optimal instance value be used as objective limit (0 or 1)?
 FEASTOL=$8       # - feasibility tolerance, or 'default'
 TIMELIMIT=$9     # - time limit for the solver
-MEMLIMIT=${10}      # - memory limit for the solver
+MEMLIMIT=${10}   # - memory limit for the solver
 NODELIMIT=${11}  # - node limit for the solver
 LPS=${12}        # - LP solver to use
 DISPFREQ=${13}   # - display frequency for chronological output table
-OPTCOMMAND=${14} # - command that should per executed after reading the instance, e.g. optimize, presolve or count
-SOLUFILE=${15}   # - solu file, only necessary if $SETCUTOFF is 1
-
+REOPT=${14}      # - true if we use reoptimization, i.e., using a difflist file instead if an instance file
+OPTCOMMAND=${15} # - command that should per executed after reading the instance, e.g. optimize, presolve or count
+CLIENTTMPDIR=${16}
+SOLBASENAME=${17}
+SETCUTOFF=${18}
+VISUALIZE=${19}
+SOLUFILE=${20}   # - solu file, only necessary if $SETCUTOFF is 1
 #args=("$@")
 #for ((i=0; i < $#; i++)) {
 #   echo "argument $((i+1)): ${args[$i]}"
@@ -42,6 +46,9 @@ SOLUFILE=${15}   # - solu file, only necessary if $SETCUTOFF is 1
 
 # new environment variables after running this script
 # -None
+
+#set solfile
+SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.sol
 
 # reset TMPFILE
 echo > $TMPFILE
@@ -82,25 +89,49 @@ echo set display freq $DISPFREQ        >> $TMPFILE
 echo set memory savefac 1.0            >> $TMPFILE
 echo set save $SETFILE                 >> $TMPFILE
 
-# read and solve the instance
-echo read $SCIPPATH/$INSTANCE         >> $TMPFILE
-
-# set objective limit: optimal solution value from solu file, if existent
-if test $SETCUTOFF = 1
+if test "$VISUALIZE" = true
 then
-    if test $SOLUFILE == ""
-    then
-        echo Exiting test because no solu file can be found for this test
-        exit
-    fi
-    CUTOFF=`grep "$SHORTPROBNAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
-    if test ""$CUTOFF != ""
-    then
-        echo set limits objective $CUTOFF      >> $TMPFILE
-    fi
+    BAKFILENAME="`basename $TMPFILE .tmp`.dat"
+    echo visualization output set to "$BAKFILENAME"
+    echo set visual bakfilename "results/${BAKFILENAME}" >> $TMPFILE
 fi
 
-echo $OPTCOMMAND                       >> $TMPFILE
-echo display statistics                >> $TMPFILE
-echo checksol                          >> $TMPFILE
+if test "$REOPT" = false
+then
+    # read and solve the instance
+    echo read $INSTANCE         >> $TMPFILE
+
+    # set objective limit: optimal solution value from solu file, if existent
+    if test $SETCUTOFF = 1
+    then
+        if test $SOLUFILE == ""
+        then
+            echo Exiting test because no solu file can be found for this test
+            exit
+        fi
+        CUTOFF=`grep "$SHORTPROBNAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
+        if test ""$CUTOFF != ""
+        then
+            echo set limits objective $CUTOFF      >> $TMPFILE
+            echo set heur emph off                 >> $TMPFILE
+        fi
+    fi
+
+    echo $OPTCOMMAND                       >> $TMPFILE
+    echo display statistics                >> $TMPFILE
+    echo checksol                          >> $TMPFILE
+else
+    # read the difflist file
+    cat $INSTANCE                >> $TMPFILE
+fi
+
+# currently, the solution checker only supports .mps-files.
+# compare instance name (without .gz) to instance name stripped by .mps.
+#if they are unequal, we have an mps-file
+TMPINSTANCE=`basename $INSTANCE .gz`
+TMPINSTANCEB=`basename $TMPINSTANCE .mps`
+if test "$TMPINSTANCEB" != "$TMPINSTANCE"
+then
+   echo write sol $SOLFILE             >> $TMPFILE
+fi
 echo quit                              >> $TMPFILE

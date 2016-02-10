@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -45,7 +45,7 @@
 #define DEFAULT_NODESQUOT     0.05      /* subproblem nodes in relation to nodes of the original problem       */
 #define DEFAULT_LPLIMFAC      1.5       /* factor by which the limit on the number of LP depends on the node limit  */
 #define DEFAULT_MINFIXINGRATE 0.3       /* minimum percentage of integer variables that have to be fixed       */
-#define DEFAULT_NWAITINGNODES 0LL       /* number of nodes without incumbent change that heuristic should wait */
+#define DEFAULT_NWAITINGNODES 200LL       /* number of nodes without incumbent change that heuristic should wait */
 #define DEFAULT_NEIGHBORHOODSIZE  18    /* radius of the incumbents neighborhood to be searched                */
 #define DEFAULT_SOLNUM        5         /* number of pool-solutions to be checked for flag array update        */
 #define DEFAULT_USELPROWS     FALSE     /* should subproblem be created out of the rows in the LP rows,
@@ -53,9 +53,11 @@
 #define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
                                          * of the original scip be copied to constraints of the subscip        */
 
+#define DEFAULT_BESTSOLLIMIT    3       /* limit on number of improving incumbent solutions in sub-CIP            */
+
 /* event handler properties */
 #define EVENTHDLR_NAME         "Dins"
-#define EVENTHDLR_DESC         "LP event handler for "HEUR_NAME" heuristic"
+#define EVENTHDLR_DESC         "LP event handler for " HEUR_NAME " heuristic"
 
 /*
  * Data structures
@@ -83,6 +85,7 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?
                                               */
+   int                   bestsollimit;       /**< limit on number of improving incumbent solutions in sub-CIP            */
 };
 
 
@@ -384,7 +387,7 @@ SCIP_RETCODE createNewSol(
  * we interrupt the solution process
  */
 static
-SCIP_DECL_EVENTEXEC(eventExecRins)
+SCIP_DECL_EVENTEXEC(eventExecDins)
 {
    SCIP_HEURDATA* heurdata;
 
@@ -400,7 +403,7 @@ SCIP_DECL_EVENTEXEC(eventExecRins)
    /* interrupt solution process of sub-SCIP */
    if( SCIPgetNLPs(scip) > heurdata->lplimfac * heurdata->nodelimit )
    {
-      SCIPdebugMessage("interrupt after  %"SCIP_LONGINT_FORMAT" LPs\n",SCIPgetNLPs(scip));
+      SCIPdebugMessage("interrupt after  %" SCIP_LONGINT_FORMAT " LPs\n",SCIPgetNLPs(scip));
       SCIP_CALL( SCIPinterruptSolve(scip) );
    }
 
@@ -647,10 +650,10 @@ SCIP_DECL_HEUREXEC(heurExecDins)
       }
 
       /* create event handler for LP events */
-      SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecRins, NULL) );
+      SCIP_CALL( SCIPincludeEventhdlrBasic(subscip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC, eventExecDins, NULL) );
       if( eventhdlr == NULL )
       {
-         SCIPerrorMessage("event handler for "HEUR_NAME" heuristic not found.\n");
+         SCIPerrorMessage("event handler for " HEUR_NAME " heuristic not found.\n");
          return SCIP_PLUGINNOTFOUND;
       }
 
@@ -700,11 +703,19 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
 
+   /* disable statistic timing inside sub SCIP unless we are in debug mode and print the statistic timing */
+#ifdef SCIP_DEBUG
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", TRUE) );
+#else
+   /* disable statistic timing inside sub SCIP */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
+#endif
+
    /* set limits for the subproblem */
    heurdata->nodelimit = nsubnodes;
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/stallnodes", MAX(10, nsubnodes/10)) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", 3) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->bestsollimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
 
@@ -907,7 +918,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    }
 
    /* solve the subproblem */
-   SCIPdebugMessage("solving DINS sub-MIP with neighborhoodsize %d and maxnodes %"SCIP_LONGINT_FORMAT"\n", heurdata->neighborhoodsize, nsubnodes);
+   SCIPdebugMessage("solving DINS sub-MIP with neighborhoodsize %d and maxnodes %" SCIP_LONGINT_FORMAT "\n", heurdata->neighborhoodsize, nsubnodes);
    retcode = SCIPsolve(subscip);
 
    /* drop LP events of sub-SCIP */
@@ -934,7 +945,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    heurdata->usednodes += SCIPgetNNodes(subscip);
    nsubsols = SCIPgetNSols(subscip);
-   SCIPdebugMessage("DINS used %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" nodes and found %d solutions\n", SCIPgetNNodes(subscip), nsubnodes, nsubsols);
+   SCIPdebugMessage("DINS used %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " nodes and found %d solutions\n", SCIPgetNNodes(subscip), nsubnodes, nsubsols);
 
    /* check, whether a  (new) solution was found */
    if( nsubsols > 0 )
@@ -990,46 +1001,50 @@ SCIP_RETCODE SCIPincludeHeurDins(
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolDins) );
 
    /* add DINS primal heuristic parameters */
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/nodesofs",
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/nodesofs",
          "number of nodes added to the contingent of the total nodes",
          &heurdata->nodesofs, FALSE, DEFAULT_NODESOFS, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/nodesquot",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/nodesquot",
          "contingent of sub problem nodes in relation to the number of nodes of the original problem",
          &heurdata->nodesquot, FALSE, DEFAULT_NODESQUOT, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/minnodes",
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/minnodes",
          "minimum number of nodes required to start the subproblem",
          &heurdata->minnodes, FALSE, DEFAULT_MINNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/solnum",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/solnum",
          "number of pool-solutions to be checked for flag array update (for hard fixing of binary variables)",
          &heurdata->solnum, FALSE, DEFAULT_SOLNUM, 1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/neighborhoodsize",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/neighborhoodsize",
          "radius (using Manhattan metric) of the incumbent's neighborhood to be searched",
          &heurdata->neighborhoodsize, FALSE, DEFAULT_NEIGHBORHOODSIZE, 1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/maxnodes",
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxnodes",
          "maximum number of nodes to regard in the subproblem",
          &heurdata->maxnodes,TRUE,DEFAULT_MAXNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minimprove",
-         "factor by which "HEUR_NAME" should at least improve the incumbent",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minimprove",
+         "factor by which " HEUR_NAME " should at least improve the incumbent",
          &heurdata->minimprove, TRUE, DEFAULT_MINIMPROVE, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/"HEUR_NAME"/nwaitingnodes",
+   SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/nwaitingnodes",
          "number of nodes without incumbent change that heuristic should wait",
          &heurdata->nwaitingnodes, TRUE, DEFAULT_NWAITINGNODES, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/lplimfac",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/lplimfac",
          "factor by which the limit on the number of LP depends on the node limit",
          &heurdata->lplimfac, TRUE, DEFAULT_LPLIMFAC, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/"HEUR_NAME"/minfixingrate",
+   SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/minfixingrate",
          "minimum percentage of integer variables that have to be fixable",
          &heurdata->minfixingrate, FALSE, DEFAULT_MINFIXINGRATE, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/uselprows",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/uselprows",
          "should subproblem be created out of the rows in the LP rows?",
          &heurdata->uselprows, TRUE, DEFAULT_USELPROWS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/copycuts",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/bestsollimit",
+         "limit on number of improving incumbent solutions in sub-CIP",
+         &heurdata->bestsollimit, FALSE, DEFAULT_BESTSOLLIMIT, -1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;
 }

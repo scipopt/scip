@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2850,7 +2850,7 @@ SCIP_RETCODE SCIPnlrowRecalcNLPActivity(
    assert(stat   != NULL);
    assert(nlp    != NULL);
 
-   if( !SCIPnlpHasSolution(nlp) )
+   if( nlp->solstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {
       SCIPerrorMessage("do not have NLP solution for computing NLP activity\n");
       return SCIP_ERROR;
@@ -3711,14 +3711,19 @@ SCIP_RETCODE nlpUpdateObjCoef(
 
    /* get position of variable in NLP and objective coefficient */
    pos  = (int) (size_t) SCIPhashmapGetImage(nlp->varhash, var);
+   assert(nlp->varmap_nlp2nlpi[pos] == -1 || nlp->solver != NULL);
+
+   /* actually we only need to remember flushing the objective if we also have an NLPI */
+   if( nlp->solver == NULL )
+      return SCIP_OKAY;
+
    coef = SCIPvarGetObj(var);
 
    /* if variable not in NLPI yet, then we only need to remember to update the objective after variable additions were flushed */
    if( nlp->varmap_nlp2nlpi[pos] == -1 && coef != 0.0 )
    {
-      /* actually we only need to remember flushing the objective if we also have an NLPI */
-      if( nlp->solver != NULL )
-         nlp->objflushed = FALSE;
+      nlp->objflushed = FALSE;
+
       return SCIP_OKAY;
    }
 
@@ -4792,7 +4797,7 @@ SCIP_RETCODE nlpCalcFracVars(
    assert(nlp->validfracvars <= stat->nnlps);
    assert(SCIPnlpHasSolution(nlp));
 
-   SCIPdebugMessage("calculating NLP fractional variables: validfracvars=%"SCIP_LONGINT_FORMAT", nnlps=%"SCIP_LONGINT_FORMAT"\n", nlp->validfracvars, stat->nnlps);
+   SCIPdebugMessage("calculating NLP fractional variables: validfracvars=%" SCIP_LONGINT_FORMAT ", nnlps=%" SCIP_LONGINT_FORMAT "\n", nlp->validfracvars, stat->nnlps);
 
    if( nlp->solstat > SCIP_NLPSOLSTAT_LOCINFEASIBLE )
    {
@@ -5029,7 +5034,12 @@ SCIP_RETCODE SCIPnlpCreate(
       if( set->nlp_solver[0] == '\0' )
       { /* take solver with highest priority */
          assert(set->nlpis != NULL);
-         (*nlp)->solver = set->nlpis[set->nnlpis-1];
+
+         /* sort the NLPIs if necessary */
+         if( !set->nlpissorted )
+            SCIPsetSortNlpis(set);
+
+         (*nlp)->solver = set->nlpis[0];
       }
       else
       { /* find user specified NLP solver */
@@ -5098,7 +5108,7 @@ SCIP_RETCODE SCIPnlpCreate(
    (*nlp)->eventhdlr = SCIPsetFindEventhdlr(set, EVENTHDLR_NAME);
    if( (*nlp)->eventhdlr == NULL )
    {
-      SCIPerrorMessage("NLP eventhandler <"EVENTHDLR_NAME"> not found.\n");
+      SCIPerrorMessage("NLP eventhandler <" EVENTHDLR_NAME "> not found.\n");
       return SCIP_PLUGINNOTFOUND;
    }
    SCIP_CALL( SCIPeventfilterAdd(set->scip->eventfilter, blkmem, set,

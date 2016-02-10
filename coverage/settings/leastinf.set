@@ -1,0 +1,18 @@
+# SCIP version 2.1.1.6
+
+# should the real solving time be used instead of a time step counter in VBC output?
+# [type: bool, range: {TRUE,FALSE}, default: TRUE]
+vbc/realtime = FALSE
+
+# should the node where solutions are found be visualized?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+vbc/dispsols = TRUE
+
+# shall characters '#', '*', '+', '/', and '-' in variable and constraint names be replaced by '_'?
+# [type: bool, range: {TRUE,FALSE}, default: FALSE]
+reading/gmsreader/replaceforbiddenchars = TRUE
+
+# priority of branching rule <leastinf>
+# [type: int, range: [-536870912,536870911], default: 50]
+branching/leastinf/priority = 10000000
+

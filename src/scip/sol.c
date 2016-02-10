@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -726,7 +726,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
    assert(tree != NULL);
    assert(lp != NULL);
    assert(lp->solved);
-   assert(SCIPlpDiving(lp) || !SCIPlpDivingObjChanged(lp));
+   assert(SCIPlpDiving(lp) || SCIPtreeProbing(tree) || !SCIPlpDivingObjChanged(lp));
 
    SCIPdebugMessage("linking solution to LP\n");
 
@@ -752,7 +752,7 @@ SCIP_RETCODE SCIPsolLinkLPSol(
          for( c = 0; c < ncols; ++c )
          {
             var = SCIPcolGetVar(cols[c]);
-            sol->obj += SCIPvarGetObj(var) * cols[c]->primsol;
+            sol->obj += SCIPvarGetUnchangedObj(var) * cols[c]->primsol;
          }
       }
    }
@@ -987,6 +987,7 @@ SCIP_RETCODE SCIPsolSetVal(
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(stat != NULL);
    assert(var != NULL);
+   assert(SCIPisFinite(val));
 
    SCIPdebugMessage("setting value of <%s> in solution %p to %g\n", SCIPvarGetName(var), (void*)sol, val);
 
@@ -1000,15 +1001,36 @@ SCIP_RETCODE SCIPsolSetVal(
          if( !SCIPsetIsEQ(set, val, oldval) )
          {
             SCIP_Real obj;
+            SCIP_Real objcont;
 
             SCIP_CALL( solSetArrayVal(sol, set, var, val) );
 
             /* update objective: an unknown solution value does not count towards the objective */
             obj = SCIPvarGetObj(var);
             if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
-               sol->obj -= obj * oldval;
+            {
+               objcont = obj * oldval;
+
+               /* we want to use a clean infinity */
+               if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, sol->obj-objcont) )
+                  sol->obj = SCIPsetInfinity(set);
+               else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj-objcont)) )
+                  sol->obj = -SCIPsetInfinity(set);
+               else
+                  sol->obj -= objcont;
+            }
             if( val != SCIP_UNKNOWN ) /*lint !e777*/
-               sol->obj += obj * val;
+            {
+               objcont = obj * val;
+
+               /* we want to use a clean infinity */
+               if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, sol->obj+objcont) )
+                  sol->obj = SCIPsetInfinity(set);
+               else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj+objcont)) )
+                  sol->obj = -SCIPsetInfinity(set);
+               else
+                  sol->obj += objcont;
+            }
 
             solStamp(sol, stat, tree, FALSE);
 
@@ -1025,15 +1047,37 @@ SCIP_RETCODE SCIPsolSetVal(
       if( !SCIPsetIsEQ(set, val, oldval) )
       {
          SCIP_Real obj;
+         SCIP_Real objcont;
 
          SCIP_CALL( solSetArrayVal(sol, set, var, val) );
 
          /* update objective: an unknown solution value does not count towards the objective */
-         obj = SCIPvarGetObj(var);
+         obj = SCIPvarGetUnchangedObj(var);
+
          if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
-            sol->obj -= obj * oldval;
+         {
+            objcont = obj * oldval;
+
+            /* we want to use a clean infinity */
+            if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, sol->obj-objcont) )
+               sol->obj = SCIPsetInfinity(set);
+            else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj-objcont)) )
+               sol->obj = -SCIPsetInfinity(set);
+            else
+               sol->obj -= objcont;
+         }
          if( val != SCIP_UNKNOWN ) /*lint !e777*/
-            sol->obj += obj * val;
+         {
+            objcont = obj * val;
+
+            /* we want to use a clean infinity */
+            if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, sol->obj+objcont) )
+               sol->obj = SCIPsetInfinity(set);
+            else if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, -(sol->obj+objcont)) )
+               sol->obj = -SCIPsetInfinity(set);
+            else
+               sol->obj += objcont;
+         }
 
          solStamp(sol, stat, tree, FALSE);
       }
@@ -1159,7 +1203,7 @@ SCIP_RETCODE SCIPsolIncVal(
    case SCIP_VARSTATUS_COLUMN:
       assert(!SCIPsolIsOriginal(sol));
       SCIP_CALL( solIncArrayVal(sol, set, var, incval) );
-      sol->obj += SCIPvarGetObj(var) * incval;
+      sol->obj += SCIPvarGetUnchangedObj(var) * incval;
       solStamp(sol, stat, tree, FALSE);
       return SCIP_OKAY;
 
@@ -1419,10 +1463,10 @@ SCIP_RETCODE SCIPsolCheck(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem data */
-   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
-   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            feasible            /**< stores whether solution is feasible */
    )
 {
@@ -1435,7 +1479,7 @@ SCIP_RETCODE SCIPsolCheck(
    assert(prob != NULL);
    assert(feasible != NULL);
 
-   SCIPdebugMessage("checking solution with objective value %g (nodenum=%"SCIP_LONGINT_FORMAT", origin=%u)\n",
+   SCIPdebugMessage("checking solution with objective value %g (nodenum=%" SCIP_LONGINT_FORMAT ", origin=%u)\n",
       sol->obj, sol->nodenum, sol->solorigin);
 
    *feasible = TRUE;
@@ -1460,7 +1504,14 @@ SCIP_RETCODE SCIPsolCheck(
 
             lb = SCIPvarGetLbGlobal(var);
             ub = SCIPvarGetUbGlobal(var);
-            *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb) && SCIPsetIsFeasLE(set, solval, ub);
+
+            /* check finite lower bound */
+            if( !SCIPsetIsInfinity(set, -lb) )
+               *feasible = *feasible && SCIPsetIsFeasGE(set, solval, lb);
+
+            /* check finite upper bound */
+            if( !SCIPsetIsInfinity(set, ub) )
+               *feasible = *feasible && SCIPsetIsFeasLE(set, solval, ub);
 
             if( printreason && (SCIPsetIsFeasLT(set, solval, lb) || SCIPsetIsFeasGT(set, solval, ub)) )
             {
@@ -1571,16 +1622,9 @@ SCIP_RETCODE SCIPsolRound(
       if( solval == SCIP_UNKNOWN ) /*lint !e777*/
          break;
 
-      /* if solution value is already integral, there is nothing to do */
-      if( SCIPsetIsIntegral(set, solval) )
-         continue;
-
-      /* if solution value is already integral with feastol, round to nearest integral value */
+      /* if solution value is already integral with feastol, continue */
       if( SCIPsetIsFeasIntegral(set, solval) )
-      {
-         SCIP_CALL( SCIPsolSetVal(sol, set, stat, tree, var, SCIPsetRound(set, solval)) );
          continue;
-      }
 
       /* get rounding possibilities */
       mayrounddown = SCIPvarMayRoundDown(var);
@@ -1590,7 +1634,7 @@ SCIP_RETCODE SCIPsolRound(
       if( mayrounddown && mayroundup )
       {
          /* we can round in both directions: round in objective function direction */
-         if( SCIPvarGetObj(var) >= 0.0 )
+         if( SCIPvarGetUnchangedObj(var) >= 0.0 )
             solval = SCIPsetFeasFloor(set, solval);
          else
             solval = SCIPsetFeasCeil(set, solval);
@@ -1792,7 +1836,7 @@ void SCIPsolRecomputeObj(
       solval = SCIPsolGetVal(sol, set, stat, vars[v]);
       if( !SCIPsetIsZero(set, solval) && solval != SCIP_UNKNOWN ) /*lint !e777*/
       {
-         sol->obj += SCIPvarGetObj(vars[v]) * solval;
+         sol->obj += SCIPvarGetUnchangedObj(vars[v]) * solval;
       }
    }
 
@@ -1895,7 +1939,7 @@ SCIP_RETCODE SCIPsolPrint(
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
             SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
-         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->fixedvars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->fixedvars[v]));
       }
    }
 
@@ -1914,7 +1958,7 @@ SCIP_RETCODE SCIPsolPrint(
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
             SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
-         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->vars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->vars[v]));
       }
    }
 
@@ -1940,7 +1984,7 @@ SCIP_RETCODE SCIPsolPrint(
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
                SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
-            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->fixedvars[v]));
          }
       }
       for( v = 0; v < transprob->nvars; ++v )
@@ -1961,7 +2005,7 @@ SCIP_RETCODE SCIPsolPrint(
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
                SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
-            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->vars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->vars[v]));
          }
       }
    }
@@ -2004,7 +2048,7 @@ SCIP_RETCODE SCIPsolPrintRay(
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
             SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
-         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->fixedvars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->fixedvars[v]));
       }
    }
    for( v = 0; v < prob->nvars; ++v )
@@ -2022,7 +2066,7 @@ SCIP_RETCODE SCIPsolPrintRay(
             SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
          else
             SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g", solval);
-         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(prob->vars[v]));
+         SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(prob->vars[v]));
       }
    }
 
@@ -2048,7 +2092,7 @@ SCIP_RETCODE SCIPsolPrintRay(
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
                SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
-            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->fixedvars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->fixedvars[v]));
          }
       }
       for( v = 0; v < transprob->nvars; ++v )
@@ -2069,7 +2113,7 @@ SCIP_RETCODE SCIPsolPrintRay(
                SCIPmessageFPrintInfo(messagehdlr, file, "            -infinity");
             else
                SCIPmessageFPrintInfo(messagehdlr, file, " % 20.15g", solval);
-            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetObj(transprob->vars[v]));
+            SCIPmessageFPrintInfo(messagehdlr, file, " \t(obj:%.15g)\n", SCIPvarGetUnchangedObj(transprob->vars[v]));
          }
       }
    }

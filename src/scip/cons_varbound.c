@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -62,9 +62,9 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PRESOLTIMING            (SCIP_PRESOLTIMING_FAST | SCIP_PRESOLTIMING_MEDIUM)
 #define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
 
 #define EVENTHDLR_NAME         "varbound"
@@ -423,7 +423,7 @@ SCIP_Bool checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< variable bound constraint */
    SCIP_SOL*             sol,                /**< solution to check, NULL for current solution */
-   SCIP_Bool             checklprows         /**< should LP rows be checked? */
+   SCIP_Bool             checklprows         /**< Do constraints represented by rows in the current LP have to be checked? */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -504,7 +504,11 @@ SCIP_RETCODE resolvePropagation(
       {
          SCIP_Real relaxedbd;
 
-         if( SCIPvarIsIntegral(var) )
+         /* For integer variables, we can reduce the inferbound by 1 - 2eps, because this will be adjusted
+          * to the bound we need; however, if inferbound has a large value, adding 2*eps might be lost
+          * due to fixed precision floating point arithmetics, so we explicitly check this here.
+          */
+         if( SCIPvarIsIntegral(var) && inferbd < SCIPgetHugeValue(scip) * SCIPfeastol(scip))
             relaxedbd = (consdata->lhs - (inferbd - 1.0 + 2*SCIPfeastol(scip))) / vbdcoef;
          else
             relaxedbd = (consdata->lhs - inferbd) / vbdcoef;
@@ -2052,13 +2056,13 @@ SCIP_RETCODE preprocessConstraintPairs(
                if ( SCIPisPositive(scip, consdata1->vbdcoef) )
                {
                   if ( ! SCIPisInfinity(scip, lhs) )
-                     bnd = (consdata1->lhs - consdata1->vbdcoef * lhs)/scalar;
+                     bnd = (consdata1->rhs - consdata1->vbdcoef * lhs)/scalar;
                }
                else
                {
                   assert( SCIPisNegative(scip, consdata1->vbdcoef) );
                   if ( ! SCIPisInfinity(scip, rhs) )
-                     bnd = (consdata1->lhs - consdata1->vbdcoef * rhs)/scalar;
+                     bnd = (consdata1->rhs - consdata1->vbdcoef * rhs)/scalar;
                }
 
                if ( bnd != SCIP_UNKNOWN ) /*lint !e777*/
@@ -3629,7 +3633,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyVarbound)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
- 
+
    *valid = TRUE;
 
    return SCIP_OKAY;
@@ -3989,7 +3993,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
    oldnchgsides = *nchgsides;
    oldnaggrvars = *naggrvars;
 
-   for( i = 0; i < nconss && !SCIPisStopped(scip); i++ )
+   for( i = 0; i < nconss; i++ )
    {
       cons = conss[i];
       assert(cons != NULL);
@@ -3998,6 +4002,9 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
 
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
+
+      if( i % 1000 == 0 && SCIPisStopped(scip) )
+         break;
 
       /* force presolving the constraint in the initial round */
       if( nrounds == 0 )
@@ -4087,7 +4094,7 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       /* check if we can upgrade to a set-packing constraint */
       SCIP_CALL( upgradeConss(scip, conshdlrdata, conss, nconss, &cutoff, naggrvars, nchgbds, nchgcoefs, nchgsides, ndelconss, naddconss) );
 
-      if( !cutoff && conshdlrdata->presolpairwise )
+      if( !cutoff && conshdlrdata->presolpairwise && (presoltiming & SCIP_PRESOLTIMING_MEDIUM) != 0 )
       {
 	 /* preprocess pairs of variable bound constraints */
 	 SCIP_CALL( preprocessConstraintPairs(scip, conss, nconss, &cutoff, nchgbds, ndelconss, nchgcoefs, nchgsides) );
@@ -4173,7 +4180,7 @@ SCIP_DECL_CONSPRINT(consPrintVarbound)
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(cons != NULL);
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -4192,7 +4199,7 @@ SCIP_DECL_CONSPRINT(consPrintVarbound)
       SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_BINARY ? SCIP_VARTYPE_BINARY_CHAR :
       SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_INTEGER ? SCIP_VARTYPE_INTEGER_CHAR :
       SCIPvarGetType(consdata->vbdvar) == SCIP_VARTYPE_IMPLINT ? SCIP_VARTYPE_IMPLINT_CHAR : SCIP_VARTYPE_CONTINUOUS_CHAR);
-   
+
    /* print right hand side */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
       SCIPinfoMessage(scip, file, " == %.15g", consdata->rhs);
@@ -4471,7 +4478,7 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsVarbound) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpVarbound) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseVarbound) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolVarbound, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolVarbound, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintVarbound) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropVarbound, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
@@ -4488,15 +4495,15 @@ SCIP_RETCODE SCIPincludeConshdlrVarbound(
 
    /* add varbound constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/presolpairwise",
+         "constraints/" CONSHDLR_NAME "/presolpairwise",
          "should pairwise constraint comparison be performed in presolving?",
          &conshdlrdata->presolpairwise, TRUE, DEFAULT_PRESOLPAIRWISE, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxlpcoef",
+         "constraints/" CONSHDLR_NAME "/maxlpcoef",
          "maximum coefficient in varbound constraint to be added as a row into LP",
          &conshdlrdata->maxlpcoef, TRUE, DEFAULT_MAXLPCOEF, 0.0, 1e+20, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/usebdwidening", "should bound widening be used in conflict analysis?",
+         "constraints/" CONSHDLR_NAME "/usebdwidening", "should bound widening be used in conflict analysis?",
          &conshdlrdata->usebdwidening, FALSE, DEFAULT_USEBDWIDENING, NULL, NULL) );
 
    return SCIP_OKAY;

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,8 +25,8 @@
 
 #include "scip/heur_oneopt.h"
 
-/* @note if heuristic runs in root node timing is change there to (SCIP_HEURTIMING_DURINGLPLOOP |
- *       SCIP_HEURTIMING_BEFORENODE), see SCIP_DECL_HEURINITSOL callback
+/* @note If the heuristic runs in the root node, the timing is changed to (SCIP_HEURTIMING_DURINGLPLOOP |
+ *       SCIP_HEURTIMING_BEFORENODE), see SCIP_DECL_HEURINITSOL callback.
  */
 
 #define HEUR_NAME             "oneopt"
@@ -37,7 +37,7 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFOREPRESOL | SCIP_HEURTIMING_AFTERNODE
-#define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_WEIGHTEDOBJ   TRUE           /**< should the objective be weighted with the potential shifting value when sorting the shifting candidates? */
 #define DEFAULT_DURINGROOT    TRUE           /**< should the heuristic be called before and during the root node? */
@@ -69,7 +69,7 @@ SCIP_RETCODE createNewSol(
    SCIP*                 scip,               /**< original SCIP data structure                        */
    SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
-   SCIP_HEUR*            heur,               /**< zeroobj heuristic structure                            */
+   SCIP_HEUR*            heur,               /**< zeroobj heuristic structure                         */
    SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
    SCIP_Bool*            success             /**< used to store whether new solution was found or not */
    )
@@ -109,6 +109,7 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
+/** compute value by which the solution of variable @p var can be shifted */
 static
 SCIP_Real calcShiftVal(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -125,11 +126,11 @@ SCIP_Real calcShiftVal(
    SCIP_COL* col;
    SCIP_ROW** colrows;
    SCIP_Real* colvals;
+   SCIP_Bool shiftdown;
 
    int ncolrows;
    int i;
 
-   SCIP_Bool shiftdown;
 
    /* get variable's solution value, global bounds and objective coefficient */
    lb = SCIPvarGetLbGlobal(var);
@@ -192,10 +193,16 @@ SCIP_Real calcShiftVal(
          }
 #endif
          shiftval = MIN(shiftval, shiftvalrow);
+         /* shiftvalrow might be negative, if we detected infeasibility -> make sure that shiftval is >= 0 */
+         shiftval = MAX(shiftval, 0.0);
       }
    }
    if( shiftdown )
       shiftval *= -1.0;
+
+   /* we must not shift variables to infinity */
+   if( SCIPisInfinity(scip, solval + shiftval) )
+      shiftval = 0.0;
 
    return shiftval;
 }
@@ -265,7 +272,7 @@ SCIP_DECL_HEURCOPY(heurCopyOneopt)
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurOneopt(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -320,6 +327,26 @@ SCIP_DECL_HEUREXITSOL(heurExitsolOneopt)
 
    return SCIP_OKAY;
 }
+
+/** initialization method of primal heuristic (called after problem was transformed) */
+static
+SCIP_DECL_HEURINIT(heurInitOneopt)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* initialize last solution index */
+   heurdata->lastsolindex = -1;
+
+   return SCIP_OKAY;
+}
+
 
 /** execution method of primal heuristic */
 static
@@ -388,7 +415,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
       SCIP_Real timelimit;                      /* time limit for zeroobj subproblem              */
       SCIP_Real memorylimit;                    /* memory limit for zeroobj subproblem            */
-      
+
       SCIP_SOL* startsol;
       SCIP_SOL** subsols;
       int nsubsols;
@@ -403,7 +430,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
       if( !SCIPisInfinity(scip, timelimit) )
          timelimit -= SCIPgetSolvingTime(scip);
       SCIP_CALL( SCIPgetRealParam(scip, "limits/memory", &memorylimit) );
-      
+
       /* substract the memory already used by the main SCIP and the estimated memory usage of external software */
       if( !SCIPisInfinity(scip, memorylimit) )
       {
@@ -417,11 +444,11 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
       /* initialize the subproblem */
       SCIP_CALL( SCIPcreate(&subscip) );
-      
+
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
-      
+
       /* copy complete SCIP instance */
       valid = FALSE;
       SCIP_CALL( SCIPcopy(scip, subscip, varmapfw, NULL, "oneopt", TRUE, FALSE, TRUE, &valid) );
@@ -441,9 +468,12 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
       /* try to add new solution to sub-SCIP and free it immediately */
       valid = FALSE;
-      SCIP_CALL( SCIPtrySolFree(subscip, &startsol, FALSE, FALSE, FALSE, FALSE, &valid) );      
+      SCIP_CALL( SCIPtrySolFree(subscip, &startsol, FALSE, FALSE, FALSE, FALSE, &valid) );
       SCIPfreeBufferArray(scip, &subsolvals);
       SCIPhashmapFree(&varmapfw);
+
+      /* disable statistic timing inside sub SCIP */
+      SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 
       /* deactivate basically everything except oneopt in the sub-SCIP */
       SCIP_CALL( SCIPsetPresolving(subscip, SCIP_PARAMSETTING_OFF, TRUE) );
@@ -499,7 +529,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 #endif
             SCIPwarningMessage(scip, "Error while solving subproblem in zeroobj heuristic; sub-SCIP terminated with code <%d>\n",retcode);
          }
-         
+
 #ifdef SCIP_DEBUG
          SCIP_CALL( SCIPprintStatistics(subscip, NULL) );
 #endif
@@ -712,6 +742,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
             shiftval = calcShiftVal(scip, var, solval, activities);
             SCIPdebugMessage(" -> Variable <%s> is now shifted by <%1.1f> \n", SCIPvarGetName(vars[i]), shiftval);
             assert(i > 0 || !SCIPisFeasZero(scip, shiftval));
+            assert(SCIPisFeasGE(scip, solval+shiftval, SCIPvarGetLbGlobal(var)) && SCIPisFeasLE(scip, solval+shiftval, SCIPvarGetUbGlobal(var)));
             SCIP_CALL( SCIPsetSolVal(scip, worksol, var, solval+shiftval) );
             SCIP_CALL( updateRowActivities(scip, activities, var, shiftval) );
          }
@@ -772,7 +803,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          }
 
          /* solve LP */
-         SCIPdebugMessage(" -> old LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+         SCIPdebugMessage(" -> old LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
 
          /**@todo in case of an MINLP, if SCIPisNLPConstructed() is TRUE, say, rather solve the NLP instead of the LP */
          /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
@@ -788,7 +819,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
          SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror, NULL) );
 #endif
 
-         SCIPdebugMessage(" -> new LP iterations: %"SCIP_LONGINT_FORMAT"\n", SCIPgetNLPIterations(scip));
+         SCIPdebugMessage(" -> new LP iterations: %" SCIP_LONGINT_FORMAT "\n", SCIPgetNLPIterations(scip));
          SCIPdebugMessage(" -> error=%u, status=%d\n", lperror, SCIPgetLPSolstat(scip));
 
          /* check if this is a feasible solution */
@@ -840,7 +871,6 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
 
    /* create Oneopt primal heuristic data */
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
-   heurdata->lastsolindex = -1;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -854,8 +884,9 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeOneopt) );
    SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolOneopt) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolOneopt) );
-   /* add oneopt primal heuristic parameters */
+   SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitOneopt) );
 
+   /* add oneopt primal heuristic parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/oneopt/weightedobj",
          "should the objective be weighted with the potential shifting value when sorting the shifting candidates?",
          &heurdata->weightedobj, TRUE, DEFAULT_WEIGHTEDOBJ, NULL, NULL) );
@@ -871,6 +902,6 @@ SCIP_RETCODE SCIPincludeHeurOneopt(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/oneopt/beforepresol",
          "should the heuristic be called before presolving?",
          &heurdata->beforepresol, TRUE, DEFAULT_BEFOREPRESOL, NULL, NULL) );
-   
+
    return SCIP_OKAY;
 }

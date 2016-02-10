@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="3.1.0.1"
+VERSION="3.2.0.1"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -16,7 +16,7 @@ rm -f release/$NAME.tgz
 git status
 
 echo generating default setting files
-make LPS=none OPT=opt-gccold READLINE=false ZLIB=false ZIMPL=false -j4
+make LPS=none OPT=opt READLINE=false ZLIB=false ZIMPL=false -j4
 bin/scip -c "set default set save doc/inc/parameters.set quit"
 
 # Before we create a tarball change the director and file rights in a command way
@@ -27,8 +27,6 @@ find ./ -name "*.sh" -exec chmod 750 {} \;
 chmod 750 bin/* scripts/* interfaces/ampl/get.ASL interfaces/jni/createJniInterface.py check/cmpres.awk check/find_missing_instances.py
 
 tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
---exclude="*CVS*" \
---exclude="*cvs*" \
 --exclude="*~" \
 --exclude=".*" \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
@@ -66,6 +64,30 @@ $NAME/src/blockmemshell/*.c $NAME/src/blockmemshell/*.h \
 $NAME/src/tclique/*.c $NAME/src/tclique/*.h \
 $NAME/src/objscip/*.cpp $NAME/src/objscip/*.h \
 $NAME/src/cppad/* $NAME/src/cppad/local/* \
+$NAME/applications/Coloring/* $NAME/applications/Coloring/doc/* $NAME/applications/Coloring/data/* \
+$NAME/applications/Coloring/check/testset/short.test $NAME/applications/Coloring/check/testset/short.solu \
+$NAME/applications/Coloring/src/depend.* \
+$NAME/applications/Coloring/src/*.c $NAME/applications/Coloring/src/*.h \
+$NAME/applications/Scheduler/doc/* \
+$NAME/applications/Scheduler/check/testset/short.test $NAME/applications/Scheduler/check/testset/short.solu \
+$NAME/applications/Scheduler/src/depend.* \
+$NAME/applications/Scheduler/src/*.c $NAME/applications/Scheduler/src/*.cpp $NAME/applications/Scheduler/src/*.h \
+$NAME/applications/Scheduler/data/*.sm \
+$NAME/applications/Scheduler/data/*.cmin \
+$NAME/applications/Scheduler/Makefile \
+$NAME/applications/MultiObjective/doc/* \
+$NAME/applications/MultiObjective/doc/images/*.png \
+$NAME/applications/MultiObjective/src/depend.* \
+$NAME/applications/MultiObjective/src/*.c $NAME/applications/MultiObjective/src/*.cpp $NAME/applications/MultiObjective/src/*.h \
+$NAME/applications/MultiObjective/data/*.mop \
+$NAME/applications/MultiObjective/Makefile $NAME/applications/MultiObjective/INSTALL $NAME/applications/MultiObjective/scipmip.set \
+$NAME/applications/STP/doc/* \
+$NAME/applications/STP/src/depend.* \
+$NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.cpp $NAME/applications/STP/src/*.h \
+$NAME/applications/STP/check/testset/*.test $NAME/applications/STP/check/testset/*.solu \
+$NAME/applications/STP/data/D/* \
+$NAME/applications/STP/scip-jack.sh \
+$NAME/applications/STP/Makefile $NAME/applications/STP/INSTALL \
 $NAME/examples/Binpacking/Makefile $NAME/examples/Binpacking/INSTALL \
 $NAME/examples/Binpacking/doc/* $NAME/examples/Binpacking/doc/pics/binpacking.png \
 $NAME/examples/Binpacking/check/testset/short.test $NAME/examples/Binpacking/check/testset/short.solu \
@@ -76,10 +98,6 @@ $NAME/examples/CallableLibrary/Makefile $NAME/examples/CallableLibrary/INSTALL \
 $NAME/examples/CallableLibrary/doc/scip.dxy $NAME/examples/CallableLibrary/doc/header.html \
 $NAME/examples/CallableLibrary/doc/layout.xml $NAME/examples/CallableLibrary/doc/xternal.c \
 $NAME/examples/CallableLibrary/src/depend.* $NAME/examples/CallableLibrary/src/*.c \
-$NAME/examples/Coloring/* $NAME/examples/Coloring/doc/* $NAME/examples/Coloring/data/* \
-$NAME/examples/Coloring/check/testset/short.test $NAME/examples/Coloring/check/testset/short.solu \
-$NAME/examples/Coloring/src/depend.* \
-$NAME/examples/Coloring/src/*.c $NAME/examples/Coloring/src/*.h \
 $NAME/examples/Eventhdlr/* $NAME/examples/Eventhdlr/doc/* \
 $NAME/examples/Eventhdlr/src/depend.* \
 $NAME/examples/Eventhdlr/src/*.c $NAME/examples/Eventhdlr/src/*.h \
@@ -99,13 +117,6 @@ $NAME/examples/MIPSolver/src/*.cpp \
 $NAME/examples/Queens/* $NAME/examples/Queens/doc/scip_intro.tex \
 $NAME/examples/Queens/src/depend.* \
 $NAME/examples/Queens/src/*.cpp $NAME/examples/Queens/src/*.hpp \
-$NAME/examples/Scheduler/Makefile \
-$NAME/examples/Scheduler/doc/* \
-$NAME/examples/Scheduler/check/testset/short.test $NAME/examples/Scheduler/check/testset/short.solu \
-$NAME/examples/Scheduler/src/depend.* \
-$NAME/examples/Scheduler/src/*.c $NAME/examples/Scheduler/src/*.h \
-$NAME/examples/Scheduler/data/*.sm \
-$NAME/examples/Scheduler/data/*.cmin \
 $NAME/examples/TSP/Makefile $NAME/examples/TSP/INSTALL \
 $NAME/examples/TSP/runme.sh $NAME/examples/TSP/runviewer.sh \
 $NAME/examples/TSP/sciptsp.set \

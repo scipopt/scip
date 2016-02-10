@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,7 +36,7 @@
 #define PROP_DELAY                 TRUE /**< should propagation method be delayed, if other propagators found
                                          *   reductions? */
 #define PROP_PRESOL_PRIORITY    -100000 /**< priority of the presolving method (>= 0: before, < 0: after constraint handlers); combined with presolvers */
-#define PROP_PRESOL_DELAY          TRUE /**< should presolving be delay, if other presolvers found reductions?  */
+#define PROP_PRESOLTIMING       SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolving method (fast, medium, or exhaustive) */
 #define PROP_PRESOL_MAXROUNDS        -1 /**< maximal number of presolving rounds the presolver participates in (-1: no
                                          *   limit) */
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
@@ -502,6 +502,11 @@ SCIP_RETCODE applyProbing(
                   propdata->nuseless = 0;
                   propdata->ntotaluseless = 0;
                }
+               else if( *cutoff )
+               {
+                  SCIPdebugMessage("tightening upper bound of probing variable <%s> to 0.0 led to a cutoff\n",
+                     SCIPvarGetName(vars[i]));
+               }
                continue; /* don't try downwards direction, because the variable is already fixed */
             }
 
@@ -546,6 +551,11 @@ SCIP_RETCODE applyProbing(
                   propdata->nfixings++;
                   propdata->nuseless = 0;
                   propdata->ntotaluseless = 0;
+               }
+               else if( *cutoff )
+               {
+                  SCIPdebugMessage("tightening lower bound of probing variable <%s> to 1.0 led to a cutoff\n",
+                     SCIPvarGetName(vars[i]));
                }
                continue; /* don't analyze probing deductions, because the variable is already fixed */
             }
@@ -820,12 +830,6 @@ SCIP_DECL_PROPINITSOL(propInitsolProbing)
    propdata->nuseless = 0;
    propdata->ntotaluseless = 0;
    propdata->nsumuseless = 0;
-#if 0
-   propdata->nfixings = 0;
-   propdata->naggregations = 0;
-   propdata->nimplications = 0;
-   propdata->nbdchgs = 0;
-#endif
 
    return SCIP_OKAY;
 }
@@ -946,15 +950,18 @@ SCIP_DECL_PROPPRESOL(propPresolProbing)
    /* adjust result code */
    if( cutoff )
       *result = SCIP_CUTOFF;
-   else if( delay )
+   else
    {
-      *result = SCIP_DELAYED;
-      /* probing was interrupted because it reached the maximal fixings parameter, so we want to rerun it at the next call */
-      propdata->lastnode = -2;
+      if( delay )
+      {
+         /* probing was interrupted because it reached the maximal fixings parameter, so we want to rerun it at the next call */
+         propdata->lastnode = -2;
+      }
+
+      if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
+         || propdata->nimplications > oldnimplications )
+         *result = SCIP_SUCCESS;
    }
-   else if( *nfixedvars > oldnfixedvars || *naggrvars > oldnaggrvars || *nchgbds > oldnchgbds
-      || propdata->nimplications > oldnimplications )
-      *result = SCIP_SUCCESS;
 
    return SCIP_OKAY;
 }
@@ -1032,7 +1039,7 @@ SCIP_DECL_PROPEXEC(propExecProbing)
          ++nbinvars;
       }
    }
-   SCIPdebugMessage("problem <%s> node %"SCIP_LONGINT_FORMAT" probing propagation found %d of %d possible probing candidates\n", SCIPgetProbName(scip), SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nbinvars, nvars);
+   SCIPdebugMessage("problem <%s> node %" SCIP_LONGINT_FORMAT " probing propagation found %d of %d possible probing candidates\n", SCIPgetProbName(scip), SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), nbinvars, nvars);
 
    if( nbinvars == 0 )
    {
@@ -1062,7 +1069,7 @@ SCIP_DECL_PROPEXEC(propExecProbing)
    nchgbds = 0;
    startidx = 0;
    oldnimplications = propdata->nimplications;
-   
+
    /* start probing on found variables */
    SCIP_CALL( applyProbing(scip, propdata, binvars, nbinvars, nbinvars, &startidx, &nfixedvars, &naggrvars, &nchgbds, oldnfixedvars, oldnaggrvars, &delay, &cutoff) );
    SCIPdebugMessage("probing propagation found %d fixings, %d aggregation, %d nchgbds, and %d implications\n", nfixedvars, naggrvars, nchgbds, (propdata->nimplications) - oldnimplications);
@@ -1127,36 +1134,36 @@ SCIP_RETCODE SCIPincludePropProbing(
    SCIP_CALL( SCIPsetPropInitpre(scip, prop, propInitpreProbing) );
    SCIP_CALL( SCIPsetPropExitpre(scip, prop, propExitpreProbing) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolProbing, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS,
-         PROP_PRESOL_DELAY) );
+         PROP_PRESOLTIMING) );
    SCIP_CALL( SCIPsetPropResprop(scip, prop, propRespropProbing) );
 
    /* add probing propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/maxruns",
+         "propagating/" PROP_NAME "/maxruns",
          "maximal number of runs, probing participates in (-1: no limit)",
          &propdata->maxruns, FALSE, DEFAULT_MAXRUNS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/proprounds",
+         "propagating/" PROP_NAME "/proprounds",
          "maximal number of propagation rounds in probing subproblems (-1: no limit, 0: auto)",
          &propdata->proprounds, TRUE, DEFAULT_PROPROUNDS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/maxfixings",
+         "propagating/" PROP_NAME "/maxfixings",
          "maximal number of fixings found, until probing is interrupted (0: don't iterrupt)",
          &propdata->maxfixings, TRUE, DEFAULT_MAXFIXINGS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/maxuseless",
+         "propagating/" PROP_NAME "/maxuseless",
          "maximal number of successive probings without fixings, until probing is aborted (0: don't abort)",
          &propdata->maxuseless, TRUE, DEFAULT_MAXUSELESS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/maxtotaluseless",
+         "propagating/" PROP_NAME "/maxtotaluseless",
          "maximal number of successive probings without fixings, bound changes, and implications, until probing is aborted (0: don't abort)",
          &propdata->maxtotaluseless, TRUE, DEFAULT_MAXTOTALUSELESS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/maxsumuseless",
+         "propagating/" PROP_NAME "/maxsumuseless",
          "maximal number of probings without fixings, until probing is aborted (0: don't abort)",
          &propdata->maxsumuseless, TRUE, DEFAULT_MAXSUMUSELESS, 0, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "propagating/"PROP_NAME"/maxdepth",
+         "propagating/" PROP_NAME "/maxdepth",
          "maximal depth until propagation is executed(-1: no limit)",
          &propdata->maxdepth, TRUE, DEFAULT_MAXDEPTH, -1, INT_MAX, NULL, NULL) );
 
@@ -1238,12 +1245,14 @@ SCIP_RETCODE SCIPapplyProbingVar(
          impllbs[i] = SCIPvarGetLbLocal(vars[i]);
          implubs[i] = SCIPvarGetUbLocal(vars[i]);
       }
-   }
 
-   /* apply propagation */
-   if( !(*cutoff) )
-   {
+      /* apply propagation */
       SCIP_CALL( SCIPpropagateProbing(scip, maxproprounds, cutoff, NULL) );
+   }
+   else
+   {
+      SCIPdebugMessage("propagating probing implications after <%s> to %g led to a cutoff\n",
+         SCIPvarGetName(vars[probingpos]), bound);
    }
 
    /* evaluate propagation */
@@ -1420,6 +1429,12 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                SCIPvarGetName(probingvar), SCIPvarGetNLocksDown(probingvar), SCIPvarGetNLocksUp(probingvar));
             (*nfixedvars)++;
          }
+         else if( *cutoff )
+         {
+            SCIPdebugMessage("analyzing probing deduction of <%s> led to an infeasible fixing of variable <%s> to %g\n",
+               SCIPvarGetName(probingvar), SCIPvarGetName(var), fixval);
+         }
+
          continue;
       }
       else
@@ -1459,6 +1474,11 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                   SCIPvarGetName(probingvar), SCIPvarGetNLocksDown(probingvar), SCIPvarGetNLocksUp(probingvar));
                (*nchgbds)++;
             }
+            else if( *cutoff )
+            {
+               SCIPdebugMessage("analyzing probing deduction of <%s> led to an infeasible new lower bound of variable <%s> to %g\n",
+                  SCIPvarGetName(probingvar), SCIPvarGetName(var), newlb);
+            }
          }
 
          if( tightenub && !*cutoff )
@@ -1471,6 +1491,11 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                   SCIPvarGetName(var), oldlb, oldub, newub,
                   SCIPvarGetName(probingvar), SCIPvarGetNLocksDown(probingvar), SCIPvarGetNLocksUp(probingvar));
                (*nchgbds)++;
+            }
+            else if( *cutoff )
+            {
+               SCIPdebugMessage("analyzing probing deduction of <%s> led to an infeasible new lower bound of variable <%s> to %g\n",
+                  SCIPvarGetName(probingvar), SCIPvarGetName(var), newub);
             }
          }
          if( *cutoff )
@@ -1517,6 +1542,13 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                   SCIPvarGetNLocksDown(var), SCIPvarGetNLocksUp(probingvar));
                (*naggrvars)++;
             }
+            if( *cutoff )
+            {
+               SCIPdebugMessage("analyzing probing deduction of <%s> led to an infeasible aggregation: %g<%s> - %g<%s> == %g\n",
+                  SCIPvarGetName(probingvar), rightlb - leftub, SCIPvarGetName(var),
+                  rightproplbs[j] - leftproplbs[j], SCIPvarGetName(probingvar),
+                  leftproplbs[j] * rightlb - rightproplbs[j] * leftub);
+            }
          }
          else if( probingvarisinteger && SCIPnodeGetDepth(SCIPgetCurrentNode(scip)) == 0 )
          {
@@ -1530,14 +1562,32 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
 
             SCIP_CALL( SCIPaddVarVlb(scip, var, probingvar, (rightproplbs[j] - leftproplbs[j]) / (rightlb - leftub), (leftproplbs[j] * rightlb - rightproplbs[j] * leftub) / (rightlb - leftub), cutoff, &nboundchanges) );
             (*nchgbds) += nboundchanges;
-            if( !*cutoff )
+
+            if( *cutoff )
+            {
+               SCIPdebugMessage("analyzing probing deduction of <%s> led to an infeasible vlb: %g<%s> - %g<%s> == %g\n",
+                  SCIPvarGetName(probingvar), rightlb - leftub, SCIPvarGetName(var),
+                  rightproplbs[j] - leftproplbs[j], SCIPvarGetName(probingvar),
+                  leftproplbs[j] * rightlb - rightproplbs[j] * leftub);
+            }
+            else
             {
                SCIP_CALL( SCIPaddVarVub(scip, var, probingvar, (rightproplbs[j] - leftproplbs[j]) / (rightlb - leftub), (leftproplbs[j] * rightlb - rightproplbs[j] * leftub) / (rightlb - leftub), cutoff, &nboundchanges) );
                (*nchgbds) += nboundchanges;
+
+               if( *cutoff )
+               {
+                  SCIPdebugMessage("analyzing probing deduction of <%s> led to an infeasible vub: %g<%s> - %g<%s> == %g\n",
+                     SCIPvarGetName(probingvar), rightlb - leftub, SCIPvarGetName(var),
+                     rightproplbs[j] - leftproplbs[j], SCIPvarGetName(probingvar),
+                     leftproplbs[j] * rightlb - rightproplbs[j] * leftub);
+               }
             }
             (*nimplications)++;
          }
-         /* if probingvar is continuous and we are in solving stage, then we do nothing, but it's unlikely that we get here (fixedleft && fixedright) with a continuous variable */
+         /* if probingvar is continuous and we are in solving stage, then we do nothing, but it's unlikely that we get
+          * here (fixedleft && fixedright) with a continuous variable
+          */
       }
       /* @todo: check if we can add variable lowerbounds/upperbounds on integer variables */
       /* can only add implications on binary variables which are globally valid */
@@ -1565,6 +1615,12 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                cutoff, &nboundchanges) );
             (*nimplications)++;
             (*nchgbds) += nboundchanges;
+
+            if( *cutoff )
+            {
+               SCIPdebugMessage("analyzing probing deduction of <%s> led to an infeasible implication <%s> == 0  =>  <%s> == %g\n",
+                  SCIPvarGetName(probingvar), SCIPvarGetName(probingvar), SCIPvarGetName(var), leftpropubs[j]);
+            }
          }
          else if( SCIPisEQ(scip, newub, leftproplbs[j]) && (leftimpllbs == NULL || leftimpllbs[j] < leftproplbs[j]) )
          {
@@ -1578,6 +1634,12 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                cutoff, &nboundchanges) );
             (*nimplications)++;
             (*nchgbds) += nboundchanges;
+
+            if( *cutoff )
+            {
+               SCIPdebugMessage("analyzing probing deduction of <%s> led to an infeasible implication <%s> == 0  =>  <%s> == %g\n",
+                  SCIPvarGetName(probingvar), SCIPvarGetName(probingvar), SCIPvarGetName(var), leftproplbs[j]);
+            }
          }
          /* we can do an else here, since the case where var is fixed for both fixings of probingvar had been handled as aggregation */
          else if( SCIPisEQ(scip, newlb, rightpropubs[j]) && (rightimplubs == NULL || rightimplubs[j] > rightpropubs[j]) )
@@ -1592,6 +1654,12 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                cutoff, &nboundchanges) );
             (*nimplications)++;
             (*nchgbds) += nboundchanges;
+
+            if( *cutoff )
+            {
+               SCIPdebugMessage("analyzing probing deduction of <%s> led to an infeasible implication <%s> == 1  =>  <%s> == %g\n",
+                  SCIPvarGetName(probingvar), SCIPvarGetName(probingvar), SCIPvarGetName(var), rightpropubs[j]);
+            }
          }
          else if( SCIPisEQ(scip, newub, rightproplbs[j]) && (rightimpllbs == NULL || rightimpllbs[j] < rightproplbs[j]) )
          {
@@ -1605,6 +1673,12 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                cutoff, &nboundchanges) );
             (*nimplications)++;
             (*nchgbds) += nboundchanges;
+
+            if( *cutoff )
+            {
+               SCIPdebugMessage("analyzing probing deduction of <%s> led to an infeasible implication <%s> == 1  =>  <%s> == %g\n",
+                  SCIPvarGetName(probingvar), SCIPvarGetName(probingvar), SCIPvarGetName(var), rightproplbs[j]);
+            }
          }
          else if( SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
          {
@@ -1620,6 +1694,12 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                      cutoff, &nboundchanges) );
                (*nimplications)++;
                (*nchgbds) += nboundchanges;
+
+               if( *cutoff )
+               {
+                  SCIPdebugMessage("analyzing probing deduction of <%s> led to an infeasible implication <%s> == 0  =>  <%s> <= %g\n",
+                     SCIPvarGetName(probingvar), SCIPvarGetName(probingvar), SCIPvarGetName(var), leftpropubs[j]);
+               }
             }
             if( leftproplbs[j] > newlb + 0.5 && (leftimpllbs == NULL || leftproplbs[j] > leftimpllbs[j]) && !*cutoff )
             {
@@ -1630,6 +1710,12 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                      cutoff, &nboundchanges) );
                (*nimplications)++;
                (*nchgbds) += nboundchanges;
+
+               if( *cutoff )
+               {
+                  SCIPdebugMessage("analyzing probing deduction of <%s> led to an infeasible implication <%s> == 0  =>  <%s> >= %g\n",
+                     SCIPvarGetName(probingvar), SCIPvarGetName(probingvar), SCIPvarGetName(var), leftproplbs[j]);
+               }
             }
             if( rightpropubs[j] < newub - 0.5 && (rightimplubs == NULL || rightpropubs[j] < rightimplubs[j]) && !*cutoff )
             {
@@ -1640,6 +1726,12 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                      cutoff, &nboundchanges) );
                (*nimplications)++;
                (*nchgbds) += nboundchanges;
+
+               if( *cutoff )
+               {
+                  SCIPdebugMessage("analyzing probing deduction of <%s> led to an infeasible implication <%s> == 1  =>  <%s> <= %g\n",
+                     SCIPvarGetName(probingvar), SCIPvarGetName(probingvar), SCIPvarGetName(var), rightpropubs[j]);
+               }
             }
             if( rightproplbs[j] > newlb + 0.5 && (rightimpllbs == NULL || rightproplbs[j] > rightimpllbs[j]) && !*cutoff )
             {
@@ -1650,6 +1742,12 @@ SCIP_RETCODE SCIPanalyzeDeductionsProbing(
                      cutoff, &nboundchanges) );
                (*nimplications)++;
                (*nchgbds) += nboundchanges;
+
+               if( *cutoff )
+               {
+                  SCIPdebugMessage("analyzing probing deduction of <%s> led to an infeasible implication <%s> == 1  =>  <%s> <= %g\n",
+                     SCIPvarGetName(probingvar), SCIPvarGetName(probingvar), SCIPvarGetName(var), rightproplbs[j]);
+               }
             }
          }
       }

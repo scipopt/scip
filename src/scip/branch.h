@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -415,6 +415,13 @@ void SCIPbranchruleSetExecPs(
    SCIP_DECL_BRANCHEXECPS((*branchexecps))   /**< branching execution method for not completely fixed pseudo solutions */
    );
 
+/** enables or disables all clocks of \p branchrule, depending on the value of the flag */
+extern
+void SCIPbranchruleEnableOrDisableClocks(
+   SCIP_BRANCHRULE*      branchrule,         /**< the branching rule for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the branching rule be enabled? */
+   );
+
 /*
  * branching methods
  */
@@ -465,6 +472,7 @@ SCIP_RETCODE SCIPbranchExecLP(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -483,6 +491,7 @@ SCIP_RETCODE SCIPbranchExecExtern(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_SEPASTORE*       sepastore,          /**< separation storage */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
@@ -501,6 +510,7 @@ SCIP_RETCODE SCIPbranchExecPseudo(
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */

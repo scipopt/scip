@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -32,6 +32,7 @@
 #include "scip/prob.h"
 #include "scip/primal.h"
 #include "scip/tree.h"
+#include "scip/reopt.h"
 #include "scip/branch.h"
 #include "scip/cons.h"
 #include "scip/pub_message.h"
@@ -210,7 +211,7 @@ SCIP_RETCODE SCIPprobCopy(
 
    /* create problem and initialize callbacks with NULL */
    SCIP_CALL( SCIPprobCreate(prob, blkmem, set, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL, FALSE) );
-   
+
    /* call user copy callback method */
    if( sourceprob->probdata != NULL && sourceprob->probcopy != NULL )
    {
@@ -317,6 +318,8 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->dualbound = SCIP_INVALID;
    (*prob)->objisintegral = FALSE;
    (*prob)->transformed = transformed;
+   (*prob)->nlpenabled = FALSE;
+   (*prob)->permuted = FALSE;
 
    return SCIP_OKAY;
 }
@@ -448,7 +451,7 @@ SCIP_RETCODE SCIPprobFree(
    for( v = (*prob)->nvars - 1; v >= 0; --v )
    {
       assert(SCIPvarGetProbindex((*prob)->vars[v]) >= 0);
-      SCIP_CALL( SCIPvarRemove((*prob)->vars[v], blkmem, set, TRUE) );
+      SCIP_CALL( SCIPvarRemove((*prob)->vars[v], blkmem, NULL, set, TRUE) );
       SCIP_CALL( SCIPvarRelease(&(*prob)->vars[v], blkmem, set, eventqueue, lp) );
    }
    BMSfreeMemoryArrayNull(&(*prob)->vars);
@@ -487,6 +490,7 @@ SCIP_RETCODE SCIPprobTransform(
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -557,14 +561,20 @@ SCIP_RETCODE SCIPprobTransform(
          SCIP_CALL( SCIPconshdlrLockVars(set->conshdlrs[h], set) );
       }
    }
-   
+
    /* objective value is always integral, iff original objective value is always integral and shift is integral */
    (*target)->objisintegral = source->objisintegral && SCIPsetIsIntegral(set, (*target)->objoffset);
 
    /* check, whether objective value is always integral by inspecting the problem, if it is the case adjust the
     * cutoff bound if primal solution is already known 
     */
-   SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, lp, eventqueue) );
+   SCIP_CALL( SCIPprobCheckObjIntegral(*target, source, blkmem, set, stat, primal, tree, reopt, lp, eventqueue) );
+
+   /* copy the nlpenabled flag */
+   (*target)->nlpenabled = source->nlpenabled;
+
+   /* mark the transformed problem to be permuted iff the source problem is permuted */
+   (*target)->permuted = source->permuted;
 
    return SCIP_OKAY;
 }
@@ -758,6 +768,7 @@ static
 SCIP_RETCODE probRemoveVar(
    SCIP_PROB*            prob,               /**< problem data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var                 /**< variable to remove */
    )
@@ -842,7 +853,7 @@ SCIP_RETCODE probRemoveVar(
    assert(0 <= prob->ncolvars && prob->ncolvars <= prob->nvars);
 
    /* inform the variable that it is no longer in the problem; if necessary, delete it from the implication graph */
-   SCIP_CALL( SCIPvarRemove(var, blkmem, set, FALSE) );
+   SCIP_CALL( SCIPvarRemove(var, blkmem, cliquetable, set, FALSE) );
 
    return SCIP_OKAY;
 }
@@ -1014,6 +1025,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_LP*              lp,                 /**< current LP data (may be NULL) */
    SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
    )
@@ -1050,7 +1062,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
          {
             SCIP_CALL( SCIPvarLoose(var, blkmem, set, eventqueue, prob, lp) );
          }
-         
+
          /* update branching candidates and pseudo and loose objective value in the LP */
          if( SCIPvarGetStatus(var) != SCIP_VARSTATUS_ORIGINAL )
          {
@@ -1062,7 +1074,7 @@ SCIP_RETCODE SCIPprobPerformVarDeletions(
          SCIP_CALL( SCIPprobRemoveVarName(prob, var) );
 
          /* remove variable from vars array and mark it to be not in problem */
-         SCIP_CALL( probRemoveVar(prob, blkmem, set, var) );
+         SCIP_CALL( probRemoveVar(prob, blkmem, cliquetable, set, var) );
 
          /* update the number of variables with non-zero objective coefficient */
          if( prob->transformed )
@@ -1083,6 +1095,7 @@ SCIP_RETCODE SCIPprobChgVarType(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to add */
    SCIP_VARTYPE          vartype             /**< new type of variable */
    )
@@ -1105,7 +1118,7 @@ SCIP_RETCODE SCIPprobChgVarType(
    }
 
    /* temporarily remove variable from problem */
-   SCIP_CALL( probRemoveVar(prob, blkmem, set, var) );
+   SCIP_CALL( probRemoveVar(prob, blkmem, cliquetable, set, var) );
 
    /* change the type of the variable */
    SCIP_CALL( SCIPvarChgType(var, vartype) );
@@ -1128,6 +1141,7 @@ SCIP_RETCODE SCIPprobVarChangedStatus(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var                 /**< problem variable */
    )
 {
@@ -1159,8 +1173,8 @@ SCIP_RETCODE SCIPprobVarChangedStatus(
       /* variable switched from unfixed to fixed (if it was fixed before, probindex would have been -1) */
 
       /* remove variable from problem */
-      SCIP_CALL( probRemoveVar(prob, blkmem, set, var) );
-      
+      SCIP_CALL( probRemoveVar(prob, blkmem, cliquetable, set, var) );
+
       /* insert variable in fixedvars array */
       SCIP_CALL( probEnsureFixedvarsMem(prob, set, prob->nfixedvars+1) );
       prob->fixedvars[prob->nfixedvars] = var;
@@ -1406,7 +1420,7 @@ void SCIPprobSetObjIntegral(
    )
 {
    assert(prob != NULL);
-   
+
    prob->objisintegral = TRUE;
 }
 
@@ -1421,6 +1435,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
@@ -1468,7 +1483,7 @@ SCIP_RETCODE SCIPprobCheckObjIntegral(
       transprob->objisintegral = TRUE;
 
       /* update upper bound and cutoff bound in primal data structure due to new internality information */
-      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, lp) );
+      SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp) );
    }
 
    return SCIP_OKAY;
@@ -1527,6 +1542,7 @@ SCIP_RETCODE SCIPprobScaleObj(
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_PRIMAL*          primal,             /**< primal data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue          /**< event queue */
    )
@@ -1594,7 +1610,7 @@ SCIP_RETCODE SCIPprobScaleObj(
          }
          if( gcd != 0 )
             intscalar /= gcd;
-         SCIPdebugMessage("integral objective scalar: gcd=%"SCIP_LONGINT_FORMAT", intscalar=%g\n", gcd, intscalar);
+         SCIPdebugMessage("integral objective scalar: gcd=%" SCIP_LONGINT_FORMAT ", intscalar=%g\n", gcd, intscalar);
 
          /* only apply scaling if the final scalar is small enough */
          if( intscalar <= OBJSCALE_MAXFINALSCALE )
@@ -1606,7 +1622,7 @@ SCIP_RETCODE SCIPprobScaleObj(
                for( v = 0; v < nints; ++v )
                {
                   SCIP_Real newobj;
-                  
+
                   /* check if new obj is really integral */
                   newobj = intscalar * SCIPvarGetObj(transprob->vars[v]);
                   if( !SCIPsetIsFeasIntegral(set, newobj) )
@@ -1628,7 +1644,7 @@ SCIP_RETCODE SCIPprobScaleObj(
                   SCIPdebugMessage("integral objective scalar: objscale=%g\n", transprob->objscale);
 
                   /* update upperbound and cutoffbound in primal data structure */
-                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, lp) );
+                  SCIP_CALL( SCIPprimalUpdateObjoffset(primal, blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp) );
                }
             }
          }
@@ -1732,13 +1748,13 @@ void SCIPprobUpdateBestRootSol(
             SCIP_Real ubrootredcost;
 
             /* get reduced cost if the variable gets fixed to zero */
-            lbrootredcost = SCIPvarGetImplRedcost(var, set, FALSE, stat, lp);
-            assert( !SCIPsetIsFeasPositive(set, lbrootredcost)
+            lbrootredcost = SCIPvarGetImplRedcost(var, set, FALSE, stat, prob, lp);
+            assert( !SCIPsetIsDualfeasPositive(set, lbrootredcost)
                || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
             /* get reduced cost if the variable gets fixed to one */
-            ubrootredcost = SCIPvarGetImplRedcost(var, set, TRUE, stat, lp);
-            assert( !SCIPsetIsFeasNegative(set, ubrootredcost)
+            ubrootredcost = SCIPvarGetImplRedcost(var, set, TRUE, stat, prob, lp);
+            assert( !SCIPsetIsDualfeasNegative(set, ubrootredcost)
                || SCIPsetIsFeasEQ(set, SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
 
             if( -lbrootredcost > ubrootredcost )
@@ -2062,6 +2078,8 @@ void SCIPprobPrintStatistics(
  * However, we want to have them in the library anyways, so we have to undef the defines.
  */
 
+#undef SCIPprobIsPermuted
+#undef SCIPprobMarkPermuted
 #undef SCIPprobIsTransformed
 #undef SCIPprobIsObjIntegral
 #undef SCIPprobAllColsInLP
@@ -2075,6 +2093,26 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNContVars
 #undef SCIPprobGetVars
 #undef SCIPprobGetObjoffset
+
+/** is the problem permuted */
+SCIP_Bool SCIPprobIsPermuted(
+   SCIP_PROB*            prob
+   )
+{
+   assert(prob != NULL);
+
+   return prob->permuted;
+}
+
+/** mark the problem as permuted */
+void SCIPprobMarkPermuted(
+   SCIP_PROB*            prob
+   )
+{
+   assert(prob != NULL);
+
+   prob->permuted = TRUE;
+}
 
 /** is the problem data transformed */
 SCIP_Bool SCIPprobIsTransformed(

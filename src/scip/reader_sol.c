@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -76,7 +76,7 @@ SCIP_RETCODE readSol(
 
    /* create zero solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-   
+
    /* read the file */
    error = FALSE;
    unknownvariablemessage = FALSE;
@@ -153,7 +153,7 @@ SCIP_RETCODE readSol(
       else
       {
          SCIP_RETCODE retcode;
-         retcode =  SCIPsetSolVal(scip, sol, var, value);
+         retcode = SCIPsetSolVal(scip, sol, var, value);
 
          if( retcode == SCIP_INVALIDDATA )
          {
@@ -236,12 +236,12 @@ SCIP_RETCODE readXMLSol(
       SCIPerrorMessage("Some error occured during parsing the XML solution file.\n");
       return SCIP_READERROR;
    }
-   
+
    /* create zero solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
-   
+
    error = FALSE;
-   
+
    /* find variable sections */
    tag = "variables";
    varsnode = xmlFindNodeMaxdepth(start, tag, 0, 3);
@@ -258,9 +258,9 @@ SCIP_RETCODE readXMLSol(
    unknownvariablemessage = FALSE;
    for( varnode = xmlFirstChild(varsnode); varnode != NULL; varnode = xmlNextSibl(varnode) )
    {
+      SCIP_VAR* var;
       const char* varname;
       const char* varvalue;
-      SCIP_VAR* var;
       SCIP_Real value;
       int nread;
 
@@ -272,7 +272,7 @@ SCIP_RETCODE readXMLSol(
          error = TRUE;
          break;
       }
-      
+
       /* find the variable */
       var = SCIPfindVar(scip, varname);
       if( var == NULL )
@@ -314,8 +314,34 @@ SCIP_RETCODE readXMLSol(
          }
       }
 
-      /* set the solution value of the variable */
-      SCIP_CALL( SCIPsetSolVal(scip, sol, var, value) );
+      /* set the solution value of the variable, if not multiaggregated */
+      if( SCIPisTransformed(scip) && SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n", SCIPvarGetName(var));
+      }
+      else
+      {
+         SCIP_RETCODE retcode;
+         retcode = SCIPsetSolVal(scip, sol, var, value);
+
+         if( retcode == SCIP_INVALIDDATA )
+         {
+            if( SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_FIXED )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored conflicting solution value for fixed variable <%s>\n",
+                  SCIPvarGetName(var));
+            }
+            else
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n",
+                  SCIPvarGetName(var));
+            }
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+      }
    }
 
    if( !error )
@@ -372,7 +398,7 @@ SCIP_DECL_READERCOPY(readerCopySol)
 
    /* call inclusion method of reader */
    SCIP_CALL( SCIPincludeReaderSol(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -430,7 +456,7 @@ SCIP_DECL_READERREAD(readerReadSol)
 
    /* decide whether it is xml */
    s = buffer;
-   
+
    /* skip spaces */
    while( isspace((unsigned char)*s) )
       ++s;

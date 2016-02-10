@@ -1,0 +1,10 @@
+# SCIP version 2.1.1.6
+
+# priority of node selection rule <bfs> in standard mode
+# [type: int, range: [-536870912,536870911], default: 100000]
+nodeselection/bfs/stdpriority = 10000000
+
+# priority of branching rule <fullstrong>
+# [type: int, range: [-536870912,536870911], default: 0]
+branching/fullstrong/priority = 1000000
+

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -24,7 +24,7 @@
 #include <string.h>
 
 #include "scip/heur_rootsoldiving.h"
-
+#include "scip/pub_dive.h"
 
 #define HEUR_NAME         "rootsoldiving"
 #define HEUR_DESC         "LP diving heuristic that changes variable's objective values using root LP solution as guide"
@@ -290,7 +290,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
    /* start diving */
    SCIP_CALL( SCIPstartDive(scip) );
 
-   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing rootsoldiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%"SCIP_LONGINT_FORMAT", maxdivedepth=%d, LPobj=%g, objstep=%g\n",
+   SCIPdebugMessage("(node %" SCIP_LONGINT_FORMAT ") executing rootsoldiving heuristic: depth=%d, %d fractionals, dualbound=%g, maxnlpiterations=%" SCIP_LONGINT_FORMAT ", maxdivedepth=%d, LPobj=%g, objstep=%g\n",
       SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), maxnlpiterations, maxdivedepth,
       SCIPgetLPObjval(scip), objstep);
 
@@ -342,7 +342,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       hardroundingnewbd = 0.0;
       boundschanged = FALSE;
 
-      SCIPdebugMessage("dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT":\n", divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations);
+      SCIPdebugMessage("dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ":\n", divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations);
 
       /* round solution x* from diving LP:
        *   - x~_j = down(x*_j)    if x*_j is integer or binary variable and x*_j <= root solution_j
@@ -523,7 +523,7 @@ SCIP_DECL_HEUREXEC(heurExecRootsoldiving) /*lint --e{715}*/
       SCIPdebugMessage("   -> lpsolstat=%d, nfrac=%d\n", lpsolstat, nlpcands);
    }
 
-   SCIPdebugMessage("---> diving finished: lpsolstat = %d, depth %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT"\n",
+   SCIPdebugMessage("---> diving finished: lpsolstat = %d, depth %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT "\n",
       lpsolstat, divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations);
 
    /* check if a solution has been found */

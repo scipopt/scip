@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -98,9 +98,9 @@ SCIP_RETCODE SCIPpricestoreCreate(
    )
 {
    assert(pricestore != NULL);
-   
+
    SCIP_ALLOC( BMSallocMemory(pricestore) );
-   
+
    SCIP_CALL( SCIPclockCreate(&(*pricestore)->probpricingtime, SCIP_CLOCKTYPE_DEFAULT) );
    (*pricestore)->vars = NULL;
    (*pricestore)->scores = NULL;
@@ -382,14 +382,14 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
    assert(maxpricevars >= 1);
    abortpricevars = (int)(set->price_abortfac * maxpricevars);
    assert(abortpricevars >= maxpricevars);
-   
+
    /**@todo test pricing: is abortpricevars a good idea? -> like strong branching, lookahead, ... */
 
    pricestore->nprobpricings++;
 
    /* start timing */
    SCIPclockStart(pricestore->probpricingtime, set);
-   
+
    /* price already existing problem variables */
    nfoundvars = 0;
    for( v = 0; v < prob->nvars && nfoundvars < abortpricevars; ++v )
@@ -404,7 +404,7 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
          assert(col->lppos >= -1);
          assert(col->lpipos >= -1);
          assert(SCIPcolIsInLP(col) == (col->lpipos >= 0));
-            
+
          if( !SCIPcolIsInLP(col) )
          {
             SCIPdebugMessage("price column variable <%s> in bounds [%g,%g]\n", 
@@ -421,11 +421,11 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
             else if( SCIPcolGetNNonz(col) > 0 )
             {
                SCIP_Real feasibility;
-   
+
                /* a column not in LP that doesn't have zero in its bounds was added by bound checking above */
                assert(!SCIPsetIsPositive(set, SCIPvarGetLbLocal(col->var)));
                assert(!SCIPsetIsNegative(set, SCIPvarGetUbLocal(col->var)));
-               
+
                if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
                {
                   /* The LP was proven infeasible, so we have an infeasibility proof by the dual Farkas multipliers y.
@@ -448,7 +448,7 @@ SCIP_RETCODE SCIPpricestoreAddProbVars(
                   feasibility = SCIPcolGetFeasibility(col, set, stat, lp);
                   SCIPdebugMessage("  <%s> reduced cost feasibility: %e\n", SCIPvarGetName(col->var), feasibility);
                }
-               
+
                /* the score is -feasibility / (#nonzeros in column + 1) to prefer short columns
                 * we must add variables with negative feasibility, but in order to not get a too large lower bound
                 * due to missing columns, we better also add variables, that have a very small feasibility

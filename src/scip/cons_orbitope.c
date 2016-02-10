@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -78,10 +78,10 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 
 /*
@@ -745,13 +745,16 @@ SCIP_RETCODE propagateCons(
    assert( infeasible != NULL );
    assert( nfixedvars != NULL );
 
+   *nfixedvars = 0;
+
+   if( !SCIPallowDualReds(scip) )
+      return SCIP_OKAY;
+
    consdata = SCIPconsGetData(cons);
    assert( consdata != NULL );
    assert( consdata->nspcons > 0 );
    assert( consdata->nblocks > 0 );
    assert( consdata->vars != NULL );
-
-   *nfixedvars = 0;
 
    nspcons = consdata->nspcons;
    nblocks = consdata->nblocks;
@@ -845,7 +848,8 @@ SCIP_RETCODE propagateCons(
 
       /* if we are at right border or if entry in column lastoneprevrow+1 is fixed to 0 */
       infrontier = FALSE;
-      if ( lastoneprevrow == nblocks-1 || SCIPvarGetUbLocal(vars[i][lastoneprevrow+1]) < 0.5 )
+      assert( lastoneprevrow + 1 >= 0 );
+      if ( lastoneprevrow == nblocks-1 || SCIPvarGetUbLocal(vars[i][lastoneprevrow+1]) < 0.5 ) /*lint !e679*/
          lastoneinrow = lastoneprevrow;
       else
       {
@@ -1026,7 +1030,8 @@ SCIP_RETCODE propagateCons(
             int beta;
             beta = -2;
 
-            if ( betaprev == nblocks-1 || SCIPvarGetUbLocal(vars[i][betaprev+1]) < 0.5 )
+            assert( betaprev + 1 >= 0 );
+            if ( betaprev == nblocks-1 || SCIPvarGetUbLocal(vars[i][betaprev+1]) < 0.5 ) /*lint !e679*/
                beta = betaprev;
             else
                beta = betaprev + 1;
@@ -1378,7 +1383,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyOrbitope)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrOrbitope(scip) );
- 
+
    *valid = TRUE;
 
    return SCIP_OKAY;
@@ -2079,10 +2084,11 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    SCIP_CONSDATA* sourcedata;
    SCIP_VAR*** sourcevars;
    SCIP_VAR*** vars;
-   int i;
-   int j;
    int nspcons;
    int nblocks;
+   int i;
+   int k;
+   int j;
 
    assert( scip != NULL );
    assert( cons != NULL );
@@ -2091,16 +2097,17 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
    assert( strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0 );
    assert( sourcecons != NULL );
    assert( varmap != NULL );
+   assert( valid != NULL );
 
    *valid = TRUE;
 
    SCIPdebugMessage("Copying method for orbitope constraint handler.\n");
 
    sourcedata = SCIPconsGetData(sourcecons);
-   assert(sourcedata != NULL);
-   assert(sourcedata->nspcons > 0);
-   assert(sourcedata->nblocks > 0);
-   assert(sourcedata->vars != NULL);
+   assert( sourcedata != NULL );
+   assert( sourcedata->nspcons > 0 );
+   assert( sourcedata->nblocks > 0 );
+   assert( sourcedata->vars != NULL );
 
    nspcons = sourcedata->nspcons;
    nblocks = sourcedata->nblocks;
@@ -2113,25 +2120,27 @@ SCIP_DECL_CONSCOPY(consCopyOrbitope)
 
       for (j = 0; j < nblocks && *valid; ++j)
       {
-         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &vars[i][j], varmap, consmap, global, valid) );
-         assert(!(*valid) || vars[i][j] != NULL);
+         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, sourcevars[i][j], &(vars[i][j]), varmap, consmap, global, valid) );
+         assert( !(*valid) || vars[i][j] != NULL );
       }
    }
-   
+
    /* only create the target constraint, if all variables could be copied */
    if ( *valid )
    {
       /* create copied constraint */
       if ( name == NULL )
          name = SCIPconsGetName(sourcecons);
-      
+
       SCIP_CALL( SCIPcreateConsOrbitope(scip, cons, name,
             vars, sourcedata->ispart, nspcons, nblocks, sourcedata->resolveprop,
             initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
    }
-   
-   for (i = 0; i < nspcons; ++i)
-      SCIPfreeBufferArray(scip, &vars[i]);
+
+   /* free space; only up to row i if copying failed */
+   assert( 0 <= i && i <= nspcons );
+   for (k = 0; k < i; ++k)
+      SCIPfreeBufferArray(scip, &vars[k]);
    SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;
@@ -2341,7 +2350,7 @@ SCIP_RETCODE SCIPincludeConshdlrOrbitope(
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsOrbitope) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsOrbitope) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseOrbitope) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOrbitope, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOrbitope, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintOrbitope) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropOrbitope, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

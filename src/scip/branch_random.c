@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -60,17 +60,17 @@ void getRandomVariable(
 {
    int idx;
    int firstidx;
-   
+
    assert(scip != NULL);
    assert(cands != NULL);
    assert(ncands > 0);
    assert(bestcand != NULL);
    assert(bestcandsol != NULL);
    assert(seed != NULL);
- 
+
    idx = SCIPgetRandomInt(0, ncands-1, seed);
    assert(idx >= 0);
-   
+
    /* handle case where cands[idx] is fixed by selecting next idx with unfixed var
     * this may happen if we are inside a multi-aggregation */
    firstidx = idx;
@@ -86,27 +86,27 @@ void getRandomVariable(
          return;
       }
    }
-   
+
    /* a branching variable candidate should either be an active problem variable or a multi-aggregated variable */
    assert(SCIPvarIsActive(SCIPvarGetProbvar(cands[idx])) ||
       SCIPvarGetStatus(SCIPvarGetProbvar(cands[idx])) == SCIP_VARSTATUS_MULTAGGR);
-   
+
    if( SCIPvarGetStatus(SCIPvarGetProbvar(cands[idx])) == SCIP_VARSTATUS_MULTAGGR )
    {
       /* for a multi-aggregated variable, we call the getRandomVariable function recursively with all variables in the multi-aggregation */
       SCIP_VAR* cand;
-      
+
       cand = SCIPvarGetProbvar(cands[idx]);
-      
+
       getRandomVariable(scip, SCIPvarGetMultaggrVars(cand), NULL, SCIPvarGetMultaggrNVars(cand), bestcand, bestcandsol, seed);
       return;
    }
-   
+
    assert(idx >= 0 && idx < ncands);
-   
+
    *bestcand = cands[idx];
    assert(*bestcand != NULL);
-   
+
    if( candssol != NULL )
       *bestcandsol = candssol[idx];
 }
@@ -155,7 +155,7 @@ SCIP_DECL_BRANCHINIT(branchInitRandom)
 
    /* set the seed value to the initial random seed value */
    branchruledata->seed = (unsigned int) branchruledata->initseed;
-   
+
    return SCIP_OKAY;
 }
 
@@ -261,7 +261,7 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextRandom)
       assert(SCIPisEQ(scip, SCIPvarGetLbLocal(bestcand), SCIPvarGetUbLocal(bestcand)));
       *result = SCIP_REDUCEDDOM;
    }
-   
+
    return SCIP_OKAY;
 }
 
@@ -333,7 +333,7 @@ SCIP_RETCODE SCIPincludeBranchruleRandom(
    SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextRandom) );
    SCIP_CALL( SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsRandom) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "branching/"BRANCHRULE_NAME"/seed", "initial random seed value",
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/" BRANCHRULE_NAME "/seed", "initial random seed value",
          &branchruledata->initseed, FALSE, DEFAULT_INITSEED, 0, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;

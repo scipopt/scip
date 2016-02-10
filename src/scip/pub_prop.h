@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -255,6 +255,19 @@ SCIP_PROPTIMING SCIPpropGetTimingmask(
 EXTERN
 SCIP_Bool SCIPpropDoesPresolve(
    SCIP_PROP*            prop                /**< propagator */
+   );
+
+/** returns the timing mask of the presolving method of the propagator */
+EXTERN
+SCIP_PRESOLTIMING SCIPpropGetPresolTiming(
+   SCIP_PROP*            prop                /**< propagator */
+   );
+
+/** sets the timing mask of the presolving method of the propagator */
+EXTERN
+void SCIPpropSetPresolTiming(
+   SCIP_PROP*            prop,               /**< propagator */
+   SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
    );
 
 #ifdef __cplusplus

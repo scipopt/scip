@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -690,7 +690,7 @@ void SCIPsepaSetFreq(
    )
 {
    assert(sepa != NULL);
-   
+
    sepa->freq = freq;
 }
 
@@ -712,6 +712,18 @@ SCIP_Bool SCIPsepaUsesSubscip(
    assert(sepa != NULL);
 
    return sepa->usessubscip;
+}
+
+/** enables or disables all clocks of \p sepa, depending on the value of the flag */
+void SCIPsepaEnableOrDisableClocks(
+   SCIP_SEPA*            sepa,               /**< the separator for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the separator be enabled? */
+   )
+{
+   assert(sepa != NULL);
+
+   SCIPclockEnableOrDisable(sepa->setuptime, enable);
+   SCIPclockEnableOrDisable(sepa->sepaclock, enable);
 }
 
 /** gets time in seconds used in this separator for setting up for next stages */

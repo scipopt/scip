@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -66,7 +66,7 @@ void SCIPhistoryUnite(
    SCIP_HISTORY*         addhistory,         /**< history values to add to history */
    SCIP_Bool             switcheddirs        /**< should the history entries be united with switched directories */
    );
-   
+
 /** updates the pseudo costs for a change of "solvaldelta" in the variable's LP solution value and a change of "objdelta"
  *  in the LP's objective value
  */
@@ -264,12 +264,19 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
       : ((dir) == SCIP_BRANCHDIR_UPWARDS ? SCIP_BRANCHDIR_DOWNWARDS : SCIP_BRANCHDIR_AUTO))
 #define SCIPhistoryGetPseudocost(history,solvaldelta)                   \
    ( (solvaldelta) >= 0.0 ? (solvaldelta) * ((history)->pscostcount[1] > 0.0 \
-      ? (history)->pscostsum[1] / (history)->pscostcount[1] : 1.0)      \
+      ? (history)->pscostweightedmean[1] : 1.0)      \
       : -(solvaldelta) * ((history)->pscostcount[0] > 0.0               \
+<<<<<<< HEAD
          ? (history)->pscostsum[0] / (history)->pscostcount[0] : 1.0) )
 #define SCIPhistoryGetPseudocostVariance(history, dir)                  \
    ( (history)->pscostcount[dir] >= 2.0 ? 1 / ((history)->pscostcount[dir] - 1)  \
          * ((history)->pscostsquaressum[dir] - 1 / ((history)->pscostcount[dir]) * (history)->pscostsum[dir] * (history)->pscostsum[dir]) \
+=======
+         ? (history)->pscostweightedmean[0] : 1.0) )
+#define SCIPhistoryGetPseudocostVariance(history, dir)                  \
+   ( (history)->pscostcount[dir] >= 1.9 ? 1 / ((history)->pscostcount[dir] - 1)  \
+         * ((history)->pscostvariance[dir]) \
+>>>>>>> master
          : 0.0)
 #define SCIPhistoryGetPseudocostCount(history,dir) ((history)->pscostcount[dir])
 #define SCIPhistoryIsPseudocostEmpty(history,dir)  ((history)->pscostcount[dir] == 0.0)

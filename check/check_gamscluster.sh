@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -30,9 +30,8 @@ PPN=${15}
 CLIENTTMPDIR=${16}
 NOWAITCLUSTER=${17}
 EXCLUSIVE=${18}
-
 # set this to 1 if you want the scripts to (try to) pass a best known primal bound (from .solu file) to the GAMS solver
-SETCUTOFF=0
+SETCUTOFF=${19}
 
 # set this to 1 if you want the scripts to (try to) pass a best known solution (from .gdx file) to the GAMS solver
 PASSSTARTSOL=0
@@ -363,16 +362,17 @@ do
     # additional environment variables needed by rungamscluster.sh
     export BASENAME=$FILENAME
     export FILENAME=$i
-    export GAMSBIN="$GAMSBIN"
-    export GAMSOPTS="$GAMSOPTS"
-    export GMSFILE=$GMSFILE
-    export INPUTDIR=$INPUTDIR
-    export MODTYPE=$MODTYPE
-    export SOLVER=$SOLVER
-    export GDXFILE=$GDXFILE
-    export CLIENTTMPDIR=$CLIENTTMPDIR
-    export PASSSTARTSOL=$PASSSTARTSOL
-    export EXAMINER=$EXAMINER
+    export GAMSBIN
+    export GAMSOPTS
+    export GMSFILE
+    export INPUTDIR
+    export MODTYPE
+    export SOLVER
+    export GDXFILE
+    export CLIENTTMPDIR
+    export PASSSTARTSOL
+    export EXAMINER
+    export SETNAME
 
     case $QUEUETYPE in
       srun )

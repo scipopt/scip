@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -27,7 +27,6 @@
 
 #include "scip/def.h"
 #include "blockmemshell/memory.h"
-#include "scip/buffer.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
 #include "scip/type_clock.h"
@@ -39,6 +38,7 @@
 #include "scip/type_cons.h"
 #include "scip/type_disp.h"
 #include "scip/type_heur.h"
+#include "scip/type_compr.h"
 #include "scip/type_nodesel.h"
 #include "scip/type_presol.h"
 #include "scip/type_pricer.h"
@@ -462,6 +462,20 @@ SCIP_RETCODE SCIPsetSetEmphasis(
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
    );
 
+/** set parameters for reoptimization */
+extern
+SCIP_RETCODE SCIPsetSetReoptimizationParams(
+   SCIP_SET*             set,                /**< SCIP data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   );
+
+/** enable or disable all plugin timers depending on the value of the flag \p enabled */
+extern
+void SCIPsetEnableOrDisablePluginClocks(
+   SCIP_SET*             set,                /**< SCIP settings */
+   SCIP_Bool             enabled             /**< should plugin clocks be enabled? */
+   );
+
 /** sets parameters to deactivate separators and heuristics that use auxiliary SCIP instances; should be called for
  *  auxiliary SCIP instances to avoid recursion
  */
@@ -750,6 +764,32 @@ void SCIPsetSortHeursName(
    SCIP_SET*             set                 /**< global SCIP settings */
    );
 
+/** inserts tree compression in tree compression list */
+extern
+SCIP_RETCODE SCIPsetIncludeCompr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_COMPR*           compr               /**< tree compression */
+   );
+
+/** returns the tree compression of the given name, or NULL if not existing */
+extern
+SCIP_COMPR* SCIPsetFindCompr(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   const char*           name                /**< name of tree compression */
+   );
+
+/** sorts compressions by priorities */
+extern
+void SCIPsetSortComprs(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** sorts heuristics by names */
+extern
+void SCIPsetSortComprsName(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
 /** inserts event handler in event handler list */
 extern
 SCIP_RETCODE SCIPsetIncludeEventhdlr(
@@ -1007,7 +1047,13 @@ int SCIPsetGetSepaMaxcuts(
    SCIP_Bool             root                /**< are we at the root node? */
    );
 
-/** Checks, if an iterativly updated value is reliable or should be recomputed from scratch.
+/** returns debug solution data */
+extern
+SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   );
+
+/** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.
  *  This is useful, if the value, e.g., the activity of a linear constraint or the pseudo objective value, gets a high
  *  absolute value during the optimization process which is later reduced significantly. In this case, the last digits
  *  were cancelled out when increasing the value and are random after decreasing it.
@@ -1395,14 +1441,14 @@ SCIP_Bool SCIPsetIsFeasFracIntegral(
    SCIP_Real             val                 /**< value to be compared against zero */
    );
 
-/** rounds value + feasibility tolerance down to the next integer in feasibility tolerance */
+/** rounds value + feasibility tolerance down to the next integer */
 extern
 SCIP_Real SCIPsetFeasFloor(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to be compared against zero */
    );
 
-/** rounds value - feasibility tolerance up to the next integer in feasibility tolerance */
+/** rounds value - feasibility tolerance up to the next integer */
 extern
 SCIP_Real SCIPsetFeasCeil(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1419,6 +1465,109 @@ SCIP_Real SCIPsetFeasRound(
 /** returns fractional part of value, i.e. x - floor(x) in feasibility tolerance */
 extern
 SCIP_Real SCIPsetFeasFrac(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to return fractional part for */
+   );
+
+/** checks, if relative difference of values is in range of dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasEQ(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if relative difference of val1 and val2 is lower than dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasLT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if relative difference of val1 and val2 is not greater than dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasLE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if relative difference of val1 and val2 is greater than dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasGT(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if relative difference of val1 and val2 is not lower than -dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasGE(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val1,               /**< first value to be compared */
+   SCIP_Real             val2                /**< second value to be compared */
+   );
+
+/** checks, if value is in range dual feasibility tolerance of 0.0 */
+extern
+SCIP_Bool SCIPsetIsDualfeasZero(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** checks, if value is greater than dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasPositive(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** checks, if value is lower than -dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasNegative(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** checks, if value is integral within the dual feasibility bounds */
+extern
+SCIP_Bool SCIPsetIsDualfeasIntegral(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** checks, if given fractional part is smaller than dual feasibility tolerance */
+extern
+SCIP_Bool SCIPsetIsDualfeasFracIntegral(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** rounds value + dual feasibility tolerance down to the next integer */
+extern
+SCIP_Real SCIPsetDualfeasFloor(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** rounds value - dual feasibility tolerance up to the next integer */
+extern
+SCIP_Real SCIPsetDualfeasCeil(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** rounds value to the nearest integer in dual feasibility tolerance */
+extern
+SCIP_Real SCIPsetDualfeasRound(
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             val                 /**< value to be compared against zero */
+   );
+
+/** returns fractional part of value, i.e. x - floor(x) in dual feasibility tolerance */
+extern
+SCIP_Real SCIPsetDualfeasFrac(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Real             val                 /**< value to return fractional part for */
    );
@@ -1596,6 +1745,21 @@ SCIP_Bool SCIPsetIsSumRelGE(
 #define SCIPsetFeasRound(set, val)         ( EPSROUND(val, (set)->num_feastol) )
 #define SCIPsetFeasFrac(set, val)          ( EPSFRAC(val, (set)->num_feastol) )
 
+#define SCIPsetIsDualfeasEQ(set, val1, val2)   ( EPSZ(SCIPrelDiff(val1, val2), (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasLT(set, val1, val2)   ( EPSN(SCIPrelDiff(val1, val2), (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasLE(set, val1, val2)   ( !EPSP(SCIPrelDiff(val1, val2), (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasGT(set, val1, val2)   ( EPSP(SCIPrelDiff(val1, val2), (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasGE(set, val1, val2)   ( !EPSN(SCIPrelDiff(val1, val2), (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasZero(set, val)        ( EPSZ(val, (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasPositive(set, val)    ( EPSP(val, (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasNegative(set, val)    ( EPSN(val, (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasIntegral(set, val)    ( EPSISINT(val, (set)->num_dualfeastol) )
+#define SCIPsetIsDualfeasFracIntegral(set, val) ( !EPSP(val, (set)->num_dualfeastol) )
+#define SCIPsetDualfeasFloor(set, val)         ( EPSFLOOR(val, (set)->num_dualfeastol) )
+#define SCIPsetDualfeasCeil(set, val)          ( EPSCEIL(val, (set)->num_dualfeastol) )
+#define SCIPsetDualfeasRound(set, val)         ( EPSROUND(val, (set)->num_dualfeastol) )
+#define SCIPsetDualfeasFrac(set, val)          ( EPSFRAC(val, (set)->num_dualfeastol) )
+
 #define SCIPsetIsLbBetter(set, newlb, oldlb, oldub) ( EPSGT(newlb, oldlb, \
          set->num_boundstreps * MAX(MIN((oldub) - (oldlb), REALABS(oldlb)), 1e-3)) )
 #define SCIPsetIsUbBetter(set, newub, oldlb, oldub) ( EPSLT(newub, oldub, \
@@ -1619,28 +1783,23 @@ SCIP_Bool SCIPsetIsSumRelGE(
 
 #endif
 
-#ifdef NDEBUG
-#define SCIPsetAllocBufferArray(set,ptr,num)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), \
-                                                                     (int)((num)*sizeof(**(ptr))))      )
-#define SCIPsetDuplicateBufferArray(set,ptr,source,num)                 \
-   ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source,  \
-                            (int)((num)*sizeof(**(ptr)))) )
-#define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), \
-                                                                       (int)((num)*sizeof(**(ptr)))) )
-#else
-/* Check for integer overflow in allocation size */
-#define SCIPsetAllocBufferArray(set,ptr,num)    ( SCIPbufferAllocMemSave(set, (void**)(ptr), num, sizeof(**(ptr))) )
-#define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( SCIPbufferDuplicateMemSave(set, (void**)(ptr), source, num, sizeof(**(ptr))) )
-#define SCIPsetReallocBufferArray(set,ptr,num)  ( SCIPbufferReallocMemSave(set, (void**)(ptr), num, sizeof(**(ptr))) )
-#endif
-#define SCIPsetFreeBufferArray(set,ptr)         ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
-#define SCIPsetAllocBuffer(set,ptr)             ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), (int) sizeof(**(ptr))) )
-#define SCIPsetAllocBufferSize(set,ptr,size)    ( SCIPbufferAllocMem((set)->buffer, set, (void**)(ptr), size) )
-#define SCIPsetDuplicateBufferSize(set,ptr,source,size)                 \
-   ( SCIPbufferDuplicateMem((set)->buffer, set, (void**)(ptr), source, size) )
-#define SCIPsetReallocBufferSize(set,ptr,size)  ( SCIPbufferReallocMem((set)->buffer, set, (void**)(ptr), size) )
-#define SCIPsetFreeBuffer(set,ptr)             ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
-#define SCIPsetFreeBufferSize(set,ptr)          ( SCIPbufferFreeMem((set)->buffer, (void**)(ptr), 0) )
+#define SCIPsetAllocBuffer(set,ptr)             ( (BMSallocBufferMemory((set)->buffer, (ptr)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetAllocBufferSize(set,ptr,size)    ( (BMSallocBufferMemorySize((set)->buffer, (ptr), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetAllocBufferArray(set,ptr,num)    ( (BMSallocBufferMemoryArray((set)->buffer, (ptr), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetDuplicateBufferSize(set,ptr,source,size) ( (BMSduplicateBufferMemory((set)->buffer, (ptr), (source), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetDuplicateBufferArray(set,ptr,source,num) ( (BMSduplicateBufferMemoryArray((set)->buffer, (ptr), (source), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetReallocBufferSize(set,ptr,size)  ( (BMSreallocBufferMemorySize((set)->buffer, (ptr), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetReallocBufferArray(set,ptr,num)  ( (BMSreallocBufferMemoryArray((set)->buffer, (ptr), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetFreeBuffer(set,ptr)              BMSfreeBufferMemory((set)->buffer, (ptr))
+#define SCIPsetFreeBufferSize(set,ptr)          BMSfreeBufferMemorySize((set)->buffer, (ptr))
+#define SCIPsetFreeBufferArray(set,ptr)         BMSfreeBufferMemoryArray((set)->buffer, (ptr))
+
+#define SCIPsetAllocCleanBuffer(set,ptr)             ( (BMSallocBufferMemory((set)->cleanbuffer, (ptr)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetAllocCleanBufferSize(set,ptr,size)    ( (BMSallocBufferMemorySize((set)->cleanbuffer, (ptr), (size)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetAllocCleanBufferArray(set,ptr,num)    ( (BMSallocBufferMemoryArray((set)->cleanbuffer, (ptr), (num)) == NULL) ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPsetFreeCleanBuffer(set,ptr)              BMSfreeBufferMemory((set)->cleanbuffer, (ptr))
+#define SCIPsetFreeCleanBufferSize(set,ptr)          BMSfreeBufferMemorySize((set)->cleanbuffer, (ptr))
+#define SCIPsetFreeCleanBufferArray(set,ptr)         BMSfreeBufferMemoryArray((set)->cleanbuffer, (ptr))
 
 #ifdef __cplusplus
 }

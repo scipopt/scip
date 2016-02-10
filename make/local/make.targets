@@ -5,21 +5,22 @@ OPTHOST	   	 := $(shell uname -n | sed 's/\(.zib.de\)//g' | tr -cd '[:alpha:]')
 -include $(SCIPDIR)/make/local/make.$(OPTHOST)
 
 .PHONY: testcluster
-testcluster:
+testcluster: check/check_cluster.sh check/configuration_cluster.sh check/configuration_set.sh check/configuration_logfiles.sh check/evalcheck_cluster.sh check/check.awk
 		cd check; \
 		$(SHELL) ./check_cluster.sh $(TEST) $(MAINFILE) $(SETTINGS) \
 		$(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
 		$(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
-		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(OPTCOMMAND);
+		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
 .PHONY: testclustercpx
 testclustercpx:
 		cd check; \
-		$(SHELL) ./check_cluster_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) \
-		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
-		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
-		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+		$(SHELL) ./check_cluster.sh $(TEST) $(CPLEX) $(SETTINGS) \
+                $(notdir $(CPLEX)).$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
+                $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
+                $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
+                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) false $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
 .PHONY: testclustercbc
 testclustercbc:
@@ -37,34 +38,51 @@ testclustergurobi:
 		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
 		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
 
+.PHONY: testclusterxpress
+testclusterxpress:
+		cd check; \
+		$(SHELL) ./check_cluster_xpress.sh $(TEST) $(XPRESS) $(SETTINGS) \
+		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
+		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+
+.PHONY: testclustermosek
+testclustermosek:
+		cd check; \
+		$(SHELL) ./check_cluster_mosek.sh $(TEST) $(MOSEK) $(SETTINGS) \
+		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) \
+		$(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(QUEUETYPE) $(QUEUE) $(PPN) \
+		$(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+
 .PHONY: testgamscluster
 testgamscluster:
 		cd check; \
 		$(SHELL) ./check_gamscluster.sh $(TEST) $(GAMS) "$(GAMSSOLVER)" $(SETTINGS) \
 		$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(CONTINUE) \
-		"$(CONVERTSCIP)" $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE);
+		"$(CONVERTSCIP)" $(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) $(NOWAITCLUSTER) $(EXCLUSIVE) $(SETCUTOFF);
 
-
-SCIPEXAMPLES	=	Binpacking CallableLibrary Coloring Eventhdlr GMI LOP MIPSolver Scheduler TSP VRP
+SCIPEXAMPLES	=	examples/Binpacking examples/CallableLibrary applications/Coloring \
+                  examples/Eventhdlr examples/GMI examples/LOP examples/MIPSolver \
+                  applications/MultiObjective applications/Scheduler applications/STP examples/TSP examples/VRP
 
 .PHONY: testexamples
 testexamples:
-		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C examples/$(EXAMPLE) $^ test || exit 1;)
+		@-echo "" > exampletestsummary.log
+		@$(foreach EXAMPLE, $(SCIPEXAMPLES), echo $(EXAMPLE);  $(MAKE) -C $(EXAMPLE) $^ test && { echo "tested $(EXAMPLE) example -- success" >> exampletestsummary.log; } \
+			|| { echo "tested example $(EXAMPLE) -- FAIL" >> exampletestsummary.log; };)
+		@-echo "Summary: "
+		@-cat exampletestsummary.log
+		@-rm -f exampletestsummary.log
 
 .PHONY: docexamples
 docexamples:
-		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C examples/$(EXAMPLE) $^ doc || exit 1;)
+		@$(foreach EXAMPLE, $(SCIPEXAMPLES), $(MAKE) -C $(EXAMPLE) $^ doc || exit 1;)
 
 .PHONY: coverage
 coverage:
-		-ln -s ../../../../src $(OBJDIR)/lib/scip
-		-ln -s ../../../../src $(OBJDIR)/lib/tclique
-		-ln -s ../../../../src $(OBJDIR)/lib/dijkstra
-		-ln -s ../../../../src $(OBJDIR)/lib/blockmemshell
-		-ln -s ../../../../src $(OBJDIR)/lib/nlpi
-		-ln -s ../../../../src $(OBJDIR)/lib/xml
-		-mkdir -p gcov
-		lcov -d $(OBJDIR) -z
-		make  $^ test
-		lcov -d $(OBJDIR) -c >gcov/scip.capture
-		genhtml -o gcov gcov/scip.capture
+		$(SHELL) ./check/check_coverage.sh $(MAINFILE) $(notdir $(MAINFILE)).$(HOSTNAME) $(MEM) $(VERSION) $(LPS) $(OBJDIR);
+
+.PHONY: solchecker
+solchecker:
+		cd ./check/solchecker; \
+		$(MAKE);

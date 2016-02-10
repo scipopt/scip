@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -167,10 +167,10 @@ void setPowerOfTwo(
    assert(0 <= exponent && exponent < LONG_MAX);
 
 #ifdef WITH_GMP
-   mpz_ui_pow_ui(*value, 2, (unsigned long) exponent);
+   mpz_ui_pow_ui(*value, 2UL, (unsigned long) exponent);
 #else
    assert(exponent < 64);
-   (*value) = 1 << exponent;
+   (*value) = (SCIP_Longint)1 << exponent;
 #endif
 }
 
@@ -194,7 +194,7 @@ void addOne(
    )
 {
 #ifdef WITH_GMP
-   mpz_add_ui(*value, *value, 1);
+   mpz_add_ui(*value, *value, 1UL);
 #else
    (*value)++;
 #endif
@@ -244,7 +244,7 @@ void toString(
 #ifdef WITH_GMP
    (void) mpz_get_str(*buffer, 10, value);
 #else
-   (void) SCIPsnprintf (*buffer, buffersize, "%"SCIP_LONGINT_FORMAT"", value);
+   (void) SCIPsnprintf (*buffer, buffersize, "%" SCIP_LONGINT_FORMAT "", value);
 #endif
 }
 
@@ -658,16 +658,16 @@ SCIP_RETCODE collectSolution(
 
       if( sol == NULL )
       {
-         lbvalues[v] = (SCIP_Longint)(SCIPvarGetLbLocal(var) + 0.5);
-         ubvalues[v] = (SCIP_Longint)(SCIPvarGetUbLocal(var) + 0.5);
+         lbvalues[v] = SCIPconvertRealToLongint(scip, SCIPvarGetLbLocal(var));
+         ubvalues[v] = SCIPconvertRealToLongint(scip, SCIPvarGetUbLocal(var));
       }
       else
       {
-         lbvalues[v] = (SCIP_Longint)(SCIPgetSolVal(scip, sol, var) + 0.5);
+         lbvalues[v] = SCIPconvertRealToLongint(scip, SCIPgetSolVal(scip, sol, var));
          ubvalues[v] = lbvalues[v];
       }
 
-      SCIPdebugMessage("variable <%s> [%"SCIP_LONGINT_FORMAT",%"SCIP_LONGINT_FORMAT"]\n",
+      SCIPdebugMessage("variable <%s> [%" SCIP_LONGINT_FORMAT ",%" SCIP_LONGINT_FORMAT "]\n",
          SCIPvarGetName(var), lbvalues[v], ubvalues[v]);
    }
 
@@ -920,14 +920,14 @@ SCIP_RETCODE checkKnapsack(
       capacity = SCIPgetCapacityKnapsack(scip, conss[c]);
       weights = SCIPgetWeightsKnapsack(scip,conss[c]);
 
-      SCIPdebugMessage("knapsack capacity = %"SCIP_LONGINT_FORMAT"\n", capacity);
+      SCIPdebugMessage("knapsack capacity = %" SCIP_LONGINT_FORMAT "\n", capacity);
 
       capa = capacity + 0.1;
 
       for( v = nvars - 1; v >= 0 && capa >= 0 ; --v )
       {
          SCIPdebug( SCIP_CALL( SCIPprintVar( scip, vars[v], NULL) ) );
-         SCIPdebugMessage("weight = %"SCIP_LONGINT_FORMAT" :\n", weights[v]);
+         SCIPdebugMessage("weight = %" SCIP_LONGINT_FORMAT " :\n", weights[v]);
          assert( SCIPvarIsIntegral(vars[v]) );
 
          /* the weights should be greater or equal to zero */
@@ -1771,7 +1771,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", &active) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", &active) );
 
    switch( SCIPgetStage(scip) )
    {
@@ -1783,7 +1783,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
       /* activate constraint handler cons_countsols */
       if( !active )
       {
-         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", TRUE) );
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_TRANSFORMED:
@@ -1794,7 +1794,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCountPresolve)
       /* reset cons_countsols activation */
       if( !active )
       {
-         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", FALSE) );
       }
       break;
 
@@ -1841,7 +1841,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", &active) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", &active) );
    SCIP_CALL( SCIPgetIntParam(scip, "presolving/maxrestarts", &nrestarts) );
 
    if( nrestarts != 0 )
@@ -1867,7 +1867,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       /* activate constraint handler cons_countsols */
       if( !active )
       {
-         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", TRUE) );
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_TRANSFORMED:
@@ -1879,7 +1879,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       /* reset activity status of constraint handler cons_countsols */
       if( !active )
       {
-         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", FALSE) );
       }
       /*lint -fallthrough*/
    case SCIP_STAGE_SOLVING:
@@ -1923,7 +1923,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       nsols = SCIPgetNCountedSols(scip, &valid);
 
       if( valid )
-         SCIPdialogMessage(scip, NULL, "Feasible Solutions : %"SCIP_LONGINT_FORMAT"", nsols);
+         SCIPdialogMessage(scip, NULL, "Feasible Solutions : %" SCIP_LONGINT_FORMAT "", nsols);
       else
       {
          char* buffer;
@@ -1972,7 +1972,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecCount)
       /* reset cons_countsols activation */
       if( !active )
       {
-         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", FALSE) );
       }
 
       /* evaluate retcode */
@@ -2080,7 +2080,7 @@ SCIP_RETCODE writeExpandedSolutions(
          solcnt++;
 
          /* print solution number */
-         SCIPinfoMessage(scip, file, "%d(%"SCIP_LONGINT_FORMAT"), ", s+1, solcnt);
+         SCIPinfoMessage(scip, file, "%d(%" SCIP_LONGINT_FORMAT "), ", s+1, solcnt);
 
          objval = 0.0;
 
@@ -2201,7 +2201,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
 
          if( requiredsize > buffersize )
          {
-	    buffersize = requiredsize;
+            buffersize = requiredsize;
             SCIP_CALL( SCIPreallocBufferArray(scip, &buffer, requiredsize) );
             SCIPgetNCountedSolsstr(scip, &buffer, buffersize, &requiredsize);
          }
@@ -2288,7 +2288,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteAllsolutions)
                /* sort original variables array and the corresponding transformed variables w.r.t. the problem index */
                SCIPsortDownPtrPtr((void**)allvars, (void**)origvars, varCompProbindex, norigvars);
 
-               SCIPdialogMessage(scip, NULL, "saving %"SCIP_LONGINT_FORMAT" (%d) feasible solutions\n", nsols, nsparsesols);
+               SCIPdialogMessage(scip, NULL, "saving %" SCIP_LONGINT_FORMAT " (%d) feasible solutions\n", nsols, nsparsesols);
 
                /* first row: output the names of the variables in the given ordering */
                SCIPinfoMessage(scip, file, "#, ");
@@ -2506,23 +2506,23 @@ SCIP_RETCODE includeConshdlrCountsols(
 
    /* add countsols constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/active",
+         "constraints/" CONSHDLR_NAME "/active",
          "is the constraint handler active?",
          &conshdlrdata->active, FALSE, DEFAULT_ACTIVE, NULL, NULL));
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/sparsetest",
+         "constraints/" CONSHDLR_NAME "/sparsetest",
          "should the sparse solution test be turned on?",
          &conshdlrdata->sparsetest, FALSE, DEFAULT_SPARSETEST, NULL, NULL));
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/discardsols",
+         "constraints/" CONSHDLR_NAME "/discardsols",
          "is it allowed to discard solutions?",
          &conshdlrdata->discardsols, FALSE, DEFAULT_DISCARDSOLS, NULL, NULL));
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/collect",
+         "constraints/" CONSHDLR_NAME "/collect",
          "should the solutions be collected?",
          &conshdlrdata->collect, FALSE, DEFAULT_COLLECT, NULL, NULL));
    SCIP_CALL( SCIPaddLongintParam(scip,
-         "constraints/"CONSHDLR_NAME"/sollimit",
+         "constraints/" CONSHDLR_NAME "/sollimit",
          "counting stops, if the given number of solutions were found (-1: no limit)",
          &conshdlrdata->sollimit, FALSE, DEFAULT_SOLLIMIT, -1LL, SCIP_LONGINT_MAX, NULL, NULL));
 
@@ -2543,11 +2543,11 @@ SCIP_RETCODE includeConshdlrCountsols(
 #ifdef WITH_GMP
 #ifdef mpir_version
    /* add info about using MPIR to external codes information */
-   (void) SCIPsnprintf(gmpversion, sizeof(gmpversion), "MPIR %s", mpir_version);
+   (void) SCIPsnprintf(gmpversion, (int) sizeof(gmpversion), "MPIR %s", mpir_version);
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, gmpversion, "Multiple Precision Integers and Rationals Library developed by W. Hart (mpir.org)") );
 #else
    /* add info about using GMP to external codes information */
-   (void) SCIPsnprintf(gmpversion, sizeof(gmpversion), "GMP %s", gmp_version);
+   (void) SCIPsnprintf(gmpversion, (int) sizeof(gmpversion), "GMP %s", gmp_version);
    SCIP_CALL( SCIPincludeExternalCodeInformation(scip, gmpversion, "GNU Multiple Precision Arithmetic Library developed by T. Granlund (gmplib.org)") );
 #endif
 #endif
@@ -2575,10 +2575,10 @@ SCIP_RETCODE SCIPcount(
    SCIP_Bool active;
 
    /* activate constraint handler cons_countsols */
-   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", &active) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", &active) );
    if( !active )
    {
-      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", TRUE) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", TRUE) );
    }
 
    /* check if the parameter setting allows a valid counting process */
@@ -2590,7 +2590,7 @@ SCIP_RETCODE SCIPcount(
    /* reset activity status of constraint handler cons_countsols */
    if( !active )
    {
-      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/"CONSHDLR_NAME"/active", FALSE) );
+      SCIP_CALL( SCIPsetBoolParam(scip, "constraints/" CONSHDLR_NAME "/active", FALSE) );
    }
 
    return SCIP_OKAY;

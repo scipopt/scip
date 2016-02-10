@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -49,10 +49,10 @@ public:
 
    /** name of the cut separator */
    char* scip_name_;
-   
+
    /** description of the cut separator */
    char* scip_desc_;
-   
+
    /** default priority of the cut separator */
    const int scip_priority_;
 
@@ -113,7 +113,7 @@ public:
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** initialization method of cut separator (called after problem was transformed) 
     *
     *  @see SCIP_DECL_SEPAINIT(x) in @ref type_sepa.h
@@ -122,7 +122,7 @@ public:
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** deinitialization method of cut separator (called before transformed problem is freed)
     *
     *  @see SCIP_DECL_SEPAEXIT(x) in @ref type_sepa.h
@@ -131,7 +131,7 @@ public:
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** solving process initialization method of separator (called when branch and bound process is about to begin)
     *
     *  @see SCIP_DECL_SEPAINITSOL(x) in @ref type_sepa.h
@@ -140,7 +140,7 @@ public:
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** solving process deinitialization method of separator (called before branch and bound process data is freed)
     *
     *  @see SCIP_DECL_SEPAEXITSOL(x) in @ref type_sepa.h
@@ -149,7 +149,7 @@ public:
    {  /*lint --e{715}*/
       return SCIP_OKAY;
    }
-   
+
    /** LP solution separation method of separator
     *
     *  @see SCIP_DECL_SEPAEXECLP(x) in @ref type_sepa.h
@@ -160,7 +160,7 @@ public:
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
-   
+
    /** arbitrary primal solution separation method of separator
     *
     *  @see SCIP_DECL_SEPAEXECSOL(x) in @ref type_sepa.h
@@ -176,7 +176,7 @@ public:
 } /* namespace scip */
 
 
-   
+
 /** creates the cut separator for the given cut separator object and includes it in SCIP
  *
  *  The method should be called in one of the following ways:

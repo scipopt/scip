@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -69,7 +69,7 @@ SCIP_DECL_PRICERCOPY(pricerCopyXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz variable pricer not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
- 
+
    return SCIP_OKAY;
 }
 #else
@@ -196,7 +196,7 @@ SCIP_RETCODE SCIPincludePricerXyz(
    /* TODO: (optional) create variable pricer specific data here */
 
    pricer = NULL;
-   
+
    /* include variable pricer */
 #if 0
    /* use SCIPincludePricer() if you want to set all callbacks explicitly and realize (by getting compiler errors) when

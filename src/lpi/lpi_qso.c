@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2655,7 +2655,9 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    int*                  bind                /**< pointer to store basis indices ready to keep number of rows entries */
    )
 {
-   int rval = 0, nrows, ncols;
+   int nrows;
+   int ncols;
+   int stat;
    register int i;
 
    assert(lpi!=NULL);
@@ -2665,8 +2667,14 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
 
    nrows = QSget_rowcount(lpi->prob);
    ncols = QSget_colcount(lpi->prob);
-   rval = QSget_basis_order( lpi->prob, bind);
-   QS_CONDRET(rval);
+
+   QS_CONDRET( QSget_status(lpi->prob, &stat) );
+   if ( stat == QS_LP_UNSOLVED || stat == QS_LP_MODIFIED || stat == QS_LP_NUMERR )
+   {
+      QS_CONDRET( QSopt_dual(lpi->prob, &(lpi->solstat)) );
+   }
+
+   QS_CONDRET( QSget_basis_order( lpi->prob, bind) );
 
    /* transform QSopt basis header into SCIP format */
    for( i = 0; i < nrows; ++i )
@@ -2678,11 +2686,21 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    return SCIP_OKAY;
 }
 
-/** get dense row of inverse basis matrix B^-1 */
+/** get dense row of inverse basis matrix B^-1
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ *
+ *  @todo check that the result is in terms of the LP interface definition
+ */
 SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {
    int rval = 0;
@@ -2692,11 +2710,22 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIPdebugMessage("getting binv-row %d from Qsopt %d cols, %d rows, %d nonz\n", r, QSget_colcount(lpi->prob),
       QSget_rowcount(lpi->prob), QSget_nzcount(lpi->prob));
 
+   /* can only return dense result */
+   if ( ninds != NULL )
+      *ninds = -1;
+
    rval = QSget_binv_row(lpi->prob, r, coef);
    QS_RETURN(rval);
 }
 
-/** get dense column of inverse basis matrix B^-1 */
+/** get dense column of inverse basis matrix B^-1
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ *
+ *  @todo check that the result is in terms of the LP interface definition
+ */
 SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
@@ -2704,7 +2733,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
                                               *   B^-1 column numbers to the row and column numbers of the LP!
                                               *   c must be between 0 and nrows-1, since the basis has the size
                                               *   nrows * nrows */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715} */
    assert(lpi!=NULL);
@@ -2716,20 +2748,36 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    return SCIP_LPERROR;
 }
 
-/** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
+/** get dense row of inverse basis matrix times constraint matrix B^-1 * A
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ *
+ *  @todo check that the result is in terms of the LP interface definition
+ */
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef                /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                              *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715} */
-   int rval = 0,ncols,nrows;
+   int rval = 0;
+   int ncols;
+   int nrows;
 
    assert(lpi != NULL);
    assert(lpi->prob != NULL);
 
    SCIPdebugMessage("getting binva-row %d\n", r);
+
+   /* can only return dense result */
+   if ( ninds != NULL )
+      *ninds = -1;
 
    ncols = QSget_colcount(lpi->prob);
    nrows = QSget_rowcount(lpi->prob);
@@ -2745,11 +2793,21 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    return SCIP_OKAY;
 }
 
-/** get dense column of inverse basis matrix times constraint matrix B^-1 * A */
+/** get dense column of inverse basis matrix times constraint matrix B^-1 * A
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ *
+ *  @todo check that the result is in terms of the LP interface definition
+ */
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef                /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715} */
    assert(lpi!=NULL);

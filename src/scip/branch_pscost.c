@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -88,7 +88,7 @@ SCIP_RETCODE updateBestCandidate(
 
    SCIP_Real pscostdown;
    SCIP_Real pscostup;
-   
+
    char strategy;
 
    assert(scip != NULL);
@@ -101,7 +101,7 @@ SCIP_RETCODE updateBestCandidate(
    /* a branching variable candidate should either be an active problem variable or a multi-aggregated variable */
    assert(SCIPvarIsActive(SCIPvarGetProbvar(cand)) ||
       SCIPvarGetStatus(SCIPvarGetProbvar(cand)) == SCIP_VARSTATUS_MULTAGGR);
-   
+
    if( SCIPvarGetStatus(SCIPvarGetProbvar(cand)) == SCIP_VARSTATUS_MULTAGGR )
    {
       /* for a multi-aggregated variable, we call updateBestCandidate function recursively with all variables in the multi-aggregation */
@@ -220,10 +220,10 @@ SCIP_RETCODE updateBestCandidate(
          }
 
       assert(*bestvar != NULL); /* if all variables were fixed, something is strange */
-      
+
       return SCIP_OKAY;
    }
-   
+
    /* select branching point for this variable */
    candbrpoint = SCIPgetBranchingPoint(scip, cand, candsol);
    assert(candbrpoint >= SCIPvarGetLbLocal(cand));
@@ -266,7 +266,7 @@ SCIP_RETCODE updateBestCandidate(
       else
          deltaplus = SCIPvarGetUbLocal(cand) - SCIPadjustedVarLb(scip, cand, candbrpoint);
       break;
-      
+
    case 's':
       if( SCIPisInfinity(scip, -SCIPvarGetLbLocal(cand)) )
          deltaplus = SCIPisInfinity(scip, candscoremax) ? SCIPinfinity(scip) : WEIGHTEDSCORING(branchruledata, candscoremin, candscoremax, candscoresum);
@@ -307,7 +307,7 @@ SCIP_RETCODE updateBestCandidate(
 
    if( SCIPisInfinity(scip, branchscore) )
       branchscore = 0.9*SCIPinfinity(scip);
-   
+
    if( SCIPisSumGT(scip, branchscore, *bestscore) )
    {
       (*bestscore)   = branchscore;
@@ -331,8 +331,8 @@ SCIP_RETCODE updateBestCandidate(
       }
       else if( SCIPvarGetType(*bestvar) == SCIPvarGetType(cand) )
       { 
-         /* if both have the same type, take the one with larger diameter */
-         if( SCIPvarGetUbLocal(*bestvar) - SCIPvarGetLbLocal(*bestvar) < SCIPvarGetUbLocal(cand) - SCIPvarGetLbLocal(cand) )
+         /* if both have the same type, take the one with larger relative diameter */
+         if( SCIPrelDiff(SCIPvarGetUbLocal(*bestvar), SCIPvarGetLbLocal(*bestvar)) < SCIPrelDiff(SCIPvarGetUbLocal(cand), SCIPvarGetLbLocal(cand)) )
          {
             (*bestscore)   = branchscore;
             (*bestvar)     = cand;
@@ -377,13 +377,13 @@ SCIP_RETCODE selectBranchVar(
 
    SCIP_VAR** candssorted;
    int* candsorigidx;
-   
+
    int i;
    int j;
-   
+
    assert(brvar   != NULL);
    assert(brpoint != NULL);
-   
+
    (*brvar)   = NULL;
    (*brpoint) = SCIP_INVALID;
 
@@ -392,13 +392,13 @@ SCIP_RETCODE selectBranchVar(
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
-   
+
    /* sort branching candidates (in a copy), such that same variables are on consecutive positions */
    SCIP_CALL( SCIPduplicateBufferArray(scip, &candssorted, cands, ncands) );
    SCIP_CALL( SCIPallocBufferArray(scip, &candsorigidx, ncands) );
    for( i = 0; i < ncands; ++i )
       candsorigidx[i] = i;
-   
+
    SCIPsortPtrInt((void**)candssorted, candsorigidx, SCIPvarComp, ncands);
 
    bestbranchscore = -1.0;
@@ -562,16 +562,16 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
-   
+
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
    SCIPdebugMessage("Execext method of pscost branching\n");
-   
+
    /* get branching candidates */
    SCIP_CALL( SCIPgetExternBranchCands(scip, &externcands, &externcandssol, &externcandsscore, NULL, &nprioexterncands, NULL, NULL, NULL) );
    assert(nprioexterncands > 0);
-   
+
    /* get current update strategy for pseudo costs, if our multiplier rule is 'u' */
    if( branchruledata->strategy == 'u' )
    {
@@ -580,14 +580,14 @@ SCIP_DECL_BRANCHEXECEXT(branchExecextPscost)
 
    /* select branching variable */
    SCIP_CALL( selectBranchVar(scip, branchrule, externcands, externcandssol, externcandsscore, nprioexterncands, &brvar, &brpoint) );
-   
+
    if( brvar == NULL )
    {
       SCIPerrorMessage("branchExecextPscost failed to select a branching variable from %d candidates\n", nprioexterncands);
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
-  
+
    assert(SCIPvarIsActive(SCIPvarGetProbvar(brvar)));
 
    SCIPdebugMessage("branching on variable <%s>: new intervals: [%g, %g] and [%g, %g]\n",
@@ -639,7 +639,7 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
 
    /* create pscost branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
-   
+
    /* include allfullstrong branching rule */
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
@@ -652,35 +652,35 @@ SCIP_RETCODE SCIPincludeBranchrulePscost(
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpPscost) );
    SCIP_CALL( SCIPsetBranchruleExecExt(scip, branchrule, branchExecextPscost) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "branching/"BRANCHRULE_NAME"/strategy",
+   SCIP_CALL( SCIPaddCharParam(scip, "branching/" BRANCHRULE_NAME "/strategy",
          "strategy for utilizing pseudo-costs of external branching candidates (multiply as in pseudo costs 'u'pdate rule, or by 'd'omain reduction, or by domain reduction of 's'ibling, or by 'v'ariable score)",
          &branchruledata->strategy, FALSE, BRANCHRULE_STRATEGY_DEFAULT, BRANCHRULE_STRATEGIES, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/minscoreweight",
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/" BRANCHRULE_NAME "/minscoreweight",
          "weight for minimum of scores of a branching candidate when building weighted sum of min/max/sum of scores",
          &branchruledata->scoreminweight, TRUE, BRANCHRULE_SCOREMINWEIGHT_DEFAULT, -SCIPinfinity(scip), SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/maxscoreweight",
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/" BRANCHRULE_NAME "/maxscoreweight",
          "weight for maximum of scores of a branching candidate when building weighted sum of min/max/sum of scores",
          &branchruledata->scoremaxweight, TRUE, BRANCHRULE_SCOREMAXWEIGHT_DEFAULT, -SCIPinfinity(scip), SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/sumscoreweight",
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/" BRANCHRULE_NAME "/sumscoreweight",
          "weight for sum of scores of a branching candidate when building weighted sum of min/max/sum of scores",
          &branchruledata->scoresumweight, TRUE, BRANCHRULE_SCORESUMWEIGHT_DEFAULT, -SCIPinfinity(scip), SCIPinfinity(scip), NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "branching/"BRANCHRULE_NAME"/nchildren",
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/" BRANCHRULE_NAME "/nchildren",
          "number of children to create in n-ary branching",
          &branchruledata->nchildren, FALSE, BRANCHRULE_NCHILDREN_DEFAULT, 2, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "branching/"BRANCHRULE_NAME"/narymaxdepth",
+   SCIP_CALL( SCIPaddIntParam(scip, "branching/" BRANCHRULE_NAME "/narymaxdepth",
          "maximal depth where to do n-ary branching, -1 to turn off",
          &branchruledata->narymaxdepth, FALSE, BRANCHRULE_NARYMAXDEPTH_DEFAULT, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/naryminwidth",
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/" BRANCHRULE_NAME "/naryminwidth",
          "minimal domain width in children when doing n-ary branching, relative to global bounds",
          &branchruledata->naryminwidth, FALSE, BRANCHRULE_NARYMINWIDTH_DEFAULT, 0.0, 1.0, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddRealParam(scip, "branching/"BRANCHRULE_NAME"/narywidthfactor",
+   SCIP_CALL( SCIPaddRealParam(scip, "branching/" BRANCHRULE_NAME "/narywidthfactor",
          "factor of domain width in n-ary branching when creating nodes with increasing distance from branching value",
          &branchruledata->narywidthfactor, FALSE, BRANCHRULE_NARYWIDTHFAC_DEFAULT, 1.0, SCIP_REAL_MAX, NULL, NULL) );
 
@@ -700,13 +700,13 @@ SCIP_RETCODE SCIPselectBranchVarPscost(
    )
 {
    SCIP_BRANCHRULE* branchrule;
-   
+
    assert(scip != NULL);
-   
+
    /* find branching rule */
    branchrule = SCIPfindBranchrule(scip, BRANCHRULE_NAME);
    assert(branchrule != NULL);
-   
+
    /* select branching variable */
    SCIP_CALL( selectBranchVar(scip, branchrule, branchcands, branchcandssol, branchcandsscore, nbranchcands, var, brpoint) );
 

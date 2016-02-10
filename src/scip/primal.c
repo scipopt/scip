@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -25,7 +25,7 @@
 #include "scip/def.h"
 #include "scip/set.h"
 #include "scip/stat.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/event.h"
 #include "scip/lp.h"
 #include "scip/var.h"
@@ -33,9 +33,9 @@
 #include "scip/sol.h"
 #include "scip/primal.h"
 #include "scip/tree.h"
+#include "scip/reopt.h"
 #include "scip/disp.h"
 #include "scip/pub_message.h"
-
 
 
 /*
@@ -51,7 +51,7 @@ SCIP_RETCODE ensureSolsSize(
    )
 {
    assert(primal->nsols <= primal->solssize);
-   
+
    if( num > primal->solssize )
    {
       int newsize;
@@ -74,7 +74,7 @@ SCIP_RETCODE ensureExistingsolsSize(
    )
 {
    assert(primal->nexistingsols <= primal->existingsolssize);
-   
+
    if( num > primal->existingsolssize )
    {
       int newsize;
@@ -161,13 +161,14 @@ SCIP_RETCODE primalSetCutoffbound(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             cutoffbound         /**< new cutoff bound */
    )
 {
    assert(primal != NULL);
    assert(cutoffbound <= SCIPsetInfinity(set));
-   assert(SCIPsetIsLE(set, cutoffbound, primal->upperbound));
+   assert(primal->upperbound == SCIP_INVALID || SCIPsetIsLE(set, cutoffbound, primal->upperbound)); /*lint !e777*/
    assert(!SCIPtreeInRepropagation(tree));
 
    SCIPdebugMessage("changing cutoff bound from %g to %g\n", primal->cutoffbound, cutoffbound);
@@ -178,7 +179,7 @@ SCIP_RETCODE primalSetCutoffbound(
    SCIP_CALL( SCIPlpSetCutoffbound(lp, set, prob, primal->cutoffbound) );
 
    /* cut off leaves of the tree */
-   SCIP_CALL( SCIPtreeCutoff(tree, blkmem, set, stat, eventqueue, lp, primal->cutoffbound) );
+   SCIP_CALL( SCIPtreeCutoff(tree, reopt, blkmem, set, stat, eventqueue, lp, primal->cutoffbound) );
 
    return SCIP_OKAY;
 }
@@ -190,9 +191,10 @@ SCIP_RETCODE SCIPprimalSetCutoffbound(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             cutoffbound,        /**< new cutoff bound */
    SCIP_Bool             useforobjlimit      /**< should the cutoff bound be used to update the objective limit, if
@@ -215,13 +217,15 @@ SCIP_RETCODE SCIPprimalSetCutoffbound(
 
          if( objval < SCIPprobGetObjlim(origprob, set) )
          {
-            SCIPdebugMessage("changing cutoff bound from %g to %g changes objective limit from %g to %g\n", primal->cutoffbound, cutoffbound, SCIPprobGetObjlim(origprob, set), objval);
+            SCIPdebugMessage("changing cutoff bound from %g to %g changes objective limit from %g to %g\n",
+               primal->cutoffbound, cutoffbound, SCIPprobGetObjlim(origprob, set), objval);
             SCIPprobSetObjlim(origprob, objval);
+            SCIPprobSetObjlim(transprob, objval);
          }
       }
 
       /* update cutoff bound */
-      SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventqueue, tree, lp, cutoffbound) );
+      SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventqueue, tree, reopt, lp, cutoffbound) );
    }
    else if( cutoffbound > primal->cutoffbound )
    {
@@ -242,6 +246,7 @@ SCIP_RETCODE primalSetUpperbound(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             upperbound          /**< new upper bound */
    )
@@ -274,13 +279,13 @@ SCIP_RETCODE primalSetUpperbound(
    /* update cutoff bound */
    if( cutoffbound < primal->cutoffbound )
    {
-      SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, prob, eventqueue, tree, lp, cutoffbound) );
+      SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, prob, eventqueue, tree, reopt, lp, cutoffbound) );
    }
 
-   /* update upper bound in VBC output */
+   /* update upper bound in visualization output */
    if( SCIPtreeGetCurrentDepth(tree) >= 0 )
    {
-      SCIPvbcUpperbound(stat->vbc, stat, primal->upperbound);
+      SCIPvisualUpperbound(stat->visual, set, stat, primal->upperbound);
    }
 
    return SCIP_OKAY;
@@ -295,6 +300,7 @@ SCIP_RETCODE SCIPprimalSetUpperbound(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             upperbound          /**< new upper bound */
    )
@@ -305,7 +311,7 @@ SCIP_RETCODE SCIPprimalSetUpperbound(
    if( upperbound < primal->upperbound )
    {
       /* update primal bound */
-      SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventqueue, prob, tree, lp, upperbound) );
+      SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventqueue, prob, tree, reopt, lp, upperbound) );
    }
    else if( upperbound > primal->upperbound )
    {
@@ -326,6 +332,7 @@ SCIP_RETCODE SCIPprimalUpdateObjlimit(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -342,13 +349,13 @@ SCIP_RETCODE SCIPprimalUpdateObjlimit(
    /* update the cutoff bound */
    if( objlimit < primal->cutoffbound )
    {
-      SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventqueue, tree, lp, objlimit) );
+      SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventqueue, tree, reopt, lp, objlimit) );
    }
 
    /* set new upper bound (and decrease cutoff bound, if objective value is always integral) */
    if( objlimit < primal->upperbound )
    {
-      SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventqueue, transprob, tree, lp, objlimit) );
+      SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventqueue, transprob, tree, reopt, lp, objlimit) );
    }
 
    return SCIP_OKAY;
@@ -364,6 +371,7 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    SCIP_PROB*            transprob,          /**< tranformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp                  /**< current LP data */
    )
 {
@@ -404,17 +412,17 @@ SCIP_RETCODE SCIPprimalUpdateObjoffset(
    }
 
    /* invalidate old upper bound */
-   SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventqueue, transprob, tree, lp, SCIPsetInfinity(set)) );
+   SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventqueue, transprob, tree, reopt, lp, SCIPsetInfinity(set)) );
 
    /* reset the cutoff bound
     *
     * @note we might need to relax the bound since in presolving the objective correction of an
     *       aggregation is still in progress
     */
-   SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventqueue, tree, lp, upperbound) );
+   SCIP_CALL( primalSetCutoffbound(primal, blkmem, set, stat, transprob, eventqueue, tree, reopt, lp, upperbound) );
 
    /* set new upper bound (and decrease cutoff bound, if objective value is always integral) */
-   SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventqueue, transprob, tree, lp, upperbound) );
+   SCIP_CALL( primalSetUpperbound(primal, blkmem, set, stat, eventqueue, transprob, tree, reopt, lp, upperbound) );
 
    return SCIP_OKAY;
 }
@@ -477,6 +485,7 @@ SCIP_RETCODE primalAddSol(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -508,21 +517,24 @@ SCIP_RETCODE primalAddSol(
 
    SCIPdebug( SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, transprob, NULL, NULL, FALSE) ) );
 
-#if 0
+#if 0 /* this is not a valid debug check, but can be used to track down numerical troubles */
 #ifndef NDEBUG
    /* check solution again completely
-    * (this may fail, because in the LP solver, the feasibility tolerance is a relative measure against the row's norm
+    * it fail for different reasons:
+    * - in the LP solver, the feasibility tolerance is a relative measure against the row's norm
+    * - in SCIP, the feasibility tolerance is a relative measure against the row's rhs/lhs
+    * - the rhs/lhs of a row might drastically change during presolving when variables are fixed or (multi-)aggregated
     */
    if( !SCIPsolIsOriginal(sol) )
    {
       SCIP_Bool feasible;
 
-      SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, TRUE, TRUE, TRUE, &feasible) );
+      SCIP_CALL( SCIPsolCheck(sol, set, messagehdlr, blkmem, stat, transprob, TRUE, TRUE, TRUE, TRUE, &feasible) );
 
       if( !feasible )
       {
          SCIPerrorMessage("infeasible solution accepted:\n");
-         SCIP_CALL( SCIPsolPrint(sol, set, stat, transprob, NULL, NULL, FALSE) );
+         SCIP_CALL( SCIPsolPrint(sol, set, messagehdlr, stat, origprob, transprob, NULL, FALSE) );
       }
       assert(feasible);
    }
@@ -591,11 +603,11 @@ SCIP_RETCODE primalAddSol(
       stat->firstprimalbound = SCIPprobExternObjval(transprob, origprob, set, primalsolval);
 
       SCIPdebugMessage("First Solution stored in problem specific statistics.\n");
-      SCIPdebugMessage("-> %"SCIP_LONGINT_FORMAT" nodes, %d runs, %.2g time, %d depth, %.15g objective\n", stat->nnodesbeforefirst, stat->nrunsbeforefirst,
+      SCIPdebugMessage("-> %" SCIP_LONGINT_FORMAT " nodes, %d runs, %.2g time, %d depth, %.15g objective\n", stat->nnodesbeforefirst, stat->nrunsbeforefirst,
          stat->firstprimaltime, stat->firstprimaldepth, stat->firstprimalbound);
    }
 
-   SCIPdebugMessage(" -> stored at position %d of %d solutions, found %"SCIP_LONGINT_FORMAT" solutions\n", 
+   SCIPdebugMessage(" -> stored at position %d of %d solutions, found %" SCIP_LONGINT_FORMAT " solutions\n",
       insertpos, primal->nsols, primal->nsolsfound);
 
    /* update the solution value sums in variables */
@@ -605,14 +617,14 @@ SCIP_RETCODE primalAddSol(
          (SCIP_Real)(primal->nsols - insertpos)/(SCIP_Real)(2.0*primal->nsols - 1.0));
    }
 
-   /* change color of node in VBC output */
-   SCIPvbcFoundSolution(stat->vbc, set, stat, SCIPtreeGetCurrentNode(tree));
+   /* change color of node in visualization output */
+   SCIPvisualFoundSolution(stat->visual, set, stat, SCIPtreeGetCurrentNode(tree), insertpos == 0 ? TRUE : FALSE, sol);
 
    /* check, if the global upper bound has to be updated */
    if( obj < primal->upperbound )
    {
       /* update the upper bound */
-      SCIP_CALL( SCIPprimalSetUpperbound(primal, blkmem, set, stat, eventqueue, transprob, tree, lp, obj) );
+      SCIP_CALL( SCIPprimalSetUpperbound(primal, blkmem, set, stat, eventqueue, transprob, tree, reopt, lp, obj) );
 
       /* issue BESTSOLFOUND event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_BESTSOLFOUND) );
@@ -638,8 +650,8 @@ SCIP_RETCODE primalAddSol(
    {
       SCIP_Bool added;
 
-      SCIP_CALL( SCIPprimalTransformSol(primal, sol, blkmem, set, messagehdlr, stat, origprob, transprob, tree, lp,
-            eventqueue, eventfilter, NULL, NULL, 0, &added) );
+      SCIP_CALL( SCIPprimalTransformSol(primal, sol, blkmem, set, messagehdlr, stat, origprob, transprob, tree, reopt,
+            lp, eventqueue, eventfilter, NULL, NULL, 0, &added) );
 
       SCIPdebugMessage("original solution %p was successfully transferred to the transformed problem space\n",
          (void*)sol);
@@ -667,6 +679,7 @@ SCIP_RETCODE primalAddOrigSol(
    assert(prob != NULL);
    assert(sol != NULL);
    assert(0 <= insertpos && insertpos < set->limit_maxorigsol);
+   assert(!set->reopt_enable);
 
    SCIPdebugMessage("insert primal solution candidate %p with obj %g at position %d:\n", (void*)sol, SCIPsolGetOrigObj(sol), insertpos);
 
@@ -694,7 +707,7 @@ SCIP_RETCODE primalAddOrigSol(
    if( SCIPsetIsFeasLE(set, SCIPsolGetOrigObj(sol), SCIPprobGetObjlim(prob, set)) )
       primal->nlimsolsfound++;
 
-   SCIPdebugMessage(" -> stored at position %d of %d solutions, found %"SCIP_LONGINT_FORMAT" solutions\n",
+   SCIPdebugMessage(" -> stored at position %d of %d solutions, found %" SCIP_LONGINT_FORMAT " solutions\n",
       insertpos, primal->nsols, primal->nsolsfound);
 
    return SCIP_OKAY;
@@ -766,7 +779,7 @@ int primalSearchOrigSolPos(
    assert(primal != NULL);
 
    obj = SCIPsolGetOrigObj(sol);
-   
+
    left = -1;
    right = primal->nsols;
    while( left < right-1 )
@@ -826,7 +839,7 @@ SCIP_Bool primalExistsSol(
 
       if( SCIPsetIsLT(set, solobj, obj) )
          break;
-   
+
       if( SCIPsolsAreEqual(sol, primal->sols[i], set, stat, origprob, transprob) )
       {
          if( SCIPsolIsOriginal(primal->sols[i]) && !SCIPsolIsOriginal(sol) )
@@ -969,13 +982,13 @@ SCIP_Bool origsolOfInterest(
    )
 {
    assert(SCIPsolIsOriginal(sol));
-   
+
    /* find insert position for the solution */
    (*insertpos) = primalSearchOrigSolPos(primal, sol);
-      
-   if( (*insertpos) < set->limit_maxorigsol && !primalExistsOrigSol(primal, set, stat, origprob, sol, *insertpos) )
+
+   if( !set->reopt_enable && (*insertpos) < set->limit_maxorigsol && !primalExistsOrigSol(primal, set, stat, origprob, sol, *insertpos) )
       return TRUE;
-   
+
    return FALSE;
 }
 
@@ -989,6 +1002,7 @@ SCIP_RETCODE SCIPprimalAddSol(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -1021,7 +1035,7 @@ SCIP_RETCODE SCIPprimalAddSol(
 
       /* insert copied solution into solution storage */
       SCIP_CALL( primalAddSol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
-            tree, lp, eventqueue, eventfilter, &solcopy, insertpos, replace) );
+            tree, reopt, lp, eventqueue, eventfilter, &solcopy, insertpos, replace) );
 #ifdef SCIP_MORE_DEBUG
       for( i = 0; i < primal->nsols - 1; ++i )
       {
@@ -1046,6 +1060,7 @@ SCIP_RETCODE SCIPprimalAddSolFree(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -1071,7 +1086,7 @@ SCIP_RETCODE SCIPprimalAddSolFree(
 
       /* insert solution into solution storage */
       SCIP_CALL( primalAddSol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
-            tree, lp, eventqueue, eventfilter, sol, insertpos, replace) );
+            tree, reopt, lp, eventqueue, eventfilter, sol, insertpos, replace) );
 
       /* clear the pointer, such that the user cannot access the solution anymore */
       *sol = NULL;
@@ -1115,6 +1130,7 @@ SCIP_RETCODE SCIPprimalAddOrigSol(
       SCIP_SOL* solcopy;
 
       assert(insertpos >= 0 && insertpos < set->limit_maxorigsol);
+      assert(!set->reopt_enable);
 
       /* create a copy of the solution */
       SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
@@ -1154,6 +1170,7 @@ SCIP_RETCODE SCIPprimalAddOrigSolFree(
    if( origsolOfInterest(primal, set, stat, prob, *sol, &insertpos) )
    {
       assert(insertpos >= 0 && insertpos < set->limit_maxorigsol);
+      assert(!set->reopt_enable);
 
       /* insert solution into solution storage */
       SCIP_CALL( primalAddOrigSol(primal, blkmem, set, prob, *sol, insertpos) );
@@ -1213,6 +1230,7 @@ SCIP_RETCODE SCIPprimalAddCurrentSol(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -1227,7 +1245,7 @@ SCIP_RETCODE SCIPprimalAddCurrentSol(
 
    /* add solution to solution storage */
    SCIP_CALL( SCIPprimalAddSol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
-         tree, lp, eventqueue, eventfilter, primal->currentsol, stored) );
+         tree, reopt, lp, eventqueue, eventfilter, primal->currentsol, stored) );
 
    return SCIP_OKAY;
 }
@@ -1242,14 +1260,15 @@ SCIP_RETCODE SCIPprimalTrySol(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
-   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    )
 {
@@ -1289,7 +1308,7 @@ SCIP_RETCODE SCIPprimalTrySol(
 
       /* insert copied solution into solution storage */
       SCIP_CALL( primalAddSol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
-            tree, lp, eventqueue, eventfilter, &solcopy, insertpos, replace) );
+            tree, reopt, lp, eventqueue, eventfilter, &solcopy, insertpos, replace) );
 
       *stored = TRUE;
    }
@@ -1309,14 +1328,15 @@ SCIP_RETCODE SCIPprimalTrySolFree(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
-   SCIP_Bool             printreason,        /**< should all the reasons of violations be printed? */
-   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< Should all the reasons of violations be printed? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
    )
 {
@@ -1353,7 +1373,7 @@ SCIP_RETCODE SCIPprimalTrySolFree(
 
       /* insert solution into solution storage */
       SCIP_CALL( primalAddSol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
-            tree, lp, eventqueue, eventfilter, sol, insertpos, replace) );
+            tree, reopt, lp, eventqueue, eventfilter, sol, insertpos, replace) );
 
       /* clear the pointer, such that the user cannot access the solution anymore */
       *sol = NULL;
@@ -1380,13 +1400,14 @@ SCIP_RETCODE SCIPprimalTryCurrentSol(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution (or NULL if it's from the tree) */
-   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
@@ -1397,7 +1418,7 @@ SCIP_RETCODE SCIPprimalTryCurrentSol(
 
    /* add solution to solution storage */
    SCIP_CALL( SCIPprimalTrySol(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
-         tree, lp, eventqueue, eventfilter, primal->currentsol,
+         tree, reopt, lp, eventqueue, eventfilter, primal->currentsol,
          printreason, FALSE, checkintegrality, checklprows, stored) );
 
    return SCIP_OKAY;
@@ -1510,6 +1531,7 @@ SCIP_RETCODE SCIPprimalTransformSol(
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_PROB*            transprob,          /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
@@ -1655,7 +1677,7 @@ SCIP_RETCODE SCIPprimalTransformSol(
       }
 
       SCIP_CALL( SCIPprimalTrySolFree(primal, blkmem, set, messagehdlr, stat, origprob, transprob,
-            tree, lp, eventqueue, eventfilter, &transsol, FALSE, TRUE, TRUE, TRUE, added) );
+            tree, reopt, lp, eventqueue, eventfilter, &transsol, FALSE, TRUE, TRUE, TRUE, added) );
 
       SCIPdebugMessage("solution transferred, %d/%d active variables set (stored=%u)\n", nvarsset, ntransvars, *added);
    }

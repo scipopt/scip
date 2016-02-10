@@ -47,6 +47,7 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 
+#define CONSHDLR_PRESOLTIMING  SCIP_PRESOLTIMING_ALWAYS
 
 
 /* TODO: (optional) enable linear or nonlinear constraint upgrading */
@@ -662,7 +663,7 @@ SCIP_RETCODE SCIPincludeConshdlrUnittest(
          consActiveUnittest, consDeactiveUnittest,
          consEnableUnittest, consDisableUnittest, consDelvarsUnittest,
          consPrintUnittest, consCopyUnittest, consParseUnittest,
-         consGetVarsUnittest, consGetNVarsUnittest, conshdlrdata) );
+         consGetVarsUnittest, consGetNVarsUnittest, NULL, conshdlrdata) );
 #else
    /* use SCIPincludeConshdlrBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
@@ -692,7 +693,7 @@ SCIP_RETCODE SCIPincludeConshdlrUnittest(
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolUnittest) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpUnittest) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseUnittest) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolUnittest, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolUnittest, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintUnittest) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropUnittest, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -97,7 +97,7 @@ void SCIPconshdlrSetProp(
    int                   propfreq,           /**< frequency for propagating domains; zero means only preprocessing propagation */
    SCIP_Bool             delayprop,          /**< should propagation method be delayed, if other propagators found reductions? */
    SCIP_PROPTIMING       timingmask          /**< positions in the node solving loop where propagators should be executed */
-         );
+   );
 
 /** gets array with constraints of constraint handler; the first SCIPconshdlrGetNActiveConss() entries are the active
  *  constraints, the last SCIPconshdlrGetNConss() - SCIPconshdlrGetNActiveConss() constraints are deactivated
@@ -420,12 +420,6 @@ SCIP_Bool SCIPconshdlrIsPropagationDelayed(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** should presolving method be delayed, if other presolvers found reductions? */
-EXTERN
-SCIP_Bool SCIPconshdlrIsPresolvingDelayed(
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-   );
-
 /** was LP separation method delayed at the last call? */
 EXTERN
 SCIP_Bool SCIPconshdlrWasLPSeparationDelayed(
@@ -444,12 +438,6 @@ SCIP_Bool SCIPconshdlrWasPropagationDelayed(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
-/** was presolving method delayed at the last call? */
-EXTERN
-SCIP_Bool SCIPconshdlrWasPresolvingDelayed(
-   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
-   );
-
 /** is constraint handler initialized? */
 EXTERN
 SCIP_Bool SCIPconshdlrIsInitialized(
@@ -464,7 +452,7 @@ SCIP_Bool SCIPconshdlrIsClonable(
 
 /** returns the timing mask of the propagation method of the constraint handler */
 EXTERN
-SCIP_PROPTIMING SCIPconshdlrGetPropTimingmask(
+SCIP_PROPTIMING SCIPconshdlrGetPropTiming(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
@@ -477,6 +465,27 @@ void SCIPconssetchgGetAddedConsData(
    SCIP_CONSSETCHG*      conssetchg,         /**< constraint set change to get data from */
    SCIP_CONS***          conss,              /**< reference to constraints array added in the conssetchg, or NULL */
    int*                  nconss              /**< reference to store the size of the constraints array, or NULL */
+   );
+
+/** sets the timing mask of the propagation method of the constraint handler */
+EXTERN
+void SCIPconshdlrSetPropTiming(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_PROPTIMING       proptiming          /**< timing mask to be set */
+   );
+
+
+/** returns the timing mask of the presolving method of the constraint handler */
+EXTERN
+SCIP_PRESOLTIMING SCIPconshdlrGetPresolTiming(
+   SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
+   );
+
+/** sets the timing mask of the presolving method of the constraint handler */
+EXTERN
+void SCIPconshdlrSetPresolTiming(
+   SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
+   SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
    );
 
 /*

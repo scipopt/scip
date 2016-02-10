@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -198,70 +198,188 @@ SCIP_RETCODE generateAverageRay(
    SCIP_Real** tableaurows;
    SCIP_Real* rownorm;
    SCIP_Real rowweight;
-
+   int** tableaurowinds;                     /* indices of non-zero entries */
+   int* ntableaurowinds;                     /* number of non-zero entries */
+   SCIP_Bool* usedrowids = NULL;             /* visited row indices */
+   int* rowids;                              /* row indices */
+   int nrowids = 0;                          /* number of row indices */
+   int tableaurowind;
    int nrows;
    int i;
    int j;
+   int sparse = -1; /* used to check that either all information is sparse or not sparse */
 
    assert(scip != NULL);
    assert(raydirection != NULL);
    assert(subspacevars != NULL);
+   assert(nsubspacevars > 0);
 
    /* get data */
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
+   assert(nrows > 0);
+   assert(rows != NULL);
 
    /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &tableaurows, nsubspacevars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &tableaurowinds, nsubspacevars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &ntableaurowinds, nsubspacevars) );
    for( j = nsubspacevars - 1; j >= 0; --j )
    {
       /*lint --e{866}*/
       SCIP_CALL( SCIPallocBufferArray(scip, &tableaurows[j], nrows) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &tableaurowinds[j], nrows) );
    }
 
    SCIP_CALL( SCIPallocBufferArray(scip, &rownorm, nrows) );
-   for( i = nrows - 1; i >= 0; --i )
-      rownorm[i] = 0;
+   BMSclearMemoryArray(rownorm, nrows);
 
    /* get the relevant columns of the simplex tableau */
-   for( j = nsubspacevars-1; j >= 0; --j )
+   for( j = nsubspacevars - 1; j >= 0; --j )
    {
       assert(SCIPcolGetLPPos(SCIPvarGetCol(subspacevars[j])) >= 0);
-      SCIP_CALL( SCIPgetLPBInvACol(scip, SCIPcolGetLPPos(SCIPvarGetCol(subspacevars[j])), tableaurows[j]) );
-      for( i = nrows - 1; i >= 0; --i )
-         rownorm[i] += tableaurows[j][i] * tableaurows[j][i];
+      SCIP_CALL( SCIPgetLPBInvACol(scip, SCIPcolGetLPPos(SCIPvarGetCol(subspacevars[j])), tableaurows[j], tableaurowinds[j], &ntableaurowinds[j]) );
+
+      if( ntableaurowinds[j] == -1 )
+      {
+         assert(sparse == 0 || sparse == -1);
+         sparse = 0;
+
+         for( i = nrows - 1; i >= 0; --i )
+            rownorm[i] += tableaurows[j][i] * tableaurows[j][i];
+      }
+      else
+      {
+         assert(sparse == 1 || sparse == -1);
+         sparse = 1;
+
+         /* allocate temporary memory */
+         if( usedrowids == NULL )
+         {
+            SCIP_CALL( SCIPallocBufferArray(scip, &rowids, nrows) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &usedrowids, nrows) );
+            BMSclearMemoryArray(usedrowids, nrows);
+         }
+
+         for( i = ntableaurowinds[j] - 1; i >= 0; --i )
+         {
+            tableaurowind = tableaurowinds[j][i];
+            rownorm[tableaurowind] += tableaurows[j][tableaurowind] * tableaurows[j][tableaurowind];
+            if( !usedrowids[tableaurowind] )
+            {
+               usedrowids[tableaurowind] = TRUE;
+               rowids[nrowids] = tableaurowind; /*lint !e644*/
+               ++nrowids;
+               assert(nrowids <= nrows);
+            }
+         }
+      }
    }
 
-   /* take average over all rows of the tableau */
-   for( i = nrows - 1; i >= 0; --i )
+   /* compute ray direction (dense) */
+   if( sparse == 0 )
    {
-      if( SCIPisFeasZero(scip, rownorm[i]) )
-         continue;
-      else
-         rownorm[i] = SQRT(rownorm[i]);
-
-      rowweight = 0.0;
-      if( weighted )
+      /* take average over all rows of the tableau */
+      for( i = nrows - 1; i >= 0; --i )
       {
-         rowweight = SCIProwGetDualsol(rows[i]);
-         if( SCIPisFeasZero(scip, rowweight) )
+         if( SCIPisFeasZero(scip, rownorm[i]) )
             continue;
-      }
-      else
-         rowweight = 1.0;
+         else
+            rownorm[i] = SQRT(rownorm[i]);
 
-      for( j = nsubspacevars - 1; j >= 0; --j )
-      {
-         raydirection[j] += tableaurows[j][i] / (rownorm[i] * rowweight);
-         assert(SCIP_REAL_MIN <= raydirection[j] && raydirection[j]  <= SCIP_REAL_MAX);
+         rowweight = 0.0;
+         if( weighted )
+         {
+            rowweight = SCIProwGetDualsol(rows[i]);
+            if( SCIPisFeasZero(scip, rowweight) )
+               continue;
+         }
+         else
+            rowweight = 1.0;
+
+         for( j = nsubspacevars - 1; j >= 0; --j )
+         {
+            raydirection[j] += tableaurows[j][i] / (rownorm[i] * rowweight);
+            assert(SCIP_REAL_MIN <= raydirection[j] && raydirection[j]  <= SCIP_REAL_MAX);
+         }
       }
    }
+   /* compute ray direction (sparse) */
+   else
+   {
+      SCIP_Real* rowweights;
+      int r;
+      int k;
+
+      assert(usedrowids != NULL);
+      assert(rowids != NULL);
+      assert(sparse == 1);
+      assert(0 <= nrowids && nrowids <= nrows);
+
+      SCIP_CALL( SCIPallocBufferArray(scip, &rowweights, nrows) );
+
+      /* compute norms of important rows and rowweights */
+      for( i = nrowids - 1; i >= 0; --i )
+      {
+         r = rowids[i];
+         assert(0 <= r && r < nrows);
+         assert(usedrowids[r]);
+
+         if( SCIPisFeasZero(scip, rownorm[r]) )
+         {
+            usedrowids[r] = FALSE;
+            --nrowids;
+            continue;
+         }
+         else
+            rownorm[r] = SQRT(rownorm[r]);
+
+         if( weighted )
+         {
+            rowweights[r] = SCIProwGetDualsol(rows[r]);
+            if( SCIPisFeasZero(scip, rowweights[r]) )
+            {
+               usedrowids[r] = FALSE;
+               --nrowids;
+               continue;
+            }
+         }
+         else
+            rowweights[r] = 1.0;
+      }
+
+      if( nrowids > 0 )
+      {
+         /* take average over all rows of the tableau */
+         for( j = nsubspacevars - 1; j >= 0; --j )
+         {
+            for( k = ntableaurowinds[j] - 1; k >= 0; --k )
+            {
+               tableaurowind = tableaurowinds[j][k];
+
+               if( usedrowids[tableaurowind] )
+               {
+                  raydirection[j] += tableaurows[j][tableaurowind] / (rownorm[tableaurowind] * rowweights[tableaurowind]);
+                  assert(SCIP_REAL_MIN <= raydirection[j] && raydirection[j]  <= SCIP_REAL_MAX);
+               }
+            }
+         }
+      }
+
+      SCIPfreeBufferArray(scip, &rowweights);
+      SCIPfreeBufferArray(scip, &usedrowids);
+      SCIPfreeBufferArray(scip, &rowids);
+   }
+   assert(usedrowids == NULL);
 
    /* free memory */
    SCIPfreeBufferArray(scip, &rownorm);
-   for( j = nsubspacevars - 1; j >= 0; --j )
+   for( j = 0; j < nsubspacevars; ++j )
    {
+      SCIPfreeBufferArray(scip, &tableaurowinds[j]);
       SCIPfreeBufferArray(scip, &tableaurows[j]);
    }
+   SCIPfreeBufferArray(scip, &ntableaurowinds);
+   SCIPfreeBufferArray(scip, &tableaurowinds);
    SCIPfreeBufferArray(scip, &tableaurows);
 
    return SCIP_OKAY;
@@ -495,7 +613,7 @@ void generateNeighborFacets(
          tryToInsert(scip, facets, lambda, i, j, f_max, nsubspacevars, lam, nfacets);
       }
    }
-   
+
    /* reverse search for facets from which the actual facet can be got by a single, nonincreasing - to + flip */
    /* a facet will be inserted into the queue, iff it is one of the fmax closest ones already found */
    for( j = nsubspacevars - 1; j >= 0 && facets[i][j] && SCIPisFeasLE(scip, negquotient[j], lambda[i]); --j )

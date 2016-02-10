@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -352,7 +352,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
       char c;
 
       heur = SCIPgetSolHeur(scip, sol);
-      
+
       if( heur == NULL )
       {
          if( SCIPsolIsOriginal(sol) )
@@ -362,7 +362,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputSolFound)
       }
       else
          c = SCIPheurGetDispchar(heur);
-      
+
       SCIPinfoMessage(scip, file, "%c", c);
 
       SCIPdispSetData(disp, (SCIP_DISPDATA*)sol);
@@ -432,19 +432,19 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputNLPAvgIters)
    assert(disp != NULL);
    assert(strcmp(SCIPdispGetName(disp), DISP_NAME_LPAVGITERS) == 0);
    assert(scip != NULL);
-   
+
    /**@todo Currently we are using the total number of nodes to compute the average LP iterations number. The reason for
     *       that is, that for the LP iterations only the total number (over all runs) are stored in the statistics. It
     *       would be nicer if the statistic also stores the number of LP iterations for the current run similar to the
     *       nodes.
     */
-   
+
    if( SCIPgetNNodes(scip) < 2 )
       SCIPinfoMessage(scip, file, "     - ");
    else
       SCIPinfoMessage(scip, file, "%6.1f ", 
          (SCIPgetNLPIterations(scip) - SCIPgetNRootLPIterations(scip)) / (SCIP_Real)(SCIPgetNTotalNodes(scip) - 1) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -711,7 +711,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputPseudoObjval)
       SCIPinfoMessage(scip, file, "    cutoff    ");
    else
       SCIPinfoMessage(scip, file, "%13.6e ", pseudoobj);
-  
+
    return SCIP_OKAY;
 }
 

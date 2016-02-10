@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,7 +36,7 @@
                                              *   reductions? */
 #define PROP_PRESOL_PRIORITY        +8000000 /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
 #define PROP_PRESOL_MAXROUNDS             -1 /**< maximal number of propving rounds the propver participates in (-1: no limit) */
-#define PROP_PRESOL_DELAY              FALSE /**< should propver be delayed, if other propvers found reductions? */
+#define PROP_PRESOLTIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolving method (fast, medium, or exhaustive) */
 
 
 /**@name Local methods
@@ -123,7 +123,7 @@ SCIP_RETCODE performDualfix(
          if( SCIPvarMayRoundDown(var) && !SCIPisNegative(scip, obj) )
          {
             bound = SCIPvarGetLbGlobal(var);
-            if ( SCIPisZero(scip, obj) && SCIPisInfinity(scip, -bound) )
+            if ( SCIPisInfinity(scip, -bound) )
             {
                /* variable can be fixed to -infinity */
                if ( SCIPgetStage(scip) > SCIP_STAGE_PRESOLVING )
@@ -132,7 +132,7 @@ SCIP_RETCODE performDualfix(
                    * consistently. We thus have to ignore this (should better be handled in presolving). */
                   continue;
                }
-               if ( SCIPvarGetNLocksUp(var) == 1 )
+               if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksUp(var) == 1 )
                {
                   /* Variable is only contained in one constraint: we hope that the corresponding constraint handler is
                    * clever enough to set/aggregate the variable to something more useful than -infinity and do nothing
@@ -146,7 +146,7 @@ SCIP_RETCODE performDualfix(
          else if( SCIPvarMayRoundUp(var) && !SCIPisPositive(scip, obj) )
          {
             bound = SCIPvarGetUbGlobal(var);
-            if ( SCIPisZero(scip, obj) && SCIPisInfinity(scip, bound) )
+            if ( SCIPisInfinity(scip, bound) )
             {
                /* variable can be fixed to infinity */
                if ( SCIPgetStage(scip) > SCIP_STAGE_PRESOLVING )
@@ -155,7 +155,7 @@ SCIP_RETCODE performDualfix(
                    * consistently. We thus have to ignore this (should better be handled in presolving). */
                   continue;
                }
-               if ( SCIPvarGetNLocksDown(var) == 1 )
+               if ( SCIPisZero(scip, obj) && SCIPvarGetNLocksDown(var) == 1 )
                {
                   /* Variable is only contained in one constraint: we hope that the corresponding constraint handler is
                    * clever enough to set/aggregate the variable to something more useful than +infinity and do nothing
@@ -232,6 +232,11 @@ SCIP_DECL_PROPPRESOL(propPresolDualfix)
    assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
    assert(result != NULL);
 
+   *result = SCIP_DIDNOTRUN;
+
+   if( !SCIPallowDualReds(scip) )
+      return SCIP_OKAY;
+
    cutoff = FALSE;
    unbounded = FALSE;
    oldnfixedvars = *nfixedvars;
@@ -265,8 +270,11 @@ SCIP_DECL_PROPEXEC(propExecDualfix)
 
    *result = SCIP_DIDNOTRUN;
 
-   /** @warning Don't run in probing or in repropagation since this can lead to wrong conclusion */
-   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
+   /** @warning Don't run in probing or in repropagation since this can lead to wrong conclusion
+    *
+    *  do not run if propagation w.r.t. current objective is not allowed
+    */
+   if( SCIPinProbing(scip) || SCIPinRepropagation(scip) || !SCIPallowDualReds(scip) )
       return SCIP_OKAY;
 
    cutoff = FALSE;
@@ -314,7 +322,7 @@ SCIP_RETCODE SCIPincludePropDualfix(
 
    SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyDualfix) );
    SCIP_CALL( SCIPsetPropPresol(scip, prop, propPresolDualfix, PROP_PRESOL_PRIORITY, PROP_PRESOL_MAXROUNDS,
-         PROP_PRESOL_DELAY) );
+         PROP_PRESOLTIMING) );
 
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -206,6 +206,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_Bool cutoff;
    int* sidetypes = NULL;
    int* basisind;
+   int* inds;
+   int ninds;
    int naddedcuts;
    int nvars;
    int ncols;
@@ -311,6 +313,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    SCIP_CALL( SCIPallocBufferArray(scip, &cutcoefs, nvars) );
    SCIP_CALL( SCIPallocBufferArray(scip, &basisind, nrows) );
    SCIP_CALL( SCIPallocBufferArray(scip, &binvrow, nrows) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &inds, nrows) );
    if ( sepadata->sidetypebasis )
    {
       SCIP_CALL( SCIPallocBufferArray(scip, &sidetypes, nrows) );
@@ -325,7 +328,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    else
       maxsepacuts = sepadata->maxsepacuts;
 
-   SCIPdebugMessage("searching gomory cuts: %d cols, %d rows, maxdnom=%"SCIP_LONGINT_FORMAT", maxscale=%g, maxcuts=%d\n",
+   SCIPdebugMessage("searching gomory cuts: %d cols, %d rows, maxdnom=%" SCIP_LONGINT_FORMAT ", maxscale=%g, maxcuts=%d\n",
       ncols, nrows, maxdnom, maxscale, maxsepacuts);
 
    cutoff = FALSE;
@@ -386,7 +389,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          int cutrank;
 
          /* get the row of B^-1 for this basic integer variable with fractional solution value */
-         SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow) );
+         ninds = -1;
+         SCIP_CALL( SCIPgetLPBInvRow(scip, i, binvrow, inds, &ninds) );
 
          if ( sepadata->sidetypebasis )
          {
@@ -428,10 +432,22 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
          cutact = 0.0;
          cutrhs = SCIPinfinity(scip);
 
-         /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
-         SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL,
-               (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, minfrac, maxfrac,
-               binvrow, sidetypes, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
+         /* need to ensure that is sparsity information is requested from SCIPgetLPBInvRow
+          * that it is used in SCIPcalcMIR */
+         if( inds != NULL && ninds > -1 )
+         {
+            /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
+            SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL,
+                  (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, minfrac, maxfrac, binvrow, -1.0, inds, ninds, -1,
+                  sidetypes, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
+         }
+         else
+         {
+            /* create a MIR cut out of the weighted LP rows using the B^-1 row as weights */
+            SCIP_CALL( SCIPcalcMIR(scip, NULL, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, FIXINTEGRALRHS, NULL, NULL,
+                  (int) MAXAGGRLEN(nvars), sepadata->maxweightrange, minfrac, maxfrac, binvrow, -1.0, NULL, -1, -1,
+                  sidetypes, 1.0, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
+         }
          assert(ALLOWLOCAL || !cutislocal);
 
          /* @todo Currently we are using the SCIPcalcMIR() function to compute the coefficients of the Gomory
@@ -551,6 +567,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpGomory)
    {
       SCIPfreeBufferArray(scip, &sidetypes);
    }
+   SCIPfreeBufferArray(scip, &inds);
    SCIPfreeBufferArray(scip, &binvrow);
    SCIPfreeBufferArray(scip, &basisind);
    SCIPfreeBufferArray(scip, &cutcoefs);

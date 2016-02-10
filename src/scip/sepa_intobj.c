@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -254,7 +254,7 @@ SCIP_DECL_SEPACOPY(sepaCopyIntobj)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaIntobj(scip) );
- 
+
    return SCIP_OKAY;
 }
 

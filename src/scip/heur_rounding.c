@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -415,7 +415,7 @@ SCIP_DECL_HEURCOPY(heurCopyRounding)
 
    /* call inclusion method of primal heuristic */
    SCIP_CALL( SCIPincludeHeurRounding(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -762,11 +762,11 @@ SCIP_RETCODE SCIPincludeHeurRounding(
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolRounding) );
 
    /* add rounding primal heuristic parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/successfactor",
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/successfactor",
          "number of calls per found solution that are considered as standard success, a higher factor causes the heuristic to be called more often",
          &heurdata->successfactor, TRUE, DEFAULT_SUCCESSFACTOR, -1, INT_MAX, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/oncepernode",
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/oncepernode",
          "should the heuristic only be called once per node?",
          &heurdata->oncepernode, TRUE, DEFAULT_ONCEPERNODE, NULL, NULL) );
 

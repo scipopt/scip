@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -14,8 +14,8 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_distributiondiving.c
- * @brief  LP diving heuristic that chooses fixings w.r.t. the fractionalities
- * @author Tobias Achterberg
+ * @brief Diving heuristic that chooses fixings w.r.t. changes in the solution density after Pryor and Chinneck.
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -26,18 +26,21 @@
 #include "scip/heur_distributiondiving.h"
 #include "scip/branch_distribution.h"
 
+#include "pub_dive.h"
 
 #define HEUR_NAME             "distributiondiving"
-#define HEUR_DESC             "LP diving heuristic that chooses fixings w.r.t. the fractionalities"
-#define HEUR_DISPCHAR         'd'
-#define HEUR_PRIORITY         -1003000
-#define HEUR_FREQ             -1
+#define HEUR_DESC             "Diving heuristic that chooses fixings w.r.t. changes in the solution density"
+#define HEUR_DISPCHAR         'e'
+#define HEUR_PRIORITY         -1003300
+#define HEUR_FREQ             10
 #define HEUR_FREQOFS          3
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERLPPLUNGE
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
-#define EVENT_DISTRIBUTION    SCIP_EVENTTYPE_BOUNDCHANGED /**< the event tyoe to be handled by this event handler */
-#define EVENTHDLR_NAME "eventhdlr_distributiondiving"
+#define EVENT_DISTRIBUTION    SCIP_EVENTTYPE_BOUNDCHANGED /**< the event type to be handled by this event handler */
+#define EVENTHDLR_NAME        "eventhdlr_distributiondiving"
+#define DIVESET_DIVETYPES     SCIP_DIVETYPE_INTEGRALITY /**< bit mask that represents all supported dive types */
+
 #define SQUARED(x) ((x) * (x))
 /*
  * Default parameter settings
@@ -54,33 +57,20 @@
 #define DEFAULT_MAXDIVEUBQUOTNOSOL  0.1 /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_MAXDIVEAVGQUOTNOSOL 0.0 /**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
 #define DEFAULT_BACKTRACK          TRUE /**< use one level of backtracking if infeasibility is encountered? */
+#define DEFAULT_LPRESOLVEDOMCHGQUOT 0.15 /**< percentage of immediate domain changes during probing to trigger LP resolve */
+#define DEFAULT_LPSOLVEFREQ           0 /**< LP solve frequency for diving heuristics */
+#define DEFAULT_ONLYLPBRANCHCANDS  TRUE /**< should only LP branching candidates be considered instead of the slower but
+                                         *   more general constraint handler diving variable selection? */
 
-#define MINLPITER                 10000 /**< minimal number of LP iterations allowed in each LP solving call */
-
-#define SCOREPARAM_VALUES "lhwvd"
+#define SCOREPARAM_VALUES "lhwvd" /**< the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p.,
+                                   *   'v'otes lowest c.p., votes highest c.p.('w'), 'r'evolving */
 #define SCOREPARAM_VALUESLEN 5
-#define DEFAULT_SCOREPARAM 'v'
-#define DEFAULT_REVOLVINGSCORE TRUE /**< should the score parameter revolve through all possible values */
-
+#define DEFAULT_SCOREPARAM 'r'    /**< default scoring parameter to guide the diving */
 
 /* locally defined heuristic data */
 struct SCIP_HeurData
 {
    SCIP_SOL*             sol;                /**< working solution */
-   SCIP_Real             minreldepth;        /**< minimal relative depth to start diving */
-   SCIP_Real             maxreldepth;        /**< maximal relative depth to start diving */
-   SCIP_Real             maxlpiterquot;      /**< maximal fraction of diving LP iterations compared to node LP iterations */
-   int                   maxlpiterofs;       /**< additional number of allowed LP iterations */
-   SCIP_Real             maxdiveubquot;      /**< maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound)
-                                              *   where diving is performed (0.0: no limit) */
-   SCIP_Real             maxdiveavgquot;     /**< maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound)
-                                              *   where diving is performed (0.0: no limit) */
-   SCIP_Real             maxdiveubquotnosol; /**< maximal UBQUOT when no solution was found yet (0.0: no limit) */
-   SCIP_Real             maxdiveavgquotnosol;/**< maximal AVGQUOT when no solution was found yet (0.0: no limit) */
-   SCIP_Bool             backtrack;          /**< use one level of backtracking if infeasibility is encountered? */
-   SCIP_Longint          nlpiterations;      /**< LP iterations used in this heuristic */
-   int                   nsuccess;           /**< number of runs that produced at least one feasible solution */
-
    SCIP_EVENTHDLR*       eventhdlr;          /**< event handler pointer */
    SCIP_VAR**            updatedvars;        /**< variables to process bound change events for */
    SCIP_Real*            rowmeans;           /**< row activity mean values for all rows */
@@ -97,9 +87,8 @@ struct SCIP_HeurData
    int                   memsize;            /**< memory size of current arrays, needed for dynamic reallocation */
    int                   varpossmemsize;     /**< memory size of updated vars and varposs array */
 
-   char                  scoreparam;         /**< score parameter to be used */
-   SCIP_Bool             revolvingscore;     /**< should the heuristic iterate through the possible score values? */
-   SCIP_Bool             usescipscore;       /**< should the SCIP branching score be used for weighing up and down score? */
+   char                  scoreparam;         /**< score user parameter */
+   char                  score;              /**< score to be used depending on user parameter to use fixed score or revolve */
 };
 
 struct SCIP_EventhdlrData
@@ -138,10 +127,10 @@ SCIP_RETCODE heurdataEnsureArraySize(
       int v;
       int nvars;
 
-      SCIPallocBufferArray(scip, &heurdata->rowinfinitiesdown, newsize);
-      SCIPallocBufferArray(scip, &heurdata->rowinfinitiesup, newsize);
-      SCIPallocBufferArray(scip, &heurdata->rowmeans, newsize);
-      SCIPallocBufferArray(scip, &heurdata->rowvariances, newsize);
+      SCIP_CALL( SCIPallocBufferArray(scip, &heurdata->rowinfinitiesdown, newsize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &heurdata->rowinfinitiesup, newsize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &heurdata->rowmeans, newsize) );
+      SCIP_CALL( SCIPallocBufferArray(scip, &heurdata->rowvariances, newsize) );
 
       assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
 
@@ -179,10 +168,10 @@ SCIP_RETCODE heurdataEnsureArraySize(
    }
    else
    {
-      SCIPreallocBufferArray(scip, &heurdata->rowinfinitiesdown, newsize);
-      SCIPreallocBufferArray(scip, &heurdata->rowinfinitiesup, newsize);
-      SCIPreallocBufferArray(scip, &heurdata->rowmeans, newsize);
-      SCIPreallocBufferArray(scip, &heurdata->rowvariances, newsize);
+      SCIP_CALL( SCIPreallocBufferArray(scip, &heurdata->rowinfinitiesdown, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &heurdata->rowinfinitiesup, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &heurdata->rowmeans, newsize) );
+      SCIP_CALL( SCIPreallocBufferArray(scip, &heurdata->rowvariances, newsize) );
    }
 
    /* loop over extended arrays and invalidate data to trigger initialization of this row when necessary */
@@ -200,7 +189,7 @@ SCIP_RETCODE heurdataEnsureArraySize(
    return SCIP_OKAY;
 }
 
-/* update the variables current lower and upper bound */
+/** update the variables current lower and upper bound */
 static
 void heurdataUpdateCurrentBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -229,7 +218,7 @@ void heurdataUpdateCurrentBounds(
  *
  *  The mean value \f$ \mu \f$ is given by \f$ \mu = \sum_i=1^n c_i * (lb_i +ub_i) / 2 \f$ where
  *  \f$n \f$ is the number of variables, and \f$ c_i, lb_i, ub_i \f$ are the variable coefficient and
- *  bounds, respectively. With the same notation, the variance \f$ \sigma^2 \$ is given by
+ *  bounds, respectively. With the same notation, the variance \f$ \sigma^2 \f$ is given by
  *  \f$ \sigma^2 = \sum_i=1^n c_i^2 * \sigma^2_i \f$, with the variance being
  *  \f$ \sigma^2_i = ((ub_i - lb_i + 1)^2 - 1) / 12 \f$ for integer variables and
  *  \f$ \sigma^2_i = (ub_i - lb_i)^2 / 12 \f$ for continuous variables.
@@ -292,10 +281,11 @@ void rowCalculateGauss(
       varmean = 0.0;
       varvariance = 0.0;
       varindex = SCIPvarGetProbindex(colvar);
-      assert((heurdata->currentlbs[varindex] == SCIP_INVALID) == (heurdata->currentubs[varindex] == SCIP_INVALID));
+      assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
+            == (heurdata->currentubs[varindex] == SCIP_INVALID)); /*lint !e777 doesn't like comparing floats for equality */
 
       /* variable bounds need to be watched from now on */
-      if( heurdata->currentlbs[varindex] == SCIP_INVALID )
+      if( heurdata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777 doesn't like comparing floats for equality */
          heurdataUpdateCurrentBounds(scip, heurdata, colvar);
 
       assert(!SCIPisInfinity(scip, colvarlb));
@@ -354,7 +344,7 @@ SCIP_RETCODE calcBranchScore(
    SCIP_Real             lpsolval,           /**< current fractional LP-relaxation solution value  */
    SCIP_Real*            upscore,            /**< pointer to store the variable score when branching on it in upward direction */
    SCIP_Real*            downscore,          /**< pointer to store the variable score when branching on it in downward direction */
-   char                  scoreparam          /**< the score parameter of this branching rule */
+   char                  scoreparam          /**< the score parameter of this heuristic */
    )
 {
    SCIP_COL* varcol;
@@ -380,7 +370,7 @@ SCIP_RETCODE calcBranchScore(
    assert(var != NULL);
    assert(upscore != NULL);
    assert(downscore != NULL);
-   assert(!SCIPisIntegral(scip, lpsolval));
+   assert(!SCIPisIntegral(scip, lpsolval) || SCIPvarIsBinary(var));
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
 
    varcol = SCIPvarGetCol(var);
@@ -399,8 +389,17 @@ SCIP_RETCODE calcBranchScore(
    squaredbounddiff = 0.0;
    SCIPvarCalcDistributionParameters(scip, varlb, varub, vartype, &currentmean, &squaredbounddiff);
 
-   newlb = SCIPfeasCeil(scip, lpsolval);
-   newub = SCIPfeasFloor(scip, lpsolval);
+   /* unfixed binary variables may have an integer solution value in the LP solution, eg, at the presence of indicator constraints */
+   if( !SCIPvarIsBinary(var) )
+   {
+      newlb = SCIPfeasCeil(scip, lpsolval);
+      newub = SCIPfeasFloor(scip, lpsolval);
+   }
+   else
+   {
+      newlb = 1.0;
+      newub = 0.0;
+   }
 
    /* calculate the variable's uniform distribution after branching up and down, respectively. */
    squaredbounddiffup = 0.0;
@@ -450,7 +449,7 @@ SCIP_RETCODE calcBranchScore(
       SCIP_CALL( heurdataEnsureArraySize(scip, heurdata, rowpos) );
 
       /* calculate row activity distribution if this is the first candidate to appear in this row */
-      if( heurdata->rowmeans[rowpos] == SCIP_INVALID )
+      if( heurdata->rowmeans[rowpos] == SCIP_INVALID ) /*lint !e777 doesn't like comparing floats for equality */
       {
          rowCalculateGauss(scip, heurdata, row, &heurdata->rowmeans[rowpos], &heurdata->rowvariances[rowpos],
                &heurdata->rowinfinitiesdown[rowpos], &heurdata->rowinfinitiesup[rowpos]);
@@ -460,7 +459,7 @@ SCIP_RETCODE calcBranchScore(
       rowmean = heurdata->rowmeans[rowpos];
       rowvariance = heurdata->rowvariances[rowpos];
       rowinfinitiesdown = heurdata->rowinfinitiesdown[rowpos];
-      rowinfinitiesup = heurdata->rowinfinitiesdown[rowpos];
+      rowinfinitiesup = heurdata->rowinfinitiesup[rowpos];
       assert(!SCIPisNegative(scip, rowvariance));
 
       currentrowprob = SCIProwCalcProbability(scip, row, rowmean, rowvariance,
@@ -538,11 +537,11 @@ SCIP_RETCODE calcBranchScore(
    return SCIP_OKAY;
 }
 
-/** free branchrule data */
+/** free heuristic data */
 static
 SCIP_RETCODE heurdataFreeArrays(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata            /**< branching rule data */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
    assert(heurdata->memsize == 0 || heurdata->rowmeans != NULL);
@@ -623,11 +622,14 @@ void heurdataAddBoundChangeVar(
    }
 
    /* if none of the variables rows was calculated yet, variable needs not to be watched */
-   assert((heurdata->currentlbs[varindex] == SCIP_INVALID) == (heurdata->currentubs[varindex] == SCIP_INVALID));
-   if( heurdata->currentlbs[varindex] == SCIP_INVALID )
+   assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
+      == (heurdata->currentubs[varindex] == SCIP_INVALID)); /*lint !e777 doesn't like comparing floats for equality */
+
+   /* we don't need to enqueue the variable if it hasn't been watched so far */
+   if( heurdata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777 see above */
       return;
 
-   /* add the variable to the branch rule data of variables to process updates for */
+   /* add the variable to the heuristic data of variables to process updates for */
    assert(heurdata->varpossmemsize > heurdata->nupdatedvars);
    varpos = heurdata->nupdatedvars;
    heurdata->updatedvars[varpos] = var;
@@ -639,7 +641,7 @@ void heurdataAddBoundChangeVar(
 static
 SCIP_VAR* heurdataPopBoundChangeVar(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_HEURDATA*        heurdata            /**< branchrule data */
+   SCIP_HEURDATA*        heurdata            /**< heuristic data */
    )
 {
    SCIP_VAR* var;
@@ -705,8 +707,8 @@ SCIP_RETCODE varProcessBoundChanges(
    oldub = heurdata->currentubs[varindex];
 
    /* skip update if the variable has never been subject of previously calculated row activities */
-   assert((oldlb == SCIP_INVALID) == (oldub == SCIP_INVALID));
-   if( oldlb == SCIP_INVALID )
+   assert((oldlb == SCIP_INVALID) == (oldub == SCIP_INVALID)); /*lint !e777 doesn't like comparing floats for equality */
+   if( oldlb == SCIP_INVALID ) /*lint !e777 */
       return SCIP_OKAY;
 
    newlb = SCIPvarGetLbLocal(var);
@@ -737,12 +739,12 @@ SCIP_RETCODE varProcessBoundChanges(
       SCIP_CALL( heurdataEnsureArraySize(scip, heurdata, rowpos) );
 
       /* only consider rows for which activity distribution was already calculated */
-      if( heurdata->rowmeans[rowpos] != SCIP_INVALID )
+      if( heurdata->rowmeans[rowpos] != SCIP_INVALID ) /*lint !e777 doesn't like comparing floats for equality */
       {
          SCIP_Real coeff;
          SCIP_Real coeffsquared;
          assert(heurdata->rowvariances[rowpos] != SCIP_INVALID
-               && SCIPisFeasGE(scip, heurdata->rowvariances[rowpos], 0.0));
+               && SCIPisFeasGE(scip, heurdata->rowvariances[rowpos], 0.0)); /*lint !e777 */
 
          coeff = colvals[r];
          coeffsquared = SQUARED(coeff);
@@ -858,10 +860,6 @@ SCIP_DECL_HEURINIT(heurInitDistributiondiving) /*lint --e{715}*/
    /* create working solution */
    SCIP_CALL( SCIPcreateSol(scip, &heurdata->sol, heur) );
 
-   /* initialize data */
-   heurdata->nlpiterations = 0;
-   heurdata->nsuccess = 0;
-
    return SCIP_OKAY;
 }
 
@@ -885,42 +883,84 @@ SCIP_DECL_HEUREXIT(heurExitDistributiondiving) /*lint --e{715}*/
    return SCIP_OKAY;
 }
 
+/** scoring callback for distribution diving. best candidate maximizes the distribution score */
+static
+SCIP_DECL_DIVESETGETSCORE(divesetGetScoreDistributiondiving)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+   SCIP_Real upscore;
+   SCIP_Real downscore;
+   int varindex;
+
+   heurdata = SCIPheurGetData(SCIPdivesetGetHeur(diveset));
+   assert(heurdata != NULL);
+
+   /* process pending bound change events */
+   while( heurdata->nupdatedvars > 0 )
+   {
+      SCIP_VAR* nextvar;
+
+      /* pop the next variable from the queue and process its bound changes */
+      nextvar = heurdataPopBoundChangeVar(scip, heurdata);
+      assert(nextvar != NULL);
+      SCIP_CALL( varProcessBoundChanges(scip, heurdata, nextvar) );
+   }
+
+   assert(cand != NULL);
+
+   varindex = SCIPvarGetProbindex(cand);
+
+   /* terminate with a penalty for inactive variables, which the plugin can currently not score
+    * this should never happen with default settings where only LP branching candidates are iterated, but might occur
+    * if other constraint handlers try to score an inactive variable that was (multi-)aggregated or negated
+    */
+   if( varindex == - 1 )
+   {
+      *score = -1.0;
+      *roundup = FALSE;
+
+      return SCIP_OKAY;
+   }
+
+
+   /* in debug mode, ensure that all bound process events which occurred in the mean time have been captured
+    * by the heuristic event system
+    */
+   assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(cand), SCIPvarGetUbLocal(cand)));
+   assert(0 <= varindex && varindex < heurdata->varpossmemsize);
+
+   assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
+      == (heurdata->currentubs[varindex] == SCIP_INVALID));/*lint !e777 doesn't like comparing floats for equality */
+   assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
+      || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(cand), heurdata->currentlbs[varindex])); /*lint !e777 */
+   assert((heurdata->currentubs[varindex] == SCIP_INVALID)
+      || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(cand), heurdata->currentubs[varindex])); /*lint !e777 */
+
+   /* if the heuristic has not captured the variable bounds yet, this can be done now */
+   if( heurdata->currentlbs[varindex] == SCIP_INVALID ) /*lint !e777 */
+      heurdataUpdateCurrentBounds(scip, heurdata, cand);
+
+   upscore = 0.0;
+   downscore = 0.0;
+
+   /* loop over candidate rows and determine the candidate up- and down- branching score w.r.t. the score parameter */
+   SCIP_CALL( calcBranchScore(scip, heurdata, cand, candsol, &upscore, &downscore, heurdata->score) );
+
+   /* score is simply the maximum of the two individual scores */
+   *roundup = (upscore > downscore);
+   *score = MAX(upscore, downscore);
+
+   return SCIP_OKAY;
+}
+
 
 /** execution method of primal heuristic */
 static
-SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
+SCIP_DECL_HEUREXEC(heurExecDistributiondiving)
 {  /*lint --e{715}*/
    SCIP_HEURDATA* heurdata;
-   SCIP_LPSOLSTAT lpsolstat;
-   SCIP_VAR* var;
-   SCIP_VAR** lpcands;
-   SCIP_Real* lpcandssol;
-   SCIP_Real* lpcandsfrac;
-   SCIP_Real searchubbound;
-   SCIP_Real searchavgbound;
-   SCIP_Real searchbound;
-   SCIP_Real objval;
-   SCIP_Real oldobjval;
-   SCIP_Real bestscore;
-   SCIP_Bool lperror;
-   SCIP_Bool cutoff;
-   SCIP_Bool backtracked;
-   SCIP_BRANCHDIR bestdivedir;
-   SCIP_BRANCHDIR divedir;
-   SCIP_Longint ncalls;
-   SCIP_Longint nsolsfound;
-   SCIP_Longint nlpiterations;
-   SCIP_Longint maxnlpiterations;
-   int nlpcands;
-   int startnlpcands;
-   int depth;
-   int maxdepth;
-   int maxdivedepth;
-   int divedepth;
-   int bestcand;
-   int c;
+   SCIP_DIVESET* diveset;
    int nlprows;
-   char scoreparam;
 
    assert(heur != NULL);
    assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
@@ -928,436 +968,34 @@ SCIP_DECL_HEUREXEC(heurExecDistributiondiving) /*lint --e{715}*/
    assert(result != NULL);
    assert(SCIPhasCurrentNodeLP(scip));
 
-   *result = SCIP_DELAYED;
-
-   /* do not call heuristic of node was already detected to be infeasible */
-   if( nodeinfeasible )
-      return SCIP_OKAY;
-
-   /* only call heuristic, if an optimal LP solution is at hand */
-   if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
-      return SCIP_OKAY;
-
-   /* only call heuristic, if the LP objective value is smaller than the cutoff bound */
-   if( SCIPisGE(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)) )
-      return SCIP_OKAY;
-
-   /* only call heuristic, if the LP solution is basic (which allows fast resolve in diving) */
-   if( !SCIPisLPSolBasic(scip) )
-      return SCIP_OKAY;
-
-   /* don't dive two times at the same node */
-   if( SCIPgetLastDivenode(scip) == SCIPgetNNodes(scip) && SCIPgetDepth(scip) > 0 )
-      return SCIP_OKAY;
-
    *result = SCIP_DIDNOTRUN;
 
    /* get heuristic's data */
    heurdata = SCIPheurGetData(heur);
    assert(heurdata != NULL);
-
-   /* only try to dive, if we are in the correct part of the tree, given by minreldepth and maxreldepth */
-   depth = SCIPgetDepth(scip);
-   maxdepth = SCIPgetMaxDepth(scip);
-   maxdepth = MAX(maxdepth, 30);
-   if( depth < heurdata->minreldepth * maxdepth || depth > heurdata->maxreldepth * maxdepth )
-      return SCIP_OKAY;
-
-   /* calculate the maximal number of LP iterations until heuristic is aborted */
-   nlpiterations = SCIPgetNNodeLPIterations(scip);
-   ncalls = SCIPheurGetNCalls(heur);
-   nsolsfound = 10*SCIPheurGetNBestSolsFound(heur) + heurdata->nsuccess;
-   maxnlpiterations = (SCIP_Longint)((1.0 + 10.0 * (nsolsfound+1.0)/(ncalls+1.0)) * heurdata->maxlpiterquot * nlpiterations);
-   maxnlpiterations += heurdata->maxlpiterofs;
-
-   /* don't try to dive, if we took too many LP iterations during diving */
-   if( heurdata->nlpiterations >= maxnlpiterations )
-      return SCIP_OKAY;
-
-   /* allow at least a certain number of LP iterations in this dive */
-   maxnlpiterations = MAX(maxnlpiterations, heurdata->nlpiterations + MINLPITER);
-
-   /* get fractional variables that should be integral */
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
-
-   /* don't try to dive, if there are no fractional variables */
-   if( nlpcands == 0 )
-      return SCIP_OKAY;
-
-   /* calculate the objective search bound */
-   if( SCIPgetNSolsFound(scip) == 0 )
-   {
-      if( heurdata->maxdiveubquotnosol > 0.0 )
-         searchubbound = SCIPgetLowerbound(scip)
-            + heurdata->maxdiveubquotnosol * (SCIPgetCutoffbound(scip) - SCIPgetLowerbound(scip));
-      else
-         searchubbound = SCIPinfinity(scip);
-      if( heurdata->maxdiveavgquotnosol > 0.0 )
-         searchavgbound = SCIPgetLowerbound(scip)
-            + heurdata->maxdiveavgquotnosol * (SCIPgetAvgLowerbound(scip) - SCIPgetLowerbound(scip));
-      else
-         searchavgbound = SCIPinfinity(scip);
-   }
-   else
-   {
-      if( heurdata->maxdiveubquot > 0.0 )
-         searchubbound = SCIPgetLowerbound(scip)
-            + heurdata->maxdiveubquot * (SCIPgetCutoffbound(scip) - SCIPgetLowerbound(scip));
-      else
-         searchubbound = SCIPinfinity(scip);
-      if( heurdata->maxdiveavgquot > 0.0 )
-         searchavgbound = SCIPgetLowerbound(scip)
-            + heurdata->maxdiveavgquot * (SCIPgetAvgLowerbound(scip) - SCIPgetLowerbound(scip));
-      else
-         searchavgbound = SCIPinfinity(scip);
-   }
-   searchbound = MIN(searchubbound, searchavgbound);
-   if( SCIPisObjIntegral(scip) )
-      searchbound = SCIPceil(scip, searchbound);
-
-   /* calculate the maximal diving depth: 10 * min{number of integer variables, max depth} */
-   maxdivedepth = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
-   maxdivedepth = MIN(maxdivedepth, maxdepth);
-   maxdivedepth *= 10;
-
-
-   *result = SCIP_DIDNOTFIND;
-
    nlprows = SCIPgetNLPRows(scip);
-   assert(nlprows > 0);
+   if( nlprows == 0 )
+      return SCIP_OKAY;
+
+   /* terminate if there are no integer variables (note that, e.g., SOS1 variables may be present) */
+   if( SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* select and store the scoring parameter for this call of the heuristic */
+   if( heurdata->scoreparam == 'r' )
+      heurdata->score = SCOREPARAM_VALUES[SCIPheurGetNCalls(heur) % SCOREPARAM_VALUESLEN];
+   else
+      heurdata->score = heurdata->scoreparam;
 
    SCIP_CALL( heurdataEnsureArraySize(scip, heurdata, nlprows) );
+   assert(SCIPheurGetNDivesets(heur) > 0);
+   assert(SCIPheurGetDivesets(heur) != NULL);
+   diveset = SCIPheurGetDivesets(heur)[0];
+   assert(diveset != NULL);
 
+   SCIP_CALL( SCIPperformGenericDivingAlgorithm(scip, diveset, heurdata->sol, heur, result, nodeinfeasible) );
 
-   /* start diving */
-   SCIP_CALL( SCIPstartProbing(scip) );
-
-   /* enables collection of variable statistics during probing */
-   SCIPenableVarHistory(scip);
-
-   /* get LP objective value*/
-   lpsolstat = SCIP_LPSOLSTAT_OPTIMAL;
-   objval = SCIPgetLPObjval(scip);
-
-   if( heurdata->revolvingscore )
-      scoreparam = SCOREPARAM_VALUES[SCIPheurGetNCalls(heur) % SCOREPARAM_VALUESLEN];
-   else
-      scoreparam = heurdata->scoreparam;
-
-   SCIPdebugMessage("(node %"SCIP_LONGINT_FORMAT") executing distributiondiving heuristic: depth=%d, %d fractionals, dualbound=%g, searchbound=%g\n",
-      SCIPgetNNodes(scip), SCIPgetDepth(scip), nlpcands, SCIPgetDualbound(scip), SCIPretransformObj(scip, searchbound));
-
-   /* dive as long we are in the given objective, depth and iteration limits and fractional variables exist, but
-    * - if possible, we dive at least with the depth 10
-    * - if the number of fractional variables decreased at least with 1 variable per 2 dive depths, we continue diving
-    */
-   lperror = FALSE;
-   cutoff = FALSE;
-   divedepth = 0;
-   startnlpcands = nlpcands;
-   while( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL && nlpcands > 0
-      && (divedepth < 10
-         || nlpcands <= startnlpcands - divedepth/2
-         || (divedepth < maxdivedepth && heurdata->nlpiterations < maxnlpiterations && objval < searchbound))
-      && !SCIPisStopped(scip) )
-   {
-      SCIP_Bool bestmayround;
-      SCIP_Bool mayroundup;
-      SCIP_Bool mayrounddown;
-
-      /* process pending bound change events */
-      while( heurdata->nupdatedvars > 0 )
-      {
-         SCIP_VAR* nextvar;
-
-         /* pop the next variable from the queue and process its bound changes */
-         nextvar = heurdataPopBoundChangeVar(scip, heurdata);
-         assert(nextvar != NULL);
-         SCIP_CALL( varProcessBoundChanges(scip, heurdata, nextvar) );
-      }
-
-
-      /* choose variable fixing:
-       * - prefer variables that may not be rounded without destroying LP feasibility:
-       *   - of these variables, round least fractional variable in corresponding direction
-       * - if all remaining fractional variables may be rounded without destroying LP feasibility:
-       *   - round variable with least increasing objective value
-       */
-      bestcand = -1;
-      bestscore = -1.0;
-      bestdivedir = SCIP_BRANCHDIR_AUTO;
-      bestmayround = TRUE;
-
-      for( c = 0; c < nlpcands; ++c )
-      {
-         SCIP_Real upscore;
-         SCIP_Real downscore;
-         SCIP_VAR* lpcand;
-         SCIP_Bool takeit;
-         SCIP_Real score;
-         int varindex;
-
-         lpcand = lpcands[c];
-         assert(lpcand != NULL);
-
-         varindex = SCIPvarGetProbindex(lpcand);
-
-         /* in debug mode, ensure that all bound process events which occurred in the mean time have been captured
-          * by the branching rule event system
-          */
-         assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(lpcand), SCIPvarGetUbLocal(lpcand)));
-         assert(0 <= varindex && varindex < heurdata->varpossmemsize);
-
-         assert((heurdata->currentlbs[varindex] == SCIP_INVALID) == (heurdata->currentubs[varindex] == SCIP_INVALID));
-         assert((heurdata->currentlbs[varindex] == SCIP_INVALID)
-               || SCIPisFeasEQ(scip, SCIPvarGetLbLocal(lpcand), heurdata->currentlbs[varindex]));
-         assert((heurdata->currentubs[varindex] == SCIP_INVALID)
-               || SCIPisFeasEQ(scip, SCIPvarGetUbLocal(lpcand), heurdata->currentubs[varindex]));
-
-         /* if the branching rule has not captured the variable bounds yet, this can be done now */
-         if( heurdata->currentlbs[varindex] == SCIP_INVALID )
-         {
-            heurdataUpdateCurrentBounds(scip, heurdata, lpcand);
-         }
-
-         upscore = 0.0;
-         downscore = 0.0;
-         takeit = FALSE;
-         /* loop over candidate rows and determine the candidate up- and down- branching score w.r.t. the score parameter */
-         SCIP_CALL( calcBranchScore(scip, heurdata, lpcand, lpcandssol[c],
-               &upscore, &downscore, scoreparam) );
-         mayrounddown = SCIPvarMayRoundDown(lpcand);
-         mayroundup = SCIPvarMayRoundUp(lpcand);
-
-         score = SCIPgetBranchScore(scip, lpcand, downscore, upscore);
-
-         /* if weighted scoring is enabled, use the branching score method of SCIP to weigh up and down score */
-         if( heurdata->usescipscore )
-         {
-            /* select the candidate with the highest branching score */
-            if( mayrounddown || mayroundup )
-            {
-               if( bestmayround && score > bestscore )
-                 takeit = TRUE;
-            }
-            else
-            {
-               if( bestmayround || score > bestscore )
-                  takeit = TRUE;
-            }
-         }
-         else
-         {
-            /* no weighted score; keep candidate which has the single highest score in one direction */
-            if( mayrounddown || mayroundup )
-            {
-               if( bestmayround )
-               {
-                  if( upscore > bestscore && upscore > downscore )
-                     takeit = TRUE;
-                  else if( downscore > bestscore )
-                     takeit = TRUE;
-               }
-            }
-            else
-               if( bestmayround || (upscore > bestscore && upscore > downscore) )
-                  takeit = TRUE;
-               else if( downscore > bestscore )
-                  takeit = TRUE;
-         }
-
-         if( takeit )
-         {
-            bestscore = heurdata->usescipscore ? score : MAX(upscore, downscore);
-            bestcand = c;
-            bestmayround = bestmayround && (mayroundup || mayrounddown);
-            /* prioritize branching direction with the higher score */
-            if( upscore > downscore )
-               bestdivedir = SCIP_BRANCHDIR_UPWARDS;
-            else
-               bestdivedir = SCIP_BRANCHDIR_DOWNWARDS;
-         }
-
-         SCIPdebugMessage("  Candidate %s has score down %g and up %g \n", SCIPvarGetName(lpcand), downscore, upscore);
-         SCIPdebugMessage("  Best candidate: %s, score %g, direction %d\n", SCIPvarGetName(lpcand), bestscore, bestdivedir);
-      }
-      assert(bestcand != -1);
-
-      if( bestmayround )
-      {
-         SCIP_Bool success;
-
-         success = FALSE;
-         SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
-         SCIP_CALL( SCIProundSol(scip, heurdata->sol, &success));
-
-         if( success )
-         {
-            SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
-
-            /* check, if solution was feasible and good enough */
-            if( success )
-            {
-               SCIPdebugMessage(" -> solution was feasible and good enough\n");
-               *result = SCIP_FOUNDSOL;
-            }
-         }
-      }
-
-      var = lpcands[bestcand];
-
-      backtracked = FALSE;
-      divedir = bestdivedir;
-      SCIP_CALL( SCIPnewProbingNode(scip) );
-      divedepth++;
-
-      do
-      {
-         /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
-          * occured or variable was fixed by propagation while backtracking => Abort diving!
-          */
-         if( SCIPvarGetLbLocal(var) >= SCIPvarGetUbLocal(var) - 0.5 )
-         {
-            SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
-               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), lpcandssol[bestcand]);
-            cutoff = TRUE;
-            break;
-         }
-         if( SCIPisFeasLT(scip, lpcandssol[bestcand], SCIPvarGetLbLocal(var)) || SCIPisFeasGT(scip, lpcandssol[bestcand], SCIPvarGetUbLocal(var)) )
-         {
-            SCIPdebugMessage("selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
-               SCIPvarGetName(var), SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var), lpcandssol[bestcand]);
-            assert(backtracked);
-            break;
-         }
-
-         /* apply rounding of best candidate */
-         if( (bestdivedir == SCIP_BRANCHDIR_UPWARDS) == !backtracked )
-         {
-            /* round variable up */
-            SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
-               divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
-               SCIPvarGetName(var),
-               lpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-               SCIPfeasCeil(scip, lpcandssol[bestcand]), SCIPvarGetUbLocal(var));
-
-            SCIP_CALL( SCIPchgVarLbProbing(scip, var, SCIPfeasCeil(scip, lpcandssol[bestcand])) );
-            divedir = SCIP_BRANCHDIR_UPWARDS;
-         }
-         else
-         {
-            /* round variable down */
-            SCIPdebugMessage("  dive %d/%d, LP iter %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT": var <%s>, sol=%g, oldbounds=[%g,%g], newbounds=[%g,%g]\n",
-               divedepth, maxdivedepth, heurdata->nlpiterations, maxnlpiterations,
-               SCIPvarGetName(var),
-               lpcandssol[bestcand], SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var),
-               SCIPvarGetLbLocal(var), SCIPfeasFloor(scip, lpcandssol[bestcand]));
-
-            SCIP_CALL( SCIPchgVarUbProbing(scip, var, SCIPfeasFloor(scip, lpcandssol[bestcand])) );
-            divedir = SCIP_BRANCHDIR_DOWNWARDS;
-         }
-
-         /* apply domain propagation */
-         SCIP_CALL( SCIPpropagateProbing(scip, 0, &cutoff, NULL) );
-         if( !cutoff )
-         {
-            /* resolve the diving LP */
-            /* Errors in the LP solver should not kill the overall solving process, if the LP is just needed for a heuristic.
-             * Hence in optimized mode, the return code is caught and a warning is printed, only in debug mode, SCIP will stop.
-             */
-#ifdef NDEBUG
-            SCIP_RETCODE retstat;
-            nlpiterations = SCIPgetNLPIterations(scip);
-            retstat = SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror, &cutoff);
-            if( retstat != SCIP_OKAY )
-            {
-               SCIPwarningMessage(scip, "Error while solving LP in Distributiondiving heuristic; LP solve terminated with code <%d>\n",retstat);
-            }
-#else
-            nlpiterations = SCIPgetNLPIterations(scip);
-            SCIP_CALL( SCIPsolveProbingLP(scip, MAX((int)(maxnlpiterations - heurdata->nlpiterations), MINLPITER), &lperror, &cutoff) );
-#endif
-            if( lperror )
-               break;
-
-            /* update iteration count */
-            heurdata->nlpiterations += SCIPgetNLPIterations(scip) - nlpiterations;
-
-            /* get LP solution status, objective value, and fractional variables, that should be integral */
-            lpsolstat = SCIPgetLPSolstat(scip);
-            assert(cutoff || (lpsolstat != SCIP_LPSOLSTAT_OBJLIMIT && lpsolstat != SCIP_LPSOLSTAT_INFEASIBLE &&
-                  (lpsolstat != SCIP_LPSOLSTAT_OPTIMAL || SCIPisLT(scip, SCIPgetLPObjval(scip), SCIPgetCutoffbound(scip)))));
-         }
-
-         /* perform backtracking if a cutoff was detected */
-         if( cutoff && !backtracked && heurdata->backtrack )
-         {
-            SCIPdebugMessage("  *** cutoff detected at level %d - backtracking\n", SCIPgetProbingDepth(scip));
-            SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
-            SCIP_CALL( SCIPnewProbingNode(scip) );
-            backtracked = TRUE;
-         }
-         else
-            backtracked = FALSE;
-      }
-      while( backtracked );
-
-      if( !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
-      {
-         /* get new objective value */
-         oldobjval = objval;
-         objval = SCIPgetLPObjval(scip);
-
-         /* update pseudo cost values */
-         if( SCIPisGT(scip, objval, oldobjval) )
-         {
-            if( divedir == SCIP_BRANCHDIR_UPWARDS )
-            {
-               SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[bestcand], 1.0-lpcandsfrac[bestcand],
-                     objval - oldobjval, 1.0) );
-            }
-            else
-            {
-               SCIP_CALL( SCIPupdateVarPseudocost(scip, lpcands[bestcand], 0.0-lpcandsfrac[bestcand],
-                     objval - oldobjval, 1.0) );
-            }
-         }
-
-         /* get new fractional variables */
-         SCIP_CALL( SCIPgetLPBranchCands(scip, &lpcands, &lpcandssol, &lpcandsfrac, &nlpcands, NULL, NULL) );
-      }
-      SCIPdebugMessage("   -> lpsolstat=%d, objval=%g/%g, nfrac=%d\n", lpsolstat, objval, searchbound, nlpcands);
-   }
-
-   /* check if a solution has been found */
-   if( nlpcands == 0 && !lperror && !cutoff && lpsolstat == SCIP_LPSOLSTAT_OPTIMAL )
-   {
-      SCIP_Bool success;
-
-      /* create solution from diving LP */
-      SCIP_CALL( SCIPlinkLPSol(scip, heurdata->sol) );
-      SCIPdebugMessage("distributiondiving found primal solution: obj=%g\n", SCIPgetSolOrigObj(scip, heurdata->sol));
-
-      /* try to add solution to SCIP */
-      SCIP_CALL( SCIPtrySol(scip, heurdata->sol, FALSE, FALSE, FALSE, FALSE, &success) );
-
-      /* check, if solution was feasible and good enough */
-      if( success )
-      {
-         SCIPdebugMessage(" -> solution was feasible and good enough\n");
-         *result = SCIP_FOUNDSOL;
-      }
-   }
-
-   /* end diving */
-   SCIP_CALL( SCIPendProbing(scip) );
-
-   if( *result == SCIP_FOUNDSOL )
-      heurdata->nsuccess++;
-
-   SCIPdebugMessage("distributiondiving heuristic finished\n");
-
-   heurdataFreeArrays(scip, heurdata);
+   SCIP_CALL( heurdataFreeArrays(scip, heurdata) );
 
    return SCIP_OKAY;
 }
@@ -1383,8 +1021,6 @@ SCIP_DECL_EVENTEXEC(eventExecDistribution)
    return SCIP_OKAY;
 }
 
-
-
 /*
  * heuristic specific interface methods
  */
@@ -1398,7 +1034,7 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
    SCIP_HEUR* heur;
    SCIP_EVENTHDLRDATA* eventhdlrdata;
 
-   /* create distributiondivingdata */
+   /* create distributiondiving data */
    heurdata = NULL;
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
@@ -1411,10 +1047,7 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
    heurdata->currentlbs = NULL;
    heurdata->currentubs = NULL;
 
-   heurdata->scoreparam = 'l';
-   heurdata->usescipscore = FALSE;
-
-   /* create event handler first to finish branch rule data */
+   /* create event handler first to finish heuristic data */
    eventhdlrdata = NULL;
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
    eventhdlrdata->heurdata = heurdata;
@@ -1439,51 +1072,17 @@ SCIP_RETCODE SCIPincludeHeurDistributiondiving(
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitDistributiondiving) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitDistributiondiving) );
 
-   /* distributiondiving heuristic parameters */
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/distributiondiving/minreldepth",
-         "minimal relative depth to start diving",
-         &heurdata->minreldepth, TRUE, DEFAULT_MINRELDEPTH, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/distributiondiving/maxreldepth",
-         "maximal relative depth to start diving",
-         &heurdata->maxreldepth, TRUE, DEFAULT_MAXRELDEPTH, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/distributiondiving/maxlpiterquot",
-         "maximal fraction of diving LP iterations compared to node LP iterations",
-         &heurdata->maxlpiterquot, FALSE, DEFAULT_MAXLPITERQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "heuristics/distributiondiving/maxlpiterofs",
-         "additional number of allowed LP iterations",
-         &heurdata->maxlpiterofs, FALSE, DEFAULT_MAXLPITEROFS, 0, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/distributiondiving/maxdiveubquot",
-         "maximal quotient (curlowerbound - lowerbound)/(cutoffbound - lowerbound) where diving is performed (0.0: no limit)",
-         &heurdata->maxdiveubquot, TRUE, DEFAULT_MAXDIVEUBQUOT, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/distributiondiving/maxdiveavgquot",
-         "maximal quotient (curlowerbound - lowerbound)/(avglowerbound - lowerbound) where diving is performed (0.0: no limit)",
-         &heurdata->maxdiveavgquot, TRUE, DEFAULT_MAXDIVEAVGQUOT, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/distributiondiving/maxdiveubquotnosol",
-         "maximal UBQUOT when no solution was found yet (0.0: no limit)",
-         &heurdata->maxdiveubquotnosol, TRUE, DEFAULT_MAXDIVEUBQUOTNOSOL, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip,
-         "heuristics/distributiondiving/maxdiveavgquotnosol",
-         "maximal AVGQUOT when no solution was found yet (0.0: no limit)",
-         &heurdata->maxdiveavgquotnosol, TRUE, DEFAULT_MAXDIVEAVGQUOTNOSOL, 0.0, SCIP_REAL_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "heuristics/distributiondiving/backtrack",
-         "use one level of backtracking if infeasibility is encountered?",
-         &heurdata->backtrack, FALSE, DEFAULT_BACKTRACK, NULL, NULL) );
+   /* add diveset with the defined scoring function */
+   SCIP_CALL( SCIPcreateDiveset(scip, NULL, heur, HEUR_NAME, DEFAULT_MINRELDEPTH,
+         DEFAULT_MAXRELDEPTH, DEFAULT_MAXLPITERQUOT, DEFAULT_MAXDIVEUBQUOT,
+         DEFAULT_MAXDIVEAVGQUOT, DEFAULT_MAXDIVEUBQUOTNOSOL,
+         DEFAULT_MAXDIVEAVGQUOTNOSOL, DEFAULT_LPRESOLVEDOMCHGQUOT, DEFAULT_LPSOLVEFREQ,
+         DEFAULT_MAXLPITEROFS, DEFAULT_BACKTRACK, DEFAULT_ONLYLPBRANCHCANDS, DIVESET_DIVETYPES,
+         divesetGetScoreDistributiondiving) );
 
-   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/"HEUR_NAME"/scoreparam",
-         "the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p., 'v'otes lowest c.p., votes highest c.p.('w') ",
-         &heurdata->scoreparam, TRUE, DEFAULT_SCOREPARAM, SCOREPARAM_VALUES, NULL, NULL) );
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/scoreparam",
+         "the score;largest 'd'ifference, 'l'owest cumulative probability,'h'ighest c.p., 'v'otes lowest c.p., votes highest c.p.('w'), 'r'evolving",
+         &heurdata->scoreparam, TRUE, DEFAULT_SCOREPARAM, "lvdhwr", NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip,
-            "heuristics/distributiondiving/revolvingscore",
-            "should the heuristic iterate through the score parameters?",
-            &heurdata->revolvingscore, TRUE, DEFAULT_REVOLVINGSCORE, NULL, NULL) );
    return SCIP_OKAY;
 }

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -221,7 +221,7 @@ SCIP_RETCODE addCut(
          SCIP_ROW* cut;
          char cutname[SCIP_MAXSTRLEN];
          SCIP_Bool success;
-         
+
          /* create the cut */
          (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "%s%d_%d", cutclassname, SCIPgetNLPs(scip), *ncuts);
          SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), cutrhs, 
@@ -234,7 +234,7 @@ SCIP_RETCODE addCut(
          SCIPdebugMessage(" -> found potential %s cut <%s>: activity=%f, rhs=%f, norm=%f, eff=%f\n",
             cutclassname, cutname, cutact, cutrhs, cutnorm, SCIPgetCutEfficacy(scip, sol, cut));
          SCIPdebug( SCIP_CALL( SCIPprintRow(scip, cut, NULL) ) );
-   
+
          /* try to scale the cut to integral values, but only if the scaling is small; otherwise keep the fractional cut */
          SCIP_CALL( SCIPmakeRowIntegral(scip, cut, -SCIPepsilon(scip), SCIPsumepsilon(scip),
                (SCIP_Longint) 30, 100.0, MAKECONTINTEGRAL, &success) );
@@ -247,7 +247,7 @@ SCIP_RETCODE addCut(
          }
          else
             success = TRUE; /* also use cut if scaling failed */
-   
+
          /* if scaling was successful, add the cut */
          if( success ) /*lint !e774*/ /* Boolean within 'if' always evaluates to True */
          {
@@ -304,7 +304,7 @@ void updateNActiveConts(
       primsol = varsolvals[probindex];
       lb = bestcontlbs[probindex - nintvars];
       ub = bestcontubs[probindex - nintvars];
-      
+
       if( SCIPisLT(scip, lb, primsol) && SCIPisLT(scip, primsol, ub) )
          (*nactiveconts) += delta;
    }
@@ -337,6 +337,10 @@ SCIP_RETCODE tryDelta(
    SCIP_SOL*             sol,                /**< the solution that should be separated, or NULL for LP solution */
    int                   nvars,              /**< number of problem variables */
    SCIP_Real*            rowweights,         /**< weight of rows in aggregated row */ 
+   SCIP_Real             maxweight,          /**< largest magnitude of weights; set to -1 if sparsity information is unknown */
+   int*                  weightinds,         /**< sparsity pattern of weights; size nrowinds; NULL if sparsity info is unknown */
+   int                   nweightinds,        /**< number of nonzeros in weights; -1 if rowinds is NULL */
+   int                   rowlensum,          /**< total number of non-zeros in used rows (row associated with nonzero weight coefficient); -1 if unknown */
    SCIP_Real*            cutcoefs,           /**< array to store the cut coefficients */
    SCIP_Real*            mksetcoefs,         /**< array to store mixed knapsack set coefficients: size nvars; or NULL */
    SCIP_Bool*            mksetcoefsvalid,    /**< pointer to store whether mixed knapsack set coefficients are valid; or NULL */
@@ -383,12 +387,12 @@ SCIP_RETCODE tryDelta(
 
       /* create a MIR cut out of the weighted LP rows */
       SCIP_CALL( SCIPcalcMIR(scip, sol, boundswitch, usevbds, allowlocal, fixintegralrhs, NULL, NULL, maxmksetcoefs,
-            maxweightrange, minfrac, maxfrac, rowweights, NULL, delta, mksetcoefs, mksetcoefsvalid, cutcoefs, &cutrhs, &cutact,
-            &success, &cutislocal, NULL) );
+            maxweightrange, minfrac, maxfrac, rowweights, maxweight, weightinds, nweightinds, rowlensum, NULL, delta,
+            mksetcoefs, mksetcoefsvalid, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, NULL) );
       assert(allowlocal || !cutislocal);
       SCIPdebugMessage("delta = %g  -> success: %u, cutact: %g, cutrhs: %g, vio: %g\n",
          delta, success, success ? cutact : 0.0, success ? cutrhs : 0.0, success ? cutact - cutrhs : 0.0);
-               
+
       /* check if delta generates cut which is more violated */
       if( success && SCIPisFeasGT(scip, cutact, cutrhs) )
       {
@@ -425,6 +429,12 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    SCIP_Real*            varsolvals,         /**< LP solution value of all variables in LP */
    int                   maxtestdelta,       /**< maximal number of different deltas to try (-1: unlimited) */
    SCIP_Real*            rowweights,         /**< weight of rows in aggregated row */ 
+   SCIP_Real             maxweight,          /**< largest magnitude of weights; set to -1.0 if sparsity information is
+                                              *   unknown */
+   int*                  weightinds,         /**< sparsity pattern of weights; size nrowinds; NULL if sparsity info is
+                                              *   unknown */
+   int                   nweightinds,        /**< number of nonzeros in weights; -1 if rowinds is NULL */
+   int                   rowlensum,          /**< total number of non-zeros in used rows (row associated with nonzero weight coefficient); -1 if unknown */
    SCIP_Real             boundswitch,        /**< fraction of domain up to which lower bound is used in transformation */
    SCIP_Bool             usevbds,            /**< should variable bounds be used in bound transformation? */
    SCIP_Bool             allowlocal,         /**< should local information allowed to be used, resulting in a local cut? */
@@ -440,7 +450,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    int*                  ncuts,              /**< pointer to count the number of generated cuts */
    SCIP_Real*            delta,              /**< pointer to store best delta found; NULL, if cut should be added here */
    SCIP_Bool*            deltavalid          /**< pointer to store whether best delta value is valid or NULL */
-)
+   )
 {  /*lint --e{715}*/
    SCIP_VAR** vars;
    SCIP_Real* cutcoefs;        
@@ -483,7 +493,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
     * strictly between its bounds) in the constructed mixed knapsack set, i.e., 
     * N* = { |alpha'_j| : j in N, alpha'_j != 0 and l_j < x*_j < u_j }
     */ 
-         
+
    /* search delta for generating a cut with maximum efficacy: 
     * delta = coefficient of integer variable in constructed mixed knapsack set which lies between its bounds
     */ 
@@ -498,14 +508,14 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
     * in this case, mksetcoefs is not valid and we can abort the separation heuristic (as the number of nonzeros
     * keeps the same for different values of delta) 
     */
-   SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, cutcoefs, mksetcoefs, &mksetcoefsvalid, testeddeltas, &ntesteddeltas, 
-         1.0, boundswitch, usevbds, allowlocal, fixintegralrhs, maxmksetcoefs, maxweightrange, minfrac, maxfrac, &bestdelta, 
-         &bestefficacy) );
+   SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, maxweight, weightinds, nweightinds, rowlensum, cutcoefs, mksetcoefs,
+         &mksetcoefsvalid, testeddeltas, &ntesteddeltas, 1.0, boundswitch, usevbds, allowlocal, fixintegralrhs,
+         maxmksetcoefs, maxweightrange, minfrac, maxfrac, &bestdelta, &bestefficacy) );
    if( mksetcoefsvalid && trynegscaling )
    {
-      SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas, -1.0,
-            boundswitch, usevbds, allowlocal, fixintegralrhs, maxmksetcoefs, maxweightrange, minfrac, maxfrac,
-            &bestdelta, &bestefficacy) );
+      SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, maxweight, weightinds, nweightinds, rowlensum, cutcoefs, NULL,
+            NULL, testeddeltas, &ntesteddeltas, -1.0, boundswitch, usevbds, allowlocal, fixintegralrhs, maxmksetcoefs,
+            maxweightrange, minfrac, maxfrac, &bestdelta, &bestefficacy) );
    }
 
    /* find mult in { +1, -1 } and delta in the corresponding set N* leading to the most violated c-MIR cut */
@@ -516,7 +526,7 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
       SCIP_Real lb;
       SCIP_Real ub;
       SCIP_Real absmksetcoef;
-            
+
       var = vars[vi];
       assert(vi == SCIPvarGetProbindex(var));
       assert(SCIPvarGetType(var) != SCIP_VARTYPE_CONTINUOUS);
@@ -543,14 +553,14 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
       /* try to divide aggregated row by absmksetcoef */
       if( !SCIPisFeasZero(scip, absmksetcoef) )
       {
-         SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas,
-               1.0/absmksetcoef, boundswitch, usevbds, allowlocal, fixintegralrhs, maxmksetcoefs, maxweightrange, minfrac, 
-               maxfrac, &bestdelta, &bestefficacy) );
+         SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, maxweight, weightinds, nweightinds, rowlensum, cutcoefs, NULL,
+               NULL, testeddeltas, &ntesteddeltas, 1.0/absmksetcoef, boundswitch, usevbds, allowlocal, fixintegralrhs,
+               maxmksetcoefs, maxweightrange, minfrac, maxfrac, &bestdelta, &bestefficacy) );
          if( trynegscaling )
          {
-            SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas,
-                  -1.0/absmksetcoef, boundswitch, usevbds, allowlocal, fixintegralrhs, maxmksetcoefs, maxweightrange, 
-                  minfrac, maxfrac, &bestdelta, &bestefficacy) );
+            SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, maxweight, weightinds, nweightinds, rowlensum, cutcoefs,
+                  NULL, NULL, testeddeltas, &ntesteddeltas, -1.0/absmksetcoef, boundswitch, usevbds, allowlocal,
+                  fixintegralrhs, maxmksetcoefs, maxweightrange, minfrac, maxfrac, &bestdelta, &bestefficacy) );
          }
       }
    }
@@ -558,14 +568,14 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
    /* additionally try delta = maxabscoef+1 */
    if( mksetcoefsvalid && !SCIPisFeasZero(scip, maxabsmksetcoef) )
    {
-      SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas,
-            1.0/(maxabsmksetcoef+1.0), boundswitch, usevbds, allowlocal, fixintegralrhs, maxmksetcoefs, maxweightrange, 
-            minfrac, maxfrac, &bestdelta, &bestefficacy) );
+      SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, maxweight, weightinds, nweightinds, rowlensum, cutcoefs, NULL,
+            NULL, testeddeltas, &ntesteddeltas, 1.0/(maxabsmksetcoef+1.0), boundswitch, usevbds, allowlocal,
+            fixintegralrhs, maxmksetcoefs, maxweightrange, minfrac, maxfrac, &bestdelta, &bestefficacy) );
       if( trynegscaling )
       {
-         SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas,
-               -1.0/(maxabsmksetcoef+1.0), boundswitch, usevbds, allowlocal, fixintegralrhs, maxmksetcoefs, maxweightrange, 
-               minfrac, maxfrac, &bestdelta, &bestefficacy) );
+         SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, maxweight, weightinds, nweightinds, rowlensum, cutcoefs, NULL,
+               NULL, testeddeltas, &ntesteddeltas, -1.0/(maxabsmksetcoef+1.0), boundswitch, usevbds, allowlocal,
+               fixintegralrhs, maxmksetcoefs, maxweightrange, minfrac, maxfrac, &bestdelta, &bestefficacy) );
       }
    }
 
@@ -585,9 +595,9 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
       /* Try to improve efficacy by multiplying delta with 2, 4 and 8 */
       for( i = 0, currentdelta = 2.0 * bestdelta; i < 3; i++, currentdelta *= 2.0 )
       {
-         SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, cutcoefs, NULL, NULL, testeddeltas, &ntesteddeltas,
-               currentdelta, boundswitch, usevbds, allowlocal, fixintegralrhs, maxmksetcoefs, maxweightrange, minfrac, 
-               maxfrac, &bestdelta, &bestefficacy) );
+         SCIP_CALL( tryDelta(scip, sol, nvars, rowweights, maxweight, weightinds, nweightinds, rowlensum, cutcoefs,
+               NULL, NULL, testeddeltas, &ntesteddeltas, currentdelta, boundswitch, usevbds, allowlocal, fixintegralrhs,
+               maxmksetcoefs, maxweightrange, minfrac, maxfrac, &bestdelta, &bestefficacy) );
       }
 
       /* if no pointer to store delta is given, add cut here (zerohalf cuts will be stored in a separate cut pool first) */
@@ -595,11 +605,11 @@ SCIP_RETCODE SCIPcutGenerationHeuristicCmir(
       {
          /* generate cut with bestdelta and best boundswitch value */
          SCIP_CALL( SCIPcalcMIR(scip, sol, boundswitch, usevbds, allowlocal, fixintegralrhs, NULL, NULL,
-               maxmksetcoefs, maxweightrange, minfrac, maxfrac, rowweights, NULL, bestdelta, NULL, NULL, cutcoefs,
-               &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
+               maxmksetcoefs, maxweightrange, minfrac, maxfrac, rowweights, maxweight, weightinds, nweightinds, rowlensum,
+               NULL, bestdelta, NULL, NULL, cutcoefs, &cutrhs, &cutact, &success, &cutislocal, &cutrank) );
          assert(allowlocal || !cutislocal);
          assert(success); 
-         
+
          /* add the cut to the separation storage */
          SCIP_CALL( addCut(scip, sepa, sol, varsolvals, cutcoefs, cutrhs, cutislocal, cutremovable, cutrank, cutclassname, cutoff, ncuts) );
       }
@@ -654,6 +664,7 @@ SCIP_Real getBounddist(
    SCIP_Real bounddist;
 
    assert(varIsContinuous(var));
+   assert(SCIPvarGetProbindex(var) >= nintvars);
 
    primsol = varsolvals[SCIPvarGetProbindex(var)];
    lb = bestcontlbs[SCIPvarGetProbindex(var) - nintvars];
@@ -702,7 +713,8 @@ SCIP_RETCODE aggregation(
    SCIP_COL* bestcol;          
    SCIP_Real* startnonzcoefs;      
    SCIP_Real* aggrcoefs;       
-   SCIP_Real* rowweights;       
+   SCIP_Real* rowweights;
+   int* weightinds;
    int* aggrcontnonzposs;
    SCIP_Real* aggrcontnonzbounddists;
    SCIP_Real maxweight;
@@ -720,8 +732,11 @@ SCIP_RETCODE aggregation(
    int ncontvars;
    int ncols;
    int nrows;
+   int indpos;
    int c;
    int r;
+   int nweightinds;
+   int rowlensum;
 
    assert(scip != NULL);
    assert(sepadata != NULL);      
@@ -754,27 +769,37 @@ SCIP_RETCODE aggregation(
 
    /* get temporary memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrcoefs, ncols) );
+   BMSclearMemoryArray(aggrcoefs, ncols);
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrcontnonzposs, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &aggrcontnonzbounddists, ncols) );
    SCIP_CALL( SCIPallocBufferArray(scip, &rowweights, nrows) );
-
    /* initialize weights of rows in aggregation */
    BMSclearMemoryArray(rowweights, nrows);
+   SCIP_CALL( SCIPallocBufferArray(scip, &weightinds, nrows) );
+   BMSclearMemoryArray(weightinds, nrows);
+
    startrowact = SCIPgetRowSolActivity(scip, rows[startrow], sol);
    if( startrowact <= 0.5 * SCIProwGetLhs(rows[startrow]) + 0.5 * SCIProwGetRhs(rows[startrow]) )
       rowweights[startrow] = -1.0;
    else 
       rowweights[startrow] = 1.0;
+
+   /* build weights sparse representation */
+   nweightinds = 0;
+   rowlensum = 0;
+   weightinds[nweightinds] = startrow;
+   nweightinds++;
+   rowlensum += SCIProwGetNNonz(rows[startrow]);
+
    maxweight = 1.0;
    minweight = 1.0;
-   
+
    /* get nonzero columns and coefficients of startrow */
    startnonzcols =  SCIProwGetCols(rows[startrow]);
    nstartnonzcols = SCIProwGetNLPNonz(rows[startrow]);
    startnonzcoefs = SCIProwGetVals(rows[startrow]);
-   
+
    /* for all columns of startrow store coefficient as coefficient in aggregated row */ 
-   BMSclearMemoryArray(aggrcoefs, ncols);
    naggrintnonzs = 0;
    naggrcontnonzs = 0;
    nactiveconts = 0;
@@ -805,7 +830,7 @@ SCIP_RETCODE aggregation(
       if( !hasfractional && SCIPvarIsIntegral(var) )
       {
          SCIP_Real primsol;
-         
+
          primsol = varsolvals[SCIPvarGetProbindex(var)];
          hasfractional = !SCIPisFeasIntegral(scip, primsol);
       }
@@ -821,7 +846,7 @@ SCIP_RETCODE aggregation(
 
    /* decrease score of startrow in order to not aggregate it again too soon */
    decreaseRowScore(scip, rowlhsscores, rowrhsscores, startrow);
-   
+
    /* try to generate cut from the current aggregated row 
     * add cut if found, otherwise add another row to aggregated row 
     * in order to get rid of a continuous variable
@@ -860,9 +885,10 @@ SCIP_RETCODE aggregation(
        * try to generate a MIR cut out of the current aggregation 
        */
       oldncuts = *ncuts;
-      SCIP_CALL( SCIPcutGenerationHeuristicCmir(scip, sepa, sol, varsolvals, sepadata->maxtestdelta, rowweights, BOUNDSWITCH,
-            USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs, (int) MAXAGGRLEN(nvars), sepadata->maxrowfac, MINFRAC, MAXFRAC,
-            sepadata->trynegscaling, sepadata->dynamiccuts, "cmir", cutoff, ncuts, NULL, NULL) );
+      SCIP_CALL( SCIPcutGenerationHeuristicCmir(scip, sepa, sol, varsolvals, sepadata->maxtestdelta, rowweights, maxweight,
+             weightinds, nweightinds, rowlensum, BOUNDSWITCH, USEVBDS, ALLOWLOCAL, sepadata->fixintegralrhs,
+             (int) MAXAGGRLEN(nvars), sepadata->maxrowfac, MINFRAC, MAXFRAC, sepadata->trynegscaling,
+             sepadata->dynamiccuts, "cmir", cutoff, ncuts, NULL, NULL) );
 
       if ( *cutoff )
          break;
@@ -887,7 +913,7 @@ SCIP_RETCODE aggregation(
       }
 
       SCIPdebugMessage(" -> search column to eliminate\n");
-      
+
       /* search for "best" continuous variable in aggregated row:
        * - solution value is strictly between lower and upper bound
        * - it exists a not yet aggregated row with nonzero coefficient in this column
@@ -956,18 +982,22 @@ SCIP_RETCODE aggregation(
                SCIP_Real activity;
                SCIP_Real lhs;
                SCIP_Real rhs;
+               SCIP_Real rowlhsscore;
+               SCIP_Real rowrhsscore;
                int lppos;
-               
+
                lppos = SCIProwGetLPPos(nonzrows[r]);
                assert(0 <= lppos && lppos < nrows);
-               
+
                SCIPdebugMessage("        -> r=%d row <%s>: weight=%g, pos=%d, alpha_j=%g, a^r_j=%g, factor=%g, %g <= %g <= %g\n",
                   r, SCIProwGetName(nonzrows[r]), rowweights[lppos], lppos, aggrcoefs[c], nonzcoefs[r], 
                   - aggrcoefs[c] / nonzcoefs[r], SCIProwGetLhs(nonzrows[r]), 
                   SCIPgetRowSolActivity(scip, nonzrows[r], sol), SCIProwGetRhs(nonzrows[r]));
 
                /* update maxrowscore */
-               rowscore = MAX(rowlhsscores[lppos], rowrhsscores[lppos]);
+               rowlhsscore = rowlhsscores[lppos];
+               rowrhsscore = rowrhsscores[lppos];
+               rowscore = MAX(rowlhsscore, rowrhsscore);
                maxrowscore = MAX(maxrowscore, rowscore);
 
                /* if even the better rowscore does not improve the bestscore, ignore the row */
@@ -977,7 +1007,7 @@ SCIP_RETCODE aggregation(
                /* take only unmodifiable LP rows, that are not yet aggregated */
                if( rowweights[lppos] != 0.0 || SCIProwIsModifiable(nonzrows[r]) )
                   continue;
-               
+
                /* don't aggregate rows that would lead to a too extreme aggregation factor */
                factor = - aggrcoefs[c] / nonzcoefs[r]; 
                absfactor = REALABS(factor);
@@ -985,13 +1015,13 @@ SCIP_RETCODE aggregation(
                   || absfactor > sepadata->maxrowfac * minweight
                   || maxweight > sepadata->maxrowfac * absfactor )
                   continue;
-               
+
                /* for selected real variable y_k, select constraint r with best score SCORE_r with r in P\Q, 
                 * where P\Q is the set of constraints not yet involved in the aggregation set
                 */
                assert(!SCIPisInfinity(scip, -SCIProwGetLhs(nonzrows[r])) || rowlhsscores[lppos] == 0.0);
                assert(!SCIPisInfinity(scip, SCIProwGetRhs(nonzrows[r])) || rowrhsscores[lppos] == 0.0);
-               score = (factor < 0.0 ? rowlhsscores[lppos] : rowrhsscores[lppos]);
+               score = (factor < 0.0 ? rowlhsscore : rowrhsscore);
                if( score <= bestscore )
                   continue;
 
@@ -1002,7 +1032,7 @@ SCIP_RETCODE aggregation(
                if( (factor < 0.0 && SCIPisGT(scip, factor * (lhs - activity), maxslack))
                   || (factor > 0.0 && SCIPisGT(scip, factor * (rhs - activity), maxslack)) )
                   continue;
-               
+
                /* the row passed all tests: it is the best candidate up to now */
                bestbounddist = bounddist;
                bestscore = score; 
@@ -1032,15 +1062,15 @@ SCIP_RETCODE aggregation(
          SCIP_COL* col;
          SCIP_VAR* var;
          SCIP_Real bounddist;
-         
+
          c = aggrcontnonzposs[nzi];
          assert(0 <= c && c < ncols);
          assert(!SCIPisZero(scip, aggrcoefs[c]));
-         
+
          col = cols[c];
          var = SCIPcolGetVar(col);
          assert(varIsContinuous(var));
-         
+
          bounddist = aggrcontnonzbounddists[nzi];
 
          SCIPdebugMessage("     -> ignoring col <%s>[%g,%g]: sol=%g, dist=%g\n", 
@@ -1068,6 +1098,11 @@ SCIP_RETCODE aggregation(
 
       /* change row's aggregation weight */
       rowweights[bestrowpos] = aggrfac;
+
+      /* build weights sparse representation */
+      SCIPsortedvecInsertInt(weightinds, bestrowpos, &nweightinds, &indpos);
+      rowlensum += SCIProwGetNNonz(rows[bestrowpos]);
+
       absaggrfac = REALABS(aggrfac);
       maxweight = MAX(maxweight, absaggrfac);
       minweight = MIN(minweight, absaggrfac);
@@ -1175,12 +1210,13 @@ SCIP_RETCODE aggregation(
 #endif
 
    /* free datastructures */
+   SCIPfreeBufferArray(scip, &weightinds);
    SCIPfreeBufferArray(scip, &rowweights);
    SCIPfreeBufferArray(scip, &aggrcontnonzbounddists);
    SCIPfreeBufferArray(scip, &aggrcontnonzposs);
    SCIPfreeBufferArray(scip, &aggrcoefs);
 
-   return SCIP_OKAY; 
+   return SCIP_OKAY;
 }
 
 /** searches and adds c-MIR cuts that separate the given primal solution */
@@ -1210,6 +1246,8 @@ SCIP_RETCODE separateCuts(
    int nintvars;
    int ncontvars;
    int nrows;
+   int nnonzrows;
+   int zerorows;
    int ntries;
    int nfails;
    int depth;
@@ -1248,7 +1286,7 @@ SCIP_RETCODE separateCuts(
    /* check whether SCIP was stopped in the meantime */
    if( SCIPisStopped(scip) )
       return SCIP_OKAY;
-   
+
    /* get active problem variables */
    vars = SCIPgetVars(scip);
    nvars = SCIPgetNVars(scip);
@@ -1334,6 +1372,12 @@ SCIP_RETCODE separateCuts(
    /* calculate aggregation scores for both sides of all rows, and sort rows by nonincreasing maximal score */
    objnorm = SCIPgetObjNorm(scip);
    objnorm = MAX(objnorm, 1.0);
+
+   /* count the number of non-zero rows and zero rows.
+    * these values are used for the sorting of the rowscores.
+    * only the non-zero rows need to be sorted. */
+   nnonzrows = 0;
+   zerorows = 0;
    for( r = 0; r < nrows; r++ )
    {
       int nnonz;
@@ -1347,6 +1391,12 @@ SCIP_RETCODE separateCuts(
          /* ignore empty rows */
          rowlhsscores[r] = 0.0;
          rowrhsscores[r] = 0.0;
+
+         /* adding the row number to the back of the roworder
+          * for the zero rows  */
+         zerorows++;
+         rowscores[r] = 0.0;
+         roworder[nrows - zerorows] = r;
       }
       else
       {
@@ -1395,16 +1445,31 @@ SCIP_RETCODE separateCuts(
          }
          else
             rowrhsscores[r] = 0.0;
+
+         rowscores[r] = MAX(rowlhsscores[r], rowrhsscores[r]);
+         if( rowscores[r] == 0.0 )
+         {
+            /* adding the row number to the back of the roworder
+             * for the zero rows  */
+            zerorows++;
+            roworder[nrows - zerorows] = r;
+         }
+         else
+         {
+            /* adding and sorting the row number to the next index
+             * in roworder <= nnonzrows  */
+            for( i = nnonzrows; i > 0 && rowscores[r] > rowscores[roworder[i - 1]]; --i )
+               roworder[i] = roworder[i - 1];
+            roworder[i] = r;
+
+            nnonzrows++;
+         }
       }
-      rowscores[r] = MAX(rowlhsscores[r], rowrhsscores[r]);
-      for( i = r; i > 0 && rowscores[r] > rowscores[roworder[i-1]]; --i )
-         roworder[i] = roworder[i-1];
-      assert(0 <= i && i <= r);
-      roworder[i] = r;
 
       SCIPdebugMessage(" -> row %d <%s>: lhsscore=%g rhsscore=%g maxscore=%g\n", r, SCIProwGetName(rows[r]),
                        rowlhsscores[r], rowrhsscores[r], rowscores[r]);
    }
+   assert(nrows == nnonzrows + zerorows);
 
    /* start aggregation heuristic for each row in the LP */
    ncuts = 0;
@@ -1475,7 +1540,7 @@ SCIP_DECL_SEPACOPY(sepaCopyCmir)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaCmir(scip) );
- 
+
    return SCIP_OKAY;
 }
 

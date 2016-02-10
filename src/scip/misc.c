@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,6 +40,194 @@
 #ifndef NDEBUG
 #include "scip/struct_misc.h"
 #endif
+
+#define SQRTOFTWO                  1.4142136 /**< the square root of 2 with sufficient precision */
+
+/**< contains all critical values for a one-sided two sample t-test up to 15 degrees of freedom
+ *   a critical value represents a threshold for rejecting the null-hypothesis in hypothesis testing at
+ *   a certain confidence level;
+ *
+ *   access through method SCIPstudentTGetCriticalValue()
+ *
+ *  source: German Wikipedia
+ *
+ *  for confidence levels
+ *  c =
+ *  0.75    0.875     0.90      0.95      0.975 (one-sided)
+ *  0.50    0.750     0.80      0.90      0.950 (two-sided)
+ *
+ */
+static const SCIP_Real studentt_quartiles[] = {      /* df:*/
+   1.000,    2.414,    3.078,    6.314,    12.706,   /*  1 */
+   0.816,    1.604,    1.886,    2.920,    4.303,    /*  2 */
+   0.765,    1.423,    1.638,    2.353,    3.182,    /*  3 */
+   0.741,    1.344,    1.533,    2.132,    2.776,    /*  4 */
+   0.727,    1.301,    1.476,    2.015,    2.571,    /*  5 */
+   0.718,    1.273,    1.440,    1.943,    2.447,    /*  6 */
+   0.711,    1.254,    1.415,    1.895,    2.365,    /*  7 */
+   0.706,    1.240,    1.397,    1.860,    2.306,    /*  8 */
+   0.703,    1.230,    1.383,    1.833,    2.262,    /*  9 */
+   0.700,    1.221,    1.372,    1.812,    2.228,    /* 10 */
+   0.697,    1.214,    1.363,    1.796,    2.201,    /* 11 */
+   0.695,    1.209,    1.356,    1.782,    2.179,    /* 12 */
+   0.694,    1.204,    1.350,    1.771,    2.160,    /* 13 */
+   0.692,    1.200,    1.345,    1.761,    2.145,    /* 14 */
+   0.691,    1.197,    1.341,    1.753,    2.131     /* 15 */
+};
+
+/**< critical values for higher degrees of freedom of Student-T distribution for the same error probabilities; infact,
+ *   these are critical values of the standard normal distribution with mean 0 and variance 1
+ */
+static const SCIP_Real studentt_quartilesabove[] = {
+   0.674,    1.150,    1.282,    1.645,    1.960
+};
+
+/** the maximum degrees of freedom represented before switching to normal approximation */
+static const int studentt_maxdf = sizeof(studentt_quartiles)/(5 * sizeof(SCIP_Real));
+
+/** get critical value of a Student-T distribution for a given number of degrees of freedom at a confidence level */
+SCIP_Real SCIPstudentTGetCriticalValue(
+   SCIP_CONFIDENCELEVEL  clevel,             /**< (one-sided) confidence level */
+   int                   df                  /**< degrees of freedom */
+   )
+{
+   if( df > studentt_maxdf )
+      return studentt_quartilesabove[(int)clevel];
+   else
+      return studentt_quartiles[(int)clevel + 5 * (df - 1)];
+}
+
+/** compute a t-value for the hypothesis that x and y are from the same population; Assuming that
+ *  x and y represent normally distributed random samples with equal variance, the returned value
+ *  comes from a Student-T distribution with countx + county - 2 degrees of freedom; this
+ *  value can be compared with a critical value (see also SCIPstudentTGetCriticalValue()) at
+ *  a predefined confidence level for checking if x and y significantly differ in location
+ */
+SCIP_Real SCIPcomputeTwoSampleTTestValue(
+   SCIP_Real             meanx,              /**< the mean of the first distribution */
+   SCIP_Real             meany,              /**< the mean of the second distribution */
+   SCIP_Real             variancex,          /**< the variance of the x-distribution */
+   SCIP_Real             variancey,          /**< the variance of the y-distribution */
+   SCIP_Real             countx,             /**< number of samples of x */
+   SCIP_Real             county              /**< number of samples of y */
+   )
+{
+   SCIP_Real pooledvariance;
+   SCIP_Real tresult;
+
+   /* too few samples */
+   if( countx < 1.9 || county < 1.9 )
+      return SCIP_INVALID;
+
+   /* pooled variance is the weighted average of the two variances */
+   pooledvariance = (countx - 1) * variancex + (county - 1) * variancey;
+   pooledvariance /= (countx + county - 2);
+
+   /* a variance close to zero means the distributions are basically constant */
+   pooledvariance = MAX(pooledvariance, 1e-9);
+
+   /* tresult can be understood as realization of a Student-T distributed variable with
+    * countx + county - 2 degrees of freedom
+    */
+   tresult = (meanx - meany) / pooledvariance;
+   tresult *= SQRT(countx * county / (countx + county));
+
+   return tresult;
+}
+
+/** returns the value of the Gauss error function evaluated at a given point */
+SCIP_Real SCIPerf(
+   SCIP_Real             x                   /**< value to evaluate */
+   )
+{
+#if defined(_WIN32) || defined(_WIN64)
+   SCIP_Real a1, a2, a3, a4, a5, p, t, y;
+   int sign;
+
+   a1 =  0.254829592;
+   a2 = -0.284496736;
+   a3 =  1.421413741;
+   a4 = -1.453152027;
+   a5 =  1.061405429;
+   p  =  0.3275911;
+
+   sign = (x >= 0) ? 1 : -1;
+   x = REALABS(x);
+
+   t = 1.0/(1.0 + p*x);
+   y = 1.0 - (((((a5*t + a4)*t) + a3)*t + a2)*t + a1)*t*exp(-x*x);
+   return sign * y;
+#else
+   return erf(x);
+#endif
+}
+
+/** get critical value of a standard normal distribution  at a given confidence level */
+SCIP_Real SCIPnormalGetCriticalValue(
+   SCIP_CONFIDENCELEVEL  clevel              /**< (one-sided) confidence level */
+   )
+{
+   return studentt_quartilesabove[(int)clevel];
+}
+
+/** calculates the cumulative distribution P(-infinity <= x <= value) that a normally distributed
+ *  random variable x takes a value between -infinity and parameter \p value.
+ *
+ *  The distribution is given by the respective mean and deviation. This implementation
+ *  uses the error function SCIPerf().
+ */
+SCIP_Real SCIPnormalCDF(
+   SCIP_Real             mean,               /**< the mean value of the distribution */
+   SCIP_Real             variance,           /**< the square of the deviation of the distribution */
+   SCIP_Real             value               /**< the upper limit of the calculated distribution integral */
+   )
+{
+   SCIP_Real normvalue;
+   SCIP_Real std;
+
+   /* we need to calculate the standard deviation from the variance */
+   assert(variance >= -1e-9);
+   if( variance < 1e-9 )
+      std = 0.0;
+   else
+      std = sqrt(variance);
+
+   /* special treatment for zero variance */
+   if( std < 1e-9 )
+   {
+      if( value < mean + 1e-9 )
+         return 1.0;
+      else
+         return 0.0;
+   }
+   assert( std != 0.0 ); /* for lint */
+
+   /* scale and translate to standard normal distribution. Factor sqrt(2) is needed for SCIPerf() function */
+   normvalue = (value - mean)/(std * SQRTOFTWO);
+
+   SCIPdebugMessage(" Normalized value %g = ( %g - %g ) / (%g * 1.4142136)\n", normvalue, value, mean, std);
+
+   /* calculate the cumulative distribution function for normvalue. For negative normvalues, we negate the normvalue and
+    * use the oddness of the SCIPerf()-function; special treatment for values close to zero.
+    */
+   if( normvalue < 1e-9 && normvalue > -1e-9 )
+      return .5;
+   else if( normvalue > 0 )
+   {
+      SCIP_Real erfresult;
+
+      erfresult = SCIPerf(normvalue);
+      return  erfresult / 2.0 + 0.5;
+   }
+   else
+   {
+      SCIP_Real erfresult;
+
+      erfresult = SCIPerf(-normvalue);
+
+      return 0.5 - erfresult / 2.0;
+   }
+}
 
 /** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */
 static
@@ -367,7 +555,7 @@ SCIP_RETCODE SCIPsparseSolCreate(
    return SCIP_OKAY;
 }
 
-/** frees priority queue, but not the data elements themselves */
+/** frees sparse solution */
 void SCIPsparseSolFree(
    SCIP_SPARSESOL**      sparsesol           /**< pointer to a sparse solution */
    )
@@ -738,7 +926,7 @@ SCIP_RETCODE pqueueResize(
    )
 {
    assert(pqueue != NULL);
-   
+
    if( minsize <= pqueue->size )
       return SCIP_OKAY;
 
@@ -834,7 +1022,7 @@ void* SCIPpqueueRemove(
 
    assert(pqueue != NULL);
    assert(pqueue->len >= 0);
-   
+
    if( pqueue->len == 0 )
       return NULL;
 
@@ -1189,7 +1377,7 @@ SCIP_RETCODE hashtableResize(
    nnewlists = (int) MIN((unsigned int)(hashtable->nlists * SCIP_HASHTABLE_GROW_FACTOR), SCIP_HASHTABLE_MAXSIZE);
    nnewlists = MAX(nnewlists, hashtable->nlists);
 
-   SCIPdebugMessage("load = %g, nelements = %"SCIP_LONGINT_FORMAT", nlists = %d, nnewlist = %d\n", SCIPhashtableGetLoad(hashtable), hashtable->nelements, hashtable->nlists, nnewlists);
+   SCIPdebugMessage("load = %g, nelements = %" SCIP_LONGINT_FORMAT ", nlists = %d, nnewlist = %d\n", SCIPhashtableGetLoad(hashtable), hashtable->nelements, hashtable->nlists, nnewlists);
 
    if( nnewlists > hashtable->nlists )
    {
@@ -1268,7 +1456,7 @@ SCIP_RETCODE hashtableResize(
 
          for( l = 0; l < hashtable->nlists; ++l )
          {
-            hashtablelist = hashtable->lists[i];
+            hashtablelist = hashtable->lists[l];
             while( hashtablelist != NULL )
             {
                sumslotsize++;
@@ -1633,7 +1821,7 @@ void SCIPhashtablePrintStatistics(
    }
    assert(sumslotsize == hashtable->nelements);
 
-   SCIPmessagePrintInfo(messagehdlr, "%"SCIP_LONGINT_FORMAT" hash entries, used %d/%d slots (%.1f%%)",
+   SCIPmessagePrintInfo(messagehdlr, "%" SCIP_LONGINT_FORMAT " hash entries, used %d/%d slots (%.1f%%)",
       hashtable->nelements, usedslots, hashtable->nlists, 100.0*(SCIP_Real)usedslots/(SCIP_Real)(hashtable->nlists));
    if( usedslots > 0 )
       SCIPmessagePrintInfo(messagehdlr, ", avg. %.1f entries/used slot, max. %d entries in slot",
@@ -1737,7 +1925,7 @@ void hashmaplistFree(
    SCIP_HASHMAPLIST* nextlist;
 
    assert(hashmaplist != NULL);
-   
+
    list = *hashmaplist;
    while( list != NULL )
    {
@@ -1915,7 +2103,7 @@ SCIP_RETCODE SCIPhashmapInsert(
 
    /* append origin->image pair to the list at the hash position */
    SCIP_CALL( hashmaplistAppend(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1958,7 +2146,7 @@ SCIP_RETCODE SCIPhashmapSetImage(
 
    /* set image for origin in hash list */
    SCIP_CALL( hashmaplistSetImage(&hashmap->lists[hashval], hashmap->blkmem, origin, image) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -1997,7 +2185,7 @@ SCIP_RETCODE SCIPhashmapRemove(
 
    /* remove element from the list at the hash position */
    SCIP_CALL( hashmaplistRemove(&hashmap->lists[hashval], hashmap->blkmem, origin) );
-   
+
    return SCIP_OKAY;
 }
 
@@ -2047,27 +2235,27 @@ void SCIPhashmapPrintStatistics(
 /** indicates whether a hash map has no entries */
 SCIP_Bool SCIPhashmapIsEmpty(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-)
+   )
 {
    int i;
    assert(hashmap != NULL);
-   
+
    for( i = 0; i < hashmap->nlists; ++i )
       if( hashmap->lists[i] )
          return FALSE;
-   
+
    return TRUE;
 }
 
 /** gives the number of entries in a hash map */ 
 int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-)
+   )
 {
    int count = 0;
    int i;
    assert(hashmap != NULL);
-   
+
    for( i = 0; i < hashmap->nlists; ++i )
       count += SCIPhashmapListGetNEntries(hashmap->lists[i]);
 
@@ -2077,10 +2265,10 @@ int SCIPhashmapGetNEntries(
 /** gives the number of lists (buckets) in a hash map */ 
 int SCIPhashmapGetNLists(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-)
+   )
 {
    assert(hashmap != NULL);
-   
+
    return hashmap->nlists;
 }
 
@@ -2088,62 +2276,62 @@ int SCIPhashmapGetNLists(
 SCIP_HASHMAPLIST* SCIPhashmapGetList(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    int                   listindex           /**< index of hash map list */
-)
+   )
 {
    assert(hashmap != NULL);
    assert(listindex >= 0);
    assert(listindex < hashmap->nlists);
-   
+
    return hashmap->lists[listindex];
 }
 
 /** gives the number of entries in a list of a hash map */ 
 int SCIPhashmapListGetNEntries(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list, can be NULL */
-)
+   )
 {
    int count = 0;
-   
+
    for( ; hashmaplist; hashmaplist = hashmaplist->next )
       ++count;
-   
+
    return count;
 }
 
 /** retrieves origin of given entry in a hash map */ 
 void* SCIPhashmapListGetOrigin(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-)
+   )
 {
    assert(hashmaplist != NULL);
-   
+
    return hashmaplist->origin;
 }
 
 /** retrieves image of given entry in a hash map */ 
 void* SCIPhashmapListGetImage(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-)
+   )
 {
    assert(hashmaplist != NULL);
-   
+
    return hashmaplist->image;
 }
 
 /** retrieves next entry from given entry in a hash map list, or NULL if at end of list. */ 
 SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-)
+   )
 {
    assert(hashmaplist != NULL);
-   
+
    return hashmaplist->next;
 }
 
 /** removes all entries in a hash map. */ 
 SCIP_RETCODE SCIPhashmapRemoveAll(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-)
+   )
 {
    int listidx;
 
@@ -2277,7 +2465,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
 
          BMScopyMemoryArray(&newvals[realarray->minusedidx - newfirstidx],
             &(realarray->vals[realarray->minusedidx - realarray->firstidx]),
-            realarray->maxusedidx - realarray->minusedidx + 1); /*lint !e866*/
+            realarray->maxusedidx - realarray->minusedidx + 1); /*lint !e866 !e776*/
          for( i = realarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = 0.0;
       }
@@ -2315,7 +2503,7 @@ SCIP_RETCODE SCIPrealarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + realarray->valssize);
-      
+
       if( realarray->minusedidx <= realarray->maxusedidx )
       {
          int shift;
@@ -2612,7 +2800,7 @@ SCIP_RETCODE SCIPintarrayExtend(
    assert(intarray->maxusedidx == INT_MIN || intarray->maxusedidx < intarray->firstidx + intarray->valssize);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
-   
+
    minidx = MIN(minidx, intarray->minusedidx);
    maxidx = MAX(maxidx, intarray->maxusedidx);
    assert(0 <= minidx);
@@ -2648,7 +2836,7 @@ SCIP_RETCODE SCIPintarrayExtend(
 
          BMScopyMemoryArray(&newvals[intarray->minusedidx - newfirstidx],
             &intarray->vals[intarray->minusedidx - intarray->firstidx],
-            intarray->maxusedidx - intarray->minusedidx + 1); /*lint !e866*/
+            intarray->maxusedidx - intarray->minusedidx + 1); /*lint !e866 !e776*/
          for( i = intarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = 0;
       }
@@ -2686,7 +2874,7 @@ SCIP_RETCODE SCIPintarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + intarray->valssize);
-      
+
       if( intarray->minusedidx <= intarray->maxusedidx )
       {
          int shift;
@@ -2717,7 +2905,7 @@ SCIP_RETCODE SCIPintarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + intarray->valssize);
-      
+
       if( intarray->minusedidx <= intarray->maxusedidx )
       {
          int shift;
@@ -2785,7 +2973,7 @@ int SCIPintarrayGetVal(
 {
    assert(intarray != NULL);
    assert(idx >= 0);
-   
+
    if( idx < intarray->minusedidx || idx > intarray->maxusedidx )
       return 0;
    else
@@ -2819,7 +3007,7 @@ SCIP_RETCODE SCIPintarraySetVal(
       SCIP_CALL( SCIPintarrayExtend(intarray, arraygrowinit, arraygrowfac, idx, idx) );
       assert(idx >= intarray->firstidx);
       assert(idx < intarray->firstidx + intarray->valssize);
-      
+
       /* set the array value of the index */
       intarray->vals[idx - intarray->firstidx] = val;
 
@@ -2831,7 +3019,7 @@ SCIP_RETCODE SCIPintarraySetVal(
    {
       /* set the array value of the index to zero */
       intarray->vals[idx - intarray->firstidx] = 0;
-      
+
       /* check, if we can tighten the min/maxusedidx */
       if( idx == intarray->minusedidx )
       {
@@ -2978,7 +3166,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
    assert(boolarray->maxusedidx == INT_MIN || boolarray->maxusedidx < boolarray->firstidx + boolarray->valssize);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
-   
+
    minidx = MIN(minidx, boolarray->minusedidx);
    maxidx = MAX(maxidx, boolarray->maxusedidx);
    assert(0 <= minidx);
@@ -3014,7 +3202,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
 
          BMScopyMemoryArray(&newvals[boolarray->minusedidx - newfirstidx],
             &boolarray->vals[boolarray->minusedidx - boolarray->firstidx],
-            boolarray->maxusedidx - boolarray->minusedidx + 1); /*lint !e866*/
+            boolarray->maxusedidx - boolarray->minusedidx + 1); /*lint !e866 !e776*/
          for( i = boolarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = FALSE;
       }
@@ -3052,7 +3240,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + boolarray->valssize);
-      
+
       if( boolarray->minusedidx <= boolarray->maxusedidx )
       {
          int shift;
@@ -3083,7 +3271,7 @@ SCIP_RETCODE SCIPboolarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + boolarray->valssize);
-      
+
       if( boolarray->minusedidx <= boolarray->maxusedidx )
       {
          int shift;
@@ -3153,7 +3341,7 @@ SCIP_Bool SCIPboolarrayGetVal(
 {
    assert(boolarray != NULL);
    assert(idx >= 0);
-   
+
    if( idx < boolarray->minusedidx || idx > boolarray->maxusedidx )
       return FALSE;
    else
@@ -3187,7 +3375,7 @@ SCIP_RETCODE SCIPboolarraySetVal(
       SCIP_CALL( SCIPboolarrayExtend(boolarray, arraygrowinit, arraygrowfac, idx, idx) );
       assert(idx >= boolarray->firstidx);
       assert(idx < boolarray->firstidx + boolarray->valssize);
-      
+
       /* set the array value of the index */
       boolarray->vals[idx - boolarray->firstidx] = val;
 
@@ -3199,7 +3387,7 @@ SCIP_RETCODE SCIPboolarraySetVal(
    {
       /* set the array value of the index to zero */
       boolarray->vals[idx - boolarray->firstidx] = FALSE;
-      
+
       /* check, if we can tighten the min/maxusedidx */
       if( idx == boolarray->minusedidx )
       {
@@ -3333,7 +3521,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
    assert(ptrarray->maxusedidx == INT_MIN || ptrarray->maxusedidx < ptrarray->firstidx + ptrarray->valssize);
    assert(0 <= minidx);
    assert(minidx <= maxidx);
-   
+
    minidx = MIN(minidx, ptrarray->minusedidx);
    maxidx = MAX(maxidx, ptrarray->maxusedidx);
    assert(0 <= minidx);
@@ -3369,7 +3557,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
 
          BMScopyMemoryArray(&newvals[ptrarray->minusedidx - newfirstidx],
             &(ptrarray->vals[ptrarray->minusedidx - ptrarray->firstidx]),
-            ptrarray->maxusedidx - ptrarray->minusedidx + 1); /*lint !e866*/
+            ptrarray->maxusedidx - ptrarray->minusedidx + 1); /*lint !e866 !e776*/
          for( i = ptrarray->maxusedidx - newfirstidx + 1; i < newvalssize; ++i )
             newvals[i] = NULL;
       }
@@ -3378,7 +3566,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
          for( i = 0; i < newvalssize; ++i )
             newvals[i] = NULL;
       }
-      
+
       /* free old memory storage, and set the new array parameters */
       BMSfreeBlockMemoryArrayNull(ptrarray->blkmem, &ptrarray->vals, ptrarray->valssize);
       ptrarray->vals = newvals;
@@ -3407,7 +3595,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + ptrarray->valssize);
-      
+
       if( ptrarray->minusedidx <= ptrarray->maxusedidx )
       {
          int shift;
@@ -3438,7 +3626,7 @@ SCIP_RETCODE SCIPptrarrayExtend(
       newfirstidx = MAX(newfirstidx, 0);
       assert(newfirstidx <= minidx);
       assert(maxidx < newfirstidx + ptrarray->valssize);
-      
+
       if( ptrarray->minusedidx <= ptrarray->maxusedidx )
       {
          int shift;
@@ -3506,7 +3694,7 @@ void* SCIPptrarrayGetVal(
 {
    assert(ptrarray != NULL);
    assert(idx >= 0);
-   
+
    if( idx < ptrarray->minusedidx || idx > ptrarray->maxusedidx )
       return NULL;
    else
@@ -3540,7 +3728,7 @@ SCIP_RETCODE SCIPptrarraySetVal(
       SCIP_CALL( SCIPptrarrayExtend(ptrarray, arraygrowinit, arraygrowfac, idx, idx) );
       assert(idx >= ptrarray->firstidx);
       assert(idx < ptrarray->firstidx + ptrarray->valssize);
-      
+
       /* set the array value of the index */
       ptrarray->vals[idx - ptrarray->firstidx] = val;
 
@@ -3552,7 +3740,7 @@ SCIP_RETCODE SCIPptrarraySetVal(
    {
       /* set the array value of the index to zero */
       ptrarray->vals[idx - ptrarray->firstidx] = NULL;
-      
+
       /* check, if we can tighten the min/maxusedidx */
       if( idx == ptrarray->minusedidx )
       {
@@ -3716,6 +3904,15 @@ void SCIPsort(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrRealBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Bool
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     PtrPtrInt
 #define SORTTPL_KEYTYPE     void*
@@ -3760,6 +3957,16 @@ void SCIPsort(
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortPtrPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     PtrPtrRealBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
 #define SORTTPL_PTRCOMP
 #include "scip/sorttpl.c" /*lint !e451*/
 
@@ -3810,6 +4017,14 @@ void SCIPsort(
 #define SORTTPL_NAMEEXT     RealInt
 #define SORTTPL_KEYTYPE     SCIP_Real
 #define SORTTPL_FIELD1TYPE  int
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortRealIntInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealIntInt
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
@@ -3901,6 +4116,17 @@ void SCIPsort(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortRealRealRealBoolBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     RealRealRealBoolBoolPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
+#define SORTTPL_FIELD5TYPE  void*
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     Int
 #define SORTTPL_KEYTYPE     int
@@ -3976,6 +4202,13 @@ void SCIPsort(
 #define SORTTPL_FIELD3TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
 
+/* SCIPsortIntIntIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     IntIntIntReal
+#define SORTTPL_KEYTYPE     int
+#define SORTTPL_FIELD1TYPE  int
+#define SORTTPL_FIELD2TYPE  int
+#define SORTTPL_FIELD3TYPE  SCIP_Real
+#include "scip/sorttpl.c" /*lint !e451*/
 
 /* SCIPsortIntPtrIntReal(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     IntPtrIntReal
@@ -4107,7 +4340,7 @@ void SCIPsortDown(
    /* create identity permutation */
    for( pos = 0; pos < len; ++pos )
       perm[pos] = pos;
-   
+
    SCIPsortDownInd(perm, indcomp, dataptr, len);
 }
 
@@ -4182,6 +4415,16 @@ void SCIPsortDown(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
+/* SCIPsortDownPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrRealBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Bool
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
 /* SCIPsortDownPtrPtrInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownPtrPtrInt
 #define SORTTPL_KEYTYPE     void*
@@ -4224,12 +4467,23 @@ void SCIPsortDown(
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
-/* SCIPsortPtrPtrRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+/* SCIPsortDownPtrPtrRealInt(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
 #define SORTTPL_NAMEEXT     DownPtrPtrRealInt
 #define SORTTPL_KEYTYPE     void*
 #define SORTTPL_FIELD1TYPE  void*
 #define SORTTPL_FIELD2TYPE  SCIP_Real
 #define SORTTPL_FIELD3TYPE  int
+#define SORTTPL_PTRCOMP
+#define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownPtrPtrRealBool(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownPtrPtrRealBool
+#define SORTTPL_KEYTYPE     void*
+#define SORTTPL_FIELD1TYPE  void*
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
 #define SORTTPL_PTRCOMP
 #define SORTTPL_BACKWARDS
 #include "scip/sorttpl.c" /*lint !e451*/
@@ -4394,6 +4648,17 @@ void SCIPsortDown(
 #define SORTTPL_FIELD3TYPE  SCIP_Bool
 #define SORTTPL_FIELD4TYPE  void*
 #define SORTTPL_BACKWARDS
+#include "scip/sorttpl.c" /*lint !e451*/
+
+
+/* SCIPsortDownRealRealRealBoolBoolPtr(), SCIPsortedvecInsert...(), SCIPsortedvecDelPos...(), SCIPsortedvecFind...() via sort template */
+#define SORTTPL_NAMEEXT     DownRealRealRealBoolBoolPtr
+#define SORTTPL_KEYTYPE     SCIP_Real
+#define SORTTPL_FIELD1TYPE  SCIP_Real
+#define SORTTPL_FIELD2TYPE  SCIP_Real
+#define SORTTPL_FIELD3TYPE  SCIP_Bool
+#define SORTTPL_FIELD4TYPE  SCIP_Bool
+#define SORTTPL_FIELD5TYPE  void*
 #include "scip/sorttpl.c" /*lint !e451*/
 
 
@@ -5331,12 +5596,13 @@ SCIP_RETCODE SCIPdigraphCreate(
    assert(digraph != NULL);
    assert(nnodes > 0);
 
-   /* allocate memory for the graph and the arrays storing arcs and datas */
+   /* allocate memory for the graph and the arrays storing arcs and data */
    SCIP_ALLOC( BMSallocMemory(digraph) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->successors, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->arcdatas, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->arcdata, nnodes) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->successorssize, nnodes) );
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nsuccessors, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*digraph)->nodedata, nnodes) );
 
    /* store number of nodes */
    (*digraph)->nnodes = nnodes;
@@ -5362,16 +5628,17 @@ SCIP_RETCODE SCIPdigraphResize(
    if( nnodes <= digraph->nnodes )
       return SCIP_OKAY;
 
-   /* reallocate memory for increasing the arrays storing arcs and datas */
+   /* reallocate memory for increasing the arrays storing arcs and data */
    SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors, nnodes) );
-   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdatas, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdata, nnodes) );
    SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successorssize, nnodes) );
    SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nsuccessors, nnodes) );
+   SCIP_ALLOC( BMSreallocMemoryArray(&digraph->nodedata, nnodes) );
 
    /* initialize the new node data structures */
    for( n = digraph->nnodes; n < nnodes; ++n )
    {
-      digraph->nodedatas[n] = NULL;
+      digraph->nodedata[n] = NULL;
       digraph->successorssize[n] = 0;
       digraph->nsuccessors[n] = 0;
    }
@@ -5382,7 +5649,10 @@ SCIP_RETCODE SCIPdigraphResize(
    return SCIP_OKAY;
 }
 
-/** copies directed graph structure */
+/** copies directed graph structure
+ *
+ *  @note The data in nodedata is copied verbatim. This possibly has to be adapted by the user.
+ */
 SCIP_RETCODE SCIPdigraphCopy(
    SCIP_DIGRAPH**        targetdigraph,      /**< pointer to store the copied directed graph */
    SCIP_DIGRAPH*         sourcedigraph       /**< source directed graph */
@@ -5399,22 +5669,25 @@ SCIP_RETCODE SCIPdigraphCopy(
    (*targetdigraph)->nnodes = nnodes;
    (*targetdigraph)->ncomponents = ncomponents;
 
-   /* copy arcs and datas */
+   /* copy arcs and data */
    SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->successors, nnodes) );
-   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->arcdatas, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->arcdata, nnodes) );
+   SCIP_ALLOC( BMSallocClearMemoryArray(&(*targetdigraph)->nodedata, nnodes) );
 
-   /* copy lists of successors and arc datas */
+   /* copy lists of successors and arc data */
    for( i = 0; i < nnodes; ++i )
    {
       if( sourcedigraph->nsuccessors[i] > 0 )
       {
          assert(sourcedigraph->successors[i] != NULL);
-         assert(sourcedigraph->arcdatas[i] != NULL);
+         assert(sourcedigraph->arcdata[i] != NULL);
          SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->successors[i]),
                sourcedigraph->successors[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdatas[i]),
-               sourcedigraph->arcdatas[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSduplicateMemoryArray(&((*targetdigraph)->arcdata[i]),
+               sourcedigraph->arcdata[i], sourcedigraph->nsuccessors[i]) ); /*lint !e866*/
       }
+      /* copy node data - careful if these are pointers to some information -> need to be copied by hand */
+      (*targetdigraph)->nodedata[i] = sourcedigraph->nodedata[i];
    }
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->successorssize, sourcedigraph->nsuccessors, nnodes) );
    SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->nsuccessors, sourcedigraph->nsuccessors, nnodes) );
@@ -5425,7 +5698,7 @@ SCIP_RETCODE SCIPdigraphCopy(
       SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->components, sourcedigraph->components,
             sourcedigraph->componentstarts[ncomponents]) );
       SCIP_ALLOC( BMSduplicateMemoryArray(&(*targetdigraph)->componentstarts,
-            sourcedigraph->componentstarts,ncomponents + 1) );
+            sourcedigraph->componentstarts,ncomponents + 1) ); /*lint !e776*/
       (*targetdigraph)->componentstartsize = ncomponents + 1;
    }
    else
@@ -5452,7 +5725,7 @@ SCIP_RETCODE SCIPdigraphSetSizes(
    for( i = 0; i < digraph->nnodes; ++i )
    {
       SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[i], sizes[i]) ); /*lint !e866*/
-      SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdatas[i], sizes[i]) ); /*lint !e866*/
+      SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdata[i], sizes[i]) ); /*lint !e866*/
       digraph->successorssize[i] = sizes[i];
       digraph->nsuccessors[i] = 0;
    }
@@ -5470,11 +5743,11 @@ void SCIPdigraphFree(
    assert(digraph != NULL);
    assert(*digraph != NULL);
 
-   /* free arrays storing the successor nodes and arc datas */
+   /* free arrays storing the successor nodes and arc data */
    for( i = (*digraph)->nnodes - 1; i >= 0; --i )
    {
       BMSfreeMemoryArrayNull(&(*digraph)->successors[i]);
-      BMSfreeMemoryArrayNull(&(*digraph)->arcdatas[i]);
+      BMSfreeMemoryArrayNull(&(*digraph)->arcdata[i]);
    }
 
    /* free components structure */
@@ -5485,10 +5758,11 @@ void SCIPdigraphFree(
    assert((*digraph)->componentstarts == NULL);
 
    /* free directed graph data structure */
+   BMSfreeMemoryArray(&(*digraph)->nodedata);
    BMSfreeMemoryArray(&(*digraph)->successorssize);
    BMSfreeMemoryArray(&(*digraph)->nsuccessors);
    BMSfreeMemoryArray(&(*digraph)->successors);
-   BMSfreeMemoryArray(&(*digraph)->arcdatas);
+   BMSfreeMemoryArray(&(*digraph)->arcdata);
 
    BMSfreeMemory(digraph);
 }
@@ -5515,13 +5789,13 @@ SCIP_RETCODE ensureSuccessorsSize(
       {
          digraph->successorssize[idx] = STARTSUCCESSORSSIZE;
          SCIP_ALLOC( BMSallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdatas[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
       else
       {
          digraph->successorssize[idx] = 2 * digraph->successorssize[idx];
          SCIP_ALLOC( BMSreallocMemoryArray(&digraph->successors[idx], digraph->successorssize[idx]) ); /*lint !e866*/
-         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdatas[idx], digraph->successorssize[idx]) ); /*lint !e866*/
+         SCIP_ALLOC( BMSreallocMemoryArray(&digraph->arcdata[idx], digraph->successorssize[idx]) ); /*lint !e866*/
       }
    }
 
@@ -5549,7 +5823,7 @@ SCIP_RETCODE SCIPdigraphAddArc(
 
    /* add arc */
    digraph->successors[startnode][digraph->nsuccessors[startnode]] = endnode;
-   digraph->arcdatas[startnode][digraph->nsuccessors[startnode]] = data;
+   digraph->arcdata[startnode][digraph->nsuccessors[startnode]] = data;
    digraph->nsuccessors[startnode]++;
 
    return SCIP_OKAY;
@@ -5587,8 +5861,24 @@ SCIP_RETCODE SCIPdigraphAddArcSafe(
 
    /* add arc */
    digraph->successors[startnode][nsuccessors] = endnode;
-   digraph->arcdatas[startnode][nsuccessors] = data;
+   digraph->arcdata[startnode][nsuccessors] = data;
    ++(digraph->nsuccessors[startnode]);
+
+   return SCIP_OKAY;
+}
+
+/** sets the number of successors to a given value */
+SCIP_RETCODE SCIPdigraphSetNSuccessors(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   node,               /**< node for which the number of successors has to be changed */
+   int                   nsuccessors         /**< new number of successors */
+   )
+{
+   assert(digraph != NULL);
+   assert(node >= 0);
+   assert(node < digraph->nnodes);
+
+   digraph->nsuccessors[node] = nsuccessors;
 
    return SCIP_OKAY;
 }
@@ -5604,7 +5894,7 @@ int SCIPdigraphGetNNodes(
 }
 
 /** returns the node data, or NULL if no data exist */
-void* SCIPdigraphGetNodeDatas(
+void* SCIPdigraphGetNodeData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the node data is returned */
    )
@@ -5613,14 +5903,14 @@ void* SCIPdigraphGetNodeDatas(
    assert(node >= 0);
    assert(node < digraph->nnodes);
 
-   return digraph->nodedatas[node];
+   return digraph->nodedata[node];
 }
 
 /** sets the node data
  *
  *  @note The old user pointer is not freed. This has to be done by the user
  */
-void SCIPdigraphSetNodeDatas(
+void SCIPdigraphSetNodeData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    void*                 dataptr,            /**< user node data pointer, or NULL */
    int                   node                /**< node for which the node data is returned */
@@ -5630,7 +5920,7 @@ void SCIPdigraphSetNodeDatas(
    assert(node >= 0);
    assert(node < digraph->nnodes);
 
-   digraph->nodedatas[node] = dataptr;
+   digraph->nodedata[node] = dataptr;
 }
 
 /** returns the total number of arcs in the given digraph */
@@ -5682,10 +5972,10 @@ int* SCIPdigraphGetSuccessors(
    return digraph->successors[node];
 }
 
-/** returns the array of datas corresponding to the arcs originating at the given node, or NULL if no data exist; this
+/** returns the array of data corresponding to the arcs originating at the given node, or NULL if no data exist; this
  *  array must not be changed from outside
  */
-void** SCIPdigraphGetSuccessorsDatas(
+void** SCIPdigraphGetSuccessorsData(
    SCIP_DIGRAPH*         digraph,            /**< directed graph */
    int                   node                /**< node for which the data corresponding to the outgoing arcs is returned */
    )
@@ -5695,9 +5985,9 @@ void** SCIPdigraphGetSuccessorsDatas(
    assert(node < digraph->nnodes);
    assert(digraph->nsuccessors[node] >= 0);
    assert(digraph->nsuccessors[node] <= digraph->successorssize[node]);
-   assert(digraph->arcdatas != NULL);
+   assert(digraph->arcdata != NULL);
 
-   return digraph->arcdatas[node];
+   return digraph->arcdata[node];
 }
 
 /** performs depth-first-search in the given directed graph from the given start node */
@@ -5714,8 +6004,7 @@ void depthFirstSearch(
    int*                  ndfsnodes           /**< pointer to store number of nodes that can be reached starting at startnode */
    )
 {
-   int stacksize;
-   int currnode;
+   int stackidx;
 
    assert(digraph != NULL);
    assert(startnode >= 0);
@@ -5729,44 +6018,48 @@ void depthFirstSearch(
    /* put start node on the stack */
    dfsstack[0] = startnode;
    stackadjvisited[0] = 0;
-   stacksize = 1;
+   stackidx = 0;
 
-   while( stacksize > 0 )
+   while( stackidx >= 0 )
    {
+      int currnode;
+      int sadv;
+
       /* get next node from stack */
-      currnode = dfsstack[stacksize - 1];
+      currnode = dfsstack[stackidx];
+
+      sadv = stackadjvisited[stackidx];
+      assert( 0 <= sadv && sadv <= digraph->nsuccessors[currnode] );
 
       /* mark current node as visited */
-      assert(visited[currnode] == (stackadjvisited[stacksize - 1] > 0));
+      assert( visited[currnode] == (sadv > 0) );
       visited[currnode] = TRUE;
 
       /* iterate through the successor list until we reach unhandled node */
-      while( stackadjvisited[stacksize - 1] < digraph->nsuccessors[currnode]
-         && visited[digraph->successors[currnode][stackadjvisited[stacksize - 1]]] )
-      {
-         stackadjvisited[stacksize - 1]++;
-      }
+      while( sadv < digraph->nsuccessors[currnode] && visited[digraph->successors[currnode][sadv]] )
+         ++sadv;
 
       /* the current node was completely handled, remove it from stack */
-      if( stackadjvisited[stacksize - 1] == digraph->nsuccessors[currnode] )
+      if( sadv == digraph->nsuccessors[currnode] )
       {
-         stacksize--;
+         --stackidx;
 
          /* store node in the sorted nodes array */
-         dfsnodes[(*ndfsnodes)] = currnode;
-         (*ndfsnodes)++;
+         dfsnodes[(*ndfsnodes)++] = currnode;
       }
       /* handle next unhandled successor node */
       else
       {
-         assert(!visited[digraph->successors[currnode][stackadjvisited[stacksize - 1]]]);
+         assert( ! visited[digraph->successors[currnode][sadv]] );
+
+         /* store current stackadjvisted index */
+         stackadjvisited[stackidx] = sadv + 1;
 
          /* put the successor node onto the stack */
-         dfsstack[stacksize] = digraph->successors[currnode][stackadjvisited[stacksize - 1]];
-         stackadjvisited[stacksize] = 0;
-         stackadjvisited[stacksize - 1]++;
-         stacksize++;
-         assert(stacksize <= digraph->nnodes);
+         ++stackidx;
+         dfsstack[stackidx] = digraph->successors[currnode][sadv];
+         stackadjvisited[stackidx] = 0;
+         assert( stackidx < digraph->nnodes );
       }
    }
 }
@@ -5982,6 +6275,205 @@ void SCIPdigraphGetComponent(
       (*nodes) = &(digraph->components[digraph->componentstarts[compidx]]);
    if( nnodes != NULL )
       (*nnodes) = digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx];
+}
+
+/* Performs Tarjan's algorithm for a given directed graph to obtain the strongly connected components
+ * which are reachable from a given node.
+ */
+static
+void tarjan(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   v,                  /**< node to start the algorithm */
+   int*                  lowlink,            /**< array to store lowlink values */
+   int*                  dfsidx,             /**< array to store dfs indices */
+   int*                  stack,              /**< array to store a stack */
+   int*                  stacksize,          /**< pointer to store the size of the stack */
+   SCIP_Bool*            unprocessed,        /**< array to store which node is unprocessed yet */
+   SCIP_Bool*            nodeinstack,        /**< array to store which nodes are in the stack */
+   int*                  maxdfs,             /**< pointer to store index for DFS */
+   int*                  strongcomponents,   /**< array to store for each node the strongly connected
+                                              *   component to which it belongs (components are
+                                              *   numbered 0 to nstrongcomponents - 1); */
+   int*                  nstrongcomponents,  /**< pointer to store the number of computed components so far */
+   int*                  strongcompstartidx, /**< array to store the start index of the computed components */
+   int*                  nstorednodes        /**< pointer to store the number of already stored nodes */
+   )
+{
+   int i;
+
+   assert(digraph != NULL);
+   assert(v >= 0);
+   assert(v < digraph->nnodes);
+   assert(lowlink != NULL);
+   assert(dfsidx != NULL);
+   assert(stack != NULL);
+   assert(stacksize != NULL);
+   assert(*stacksize >= 0);
+   assert(*stacksize < digraph->nnodes);
+   assert(unprocessed != NULL);
+   assert(nodeinstack != NULL);
+   assert(maxdfs != NULL);
+   assert(strongcomponents != NULL);
+   assert(nstrongcomponents != NULL);
+   assert(strongcompstartidx != NULL);
+   assert(nstorednodes != NULL);
+   assert(*nstorednodes >= 0 && *nstorednodes < digraph->nnodes);
+
+   dfsidx[v] = *maxdfs;
+   lowlink[v] = *maxdfs;
+   *maxdfs += 1;
+
+   /* add v to the stack */
+   stack[*stacksize] = v;
+   *stacksize += 1;
+   nodeinstack[v] = TRUE;
+
+   /* mark v as processed */
+   unprocessed[v] = FALSE;
+
+   for( i = 0; i < digraph->nsuccessors[v]; ++i )
+   {
+      int w;
+
+      /* edge (v,w) */
+      w = digraph->successors[v][i];
+
+      if( unprocessed[w] )
+      {
+         tarjan(digraph, w, lowlink, dfsidx, stack, stacksize, unprocessed, nodeinstack, maxdfs, strongcomponents,
+               nstrongcomponents, strongcompstartidx, nstorednodes);
+
+         assert(lowlink[v] >= 0 && lowlink[v] < digraph->nnodes);
+         assert(lowlink[w] >= 0 && lowlink[w] < digraph->nnodes);
+
+         /* update lowlink */
+         lowlink[v] = MIN(lowlink[v], lowlink[w]);
+      }
+      else if( nodeinstack[w] )
+      {
+         assert(lowlink[v] >= 0 && lowlink[v] < digraph->nnodes);
+         assert(dfsidx[w] >= 0 && dfsidx[w] < digraph->nnodes);
+
+         /* update lowlink */
+         lowlink[v] = MIN(lowlink[v], dfsidx[w]);
+      }
+   }
+
+   /* found a root of a strong component */
+   if( lowlink[v] == dfsidx[v] )
+   {
+      int w;
+
+      strongcompstartidx[*nstrongcomponents] = *nstorednodes;
+      *nstrongcomponents += 1;
+
+      do
+      {
+         assert(*stacksize > 0);
+
+         /* stack.pop() */
+         w = stack[*stacksize - 1];
+         *stacksize -= 1;
+         nodeinstack[w] = FALSE;
+
+         /* store the node in the corresponding component */
+         strongcomponents[*nstorednodes] = w;
+         *nstorednodes += 1;
+      }
+      while( v != w );
+   }
+}
+
+/** Computes all strongly connected components of an undirected connected component with Tarjan's Algorithm.
+ *  The resulting strongly connected components are sorted topologically (starting from the end of the
+ *  strongcomponents array).
+ *
+ *  @note In general a topological sort of the strongly connected components is not unique.
+ */
+SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
+   SCIP_DIGRAPH*         digraph,            /**< directed graph */
+   int                   compidx,            /**< number of the undirected connected component */
+   int*                  strongcomponents,   /**< array to store the strongly connected components
+                                              *   (length >= size of the component) */
+   int*                  strongcompstartidx, /**< array to store the start indices of the strongly connected
+                                              *   components (length >= size of the component) */
+   int*                  nstrongcomponents   /**< pointer to store the number of strongly connected
+                                              *   components */
+   )
+{
+   int* lowlink;
+   int* dfsidx;
+   int* stack;
+   int stacksize;
+   SCIP_Bool* unprocessed;
+   SCIP_Bool* nodeinstack;
+   int maxdfs;
+   int nstorednodes;
+   int i;
+   SCIP_RETCODE retcode;
+
+   assert(digraph != NULL);
+   assert(compidx >= 0);
+   assert(compidx < digraph->ncomponents);
+   assert(strongcomponents != NULL);
+   assert(strongcompstartidx != NULL);
+   assert(nstrongcomponents != NULL);
+
+   retcode = SCIP_OKAY;
+
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&lowlink, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&dfsidx, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&stack, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&unprocessed, digraph->nnodes), TERMINATE );
+   SCIP_ALLOC_TERMINATE( retcode, BMSallocMemoryArray(&nodeinstack, digraph->nnodes), TERMINATE );
+
+   for( i = 0; i < digraph->nnodes; ++i )
+   {
+      lowlink[i] = -1;
+      dfsidx[i] = -1;
+      stack[i] = -1;
+      unprocessed[i] = TRUE;
+      nodeinstack[i] = FALSE;
+   }
+
+   nstorednodes = 0;
+   stacksize = 0;
+   maxdfs = 0;
+   *nstrongcomponents = 0;
+
+   /* iterate over all nodes in the undirected connected component */
+   for( i = digraph->componentstarts[compidx]; i < digraph->componentstarts[compidx + 1]; ++i )
+   {
+      int v;
+
+      v = digraph->components[i];
+      assert(v >= 0 && v < digraph->nnodes);
+
+      /* call Tarjan's algorithm for unprocessed nodes */
+      if( unprocessed[v] )
+      {
+         SCIPdebugMessage("apply Tarjan's algorithm for node %d\n", v);
+         tarjan(digraph, v, lowlink, dfsidx, stack, &stacksize, unprocessed, nodeinstack, &maxdfs,
+               strongcomponents, nstrongcomponents, strongcompstartidx, &nstorednodes);
+      }
+   }
+
+   /* we should have stored as many nodes as in the undirected connected component */
+   assert(nstorednodes == digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx]);
+
+   /* to simplify the iteration over all strongly connected components */
+   strongcompstartidx[*nstrongcomponents] = nstorednodes;
+
+   assert(retcode == SCIP_OKAY);
+
+ TERMINATE:
+   BMSfreeMemoryArrayNull(&lowlink);
+   BMSfreeMemoryArrayNull(&dfsidx);
+   BMSfreeMemoryArrayNull(&stack);
+   BMSfreeMemoryArrayNull(&unprocessed);
+   BMSfreeMemoryArrayNull(&nodeinstack);
+
+   return retcode;
 }
 
 /** frees the component information for the given directed graph */
@@ -6650,7 +7142,7 @@ SCIP_Longint SCIPcalcGreComDiv(
       {
          /* we can stop if one value reached one */
          if( val2 == 1 )
-            return (1 << t);  /*lint !e647 !e701*/
+            return (val2 << t);  /*lint !e647 !e703*/
 
          /* if ((val1 xor val2) and 2) = 2, then gcd(val1, val2) = gcd((val1 + val2)/4, val2),
           * and otherwise                        gcd(val1, val2) = gcd((val1 − val2)/4, val2)
@@ -6671,7 +7163,7 @@ SCIP_Longint SCIPcalcGreComDiv(
       {
          /* we can stop if one value reached one */
          if( val1 == 1 )
-            return (1 << t);  /*lint !e647 !e701*/
+            return (val1 << t);  /*lint !e647 !e703*/
 
          /* if ((val2 xor val1) and 2) = 2, then gcd(val2, val1) = gcd((val2 + val1)/4, val1),
           * and otherwise                        gcd(val2, val1) = gcd((val2 − val1)/4, val1)
@@ -6789,7 +7281,7 @@ SCIP_Bool SCIPrealToRational(
    h1 = 0.0;
    delta0 = val - g0/h0;
    delta1 = (delta0 < 0.0 ? val - (g0-1.0)/h0 : val - (g0+1.0)/h0);
-  
+
    while( (delta0 < mindelta || delta0 > maxdelta) && (delta1 < mindelta || delta1 > maxdelta) )
    {
       assert(EPSGT(b, a, epsilon));
@@ -6808,10 +7300,10 @@ SCIP_Bool SCIPrealToRational(
 
       g1 = gx;
       h1 = hx;
-      
+
       if( h0 > maxdnom )
          return FALSE;
-      
+
       delta0 = val - g0/h0;
       delta1 = (delta0 < 0.0 ? val - (g0-1.0)/h0 : val - (g0+1.0)/h0);
    }
@@ -6926,7 +7418,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
       }
    }
 
-   if( minval == SCIP_REAL_MAX )
+   if( minval == SCIP_REAL_MAX ) /*lint !e777*/
    {
       /* all coefficients are zero (inside tolerances) */
       if( intscalar != NULL )
@@ -7021,7 +7513,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
          gcd = ABS(nominator);
          scm = denominator;
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-         SCIPdebugMessage(" -> c=%d first rational: val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%u\n",
+         SCIPdebugMessage(" -> c=%d first rational: val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
             c, val, nominator, denominator, gcd, scm, rational);
          break;
       }
@@ -7041,7 +7533,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
          gcd = SCIPcalcGreComDiv(gcd, ABS(nominator));
          scm *= denominator / SCIPcalcGreComDiv(scm, denominator);
          rational = ((SCIP_Real)scm/(SCIP_Real)gcd <= maxscale);
-         SCIPdebugMessage(" -> c=%d next rational : val: %g == %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT", gcd=%"SCIP_LONGINT_FORMAT", scm=%"SCIP_LONGINT_FORMAT", rational=%u\n",
+         SCIPdebugMessage(" -> c=%d next rational : val: %g == %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ", gcd=%" SCIP_LONGINT_FORMAT ", scm=%" SCIP_LONGINT_FORMAT ", rational=%u\n",
             c, val, nominator, denominator, gcd, scm, rational);
       }
       else
@@ -7059,7 +7551,7 @@ SCIP_RETCODE SCIPcalcIntegralScalar(
       if( (SCIP_Real)scm/(SCIP_Real)gcd < bestscalar )
 	 bestscalar = (SCIP_Real)scm/(SCIP_Real)gcd;
 
-      SCIPdebugMessage(" -> integrality could be achieved by scaling with %g (rational:%"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT")\n",
+      SCIPdebugMessage(" -> integrality could be achieved by scaling with %g (rational:%" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ")\n",
          (SCIP_Real)scm/(SCIP_Real)gcd, scm, gcd);
    }
 
@@ -7134,14 +7626,14 @@ SCIP_Real SCIPselectSimpleValue(
       SCIP_Longint nominator;
       SCIP_Longint denominator;
       SCIP_Bool success;
-      
+
       /* try to find a "simple" rational number inside the interval */
       SCIPdebugMessage("simple rational in [%.9f,%.9f]:", lb, ub);
       success = SCIPfindSimpleRational(lb, ub, maxdnom, &nominator, &denominator);
       if( success )
       {
          val = (SCIP_Real)nominator/(SCIP_Real)denominator;
-         SCIPdebugPrintf(" %"SCIP_LONGINT_FORMAT"/%"SCIP_LONGINT_FORMAT" == %.9f\n", nominator, denominator, val);
+         SCIPdebugPrintf(" %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT " == %.9f\n", nominator, denominator, val);
 
          if( val - lb < 0.0 || val - ub > 0.0 )
          {
@@ -7154,7 +7646,7 @@ SCIP_Real SCIPselectSimpleValue(
          SCIPdebugPrintf(" failed\n");
       }
    }
-   
+
    return val;
 }
 
@@ -7165,7 +7657,7 @@ SCIP_Real SCIPselectSimpleValue(
  * Random Numbers
  */
 
-#ifdef NO_RAND_R
+#if defined(NO_RAND_R) || defined(_WIN32) || defined(_WIN64)
 
 #define SCIP_RAND_MAX 32767
 /** returns a random number between 0 and SCIP_RAND_MAX */
@@ -7178,7 +7670,7 @@ int getRand(
 
    assert(seedp != NULL);
 
-   nextseed = (*seedp) * 1103515245 + 12345;
+   nextseed = (*seedp) * (SCIP_Longint)1103515245 + 12345;
    *seedp = (unsigned int)nextseed;
 
    return (int)((unsigned int)(nextseed/(2*(SCIP_RAND_MAX+1))) % (SCIP_RAND_MAX+1));
@@ -7269,9 +7761,9 @@ SCIP_Longint SCIPcalcBinomCoef(
    if( m == 2 )
    {
       if( ((SCIP_Real)SCIP_LONGINT_MAX) / n >= (n-1) * 2 ) /*lint !e790*/
-	 return (n*(n-1)/2); /*lint !e647*/
+         return ((SCIP_Longint)n*(n-1)/2); /*lint !e647*/
       else
-	 return -1;
+         return -1;
    }
 
    /* abort on to big numbers */
@@ -7468,6 +7960,113 @@ SCIP_RETCODE SCIPgetRandomSubset(
 }
 
 
+/*
+ * Arrays
+ */
+
+/** computes set intersection (duplicates removed) of two integer arrays that are ordered ascendingly */
+SCIP_RETCODE SCIPcomputeArraysIntersection(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  intersectarray,     /**< intersection of array1 and array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nintersectarray     /**< pointer to store number of entries of intersection array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   )
+{
+   int cnt = 0;
+   int k = 0;
+   int v1;
+   int v2;
+
+   assert( array1 != NULL );
+   assert( array2 != NULL );
+   assert( intersectarray != NULL );
+   assert( nintersectarray != NULL );
+
+   /* determine intersection of array1 and array2 */
+   for (v1 = 0; v1 < narray1; ++v1)
+   {
+      assert( v1 == 0 || array1[v1] >= array1[v1-1] );
+
+      /* skip duplicate entries */
+      if ( v1+1 < narray1 && array1[v1] == array1[v1+1])
+         continue;
+
+      for (v2 = k; v2 < narray2; ++v2)
+      {
+         assert( v2 == 0 || array2[v2] >= array2[v2-1] );
+
+         if ( array2[v2] > array1[v1] )
+         {
+            k = v2;
+            break;
+         }
+         else if ( array2[v2] == array1[v1] )
+         {
+            intersectarray[cnt++] = array2[v2];
+            k = v2 + 1;
+            break;
+         }
+      }
+   }
+
+   /* store size of intersection array */
+   *nintersectarray = cnt;
+
+   return SCIP_OKAY;
+}
+
+
+/** computes set difference (duplicates removed) of two integer arrays that are ordered ascendingly */
+SCIP_RETCODE SCIPcomputeArraysSetminus(
+   int*                  array1,             /**< first array (in ascending order) */
+   int                   narray1,            /**< number of entries of first array */
+   int*                  array2,             /**< second array (in ascending order) */
+   int                   narray2,            /**< number of entries of second array */
+   int*                  setminusarray,      /**< array to store entries of array1 that are not an entry of array2
+                                              *   (note: it is possible to use array1 for this input argument) */
+   int*                  nsetminusarray      /**< pointer to store number of entries of setminus array
+                                              *   (note: it is possible to use narray1 for this input argument) */
+   )
+{
+   int cnt = 0;
+   int v1 = 0;
+   int v2 = 0;
+
+   assert( array1 != NULL );
+   assert( array2 != NULL );
+   assert( setminusarray != NULL );
+   assert( nsetminusarray != NULL );
+
+   while ( v1 < narray1 )
+   {
+      int entry1;
+
+      assert( v1 == 0 || array1[v1] >= array1[v1-1] );
+
+      /* skip duplicate entries */
+      while ( v1 + 1 < narray1 && array1[v1] == array1[v1 + 1] )
+         ++v1;
+
+      entry1 = array1[v1];
+
+      while ( v2 < narray2 && array2[v2] < entry1 )
+         ++v2;
+
+      if ( v2 >= narray2 || entry1 < array2[v2] )
+         setminusarray[cnt++] = entry1;
+      ++v1;
+   }
+
+   /* store size of setminus array */
+   *nsetminusarray = cnt;
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Strings
@@ -7494,7 +8093,7 @@ int SCIPmemccpy(
 
       while( cnt-- && (*destination++ = *src++) != stop ); /*lint !e722*/
 
-      return (destination - dest);
+      return (int)(destination - dest);
    }
 }
 
@@ -7585,7 +8184,7 @@ int SCIPsnprintf(
 #if defined(_WIN32) || defined(_WIN64)
    n = _vsnprintf(t, (size_t) len, s, ap);
 #else
-   n = vsnprintf(t, (size_t) len, s, ap);
+   n = vsnprintf(t, (size_t) len, s, ap); /*lint !e571*/
 #endif
    va_end(ap);
 
@@ -7872,6 +8471,6 @@ SCIP_Real SCIPrelDiff(
    absval1 = REALABS(val1);
    absval2 = REALABS(val2);
    quot = MAX3(1.0, absval1, absval2);
-   
+
    return (val1-val2)/quot;
 }

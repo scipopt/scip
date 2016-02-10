@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -89,7 +89,7 @@ BEGIN {
    githash = "?";
    conftottime = 0.0;
    overheadtottime = 0.0;
-   
+
    #initialize paver input file
    if( PAVFILE != "" ) {
       printf("* Trace Record Definition\n") > PAVFILE;
@@ -98,7 +98,14 @@ BEGIN {
    }
 }
 /^IP\// {  # TEMPORARY HACK to parse .test files
-   intestfile[$1] = 1;
+   n  = split ($1, a, "/");
+   m = split(a[n], b, ".");
+   prob = b[1];
+   if( b[m] == "gz" || b[m] == "z" || b[m] == "GZ" || b[m] == "Z" )
+      m--;
+   for( i = 2; i < m; ++i )
+      prob = prob "." b[i];
+   intestfile[prob] = 1;
 }
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }   # get optimum
 /=inf=/  { solstatus[$2] = "inf"; }                 # problem infeasible (no feasible solution exists)
@@ -107,8 +114,9 @@ BEGIN {
 #
 # problem name
 #
-/^@01/ { 
+/^@01/ {
    filename = $2;
+   grepresult = ""
 
    n  = split ($2, a, "/");
    m = split(a[n], b, ".");
@@ -178,14 +186,16 @@ BEGIN {
    valgrinderror = 0;
    valgrindleaks = 0;
    bestsolfeas = 1;
+   reoptimization = 0;
+   niter = 0;
 }
 
 /@03/ { starttime = $2; }
 /@04/ { endtime = $2; }
 
 /^SCIP version/ {
-   # get SCIP version 
-   scipversion = $3; 
+   # get SCIP version
+   scipversion = $3;
 
    # get name of LP solver
    if( $13 == "SoPlex" )
@@ -210,13 +220,13 @@ BEGIN {
 #   else if( $13 == "???" )
 #      lpsname = "xprs";
 
-    # get LP solver version 
+    # get LP solver version
    if( NF >= 16 ) {
       split($14, v, "]");
       lpsversion = v[1];
    }
 
-   # get git hash 
+   # get git hash
    if( $(NF-1) == "[GitHash:" ) {
       split($NF, v, "]");
       githash = v[1];
@@ -228,6 +238,14 @@ BEGIN {
 /^reading user parameter file/ { settings = $5; sub(/<.*settings\//, "", settings); sub(/\.set>/, "", settings); }
 /^parameter <limits\/time> set to/ { timelimit = $5; }
 /^limits\/time =/ { timelimit = $3; }
+
+/^read problem/ { niter += 1; }
+
+# check if reoptimization is enabled
+/^Solving Nodes      :/{
+    if( $6 == "reactivated)" )
+      reoptimization = 1;
+}
 
 # check for primalbound before statitic printing
 /^Primal Bound       :/{
@@ -307,7 +325,7 @@ BEGIN {
 }
 
 #
-# count number of linear constraints 
+# count number of linear constraints
 #
 /^Constraints        :/ {
    incons = 1;
@@ -327,13 +345,13 @@ BEGIN {
       lincons += a[1];
    }
 }
-/^  linear           :/ { 
+/^  linear           :/ {
    if( incons  == 1 ) {
       n  = split ($3, a, "+");
       lincons += a[1];
    }
 }
-/^  logicor          :/ { 
+/^  logicor          :/ {
    if( incons == 1 ) {
       n  = split ($3, a, "+");
       lincons += a[1];
@@ -345,31 +363,31 @@ BEGIN {
       lincons += a[1];
    }
 }
-/^  quadratic        :/ { 
+/^  quadratic        :/ {
    if( incons == 1 ) {
       n  = split ($3, a, "+");
       quadcons += a[1];
    }
 }
-/^  soc              :/ { 
+/^  soc              :/ {
    if( incons == 1 ) {
       n  = split ($3, a, "+");
       quadcons += a[1];
    }
 }
-/^  bivariate        :/ { 
+/^  bivariate        :/ {
    if( incons == 1 ) {
       n  = split ($3, a, "+");
       nonlincons += a[1];
    }
 }
-/^  nonlinear        :/ { 
+/^  nonlinear        :/ {
    if( incons == 1 ) {
       n  = split ($3, a, "+");
       nonlincons += a[1];
    }
 }
-/^  abspower         :/ { 
+/^  abspower         :/ {
    if( incons == 1 ) {
       n  = split ($3, a, "+");
       nonlincons += a[1];
@@ -383,7 +401,23 @@ BEGIN {
 # solution
 #
 /^Original Problem   : no problem exists./ { readerror = 1; }
-/^SCIP Status        :/ { aborted = 0; }
+/^SCIP Status        :/ {
+   # replace / by \/ in filename
+   fname = filename
+   gsub(/\//, "\\/",fname);
+
+   #grep between filename and next @01 for an error
+   command = "sed -n '/"fname"/,/@01/p' "ERRFILE" | grep 'returned with error code'";
+   command | getline grepresult;
+
+   # set aborted flag correctly
+   if( grepresult == "" ) {
+      aborted = 0;
+   }
+
+   close(command)
+}
+
 /solving was interrupted/ { timeout = 1; }
 /gap limit reached/ { gapreached = 1; }
 /solution limit reached/ { sollimitreached = 1; }
@@ -391,6 +425,14 @@ BEGIN {
 /node limit reached/ { nodelimitreached = 1; }
 /problem is solved/ { timeout = 0; }
 /best solution is not feasible in original problem/  { bestsolfeas = 0; }
+
+/Check SOL:/ { 
+   intcheck = $4;
+   conscheck = $6;
+   objcheck = $8;
+   if( !intcheck || !conscheck || !objcheck ) 
+      bestsolfeas = 0;
+}
 
 /^  First Solution   :/ {
    timetofirst = $11;
@@ -405,6 +447,10 @@ BEGIN {
    }
    else if( $4 == "-"  || $4 == "-\r") {
       pb = +infty;
+      feasible = 0;
+   }
+   else if( $5 == "(user" && $6 == "objective" && $7 == "limit)" ) {
+      pb = $4;
       feasible = 0;
    }
    else {
@@ -428,15 +474,27 @@ BEGIN {
 /^  primal LP        :/ { simpiters += $6; }
 /^  dual LP          :/ { simpiters += $6; }
 /^  barrier LP       :/ { simpiters += $6; }
-/^  nodes \(total\)    :/ { bbnodes = $4 }
-/^  primal LP        :/ { primlps = $5; primiter = $6; }
-/^  dual LP          :/ { duallps = $5; dualiter = $6; }
-/^  strong branching :/ { sblps = $5; sbiter = $6; }
+/^  nodes \(total\)    :/ {
+   if( reoptimization == 1 ) { bbnodes += $4; }
+   else { bbnodes = $4; }
+}
+/^  primal LP        :/ {
+   if( reoptimization == 1 ) { primlps += $5; primiter += $6; }
+   else { primlps = $5; primiter = $6; }
+}
+/^  dual LP          :/ {
+   if( reoptimization == 1 ) { duallps += $5; dualiter += $6; }
+   else { duallps = $5; dualiter = $6; }
+}
+/^  strong branching :/ {
+   if( reoptimization == 1 ) { sblps += $5; sbiter += $6; }
+   else { sblps = $5; sbiter = $6; }
+}
 #
 # time
 #
 /^Solving Time       :/ { tottime = $4 } # for older scip version ( < 2.0.1.3 )
-/^  solving          :/ { tottime = $3 } 
+/^  solving          :/ { tottime = $3 }
 #
 # valgrind check
 #
@@ -445,13 +503,13 @@ BEGIN {
 /^==[0-9]*==    indirectly lost:/  { valgrindleaks += $4 }
 /^==[0-9]*==    possibly lost:/    { valgrindleaks += $4 }
 #
-# solver status overview (in order of priority): 
+# solver status overview (in order of priority):
 # 1) solver broke before returning solution => abort
 # 2) solver cut off the optimal solution (solu-file-value is not between primal and dual bound) => fail
 #    (especially if problem is claimed to be solved but solution is not the optimal solution)
 # 3) solver solved problem with the value in solu-file (if existing) => ok
 # 4) solver solved problem which has no (optimal) value in solu-file => solved
-#    (since we here don't detect the direction of optimization, it is possible 
+#    (since we here don't detect the direction of optimization, it is possible
 #     that a solver claims an optimal solution which contradicts a known feasible solution)
 # 5) solver found solution better than known best solution (or no solution was known so far) => better
 # 7) solver reached gaplimit or limit of number of solutions => gaplimit, sollimit
@@ -463,7 +521,7 @@ BEGIN {
    #since the header depends on the parameter printsoltimes and settings it is no longer possible to print it in the BEGIN section
    if( !headerprinted ) {
       ntexcolumns = 8 + (2 * printsoltimes);
-      
+
       if (TEXFILE != "") {
          #print header of tex file table
          printf("\\documentclass[leqno]{article}\n")                      >TEXFILE;
@@ -505,21 +563,31 @@ BEGIN {
       tablehead3 = hyphenstr;
 
       # append rest of header
-      tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+----------------+----------------+------+---------+--------+-------+";
-      tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time |";
-      tablehead3 = tablehead3"+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+";
+      if( reoptimization == 0 )
+      {
+	 tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+----------------+----------------+------+---------+--------+-------+";
+	 tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars |   Dual Bound   |  Primal Bound  | Gap%% |  Iters  |  Nodes |  Time |";
+	 tablehead3 = tablehead3"+------+-------+-------+-------+-------+----------------+----------------+------+---------+--------+-------+";
+      }
+      else
+      {
+         tablehead1 = tablehead1"+------+--- Original --+-- Presolved --+-----------+----------------+----------------+---------+--------+-------+";
+	 tablehead2 = tablehead2"| Type | Conss |  Vars | Conss |  Vars | Reopt Its | last Dual Bnd  | last Primal Bnd|  Iters  |  Nodes |  Time |";
+	 tablehead3 = tablehead3"+------+-------+-------+-------+-------+-----------+----------------+----------------+---------+--------+-------+";
+      }
 
-      if( printsoltimes == 1 ) 
+
+      if( printsoltimes == 1 )
       {
          tablehead1 = tablehead1"----------+---------+";
          tablehead2 = tablehead2" To First | To Best |";
          tablehead3 = tablehead3"----------+---------+";
-      } 
- 
+      }
+
       tablehead1 = tablehead1"--------\n";
       tablehead2 = tablehead2"       \n";
       tablehead3 = tablehead3"--------\n";
-   
+
       printf(tablehead1);
       printf(tablehead2);
       printf(tablehead3);
@@ -528,7 +596,7 @@ BEGIN {
    }
 
    if( (!onlyinsolufile || prob in solstatus) &&
-       (!onlyintestfile || intestfile[filename]) )
+       (!onlyintestfile || intestfile[prob]) )
    {
       # if sol file could not be read, fix status to be "unkown"
       if ( ! (prob in solstatus) )
@@ -541,7 +609,7 @@ BEGIN {
       db = 1.0*temp;
       temp = dbforobjsense;
       dbforobjsense = 1.0*temp;
-      
+
       # if objsense could not be determined so far (output is maybe too old)
       if ( objsense == 0 )
       {
@@ -594,7 +662,7 @@ BEGIN {
          gapstr = sprintf("%6.1f", gap);
       else
          gapstr = " Large";
-      
+
       if( vars == 0 )
          probtype = "   --";
       else if( lincons < cons )
@@ -636,7 +704,11 @@ BEGIN {
          tottime = endtime - starttime;
       }
       else if( gapreached || sollimitreached || memlimitreached || nodelimitreached )
+      {
          timeout = 0;
+         if( memlimitreached )
+            tottime = max(endtime - starttime, timelimit);
+      }
 
       if( aborted && tottime == 0.0 )
          tottime = timelimit;
@@ -701,13 +773,13 @@ BEGIN {
          abstol = 1e-4;
 
 	 # objsense = 1 -> minimize; objsense = -1 -> maximize
-         if( ( objsense == 1 && ((db > -infty && db-sol[prob] > reltol) || sol[prob]-pb > reltol) ) || ( objsense == -1 && ((db > -infty && sol[prob]-db > reltol) || pb-sol[prob] > reltol) ) ) {
+         if( feasible && (( objsense == 1 && ((db > -infty && db-sol[prob] > reltol) || sol[prob]-pb > reltol) ) || ( objsense == -1 && ((db > -infty && sol[prob]-db > reltol) || pb-sol[prob] > reltol) )) ) {
             status = "fail";
             failtime += tottime;
             fail++;
          }
          else {
-            if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached ) 
+            if( timeout || gapreached || sollimitreached || memlimitreached || nodelimitreached )
 	    {
                if( timeout )
                   status = "timeout";
@@ -888,18 +960,36 @@ BEGIN {
       #write output to both the tex file and the console depending on whether printsoltimes is activated or not
       if( !onlypresolvereductions || origcons > cons || origvars > vars ) {
          if (TEXFILE != "") {
-            printf("%-*s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
-                   namelength, pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime)  >TEXFILE;
-            if( printsoltimes )
+	    if( reoptimization == 0 )
+	    {
+               printf("%-*s & %6d & %6d & %16.9g & %16.9g & %6s &%s%8d &%s%7.1f",
+                      namelength, pprob, cons, vars, db, pb, gapstr, markersym, bbnodes, markersym, tottime)  >TEXFILE;
+	    }
+	    else
+	    {
+               printf("%-*s & %6d & %6d & %10d & %16.9g & %16.9g &%s%8d &%s%7.1f",
+                      namelength, pprob, cons, vars, niter, db, pb, markersym, bbnodes, markersym, tottime)  >TEXFILE;
+	    }
+
+	    if( printsoltimes )
                printf(" & %7.1f & %7.1f", timetofirst, timetobest) > TEXFILE;
             printf("\\\\\n") > TEXFILE;
          }
 
          # note: probtype has length 5, but field width is 6
-         printf("%-*s  %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %9d %8d %7.1f ",
-                namelength, shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
-         if( printsoltimes )
+         if( reoptimization == 0 )
+	 {
+	    printf("%-*s  %-5s %7d %7d %7d %7d %16.9g %16.9g %6s %9d %8d %7.1f ",
+                   namelength, shortprob, probtype, origcons, origvars, cons, vars, db, pb, gapstr, simpiters, bbnodes, tottime);
+	 }
+	 else
+	 {
+	    printf("%-*s  %-5s %7d %7d %7d %7d %11d %16.9g %16.9g %9d %8d %7.1f ",
+                   namelength, shortprob, probtype, origcons, origvars, cons, vars, niter, db, pb, simpiters, bbnodes, tottime);
+	 }
+	 if( printsoltimes )
             printf(" %9.1f %9.1f ", timetofirst, timetobest);
+
          printf("%s\n", status);
       }
 
@@ -981,26 +1071,26 @@ END {
    tablebottom1 = "------------------------------[Nodes]---------------[Time]------";
    tablebottom2 = "  Cnt  Pass  Time  Fail  total(k)     geom.     total     geom.";
    tablebottom3 = "----------------------------------------------------------------";
-   
+
    if( printsoltimes ) {
       tablebottom1 = tablebottom1"--------[ToFirst]-----------[ToLast]-----";
       tablebottom2 = tablebottom2"     total     geom.     total     geom.";
       tablebottom3 = tablebottom3"-----------------------------------------";
    }
-   
+
    tablebottom1 = tablebottom1"\n";
    tablebottom2 = tablebottom2"\n";
    tablebottom3 = tablebottom3"\n";
-   
+
    printf(tablebottom1);
    printf(tablebottom2);
    printf(tablebottom3);
-   
+
    printf("%5d %5d %5d %5d %9d %9.1f %9.1f %9.1f ",
           nprobs, pass, timeouts, fail, sbab / 1000, nodegeom, stottime, timegeom);
    if( printsoltimes )
       printf("%9.1f %9.1f %9.1f %9.1f", stimetofirst, timetofirstgeom, stimetobest, timetobestgeom);
-   
+
    printf("\n");
    printf(" shifted geom. [%5d/%5.1f]      %9.1f           %9.1f ",
           nodegeomshift, timegeomshift, shiftednodegeom, shiftedtimegeom);

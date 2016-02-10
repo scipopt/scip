@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -822,8 +822,8 @@ void printValue(
    case FZN_INT:
    {
       SCIP_Longint longvalue;
-      longvalue = (SCIP_Longint)(value + 0.5);
-      SCIPinfoMessage(scip, file, "%"SCIP_LONGINT_FORMAT"", longvalue);
+      longvalue = SCIPconvertRealToLongint(scip, value);
+      SCIPinfoMessage(scip, file, "%" SCIP_LONGINT_FORMAT "", longvalue);
       break;
    }
    case FZN_FLOAT:
@@ -3297,9 +3297,9 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
 {  /*lint --e{715}*/
    SCIP_CONS* cons;
    SCIP_VAR** vars;
-   SCIP_Real* vals;
-   int* durations;
-   int* demands;
+   SCIP_Real* vals = NULL;
+   int* durations = NULL;
+   int* demands = NULL;
    SCIP_Real val;
    int capacity;
    char assignment[FZN_BUFFERLEN];
@@ -3321,7 +3321,6 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
    nvars = 0;
    ndurations = 0;
    ndemads = 0;
-   demands = NULL;
 
    SCIPdebugMessage("parse cumulative expression\n");
 
@@ -3397,8 +3396,8 @@ CREATE_CONSTRAINT(createCumulativeOpCons)
  TERMINATE:
    /* free buffers */
    SCIPfreeBufferArrayNull(scip, &demands);
-   SCIPfreeBufferArray(scip, &durations);
-   SCIPfreeBufferArray(scip, &vals);
+   SCIPfreeBufferArrayNull(scip, &durations);
+   SCIPfreeBufferArrayNull(scip, &vals);
    SCIPfreeBufferArray(scip, &vars);
 
    return SCIP_OKAY;

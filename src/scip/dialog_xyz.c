@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -110,7 +110,7 @@ static
 SCIP_DECL_DIALOGEXEC(dialogExecXyz)
 {  /*lint --e{715}*/
    SCIPerrorMessage("method of xyz dialog not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIPABORT(); /*lint --e{827}*/
 
    /* add your dialog to history of dialogs that have been executed */
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -148,7 +148,7 @@ SCIP_RETCODE SCIPincludeDialogXyz(
    parentdialog = SCIPgetRootDialog(scip);
    assert(parentdialog != NULL);
    /* TODO: (optional) change parent dialog from root dialog to another existing dialog (needs to be a menu) */
-   
+
    /* create, include, and release dialog */
    if( !SCIPdialogHasEntry(parentdialog, DIALOG_NAME) )
    {

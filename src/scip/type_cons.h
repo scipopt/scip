@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,6 +38,7 @@
 #include "scip/type_sol.h"
 #include "scip/type_scip.h"
 #include "scip/type_timing.h"
+#include "scip/type_heur.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -378,9 +379,9 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conss           : array of constraints to process
  *  - nconss          : number of constraints to process
  *  - sol             : the solution to check feasibility for
- *  - checkintegrality: has integrality to be checked?
- *  - checklprows     : have current LP rows to be checked?
- *  - printreason     : should the reason for the violation be printed?
+ *  - checkintegrality: Has integrality to be checked?
+ *  - checklprows     : Do constraints represented by rows in the current LP have to be checked?
+ *  - printreason     : Should the reason for the violation be printed?
  *  - result          : pointer to store the result of the feasibility checking call
  *
  *  possible return values for *result:
@@ -395,6 +396,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  The first nusefulconss constraints are the ones, that are identified to likely be violated. The propagation
  *  method should process only the useful constraints in most runs, and only occasionally the remaining
  *  nconss - nusefulconss constraints.
+ *
+ *  @note if the constraint handler uses dual information in propagation it is nesassary to check via calling
+ *        SCIPallowDualReds and SCIPallowObjProp if dual reductions and propgation with the current cutoff bound, resp.,
+ *        are allowed.
  *
  *  input:
  *  - scip            : SCIP main data structure
@@ -427,6 +432,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conss           : array of constraints to process
  *  - nconss          : number of constraints to process
  *  - nrounds         : number of presolving rounds already done
+ *  - presoltiming    : current presolving timing
  *  - nnewfixedvars   : number of variables fixed since the last call to the presolving method
  *  - nnewaggrvars    : number of variables aggregated since the last call to the presolving method
  *  - nnewchgvartypes : number of variable type changes since the last call to the presolving method
@@ -440,6 +446,9 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *
  *  @note the counters state the changes since the last call including the changes of this presolving method during its
  *        call
+ *
+ *  @note if the constraint handler performs dual presolving it is nesassary to check via calling SCIPallowDualReds
+ *        if dual reductions are allowed.
  *
  *  input/output:
  *  - nfixedvars      : pointer to count total number of variables fixed of all presolvers
@@ -468,7 +477,7 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - SCIP_DELAYED    : the presolving method was skipped, but should be called again
  */
 #define SCIP_DECL_CONSPRESOL(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS** conss, int nconss, int nrounds, \
-      int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
+      SCIP_PRESOLTIMING presoltiming, int nnewfixedvars, int nnewaggrvars, int nnewchgvartypes, int nnewchgbds, int nnewholes, \
       int nnewdelconss, int nnewaddconss, int nnewupgdconss, int nnewchgcoefs, int nnewchgsides, \
       int* nfixedvars, int* naggrvars, int* nchgvartypes, int* nchgbds, int* naddholes, \
       int* ndelconss, int* naddconss, int* nupgdconss, int* nchgcoefs, int* nchgsides, SCIP_RESULT* result)
@@ -788,6 +797,45 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  */
 #define SCIP_DECL_CONSGETNVARS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, \
       int* nvars, SCIP_Bool* success)
+
+/** constraint handler method to suggest dive bound changes during the generic diving algorithm
+ *
+ *  This callback is used inside the various diving heuristics of SCIP and does not affect the normal branching
+ *  of the actual search.
+ *  The constraint handler can provide this callback to render the current solution (even more) infeasible by
+ *  suggesting one or several variable bound changes. Infact,
+ *  since diving heuristics do not necessarily solve LP relaxations at every probing depth, some of the variable
+ *  local bounds might already be conflicting with the solution values.
+ *  The solution is rendered infeasible by determining bound changes that should be applied to the next explored search node
+ *  via SCIPaddDiveBoundChange().
+ *  An alternative in case that the preferred bound change(s) were detected infeasible must be provided.
+ *
+ *  The constraint handler must take care to only add bound changes that further shrink the variable domain.
+ *
+ *  The success pointer must be used to indicate whether the constraint handler succeeded in selecting diving bound
+ *  changes. The infeasible pointer should be set to TRUE if the constraint handler found a local infeasibility.  If the
+ *  constraint handler needs to select between several candidates, it may use the scoring mechanism of the diveset
+ *  argument to control its choice.
+ *
+ *
+ *
+ *  This callback is optional.
+ *
+ *  @note: @p sol is usually the LP relaxation solution unless the caller of the method, usually a diving heuristic,
+ *         does not solve LP relaxations at every depth
+ *
+ *  input:
+ *  - scip            : SCIP main data structure
+ *  - conshdlr        : the constraint handler itself
+ *  - diveset         : diving settings for scoring
+ *  - sol             : current diving solution, usually the LP relaxation solution
+ *
+ *  output:
+ *  - success         : pointer to store whether the constraint handler succeeded to determine dive bound changes
+ *  - infeasible      : pointer to store whether the constraint handler detected an infeasibility in the local node
+ */
+#define SCIP_DECL_CONSGETDIVEBDCHGS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_DIVESET* diveset, \
+      SCIP_SOL* sol, SCIP_Bool* success, SCIP_Bool* infeasible)
 
 #ifdef __cplusplus
 }

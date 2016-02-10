@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -17,6 +17,12 @@
  * @brief  cloud branching rule
  * @author Timo Berthold
  * @author Domenico Salvagnin
+ *
+ * Branching rule based on muliple optimal solutions to the current LP relaxation. See@n
+ * Cloud Branching@n
+ * Time Berthold and Domenico Salvagnin@n
+ * Integration of AI and OR Techniques in Constraint Programming for Combinatorial Optimization Problems, CPAIOR 2013, LNCS 7874@n
+ * Preliminary version available as <a href="http://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/1730">ZIB-Report 13-01</a>.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -46,8 +52,6 @@
 /*
  * Data structures
  */
-
-/* TODO: fill in the necessary branching rule data */
 
 /** branching rule data */
 struct SCIP_BranchruleData
@@ -142,7 +146,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    SCIP_VAR** lpcands;
    SCIP_VAR** lpcandscopy;
 
-   SCIP_VAR** vars;                          /* SCIP variables                */
+   SCIP_VAR** vars;
    SCIP_ROW** lprows;
    SCIP_Real* lpcandsfrac;
    SCIP_Real* lpcandssol;
@@ -181,7 +185,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
    if( !SCIPisLPSolBasic(scip) )
       return SCIP_OKAY;
 
-   SCIPdebugMessage("Execlp method of "BRANCHRULE_NAME" branching\n");
+   SCIPdebugMessage("Execlp method of " BRANCHRULE_NAME " branching\n");
 
    /* get problem variables and LP row data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
@@ -326,7 +330,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       retcode = SCIPsolveDiveLP(scip, -1, &lperror, NULL);
       if( retcode != SCIP_OKAY )
       {
-         SCIPwarningMessage(scip, "Error while solving LP in "BRANCHRULE_NAME"; LP solve terminated with code <%d>\n",retcode);
+         SCIPwarningMessage(scip, "Error while solving LP in " BRANCHRULE_NAME "; LP solve terminated with code <%d>\n",retcode);
       }
 #else
       SCIP_CALL( SCIPsolveDiveLP(scip, -1, &lperror, NULL) );
@@ -469,8 +473,8 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
       counter = MAX(counter,1);
 
    /* the second counter should maybe be replaced at some point */
-   SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcandscopy, lpcandssolcopy, lpcandsfraccopy, branchruledata->skipdown, branchruledata->skipup, counter, counter,
-         ncomplete, &branchruledata->lastcand, allowaddcons, 0, FALSE,
+   SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcandscopy, lpcandssolcopy, lpcandsfraccopy, branchruledata->skipdown,
+         branchruledata->skipup, counter, counter, ncomplete, &branchruledata->lastcand, allowaddcons, 0, FALSE, FALSE,
          &bestcand, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
    if( branchruledata->lastcand <= ncomplete )
@@ -642,7 +646,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
 /** creates the cloud branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleCloud(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_BRANCHRULEDATA* branchruledata;
    SCIP_BRANCHRULE* branchrule;
@@ -658,7 +662,6 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
    branchrule = NULL;
    SCIP_CALL( SCIPincludeBranchruleBasic(scip, &branchrule, BRANCHRULE_NAME, BRANCHRULE_DESC, BRANCHRULE_PRIORITY,
          BRANCHRULE_MAXDEPTH, BRANCHRULE_MAXBOUNDDIST, branchruledata) );
-
    assert(branchrule != NULL);
 
    /* set non-fundamental callbacks via setter functions */
@@ -667,33 +670,32 @@ SCIP_RETCODE SCIPincludeBranchruleCloud(
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpCloud) );
 
    /* add cloud branching rule parameters */
-
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "branching/"BRANCHRULE_NAME"/usecloud",
+         "branching/" BRANCHRULE_NAME "/usecloud",
          "should a cloud of points be used?",
          &branchruledata->usecloud, FALSE, DEFAULT_USECLOUD, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "branching/"BRANCHRULE_NAME"/onlyF2",
+         "branching/" BRANCHRULE_NAME "/onlyF2",
          "should only F2 be used?",
          &branchruledata->onlyF2, FALSE, DEFAULT_ONLYF2, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "branching/"BRANCHRULE_NAME"/useunion",
+         "branching/" BRANCHRULE_NAME "/useunion",
          "should the union of candidates be used?",
          &branchruledata->useunion, FALSE, DEFAULT_USEUNION, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "branching/"BRANCHRULE_NAME"/maxpoints",
+         "branching/" BRANCHRULE_NAME "/maxpoints",
          "maximum number of points for the cloud (-1 means no limit)",
          &branchruledata->maxpoints, FALSE, DEFAULT_MAXPOINTS, -1, INT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "branching/"BRANCHRULE_NAME"/minsuccessrate",
+         "branching/" BRANCHRULE_NAME "/minsuccessrate",
          "minimum success rate for the cloud",
          &branchruledata->minsuccessrate, FALSE, DEFAULT_MINSUCCESSRATE, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddRealParam(scip,
-         "branching/"BRANCHRULE_NAME"/minsuccessunion",
+         "branching/" BRANCHRULE_NAME "/minsuccessunion",
          "minimum success rate for the union",
          &branchruledata->minsuccessunion, FALSE, DEFAULT_MINSUCCESSUNION, 0.0, 1.0, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
-         "branching/"BRANCHRULE_NAME"/maxdepthunion",
+         "branching/" BRANCHRULE_NAME "/maxdepthunion",
          "maximum depth for the union",
          &branchruledata->maxdepthunion, FALSE, DEFAULT_MAXDEPTHUNION, 0, 65000, NULL, NULL) );
 

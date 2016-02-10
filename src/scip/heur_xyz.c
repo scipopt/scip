@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -196,7 +196,7 @@ SCIP_RETCODE SCIPincludeHeurXyz(
          HEUR_MAXDEPTH, HEUR_TIMING, HEUR_USESSUBSCIP, heurExecXyz, heurdata) );
 
    assert(heur != NULL);
-   
+
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyXyz) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeXyz) );

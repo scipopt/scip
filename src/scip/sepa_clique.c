@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -160,25 +160,6 @@ SCIP_RETCODE tcliquegraphFree(
    return SCIP_OKAY;
 }
 
-/** ensures that the adjnodes array can store at least num entries */
-static
-SCIP_RETCODE tcliquegraphEnsureAdjnodesSize(
-   SCIP*                 scip,               /**< SCIP data structure */
-   TCLIQUE_GRAPH*        tcliquegraph,       /**< tclique graph data */
-   int                   num                 /**< minimal number of adjacent nodes to be able to store in the array */
-   )
-{
-   assert(tcliquegraph != NULL);
-
-   if( num > tcliquegraph->adjnodessize )
-   {
-      tcliquegraph->adjnodessize = SCIPcalcMemGrowSize(scip, num);
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &tcliquegraph->adjnodes, tcliquegraph->adjnodessize) );
-   }
-   assert(num <= tcliquegraph->adjnodessize);
-
-   return SCIP_OKAY;
-}
 
 /** ensures that the cliqueids array can store at least num entries */
 static
@@ -303,7 +284,7 @@ SCIP_RETCODE tcliquegraphAddCliqueVars(
       for( value = 0; value < 2; ++value )
       {
          assert(cliquegraphidx[value][i] == -1);
-         
+
          if( SCIPvarGetNCliques(var, (SCIP_Bool)value) >= 1 )
          {
             /* all cliques stored in the clique table are at least 3-cliques */
@@ -311,433 +292,6 @@ SCIP_RETCODE tcliquegraphAddCliqueVars(
          }
       }
    }
-
-   return SCIP_OKAY;
-}
-
-/** adds all variable/value pairs to the tclique graph that are contained in a 3-clique in the implication graph */
-static
-SCIP_RETCODE tcliquegraphAddImplicsVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   TCLIQUE_GRAPH**       tcliquegraph,       /**< pointer to tclique graph data */
-   int**                 cliquegraphidx      /**< array to store tclique graph node index of variable/value pairs */
-   )
-{
-   SCIP_VAR** vars;
-   int nvars;
-   int xi;
-
-   assert(tcliquegraph != NULL);
-   assert(cliquegraphidx != NULL);
-   assert(cliquegraphidx[0] != NULL);
-   assert(cliquegraphidx[1] != NULL);
-
-   /**@todo search for 3-clique in the implication graph w.r.t. to implicit binary variable (SCIPvarIsBinary()) */
-   /* get binary variables */
-   vars = SCIPgetVars(scip);
-   nvars = SCIPgetNBinVars(scip);
-
-   if( nvars == 0 )
-      return SCIP_OKAY;
-
-   assert(nvars > 0);
-
-   /* detect 3-cliques in the clique graph: triples (x,y,z) in the implication graph with x -> y', x -> z', and y -> z';
-    * in order to avoid double checks, we only check triplets with variable indices xindex < yindex < zindex;
-    * we don't have to check triples with x == y, x == z, or y == z, because cliques with the same variable occuring
-    * twice lead to fixings of this or all other variables which should already have been detected in presolving
-    */
-   for( xi = 0; xi < nvars-2 && !SCIPisStopped(scip); ++xi ) /* at least two variables must be left over for y and z */
-   {
-      SCIP_VAR* x;
-      int xvalue;
-#ifndef NDEBUG
-      int xindex;
-#endif
-
-      x = vars[xi];
-#ifndef NDEBUG
-      xindex = SCIPvarGetIndex(x);
-#endif
-      assert(SCIPvarGetType(x) == SCIP_VARTYPE_BINARY);
-
-      for( xvalue = 0; xvalue < 2; xvalue++ )
-      {
-         SCIP_VAR** ximplvars;
-         SCIP_BOUNDTYPE* ximpltypes;
-         int xnbinimpls;
-         int i;
-
-         /**@todo search for 3-clique in the implication graph w.r.t. to implicit binary variable (SCIPvarIsBinary()) */
-         /* scan the implications of x == xvalue for potential y candidates */
-         xnbinimpls = SCIPvarGetNBinImpls(x, (SCIP_Bool)xvalue);
-         ximplvars = SCIPvarGetImplVars(x, (SCIP_Bool)xvalue);
-         ximpltypes = SCIPvarGetImplTypes(x, (SCIP_Bool)xvalue);
-
-	 assert(xnbinimpls >= 0);
-	 if( xnbinimpls > 0 )
-	 {
-#ifndef NDEBUG
-	    SCIP_Bool found;
-
-	    /* search for the position in the sorted array (via binary search) */
-	    found = SCIPsortedvecFindPtr((void**)ximplvars, SCIPvarComp, (void*)x, xnbinimpls, &i);
-	    assert(!found); /* no implication to itself */
-	    assert(i >= 0 && i <= xnbinimpls);
-#else
-	    /* search for the position in the sorted array (via binary search) */
-	    (void) SCIPsortedvecFindPtr((void**)ximplvars, SCIPvarComp, (void*)x, xnbinimpls, &i);
-#endif
-	 }
-	 else
-	    i = 0;
-
-         /* loop over all y > x */
-         for( ; i < xnbinimpls-1 && !SCIPisStopped(scip); ++i ) /* at least one variable must be left over for z */
-         {
-            SCIP_VAR* y;
-            int yvalue;
-            int yi;
-            SCIP_VAR** yimplvars;
-            SCIP_BOUNDTYPE* yimpltypes;
-            int ynbinimpls;
-            int xk;
-            int yk;
-#ifndef NDEBUG
-            int yindex;
-#endif
-
-            y = ximplvars[i];
-            yi = SCIPvarGetProbindex(y);
-#ifndef NDEBUG
-            yindex = SCIPvarGetIndex(y);
-#endif
-            assert(yi < nvars);
-
-            /* consider only implications with active implvar y */
-            if( yi < 0 )
-               continue;
-
-            assert(xindex < yindex); /* the implied variables are sorted by increasing variable index */
-            assert(yindex < SCIPvarGetIndex(ximplvars[i+1]));
-
-            /* check, whether the implicant is y == 0 or y == 1 (yi conflicts with x == xvalue) */
-            yvalue = (int)(ximpltypes[i] == SCIP_BOUNDTYPE_UPPER);
-            assert(0 <= yvalue && yvalue <= 1);
-
-            /**@todo search for 3-clique in the implication graph w.r.t. to implicit binary variable (SCIPvarIsBinary()) */
-            /* scan the remaining implications of x == xvalue and the implications of y == yvalue for equal entries */
-            ynbinimpls = SCIPvarGetNBinImpls(y, (SCIP_Bool)yvalue);
-            yimplvars = SCIPvarGetImplVars(y, (SCIP_Bool)yvalue);
-            yimpltypes = SCIPvarGetImplTypes(y, (SCIP_Bool)yvalue);
-
-            /* we simultaneously scan both implication arrays for candidates z with x < y < z */
-            xk = i+1;
-
-	    assert(ynbinimpls >= 0);
-	    if( ynbinimpls > 0 )
-	    {
-#ifndef NDEBUG
-	       SCIP_Bool found;
-
-	       /* search for the position in the sorted array (via binary search) */
-	       found = SCIPsortedvecFindPtr((void**)yimplvars, SCIPvarComp, (void*)y, ynbinimpls, &yk);
-	       assert(!found); /* no implication to itself */
-	       assert(yk >= 0 && yk <= ynbinimpls);
-#else
-	       (void) SCIPsortedvecFindPtr((void**)yimplvars, SCIPvarComp, (void*)y, ynbinimpls, &yk);
-#endif
-	    }
-	    else
-	       yk = 0;
-
-            while( xk < xnbinimpls && yk < ynbinimpls )
-            {
-               int zindex;
-
-               assert(yindex < SCIPvarGetIndex(ximplvars[xk]));
-               assert(yindex < SCIPvarGetIndex(yimplvars[yk]));
-
-               /* scan the implications of x */
-               zindex = SCIPvarGetIndex(yimplvars[yk]);
-
-               while ( xk < xnbinimpls && SCIPvarGetIndex(ximplvars[xk]) < zindex )
-                  ++xk;
-
-               if( xk >= xnbinimpls )
-                  break;
-
-               /* scan the implications of y */
-               zindex = SCIPvarGetIndex(ximplvars[xk]);
-
-               while ( yk < ynbinimpls && SCIPvarGetIndex(yimplvars[yk]) < zindex )
-                  ++yk;
-
-               if( yk >= ynbinimpls )
-                  break;
-
-               /* check, whether we reached a common implied variable */
-               if( ximplvars[xk] != yimplvars[yk] )
-                  continue;
-
-               assert(SCIPvarGetIndex(ximplvars[xk]) == zindex);
-               assert(SCIPvarGetIndex(yimplvars[yk]) == zindex);
-
-               /* check, whether both implications are of the same type */
-               if( ximpltypes[xk] == yimpltypes[yk] )
-               {
-                  SCIP_VAR* z;
-                  int zi;
-                  int zvalue;
-                  
-                  /* we found z with xindex < yindex < zindex and x + y + z <= 1 */
-                  z = ximplvars[xk];
-                  zi = SCIPvarGetProbindex(z);
-                  assert(zi < nvars);
-                  
-                  /* consider only implications with active implvar z */
-                  if( zi < 0 )
-                     continue;
-                  
-                  assert(SCIPvarGetIndex(z) == zindex);
-                  assert(xindex < yindex && yindex < zindex);
-
-                  /* check, whether the implicant is z == 0 or z == 1 (z conflicts with x == xvalue) */
-                  zvalue = (int)(ximpltypes[xk] == SCIP_BOUNDTYPE_UPPER);
-                  assert(0 <= zvalue && zvalue <= 1);
-
-                  /* add nodes x == xvalue, y == yvalue, and z == zvalue to clique graph (if not yet existing) */
-                  if( cliquegraphidx[xvalue][xi] == -1 )
-                  {
-                     SCIP_CALL( tcliquegraphAddNode(scip, tcliquegraph, x, (SCIP_Bool)xvalue, &cliquegraphidx[xvalue][xi]) );
-                  }
-                  if( cliquegraphidx[yvalue][yi] == -1 )
-                  {
-                     SCIP_CALL( tcliquegraphAddNode(scip, tcliquegraph, y, (SCIP_Bool)yvalue, &cliquegraphidx[yvalue][yi]) );
-                  }
-                  if( cliquegraphidx[zvalue][zi] == -1 )
-                  {
-                     SCIP_CALL( tcliquegraphAddNode(scip, tcliquegraph, z, (SCIP_Bool)zvalue, &cliquegraphidx[zvalue][zi]) );
-                  }
-               }
-
-               /* proceed with the next pair of implications */
-               xk++;
-               yk++;
-            }
-         }
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** adds all variable/value pairs to the tclique graph that have implications to two variables of the same existing clique */
-static
-SCIP_RETCODE tcliquegraphAddImplicsCliqueVars(
-   SCIP*                 scip,               /**< SCIP data structure */
-   TCLIQUE_GRAPH**       tcliquegraph,       /**< pointer to tclique graph data */
-   int**                 cliquegraphidx      /**< array to store tclique graph node index of variable/value pairs */
-   )
-{
-   SCIP_VAR** vars;
-   int nvars;
-   int xi;
-
-   assert(tcliquegraph != NULL);
-   assert(cliquegraphidx != NULL);
-   assert(cliquegraphidx[0] != NULL);
-   assert(cliquegraphidx[1] != NULL);
-
-   /**@todo search for 3-clique in the implication graph w.r.t. to implicit binary variable (SCIPvarIsBinary()) */
-   /* get binary variables */
-   vars = SCIPgetVars(scip);
-   nvars = SCIPgetNBinVars(scip);
-   assert(nvars > 0);
-
-   /* detect triples (x,y,z) with implications x -> y' and x -> z' and a clique that contains y and z;
-    * because all cliques stored in the clique table are at least 3-cliques, y and z are already member of the
-    * tclique graph due to tcliquegraphAddCliqueVars(); therefore, we only have to process pairs x == xvalue
-    * that are currently not member of the tclique graph
-    */
-   for( xi = 0; xi < nvars && !SCIPisStopped(scip); ++xi )
-   {
-      SCIP_VAR* x;
-      SCIP_Bool xvalue;
-
-      x = vars[xi];
-
-      for( xvalue = 0; xvalue < 2; xvalue++ )
-      {
-         SCIP_VAR** ximplvars;
-         SCIP_BOUNDTYPE* ximpltypes;
-         int xnbinimpls;
-         int yk;
-
-         /* we only need to process pairs x == xvalue that are not yet member of the tclique graph */
-         if( cliquegraphidx[xvalue][xi] >= 0 )
-            continue;
-
-         /**@todo search for 3-clique in the implication graph w.r.t. to implicit binary variable (SCIPvarIsBinary()) */
-         /* scan the implications of x == xvalue for potential y and z candidates */
-         xnbinimpls = SCIPvarGetNBinImpls(x, (SCIP_Bool)xvalue);
-         ximplvars = SCIPvarGetImplVars(x, (SCIP_Bool)xvalue);
-         ximpltypes = SCIPvarGetImplTypes(x, (SCIP_Bool)xvalue);
-
-         /* loop over all y, at least one variable must be left over for z */
-         for( yk = 0; yk < xnbinimpls-1 && !SCIPisStopped(scip); ++yk ) 
-         {
-            SCIP_VAR* y;
-            SCIP_Bool yvalue;
-            int yi;
-            int zk;
-
-            y = ximplvars[yk];
-            yi = SCIPvarGetProbindex(y);
-            assert(yi < nvars);
-
-            /* consider only implications with active implvar y */
-            if( yi < 0 )
-               continue;
-
-            assert(SCIPvarGetType(y) == SCIP_VARTYPE_BINARY);
-            
-            /* check, whether the implicant is y == 0 or y == 1 (y conflicts with x == xvalue) */
-            yvalue = (ximpltypes[yk] == SCIP_BOUNDTYPE_UPPER);
-            if( SCIPvarGetNCliques(y, yvalue) == 0 )
-               continue;
-
-            /* loop over all z > y */
-            for( zk = yk+1; zk < xnbinimpls; ++zk )
-            {
-               SCIP_VAR* z;
-               SCIP_Bool zvalue;
-               int zi;
-
-               z = ximplvars[zk];
-               zi = SCIPvarGetProbindex(z);
-               assert(zi < nvars);
-
-               /* consider only implications with active implvar z */
-               if( zi < 0 )
-                  continue;
-
-               assert(SCIPvarGetType(z) == SCIP_VARTYPE_BINARY);
-               
-               /* check, whether the implicant is z == 0 or z == 1 (z conflicts with x == xvalue) */
-               zvalue = (ximpltypes[zk] == SCIP_BOUNDTYPE_UPPER);
-
-               /* check whether y and z have a common clique stored in the clique table
-                * (the ones in the implication graph have already been processed by tcliquegraphAddImplicsVars())
-                */
-               if( SCIPvarsHaveCommonClique(y, yvalue, z, zvalue, FALSE) )
-               {
-                  /* add nodes x == xvalue to clique graph */
-                  assert(cliquegraphidx[xvalue][xi] == -1);
-                  assert(cliquegraphidx[yvalue][yi] >= 0);
-                  assert(cliquegraphidx[zvalue][zi] >= 0);
-                  SCIP_CALL( tcliquegraphAddNode(scip, tcliquegraph, x, (SCIP_Bool)xvalue, &cliquegraphidx[xvalue][xi]) );
-                  assert(cliquegraphidx[xvalue][xi] >= 0);
-                  break;
-               }
-            }
-            if( cliquegraphidx[xvalue][xi] >= 0 )
-               break;
-         }
-      }
-   }
-
-   return SCIP_OKAY;
-}
-
-/** adds all implications between nodes in the tclique graph to the tclique graph */
-static
-SCIP_RETCODE tcliquegraphAddImplics(
-   SCIP*                 scip,               /**< SCIP data structure */
-   TCLIQUE_GRAPH*        tcliquegraph,       /**< tclique graph data */
-   int**                 cliquegraphidx      /**< array to store tclique graph node index of variable/value pairs */
-   )
-{
-   int nadjnodes;
-   int i;
-
-   assert(cliquegraphidx != NULL);
-   assert(cliquegraphidx[0] != NULL);
-   assert(cliquegraphidx[1] != NULL);
-
-   /* there is nothing to do, if the graph is empty */
-   if( tcliquegraph == NULL )
-      return SCIP_OKAY;
-
-   /* the tclique graph should currently contain no implications */
-   assert(tcliquegraph->adjnodes == NULL);
-   assert(tcliquegraph->adjnodessize == 0);
-
-   nadjnodes = 0;
-   for( i = 0; i < tcliquegraph->nnodes; ++i )
-   {
-      SCIP_VAR* var;
-      SCIP_Bool value;
-      SCIP_VAR** implvars;
-      SCIP_BOUNDTYPE* impltypes;
-      int nbinimpls;
-      int adjnodesidx;
-      int j;
-
-      /* store start adjnodes index of the node */
-      adjnodesidx = nadjnodes;
-      tcliquegraph->adjnodesidxs[i] = adjnodesidx;
-
-      /* get active problem variable */
-      var = tcliquegraph->vars[i];
-      value = TRUE;
-      SCIP_CALL( SCIPvarGetProbvarBinary(&var, &value) );
-      assert(0 <= SCIPvarGetProbindex(var) && SCIPvarGetProbindex(var) < SCIPgetNBinVars(scip));
-      assert(cliquegraphidx[value][SCIPvarGetProbindex(var)] == i);
-
-      /**@todo search for 3-clique in the implication graph w.r.t. to implicit binary variable (SCIPvarIsBinary()) */
-      /* get implications on binary variables */
-      nbinimpls = SCIPvarGetNBinImpls(var, value);
-      implvars = SCIPvarGetImplVars(var, value);
-      impltypes = SCIPvarGetImplTypes(var, value);
-      for( j = 0; j < nbinimpls; ++j )
-      {
-         int probidx;
-         int graphidx;
-         SCIP_Bool implvalue;
-
-         probidx = SCIPvarGetProbindex(implvars[j]);
-         implvalue = (impltypes[j] == SCIP_BOUNDTYPE_UPPER);
-         assert(probidx < SCIPgetNVars(scip));
-                  
-         /* consider only implications with active implvar */
-         if( probidx < 0 )
-            continue;
-
-         graphidx = cliquegraphidx[implvalue][probidx];
-         if( graphidx >= 0 )
-         {
-            int pos;
-
-            assert(graphidx < tcliquegraph->nnodes);
-            assert((implvalue == TRUE && tcliquegraph->vars[graphidx] == implvars[j])
-               || (implvalue == FALSE && SCIPvarGetNegationVar(tcliquegraph->vars[graphidx]) == implvars[j]));
-
-            /* allocate memory for additional arc */
-            SCIP_CALL( tcliquegraphEnsureAdjnodesSize(scip, tcliquegraph, nadjnodes+1) );
-
-            /* store the adjacent node in the tclique graph data structure, sorted by index */
-            for( pos = nadjnodes; pos > adjnodesidx && tcliquegraph->adjnodes[pos-1] > graphidx; --pos )
-               tcliquegraph->adjnodes[pos] = tcliquegraph->adjnodes[pos-1];
-            tcliquegraph->adjnodes[pos] = graphidx;
-            nadjnodes++;
-         }
-      }
-   }
-   assert(nadjnodes/2 == (nadjnodes+1)/2); /* we must have an even number of arcs */
-
-   /* store final adjnodes index */
-   tcliquegraph->adjnodesidxs[tcliquegraph->nnodes] = nadjnodes;
 
    return SCIP_OKAY;
 }
@@ -762,7 +316,6 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
    int nelems;
    int i;
 
-   /* get clique table */
    cliques = SCIPgetCliques(scip);
    ncliques = SCIPgetNCliques(scip);
    if( ncliques == 0 )
@@ -773,7 +326,7 @@ SCIP_RETCODE tcliquegraphConstructCliqueTable(
    /* calculate size of dense clique table */
    nbits = 8*sizeof(unsigned int);
    tcliquegraph->tablewidth = (tcliquegraph->nnodes + nbits-1) / nbits; /* number of ints needed */
-   
+
    /* check if dense clique table is too large (calculate as Reals to avoid overflow) */
    if( (SCIP_Real)tcliquegraph->nnodes * (SCIP_Real)tcliquegraph->tablewidth/1024.0 > cliquetablemem )
       return SCIP_OKAY;
@@ -902,15 +455,6 @@ SCIP_RETCODE loadTcliquegraph(
    /* insert all variable/value pairs that are contained in an existing 3-clique */
    SCIP_CALL( tcliquegraphAddCliqueVars(scip, &sepadata->tcliquegraph, cliquegraphidx) );
 
-   /* insert all variable/value pairs that are contained in a 3-clique in the implication graph */
-   SCIP_CALL( tcliquegraphAddImplicsVars(scip, &sepadata->tcliquegraph, cliquegraphidx) );
-
-   /* insert all variable/value pairs that have implications to two variables of the same existing clique */
-   SCIP_CALL( tcliquegraphAddImplicsCliqueVars(scip, &sepadata->tcliquegraph, cliquegraphidx) );
-
-   /* add all implications between used variables to the tclique graph */
-   SCIP_CALL( tcliquegraphAddImplics(scip, sepadata->tcliquegraph, cliquegraphidx) );
-
    /* it occurs that it might be that some cliques were not yet removed from the global clique array, so SCIPgetNClique
     * can be greater than 0, even if there is no clique with some variables left */
    /** @todo clean up empty cliques */
@@ -1013,7 +557,7 @@ SCIP_Bool nodesHaveCommonClique(
       int i2;
       int endi1;
       int endi2;
-      
+
       cliqueids = tcliquegraph->cliqueids;
       i1 = tcliquegraph->cliqueidsidxs[node1];
       endi1 = tcliquegraph->cliqueidsidxs[node1+1];
@@ -1025,7 +569,7 @@ SCIP_Bool nodesHaveCommonClique(
             i1++;
          if( i1 == endi1 )
             break;
-         
+
          while( i2 < endi2 && cliqueids[i2] < cliqueids[i1] )
             i2++;
          if( i2 == endi2 )
@@ -1034,7 +578,7 @@ SCIP_Bool nodesHaveCommonClique(
          if( cliqueids[i1] == cliqueids[i2] )
             return TRUE;
       }
-      
+
       return FALSE;
    }
 }
@@ -1146,7 +690,7 @@ SCIP_RETCODE newsolCliqueAddRow(
    assert(vars != NULL);
 
    /* create the cut (handle retcode since we do not have a backtrace) */
-   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "clique%"SCIP_LONGINT_FORMAT"_%d", sepadata->ncalls, sepadata->ncuts);
+   (void) SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "clique%" SCIP_LONGINT_FORMAT "_%d", sepadata->ncalls, sepadata->ncuts);
    SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 1.0, FALSE, FALSE, TRUE) );
 
    SCIP_CALL( SCIPcacheRowExtensions(scip, cut) );
@@ -1272,7 +816,11 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
  * main separation method
  */
 
-/** searches and adds clique cuts that separate the given primal solution */
+/** searches and adds clique cuts that separate the given primal solution
+ *
+ *  @todo Should the existing cliques in the table be separated before starting the tclique algorithm?
+ *        Is this done somewhere else?
+ */
 static
 SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1289,9 +837,16 @@ SCIP_RETCODE separateCuts(
    int ncliquenodes;
    int maxtreenodes;
    int maxzeroextensions;
+   SCIP_Bool infeasible;
 
    assert(scip != NULL);
    assert(*result == SCIP_DIDNOTRUN);
+
+   infeasible = FALSE;
+   /* get clique table */
+   SCIP_CALL( SCIPcleanupCliques(scip, &infeasible) );
+   if( infeasible )
+      return SCIP_OKAY;
 
    /* get separator data */
    sepadata = SCIPsepaGetData(sepa);
@@ -1391,7 +946,7 @@ SCIP_DECL_SEPACOPY(sepaCopyClique)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaClique(scip) );
- 
+
    return SCIP_OKAY;
 }
 

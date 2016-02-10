@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -481,7 +481,7 @@ SCIP_DECL_NODESELSELECT(nodeselSelectUct)
    else
    {
       /* trigger update of visits along the path from the selected node to the root node */
-      SCIPdebugMessage("updating node visits from node number %"SCIP_LONGINT_FORMAT"\n", SCIPnodeGetNumber(*selnode));
+      SCIPdebugMessage("updating node visits from node number %" SCIP_LONGINT_FORMAT "\n", SCIPnodeGetNumber(*selnode));
       updateVisits(nodeseldata, *selnode);
    }
 
@@ -542,13 +542,13 @@ SCIP_RETCODE SCIPincludeNodeselUct(
    SCIP_CALL( SCIPsetNodeselExitsol(scip, nodesel, nodeselExitsolUct) );
 
    /* add uct node selector parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "nodeselection/"NODESEL_NAME"/nodelimit",
+   SCIP_CALL( SCIPaddIntParam(scip, "nodeselection/" NODESEL_NAME "/nodelimit",
          "maximum number of nodes before switching to default rule",
          &nodeseldata->nodelimit, TRUE, DEFAULT_NODELIMIT, 0, MAXNODELIMIT, NULL, NULL) );
-   SCIP_CALL( SCIPaddRealParam(scip, "nodeselection/"NODESEL_NAME"/weight",
+   SCIP_CALL( SCIPaddRealParam(scip, "nodeselection/" NODESEL_NAME "/weight",
          "weight for visit quotient of node selection rule",
          &nodeseldata->weight, TRUE, DEFAULT_WEIGHT, 0.0, 1.0, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, "nodeselection/"NODESEL_NAME"/useestimate",
+   SCIP_CALL( SCIPaddBoolParam(scip, "nodeselection/" NODESEL_NAME "/useestimate",
          "should the estimate (TRUE) or lower bound of a node be used for UCT score?",
          &nodeseldata->useestimate, TRUE, DEFAULT_USEESTIMATE, NULL, NULL) );
 

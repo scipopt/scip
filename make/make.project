@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -54,23 +54,32 @@ CONTINUE	=	false
 LOCK		=	false
 VALGRIND	=	false
 CLIENTTMPDIR    =       /tmp
+REOPT		=	false
 OPTCOMMAND	=	optimize
+SETCUTOFF	=	0
+VISUALIZE       =       false
+MAXJOBS         =       1
+
 
 #compiling and linking parameters
 VERBOSE		=	false
 OPT		=	opt
 COMP		=	gnu
-LPS		=	spx
+LPS		=	spx2
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
 LINKER  	=	C
 SHARED		=	false
+NOBLKMEM	=	false
+NOBUFMEM	=	false
+NOBLKBUFMEM	=	false
 
 #will this be compiled for parascip, necessary for dbg-builds and cppad to make it threadsafe
 PARASCIP	=	false
 
 #third party compiling parameters
+OPENSOURCE   =         true
 READLINE	=	true
 ZLIB		=	true
 GMP		=	true
@@ -82,7 +91,7 @@ ZIMPLOPT	=	opt
 IPOPTOPT	=	opt
 LPSCHECK        =       false
 GAMS		=	false
-SPX_LEGACY  = false
+SPX_LEGACY  	= 	false
 
 #compiler and linker parameters
 CC		=	gcc
@@ -124,6 +133,7 @@ CBC		=	cbc
 CBCPARALLEL	=	cbc-parallel
 MOSEK           =       mosek
 GUROBI          =       gurobi_cl
+XPRESS_BIN      =       xpress
 GLPK            =       glpsol
 SYMPHONY        =       symphony
 BLIS            =       blis
@@ -179,7 +189,7 @@ ALLSRC		=
 #-----------------------------------------------------------------------------
 # include additional make files
 #-----------------------------------------------------------------------------
-include $(SCIPREALPATH)/make/make.$(BASE)
+-include $(SCIPREALPATH)/make/make.$(BASE)
 -include $(SCIPREALPATH)/make/local/make.$(HOSTNAME)
 -include $(SCIPREALPATH)/make/local/make.$(HOSTNAME).$(COMP)
 -include $(SCIPREALPATH)/make/local/make.$(HOSTNAME).$(COMP).$(OPT)
@@ -202,8 +212,16 @@ DFLAGS		+=	$(USRDFLAGS)
 # Memory Management
 #-----------------------------------------------------------------------------
 
-#FLAGS		+=	-DBMS_NOBLOCKMEM
-
+ifeq ($(NOBLKBUFMEM),true)
+     FLAGS		+=	-DBMS_NOBLOCKMEM -DSCIP_NOBUFFERMEM
+else
+  ifeq ($(NOBLKMEM),true)
+       FLAGS		+=	-DBMS_NOBLOCKMEM
+  endif
+  ifeq ($(NOBUFMEM),true)
+       FLAGS		+=	-DSCIP_NOBUFFERMEM
+  endif
+endif
 
 #-----------------------------------------------------------------------------
 # PARASCIP
@@ -220,6 +238,10 @@ endif
 # LP Solver Interface
 #-----------------------------------------------------------------------------
 
+ifeq ($(LPS),spx)
+LPS		=	spx2
+endif
+
 LPILIBNAME	=	lpi$(LPS)
 
 ifeq ($(LPS),cpx)
@@ -233,6 +255,9 @@ endif
 
 ifeq ($(LPS),xprs)
 LPSLDFLAGS	+=	$(LINKCC_l)xpress.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX) $(LINKCC_l)dl$(LINKLIBSUFFIX)
+ifneq ($(LINKRPATH),)
+LDFLAGS                +=      $(LINKRPATH)$(realpath $(SCIPREALPATH)/$(LIBDIR)/xprsinc/../lib)
+endif
 endif
 
 ifeq ($(LPS),msk)
@@ -240,7 +265,7 @@ LPSLDFLAGS	+=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
 
-ifeq ($(LPS),spx)
+ifeq ($(LPS),spx1)
 LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 
 ifeq ($(LPSCHECK),true)
@@ -249,15 +274,11 @@ endif
 endif
 
 ifeq ($(LPS),spx2)
-LPSLDFLAGS  += $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 
 ifeq ($(LPSCHECK),true)
-LPSLDFLAGS  += $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
-endif
-
-ifeq ($(LPS),spx132)
-LPSLDFLAGS	+=	$(LINKCXX_l)soplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 endif
 
 ifeq ($(LPS),clp)
@@ -305,6 +326,11 @@ endif
 
 ifeq ($(ZIMPL),auto)
 ZIMPL		=	$(GMP)
+ifeq ($(ZIMPL),false)
+ifeq ($(MAKELEVEL),0)
+$(warning ZIMPL was deactived because of missing GMP support.)
+endif
+endif
 endif
 
 ifeq ($(GMP_LDFLAGS),)
@@ -366,8 +392,14 @@ LIBBUILD	=	$(LINKCXX)
 else
 LIBBUILD	=	$(LINKCC)
 endif
+
+ifeq ($(COMP),msvc)
+LIBBUILDFLAGS	+=      -dll
+LIBBUILD_o	= 	-out:
+else
 LIBBUILDFLAGS	+=      -shared
 LIBBUILD_o	= 	-o # the trailing space is important
+endif
 ARFLAGS		=
 RANLIB		=
 endif

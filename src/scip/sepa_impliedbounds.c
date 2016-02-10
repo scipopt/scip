@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -37,13 +37,19 @@
 #define SEPA_DELAY                FALSE /**< should separation method be delayed, if other separators found cuts? */
 
 #define RELCUTCOEFMAXRANGE          1.0 /**< maximal allowed range of cut coefficients, relative to 1/feastol */
+#define DEFAULT_USETWOSIZECLIQUES  TRUE /**< should violated inequalities for cliques with 2 variables be separated? */
 
+/** separator-specific data for the implied bounds separator */
+struct SCIP_SepaData
+{
+   SCIP_Bool             usetwosizecliques;  /**< should violated inequalities for cliques with 2 variables be separated? */
+};
 
 /*
  * Local methods
  */
 
-/* adds given cut with two variables, if it is violated */
+/** adds given cut with two variables, if it is violated */
 static
 SCIP_RETCODE addCut(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -121,6 +127,9 @@ SCIP_RETCODE separateCuts(
    int*                  ncuts               /**< pointer to store the number of generated cuts */
    )
 {
+   SCIP_CLIQUE** cliques;
+   SCIP_SEPADATA* sepadata;
+   int ncliques;
    int i;
 
    assert(solvals != NULL);
@@ -131,6 +140,8 @@ SCIP_RETCODE separateCuts(
 
    *cutoff = FALSE;
    *ncuts = 0;
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
 
    SCIPdebugMessage("searching for implied bound cuts\n");
 
@@ -155,7 +166,7 @@ SCIP_RETCODE separateCuts(
       implvars = SCIPvarGetImplVars(fracvars[i], TRUE);
       impltypes = SCIPvarGetImplTypes(fracvars[i], TRUE);
       implbounds = SCIPvarGetImplBounds(fracvars[i], TRUE);
-      
+
       /*debugMessage("%d implications for <%s>[%g] == 1\n", nimpl, SCIPvarGetName(fracvars[i]), fracvals[i]);*/
 
       /* try to add cuts for implications of x == 1
@@ -179,10 +190,10 @@ SCIP_RETCODE separateCuts(
          if( impltypes[j] == SCIP_BOUNDTYPE_UPPER )
          {
             SCIP_Real ub;
-         
+
             /* implication x == 1 -> y <= p */
             ub = SCIPvarGetUbGlobal(implvars[j]);
-            
+
             /* consider only nonredundant and numerical harmless implications */
             if( SCIPisLE(scip, implbounds[j], ub) && (ub - implbounds[j]) * SCIPfeastol(scip) <= RELCUTCOEFMAXRANGE )
             {
@@ -218,7 +229,7 @@ SCIP_RETCODE separateCuts(
       implvars = SCIPvarGetImplVars(fracvars[i], FALSE);
       impltypes = SCIPvarGetImplTypes(fracvars[i], FALSE);
       implbounds = SCIPvarGetImplBounds(fracvars[i], FALSE);
-      
+
       /*debugMessage("%d implications for <%s>[%g] == 0\n", nimpl, SCIPvarGetName(fracvars[i]), fracvals[i]);*/
 
       /* try to add cuts for implications of x == 0
@@ -273,6 +284,66 @@ SCIP_RETCODE separateCuts(
       }
    }
 
+   /* stop separation here if cliques should not be separated */
+   if( ! sepadata->usetwosizecliques )
+      return SCIP_OKAY;
+
+   /* prepare clean clique data */
+   SCIP_CALL( SCIPcleanupCliques(scip, cutoff) );
+
+   if( *cutoff )
+      return SCIP_OKAY;
+
+   cliques = SCIPgetCliques(scip);
+   ncliques = SCIPgetNCliques(scip);
+
+   /* loop over cliques of size 2 which are essentially implications and add cuts if they are violated */
+   for( i = 0; i < ncliques; ++i )
+   {
+      SCIP_CLIQUE* clique;
+      SCIP_VAR** clqvars;
+      SCIP_Bool* clqvals;
+      SCIP_Real rhs;
+
+      clique = cliques[i];
+      /* only consider inequality cliques of size 2 */
+      if( SCIPcliqueGetNVars(clique) != 2 || SCIPcliqueIsEquation(clique) )
+         continue;
+
+      /* get variables and values of the clique */
+      clqvars = SCIPcliqueGetVars(clique);
+      clqvals = SCIPcliqueGetValues(clique);
+
+      /* clique variables should never be equal after clean up */
+      assert(clqvars[0] != clqvars[1]);
+
+      /* calculate right hand side of clique inequality, which is initially 1 and decreased by 1 for every occurence of
+       * a negated variable in the clique
+       */
+      rhs = 1.0;
+      if( ! clqvals[0] )
+         rhs -= 1.0;
+      if( ! clqvals[1] )
+         rhs -= 1.0;
+
+      /* Basic clique inequality is
+       *
+       *       cx * x + (1-cx) (1-x) + cy * y + (1-cy) * (1-y) <= 1,
+       *
+       * where x and y are the two binary variables in the clique and cx and cy are their clique values, where a
+       * clique value of 0 means that the negation of the variable should be part of the inequality.
+       * Hence, exactly one of the two possible terms for x and y has a nonzero coefficient
+       */
+      SCIP_CALL( addCut(scip, sepa, sol,
+            clqvals[0] ? 1.0 : -1.0, clqvars[0], SCIPgetSolVal(scip, sol, clqvars[0]),
+            clqvals[1] ? 1.0 : -1.0, clqvars[1], SCIPgetSolVal(scip, sol, clqvars[1]),
+            rhs, cutoff, ncuts) );
+
+      /* terminate if cutoff was found */
+      if( *cutoff )
+         return SCIP_OKAY;
+   }
+
    return SCIP_OKAY;
 }
 
@@ -291,7 +362,28 @@ SCIP_DECL_SEPACOPY(sepaCopyImpliedbounds)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeSepaImpliedbounds(scip) );
- 
+
+   return SCIP_OKAY;
+}
+
+/** destructor of separator to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_SEPAFREE(sepaFreeImpliedbounds)
+{  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+
+   assert(scip != NULL);
+   assert(sepa != NULL);
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* get separation data and free it */
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+   SCIPfreeMemory(scip, &sepadata);
+
+   /* reset data pointer to NULL */
+   SCIPsepaSetData(sepa, NULL);
+
    return SCIP_OKAY;
 }
 
@@ -312,7 +404,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpImpliedbounds)
 
    assert(sepa != NULL);
    assert(scip != NULL);
- 
+
    *result = SCIP_DIDNOTRUN;
 
    /* gets active problem variables */
@@ -365,7 +457,7 @@ SCIP_DECL_SEPAEXECSOL(sepaExecsolImpliedbounds)
 
    assert(sepa != NULL);
    assert(scip != NULL);
- 
+
    *result = SCIP_DIDNOTRUN;
 
    /* gets active problem variables */
@@ -430,18 +522,24 @@ SCIP_RETCODE SCIPincludeSepaImpliedbounds(
    SCIP_SEPA* sepa;
 
    /* create impliedbounds separator data */
-   sepadata = NULL;
+   SCIP_CALL( SCIPallocMemory(scip, &sepadata) );
+   assert(sepadata != NULL);
 
    /* include separator */
    SCIP_CALL( SCIPincludeSepaBasic(scip, &sepa, SEPA_NAME, SEPA_DESC, SEPA_PRIORITY, SEPA_FREQ, SEPA_MAXBOUNDDIST,
          SEPA_USESSUBSCIP, SEPA_DELAY,
          sepaExeclpImpliedbounds, sepaExecsolImpliedbounds,
          sepadata) );
-
    assert(sepa != NULL);
 
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopyImpliedbounds) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeImpliedbounds) );
+
+   /* add separator parameters */
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/impliedbounds/usetwosizecliques",
+         "should violated inequalities for cliques with 2 variables be separated?",
+         &sepadata->usetwosizecliques, TRUE, DEFAULT_USETWOSIZECLIQUES, NULL, NULL) );
 
    return SCIP_OKAY;
 }

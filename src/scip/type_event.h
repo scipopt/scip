@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -78,7 +78,7 @@ extern "C" {
 /* primal solution events */
 #define SCIP_EVENTTYPE_POORSOLFOUND   0x00800000u /**< a good enough primal feasible (but not new best) solution was found */
 #define SCIP_EVENTTYPE_BESTSOLFOUND   0x01000000u /**< a new best primal feasible solution was found */
-   
+
 /* linear row events */
 #define SCIP_EVENTTYPE_ROWADDEDSEPA   0x02000000u /**< a row has been added to SCIP's separation storage */
 #define SCIP_EVENTTYPE_ROWDELETEDSEPA 0x04000000u /**< a row has been removed from SCIP's separation storage */
@@ -103,7 +103,7 @@ extern "C" {
                                        | SCIP_EVENTTYPE_GBDCHANGED | SCIP_EVENTTYPE_DOMCHANGED | SCIP_EVENTTYPE_IMPLADDED \
                                        | SCIP_EVENTTYPE_VARDELETED)
 #define SCIP_EVENTTYPE_VAREVENT       (SCIP_EVENTTYPE_VARADDED | SCIP_EVENTTYPE_VARCHANGED)
-   
+
 /* event masks for node events */
 #define SCIP_EVENTTYPE_NODESOLVED     (SCIP_EVENTTYPE_NODEFEASIBLE | SCIP_EVENTTYPE_NODEINFEASIBLE \
                                        | SCIP_EVENTTYPE_NODEBRANCHED)
@@ -119,7 +119,7 @@ extern "C" {
 /* event masks for row events */
 #define SCIP_EVENTTYPE_ROWCHANGED     (SCIP_EVENTTYPE_ROWCOEFCHANGED | SCIP_EVENTTYPE_ROWCONSTCHANGED | SCIP_EVENTTYPE_ROWSIDECHANGED)
 #define SCIP_EVENTTYPE_ROWEVENT       (SCIP_EVENTTYPE_ROWADDEDSEPA | SCIP_EVENTTYPE_ROWDELETEDSEPA | SCIP_EVENTTYPE_ROWADDEDLP | SCIP_EVENTTYPE_ROWDELETEDLP | SCIP_EVENTTYPE_ROWCHANGED)
-   
+
 typedef unsigned int SCIP_EVENTTYPE;         /**< type of event (bit field) */
 
 

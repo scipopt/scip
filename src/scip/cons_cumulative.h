@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -284,6 +284,7 @@ SCIP_RETCODE SCIPpresolveCumulativeCondition(
 EXTERN
 SCIP_RETCODE SCIPpropCumulativeCondition(
    SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_PRESOLTIMING     presoltiming,       /**< current presolving timing */
    int                   nvars,              /**< number of variables (jobs) */
    SCIP_VAR**            vars,               /**< array of integer variable which corresponds to starting times for a job */
    int*                  durations,          /**< array containing corresponding durations */

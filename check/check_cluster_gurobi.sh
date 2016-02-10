@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -169,7 +169,7 @@ else
     fi
 fi
 
-EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME.eval
+EVALFILE=$SCIPPATH/results/check.$TSTNAME.$BINID.$QUEUE.$SETNAME"_"$THREADS.eval
 echo > $EVALFILE
 
 # counter to define file names for a test set uniquely
@@ -183,7 +183,7 @@ if test $FEASTOL != "default"
 then
     CLSETTINGSLIST="$CLSETTINGSLIST FeasibilityTol=$FEASTOL IntFeasTol=$FEASTOL"
 fi
-CLSETTINGSLIST="$CLSETTINGSLIST TimeLimit=$TIMELIMIT NodeLimit=$NODELIMIT DisplayInterval=$DISPFREQ MIPGap=0.0 Threads=$THREADS"
+CLSETTINGSLIST="$CLSETTINGSLIST TimeLimit=$TIMELIMIT NodeLimit=$NODELIMIT DisplayInterval=$DISPFREQ MIPGap=0.0 Threads=$THREADS Crossover=0 Method=2"
 
 # parse settings from settings file via awk
 if test $SETNAME != "default"
@@ -226,7 +226,7 @@ do
       SHORTFILENAME=`basename $SHORTFILENAME .lp`
       SHORTFILENAME=`basename $SHORTFILENAME .opb`
 
-      FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTFILENAME.$QUEUE.$BINID.$SETNAME
+      FILENAME=$USER.$TSTNAME.$COUNT"_"$SHORTFILENAME.$QUEUE.$BINID.$SETNAME"_"$THREADS
       BASENAME=$SCIPPATH/results/$FILENAME
 
       SETFILE=$BASENAME.prm
@@ -248,7 +248,11 @@ do
 	  rm -f $SETFILE
       fi
 
-      # additional environment variables needed by runcluster.sh
+      # we need to create a tmp file for run.sh - even if it's empty!
+      TMPFILE=$BASENAME.tmp
+      touch $TMPFILE
+
+      # additional environment variables needed by run.sh
       export SOLVERPATH=$SCIPPATH
       export EXECNAME="$BINNAME $CLSETTINGSLIST $i"
       export BASENAME=$FILENAME
@@ -258,9 +262,9 @@ do
       # check queue type
       if test  "$QUEUETYPE" = "srun"
       then
-         sbatch --job-name=GUROBI$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT --time=${HARDTIMELIMIT} ${NICE} ${EXCLUSIVE} --output=/dev/null runcluster_gurobi.sh
+         sbatch --job-name=GUROBI$SHORTFILENAME --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT --time=${HARDTIMELIMIT} ${NICE} ${EXCLUSIVE} --output=/dev/null run.sh
       else
-         qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N GUROBI$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null runcluster_gurobi.sh
+         qsub -l walltime=$HARDTIMELIMIT -l mem=$HARDMEMLIMIT -l nodes=1:ppn=$PPN -N GUROBI$SHORTFILENAME -V -q $QUEUE -o /dev/null -e /dev/null run.sh
       fi
   else
       echo "input file "$SCIPPATH/$i" not found!"

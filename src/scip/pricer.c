@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -362,22 +362,22 @@ SCIP_RETCODE SCIPpricerRedcost(
    assert(result != NULL);
 
    SCIPdebugMessage("executing reduced cost pricing of variable pricer <%s>\n", pricer->name);
-   
+
    oldnvars = prob->nvars;
-   
+
    /* start timing */
    SCIPclockStart(pricer->pricerclock, set);
-   
+
    /* call external method */
    SCIP_CALL( pricer->pricerredcost(set->scip, pricer, lowerbound, stopearly, result) );
-   
+
    /* stop timing */
    SCIPclockStop(pricer->pricerclock, set);
-   
+
    /* evaluate result */
    pricer->ncalls++;
    pricer->nvarsfound += prob->nvars - oldnvars;
-   
+
    return SCIP_OKAY;
 }
 
@@ -385,7 +385,8 @@ SCIP_RETCODE SCIPpricerRedcost(
 SCIP_RETCODE SCIPpricerFarkas(
    SCIP_PRICER*          pricer,             /**< variable pricer */
    SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_PROB*            prob                /**< transformed problem */
+   SCIP_PROB*            prob,               /**< transformed problem */
+   SCIP_RESULT*          result              /**< result of the pricing process */
    )
 {
    int oldnvars;
@@ -400,22 +401,22 @@ SCIP_RETCODE SCIPpricerFarkas(
       return SCIP_OKAY;
 
    SCIPdebugMessage("executing Farkas pricing of variable pricer <%s>\n", pricer->name);
-   
+
    oldnvars = prob->nvars;
-   
+
    /* start timing */
    SCIPclockStart(pricer->pricerclock, set);
-   
+
    /* call external method */
-   SCIP_CALL( pricer->pricerfarkas(set->scip, pricer) );
-   
+   SCIP_CALL( pricer->pricerfarkas(set->scip, pricer, result) );
+
    /* stop timing */
    SCIPclockStop(pricer->pricerclock, set);
-   
+
    /* evaluate result */
    pricer->ncalls++;
    pricer->nvarsfound += prob->nvars - oldnvars;
-   
+
    return SCIP_OKAY;
 }
 
@@ -447,7 +448,7 @@ SCIP_RETCODE SCIPpricerExec(
 
    if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_INFEASIBLE )
    {
-      SCIP_CALL( SCIPpricerFarkas(pricer, set, prob) );
+      SCIP_CALL( SCIPpricerFarkas(pricer, set, prob, result) );
    }
    else
    {
@@ -584,7 +585,7 @@ void SCIPpricerSetPriority(
 {
    assert(pricer != NULL);
    assert(set != NULL);
-   
+
    pricer->priority = priority;
    set->pricerssorted = FALSE;
 }
@@ -627,6 +628,18 @@ SCIP_Real SCIPpricerGetTime(
    assert(pricer != NULL);
 
    return SCIPclockGetTime(pricer->pricerclock);
+}
+
+/** enables or disables all clocks of \p pricer, depending on the value of the flag */
+void SCIPpricerEnableOrDisableClocks(
+   SCIP_PRICER*          pricer,             /**< the pricer for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the pricer be enabled? */
+   )
+{
+   assert(pricer != NULL);
+
+   SCIPclockEnableOrDisable(pricer->setuptime, enable);
+   SCIPclockEnableOrDisable(pricer->pricerclock, enable);
 }
 
 /** returns whether the given pricer is in use in the current problem */

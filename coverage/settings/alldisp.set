@@ -1,0 +1,66 @@
+# SCIP version 3.0.0
+
+# maximal number of characters in a node information line
+# [type: int, range: [0,2147483647], default: 139]
+display/width = 200
+
+# display activation status of display column <lpcond> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/lpcond/active = 2
+
+# display activation status of display column <depth> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/depth/active = 2
+
+# display activation status of display column <plungedepth> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/plungedepth/active = 2
+
+# display activation status of display column <nexternbranchcands> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/nexternbranchcands/active = 2
+
+# display activation status of display column <curconss> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/curconss/active = 2
+
+# display activation status of display column <separounds> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/separounds/active = 2
+
+# display activation status of display column <poolsize> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/poolsize/active = 2
+
+# display activation status of display column <pseudoobj> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/pseudoobj/active = 2
+
+# display activation status of display column <lpobj> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/lpobj/active = 2
+
+# display activation status of display column <curdualbound> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/curdualbound/active = 2
+
+# display activation status of display column <estimate> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/estimate/active = 2
+
+# display activation status of display column <avgdualbound> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/avgdualbound/active = 2
+
+# display activation status of display column <cutoffbound> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/cutoffbound/active = 2
+
+# display activation status of display column <primalgap> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 0]
+display/primalgap/active = 2
+
+# display activation status of display column <nsols> (0: off, 1: auto, 2:on)
+# [type: int, range: [0,2], default: 1]
+display/nsols/active = 2
+

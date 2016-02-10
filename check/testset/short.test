@@ -24,7 +24,6 @@ instances/MINLP/circle.cip
 instances/MINLP/ex1266.mps
 instances/MINLP/gastrans.cip
 instances/MINLP/m3.osil
-instances/MINLP/meanvarx.mps
 instances/MINLP/parincQuadratic.osil
 instances/MINLP/tltr.mps
 instances/PseudoBoolean/factor-mod-size=9-P0=67-P1=349-P2=67-P3=499-P4=79-P5=347-P6=307-B.opb
@@ -41,6 +40,7 @@ instances/SOS/findRoot.lp
 instances/SOS/pcu_0.01.lp
 instances/SOS/pcu_0.1.lp
 instances/SOS/sparse2.lp
+instances/SOS/tpesc.lp
 instances/Orbitope/packorb_1-FullIns_3.cip
 instances/Orbitope/partorb_1-FullIns_3.cip
 instances/CP/disj_conj_rail.cip

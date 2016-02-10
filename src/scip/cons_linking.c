@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -61,10 +61,10 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 
 #define HASHSIZE_BINVARSCONS     131101 /**< minimal size of hash table in linking constraint handler */
@@ -111,7 +111,7 @@ void* getHashmapKey(
    )
 {
    /* return the unique variable index + 1 */
-   return (void*)(size_t)(SCIPvarGetIndex(var) + 1);
+   return (void*)(size_t)(SCIPvarGetIndex(var) + 1); /*lint !e571 !e776*/
 }
 
 /* sort binary variable in non-decreasing order w.r.t. coefficients */
@@ -423,8 +423,8 @@ SCIP_RETCODE consdataCreateBinvars(
    SCIPdebugMessage("create binary variables for integer variable <%s>\n", SCIPvarGetName(consdata->intvar));
 
    intvar = consdata->intvar;
-   lb = (int)(SCIPvarGetLbGlobal(intvar) + 0.5);
-   ub = (int)(SCIPvarGetUbGlobal(intvar) + 0.5);
+   lb = SCIPconvertRealToInt(scip, SCIPvarGetLbGlobal(intvar));
+   ub = SCIPconvertRealToInt(scip, SCIPvarGetUbGlobal(intvar));
    nbinvars = ub-lb+1;
    assert(nbinvars > 0);
 
@@ -772,8 +772,8 @@ SCIP_RETCODE processIntegerBoundChg(
    binvars = consdata->binvars;
    vals = consdata->vals;
 
-   lblocal = (int)(SCIPvarGetLbLocal(intvar) + 0.5);
-   ublocal = (int)(SCIPvarGetUbLocal(intvar) + 0.5);
+   lblocal = SCIPconvertRealToInt(scip, SCIPvarGetLbLocal(intvar));
+   ublocal = SCIPconvertRealToInt(scip, SCIPvarGetUbLocal(intvar));
    assert(lblocal <= ublocal);
 
 #ifndef NDEBUG
@@ -1266,7 +1266,7 @@ SCIP_RETCODE processBinvarFixings(
       /* at least two variables are fixed to 1:
        * - the set partitioning condition is violated
        */
-      SCIPdebugMessage(" -> conflict on "CONSHDLR_NAME" constraint <%s> due to the set partitioning condition\n", SCIPconsGetName(cons));
+      SCIPdebugMessage(" -> conflict on " CONSHDLR_NAME " constraint <%s> due to the set partitioning condition\n", SCIPconsGetName(cons));
 
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
 
@@ -1310,7 +1310,7 @@ SCIP_RETCODE processBinvarFixings(
        */
       assert(consdata->nfixedones == 0);
 
-      SCIPdebugMessage(" -> "CONSHDLR_NAME" constraint <%s> is infeasible due to the set partitioning condition\n",
+      SCIPdebugMessage(" -> " CONSHDLR_NAME " constraint <%s> is infeasible due to the set partitioning condition\n",
          SCIPconsGetName(cons));
 
       SCIP_CALL( SCIPresetConsAge(scip, cons) );
@@ -1369,7 +1369,7 @@ SCIP_RETCODE processBinvarFixings(
             if( SCIPvarGetUbLocal(var) > 0.5 )
             {
                assert(SCIPvarGetLbLocal(var) < 0.5);
-               SCIPdebugMessage(" -> fixing remaining binary variable <%s> to one in "CONSHDLR_NAME" constraint <%s>\n",
+               SCIPdebugMessage(" -> fixing remaining binary variable <%s> to one in " CONSHDLR_NAME " constraint <%s>\n",
                   SCIPvarGetName(var), SCIPconsGetName(cons));
 
                SCIP_CALL( SCIPinferBinvarCons(scip, var, TRUE, cons, -1, &infeasible, &tightened) );
@@ -1517,7 +1517,7 @@ SCIP_RETCODE aggregateVariables(
                 * integral
                 */
                assert(SCIPisIntegral(scip, aggrconst));
-               shift = (int)(aggrconst + 0.5);
+               shift = SCIPconvertRealToInt(scip, aggrconst);
 
                offset = consdata->offset;
                binvars = consdata->binvars;
@@ -2068,7 +2068,7 @@ SCIP_DECL_CONSSEPASOL(consSepasolLinking)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("separating %d/%d "CONSHDLR_NAME" constraints\n", nusefulconss, nconss);
+   SCIPdebugMessage("separating %d/%d " CONSHDLR_NAME " constraints\n", nusefulconss, nconss);
 
    cutoff = FALSE;
    separated = FALSE;
@@ -2155,7 +2155,7 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinking)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("pseudo enforcing %d "CONSHDLR_NAME" constraints\n", nconss);
+   SCIPdebugMessage("pseudo enforcing %d " CONSHDLR_NAME " constraints\n", nconss);
 
    if( objinfeasible )
    {
@@ -2290,7 +2290,7 @@ SCIP_DECL_CONSPROP(consPropLinking)
    assert(nconss == 0 || conss != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("propagating %d/%d "CONSHDLR_NAME" constraints\n", nusefulconss, nconss);
+   SCIPdebugMessage("propagating %d/%d " CONSHDLR_NAME " constraints\n", nusefulconss, nconss);
 
    cutoff = FALSE;
    nchgbds = 0;
@@ -2386,7 +2386,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
          /* at least two variables are fixed to 1:
           * - a linking constraint is infeasible due to the set partitioning condition
           */
-         SCIPdebugMessage(""CONSHDLR_NAME" constraint <%s> is infeasible\n", SCIPconsGetName(cons));
+         SCIPdebugMessage("" CONSHDLR_NAME " constraint <%s> is infeasible\n", SCIPconsGetName(cons));
          *result = SCIP_CUTOFF;
          return SCIP_OKAY;
       }
@@ -2401,7 +2401,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
          SCIP_VAR* var;
          int v;
 
-         SCIPdebugMessage(""CONSHDLR_NAME" constraint <%s> has a binary variable fixed to 1.0\n", SCIPconsGetName(cons));
+         SCIPdebugMessage("" CONSHDLR_NAME " constraint <%s> has a binary variable fixed to 1.0\n", SCIPconsGetName(cons));
 
          for( v = 0; v < consdata->nbinvars; ++v )
          {
@@ -2414,7 +2414,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
 
                if( infeasible )
                {
-                  SCIPdebugMessage(""CONSHDLR_NAME" constraint <%s>: infeasible fixing <%s> == 0\n",
+                  SCIPdebugMessage("" CONSHDLR_NAME " constraint <%s>: infeasible fixing <%s> == 0\n",
                      SCIPconsGetName(cons), SCIPvarGetName(var));
 
                   *result = SCIP_CUTOFF;
@@ -2430,7 +2430,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
 
                if( infeasible )
                {
-                  SCIPdebugMessage(""CONSHDLR_NAME" constraint <%s>: infeasible fixing <%s> == %d\n",
+                  SCIPdebugMessage("" CONSHDLR_NAME " constraint <%s>: infeasible fixing <%s> == %d\n",
                      SCIPconsGetName(cons), SCIPvarGetName(consdata->intvar), consdata->vals[v]);
 
                   *result = SCIP_CUTOFF;
@@ -2445,7 +2445,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
          /* now all other variables are fixed to zero:
           * the constraint is feasible, and if it's not modifiable, it is redundant
           */
-         SCIPdebugMessage(""CONSHDLR_NAME" constraint <%s> is redundant\n", SCIPconsGetName(cons));
+         SCIPdebugMessage("" CONSHDLR_NAME " constraint <%s> is redundant\n", SCIPconsGetName(cons));
          SCIP_CALL( SCIPdelCons(scip, cons) );
          (*ndelconss)++;
          continue;
@@ -2477,7 +2477,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
 
          assert(consdata->nfixedones == 0);
 
-         SCIPdebugMessage(""CONSHDLR_NAME" constraint <%s> has only one binary variable not fixed to zero\n",
+         SCIPdebugMessage("" CONSHDLR_NAME " constraint <%s> has only one binary variable not fixed to zero\n",
             SCIPconsGetName(cons));
 
          /* search unfixed variable */
@@ -2494,7 +2494,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
          SCIP_CALL( SCIPfixVar(scip, var, 1.0, &infeasible, &fixed) );
          if( infeasible )
          {
-            SCIPdebugMessage(""CONSHDLR_NAME" constraint <%s>: infeasible fixing <%s> == 1\n",
+            SCIPdebugMessage("" CONSHDLR_NAME " constraint <%s>: infeasible fixing <%s> == 1\n",
                SCIPconsGetName(cons), SCIPvarGetName(var));
             *result = SCIP_CUTOFF;
             return SCIP_OKAY;
@@ -2506,7 +2506,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
          SCIP_CALL( SCIPfixVar(scip, consdata->intvar, (SCIP_Real)(consdata->vals[v]), &infeasible, &fixed) );
          if( infeasible )
          {
-            SCIPdebugMessage(""CONSHDLR_NAME" constraint <%s>: infeasible fixing <%s> == %d\n",
+            SCIPdebugMessage("" CONSHDLR_NAME " constraint <%s>: infeasible fixing <%s> == %d\n",
                SCIPconsGetName(cons), SCIPvarGetName(consdata->intvar), consdata->vals[v]);
 
             *result = SCIP_CUTOFF;
@@ -2551,7 +2551,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
          assert(var1 != NULL && var2 != NULL);
 
          /* aggregate binary equality var1 + var2 == 1 */
-         SCIPdebugMessage(""CONSHDLR_NAME" constraint <%s>: aggregate <%s> + <%s> == 1\n",
+         SCIPdebugMessage("" CONSHDLR_NAME " constraint <%s>: aggregate <%s> + <%s> == 1\n",
             SCIPconsGetName(cons), SCIPvarGetName(var1), SCIPvarGetName(var2));
          SCIP_CALL( SCIPaggregateVars(scip, var1, var2, 1.0, 1.0, 1.0, &infeasible, &redundant, &aggregated) );
 
@@ -2618,7 +2618,7 @@ SCIP_DECL_CONSPRESOL(consPresolLinking)
          /* add set partitioning condition as clique */
          int ncliquebdchgs;
 
-         SCIP_CALL( SCIPaddClique(scip, consdata->binvars, NULL, consdata->nbinvars, &infeasible, &ncliquebdchgs) );
+         SCIP_CALL( SCIPaddClique(scip, consdata->binvars, NULL, consdata->nbinvars, TRUE, &infeasible, &ncliquebdchgs) );
          *nchgbds += ncliquebdchgs;
 
          if( infeasible )
@@ -2655,7 +2655,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
    SCIP_VAR* intvar;
    int v;
 
-   SCIPdebugMessage("conflict resolving method of "CONSHDLR_NAME" constraint handler\n");
+   SCIPdebugMessage("conflict resolving method of " CONSHDLR_NAME " constraint handler\n");
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
@@ -2748,7 +2748,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       vals = consdata->vals;
 
       /* get propagated lower bound */
-      lb = (int)(SCIPvarGetLbAtIndex(intvar, bdchgidx, TRUE) + 0.5);
+      lb = SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(intvar, bdchgidx, TRUE));
 
       for( b = 0;  b < nbinvars; ++b )
       {
@@ -2777,7 +2777,7 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       vals = consdata->vals;
 
       /* get old and new upper bound */
-      ub = (int)(SCIPvarGetUbAtIndex(intvar, bdchgidx, TRUE) + 0.5);
+      ub = SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(intvar, bdchgidx, TRUE));
 
       /* resolve tightening of upper bound of the integer variable by binary variables */
       for( b = nbinvars - 1; b >= 0; --b )
@@ -2810,8 +2810,8 @@ SCIP_DECL_CONSRESPROP(consRespropLinking)
       assert(infervar == intvar);
       assert(inferinfo >= 0);
       assert(inferinfo < consdata->nbinvars);
-      assert(consdata->vals[inferinfo] == (int)(SCIPvarGetUbAtIndex(consdata->intvar, bdchgidx, TRUE) + 0.5)
-         || consdata->vals[inferinfo] == (int)(SCIPvarGetLbAtIndex(consdata->intvar, bdchgidx, TRUE) + 0.5));
+      assert(consdata->vals[inferinfo] == SCIPconvertRealToInt(scip, SCIPvarGetUbAtIndex(consdata->intvar, bdchgidx, TRUE))
+         || consdata->vals[inferinfo] == SCIPconvertRealToInt(scip, SCIPvarGetLbAtIndex(consdata->intvar, bdchgidx, TRUE)));
 
       assert(SCIPvarGetLbAtIndex(consdata->binvars[inferinfo], bdchgidx, FALSE) > 0.5);
       SCIP_CALL( SCIPaddConflictBinvar(scip, consdata->binvars[inferinfo]) );
@@ -3044,10 +3044,7 @@ SCIP_DECL_CONSPARSE(consParseLinking)
             /* check that the coefficients is integral */
             *success = *success && SCIPisIntegral(scip, vals[v]);
 
-            if( vals[v] < 0 )
-               intvals[v] = (int)(vals[v] - 0.5);
-            else
-               intvals[v] = (int)(vals[v] + 0.5);
+            intvals[v] = SCIPconvertRealToInt(scip, vals[v]);
          }
       }
 
@@ -3194,7 +3191,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreLinking) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpLinking) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseLinking) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolLinking, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolLinking, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintLinking) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropLinking, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
@@ -3209,7 +3206,7 @@ SCIP_RETCODE SCIPincludeConshdlrLinking(
 
    /* add linking constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/linearize", "this constraint will not propagate or separate, linear and setppc are used?",
+         "constraints/" CONSHDLR_NAME "/linearize", "this constraint will not propagate or separate, linear and setppc are used?",
          &conshdlrdata->linearize, FALSE, DEFAULT_LINEARIZE, NULL, NULL) );
 
    return SCIP_OKAY;
@@ -3372,7 +3369,7 @@ SCIP_VAR* SCIPgetIntvarLinking(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not a "CONSHDLR_NAME" constraint\n");
+      SCIPerrorMessage("constraint is not a " CONSHDLR_NAME " constraint\n");
       SCIPABORT();
       return NULL;  /*lint !e527*/
    }
@@ -3396,7 +3393,7 @@ SCIP_RETCODE SCIPgetBinvarsLinking(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not a "CONSHDLR_NAME" constraint\n");
+      SCIPerrorMessage("constraint is not a " CONSHDLR_NAME " constraint\n");
       SCIPABORT();
       return SCIP_INVALIDDATA;  /*lint !e527*/
    }
@@ -3438,7 +3435,7 @@ int SCIPgetNBinvarsLinking(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not a "CONSHDLR_NAME" constraint\n");
+      SCIPerrorMessage("constraint is not a " CONSHDLR_NAME " constraint\n");
       SCIPABORT();
       return -1;  /*lint !e527*/
    }
@@ -3459,7 +3456,7 @@ int* SCIPgetValsLinking(
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
-      SCIPerrorMessage("constraint is not a "CONSHDLR_NAME" constraint\n");
+      SCIPerrorMessage("constraint is not a " CONSHDLR_NAME " constraint\n");
       SCIPABORT();
       return NULL;  /*lint !e527*/
    }

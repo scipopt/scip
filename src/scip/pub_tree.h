@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,6 +28,7 @@
 #include "scip/def.h"
 #include "scip/type_misc.h"
 #include "scip/type_tree.h"
+#include "scip/type_reopt.h"
 
 #ifdef NDEBUG
 #include "scip/struct_tree.h"
@@ -61,6 +62,19 @@ void SCIPnodeGetParentBranchings(
 EXTERN
 void SCIPnodeGetAncestorBranchings(
    SCIP_NODE*            node,               /**< node data */
+   SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
+   SCIP_Real*            branchbounds,       /**< array of bounds which the branchings in all ancestors set */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branchings in all ancestors set */
+   int*                  nbranchvars,        /**< number of variables on which branchings have been performed in all ancestors
+                                              *   if this is larger than the array size, arrays should be reallocated and method should be called again */
+   int                   branchvarssize      /**< available slots in arrays */
+   );
+
+/** returns the set of variable branchings that were performed between the given @p node and the given @p parent node. */
+EXTERN
+void SCIPnodeGetAncestorBranchingsPart(
+   SCIP_NODE*            node,               /**< node data */
+   SCIP_NODE*            parent,             /**< node data */
    SCIP_VAR**            branchvars,         /**< array of variables on which the branchings has been performed in all ancestors */
    SCIP_Real*            branchbounds,       /**< array of bounds which the branchings in all ancestors set */
    SCIP_BOUNDTYPE*       boundtypes,         /**< array of boundtypes which the branchings in all ancestors set */
@@ -140,6 +154,44 @@ SCIP_Real SCIPnodeGetLowerbound(
 EXTERN
 SCIP_Real SCIPnodeGetEstimate(
    SCIP_NODE*            node                /**< node */
+   );
+
+
+/** gets the reoptimization type of a node */
+EXTERN
+SCIP_REOPTTYPE SCIPnodeGetReopttype(
+   SCIP_NODE*            node                /**< node */
+   );
+
+/** gets the unique id to identify the node during reoptimization; id is 0 if the node is the root or not part of the
+ * reoptimization tree
+ */
+EXTERN
+unsigned int SCIPnodeGetReoptID(
+   SCIP_NODE*            node                /**< node */
+   );
+
+/** sets the reoptimization type of the node */
+EXTERN
+void SCIPnodeSetReopttype(
+   SCIP_NODE*            node,               /**< node */
+   SCIP_REOPTTYPE        type                /**< reoptimization type */
+   );
+
+/** sets a unique id to identify the node during reoptimization */
+EXTERN
+void SCIPnodeSetReoptID(
+   SCIP_NODE*            node,               /**< node */
+   unsigned int          id                  /**< unique id */
+   );
+
+/** counts the number of bound changes due to branching, constraint propagation, and propagation */
+EXTERN
+void SCIPnodeGetNDomchg(
+   SCIP_NODE*            node,               /**< node */
+   int*                  nbranchings,        /**< pointer to store number of branchings (or NULL if not needed) */
+   int*                  nconsprop,          /**< pointer to store number of constraint propagations (or NULL if not needed) */
+   int*                  nprop               /**< pointer to store number of propagations (or NULL if not needed) */
    );
 
 /** gets the domain change information of the node, i.e., the information about the differences in the

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -122,9 +122,10 @@ struct SCIP_LpSolVals
  */
 struct SCIP_Col
 {
-   SCIP_Real             obj;                /**< current objective value of column in LP */
+   SCIP_Real             obj;                /**< current objective value of column in LP (might be changed in diving or probing) */
    SCIP_Real             lb;                 /**< current lower bound of column in LP */
    SCIP_Real             ub;                 /**< current upper bound of column in LP */
+   SCIP_Real             unchangedobj;       /**< unchanged objective value of column (ignoring diving or probing changes) */
    SCIP_Real             lazylb;             /**< lazy lower bound of the column; if the current lower bound is not greater than 
                                               *   the lazy lower bound, then the lower bound has not to be added to the LP */
    SCIP_Real             lazyub;             /**< lazy upper bound of the column; if the current upper bound is not smaller than 
@@ -245,7 +246,8 @@ struct SCIP_Row
    unsigned int          modifiable:1;       /**< is row modifiable during node processing (subject to column generation)? */
    unsigned int          removable:1;        /**< is row removable from the LP (due to aging or cleanup)? */
    unsigned int          inglobalcutpool:1;  /**< is row contained in the global cut pool? */
-   unsigned int          nlocks:16;          /**< number of sealed locks of an unmodifiable row */
+   unsigned int          normunreliable:1;   /**< is the objective product of the row unreliable? */
+   unsigned int          nlocks:15;          /**< number of sealed locks of an unmodifiable row */
    unsigned int          origintype:2;       /**< origin of row (0: unkown, 1: constraint handler, 2: separator) */
 };
 
@@ -319,6 +321,7 @@ struct SCIP_Lp
    int                   lpiitlim;           /**< current iteration limit setting in LPI */
    int                   lpifastmip;         /**< current FASTMIP setting in LPI */
    int                   lpithreads;         /**< current THREADS setting in LPI */
+   int                   lpitiming;          /**< current timing type in LPI */
    SCIP_PRICING          lpipricing;         /**< current pricing setting in LPI */
    SCIP_LPSOLSTAT        lpsolstat;          /**< solution status of last LP solution */
    SCIP_LPALGO           lastlpalgo;         /**< algorithm used for last LP solve */
@@ -344,9 +347,10 @@ struct SCIP_Lp
    SCIP_Bool             probing;            /**< are we currently in probing mode? */
    SCIP_Bool             strongbranchprobing;/**< are we currently in probing mode for strong branching? */
    SCIP_Bool             diving;             /**< LP is used for diving: col bounds and obj don't correspond to variables */
-   SCIP_Bool             divingobjchg;       /**< objective values were changed in diving: LP objective is invalid */
+   SCIP_Bool             divingobjchg;       /**< objective values were changed in diving or probing: LP objective is invalid */
    SCIP_Bool             divinglazyapplied;  /**< lazy bounds were applied to the LP during diving */
    SCIP_Bool             resolvelperror;     /**< an error occured during resolving the LP after diving or probing */
+   SCIP_Bool             adjustlpval;        /**< does an infinite LP objective value has been adjusted so far? */
    SCIP_Bool             lpifromscratch;     /**< current FROMSCRATCH setting in LPI */
    SCIP_Bool             lpiscaling;         /**< current SCALING setting in LPI */
    SCIP_Bool             lpipresolving;      /**< current PRESOLVING setting in LPI */

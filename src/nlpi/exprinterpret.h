@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -74,6 +74,19 @@ SCIP_RETCODE SCIPexprintCompile(
    SCIP_EXPRTREE*        tree                /**< expression tree */
    );
 
+/** gives the capability to evaluate an expression by the expression interpreter
+ *
+ * In cases of user-given expressions, higher order derivatives may not be available for the user-expression,
+ * even if the expression interpreter could handle these. This method allows to recognize that, e.g., the
+ * Hessian for an expression is not available because it contains a user expression that does not provide
+ * Hessians.
+ */
+EXTERN
+SCIP_EXPRINTCAPABILITY SCIPexprintGetExprtreeCapability(
+   SCIP_EXPRINT*         exprint,            /**< interpreter data structure */
+   SCIP_EXPRTREE*        tree                /**< expression tree */
+   );
+
 /** frees interpreter data */
 EXTERN
 SCIP_RETCODE SCIPexprintFreeData(
@@ -132,7 +145,8 @@ SCIP_RETCODE SCIPexprintGradInt(
    );
 
 /** gives sparsity pattern of hessian
- * NOTE: this function might be replaced later by something nicer 
+ *
+ * NOTE: this function might be replaced later by something nicer.
  * Since the AD code might need to do a forward sweep, you should pass variable values in here.
  */
 EXTERN
@@ -144,7 +158,8 @@ SCIP_RETCODE SCIPexprintHessianSparsityDense(
    );
 
 /** computes value and dense hessian of an expression tree
- * the full hessian is computed (lower left and upper right triangle)
+ *
+ *  The full hessian is computed (lower left and upper right triangle).
  */
 EXTERN
 SCIP_RETCODE SCIPexprintHessianDense(

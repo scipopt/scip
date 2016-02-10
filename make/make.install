@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -17,6 +17,9 @@
 #@brief   Makefile targets for installing and removing SCIP
 #@author  Stefan Heinz
 #@author  Michael Winkler
+
+# should header files be deleted?
+DELHEADERS	=	false
 
 # installs headers, libraries, and binary
 .PHONY: install
@@ -34,7 +37,7 @@ ifneq ($(INSTALLDIR),)
 		@-install -m 644 -p $(SRCDIR)/scip/type_*.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
 		@-install -m 644 -p $(SRCDIR)/scip/scip.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
 		@-install -m 644 -p $(SRCDIR)/scip/def.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
-		@-install -m 644 -p $(SRCDIR)/scip/vbc.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
+		@-install -m 644 -p $(SRCDIR)/scip/visual.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
 		@-install -m 644 -p $(SRCDIR)/scip/scipshell.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
 		@-install -m 644 -p $(SRCDIR)/scip/scipdefplugins.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
 		@-install -m 644 -p $(SRCDIR)/scip/presolve.h $(INSTALLDIR)/$(INCLUDEDIR)/scip/
@@ -66,22 +69,37 @@ ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP libraries into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(LIBDIR)/
 		@-install -m 644 -p $(LPILIBFILE) $(NLPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE) $(INSTALLDIR)/$(LIBDIR)/
+		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(LPILIBLINK)) && $(LN_s) $(notdir $(LPILIBFILE)) $(notdir $(LPILIBLINK)));
+		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(LPILIBSHORTLINK)) && $(LN_s) $(notdir $(LPILIBLINK)) $(notdir $(LPILIBSHORTLINK)));
+		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(NLPILIBLINK)) && $(LN_s) $(notdir $(NLPILIBFILE)) $(notdir $(NLPILIBLINK)));
+		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(NLPILIBSHORTLINK)) && $(LN_s) $(notdir $(NLPILIBLINK)) $(notdir $(NLPILIBSHORTLINK)));
+		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(SCIPLIBLINK)) && $(LN_s) $(notdir $(SCIPLIBFILE)) $(notdir $(SCIPLIBLINK)));
+		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(SCIPLIBSHORTLINK)) && $(LN_s) $(notdir $(SCIPLIBLINK)) $(notdir $(SCIPLIBSHORTLINK)));
+		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(OBJSCIPLIBLINK)) && $(LN_s) $(notdir $(OBJSCIPLIBFILE)) $(notdir $(OBJSCIPLIBLINK)));
+		@-(cd $(INSTALLDIR)/$(LIBDIR)/ && rm -f $(notdir $(OBJSCIPLIBSHORTLINK)) && $(LN_s) $(notdir $(OBJSCIPLIBLINK)) $(notdir $(OBJSCIPLIBSHORTLINK)));
 endif
 
 
 
 .PHONY: installbinary
-installbinary:	all 
+installbinary:	all
 ifneq ($(INSTALLDIR),)
 		@echo "-> install SCIP binary into INSTALLDIR <$(INSTALLDIR)>"
 		@-install -m 755 -d $(INSTALLDIR)/$(BINDIR)/
-		@-install -m 755 -p $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK) $(INSTALLDIR)/$(BINDIR)/
+		@-install -m 755 -p $(MAINFILE) $(INSTALLDIR)/$(BINDIR)/
+		@-(cd $(INSTALLDIR)/$(BINDIR)/ && rm -f $(notdir $(MAINLINK)) && $(LN_s) $(notdir $(MAINFILE)) $(notdir $(MAINLINK)));
+		@-(cd $(INSTALLDIR)/$(BINDIR)/ && rm -f $(notdir $(MAINSHORTLINK)) && $(LN_s) $(notdir $(MAINLINK)) $(notdir $(MAINSHORTLINK)));
 endif
 
 
 .PHONY: uninstall
 uninstall:
 ifneq ($(INSTALLDIR),)
+		@echo "-> remove binary from INSTALLDIR <$(INSTALLDIR)>"
+		@-(cd $(INSTALLDIR) && rm -vf $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK));
+		@echo "-> remove libraries from INSTALLDIR <$(INSTALLDIR)>"
+		@-(cd $(INSTALLDIR) && rm -vf $(LPILIBFILE) $(LPILIBLINK) $(LPILIBSHORTLINK) $(NLPILIBFILE) $(NLPILIBLINK) $(NLPILIBSHORTLINK) $(SCIPLIBFILE) $(SCIPLIBLINK) $(SCIPLIBSHORTLINK) $(OBJSCIPLIBFILE) $(OBJSCIPLIBLINK) $(OBJSCIPLIBSHORTLINK));
+ifeq ($(DELHEADERS), true)
 		@echo "-> remove scip headers from INSTALLDIR <$(INSTALLDIR)>"
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/scip
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/scip/*.h
@@ -100,10 +118,9 @@ ifneq ($(INSTALLDIR),)
 		@-mkdir -p $(INSTALLDIR)/$(INCLUDEDIR)/xml/
 		@-rm -f $(INSTALLDIR)/$(INCLUDEDIR)/xml/*.h
 		@-rmdir $(INSTALLDIR)/$(INCLUDEDIR)/scip $(INSTALLDIR)/$(INCLUDEDIR)/objscip $(INSTALLDIR)/$(INCLUDEDIR)/lpi/ $(INSTALLDIR)/$(INCLUDEDIR)/nlpi/ $(INSTALLDIR)/$(INCLUDEDIR)/blockmemshell/ $(INSTALLDIR)/$(INCLUDEDIR)/dijkstra/ $(INSTALLDIR)/$(INCLUDEDIR)/tclique/ $(INSTALLDIR)/$(INCLUDEDIR)/xml/
-		@echo "-> remove binary from INSTALLDIR <$(INSTALLDIR)>"
-		@-(cd $(INSTALLDIR) && rm -f $(MAINFILE) $(MAINLINK) $(MAINSHORTLINK));
-		@echo "-> remove libraries from INSTALLDIR <$(INSTALLDIR)>"
-		@-(cd $(INSTALLDIR) && rm -f $(LPILIBFILE) $(NLPILIBFILE) $(SCIPLIBFILE) $(OBJSCIPLIBFILE)); 
+else
+		@echo "-> keeping scip headers under <$(INSTALLDIR)/$(INCLUDEDIR)>; rerun with 'DELHEADERS=true' to force deletion"
+endif
 else
 		$(error "no installation directory specified - use make uninstall INSTALLDIR=<dir>, e.g., make uninstall INSTALLDIR=/usr/local")
 endif

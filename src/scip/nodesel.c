@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -28,18 +28,18 @@
 #include "scip/set.h"
 #include "scip/clock.h"
 #include "scip/stat.h"
-#include "scip/vbc.h"
+#include "scip/visual.h"
 #include "scip/paramset.h"
 #include "scip/tree.h"
+#include "scip/reopt.h"
+#include "scip/lp.h"
 #include "scip/scip.h"
 #include "scip/nodesel.h"
 #include "scip/pub_message.h"
 #include "scip/pub_misc.h"
-#include "scip/event_solvingphase.h"
 
 #include "scip/struct_nodesel.h"
-
-
+#include "scip/struct_scip.h"
 
 /* 
  * node priority queue methods
@@ -79,7 +79,7 @@ SCIP_RETCODE nodepqResize(
    )
 {
    assert(nodepq != NULL);
-   
+
    if( minsize <= nodepq->size )
       return SCIP_OKAY;
 
@@ -142,7 +142,7 @@ SCIP_RETCODE SCIPnodepqFree(
 
    /* free the nodes of the queue */
    SCIP_CALL( SCIPnodepqClear(*nodepq, blkmem, set, stat, eventqueue, tree, lp) );
-   
+
    /* free the queue data structure */
    SCIPnodepqDestroy(nodepq);
 
@@ -219,19 +219,19 @@ SCIP_RETCODE SCIPnodepqSetNodesel(
 
       /* create new node priority queue */
       SCIP_CALL( SCIPnodepqCreate(&newnodepq, set, nodesel) );
-      
+
       /* resize the new node priority queue to be able to store all nodes */
       SCIP_CALL( nodepqResize(newnodepq, set, (*nodepq)->len) );
-      
+
       /* insert all nodes in the new node priority queue */
       for( i = 0; i < (*nodepq)->len; ++i )
       {
          SCIP_CALL( SCIPnodepqInsert(newnodepq, set, (*nodepq)->slots[i]) );
       }
-      
+
       /* destroy the old node priority queue without freeing the nodes */
       SCIPnodepqDestroy(nodepq);
-      
+
       /* use the new node priority queue */
       *nodepq = newnodepq;
    }
@@ -296,7 +296,7 @@ SCIP_RETCODE SCIPnodepqInsert(
       pos = PQ_PARENT(pos);
    }
    slots[pos] = node;
-   
+
    /* insert the final position into the bfs index queue */
    lowerbound = SCIPnodeGetLowerbound(node);
    bfspos = nodepq->len-1;
@@ -495,7 +495,7 @@ int nodepqFindNode(
 
    if( pos == nodepq->len )
       pos = -1;
-   
+
    return pos;
 }
 
@@ -622,6 +622,7 @@ SCIP_RETCODE SCIPnodepqBound(
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
@@ -664,7 +665,15 @@ SCIP_RETCODE SCIPnodepqBound(
          if( !parentfelldown )
             pos--;
 
-         SCIPvbcCutoffNode(stat->vbc, stat, node);
+         SCIPvisualCutoffNode(stat->visual, set, stat, node, FALSE);
+
+         if( set->reopt_enable )
+         {
+            assert(reopt != NULL);
+            SCIP_CALL( SCIPreoptCheckCutoff(reopt, set, blkmem, node, SCIP_EVENTTYPE_NODEINFEASIBLE,
+                  SCIPlpGetSolstat(lp), SCIPnodeGetDepth(node) == 0, SCIPtreeGetFocusNode(tree) == node,
+                  SCIPnodeGetLowerbound(node), SCIPtreeGetEffectiveRootDepth(tree)));
+         }
 
          /* free memory of the node */
          SCIP_CALL( SCIPnodeFree(&node, blkmem, set, stat, eventqueue, tree, lp) );
@@ -957,41 +966,6 @@ SCIP_RETCODE SCIPnodeselSelect(
 
    SCIP_CALL( nodesel->nodeselselect(set->scip, nodesel, selnode) );
 
-   /* check if aspiration should be used and select the best leaf node instead */
-   if( set->nodesel_useaspiration && *selnode != NULL &&
-         (SCIPnodeGetType(*selnode) == SCIP_NODETYPE_CHILD || SCIPnodeGetType(*selnode) == SCIP_NODETYPE_SIBLING) )
-   {
-      SCIP_Real aspirationvalue;
-      aspirationvalue = SCIPgetOptimalSolutionValue(set->scip);
-      if( !SCIPsetIsInfinity(set, REALABS(aspirationvalue)) )
-      {
-         SCIP_OBJSENSE objsense;
-         SCIP_Real nodebound;
-         nodebound = SCIPnodeGetLowerbound(*selnode);
-         objsense = SCIPgetObjsense(set->scip);
-         nodebound = SCIPgetExternalValue(set->scip, nodebound);
-
-         /* check if next selected node bound exceeds aspiration value */
-         if( (objsense == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsFeasGT(set, nodebound, aspirationvalue))
-               ||  (objsense == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsFeasLT(set, nodebound, aspirationvalue)) )
-         {
-            SCIP_NODE* bestnode;
-
-            /* compare best leaf bound with aspiration value */
-            bestnode = SCIPgetBestNode(set->scip);
-            if( bestnode != NULL )
-            {
-               SCIP_Real bestnodebound;
-
-               bestnodebound = SCIPgetExternalValue(set->scip, SCIPnodeGetLowerbound(bestnode));
-               /* replace selected node with best node if best node bound does not exceed limit */
-               if( (objsense == SCIP_OBJSENSE_MINIMIZE && SCIPsetIsFeasLE(set, bestnodebound, aspirationvalue))
-                     ||  (objsense == SCIP_OBJSENSE_MAXIMIZE && SCIPsetIsFeasGE(set, bestnodebound, aspirationvalue)))
-               *selnode = bestnode;
-            }
-         }
-      }
-   }
    /* stop timing */
    SCIPclockStop(nodesel->nodeseltime, set);
 
@@ -1078,7 +1052,7 @@ void SCIPnodeselSetMemsavePriority(
 {
    assert(nodesel != NULL);
    assert(set != NULL);
-   
+
    nodesel->memsavepriority = priority;
    set->nodesel = NULL;
 }
@@ -1180,6 +1154,18 @@ SCIP_Bool SCIPnodeselIsInitialized(
    assert(nodesel != NULL);
 
    return nodesel->initialized;
+}
+
+/** enables or disables all clocks of \p nodesel, depending on the value of the flag */
+void SCIPnodeselEnableOrDisableClocks(
+   SCIP_NODESEL*         nodesel,            /**< the node selector for which all clocks should be enabled or disabled */
+   SCIP_Bool             enable              /**< should the clocks of the node selector be enabled? */
+   )
+{
+   assert(nodesel != NULL);
+
+   SCIPclockEnableOrDisable(nodesel->setuptime, enable);
+   SCIPclockEnableOrDisable(nodesel->nodeseltime, enable);
 }
 
 /** gets time in seconds used in this node selector for setting up for next stages */

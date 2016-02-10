@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -36,6 +36,8 @@
  * @todo Check whether solisbasic is correctly used.
  *
  * @todo Try quad-precision and concurrent runs.
+ *
+ * @todo Make this lpi thread safe.
  */
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -47,6 +49,7 @@
 #include "lpi/lpi.h"
 #include "scip/pub_message.h"
 
+static unsigned char warnedbeta = 0;
 
 #define CHECK_ZERO(messagehdlr, x) { int _restat_;                      \
       if( (_restat_ = (x)) != 0 )                                       \
@@ -55,6 +58,19 @@
          return SCIP_LPERROR;                                           \
       }                                                                 \
    }
+
+#if GRB_VERSION_MAJOR == 6 && GRB_VERSION_MINOR == 0 && GRB_VERSION_TECHNICAL < 2
+struct _GRBsvec
+{
+  int     len;
+  int    *ind;
+  double *val;
+};
+#endif
+
+#ifndef SVECTOR
+#define SVECTOR GRBsvec
+#endif
 
 #if( GRB_VERSION_MAJOR < 4 )
 #define GRB_METHOD_DUAL    GRB_LPMETHOD_DUAL
@@ -1056,7 +1072,7 @@ const char* SCIPlpiGetSolverName(
    int technical;
 
    GRBversion(&major, &minor, &technical);
-   snprintf(grbname, 100, "Gurobi %d.%d.%d", major, minor, technical);
+   sprintf(grbname, "Gurobi %d.%d.%d", major, minor, technical);
    return grbname;
 }
 
@@ -1157,7 +1173,10 @@ SCIP_RETCODE SCIPlpiCreate(
    /* set default pricing */
    SCIP_CALL( SCIPlpiSetIntpar(*lpi, SCIP_LPPAR_PRICING, (*lpi)->pricing) );
 
-   SCIPmessagePrintWarning(messagehdlr, "The Gurobi LPI is a beta version only - use with care.\n");
+   if( !warnedbeta ) {
+      warnedbeta = 1;
+      SCIPmessagePrintWarning(messagehdlr, "The Gurobi LPI is a beta version only - use with care.\n");
+   }
 
    return SCIP_OKAY;
 }
@@ -1682,7 +1701,7 @@ SCIP_RETCODE SCIPlpiScaleRow(
    SCIP_CALL( SCIPlpiGetRows(lpi, row, row, &lhs, &rhs, &nnonz, &beg, lpi->indarray, lpi->valarray) );
 
    /* scale row coefficients */
-   for(  i = 0; i < nnonz; ++i )
+   for ( i = 0; i < nnonz; ++i )
    {
       SCIP_CALL( SCIPlpiChgCoef(lpi, row, lpi->indarray[i], lpi->valarray[i] * scaleval) );
    }
@@ -1878,8 +1897,8 @@ SCIP_RETCODE SCIPlpiGetCols(
       assert(val != NULL);
 
       /* get matrix entries */
-      CHECK_ZERO( lpi->messagehdlr, GRBgetvars(lpi->grbmodel, nnonz, beg, ind, val, firstcol, lastcol-firstcol+1) )
-         }
+      CHECK_ZERO( lpi->messagehdlr, GRBgetvars(lpi->grbmodel, nnonz, beg, ind, val, firstcol, lastcol-firstcol+1) );
+   }
    else
    {
       assert(beg == NULL);
@@ -2808,7 +2827,7 @@ SCIP_RETCODE SCIPlpiGetSolFeasibility(
    }
 
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* @todo: check whether this code is needed anymore (this was the first version) */
    SCIP_Real viol;
    SCIP_Real tol;
@@ -3509,7 +3528,7 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    }
    BMSfreeMemoryArray(&bhead);
 
-#if 0
+#ifdef SCIP_DISABLED_CODE
    /* old implementation */
    cnt = 0;
    for( i = 0; i < nrows; ++i )
@@ -3535,11 +3554,21 @@ SCIP_RETCODE SCIPlpiGetBasisInd(
    return SCIP_OKAY;
 }
 
-/** get dense row of inverse basis matrix B^-1 */
+/** get dense row of inverse basis matrix B^-1
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ *
+ *  @todo check that the result is in terms of the LP interface definition
+ */
 SCIP_RETCODE SCIPlpiGetBInvRow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the row */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the row */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {
    SVECTOR x;
@@ -3583,15 +3612,32 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    /* size should be at most the number of rows */
    assert( x.len <= nrows );
 
-   /* copy solution to dense vector */
-   k = 0;
-   for (i = 0; i < nrows; ++i)
+   /* check whether we require a dense or sparse result vector */
+   if ( ninds != NULL && inds != NULL )
    {
-      assert( k <= x.len );
-      if ( k < x.len && (x.ind)[k] == i )
-         coef[i] = (x.val)[k++];
-      else
-         coef[i] = 0.0;
+      int idx;
+
+      /* copy sparse solution */
+      for (i = 0; i < x.len; ++i)
+      {
+         idx = (x.ind)[i];
+         inds[i] = idx;
+         coef[idx] = (x.val)[i];
+      }
+      *ninds = x.len;
+   }
+   else
+   {
+      /* copy solution to dense vector */
+      k = 0;
+      for (i = 0; i < nrows; ++i)
+      {
+         assert( k <= x.len );
+         if ( k < x.len && (x.ind)[k] == i )
+            coef[i] = (x.val)[k++];
+         else
+            coef[i] = 0.0;
+      }
    }
 
    /* free solution space */
@@ -3601,7 +3647,14 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
    return SCIP_OKAY;
 }
 
-/** get dense column of inverse basis matrix B^-1 */
+/** get dense column of inverse basis matrix B^-1
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ *
+ *  @todo check that the result is in terms of the LP interface definition
+ */
 SCIP_RETCODE SCIPlpiGetBInvCol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number of B^-1; this is NOT the number of the column in the LP;
@@ -3609,7 +3662,10 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
                                               *   B^-1 column numbers to the row and column numbers of the LP!
                                               *   c must be between 0 and nrows-1, since the basis has the size
                                               *   nrows * nrows */
-   SCIP_Real*            coef                /**< pointer to store the coefficients of the column */
+   SCIP_Real*            coef,               /**< pointer to store the coefficients of the column */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {
    SVECTOR x;
@@ -3653,15 +3709,32 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    /* size should be at most the number of rows */
    assert( x.len <= nrows );
 
-   /* copy solution to dense vector */
-   k = 0;
-   for (i = 0; i < nrows; ++i)
+   /* check whether we require a dense or sparse result vector */
+   if ( ninds != NULL && inds != NULL )
    {
-      assert( k <= x.len );
-      if ( k < x.len && (x.ind)[k] == i )
-         coef[i] = (x.val)[k++];
-      else
-         coef[i] = 0.0;
+      int idx;
+
+      /* copy sparse solution */
+      for (i = 0; i < x.len; ++i)
+      {
+         idx = (x.ind)[i];
+         inds[i] = idx;
+         coef[idx] = (x.val)[i];
+      }
+      *ninds = x.len;
+   }
+   else
+   {
+      /* copy solution to dense vector */
+      k = 0;
+      for (i = 0; i < nrows; ++i)
+      {
+         assert( k <= x.len );
+         if ( k < x.len && (x.ind)[k] == i )
+            coef[i] = (x.val)[k++];
+         else
+            coef[i] = 0.0;
+      }
    }
 
    /* free solution space */
@@ -3671,12 +3744,22 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
    return SCIP_OKAY;
 }
 
-/** get dense row of inverse basis matrix times constraint matrix B^-1 * A */
+/** get dense row of inverse basis matrix times constraint matrix B^-1 * A
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ *
+ *  @todo check that the result is in terms of the LP interface definition
+ */
 SCIP_RETCODE SCIPlpiGetBInvARow(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   r,                  /**< row number */
    const SCIP_Real*      binvrow,            /**< row in (A_B)^-1 from prior call to SCIPlpiGetBInvRow(), or NULL */
-   SCIP_Real*            coef                /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                              *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715}*/
    SVECTOR x;
@@ -3710,14 +3793,31 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    /* size should be at most the number of columns plus rows for slack variables */
    assert( x.len <= ncols + nrows );
 
-   k = 0;
-   for (j = 0; j < ncols; ++j)
+   /* check whether we require a dense or sparse result vector */
+   if ( ninds != NULL && inds != NULL )
    {
-      assert( k <= x.len );
-      if ( k < x.len && (x.ind)[k] == j )
-         coef[j] = (x.val)[k++];
-      else
-         coef[j] = 0.0;
+      int idx;
+
+      /* copy sparse solution */
+      for (j = 0; j < x.len; ++j)
+      {
+         idx = (x.ind)[j];
+         inds[j] = idx;
+         coef[idx] = (x.val)[j];
+      }
+      *ninds = x.len;
+   }
+   else
+   {
+      k = 0;
+      for (j = 0; j < ncols; ++j)
+      {
+         assert( k <= x.len );
+         if ( k < x.len && (x.ind)[k] == j )
+            coef[j] = (x.val)[k++];
+         else
+            coef[j] = 0.0;
+      }
    }
 
    /* free solution space */
@@ -3727,11 +3827,21 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
    return SCIP_OKAY;
 }
 
-/** get dense column of inverse basis matrix times constraint matrix B^-1 * A */
+/** get dense column of inverse basis matrix times constraint matrix B^-1 * A
+ *
+ *  @note The LP interface defines slack variables to have coefficient +1. This means that if, internally, the LP solver
+ *        uses a -1 coefficient, then rows associated with slacks variables whose coefficient is -1, should be negated;
+ *        see also the explanation in lpi.h.
+ *
+ *  @todo check that the result is in terms of the LP interface definition
+ */
 SCIP_RETCODE SCIPlpiGetBInvACol(
    SCIP_LPI*             lpi,                /**< LP interface structure */
    int                   c,                  /**< column number */
-   SCIP_Real*            coef                /**< vector to return coefficients */
+   SCIP_Real*            coef,               /**< vector to return coefficients */
+   int*                  inds,               /**< array to store the non-zero indices */
+   int*                  ninds               /**< pointer to store the number of non-zero indices
+                                               *  (-1: if we do not store sparsity informations) */
    )
 {  /*lint --e{715}*/
    SVECTOR x;
@@ -3763,14 +3873,31 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
    /* size should be at most the number of rows */
    assert( x.len <= nrows );
 
-   k = 0;
-   for (j = 0; j < nrows; ++j)
+   /* check whether we require a dense or sparse result vector */
+   if ( ninds != NULL && inds != NULL )
    {
-      assert( k <= x.len );
-      if ( k < x.len && (x.ind)[k] == j )
-         coef[j] = (x.val)[k++];
-      else
-         coef[j] = 0.0;
+      int idx;
+
+      /* copy sparse solution */
+      for (j = 0; j < x.len; ++j)
+      {
+         idx = (x.ind)[j];
+         inds[j] = idx;
+         coef[idx] = (x.val)[j];
+      }
+      *ninds = x.len;
+   }
+   else
+   {
+      k = 0;
+      for (j = 0; j < nrows; ++j)
+      {
+         assert( k <= x.len );
+         if ( k < x.len && (x.ind)[k] == j )
+            coef[j] = (x.val)[k++];
+         else
+            coef[j] = 0.0;
+      }
    }
 
    /* free solution space */
@@ -4003,7 +4130,8 @@ SCIP_RETCODE SCIPlpiWriteState(
       char name[SCIP_MAXSTRLEN];
 
       /* force extension to be ".bas" */
-      snprintf(name, SCIP_MAXSTRLEN, "%s.bas", fname);
+	  assert(strlen(fname) < SCIP_MAXSTRLEN-4);
+      sprintf(name, "%s.bas", fname);
       CHECK_ZERO( lpi->messagehdlr, GRBwrite(lpi->grbmodel, fname) );
    }
 

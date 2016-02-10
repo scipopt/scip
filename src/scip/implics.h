@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -192,13 +192,6 @@ int SCIPimplicsGetNImpls(
    SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
    );
 
-/** gets number of implications on binary variables for a given binary variable fixing */
-extern
-int SCIPimplicsGetNBinImpls(
-   SCIP_IMPLICS*         implics,            /**< implication data */
-   SCIP_Bool             varfixing           /**< should the implications on var == FALSE or var == TRUE be returned? */
-   );
-
 /** gets array with implied variables for a given binary variable fixing */
 extern
 SCIP_VAR** SCIPimplicsGetVars(
@@ -266,8 +259,9 @@ SCIP_RETCODE SCIPcliqueAddVar(
 
 /** removes a single variable from the given clique */
 extern
-SCIP_RETCODE SCIPcliqueDelVar(
+void SCIPcliqueDelVar(
    SCIP_CLIQUE*          clique,             /**< clique data structure */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_VAR*             var,                /**< variable to remove from the clique */
    SCIP_Bool             value               /**< value of the variable in the clique */
    );
@@ -313,13 +307,18 @@ SCIP_Bool SCIPcliquelistsHaveCommonClique(
 extern
 void SCIPcliquelistRemoveFromCliques(
    SCIP_CLIQUELIST*      cliquelist,         /**< clique list data structure */
-   SCIP_VAR*             var                 /**< active problem variable the clique list belongs to */
+   SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
+   SCIP_VAR*             var,                /**< active problem variable the clique list belongs to */
+   SCIP_Bool             irrelevantvar       /**< has the variable become irrelevant, meaning that equality
+                                              *   cliques need to be relaxed? */
    );
 
 /** creates a clique table data structure */
 extern
 SCIP_RETCODE SCIPcliquetableCreate(
-   SCIP_CLIQUETABLE**    cliquetable         /**< pointer to store clique table data structure */
+   SCIP_CLIQUETABLE**    cliquetable,        /**< pointer to store clique table data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
 /** frees a clique table data structure */
@@ -341,18 +340,21 @@ SCIP_RETCODE SCIPcliquetableAdd(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_VAR**            vars,               /**< binary variables in the clique: at most one can be set to the given value */
    SCIP_Bool*            values,             /**< values of the variables in the clique; NULL to use TRUE for all vars */
    int                   nvars,              /**< number of variables in the clique */
+   SCIP_Bool             isequation,         /**< is the clique an equation or an inequality? */
    SCIP_Bool*            infeasible,         /**< pointer to store whether an infeasibility was detected */
    int*                  nbdchgs             /**< pointer to count the number of performed bound changes, or NULL */
    );
 
-/** removes all empty and single variable cliques from the clique table, and converts all two variable cliques
- *  into implications; removes double entries from the clique table
+/** removes all empty and single variable cliques from the clique table; removes double entries from the clique table
+ *
+ * @note cliques can be processed several times by this method
  */
 extern
 SCIP_RETCODE SCIPcliquetableCleanup(
@@ -363,9 +365,11 @@ SCIP_RETCODE SCIPcliquetableCleanup(
    SCIP_PROB*            transprob,          /**< transformed problem */
    SCIP_PROB*            origprob,           /**< original problem */
    SCIP_TREE*            tree,               /**< branch and bound tree if in solving stage */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   int*                  nchgbds,            /**< pointer to store number of fixed variables */
    SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    );
 
@@ -402,6 +406,12 @@ SCIP_CLIQUE** SCIPcliquetableGetCliques(
    SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
    );
 
+/** gets the number of entries in the whole clique table */
+extern
+SCIP_Longint SCIPcliquetableGetNEntries(
+   SCIP_CLIQUETABLE*     cliquetable         /**< clique table data structure */
+   );
+
 #ifdef NDEBUG
 
 /* In optimized mode, the function calls are overwritten by defines to reduce the number of function calls and
@@ -413,6 +423,7 @@ SCIP_CLIQUE** SCIPcliquetableGetCliques(
 #define SCIPcliquelistCheck(cliquelist, var)         /**/
 #define SCIPcliquetableGetNCliques(cliquetable)      ((cliquetable)->ncliques)
 #define SCIPcliquetableGetCliques(cliquetable)       ((cliquetable)->cliques)
+#define SCIPcliquetableGetNEntries(cliquetable)      ((cliquetable)->nentries)
 
 #endif
 

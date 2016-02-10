@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -52,10 +52,10 @@
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA        FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS         TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define EVENTHDLR_NAME         "or"
 #define EVENTHDLR_DESC         "event handler for or constraints"
@@ -303,7 +303,7 @@ SCIP_RETCODE consdataSwitchWatchedvars(
    if( watchedvar1 == consdata->watchedvar2 || watchedvar2 == consdata->watchedvar1 )
    {
       int tmp;
-      
+
       tmp = consdata->watchedvar1;
       consdata->watchedvar1 = consdata->watchedvar2;
       consdata->watchedvar2 = tmp;
@@ -353,7 +353,7 @@ SCIP_RETCODE consdataEnsureVarsSize(
 {
    assert(consdata != NULL);
    assert(consdata->nvars <= consdata->varssize);
-   
+
    if( num > consdata->varssize )
    {
       int newsize;
@@ -425,7 +425,7 @@ SCIP_RETCODE consdataFreeRows(
    if( consdata->rows != NULL )
    {
       int nrows;
-      
+
       nrows = consdataGetNRows(consdata);
 
       for( r = 0; r < nrows; ++r )
@@ -468,7 +468,7 @@ SCIP_RETCODE consdataFree(
 
    SCIPfreeBlockMemoryArray(scip, &(*consdata)->vars, (*consdata)->varssize);
    SCIPfreeBlockMemory(scip, consdata);
- 
+
    return SCIP_OKAY;
 }
 
@@ -640,7 +640,7 @@ SCIP_RETCODE applyFixings(
       {
          SCIP_VAR* repvar;
          SCIP_Bool negated;
-         
+
          /* get binary representative of variable */
          SCIP_CALL( SCIPgetBinvarRepresentative(scip, var, &repvar, &negated) );
 
@@ -752,8 +752,8 @@ SCIP_RETCODE checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< solution to check, NULL for current solution */
-   SCIP_Bool             checklprows,        /**< should LP rows be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
    SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
@@ -1100,7 +1100,7 @@ SCIP_RETCODE propagateCons(
       if( SCIPvarGetUbLocal(vars[watchedvar2]) < 0.5 )
          watchedvar2 = -1;
    }
-   
+
    /* if only one watched variable is still unfixed, make it the first one */
    if( watchedvar1 == -1 )
    {
@@ -1136,7 +1136,7 @@ SCIP_RETCODE propagateCons(
    if( watchedvar1 == -1 )
    {
       assert(watchedvar2 == -1);
-      
+
       SCIPdebugMessage("constraint <%s>: all operator vars fixed to 0.0 -> fix resultant <%s> to 0.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar));
       SCIP_CALL( SCIPinferBinvarCons(scip, resvar, FALSE, cons, (int)PROPRULE_3, &infeasible, &tightened) );
@@ -1166,7 +1166,7 @@ SCIP_RETCODE propagateCons(
    if( SCIPvarGetLbLocal(resvar) > 0.5 && watchedvar2 == -1 )
    {
       assert(watchedvar1 != -1);
-      
+
       SCIPdebugMessage("constraint <%s>: resultant <%s> fixed to 1.0, only one unfixed operand -> fix operand <%s> to 1.0\n",
          SCIPconsGetName(cons), SCIPvarGetName(resvar), SCIPvarGetName(vars[watchedvar1]));
       SCIP_CALL( SCIPinferBinvarCons(scip, vars[watchedvar1], TRUE, cons, (int)PROPRULE_4, &infeasible, &tightened) );
@@ -1359,7 +1359,7 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyOr)
 
    /* call inclusion method of constraint handler */
    SCIP_CALL( SCIPincludeConshdlrOr(scip) );
- 
+
    *valid = TRUE;
 
    return SCIP_OKAY;
@@ -1590,7 +1590,7 @@ SCIP_DECL_CONSPROP(consPropOr)
    SCIP_Bool cutoff;
    int nfixedvars;
    int c;
-   
+
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
@@ -1672,11 +1672,11 @@ SCIP_DECL_CONSPRESOL(consPresolOr)
          if( consdata->nvars == 1 )
          {
             SCIPdebugMessage("or constraint <%s> has only one variable not fixed to 0.0\n", SCIPconsGetName(cons));
-            
+
             assert(consdata->vars != NULL);
             assert(SCIPisFeasEQ(scip, SCIPvarGetLbGlobal(consdata->vars[0]), 0.0));
             assert(SCIPisFeasEQ(scip, SCIPvarGetUbGlobal(consdata->vars[0]), 1.0));
-            
+
             /* aggregate variables: resultant - operand == 0 */
             SCIP_CALL( SCIPaggregateVars(scip, consdata->resvar, consdata->vars[0], 1.0, -1.0, 0.0,
                   &cutoff, &redundant, &aggregated) );
@@ -1716,7 +1716,7 @@ SCIP_DECL_CONSPRESOL(consPresolOr)
             && SCIPvarGetLbGlobal(consdata->resvar) > 0.5 )
          {
             int nimplbdchgs;
-            
+
             SCIP_CALL( SCIPaddVarImplication(scip, consdata->vars[0], FALSE, consdata->vars[1],
                   SCIP_BOUNDTYPE_LOWER, 1.0, &cutoff, &nimplbdchgs) );
             (*nchgbds) += nimplbdchgs;
@@ -1778,7 +1778,7 @@ SCIP_DECL_CONSPRINT(consPrintOr)
    assert( cons != NULL );
 
    SCIP_CALL( consdataPrint(scip, SCIPconsGetData(cons), file) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -1796,7 +1796,7 @@ SCIP_DECL_CONSCOPY(consCopyOr)
    assert(valid != NULL);
    (*valid) = TRUE;
    resvar = NULL;
-   
+
    /* get variables that need to be copied */
    sourceresvar = SCIPgetResultantOr(sourcescip, sourcecons); 
    sourcevars = SCIPgetVarsOr(sourcescip, sourcecons);
@@ -1804,7 +1804,7 @@ SCIP_DECL_CONSCOPY(consCopyOr)
 
    /* allocate buffer array */
    SCIP_CALL( SCIPallocBufferArray(scip, &vars, nvars) );
-   
+
    /* map operand variables to active variables of the target SCIP */
    for( v = 0; v < nvars && *valid; ++v )
    {
@@ -1828,7 +1828,7 @@ SCIP_DECL_CONSCOPY(consCopyOr)
 
    /* free buffer array */
    SCIPfreeBufferArray(scip, &vars);
-   
+
    return SCIP_OKAY;
 }
 
@@ -1845,7 +1845,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
    int requiredsize;
    int varssize;
    int nvars;
-   
+
    SCIPdebugMessage("parse <%s> as or constraint\n", str);
 
    /* copy string for truncating it */
@@ -1869,7 +1869,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
 
       /* cutoff ")" form the constraint string */
       token = SCIPstrtok(NULL, ")", &saveptr ); 
-   
+
       varssize = 100;
       nvars = 0;
 
@@ -1878,7 +1878,7 @@ SCIP_DECL_CONSPARSE(consParseOr)
 
       /* parse string */
       SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
-   
+
       if( *success )
       {
          /* check if the size of the variable array was great enough */
@@ -1887,11 +1887,11 @@ SCIP_DECL_CONSPARSE(consParseOr)
             /* reallocate memory */
             varssize = requiredsize;
             SCIP_CALL( SCIPreallocBufferArray(scip, &vars, varssize) );
-            
+
             /* parse string again with the correct size of the variable array */
             SCIP_CALL( SCIPparseVarsList(scip, token, vars, &nvars, varssize, &requiredsize, &endptr, ',', success) );
          }
-         
+
          assert(*success);
          assert(varssize >= requiredsize);
 
@@ -1903,10 +1903,10 @@ SCIP_DECL_CONSPARSE(consParseOr)
       /* free variable buffer */
       SCIPfreeBufferArray(scip, &vars);
    }
-   
+
    /* free string buffer */
    SCIPfreeBufferArray(scip, &strcopy);
-   
+
    return SCIP_OKAY;
 }
 
@@ -2011,7 +2011,7 @@ SCIP_RETCODE SCIPincludeConshdlrOr(
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsOr) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpOr) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseOr) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOr, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolOr, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintOr) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropOr, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );
@@ -2140,7 +2140,7 @@ SCIP_VAR** SCIPgetVarsOr(
       SCIPABORT();
       return NULL;  /*lint !e527*/
    }
-   
+
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
@@ -2154,7 +2154,7 @@ SCIP_VAR* SCIPgetResultantOr(
    )
 {
    SCIP_CONSDATA* consdata;
-   
+
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
    {
       SCIPerrorMessage("constraint is not a or constraint\n");
@@ -2164,6 +2164,6 @@ SCIP_VAR* SCIPgetResultantOr(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-   
+
    return consdata->resvar;
 }

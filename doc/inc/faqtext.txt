@@ -58,11 +58,11 @@ SECTION: General Questions about SCIP
       An easy way is to use the SCIP-binaries and call SCIP from a shell, see <a href="PATHTODOC/SHELL.LINKEXT">here</a> for a tutorial.
       For that, you just have to download one of the precompiled binaries from the
       <a href="http://scip.zib.de/#download">download section</a>, or the zipped source code and compile it
-      with your favorite settings. This is described in detail in the <a href="PATHTODOC/INSTALL.LINKEXT"><tt>INSTALL</tt></a> file in the SCIP main directory.
+      with your favorite settings. This is described in detail in the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP main directory.
     </p>
     <p>
       Another way is to use SCIP as a solver integrated into your own program source code.
-      See the directories &quot;examples/MIPsolver/&quot and &quot;examples/Queens/&quot;
+      See the directories &quot;examples/MIPsolver/&quot; and &quot;examples/Queens/&quot;
       for simple examples and <a href="#howtocreateproblem">this point</a>.
     </p>
     <p>
@@ -77,7 +77,7 @@ SECTION: General Questions about SCIP
     ANSWER:
     <p>Unless you want to use SCIP as a pure CP-Solver (see <a href="#scipascpsolver">here</a>),
       you need an underlying LP-Solver installed and linked to the libraries
-      (see the <a href="PATHTODOC/INSTALL.LINKEXT"><tt>INSTALL</tt></a> file in the SCIP root directory).
+      (see the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP root directory).
       LP-solvers currently supported by SCIP are:
     </p>
     <ul>
@@ -104,7 +104,7 @@ SECTION: General Questions about SCIP
     LABEL:installationproblems
     ANSWER:
     <p>
-      Read the <a href="PATHTODOC/INSTALL.LINKEXT"><tt>INSTALL</tt></a> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
+      Read the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file in the SCIP root directory. It contains hints of how to get around problems. You can also try
       the binaries available on the <a href="http://scip.zib.de">SCIP page</a>. <br>
       If you want to use <a href="http://soplex.zib.de/">SoPlex</a> as the underlying LP-solver, you can try the
       following:
@@ -121,13 +121,17 @@ SECTION: General Questions about SCIP
         <li>Readline (libreadline.a)</li>
     </ol>
     <p>
-    If you do not have all of these libraries, read the <tt>INSTALL</tt> file in the SCIP Optimization
-      Suite directory.
+      If you do not have all of these libraries, read the <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file
+      in the SCIP Optimization Suite directory.
     </p>
     <p>
       As a summary, the call of <code>make ZIMPL=false ZLIB=false READLINE=false</code> should work on most systems.
       If you have any problems while using an LP-solver different from SoPlex,
-      please read the SCIP <a href="PATHTODOC/INSTALL.LINKEXT"><tt>INSTALL</tt></a> file first.
+      please read the SCIP <code><a href="PATHTODOC/INSTALL.LINKEXT">INSTALL</a></code> file first.
+    </p>
+    <p>
+      If you encounter compilation problems dealing with the <code>explicit</code> keyword you can either try a newer
+      compiler or set the flags <code>LEGACY=true</code> for SoPlex and <code>SPX_LEGACY=true</code> for SCIP.
     </p>
 
     QUESTION: I changed to a new version of SCIP and now compiling breaks with some error messages which I don't understand.
@@ -145,6 +149,7 @@ SECTION: General Questions about SCIP
         <li> <a href="PATHTODOC/CHG5.LINKEXT">Interface changes between SCIP 2.0 and SCIP 2.1</a></li>
         <li> <a href="PATHTODOC/CHG6.LINKEXT">Interface changes between SCIP 2.1 and SCIP 3.0</a></li>
         <li> <a href="PATHTODOC/CHG7.LINKEXT">Interface changes between SCIP 3.0 and SCIP 3.1</a></li>
+        <li> <a href="PATHTODOC/CHG8.LINKEXT">Interface changes between SCIP 3.1 and SCIP 3.2</a></li>
     </ul>
 
     QUESTION: How can I debug in SCIP?
@@ -236,7 +241,7 @@ SECTION: General Questions about SCIP
         See <a href="PATHTODOC/MAKE.LINKEXT">Makefiles</a>.
     </p>
 
-    QUESTION: What is this business with .a and .so libraries in the directory <tt>lib/</tt>?
+    QUESTION: What is this business with .a and .so libraries in the directory <code>lib/</code>?
     LABEL:staticvsshared
     ANSWER:
     <p>
@@ -246,8 +251,8 @@ SECTION: General Questions about SCIP
         library. In this case, the code of the library is not inserted into the binary itself, but is loaded at
         runtime. This has the advantage that the binaries are smaller, but it comes at the cost that you have to make
         sure that the library is found at runtime (for most systems it suffices to put the path of the library into the
-        <tt>LD_LIBRARY_PATH</tt> variable).<br/><br/> <em>Note:</em> Depending on the system shared or static libraries
-        are standard. If both links are present in the <tt>lib</tt> directory, the linker chooses which version to take
+        <code>LD_LIBRARY_PATH</code> variable).<br/><br/> <em>Note:</em> Depending on the system shared or static libraries
+        are standard. If both links are present in the <code>lib</code> directory, the linker chooses which version to take
         (on newer Linux systems this is usually the shared version). If you do not want this to happen you have to delete
         the link that is not intended.
     </p>
@@ -265,7 +270,7 @@ SECTION: General Questions about SCIP
         <!--
             If you have a different system or compiler (which supports shared libraries) you might try to
             copy the file <code>make.linux.x86.gnu.opt-shared</code> and modify it according to your
-            needs (see also <a href="PATHTODOC/MAKE.LINKEXT">Makefiles</a>).
+            needs (see also <code><a href="PATHTODOC/MAKE.LINKEXT">Makefiles</a></code>).
         -->
        If you are using your own building system: The "magic" changes are the <code>-FPIC</code>
        compiler/linker option and the <code>-Wl,-rpath</code> option.
@@ -285,13 +290,24 @@ SECTION: General Questions about SCIP
     LABEL:visualizebranchandbound
     ANSWER:
     <p>
-        Yes, there is. SCIP can optionally write tree information to a specified file which can
-        be read and visualized via the <a href="http://www.informatik.uni-koeln.de/ls_juenger/research/vbctool">vbctool</a>.
-        In order to trigger vbc output, specify a file name via <code>set vbc filename somefilename.vbc</code>.
-        the viewer has an option to uncover the nodes one-by-one (each time you
-        hit the space key). Besides that, SCIP has a parameter which also solves
-        that issue: <code>set vbc realtime FALSE</code>.
-        In case of the callable library, the parameter names are "vbc/filename" and "vbc/realtime".
+        Yes, currently there are two tree visualizations supported, the <a href="http://www.informatik.uni-koeln.de/ls_juenger/research/vbctool">vbctool</a>,
+        and the <a href="https://projects.coin-or.org/CoinBazaar/wiki/Projects/BAK">Branch-and-Bound Analysis Kit</a>.
+        The first comes with a viewer that has an option to uncover the nodes one-by-one (each time you
+        hit the space key). Additional node information such as its lower bound, depth, and number are accessed through a
+        context menu. The BAK is a command line tool written in the Python programming language. It offers several
+        noninteractive visualizations of the tree at a user-defined frequency.
+    </p>
+    <p>
+        For using one of these tools, SCIP lets you define file names <code>set visual vbcfilename somefilename.vbc</code> and
+        <code>set visual bakfilename somefilename.dat</code>.
+    </p>
+    <p>
+        For those who want to use the step-by-step functionality of vbctool,
+        it is necessary to use a time-step counter for the visualization instead of the real time. The corresponding parameter
+        is changed via <code>set visual realtime FALSE</code>.
+     </p>
+        For users of the callable library, the corresponding parameters are called "visual/bakfilename", "visual/vbcfilename", and
+        "visual/realtime".
     </p>
 
 SECTION: Using SCIP as a standalone solver
@@ -316,6 +332,23 @@ SECTION: Using SCIP as a standalone solver
         Typing <code>display statistics</code> after finishing or interrupting the solving process gives
         you plenty of extra information about the solving process.<br>
         (Typing <code>display heuristics</code> gives you a list of the heuristics including their letters.)
+    </p>
+
+    QUESTION: Why does SCIP claim that it could not find the user parameters "scip.set"? Where can I get such a file?
+    LABEL:whereareuserparameters
+    ANSWER:
+    <p>
+    SCIP comes with default settings that are automatically active when you start the interactive shell.
+    However, you have the possibility to save customized settings via the <code>set save</code> and <code>set diffsave</code> commands.
+    Both commands will prompt you to enter a file name and save either all or customized parameters only to the specified file.
+
+    A user parameter file that you save as "scip.set" has a special meaning; Whenever you invoke SCIP from a directory containing a file named "scip.set",
+    the settings therein overwrite the default settings. For more information about customized settings, see the <a href="PATHTODOC/SHELL.LINKEXT">
+    Tutorial on the interactive shell</a>.
+
+    Settings files can become incompatible with later releases if we decide to rename/delete a parameter.
+    Information about this can be found in the CHANGELOG for every release, see also <a href="#versionchange">this related question</a>.
+
     </p>
 
     QUESTION: How do I change the behavior of SCIP?
@@ -809,17 +842,17 @@ SECTION: Specific questions about Column Generation and Branch-And-Price with SC
     ANSWER:
     <p>
         If you want to use SCIP as a branch-and-price framework, you normally need to implement a reader to read in your
-	problem data and build the problem, a pricer to generate new columns, and a branching rule to do the branching
-	(see also  <a href="#howtostorebranchingdecisions">this question</a> to see how to store branching decisions, if needed).
-	SCIP takes care about everything else,
-	for example the branch-and-bound tree management and LP solving including storage of warmstart bases. Moreover,
-	many of SCIP's primal heuristics will be used and can help improve your primal bound.
-	However, this also comes with a few restrictions: You are not allowed to change the objective function coefficients
-	of variables during the solving process, because that means that previously computed dual bounds might have to be updated.
-	This prevents the use of dual variable stabilization techniques based on a (more or less strict) bounding box in the dual.
-	We are working on making this possible and recommend to use a weighted sum stabilization approach until then.
-	Another point that SCIP does for you is the dynamic removal of columns from the LP due to aging (see also the next two questions).
-	However, due to the way simplex bases are stored in SCIP, columns can only be removed at the same node where they were created.
+        problem data and build the problem, a pricer to generate new columns, and a branching rule to do the branching
+        (see also  <a href="#howtostorebranchingdecisions">this question</a> to see how to store branching decisions, if needed).
+        SCIP takes care about everything else,
+        for example the branch-and-bound tree management and LP solving including storage of warmstart bases. Moreover,
+        many of SCIP's primal heuristics will be used and can help improve your primal bound.
+        However, this also comes with a few restrictions: You are not allowed to change the objective function coefficients
+        of variables during the solving process, because that means that previously computed dual bounds might have to be updated.
+        This prevents the use of dual variable stabilization techniques based on a (more or less strict) bounding box in the dual.
+        We are working on making this possible and recommend to use a weighted sum stabilization approach until then.
+        Another point that SCIP does for you is the dynamic removal of columns from the LP due to aging (see also the next two questions).
+        However, due to the way simplex bases are stored in SCIP, columns can only be removed at the same node where they were created.
     </p>
 
     QUESTION: Why are not all variables in the LP?
@@ -869,21 +902,25 @@ SECTION: Specific questions about Column Generation and Branch-And-Price with SC
     <p>
         This can be done by creating a new constraint handler with constraint data that can store the information and
         do/undo changes in the pricer's data structures.
+    <p>
+        Once you have such a constraint handler, just create constraints of this type and add them to the child nodes of
+        your branching by <code>SCIPaddConsNode()</code>. Make sure to set the "stickingatnode" flag to TRUE in order to
+        prevent SCIP from moving the constraint around in the tree.
+    </p>
     </p>
         In general, all methods of the constraint handler (check, enforcing, separation, ...) should be empty (which means
         that they always return the status SCIP_FEASIBLE for the fundamental callbacks), just as if all constraints of this type
-        are always feasible. The important callbacks are the CONSACTIVE and CONSDEACTIVE methods.
+        are always feasible. The important callbacks are the CONSACTIVE and CONSDEACTIVE methods for communicating the
+        constraints along the active path to your pricer, and the CONSDELETE callback for deleting data of constraints at nodes
+        which became obsolete.
     <p>
         The CONSACTIVE method is always called when a node is entered on which the constraint has been added. Here, you
         need to apply the changes to your pricing data structures. The CONSDEACTIVE method will be called if the node is
         left again. Since the CONSACTIVE and CONSDEACTIVE methods of different constraints are always called in a
         stack-like fashion, this should be exactly what you need.
     </p>
-
     <p>
-        If you have such a constraint handler, just create constraints of this type and add them to the child nodes of
-        your branching by <code>SCIPaddConsNode()</code>. Make sure to set the "stickingatnode" flag to TRUE in order to
-        prevent SCIP from moving the constraint around in the tree.
+        All data of a constraint need to be freed by implementing an appropriate CONSDELETE callback.
     </p>
     <p>
         If you need to fix variables for enforcing your branching decision, this can be done in the propagation callback
@@ -991,16 +1028,16 @@ SECTION: Specific questions about Column Generation and Branch-And-Price with SC
     </p>
     <p>
         The reduced cost pricing method of a pricer has a result pointer that should be set each time the method is called.
-	In the usual case that the pricer either adds a new variable or ensures that there are no further
-	variables with negative dual feasibility, the result pointer should be set to SCIP_SUCCESS.
-	If the pricer aborts pricing without creating a new variable, but there might exist additional
-	variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN.
-	In this case, the LP solution will not be used as a lower bound.
-	Typically, early branching goes along with the computation of a Lagrangian bound in each pricing iteration.
-	The pricer store store this valid lower bound in the <code>lowerbound pointer</code> in order to update the lower
-	bound of the current node.
-	Since SCIP 3.1, it is even possible to state that pricing should be stopped early even though new variables were created
-	in the last pricing round. For this, the pricer has to set the <code>stopearly</code> pointer to TRUE.
+        In the usual case that the pricer either adds a new variable or ensures that there are no further
+        variables with negative dual feasibility, the result pointer should be set to SCIP_SUCCESS.
+        If the pricer aborts pricing without creating a new variable, but there might exist additional
+        variables with negative dual feasibility, the result pointer should be set to SCIP_DIDNOTRUN.
+        In this case, the LP solution will not be used as a lower bound.
+        Typically, early branching goes along with the computation of a Lagrangian bound in each pricing iteration.
+        The pricer store store this valid lower bound in the <code>lowerbound pointer</code> in order to update the lower
+        bound of the current node.
+        Since SCIP 3.1, it is even possible to state that pricing should be stopped early even though new variables were created
+        in the last pricing round. For this, the pricer has to set the <code>stopearly</code> pointer to TRUE.
     </p>
 
     QUESTION: How can I delete variables?
@@ -1028,7 +1065,7 @@ SECTION: Specific questions about Column Generation and Branch-And-Price with SC
     <p>
         Instead of deleting a variable completely, you can also remove it from the problem by either fixing the variable to zero
         using <code>SCIPfixVar()</code>, which fixes the variable globally or using <code>SCIPchgVarUbNode()</code> and
-        <code>SCIPchgVarLBNode()</code>, which changes the bounds only for the current subtree.
+        <code>SCIPchgVarLbNode()</code>, which changes the bounds only for the current subtree.
     </p>
 
     QUESTION: How do I branch on constraints?

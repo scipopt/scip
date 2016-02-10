@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -30,7 +30,7 @@
 #define PRESOL_DESC            "trivial presolver: round fractional bounds on integers, fix variables with equal bounds"
 #define PRESOL_PRIORITY        +9000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers) */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY              FALSE /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_FAST /* timing of the presolver (fast, medium, or exhaustive) */
 
 #ifdef FIXSIMPLEVALUE
 #define MAXDNOM                 10000LL /**< maximal denominator for simple rational fixed values */
@@ -51,7 +51,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyTrivial)
 
    /* call inclusion method of presolver */
    SCIP_CALL( SCIPincludePresolTrivial(scip) );
- 
+
    return SCIP_OKAY;
 }
 
@@ -91,7 +91,7 @@ SCIP_DECL_PRESOLEXEC(presolExecTrivial)
       {
          SCIP_Real newlb;
          SCIP_Real newub;
-         
+
          /* round fractional bounds on integer variables */
          newlb = SCIPfeasCeil(scip, lb);
          newub = SCIPfeasFloor(scip, ub);
@@ -197,7 +197,7 @@ SCIP_RETCODE SCIPincludePresolTrivial(
    presoldata = NULL;
 
    /* include presolver */
-   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_DELAY,
+   SCIP_CALL( SCIPincludePresolBasic(scip, &presolptr, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS, PRESOL_TIMING,
          presolExecTrivial,
          presoldata) );
 

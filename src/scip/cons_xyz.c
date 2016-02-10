@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -44,8 +44,9 @@
 #define CONSHDLR_DELAYPROP        FALSE /**< should propagation method be delayed, if other propagators found reductions? */
 #define CONSHDLR_PROP_TIMING       SCIP_PROPTIMING_BEFORELP/**< propagation timing mask of the constraint handler*/
 
+#define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
-#define CONSHDLR_DELAYPRESOL      FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
+
 
 
 
@@ -530,7 +531,7 @@ SCIP_DECL_CONSPARSE(consParseXyz)
 static
 SCIP_DECL_CONSGETVARS(consGetVarsXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz power constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
@@ -544,13 +545,27 @@ SCIP_DECL_CONSGETVARS(consGetVarsXyz)
 static
 SCIP_DECL_CONSGETNVARS(consGetNVarsXyz)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of xyz power constraint handler not implemented yet\n");
+   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
    SCIPABORT(); /*lint --e{527}*/
 
    return SCIP_OKAY;
 }
 #else
 #define consGetNVarsXyz NULL
+#endif
+
+/** constraint handler method to suggest dive bound changes during the generic diving algorithm */
+#if 0
+static
+SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsXyz)
+{  /*lint --e{715}*/
+   SCIPerrorMessage("method of xyz constraint handler not implemented yet\n");
+   SCIPABORT(); /*lint --e{527}*/
+
+   return SCIP_OKAY;
+}
+#else
+#define consGetDiveBdChgsXyz NULL
 #endif
 
 
@@ -580,8 +595,8 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
    SCIP_CALL( SCIPincludeConshdlr(scip, CONSHDLR_NAME, CONSHDLR_DESC,
          CONSHDLR_SEPAPRIORITY, CONSHDLR_ENFOPRIORITY, CONSHDLR_CHECKPRIORITY,
          CONSHDLR_SEPAFREQ, CONSHDLR_PROPFREQ, CONSHDLR_EAGERFREQ, CONSHDLR_MAXPREROUNDS,
-         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_DELAYPRESOL, CONSHDLR_NEEDSCONS,
-         CONSHDLR_PROP_TIMING,
+         CONSHDLR_DELAYSEPA, CONSHDLR_DELAYPROP, CONSHDLR_NEEDSCONS,
+         CONSHDLR_PROP_TIMING, CONSHDLR_PRESOLTIMING,
          conshdlrCopyXyz,
          consFreeXyz, consInitXyz, consExitXyz,
          consInitpreXyz, consExitpreXyz, consInitsolXyz, consExitsolXyz,
@@ -591,7 +606,7 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
          consActiveXyz, consDeactiveXyz,
          consEnableXyz, consDisableXyz, consDelvarsXyz,
          consPrintXyz, consCopyXyz, consParseXyz,
-         consGetVarsXyz, consGetNVarsXyz, conshdlrdata) );
+         consGetVarsXyz, consGetNVarsXyz, consGetDiveBdChgsXyz, conshdlrdata) );
 #else
    /* use SCIPincludeConshdlrBasic() plus setter functions if you want to set callbacks one-by-one and your code should
     * compile independent of new callbacks being added in future SCIP versions
@@ -614,6 +629,7 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
    SCIP_CALL( SCIPsetConshdlrExitpre(scip, conshdlr, consExitpreXyz) );
    SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolXyz) );
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, consFreeXyz) );
+   SCIP_CALL( SCIPsetConshdlrGetDiveBdChgs(scip, conshdlr, consGetDiveBdChgsXyz) );
    SCIP_CALL( SCIPsetConshdlrGetVars(scip, conshdlr, consGetVarsXyz) );
    SCIP_CALL( SCIPsetConshdlrGetNVars(scip, conshdlr, consGetNVarsXyz) );
    SCIP_CALL( SCIPsetConshdlrInit(scip, conshdlr, consInitXyz) );
@@ -621,7 +637,7 @@ SCIP_RETCODE SCIPincludeConshdlrXyz(
    SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolXyz) );
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpXyz) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseXyz) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolXyz, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolXyz, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintXyz) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropXyz, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP,
          CONSHDLR_PROP_TIMING) );

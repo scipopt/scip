@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -54,10 +54,10 @@
                                               *   participates in (-1: no limit) */
 #define CONSHDLR_DELAYSEPA             FALSE /**< should separation method be delayed, if other separators found cuts? */
 #define CONSHDLR_DELAYPROP             FALSE /**< should propagation method be delayed, if other propagators found reductions? */
-#define CONSHDLR_DELAYPRESOL           FALSE /**< should presolving method be delayed, if other presolvers found reductions? */
 #define CONSHDLR_NEEDSCONS              TRUE /**< should the constraint handler be skipped, if no constraints are available? */
 
-#define CONSHDLR_PROP_TIMING SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler*/
+#define CONSHDLR_PROP_TIMING             SCIP_PROPTIMING_BEFORELP /**< propagation timing mask of the constraint handler */
+#define CONSHDLR_PRESOLTIMING            SCIP_PRESOLTIMING_MEDIUM /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 
 #define DEFAULT_CHECKSLACKTYPE          TRUE /**< should type of slack constraint be checked when creating superindicator constraint? */
 #define DEFAULT_UPGDPRIOINDICATOR          1 /**< priority for upgrading to an indicator constraint (-1: never) */
@@ -137,9 +137,9 @@ SCIP_RETCODE consdataCheckSuperindicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< pointer to superindicator constraint data */
    SCIP_SOL*             sol,                /**< pointer to the solution to be checked */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result of the test */
    )
 {
@@ -288,7 +288,7 @@ SCIP_RETCODE upgradeIndicatorSuperindicator(
    SCIP_CONS*            cons,               /**< superindicator constraint to be upgraded */
    SCIP_Bool*            success,            /**< pointer to store if the upgrading was successful */
    SCIP_Bool*            deleted             /**< pointer to store if the constraint was deleted */
-)
+   )
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
@@ -404,7 +404,7 @@ SCIP_RETCODE upgradeLinearSuperindicator(
    SCIP_CONS*            cons,               /**< superindicator constraint to be upgraded */
    SCIP_Bool*            success,            /**< pointer to store if the upgrading was successful */
    SCIP_Bool*            deleted             /**< pointer to store if the constraint was deleted */
-)
+   )
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
@@ -1882,7 +1882,7 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
    SCIP_CALL( SCIPsetConshdlrInitlp(scip, conshdlr, consInitlpSuperindicator) );
    SCIP_CALL( SCIPsetConshdlrInitpre(scip, conshdlr, consInitpreSuperindicator) );
    SCIP_CALL( SCIPsetConshdlrParse(scip, conshdlr, consParseSuperindicator) );
-   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSuperindicator, CONSHDLR_MAXPREROUNDS, CONSHDLR_DELAYPRESOL) );
+   SCIP_CALL( SCIPsetConshdlrPresol(scip, conshdlr, consPresolSuperindicator, CONSHDLR_MAXPREROUNDS, CONSHDLR_PRESOLTIMING) );
    SCIP_CALL( SCIPsetConshdlrPrint(scip, conshdlr, consPrintSuperindicator) );
    SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropSuperindicator, CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING) );
    SCIP_CALL( SCIPsetConshdlrResprop(scip, conshdlr, consRespropSuperindicator) );
@@ -1926,22 +1926,22 @@ SCIP_RETCODE SCIPincludeConshdlrSuperindicator(
 
    /* add constraint handler parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "constraints/"CONSHDLR_NAME"/checkslacktype",
+         "constraints/" CONSHDLR_NAME "/checkslacktype",
          "should type of slack constraint be checked when creating superindicator constraint?",
          &conshdlrdata->checkslacktype, TRUE, DEFAULT_CHECKSLACKTYPE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
-         "constraints/"CONSHDLR_NAME"/maxupgdcoeflinear",
+         "constraints/" CONSHDLR_NAME "/maxupgdcoeflinear",
          "maximum big-M coefficient of binary variable in upgrade to a linear constraint (relative to smallest coefficient)",
          &conshdlrdata->maxupgdcoeflinear, TRUE, DEFAULT_MAXUPGDCOEFLINEAR, 0.0, 1e15, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/upgdprioindicator",
+         "constraints/" CONSHDLR_NAME "/upgdprioindicator",
          "priority for upgrading to an indicator constraint (-1: never)",
          &conshdlrdata->upgdprioindicator, TRUE, DEFAULT_UPGDPRIOINDICATOR, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
-         "constraints/"CONSHDLR_NAME"/upgdpriolinear",
+         "constraints/" CONSHDLR_NAME "/upgdpriolinear",
          "priority for upgrading to an indicator constraint (-1: never)",
          &conshdlrdata->upgdpriolinear, TRUE, DEFAULT_UPGDPRIOLINEAR, -1, INT_MAX, NULL, NULL) );
 

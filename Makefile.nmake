@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -29,12 +29,13 @@ ARCH			=	x86
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION			=	3.1.0.1
+VERSION			=	3.2.0.1
 VERBOSE			=	false
 OPT				=	opt
 COMP			=	msvc
-LPS				=	spx
+LPS			=	spx
 SHARED			=	false
+LEGACY			=	false
 
 #third party compiling parameters
 ZLIB			=	true
@@ -92,6 +93,14 @@ ARFLAGS			=	$(ARFLAGS) $(USRARFLAGS)
 CPPFLAGS		=	$(CPPFLAGS) /DNPARASCIP
 
 #-----------------------------------------------------------------------------
+# LEGACY
+#-----------------------------------------------------------------------------
+
+!if "$(LEGACY)" == "true"
+CPPFLAGS	=	$(CPPFLAGS) /DSOPLEX_LEGACY
+!endif
+
+#-----------------------------------------------------------------------------
 # LP Solver Interface
 #-----------------------------------------------------------------------------
 
@@ -138,9 +147,44 @@ NLPILIBSCIPOBJ	=	$(LIBOBJDIR)\blockmemshell\memory.obj \
 					$(LIBOBJDIR)\scip\interrupt.obj \
 					$(LIBOBJDIR)\scip\message.obj
 
-NLPILIBSHORTNAMECPPAD	=	.cppad
-
+!if "$(IPOPT)" == "true"
+CPPFLAGS			=	$(CPPFLAGS) /Ilib\ipopt.$(ARCH)\include\coin
+!if "$(ARCH)" == "x86"
+LDFLAGS			=	lib\ipopt.$(ARCH)\lib\libipopt.lib \
+					lib\ipopt.$(ARCH)\lib\libcoinmumps.lib \
+					lib\mkl.$(ARCH)\mkl_intel_c.lib \
+					lib\mkl.$(ARCH)\mkl_sequential.lib \
+					lib\mkl.$(ARCH)\mkl_core.lib \
+					lib\if.$(ARCH)\ifconsol.lib \
+					lib\if.$(ARCH)\libifcoremt.lib \
+					lib\if.$(ARCH)\libifport.lib \
+					lib\if.$(ARCH)\libmmt.lib \
+					lib\if.$(ARCH)\libirc.lib \
+					lib\if.$(ARCH)\svml_dispmt.lib \
+					lib\if.$(ARCH)\libdecimal.lib \
+					$(LDFLAGS)
+!else
+LDFLAGS			=	lib\ipopt.$(ARCH)\lib\libipopt.lib \
+					lib\ipopt.$(ARCH)\lib\libcoinmumps.lib \
+					lib\mkl.$(ARCH)\mkl_intel_lp64.lib \
+					lib\mkl.$(ARCH)\mkl_sequential.lib \
+					lib\mkl.$(ARCH)\mkl_core.lib \
+					lib\if.$(ARCH)\ifconsol.lib \
+					lib\if.$(ARCH)\libifcoremt.lib \
+					lib\if.$(ARCH)\libifport.lib \
+					lib\if.$(ARCH)\libmmt.lib \
+					lib\if.$(ARCH)\libirc.lib \
+					lib\if.$(ARCH)\svml_dispmt.lib \
+					lib\if.$(ARCH)\libdecimal.lib \
+					$(LDFLAGS)
+!endif
+NLPILIBSHORTNAMEIPOPT	=	.ipopt
+NLPILIBCXXOBJ		=	$(NLPILIBCXXOBJ) $(LIBOBJDIR)\nlpi\nlpi_ipopt.obj
+!else
 NLPILIBCOBJ		=	$(NLPILIBCOBJ) $(LIBOBJDIR)\nlpi\nlpi_ipopt_dummy.obj
+!endif
+
+NLPILIBSHORTNAMECPPAD	=	.cppad
 
 NLPILIBSHORTNAME=	nlpi$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAMEIPOPT)
 NLPILIBNAME		=	$(NLPILIBSHORTNAME)-$(VERSION)
@@ -158,17 +202,17 @@ NLPILIBDEP		=	$(SRCDIR)/depend.nlpilib$(NLPILIBSHORTNAMECPPAD)$(NLPILIBSHORTNAME
 
 !if "$(ZIMPL)" == "true"
 CPPFLAGS		=	$(CPPFLAGS) /DWITH_ZIMPL /Ilib /Ilib\zimpl\WIN
-LDFLAGS			=	lib\libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).lib lib\libpcre.$(ARCH).opt.lib $(LDFLAGS)
+LDFLAGS			=	lib\libzimpl.$(OSTYPE).$(ARCH).$(COMP).$(ZIMPLOPT).lib lib\libpcre.$(ARCH).lib $(LDFLAGS)
 !endif
 
 !if "$(GMP)" == "true"
-CPPFLAGS		=	$(CPPFLAGS) /DWITH_GMP /Ilib\mpir.$(ARCH).opt # /Ilib
-LDFLAGS			=	lib\libmpir.$(ARCH).opt.lib $(LDFLAGS)
+CPPFLAGS		=	$(CPPFLAGS) /DWITH_GMP /Ilib\mpir.$(ARCH) # /Ilib
+LDFLAGS			=	lib\libmpir.$(ARCH).lib $(LDFLAGS)
 !endif
 
 !if "$(ZLIB)" == "true"
 CPPFLAGS		=	$(CPPFLAGS) /DWITH_ZLIB /Ilib\zlib
-LDFLAGS			=	lib\libz.$(ARCH).opt.lib $(LDFLAGS) /NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCMTD
+LDFLAGS			=	lib\libz.$(ARCH).lib $(LDFLAGS) /NODEFAULTLIB:LIBCMT /NODEFAULTLIB:LIBCMTD
 !endif
 
 #-----------------------------------------------------------------------------
@@ -177,7 +221,7 @@ LDFLAGS			=	lib\libz.$(ARCH).opt.lib $(LDFLAGS) /NODEFAULTLIB:LIBCMT /NODEFAULTL
 
 !if "$(SHARED)" == "true"
 LINK			=	ld
-LINKLIBEXT		=	mt # default
+LINKLIBEXT		=	ld
 !else
 LINK			=	mt
 LINKLIBEXT		=	mt
@@ -192,13 +236,18 @@ SCIPLIBNAME		=	$(SCIPLIBSHORTNAME)-$(VERSION)
 SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\branch_allfullstrong.obj \
 					$(LIBOBJDIR)\scip\branch_cloud.obj \
+					$(LIBOBJDIR)\scip\branch_distribution.obj \
 					$(LIBOBJDIR)\scip\branch_fullstrong.obj \
 					$(LIBOBJDIR)\scip\branch_inference.obj \
-					$(LIBOBJDIR)\scip\branch_mostinf.obj \
 					$(LIBOBJDIR)\scip\branch_leastinf.obj \
+					$(LIBOBJDIR)\scip\branch_mostinf.obj \
+					$(LIBOBJDIR)\scip\branch_multaggr.obj \
+               $(LIBOBJDIR)\scip\branch_nodereopt.obj \
 					$(LIBOBJDIR)\scip\branch_pscost.obj \
 					$(LIBOBJDIR)\scip\branch_random.obj \
 					$(LIBOBJDIR)\scip\branch_relpscost.obj \
+               $(LIBOBJDIR)\scip\compr_largestrepr.obj \
+               $(LIBOBJDIR)\scip\compr_weakcompr.obj \
 					$(LIBOBJDIR)\scip\cons_abspower.obj \
 					$(LIBOBJDIR)\scip\cons_and.obj \
 					$(LIBOBJDIR)\scip\cons_bivariate.obj \
@@ -227,17 +276,20 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\cons_xor.obj \
 					$(LIBOBJDIR)\scip\dialog_default.obj \
 					$(LIBOBJDIR)\scip\disp_default.obj \
+               $(LIBOBJDIR)\scip\event_softtimelimit.obj \
 					$(LIBOBJDIR)\scip\heur_actconsdiving.obj \
+               $(LIBOBJDIR)\scip\heur_bound.obj \
 					$(LIBOBJDIR)\scip\heur_clique.obj \
 					$(LIBOBJDIR)\scip\heur_coefdiving.obj \
 					$(LIBOBJDIR)\scip\heur_crossover.obj \
 					$(LIBOBJDIR)\scip\heur_dins.obj \
+               $(LIBOBJDIR)\scip\heur_distributiondiving.obj \
 					$(LIBOBJDIR)\scip\heur_dualval.obj \
 					$(LIBOBJDIR)\scip\heur_feaspump.obj \
 					$(LIBOBJDIR)\scip\heur_fixandinfer.obj \
 					$(LIBOBJDIR)\scip\heur_fracdiving.obj \
 					$(LIBOBJDIR)\scip\heur_guideddiving.obj \
-					$(LIBOBJDIR)\scip\heur_zeroobj.obj \
+					$(LIBOBJDIR)\scip\heur_indicator.obj \
 					$(LIBOBJDIR)\scip\heur_intdiving.obj \
 					$(LIBOBJDIR)\scip\heur_intshifting.obj \
 					$(LIBOBJDIR)\scip\heur_linesearchdiving.obj \
@@ -246,11 +298,13 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\heur_nlpdiving.obj \
 					$(LIBOBJDIR)\scip\heur_objpscostdiving.obj \
 					$(LIBOBJDIR)\scip\heur_octane.obj \
+               $(LIBOBJDIR)\scip\heur_ofins.obj \
 					$(LIBOBJDIR)\scip\heur_oneopt.obj \
 					$(LIBOBJDIR)\scip\heur_proximity.obj \
 					$(LIBOBJDIR)\scip\heur_pscostdiving.obj \
-					$(LIBOBJDIR)\scip\heur_rens.obj \
 					$(LIBOBJDIR)\scip\heur_randrounding.obj \
+					$(LIBOBJDIR)\scip\heur_rens.obj \
+               $(LIBOBJDIR)\scip\heur_reoptsols.obj \
 					$(LIBOBJDIR)\scip\heur_rins.obj \
 					$(LIBOBJDIR)\scip\heur_rootsoldiving.obj \
 					$(LIBOBJDIR)\scip\heur_rounding.obj \
@@ -259,11 +313,13 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\heur_simplerounding.obj \
 					$(LIBOBJDIR)\scip\heur_subnlp.obj \
 					$(LIBOBJDIR)\scip\heur_trivial.obj \
+               $(LIBOBJDIR)\scip\heur_trivialnegation.obj \
 					$(LIBOBJDIR)\scip\heur_trysol.obj \
 					$(LIBOBJDIR)\scip\heur_twoopt.obj \
 					$(LIBOBJDIR)\scip\heur_undercover.obj \
 					$(LIBOBJDIR)\scip\heur_vbounds.obj \
 					$(LIBOBJDIR)\scip\heur_veclendiving.obj \
+					$(LIBOBJDIR)\scip\heur_zeroobj.obj \
 					$(LIBOBJDIR)\scip\heur_zirounding.obj \
 					$(LIBOBJDIR)\scip\message_default.obj \
 					$(LIBOBJDIR)\scip\nodesel_bfs.obj \
@@ -277,11 +333,16 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\presol_components.obj \
 					$(LIBOBJDIR)\scip\presol_convertinttobin.obj \
 					$(LIBOBJDIR)\scip\presol_domcol.obj\
+               $(LIBOBJDIR)\scip\presol_dualagg.obj \
 					$(LIBOBJDIR)\scip\presol_dualinfer.obj \
 					$(LIBOBJDIR)\scip\presol_gateextraction.obj \
+					$(LIBOBJDIR)\scip\presol_implfree.obj \
 					$(LIBOBJDIR)\scip\presol_implics.obj \
 					$(LIBOBJDIR)\scip\presol_inttobinary.obj \
+					$(LIBOBJDIR)\scip\presol_redvub.obj \
 					$(LIBOBJDIR)\scip\presol_trivial.obj \
+					$(LIBOBJDIR)\scip\presol_tworowbnd.obj \
+               $(LIBOBJDIR)\scip\presol_stuffing.obj \
 					$(LIBOBJDIR)\scip\prop_dualfix.obj \
 					$(LIBOBJDIR)\scip\prop_genvbounds.obj \
 					$(LIBOBJDIR)\scip\prop_obbt.obj \
@@ -294,6 +355,7 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\reader_ccg.obj \
 					$(LIBOBJDIR)\scip\reader_cip.obj \
 					$(LIBOBJDIR)\scip\reader_cnf.obj \
+               $(LIBOBJDIR)\scip\reader_diff.obj \
 					$(LIBOBJDIR)\scip\reader_fix.obj \
 					$(LIBOBJDIR)\scip\reader_fzn.obj \
 					$(LIBOBJDIR)\scip\reader_gms.obj \
@@ -302,8 +364,8 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\reader_opb.obj \
 					$(LIBOBJDIR)\scip\reader_osil.obj \
 					$(LIBOBJDIR)\scip\reader_pip.obj \
-					$(LIBOBJDIR)\scip\reader_ppm.obj \
 					$(LIBOBJDIR)\scip\reader_pbm.obj \
+					$(LIBOBJDIR)\scip\reader_ppm.obj \
 					$(LIBOBJDIR)\scip\reader_rlp.obj \
 					$(LIBOBJDIR)\scip\reader_sol.obj \
 					$(LIBOBJDIR)\scip\reader_wbo.obj \
@@ -312,6 +374,8 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\sepa_clique.obj \
 					$(LIBOBJDIR)\scip\sepa_closecuts.obj \
 					$(LIBOBJDIR)\scip\sepa_cmir.obj \
+               $(LIBOBJDIR)\scip\sepa_disjunctive.obj \
+               $(LIBOBJDIR)\scip\sepa_eccuts.obj \
 					$(LIBOBJDIR)\scip\sepa_flowcover.obj \
 					$(LIBOBJDIR)\scip\sepa_gomory.obj \
 					$(LIBOBJDIR)\scip\sepa_impliedbounds.obj \
@@ -321,15 +385,16 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\sepa_rapidlearning.obj \
 					$(LIBOBJDIR)\scip\sepa_strongcg.obj \
 					$(LIBOBJDIR)\scip\sepa_zerohalf.obj \
-      				$(LIBOBJDIR)\scip\branch.obj \
-					$(LIBOBJDIR)\scip\buffer.obj \
+					$(LIBOBJDIR)\scip\branch.obj \
 					$(LIBOBJDIR)\scip\clock.obj \
+               $(LIBOBJDIR)\scip\compr.obj \
 					$(LIBOBJDIR)\scip\conflict.obj \
 					$(LIBOBJDIR)\scip\cons.obj \
 					$(LIBOBJDIR)\scip\cutpool.obj \
 					$(LIBOBJDIR)\scip\debug.obj \
 					$(LIBOBJDIR)\scip\dialog.obj \
 					$(LIBOBJDIR)\scip\disp.obj \
+               $(LIBOBJDIR)\scip\dive.obj \
 					$(LIBOBJDIR)\scip\event.obj \
 					$(LIBOBJDIR)\scip\fileio.obj \
 					$(LIBOBJDIR)\scip\heur.obj \
@@ -338,6 +403,7 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\interrupt.obj \
 					$(LIBOBJDIR)\scip\intervalarith.obj \
 					$(LIBOBJDIR)\scip\lp.obj \
+					$(LIBOBJDIR)\scip\matrix.obj \
 					$(LIBOBJDIR)\scip\mem.obj \
 					$(LIBOBJDIR)\scip\misc.obj \
 					$(LIBOBJDIR)\scip\nlp.obj \
@@ -352,6 +418,7 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\prop.obj \
 					$(LIBOBJDIR)\scip\reader.obj \
 					$(LIBOBJDIR)\scip\relax.obj \
+               $(LIBOBJDIR)\scip\reopt.obj \
 					$(LIBOBJDIR)\scip\retcode.obj \
 					$(LIBOBJDIR)\scip\scip.obj \
 					$(LIBOBJDIR)\scip\scipdefplugins.obj \
@@ -365,7 +432,7 @@ SCIPPLUGINLIBOBJ=	\
 					$(LIBOBJDIR)\scip\stat.obj \
 					$(LIBOBJDIR)\scip\tree.obj \
 					$(LIBOBJDIR)\scip\var.obj \
-					$(LIBOBJDIR)\scip\vbc.obj \
+					$(LIBOBJDIR)\scip\visual.obj \
 					$(LIBOBJDIR)\tclique\tclique_branch.obj \
 					$(LIBOBJDIR)\tclique\tclique_coloring.obj \
 					$(LIBOBJDIR)\tclique\tclique_graph.obj \

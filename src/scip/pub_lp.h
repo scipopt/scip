@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -461,6 +461,18 @@ SCIP_Bool SCIProwIsInLP(
    SCIP_ROW*             row                 /**< LP row */
    );
 
+/** returns the number of times that this row has been sharp in an optimal LP solution */
+EXTERN
+SCIP_Longint SCIProwGetActiveLPCount(
+   SCIP_ROW*             row                 /**< row */
+   );
+
+/** returns the number of LPs since this row has been created */
+EXTERN
+SCIP_Longint SCIProwGetNLPsAfterCreation(
+   SCIP_ROW*             row                 /**< row */
+   );
+
 /** changes the rank of LP row */
 EXTERN
 void SCIProwChgRank(
@@ -501,6 +513,8 @@ void SCIProwChgRank(
 #define SCIProwGetLPPos(row)            (row)->lppos
 #define SCIProwGetLPDepth(row)          (row)->lpdepth
 #define SCIProwIsInLP(row)              ((row)->lppos >= 0)
+#define SCIProwGetActiveLPCount(row)    ((row)->activeinlpcounter)
+#define SCIProwGetNLPsAfterCreation(row) ((row)->nlpsaftercreation)
 #define SCIProwChgRank(row, cutrank)    ((row)->rank = (cutrank))
 
 #endif

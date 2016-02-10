@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -33,7 +33,7 @@
 #define PRESOL_DESC            "presolver extracting gate(and)-constraints"
 #define PRESOL_PRIORITY         1000000 /**< priority of the presolver (>= 0: before, < 0: after constraint handlers); combined with propagators */
 #define PRESOL_MAXROUNDS             -1 /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-#define PRESOL_DELAY               TRUE /**< should presolver be delayed, if other presolvers found reductions? */
+#define PRESOL_TIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolver (fast, medium, or exhaustive) */
 
 #define HASHSIZE_LOGICORCONS     131101 /**< minimal size of hash table in logicor constraint tables */
 #define HASHSIZE_SETPPCCONS      131101 /**< minimal size of hash table in setppc constraint tables */
@@ -250,7 +250,7 @@ SCIP_DECL_HASHKEYVAL(setppcHashdataKeyValCons)
    hashval = 0;
 
    /* if we have more then one variables the index of each variable is imaged to a bit positioned from 0 to 31, and over
-    * all variables these bitfields are combined by an or operation to get a good hashvalue for distinguishing the datas
+    * all variables these bitfields are combined by an or operation to get a good hashvalue for distinguishing the data
     */
    for( v = 1; v >= 0; --v )
       hashval |= (1 << (SCIPvarGetIndex(hashdata->vars[v]) % 32)); /*lint !e701*/
@@ -1363,12 +1363,12 @@ SCIP_DECL_PRESOLEXEC(presolExecGateextraction)
       else
       {
          /* make sure that we correct the parameter for only extrating set-partitioning constraints */
-         if( SCIPisParamFixed(scip, "presolving/"PRESOL_NAME"/onlysetpart") )
+         if( SCIPisParamFixed(scip, "presolving/" PRESOL_NAME "/onlysetpart") )
          {
-            SCIPwarningMessage(scip, "unfixing parameter <presolving/"PRESOL_NAME"/onlysetpart> in gate extration presolver\n");
-            SCIP_CALL( SCIPunfixParam(scip, "presolving/"PRESOL_NAME"/onlysetpart") );
+            SCIPwarningMessage(scip, "unfixing parameter <presolving/" PRESOL_NAME "/onlysetpart> in gate extration presolver\n");
+            SCIP_CALL( SCIPunfixParam(scip, "presolving/" PRESOL_NAME "/onlysetpart") );
          }
-         SCIP_CALL( SCIPsetBoolParam(scip, "presolving/"PRESOL_NAME"/onlysetpart", TRUE) );
+         SCIP_CALL( SCIPsetBoolParam(scip, "presolving/" PRESOL_NAME "/onlysetpart", TRUE) );
          assert(presoldata->onlysetpart);
       }
    }
@@ -1798,7 +1798,7 @@ SCIP_RETCODE SCIPincludePresolGateextraction(
 
    /* include presolver */
    SCIP_CALL( SCIPincludePresolBasic(scip, &presol, PRESOL_NAME, PRESOL_DESC, PRESOL_PRIORITY, PRESOL_MAXROUNDS,
-         PRESOL_DELAY, presolExecGateextraction, presoldata) );
+         PRESOL_TIMING, presolExecGateextraction, presoldata) );
 
    SCIP_CALL( SCIPsetPresolCopy(scip, presol, presolCopyGateextraction) );
    SCIP_CALL( SCIPsetPresolFree(scip, presol, presolFreeGateextraction) );
@@ -1808,19 +1808,19 @@ SCIP_RETCODE SCIPincludePresolGateextraction(
 
    /* add gateextraction presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/"PRESOL_NAME"/onlysetpart",
+         "presolving/" PRESOL_NAME "/onlysetpart",
          "should we only try to extract set-partitioning constraints and no and-constraints",
          &presoldata->onlysetpart, TRUE, DEFAULT_ONLYSETPART, NULL, NULL) );
 
    /* add gateextraction presolver parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "presolving/"PRESOL_NAME"/searchequations",
+         "presolving/" PRESOL_NAME "/searchequations",
          "should we try to extract set-partitioning constraint out of one logicor and one corresponding set-packing constraint",
          &presoldata->searchequations, TRUE, DEFAULT_SEARCHEQUATIONS, NULL, NULL) );
 
    /* add gateextraction presolver parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
-         "presolving/"PRESOL_NAME"/sorting",
+         "presolving/" PRESOL_NAME "/sorting",
          "order logicor contraints to extract big-gates before smaller ones (-1), do not order them (0) or order them to extract smaller gates at first (1)",
          &presoldata->sorting, TRUE, DEFAULT_SORTING, -1, 1, NULL, NULL) );
 

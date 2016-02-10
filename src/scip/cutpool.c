@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2014 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -237,7 +237,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    int maxabsval;
    SCIP_Real maxval;  
    SCIP_SET* set;
-   
+
    set = (SCIP_SET*) userptr;
    row = (SCIP_ROW*)key;
    assert(row != NULL);
@@ -245,7 +245,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    maxval = SCIProwGetMaxval(row, set);
    assert(row->nummaxval > 0);
    assert(row->validminmaxidx);
-   
+
    if( maxval > (SCIP_Real) INT_MAX )
       maxabsval = 0;
    else if( maxval < 1.0 )
@@ -333,7 +333,7 @@ SCIP_RETCODE cutFree(
    assert(*cut != NULL);
    assert((*cut)->row != NULL);
    assert(blkmem != NULL);
-   
+
    /* release row */
    SCIP_CALL( SCIProwRelease(&(*cut)->row, blkmem, set, lp) );
 
@@ -375,26 +375,26 @@ int SCIPcutGetAge(
    return cut->age;
 }
 
-/** returns the number of times that this cut has been sharp in an optimal LP solution */
-SCIP_Longint SCIPcutGetActiveLPCount(
+/** returns the ratio of LPs where the row belonging to this cut was active in an LP solution, i.e.
+ *  where the age of its row has not been increased
+ *
+ *  @see SCIPcutGetAge() to get the age of a cut
+ */
+SCIP_Real SCIPcutGetLPActivityQuot(
    SCIP_CUT*             cut                 /**< cut */
    )
 {
+   SCIP_Longint nlpsaftercreation;
+   SCIP_Longint activeinlpcounter;
+
    assert(cut != NULL);
+   assert(cut->row != NULL);
 
-   return cut->row->activeinlpcounter;
+   nlpsaftercreation = SCIProwGetNLPsAfterCreation(cut->row);
+   activeinlpcounter = SCIProwGetActiveLPCount(cut->row);
+
+   return (nlpsaftercreation > 0 ? activeinlpcounter / (SCIP_Real)nlpsaftercreation : 0.0);
 }
-
-/** returns the number of LPs since this cut has been created */
-SCIP_Longint SCIPcutGetNLPsAfterCreation(
-   SCIP_CUT*             cut                 /**< cut */
-   )
-{
-   assert(cut != NULL);
-
-   return cut->row->nlpsaftercreation;
-}
-
 
 /*
  * Cutpool methods
@@ -456,7 +456,7 @@ SCIP_RETCODE SCIPcutpoolFree(
 
    /* free hash table */
    SCIPhashtableFree(&(*cutpool)->hashtable);
-   
+
    BMSfreeMemoryArrayNull(&(*cutpool)->cuts);
    BMSfreeMemory(cutpool);
 
@@ -499,6 +499,10 @@ SCIP_RETCODE SCIPcutpoolAddRow(
 {
    assert(cutpool != NULL);
    assert(row != NULL);
+
+   /* only called to ensure that minidx and maxidx are up-to-date */
+   (void) SCIProwGetMaxidx(row, set);
+   assert(row->validminmaxidx);
 
    /* check in hash table, if cut already exists in the pool */
    if( SCIPhashtableRetrieve(cutpool->hashtable, (void*)row) == NULL )
@@ -609,7 +613,7 @@ SCIP_RETCODE cutpoolDelCut(
 
    /* free the cut */
    SCIP_CALL( cutFree(&cutpool->cuts[pos], blkmem, set, lp) );
-   
+
    /* move the last cut of the pool to the free position */
    if( pos < cutpool->ncuts-1 )
    {
