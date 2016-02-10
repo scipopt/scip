@@ -46,7 +46,7 @@
 #define EVENTHDLR_NAME         "solvingphase"
 #define EVENTHDLR_DESC         "event handler to adjust settings depending on current stage"
 
-#define EVENTHDLR_EVENT SCIP_EVENTTYPE_BESTSOLFOUND | SCIP_EVENTTYPE_NODESOLVED /**< the actual event to be caught */
+#define EVENTHDLR_EVENT SCIP_EVENTTYPE_BESTSOLFOUND | SCIP_EVENTTYPE_NODESOLVED | SCIP_EVENTTYPE_NODEFOCUSED /**< the actual event to be caught */
 #define TRANSITIONMETHODS          "elor" /**< which heuristic transition method: (e)stimate based, (l)ogarithmic regression based, (o)ptimal value based (cheat!),
                                             * (r)ank-1 node based? */
 #define DEFAULT_SETNAME     "default.set" /**< default settings file name for all solving phase setting files */
@@ -137,6 +137,7 @@ struct SCIP_EventhdlrData
                                                *  (e)stimate based, (l)ogarithmic regression based, (o)ptimal value based (cheat!),
                                                *  (r)ank-1 node based */
    SCIP_Longint         nodeoffset;          /**< node offset for triggering rank-1 node based phased transition */
+   SCIP_Longint         lastndelayedcutoffs; /**< the number of delayed cutoffs since the last update of a focus node */
    SCIP_Bool            fallback;            /**< should the phase transition fall back to improvement phase? */
    SCIP_Bool            interruptoptimal;    /**< interrupt after optimal solution was found */
    SCIP_Bool            adjustrelpsweights;  /**< should the relpscost cutoff weights be adjusted? */
@@ -506,6 +507,7 @@ SCIP_RETCODE storeDepthInfo(
    oldsize = eventhdlrdata->maxdepth;
    newsize = oldsize;
 
+
    /* create depth info array with small initial size or enlarge the existing array if new node is deeper */
    if( oldsize == 0 )
    {
@@ -535,8 +537,18 @@ SCIP_RETCODE storeDepthInfo(
 
    assert(newsize > nodedepth);
 
-   /* remove the node from the data structures */
-   updateDepthinfo(scip, eventhdlrdata, node);
+   /* in case that selected nodes were cut off in between two calls to this method, build data structures from scratch again */
+   if( SCIPgetNDelayedCutoffs(scip) > eventhdlrdata->lastndelayedcutoffs )
+   {
+      SCIP_CALL( storeRank1Nodes(scip, eventhdlrdata) );
+
+      eventhdlrdata->lastndelayedcutoffs = SCIPgetNDelayedCutoffs(scip);
+   }
+   else
+   {
+      /* remove the node from the data structures */
+      updateDepthinfo(scip, eventhdlrdata, node);
+   }
 
    return SCIP_OKAY;
 }
@@ -1014,7 +1026,9 @@ void determineSolvingPhase(
       eventhdlrdata->solvingphase = SOLVINGPHASE_PROOF;
 }
 
-/**< adjust reliability pseudo cost weights depending on previously observed ratio between infeasible and pruned leaf nodes */
+/**< adjust reliability pseudo cost weights depending on previously observed ratio between infeasible and pruned leaf nodes
+ *   todo implement this directly inside relpscost or the core instead of using parameter here.
+ */
 static
 SCIP_RETCODE adjustRelpscostWeights(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1226,6 +1240,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolSolvingphase)
    eventhdlrdata->maxdepth = 0;
    eventhdlrdata->nnodesbelowincumbent = 0;
    eventhdlrdata->nrank1nodes = 0;
+   eventhdlrdata->lastndelayedcutoffs = SCIPgetNDelayedCutoffs(scip);
 
    resetLeafInfo(eventhdlrdata->leafinfo);
 
@@ -1318,13 +1333,20 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingphase)
 
    assert(eventtype & (EVENTHDLR_EVENT));
 
-   assert((eventtype & SCIP_EVENTTYPE_BESTSOLFOUND) || eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
 
    if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
    {
       if( eventtype & SCIP_EVENTTYPE_BESTSOLFOUND )
       {
          SCIP_CALL( storeRank1Nodes(scip, eventhdlrdata) );
+      }
+      else if (eventtype & SCIP_EVENTTYPE_NODEFOCUSED )
+      {
+         assert(SCIPeventGetNode(event) == SCIPgetCurrentNode(scip));
+
+         SCIP_CALL( storeDepthInfo(scip, eventhdlrdata, SCIPeventGetNode(event)));
+
+         assert(eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
       }
       else if( eventtype & SCIP_EVENTTYPE_NODEBRANCHED )
       {
