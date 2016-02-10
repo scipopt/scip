@@ -192,7 +192,8 @@ SCIP_Bool sepastoreIsCutRedundant(
    rhs = SCIProwGetRhs(cut);
    minactivity = SCIProwGetMinActivity(cut, set, stat);
    maxactivity = SCIProwGetMaxActivity(cut, set, stat);
-   if( SCIPsetIsLE(set, lhs, minactivity) && SCIPsetIsLE(set, maxactivity, rhs) )
+   if( (SCIPsetIsInfinity(set, -lhs) || SCIPsetIsLE(set, lhs, minactivity))
+      && (SCIPsetIsInfinity(set, rhs) || SCIPsetIsLE(set, maxactivity, rhs)) )
    {
       SCIPdebugMessage("ignoring activity redundant cut <%s> (sides=[%g,%g], act=[%g,%g])\n",
          SCIProwGetName(cut), lhs, rhs, minactivity, maxactivity);

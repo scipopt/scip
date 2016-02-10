@@ -48,7 +48,7 @@ fixed bugs:
 - fixed bug with transferring solutions to new runs (need to recompute objective before checking)
 - fixed bug in cons_indicator with changing type of slackvariable
 - fixed issue: constraints being parallel to objective function (after restart) sometimes led to wrongly stating infeasible
-
+- fixed issue with infinite values when checking cuts for redundancy
 
 SCIP version 3.2.0
 ==================
