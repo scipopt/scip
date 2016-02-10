@@ -541,6 +541,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
    SCIP_LP*              lp,                  /**< current LP data */
    SCIP_BASISSTORE*      basestore           /**< starting basis storage */
    );

@@ -1037,16 +1037,19 @@ SCIP_RETCODE SCIPlpFreeState(
 /** load a starting basis */
 extern
 SCIP_RETCODE SCIPlpSetBasis(
-   SCIP_LP*             lp,
-   SCIP_SET*            set,
-   SCIP_VAR**           vars,
-   SCIP_CONS**          conss,
-   int*                 vstat,
-   int*                 cstat,
-   int                  nvars,
-   int                  nconss,
-   BMS_BLKMEM*          blkmem,
-   SCIP_Bool*           success
+   SCIP_LP*              lp,
+   SCIP_SET*             set,
+   BMS_BLKMEM*           blkmem,
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
+   SCIP_VAR**            vars,
+   SCIP_CONS**           conss,
+   int*                  vstat,
+   int*                  cstat,
+   int                   nvars,
+   int                   nconss,
+   int                   depth,
+   SCIP_Bool*            success
    );
 
 /** stores pricing norms into LP norms object */

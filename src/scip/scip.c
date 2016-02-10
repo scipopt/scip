@@ -1630,13 +1630,13 @@ SCIP_RETCODE copyBasis(
    conss = sourcescip->transprob->conss;
    nvars = sourcescip->transprob->nvars;
    nconss = sourcescip->transprob->nconss;
-   ntconss = nconss + nsourcerows;
+   ntconss = 0;
 
    /* allocate buffer */
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &vstat, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(sourcescip, &cstat, ntconss) );
    SCIP_CALL( SCIPallocBufferArray(sourcescip, &tvars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(sourcescip, &tconss, ntconss) );
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &cstat, nconss + nsourcerows) );
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &tconss, nconss + nsourcerows) );
 
    /* match the basis status of source-variables */
    for( i = 0; i < nvars; i++ )
@@ -1644,32 +1644,32 @@ SCIP_RETCODE copyBasis(
       assert(SCIPhashmapExists(varmap, vars[i]));
 
       tvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
-      SCIP_CALL( SCIPhashmapRemove(varmap, vars[i]) );
+      //SCIP_CALL( SCIPhashmapRemove(varmap, vars[i]) );
       vstat[i] = getBasestatVar(vars[i]);
    }
 
    /* match the basis status of source-constraints */
-   for( i = 0; i < nconss; i++ )
+   for( i = 0; i < nconss; ++i )
    {
       assert(SCIPhashmapExists(consmap, conss[i]));
 
-      tconss[i] = (SCIP_CONS*) SCIPhashmapGetImage(consmap, conss[i]);
-      cstat[i] = getBasestatCons(sourcescip, conss[i], &success);
-      if( !success )
+      tconss[ntconss] = (SCIP_CONS*) SCIPhashmapGetImage(consmap, conss[i]);
+      cstat[ntconss] = getBasestatCons(sourcescip, conss[i], &success);
+      if( success )
       {
-         SCIPdebugMessage("copying basis failed for constraint <%s>\n", SCIPconsGetName(conss[i]));
-         goto TERMINATE;
+         ntconss++;
       }
    }
 
-   /* match the basis status of source-constraints */
+   /* match the basis status of source-cuts */
    for( i = 0; i < nsourcerows; i++ )
    {
       assert(sourcerows[i] != NULL);
-      assert(nconss + i < ntconss);
+      assert(ntconss < nconss + nsourcerows);
 
-      tconss[nconss + i] = targetconss[i];
-      cstat[nconss + i] = SCIProwGetBasisStatus(sourcerows[i]);
+      tconss[ntconss] = targetconss[i];
+      cstat[ntconss] = SCIProwGetBasisStatus(sourcerows[i]);
+      ++ntconss;
    }
 
    SCIP_CALL( SCIPbasisstoreAddBasis(targetscip->basesstore, targetscip->mem->probmem, tvars, tconss, vstat, cstat, nvars, ntconss) );
@@ -1677,7 +1677,6 @@ SCIP_RETCODE copyBasis(
    SCIPdebugMessage("basis copied\n");
 
    /* free buffer */
-  TERMINATE:
    SCIPfreeBufferArray(sourcescip, &tconss);
    SCIPfreeBufferArray(sourcescip, &tvars);
    SCIPfreeBufferArray(sourcescip, &cstat);
@@ -3137,7 +3136,7 @@ SCIP_RETCODE SCIPcopyCuts(
    }
 
    /* count number of cuts to copy and check that given arrays are large enough */
-   if( sourcerowssize > 0 )
+   if( sourcerows != NULL )
    {
       /* get cuts from global cut pool */
       cuts = SCIPgetPoolCuts(sourcescip);
@@ -3172,7 +3171,7 @@ SCIP_RETCODE SCIPcopyCuts(
    if( ncutsadded != NULL )
       *ncutsadded = nlocalcutsadded;
 
-   assert(sourcerowssize == 0 || *ncutsadded <= sourcerowssize);
+   assert(sourcerows == NULL || *ncutsadded <= sourcerowssize);
 
    SCIPdebugMessage("Converted %d active cuts to constraints.\n", nlocalcutsadded);
 

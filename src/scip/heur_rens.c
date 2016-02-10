@@ -17,7 +17,7 @@
  * @brief  LNS heuristic that finds the optimal rounding to a given point
  * @author Timo Berthold
  */
-#define SCIP_DEBUG
+
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -528,6 +528,7 @@ SCIP_RETCODE SCIPapplyRens(
 
       if( heurdata->copycuts )
       {
+#if 0
          int sourcerowssize = SCIPgetNLPRows(scip);
 
          SCIP_CALL( SCIPallocBufferArray(scip, &sourcerows, sourcerowssize) );
@@ -536,6 +537,10 @@ SCIP_RETCODE SCIPapplyRens(
          /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
          SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, sourcerowssize, TRUE, &nsourcerows) );
          assert(nsourcerows <= sourcerowssize);
+#else
+         /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
+         SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, NULL, NULL, NULL, 0, TRUE, NULL) );
+#endif
       }
 
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
@@ -556,11 +561,11 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( createSubproblem(scip, subscip, subvars, startsol, binarybounds, uselprows) );
    SCIPdebugMessage("RENS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
-   if( !uselprows )
-   {
-      /* use the last LP basis as starting basis */
-      SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows) );
-   }
+   // if( !uselprows )
+   // {
+   //    /* use the last LP basis as starting basis */
+   //    SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows) );
+   // }
 
    if( sourcerows != NULL )
    {

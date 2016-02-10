@@ -1311,7 +1311,7 @@ SCIP_RETCODE solveNodeInitialLP(
       return SCIP_OKAY;
 
    /* load the LP state */
-   SCIP_CALL( SCIPtreeLoadLPState(tree, blkmem, set, stat, eventqueue, lp, basisstore) );
+   SCIP_CALL( SCIPtreeLoadLPState(tree, blkmem, set, stat, eventqueue, eventfilter, lp, basisstore) );
 
    focusnode = SCIPtreeGetFocusNode(tree);
 

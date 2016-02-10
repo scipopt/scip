@@ -3399,6 +3399,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_BASISSTORE*      basestore           /**< starting basis storage */
    )
@@ -3454,7 +3455,8 @@ SCIP_RETCODE SCIPtreeLoadLPState(
       assert(vstat != NULL);
       assert(cstat != NULL);
 
-      SCIP_CALL( SCIPlpSetBasis(lp, set, vars, conss, vstat, cstat, nvars, nconss, blkmem, &success) );
+      SCIP_CALL( SCIPlpSetBasis(lp, set, blkmem, eventqueue, eventfilter, vars, conss, vstat, cstat, nvars, nconss,
+            (int)(tree->focusnode->depth), &success) );
 
       SCIPdebugMessage("%sset starting basis\n", success ? "" : "cannot ");
       loadedbasis = success;

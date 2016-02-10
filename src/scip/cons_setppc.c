@@ -1864,10 +1864,12 @@ SCIP_RETCODE applyFixings(
                SCIPdebugPrintCons(scip, newcons, NULL);
 
                /* we want to link the original and the new constraint */
-               assert(SCIPconsGetTransorig(cons) != NULL);
-               assert(SCIPconsIsOriginal(SCIPconsGetTransorig(cons)));
+               if( SCIPconsGetTransorig(cons) != NULL )
+               {
+                  assert(SCIPconsIsOriginal(SCIPconsGetTransorig(cons)));
 
-               SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), newcons);
+                  SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), newcons);
+               }
 
                SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
 

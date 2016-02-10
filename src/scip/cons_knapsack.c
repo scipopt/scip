@@ -8027,10 +8027,12 @@ SCIP_RETCODE detectRedundantVars(
                SCIP_CALL( SCIPaddCons(scip, cliquecons) );
 
                /* we want to link the original and the new constraint */
-               assert(SCIPconsGetTransorig(cons) != NULL);
-               assert(SCIPconsIsOriginal(SCIPconsGetTransorig(cons)));
+               if( SCIPconsGetTransorig(cons) != NULL )
+               {
+                  assert(SCIPconsIsOriginal(SCIPconsGetTransorig(cons)));
 
-               SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), cliquecons);
+                  SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), cliquecons);
+               }
 
                SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
                ++(*naddconss);
@@ -8196,10 +8198,12 @@ SCIP_RETCODE dualWeightsTightening(
       SCIP_CALL( SCIPaddCons(scip, newcons) );
 
       /* we want to link the original and the new constraint */
-      assert(SCIPconsGetTransorig(cons) != NULL);
-      assert(SCIPconsIsOriginal(SCIPconsGetTransorig(cons)));
+      if( SCIPconsGetTransorig(cons) != NULL )
+      {
+         assert(SCIPconsIsOriginal(SCIPconsGetTransorig(cons)));
 
-      SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), newcons);
+         SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), newcons);
+      }
 
       SCIP_CALL( SCIPreleaseCons(scip, &newcons) );
       ++(*naddconss);
@@ -10531,11 +10535,13 @@ SCIP_RETCODE tightenWeights(
 
             SCIP_CALL( SCIPaddCons(scip, cliquecons) );
 
-         /* we want to link the original and the new constraint */
-         assert(SCIPconsGetTransorig(cons) != NULL);
-         assert(SCIPconsIsOriginal(SCIPconsGetTransorig(cons)));
+            /* we want to link the original and the new constraint */
+            if( SCIPconsGetTransorig(cons) != NULL )
+            {
+               assert(SCIPconsIsOriginal(SCIPconsGetTransorig(cons)));
 
-         SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), cliquecons);
+               SCIPconsSetUpgradedCons(SCIPconsGetTransorig(cons), cliquecons);
+            }
 
             SCIP_CALL( SCIPreleaseCons(scip, &cliquecons) );
             ++(*naddconss);
