@@ -200,8 +200,8 @@ BEGIN {
    # get name of LP solver
    if( $13 == "SoPlex" )
       lpsname = "spx";
-   else if( $13 == "SoPlex2" )
-      lpsname = "spx2";
+   else if( $13 == "SoPlex1" )
+      lpsname = "spx1";
    else if( $13 == "CPLEX" )
       lpsname = "cpx";
    else if( $13 == "NONE]" )
@@ -600,7 +600,7 @@ BEGIN {
    {
       # if sol file could not be read, fix status to be "unkown"
       if ( ! (prob in solstatus) )
-         solstatus[prob] = "unkown";
+         solstatus[prob] = "unkn";
 
       #avoid problems when comparing floats and integer (make everything float)
       temp = pb;
@@ -932,7 +932,7 @@ BEGIN {
             pass++;
          }
          else {
-               status = "unknown";
+	    status = "unknown";
          }
       }
 

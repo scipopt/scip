@@ -214,7 +214,7 @@
 #define SCIP_DEFAULT_LP_RESOLVEITERFAC     -1.0 /**< factor of average LP iterations that is used as LP iteration limit
                                                  *   for LP resolve (-1.0: unlimited) */
 #define SCIP_DEFAULT_LP_RESOLVEITERMIN     1000 /**< minimum number of iterations that are allowed for LP resolve */
-
+#define SCIP_DEFAULT_LP_RANDOMSEED            0 /**< random seed for LP solver, e.g. for perturbations in the simplex (0: LP default) */
 
 /* NLP */
 
@@ -1606,6 +1606,11 @@ SCIP_RETCODE SCIPsetCreate(
          "lp/resolveitermin",
          "minimum number of iterations that are allowed for LP resolve",
          &(*set)->lp_resolveitermin, TRUE, SCIP_DEFAULT_LP_RESOLVEITERMIN, 1, INT_MAX,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
+         "lp/randomseed",
+         "random seed for LP solver, e.g. for perturbations in the simplex (0: LP default)",
+         &(*set)->lp_randomseed, TRUE, SCIP_DEFAULT_LP_RANDOMSEED, 0, INT_MAX,
          NULL, NULL) );
 
    /* NLP parameters */

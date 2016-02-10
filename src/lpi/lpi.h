@@ -29,6 +29,19 @@
  * and query information about the solution. Although it includes a few SCIP header files, e.g., because it uses SCIP's
  * return codes, it can be used independently of any SCIP instance.
  *
+ * The basis status for (column) variables are as follows:
+ * - If x_j = lb, then j is at its lower bound (SCIP_BASESTAT_LOWER).
+ * - If x_j = ub, then j is at its lower bound (SCIP_BASESTAT_UPPER).
+ * - If x_j is in the basis, it has SCIP_BASESTAT_BASIC status.
+ * - If x_j is free and non-basic, it has SCIP_BASESTAT_ZERO status.
+ *
+ * The basis status for (row) slack variables are:
+ * - If (A * x)_i = lhs, then i is at its lower bound (SCIP_BASESTAT_LOWER).
+ * - If (A * x)_i = rhs, then i is at its upper bound (SCIP_BASESTAT_UPPER).
+ * - If the slack variable for row i is basic, it has SCIP_BASESTAT_BASIC status.
+ *
+ * If the solvers use their status differently, the have to be corrected.
+ *
  * In the methods accessing information about the (inverse of the) basis matrix, the interface assumes the following
  * column-oriented format: slack variables of rows have coefficient +1 and the basis matrix is a regular m times m
  * submatrix of (A,I), where m is the number of rows and I is the identity matrix. This means that if, internally, the

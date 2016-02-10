@@ -698,8 +698,8 @@ SCIP_DECL_NODESELSELECT(nodeselSelectLinprojection)
             SCIP_Real extclassicestimate;
             SCIP_Real extnewestimate;
 
-            extclassicestimate = SCIPgetExternalValue(scip, bestclassicestimate);
-            extnewestimate = SCIPgetExternalValue(scip, bestnodeestimate);
+            extclassicestimate = SCIPretransformObj(scip, bestclassicestimate);
+            extnewestimate = SCIPretransformObj(scip, bestnodeestimate);
 
             if( !SCIPisInfinity(scip, REALABS(nodeseldata->optsolvalue)) )
             {

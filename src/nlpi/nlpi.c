@@ -719,8 +719,7 @@ SCIP_RETCODE SCIPnlpiSetMessageHdlr(
    SCIP_MESSAGEHDLR*     messagehdlr         /**< pointer to message handler, or NULL to suppress all output */
    )
 {
-   assert(nlpi        != NULL);
-   assert(messagehdlr != NULL);
+   assert(nlpi != NULL);
 
    SCIP_CALL( (*nlpi->nlpisetmessagehdlr)(nlpi, messagehdlr) );
 

@@ -82,9 +82,9 @@ typedef SCIP_DUALPACKET ROWPACKET;           /* each row needs two bit of inform
 
 /* CPLEX parameter lists which can be changed */
 #if (CPX_VERSION < 12060100)
-#define NUMINTPARAM  10
+#define NUMINTPARAM  11
 #else
-#define NUMINTPARAM  9
+#define NUMINTPARAM  10
 #endif
 static const int intparam[NUMINTPARAM] =
 {
@@ -99,7 +99,8 @@ static const int intparam[NUMINTPARAM] =
    CPX_PARAM_DPRIIND,
    CPX_PARAM_SIMDISPLAY,
    CPX_PARAM_SCRIND,
-   CPX_PARAM_THREADS
+   CPX_PARAM_THREADS,
+   CPX_PARAM_RANDOMSEED
 };
 
 #define NUMDBLPARAM  7
@@ -3483,7 +3484,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
 
       CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &rowsense, basicrow, basicrow) );
 
-      if( rowsense == 'G' )
+      /* slacks for 'G' and 'R' rows are added with -1 in CPLEX */
+      if( rowsense == 'G' || rowsense == 'R' )
       {
          int i;
 
@@ -3559,7 +3561,8 @@ SCIP_RETCODE SCIPlpiGetBInvCol(
          assert(basicrow >= 0);
          assert(basicrow < nrows);
 
-         if( basicrow >= 0 && basicrow < nrows && lpi->senarray[basicrow] == 'G' )
+         /* slacks for 'G' and 'R' rows are added with -1 in CPLEX */
+         if( basicrow >= 0 && basicrow < nrows && (lpi->senarray[basicrow] == 'G' || lpi->senarray[basicrow] == 'R') )
             coef[r] *= -1.0;
       }
    }
@@ -3626,7 +3629,8 @@ SCIP_RETCODE SCIPlpiGetBInvARow(
 
       CHECK_ZERO( lpi->messagehdlr, CPXgetsense(lpi->cpxenv, lpi->cpxlp, &rowsense, basicrow, basicrow) );
 
-      if( rowsense == 'G' )
+      /* slacks for 'G' and 'R' rows are added with -1 in CPLEX */
+      if( rowsense == 'G' || rowsense == 'R' )
       {
          int i;
 
@@ -3698,7 +3702,8 @@ SCIP_RETCODE SCIPlpiGetBInvACol(
          assert(basicrow >= 0);
          assert(basicrow < nrows);
 
-         if( basicrow >= 0 && basicrow < nrows && lpi->senarray[basicrow] == 'G' )
+         /* slacks for 'G' and 'R' rows are added with -1 in CPLEX */
+         if( basicrow >= 0 && basicrow < nrows && (lpi->senarray[basicrow] == 'G' || lpi->senarray[basicrow] == 'R') )
             coef[r] *= -1.0;
       }
    }
@@ -4225,6 +4230,9 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       ival = MIN(ival, CPX_INT_MAX);
 #endif
       setIntParam(lpi, CPX_PARAM_THREADS, ival);
+      break;
+   case SCIP_LPPAR_RANDOMSEED:
+      setIntParam(lpi, CPX_PARAM_RANDOMSEED, ival);
       break;
    default:
       return SCIP_PARAMETERUNKNOWN;

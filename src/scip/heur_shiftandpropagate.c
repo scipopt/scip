@@ -467,6 +467,7 @@ SCIP_RETCODE initMatrix(
    SCIP*                 scip,               /**< current scip instance */
    CONSTRAINTMATRIX*     matrix,             /**< constraint matrix object to be initialized */
    SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   int*                  colposs,            /**< position of columns according to variable type sorting */
    SCIP_Bool             normalize,          /**< should coefficients and be normalized by rows maximum norms? */
    int*                  nmaxrows,           /**< maximum number of rows a variable appears in */
    SCIP_Bool             relax,              /**< should continuous variables be relaxed from the problem? */
@@ -580,12 +581,12 @@ SCIP_RETCODE initMatrix(
        * maximum absolute value of the row
        */
       if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
-         matrix->lhs[i] = (SCIProwGetLhs(row) - constant);
+         matrix->lhs[i] = SCIProwGetLhs(row) - constant;
       else
          matrix->lhs[i] = -SCIPinfinity(scip);
 
       if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) )
-         matrix->rhs[i] = (SCIProwGetRhs(row) - constant);
+         matrix->rhs[i] = SCIProwGetRhs(row) - constant;
       else
          matrix->rhs[i] = SCIPinfinity(scip);
 
@@ -621,7 +622,7 @@ SCIP_RETCODE initMatrix(
          if( normalize && SCIPisFeasGT(scip, maxval, 0.0) )
             matrix->rowmatvals[currentpointer] /= maxval;
 
-         matrix->rowmatind[currentpointer] = SCIPcolGetLPPos(cols[j]);
+         matrix->rowmatind[currentpointer] = colposs[SCIPcolGetLPPos(cols[j])];
 
          ++currentpointer;
       }
@@ -1406,6 +1407,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    int* violatedrowpos;           /* the array position of a violated row, or -1 */
    int* permutation;              /* reflects the position of the variables after sorting */
    int* violatedvarrows;          /* number of violated rows for each variable */
+   int* colposs;                  /* position of columns according to variable type sorting */
    int nlpcols;                   /* number of lp columns */
    int nviolatedrows;             /* number of violated rows */
    int ndiscvars;                 /* number of non-continuous variables of the problem */
@@ -1486,9 +1488,12 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    BMSclearMemoryArray(heurdata->lpcols, nlpcols);
 #endif
 
+   /* copy and sort the columns by their variable types (binary before integer before implicit integer before continuous) */
    BMScopyMemoryArray(heurdata->lpcols, lpcols, nlpcols);
 
    SCIPsortPtr((void**)heurdata->lpcols, heurSortColsShiftandpropagate, nlpcols);
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &colposs, nlpcols) );
 
    /* we have to collect the number of different variable types before we start probing since during probing variable
     * can be created (e.g., cons_xor.c)
@@ -1512,6 +1517,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          ++nbinvars;
       else if( SCIPvarGetType(colvar) == SCIP_VARTYPE_INTEGER )
          ++nintvars;
+
+      /* save the position of this column in the array such that it can be accessed as the "true" column position */
+      assert(SCIPcolGetLPPos(col) >= 0);
+      colposs[SCIPcolGetLPPos(col)] = c;
    }
    assert(nbinvars + nintvars <= ndiscvars);
 
@@ -1536,7 +1545,10 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
    /* initialize heuristic matrix and working solution */
    SCIP_CALL( SCIPallocBuffer(scip, &matrix) );
-   SCIP_CALL( initMatrix(scip, matrix, heurdata, heurdata->normalize, &nmaxrows, heurdata->relax, &initialized, &infeasible) );
+   SCIP_CALL( initMatrix(scip, matrix, heurdata, colposs, heurdata->normalize, &nmaxrows, heurdata->relax, &initialized, &infeasible) );
+
+   /* the column positions are not needed anymore */
+   SCIPfreeBufferArray(scip, &colposs);
 
    /* could not initialize matrix */
    if( !initialized || infeasible )
@@ -1550,7 +1562,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
     */
    if( matrix->ndiscvars < ndiscvars )
    {
-      SCIPdebugMessage(" Not all discrete variables are in the current LP. Shiftandpropagate execution terminated\n");
+      SCIPdebugMessage("Not all discrete variables are in the current LP. Shiftandpropagate execution terminated.\n");
       goto TERMINATE;
    }
 

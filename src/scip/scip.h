@@ -5987,19 +5987,6 @@ SCIP_Real SCIPgetNodeDualbound(
    SCIP_NODE*            node                /**< node to get dual bound for */
    );
 
-/** gets external value of a transformed objective value (estimate or lower bound)
- *
- *  @return untransformed (original space) value of \p val
- *
- *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_SOLVING
- */
-EXTERN
-SCIP_Real SCIPgetExternalValue(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             val                 /**< internal objective value */
-   );
-
 /** gets lower bound of given node in transformed problem
  *
  *  @return lower bound  of given node in transformed problem
@@ -6297,7 +6284,7 @@ SCIP_RETCODE SCIPrestartSolve(
 EXTERN
 SCIP_RETCODE SCIPenableReoptimization(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             enable              /**< enable reoptimization */
+   SCIP_Bool             enable              /**< enable reoptimization (TRUE) or disable it (FALSE) */
    );
 
 /** returns whether reoptimization is enabled or not */

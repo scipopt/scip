@@ -2745,9 +2745,9 @@ SCIP_RETCODE solveNodeLP(
       stat->ninitlps += stat->nlps - nlps;
       stat->ninitlpiterations += stat->nlpiterations - nlpiterations;
 
-      /* in the root node, we try if initial LP solution is feasible to avoid expensive setup of data structures in
-       * separators; in case the root LP is aborted, e.g, by hitting the time limit, we do not check the LP solution
-       * since the corresponding data structures have not been updated 
+      /* In the root node, we try if the initial LP solution is feasible to avoid expensive setup of data structures in
+       * separators; in case the root LP is aborted, e.g., by hitting the time limit, we do not check the LP solution
+       * since the corresponding data structures have not been updated.
        */
       if( SCIPtreeGetCurrentDepth(tree) == 0 && !(*cutoff) && !(*lperror)
          && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
@@ -2756,7 +2756,7 @@ SCIP_RETCODE solveNodeLP(
          SCIP_Bool checklprows;
          SCIP_Bool stored;
          SCIP_SOL* sol;
-         SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
+         SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
 
          SCIP_CALL( SCIPsolCreateLPSol(&sol, blkmem, set, stat, transprob, primal, tree, lp, NULL) );
 
@@ -2785,8 +2785,13 @@ SCIP_RETCODE solveNodeLP(
 #endif
          if( stored )
          {
-            if( bestsol != SCIPgetBestSol(set->scip) )
+            stat->nlpsolsfound++;
+
+            if( primal->nbestsolsfound != oldnbestsolsfound )
+            {
+               stat->nlpbestsolsfound++;
                SCIPstoreSolutionGap(set->scip);
+            }
 
             if( set->reopt_enable )
             {
@@ -2795,8 +2800,6 @@ SCIP_RETCODE solveNodeLP(
                      SCIPlpGetSolstat(lp), tree->root == tree->focusnode, TRUE, tree->focusnode->lowerbound,
                      tree->effectiverootdepth) );
             }
-
-            stat->nlpsolsfound++;
          }
 
          if( SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY )
@@ -3912,7 +3915,7 @@ SCIP_RETCODE solveNode(
        */
       if( pricingaborted && !(*infeasible) && !(*cutoff) )
       {
-         SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
+         SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
          SCIP_SOL* sol;
          SCIP_Bool stored;
 
@@ -3922,8 +3925,13 @@ SCIP_RETCODE solveNode(
 
          if( stored )
          {
-            if( bestsol != SCIPgetBestSol(set->scip) )
+            stat->nlpsolsfound++;
+
+            if( primal->nbestsolsfound != oldnbestsolsfound )
+            {
+               stat->nlpbestsolsfound++;
                SCIPstoreSolutionGap(set->scip);
+            }
          }
 
          *infeasible = TRUE;
@@ -4198,7 +4206,7 @@ SCIP_RETCODE addCurrentSolution(
    SCIP_Bool             checksol            /**< should the solution be checked? */
    )
 {
-   SCIP_SOL* bestsol = SCIPgetBestSol(set->scip);
+   SCIP_Longint oldnbestsolsfound = primal->nbestsolsfound;
    SCIP_SOL* sol;
    SCIP_Bool foundsol;
 
@@ -4228,8 +4236,11 @@ SCIP_RETCODE addCurrentSolution(
       {
          stat->nlpsolsfound++;
 
-         if( bestsol != SCIPgetBestSol(set->scip) )
+         if( primal->nbestsolsfound != oldnbestsolsfound )
+         {
+            stat->nlpbestsolsfound++;
             SCIPstoreSolutionGap(set->scip);
+         }
       }
 
       /* stop clock for LP solutions */
@@ -4261,8 +4272,11 @@ SCIP_RETCODE addCurrentSolution(
       {
          stat->npssolsfound++;
 
-         if( bestsol != SCIPgetBestSol(set->scip) )
+         if( primal->nbestsolsfound != oldnbestsolsfound )
+         {
+            stat->npsbestsolsfound++;
             SCIPstoreSolutionGap(set->scip);
+         }
       }
    }
 
@@ -4747,15 +4761,19 @@ SCIP_RETCODE SCIPsolveCIP(
             stat->status = SCIP_STATUS_INFORUNBD;
          }
       }
-      else if( primal->nsols == 0
-         || SCIPsetIsGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
-            SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))) )
+      else if( primal->nlimsolsfound == 0 )
       {
+         assert(primal->nsols == 0 || SCIPsetIsFeasGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
+               SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))));
+
          /* switch status to INFEASIBLE */
          stat->status = SCIP_STATUS_INFEASIBLE;
       }
       else
       {
+         assert(primal->nsols > 0 && SCIPsetIsFeasLE(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
+               SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))));
+
          /* switch status to OPTIMAL */
          stat->status = SCIP_STATUS_OPTIMAL;
       }

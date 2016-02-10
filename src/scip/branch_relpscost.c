@@ -52,7 +52,6 @@
                                          *   before solving the LP (-1: no limit, -2: parameter settings) */
 #define DEFAULT_PROBINGBOUNDS    TRUE   /**< should valid bounds be identified in a probing-like fashion during strong
                                          *   branching (only with propagation)? */
-
 #define DEFAULT_USERELERRORFORRELIABILITY FALSE /**< should reliability be based on relative errors? */
 #define DEFAULT_LOWERRORTOL 0.05   /**< lowest tolerance beneath which relative errors are reliable */
 #define DEFAULT_HIGHERRORTOL 1.0   /**< highest tolerance beneath which relative errors are reliable */
@@ -473,45 +472,6 @@ SCIP_RETCODE applyBdchgs(
    return SCIP_OKAY;
 }
 
-/** returns the confidence error w.r.t. the mean value */
-static
-SCIP_Real calcRelError(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Real             variance,           /**< measured variance */
-   SCIP_Real             size,               /**< size of the sample */
-   SCIP_Real             mean                /**< mean value of the sample */
-   )
-{
-   SCIP_Real relerror;
-
-   assert(scip != NULL);
-   assert(SCIPisFeasGE(scip, variance, 0.0));
-
-   if( size < 2 )
-      return 0.0;
-
-   relerror = variance;
-
-   /* use the relative error between the current mean pseudo cost value of the candidate and its upper
-    * confidence interval bound at confidence level of 95% for individual variable reliability.
-    * this is only possible if we have at least 2 measurements and therefore a valid variance estimate.
-    *
-    * the factor 1.96 is the critical value of a standard normal distribution at 5 % error rate.
-    */
-   if( SCIPisFeasPositive(scip, relerror) )
-   {
-      relerror = relerror / size;
-      relerror = sqrt(relerror);
-      relerror *= 1.96;
-      assert(SCIPisFeasPositive(scip, REALABS(mean)));
-      relerror /= REALABS(mean);
-   }
-   else
-      relerror = 0.0;
-
-   return relerror;
-
-}
 /** execute reliability pseudo cost branching */
 static
 SCIP_RETCODE execRelpscost(
@@ -596,8 +556,6 @@ SCIP_RETCODE execRelpscost(
       SCIP_Real avginferencescore;
       SCIP_Real avgcutoffscore;
       SCIP_Real avgpscostscore;
-      SCIP_Real avgpscostscorecrunup;
-      SCIP_Real avgpscostscorecrundown;
       SCIP_Real bestpsscore;
       SCIP_Real bestpsfracscore;
       SCIP_Real bestpsdomainscore;
@@ -644,7 +602,6 @@ SCIP_RETCODE execRelpscost(
       avgcutoffscore = MAX(avgcutoffscore, 0.1);
       avgpscostscore = SCIPgetAvgPseudocostScore(scip);
       avgpscostscore = MAX(avgpscostscore, 0.1);
-
 
       /* get nonlinear counts according to parameters */
       SCIP_CALL( branchruledataEnsureNlcount(scip, branchruledata) );
@@ -838,10 +795,6 @@ SCIP_RETCODE execRelpscost(
             SCIP_Real downsize;
             SCIP_Real upsize;
             SCIP_Real size;
-            SCIP_Real relerrorup;
-            SCIP_Real relerrordown;
-            SCIP_Real relerror;
-            SCIP_Real pscostrelerror;
 
             /* check, if the pseudo cost score of the variable is reliable */
             downsize = SCIPgetVarPseudocostCountCurrentRun(scip, branchcands[c], SCIP_BRANCHDIR_DOWNWARDS);

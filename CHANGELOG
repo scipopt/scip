@@ -2,6 +2,7 @@ SCIP version NEXT
 ==================
 
 features:
+- new presolving step for variables contained in a single quadratic constraint with proper square coefficients
 - can now solve relaxations within probing
 - can now separate perspective cuts for indicator constraints
 - added write callback for reader_bnd
@@ -12,13 +13,17 @@ parameters:
 - new parameter sepapersplocal to decide whether local cuts can be used for perspective cuts for indicator contraints
 - new parameter branching/relpscost/usesmallweightsitlim to use smaller weights for pseudo cost updates when LP iteration limit was hit
 - spx2 is the new default LP solver interface
+- new parameter lp/randomseed to set the initial seed of the LP solver
 
 performance improvements:
 
 interface:
 - new function SCIPsolveProbingRelax() to solve a relaxation within probing
 - new function SCIPgetIntVarXor() to access integer variable of XOR constraints
-- new function SCIPgetLastStrongbranchingLPSolstat() to query the LP statuses after strong branching on a variable 
+- new function SCIPgetLastStrongbranchingLPSolstat() to query the LP statuses after strong branching on a variable
+- next to the number of found solution, also the number of new best solutions is now printed for each heuristic
+  (and relaxation solutions) in the statistics in the "Primal Heuristic" section.
+
 fixed bugs:
 
 SCIP version 3.2.1
@@ -52,6 +57,7 @@ fixed bugs:
 - fixed bug in SOS1 constraint handler with inconsistent data structure after restart
 - fixed wrong handling of loose variables in OBBT
 - fixed freeing of hash for binary variables
+- fixed endless loop in knapsack constraint handler when continuous variables change their types to binary during presolving
 - squares of binary variables might not have been replaced by the binary variable itself in presolve,
   if the variable was originally general integer and only became binary during presolve (due to bound tightening)
 - fixed late change of type of slack variables in cons_indicator, if the bounds are not integral
@@ -64,6 +70,12 @@ fixed bugs:
 - fixed bug in dive.c avoiding a check of constraints in the presence of indicator constraints
 - fixed bug in conflict.c with wrong reset of bounds used
 - fixed bug in heur_simplerounding in connection with relaxators
+- fixed wrong objective sense when copying the original problem
+- fixed bug in feaspump heuristic where last solution candidates were not updated correctly
+- fixed bug with transferring solutions to new runs (need to recompute objective before checking)
+- fixed bug in cons_indicator with changing type of slackvariable
+- fixed issue: constraints being parallel to objective function (after restart) sometimes led to wrongly stating infeasible
+
 
 SCIP version 3.2.0
 ==================
@@ -626,7 +638,6 @@ interface:
   fractionalities and solution values in the same way as binary and integer variables before; the arrays are sorted such
   that binary and integer variables precede the implicit integer variables; the method SCIPbranchcandGetLPCands()
   has been modified in the same way
-- new SCIP method SCIPgetExternalValue() to transform given value back into original space
 - SCIPcalcMIR() gets an additional parameter "cutrank" which returns the rank of the aggregation; via SCIProwChgRank()
   the rank of a cut can be changed (default rank is 0)
 - added number of constraints which are marked for propagation to callback method consprop

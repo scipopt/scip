@@ -517,11 +517,11 @@ SCIP_DECL_EVENTEXEC(eventExecEstimation)
       assert(file != NULL);
       SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, file, "%lld %15g %15g %15g %15g %d %d %15g %d\n",
             SCIPnodeGetNumber(focusnode),
-            SCIPgetExternalValue(scip, upperbound),
-            SCIPgetExternalValue(scip, lowerbound),
-            SCIPgetExternalValue(scip, estimate),
-            SCIPgetExternalValue(scip, eventhdlrdata->rootcorrestim),
-            depth, nlpcands, SCIPgetExternalValue(scip, SCIPnodeGetLowerbound(focusnode)), SCIPgetLPSolstat(scip));
+            SCIPretransformObj(scip, upperbound),
+            SCIPretransformObj(scip, lowerbound),
+            SCIPretransformObj(scip, estimate),
+            SCIPretransformObj(scip, eventhdlrdata->rootcorrestim),
+            depth, nlpcands, SCIPretransformObj(scip, SCIPnodeGetLowerbound(focusnode)), SCIPgetLPSolstat(scip));
       fclose(file);
    }
 

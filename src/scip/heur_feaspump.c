@@ -1185,6 +1185,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       }
 
       /* swap the last solutions */
+      SCIP_CALL( SCIPunlinkSol(scip, heurdata->roundedsol) );
       tmpsol = lastroundedsols[heurdata->cyclelength-1];
       for( j = heurdata->cyclelength-1; j > 0; j-- )
       {
@@ -1355,6 +1356,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    }
 
 #endif /* SCIP_STATISTIC */
+
    return SCIP_OKAY;
 }
 
