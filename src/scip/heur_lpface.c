@@ -113,7 +113,7 @@ static SCIP_RETCODE fixVariables(
    int fixingcounter;
 
 
-   /* get required data of the original problem */
+   /* get required data of the main scip problem */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
    fixingcounter = 0;
@@ -126,6 +126,8 @@ static SCIP_RETCODE fixVariables(
       SCIP_Real solval;
       SCIP_COL* col;
       SCIP_Real redcost;
+
+      /* skip non-column variables */
       if( SCIPvarGetStatus(vars[i]) != SCIP_VARSTATUS_COLUMN )
          continue;
 
