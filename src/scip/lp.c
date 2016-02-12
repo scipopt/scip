@@ -12169,131 +12169,122 @@ void findVarPosition(
    }
 }
 
+/* find an ordering of variables and columns that should be used to find a non-singular matrix */
 static
 SCIP_RETCODE getBasisOrdering(
-   int*                  order,
-   SCIP_VAR**            vars,
-   SCIP_ROW**            rows,
-   int*                  vstat,
-   int*                  rowstat,
-   int                   nvars,
-   int                   nrows,
-   int                   nbasicvars,
-   int                   nbasicrows
+   int*                  order,              /**< array to fill with the ordering. a positive value corresponds to a
+                                              *   variable index, a negative to a row index.
+                                              *   all values are shifted by +1
+                                              */
+   SCIP_VAR**            vars,               /**< problem variables to order */
+   SCIP_ROW**            rows,               /**< LP rows to order */
+   int*                  varstat,            /**< basis status of variables */
+   int*                  rowstat,            /**< basis status of rows */
+   int                   nvars,              /**< number of variables */
+   int                   nrows,              /**< number of rows */
+   int                   nbasicvars,         /**< number of variables with basis status BASIC */
+   int                   nbasicrows          /**< number of rows with basis status BASIC */
    )
 {
+   int basicfront;
+   int nonbasicfront;
    int i;
-   int bfront;
-   int nbfront;
 
    assert(order != NULL);
    assert(vars != NULL);
    assert(rows != NULL);
-   assert(vstat != NULL);
+   assert(varstat != NULL);
    assert(rowstat != NULL);
 
-   bfront = 0;
-   nbfront = nbasicvars;
+   basicfront = 0; /* start position of basic part */
+   nonbasicfront = nbasicvars; /* start osition of non-basic part */
 
-   /* initialize the order array with 4 (for debugging) */
+#ifndef NDEBUG
+   /* initialize the order array with 0, this value should never appear again at the end of this method */
    for( i = 0; i < nvars+nrows; i++ )
       order[i] = 0;
+#endif
 
-   /** order the variables simple: basic vars | non-basic vars | basic rows | non-basic rows */
+   /** order the variables and constraints in the following fashion: basic vars | non-basic vars | basic rows | non-basic rows */
    for( i = 0; i < nvars; i++ )
    {
       /* shift the index by +1 */
-      if( vstat[i] == SCIP_BASESTAT_BASIC )
+      if( varstat[i] == SCIP_BASESTAT_BASIC )
       {
-         assert(order[bfront] == 0);
-         order[bfront] = i+1;
-         bfront++;
+         assert(order[basicfront] == 0);
+         order[basicfront] = i+1;
+         basicfront++;
 
-         findVarPosition(order, vars, bfront-1, 0);
+         findVarPosition(order, vars, basicfront-1, 0);
       }
       else
       {
-         assert(order[nbfront] == 0);
-         order[nbfront] = i+1;
-         nbfront++;
+         assert(order[nonbasicfront] == 0);
+         order[nonbasicfront] = i+1;
+         nonbasicfront++;
 
-         findVarPosition(order, vars, nbfront-1, nbasicvars);
+         findVarPosition(order, vars, nonbasicfront-1, nbasicvars);
       }
-      assert(bfront <= nbasicvars);
-      assert(bfront <= nbfront);
-      assert(nbfront <= nvars);
+      assert(basicfront <= nbasicvars);
+      assert(basicfront <= nonbasicfront);
+      assert(nonbasicfront <= nvars);
    }
 
-   bfront = nvars;
-   nbfront = nvars + nbasicrows;
+   /* set start position for (non-)basic parts of constraints */
+   basicfront = nvars;
+   nonbasicfront = nvars + nbasicrows;
 
    for( i = 0; i < nrows; i++ )
    {
       /* shift the index by +1 and multiply with -1 */
       if( rowstat[i] == SCIP_BASESTAT_BASIC )
       {
-         assert(bfront < nvars + nbasicrows);
+         assert(basicfront < nvars + nbasicrows);
 
-         assert(order[bfront] == 0);
-         order[bfront] = -(i+1);
-         bfront++;
+         assert(order[basicfront] == 0);
+         order[basicfront] = -(i+1);
+         basicfront++;
       }
       else
       {
-         assert(nbfront < nvars + nrows);
+         assert(nonbasicfront < nvars + nrows);
 
-         assert(order[nbfront] == 0);
-         order[nbfront] = -(i+1);
-         nbfront++;
+         assert(order[nonbasicfront] == 0);
+         order[nonbasicfront] = -(i+1);
+         nonbasicfront++;
       }
-      assert(bfront <= nbfront);
-      assert(bfront <= nvars + nbasicrows);
-      assert(nbfront <= nvars + nrows);
+      assert(basicfront <= nonbasicfront);
+      assert(basicfront <= nvars + nbasicrows);
+      assert(nonbasicfront <= nvars + nrows);
    }
 
+#ifndef NDEBUG
    /* ensure that each slot is != 0 */
    for( i = 0; i < nvars+nrows; i++ )
-   {
       assert(order[i] != 0);
-//         if( i < nrows )
-//         {
-//            int idx;
-//
-//            if( order[i] > 0 )
-//            {
-//               idx = order[i]-1;
-//               assert(vstat[idx] == SCIP_BASESTAT_BASIC);
-//               printf("col %d with %d non-zeros\n", idx, SCIPcolGetNNonz(SCIPvarGetCol(SCIPvarGetProbvar(vars[idx]))));
-//            }
-//            else
-//            {
-//               idx = -order[i]-1;
-//               assert(rowstat[idx] == SCIP_BASESTAT_BASIC);
-//               printf("row %d with ?? non-zeros\n", idx);
-//            }
-//         }
-   }
+#endif
 
    return SCIP_OKAY;
 }
 
+/* method to construct a non-singular basis */
 static
 SCIP_RETCODE findSimpleBasis(
-   SCIP_SET*             set,
-   SCIP_VAR**            vars,
-   SCIP_ROW**            rows,
-   int*                  vstat,
-   int*                  rowstat,
-   int*                  order,
-   int                   nvars,
-   int                   nrows,
-   SCIP_Bool*            success,
-   BMS_BLKMEM*           blkmem
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_VAR**            vars,               /**< active problem variables */
+   SCIP_ROW**            rows,               /**< lp rows */
+   int*                  vstat,              /**< current basis status of variables */
+   int*                  rowstat,            /**< current basis status of rows */
+   int*                  order,              /**< order to check variables and rows */
+   int                   nvars,              /**< number of active problem variables */
+   int                   nrows,              /**< number of lp rows */
+   SCIP_Bool*            success             /**< success pointer */
    )
 {
-   int* forbidden;
    SCIP_COL* col;
    SCIP_ROW* row;
+   int* forbidden;
    SCIP_Bool tmp_idx_is_var;
    SCIP_Real max_entry;
    int lppos;
@@ -12335,6 +12326,7 @@ SCIP_RETCODE findSimpleBasis(
          assert(rows[tmp_idx]->lppos == tmp_idx);
       }
 
+      /* the index corresponds to a variable */
       if( tmp_idx_is_var )
       {
          int ncolrows;
@@ -12355,6 +12347,7 @@ SCIP_RETCODE findSimpleBasis(
 
             max_entry = col->vals[0];
 
+            /* check whether the row was marked row belongs to the smallest column (abslute) entry */
             if( forbidden[col->rows[0]->lppos] < 2 )
             {
                sel = col->rows[0]->lppos;
@@ -12378,6 +12371,7 @@ SCIP_RETCODE findSimpleBasis(
                max_entry = MAX(max_entry, absval);
             }
 
+            /* find the row with the smallest absolut value that was not marked so far, i.e., forbidden[lppos] = 0 */
             for( r = 0; r < ncolrows; r++ )
             {
                SCIP_Real val;
@@ -12387,6 +12381,9 @@ SCIP_RETCODE findSimpleBasis(
                lppos = col->rows[r]->lppos;      /* position of row r in the lp */
                size = col->rows[r]->nlpcols;     /* number of non-zero entries in row r */
 
+               /* the row was not marked (i.e., forbidden[lppos] = 0), is the shortest, and the value is not to small
+                * compared to the largest entry in this column
+                */
                if( !forbidden[lppos] && (REALABS(val) > STABLE_ENTRY * max_entry) && (size < smallest_size) )
                {
                   smallest_size = size;
@@ -12395,16 +12392,16 @@ SCIP_RETCODE findSimpleBasis(
             }
          }
       }
+      /* the index corresponds to a row */
       else
       {
          row = rows[tmp_idx];
          assert(row != NULL);
          assert(row->lppos >= 0);
 
+         /* check whether the row is already marked to enter the basis or contains the smallest value of a basic column */
          if( forbidden[row->lppos] < 2 )
-         {
             sel = row->lppos;
-         }
       }
 
       /* the selected column/row enters the basis */
@@ -12412,13 +12409,14 @@ SCIP_RETCODE findSimpleBasis(
       {
          forbidden[sel] = 2;
 
+         /* the index corresponds to a variable */
          if( tmp_idx_is_var )
          {
             int r;
 
             assert(col != NULL);
 
-            /* the selected columns enters the basis */
+            /* the selected column enters the basis */
             vstat[tmp_idx] = SCIP_BASESTAT_BASIC;
 
             SCIPdebugMessage("col <%s> = [%g,%g] is basic\n", SCIPvarGetName(vars[tmp_idx]), col->lb, col->ub);
@@ -12431,6 +12429,7 @@ SCIP_RETCODE findSimpleBasis(
                val = REALABS(col->vals[r]); /* coefficient of the column in row r */
                lppos = col->rows[r]->lppos; /* position of row r in the lp */
 
+               /* mark all unmarked rows with a not to small column entry */
                if( !forbidden[lppos] && (val > EPS_ENTRY * max_entry) )
                {
                   forbidden[lppos] = 1;
@@ -12438,6 +12437,7 @@ SCIP_RETCODE findSimpleBasis(
                }
             }
          }
+         /* the index corresponds to a row */
          else
          {
             /* the selected row enters the basis */
@@ -12451,31 +12451,38 @@ SCIP_RETCODE findSimpleBasis(
          /* we found enough basic columns/rows */
          if( dim == 0 )
          {
+            /* iterate over all indeces we have not seen so far */
             for( i += 1; i < nvars + nrows; i++ )
             {
+               /* the index corresponds to a variable */
                if( order[i] > 0 )
                {
                   idx = order[i]-1;
 
+                  /* the variable gets basis status UPPER, LOWER or ZERO */
                   if( vstat[idx] == SCIP_BASESTAT_BASIC )
                   {
                      if( SCIPvarGetUbGlobal(vars[idx]) < SCIPsetInfinity(set) )
                      {
-                        SCIPdebugMessage("col <%s> = [%g,%g] is non-basic and on its upper bound\n", SCIPvarGetName(vars[idx]), SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]));
+                        SCIPdebugMessage("col <%s> = [%g,%g] is non-basic and on its upper bound\n",
+                              SCIPvarGetName(vars[idx]), SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]));
                         vstat[idx] = SCIP_BASESTAT_UPPER;
                      }
                      else if( SCIPvarGetLbGlobal(vars[idx]) > -SCIPsetInfinity(set) )
                      {
-                        SCIPdebugMessage("col <%s> = [%g,%g] is non-basic and on its lower bound\n", SCIPvarGetName(vars[idx]), SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]));
+                        SCIPdebugMessage("col <%s> = [%g,%g] is non-basic and on its lower bound\n",
+                              SCIPvarGetName(vars[idx]), SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]));
                         vstat[idx] = SCIP_BASESTAT_LOWER;
                      }
                      else
                      {
-                        SCIPdebugMessage("col <%s> = [%g,%g] is non-basic and free\n", SCIPvarGetName(vars[idx]), SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]));
+                        SCIPdebugMessage("col <%s> = [%g,%g] is non-basic and free\n",
+                              SCIPvarGetName(vars[idx]), SCIPvarGetLbGlobal(vars[idx]), SCIPvarGetUbGlobal(vars[idx]));
                         vstat[idx] = SCIP_BASESTAT_ZERO;
                      }
                   }
                }
+               /* the index corresponds to a row */
                else
                {
                   idx = -order[i]-1;
@@ -12484,20 +12491,24 @@ SCIP_RETCODE findSimpleBasis(
                   assert(row != NULL);
                   assert(row->lppos == idx);
 
+                  /* the row gets basis status UPPER or LOWER */
                   if( rowstat[idx] == SCIP_BASESTAT_BASIC )
                   {
                      if( !SCIPsetIsInfinity(set, row->rhs) )
                      {
-                        SCIPdebugMessage("row <%s> = [%g,%g] is non-basic and on its upper bound\n", row->name, row->lhs, row->rhs);
+                        SCIPdebugMessage("row <%s> = [%g,%g] is non-basic and on its upper bound\n", row->name,
+                              row->lhs, row->rhs);
                         rowstat[idx] = SCIP_BASESTAT_UPPER;
                      }
                      else
                      {
                         assert(!SCIPsetIsInfinity(set, -row->lhs));
-                        SCIPdebugMessage("row <%s> = [%g,%g] is non-basic and on its lower bound\n", row->name, row->lhs, row->rhs);
+                        SCIPdebugMessage("row <%s> = [%g,%g] is non-basic and on its lower bound\n", row->name,
+                              row->lhs, row->rhs);
                         rowstat[idx] = SCIP_BASESTAT_LOWER;
                      }
                   }
+                  /* check whether we have to switch the basis status: UPPER -> LOWER or LOWER -> UPPER */
                   else
                   {
                      assert(rowstat[idx] == SCIP_BASESTAT_LOWER || rowstat[idx] == SCIP_BASESTAT_UPPER);
@@ -12516,6 +12527,9 @@ SCIP_RETCODE findSimpleBasis(
                }
             }
 
+            /* iterate through all rows and put them into the basis if they are not basic and do not contain the
+             * smallest entry of a basic column
+             */
             for( lppos = nrows-1; lppos >= 0; lppos-- )
             {
                if( forbidden[lppos] < 2 )
@@ -12536,24 +12550,25 @@ SCIP_RETCODE findSimpleBasis(
       /* the selected column/row enters the non-basis */
       else
       {
+         /* the index corresponds to a variable */
          if( tmp_idx_is_var )
          {
             if( vstat[tmp_idx] == SCIP_BASESTAT_BASIC )
             {
                SCIPdebugMessage("var <%s> goes into the non-basis\n", SCIPvarGetName(vars[tmp_idx]));
-               if( col->lb > -SCIPsetInfinity(set) )
-               {
+               if( !SCIPsetIsInfinity(set, -col->lb) )
                   vstat[tmp_idx] = SCIP_BASESTAT_LOWER;
-               }
-               else if( col->ub < SCIPsetInfinity(set) )
+               else if( !SCIPsetIsInfinity(set, col->ub) )
                   vstat[tmp_idx] = SCIP_BASESTAT_UPPER;
                else
                   vstat[tmp_idx] = SCIP_BASESTAT_ZERO;
             }
 
-            assert((vstat[tmp_idx] == SCIP_BASESTAT_UPPER && col->ub < SCIPsetInfinity(set))
-                || (vstat[tmp_idx] == SCIP_BASESTAT_LOWER && col->lb > -SCIPsetInfinity(set)));
+            /* @note I think the case SCIP_BASESTAT_ZERO should not happen */
+            assert((vstat[tmp_idx] == SCIP_BASESTAT_UPPER && !SCIPsetIsInfinity(set, col->ub))
+                || (vstat[tmp_idx] == SCIP_BASESTAT_LOWER && !SCIPsetIsInfinity(set, -col->lb)));
          }
+         /* the index corresponds to a row */
          else
          {
             if( rowstat[tmp_idx] == SCIP_BASESTAT_BASIC )
@@ -12582,23 +12597,24 @@ SCIP_RETCODE findSimpleBasis(
    return SCIP_OKAY;
 }
 
+/** check the dimension of the given basis and try to repair the basis, e.g., adding slack variables */
 static
 SCIP_RETCODE checkAndRepairBasis(
-   SCIP_LP*              lp,
-   SCIP_SET*             set,
-   BMS_BLKMEM*           blkmem,
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
-   SCIP_VAR**            vars,
-   SCIP_CONS**           conss,
-   int*                  vstat,
-   int*                  cstat,
-   int                   nvars,
-   int                   nconss,
-   int*                  colstat,
-   int**                 rowstat,
-   int                   depth,
-   SCIP_Bool*            success
+   SCIP_VAR**            vars,               /**< problem variables */
+   SCIP_CONS**           conss,              /**< problem constraints */
+   int*                  varstat,            /**< basis status of variables */
+   int*                  consstat,           /**< basis status of constraints */
+   int                   nvars,              /**< number of problem variables */
+   int                   nconss,             /**< number of problem constrainst */
+   int*                  colstat,            /**< array to store basis status of columns */
+   int*                  rowstat,            /**< array to store basis status of rows */
+   int                   depth,              /**< current depth */
+   SCIP_Bool*            success             /**< success pointer */
    )
 {
    SCIP_HASHMAP* varaggrmap;
@@ -12607,6 +12623,9 @@ SCIP_RETCODE checkAndRepairBasis(
    SCIP_ROW** rows;
    SCIP_ROW* row;
    int* order;
+#ifndef NDEBUG
+   int tmpbasicrows = 0;
+#endif
    int nbasicvars;
    int nlowervars;
    int nuppervars;
@@ -12624,8 +12643,8 @@ SCIP_RETCODE checkAndRepairBasis(
    assert(set != NULL);
    assert(vars != NULL);
    assert(conss != NULL);
-   assert(vstat != NULL);
-   assert(cstat != NULL);
+   assert(varstat != NULL);
+   assert(consstat != NULL);
 
    nbasicvars = 0;
    nlowervars = 0;
@@ -12648,7 +12667,6 @@ SCIP_RETCODE checkAndRepairBasis(
 
       /* get the active variable */
       SCIP_CALL( SCIPvarGetProbvarSum(&var, set, &scalar, &constant) );
-      assert(SCIPvarGetProbindex(var) >= 0);
 
       /* the variable is not aggregated or we see the probvar the first time*/
       if( !SCIPhashmapExists(varaggrmap, var) )
@@ -12660,7 +12678,7 @@ SCIP_RETCODE checkAndRepairBasis(
             SCIPdebugMessage("<%s> is fixed -> remove\n", SCIPvarGetName(var));
 
             vars[i] = vars[nvars - 1];
-            vstat[i] = vstat[nvars - 1];
+            varstat[i] = varstat[nvars - 1];
             nvars--;
          }
          else
@@ -12677,25 +12695,26 @@ SCIP_RETCODE checkAndRepairBasis(
             /* switch basisstatus if variable is negated or aggregated with negative factor */
             if( scalar < 0 )
             {
-               if( vstat[i] == SCIP_BASESTAT_LOWER )
-                  vstat[i] = SCIP_BASESTAT_UPPER;
-               else if( vstat[i] == SCIP_BASESTAT_UPPER )
-                  vstat[i] = SCIP_BASESTAT_LOWER;
+               if( varstat[i] == SCIP_BASESTAT_LOWER )
+                  varstat[i] = SCIP_BASESTAT_UPPER;
+               else if( varstat[i] == SCIP_BASESTAT_UPPER )
+                  varstat[i] = SCIP_BASESTAT_LOWER;
             }
 
             /* replace with active variable */
             vars[i] = var;
 
-            if( vstat[i] == SCIP_BASESTAT_BASIC )
+            /* count number of varibales with status BASIC, LOWER, UPPER, and ZERO */
+            if( varstat[i] == SCIP_BASESTAT_BASIC )
                nbasicvars++;
-            else if( vstat[i] == SCIP_BASESTAT_LOWER )
+            else if( varstat[i] == SCIP_BASESTAT_LOWER )
                nlowervars++;
-            else if( vstat[i] == SCIP_BASESTAT_UPPER )
+            else if( varstat[i] == SCIP_BASESTAT_UPPER )
                nuppervars++;
-            else if( vstat[i] == SCIP_BASESTAT_ZERO )
+            else if( varstat[i] == SCIP_BASESTAT_ZERO )
                nzerovars++;
 
-            SCIPdebugMessage("var <%s>: status %d\n", SCIPvarGetName(var), vstat[i]);
+            SCIPdebugMessage("var <%s>: status %d\n", SCIPvarGetName(var), varstat[i]);
 
             i++;
          }
@@ -12709,22 +12728,22 @@ SCIP_RETCODE checkAndRepairBasis(
          SCIPdebugMessage("found (multi)aggregated variable (<%s>, <%s>) -> <%s>\n", SCIPvarGetName(vars[aggrpos]), SCIPvarGetName(vars[i]), SCIPvarGetName(var));
 
          /* @todo keep variable basic or rather nonbasic? */
-         if( vstat[aggrpos] != SCIP_BASESTAT_BASIC && vstat[i] == SCIP_BASESTAT_BASIC )
+         if( varstat[aggrpos] != SCIP_BASESTAT_BASIC && varstat[i] == SCIP_BASESTAT_BASIC )
          {
-            if( vstat[aggrpos] == SCIP_BASESTAT_LOWER )
+            if( varstat[aggrpos] == SCIP_BASESTAT_LOWER )
                nlowervars--;
-            else if( vstat[aggrpos] == SCIP_BASESTAT_UPPER )
+            else if( varstat[aggrpos] == SCIP_BASESTAT_UPPER )
                nuppervars--;
-            else if( vstat[aggrpos] == SCIP_BASESTAT_ZERO )
+            else if( varstat[aggrpos] == SCIP_BASESTAT_ZERO )
                nzerovars--;
 
-            vstat[aggrpos] = SCIP_BASESTAT_BASIC;
+            varstat[aggrpos] = SCIP_BASESTAT_BASIC;
             nbasicvars++;
 
-            SCIPdebugMessage("var <%s>: new status %d\n", SCIPvarGetName(vars[aggrpos]), vstat[aggrpos]);
+            SCIPdebugMessage("var <%s>: new status %d\n", SCIPvarGetName(vars[aggrpos]), varstat[aggrpos]);
          }
          vars[i] = vars[nvars-1];
-         vstat[i] = vstat[nvars-1];
+         varstat[i] = varstat[nvars-1];
          nvars--;
       }
    }
@@ -12734,35 +12753,39 @@ SCIP_RETCODE checkAndRepairBasis(
    {
       SCIP_CALL( SCIPsetAllocClearBufferArray(set, &marked, lp->ncols) );
 
+      /* initialize the marked array */
       for( i = nvars - 1; i >= 0; --i )
       {
          assert(!marked[SCIPvarGetProbindex(vars[i])]);
          marked[SCIPvarGetProbindex(vars[i])] = TRUE;
       }
 
+      /* reallocate memory if the LP has more column as given variables */
       if( lp->ncols > varssize )
       {
          varssize = lp->ncols;
          SCIP_CALL( SCIPsetReallocBufferArray(set, &vars, varssize) );
-         SCIP_CALL( SCIPsetReallocBufferArray(set, &vstat, varssize) );
+         SCIP_CALL( SCIPsetReallocBufferArray(set, &varstat, varssize) );
       }
 
+      /* iterate over all columsn and check whether the corresponding variables was given or not */
       for( i = 0; i < lp->ncols; ++i )
       {
          var = SCIPcolGetVar(lp->cols[i]);
          assert(var != NULL);
 
+         /* the variable was not given: add the variable with status UPPER, LOWER or ZERO */
          if( !marked[SCIPvarGetProbindex(var)] )
          {
             assert(nvars < varssize);
 
             vars[nvars] = var;
             if( !SCIPsetIsInfinity(set, -SCIPvarGetLbLocal(var)) )
-               vstat[nvars] = SCIP_BASESTAT_LOWER;
+               varstat[nvars] = SCIP_BASESTAT_LOWER;
             else if( !SCIPsetIsInfinity(set, SCIPvarGetUbLocal(var)) )
-               vstat[nvars] = SCIP_BASESTAT_UPPER;
+               varstat[nvars] = SCIP_BASESTAT_UPPER;
             else
-               vstat[nvars] = SCIP_BASESTAT_ZERO;
+               varstat[nvars] = SCIP_BASESTAT_ZERO;
             ++nvars;
          }
       }
@@ -12781,6 +12804,7 @@ SCIP_RETCODE checkAndRepairBasis(
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rows, nrows) );
 
+   /* iterate through all rows and initialize them with basis status BASIC */
    for( i = 0; i < nrows; ++i )
    {
       row = lp->rows[i];
@@ -12812,8 +12836,9 @@ SCIP_RETCODE checkAndRepairBasis(
       }
       else
       {
-         /* get the constraint handler of the transformed constraint, which can
-          * by upgraded, i.e., the constraint handler is not linear. */
+         /* get the constraint handler of the transformed constraint, which can by upgraded, i.e., the constraint
+          * handler is not linear.
+          */
          conshdlr = SCIPconsGetHdlr(cons);
          assert(conshdlr != NULL);
 
@@ -12834,8 +12859,8 @@ SCIP_RETCODE checkAndRepairBasis(
          }
          else
          {
-            SCIPdebugMessage("<%s> has status %d\n", SCIPconsGetName(conss[i]), cstat[i]);
-            if( cstat[i] == SCIP_BASESTAT_BASIC )
+            SCIPdebugMessage("<%s> has status %d\n", SCIPconsGetName(conss[i]), consstat[i]);
+            if( consstat[i] == SCIP_BASESTAT_BASIC )
             {
                if( row->lppos == -1 )
                {
@@ -12848,6 +12873,7 @@ SCIP_RETCODE checkAndRepairBasis(
             }
             else
             {
+               /* the row is not in the current LP, we add the row with with basis status BASIC */
                if( row->lppos == -1 )
                {
                   assert(nrows == lp->nrows);
@@ -12867,7 +12893,8 @@ SCIP_RETCODE checkAndRepairBasis(
 
                assert((*rowstat)[row->lppos] == SCIP_BASESTAT_BASIC);
 
-               if( cstat[i] == SCIP_BASESTAT_LOWER )
+               /* check whether we can switch the basis status. this can happen due to sclaing with -1 during presolving */
+               if( consstat[i] == SCIP_BASESTAT_LOWER )
                {
                   if( SCIPsetIsInfinity(set, -row->lhs) )
                   {
@@ -12880,7 +12907,7 @@ SCIP_RETCODE checkAndRepairBasis(
                      nlowerconss++;
                   }
                }
-               else if( cstat[i] == SCIP_BASESTAT_UPPER )
+               else if( consstat[i] == SCIP_BASESTAT_UPPER )
                {
                   if( SCIPsetIsInfinity(set, row->rhs) )
                   {
@@ -12906,15 +12933,14 @@ SCIP_RETCODE checkAndRepairBasis(
       }
    }
 
+#ifndef NDEBUG
+   for( i = 0; i < nrows; ++i )
    {
-      int tmpbasicrows = 0;
-      for( i = 0; i < nrows; ++i )
-      {
-         if( (*rowstat)[i] == SCIP_BASESTAT_BASIC )
-            ++tmpbasicrows;
-      }
-      assert(nbasicconss == tmpbasicrows);
+      if( rowstat[i] == SCIP_BASESTAT_BASIC )
+         ++tmpbasicrows;
    }
+   assert(nbasicconss == tmpbasicrows);
+#endif
 
    SCIPdebugMessage("%d constraints remain in presolved problems (basic: %d, lower: %d, upper: %d)\n", nconss, nbasicconss, nlowerconss, nupperconss);
 
@@ -12929,10 +12955,13 @@ SCIP_RETCODE checkAndRepairBasis(
       /* get buffer */
       SCIP_CALL( SCIPsetAllocBufferArray(set, &order, nvars + nrows) );
 
-      SCIP_CALL( getBasisOrdering(order, vars, rows, vstat, (*rowstat), nvars, nrows, nbasicvars, nbasicconss) );
+      /* calculte an ordering of variables and constraints. this ordering is used in findSimpleBasis to build a
+       * non-singular basis matrix
+       */
+      SCIP_CALL( getBasisOrdering(order, vars, rows, varstat, (*rowstat), nvars, nrows, nbasicvars, nbasicconss) );
 
       /* check for non-singularity */
-      SCIP_CALL( findSimpleBasis(set, vars, rows, vstat, (*rowstat), order, nvars, nrows, success, blkmem) );
+      SCIP_CALL( findSimpleBasis(set, blkmem, vars, rows, varstat, (*rowstat), order, nvars, nrows, success) );
 
       /* free buffer */
       SCIPsetFreeBufferArray(set, &order);
@@ -12941,7 +12970,7 @@ SCIP_RETCODE checkAndRepairBasis(
    ncolsbasic = 0;
    nrowsbasic = 0;
 
-   /* get the column and the LP position */
+   /* get the column and the LP position, match basis status of variables to columsn */
    for( i = 0; i < nvars; i++ )
    {
       SCIP_COL* col;
@@ -12957,7 +12986,7 @@ SCIP_RETCODE checkAndRepairBasis(
       lppos = SCIPcolGetLPPos(col);
       assert(lppos >= 0);
 
-      colstat[lppos] = vstat[i];
+      colstat[lppos] = varstat[i];
 
       if( colstat[lppos] == SCIP_BASESTAT_BASIC )
          ncolsbasic++;
@@ -13267,19 +13296,19 @@ SCIP_RETCODE SCIPlpFreeState(
 
 /** load a starting basis */
 SCIP_RETCODE SCIPlpSetBasis(
-   SCIP_LP*              lp,
-   SCIP_SET*             set,
-   BMS_BLKMEM*           blkmem,
+   SCIP_LP*              lp,                 /**< LP data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< global event filter */
-   SCIP_VAR**            basevars,
-   SCIP_CONS**           baseconss,
-   int*                  basevstat,
-   int*                  basecstat,
-   int                   nbasevars,
-   int                   nbaseconss,
-   int                   depth,
-   SCIP_Bool*            success
+   SCIP_VAR**            basevars,           /**< variables of the basis */
+   SCIP_CONS**           baseconss,          /**< constraints of the basis */
+   int*                  basevarstat,        /**< basis status of variables */
+   int*                  baseconsstat,       /**< basis status of constraints */
+   int                   nbasevars,          /**< number of variables */
+   int                   nbaseconss,         /**< number of constraints */
+   int                   depth,              /**< current depth */
+   SCIP_Bool*            success             /**< pointer to store the success */
    )
 {
    SCIP_VAR** vars;
@@ -13295,8 +13324,8 @@ SCIP_RETCODE SCIPlpSetBasis(
    assert(lp != NULL);
    assert(basevars != NULL);
    assert(baseconss != NULL);
-   assert(basevstat != NULL);
-   assert(basecstat != NULL);
+   assert(basevarstat != NULL);
+   assert(baseconsstat != NULL);
    assert(nbasevars >= 0);
    assert(nbaseconss >= 0);
    assert(blkmem != NULL);
@@ -13308,14 +13337,13 @@ SCIP_RETCODE SCIPlpSetBasis(
 
    /* get buffer */
    SCIP_CALL( SCIPsetDuplicateBufferArray(set, &vars, basevars, nbasevars) );
-   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &vstat, basevstat, nbasevars) );
+   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &vstat, basevarstat, nbasevars) );
    SCIP_CALL( SCIPsetDuplicateBufferArray(set, &conss, baseconss, nbaseconss) );
-   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &cstat, basecstat, nbaseconss) );
+   SCIP_CALL( SCIPsetDuplicateBufferArray(set, &cstat, baseconsstat, nbaseconss) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &colstat, lp->ncols) );
    SCIP_CALL( SCIPsetAllocBufferArray(set, &rowstat, lp->nrows) );
 
-   /* fill the array with -1 to be sure that for each column and row a
-    * base status is set */
+   /* fill the array with -1 to be sure that for each column and row a base status is set */
    for( i = 0; i < lp->ncols; i++ )
       colstat[i] = -1;
    for( i = 0; i < lp->nrows; i++ )
@@ -13351,6 +13379,7 @@ SCIP_RETCODE SCIPlpSetBasis(
 
    SCIPdebugMessage("set starting lp basis\n");
 
+   /* set the basis */
    SCIPlpiSetBase(lp->lpi, colstat, rowstat);
 
   TERMINATE:
@@ -15535,29 +15564,6 @@ SCIP_RETCODE SCIPlpSolveAndEval(
       SCIP_Bool wasfromscratch;
       SCIP_Longint oldnlps;
       int fastmip;
-
-      // if( lp->solisbasic )
-      // {
-      //    int i;
-      //    int* cstat;
-      //    int* rstat;
-
-      //    /* get temporary memory */
-      //    SCIP_CALL( SCIPsetAllocBufferArray(set, &cstat, lp->nlpicols) );
-      //    SCIP_CALL( SCIPsetAllocBufferArray(set, &rstat, lp->nlpirows) );
-
-      //    SCIP_CALL( SCIPlpiGetBase(lp->lpi, cstat, rstat) );
-
-      //    for( i = 0; i < lp->nlpirows; ++i )
-      //       printf("row %d <%s>: basestat: %u\n", i, SCIProwGetName(lp->lpirows[i]), rstat[i]);
-
-      //    for( i = 0; i < lp->nlpicols; ++i )
-      //       printf("col %d <%s>: basestat: %u\n", i, SCIPvarGetName(SCIPcolGetVar(lp->lpicols[i])),
-      //          cstat[i]);
-
-      //    SCIPsetFreeBufferArray(set, &cstat);
-      //    SCIPsetFreeBufferArray(set, &rstat);
-      // }
 
       /* set initial LP solver settings */
       fastmip = ((lp->lpihasfastmip && !lp->flushaddedcols && !lp->flushdeletedcols && stat->nnodes > 1) ? set->lp_fastmip : 0);

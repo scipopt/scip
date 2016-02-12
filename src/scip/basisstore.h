@@ -39,52 +39,53 @@ extern "C" {
 /** creates separation storage */
 extern
 SCIP_RETCODE SCIPbasisstoreCreate(
-   SCIP_BASISSTORE**     basisstore           /**< pointer to store basis storage */
+   SCIP_BASISSTORE**     basisstore           /**< basis storage */
    );
 
 /** frees separation storage */
 extern
 SCIP_RETCODE SCIPbasisstoreFree(
-   SCIP_BASISSTORE**     basisstore,          /**< pointer to store basis storage */
-   BMS_BLKMEM*           blkmem
+   SCIP_BASISSTORE**     basisstore,          /**< basis storage */
+   BMS_BLKMEM*           blkmem               /**< block memory */
    );
 
 /** add a basis to the storage */
 extern
 SCIP_RETCODE SCIPbasisstoreAddBasis(
-   SCIP_BASISSTORE*      basisstore,
-   BMS_BLKMEM*           blkmem,
-   SCIP_VAR**            vars,
-   SCIP_CONS**           conss,
-   int*                  cstat,
-   int*                  rstat,
-   int                   ncols,
-   int                   nrows
+   SCIP_BASISSTORE*      basisstore,          /**< basis storage */
+   BMS_BLKMEM*           blkmem,              /**< block memory */
+   SCIP_VAR**            vars,                /**< array of problem variables */
+   SCIP_CONS**           conss,               /**< array of problem constraints */
+   int*                  varstat,             /**< array of variable basis status */
+   int*                  consstat,            /**< array of constraint basis status */
+   int                   nvars,               /**< number of problem variables */
+   int                   nconss               /**< number of problem constraints */
    );
 
 /** return the number of stored basis */
 extern
 int SCIPbasisstoreGetNBasis(
-   SCIP_BASISSTORE*      basisstore
+   SCIP_BASISSTORE*      basisstore           /**< basis storage */
    );
 
 /** returns the stored basis */
 extern
-SCIP_BASIS* SCIPbasestoreGetBasis(
-   SCIP_BASISSTORE*      basestore
+SCIP_BASIS* SCIPbasistoreGetBasis(
+   SCIP_BASISSTORE*      basistore           /**< basis storage */
    );
 
-/** copy the basis */
+/** copy basis storage */
 extern
 SCIP_RETCODE SCIPbasisstoreCopy(
-   SCIP_BASISSTORE*      basisstore,
-   SCIP_BASISSTORE*      cpybasisstore,
-   BMS_BLKMEM*           blkmem
+   SCIP_BASISSTORE*      basisstore,         /**< source basis storage */
+   SCIP_BASISSTORE*      targetbasisstore,   /**< target basis storage */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    );
 
+/** remove last added basis */
 extern
-void SCIPbasestoreRemoveBasis(
-   SCIP_BASISSTORE*      basesstore
+void SCIPbasistoreRemoveBasis(
+   SCIP_BASISSTORE*      basisstore         /**< source basis storage */
    );
 
 /**
@@ -92,15 +93,14 @@ void SCIPbasestoreRemoveBasis(
  */
 
 /* returns the data of the given basis */
-extern
-void SCIPbaseGetData(
-   SCIP_BASIS*           basis,
-   SCIP_VAR***           vars,
-   SCIP_CONS***          conss,
-   int**                 vstat,
-   int**                 cstat,
-   int*                  nvars,
-   int*                  nconss
+void SCIPbasisGetData(
+   SCIP_BASIS*           basis,         /**< source basis storage */
+   SCIP_VAR***           vars,          /**< array to store the problem variables */
+   SCIP_CONS***          conss,         /**< array to store the problem constraints */
+   int**                 varstat,       /**< array to store basis status of variables */
+   int**                 consstat,      /**< array to store basis status of constraints */
+   int*                  nvars,         /**< pointer to store number of variabls */
+   int*                  nconss         /**< pointer to store number of constraints */
    );
 
 #ifdef __cplusplus

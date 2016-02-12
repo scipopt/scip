@@ -44,10 +44,10 @@ struct SCIP_Basis
 {
    SCIP_VAR**            vars;               /**< array of variables (correspond to columns) */
    SCIP_CONS**           conss;              /**< array of constraints (correspond to rows) */
-   int*                  vstat;              /**< array for storing variable (column) basis status */
-   int*                  cstat;              /**< array for storing constraint (row) basis status */
-   int                   nvars;              /**< number of LP columns/variables */
-   int                   nconss;             /**< number of LP rows/constraints */
+   int*                  varstat;            /**< array for storing variable/column basis status */
+   int*                  consstat;           /**< array for storing constraint/row basis status */
+   int                   nvars;              /**< number of LP variables/columns */
+   int                   nconss;             /**< number of LP constraints/rows */
 };
 
 #ifdef __cplusplus

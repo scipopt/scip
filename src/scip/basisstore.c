@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   basisstore.c
- * @brief  methods for storing separated cuts
+ * @brief  methods for storing LP starting bases
  * @author Jakob Witzig
  */
 
@@ -29,14 +29,14 @@
 
 
 /**
- * Methods for SCIP_BASESSTORE
+ * Methods for SCIP_BASISSTORE
  */
 
 /** initialize the basis storage */
 static
 SCIP_RETCODE initializeBasisstore(
-   SCIP_BASISSTORE*      basisstore,
-   BMS_BLKMEM*           blkmem
+   SCIP_BASISSTORE*      basisstore,         /**< basis storage */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(basisstore != NULL);
@@ -54,8 +54,8 @@ SCIP_RETCODE initializeBasisstore(
 /** ensure that the store is large enoug */
 static
 SCIP_RETCODE checkMem(
-   SCIP_BASISSTORE*      basisstore,
-   BMS_BLKMEM*           blkmem
+   SCIP_BASISSTORE*      basisstore,         /**< basis storage */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    assert(basisstore != NULL);
@@ -72,7 +72,7 @@ SCIP_RETCODE checkMem(
 
 /** creates basis storage */
 SCIP_RETCODE SCIPbasisstoreCreate(
-   SCIP_BASISSTORE**     basisstore           /**< pointer to store basis storage */
+   SCIP_BASISSTORE**     basisstore          /**< basis storage */
    )
 {
    assert(basisstore != NULL);
@@ -88,8 +88,8 @@ SCIP_RETCODE SCIPbasisstoreCreate(
 
 /** frees basis storage */
 SCIP_RETCODE SCIPbasisstoreFree(
-   SCIP_BASISSTORE**     basisstore,           /**< pointer to store basis storage */
-   BMS_BLKMEM*           blkmem
+   SCIP_BASISSTORE**     basisstore,          /**< basis storage */
+   BMS_BLKMEM*           blkmem               /**< block memory */
    )
 {
    assert(basisstore != NULL);
@@ -98,21 +98,20 @@ SCIP_RETCODE SCIPbasisstoreFree(
    if( *basisstore == NULL)
       return SCIP_OKAY;
 
+   SCIPdebugMessage("free %d basis.\n", (*basisstore)->nbases);
+
    while( (*basisstore)->nbases > 0 )
    {
-      int b;
+      int b = (*basisstore)->nbases-1;
 
-      b = (*basisstore)->nbases-1;
-
-      SCIPdebugMessage("free basis %d\n", b);
-
-      BMSfreeMemoryArray(&(*basisstore)->bases[b]->cstat);
-      BMSfreeMemoryArray(&(*basisstore)->bases[b]->vstat);
+      BMSfreeMemoryArray(&(*basisstore)->bases[b]->consstat);
+      BMSfreeMemoryArray(&(*basisstore)->bases[b]->varstat);
       BMSfreeMemoryArray(&(*basisstore)->bases[b]->conss);
       BMSfreeMemoryArray(&(*basisstore)->bases[b]->vars);
       BMSfreeMemoryArrayNull(&(*basisstore)->bases[b]);
       (*basisstore)->nbases--;
    }
+   assert((*basisstore)->nbases == 0);
 
    if( (*basisstore)->bases != NULL )
    {
@@ -126,22 +125,22 @@ SCIP_RETCODE SCIPbasisstoreFree(
 
 /** add a basis to the storage */
 SCIP_RETCODE SCIPbasisstoreAddBasis(
-   SCIP_BASISSTORE*      basisstore,
-   BMS_BLKMEM*           blkmem,
-   SCIP_VAR**            vars,
-   SCIP_CONS**           conss,
-   int*                  vstat,
-   int*                  cstat,
-   int                   nvars,
-   int                   nconss
+   SCIP_BASISSTORE*      basisstore,          /**< basis storage */
+   BMS_BLKMEM*           blkmem,              /**< block memory */
+   SCIP_VAR**            vars,                /**< array of problem variables */
+   SCIP_CONS**           conss,               /**< array of problem constraints */
+   int*                  varstat,             /**< array of variable basis status */
+   int*                  consstat,            /**< array of constraint basis status */
+   int                   nvars,               /**< number of problem variables */
+   int                   nconss               /**< number of problem constraints */
    )
 {
    assert(basisstore != NULL);
    assert(blkmem != NULL);
    assert(vars != NULL);
    assert(conss != NULL);
-   assert(vstat != NULL);
-   assert(cstat != NULL);
+   assert(varstat != NULL);
+   assert(consstat != NULL);
 
    /* initialize the storage */
    if( basisstore->basessize == 0 )
@@ -161,8 +160,8 @@ SCIP_RETCODE SCIPbasisstoreAddBasis(
    SCIP_ALLOC( BMSallocMemory(&basisstore->bases[basisstore->nbases]) );
    BMSduplicateMemoryArray(&basisstore->bases[basisstore->nbases]->vars, vars, nvars);
    BMSduplicateMemoryArray(&basisstore->bases[basisstore->nbases]->conss, conss, nconss);
-   BMSduplicateMemoryArray(&basisstore->bases[basisstore->nbases]->vstat, vstat, nvars);
-   BMSduplicateMemoryArray(&basisstore->bases[basisstore->nbases]->cstat, cstat, nconss);
+   BMSduplicateMemoryArray(&basisstore->bases[basisstore->nbases]->varstat, varstat, nvars);
+   BMSduplicateMemoryArray(&basisstore->bases[basisstore->nbases]->consstat, consstat, nconss);
    basisstore->bases[basisstore->nbases]->nvars = nvars;
    basisstore->bases[basisstore->nbases]->nconss = nconss;
    basisstore->nbases++;
@@ -172,7 +171,7 @@ SCIP_RETCODE SCIPbasisstoreAddBasis(
 
 /** return the number of stored basis */
 int SCIPbasisstoreGetNBasis(
-   SCIP_BASISSTORE*      basisstore
+   SCIP_BASISSTORE*      basisstore           /**< basis storage */
    )
 {
    assert(basisstore != NULL);
@@ -181,59 +180,60 @@ int SCIPbasisstoreGetNBasis(
 }
 
 /** returns the stored basis */
-SCIP_BASIS* SCIPbasestoreGetBasis(
-   SCIP_BASISSTORE*      basestore
+SCIP_BASIS* SCIPbasistoreGetBasis(
+   SCIP_BASISSTORE*      basistore           /**< basis storage */
    )
 {
-   assert(basestore != NULL);
-   assert(basestore->nbases == 1); /* tmp: need to be changed if we store more than one basis */
+   assert(basistore != NULL);
+   assert(basistore->bases != NULL);
+   assert(basistore->nbases == 1); /* tmp: need to be changed if we store more than one basis */
 
-   return basestore->bases[0];
+   return basistore->bases[0];
 }
 
-/** copy the basis */
+/** copy basis storage */
 SCIP_RETCODE SCIPbasisstoreCopy(
-   SCIP_BASISSTORE*      basisstore,
-   SCIP_BASISSTORE*      cpybasisstore,
-   BMS_BLKMEM*           blkmem
+   SCIP_BASISSTORE*      basisstore,         /**< source basis storage */
+   SCIP_BASISSTORE*      targetbasisstore,   /**< target basis storage */
+   BMS_BLKMEM*           blkmem              /**< block memory */
    )
 {
    int b;
 
    assert(basisstore != NULL);
-   assert(cpybasisstore != NULL);
+   assert(targetbasisstore != NULL);
 
-   SCIPdebugMessage("copy basis %p to %p\n", (void*) basisstore, (void*) cpybasisstore);
+   SCIPdebugMessage("copy basis %p to %p\n", (void*) basisstore, (void*) targetbasisstore);
 
    for(b = 0; b < basisstore->nbases; b++)
    {
-      assert(basisstore->bases[b]->vstat != NULL);
-      assert(basisstore->bases[b]->cstat != NULL);
+      assert(basisstore->bases[b]->varstat != NULL);
+      assert(basisstore->bases[b]->consstat != NULL);
 
-      SCIP_CALL( SCIPbasisstoreAddBasis(cpybasisstore, blkmem,
-            basisstore->bases[b]->vars, basisstore->bases[b]->conss, basisstore->bases[b]->vstat,
-            basisstore->bases[b]->cstat, basisstore->bases[b]->nvars, basisstore->bases[b]->nconss) );
+      SCIP_CALL( SCIPbasisstoreAddBasis(targetbasisstore, blkmem,
+            basisstore->bases[b]->vars, basisstore->bases[b]->conss, basisstore->bases[b]->varstat,
+            basisstore->bases[b]->consstat, basisstore->bases[b]->nvars, basisstore->bases[b]->nconss) );
    }
 
    return SCIP_OKAY;
 }
 
-
-void SCIPbasestoreRemoveBasis(
-   SCIP_BASISSTORE*      basesstore
+/** remove last added basis */
+void SCIPbasistoreRemoveBasis(
+   SCIP_BASISSTORE*      basisstore         /**< source basis storage */
    )
 {
-   assert(basesstore != NULL);
+   assert(basisstore != NULL);
+   assert(basisstore->nbases > 0);
 
-   SCIPdebugMessage("remove last basis\n");
+   basisstore->nbases--;
+   SCIPdebugMessage("delete last basis at position %d\n", basisstore->nbases);
 
-   BMSfreeMemoryArray(&basesstore->bases[0]->cstat);
-   BMSfreeMemoryArray(&basesstore->bases[0]->vstat);
-   BMSfreeMemoryArray(&basesstore->bases[0]->conss);
-   BMSfreeMemoryArray(&basesstore->bases[0]->vars);
-   BMSfreeMemory(&basesstore->bases[0]);
-
-   basesstore->nbases--;
+   BMSfreeMemoryArray(&basisstore->bases[basisstore->nbases]->consstat);
+   BMSfreeMemoryArray(&basisstore->bases[basisstore->nbases]->varstat);
+   BMSfreeMemoryArray(&basisstore->bases[basisstore->nbases]->conss);
+   BMSfreeMemoryArray(&basisstore->bases[basisstore->nbases]->vars);
+   BMSfreeMemory(&basisstore->bases[basisstore->nbases]);
 }
 
 /**
@@ -241,22 +241,28 @@ void SCIPbasestoreRemoveBasis(
  */
 
 /* returns the data of the given basis */
-void SCIPbaseGetData(
-   SCIP_BASIS*           basis,
-   SCIP_VAR***           vars,
-   SCIP_CONS***          conss,
-   int**                 vstat,
-   int**                 cstat,
-   int*                  nvars,
-   int*                  nconss
+void SCIPbasisGetData(
+   SCIP_BASIS*           basis,         /**< source basis storage */
+   SCIP_VAR***           vars,          /**< array to store the problem variables */
+   SCIP_CONS***          conss,         /**< array to store the problem constraints */
+   int**                 varstat,       /**< array to store basis status of variables */
+   int**                 consstat,      /**< array to store basis status of constraints */
+   int*                  nvars,         /**< pointer to store number of variabls */
+   int*                  nconss         /**< pointer to store number of constraints */
    )
 {
    assert(basis != NULL);
+   assert(vars != NULL);
+   assert(conss != NULL);
+   assert(varstat != NULL);
+   assert(consstat != NULL);
+   assert(nvars != NULL);
+   assert(nconss != NULL);
 
    (*vars) = basis->vars;
    (*conss) = basis->conss;
-   (*vstat) = basis->vstat;
-   (*cstat) = basis->cstat;
+   (*varstat) = basis->varstat;
+   (*consstat) = basis->consstat;
    (*nvars) = basis->nvars;
    (*nconss) = basis->nconss;
 }

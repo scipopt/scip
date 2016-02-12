@@ -561,11 +561,11 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( createSubproblem(scip, subscip, subvars, startsol, binarybounds, uselprows) );
    SCIPdebugMessage("RENS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
-   // if( !uselprows )
-   // {
-   //    /* use the last LP basis as starting basis */
-   //    SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows) );
-   // }
+//    if( !uselprows )
+//    {
+//       /* use the last LP basis as starting basis */
+//       SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows) );
+//    }
 
    if( sourcerows != NULL )
    {

@@ -3445,11 +3445,11 @@ SCIP_RETCODE SCIPtreeLoadLPState(
       int nconss = 0;
 
       /* get the basis */
-      basis = SCIPbasestoreGetBasis(basestore);
+      basis = SCIPbasistoreGetBasis(basestore);
       assert(basis != NULL);
 
       /* get variables, constraints and the corresponding basis status */
-      SCIPbaseGetData(basis, &vars, &conss, &vstat, &cstat, &nvars, &nconss);
+      SCIPbasisGetData(basis, &vars, &conss, &vstat, &cstat, &nvars, &nconss);
       assert(vars != NULL);
       assert(conss != NULL);
       assert(vstat != NULL);
@@ -3462,7 +3462,7 @@ SCIP_RETCODE SCIPtreeLoadLPState(
       loadedbasis = success;
 
       /* delete the stored basis */
-      SCIPbasestoreRemoveBasis(basestore);
+      SCIPbasistoreRemoveBasis(basestore);
    }
 
    /* if there is no LP state defining fork, nothing can be done */

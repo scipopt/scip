@@ -11970,13 +11970,13 @@ int SCIPgetNBasis(
 /** copy the stored starting basis */
 EXTERN
 SCIP_RETCODE SCIPcopyBasis(
-   SCIP*                 sourcescip,
-   SCIP*                 targetscip,
-   SCIP_HASHMAP*         varmap,
-   SCIP_HASHMAP*         consmap,
-   SCIP_ROW**            sourcerows,
-   SCIP_CONS**           targetconss,
-   int                   nsourcerows
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< hashmap mapping source to target variables */
+   SCIP_HASHMAP*         consmap,            /**< hashmap mapping source to target constraints */
+   SCIP_ROW**            sourcerows,         /**< array of source rows */
+   SCIP_CONS**           targetconss,        /**< array of target constraints */
+   int                   nsourcerows         /**< number of source rows */
    );
 
 

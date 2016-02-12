@@ -1593,25 +1593,26 @@ void getBasis(
    }
 }
 
+/** copy the last basis of the source scip into the basis storage of the target scip */
 static
 SCIP_RETCODE copyBasis(
-   SCIP*                 sourcescip,
-   SCIP*                 targetscip,
-   SCIP_HASHMAP*         varmap,
-   SCIP_HASHMAP*         consmap,
-   SCIP_ROW**            sourcerows,
-   SCIP_CONS**           targetconss,
-   int                   nsourcerows
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< hashmap mapping source to target variables */
+   SCIP_HASHMAP*         consmap,            /**< hashmap mapping source to target constraints */
+   SCIP_ROW**            sourcecuts,         /**< array of source rows corresponding to a cut */
+   SCIP_CONS**           targetcuts,         /**< array of target constraints corresponding to a cut */
+   int                   nsourcecuts         /**< number of source rows corresponding to a cut */
    )
 {
    SCIP_VAR** vars;
-   SCIP_VAR** tvars;
+   SCIP_VAR** targetvars;
    SCIP_CONS** conss;
-   SCIP_CONS** tconss;
-   int* vstat;
-   int* cstat;
+   SCIP_CONS** targetconss;
+   int* varstat;
+   int* consstat;
    SCIP_Bool success;
-   int ntconss;
+   int ntargetconss;
    int nvars;
    int nconss;
    int i;
@@ -1626,26 +1627,26 @@ SCIP_RETCODE copyBasis(
       SCIPbasisstoreCreate(&targetscip->basesstore);
    }
 
+   /* get the variable and constraint data of the source scip */
    vars = sourcescip->transprob->vars;
    conss = sourcescip->transprob->conss;
    nvars = sourcescip->transprob->nvars;
    nconss = sourcescip->transprob->nconss;
-   ntconss = 0;
+   ntargetconss = 0;
 
    /* allocate buffer */
-   SCIP_CALL( SCIPallocBufferArray(sourcescip, &vstat, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(sourcescip, &tvars, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(sourcescip, &cstat, nconss + nsourcerows) );
-   SCIP_CALL( SCIPallocBufferArray(sourcescip, &tconss, nconss + nsourcerows) );
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &varstat, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetvars, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &consstat, nconss + nsourcecuts) );
+   SCIP_CALL( SCIPallocBufferArray(sourcescip, &targetconss, nconss + nsourcecuts) );
 
    /* match the basis status of source-variables */
    for( i = 0; i < nvars; i++ )
    {
       assert(SCIPhashmapExists(varmap, vars[i]));
 
-      tvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
-      //SCIP_CALL( SCIPhashmapRemove(varmap, vars[i]) );
-      vstat[i] = getBasestatVar(vars[i]);
+      targetvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmap, vars[i]);
+      varstat[i] = getBasestatVar(vars[i]);
    }
 
    /* match the basis status of source-constraints */
@@ -1653,34 +1654,33 @@ SCIP_RETCODE copyBasis(
    {
       assert(SCIPhashmapExists(consmap, conss[i]));
 
-      tconss[ntconss] = (SCIP_CONS*) SCIPhashmapGetImage(consmap, conss[i]);
-      cstat[ntconss] = getBasestatCons(sourcescip, conss[i], &success);
+      targetconss[ntargetconss] = (SCIP_CONS*) SCIPhashmapGetImage(consmap, conss[i]);
+      consstat[ntargetconss] = getBasestatCons(sourcescip, conss[i], &success);
       if( success )
-      {
-         ntconss++;
-      }
+         ntargetconss++;
    }
 
    /* match the basis status of source-cuts */
-   for( i = 0; i < nsourcerows; i++ )
+   for( i = 0; i < nsourcecuts; i++ )
    {
-      assert(sourcerows[i] != NULL);
-      assert(ntconss < nconss + nsourcerows);
+      assert(sourcecuts[i] != NULL);
+      assert(ntargetconss < nconss + nsourcecuts);
 
-      tconss[ntconss] = targetconss[i];
-      cstat[ntconss] = SCIProwGetBasisStatus(sourcerows[i]);
-      ++ntconss;
+      targetconss[ntargetconss] = targetcuts[i];
+      consstat[ntargetconss] = SCIProwGetBasisStatus(sourcecuts[i]);
+      ++ntargetconss;
    }
 
-   SCIP_CALL( SCIPbasisstoreAddBasis(targetscip->basesstore, targetscip->mem->probmem, tvars, tconss, vstat, cstat, nvars, ntconss) );
-
+   /* add the basis to the storage */
+   SCIP_CALL( SCIPbasisstoreAddBasis(targetscip->basesstore, targetscip->mem->probmem, targetvars, targetconss, varstat,
+         consstat, nvars, ntargetconss) );
    SCIPdebugMessage("basis copied\n");
 
    /* free buffer */
-   SCIPfreeBufferArray(sourcescip, &tconss);
-   SCIPfreeBufferArray(sourcescip, &tvars);
-   SCIPfreeBufferArray(sourcescip, &cstat);
-   SCIPfreeBufferArray(sourcescip, &vstat);
+   SCIPfreeBufferArray(sourcescip, &targetconss);
+   SCIPfreeBufferArray(sourcescip, &targetvars);
+   SCIPfreeBufferArray(sourcescip, &consstat);
+   SCIPfreeBufferArray(sourcescip, &varstat);
 
    return SCIP_OKAY;
 }
@@ -27577,18 +27577,19 @@ int SCIPgetNBasis(
 
 /** copy the stored starting basis */
 SCIP_RETCODE SCIPcopyBasis(
-   SCIP*                 sourcescip,
-   SCIP*                 targetscip,
-   SCIP_HASHMAP*         varmap,
-   SCIP_HASHMAP*         consmap,
-   SCIP_ROW**            sourcerows,
-   SCIP_CONS**           targetconss,
-   int                   nsourcerows
+   SCIP*                 sourcescip,         /**< source SCIP data structure */
+   SCIP*                 targetscip,         /**< target SCIP data structure */
+   SCIP_HASHMAP*         varmap,             /**< hashmap mapping source to target variables */
+   SCIP_HASHMAP*         consmap,            /**< hashmap mapping source to target constraints */
+   SCIP_ROW**            sourcerows,         /**< array of source rows */
+   SCIP_CONS**           targetconss,        /**< array of target constraints */
+   int                   nsourcerows         /**< number of source rows */
    )
 {
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
 
+   /* return if source and target scip are the same */
    if( sourcescip == targetscip )
       return SCIP_OKAY;
 
