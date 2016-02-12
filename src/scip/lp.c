@@ -12596,7 +12596,7 @@ SCIP_RETCODE checkAndRepairBasis(
    int                   nvars,
    int                   nconss,
    int*                  colstat,
-   int*                  rowstat,
+   int**                 rowstat,
    int                   depth,
    SCIP_Bool*            success
    )
@@ -12787,7 +12787,7 @@ SCIP_RETCODE checkAndRepairBasis(
       assert(row->lppos == i);
 
       rows[i] = row;
-      rowstat[i] = SCIP_BASESTAT_BASIC;
+      (*rowstat)[i] = SCIP_BASESTAT_BASIC;
    }
 
    /* remove all constraints that have no corresponding row in the current LP */
@@ -12843,7 +12843,7 @@ SCIP_RETCODE checkAndRepairBasis(
                }
                else
                {
-                  assert(rowstat[row->lppos] == SCIP_BASESTAT_BASIC);
+                  assert((*rowstat)[row->lppos] == SCIP_BASESTAT_BASIC);
                }
             }
             else
@@ -12852,29 +12852,31 @@ SCIP_RETCODE checkAndRepairBasis(
                {
                   assert(nrows == lp->nrows);
                   SCIP_CALL( SCIPlpAddRow(lp, blkmem, set, eventqueue, eventfilter, row, depth) );
+                  assert(nrows + 1 == lp->nrows);
+                  assert(row->lppos == nrows);
 
                   SCIP_CALL( SCIPsetReallocBufferArray(set, &rows, nrows+1) );
-                  SCIP_CALL( SCIPsetReallocBufferArray(set, &rowstat, nrows+1) );
+                  SCIP_CALL( SCIPsetReallocBufferArray(set, rowstat, nrows+1) );
                   rows[nrows] = row;
-                  rowstat[row->lppos] = SCIP_BASESTAT_BASIC;
+                  (*rowstat)[row->lppos] = SCIP_BASESTAT_BASIC;
                   ++nrows;
                   ++nbasicconss;
                }
                assert(row->lppos >= 0);
                assert(nrows == lp->nrows);
 
-               assert(rowstat[row->lppos] == SCIP_BASESTAT_BASIC);
+               assert((*rowstat)[row->lppos] == SCIP_BASESTAT_BASIC);
 
                if( cstat[i] == SCIP_BASESTAT_LOWER )
                {
                   if( SCIPsetIsInfinity(set, -row->lhs) )
                   {
-                     rowstat[row->lppos] = SCIP_BASESTAT_UPPER;
+                     (*rowstat)[row->lppos] = SCIP_BASESTAT_UPPER;
                      nupperconss++;
                   }
                   else
                   {
-                     rowstat[row->lppos] = SCIP_BASESTAT_LOWER;
+                     (*rowstat)[row->lppos] = SCIP_BASESTAT_LOWER;
                      nlowerconss++;
                   }
                }
@@ -12882,12 +12884,12 @@ SCIP_RETCODE checkAndRepairBasis(
                {
                   if( SCIPsetIsInfinity(set, row->rhs) )
                   {
-                     rowstat[row->lppos] = SCIP_BASESTAT_LOWER;
+                     (*rowstat)[row->lppos] = SCIP_BASESTAT_LOWER;
                      nlowerconss++;
                   }
                   else
                   {
-                     rowstat[row->lppos] = SCIP_BASESTAT_UPPER;
+                     (*rowstat)[row->lppos] = SCIP_BASESTAT_UPPER;
                      nupperconss++;
                   }
                }
@@ -12908,7 +12910,7 @@ SCIP_RETCODE checkAndRepairBasis(
       int tmpbasicrows = 0;
       for( i = 0; i < nrows; ++i )
       {
-         if( rowstat[i] == SCIP_BASESTAT_BASIC )
+         if( (*rowstat)[i] == SCIP_BASESTAT_BASIC )
             ++tmpbasicrows;
       }
       assert(nbasicconss == tmpbasicrows);
@@ -12927,10 +12929,10 @@ SCIP_RETCODE checkAndRepairBasis(
       /* get buffer */
       SCIP_CALL( SCIPsetAllocBufferArray(set, &order, nvars + nrows) );
 
-      SCIP_CALL( getBasisOrdering(order, vars, rows, vstat, rowstat, nvars, nrows, nbasicvars, nbasicconss) );
+      SCIP_CALL( getBasisOrdering(order, vars, rows, vstat, (*rowstat), nvars, nrows, nbasicvars, nbasicconss) );
 
       /* check for non-singularity */
-      SCIP_CALL( findSimpleBasis(set, vars, rows, vstat, rowstat, order, nvars, nrows, success, blkmem) );
+      SCIP_CALL( findSimpleBasis(set, vars, rows, vstat, (*rowstat), order, nvars, nrows, success, blkmem) );
 
       /* free buffer */
       SCIPsetFreeBufferArray(set, &order);
@@ -12964,7 +12966,7 @@ SCIP_RETCODE checkAndRepairBasis(
    /* count basic rows */
    for( i = 0; i < nrows; i++ )
    {
-      if( rowstat[i] == SCIP_BASESTAT_BASIC )
+      if( (*rowstat)[i] == SCIP_BASESTAT_BASIC )
          nrowsbasic++;
    }
 
@@ -13321,7 +13323,7 @@ SCIP_RETCODE SCIPlpSetBasis(
 
    /* check if the basis is non-singular and probably put slack variables into the basis */
    SCIP_CALL( checkAndRepairBasis(lp, set, blkmem, eventqueue, eventfilter, vars, conss, vstat, cstat, nvars,
-         nconss, colstat, rowstat, depth, success) );
+         nconss, colstat, &rowstat, depth, success) );
 
    if( !(*success) )
       goto TERMINATE;
