@@ -128,6 +128,7 @@ then
         fi
     fi
 
+    echo display parameters                >> $TMPFILE
     echo $OPTCOMMAND                       >> $TMPFILE
     echo display statistics                >> $TMPFILE
     echo checksol                          >> $TMPFILE
