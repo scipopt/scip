@@ -979,6 +979,9 @@ SCIP_RETCODE applyGenVBound(
    /* get bound value provided by genvbound */
    boundval = getGenVBoundsBound(scip, genvbound, global);
 
+   if( SCIPisInfinity(scip, REALABS(boundval)) )
+      return SCIP_OKAY;
+
 #ifdef SCIP_DEBUG
    {
       SCIP_Real lb;

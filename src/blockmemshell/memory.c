@@ -22,6 +22,10 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#ifdef __cplusplus
+#define __STDC_LIMIT_MACROS
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -2469,10 +2473,15 @@ void BMSdestroyBufferMemory_call(
 
    if ( *buffer != NULL )
    {
-      for (i = 0; i < (*buffer)->ndata; ++i)
-      {
-         assert( ! (*buffer)->used[i] );
-         BMSfreeMemoryArrayNull(&(*buffer)->data[i]);
+      i = (*buffer)->ndata;
+      if ( i > 0 ) {
+         for (--i ; ; i--)
+         {
+            assert( ! (*buffer)->used[i] );
+            BMSfreeMemoryArrayNull(&(*buffer)->data[i]);
+            if ( i == 0 )
+               break;
+         }
       }
       BMSfreeMemoryArrayNull(&(*buffer)->data);
       BMSfreeMemoryArrayNull(&(*buffer)->size);

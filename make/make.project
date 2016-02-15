@@ -57,6 +57,7 @@ CLIENTTMPDIR    =       /tmp
 REOPT		=	false
 OPTCOMMAND	=	optimize
 SETCUTOFF	=	0
+VISUALIZE       =       false
 MAXJOBS         =       1
 
 
@@ -131,7 +132,7 @@ CBC		=	cbc
 CBCPARALLEL	=	cbc-parallel
 MOSEK           =       mosek
 GUROBI          =       gurobi_cl
-XPRESS		=	xpress
+XPRESS_BIN      =       xpress
 GLPK            =       glpsol
 SYMPHONY        =       symphony
 BLIS            =       blis

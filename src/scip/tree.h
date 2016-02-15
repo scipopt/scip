@@ -45,6 +45,8 @@
 #include "scip/struct_tree.h"
 #endif
 
+#define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -872,6 +874,12 @@ int SCIPtreeGetCurrentDepth(
    SCIP_TREE*            tree                /**< branch and bound tree */
    );
 
+/** gets the maximal allowed tree depth */
+extern
+int SCIPtreeGetDepthLimit(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   );
+
 /** returns, whether the LP was or is to be solved in the current node */
 extern
 SCIP_Bool SCIPtreeHasCurrentNodeLP(
@@ -914,6 +922,7 @@ void SCIPtreeMarkProbingObjChanged(
 #define SCIPtreeGetNNodes(tree)         \
    (SCIPtreeGetNChildren(tree) + SCIPtreeGetNSiblings(tree) + SCIPtreeGetNLeaves(tree))
 #define SCIPtreeIsPathComplete(tree)    ((tree)->focusnode == NULL || (tree)->focusnode->depth < (tree)->pathlen)
+#define SCIPtreeGetDepthLimit(tree)     (MAXDEPTH)
 #define SCIPtreeProbing(tree)           ((tree)->probingroot != NULL)
 #define SCIPtreeGetProbingRoot(tree)    (tree)->probingroot
 #define SCIPtreeGetProbingDepth(tree)   (SCIPtreeGetCurrentDepth(tree) - SCIPnodeGetDepth((tree)->probingroot))

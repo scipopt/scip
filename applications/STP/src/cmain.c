@@ -59,6 +59,9 @@ SCIP_RETCODE runShell(
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
 
+   /* we explicitly enable the use of a debug solution for this main SCIP instance */
+   SCIPenableDebugSol(scip);
+
    /* include stp pricer */
    SCIP_CALL( SCIPincludePricerStp(scip) );
 

@@ -843,8 +843,8 @@ SCIP_RETCODE checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< solution to check, NULL for current solution */
-   SCIP_Bool             checklprows,        /**< should LP rows be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
    SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
@@ -5802,6 +5802,16 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
 
       SCIP_CALL( SCIPallocBufferArray(scip, &tmpindices, nknapvars) );
 
+      /* increase array size to avoid an endless loop in the next block; this might happen if continuous variables
+       * change their types to SCIP_VARTYPE_BINARY during presolving
+       */
+      if( conshdlrdata->reals1size == 0 )
+      {
+         conshdlrdata->reals1size = 1;
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->reals1, 1) );
+         conshdlrdata->reals1[0] = 0.0;
+      }
+
       assert(conshdlrdata->reals1size > 0);
 
       /* next if condition should normally not be true, because it means that presolving has created more binary
@@ -6847,6 +6857,12 @@ SCIP_RETCODE checkParallelObjective(
     * and/or separated flag is set to FALSE
     */
    if( nvars != nobjvars || (!SCIPconsIsInitial(cons) && !SCIPconsIsSeparated(cons)) )
+      return SCIP_OKAY;
+
+   /* There are no variables in the ojective function and in the constraint. Thus, the constraint is redundant. Since we
+    * have a pure feasibility problem, we do not want to set a cutoff or lower bound.
+    */
+   if( nobjvars == 0 )
       return SCIP_OKAY;
 
    vars = consdata->vars;

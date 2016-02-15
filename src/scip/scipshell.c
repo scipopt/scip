@@ -352,6 +352,9 @@ SCIP_RETCODE SCIPrunShell(
    /* initialize SCIP */
    SCIP_CALL( SCIPcreate(&scip) );
 
+   /* we explicitly enable the use of a debug solution for this main SCIP instance */
+   SCIPenableDebugSol(scip);
+
    /* include default SCIP plugins */
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
 

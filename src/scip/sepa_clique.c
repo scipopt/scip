@@ -816,7 +816,11 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
  * main separation method
  */
 
-/** searches and adds clique cuts that separate the given primal solution */
+/** searches and adds clique cuts that separate the given primal solution
+ *
+ *  @todo Should the existing cliques in the table be separated before starting the tclique algorithm?
+ *        Is this done somewhere else?
+ */
 static
 SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */

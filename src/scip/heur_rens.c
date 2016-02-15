@@ -112,7 +112,7 @@ SCIP_RETCODE computeFixingrate(
    char*                 startsol,           /**< pointer to solution used for fixing values ('l'p relaxation, 'n'lp relaxation) */
    SCIP_Real*            fixingrate,         /**< percentage of integers that get actually fixed */
    SCIP_Bool*            success             /**< pointer to store whether minimum fixingrate is exceeded */
-  )
+   )
 {
    SCIP_VAR** vars;
    int fixingcounter;

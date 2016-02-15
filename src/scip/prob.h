@@ -524,6 +524,18 @@ void SCIPprobPrintStatistics(
  * type validity.
  */
 
+/** is the problem permuted */
+extern
+SCIP_Bool SCIPprobIsPermuted(
+   SCIP_PROB*            prob
+   );
+
+/** mark the problem as permuted */
+extern
+void SCIPprobMarkPermuted(
+   SCIP_PROB*            prob
+   );
+
 /** is the problem data transformed */
 extern
 SCIP_Bool SCIPprobIsTransformed(
@@ -619,6 +631,8 @@ SCIP_Real SCIPprobGetObjscale(
  * speed up the algorithms.
  */
 
+#define SCIPprobIsPermuted(prob)        ((prob)->permuted)
+#define SCIPprobMarkPermuted(prob)      ((prob)->permuted = TRUE)
 #define SCIPprobIsTransformed(prob)     ((prob)->transformed)
 #define SCIPprobIsObjIntegral(prob)     ((prob)->objisintegral)
 #define SCIPprobAllColsInLP(prob,set,lp) (SCIPlpGetNCols(lp) == (prob)->ncolvars && (set)->nactivepricers == 0)

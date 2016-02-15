@@ -18590,6 +18590,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIPlpDivingObjChanged
 #undef SCIPlpMarkDivingObjChanged
 #undef SCIPlpUnmarkDivingObjChanged
+#undef SCIPlpDivingRowsChanged
 
 /** gets objective value of column */
 SCIP_Real SCIPcolGetObj(
@@ -19438,6 +19439,17 @@ void SCIPlpUnmarkDivingObjChanged(
    assert(lp->diving || lp->probing);
 
    lp->divingobjchg = FALSE;
+}
+
+/* returns TRUE if at least one left/right hand side of an LP row was changed during diving mode */
+SCIP_Bool SCIPlpDivingRowsChanged(
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->diving || lp->ndivechgsides == 0);
+
+   return (lp->ndivechgsides > 0);
 }
 
 /** compute relative interior point

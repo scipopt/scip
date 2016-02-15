@@ -79,7 +79,7 @@ struct SCIP_PropData
  */
 
 /** propagate the given binary variable/column using the root reduced cost stored in the SCIP internal data structers
- *  and check if the implictions can be useful. Deppending on that implictions are used or not used during the search to
+ *  and check if the implications can be useful. Depending on that implictions are used or not used during the search to
  *  strength the reduced costs.
  */
 static
@@ -247,7 +247,7 @@ SCIP_RETCODE propagateRedcostBinvar(
       return SCIP_INVALIDDATA;
    }
 
-   /* second, if the implications should be used and if the implications are seen to be promising used the implied
+   /* second, if the implications should be used and if the implications are seen to be promising use the implied
     * reduced costs to fix the binary variable
     */
    if( propdata->useimplics && propdata->usefullimplics )
