@@ -2,7 +2,7 @@
 
 # For release versions, only use VERSION="x.x.x".
 # For development versions, use VERSION="x.x.x.x" with subversion number.
-VERSION="3.2.0"
+VERSION="3.2.1"
 NAME="scip-$VERSION"
 rm -f $NAME
 ln -s . $NAME
@@ -63,7 +63,6 @@ $NAME/applications/Coloring/* $NAME/applications/Coloring/doc/* $NAME/applicatio
 $NAME/applications/Coloring/check/testset/short.test $NAME/applications/Coloring/check/testset/short.solu \
 $NAME/applications/Coloring/src/depend.* \
 $NAME/applications/Coloring/src/*.c $NAME/applications/Coloring/src/*.h \
-$NAME/applications/Coloring/Makefile \
 $NAME/applications/Scheduler/doc/* \
 $NAME/applications/Scheduler/check/testset/short.test $NAME/applications/Scheduler/check/testset/short.solu \
 $NAME/applications/Scheduler/src/depend.* \
@@ -72,6 +71,7 @@ $NAME/applications/Scheduler/data/*.sm \
 $NAME/applications/Scheduler/data/*.cmin \
 $NAME/applications/Scheduler/Makefile \
 $NAME/applications/MultiObjective/doc/* \
+$NAME/applications/MultiObjective/doc/images/*.png \
 $NAME/applications/MultiObjective/src/depend.* \
 $NAME/applications/MultiObjective/src/*.c $NAME/applications/MultiObjective/src/*.cpp $NAME/applications/MultiObjective/src/*.h \
 $NAME/applications/MultiObjective/data/*.mop \

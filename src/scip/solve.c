@@ -139,10 +139,9 @@ SCIP_Bool SCIPsolveIsStopped(
    }
    if( SCIPgetMemUsed(set->scip) >= set->limit_memory*1048576.0 - set->mem_externestim )
       stat->status = SCIP_STATUS_MEMLIMIT;
-   else if( set->stage >= SCIP_STAGE_SOLVING && SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap) )
-      stat->status = SCIP_STATUS_GAPLIMIT;
-   else if( set->stage >= SCIP_STAGE_SOLVING
-      && SCIPsetIsLT(set, SCIPgetUpperbound(set->scip) - SCIPgetLowerbound(set->scip), set->limit_absgap) )
+   else if( set->stage >= SCIP_STAGE_SOLVING && SCIPgetNLimSolsFound(set->scip) > 0
+      && (SCIPsetIsLT(set, SCIPgetGap(set->scip), set->limit_gap)
+         || SCIPsetIsLT(set, SCIPgetUpperbound(set->scip) - SCIPgetLowerbound(set->scip), set->limit_absgap)) )
       stat->status = SCIP_STATUS_GAPLIMIT;
    else if( set->limit_solutions >= 0 && set->stage >= SCIP_STAGE_PRESOLVED
       && SCIPgetNLimSolsFound(set->scip) >= set->limit_solutions )
@@ -1204,7 +1203,7 @@ SCIP_RETCODE updatePrimalRay(
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_LP*              lp,                 /**< LP data */
    SCIP_Bool             lperror             /**< has there been an LP error? */
-)
+   )
 {
    assert(blkmem != NULL);
    assert(set != NULL);
@@ -2747,9 +2746,9 @@ SCIP_RETCODE solveNodeLP(
       stat->ninitlps += stat->nlps - nlps;
       stat->ninitlpiterations += stat->nlpiterations - nlpiterations;
 
-      /* in the root node, we try if initial LP solution is feasible to avoid expensive setup of data structures in
-       * separators; in case the root LP is aborted, e.g, by hitting the time limit, we do not check the LP solution
-       * since the corresponding data structures have not been updated 
+      /* In the root node, we try if the initial LP solution is feasible to avoid expensive setup of data structures in
+       * separators; in case the root LP is aborted, e.g., by hitting the time limit, we do not check the LP solution
+       * since the corresponding data structures have not been updated.
        */
       if( SCIPtreeGetCurrentDepth(tree) == 0 && !(*cutoff) && !(*lperror)
          && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_UNBOUNDEDRAY)
@@ -3597,16 +3596,17 @@ static
 SCIP_Bool restartAllowed(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat                /**< dynamic problem statistics */
-)
+   )
 {
    assert(set != NULL);
    assert(stat != NULL);
 
-   return (set->nactivepricers == 0 && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
+   return (set->nactivepricers == 0 && !set->reopt_enable
+         && (set->presol_maxrestarts == -1 || stat->nruns <= set->presol_maxrestarts)
          && (set->limit_restarts == -1 || stat->nruns <= set->limit_restarts));
 }
 #else
-#define restartAllowed(set,stat)             ((set)->nactivepricers == 0 && ((set)->presol_maxrestarts == -1 || (stat)->nruns <= (set)->presol_maxrestarts) \
+#define restartAllowed(set,stat)             ((set)->nactivepricers == 0 && !set->reopt_enable && ((set)->presol_maxrestarts == -1 || (stat)->nruns <= (set)->presol_maxrestarts) \
                                                 && (set->limit_restarts == -1 || stat->nruns <= set->limit_restarts))
 #endif
 
@@ -4717,15 +4717,19 @@ SCIP_RETCODE SCIPsolveCIP(
             stat->status = SCIP_STATUS_INFORUNBD;
          }
       }
-      else if( primal->nsols == 0
-         || SCIPsetIsGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
-            SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))) )
+      else if( primal->nlimsolsfound == 0 )
       {
+         assert(primal->nsols == 0 || SCIPsetIsFeasGT(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
+               SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))));
+
          /* switch status to INFEASIBLE */
          stat->status = SCIP_STATUS_INFEASIBLE;
       }
       else
       {
+         assert(primal->nsols > 0 && SCIPsetIsFeasLE(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
+               SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))));
+
          /* switch status to OPTIMAL */
          stat->status = SCIP_STATUS_OPTIMAL;
       }

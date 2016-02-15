@@ -15,7 +15,7 @@
 
 /**@file   heur_ofins.h
  * @ingroup PRIMALHEURISTICS
- * @brief  OFINS - Objective Function Induced Neighborhood Search. Primal heuristic for reoptimization
+ * @brief  OFINS - Objective Function Induced Neighborhood Search - a primal heuristic for reoptimization
  * @author Jakob Witzig
  */
 

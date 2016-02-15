@@ -301,7 +301,7 @@ SCIP_DECL_HEUREXEC(heurExecReoptsols)
 /* returns the number of checked solutions */
 int SCIPreoptsolsGetNCheckedsols(
    SCIP*                 scip
-)
+   )
 {
    SCIP_HEUR* heur;
    SCIP_HEURDATA* heurdata;
@@ -320,7 +320,7 @@ int SCIPreoptsolsGetNCheckedsols(
 /* returns the number of found improving solutions */
 int SCIPreoptsolsGetNImprovingsols(
    SCIP*                 scip
-)
+   )
 {
    SCIP_HEUR* heur;
    SCIP_HEURDATA* heurdata;

@@ -34,7 +34,7 @@ include $(SCIPDIR)/make/make.project
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAME	=	scip
+MAINNAME	=	scheduler
 MAINOBJ		=	cons_optcumulative.o \
 			heur_listscheduling.o \
 			heur_optcumulative.o \
@@ -128,7 +128,7 @@ test:		$(MAINFILE) $(CHECKDIR)
 		@-(cd check && ln -fs ../$(SCIPDIR)/check/run.sh);
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-		$(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS);
+		$(CONTINUE) $(LOCK) "example" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE);
 
 # include local targets
 -include $(SCIPDIR)/make/local/make.targets

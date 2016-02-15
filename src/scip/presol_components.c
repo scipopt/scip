@@ -971,7 +971,7 @@ SCIP_RETCODE splitProblem(
    int*                  ndeletedvars,       /**< pointer to store the number of deleted variables */
    int*                  ndeletedconss,      /**< pointer to store the number of deleted constraints */
    SCIP_RESULT*          result              /**< pointer to store the result of the presolving call */
-  )
+   )
 {
    SCIP_HASHMAP* consmap;
    SCIP_CONS** compconss;

@@ -15,7 +15,7 @@
 
 /**@file   type_matrix.h
  * @ingroup TYPEDEFINITIONS
- * @brief  type definitions for MILP matrix
+ * @brief  type definitions for MIP matrix
  * @author Dieter Weninger
  */
 
@@ -28,7 +28,7 @@
 extern "C" {
 #endif
 
-typedef struct SCIPmilpMatrix SCIPMILPMATRIX;
+typedef struct SCIP_Matrix SCIP_MATRIX;
 
 #ifdef __cplusplus
 }

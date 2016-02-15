@@ -423,7 +423,7 @@ SCIP_Bool checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< variable bound constraint */
    SCIP_SOL*             sol,                /**< solution to check, NULL for current solution */
-   SCIP_Bool             checklprows         /**< should LP rows be checked? */
+   SCIP_Bool             checklprows         /**< Do constraints represented by rows in the current LP have to be checked? */
    )
 {
    SCIP_CONSDATA* consdata;

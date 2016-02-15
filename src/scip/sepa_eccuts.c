@@ -18,11 +18,9 @@
  * @author Benjamin Müller
  */
 
-/**@todo solveFacetEquality() copy the array and this array will be copied in SCIPsolveLinearProb() => unify methods to
- * solve linear problems in nlpi_ipopt.c and nlpi_ipopt_dummy.c and do not copy array there */
 /**@todo only count number of fixed variables in the edge concave terms */
 /**@todo only add nonlinear row aggregations where at least ...% of the variables (bilinear terms?) are in edge concave
- * terms? */
+ * terms */
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
@@ -30,11 +28,9 @@
 
 #include "scip/scipdefplugins.h"
 #include "scip/sepa_eccuts.h"
-#include "scip/cons_quadratic.h"
 #include "scip/cons_xor.h"
 #include "scip/nlp.h"
 #include "tclique/tclique.h"
-#include "nlpi/nlpi_ipopt.h"
 
 #define SEPA_NAME                            "eccuts"
 #define SEPA_DESC                            "separator for edge-concave functions"

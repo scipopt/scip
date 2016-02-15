@@ -86,8 +86,8 @@ typedef enum SCIP_BaseStat SCIP_BASESTAT;
 /** LP solution quality quantities */
 enum SCIP_LPSolQuality
 {
-   SCIP_LPSOLQUALITY_ESTIMCONDITION,    /**< estimated condition number of (scaled) basis matrix (SCIP_Real) */
-   SCIP_LPSOLQUALITY_EXACTCONDITION     /**< exact condition number of (scaled) basis matrix (SCIP_Real) */
+   SCIP_LPSOLQUALITY_ESTIMCONDITION = 0,    /**< estimated condition number of (scaled) basis matrix (SCIP_Real) */
+   SCIP_LPSOLQUALITY_EXACTCONDITION = 1     /**< exact condition number of (scaled) basis matrix (SCIP_Real) */
 };
 typedef enum SCIP_LPSolQuality SCIP_LPSOLQUALITY;
 
