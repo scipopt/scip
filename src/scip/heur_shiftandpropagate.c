@@ -63,6 +63,8 @@
 
 #define EVENTHDLR_NAME         "eventhdlrshiftandpropagate"
 #define EVENTHDLR_DESC         "event handler to catch bound changes"
+#define EVENTTYPE_SHIFTANDPROPAGATE (SCIP_EVENTTYPE_BOUNDCHANGED | SCIP_EVENTTYPE_GBDCHANGED)
+
 
 /*
  * Data structures
@@ -1821,7 +1823,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
       eventdatas[c]->colpos = c;
 
-      SCIP_CALL( SCIPcatchVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, eventdatas[c], NULL) );
+      SCIP_CALL( SCIPcatchVarEvent(scip, var, EVENTTYPE_SHIFTANDPROPAGATE, eventhdlr, eventdatas[c], NULL) );
    }
 
    cutoff = FALSE;
@@ -2008,17 +2010,28 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
          /* backtrack to the parent of the current node */
          assert(SCIPgetProbingDepth(scip) >= 1);
          SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip) - 1) );
-         marksuspicious = TRUE;
+
+
+
 
          /* this assert should be always fulfilled because we run this heuristic at the root node only and do not
           * perform probing if nprobings is less than DEFAULT_PROPBREAKER (currently: 65000)
           */
          assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
 
-         /* if the variable were to be set to one of its bounds, repropagate by tightening this bound by 1.0
-          * into the direction of the other bound, if possible */
-         if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), origsolval) )
+         /* if the variable upper and lower bound are equal to the solution value to which we tried to fix the variable,
+          * we are trapped at an infeasible node and break; this can only happen due to an intermediate global bound change of the variable,
+          * I guess
+          */
+         if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), origsolval) && SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), origsolval) )
          {
+            cutoff = TRUE;
+            break;
+         }
+         else if( SCIPisFeasEQ(scip, SCIPvarGetLbLocal(var), origsolval) )
+         {
+            /* if the variable were to be set to one of its bounds, repropagate by tightening this bound by 1.0
+             * into the direction of the other bound, if possible */
             assert(SCIPisFeasGE(scip, SCIPvarGetUbLocal(var), origsolval + 1.0));
 
             ndomredsfound = 0;
@@ -2027,14 +2040,11 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
             SCIP_CALL( SCIPpropagateProbing(scip, heurdata->nproprounds, &cutoff, &ndomredsfound) );
 
             SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
-
-            /* if the tightened bound again leads to a cutoff, both subproblems are proven infeasible and the heuristic
-             * can be stopped */
-            if( cutoff )
-               break;
          }
          else if( SCIPisFeasEQ(scip, SCIPvarGetUbLocal(var), origsolval) )
          {
+            /* if the variable were to be set to one of its bounds, repropagate by tightening this bound by 1.0
+             * into the direction of the other bound, if possible */
             assert(SCIPisFeasLE(scip, SCIPvarGetLbLocal(var), origsolval - 1.0));
 
             ndomredsfound = 0;
@@ -2045,10 +2055,17 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
             SCIPstatistic( heurdata->ntotaldomredsfound += ndomredsfound );
 
-            /* if the tightened bound again leads to a cutoff, both subproblems are proven infeasible and the heuristic
-             * can be stopped */
-            if( cutoff )
-               break;
+         }
+         /* if the tightened bound again leads to a cutoff, both subproblems are proven infeasible and the heuristic
+          * can be stopped */
+         if( cutoff )
+         {
+            break;
+         }
+         else
+         {
+            /* since repropagation was successful, we indicate that this variable led to a cutoff in one direction */
+            marksuspicious = TRUE;
          }
       }
 
@@ -2218,7 +2235,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
       assert(var != NULL);
       assert(eventdatas[c] != NULL);
 
-      SCIP_CALL( SCIPdropVarEvent(scip, var, SCIP_EVENTTYPE_BOUNDCHANGED, eventhdlr, eventdatas[c], -1) );
+      SCIP_CALL( SCIPdropVarEvent(scip, var, EVENTTYPE_SHIFTANDPROPAGATE, eventhdlr, eventdatas[c], -1) );
       SCIPfreeBuffer(scip, &(eventdatas[c]));
    }
    SCIPfreeBufferArray(scip, &eventdatas);
