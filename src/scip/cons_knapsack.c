@@ -12403,6 +12403,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
    int oldnchgsides;
    int firstchange;
    int c;
+   SCIP_Bool newchanges;
 
    /* remember old preprocessing counters */
    cutoff = FALSE;
@@ -12413,6 +12414,8 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
    oldnchgcoefs = *nchgcoefs;
    oldnchgsides = *nchgsides;
    firstchange = INT_MAX;
+
+   newchanges = (nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgbds > 0 || nnewupgdconss > 0);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -12426,6 +12429,15 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
+      /* update data structures */
+      /* todo if UBTIGHTENED events were caught, we could move this block after the continue */
+      if( newchanges || *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds )
+      {
+         SCIP_CALL( applyFixings(scip, cons, &cutoff) );
+         if( cutoff )
+            break;
+      }
+
       /* force presolving the constraint in the initial round */
       if( nrounds == 0 )
          consdata->presolvedtiming = 0;
@@ -12435,14 +12447,6 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       SCIPdebugMessage("presolving knapsack constraint <%s>\n", SCIPconsGetName(cons));
       SCIPdebugPrintCons(scip, cons, NULL);
       consdata->presolvedtiming = presoltiming;
-
-      if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgbds > 0
-         || nnewupgdconss > 0 || *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds )
-      {
-         SCIP_CALL( applyFixings(scip, cons, &cutoff) );
-         if( cutoff )
-            break;
-      }
 
       thisnfixedvars = *nfixedvars;
       thisnchgbds = *nchgbds;
@@ -12477,7 +12481,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          if( cutoff )
             break;
 
-	 thisnfixedvars = *nfixedvars;
+         thisnfixedvars = *nfixedvars;
       }
 
       if( !SCIPconsIsModifiable(cons) )
@@ -12504,13 +12508,13 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
             if( SCIPconsIsDeleted(cons) )
                continue;
 
-	    /* remove again all fixed variables, if further fixings were found */
-	    if( *nfixedvars > thisnfixedvars )
-	    {
-	       SCIP_CALL( applyFixings(scip, cons, &cutoff) );
-	       if( cutoff )
-		  break;
-	    }
+            /* remove again all fixed variables, if further fixings were found */
+            if( *nfixedvars > thisnfixedvars )
+            {
+               SCIP_CALL(applyFixings(scip, cons, &cutoff));
+               if( cutoff )
+                  break;
+            }
          }
 
          /* tighten capacity and weights */
