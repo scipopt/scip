@@ -947,7 +947,7 @@ void collectBinaryCliqueData(
  *
  *  Because of the last implication x4 is redundant, because x1 >= 1 would also be fulfilled in the variable set, so we
  *  can reduce the set by x4.
- *  Also, the both other implications and x3 >= 1 (in the given variable set) all implie exactly x3 >= 1, so we tighten
+ *  Also, the both other implications and x3 >= 1 (in the given variable set) all imply exactly x3 >= 1, so we tighten
  *  the global lower bound of x3 to 1 and the set of variables gets redundant.
  */
 SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
