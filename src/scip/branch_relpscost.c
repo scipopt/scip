@@ -1168,9 +1168,6 @@ SCIP_RETCODE execRelpscost(
                            SCIP_BOUNDTYPE_UPPER, newubs[v]) );
                   }
                }
-
-               if( nbdchgs + nbdconflicts >= maxbdchgs )
-                  break; /* terminate initialization loop, because enough bound changes are performed */
             }
          }
 
@@ -1331,6 +1328,13 @@ SCIP_RETCODE execRelpscost(
             bestcand = initcands[0];
             bestisstrongbranch = FALSE;
          }
+
+         /* update lower bound of current node */
+         if( allcolsinlp && !exactsolve )
+         {
+            assert(SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
+            SCIP_CALL( SCIPupdateNodeLowerbound(scip, SCIPgetCurrentNode(scip), provedbound) );
+         }
       }
 
       /* apply domain reductions */
@@ -1356,8 +1360,6 @@ SCIP_RETCODE execRelpscost(
       SCIP_NODE* downchild;
       SCIP_NODE* upchild;
       SCIP_VAR* var;
-      SCIP_Real proveddown;
-      SCIP_Real provedup;
 
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nbranchcands);
@@ -1378,25 +1380,23 @@ SCIP_RETCODE execRelpscost(
       assert(downchild != NULL);
       assert(upchild != NULL);
 
-      /* calculate proved lower bounds for children */
-      proveddown = provedbound;
-      provedup = provedbound;
-      if( bestisstrongbranch )
+      /* update the lower bounds in the children */
+      if( bestisstrongbranch && allcolsinlp && !exactsolve )
       {
          if( bestsbdownvalid )
-            proveddown = MAX(provedbound, bestsbdown);
+         {
+            assert(SCIPisLT(scip, bestsbdown, SCIPgetCutoffbound(scip)));
+            SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, bestsbdown) );
+            assert(SCIPisGE(scip, SCIPgetNodeLowerbound(scip, downchild), provedbound));
+         }
          if( bestsbupvalid )
-            provedup = MAX(provedbound, bestsbup);
+         {
+            assert(SCIPisLT(scip, bestsbup, SCIPgetCutoffbound(scip)));
+            SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, bestsbup) );
+            assert(SCIPisGE(scip, SCIPgetNodeLowerbound(scip, upchild), provedbound));
+         }
       }
 
-      /* update the lower bounds in the children */
-      if( allcolsinlp && !exactsolve )
-      {
-         assert(SCIPisLT(scip, proveddown, SCIPgetCutoffbound(scip)));
-         assert(SCIPisLT(scip, provedup, SCIPgetCutoffbound(scip)));
-         SCIP_CALL( SCIPupdateNodeLowerbound(scip, downchild, proveddown) );
-         SCIP_CALL( SCIPupdateNodeLowerbound(scip, upchild, provedup) );
-      }
       SCIPdebugMessage(" -> down child's lowerbound: %g\n", SCIPnodeGetLowerbound(downchild));
       SCIPdebugMessage(" -> up child's lowerbound  : %g\n", SCIPnodeGetLowerbound(upchild));
 
