@@ -4538,7 +4538,7 @@ SCIP_RETCODE SCIPsolveCIP(
          }
          assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
-         /* if no branching was created, the node was not cut off, but it's lower bound is still smaller than
+         /* if no branching was created, the node was not cut off, but its lower bound is still smaller than
           * the cutoff bound, we have to branch on a non-fixed variable;
           * this can happen, if we want to solve exactly, the current solution was declared feasible by the
           * constraint enforcement, but in exact solution checking it was found out to be infeasible;
