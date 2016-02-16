@@ -18891,6 +18891,10 @@ SCIP_Real SCIPgetCutoffbound(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
+ *  @note using this method in the solving stage can lead to an erroneous SCIP solving status; in particular,
+ *        if a solution not respecting the cutoff bound was found before installing a cutoff bound which
+ *        renders the remaining problem infeasible, this solution may be reported as optimal
+ *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING

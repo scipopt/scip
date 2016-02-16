@@ -4727,9 +4727,6 @@ SCIP_RETCODE SCIPsolveCIP(
       }
       else
       {
-         assert(primal->nsols > 0 && SCIPsetIsFeasLE(set, SCIPsolGetObj(primal->sols[0], set, transprob, origprob),
-               SCIPprobInternObjval(transprob, origprob, set, SCIPprobGetObjlim(transprob, set))));
-
          /* switch status to OPTIMAL */
          stat->status = SCIP_STATUS_OPTIMAL;
       }

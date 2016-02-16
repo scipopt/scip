@@ -13640,8 +13640,6 @@ SCIP_RETCODE presolve(
          /* switch status to OPTIMAL */
          if( scip->primal->nlimsolsfound > 0 )
          {
-            assert(scip->primal->nsols > 0 && SCIPsetIsFeasLE(scip->set, SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob, scip->origprob),
-                  SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, SCIPprobGetObjlim(scip->transprob, scip->set))));
             scip->stat->status = SCIP_STATUS_OPTIMAL;
          }
          else /* switch status to INFEASIBLE */
@@ -38573,6 +38571,10 @@ SCIP_Real SCIPgetCutoffbound(
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @note using this method in the solving stage can lead to an erroneous SCIP solving status; in particular,
+ *        if a solution not respecting the cutoff bound was found before installing a cutoff bound which
+ *        renders the remaining problem infeasible, this solution may be reported as optimal
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
