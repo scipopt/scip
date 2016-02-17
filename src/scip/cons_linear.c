@@ -10992,7 +10992,7 @@ SCIP_RETCODE simplifyInequalities(
 
    feastol = SCIPfeastol(scip);
 
-   SCIPdebugMessage("starting simplification of coeffcients\n");
+   SCIPdebugMessage("starting simplification of coefficients\n");
    SCIPdebugPrintCons(scip, cons, NULL);
 
    /* get global activities */
@@ -11041,7 +11041,7 @@ SCIP_RETCODE simplifyInequalities(
    {
       v = 1;
 
-      while( SCIPisEQ(scip, side, vals[v]) )
+      while( v < nvars && SCIPisEQ(scip, side, vals[v]) )
       {
          /* if we have integer variable with "side"-coefficients but also with a lower bound greater than 0 we stop this
           * extra step, which might have worked
@@ -11053,8 +11053,12 @@ SCIP_RETCODE simplifyInequalities(
          }
 
          ++v;
-         assert(v < nvars);
       }
+
+      /* easy and quick fix: if all coefficients were equal to the side, we cannot apply further simplifications */
+      /* todo find numerically stable normalization conditions to scale this cons to have coefficients almost equal to 1 */
+      if( v == nvars )
+         return SCIP_OKAY;
 
       /* cannot work with continuous variables which have a big coefficient */
       if( v > 0 && SCIPvarGetType(vars[v - 1]) == SCIP_VARTYPE_CONTINUOUS )
