@@ -1952,6 +1952,7 @@ SCIP_RETCODE detectImpliedBounds(
    {
       SCIP_VAR** vars;
       SCIP_Bool* redundants;
+      SCIP_Bool glbinfeas;
 
       /* sort variables in increasing order of binary implications to gain speed later on */
       SCIPsortLongPtrRealRealBool(nbinimpls, (void**)bdchginfos, relaxedbds, bounds, boundtypes, v);
@@ -1973,7 +1974,14 @@ SCIP_RETCODE detectImpliedBounds(
       for( v = 0; v < nbdchginfos; ++v )
          vars[v] = SCIPbdchginfoGetVar(bdchginfos[v]);
 
-      SCIP_CALL( SCIPshrinkDisjunctiveVarSet(set->scip, vars, bounds, boundtypes, redundants, nbdchginfos, nredvars, nbdchgs, redundant, set->conf_fullshortenconflict) );
+      SCIP_CALL( SCIPshrinkDisjunctiveVarSet(set->scip, vars, bounds, boundtypes, redundants, nbdchginfos, nredvars,
+            nbdchgs, redundant, &glbinfeas, set->conf_fullshortenconflict) );
+
+      if( glbinfeas )
+      {
+         SCIPdebugMessage("conflict set (%p) led to global infeasibility\n", (void*) conflictset);
+         goto TERMINATE;
+      }
 
 #ifdef SCIP_DEBUG
       if( *nbdchgs > 0 )
@@ -2018,6 +2026,7 @@ SCIP_RETCODE detectImpliedBounds(
          conflictset->nbdchginfos = nbdchginfos;
       }
 
+     TERMINATE:
       SCIPsetFreeCleanBufferArray(set, &redundants);
       SCIPsetFreeBufferArray(set, &vars);
    }

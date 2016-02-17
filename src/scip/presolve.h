@@ -67,6 +67,7 @@ SCIP_RETCODE SCIPshrinkDisjunctiveVarSet(
                                               *   through this set of variables */
    SCIP_Bool*            setredundant,       /**< pointer to store if we found a global reduction on a variable which was part
                                               *   of the given set of variables, this makes this disjunction redundant */
+   SCIP_Bool*            glbinfeas,          /**< pointer to store if global infeasibility was detected */
    SCIP_Bool             fullshortening      /**< do we want to try the shortening procedure over the whole set (which might be expensive) */
    );
 
