@@ -14,10 +14,19 @@ parameters:
 - new parameter misc/transsolorig for transfering transformed solutions to the original space (default: true)
 - new "force" parameter in (root)redcost propagator to run the propagator also with active pricers
 - new parameter propagating/rootredcost/onlybinary to propagate root reduced costs of binary variables only
+- new parameter constraints/sos1/perfimplanalysis to perform an implication graph analysis to deduce variable fixings and
+  additional SOS1 constraints (this parameter replaces the old parameter constraints/sos1/updateconflpresol)
+- new parameter constraints/sos1/depthimplanalysis to limit the number of recursive calls of implication graph analysis
+- new parameter constraints/sos1/branchingrule to decide whether to use neighborhood, bipartite, or SOS1 branching
+  (this parameter replaces the old parameters constraints/sos1/neighbranch, constraints/sos1/bipbranch, and
+  constraints/sos1/sos1branch)
 
 performance improvements:
 - handle cutoffs in cons_indicator detected by infeasible inequalities
 - do not transfer solutions to original space, if SCIP is being freed
+- modified implication graph analysis of SOS1 constraint handler; a new component allows to deduce zero fixings of variables
+- made SOS1 constraint handler specific diving selection rule faster for the case that the SOS1 constraints do not overlap
+- improved disjunctive cuts by the 'monoidal cut strengthening' procedure of Balas and Jeroslow
 
 interface:
 - add SCIPcomputeHyperplaneThreePoints to compute a hyperplane containing three given 3-dimensional points
@@ -50,6 +59,8 @@ fixed bugs:
 - do not analyse an infeasible LP for conflicts during diving mode when LHS/RHS of rows were changed
 - fixed some problem with reoptimization when the problems are infeasible or have been solved in presolving
 - fixed bug in SOS1 constraint handler with inconsistent data structure after restart
+- fixed wrong handling of negated variables in bound tightening procedure of SOS1 constraint handler
+- fixed bug in simple fixing heuristic of SOS1 constraint handler
 - fixed wrong handling of loose variables in OBBT
 - fixed freeing of hash for binary variables
 - fixed endless loop in knapsack constraint handler when continuous variables change their types to binary during presolving
