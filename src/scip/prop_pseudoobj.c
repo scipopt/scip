@@ -1819,7 +1819,9 @@ SCIP_RETCODE addConflictBounds(
          SCIPdebugMessage("  add bound change <%s>[%g] >= <%g>\n", SCIPvarGetName(var), objval, loclb);
          SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
 
-         assert(SCIPisPositive(scip, (loclb - glblb) * objval));
+         /* hard comparison  is enough to make requiredpseudoobjval nonincreasing */
+         assert((loclb - glblb) * objval > 0.0);
+
          (*reqpseudoobjval) -= (loclb - glblb) * objval;
       }
    }
@@ -1838,7 +1840,9 @@ SCIP_RETCODE addConflictBounds(
          SCIPdebugMessage("  add bound change <%s>[%g] <= <%g>\n", SCIPvarGetName(var), objval, locub);
          SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
 
-         assert(SCIPisPositive(scip, (locub - glbub) * objval));
+         /* hard comparison  is enough to make requiredpseudoobjval nonincreasing */
+         assert((locub - glbub) * objval > 0.0);
+
          (*reqpseudoobjval) -= (locub - glbub) * objval;
       }
    }
@@ -2137,10 +2141,10 @@ SCIP_RETCODE resolvePropagation(
     *  - obj < 0 and local ub < global ub
     *
     * collect all variables which contribute positively to the pseudo objective value (minimum activity) until we
-    * reached the (adjusted) required minimum activity for the inference bound chnage
+    * reached the (adjusted) required minimum activity for the inference bound change
     */
 
-   /* first consider the binary variables */
+   /* first, consider the binary variables */
    if( nvars > 0 )
    {
       SCIP_OBJIMPLICS** minactimpls;
@@ -2158,7 +2162,7 @@ SCIP_RETCODE resolvePropagation(
       if( infinity )
       {
          /* if the required minimum activity is minus infinity, we have to add all variables which contribute the local
-          * prseudo objective activity
+          * pseudo objective activity
           */
 
          for( v = propdata->glbfirstnonfixed; v < nvars; ++v )
@@ -2200,7 +2204,7 @@ SCIP_RETCODE resolvePropagation(
    nvars = propdata->nobjintvars;
    assert(nvars == 0 || vars != NULL);
 
-   /* second consider the none binary variables */
+   /* second, consider the non-binary variables */
    for( v = 0; v < nvars && (infinity || SCIPisPositive(scip, reqpseudoobjval)); ++v )
    {
       var = vars[v];
@@ -2722,7 +2726,7 @@ SCIP_RETCODE propagateCutoffbound(
    if( SCIPisInfinity(scip, cutoffbound) )
       return SCIP_OKAY;
 
-   /* @note A new global pseudo objective value could be used to retrive global fixings. There is, however, no need to
+   /* @note A new global pseudo objective value could be used to retrieve global fixings. There is, however, no need to
     *       check if a new global pseudo objective value is available. This is the case since a new (better) global
     *       pseudo activity implicis that a global bound change was performed. That causes that the root node of the
     *       search tree get marked for repropagation. That will result in propagation call of the pseudo objective
@@ -3544,7 +3548,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
    if( !SCIPallowObjProp(scip) )
       return SCIP_OKAY;
 
-   /* check if enough new variable are added (due to column generatition to reinitialized the propgator data) */
+   /* check if enough new variable are added (due to column generation to reinitialized the propagator data) */
    if( !propdata->initialized || propdata->nnewvars > propdata->maxnewvars )
    {
       /* free current propdata data */
