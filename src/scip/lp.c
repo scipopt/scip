@@ -5796,9 +5796,9 @@ void SCIProwSort(
       if( !row->delaysort )
       {
          for( c = 1; c < row->nlpcols; ++c )
-            assert(row->cols[c]->index > row->cols[c-1]->index);
+            assert(row->cols[c]->index >= row->cols[c-1]->index);
          for( c = row->nlpcols + 1; c < row->len; ++c )
-            assert(row->cols[c]->index > row->cols[c-1]->index);
+            assert(row->cols[c]->index >= row->cols[c-1]->index);
       }
    }
 #endif
