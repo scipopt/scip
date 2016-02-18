@@ -1360,6 +1360,7 @@ SCIP_RETCODE execRelpscost(
       SCIP_NODE* downchild;
       SCIP_NODE* upchild;
       SCIP_VAR* var;
+      SCIP_Real val;
 
       assert(*result == SCIP_DIDNOTRUN);
       assert(0 <= bestcand && bestcand < nbranchcands);
@@ -1368,6 +1369,7 @@ SCIP_RETCODE execRelpscost(
       assert(!bestsbdowncutoff && !bestsbupcutoff);
 
       var = branchcands[bestcand];
+      val = branchcandssol[bestcand];
 
       /* perform the branching */
       SCIPdebugMessage(" -> %d (%d) cands, sel cand %d: var <%s> (sol=%g, down=%g (%+g), up=%g (%+g), sb=%u, psc=%g/%g [%g])\n",
@@ -1376,7 +1378,7 @@ SCIP_RETCODE execRelpscost(
          SCIPgetVarPseudocostCurrentRun(scip, var, SCIP_BRANCHDIR_DOWNWARDS),
          SCIPgetVarPseudocostCurrentRun(scip, var, SCIP_BRANCHDIR_UPWARDS),
          SCIPgetVarPseudocostScoreCurrentRun(scip, var, branchcandssol[bestcand]));
-      SCIP_CALL( SCIPbranchVar(scip, var, &downchild, NULL, &upchild) );
+      SCIP_CALL( SCIPbranchVarVal(scip, var, val, &downchild, NULL, &upchild) );
       assert(downchild != NULL);
       assert(upchild != NULL);
 
