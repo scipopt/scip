@@ -532,7 +532,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpPscost)
    }
    assert(0 <= bestcand && bestcand < nlpcands);
    assert(!SCIPisFeasIntegral(scip, lpcandssol[bestcand]));
-   assert(!SCIPisFeasIntegral(scip, SCIPvarGetSol(bestcand, TRUE)));
+   assert(!SCIPisFeasIntegral(scip, SCIPvarGetSol(lpcands[bestcand], TRUE)));
 
    /* perform the branching */
    SCIPdebugMessage(" -> %d cands, selected cand %d: variable <%s> (solval=%g, score=%g)\n",
