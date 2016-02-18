@@ -11620,14 +11620,24 @@ SCIP_RETCODE SCIPvarGetProbvarBinary(
             {
                /* @note due to fixations, a multi-aggregation can have a constant of zero and a negative scalar or even
                 *       a scalar in absolute value unequal to one, in this case this aggregation variable needs to be
-                *       fixed to zero, but should be done by another enforcement; so not depending on the scalar, we
-                *       will return the aggregation variable
+                *       fixed to zero, but this should be done by another enforcement; so not depending on the scalar,
+                *       we will return the aggregated variable;
                 */
                if( !EPSEQ(REALABS((*var)->data.multaggr.scalars[0]), 1.0, 1e-06) )
                   return SCIP_OKAY;
 
-               assert( EPSZ((*var)->data.multaggr.constant, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) );
-               assert( EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
+               /* @note it may also happen that the constant is larger than 1 or smaller than 0, in that case the
+                *       aggregation variable needs to be fixed to one, but this should be done by another enforcement;
+                *       so if this is the case, we will return the aggregated variable
+                */
+               assert(EPSZ((*var)->data.multaggr.constant, 1e-06) || EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06)
+                  || EPSZ((*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0], 1e-06)
+                  || EPSEQ((*var)->data.multaggr.constant + (*var)->data.multaggr.scalars[0], 1.0, 1e-06));
+
+               if( !EPSZ((*var)->data.multaggr.constant, 1e-06) && !EPSEQ((*var)->data.multaggr.constant, 1.0, 1e-06) )
+                  return SCIP_OKAY;
+
+               assert(EPSEQ((*var)->data.multaggr.scalars[0], 1.0, 1e-06) || EPSEQ((*var)->data.multaggr.scalars[0], -1.0, 1e-06));
 
                if( EPSZ((*var)->data.multaggr.constant, 1e-06) )
                {
