@@ -74,6 +74,7 @@ struct SCIP_HeurData
    SCIP_Longint          nwaitingnodes;      /**< number of nodes without incumbent change heuristic should wait    */
    unsigned int          nfailures;          /**< number of failures since last successful call                     */
    SCIP_Longint          nextnodenumber;     /**< number of nodes at which lpface should be called the next time */
+   SCIP_Real             lastlpobjinfeas;    /**< last LP objective where the sub-MIP was run to proven infeasibility */
    SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed     */
    SCIP_Real             minimprove;         /**< factor by which Lpface should at least improve the incumbent   */
    SCIP_Real             nodelimit;          /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
@@ -85,10 +86,11 @@ struct SCIP_HeurData
    SCIP_Bool             dualbasisequations; /**< should the dually nonbasic rows be turned into equations?        */
    SCIP_Bool             ignoreobjective;    /**< should the objective function of the original problem be ignored? */
 
-   SCIP_STATUS           submipstatus;
-   SCIP_Longint          submipnlpiters;
-   SCIP_Real             submippresoltime;
-   int                   nvarsfixed;
+
+   SCIP_STATUS           submipstatus;       /**< return status of the sub-MIP */
+   SCIP_Longint          submipnlpiters;     /**< number of LP iterations of the sub-MIP */
+   SCIP_Real             submippresoltime;   /**< time required to presolve the sub-MIP */
+   int                   nvarsfixed;         /**< the number of fixed variables by the heuristic */
 };
 
 /*
@@ -426,6 +428,25 @@ SCIP_DECL_HEURINIT(heurInitLpface)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_HEURINITSOL(heurInitsolLpface)
+{  /*lint --e{715}*/
+   SCIP_HEURDATA* heurdata;
+
+   assert(heur != NULL);
+   assert(scip != NULL);
+
+   /* get heuristic's data */
+   heurdata = SCIPheurGetData(heur);
+   assert(heurdata != NULL);
+
+   /* reset the last infeasible objective because it lives in transformed space and must be invalidated at every restart */
+   heurdata->lastlpobjinfeas = -SCIPinfinity(scip);
+
+   return SCIP_OKAY;
+}
+
 /** deinitialization method of primal heuristic (called after problem was transformed) */
 static
 SCIP_DECL_HEUREXIT(heurExitLpface)
@@ -456,13 +477,15 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    SCIP_CONS* origobjcons;
    SCIP* subscip;                            /* the subproblem created by lpface                 */
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
-   SCIP_EVENTHDLR*       eventhdlr;          /* event handler for LP events                     */
+   SCIP_EVENTHDLR* eventhdlr;                /* event handler for LP events                     */
 
    SCIP_VAR** vars;                          /* original problem's variables                        */
    SCIP_VAR** subvars;                       /* subproblem's variables                              */
 
    SCIP_Real memorylimit;                    /* memory limit for the subproblem                     */
    SCIP_Real timelimit;                      /* time limit for the subproblem                       */
+   SCIP_Real focusnodelb;
+   SCIP_Real rootlb;
    SCIP_Bool success;
 
    SCIP_Longint nstallnodes;                 /* node limit for the subproblem                       */
@@ -484,9 +507,6 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
 
    *result = SCIP_DELAYED;
 
-   /* TODO put some nice limits to prevent the heuristic from running too often, eg only along nodes for which
-    * branching decisions could not improve the dual bound since x levels of depth
-    */
 
    /* we skip infeasible nodes */
    if( nodeinfeasible )
@@ -500,6 +520,60 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    if( SCIPgetLPSolstat(scip) != SCIP_LPSOLSTAT_OPTIMAL )
       return SCIP_OKAY;
 
+
+   assert(SCIPgetCurrentNode(scip) != NULL);
+   focusnodelb = SCIPgetNodeLowerbound(scip, SCIPgetCurrentNode(scip));
+   assert(SCIPisGE(scip, focusnodelb, SCIPgetLPObjval(scip)));
+
+   /* do not run if the current focus node already has a lower bound higher than the LP value at the node, maybe due to strong branching */
+   if( SCIPisLT(scip, SCIPgetLPObjval(scip), focusnodelb) )
+      return SCIP_OKAY;
+
+   /* only run at lower bound defining nodes */
+   if( SCIPisLT(scip, SCIPgetLowerbound(scip), focusnodelb) )
+      return SCIP_OKAY;
+
+   /* only run if lower bound has increased since last LP objective where the sub-MIP was solved to infeasibility */
+   if( SCIPisEQ(scip, heurdata->lastlpobjinfeas, focusnodelb) )
+      return SCIP_OKAY;
+
+   /* make the reasoning stronger if the objective value must be integral */
+   if( SCIPisObjIntegral(scip) && (!SCIPisIntegral(scip, focusnodelb) || SCIPisLT(scip, focusnodelb, heurdata->lastlpobjinfeas + 1.0)) )
+      return SCIP_OKAY;
+
+   rootlb = SCIPgetLowerboundRoot(scip);
+   assert(SCIPisLE(scip, rootlb, focusnodelb));
+   /* TODO put some nice limits to prevent the heuristic from running too often, eg only along nodes for which
+    * branching decisions could not improve the dual bound since x levels of depth
+    */
+
+   /* if the lower bound hasn't changed since the root node, we want to run anyway, otherwise, we compare with the last,
+    * lower bound defining node that we keep up to date in the heuristic. if it stayed constant since the last call, we run */
+   if( SCIPisLT(scip, rootlb, focusnodelb) )
+   {
+      SCIP_NODE* parent;
+      int nonimprovingpathlen = 0; /* the length of the current path (in edges) along which the lower bound stayed the same */
+
+      parent = SCIPnodeGetParent(SCIPgetCurrentNode(scip));
+      /* count the path length along which the dual bound has not changed */
+      while( SCIPisEQ(scip, SCIPnodeGetLowerbound(parent), focusnodelb) && nonimprovingpathlen < SCIPheurGetFreq(heur))
+      {
+         ++nonimprovingpathlen;
+         /* we cannot hit the root node because the root lower bound was strictly smaller */
+         assert(SCIPnodeGetParent(parent) != NULL);
+         parent = SCIPnodeGetParent(parent);
+      }
+
+      /* we return if the nonimproving path is too short measured by the heuristic frequency */
+      if( nonimprovingpathlen < SCIPheurGetFreq(heur) )
+      {
+         /* we do not delay the heuristic if the path has length zero, otherwise it may be called at children so that the path length is sufficient */
+         if( nonimprovingpathlen == 0 )
+            *result = SCIP_DIDNOTRUN;
+
+         return SCIP_OKAY;
+      }
+   }
 
    *result = SCIP_DIDNOTRUN;
 
@@ -687,7 +761,7 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    nobjvars = 0;
 #endif
 
-   SCIP_CALL( SCIPcreateConsLinear(subscip, &origobjcons, "objfacet_of_origscip", 0, NULL, NULL, -SCIPinfinity(subscip), SCIPgetLPObjval(scip),
+   SCIP_CALL( SCIPcreateConsLinear(subscip, &origobjcons, "objfacet_of_origscip", 0, NULL, NULL, -SCIPinfinity(subscip), focusnodelb,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    for( i = 0; i < nvars; ++i)
@@ -742,6 +816,13 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
    heurdata->submipnlpiters = SCIPgetNLPIterations(subscip);
    heurdata->submippresoltime = SCIPgetPresolvingTime(subscip);
    heurdata->submipstatus = SCIPgetStatus(subscip);
+
+   /* store the focus node lower bound as infeasible to avoid running on this face again */
+   /* TODO actually, we would like to continue the search that we began in this run if the sub-MIP solve reached some limit */
+   if( heurdata->submipstatus == SCIP_STATUS_INFEASIBLE )
+   {
+      heurdata->lastlpobjinfeas = focusnodelb;
+   }
 
    /* check, whether a solution was found */
    if( SCIPgetNSols(subscip) > 0 )
@@ -809,6 +890,7 @@ SCIP_RETCODE SCIPincludeHeurLpface(
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopyLpface) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeLpface) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitLpface) );
+   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolLpface) );
    SCIP_CALL( SCIPsetHeurExit(scip, heur, heurExitLpface) );
 
    /* add lpface primal heuristic parameters */
