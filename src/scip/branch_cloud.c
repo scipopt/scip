@@ -591,7 +591,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpCloud)
             counter, bestcand, SCIPvarGetName(var), bestdown, bestup, bestscore);
       }
 
-      assert(!SCIPisFeasIntegral(scip, SCIPvarGetSol(bestcand, TRUE)));
+      assert(!SCIPisFeasIntegral(scip, SCIPvarGetSol(lpcands[bestcand], TRUE)));
 
       SCIP_CALL( SCIPbranchVar(scip, var, &downchild, NULL, &upchild) );
       assert(downchild != NULL);

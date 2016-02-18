@@ -586,7 +586,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
       SCIP_NODE* downchild;
       SCIP_NODE* upchild;
       SCIP_VAR* var;
-      SCIP_real val;
+      SCIP_Real val;
       SCIP_Bool allcolsinlp;
       SCIP_Bool exactsolve;
 
