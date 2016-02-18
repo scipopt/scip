@@ -987,7 +987,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpMultAggr)
             assert(*result == SCIP_DIDNOTRUN);
             assert(SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
 
-            SCIP_CALL( SCIPbranchVar(scip, bestcand, &downchild, NULL, &upchild) );
+            SCIP_CALL( SCIPbranchVarVal(scip, bestcand, bestsol, &downchild, NULL, &upchild) );
 
             assert(downchild != NULL);
             assert(upchild != NULL);

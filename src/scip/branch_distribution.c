@@ -1238,7 +1238,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpDistribution)
       SCIPdebugMessage("  Candidate %s has score down %g and up %g \n", SCIPvarGetName(lpcand), downscore, upscore);
       SCIPdebugMessage("  Best candidate: %s, score %g, direction %d\n", SCIPvarGetName(bestcand), bestscore, bestbranchdir);
    }
-
+   assert(!SCIPisFeasIntegral(scip, SCIPvarGetSol(bestcand, TRUE)));
    assert(bestbranchdir == SCIP_BRANCHDIR_DOWNWARDS || bestbranchdir == SCIP_BRANCHDIR_UPWARDS);
    assert(bestcand != NULL);
 

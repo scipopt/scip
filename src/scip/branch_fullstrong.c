@@ -586,6 +586,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
       SCIP_NODE* downchild;
       SCIP_NODE* upchild;
       SCIP_VAR* var;
+      SCIP_real val;
       SCIP_Bool allcolsinlp;
       SCIP_Bool exactsolve;
 
@@ -594,11 +595,12 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpFullstrong)
       assert(SCIPisLT(scip, provedbound, SCIPgetCutoffbound(scip)));
 
       var = lpcands[bestcand];
+      val = lpcandssol[bestcand];
 
       /* perform the branching */
       SCIPdebugMessage(" -> %d candidates, selected candidate %d: variable <%s> (solval=%g, down=%g, up=%g, score=%g)\n",
          nlpcands, bestcand, SCIPvarGetName(var), lpcandssol[bestcand], bestdown, bestup, bestscore);
-      SCIP_CALL( SCIPbranchVar(scip, var, &downchild, NULL, &upchild) );
+      SCIP_CALL( SCIPbranchVarVal(scip, var, val, &downchild, NULL, &upchild) );
       assert(downchild != NULL);
       assert(upchild != NULL);
 
