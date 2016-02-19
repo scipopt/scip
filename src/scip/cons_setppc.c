@@ -2855,7 +2855,7 @@ SCIP_RETCODE collectCliqueData(
          assert(var != NULL);
 
          /* don't remember fixed vars */
-         if( SCIPvarGetLbLocal(var) > 0.5 && SCIPvarGetUbLocal(var) < 0.5 )
+         if( SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5 )
             continue;
 
 	 /* only collect active or negated active varibels */
