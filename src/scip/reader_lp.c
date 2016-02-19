@@ -3226,10 +3226,13 @@ void checkVarnames(
    int                   nvars               /**< number of variables */
    )
 {
+   SCIP_Bool printwarning;
    int v;
 
    assert(scip != NULL);
    assert(vars != NULL || nvars == 0);
+
+   printwarning = TRUE;
 
    /* check if the variable names are not to long */
    for( v = 0; v < nvars; ++v )
@@ -3239,6 +3242,15 @@ void checkVarnames(
          SCIPwarningMessage(scip, "there is a variable name which has to be cut down to %d characters; LP might be corrupted\n", 
             LP_MAX_NAMELEN - 1);
          return;
+      }
+
+      /* check if variable name starts with a digit */
+      if( printwarning && isdigit((unsigned char)SCIPvarGetName(vars[v])[0]) ) /*lint !e613*/
+      {
+         SCIPwarningMessage(scip, "violation of LP format - a variable name starts with a digit; " \
+            "it is not possible to read the generated LP file with SCIP; " \
+            "use write/genproblem or write/gentransproblem for generic variable names\n");
+         printwarning = FALSE;
       }
    }
 }
@@ -3256,9 +3268,12 @@ void checkConsnames(
    SCIP_CONS* cons;
    SCIP_CONSHDLR* conshdlr;
    const char* conshdlrname;
+   SCIP_Bool printwarning;
 
    assert( scip != NULL );
    assert( conss != NULL || nconss == 0 );
+
+   printwarning = TRUE;
 
    for( c = 0; c < nconss; ++c )
    {
@@ -3294,6 +3309,15 @@ void checkConsnames(
       {
          SCIPwarningMessage(scip, "there is a constraint name which has to be cut down to %d characters;\n", LP_MAX_NAMELEN - 1);
          return;
+      }
+
+      /* check if constraint name starts with a digit */
+      if( printwarning && isdigit((unsigned char)SCIPconsGetName(cons)[0]) )
+      {
+         SCIPwarningMessage(scip, "violation of LP format - a constraint name starts with a digit; " \
+            "it is not possible to read the generated LP file with SCIP; " \
+            "use write/genproblem or write/gentransproblem for generic variable names\n");
+         printwarning = FALSE;
       }
    }
 }
