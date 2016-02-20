@@ -4,6 +4,7 @@
 # exclude patterns (uncomment them if you want to use them):
 *.[oa]
 *.pyc
+*.so
 *~
 \#*
 bin/
@@ -38,3 +39,8 @@ unittests/check/results
 unittests/check/locks
 unittests/check/evalcheck.sh
 unittests/check/getlastprob.awk
+interfaces/python/.cache/
+interfaces/python/build/
+interfaces/python/include/
+interfaces/python/pyscipopt/scip.c
+/interfaces/python/tests/check
