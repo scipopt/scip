@@ -5540,14 +5540,18 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
    int ntightened;
 
    assert(scip != NULL);
-   assert(vars != NULL);
-   assert(nvars > 0);
-   assert(weights != NULL);
    assert(capacity >= 0);
    assert(cutoff != NULL);
    assert(ncuts != NULL);
 
    *cutoff = FALSE;
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   assert(vars != NULL);
+   assert(nvars > 0);
+   assert(weights != NULL);
 
    /* increase age of constraint (age is reset to zero, if a cut was found) */
    if( cons != NULL )
