@@ -51,6 +51,7 @@ fixed bugs:
 - fixed issue with infinite values when checking cuts for redundancy
 - fixed bug during the computation of branching points for continuous variables which are almost fixed to +/- SCIPinfinity()
 - fixed library problems on Windows operating systems
+- fixed bug during coefficient tightening in varbound constraint handler
 
 SCIP version 3.2.0
 ==================
