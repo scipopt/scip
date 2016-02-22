@@ -52,6 +52,8 @@ fixed bugs:
 - fixed bug during the computation of branching points for continuous variables which are almost fixed to +/- SCIPinfinity()
 - fixed library problems on Windows operating systems
 - fixed bug during coefficient tightening in varbound constraint handler
+- treated the case of integer variables as intermediate variables in the process of obtaining the active variable for a
+  given binary variable
 
 SCIP version 3.2.0
 ==================
