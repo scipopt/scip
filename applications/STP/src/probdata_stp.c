@@ -2224,10 +2224,13 @@ SCIP_RETCODE SCIPprobdataCreate(
       {
          SCIP_CALL( SCIPdualAscentPcStp(scip, graph, NULL, &lpobjval, TRUE, 1) );
       }
+#if 0
       else if( graph->stp_type == STP_UNDIRECTED )
       {
+
          SCIP_CALL( SCIPdualAscentAddCutsStp(scip, graph, 10) );
       }
+#endif
       else
       {
          SCIP_CALL( SCIPdualAscentStp(scip, graph, NULL, &lpobjval, TRUE, NULL, NULL, NULL, graph->source[0], 1, NULL, NULL) );
