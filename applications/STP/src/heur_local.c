@@ -51,6 +51,7 @@
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
 #define DEFAULT_DURINGROOT    TRUE
+#define DEFAULT_MAXFREQLOC    FALSE
 #define DEFAULT_MAXNBESTSOLS  6
 #define DEFAULT_NBESTSOLS     3
 
@@ -65,6 +66,7 @@ struct SCIP_HeurData
    int                   maxnsols;           /**< maximal number of best solutions to improve */
    int                   nbestsols;          /**< number of best solutions to improve */
    int*                  lastsolindices;     /**< indices of a number of best solutions already tried */
+   SCIP_Bool             maxfreq;            /**< should the heuristic be called with maximum frequency? */
    SCIP_Bool             duringroot;         /**< should the heuristic be called during the root node? */
 };
 
@@ -406,8 +408,9 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
       }
 
       i = 0;
-      newnode = 0;
+      l = 0;
       w = NULL;
+      newnode = 0;
 
       for( ;; )
       {
@@ -426,7 +429,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                if( Is_pterm(graph->term[i]) )
                {
                   // printf("%d- prize: %f ....%d %d",i, graph->prize[i], graph->tail[insert[0]], graph->head[insert[0]]);
-                  printf("ADDED VERTEX \n");
+                  SCIPdebugMessage("ADDED VERTEX \n");
                   v = &nodes[i];
 
                   SCIPlinkcuttreeLink(v, &nodes[graph->head[insert[0]]], insert[0]);
@@ -435,11 +438,10 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                   steinertree[i] = TRUE;
                   newnverts++;
                }
-               insertcount = 0;
             }
 
             /* if there are at least two edges connecting node i and the current tree, start the insertion process */
-            if( insertcount > 1 && !mw )
+            if( insertcount > 1 && mw == FALSE )
             {
                /* the node to insert */
                v = &nodes[i];
@@ -508,7 +510,6 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                      for( e = graph->outbeg[l]; e != EAT_LAST; e = graph->oeat[e] )
                         if( best_result[e] == CONNECT || best_result[flipedge(e)] == CONNECT )
                            printf("%d connect to %d %d \n", l, graph->tail[l], graph->head[l]);
-		     printf("2222 (n: %d) minfound: %d of cost %f orgcost %f\n", insertcount, l, graph->prize[l], graph->prize[i]);
 		     steinertree[l] = FALSE;
 		     break;
 		  }
@@ -536,7 +537,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                      newnode = i;
                      steinertree[i] = TRUE;
                      newnverts++;
-                     printf("ADDED VERTEX \n");
+                     SCIPdebugMessage("ADDED VERTEX \n");
                   }
                }
 	    }
@@ -1997,7 +1998,7 @@ SCIP_RETCODE extendSteinerTreePcMw(
 		  {
                      stvertex[i] = TRUE;
                      newnverts++;
-		     printf("add terminal  %d  %f < %f \n\n", i, graph->cost[e], graph->prize[i]);
+		     SCIPdebugMessage("add terminal  %d  %f < %f \n\n", i, graph->cost[e], graph->prize[i]);
 		     break;
 		  }
 	       }
@@ -2016,7 +2017,7 @@ SCIP_RETCODE extendSteinerTreePcMw(
 		  {
                      stvertex[i] = TRUE;
                      newnverts++;
-		     printf("add terminal %d  %f head %d:  \n\n", i, graph->prize[i], graph->head[e]);
+		     SCIPdebugMessage("add terminal %d  %f head %d:  \n\n", i, graph->prize[i], graph->head[e]);
 		     break;
 		  }
 	       }
@@ -2043,12 +2044,11 @@ SCIP_RETCODE extendSteinerTreePcMw(
                   {
                      stvertex[k] = TRUE;
                      sum += graph->prize[k];
-                     printf("add vertex %d (vbase: %d, cost: %f \n", k, i, graph->prize[k]);
+                     SCIPdebugMessage("add vertex %d (vbase: %d, cost: %f \n", k, i, graph->prize[k]);
 
                      newnverts++;
                   }
                }
-               printf("profit: %f head: %d \n \n", sum, i);
             }
          }
       }
@@ -2060,7 +2060,7 @@ SCIP_RETCODE extendSteinerTreePcMw(
    /* have vertices been added? */
    if( *adds > 0  )
    {
-      printf("\n vertices added! \n");
+      SCIPdebugMessage("\n vertices added! \n");
       for( e = 0; e < nedges; e++ )
          stedge[e] = UNKNOWN;
       SCIP_CALL( SCIPheurPrunePCSteinerTree(scip, graph, graph->cost, stedge, stvertex) );
@@ -2153,13 +2153,13 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    assert(graph != NULL);
 
    *result = SCIP_DIDNOTRUN;
-#if 1
-   /* the local heuristics may not work correctly for problems other than undirected STPs */
+
+   /* the local heuristics may not work correctly for several problem variants*/
    if( graph->stp_type != STP_UNDIRECTED && graph->stp_type != STP_GRID && graph->stp_type != STP_OBSTACLES_GRID &&
       graph->stp_type != STP_PRIZE_COLLECTING && graph->stp_type != STP_ROOTED_PRIZE_COLLECTING && graph->stp_type != GSTP
       && graph->stp_type != STP_MAX_NODE_WEIGHT )
       return SCIP_OKAY;
-#endif
+
    /* don't run local in a Subscip */
    if( SCIPgetSubscipDepth(scip) > 0 )
       return SCIP_OKAY;
@@ -2168,10 +2168,10 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
    if( SCIPgetBestSol(scip) == NULL )
       return SCIP_OKAY;
 
-   nsols = SCIPgetNSols(scip);
-   nedges = graph->edges;
    root = graph->source[0];
    sols = SCIPgetSols(scip);
+   nsols = SCIPgetNSols(scip);
+   nedges = graph->edges;
 
    assert(heurdata->maxnsols >= 0);
 
@@ -2196,8 +2196,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
 
 
-   if( 0 )
-   {
+#if 0
 
 
 
@@ -2214,7 +2213,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       fclose(fptr);
 #endif
 
-#if 1 //THE USUAL STUFF
+#if 1
       fptr=fopen("redStats.txt","a");
       if(fptr==NULL){
          printf("Error!");
@@ -2227,7 +2226,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       }
       else if(  graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
       {
-//fprintf(fptr,"%d    &   %d  \n", (graph->knots - graph->terms),  ((graph->edges) / 2 - 3 * (graph->terms - 1)));
+          //fprintf(fptr,"%d    &   %d  \n", (graph->knots - graph->terms),  ((graph->edges) / 2 - 3 * (graph->terms - 1)));
           //   graph->norgmodeledges / 2, SCIPgetReadingTime(scip));
            fprintf(fptr,"%d       %d      %d      %d     %f  \n", (graph->knots - graph->terms), graph->norgmodelknots, ((graph->edges) / 2 - 3 * (graph->terms - 1)),
              graph->norgmodeledges / 2, SCIPgetReadingTime(scip));
@@ -2259,14 +2258,14 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       fclose(fptr);
 #endif
 
-   }
+#endif
 
 
    newsol = sols[v];
    lastsolindices[v] = SCIPsolGetIndex(newsol);
 
    /* solution not good enough? */
-   if( v > heurdata->nbestsols && graph->stp_type != STP_MAX_NODE_WEIGHT )
+   if( (v > heurdata->nbestsols && !heurdata->maxfreq)  && graph->stp_type != STP_MAX_NODE_WEIGHT )
       return SCIP_OKAY;
 
    /* has the new solution been found by this very heuristic? */
@@ -2275,17 +2274,17 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 
    *result = SCIP_DIDNOTFIND;
 
-   nvars = SCIPprobdataGetNVars(scip);
    vars = SCIPprobdataGetVars(scip);
-
+   nvars = SCIPprobdataGetNVars(scip);
    xval = SCIPprobdataGetXval(scip, newsol);
 
    if( vars == NULL )
       return SCIP_OKAY;
+
    assert(vars != NULL);
    assert(xval != NULL);
 
-   /* for PC variants test whether solution is trivial */
+   /* for PC variants: test whether solution is trivial */
    if( graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
    {
       for( e = graph->outbeg[root]; e != EAT_LAST; e = graph->oeat[e] )
@@ -2295,11 +2294,13 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
          return SCIP_OKAY;
    }
 
+   /* allocate memory */
    SCIP_CALL( SCIPallocBufferArray(scip, &cost, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &costrev, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &results, nedges) );
    SCIP_CALL( SCIPallocBufferArray(scip, &nval, nvars) );
 
+   /* set solution array */
    for( e = 0; e < nedges; e++ )
    {
       if( SCIPisEQ(scip, xval[e], 1.0) )
@@ -2395,7 +2396,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
 	       heurdata->nfails = 0;
 	       heurdata->nbestsols++;
 	    }
-            printf("success in local: old: %f new: %f \n", (SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip)), pobj);
+            SCIPdebugMessage("success in local: old: %f new: %f \n", (SCIPgetSolOrigObj(scip, bestsol) - SCIPprobdataGetOffset(scip)), pobj);
 	 }
       }
    }
@@ -2406,7 +2407,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       if( heurdata->nbestsols > 1 && heurdata->nfails > 1 && graph->stp_type != STP_MAX_NODE_WEIGHT )
          heurdata->nbestsols--;
 
-      printf("fail! %d \n", heurdata->nbestsols);
+      SCIPdebugMessage("fail! %d \n", heurdata->nbestsols);
    }
 
    SCIPfreeBufferArray(scip, &nval);
@@ -2435,13 +2436,7 @@ SCIP_RETCODE SCIPincludeHeurLocal(
    SCIP_CALL( SCIPallocMemory(scip, &heurdata) );
 
    heurdata->nfails = 1;
-   heurdata->maxnsols = DEFAULT_MAXNBESTSOLS;
    heurdata->nbestsols = DEFAULT_NBESTSOLS;
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->lastsolindices), heurdata->maxnsols) );
-
-   for( i = 0; i < heurdata->maxnsols; i++ )
-      heurdata->lastsolindices[i] = -1;
 
    /* include primal heuristic */
    SCIP_CALL( SCIPincludeHeurBasic(scip, &heur,
@@ -2457,7 +2452,20 @@ SCIP_RETCODE SCIPincludeHeurLocal(
    /* add local primal heuristic parameters */
    SCIP_CALL( SCIPaddBoolParam(scip, "stp/duringroot",
          "should the heuristic be called during the root node?",
-         &heurdata->duringroot, TRUE, DEFAULT_DURINGROOT, NULL, NULL) );
+         &heurdata->duringroot, FALSE, DEFAULT_DURINGROOT, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/maxfreq",
+         "should the heuristic be executed at maximum frequeny?",
+         &heurdata->maxfreq, FALSE, DEFAULT_MAXFREQLOC, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/maxnsols",
+         "maximum number of best solutions to improve",
+         &heurdata->maxnsols, FALSE, DEFAULT_MAXNBESTSOLS, 1, 50, NULL, NULL) );
+
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(heurdata->lastsolindices), heurdata->maxnsols) );
+
+   for( i = 0; i < heurdata->maxnsols; i++ )
+      heurdata->lastsolindices[i] = -1;
 
    return SCIP_OKAY;
 }

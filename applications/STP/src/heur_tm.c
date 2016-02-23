@@ -111,7 +111,7 @@ SCIP_DECL_PARAMCHGD(paramChgdRandomseed)
 }
 
 
-#if 1
+#if 0
 /** for debug purposes only */
 static
 SCIP_RETCODE printGraph(
@@ -405,8 +405,8 @@ SCIP_RETCODE SCIPheurPruneSteinerTree(
       g->mark[i] = connected[i];
    }
 
-   //@todo!!! remove hack
-   if( g->stp_type == STP_DIRECTED &&  j < g->terms )
+   /* @todo_ remove j < g->terms and fix */
+   if( g->stp_type == STP_DIRECTED && j < g->terms )
    {
       for( i = 0 ; i < g->edges; i++ )
          result[i] = CONNECT;
@@ -2122,7 +2122,7 @@ SCIP_RETCODE SCIPheurComputeSteinerTree(
 
          SCIPdebugMessage(" Obj=%.12e\n", obj);
 
-         if( SCIPisLT(scip, obj, min) && (graph->stp_type != STP_DEG_CONS || solfound) && !SCIPisStopped(scip) )
+         if( SCIPisLT(scip, obj, min) && (graph->stp_type != STP_DEG_CONS || solfound) && !SCIPisStopped(scip) && r < runs )
          {
             if( graph->stp_type != STP_HOP_CONS || edgecount <= graph->hoplimit )
             {

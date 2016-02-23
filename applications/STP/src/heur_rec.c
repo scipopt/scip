@@ -51,6 +51,7 @@
 #define HEUR_TIMING           (SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)
 #define HEUR_USESSUBSCIP      TRUE           /**< does the heuristic use a secondary SCIP instance?                                 */
 
+#define DEFAULT_MAXFREQREC     FALSE         /**< executions of the rec heuristic at maximum frequency?                             */
 #define DEFAULT_MAXNSOLS       50            /**< maximum number of (good) solutions be regarded in the subproblem                  */
 #define DEFAULT_NUSEDSOLS      4             /**< number of solutions that will be taken into account                               */
 #define DEFAULT_RANDSEED       0             /**< random seed                                                                       */
@@ -81,6 +82,7 @@ struct SCIP_HeurData
    int                   nwaitingsols;       /**< number of new solutions before executing the heuristic again      */
    int                   nfailures;          /**< number of failures since last successful call                     */
    unsigned int          randseed;           /**< seed value for random number generator                            */
+   SCIP_Bool             maxfreq;            /**< should the heuristic be called at maximum frequency?              */
 };
 
 
@@ -848,6 +850,8 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    {
       if( heurdata->ncalls == 0 )
 	 i = 0;
+      else if( heurdata->maxfreq )
+	 i = 1;
       else if( probtype == STP_ROOTED_PRIZE_COLLECTING || probtype == STP_DEG_CONS )
          i = MIN(heurdata->nwaitingsols, 2 * heurdata->nfailures);
       else
@@ -858,9 +862,12 @@ SCIP_DECL_HEUREXEC(heurExecRec)
    }
    else
    {
-      i = MIN(heurdata->nwaitingsols, heurdata->nfailures);
-      if( nsols <= heurdata->nlastsols + i
-         && heurdata->bestsolindex == SCIPsolGetIndex(SCIPgetBestSol(scip)) )
+      if( heurdata->maxfreq )
+         i = 1;
+      else
+         i = MIN(heurdata->nwaitingsols, heurdata->nfailures);
+
+      if( nsols <= heurdata->nlastsols + i && heurdata->bestsolindex == SCIPsolGetIndex(SCIPgetBestSol(scip)) )
          return SCIP_OKAY;
    }
 
@@ -1264,6 +1271,10 @@ SCIP_RETCODE SCIPincludeHeurRec(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/"HEUR_NAME"/ntmruns",
          "number of runs in TM",
          &heurdata->ntmruns, FALSE, DEFAULT_NTMRUNS, 1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/"HEUR_NAME"/maxfreq",
+         "should the heuristic be executed at maximum frequeny?",
+         &heurdata->maxfreq, FALSE, DEFAULT_MAXFREQREC, NULL, NULL) );
 
    heurdata->nusedsols = DEFAULT_NUSEDSOLS;
 

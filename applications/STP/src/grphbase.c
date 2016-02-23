@@ -136,12 +136,13 @@ SCIP_RETCODE graph_init_history(
    int* orghead;             /* (original) head of all orginal edges  */
    int e;
    int nedges;
-   SCIP_Bool pc;
+   SCIP_Bool pcmw;
 
    assert(scip != NULL);
    assert(graph != NULL);
 
-   pc = graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING;
+   pcmw = (graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING ||
+    graph->stp_type == STP_MAX_NODE_WEIGHT);
 
    nedges = graph->edges;
 
@@ -168,7 +169,7 @@ SCIP_RETCODE graph_init_history(
 
    }
 
-   if( pc )
+   if( pcmw )
    {
       int k;
       int nnodes = graph->knots;
@@ -812,7 +813,6 @@ SCIP_RETCODE graph_PcSapCopy(
    assert(graph->knots == graph->ksize);
    assert(graph->edges == graph->esize);
 
-   root = graph->source[0];
    prize = graph->prize;
    nnodes = graph->knots;
    nterms = graph->terms;
@@ -851,18 +851,14 @@ SCIP_RETCODE graph_PcSapCopy(
       head = (*newgraph)->head[e];
       if( Is_term((*newgraph)->term[head]) )
       {
-	// assert(SCIPisGT(scip, prize[head], 0.0) );
-	//  printf("redir %d %d\n", pseudoroot, head);
-           graph_edge_redirect(scip, (*newgraph), e, pseudoroot, head, graph->cost[e]);
-	   (*newgraph)->cost[flipedge(e)] = FARAWAY;
-	   assert((*newgraph)->head[e] == head);
-	   assert((*newgraph)->tail[e] == pseudoroot);
+         (void) graph_edge_redirect(scip, (*newgraph), e, pseudoroot, head, graph->cost[e]);
+         (*newgraph)->cost[flipedge(e)] = FARAWAY;
+         assert((*newgraph)->head[e] == head);
+         assert((*newgraph)->tail[e] == pseudoroot);
       }
       else
       {
-	// printf("%d %f \n", head, prize[head]);
-	// assert(SCIPisGT(scip, prize[head], 0.0) );
-	  (*newgraph)->cost[e] = prizesum;
+         (*newgraph)->cost[e] = prizesum;
       }
 
       e = enext;
@@ -873,12 +869,9 @@ SCIP_RETCODE graph_PcSapCopy(
       /* is the kth node a terminal other than the root? */
       if( Is_pterm((*newgraph)->term[k]) )
       {
-	// assert(SCIPisGT(scip, prize[k], 0.0) );
-	//printf("add  %d %d\n", k, pseudoroot);
 	 graph_edge_add(scip, (*newgraph), k, pseudoroot, 0.0, FARAWAY);
       }
    }
-
 
    return SCIP_OKAY;
 }
@@ -1278,13 +1271,10 @@ SCIP_RETCODE graph_copy(
    if( g->stp_type == STP_PRIZE_COLLECTING || g->stp_type == STP_ROOTED_PRIZE_COLLECTING
       || g->stp_type == STP_MAX_NODE_WEIGHT )
    {
-    // int k;
-     printf("norgmodelknots %d \n", g->norgmodelknots);
+      SCIPdebugMessage("norgmodelknots %d \n", g->norgmodelknots);
       SCIP_CALL( SCIPallocMemoryArray(scip, &(g->prize), g->norgmodelknots) );
-  //    for( k = 0; k < g->norgmodelknots; k++)
-//	g->prize[k] = p->prize[k];
 
-     BMScopyMemoryArray(&(g->prize), p->prize, g->norgmodelknots);
+      BMScopyMemoryArray(&(g->prize), p->prize, g->norgmodelknots);
    }
    else if( g->stp_type == STP_DEG_CONS )
    {
@@ -1653,8 +1643,13 @@ void prize_subtract(
 {
    int e;
    int j;
+
    assert(scip != NULL);
    assert(g != NULL);
+
+   if( g->stp_type == STP_ROOTED_PRIZE_COLLECTING && i == g->source[0] )
+      return;
+
    g->prize[i] -= cost;
    for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
       if( Is_pterm(g->term[g->head[e]]) )
@@ -1680,7 +1675,7 @@ void prize_subtract(
    assert(SCIPisEQ(scip, g->prize[i], g->cost[e]));
 }
 
-/** contract an edge in (rooted) price collecting */
+/** contract an edge of (rooted) prize-collecting Steiner tree problem */
 SCIP_RETCODE graph_knot_contractpc(
    SCIP*                 scip,               /**< SCIP data structure */
    GRAPH*                g,                  /**< the graph */
@@ -1693,42 +1688,51 @@ SCIP_RETCODE graph_knot_contractpc(
    assert(g != NULL);
    assert(scip != NULL);
    assert(Is_term(g->term[i]));
+//printf("contact %d (%d) %d (%d), term: %d ", t, g->term[t], s, g->term[s], i);
 
+   /* get edge from t to s */
    for( ets = g->outbeg[t]; ets != EAT_LAST; ets = g->oeat[ets] )
       if( g->head[ets] == s )
          break;
+
    assert(ets != EAT_LAST);
 
+   /* are both endpoints of the edge to be contracted terminals? */
    if( Is_term(g->term[t]) && Is_term(g->term[s]) )
    {
-      IDX*   etsancestors = NULL;
       int e;
       int j;
-
+#if 0
+      IDX* etsancestors = NULL;
       SCIP_CALL( SCIPintListNodeAppendCopy(scip, &etsancestors, g->ancestors[ets]) );
-
+#endif
+      /* get edge from s to its artificial terminal */
       for( e = g->outbeg[s]; e != EAT_LAST; e = g->oeat[e] )
          if( Is_pterm(g->term[g->head[e]]) )
             break;
+
       assert(e != EAT_LAST);
-      /*
-        assert(g->pcancestors != NULL);
-        if( g->pcancestors[s] != NULL )
-        {
-        SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->pcancestors[s]) );
-        SCIPintListNodeFree(scip, &(g->pcancestors[s]));
-        }
-        SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->ancestors[e]) );
-      */
-
+      assert(g->pcancestors != NULL);
+#if 1
+      if( g->pcancestors[s] != NULL )
+      {
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->pcancestors[s]) );
+         SCIPintListNodeFree(scip, &(g->pcancestors[s]));
+      }
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->ancestors[ets]) );
+#endif
+      /* artificial terminal to s */
       j = g->head[e];
-
+//       printf("ur grad: %d %d   ", s, g->grad[s]);
+// printf("delete edge: %d %d ", s, j);
       assert(j != g->source[0]);
       assert(!g->mark[j]);
 
+      /* delete edge and unmark artificial terminal */
       graph_knot_chg(g, j, -1);
       graph_edge_del(scip, g, e, TRUE);
 
+      /* delete remaining incident edge of artificial terminal */
       e = g->inpbeg[j];
 
       assert(e != EAT_LAST);
@@ -1738,7 +1742,14 @@ SCIP_RETCODE graph_knot_contractpc(
       prize_subtract(scip, g, g->cost[ets] - g->prize[s], i);
       graph_edge_del(scip, g, e, TRUE);
 
+      assert(g->inpbeg[j] == EAT_LAST);
+
+      /* contract s into t */
+//       printf("grad bef contract: %d %d   \n", s, g->grad[s]);
       SCIP_CALL( graph_knot_contract(scip, g, t, s) );
+      graph_knot_chg(g, s, -1);
+
+      assert(g->grad[s] == 0);
 
       SCIPdebugMessage("PC contract: %d, %d \n", t, s);
 #if 0
@@ -1746,16 +1757,29 @@ SCIP_RETCODE graph_knot_contractpc(
 	 SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e]), etsancestors) );
       for( e = g->outbeg[t]; e != EAT_LAST; e = g->oeat[e] )
 	 SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e]), etsancestors) );
-#endif
+
       SCIPintListNodeFree(scip, &etsancestors);
+      #endif
    }
    else
    {
+     #if 1
+      if( g->pcancestors[s] != NULL )
+      {
+         SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->pcancestors[s]) );
+         SCIPintListNodeFree(scip, &(g->pcancestors[s]));
+      }
+      SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->ancestors[ets]) );
+#endif
+
+//   printf("single term terminal %d into %d prize: %f \n", t, s, g->prize[s]);
+    //  printf("prizei %f, minus %f \n", g->prize[i], g->cost[ets]);
       if( g->stp_type != STP_MAX_NODE_WEIGHT )
          prize_subtract(scip, g, g->cost[ets], i);
       else
 	 prize_subtract(scip, g, -(g->prize[s]), i);
       SCIP_CALL( graph_knot_contract(scip, g, t, s) );
+
    }
    return SCIP_OKAY;
 }
@@ -1908,7 +1932,7 @@ void graph_edge_add(
 inline static void edge_remove(
    GRAPH*                g,                  /**< the graph */
    int                   e                   /**< the edge to be removed */
-			      )
+   )
 {
    int    i;
    int    head;
@@ -1920,7 +1944,7 @@ inline static void edge_remove(
 
    head = g->head[e];
    tail = g->tail[e];
-//printf("remove: %d %d->%d \n", e,  g->tail[e], g->head[e]);
+
    if( g->inpbeg[head] == e )
       g->inpbeg[head] = g->ieat[e];
    else
@@ -2672,8 +2696,8 @@ SCIP_Bool graph_sol_valid(
    {
       for( i = 0; i < nnodes; i++ )
          if( Is_term(graph->term[i]) && !terminal[i] )
-            printf("not reached, node: %d\n", i);
-      printf("a: %d, b: %d: \n", termcount, graph->terms);
+            SCIPdebugMessage("not reached, node: %d\n", i);
+      SCIPdebugMessage("a: %d, b: %d: \n", termcount, graph->terms);
    }
 
    SCIPfreeBufferArray(scip, &terminal);

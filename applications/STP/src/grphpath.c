@@ -584,7 +584,6 @@ void sdpaths(
 
    if( g->stp_type != STP_MAX_NODE_WEIGHT )
       g->mark[head] = FALSE;
- //printf("tail : %d \n  ", tail);
 
    for( e = g->outbeg[tail]; e != EAT_LAST; e = g->oeat[e] )
    {
@@ -592,8 +591,6 @@ void sdpaths(
 
       if( g->mark[m] )
       {
-	//printf("head : %d \n  ", m);
-//	printf(" %f,( %f + %f )\n", path[m].dist, path[tail].dist, cost[e] );
 	 assert(SCIPisGT(scip, path[m].dist, path[tail].dist + cost[e]));
          /* m labelled the first time */
          memlbl[(*nlbl)++] = m;
@@ -614,7 +611,7 @@ void sdpaths(
 
       /* distance limit reached? */
       if( SCIPisGT(scip, path[k].dist, distlimit) )
-        break;
+         break;
 
       /* stop at terminals */
       if( Is_term(g->term[k]) || k == head )
@@ -810,12 +807,12 @@ void graph_path_st(
 	    if( cgt || (state[m]) )
 	    {
 	       if( !connected[m] && g->mark[m] && SCIPisGT(scip, pathdist[m], (pathdist[k] + cost[e])) )
-                 correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
+                  correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
 	    }
 	    else
 	    {
-              if( !connected[m] && g->mark[m] && SCIPisGE(scip, pathdist[m], (pathdist[k] + cost[e])) )
-                 correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
+               if( !connected[m] && g->mark[m] && SCIPisGE(scip, pathdist[m], (pathdist[k] + cost[e])) )
+                  correctX(scip, heap, state, &count, pathdist, pathedge, m, k, e, cost[e]);
 	    }
          }
       }
@@ -1643,10 +1640,10 @@ void getnext4tterms(
          k2 = g->head[e];
          if( !g->mark[k2] || k2 < k )
             continue;
+
          /* is e a boundary edge? */
          if( vbase[k] != vbase[k2] )
          {
-            //printf("boundedge: %d, %d vbase %d %d\n", k, k2, vbase[k], vbase[k2] );
             boundedges[nboundedges++] = e;
          }
       }
@@ -1705,7 +1702,6 @@ void voronoi_terms(
          nbases++;
          if( g->knots > 1 )
             heap[++count] = i;
-	 //printf("add %d\n",i);
          vbase[i] = i;
          path[i].dist = 0.0;
          path[i].edge = UNKNOWN;
@@ -1731,21 +1727,17 @@ void voronoi_terms(
 
          /* mark vertex k as scanned */
          state[k] = CONNECT;
-//printf("check: %d\n", k);
+
          /* iterate over all outgoing edges of vertex k */
          for( i = g->outbeg[k]; i != EAT_LAST; i = g->oeat[i] )
          {
 	    m = g->head[i];
-	    if( m == 13 )
-	     printf("scrutinize %d: %f from %d\n", m, path[k].dist + cost[i], k);
 
             /* check whether the path (to m) including k is shorter than the so far best known */
             if( (state[m]) && SCIPisGT(scip, path[m].dist, path[k].dist + cost[i]) && g->mark[m] )
             {
                correct(scip, heap, state, &count, path, m, k, i, cost[i], FSP_MODE);
                vbase[m] = vbase[k];
-//	       	   printf("%d vbase: %d\n", m, vbase[m]);
-
             }
          }
       }
@@ -1761,6 +1753,7 @@ SCIP_RETCODE voronoi_dist(
    SCIP_Real*            cost,               /**< edge costs */
    SCIP_Real*            distance,           /**< array storing path from a terminal over shortest
                                                 incident edge to nearest terminal */
+   int*                  minedgepred,        /**< shortest edge predecessor array */
    int*                  vbase,              /**< array containing Voronoi base to each node */
    int*                  minarc,             /**< array to mark whether an edge is one a path corresponding to 'distance' */
    int*                  heap,               /**< array representing a heap */
@@ -1775,20 +1768,21 @@ SCIP_RETCODE voronoi_dist(
    int m;
    int i;
    int pred;
-   int count = 0;
-   int nbases = 0;
+   int count;
+   int nbases;
    int nnodes;
-   char* minedgepred;
+   int prededge;
 
-   assert(g      != NULL);
-   assert(path   != NULL);
-   assert(cost   != NULL);
-   assert(heap != NULL);
-   assert(state != NULL);
-   assert(distance   != NULL);
-//@todo alloc globally
+   assert(g        != NULL);
+   assert(path     != NULL);
+   assert(cost     != NULL);
+   assert(heap     != NULL);
+   assert(state    != NULL);
+   assert(distance != NULL);
+
+   count = 0;
+   nbases = 0;
    nnodes = g->knots;
-   SCIP_CALL( SCIPallocBufferArray(scip, &minedgepred, g->edges) );
 
    /* initialize */
    for( i = 0; i < nnodes; i++ )
@@ -1796,6 +1790,7 @@ SCIP_RETCODE voronoi_dist(
       distance[i] = FARAWAY;
       if( distnode != NULL )
          distnode[i] = UNKNOWN;
+
       /* set the base of vertex i */
       if( Is_term(g->term[i]) && g->mark[i] )
       {
@@ -1803,27 +1798,28 @@ SCIP_RETCODE voronoi_dist(
          if( nnodes > 1 )
             heap[++count] = i;
          vbase[i] = i;
-         path[i].dist = 0.0;
-         path[i].edge = UNKNOWN;
          state[i] = count;
+         path[i].dist = 0.0;
       }
       else
       {
          vbase[i] = UNKNOWN;
+         state[i] = UNKNOWN;
          path[i].dist = FARAWAY;
-         path[i].edge = UNKNOWN;
-         state[i]     = UNKNOWN;
       }
+      path[i].edge = UNKNOWN;
    }
+
+   /* initialize predecessor array */
 
    for( e = 0; e < g->edges; e++ )
       minedgepred[e] = FALSE;
 
    for( k = 0; k < nbases; k++ )
-   {
       if( minarc[k] != UNKNOWN )
          minedgepred[minarc[k]] = TRUE;
-   }
+
+   /* if graph contains more than one vertices, start main loop */
    if( nnodes > 1 )
    {
       /* until the heap is empty */
@@ -1834,18 +1830,24 @@ SCIP_RETCODE voronoi_dist(
 
          /* mark vertex k as scanned */
          state[k] = CONNECT;
-         if( path[k].edge != UNKNOWN )
+
+         prededge = path[k].edge;
+
+         if( prededge != UNKNOWN )
          {
-            assert(g->head[path[k].edge] == k);
-            pred = g->tail[path[k].edge];
+            pred = g->tail[prededge];
+
             assert(vbase[k] != UNKNOWN);
             assert(vbase[pred] != UNKNOWN);
             assert(vbase[pred] == vbase[k]);
+            assert(g->head[prededge] == k);
+
             if( !Is_term(g->term[pred]) && g->mark[pred] )
             {
                assert(path[pred].edge != UNKNOWN);
-               minedgepred[path[k].edge] = minedgepred[path[pred].edge];
+               minedgepred[prededge] = minedgepred[path[pred].edge];
             }
+
          }
 
          /* iterate over all outgoing edges of vertex k */
@@ -1855,13 +1857,17 @@ SCIP_RETCODE voronoi_dist(
 
             if( state[m] == CONNECT && vbase[m] != vbase[k] && g->mark[m] )
             {
-               if( minedgepred[i] || (path[k].edge != UNKNOWN && minedgepred[path[k].edge] ) )
+               if( minedgepred[i] || (prededge != UNKNOWN && minedgepred[prededge] ) )
                {
                   new = path[k].dist + g->cost[i] + path[m].dist;
                   if( SCIPisLT(scip, new, distance[vbase[k]]) )
                   {
                      if( distnode != NULL )
                         distnode[vbase[k]] = vbase[m];
+#if 0
+		     if( vbase[k] == 0 )
+		        printf("update dist to %f k: %d m: %d \n", new , k, m);
+#endif
                      distance[vbase[k]] = new;
                   }
                }
@@ -1872,13 +1878,20 @@ SCIP_RETCODE voronoi_dist(
                   {
                      if( distnode != NULL )
                         distnode[vbase[m]] = vbase[k];
+#if 0
+                     if( vbase[m] == 0 )
+                        printf("update dist to %f k: %d m: %d \n", new , k, m);
+#endif
                      distance[vbase[m]] = new;
                   }
                }
             }
-//@todo in case of equality, uptdate if successor of minedge
-            /* check whether the path (to m) including k is shorter than the so far best known */
-            if( state[m] && SCIPisGT(scip, path[m].dist, path[k].dist + cost[i]) && g->mark[m] )
+
+            /* Check whether the path (to m) including k is shorter than the so far best known.
+               In case of equality, also update if k is sucessor of minedge. */
+            if( state[m] && g->mark[m] &&
+               (SCIPisGT(scip, path[m].dist, path[k].dist + cost[i]) ||
+                  (prededge != UNKNOWN && minedgepred[prededge] && SCIPisEQ(scip, path[m].dist, path[k].dist + cost[i]))) )
             {
                correct(scip, heap, state, &count, path, m, k, i, cost[i], FSP_MODE);
                vbase[m] = vbase[k];
@@ -1886,7 +1899,6 @@ SCIP_RETCODE voronoi_dist(
          }
       }
    }
-   SCIPfreeBufferArray(scip, &minedgepred);
 
    return SCIP_OKAY;
 }

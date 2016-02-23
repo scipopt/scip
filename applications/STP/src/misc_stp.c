@@ -194,7 +194,7 @@ void SCIPlinkcuttreeCut(
 /** finds minimal non-key-node value between node 'v' and the root of the tree **/
 NODE* SCIPlinkcuttreeFindMinMW(
    SCIP*                 scip,               /**< SCIP data structure */
-      SCIP_Real*            nodeweight,         /**< node weight array */
+   SCIP_Real*            nodeweight,         /**< node weight array */
    int*                  tail,               /**< tail of an arc */
    int*                  stdeg,              /**< degree in Steiner tree */
    NODE*                 v                   /**< the node */
@@ -215,7 +215,7 @@ NODE* SCIPlinkcuttreeFindMinMW(
    {
       assert(p->edge >= 0);
       node = tail[p->edge];
-      //printf(" %d(%f, %d), \n", node, nodeweight[node], stdeg[node]);
+
       if( SCIPisLT(scip, nodeweight[node], min) && stdeg[node] == 2 )
       {
          min = nodeweight[node];

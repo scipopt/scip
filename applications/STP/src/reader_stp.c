@@ -46,6 +46,8 @@
 #define   DEFAULT_EMITGRAPH    FALSE         /**< emit graph? */
 #define   DEFAULT_COUNTPRESOLTIME  TRUE      /**< count presolving time as part of overall solution time? */
 #define   DEFAULT_REDUCTION    2             /**< reduction mode to apply */
+#define   DEFAULT_SYMCONS      2             /**< symmetry constraints */
+#define   DEFAULT_CYCLECONS    2             /**< cycle constraints */
 #define   DEFAULT_MINELIMS     3             /**< minimal number of eliminations to be achieved for reiteration of reduction methods */
 #define   DEFAULT_PRETIMELIMIT -1.0          /**< presolving time limit */
 
@@ -166,6 +168,16 @@ SCIP_RETCODE SCIPincludeReaderStp(
          "stp/reduction",
          "Reduction: 0 disable, 1 diminish, 2 default",
          NULL, FALSE, DEFAULT_REDUCTION, 0, 2, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "stp/usesymcons",
+         "Use symmetry constraints (PC, MW): 0 never, 1 always, 2 problem specific",
+         NULL, FALSE, DEFAULT_SYMCONS, 0, 2, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "stp/usecyclecons",
+         "Use 2-cycle constraints (PC): 0 never, 1 always, 2 problem specific",
+         NULL, FALSE, DEFAULT_CYCLECONS, 0, 2, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
          "stp/minelims",

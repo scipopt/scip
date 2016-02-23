@@ -171,13 +171,16 @@ SCIP_DECL_BRANCHINIT(branchInitStp)
 static
 SCIP_DECL_BRANCHEXIT(branchExitStp)
 {  /*lint --e{715}*/
+#if 0
    SCIP_BRANCHRULEDATA* branchruledata;
+#endif
    SCIPstatistic(int j = 0);
 
+#if 0
    /* initialize branching rule data */
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
-
+#endif
    return SCIP_OKAY;
 }
 
