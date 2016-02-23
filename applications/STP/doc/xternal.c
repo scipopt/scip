@@ -27,22 +27,27 @@
 
 /**@mainpage Overview
  * @author Daniel Rehfeldt
+ * @author Gerald Gamrath
+ * @author Thorsten Koch
+ * @author Stephen Maher
+ * @author Yuji Shinano
+ * @author Michael Winkler
  *
  * This application contains a (by default) branch-and-cut based solver for Steiner problems, realized within the framework
  * \SCIP, see: "SCIP-Jack - A solver for STP and variants with parallelization extensions" by G. Gamrath et al. The following plugins are implemented:
  *
- * - a problem reader which parses the problem out of an .stp file
+ * - a problem reader, which parses the problem out of a .stp file
  *   (reader_stp.c)
  * - a (global) problem data structure, containing all necessary information including the graph, which creates the model within \SCIP (probdata_stp.c)
  * - a construction heuristic (heur_tm.c)
  * - an improvment heuristic (heur_local.c)
  * - a recombination heuristic (heur_rec.c)
- * - a, by default not used, pricer which generates new variables/columns during the search (pricer_stp.c)
- * - a constraint handler which checks solutions for feasibility and separates any violated model constraints (cons_stp.c)
- * - a propagator which attempts to fix (edge) variables to zero utilizing their reduced costs (prop_stp.c)
- * - an event handler which simple writes each incumbent solution to a file, if activated (event_bestsol.c)
+ * - a, by default not used, pricer, which generates new variables/columns during the search (pricer_stp.c)
+ * - a constraint handler, which checks solutions for feasibility and separates any violated model constraints (cons_stp.c)
+ * - a propagator, which attempts to fix (edge) variables to zero utilizing their reduced costs (prop_stp.c)
+ * - an event handler, which simply writes each incumbent solution to a file -- if activated (event_bestsol.c)
  *
- * In the following the problem is introduced and the solving process delineated. Afterwards, two plugins are
+ * In the following, the problem is introduced and the solving process is delineated. Afterwards, the two main plugins are
  * sketched.
  *
  * -# \ref PROBLEM "Problem description and solving approach"
@@ -56,10 +61,12 @@
  *
  * A more intricate account of the following can be found in
  * "SCIP-Jack - A solver for STP and variants with parallelization extensions" by G. Gamrath et al.
- * The Steiner tree problem in graphs (SPG) can be described as follows: Given an undirected connected graph
+ *
+ * The \textit{Steiner tree problem in graphs} (\textit{SPG}) can be described as follows: Given an undirected connected graph
  * \f$ G=(V,E)\f$, costs \f[ c: E \rightarrow  \mathcal{Q}^+ \f] and a set \f$ T \subset V \f$ of \f$ \textit{terminals} \f$,
- * the problem is to find a minimum weight tree \f$ S\subseteq G \f$ which spans \f$ T \f$.
- * The following picture shows a SPG instance with the terminals given as squares:
+ * the problem is to find a minimum weight tree \f$ S\subseteq G \f$ that spans \f$ T \f$. Each tree \f$ S \f$ that spans \f$ T \f$, called \textit{Steiner tree}), is
+ * a feasible solution to the problem.
+ * The following picture shows an SPG instance with the terminals given as squares:
  *
  * <CENTER>
  * \image html stp.png
@@ -72,17 +79,18 @@
  * specifically constructed to defy presolving techniques, preprocessing is often able to significantly
  * reduce instances.
  *
- * Second, heuristics are needed to find good or even optimal solutions.
+ * Second, heuristics are needed, especially for hard instances, to find good or even optimal solutions.
  *
  * Finally, at the core is the branch-and-cut procedure used to compute a lower bound and prove optimality:
  *
- * The problem can be formulated using the directed equivalent of the STP, the Steiner arborescence problem (SAP):
+ * The problem can be formulated using the directed equivalent of the STP, the \textit{Steiner arborescence problem} (\textit{SAP)}:
  * Given a directed graph \f$ D=(V,A) \f$, a root \f$ r \in V \f$, costs \f$ c: A \rightarrow \mathcal{Q}^+ \f$
- * and a set \f$ T \subset V \f$ of terminals, a directed tree \f$ S\subseteq D \f$ is required such that
- * for all \f$ t \in T \f$, \f$ (V_S,A_S) \f$ contains exactly one directed path from \f$ r \f$ to \f$ t \f$.  Each STP can be
- * transformed to an SAP replacing each edge by two anti-parallel arcs of the same cost and distinguishing an arbirtrary
- * terminal as the root. This results in a one-to-one correspondence between the respective solution sets
- * Introducing variables \f$y_a\f$ for \f$a\in A\f$ with the interpretation \f$y_a:=1\f$, if \f$a\f$ is in the
+ * and a set \f$ T \subset V \f$ of terminals, a subgraph \f$ S\subseteq D \f$  such that
+ * for all \f$ t \in T \f$, \f$ S \f$ contains exactly one directed path from \f$ r \f$ to \f$ t \f$ is called Steiner arborescence.
+ * Thereupon, a Steiner arborescence \f$ S = (V_S, A_S) \f$ is required that minimizes \f$ \sum_{a \in A_S} c_a \f$.  Each STP can be
+ * transformed to an SAP by replacing each edge with two anti-parallel arcs of the same cost and distinguishing an arbitrary
+ * terminal as the root. This transformation results in a one-to-one correspondence between the respective solution sets.
+ * Introducing variables \f$y_a\f$ for \f$a\in A\f$ with the interpretation that \f$y_a:=1\f$ if and only if \f$a\f$ is in the
  * Steiner arborecence, and \f$y_a:=0\f$ otherwise, we obtain the integer program:
  *
  * \f[
@@ -114,28 +122,28 @@
  * \f$X\subset V\f$ i.e., \f$\delta^+(X)\f$ is the set of all arcs going out of and \f$\delta^-(X)\f$ the set of all arcs going into \f$X\f$.
  *
  * Since the model potentially contains an exponential number of constraints, a separation approach is employed.
- * Violated constraints are separated during the execution of the branch-and-cut algorithm
+ * Violated constraints are separated during the execution of the branch-and-cut algorithm.
  *
- * In addition to Steiner Problems in Graphs there exist several variants of which the following can be solved by SCIP-JACK,
- * transforming them to a Steiner Arborescence Problem, and in some cases introducing additional constraints:
+ * In addition to Steiner problems in graphs there exist several variations. The following Steiner problem variants can be solved by SCIP-JACK,
+ * transforming them to a Steiner arborescence problem, and in some cases introducing additional constraints:
  *
- * -Steiner Arborescence Problems,
+ * -Steiner arborescence problems,
  *
- * -Rectilinear Steiner Minimum Tree Problems,
+ * -rectilinear Steiner minimum tree problems,
  *
- * -Node-Weighted Steiner Tree Problems,
+ * -node-weighted Steiner tree problems,
  *
- * -Prize-Collecting Steiner Tree Problems,
+ * -prize-collecting Steiner tree problems,
  *
- * -Rooted Prize-Collecting Steiner Tree Problems,
+ * -rooted prize-collecting Steiner tree problems,
  *
- * -Maximum-Weight Connected Subgraph Problems,
+ * -maximum-weight connected subgraph problems,
  *
- * -Degree-Constrained Steiner Tree Problems,
+ * -degree-constrained Steiner tree problems,
  *
- * -Group Steiner Tree Problems, and
+ * -group Steiner tree problems, and
  *
- * -Hop-Constrained Directed Steiner Tree Problems.
+ * -hop-honstrained directed Steiner tree problems.
  */
 
 
