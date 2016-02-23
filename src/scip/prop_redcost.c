@@ -54,6 +54,10 @@
 
 #define DEFAULT_CONTINUOUS        FALSE /**< should reduced cost fixing be also applied to continuous variables? */
 #define DEFAULT_USEIMPLICS         TRUE /**< should implications be used to strength the reduced cost for binary variables? */
+#define DEFAULT_FORCE             FALSE /**< should the propagator be forced even if active pricer are present? Note that
+                                         *   the reductions are always valid, but installing an upper bound on priced
+                                         *   variables may lead to problems in pricing (existing variables at their upper
+                                         *   bound may be priced again since they may have negative reduced costs) */
 
 /**@} */
 
@@ -70,6 +74,7 @@ struct SCIP_PropData
    SCIP_Real             maxredcost;         /**< maximum reduced cost of a single binary variable */
    SCIP_Bool             usefullimplics;     /**< are the implied reduced cost usefull */
    SCIP_Bool             useimplics;         /**< should implications be used to strength the reduced cost for binary variables? */
+   SCIP_Bool             force;              /**< should the propagator be forced even if active pricer are present? */
 };
 
 
@@ -538,7 +543,11 @@ SCIP_DECL_PROPEXEC(propExecRedcost)
    propdata = SCIPpropGetData(prop);
    assert(propdata != NULL);
 
-   /* chack if all integral variables are fixed and the continuous variables should not be propagated */
+   /* do nothing if active pricer are present and force flag is not TRUE */
+   if( !propdata->force && SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
+
+   /* check if all integral variables are fixed and the continuous variables should not be propagated */
    if( !propdata->continuous && SCIPgetNPseudoBranchCands(scip) == 0 )
       return SCIP_OKAY;
 
@@ -649,6 +658,10 @@ SCIP_RETCODE SCIPincludePropRedcost(
          "propagating/" PROP_NAME "/useimplics",
          "should implications be used to strength the reduced cost for binary variables?",
          &propdata->useimplics, FALSE, DEFAULT_USEIMPLICS, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip,
+         "propagating/" PROP_NAME "/force",
+         "should the propagator be forced even if active pricer are present?",
+         &propdata->force, TRUE, DEFAULT_FORCE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -54,7 +54,7 @@
                                          *   without a bound reduction before aborted */
 #define DEFAULT_PROPFULLINROOT     TRUE /**< do we want to propagate all non-binary variables if we are propagating the root node? */
 #define DEFAULT_PROPCUTOFFBOUND    TRUE /**< propagate new cutoff bound directly globally */
-#define DEFAULT_FORCE             FALSE /**< should the propagator be forced even active pricer are present? Note that
+#define DEFAULT_FORCE             FALSE /**< should the propagator be forced even if active pricer are present? Note that
                                          *   can be done if it is known that the pseudo objective activity is given by
                                          *   the zero bound for all variables which are currently not present in the
                                          *   problem */
@@ -3718,7 +3718,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/force",
-         "should the propagator be forced even active pricer are present?",
+         "should the propagator be forced even if active pricer are present?",
          &propdata->force, TRUE, DEFAULT_FORCE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,
