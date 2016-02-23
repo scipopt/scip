@@ -15803,6 +15803,36 @@ SCIP_Real SCIPvarGetLbAtIndex(
       }
 
    case SCIP_VARSTATUS_MULTAGGR:
+      /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+      if ( var->data.multaggr.nvars == 1 )
+      {
+         assert(var->data.multaggr.vars != NULL);
+         assert(var->data.multaggr.scalars != NULL);
+         assert(var->data.multaggr.vars[0] != NULL);
+
+         if( var->data.multaggr.scalars[0] > 0.0 )
+         {
+            /* a > 0 -> get lower bound of y */
+            assert(SCIPvarGetLbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
+            assert(SCIPvarGetLbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
+            return var->data.multaggr.scalars[0] * SCIPvarGetLbAtIndex(var->data.multaggr.vars[0], bdchgidx, after)
+               + var->data.multaggr.constant;
+         }
+         else if( var->data.multaggr.scalars[0] < 0.0 )
+         {
+            /* a < 0 -> get upper bound of y */
+            assert(SCIPvarGetUbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
+            assert(SCIPvarGetUbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
+            return var->data.multaggr.scalars[0] * SCIPvarGetUbAtIndex(var->data.multaggr.vars[0], bdchgidx, after)
+               + var->data.multaggr.constant;
+         }
+         else
+         {
+            SCIPerrorMessage("scalar is zero in multi-aggregation\n");
+            SCIPABORT();
+            return SCIP_INVALID; /*lint !e527*/
+         }
+      }
       SCIPerrorMessage("cannot get the bounds of a multi-aggregated variable.\n");
       SCIPABORT();
       return SCIP_INVALID; /*lint !e527*/
@@ -15895,6 +15925,36 @@ SCIP_Real SCIPvarGetUbAtIndex(
       }
 
    case SCIP_VARSTATUS_MULTAGGR:
+      /* handle multi-aggregated variables depending on one variable only (possibly caused by SCIPvarFlattenAggregationGraph()) */
+      if ( var->data.multaggr.nvars == 1 )
+      {
+         assert(var->data.multaggr.vars != NULL);
+         assert(var->data.multaggr.scalars != NULL);
+         assert(var->data.multaggr.vars[0] != NULL);
+
+         if( var->data.multaggr.scalars[0] > 0.0 )
+         {
+            /* a > 0 -> get lower bound of y */
+            assert(SCIPvarGetUbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
+            assert(SCIPvarGetUbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
+            return var->data.multaggr.scalars[0] * SCIPvarGetUbAtIndex(var->data.multaggr.vars[0], bdchgidx, after)
+               + var->data.multaggr.constant;
+         }
+         else if( var->data.multaggr.scalars[0] < 0.0 )
+         {
+            /* a < 0 -> get upper bound of y */
+            assert(SCIPvarGetLbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) > -SCIP_DEFAULT_INFINITY);
+            assert(SCIPvarGetLbAtIndex(var->data.multaggr.vars[0], bdchgidx, after) < +SCIP_DEFAULT_INFINITY);
+            return var->data.multaggr.scalars[0] * SCIPvarGetLbAtIndex(var->data.multaggr.vars[0], bdchgidx, after)
+               + var->data.multaggr.constant;
+         }
+         else
+         {
+            SCIPerrorMessage("scalar is zero in multi-aggregation\n");
+            SCIPABORT();
+            return SCIP_INVALID; /*lint !e527*/
+         }
+      }
       SCIPerrorMessage("cannot get the bounds of a multiple aggregated variable.\n");
       SCIPABORT();
       return SCIP_INVALID; /*lint !e527*/

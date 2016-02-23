@@ -3621,7 +3621,8 @@ SCIP_RETCODE conflictResolveBound(
             SCIP_Real constant;
 
             assert(SCIPvarGetStatus(infervar) == SCIP_VARSTATUS_AGGREGATED
-               || SCIPvarGetStatus(infervar) == SCIP_VARSTATUS_NEGATED);
+               || SCIPvarGetStatus(infervar) == SCIP_VARSTATUS_NEGATED
+               || (SCIPvarGetStatus(infervar) == SCIP_VARSTATUS_MULTAGGR && SCIPvarGetMultaggrNVars(infervar) == 1));
 
             scalar = 1.0;
             constant = 0.0;
