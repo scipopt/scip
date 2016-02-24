@@ -119,7 +119,7 @@ SCIP_RETCODE SCIPpresolCreate(
    /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
     * error message
     */
-   if( timing < SCIP_PRESOLTIMING_FAST || timing > SCIP_PRESOLTIMING_ALWAYS )
+   if( timing < SCIP_PRESOLTIMING_NONE || timing > SCIP_PRESOLTIMING_ALWAYS )
    {
       SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> presolver instead.\n", name);
