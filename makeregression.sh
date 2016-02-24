@@ -66,13 +66,6 @@ do
 
     for OPT in ${OPTS[@]}
     do
-        if [ "$OPT" == "dbg" ];
-        then
-            LPSOPT=dbg
-        else
-            LPSOPT=opt
-        fi
-
         for TEST in ${TESTS[@]}
         do
             # pull and compile SoPlex
@@ -92,8 +85,8 @@ do
             GITHASH=`git describe --always --dirty  | sed -re 's/^.+-g//'`
 
             # compile SCIP in debug or opt mode
-            make OPT=$OPT LPSOPT=$LPSOPT VERSION=$GITHASH LPS=$LPS ZIMPL=true clean
-            make OPT=$OPT LPSOPT=$LPSOPT VERSION=$GITHASH LPS=$LPS ZIMPL=true
+            make OPT=$OPT LPSOPT=$OPT VERSION=$GITHASH LPS=$LPS ZIMPL=true clean
+            make OPT=$OPT LPSOPT=$OPT VERSION=$GITHASH LPS=$LPS ZIMPL=true
 
             # run test
             make OPT=$OPT VERSION=$GITHASH LPS=$LPS TIME=$TIME LOCK=$LOCK CONTINUE=$CONTINUE TEST=$TEST MEM=$MEM test

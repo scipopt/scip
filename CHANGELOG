@@ -7,6 +7,8 @@ features:
 
 parameters:
 - new parameter misc/transsolorig for transfering transformed solutions to the original space (default: true)
+- new "force" parameter in (root)redcost propagator to run the propagator also with active pricers
+- new parameter propagating/rootredcost/onlybinary to propagate root reduced costs of binary variables only
 
 performance improvements:
 - do not transfer solutions to original space, if SCIP is being freed
@@ -54,6 +56,8 @@ fixed bugs:
 - fixed bug during coefficient tightening in varbound constraint handler
 - treated the case of integer variables as intermediate variables in the process of obtaining the active variable for a
   given binary variable
+- (root) reduced cost propagators are not run anymore when doing branch-and-price, since they may install upper bounds
+  on variables which might interfere with the pricing
 
 SCIP version 3.2.0
 ==================
