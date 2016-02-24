@@ -49,6 +49,7 @@
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem             */
 #define DEFAULT_ADDALLSOLS    FALSE     /* should all subproblem solutions be added to the original SCIP?            */
 #define DEFAULT_ONLYWITHOUTSOL   TRUE   /**< should heuristic only be executed if no primal solution was found, yet? */
+#define DEFAULT_USEUCT        FALSE     /* should uct node selection be used at the beginning of the search?     */
 
 /*
  * Data structures
@@ -66,6 +67,7 @@ struct SCIP_HeurData
    SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
    SCIP_Bool             addallsols;         /**< should all subproblem solutions be added to the original SCIP?      */
    SCIP_Bool             onlywithoutsol;     /**< should heuristic only be executed if no primal solution was found, yet? */
+   SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
 
 
@@ -428,21 +430,21 @@ SCIP_RETCODE SCIPapplyZeroobj(
       SCIP_CALL( SCIPsetIntParam(subscip, "presolving/maxrounds", 50) );
    }
 
-   /* use best dfs node selection */
+   /* use restart dfs node selection */
    if( SCIPfindNodesel(subscip, "restartdfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/restartdfs/stdpriority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/restartdfs/stdpriority", INT_MAX/4) );
    }
 
    /* activate uct node selection at the top of the tree */
-   if( SCIPuseUctLns(scip) && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+   if( heurdata->useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
    }
    /* use least infeasible branching */
    if( SCIPfindBranchrule(subscip, "leastinf") != NULL && !SCIPisParamFixed(subscip, "branching/leastinf/priority") )
    {
-      SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "branching/leastinf/priority", INT_MAX/4) );
    }
 
    /* employ a limit on the number of enforcement rounds in the quadratic constraint handler; this fixes the issue that
@@ -622,6 +624,9 @@ SCIP_RETCODE SCIPincludeHeurZeroobj(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/onlywithoutsol",
          "should heuristic only be executed if no primal solution was found, yet?",
          &heurdata->onlywithoutsol, TRUE, DEFAULT_ONLYWITHOUTSOL, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
+         "should uct node selection be used at the beginning of the search?",
+         &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -60,6 +60,7 @@
 #define DEFAULT_RESTART       TRUE       /* should the heuristic immediately run again on its newly found solution? */
 #define DEFAULT_USEFINALLP    FALSE      /* should the heuristic solve a final LP in case of continuous objective variables? */
 #define DEFAULT_LPITERSQUOT   0.2        /* default quotient of sub-MIP LP iterations with respect to LP iterations so far */
+#define DEFAULT_USEUCT        FALSE      /* should uct node selection be used at the beginning of the search?     */
 
 /*
  * Data structures
@@ -94,6 +95,7 @@ struct SCIP_HeurData
    SCIP_Bool             uselprows;          /**< should subproblem be constructed based on LP row information? */
    SCIP_Bool             restart;            /* should the heuristic immediately run again on its newly found solution? */
    SCIP_Bool             usefinallp;         /* should the heuristic solve a final LP in case of continuous objective variables? */
+   SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
 
 
@@ -284,7 +286,7 @@ SCIP_RETCODE createNewSol(
 /** sets solving parameters for the subproblem created by the heuristic */
 static
 SCIP_RETCODE setupSubproblem(
-   SCIP*                 scip,               /**< main SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
    SCIP*                 subscip             /**< copied SCIP data structure */
    )
 {
@@ -306,7 +308,7 @@ SCIP_RETCODE setupSubproblem(
    }
 
    /* activate uct node selection at the top of the tree */
-   if( SCIPuseUctLns(scip) && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+   if( heurdata->useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
    }
@@ -890,7 +892,7 @@ SCIP_RETCODE SCIPapplyProximity(
       }
 
       /* set up parameters for the copied instance */
-      SCIP_CALL( setupSubproblem(scip, subscip) );
+      SCIP_CALL( setupSubproblem(heurdata, subscip) );
 
       /* create the objective constraint in the sub scip, first without variables and values which will be added later */
       SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &objcons, "objbound_of_origscip", 0, NULL, NULL, -SCIPinfinity(subscip), SCIPinfinity(subscip)) );
@@ -1159,6 +1161,11 @@ SCIP_RETCODE SCIPincludeHeurProximity(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/mingap",
          "minimum primal-dual gap for which the heuristic is executed",
          &heurdata->mingap, TRUE, DEFAULT_MINGAP, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
+         "should uct node selection be used at the beginning of the search?",
+         &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }

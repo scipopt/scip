@@ -66,6 +66,7 @@
                                          * implemented for testing and not recommended to be used!
                                          */
 #define DEFAULT_BESTSOLLIMIT   -1       /* limit on number of improving incumbent solutions in sub-CIP            */
+#define DEFAULT_USEUCT         FALSE     /* should uct node selection be used at the beginning of the search?     */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Rens"
@@ -99,6 +100,7 @@ struct SCIP_HeurData
                                               * including techniques that merely work on the dual bound, e.g., cuts?
                                               * This is only implemented for testing and not recommended to be used! */
    int                   bestsollimit;       /**< limit on number of improving incumbent solutions in sub-CIP            */
+   SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
 
 
@@ -584,7 +586,7 @@ SCIP_RETCODE SCIPapplyRens(
       }
 
       /* activate uct node selection at the top of the tree */
-      if( SCIPuseUctLns(scip) && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+      if( heurdata->useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
       {
          SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
       }
@@ -964,6 +966,10 @@ SCIP_RETCODE SCIPincludeHeurRens(
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/bestsollimit",
          "limit on number of improving incumbent solutions in sub-CIP",
          &heurdata->bestsollimit, FALSE, DEFAULT_BESTSOLLIMIT, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
+         "should uct node selection be used at the beginning of the search?",
+         &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
 
    return SCIP_OKAY;
 }
