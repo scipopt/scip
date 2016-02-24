@@ -266,17 +266,10 @@ SCIP_Real SCIPhistoryGetAvgBranchdepth(
    ( (solvaldelta) >= 0.0 ? (solvaldelta) * ((history)->pscostcount[1] > 0.0 \
       ? (history)->pscostweightedmean[1] : 1.0)      \
       : -(solvaldelta) * ((history)->pscostcount[0] > 0.0               \
-<<<<<<< HEAD
-         ? (history)->pscostsum[0] / (history)->pscostcount[0] : 1.0) )
-#define SCIPhistoryGetPseudocostVariance(history, dir)                  \
-   ( (history)->pscostcount[dir] >= 2.0 ? 1 / ((history)->pscostcount[dir] - 1)  \
-         * ((history)->pscostsquaressum[dir] - 1 / ((history)->pscostcount[dir]) * (history)->pscostsum[dir] * (history)->pscostsum[dir]) \
-=======
          ? (history)->pscostweightedmean[0] : 1.0) )
 #define SCIPhistoryGetPseudocostVariance(history, dir)                  \
    ( (history)->pscostcount[dir] >= 1.9 ? 1 / ((history)->pscostcount[dir] - 1)  \
          * ((history)->pscostvariance[dir]) \
->>>>>>> master
          : 0.0)
 #define SCIPhistoryGetPseudocostCount(history,dir) ((history)->pscostcount[dir])
 #define SCIPhistoryIsPseudocostEmpty(history,dir)  ((history)->pscostcount[dir] == 0.0)
