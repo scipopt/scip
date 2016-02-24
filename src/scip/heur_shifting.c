@@ -354,7 +354,9 @@ SCIP_RETCODE selectShifting(
             }
          }
 
-         if( SCIPisEQ(scip, shiftval, solval) )
+         if( (SCIPisInfinity(scip, shiftval) && SCIPisInfinity(scip, SCIPvarGetUbGlobal(var)))
+            || (SCIPisInfinity(scip, -shiftval) && SCIPisInfinity(scip, -SCIPvarGetLbGlobal(var)))
+            || SCIPisEQ(scip, shiftval, solval) )
             continue;
 
          deltaobj = SCIPvarGetObj(var) * (shiftval - solval);
