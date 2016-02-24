@@ -90,8 +90,6 @@
 #include "scip/dialog_default.h"
 #include "scip/message_default.h"
 
-#include "scip/event_estimation.h"
-
 /* We include the linear constraint handler to be able to copy a (multi)aggregation of variables (to a linear constraint).
  * The better way would be to handle the distinction between original and transformed variables via a flag 'isoriginal'
  * in the variable data structure. This would allow to have (multi)aggregated variables in the original problem.
@@ -7441,17 +7439,6 @@ SCIP_RETCODE SCIPsetHeurPriority(
    SCIPheurSetPriority(heur, scip->set, priority);
 
    return SCIP_OKAY;
-}
-
-/** should LNS heuristics use UCT node selection at the top of their tree? */
-SCIP_Bool SCIPuseUctLns(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->set != NULL);
-
-   return scip->set->heur_useuctlns;
 }
 
 /** creates a tree compression and includes it in SCIP.

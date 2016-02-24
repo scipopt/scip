@@ -3577,12 +3577,6 @@ SCIP_RETCODE SCIPsetHeurPriority(
    int                   priority            /**< new priority of the primal heuristic */
    );
 
-/** should LNS heuristics use UCT node selection at the top of their tree? */
-EXTERN
-SCIP_Bool SCIPuseUctLns(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** creates a tree compression and includes it in SCIP.
  *
  *  @note method has all compression callbacks as arguments and is thus changed every time a new
