@@ -149,9 +149,6 @@
 #define SCIP_DEFAULT_HISTORY_ALLOWMERGE   FALSE /**< should variable histories be merged from sub-SCIPs whenever possible? */
 #define SCIP_DEFAULT_HISTORY_ALLOWTRANSFER FALSE /**< should variable histories be transferred to initialize SCIP copies? */
 
-/* heuristic settings */
-#define SCIP_DEFAULT_HEUR_USEUCTLNS       FALSE /**< should lns heuristics use uct node selection at the top of the tree? */
-
 /* Limits */
 
 #define SCIP_DEFAULT_LIMIT_TIME           1e+20 /**< maximal time in seconds to run */
@@ -169,6 +166,7 @@
 #define SCIP_DEFAULT_LIMIT_MAXORIGSOL        10 /**< maximal number of solutions candidates to store in the solution storage of the original problem */
 #define SCIP_DEFAULT_LIMIT_RESTARTS          -1 /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
 #define SCIP_DEFAULT_LIMIT_AUTORESTARTNODES  -1 /**< if solve exceeds this number of nodes, an automatic restart is triggered (-1: no automatic restart)*/
+
 
 /* LP */
 
@@ -262,6 +260,8 @@
 
 #define SCIP_DEFAULT_NODESEL_CHILDSEL       'h' /**< child selection rule ('d'own, 'u'p, 'p'seudo costs, 'i'nference, 'l'p value,
                                                  *   'r'oot LP value difference, 'h'brid inference/root LP value difference) */
+
+
 /* Presolving */
 
 #define SCIP_DEFAULT_PRESOL_ABORTFAC      1e-03 /**< abort presolve, if at most this fraction of the problem was changed
@@ -353,11 +353,11 @@
 #define SCIP_DEFAULT_SEPA_CUTAGELIMIT       100 /**< maximum age a cut can reach before it is deleted from global cut pool
                                                  *   (-1: cuts are never deleted from the global cut pool) */
 #define SCIP_DEFAULT_SEPA_POOLFREQ            0 /**< separation frequency for the global cut pool */
-#define SCIP_DEFAULT_SEPA_MINACTIVITYQUOT   0.8 /**< minimum cut activity quotient to convert cuts into constraints
-                                                 *   during a restart (0.0: all cuts are converted) */
 #define SCIP_DEFAULT_SEPA_FEASTOLFAC      -1.00 /**< factor on cut infeasibility to limit feasibility tolerance for relaxation solver (-1: off) */
 #define SCIP_DEFAULT_SEPA_MINACTIVITYQUOT   0.8 /**< minimum cut activity quotient to convert cuts into constraints
                                                  *   during a restart (0.0: all cuts are converted) */
+
+
 /* Timing */
 
 #define SCIP_DEFAULT_TIME_CLOCKTYPE  SCIP_CLOCKTYPE_CPU  /**< default clock type for timing */
@@ -1365,13 +1365,6 @@ SCIP_RETCODE SCIPsetCreate(
          "should variable histories be transferred to initialize SCIP copies?",
          &(*set)->history_allowtransfer, FALSE, SCIP_DEFAULT_HISTORY_ALLOWTRANSFER,
          NULL, NULL) );
-
-   /* heuristic settings */
-   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
-            "heuristics/useuctlns",
-            "should lns heuristics use uct node selection at the top of the tree?",
-            &(*set)->heur_useuctlns, FALSE, SCIP_DEFAULT_HEUR_USEUCTLNS,
-            NULL, NULL) );
 
    /* limit parameters */
    SCIP_CALL( SCIPsetAddRealParam(*set, messagehdlr, blkmem,

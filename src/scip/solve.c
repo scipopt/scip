@@ -57,6 +57,7 @@
 #include "scip/pub_misc.h"
 #include "scip/debug.h"
 
+
 #define MAXNLPERRORS  10                /**< maximal number of LP error loops in a single node */
 #define MAXNCLOCKSKIPS 64               /**< maximum number of SCIPsolveIsStopped() calls without checking the clock */
 #define NINITCALLS 1000L                /**< minimum number of calls to SCIPsolveIsStopped() prior to dynamic clock skips */
@@ -4435,36 +4436,6 @@ SCIP_RETCODE SCIPsolveCIP(
       stat->nnodes++;
       stat->ntotalnodes++;
 
-#if 0
-      if( (stat->nnodes % 30000) == 0 )
-      {
-         /* print front statistics to file */
-         char filename[256];
-         FILE* file;
-
-         sprintf(filename, "/nfs/optimi/kombadon/bzfhende/projects/scip-git/check/nodefrontiers/%s_%"SCIP_LONGINT_FORMAT".profile", SCIPprobGetName(origprob), stat->nnodes);
-         file = fopen(filename, "w");
-
-         if( file != NULL )
-         {
-            SCIP_NODE** treenodes;
-            int len;
-            int n;
-
-            treenodes = SCIPnodepqNodes(tree->leaves);
-            len = SCIPnodepqLen(tree->leaves);
-
-            for( n = 0; n < len; ++n )
-            {
-               fprintf(file, "%g,%d,%g,%"SCIP_LONGINT_FORMAT"\n", SCIPprobExternObjval(transprob, set, SCIPnodeGetLowerbound(treenodes[n])),
-                     SCIPnodeGetDepth(treenodes[n]),
-                     SCIPprobExternObjval(transprob, set, SCIPnodeGetEstimate(treenodes[n])),
-                     SCIPnodeGetNumber(treenodes[n]));
-            }
-         }
-         fclose(file);
-      }
-#endif
       /* issue NODEFOCUSED event */
       SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFOCUSED) );
       SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
@@ -4680,7 +4651,6 @@ SCIP_RETCODE SCIPsolveCIP(
        * another restart
        */
       *restart = *restart || (stat->userrestart && SCIPtreeGetNNodes(tree) > 0 && restartAllowed(set, stat));
-
       if( restartAllowed(set, stat) && set->limit_autorestartnodes == stat->nnodes && stat->ntotalnodes - stat->nruns + 1 == set->limit_autorestartnodes )
       {
          SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_HIGH,

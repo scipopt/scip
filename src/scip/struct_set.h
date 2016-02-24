@@ -227,9 +227,6 @@ struct SCIP_Set
    SCIP_Bool             history_allowmerge; /**< should variable histories be merged from sub-SCIPs whenever possible? */
    SCIP_Bool             history_allowtransfer; /**< should variable histories be transferred to initialize SCIP copies? */
 
-   /* heuristic settings */
-   SCIP_Bool             heur_useuctlns;     /**< should lns heuristics use uct node selection at the top of the tree? */
-
    /* limit settings */
    SCIP_Real             limit_time;         /**< maximal time in seconds to run */
    SCIP_Real             limit_memory;       /**< maximal memory usage in MB */
@@ -247,6 +244,7 @@ struct SCIP_Set
    int                   limit_maxorigsol;   /**< maximal number of solutions candidates to store in the solution storage of the original problem */
    int                   limit_restarts;     /**< solving stops, if the given number of restarts was triggered (-1: no limit) */
    int                   limit_autorestartnodes;/**< nodes to trigger automatic restart */
+
    SCIP_Bool             istimelimitfinite;  /**< is the time limit finite */
 
    /* LP settings */

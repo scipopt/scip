@@ -72,12 +72,10 @@ void SCIPhistoryReset(
 
    history->pscostcount[0] = 0.0;
    history->pscostcount[1] = 0.0;
-
    history->pscostweightedmean[0] = 0.0;
    history->pscostweightedmean[1] = 0.0;
    history->pscostvariance[0] = 0.0;
    history->pscostvariance[1] = 0.0;
-
    history->vsids[0] = 0.0;
    history->vsids[1] = 0.0;
    history->conflengthsum[0] = 0.0;
@@ -152,6 +150,7 @@ void SCIPhistoryUnite(
       history->branchdepthsum[i] += addhistory->branchdepthsum[d];
 
    }
+
 }
 
 /** updates the pseudo costs for a change of "solvaldelta" in the variable's LP solution value and a change of "objdelta"
