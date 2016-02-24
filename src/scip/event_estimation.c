@@ -411,7 +411,7 @@ SCIP_DECL_EVENTINIT(eventInitEstimation)
    if( eventhdlrdata->filename != NULL )
       SCIPfreeMemory(scip, &eventhdlrdata->filename);
 
-   sprintf(filename, "/OPTI/bzfhende/nodefiles/%s.npf",SCIPstringGetBasename(SCIPgetProbName(scip)));
+   sprintf(filename, "/OPTI/bzfhende/nodefiles/%s.npf",SCIPgetProbName(scip));
 
    SCIPduplicateMemoryArray(scip, &eventhdlrdata->filename, filename, strlen(filename) + 1);
 
