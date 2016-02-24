@@ -1227,7 +1227,7 @@ void get2next(
    int i;
    int e;
    int root;
-   int count = 0;
+   int count;
    int nnodes;
 
    assert(g      != NULL);
@@ -1238,7 +1238,9 @@ void get2next(
    assert(costrev   != NULL);
 
    root = g->source[0];
+   count = 0;
    nnodes = g->knots;
+
    /* initialize */
    for( i = 0; i < nnodes; i++ )
    {
@@ -1291,6 +1293,7 @@ void get2next(
 	    if( Is_term(g->term[j]) || !g->mark[j] )
                continue;
 	    jc = j + nnodes;
+
             /* check whether the path (to j) including k is shorter than the so far best known */
             if( vbase[j] != vbase[k] && SCIPisGT(scip, path[jc].dist, path[k].dist + ((root == vbase[k])? cost[e] : costrev[e])) )
             {
@@ -1336,6 +1339,7 @@ void get3next(
    root = g->source[0];
    nnodes = g->knots;
    dnnodes = 2 * nnodes;
+
    /* initialize */
    for( i = 0; i < nnodes; i++ )
    {
@@ -1567,12 +1571,13 @@ void getnext4terms(
    )
 {
    int k;
-   assert(g      != NULL);
-   assert(path   != NULL);
-   assert(cost   != NULL);
+
+   assert(g         != NULL);
+   assert(path      != NULL);
+   assert(cost      != NULL);
+   assert(heap      != NULL);
+   assert(state     != NULL);
    assert(costrev   != NULL);
-   assert(heap   != NULL);
-   assert(state   != NULL);
 
    if( g->stp_type != STP_PRIZE_COLLECTING && g->stp_type != STP_ROOTED_PRIZE_COLLECTING )
       for( k = 0; k < g->knots; k++ )

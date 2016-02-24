@@ -142,7 +142,7 @@ SCIP_RETCODE graph_init_history(
    assert(graph != NULL);
 
    pcmw = (graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_ROOTED_PRIZE_COLLECTING ||
-    graph->stp_type == STP_MAX_NODE_WEIGHT);
+      graph->stp_type == STP_MAX_NODE_WEIGHT);
 
    nedges = graph->edges;
 
@@ -1685,10 +1685,10 @@ SCIP_RETCODE graph_knot_contractpc(
    )
 {
    int ets;
+
    assert(g != NULL);
    assert(scip != NULL);
    assert(Is_term(g->term[i]));
-//printf("contact %d (%d) %d (%d), term: %d ", t, g->term[t], s, g->term[s], i);
 
    /* get edge from t to s */
    for( ets = g->outbeg[t]; ets != EAT_LAST; ets = g->oeat[ets] )
@@ -1723,8 +1723,7 @@ SCIP_RETCODE graph_knot_contractpc(
 #endif
       /* artificial terminal to s */
       j = g->head[e];
-//       printf("ur grad: %d %d   ", s, g->grad[s]);
-// printf("delete edge: %d %d ", s, j);
+
       assert(j != g->source[0]);
       assert(!g->mark[j]);
 
@@ -1745,7 +1744,6 @@ SCIP_RETCODE graph_knot_contractpc(
       assert(g->inpbeg[j] == EAT_LAST);
 
       /* contract s into t */
-//       printf("grad bef contract: %d %d   \n", s, g->grad[s]);
       SCIP_CALL( graph_knot_contract(scip, g, t, s) );
       graph_knot_chg(g, s, -1);
 
@@ -1759,11 +1757,11 @@ SCIP_RETCODE graph_knot_contractpc(
 	 SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->ancestors[e]), etsancestors) );
 
       SCIPintListNodeFree(scip, &etsancestors);
-      #endif
+#endif
    }
    else
    {
-     #if 1
+#if 1
       if( g->pcancestors[s] != NULL )
       {
          SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->pcancestors[s]) );
@@ -1772,12 +1770,10 @@ SCIP_RETCODE graph_knot_contractpc(
       SCIP_CALL( SCIPintListNodeAppendCopy(scip, &(g->pcancestors[t]), g->ancestors[ets]) );
 #endif
 
-//   printf("single term terminal %d into %d prize: %f \n", t, s, g->prize[s]);
-    //  printf("prizei %f, minus %f \n", g->prize[i], g->cost[ets]);
       if( g->stp_type != STP_MAX_NODE_WEIGHT )
          prize_subtract(scip, g, g->cost[ets], i);
       else
-	 prize_subtract(scip, g, -(g->prize[s]), i);
+         prize_subtract(scip, g, -(g->prize[s]), i);
       SCIP_CALL( graph_knot_contract(scip, g, t, s) );
 
    }
@@ -2350,7 +2346,7 @@ SCIP_RETCODE graph_pack(
    SCIP_Bool             verbose             /**< verbose? */
    )
 {
-   const char* msg1   = "Nodes: %d  Edges: %d  Terminals: %d\n";
+   const char* msg1 = "Nodes: %d  Edges: %d  Terminals: %d\n";
    GRAPH* g;
    GRAPH* q;
    int*   new;
@@ -2360,7 +2356,7 @@ SCIP_RETCODE graph_pack(
    SCIP_Bool pcmw;
 
    assert(scip      != NULL);
-   assert(graph      != NULL);
+   assert(graph     != NULL);
    assert(graph_valid(graph));
 
    g = graph;
@@ -2369,7 +2365,7 @@ SCIP_RETCODE graph_pack(
    SCIP_CALL( SCIPallocBufferArray(scip, &new, g->knots) );
 
    if( verbose )
-      printf("Packing graph: ");
+      printf("Reduced graph: ");
 
    /* count nodes */
    for( i = 0; i < g->knots; i++ )

@@ -887,7 +887,7 @@ SCIP_RETCODE degree_test_mw(
             }
 
             /* contract non-positive chains */
-            if( g->grad[i] == 2 && 1 )
+            if( g->grad[i] == 2 )
             {
                int f1 = -1;
                int f2 = -1;
@@ -931,7 +931,7 @@ SCIP_RETCODE degree_test_mw(
          /* node i is of positive weight (terminal): */
 
          /* terminal of (real) degree 0? */
-         if( g->grad[i] == 2 && 1 )
+         if( g->grad[i] == 2 )
          {
             /* if terminal node i is not the one with the highest prize, delete */
             if( !maxprize(scip, g, i) )
@@ -942,7 +942,7 @@ SCIP_RETCODE degree_test_mw(
             }
          }
          /* terminal of (real) degree 1? */
-         else if( g->grad[i] == 3 && 1 )
+         else if( g->grad[i] == 3 )
          {
             for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
                if( g->mark[g->head[e]] )
@@ -1152,7 +1152,7 @@ SCIP_RETCODE degree_test_pc(
          /* node i is a terminal: */
 
          /* terminal of (real) degree 0? */
-         if( ( (g->grad[i] == 2 && pc) || (g->grad[i] == 1 && !pc) ) && 1 )
+         if( ( (g->grad[i] == 2 && pc) || (g->grad[i] == 1 && !pc) ) )
          {
             /* if terminal node i is node the one with the highest prize, delete*/
             if( !maxprize(scip, g, i) )
@@ -1163,7 +1163,7 @@ SCIP_RETCODE degree_test_pc(
             }
          }
          /* terminal of (real) degree 1? */
-         else if( ( (g->grad[i] == 3 && pc) || (g->grad[i] == 2 && !pc)  ) && 1 )
+         else if( ( (g->grad[i] == 3 && pc) || (g->grad[i] == 2 && !pc) ) )
          {
             for( e = g->outbeg[i]; e != EAT_LAST; e = g->oeat[e] )
                if( g->mark[g->head[e]] || (!pc && g->head[e] == g->source[0]) )
@@ -1174,7 +1174,7 @@ SCIP_RETCODE degree_test_pc(
             SCIP_CALL( trydg1edgepc(scip, g, fixed, count, i, e, &rerun) );
          }
          /* terminal of (real) degree 2? */
-         else if( ( (g->grad[i] == 4 && pc) || (g->grad[i] == 3 && !pc)  ) && 1 )
+         else if( ( (g->grad[i] == 4 && pc) || (g->grad[i] == 3 && !pc)  )  )
          {
             if( !maxprize(scip, g, i) )
             {
@@ -1225,7 +1225,7 @@ SCIP_RETCODE degree_test_pc(
          }
 
          /* try to contract adjacent terminals */
-         if( g->grad[i] > 0 && 1)
+         if( g->grad[i] > 0 )
          {
             SCIP_Real mincost = FARAWAY;
             int ett = UNKNOWN;

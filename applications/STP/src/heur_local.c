@@ -46,7 +46,6 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           (SCIP_HEURTIMING_BEFORENODE | SCIP_HEURTIMING_DURINGLPLOOP | SCIP_HEURTIMING_AFTERLPLOOP | SCIP_HEURTIMING_AFTERNODE)
-#define printDebug0
 
 #define HEUR_USESSUBSCIP      FALSE  /**< does the heuristic use a secondary SCIP instance? */
 
@@ -406,6 +405,11 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                      stdeg[i]++;
          }
       }
+      else
+      {
+         cuts2 = NULL;
+         stdeg = NULL;
+      }
 
       i = 0;
       l = 0;
@@ -428,7 +432,6 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
             {
                if( Is_pterm(graph->term[i]) )
                {
-                  // printf("%d- prize: %f ....%d %d",i, graph->prize[i], graph->tail[insert[0]], graph->head[insert[0]]);
                   SCIPdebugMessage("ADDED VERTEX \n");
                   v = &nodes[i];
 
@@ -448,7 +451,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
 
                SCIPlinkcuttreeLink(v, &nodes[graph->head[insert[0]]], insert[0]);
 	       if( mw )
-                  diff = -1.0;//-graph->prize[i];
+                  diff = -1.0;
 	       else
                   diff = graph->cost[v->edge];
 
@@ -462,12 +465,13 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
 
 		  if( mw )
 		  {
+		     assert(stdeg != NULL);
                      stdeg[graph->head[insert[k]]]++;
                      max = SCIPlinkcuttreeFindMinMW(scip, graph->prize, graph->tail, stdeg, w);
                      l = graph->tail[max->edge];
 
                      stdeg[graph->head[insert[k]]]--;
-                     //   break;
+
                      if( SCIPisLT(scip,  graph->prize[l], graph->prize[i]) )
 		     {
 		        SCIPlinkcuttreeLink(v, w, insert[k]);
@@ -1182,9 +1186,6 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
 
                if( SCIPisLT(scip, mstcost, kpcost) )
                {
-                  SCIP_Real added = 0.0;
-                  SCIP_Real removed = 0.0;
-
                   localmoves++;
 #ifdef printDebug
                   printf("found improving solution in KEY VERTEX ELIMINATION (round: %d) \n ", nruns);
@@ -1194,7 +1195,6 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                   {
                      assert(best_result[kpedges[e]] != -1);
                      best_result[kpedges[e]] = -1;
-                     removed += graph->cost[kpedges[e]];
                   }
 
                   /* mark all ST nodes except for those belonging to the root-component as forbidden */
@@ -1255,7 +1255,6 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                            printf(" FINAL ADD root edgee: : %d -> %d \n", graph->tail[edge], graph->head[edge]);
 
                         best_result[edge] = CONNECT;
-                        added += graph->cost[edge];
 
                         for( node = graph->tail[edge], adjnode = graph->head[edge]; node != vbase[node]; adjnode = node, node = graph->tail[vnoi[node].edge] )
                         {
@@ -1265,14 +1264,13 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                            if( best_result[flipedge(vnoi[node].edge)] == CONNECT )
                            {
                               best_result[flipedge(vnoi[node].edge)] = UNKNOWN;
-                              removed += graph->cost[flipedge(vnoi[node].edge)];
+
                               if( debg )
                                  printf(" FINAL delete reverse1 of : %d -> %d \n", graph->tail[(vnoi[node].edge)], graph->head[(vnoi[node].edge)]);
                            }
                            if( debg )
                               printf("FINAL ADD rootedge: : %d -> %d \n", graph->tail[(vnoi[node].edge)], graph->head[(vnoi[node].edge)]);
                            best_result[vnoi[node].edge] = CONNECT;
-                           added += graph->cost[vnoi[node].edge];
                         }
 
                         assert(!nodesmark[node] && vbase[node] == node);
@@ -1341,14 +1339,14 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                            if( best_result[vnoi[node].edge] == CONNECT )
                            {
                               best_result[vnoi[node].edge] = -1;
-                              removed += graph->cost[vnoi[node].edge];
+
                               if( debg )
                                  printf(" FINAL delete reverse2 of : %d -> %d \n", graph->head[(vnoi[node].edge)], graph->tail[(vnoi[node].edge)]);
                            }
                            if( debg )
                               printf("FINAL ADD rootedge: : %d -> %d \n", graph->tail[flipedge(vnoi[node].edge)], graph->head[flipedge(vnoi[node].edge)]);
                            best_result[flipedge(vnoi[node].edge)] = CONNECT;
-                           added += graph->cost[flipedge(vnoi[node].edge)];
+
                         }
                      }
                      else
@@ -1357,7 +1355,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                            printf(" FINAL ADD egde: : %d -> %d \n", graph->tail[edge], graph->head[edge]);
 
                         best_result[edge] = CONNECT;
-                        added += graph->cost[edge];
+
                         for( node = graph->tail[edge]; node != vbase[node]; node = graph->tail[vnoi[node].edge] )
                         {
                            graphmark[node] = FALSE;
@@ -1366,7 +1364,7 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                               if( debg )
                                  printf("FINAL ADD edge: : %d -> %d \n", graph->tail[(vnoi[node].edge)], graph->head[(vnoi[node].edge)]);
                               best_result[vnoi[node].edge] = CONNECT;
-                              added+= graph->cost[(vnoi[node].edge)];
+
                            }
                         }
 
@@ -1377,7 +1375,6 @@ SCIP_RETCODE SCIPheurImproveSteinerTree(
                               printf("FINAL ADD edge: : %d -> %d \n", graph->tail[flipedge(vnoi[node].edge)], graph->head[flipedge(vnoi[node].edge)]);
                            best_result[flipedge(vnoi[node].edge)] = CONNECT;
                            best_result[vnoi[node].edge] = UNKNOWN;
-                           added += graph->cost[flipedge(vnoi[node].edge)];
                         }
                      }
                   }
@@ -2031,8 +2028,8 @@ SCIP_RETCODE extendSteinerTreePcMw(
       {
          if( stvertex[i] && vbase[i] != UNKNOWN && vbase[i] != i && !Is_term(graph->term[i]) )
          {
-            double sum = 0.0;
             assert(Is_pterm(graph->term[vbase[i]]));
+
             if( !stvertex[vbase[i]] && SCIPisLT(scip, vnoi[i].dist, 0.0) )
             {
                k = i;
@@ -2043,10 +2040,9 @@ SCIP_RETCODE extendSteinerTreePcMw(
                   if( !stvertex[k] )
                   {
                      stvertex[k] = TRUE;
-                     sum += graph->prize[k];
-                     SCIPdebugMessage("add vertex %d (vbase: %d, cost: %f \n", k, i, graph->prize[k]);
-
                      newnverts++;
+
+                     SCIPdebugMessage("add vertex %d (vbase: %d, cost: %f \n", k, i, graph->prize[k]);
                   }
                }
             }
@@ -2209,7 +2205,7 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       }
 
 
-      fprintf(fptr," &   %d    &   %d   &   %d   &   %d   &    &    \n", graph->norgmodelknots, graph->norgmodeledges / 2, (graph->knots - graph->terms), ((graph->edges) / 2 - 3 * (graph->terms - 1)));// SCIPgetReadingTime(scip));
+      fprintf(fptr," &   %d    &   %d   &   %d   &   %d   &    &    \n", graph->norgmodelknots, graph->norgmodeledges / 2, (graph->knots - graph->terms), ((graph->edges) / 2 - 3 * (graph->terms - 1)));
       fclose(fptr);
 #endif
 
@@ -2226,8 +2222,6 @@ SCIP_DECL_HEUREXEC(heurExecLocal)
       }
       else if(  graph->stp_type == STP_PRIZE_COLLECTING || graph->stp_type == STP_MAX_NODE_WEIGHT )
       {
-          //fprintf(fptr,"%d    &   %d  \n", (graph->knots - graph->terms),  ((graph->edges) / 2 - 3 * (graph->terms - 1)));
-          //   graph->norgmodeledges / 2, SCIPgetReadingTime(scip));
            fprintf(fptr,"%d       %d      %d      %d     %f  \n", (graph->knots - graph->terms), graph->norgmodelknots, ((graph->edges) / 2 - 3 * (graph->terms - 1)),
              graph->norgmodeledges / 2, SCIPgetReadingTime(scip));
       }

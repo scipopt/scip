@@ -878,9 +878,8 @@ SCIP_RETCODE reduceStp(
    if( SCIPisLE(scip, (double) g->terms / (double) nnodes, 0.03 ) )
       bred = TRUE;
 
-//    da = FALSE;
-//    sd = FALSE;
 #if 0
+da = FALSE
 bd3 = FALSE;
 sdc = FALSE;
 
@@ -960,7 +959,7 @@ bred = FALSE;
          else
             SCIP_CALL( degree_test(scip, g, fixed, &degtnelims) );
 
-         printf("le: %d \n", lenelims);
+         SCIPdebugMessage("le: %d \n", lenelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -972,7 +971,7 @@ bred = FALSE;
          if( sdnelims <= reductbound )
             sd = FALSE;
 
-         printf("sd: %d, \n", sdnelims);
+         SCIPdebugMessage("sd: %d, \n", sdnelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -984,7 +983,7 @@ bred = FALSE;
          if( sdcnelims <= reductbound )
             sdc = FALSE;
 
-	 printf("sdsp: %d \n", sdcnelims);
+	 SCIPdebugMessage("sdsp: %d \n", sdcnelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1000,7 +999,7 @@ bred = FALSE;
          else
             SCIP_CALL( degree_test(scip, g, fixed, &degtnelims) );
 
-         printf("bd3: %d \n", bd3nelims);
+         SCIPdebugMessage("bd3: %d \n", bd3nelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1012,7 +1011,7 @@ bred = FALSE;
          if( nvslnelims <= reductbound )
             nvsl = FALSE;
 
-         printf("nvsl: %d \n", nvslnelims);
+         SCIPdebugMessage("nvsl: %d \n", nvslnelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1024,7 +1023,7 @@ bred = FALSE;
 	 if( brednelims <= 2 * reductbound )
             bred = FALSE;
 
-         printf("bnd: %d \n", brednelims);
+         SCIPdebugMessage("bnd: %d \n", brednelims);
          if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1295,7 +1294,7 @@ SCIP_RETCODE reducePc(
          if( brednelims <= reductbound )
 	    bred = FALSE;
 
-         printf("bnd %d \n", brednelims);
+         SCIPdebugMessage("bnd %d \n", brednelims);
 	 if( SCIPgetTotalTime(scip) > timelimit )
             break;
       }
@@ -1314,7 +1313,7 @@ SCIP_RETCODE reducePc(
 	 if( danelims <= 2 * reductbound )
             da = FALSE;
 
-         printf("da: %d \n", danelims);
+         SCIPdebugMessage("da: %d \n", danelims);
       }
 
       if( degnelims + sdnelims + sdcnelims + bd3nelims + danelims + brednelims + nvslnelims <= reductbound )
@@ -1325,7 +1324,6 @@ SCIP_RETCODE reducePc(
    SCIPdebugMessage("Reduction Level PC 1: Fixed Cost = %.12e\n", *fixed);
 
    /* free memory */
-
 
    if( gnodearr != NULL )
    {
@@ -1513,7 +1511,7 @@ SCIP_RETCODE reduceMwcs(
          if( anselims <= redbound )
             ans = FALSE;
 
-         printf("ans deleted: %d \n", anselims);
+         SCIPdebugMessage("ans deleted: %d \n", anselims);
       }
 
       if( ansad )
@@ -1523,7 +1521,7 @@ SCIP_RETCODE reduceMwcs(
 	 if( ansadelims <= redbound )
             ansad = FALSE;
 
-         printf("ans advanced deleted: %d \n", ansadelims);
+         SCIPdebugMessage("ans advanced deleted: %d \n", ansadelims);
       }
 #if 0
       if( ansad2 )
@@ -1549,7 +1547,7 @@ SCIP_RETCODE reduceMwcs(
          if( chain2elims <= redbound )
             chain2 = FALSE;
 
-         printf("chain2 delete: %d \n", chain2elims);
+         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
       }
 
       if( npv )
@@ -1559,7 +1557,7 @@ SCIP_RETCODE reduceMwcs(
          if( npvelims <= redbound )
             npv = FALSE;
 
-         printf("npv delete: %d \n", npvelims);
+         SCIPdebugMessage("npv delete: %d \n", npvelims);
       }
 #endif
 #if 1 /* org */
@@ -1570,7 +1568,7 @@ SCIP_RETCODE reduceMwcs(
          if( nnpelims <= redbound )
             nnp = FALSE;
 
-         printf("nnp deleted: %d \n", nnpelims);
+         SCIPdebugMessage("nnp deleted: %d \n", nnpelims);
       }
 #endif
       if( nnp )
@@ -1580,7 +1578,7 @@ SCIP_RETCODE reduceMwcs(
          if( chain2elims <= redbound )
             chain2 = FALSE;
 
-         printf("chain2 delete: %d \n", chain2elims);
+         SCIPdebugMessage("chain2 delete: %d \n", chain2elims);
 
 	 if( SCIPgetTotalTime(scip) > timelimit )
             break;
@@ -1597,7 +1595,7 @@ SCIP_RETCODE reduceMwcs(
 	 else
 	    SCIP_CALL( degree_test_mw(scip, g, fixed, &degelims) );
 
-         printf("ans advanced 2 deleted: %d \n", degelims);
+         SCIPdebugMessage("ans advanced 2 deleted: %d \n", degelims);
       }
 #endif
 
@@ -1610,7 +1608,7 @@ SCIP_RETCODE reduceMwcs(
          else
             SCIP_CALL( degree_test_mw(scip, g, fixed, &degelims) );
 
-         printf("bound_reduce: %d \n", bredelims);
+         SCIPdebugMessage("bound_reduce: %d \n", bredelims);
       }
 
       if( da )
@@ -1638,7 +1636,7 @@ SCIP_RETCODE reduceMwcs(
             rerun = TRUE;
             dualascent = FALSE;
             SCIP_CALL( degree_test_mw(scip, g, fixed, &degelims) );
-            printf("RELAOD! %d\n\n ", cnsadvelims);
+            SCIPdebugMessage("RELAOD! %d\n\n ", cnsadvelims);
 	 }
       }
    }
@@ -1666,7 +1664,6 @@ SCIP_RETCODE reduceMwcs(
 
    if( gnodearr != NULL )
    {
-
       for( i = nterms - 2; i >= 0; i-- )
          SCIPfreeBuffer(scip, &gnodearr[i]);
       SCIPfreeBufferArray(scip, &gnodearr);

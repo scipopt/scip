@@ -33,8 +33,8 @@
  * @author Yuji Shinano
  * @author Michael Winkler
  *
- * This application contains a (by default) branch-and-cut based solver for Steiner problems, realized within the framework
- * \SCIP, see: "SCIP-Jack - A solver for STP and variants with parallelization extensions" by G. Gamrath et al. The following plugins are implemented:
+ * This application contains a (by default) branch-and-cut based solver SCIP-Jack for Steiner problems, realized within the framework
+ * \SCIP, see: "A generic approach to solving the Steiner tree problem and variants" by D. Rehfeldt. The following plugins are implemented:
  *
  * - a problem reader, which parses the problem out of a .stp file
  *   (reader_stp.c)
@@ -47,7 +47,7 @@
  * - a propagator, which attempts to fix (edge) variables to zero utilizing their reduced costs (prop_stp.c)
  * - an event handler, which simply writes each incumbent solution to a file -- if activated (event_bestsol.c)
  *
- * In the following, the problem is introduced and the solving process is delineated. Afterwards, the two main plugins are
+ * In the following the problem is introduced and the solving process is delineated. Afterwards the two main plugins are
  * sketched.
  *
  * -# \ref PROBLEM "Problem description and solving approach"
@@ -58,9 +58,6 @@
  */
 
 /**@page PROBLEM Problem description and solving approach
- *
- * A more intricate account of the following can be found in
- * "SCIP-Jack - A solver for STP and variants with parallelization extensions" by G. Gamrath et al.
  *
  * The \textit{Steiner tree problem in graphs} (\textit{SPG}) can be described as follows: Given an undirected connected graph
  * \f$ G=(V,E)\f$, costs \f[ c: E \rightarrow  \mathcal{Q}^+ \f] and a set \f$ T \subset V \f$ of \f$ \textit{terminals} \f$,
@@ -144,6 +141,9 @@
  * -group Steiner tree problems, and
  *
  * -hop-honstrained directed Steiner tree problems.
+ *
+ * A far more intricate description of SCIP-Jack and its various components can be found in
+ * "A generic approach to solving the Steiner tree problem and variants" by D. Rehfeldt.
  */
 
 

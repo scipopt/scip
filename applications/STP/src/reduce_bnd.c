@@ -413,23 +413,9 @@ SCIP_RETCODE da_reduce(
 
       SCIP_CALL( SCIPdualAscentStp(scip, graph, cost, &lpobjval, FALSE, gnodearr, edgearrint, state, root, 1, NULL, nodearrchar) );
 
-#if 0
-      SCIP*                 scip,               /**< SCIP data structure */
-         GRAPH*                g,                  /**< graph data structure */
-         SCIP_Real*            redcost,            /**< array to store reduced costs or NULL */
-         SCIP_Real*            objval,             /**< pointer to store objective value */
-         SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
-         GNODE**               gnodearrterms,      /**< gnode terminals array for internal computations or NULL */
-         int*                  edgearrint,         /**< int edges array for internal computations or NULL */
-         int*                  nodearrint,         /**< int vertices array for internal computations or NULL */
-         int                   root,               /**< the root */
-         int                   nruns,              /**< number of dual ascent runs */
-         char*                 edgearrchar,        /**< char edges array for internal computations or NULL */
-         char*                 nodearrchar         /**< char vertices array for internal computations or NULL */
-#endif
-         /* the required reduced path cost to be surpassed */
-         minpathcost = upperbound - lpobjval;
-      printf("upperbound %f, lpobjval %f\n", upperbound, lpobjval);
+      /* the required reduced path cost to be surpassed */
+      minpathcost = upperbound - lpobjval;
+      SCIPdebugMessage("da: upperbound %f, lpobjval %f\n", upperbound, lpobjval);
 
       for( e = 0; e < nedges; e++ )
       {
@@ -554,7 +540,7 @@ SCIP_RETCODE da_reduce(
 	    }
 	 }
       }
-      printf("deleted by da: %d \n", nfixed );
+      SCIPdebugMessage("deleted by da: %d \n", nfixed );
 
       if( rpc )
          graph->mark[root] = TRUE;
@@ -744,25 +730,12 @@ SCIP_RETCODE daPc_reduce(
       transnedges = transgraph->edges;
 
       SCIP_CALL( SCIPdualAscentStp(scip, transgraph, cost, &lpobjval, FALSE, gnodearr, edgearrint, state, root, 1, marked, nodearrchar) );
-#if 0
-      SCIP*                 scip,               /**< SCIP data structure */
-         GRAPH*                g,                  /**< graph data structure */
-         SCIP_Real*            redcost,            /**< array to store reduced costs or NULL */
-         SCIP_Real*            objval,             /**< pointer to store objective value */
-         SCIP_Bool             addcuts,            /**< should dual ascent add Steiner cuts? */
-         GNODE**               gnodearrterms,      /**< gnode terminals array for internal computations or NULL */
-         int*                  edgearrint,         /**< int edges array for internal computations or NULL */
-         int*                  nodearrint,         /**< int vertices array for internal computations or NULL */
-         int                   root,               /**< the root */
-         int                   nruns,              /**< number of dual ascent runs */
-         char*                 edgearrchar,        /**< char edges array for internal computations or NULL */
-         char*                 nodearrchar         /**< char vertices array for internal computations or NULL */
-#endif
-         lpobjval += offset;
+
+      lpobjval += offset;
 
       /* the required reduced path cost to be surpassed */
       minpathcost = upperbound - lpobjval;
-      printf("xupperbound %f, lpobjval %f\n", upperbound, lpobjval);
+      SCIPdebugMessage("xupperbound %f, lpobjval %f\n", upperbound, lpobjval);
 
       for( e = 0; e < transnedges; e++ )
       {
@@ -836,7 +809,7 @@ SCIP_RETCODE daPc_reduce(
          }
       }
 
-      printf("fixed by da: %d \n", nfixed );
+      SCIPdebugMessage("fixed by da: %d \n", nfixed );
 
       graph_path_exit(scip, transgraph);
       graph_free(scip, transgraph, TRUE);
@@ -1285,7 +1258,7 @@ SCIP_RETCODE bound_reduce(
       obj = *upperbound - *offset;
       assert(SCIPisGE(scip, obj, 0.0));
    }
-#if 1
+#if 0
    printf("radiim2: %f \n", radiim2);
    printf("mstobj:  %f \n", mstobj);
    printf("totalobj: %f \n", obj);

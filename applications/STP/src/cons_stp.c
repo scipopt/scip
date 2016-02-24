@@ -1563,7 +1563,7 @@ SCIP_RETCODE SCIPdualAscentStp(
 
    } /* dual ascent loop */
 
-   printf("dualglobal: %f \n", dualobj);
+   SCIPdebugMessage("DA: dualglobal: %f \n", dualobj);
    *objval = dualobj;
 
    /* free memory */
@@ -1982,7 +1982,7 @@ SCIP_RETCODE SCIPdualAscentPcStp(
 
 
    *objval = dualobj + offset;
-   printf("XXX dualglobal: %f \n", *objval + SCIPprobdataGetOffset(scip));
+   SCIPdebugMessage("DA: dualglobal: %f \n", *objval + SCIPprobdataGetOffset(scip));
 
    /* free memory */
    SCIPpqueueFree(&pqueue);
@@ -2074,7 +2074,7 @@ SCIP_RETCODE SCIPdualAscentAddCutsStp(
    for( i = 0; i < nruns; i++ )
    {
       r = root[k - i - 1];
-      printf("newroot: %d \n ", r);
+
       SCIP_CALL( SCIPdualAscentStp(scip, g, redcost, &objval, FALSE, gnodearr, edgearrint, nodearrint, r, 1, edgearrchar, nodearrchar) );
 
       if( SCIPisGT(scip, objval, max ) )
@@ -2086,7 +2086,7 @@ SCIP_RETCODE SCIPdualAscentAddCutsStp(
 
    g->source[0] = maxroot;
    SCIP_CALL( SCIPdualAscentStp(scip, g, redcost, &objval, TRUE, gnodearr, edgearrint, nodearrint, maxroot, 1, edgearrchar, nodearrchar) );
-   printf("newroot: %d, obj: %f \n", g->source[0] , objval);
+
    SCIPfreeBufferArray(scip, &nodearrchar);
    SCIPfreeBufferArray(scip, &edgearrchar);
    SCIPfreeBufferArray(scip, &nodearrint);

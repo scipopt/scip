@@ -140,13 +140,26 @@ SCIP_Bool sddeltable(
    int                   nnodes
    )
 {
+#if 0
    int e;
+#endif
 
    assert(g != NULL);
    assert(path != NULL);
    assert(scip != NULL);
+   assert(vbase != NULL);
    assert(forbidden != NULL);
 
+   assert(tpos >= 0);
+   assert(hpos >= 0);
+   assert(tail >= 0);
+   assert(head >= 0);
+   assert(edge >= 0);
+   assert(nnodes >= 0);
+
+   return FALSE;
+
+#if 0 /* @todo */
    /* edge between non-terminals */
    if( !Is_term(g->term[tail]) && !Is_term(g->term[head]) )
    {
@@ -165,9 +178,9 @@ SCIP_Bool sddeltable(
       int k;
       int base;
       int shift;
-            int antiedge;
+      int antiedge;
 
-            antiedge = flipedge(edge);
+      antiedge = flipedge(edge);
 #endif
 
       /* check whether edge is used in shortest path */
@@ -184,7 +197,7 @@ SCIP_Bool sddeltable(
 #if 0
          k = tail;
          base = vbase[tail + tpos * nnodes];
-shift = tpos * nnodes;
+         shift = tpos * nnodes;
          while( k != base )
          {
             e = path[k + shift].edge;
@@ -251,6 +264,7 @@ shift = tpos * nnodes;
    }
    printf("deletable! \n");
    return TRUE;
+#endif
 }
 
 
@@ -656,7 +670,42 @@ SCIP_RETCODE sd_red(
 
    /* compute nearest four terminals to all non-terminals */
    getnext4terms(scip, g, g->cost, g->cost, vnoi, vbase, heap, state);
+#if 0
+   int tpos;
+   int base;
+   int shift;
+   int x = 0;
+   for( tpos = 0; tpos < 4; tpos++ )
+   {
+      for( k = 0; k < nnodes; k++ )
+      {
+         if(  Is_term(g->term[k]) || !g->mark[k] )
+            continue;
 
+
+         base = vbase[k + tpos * nnodes];
+         if( base == -1 )
+            continue;
+         shift = tpos * nnodes;
+         x = 0;
+         printf("in %d\n", base);
+         i = k;
+         while( i != base )
+         {
+            if( x++ >= 10000 )
+            {
+               printf("FAIL k: %d, tpos: %d, base: %d\n",k, tpos, base);
+               assert(0);
+            }
+            e = vnoi[i + shift].edge;
+
+            assert(g->ieat[e] != EAT_FREE);
+
+            i = g->tail[e];
+         }
+      }
+   }
+#endif
 #if 0
    if( 1 )
    {
@@ -842,7 +891,7 @@ SCIP_RETCODE sd_red(
 
    graph_path_exec(scip, netgraph, MST_MODE, 0, netgraph->cost, mst);
 
-   /* mark (original) edges of MST*/
+   /* mark (original) edges of MST */
    for( k = 1; k < netgraph->knots; k++ )
    {
       assert(mst[k].edge != -1);
@@ -908,11 +957,12 @@ SCIP_RETCODE sd_red(
          if( !Is_term(g->term[i]) )
          {
 #if 0
-            if( 1 || Is_term(g->term[i2]) )
+            if( Is_term(g->term[i2]) )
                nnterms1 = getcloseterms(scip, vnoi, termdist1, ecost, vbase, neighbterms1, i, nnodes);
             else
+               nnterms2 = getlecloseterms(scip, vnoi, termdist2, ecost, vbase, neighbterms2, i2, nnodes);
 #endif
-               nnterms1 = getlecloseterms(scip, vnoi, termdist1, ecost, vbase, neighbterms1, i, nnodes);
+            nnterms1 = getlecloseterms(scip, vnoi, termdist1, ecost, vbase, neighbterms1, i, nnodes);
 
             if( nnterms1 == 0 )
                continue;
@@ -930,11 +980,12 @@ SCIP_RETCODE sd_red(
          {
             /* get closest terminals of distance smaller ecost */
 #if 0
-            if(  1 || Is_term(g->term[i]) )
+            if(  Is_term(g->term[i]) )
                nnterms2 = getcloseterms(scip, vnoi, termdist2, ecost, vbase, neighbterms2, i2, nnodes);
             else
-#endif
                nnterms2 = getlecloseterms(scip, vnoi, termdist2, ecost, vbase, neighbterms2, i2, nnodes);
+#endif
+            nnterms2 = getlecloseterms(scip, vnoi, termdist2, ecost, vbase, neighbterms2, i2, nnodes);
 
             if( nnterms2 == 0 )
                continue;
@@ -960,18 +1011,17 @@ SCIP_RETCODE sd_red(
 
                if( tj == tk )
                {
-
                   if( SCIPisGE(scip, termdist1[j], termdist2[k] ) )
                      dist = termdist1[j];
                   else
                      dist = termdist2[k];
 
                   assert(SCIPisGE(scip, ecost, dist));
-#if 1
+
                   if( SCIPisEQ(scip, dist, ecost) )
                      if( !sddeltable(scip, g, vnoi, vbase, forbidden, j, k, i, i2, e, nnodes ) )
                         continue;
-#endif
+
                   graph_edge_del(scip, g, e, TRUE);
                   (*nelims)++;
                   break;
@@ -1056,14 +1106,11 @@ SCIP_RETCODE sd_red(
                      dist = termdist2[k];
 
                   if( SCIPisGE(scip, ecost, dist) )
-
-                     //                      || (!Is_term(g->term[i]) && !Is_term(g->term[i2]) && SCIPisGE(scip, ecost, dist)) )
                   {
-#if 1
                      if( SCIPisEQ(scip, ecost, dist) )
                         if( !(sddeltable(scip, g, vnoi, vbase, forbidden, j, k, i, i2, e, nnodes)) )
                            continue;
-#endif
+
                      assert(SCIPisGE(scip, ecost, termdist1[j]));
                      assert(SCIPisGE(scip, ecost, termdist2[k]));
 

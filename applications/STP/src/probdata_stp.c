@@ -59,7 +59,6 @@
 #define MODE_FLOW   1           /**< use flow model */
 #define MODE_PRICE  2           /**< branch and price */
 
-#define CONS_NEVER        0           /**< never use (respective) constraints */
 #define CONS_ALWAYS       1           /**< always use (respective) constraints */
 #define CONS_SPECIFIC     2           /**< use (respective) constraints depending on the problem instance */
 
@@ -81,7 +80,9 @@ struct SCIP_ProbData
    SCIP_CONS**           degcons;            /**< array of (node) degree constraints */
    SCIP_CONS**           edgecons;           /**< array of constraints */
    SCIP_CONS**           pathcons;           /**< array of constraints */
+#if FLOWB
    SCIP_CONS**           flowbcons;          /**< flow balance constraints */
+#endif
    SCIP_CONS**           prizesymcons;       /**< prize-collecting, improving LP constraints */
    SCIP_CONS**           prizecyclecons;     /**< prize-collecting, improving LP constraints */
    SCIP_CONS*            hopcons;            /**< hop constraint */
@@ -871,19 +872,20 @@ SCIP_RETCODE createVariables(
    )
 {
    GRAPH* graph;
-   char varname[SCIP_MAXSTRLEN];
    SCIP_VAR* var;
    SCIP_Real* edgecost;
-   int tail;
-   int k2;
    int e;
    int t;
    int k;
+   int k2;
+   int tail;
+   char varname[SCIP_MAXSTRLEN];
 
    assert(scip != NULL);
    assert(probdata != NULL);
 
    t = 0;
+   k2 = 0;
    graph = probdata->graph;
    SCIPdebugMessage("createVariables \n");
 
@@ -1906,8 +1908,9 @@ SCIP_RETCODE SCIPprobdataCreate(
    SCIP_CALL( SCIPgetStringParam(scip, "stp/logfile", &logfilename) );
    SCIP_CALL( SCIPgetStringParam(scip, "stp/intlogfile", &intlogfilename) );
 
- // logfilename = "RPC.sol";
-  // logfilename = "MW.sol";
+#if 0
+  logfilename = "RPC.sol";
+#endif
 
    if( logfilename != NULL && logfilename[0] != '\0' )
    {
@@ -2054,7 +2057,7 @@ SCIP_RETCODE SCIPprobdataCreate(
       SCIP_CALL( SCIPsetIntParam(scip, "separating/flowcover/freq", -1) );
       SCIP_CALL( SCIPsetIntParam(scip, "separating/cmir/freq", -1) );
       SCIP_CALL( SCIPsetIntParam(scip, "separating/strongcg/freq", -1) );
-      SCIP_CALL( SCIPsetIntParam(scip, "heuristics/oneopt/freq", -1) ); //TODO? BUG in pc i640-321
+      SCIP_CALL( SCIPsetIntParam(scip, "heuristics/oneopt/freq", -1) );
 
       if( mw )
       {
@@ -2095,9 +2098,9 @@ SCIP_RETCODE SCIPprobdataCreate(
       probdata->usesymcons = FALSE;
 
    if( probdata->usesymcons  )
-   printf(" SYM CONS: %f \n\n", (0.5 * (graph->terms - 1) * graph->terms));
+      SCIPdebugMessage("USE SYM CONS: %d \n", (int) (0.5 * (graph->terms - 1) * graph->terms));
    else
-         printf(" NOOSYM CONS: \n\n");
+      SCIPdebugMessage("NO SYM CONS: \n");
 #if 0
    FILE *fptr;
 

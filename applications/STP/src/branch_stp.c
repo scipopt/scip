@@ -108,10 +108,10 @@ SCIP_RETCODE selectBranchingVertex(
       {
          branchvert = k;
 	 maxflow = fabs(inflow[k] - 0.5);
-         printf("new maxflow %f on vertex %d \n", inflow[k], branchvert );
+         SCIPdebugMessage("new maxflow %f on vertex %d \n", inflow[k], branchvert );
       }
    }
-   printf("maxflow %f on vertex %d, term? %d \n", maxflow, branchvert, Is_term(g->term[branchvert])  );
+   SCIPdebugMessage("maxflow %f on vertex %d, term? %d \n", maxflow, branchvert, Is_term(g->term[branchvert])  );
    (*vertex) = branchvert;
 
    SCIPfreeBufferArray(scip, &inflow);
@@ -260,7 +260,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpStp)
    /* relase constraints */
    SCIP_CALL( SCIPreleaseCons(scip, &consin) );
    SCIP_CALL( SCIPreleaseCons(scip, &consout) );
-   printf("Branched on stp vertex %d \n", branchvertex);
+
    SCIPdebugMessage("Branched on stp vertex %d \n", branchvertex);
 
    *result = SCIP_BRANCHED;
