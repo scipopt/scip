@@ -19,11 +19,12 @@ performance improvements:
 
 interface:
 - add SCIPcomputeHyperplaneThreePoints to compute a hyperplane containing three given 3-dimensional points
-- SCIPsolveLinearProb uses now an 1-dimensional matrix representation
+- SCIPsolveLinearProb now uses a 1-dimensional matrix representation
 - made debug solution functionality thread safe (see debug.h for further information)
 - added interactive shell command 'display finitesolution' to print solution with infinite fixings removed,
   added reference to that method to 'display solution' output if there are infinite fixings
 - renamed MIP matrix structure to SCIP_MATRIX
+- changed the numeric values for PRESOLTIMING flags
 
 fixed bugs:
 - fixed a bug in merge step of cliques during clean up phase; method did not correctly handle infeasibility in the case of multiple variable-negation pairs
@@ -37,7 +38,7 @@ fixed bugs:
   linked LP solution might have become invalid
 - fixed wrong check when computing cuts for factorable quadratic functions
 - fixed numerical problems in computation of cuts for bivariate functions in quadratic constraint handler
-- fixed bug in quadratic constraint handler when computation lifted-tangent inequalities
+- fixed bug in quadratic constraint handler when computing lifted-tangent inequalities
 - fixed bug in nonlinear constraint handler when replacing a violated nonlinear constraint leads to an infinite
   bound tightening of a single variable
 - do not analyse an infeasible LP for conflicts during diving mode when LHS/RHS of rows were changed
