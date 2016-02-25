@@ -73,6 +73,9 @@ SCIP version 3.2.0
 ==================
 
 features:
+- new application for solving Steiner tree problems: SCIP-Jack can handle both the classical Steiner tree problem in graphs
+  and 10 of its variants. Moreover, SCIP-Jack is competitive with (or even superior to) problem specific state-of-the-art solvers
+  on several well-known variants, e.g., the (rooted) prize-collecting Steiner tree problem.
 - new parameter display/allviols to print all violated constraints of the best solution during checksol in the scip shell
 - new parameter numerics/checkfeastolfac to scale feasibility tolerance when checking the feasibility of best found solution
   after the solving process finished (e.g., checksol in scip shell)
