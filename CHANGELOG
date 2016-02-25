@@ -2,8 +2,11 @@ SCIP version 3.2.1
 ==================
 
 features:
-- handle cutoffs in cons_indicator detected by infeasible inequalities
 - new interactive shell command "write history" to write the command line history (only when compiled with Readline)
+- several improvements of SCIP-Jack (STP application): extended presolving for STP variants, STP-specific branching
+  rule, dual heuristic to generate initial LP relaxation
+  SCIP-Jack is now competitive with problem specific state-of-the-art solvers on several well-known STP variants,
+  e.g., the (rooted) prize-collecting Steiner tree problem.
 
 parameters:
 - new parameter misc/transsolorig for transfering transformed solutions to the original space (default: true)
@@ -11,6 +14,7 @@ parameters:
 - new parameter propagating/rootredcost/onlybinary to propagate root reduced costs of binary variables only
 
 performance improvements:
+- handle cutoffs in cons_indicator detected by infeasible inequalities
 - do not transfer solutions to original space, if SCIP is being freed
 
 interface:
@@ -73,9 +77,6 @@ SCIP version 3.2.0
 ==================
 
 features:
-- new application for solving Steiner tree problems: SCIP-Jack can handle both the classical Steiner tree problem in graphs
-  and 10 of its variants. Moreover, SCIP-Jack is competitive with (or even superior to) problem specific state-of-the-art solvers
-  on several well-known variants, e.g., the (rooted) prize-collecting Steiner tree problem.
 - new parameter display/allviols to print all violated constraints of the best solution during checksol in the scip shell
 - new parameter numerics/checkfeastolfac to scale feasibility tolerance when checking the feasibility of best found solution
   after the solving process finished (e.g., checksol in scip shell)
@@ -150,6 +151,8 @@ features:
 - new presolver redvub which can detect redundant variable upper bound constraints added
 - new presolver stuffing for fixing of singleton continuous variables added
 - added matrix module for getting access to the internal mixed inter linear problem matrix
+- new application for solving Steiner tree problems: SCIP-Jack can handle both the classical Steiner tree problem in graphs
+  and 10 of its variants
 
 parameters:
 - new parameter 'DELHEADERS' for 'uninstall'-target: scip headers are only removed when invoking 'make uninstall DELHEADERS=true'
