@@ -72,6 +72,7 @@ fixed bugs:
 - (root) reduced cost propagators are not run anymore when doing branch-and-price, since they may install upper bounds
   on variables which might interfere with the pricing
 - fixed bug with infinite shift values in heur_shifting
+- fixed potential memory leak in genvbound propagator
 
 SCIP version 3.2.0
 ==================

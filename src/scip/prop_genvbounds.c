@@ -2262,11 +2262,16 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
          /* free genvbound and fill gap */
          SCIP_CALL( freeGenVBound(scip, propdata->genvboundstore[i]) );
          --(propdata->ngenvbounds);
-         propdata->genvboundstore[i] = propdata->genvboundstore[propdata->ngenvbounds];
-         propdata->genvboundstore[i]->index = i;
 
-         /* mark genvbounds array to be resorted */
-         propdata->issorted = FALSE;
+         /* move the last genvbound to the i-th position */
+         if( i < propdata->ngenvbounds )
+         {
+            propdata->genvboundstore[i] = propdata->genvboundstore[propdata->ngenvbounds];
+            propdata->genvboundstore[i]->index = i;
+
+            /* mark genvbounds array to be resorted */
+            propdata->issorted = FALSE;
+         }
       }
       else
          ++i;
