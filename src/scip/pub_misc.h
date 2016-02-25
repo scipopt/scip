@@ -16,8 +16,11 @@
 /**@file   pub_misc.h
  * @brief  public data structures and miscellaneous methods
  * @author Tobias Achterberg
+ * @author Gerald Gamrath
  * @author Stefan Heinz
+ * @author Gregor Hendel
  * @author Michael Winkler
+ * @author Kati Wolter
  *
  * This file contains a bunch of data structures and miscellaneous methods:
  *

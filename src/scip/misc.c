@@ -20,6 +20,7 @@
  * @author Stefan Heinz
  * @author Michael Winkler
  * @author Kati Wolter
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -40,6 +41,10 @@
 #ifndef NDEBUG
 #include "scip/struct_misc.h"
 #endif
+
+/*
+ * methods for statistical tests
+ */
 
 #define SQRTOFTWO                  1.4142136 /**< the square root of 2 with sufficient precision */
 
