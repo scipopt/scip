@@ -1,0 +1,34 @@
+PolySCIP uses data structures of the Lemon Graph Library (https://lemon.cs.elte.hu/trac/lemon).
+
+Lemon as well as PolySCIP use cmake. Make sure you have cmake (https://cmake.org/) installed. 
+
+1.) Download the Lemon Graph Library (http://lemon.cs.elte.hu/trac/lemon/) and 
+follow the steps given in the INSTALL file.
+
+2.) After you have built SCIP and SoPlex successfully (see their INSTALL files), change into the PolySCIP
+directory 
+
+3.) Execute 'mkdir build' and 'cd build'
+
+4.a) Execute 'cmake ..'
+
+cmake tries to locate the necessary includes and libraries. In case of errors, it is also possible to 
+specifiy the necessary includes and library paths on the command line:
+
+Assume Lemon was installed at '/home/user/lemon' and its include directory can be found at 
+'/home/user/lemon/include'. 
+Furthermore assume that the SCIP directory is located at '/home/user/scipoptsuite-3.2.1/scip-3.2.1' 
+and the SoPlex directory is located at '/home/user/scipoptsuite-3.2.1/soplex-2.2.1'.
+
+4.b) Execute 'cmake .. -DLEMON_INC=/home/user/lemon -DSCIP_ROOT_DIR=/home/user/scipoptsuite-3.2.1/scip-3.2.1 -DSOPLEX_ROOT_DIR=/home/user/scipoptsuite-3.2.1/soplex-2.2.1'
+
+(If there still occur linker problems, then SoPlex and SCIP was probably linked with ZLIB, GMP or READLINE support. Rebuild SoPlex and SCIP via 'make ZLIB=false READLINE=false GMP=false')
+
+5.) Execute 'make' to build the executable in the PolySCIP directory
+
+6.) Execute 'make doc' to build the doxygen documentation in the 'doc' directory 
+
+
+
+
+
