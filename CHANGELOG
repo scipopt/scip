@@ -7,6 +7,8 @@ features:
   rule, dual heuristic to generate initial LP relaxation
   SCIP-Jack is now competitive with problem specific state-of-the-art solvers on several well-known STP variants,
   e.g., the (rooted) prize-collecting Steiner tree problem.
+- several improvements of PolySCIP (PolySCIP application): better command line arg processing, overhaul of much of source 
+  code, installation via cmake 
 
 parameters:
 - new parameter misc/transsolorig for transfering transformed solutions to the original space (default: true)
