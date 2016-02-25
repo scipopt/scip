@@ -101,10 +101,10 @@ SCIP_RETCODE createSubproblem(
    SCIP*                 scip,               /**< SCIP data structure of the original problem                      */
    SCIP*                 subscip,            /**< SCIP data structure of the subproblem                            */
    SCIP_VAR**            subvars,            /**< variables of the subproblem                                      */
-   SCIP_ROW**            sourcerows,
-   SCIP_CONS**           targetconss,
-   int                   sourcerowssize,
-   int*                  nsourcerows
+   SCIP_ROW**            sourcerows,         /**< rows of original SCIP                                            */
+   SCIP_CONS**           targetconss,        /**< constraints of target SCIP                                       */
+   int                   sourcerowssize,     /**< size of sourcerows and targetconss arrays                        */
+   int*                  nsourcerows         /**< number of rows / created constraints                             */
    )
 {
    SCIP_ROW** rows;

@@ -99,11 +99,11 @@ SCIP_RETCODE createSubproblem(
    SCIP_VAR**            subvars,            /**< variables of the subproblem                                    */
    int                   nbinvars,           /**< number of binary variables of problem and subproblem           */
    int                   nintvars,           /**< number of general integer variables of problem and subproblem  */
-   SCIP_ROW**            sourcerows,
-   SCIP_CONS**           targetconss,
-   int                   sourcerowssize,
-   int*                  nsourcerows,
-   int*                  fixingcounter,      /**< number of integer variables that get fixed */
+   SCIP_ROW**            sourcerows,         /**< rows of original SCIP                                          */
+   SCIP_CONS**           targetconss,        /**< constraints of target SCIP                                     */
+   int                   sourcerowssize,     /**< size of sourcerows and targetconss arrays                      */
+   int*                  nsourcerows,        /**< number of rows / created constraints                           */
+   int*                  fixingcounter,      /**< number of integer variables that get fixed                     */
    SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?   */
    )
 {

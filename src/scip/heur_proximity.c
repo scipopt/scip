@@ -85,13 +85,14 @@ struct SCIP_HeurData
    SCIP*                 subscip;            /**< the subscip used by the heuristic                                   */
    SCIP_HASHMAP*         varmapfw;           /**< map between scip variables and subscip variables                    */
    SCIP_HASHMAP*         consmapfw;          /**< map between scip constraints and subscip constraints                */
-   SCIP_ROW**            sourcerows;
-   SCIP_CONS**           targetconss;
+   SCIP_ROW**            sourcerows;         /**< rows of original SCIP */
+   SCIP_CONS**           targetconss;        /**< constraints of target SCIP */
    SCIP_VAR**            subvars;            /**< variables in subscip                                                */
    SCIP_CONS*            objcons;            /**< the objective cutoff constraint of the subproblem                   */
 
-   int                   nsourcerows;
-   int                   sourcerowssize;
+   int                   sourcerowssize;     /**< size of sourcerows and targetconss arrays */
+   int                   nsourcerows;        /**< number of rows / created constraints */
+
    int                   nsubvars;           /**< the number of subvars                                               */
    int                   lastsolidx;         /**< index of last solution on which the heuristic was processed         */
    int                   subprobidx;         /**< counter for the subproblem index to be solved by proximity */
@@ -370,10 +371,10 @@ SCIP_RETCODE createRows(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem */
-   SCIP_ROW**            sourcerows,
-   SCIP_CONS**           targetconss,
-   int                   sourcerowssize,
-   int*                  nsourcerows
+   SCIP_ROW**            sourcerows,         /**< rows of original SCIP */
+   SCIP_CONS**           targetconss,        /**< constraints of target SCIP */
+   int                   sourcerowssize,     /**< size of sourcerows and targetconss arrays */
+   int*                  nsourcerows         /**< number of rows / created constraints */
    )
 {
    SCIP_ROW** rows;                          /* original scip rows                       */

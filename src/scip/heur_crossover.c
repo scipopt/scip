@@ -397,10 +397,10 @@ SCIP_RETCODE createRows(
    SCIP*                 scip,               /**< original SCIP data structure */
    SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem */
-   SCIP_ROW**            sourcerows,
-   SCIP_CONS**           targetconss,
-   int                   sourcerowssize,
-   int*                  nsourcerows
+   SCIP_ROW**            sourcerows,         /**< rows of original SCIP */
+   SCIP_CONS**           targetconss,        /**< constraints of target SCIP */
+   int                   sourcerowssize,     /**< size of sourcerows and targetconss arrays */
+   int*                  nsourcerows         /**< number of rows / created constraints */
    )
 {
    SCIP_ROW** rows;                          /* original scip rows                       */
