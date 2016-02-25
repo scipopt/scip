@@ -22,6 +22,15 @@ interface:
 - renamed MIP matrix structure to SCIP_MATRIX
 
 fixed bugs:
+- fixed a bug in merge step of cliques during clean up phase; method did not correctly handle infeasibility in the case of multiple variable-negation pairs
+- fixed a previously untreated case in the linear cons simplification where coefficients only differ by slightly more than an epsilon
+- fixed too hard assertion in pseudoobj propagator
+- fixed inconsistency in knapsack constraint handler data during presolving
+- fixed bug in shiftandpropagate heuristic: the heuristic did not correctly handle intermediate, global bound changes of the selected variable
+  after its tentative fixing led to a cutoff.
+- fixed a bug in shiftandpropagate where column positions after sorting are now correctly linked to their variables after sorting
+- fixed a bug in dive.c that occurred when lpsolvefreq was set to 1; after a cutoff, the solution values of the
+  linked LP solution might have become invalid
 - fixed wrong check when computing cuts for factorable quadratic functions
 - fixed numerical problems in computation of cuts for bivariate functions in quadratic constraint handler
 - fixed bug in quadratic constraint handler when computation lifted-tangent inequalities
