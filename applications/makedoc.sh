@@ -3,7 +3,7 @@
 # run with bash -e makeall.sh to stop on errors
 #
 
-APPLICATIONS=(Coloring PolySCIP Scheduler STP)
+APPLICATIONS=(Coloring Scheduler STP)
 
 for APPLICATION in ${APPLICATIONS[@]}
 do
