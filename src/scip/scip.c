@@ -1500,9 +1500,12 @@ SCIP_RETCODE copyCuts(
    return SCIP_OKAY;
 }
 
+/** returns the basis status of a given variable. if the variable has status different to column, the returned
+  * basis status will be ZERO
+  */
 static
 SCIP_BASESTAT getBasestatVar(
-   SCIP_VAR*             var
+   SCIP_VAR*             var                  /**< problem variable */
    )
 {
    /* get variable and the corresponding column */
@@ -1514,11 +1517,14 @@ SCIP_BASESTAT getBasestatVar(
       return SCIP_BASESTAT_ZERO;
 }
 
+/** returns the basis status of a given constraint. if the constraint has no linear representation, the returned
+  * basis status will be ZERO and the success pointer will set to FALSE
+  */
 static
 SCIP_BASESTAT getBasestatCons(
-   SCIP*                 scip,
-   SCIP_CONS*            cons,
-   SCIP_Bool*            success
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_CONS*            cons,                /**< problem consraint */
+   SCIP_Bool*            success              /**< pointer to store the success */
    )
 {
    SCIP_ROW* row = NULL;
@@ -1558,16 +1564,17 @@ SCIP_BASESTAT getBasestatCons(
       return SCIProwGetBasisStatus(row);
 }
 
+/** returns basis status of given variables and constraints */
 static
 void getBasis(
-   SCIP*                 scip,
-   SCIP_VAR**            vars,
-   SCIP_CONS**           conss,
-   int*                  vstat,
-   int*                  cstat,
-   int                   nvars,
-   int                   nconss,
-   SCIP_Bool*            success
+   SCIP*                 scip,                /**< SCIP data structure */
+   SCIP_VAR**            vars,                /**< problem variables */
+   SCIP_CONS**           conss,               /**< problem constraints */
+   int*                  vstat,               /**< array to store basis status of variables */
+   int*                  cstat,               /**< array to store basis status of constraints */
+   int                   nvars,               /**< number of variables */
+   int                   nconss,              /**< number of constraints */
+   SCIP_Bool*            success              /**< pointer to store the success */
    )
 {
    int i;
