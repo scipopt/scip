@@ -75,12 +75,12 @@ $NAME/applications/Scheduler/src/*.c $NAME/applications/Scheduler/src/*.cpp $NAM
 $NAME/applications/Scheduler/data/*.sm \
 $NAME/applications/Scheduler/data/*.cmin \
 $NAME/applications/Scheduler/Makefile \
-$NAME/applications/MultiObjective/doc/* \
-$NAME/applications/MultiObjective/doc/images/*.png \
-$NAME/applications/MultiObjective/src/depend.* \
-$NAME/applications/MultiObjective/src/*.c $NAME/applications/MultiObjective/src/*.cpp $NAME/applications/MultiObjective/src/*.h \
-$NAME/applications/MultiObjective/data/*.mop \
-$NAME/applications/MultiObjective/Makefile $NAME/applications/MultiObjective/INSTALL $NAME/applications/MultiObjective/scipmip.set \
+$NAME/applications/PolySCIP/doc/* \
+$NAME/applications/PolySCIP/doc/images/*.png \
+$NAME/applications/PolySCIP/src/depend.* \
+$NAME/applications/PolySCIP/src/*.c $NAME/applications/PolySCIP/src/*.cpp $NAME/applications/PolySCIP/src/*.h \
+$NAME/applications/PolySCIP/data/*.mop \
+$NAME/applications/PolySCIP/Makefile $NAME/applications/PolySCIP/INSTALL $NAME/applications/PolySCIP/scipmip.set \
 $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \
 $NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.cpp $NAME/applications/STP/src/*.h \

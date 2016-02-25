@@ -261,7 +261,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/applications/MultiObjective"><b>Multi-objective Optimization</b></a>
+ *  <a href="http://polyscip.zib.de"><b>PolySCIP</b></a>
  *  </td>
  *  <td>
  *  A solver for multi-objective optimization problems.
