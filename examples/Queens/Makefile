@@ -91,6 +91,14 @@ $(OBJDIR):
 $(BINDIR):
 		@-mkdir -p $(BINDIR)
 
+.PHONY: test
+test: $(MAINFILE)
+		for i in 1 2 4 8 16 ; do \
+			echo ; echo "Testing the n-queens solver with n = $$i" ; \
+			$(MAINFILE) $$i || break 1 ; \
+			echo ; \
+		done
+
 .PHONY: clean
 clean:		$(OBJDIR)
 ifneq ($(OBJDIR),)
