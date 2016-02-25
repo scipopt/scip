@@ -75,9 +75,11 @@ scip:
 
 .PHONY: doc
 doc:
-		@-(echo ''; echo '--> running pdflatex to create documentation'; echo ''); 
-		@-(cd doc && pdflatex scip_intro.tex && pdflatex scip_intro.tex);
-		@-(echo ''; echo '--> open doc/scip_intro.pdf for documentation')
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scip.css);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/scippy.png);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/pictures/miniscippy.png);
+		@-(cd doc && ln -fs ../$(SCIPDIR)/doc/scipfooter.html footer.html);
+		cd doc; $(DOXY) $(MAINNAME).dxy
 
 $(MAINSHORTLINK):	$(MAINFILE)
 		@rm -f $@

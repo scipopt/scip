@@ -59,9 +59,9 @@
 
 /**@page PROBLEM Problem description and solving approach
  *
- * The \textit{Steiner tree problem in graphs} (\textit{SPG}) can be described as follows: Given an undirected connected graph
- * \f$ G=(V,E)\f$, costs \f[ c: E \rightarrow  \mathcal{Q}^+ \f] and a set \f$ T \subset V \f$ of \f$ \textit{terminals} \f$,
- * the problem is to find a minimum weight tree \f$ S\subseteq G \f$ that spans \f$ T \f$. Each tree \f$ S \f$ that spans \f$ T \f$, called \textit{Steiner tree}), is
+ * The Steiner tree problem in graphs (SPG) can be described as follows: Given an undirected connected graph
+ * \f$ G=(V,E)\f$, costs \f[ c: E \rightarrow  \mathcal{Q}^+ \f] and a set \f$ T \subset V \f$ of terminals,
+ * the problem is to find a minimum weight tree \f$ S\subseteq G \f$ that spans \f$ T \f$. Each tree \f$ S \f$ that spans \f$ T \f$, called Steiner tree), is
  * a feasible solution to the problem.
  * The following picture shows an SPG instance with the terminals given as squares:
  *
@@ -80,7 +80,7 @@
  *
  * Finally, at the core is the branch-and-cut procedure used to compute a lower bound and prove optimality:
  *
- * The problem can be formulated using the directed equivalent of the STP, the \textit{Steiner arborescence problem} (\textit{SAP)}:
+ * The problem can be formulated using the directed equivalent of the STP, the Steiner arborescence problem (SAP):
  * Given a directed graph \f$ D=(V,A) \f$, a root \f$ r \in V \f$, costs \f$ c: A \rightarrow \mathcal{Q}^+ \f$
  * and a set \f$ T \subset V \f$ of terminals, a subgraph \f$ S\subseteq D \f$  such that
  * for all \f$ t \in T \f$, \f$ S \f$ contains exactly one directed path from \f$ r \f$ to \f$ t \f$ is called Steiner arborescence.
