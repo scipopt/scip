@@ -9795,25 +9795,25 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
    SCIP_Real             c3,                 /**< third coordinate of c */
    SCIP_Real*            alpha,              /**< coefficient of first coordinate */
    SCIP_Real*            beta,               /**< coefficient of second coordinate */
-   SCIP_Real*            gamma,             /**< coefficient of third coordinate */
+   SCIP_Real*            gamma_,             /**< coefficient of third coordinate */
    SCIP_Real*            delta               /**< constant right-hand side */
    )
 {
    assert(scip != NULL);
    assert(alpha != NULL);
    assert(beta  != NULL);
-   assert(gamma != NULL);
+   assert(gamma_ != NULL);
    assert(delta != NULL);
 
    *alpha  = -b3*c2 + a3*(-b2+c2) + a2*(b3-c3) + b2*c3;
    *beta   = -(-b3*c1 + a3*(-b1+c1) + a1*(b3-c3) + b1*c3);
-   *gamma = -a2*b1 + a1*b2 + a2*c1 - b2*c1 - a1*c2 + b1*c2;
+   *gamma_ = -a2*b1 + a1*b2 + a2*c1 - b2*c1 - a1*c2 + b1*c2;
    *delta  = -a3*b2*c1 + a2*b3*c1 + a3*b1*c2 - a1*b3*c2 - a2*b1*c3 + a1*b2*c3;
 
    /* check if hyperplane contains all three points (necessary because of numerical troubles) */
-   if( !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 + *gamma * a3, *delta) ||
-      !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 + *gamma * b3, *delta) ||
-      !SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 + *gamma * c3, *delta) )
+   if( !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 + *gamma_ * a3, *delta) ||
+      !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 + *gamma_ * b3, *delta) ||
+      !SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 + *gamma_ * c3, *delta) )
    {
       SCIP_Real m[9];
       SCIP_Real rhs[3];
@@ -9843,28 +9843,28 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
       *delta  = rhs[0];
       *alpha  = x[0];
       *beta   = x[1];
-      *gamma = x[2];
+      *gamma_ = x[2];
 
       /* set all coefficients to zero if one of the points is not contained in the hyperplane; this ensures that we do
        * not add a cut to SCIP and that all assertions are trivially fulfilled
        */
-      if( !success || !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 + *gamma * a3, *delta) ||
-         !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 + *gamma * b3, *delta) ||
-         !SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 + *gamma * c3, *delta) )
+      if( !success || !SCIPisRelEQ(scip, *alpha * a1 + *beta * a2 + *gamma_ * a3, *delta) ||
+         !SCIPisRelEQ(scip, *alpha * b1 + *beta * b2 + *gamma_ * b3, *delta) ||
+         !SCIPisRelEQ(scip, *alpha * c1 + *beta * c2 + *gamma_ * c3, *delta) )
       {
          SCIPdebugMessage("could not resolve numerical difficulties\n");
          *delta  = 0.0;
          *alpha  = 0.0;
          *beta   = 0.0;
-         *gamma = 0.0;
+         *gamma_ = 0.0;
       }
    }
 
-   if( *gamma < 0.0 )
+   if( *gamma_ < 0.0 )
    {
       *alpha  = -*alpha;
       *beta   = -*beta;
-      *gamma  = -*gamma;
+      *gamma_  = -*gamma_;
       *delta  = -*delta;
    }
 

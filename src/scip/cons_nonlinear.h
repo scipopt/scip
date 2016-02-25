@@ -431,7 +431,7 @@ SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
    SCIP_Real             c3,                 /**< third coordinate of c */
    SCIP_Real*            alpha,              /**< coefficient of first coordinate */
    SCIP_Real*            beta,               /**< coefficient of second coordinate */
-   SCIP_Real*            gamma,              /**< coefficient of third coordinate */
+   SCIP_Real*            gamma_,             /**< coefficient of third coordinate */
    SCIP_Real*            delta               /**< constant right-hand side */
    );
 
