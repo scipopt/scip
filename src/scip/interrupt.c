@@ -151,3 +151,11 @@ SCIP_Bool SCIPinterrupted(
    return (ninterrupts > 0);
 }
 
+/** resets the number of interrupts to 0 */
+void SCIPresetInterrupted(
+   void
+   )
+{
+   ninterrupts = 0;
+}
+

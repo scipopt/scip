@@ -62,6 +62,12 @@ SCIP_Bool SCIPinterrupted(
    void
    );
 
+/** resets the number of interrupts to 0 */
+extern
+void SCIPresetInterrupted(
+   void
+   );
+
 #ifdef __cplusplus
 }
 #endif
