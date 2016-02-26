@@ -1880,7 +1880,7 @@ SCIP_RETCODE detectImpliedBounds(
    assert(conflictset->nbdchginfos > 0);
 
    /* do not check to big or trivial conflicts */
-   if( conflictset->nbdchginfos > set->conf_maxvarsdetectimpliedbounds || conflictset->nbdchginfos == 1 )
+   if( conflictset->nbdchginfos > set->conf_maxvarsdetectimpliedbounds || conflictset->nbdchginfos <= 1 )
    {
       *nredvars = ntrivialredvars;
       return SCIP_OKAY;
