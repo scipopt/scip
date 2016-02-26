@@ -903,7 +903,6 @@ SCIP_DECL_HEURINIT(heurInitSpaGreedy)
    assert(heurdata != NULL);
 
    /* initialize last solution index */
-   SCIP_CALL( SCIPaddBoolParam(scip, "localheur", "If set to true, heuristic assigns bins as soon as any improvement is found", NULL, FALSE, FALSE, NULL, NULL) );
 
    heurdata->lasteffectrootdepth = -1;
 
@@ -1096,6 +1095,7 @@ SCIP_RETCODE SCIPincludeHeurSpaGreedy(
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolSpaGreedy) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitSpaGreedy) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "localheur", "If set to true, heuristic assigns bins as soon as any improvement is found", NULL, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

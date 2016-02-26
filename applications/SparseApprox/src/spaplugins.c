@@ -41,5 +41,7 @@ SCIP_RETCODE SCIPincludeSpaPlugins(
    SCIP_CALL( SCIPincludeHeurSpaswitch(scip) );
    SCIP_CALL( SCIPincludeEventHdlrNewsol(scip) );
 
+   SCIP_CALL( SCIPaddRealParam(scip,"coherence_bound","lower bound to within-cluster coherence", NULL, FALSE, 0.1, 0.0, 1.0, NULL, NULL ) );
+
    return SCIP_OKAY;
 }

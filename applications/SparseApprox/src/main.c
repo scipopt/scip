@@ -102,7 +102,6 @@ SCIP_RETCODE fromCommandLine(
    SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
    SCIPinfoMessage(scip, NULL, "=============\n\n");
 
-/*   SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_AGGRESSIVE, TRUE) );*/
    SCIP_CALL( SCIPsolve(scip) );
 
    /*******************

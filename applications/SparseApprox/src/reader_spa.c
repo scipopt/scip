@@ -274,7 +274,6 @@ SCIP_DECL_READERREAD(readerReadSpa)
    assert( scip != NULL);
    assert(result != NULL);
 
-   SCIP_CALL( SCIPaddRealParam(scip,"coherence_bound","lower bound to within-cluster coherence", NULL, FALSE, 0.1, 0.0, 1.0, NULL, NULL ) );
    SCIP_CALL( readSpa( scip, filename) );
 
    *result = SCIP_SUCCESS;
