@@ -81,7 +81,7 @@ $NAME/applications/PolySCIP/src/tclap/* $NAME/applications/PolySCIP/src/CMakeLis
 $NAME/applications/PolySCIP/data/*.mop \
 $NAME/applications/PolySCIP/cmake/* \ $NAME/applications/PolySCIP/mult_zimpl/*.py \
 $NAME/applications/PolySCIP/INSTALL $NAME/applications/PolySCIP/LICENCE \
-$NAME/applications/PolySCIP/README $NAME/applications/PolySCIP/scipmip.set \ 
+$NAME/applications/PolySCIP/README $NAME/applications/PolySCIP/scipmip.set \
 $NAME/applications/PolySCIP/CMakeLists.txt \
 $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \

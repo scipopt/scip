@@ -7425,6 +7425,8 @@
 
 /**@page RELEASENOTES Release notes
  *
+ * \verbinclude SCIP-release-notes-3.2.1
+ *
  * \verbinclude SCIP-release-notes-3.2
  *
  * \verbinclude SCIP-release-notes-3.1
