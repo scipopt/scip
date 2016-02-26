@@ -36,9 +36,9 @@ Then you can also execute
 
 If there still occur (linker) problems, then try to compile SoPlex and SCIP with the least 
 possible dependencies, i.e., 
-rebuild SoPlex with 'make GMP=false' 
+rebuild SoPlex with 'make GMP=false' or
 and 
-rebuild SCIP with 'make ZLIB=false READLINE=false GMP=false' 
+rebuild SCIP with 'make ZLIB=false READLINE=false GMP=false' and/or 'make SHARED=true'
 and 
 try again to build PolySCIP as described in 5.)
 

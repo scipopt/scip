@@ -24,9 +24,9 @@ include(FindPackageHandleStandardArgs)
 find_package(LEMON REQUIRED)
 find_package(SCIP REQUIRED)
 #find_package(SOPLEX REQUIRED)
+find_package(ZLIB)
 find_package(GMP)
 find_package(Readline)
-find_package(ZLIB)
 
 
 include_directories(${PROJECT_SOURCE_DIR}/${SRC})
