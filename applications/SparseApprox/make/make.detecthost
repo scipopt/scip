@@ -1,0 +1,40 @@
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+#*                                                                           *
+#*                  This file is part of the program and library             *
+#*         SCIP --- Solving Constraint Integer Programs                      *
+#*                                                                           *
+#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*                            fuer Informationstechnik Berlin                *
+#*                                                                           *
+#*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
+#*                                                                           *
+#*  You should have received a copy of the ZIB Academic License              *
+#*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      *
+#*                                                                           *
+#* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+#@file    Makefile include to detect host system
+#@brief   SCIP Makefile
+#@author  Thorsten Koch
+#@author  Tobias Achterberg
+
+
+ARCH		:=	$(shell uname -m | \
+			sed \
+			-e 's/sun../sparc/' \
+			-e 's/i.86/x86/' \
+			-e 's/i86pc/x86/' \
+			-e 's/[0-9]86/x86/' \
+			-e 's/amd64/x86_64/' \
+			-e 's/IP../mips/' \
+			-e 's/9000..../hppa/' \
+			-e 's/Power\ Macintosh/ppc/' \
+			-e 's/00........../pwr4/'\
+			-e 's/arm.*/arm/')
+OSTYPE		:=	$(shell uname -s | tr '[:upper:]' '[:lower:]' | \
+			sed \
+			-e 's/cygwin.*/cygwin/' \
+			-e 's/irix../irix/' \
+			-e 's/windows.*/windows/' \
+			-e 's/mingw.*/mingw/')
+HOSTNAME	:=	$(shell uname -n | tr '[:upper:]' '[:lower:]')

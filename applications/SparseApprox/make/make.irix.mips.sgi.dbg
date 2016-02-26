@@ -1,0 +1,15 @@
+FLAGS		+=	-DROUNDING_FE
+OFLAGS		+=	-fullwarn -g
+CFLAGS		+=	
+CXXFLAGS	+=	
+ARFLAGS		=	crs
+LDFLAGS		+=	-Bstatic -lm
+LINKRPATH =
+CC		=	cc
+CXX		=	cc
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses

@@ -1,0 +1,13 @@
+FLAGS		+=      -DNDEBUG -DROUNDING_FP  # if ROUNDING_FP does not work, try ROUNDING_FE or without
+OFLAGS		+=	-O6 -mcpu=ev6 -g
+CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	$(GXXWARN) -std=c++0x -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+ARFLAGS		=	crs
+LDFLAGS		+=	-lcurses
+LINKRPATH =
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline

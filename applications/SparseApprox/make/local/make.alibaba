@@ -1,0 +1,32 @@
+# Call with "make testcluster"
+#
+# The cluster consists of 80 nodes. These are divided into two sets of 40
+# node. Each set has a different hardware configuration. Both sets can be reached
+# over different queues.
+# - queue "ib":  PowerEdgeTM 1950 Xeon E5420 with 2 CPUS each with 4 Cores  and 16 GB RAM
+#                This gives a total of 40 * 2 * 4 = 320 cores
+# - queue "gbe": PowerEdgeTM 1955 Xeon 5150 with 2 CPUS each with 2 Cores  and 8 GB RAM
+#                This gives a total of 40 * 2 * 2 = 160 cores
+#
+# In case of time measuring you should order 1 node and 8 core (ib) or 4
+# cores (gbe) depending on the used queue.  If no time is measured, change
+# to PPN=1 (see below) in order to allow parallel runs on one node.  For
+# more information, see "http://www.zib.de/cluster-user/view/Main/Hardware"
+#
+# To get the result files call "./evalcheck_cluster.sh
+# results/check.$TSTNAME.$BINNMAE.$SETNAME.eval in directory check/
+# This leads to result files 
+#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.out
+#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.res
+#  - results/check.$TSTNAME.$BINNMAE.$SETNAME.err
+#
+# number of needed core at a certain cluster node
+#  - PPN=8 means we need 8 core, therefore time measuring is possible if we use 1 node of queue "ib"
+#  - PPN=4 means we need 4 core, therefore time measuring is possible if we use 1 node of queue "gbe"
+#  - PPN=1 means we need one core, therefore time measuring is not possible
+QUEUETYPE	=	qsub
+QUEUE		=	 gbe
+PPN		=	 4
+CLIENTTMPDIR	=	/scratch
+NOWAITCLUSTER   =       0
+EXCLUSIVE       =       notneeded

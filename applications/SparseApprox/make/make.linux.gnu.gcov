@@ -1,0 +1,5 @@
+FLAGS		+=	-DROUNDING_FE
+OFLAGS		+=	-O0 -g
+CFLAGS		+=	$(GCCWARN) -funit-at-a-time -fprofile-arcs -ftest-coverage
+CXXFLAGS	+=	-DCOVERAGE $(GXXWARN) -funit-at-a-time
+LDFLAGS         +=      -lgcov

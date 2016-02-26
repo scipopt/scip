@@ -1,0 +1,16 @@
+CC		=	icc
+CXX		=	icpc
+LINKCC		=	icc
+LINKCXX		=	icpc
+FLAGS		+=	-DROUNDING_FE
+OFLAGS		+=	-O0 -g -fp-model extended -w1 -fp_port -fp-stack-check -wd279,383,444,810,981 #-fno-rtti #-Xc
+CFLAGS		+=
+CXXFLAGS		+=	-std=c++0x
+ARFLAGS		=	crs
+LDFLAGS		+=	-lirc -lm -lstdc++ -static-intel
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses

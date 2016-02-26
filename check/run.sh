@@ -14,6 +14,9 @@
 #*                                                                           *
 #* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
+INSTANCE=$1
+SETTINGS=$2
+
 # absolut tolerance for checking linear constraints and objective value
 LINTOL=1e-04 
 # absolut tolerance for checking integrality constraints 
@@ -43,34 +46,35 @@ date                                >> $ERRFILE
 echo -----------------------------  >> $OUTFILE
 date +"@03 %s"                      >> $OUTFILE
 
-$EXECNAME                < $TMPFILE 2>>$ERRFILE | tee -a $OUTFILE
+$EXECNAME "-f" $INSTANCE "-s" $SETTINGS 2>>$ERRFILE | tee -a $OUTFILE
+
 retcode=${PIPESTATUS[0]}
 if test $retcode != 0
 then
   echo "$EXECNAME returned with error code $retcode." >>$ERRFILE
 fi
 
-if test -e $SOLFILE
-then
-    # translate SCIP solution format into format for solution checker. The
-    # SOLFILE format is a very simple format where in each line we have a
-    # <variable, value> pair, separated by spaces.  A variable name of
-    # =obj= is used to store the objective value of the solution, as
-    # computed by the solver. A variable name of =infeas= can be used to
-    # indicate that an instance is infeasible.
-    sed ' /solution status:/d;
-            s/objective value:/=obj=/g;
-            s/no solution available//g' $SOLFILE > $TMPFILE
-    mv $TMPFILE $SOLFILE
-    
-    # check if the link to the solution checker exists
-    if test -f "$CHECKERPATH/bin/solchecker" 
-    then
-      echo
-      $SHELL -c " $CHECKERPATH/bin/solchecker $FILENAME $SOLFILE $LINTOL $INTTOL" 2>>$ERRFILE | tee -a $OUTFILE
-      echo
-    fi
-fi
+#if test -e $SOLFILE
+#then
+#    # translate SCIP solution format into format for solution checker. The
+#    # SOLFILE format is a very simple format where in each line we have a
+#    # <variable, value> pair, separated by spaces.  A variable name of
+#    # =obj= is used to store the objective value of the solution, as
+#    # computed by the solver. A variable name of =infeas= can be used to
+#    # indicate that an instance is infeasible.
+#    sed ' /solution status:/d;
+#            s/objective value:/=obj=/g;
+#            s/no solution available//g' $SOLFILE > $TMPFILE
+#    mv $TMPFILE $SOLFILE
+#    
+#    # check if the link to the solution checker exists
+#    if test -f "$CHECKERPATH/bin/solchecker" 
+#    then
+#      echo
+#      $SHELL -c " $CHECKERPATH/bin/solchecker $FILENAME $SOLFILE $LINTOL $INTTOL" 2>>$ERRFILE | tee -a $OUTFILE
+#      echo
+#    fi
+#fi
 
 date +"@04 %s"                      >> $OUTFILE
 echo -----------------------------  >> $OUTFILE

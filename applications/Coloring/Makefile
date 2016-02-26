@@ -40,16 +40,9 @@ include $(SCIPDIR)/make/make.project
 # Main Program
 #-----------------------------------------------------------------------------
 
-MAINNAME	=	coloring
-MAINOBJ		=	reader_col.o \
-			reader_csol.o \
-			probdata_coloring.o \
-			pricer_coloring.o \
-			cons_storeGraph.o \
-			branch_coloring.o \
-			branch_strongcoloring.o \
-			heur_init.o \
-			coloringplugins.o \
+MAINNAME	=	sparseApprox
+MAINOBJ		=	reader_spa.o \
+			spaplugins.o \
 			main.o
 
 MAINSRC		=	$(addprefix $(SRCDIR)/,$(MAINOBJ:.o=.c))

@@ -1,0 +1,14 @@
+FLAGS		+=	-DNDEBUG -DNO_SIGACTION -DNO_RAND_R -DNO_STRTOK_R -DNO_REMOVE_HISTORY -DSCIP_LONGINT_FORMAT='"lld"' -DROUNDING_FE
+CFLAGS		=	-O6 -mtune=native
+CFLAGS		+=	$(GCCWARN) -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes
+CXXFLAGS	+=	$(GXXWARN) -Wno-strict-aliasing
+ARFLAGS		=	crs
+LDFLAGS		=	-lm -static
+LINKRPATH =
+EXEEXTENSION	=	.exe
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline

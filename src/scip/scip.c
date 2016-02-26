@@ -35628,7 +35628,7 @@ SCIP_RETCODE printDualSol(
             if( nvars > 1 )
                SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g\n", solval);
             else
-               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g*\n", solval);
+               SCIPmessageFPrintInfo(messagehdlr, file, " %20.15g*    %s\n", solval, SCIPvarGetName(vars[0]));
          }
       }
 

@@ -1,0 +1,15 @@
+CC		=	cc
+CXX		=	cxx
+FLAGS		+=	-DROUNDING_FP
+OFLAGS		+=	-w0 -gall -verbose -check -O0
+CFLAGS		+=	-msg_disable strctpadding,nestincl,ignorecallval,unusedincl,unnecincl,hexoctunsign,questcompare2,newc99,embedcomment,foundcr,unreachcode,falloffend,unusedtop
+CXXFLAGS	+=	-msg_disable basclsnondto,boolexprconst,constrlitnondep -D__USE_STD_IOSTREAM
+ARFLAGS		=	crs
+LDFLAGS		+=	
+LINKRPATH =
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=

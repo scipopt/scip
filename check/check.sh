@@ -102,6 +102,31 @@ do
             continue
         fi
 
+        # check if problem instance exists
+        SCIP_INSTANCEPATH=$SCIPPATH
+        SKIPINSTANCE="false"
+
+        for IPATH in ${POSSIBLEPATHS[@]}
+        do
+            echo $IPATH
+            if test "$IPATH" = "DONE"
+            then
+                echo "input file $INSTANCE not found!"
+                SKIPINSTANCE="true"
+            elif test -f $IPATH/$INSTANCE
+            then
+                SCIP_INSTANCEPATH=$IPATH
+                break
+            fi
+
+        # infer the names of all involved files from the arguments
+        . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SETNAME $TSTNAME $CONTINUE $QUEUE  $p
+
+        if test "$SKIPINSTANCE" = "true"
+        then
+            continue
+        fi
+
         # infer the names of all involved files from the arguments
         . ./configuration_logfiles.sh $INIT $COUNT $INSTANCE $BINID $PERMUTE $SETNAME $TSTNAME $CONTINUE $QUEUE  $p
 
@@ -144,9 +169,9 @@ do
         echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT
         if [ $MAXJOBS -eq 1 ]
         then
-            bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh"
+            bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh $INSTANCE $SETTINGS"
         else
-            bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh" &
+            bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh $INSTANCE $SETTINGS" &
         fi
         #./run.sh
     done

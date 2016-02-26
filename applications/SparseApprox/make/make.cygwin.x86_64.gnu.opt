@@ -1,0 +1,12 @@
+FLAGS		+=	-DNDEBUG #-DROUNDING_FE
+OFLAGS		+=	-O3 -mtune=native -fomit-frame-pointer # -malign-double -mcpu=pentium4 -g
+CFLAGS		+=	$(GCCWARN) -m64 -Wno-strict-aliasing -Wno-missing-declarations -Wno-missing-prototypes -Wno-char-subscripts
+CXXFLAGS	+=	$(GXXWARN) -m64 -std=c++0x -Wno-strict-aliasing # -fno-exceptions (CLP uses exceptions)
+ARFLAGS		=	crs
+LDFLAGS		+=      -m64
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline

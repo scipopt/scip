@@ -1,0 +1,16 @@
+CC		=	icc
+CXX		=	icc -Kc++
+LINKCC		=	icc
+LINKCXX		=	icc -Kc++
+FLAGS		+=	-DNDEBUG -DROUNDING_FE
+OFLAGS		+=	-O2 -fp-model extended -fp-model fast -mtune=core2 -w1 -ip
+CFLAGS		+=
+CXXFLAGS	+=	-std=c++0x
+ARFLAGS		=	crs
+LDFLAGS		+=	-lirc -lpthread -lm -lstdc++ -Bstatic
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses

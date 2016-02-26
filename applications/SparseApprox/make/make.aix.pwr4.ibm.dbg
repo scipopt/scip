@@ -1,0 +1,15 @@
+FLAGS		+=	-DROUNDING_FE
+OFLAGS		+=	-O0 -g -q64 -qmaxmem=-1 -bnoquiet -qsuppress=1506-732 -qflttrap -qcheck=all
+CFLAGS		+=	
+CXXFLAGS	+=	
+ARFLAGS		=	crs
+LDFLAGS		+=	
+CC		=	xlc
+CXX		=	xlc
+LINKRPATH =
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses

@@ -1,0 +1,18 @@
+CC		=	cc
+CXX		=	CC
+LINKCC		=	cc
+LINKCXX		=	CC
+FLAGS		+=	-DNDEBUG -I/client/include -DNO_STRERROR_R -DROUNDING_FE
+OFLAGS		+=	-xO5 -xprefetch=auto -xipo=2
+CFLAGS		+=	-Xa -errtags=yes -erroff=E_STATEMENT_NOT_REACHED
+CXXFLAGS	+= -std=c++0x
+LINKRPATH =
+AR		=	CC
+ARFLAGS		=	$(FLAGS) $(CXXFLAGS) -xar -o
+LDFLAGS		+=	-L/client/lib -lsocket -lnsl
+ZLIB_FLAGS	=
+ZLIB_LDFLAGS 	=	-lz
+GMP_FLAGS	=
+GMP_LDFLAGS 	=	-lgmp
+READLINE_FLAGS	=
+READLINE_LDFLAGS=	-lreadline -lncurses
