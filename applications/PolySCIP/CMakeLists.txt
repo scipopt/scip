@@ -23,7 +23,11 @@ configure_file(
 include(FindPackageHandleStandardArgs)
 find_package(LEMON REQUIRED)
 find_package(SCIP REQUIRED)
-find_package(SOPLEX)
+#find_package(SOPLEX REQUIRED)
+find_package(GMP)
+find_package(Readline)
+find_package(ZLIB)
+
 
 include_directories(${PROJECT_SOURCE_DIR}/${SRC})
 include_directories(${SCIP_INC})

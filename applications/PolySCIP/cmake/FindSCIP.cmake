@@ -12,11 +12,11 @@ find_library(SCIP_LIB scip
   HINTS ${SCIP_ROOT_DIR}/lib
 )
 
-find_library(NLPI_LIB nlpi
+find_library(NLPI_LIB NAMES nlpi.cppad nlpi
   HINTS ${SCIP_ROOT_DIR}/lib
 )
 
-find_library(LPS_LIB lpispx2
+find_library(LPS_LIB NAMES lpispx lpispx2
   HINTS ${SCIP_ROOT_DIR}/lib
 )
 
