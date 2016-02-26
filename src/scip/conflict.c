@@ -1796,7 +1796,7 @@ SCIP_RETCODE detectImpliedBounds(
    SCIP_CONFLICTSET*     conflictset,        /**< conflict set to add to the tree */
    int*                  nbdchgs,            /**< number of global deducted bound changes due to the conflict set */
    int*                  nredvars,           /**< number of redundant and removed variables from conflict set */
-   SCIP_Bool*            redundant           /**< did we found a gloabl reduction on a conflict set variable, which makes this conflict redundant */
+   SCIP_Bool*            redundant           /**< did we found a global reduction on a conflict set variable, which makes this conflict redundant */
    )
 {
    SCIP_BDCHGINFO** bdchginfos;
