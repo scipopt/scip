@@ -37,7 +37,7 @@ else(SOPLEX_SHARED_COUNT)
 endif(SOPLEX_SHARED_COUNT)
 get_filename_component(SOPLEX_FULLPATH_ABS ${SOPLEX_FULLPATH_REL} ABSOLUTE)
 get_filename_component(SOPLEX_LIBDIR ${SOPLEX_FULLPATH_ABS} DIRECTORY)
-message("soplex path: ${SOPLEX_LIBDIR}")
+message("SOPLEX_LIBDIR: ${SOPLEX_LIBDIR}")
 link_directories(${SOPLEX_LIBDIR})
 
 # check for libzimpl* in ${SCIP_ROOT_DIR}/lib dic
@@ -50,7 +50,7 @@ if(ZIMPL_COUNT)
   execute_process(COMMAND readlink ${HEAD_ZIMPL} OUTPUT_VARIABLE ZIMPL_FULLPATH_REL)
   get_filename_component(ZIMPL_FULLPATH_ABS ${ZIMPL_FULLPATH_REL} ABSOLUTE)
   get_filename_component(ZIMPL_LIBDIR ${ZIMPL_FULLPATH_ABS} DIRECTORY)
-  message("zimpl libdir ${ZIMPL_LIBDIR}")
+  message("ZIMPL_LIBDIR: ${ZIMPL_LIBDIR}")
   link_directories(${ZIMPL_LIBDIR})
 endif(ZIMPL_COUNT)
 
