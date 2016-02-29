@@ -32,7 +32,7 @@ tar --no-recursion --ignore-failed-read -cvzhf release/$NAME.tgz \
 $NAME/COPYING $NAME/INSTALL $NAME/CHANGELOG $NAME/Makefile \
 $NAME/doc/scip* $NAME/doc/xternal.c $NAME/doc/inc/faq.inc \
 $NAME/doc/howtoadd.dxy $NAME/doc/interfaces.dxy \
-$NAME/doc/inc/faqcss.inc $NAME/doc/inc/authors.inc $NAME/doc/inc/parameters.set \
+$NAME/doc/inc/authors.inc $NAME/doc/inc/parameters.set \
 $NAME/doc/pictures/miniscippy.png $NAME/doc/pictures/scippy.png \
 $NAME/make/make.* \
 $NAME/check/check.sh $NAME/check/evalcheck.sh $NAME/check/check.awk \
@@ -54,7 +54,7 @@ $NAME/check/configuration_tmpfile_setup_scip.sh \
 $NAME/check/run.sh $NAME/check/evalcheck_cluster.sh \
 $NAME/release-notes/SCIP-* \
 $NAME/src/depend.* \
-$NAME/src/*.c $NAME/src/*.cpp \
+$NAME/src/*.c \
 $NAME/src/scip/*.c $NAME/src/scip/*.cpp $NAME/src/scip/*.h \
 $NAME/src/nlpi/*.c $NAME/src/nlpi/*.cpp $NAME/src/nlpi/*.h \
 $NAME/src/lpi/*.c $NAME/src/lpi/*.cpp $NAME/src/lpi/*.h \
@@ -85,7 +85,7 @@ $NAME/applications/PolySCIP/README $NAME/applications/PolySCIP/scipmip.set \
 $NAME/applications/PolySCIP/CMakeLists.txt \
 $NAME/applications/STP/doc/* \
 $NAME/applications/STP/src/depend.* \
-$NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.cpp $NAME/applications/STP/src/*.h \
+$NAME/applications/STP/src/*.c $NAME/applications/STP/src/*.h \
 $NAME/applications/STP/check/testset/*.test $NAME/applications/STP/check/testset/*.solu \
 $NAME/applications/STP/data/D/* \
 $NAME/applications/STP/scip-jack.sh \
