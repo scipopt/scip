@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   reader_stp.c
- * @brief  Steiner Tree problem reader file reader
+ * @brief  Steiner tree problem file reader
  * @author Gerald Gamrath
  * @author Thorsten Koch
  * @author Daniel Rehfeldt

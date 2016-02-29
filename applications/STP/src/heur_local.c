@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_local.c
- * @brief  Improvement heuristic for STPs
+ * @brief  Improvement heuristic for Steiner problems
  * @author Daniel Rehfeldt
  *
  * This file implements three local heuristics, namely vertex insertion, key-path exchange and key-vertex elimination,

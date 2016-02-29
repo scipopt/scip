@@ -1166,13 +1166,13 @@ SCIP_DECL_HEUREXEC(heurExecRec)
 
          if( SCIPisGT(scip, SCIPgetSolOrigObj(scip, newsol) - SCIPprobdataGetOffset(scip), pobj) )
          {
-	    printf("better solution found ...      ");
+	    SCIPdebugMessage("better solution found ...      ");
             sol = NULL;
             SCIP_CALL( SCIPprobdataAddNewSol(scip, nval, sol, heur, &success) );
 
             if( success )
             {
-	       printf("and added! \n");
+	       SCIPdebugMessage("and added! \n");
                *result = SCIP_FOUNDSOL;
                solfound = TRUE;
                nsols = SCIPgetNSols(scip);

@@ -19,12 +19,10 @@
  *
  * This file includes miscellaneous methods used for solving Steiner problems. For more details see \ref MISCSTP page.
  *
- * @page MISCSTP Miscellaneous methods used for STPs
+ * @page MISCSTP Miscellaneous methods used for Steiner tree problems
  *
- * -Integer data linked list
- * -Linear link-cut tree
- * -Union-find data structure
- * -Paring heap
+ * This file implements an integer data linked list, a linear link-cut tree, a union-find data structure
+ * and a pairing heap.
  *
  * A list of all interface methods can be found in misc_stp.h.
  */

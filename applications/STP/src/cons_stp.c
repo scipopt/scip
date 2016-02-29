@@ -24,10 +24,10 @@
  * @page CONS Separating violated constraints
  *
  * In this file a constraint handler checking solutions for feasibility and separating violated model constraints is implemented, as
- * described in: "Solving the Steiner Tree Problem in Graphs to Optimality" by T. Koch and A. Martin.
+ * described in: "Solving the Steiner tree problem in graphs to optimality" by T. Koch and A. Martin.
  * The separation problem for the cut inequalities described in \ref PROBLEM can be solved by a max-flow algorithm in
  * polynomial time.  Regarding the variable values of a given LP solution as capacities on the edges, one can check for each
- * \f$t \in T \setminus {r}\f$, with \f$r\f$ being the root, whether the minimal \f$(r, t)\f$-cut is less than one. In this case,
+ * \f$ t \in T \setminus \{r\} \f$, with \f$ r \f$ being the root, whether the minimal \f$ (r, t) \f$-cut is less than one. In this case,
  * a violated cut inequality has been found, otherwise none exists. In order to calculate such a minimal cut Hao
  * and Orlin's preflow-push algorithm is used. Furthermore, the file implements a dual ascent heuristic, based on a concept described
  * in "A dual ascent approach for Steiner tree problems on a directed graph." by R. Wong.
