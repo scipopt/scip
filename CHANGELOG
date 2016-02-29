@@ -9,6 +9,7 @@ features:
   e.g., the (rooted) prize-collecting Steiner tree problem.
 - MultiObjective application renamed to PolySCIP; several improvements: better command line argument processing,
   overhaul of much of the source code, installation via CMake
+- extended python interface supporting callbacks and linear and quadratic expressions
 
 parameters:
 - new parameter misc/transsolorig for transfering transformed solutions to the original space (default: true)
