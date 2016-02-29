@@ -54,8 +54,8 @@ $NAME/check/configuration_tmpfile_setup_scip.sh \
 $NAME/check/run.sh $NAME/check/evalcheck_cluster.sh \
 $NAME/release-notes/SCIP-* \
 $NAME/src/depend.* \
-$NAME/src/*.c \
-$NAME/src/scip/*.c $NAME/src/scip/*.cpp $NAME/src/scip/*.h \
+$NAME/src/*.c $NAME/src/*.cpp \
+$NAME/src/scip/*.c $NAME/src/scip/*.h \
 $NAME/src/nlpi/*.c $NAME/src/nlpi/*.cpp $NAME/src/nlpi/*.h \
 $NAME/src/lpi/*.c $NAME/src/lpi/*.cpp $NAME/src/lpi/*.h \
 $NAME/src/xml/*.c $NAME/src/xml/*.h \
