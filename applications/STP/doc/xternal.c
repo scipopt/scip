@@ -102,14 +102,11 @@
  *     \end{array}}\right.
  *   &
  *   {\begin{array}{l}
- *    \label{flowcons1}
  *     0, \mbox{if } v=r;\\
  *     1, \mbox{if } v\in T\setminus{r};\\
  *     1, \mbox{if } v\in N; \end{array}} \hspace{2.9mm}\forall  v \in V
  *   \\
- *   \label{flowcons2}
  *   y(\delta^-(v))&\leq& y(\delta^+(v)), \hspace{10.5mm}\forall  v\in N;\\
- *   \label{flowcons3}
  *   y(\delta^-(v))&\geq& y_a, \hspace{20.2mm}\forall  a\in\delta^+(v), v\in N;\\
  *  0\leq y_a&\leq& 1, \hspace{22mm}\forall  a\in A;\\
  *   y_a&\in& \{0,1\}, \hspace{15.1mm}\forall  a\in A,
