@@ -151,7 +151,7 @@ $NAME/interfaces/jni/examples/JniKnapsack/data/solution.sol \
 $NAME/interfaces/jni/examples/JniKnapsack/data/test.lp \
 $NAME/interfaces/python/pyscipopt/* \
 $NAME/interfaces/python/tests/*.py \
-$NAME/interfaces/python/INSTALL $NAME/interfaces/python/LICENSE \
+$NAME/interfaces/python/INSTALL \
 $NAME/interfaces/python/README $NAME/interfaces/python/*.py \
 $NAME/check/instances/CP/*.cip \
 $NAME/check/instances/Indicator/*.lp \
