@@ -2432,7 +2432,7 @@ constraints/SOS1/maxtightenbds = 5
 # [type: bool, range: {TRUE,FALSE}, default: TRUE]
 constraints/SOS1/perfimplanalysis = TRUE
 
-# maximal depth for implication graph analysis (-1: no limit)
+# number of recursive calls of implication graph analysis (-1: no limit)
 # [type: int, range: [-1,2147483647], default: -1]
 constraints/SOS1/depthimplanalysis = -1
 
