@@ -7423,11 +7423,6 @@
  * \htmlinclude faq.inc
  */
 
-
-/**@page AUTHORS SCIP Authors
- * \htmlinclude authors.inc
- */
-
 /**@page INSTALL Installation information
  * \verbinclude INSTALL
  */
