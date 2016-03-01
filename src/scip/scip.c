@@ -15855,16 +15855,6 @@ SCIP_RETCODE SCIPrestartSolve(
    return SCIP_OKAY;
 }
 
-/** returns whether LP a starting basis should used */
-SCIP_Bool SCIPuseLPStartBasis(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-
-   return scip->set->misc_usestartbasis;
-}
-
 /** returns whether reoptimization is enabledor not */
 SCIP_Bool SCIPisReoptEnabled(
    SCIP*                 scip                /**< SCIP data structure */

@@ -60,6 +60,7 @@
 #define DEFAULT_RESTART       TRUE       /* should the heuristic immediately run again on its newly found solution? */
 #define DEFAULT_USEFINALLP    FALSE      /* should the heuristic solve a final LP in case of continuous objective variables? */
 #define DEFAULT_LPITERSQUOT   0.2        /* default quotient of sub-MIP LP iterations with respect to LP iterations so far */
+#define DEFAULT_COPYLPBASIS   FALSE      /**< should a LP starting basis copyied from the source SCIP? */
 
 /*
  * Data structures
@@ -100,6 +101,7 @@ struct SCIP_HeurData
    SCIP_Bool             uselprows;          /**< should subproblem be constructed based on LP row information? */
    SCIP_Bool             restart;            /* should the heuristic immediately run again on its newly found solution? */
    SCIP_Bool             usefinallp;         /* should the heuristic solve a final LP in case of continuous objective variables? */
+   SCIP_Bool             copylpbasis;        /**< should a LP starting basis copyied from the source SCIP? */
 };
 
 
@@ -373,6 +375,7 @@ SCIP_RETCODE createRows(
    SCIP_VAR**            subvars,            /**< the variables of the subproblem */
    SCIP_ROW**            sourcerows,         /**< rows of original SCIP */
    SCIP_CONS**           targetconss,        /**< constraints of target SCIP */
+   SCIP_Bool             copylpbasis,        /**< should a starting basis should be copied into the subscip? */
    int                   sourcerowssize,     /**< size of sourcerows and targetconss arrays */
    int*                  nsourcerows         /**< number of rows / created constraints */
    )
@@ -392,13 +395,13 @@ SCIP_RETCODE createRows(
    int i;
    int j;
 
-   assert(!SCIPuseLPStartBasis(scip) || nsourcerows != NULL);
-   assert(!SCIPuseLPStartBasis(scip) || sourcerows != NULL);
-   assert(!SCIPuseLPStartBasis(scip) || targetconss != NULL);
+   assert(!copylpbasis || nsourcerows != NULL);
+   assert(!copylpbasis || sourcerows != NULL);
+   assert(!copylpbasis || targetconss != NULL);
 
    /* get the rows and their number */
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-   assert(!SCIPuseLPStartBasis(scip) || nrows <= sourcerowssize);
+   assert(!copylpbasis || nrows <= sourcerowssize);
 
    *nsourcerows = 0;
 
@@ -429,9 +432,10 @@ SCIP_RETCODE createRows(
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
       SCIP_CALL( SCIPaddCons(subscip, cons) );
 
-      if( SCIPuseLPStartBasis(scip) )
+      if( copylpbasis )
       {
          assert(targetconss != NULL);
+         assert(*nsourcerows <= sourcerowssize);
 
          /* store the added cons and the corresponding row */
          sourcerows[(*nsourcerows)] = rows[i];
@@ -912,7 +916,7 @@ SCIP_RETCODE SCIPapplyProximity(
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-      if( SCIPuseLPStartBasis(scip) )
+      if( heurdata->copylpbasis )
       {
          sourcerowssize = SCIPgetNLPRows(scip);
 
@@ -949,7 +953,8 @@ SCIP_RETCODE SCIPapplyProximity(
          for( i = 0; i < nvars; i++ )
             subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
-         SCIP_CALL( createRows(scip, subscip, subvars, sourcerows, targetconss, sourcerowssize, &nsourcerows) );
+         SCIP_CALL( createRows(scip, subscip, subvars, sourcerows, targetconss, heurdata->copylpbasis, sourcerowssize,
+               &nsourcerows) );
       }
       SCIPdebugMessage("Copying the SCIP instance was %s complete.\n", valid ? "" : "not ");
 
@@ -1060,7 +1065,7 @@ SCIP_RETCODE SCIPapplyProximity(
       }
    }
 
-   if( SCIPuseLPStartBasis(scip) )
+   if( heurdata->copylpbasis )
    {
       assert(varmapfw != NULL);
       assert(consmapfw != NULL);
@@ -1210,6 +1215,9 @@ SCIP_RETCODE SCIPincludeHeurProximity(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/usefinallp", "should the heuristic solve a final LP in case of continuous objective variables?",
          &heurdata->usefinallp, TRUE, DEFAULT_USEFINALLP, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis", "should a LP starting basis copyied from the source SCIP?",
+         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip, "heuristics/" HEUR_NAME "/maxnodes",
          "maximum number of nodes to regard in the subproblem",

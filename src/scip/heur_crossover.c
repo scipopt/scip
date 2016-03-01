@@ -56,6 +56,8 @@
                                               * cutpool of the original scip be copied to constraints of the subscip
                                               */
 #define DEFAULT_PERMUTE       FALSE          /* should the subproblem be permuted to increase diversification?        */
+#define DEFAULT_COPYLPBASIS   FALSE          /* should a LP starting basis copyied from the source SCIP?              */
+
 #define HASHSIZE_SOLS         11113          /* size of hash table for solution tuples in crossover heuristic         */
 
 /* event handler properties */
@@ -98,6 +100,7 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?                                     */
    SCIP_Bool             permute;            /**< should the subproblem be permuted to increase diversification?    */
+   SCIP_Bool             copylpbasis;        /**< should a LP starting basis copyied from the source SCIP?          */
 };
 
 /** n-tuple of solutions and their hashkey */
@@ -400,7 +403,8 @@ SCIP_RETCODE createRows(
    SCIP_ROW**            sourcerows,         /**< rows of original SCIP */
    SCIP_CONS**           targetconss,        /**< constraints of target SCIP */
    int                   sourcerowssize,     /**< size of sourcerows and targetconss arrays */
-   int*                  nsourcerows         /**< number of rows / created constraints */
+   int*                  nsourcerows,        /**< number of rows / created constraints */
+   SCIP_Bool             copylpbasis         /**< should a starting basis should be copied into the subscip? */
    )
 {
    SCIP_ROW** rows;                          /* original scip rows                       */
@@ -418,13 +422,13 @@ SCIP_RETCODE createRows(
    int i;
    int j;
 
-   assert(!SCIPuseLPStartBasis(scip) || nsourcerows != NULL);
-   assert(!SCIPuseLPStartBasis(scip) || sourcerows != NULL);
-   assert(!SCIPuseLPStartBasis(scip) || targetconss != NULL);
+   assert(!copylpbasis || nsourcerows != NULL);
+   assert(!copylpbasis || sourcerows != NULL);
+   assert(!copylpbasis || targetconss != NULL);
 
    /* get the rows and their number */
    SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-   assert(!SCIPuseLPStartBasis(scip) || nrows <= sourcerowssize);
+   assert(!copylpbasis || nrows <= sourcerowssize);
 
    *nsourcerows = 0;
 
@@ -455,9 +459,10 @@ SCIP_RETCODE createRows(
             TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
       SCIP_CALL( SCIPaddCons(subscip, cons) );
 
-      if( SCIPuseLPStartBasis(scip) )
+      if( copylpbasis )
       {
          assert(targetconss != NULL);
+         assert(*nsourcerows <= sourcerowssize);
 
          /* store the added cons and the corresponding row */
          sourcerows[(*nsourcerows)] = rows[i];
@@ -569,7 +574,7 @@ SCIP_RETCODE setupSubproblem(
       relaxation of the problem */
    if( *success && heurdata->uselprows )
    {
-      SCIP_CALL( createRows(scip, subscip, subvars, sourcerows, targetconss, sourcerowssize, nsourcerows) );
+      SCIP_CALL( createRows(scip, subscip, subvars, sourcerows, targetconss, sourcerowssize, nsourcerows, heurdata->copylpbasis) );
    }
 
    return SCIP_OKAY;
@@ -885,7 +890,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* create the variable mapping hash map */
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-   if( SCIPuseLPStartBasis(scip) )
+   if( heurdata->copylpbasis )
    {
       sourcerowssize = SCIPgetNLPRows(scip);
 
@@ -929,7 +934,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
       if( heurdata->copycuts )
       {
-         if( SCIPuseLPStartBasis(scip) )
+         if( heurdata->copylpbasis )
          {
             /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
             SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, sourcerowssize, TRUE, &nsourcerows) );
@@ -973,7 +978,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* create a new problem, which fixes variables with same value in a certain set of solutions */
    SCIP_CALL( setupSubproblem(scip, subscip, subvars, selection, heurdata, sourcerows, targetconss, sourcerowssize, &nsourcerows, &success) );
 
-   if( success && SCIPuseLPStartBasis(scip) )
+   if( success && heurdata->copylpbasis )
    {
       /* use the last LP basis as starting basis */
       SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows, heurdata->uselprows) );
@@ -990,7 +995,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
-   if( SCIPuseLPStartBasis(scip) )
+   if( heurdata->copylpbasis )
    {
       assert(consmapfw != NULL);
       SCIPhashmapFree(&consmapfw);
@@ -1321,6 +1326,10 @@ SCIP_RETCODE SCIPincludeHeurCrossover(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/permute",
          "should the subproblem be permuted to increase diversification?",
          &heurdata->permute, TRUE, DEFAULT_PERMUTE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis",
+         "should a LP starting basis copyied from the source SCIP?",
+         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

@@ -52,6 +52,7 @@
                                          * otherwise, the copy constructors of the constraints handlers are used */
 #define DEFAULT_COPYCUTS      TRUE      /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the cutpool
                                          * of the original scip be copied to constraints of the subscip        */
+#define DEFAULT_COPYLPBASIS   TRUE      /**< should a LP starting basis copyied from the source SCIP?          */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Dins"
@@ -83,6 +84,7 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?
                                               */
+   SCIP_Bool             copylpbasis;        /**< should a LP starting basis copyied from the source SCIP? */
 };
 
 
@@ -104,7 +106,8 @@ SCIP_RETCODE createSubproblem(
    int                   sourcerowssize,     /**< size of sourcerows and targetconss arrays                      */
    int*                  nsourcerows,        /**< number of rows / created constraints                           */
    int*                  fixingcounter,      /**< number of integer variables that get fixed                     */
-   SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?   */
+   SCIP_Bool             uselprows,          /**< should subproblem be created out of the rows in the LP rows?   */
+   SCIP_Bool             copylpbasis         /**< should a starting basis should be copied into the subscip? */
    )
 {
    SCIP_SOL* bestsol;
@@ -203,13 +206,13 @@ SCIP_RETCODE createSubproblem(
       SCIP_ROW** rows;                          /* original scip rows                         */
       int nrows;
 
-      assert(!SCIPuseLPStartBasis(scip) || nsourcerows != NULL);
-      assert(!SCIPuseLPStartBasis(scip) || sourcerows != NULL);
-      assert(!SCIPuseLPStartBasis(scip) || targetconss != NULL);
+      assert(!copylpbasis || nsourcerows != NULL);
+      assert(!copylpbasis || sourcerows != NULL);
+      assert(!copylpbasis || targetconss != NULL);
 
       /* get the rows and their number */
       SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-      assert(!SCIPuseLPStartBasis(scip) || nrows <= sourcerowssize);
+      assert(!copylpbasis || nrows <= sourcerowssize);
 
       *nsourcerows = 0;
 
@@ -251,9 +254,10 @@ SCIP_RETCODE createSubproblem(
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
          SCIP_CALL( SCIPaddCons(subscip, cons) );
 
-         if( SCIPuseLPStartBasis(scip) )
+         if( copylpbasis )
          {
             assert(targetconss != NULL);
+            assert(*nsourcerows <= sourcerowssize);
 
             /* store the added cons and the corresponding row */
             sourcerows[(*nsourcerows)] = rows[i];
@@ -648,7 +652,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-   if( SCIPuseLPStartBasis(scip) )
+   if( heurdata->copylpbasis )
    {
       sourcerowssize = SCIPgetNLPRows(scip);
 
@@ -690,7 +694,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
       if( heurdata->copycuts )
       {
-         if( SCIPuseLPStartBasis(scip) )
+         if( heurdata->copylpbasis )
          {
             /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
             SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, sourcerowssize, TRUE, &nsourcerows) );
@@ -720,11 +724,11 @@ SCIP_DECL_HEUREXEC(heurExecDins)
    /* create variables and rebound them if their bounds differ by more than 0.5 */
    fixingcounter = 0;
    SCIP_CALL( createSubproblem(scip, subscip, vars, subvars, nbinvars, nintvars, sourcerows, targetconss, sourcerowssize,
-         &nsourcerows, &fixingcounter, heurdata->uselprows) );
+         &nsourcerows, &fixingcounter, heurdata->uselprows, heurdata->copylpbasis) );
    SCIPdebugMessage("DINS subproblem: %d vars (%d binvars & %d intvars), %d cons\n",
       SCIPgetNVars(subscip), SCIPgetNBinVars(subscip) , SCIPgetNIntVars(subscip) , SCIPgetNConss(subscip));
 
-   if( SCIPuseLPStartBasis(scip) )
+   if( heurdata->copylpbasis )
    {
       /* use the last LP basis as starting basis */
       SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows, heurdata->uselprows) );
@@ -741,7 +745,7 @@ SCIP_DECL_HEUREXEC(heurExecDins)
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
-   if( SCIPuseLPStartBasis(scip) )
+   if( heurdata->copylpbasis )
    {
       assert(consmapfw != NULL);
       SCIPhashmapFree(&consmapfw);
@@ -1110,6 +1114,10 @@ SCIP_RETCODE SCIPincludeHeurDins(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis",
+         "should a LP starting basis copyied from the source SCIP?",
+         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

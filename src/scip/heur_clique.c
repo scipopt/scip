@@ -59,6 +59,7 @@
 #define DEFAULT_COPYCUTS      TRUE                       /**< should all active cuts from the cutpool of the
                                                           *   original scip be copied to constraints of the subscip
                                                           */
+#define DEFAULT_COPYLPBASIS   FALSE                      /**< should a LP starting basis copyied from the source SCIP? */
 
 
 /*
@@ -83,6 +84,7 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem?
                                               */
+   SCIP_Bool             copylpbasis;        /**< should a LP starting basis copyied from the source SCIP? */
 };
 
 /*
@@ -823,7 +825,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-      if( SCIPuseLPStartBasis(scip) )
+      if( heurdata->copylpbasis )
       {
          /* create the constraint mapping hash map */
          SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
@@ -835,7 +837,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       if( heurdata->copycuts )
       {
-         if( SCIPuseLPStartBasis(scip) )
+         if( heurdata->copylpbasis )
          {
             int sourcerowssize = SCIPgetNLPRows(scip);
 
@@ -853,7 +855,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
          }
       }
 
-      if( SCIPuseLPStartBasis(scip) )
+      if( heurdata->copylpbasis )
       {
          /* use the last LP basis as starting basis */
          SCIP_CALL( SCIPcopyBasis(scip, subscip, varmap, consmap, sourcerows, targetconss, nsourcerows, FALSE) );
@@ -873,7 +875,7 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
       /* free hash map */
       SCIPhashmapFree(&varmap);
-      if( SCIPuseLPStartBasis(scip) )
+      if( heurdata->copylpbasis )
       {
          assert(consmap != NULL);
          SCIPhashmapFree(&consmap);
@@ -1176,6 +1178,10 @@ SCIP_RETCODE SCIPincludeHeurClique(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis",
+         "should a LP starting basis copyied from the source SCIP?",
+         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

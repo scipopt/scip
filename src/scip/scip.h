@@ -6246,12 +6246,6 @@ SCIP_RETCODE SCIPrestartSolve(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-/** returns whether LP a starting basis should used */
-EXTERN
-SCIP_Bool SCIPuseLPStartBasis(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
 /** include specific heuristics and branching rules for reoptimization
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref

@@ -51,6 +51,7 @@
 #define DEFAULT_NODESOFS      500LL     /* number of nodes added to the contingent of the total nodes */
 #define DEFAULT_NODESQUOT     0.1       /* subproblem nodes in relation to nodes of the original problem */
 #define DEFAULT_LPLIMFAC      2.0       /* factor by which the limit on the number of LP depends on the node limit */
+#define DEFAULT_COPYLPBASIS   FALSE     /**< should a LP starting basis copyied from the source SCIP? */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Ofins"
@@ -71,6 +72,7 @@ struct SCIP_HeurData
    SCIP_Real             nodesquot;               /**< subproblem nodes in relation to nodes of the original problem */
    SCIP_Real             nodelimit;               /**< the nodelimit employed in the current sub-SCIP, for the event handler*/
    SCIP_Real             lplimfac;                /**< factor by which the limit on the number of LP depends on the node limit */
+   SCIP_Bool             copylpbasis;             /**< should a LP starting basis copyied from the source SCIP? */
 };
 
 /* ---------------- Callback methods of event handler ---------------- */
@@ -278,7 +280,7 @@ SCIP_RETCODE applyOfins(
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
-   if( SCIPuseLPStartBasis(scip) )
+   if( heurdata->copylpbasis )
    {
       /* create the constraint mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&consmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
@@ -295,7 +297,7 @@ SCIP_RETCODE applyOfins(
 
    if( heurdata->copycuts )
    {
-      if( SCIPuseLPStartBasis(scip) )
+      if( heurdata->copylpbasis )
       {
          int sourcerowssize = SCIPgetNLPRows(scip);
 
@@ -333,7 +335,7 @@ SCIP_RETCODE applyOfins(
    SCIP_CALL( createSubproblem(scip, subscip, subvars, chgcoeffs) );
    SCIPdebugMessage("OFINS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
-   if( SCIPuseLPStartBasis(scip) )
+   if( heurdata->copylpbasis )
    {
       /* use the last LP basis as starting basis */
       SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows, FALSE) );
@@ -350,7 +352,7 @@ SCIP_RETCODE applyOfins(
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
-   if( SCIPuseLPStartBasis(scip) )
+   if( heurdata->copylpbasis )
    {
       assert(consmapfw != NULL);
       SCIPhashmapFree(&consmapfw);
@@ -696,6 +698,10 @@ SCIP_RETCODE SCIPincludeHeurOfins(
          &heurdata->maxchange, FALSE, DEFAULT_MAXCHANGE, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
+         "should a LP starting basis copyied from the source SCIP?",
+         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 

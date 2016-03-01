@@ -57,7 +57,7 @@
 #define DEFAULT_COPYCUTS      TRUE      /**< should all active cuts from the cutpool of the original scip be copied to
                                          *   constraints of the subscip
                                          */
-
+#define DEFAULT_COPYLPBASIS  FALSE      /**< should a LP starting basis copyied from the source SCIP? */
 
 /*
  * Data structures
@@ -82,6 +82,7 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< should all active cuts from cutpool be copied to constraints in
                                               *   subproblem?
                                               */
+   SCIP_Bool             copylpbasis;        /**< should a starting basis should be copied into the subscip? */
 };
 
 /**@name Propagator defines
@@ -699,7 +700,7 @@ SCIP_RETCODE applyVbounds(
       /* create the variable mapping hash map */
       SCIP_CALL( SCIPhashmapCreate(&varmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
 
-      if( SCIPuseLPStartBasis(scip) )
+      if( heurdata->copylpbasis )
       {
          /* create the constraint mapping hash map */
          SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * SCIPgetNConss(scip))) );
@@ -711,7 +712,7 @@ SCIP_RETCODE applyVbounds(
 
       if( heurdata->copycuts )
       {
-         if( SCIPuseLPStartBasis(scip) )
+         if( heurdata->copylpbasis )
          {
             int sourcerowssize = SCIPgetNLPRows(scip);
 
@@ -731,7 +732,7 @@ SCIP_RETCODE applyVbounds(
 
       SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
-      if( SCIPuseLPStartBasis(scip) )
+      if( heurdata->copylpbasis )
       {
          /* use the last LP basis as starting basis */
          SCIP_CALL( SCIPcopyBasis(scip, subscip, varmap, consmap, sourcerows, targetconss, nsourcerows, FALSE) );
@@ -751,7 +752,7 @@ SCIP_RETCODE applyVbounds(
 
       /* free hash map */
       SCIPhashmapFree(&varmap);
-      if( SCIPuseLPStartBasis(scip) )
+      if( heurdata->copylpbasis )
       {
          assert(consmap != NULL);
          SCIPhashmapFree(&consmap);
@@ -1119,6 +1120,10 @@ SCIP_RETCODE SCIPincludeHeurVbounds(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis",
+         "should a LP starting basis copyied from the source SCIP?",
+         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

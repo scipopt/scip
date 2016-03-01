@@ -65,6 +65,7 @@
                                          * techniques that merely work on the dual bound, e.g., cuts?  This is only
                                          * implemented for testing and not recommended to be used!
                                          */
+#define DEFAULT_COPYLPBASIS   TRUE      /**< should a LP starting basis copyied from the source SCIP? */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Rens"
@@ -91,6 +92,7 @@ struct SCIP_HeurData
    SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?        */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem? */
+   SCIP_Bool             copylpbasis;        /**< should a starting basis should be copied into the subscip? */
    SCIP_Bool             extratime;          /**< should the RENS sub-CIP get its own full time limit? This is only
                                               *   implemented for testing and not recommended to be used! */
    SCIP_Bool             addallsols;         /**< should all subproblem solutions be added to the original SCIP? */
@@ -215,7 +217,8 @@ SCIP_RETCODE createSubproblem(
    int*                  nsourcerows,        /**< number of rows / created constraints                                */
    char                  startsol,           /**< solution used for fixing values ('l'p relaxation, 'n'lp relaxation) */
    SCIP_Bool             binarybounds,       /**< should general integers get binary bounds [floor(.),ceil(.)] ?      */
-   SCIP_Bool             uselprows           /**< should subproblem be created out of the rows in the LP rows?        */
+   SCIP_Bool             uselprows,          /**< should subproblem be created out of the rows in the LP rows?        */
+   SCIP_Bool             copylpbasis         /**< should a starting basis should be copied into the subscip? */
    )
 {
    SCIP_VAR** vars;                          /* original SCIP variables */
@@ -276,19 +279,13 @@ SCIP_RETCODE createSubproblem(
       SCIP_ROW** rows; /* original scip rows */
       int nrows;
 
-      assert(!SCIPuseLPStartBasis(scip) || nsourcerows != NULL);
-      assert(!SCIPuseLPStartBasis(scip) || sourcerows != NULL);
-      assert(!SCIPuseLPStartBasis(scip) || targetconss != NULL);
+      assert(!copylpbasis || nsourcerows != NULL);
+      assert(!copylpbasis || sourcerows != NULL);
+      assert(!copylpbasis || targetconss != NULL);
 
       /* get the rows and their number */
       SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-      assert(!SCIPuseLPStartBasis(scip) || nrows <= sourcerowssize);
-
-      *nsourcerows = nrows;
-
-      /* return if the array is not large enough */
-      if( *nsourcerows > sourcerowssize )
-         return SCIP_OKAY;
+      assert(!copylpbasis|| nrows <= sourcerowssize);
 
       *nsourcerows = 0;
 
@@ -332,9 +329,10 @@ SCIP_RETCODE createSubproblem(
          /* free temporary memory */
          SCIPfreeBufferArray(subscip, &consvars);
 
-         if( SCIPuseLPStartBasis(scip) )
+         if( copylpbasis )
          {
             assert(targetconss != NULL);
+            assert(*nsourcerows <= sourcerowssize);
 
             /* store the added cons and the corresponding row */
             sourcerows[(*nsourcerows)] = rows[i];
@@ -527,7 +525,7 @@ SCIP_RETCODE SCIPapplyRens(
    SCIP_CALL( SCIPhashmapCreate(&varmapfw, SCIPblkmem(subscip), SCIPcalcHashtableSize(5 * nvars)) );
    SCIP_CALL( SCIPallocBufferArray(scip, &subvars, nvars) );
 
-   if( SCIPuseLPStartBasis(scip) )
+   if( heurdata->copylpbasis )
    {
       sourcerowssize = SCIPgetNLPRows(scip);
 
@@ -574,7 +572,7 @@ SCIP_RETCODE SCIPapplyRens(
 
       if( heurdata->copycuts )
       {
-         if( SCIPuseLPStartBasis(scip) )
+         if( heurdata->copylpbasis )
          {
             /* copies all active cuts from cutpool of sourcescip to linear constraints in targetscip */
             SCIP_CALL( SCIPcopyCuts(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, sourcerowssize, TRUE, &nsourcerows) );
@@ -602,10 +600,11 @@ SCIP_RETCODE SCIPapplyRens(
      subvars[i] = (SCIP_VAR*) SCIPhashmapGetImage(varmapfw, vars[i]);
 
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   SCIP_CALL( createSubproblem(scip, subscip, subvars, sourcerows, targetconss, sourcerowssize, &nsourcerows, startsol, binarybounds, uselprows) );
+   SCIP_CALL( createSubproblem(scip, subscip, subvars, sourcerows, targetconss, sourcerowssize, &nsourcerows, startsol,
+         binarybounds, uselprows, heurdata->copylpbasis) );
    SCIPdebugMessage("RENS subproblem: %d vars, %d cons\n", SCIPgetNVars(subscip), SCIPgetNConss(subscip));
 
-   if( SCIPuseLPStartBasis(scip) )
+   if( heurdata->copylpbasis )
    {
       /* use the last LP basis as starting basis */
       SCIP_CALL( SCIPcopyBasis(scip, subscip, varmapfw, consmapfw, sourcerows, targetconss, nsourcerows, uselprows) );
@@ -622,7 +621,7 @@ SCIP_RETCODE SCIPapplyRens(
 
    /* free hash map */
    SCIPhashmapFree(&varmapfw);
-   if( SCIPuseLPStartBasis(scip) )
+   if( heurdata->copylpbasis )
    {
       assert(consmapfw != NULL);
       SCIPhashmapFree(&consmapfw);
@@ -1023,6 +1022,10 @@ SCIP_RETCODE SCIPincludeHeurRens(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis",
+         "should a LP starting basis copyied from the source SCIP?",
+         &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/extratime",
          "should the RENS sub-CIP get its own full time limit? This is only for tesing and not recommended!",
