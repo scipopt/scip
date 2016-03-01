@@ -12169,6 +12169,35 @@ void findVarPosition(
    }
 }
 
+static
+void findRowPosition(
+   int*                  order,
+   SCIP_ROW**            rows,
+   int                   start,
+   int                   end
+)
+{
+   SCIP_ROW* row1;
+   SCIP_ROW* row2;
+   int pos;
+
+   pos = start;
+
+   while( pos > end )
+   {
+      row1 = rows[-order[pos]-1];
+      row2 = rows[-order[pos-1]-1];
+
+      if( SCIProwGetNNonz(row1) < SCIProwGetNNonz(row2) )
+      {
+         SCIPswapInts(&order[pos-1], &order[pos]);
+         pos--;
+      }
+      else
+         break;
+   }
+}
+
 /* find an ordering of variables and columns that should be used to find a non-singular matrix */
 static
 SCIP_RETCODE getBasisOrdering(
@@ -12197,7 +12226,7 @@ SCIP_RETCODE getBasisOrdering(
    assert(rowstat != NULL);
 
    basicfront = 0; /* start position of basic part */
-   nonbasicfront = nbasicvars; /* start osition of non-basic part */
+   nonbasicfront = nbasicvars + nbasicrows ; /* start osition of non-basic part */
 
 #ifndef NDEBUG
    /* initialize the order array with 0, this value should never appear again at the end of this method */
@@ -12205,7 +12234,9 @@ SCIP_RETCODE getBasisOrdering(
       order[i] = 0;
 #endif
 
-   /** order the variables and constraints in the following fashion: basic vars | non-basic vars | basic rows | non-basic rows */
+   /** order the variables and constraints in the following fashion:
+    * basic vars | non-basic vars | basic rows | non-basic rows
+    */
    for( i = 0; i < nvars; i++ )
    {
       /* shift the index by +1 */
@@ -12223,15 +12254,15 @@ SCIP_RETCODE getBasisOrdering(
          order[nonbasicfront] = i+1;
          nonbasicfront++;
 
-         findVarPosition(order, vars, nonbasicfront-1, nbasicvars);
+         findVarPosition(order, vars, nonbasicfront-1, nbasicvars+nbasicrows);
       }
-      assert(basicfront <= nbasicvars);
       assert(basicfront <= nonbasicfront);
-      assert(nonbasicfront <= nvars);
+      assert(basicfront <= nbasicvars);
+      assert(nonbasicfront <= nvars+nbasicrows);
    }
 
    /* set start position for (non-)basic parts of constraints */
-   basicfront = nvars;
+   basicfront = nbasicvars;
    nonbasicfront = nvars + nbasicrows;
 
    for( i = 0; i < nrows; i++ )
@@ -12244,6 +12275,8 @@ SCIP_RETCODE getBasisOrdering(
          assert(order[basicfront] == 0);
          order[basicfront] = -(i+1);
          basicfront++;
+
+         findRowPosition(order, rows, basicfront-1, nbasicvars);
       }
       else
       {
@@ -12252,6 +12285,8 @@ SCIP_RETCODE getBasisOrdering(
          assert(order[nonbasicfront] == 0);
          order[nonbasicfront] = -(i+1);
          nonbasicfront++;
+
+         findRowPosition(order, rows, nonbasicfront-1, nvars+nbasicrows);
       }
       assert(basicfront <= nonbasicfront);
       assert(basicfront <= nvars + nbasicrows);
@@ -12307,7 +12342,7 @@ SCIP_RETCODE findSimpleBasis(
 
    dim = nrows;
 
-   /* iterate over all variables and rows in the pre-defines order */
+   /* iterate over all non-basic variables and rows in the pre-defines order */
    for( i = 0; i < nvars + nrows; i++)
    {
       col = NULL;
