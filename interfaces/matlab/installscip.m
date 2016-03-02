@@ -3,7 +3,7 @@
 %*                  This file is part of the program and library             *
 %*         SCIP --- Solving Constraint Integer Programs                      *
 %*                                                                           *
-%*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+%*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 %*                            fuer Informationstechnik Berlin                *
 %*                                                                           *
 %*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -19,7 +19,7 @@
 %@author  Timo Berthold
 
 fprintf('Starting installer for SCIP interface.\n');
-fprintf('Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)\n\n');
+fprintf('Copyright (c) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)\n\n');
 
 % ask for SCIP directory %
 pathtoscip = '';

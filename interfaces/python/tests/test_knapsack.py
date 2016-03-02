@@ -1,14 +1,12 @@
-import pyscipopt.scip as scip
+from pyscipopt import Model
 
 def test_knapsack():
     # create solver instance
-    s = scip.Solver()
-    s.create()
-    s.includeDefaultPlugins()
-    s.createProbBasic("Knapsack")
+    s = Model("Knapsack")
+    s.hideOutput()
 
     # setting the objective sense to maximise
-    s.setMaximise()
+    s.setMaximize()
 
     # item weights
     weights = [4, 2, 6, 3, 7, 5]
@@ -26,7 +24,7 @@ def test_knapsack():
     varBaseName = "Item"
     for i in range(len(weights)):
         varNames.append(varBaseName + "_" + str(i))
-        knapsackVars.append(s.addIntVar(varNames[i], obj=costs[i], ub=1.0))
+        knapsackVars.append(s.addVar(varNames[i], vtype='I', obj=costs[i], ub=1.0))
 
 
     # adding a linear constraint for the knapsack constraint
@@ -34,7 +32,7 @@ def test_knapsack():
     s.addCons(coeffs, lhs=None, rhs=knapsackSize)
 
     # solve problem
-    s.solve()
+    s.optimize()
 
     s.printStatistics()
 
@@ -42,10 +40,9 @@ def test_knapsack():
     solution = s.getBestSol()
 
     # print solution
-    print()
     varSolutions = []
     for i in range(len(weights)):
-        solValue = round(s.getVal(solution, knapsackVars[i]))
+        solValue = round(s.getVal(knapsackVars[i], solution))
         varSolutions.append(solValue)
         if solValue > 0:
             print (varNames[i], "Times Selected:", solValue)
@@ -53,12 +50,9 @@ def test_knapsack():
 
         s.releaseVar(knapsackVars[i])
 
-
-
     includedWeight = sum([weights[i]*varSolutions[i] for i in range(len(weights))])
     assert includedWeight > 0 and includedWeight <= knapsackSize
-
-    s.free()
-
-if __name__ == '__main__':
+    
+    
+if __name__ == "__main__":
     test_knapsack()
