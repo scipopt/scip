@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -198,16 +198,19 @@ SCIP_RETCODE performRandRounding(
          /* enter a new probing node if the variable was not already fixed before */
          if( lbadjust || ubadjust )
          {
-            SCIP_RETCODE retcode;
-
             if( SCIPisStopped(scip) )
                break;
 
-            retcode = SCIPnewProbingNode(scip);
-            if( retcode == SCIP_MAXDEPTHLEVEL )
+            /* We only want to create a new probing node if we do not exceeed the maximal tree depth,
+             * otherwise we finish at this point.
+             * @todo: Maybe we want to continue with the same node because we do not backtrack.
+             */
+            if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+            {
+               SCIP_CALL( SCIPnewProbingNode(scip) );
+            }
+            else
                break;
-
-            SCIP_CALL( retcode );
 
             /* tighten the bounds to fix the variable for the probing node */
             if( lbadjust )

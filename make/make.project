@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -57,6 +57,7 @@ CLIENTTMPDIR    =       /tmp
 REOPT		=	false
 OPTCOMMAND	=	optimize
 SETCUTOFF	=	0
+VISUALIZE       =       false
 MAXJOBS         =       1
 
 
@@ -78,6 +79,7 @@ NOBLKBUFMEM	=	false
 PARASCIP	=	false
 
 #third party compiling parameters
+OPENSOURCE   =         true
 READLINE	=	true
 ZLIB		=	true
 GMP		=	true
@@ -131,7 +133,7 @@ CBC		=	cbc
 CBCPARALLEL	=	cbc-parallel
 MOSEK           =       mosek
 GUROBI          =       gurobi_cl
-XPRESS		=	xpress
+XPRESS_BIN      =       xpress
 GLPK            =       glpsol
 SYMPHONY        =       symphony
 BLIS            =       blis
@@ -390,8 +392,14 @@ LIBBUILD	=	$(LINKCXX)
 else
 LIBBUILD	=	$(LINKCC)
 endif
+
+ifeq ($(COMP),msvc)
+LIBBUILDFLAGS	+=      -dll
+LIBBUILD_o	= 	-out:
+else
 LIBBUILDFLAGS	+=      -shared
 LIBBUILD_o	= 	-o # the trailing space is important
+endif
 ARFLAGS		=
 RANLIB		=
 endif

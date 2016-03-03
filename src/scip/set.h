@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -460,6 +460,13 @@ SCIP_RETCODE SCIPsetSetEmphasis(
    SCIP_MESSAGEHDLR*     messagehdlr,        /**< message handler */
    SCIP_PARAMEMPHASIS    paramemphasis,      /**< parameter settings */
    SCIP_Bool             quiet               /**< should the parameter be set quiet (no output) */
+   );
+
+/** set parameters for reoptimization */
+extern
+SCIP_RETCODE SCIPsetSetReoptimizationParams(
+   SCIP_SET*             set,                /**< SCIP data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
    );
 
 /** enable or disable all plugin timers depending on the value of the flag \p enabled */
@@ -1038,6 +1045,12 @@ extern
 int SCIPsetGetSepaMaxcuts(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             root                /**< are we at the root node? */
+   );
+
+/** returns debug solution data */
+extern
+SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** Checks, if an iteratively updated value is reliable or should be recomputed from scratch.

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -104,10 +104,10 @@ struct SCIP_HeurData
 /** optimizes the continuous variables in an LP diving by fixing all integer variables to the given solution values */
 static
 SCIP_RETCODE solveLp(
-   SCIP*                 scip,               /* SCIP data structure */
-   SCIP_SOL*             sol,                /* candidate solution for which continuous variables should be optimized */
-   SCIP_Bool*            success             /* was the dive successful? */
-)
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< candidate solution for which continuous variables should be optimized */
+   SCIP_Bool*            success             /**< was the dive successful? */
+   )
 {
    SCIP_VAR** vars;
    SCIP_RETCODE retstat;

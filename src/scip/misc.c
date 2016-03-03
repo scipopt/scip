@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -20,6 +20,7 @@
  * @author Stefan Heinz
  * @author Michael Winkler
  * @author Kati Wolter
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -40,6 +41,10 @@
 #ifndef NDEBUG
 #include "scip/struct_misc.h"
 #endif
+
+/*
+ * methods for statistical tests
+ */
 
 #define SQRTOFTWO                  1.4142136 /**< the square root of 2 with sufficient precision */
 
@@ -2235,7 +2240,7 @@ void SCIPhashmapPrintStatistics(
 /** indicates whether a hash map has no entries */
 SCIP_Bool SCIPhashmapIsEmpty(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-)
+   )
 {
    int i;
    assert(hashmap != NULL);
@@ -2250,7 +2255,7 @@ SCIP_Bool SCIPhashmapIsEmpty(
 /** gives the number of entries in a hash map */ 
 int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-)
+   )
 {
    int count = 0;
    int i;
@@ -2265,7 +2270,7 @@ int SCIPhashmapGetNEntries(
 /** gives the number of lists (buckets) in a hash map */ 
 int SCIPhashmapGetNLists(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-)
+   )
 {
    assert(hashmap != NULL);
 
@@ -2276,7 +2281,7 @@ int SCIPhashmapGetNLists(
 SCIP_HASHMAPLIST* SCIPhashmapGetList(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    int                   listindex           /**< index of hash map list */
-)
+   )
 {
    assert(hashmap != NULL);
    assert(listindex >= 0);
@@ -2288,7 +2293,7 @@ SCIP_HASHMAPLIST* SCIPhashmapGetList(
 /** gives the number of entries in a list of a hash map */ 
 int SCIPhashmapListGetNEntries(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list, can be NULL */
-)
+   )
 {
    int count = 0;
 
@@ -2301,7 +2306,7 @@ int SCIPhashmapListGetNEntries(
 /** retrieves origin of given entry in a hash map */ 
 void* SCIPhashmapListGetOrigin(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-)
+   )
 {
    assert(hashmaplist != NULL);
 
@@ -2311,7 +2316,7 @@ void* SCIPhashmapListGetOrigin(
 /** retrieves image of given entry in a hash map */ 
 void* SCIPhashmapListGetImage(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-)
+   )
 {
    assert(hashmaplist != NULL);
 
@@ -2321,7 +2326,7 @@ void* SCIPhashmapListGetImage(
 /** retrieves next entry from given entry in a hash map list, or NULL if at end of list. */ 
 SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-)
+   )
 {
    assert(hashmaplist != NULL);
 
@@ -2331,7 +2336,7 @@ SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
 /** removes all entries in a hash map. */ 
 SCIP_RETCODE SCIPhashmapRemoveAll(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-)
+   )
 {
    int listidx;
 

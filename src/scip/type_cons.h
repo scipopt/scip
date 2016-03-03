@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -379,9 +379,9 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - conss           : array of constraints to process
  *  - nconss          : number of constraints to process
  *  - sol             : the solution to check feasibility for
- *  - checkintegrality: has integrality to be checked?
- *  - checklprows     : have current LP rows to be checked?
- *  - printreason     : should the reason for the violation be printed?
+ *  - checkintegrality: Has integrality to be checked?
+ *  - checklprows     : Do constraints represented by rows in the current LP have to be checked?
+ *  - printreason     : Should the reason for the violation be printed?
  *  - result          : pointer to store the result of the feasibility checking call
  *
  *  possible return values for *result:

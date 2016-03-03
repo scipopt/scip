@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -135,6 +135,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySeparators);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution);
 
+/** dialog execution method for the display finitesolution command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayFiniteSolution);
+
 /** dialog execution method for the display dual solution command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayDualSolution);
@@ -246,6 +250,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetBranchingPriority);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsAggressive);
 
+/** dialog execution method for the set heuristics default command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsDefault);
+
 /** dialog execution method for the set heuristics fast command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsFast);
@@ -258,6 +266,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsOff);
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingAggressive);
 
+/** dialog execution method for the set presolving default command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingDefault);
+
 /** dialog execution method for the set presolving fast command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingFast);
@@ -269,6 +281,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingOff);
 /** dialog execution method for the set separating aggressive command */
 EXTERN
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingAggressive);
+
+/** dialog execution method for the set separating default command */
+EXTERN
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingDefault);
 
 /** dialog execution method for the set separating fast command */
 EXTERN

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -816,7 +816,11 @@ TCLIQUE_NEWSOL(tcliqueNewsolClique)
  * main separation method
  */
 
-/** searches and adds clique cuts that separate the given primal solution */
+/** searches and adds clique cuts that separate the given primal solution
+ *
+ *  @todo Should the existing cliques in the table be separated before starting the tclique algorithm?
+ *        Is this done somewhere else?
+ */
 static
 SCIP_RETCODE separateCuts(
    SCIP*                 scip,               /**< SCIP data structure */

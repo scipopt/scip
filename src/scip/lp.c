@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -5796,9 +5796,9 @@ void SCIProwSort(
       if( !row->delaysort )
       {
          for( c = 1; c < row->nlpcols; ++c )
-            assert(row->cols[c]->index > row->cols[c-1]->index);
+            assert(row->cols[c]->index >= row->cols[c-1]->index);
          for( c = row->nlpcols + 1; c < row->len; ++c )
-            assert(row->cols[c]->index > row->cols[c-1]->index);
+            assert(row->cols[c]->index >= row->cols[c-1]->index);
       }
    }
 #endif
@@ -18600,6 +18600,7 @@ SCIP_RETCODE SCIPlpWriteMip(
 #undef SCIPlpDivingObjChanged
 #undef SCIPlpMarkDivingObjChanged
 #undef SCIPlpUnmarkDivingObjChanged
+#undef SCIPlpDivingRowsChanged
 
 /** gets objective value of column */
 SCIP_Real SCIPcolGetObj(
@@ -19448,6 +19449,17 @@ void SCIPlpUnmarkDivingObjChanged(
    assert(lp->diving || lp->probing);
 
    lp->divingobjchg = FALSE;
+}
+
+/* returns TRUE if at least one left/right hand side of an LP row was changed during diving mode */
+SCIP_Bool SCIPlpDivingRowsChanged(
+   SCIP_LP*              lp                  /**< current LP data */
+   )
+{
+   assert(lp != NULL);
+   assert(lp->diving || lp->ndivechgsides == 0);
+
+   return (lp->ndivechgsides > 0);
 }
 
 /** compute relative interior point

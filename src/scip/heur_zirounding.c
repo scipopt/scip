@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -302,7 +302,7 @@ void rowFindSlackVar(
    SCIP_ROW*             row,                /**< the row for which a slack variable is searched */
    SCIP_VAR**            varpointer,         /**< pointer to store the slack variable */
    SCIP_Real*            coeffpointer        /**< pointer to store the coefficient of the slack variable */
-)
+   )
 {
    int v;
    SCIP_COL** rowcols;

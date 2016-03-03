@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -112,7 +112,7 @@ SCIP_RETCODE computeFixingrate(
    char*                 startsol,           /**< pointer to solution used for fixing values ('l'p relaxation, 'n'lp relaxation) */
    SCIP_Real*            fixingrate,         /**< percentage of integers that get actually fixed */
    SCIP_Bool*            success             /**< pointer to store whether minimum fixingrate is exceeded */
-  )
+   )
 {
    SCIP_VAR** vars;
    int fixingcounter;

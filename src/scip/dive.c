@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -207,7 +207,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
    SCIP_Real searchubbound;
    SCIP_Real searchavgbound;
    SCIP_Real searchbound;
-   SCIP_Real nextcandsol;
    SCIP_Real ubquot;
    SCIP_Real avgquot;
    SCIP_Longint ncalls;
@@ -455,7 +454,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
 
             success = FALSE;
             /* try to add solution to SCIP */
-            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, FALSE, &success) );
+            SCIP_CALL( SCIPtrySol(scip, worksol, FALSE, FALSE, FALSE, changed, &success) );
 
             /* check, if solution was feasible and good enough */
             if( success )
@@ -502,7 +501,6 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       }
 
 
-      nextcandsol = SCIP_INVALID;
       enfosuccess = FALSE;
       /* select the next diving action by selecting appropriate dive bound changes for the preferred and alternative child */
       SCIP_CALL( selectNextDiving(scip, diveset, worksol, onlylpbranchcands, SCIPgetProbingDepth(scip) == lastlpdepth,
@@ -551,6 +549,13 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             assert(bdchgdirs != NULL);
             assert(bdchgvals != NULL);
 
+            /* return if we reached the depth limit */
+            if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+            {
+               SCIPdebugMessage("depth limit reached, we stop diving immediately.\n");
+               goto TERMINATE;
+            }
+
             /* dive deeper into the tree */
             SCIP_CALL( SCIPnewProbingNode(scip) );
             ++totalnprobingnodes;
@@ -560,62 +565,65 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
             {
                SCIP_Real lblocal;
                SCIP_Real ublocal;
+               SCIP_Bool infeasbdchange;
 
+               /* get the next bound change data: variable, direction, and value */
                bdchgvar = bdchgvars[d];
                bdchgvalue = bdchgvals[d];
-               nextcandsol = SCIPgetSolVal(scip, worksol, bdchgvar);
                bdchgdir = bdchgdirs[d];
 
                assert(bdchgvar != NULL);
                lblocal = SCIPvarGetLbLocal(bdchgvar);
                ublocal = SCIPvarGetUbLocal(bdchgvar);
 
-               /* if the variable is already fixed or if the solution value is outside the domain, numerical troubles may have
-                * occured or variable was fixed by propagation while backtracking => Abort diving!
-                */
-               if( (bdchgdir == SCIP_BRANCHDIR_UPWARDS && SCIPisFeasLE(scip, bdchgvalue, lblocal)) ||
-                     (bdchgdir == SCIP_BRANCHDIR_DOWNWARDS && SCIPisFeasGE(scip, bdchgvalue, ublocal)) ||
-                     (bdchgdir == SCIP_BRANCHDIR_FIXED &&
-                      ( SCIPisFeasLT(scip, bdchgvalue, lblocal) ||
-                        SCIPisFeasGT(scip, bdchgvalue, ublocal) ||
-                        ( SCIPisFeasEQ(scip, lblocal, ublocal) && nbdchanges < 2 ))) )
-               {
-                  SCIPdebugMessage("Selected variable <%s> already fixed to [%g,%g] (solval: %.9f), diving aborted \n",
-                     SCIPvarGetName(bdchgvar), lblocal, ublocal, nextcandsol);
-                  cutoff = TRUE;
-                  break;
-               }
 
-               if( SCIPisFeasLT(scip, nextcandsol, lblocal) || SCIPisFeasGT(scip, nextcandsol, ublocal) )
-               {
-                  SCIPdebugMessage("selected variable's <%s> solution value is outside the domain [%g,%g] (solval: %.9f), diving aborted\n",
-                        SCIPvarGetName(bdchgvar), lblocal, ublocal, nextcandsol);
-                  cutoff = TRUE;
-                  break;
-               }
-
-               SCIPdebugMessage("  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ": var <%s>, sol=%g, oldbounds=[%g,%g],",
+               SCIPdebugMessage("  dive %d/%d, LP iter %" SCIP_LONGINT_FORMAT "/%" SCIP_LONGINT_FORMAT ": var <%s>, oldbounds=[%g,%g],",
                      SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
-                     SCIPvarGetName(bdchgvar), nextcandsol, lblocal, ublocal);
+                     SCIPvarGetName(bdchgvar), lblocal, ublocal);
 
+               infeasbdchange = FALSE;
                /* tighten the lower and/or upper bound depending on the bound change type */
                switch( bdchgdir )
                {
                   case SCIP_BRANCHDIR_UPWARDS:
-                     /* round variable up */
-                     SCIP_CALL( SCIPchgVarLbProbing(scip, bdchgvar, bdchgvalue) );
-                     break;
-                  case SCIP_BRANCHDIR_DOWNWARDS:
-                     SCIP_CALL( SCIPchgVarUbProbing(scip, bdchgvar, bdchgvalue) );
-                     break;
-                  case SCIP_BRANCHDIR_FIXED:
-                     if( SCIPisFeasLT(scip, lblocal, bdchgvalue) )
+                     /* test if bound change is possible, otherwise propagation might have deduced the same
+                      * bound already or numerical troubles might have occurred */
+                     if( SCIPisFeasLE(scip, bdchgvalue, lblocal) )
+                        infeasbdchange = TRUE;
+                     else
                      {
+                        /* round variable up */
                         SCIP_CALL( SCIPchgVarLbProbing(scip, bdchgvar, bdchgvalue) );
                      }
-                     if( SCIPisFeasGT(scip, ublocal, bdchgvalue) )
+                     break;
+                  case SCIP_BRANCHDIR_DOWNWARDS:
+                     /* test if bound change is possible, otherwise propagation might have deduced the same
+                      * bound already or numerical troubles might have occurred */
+                     if( SCIPisFeasGE(scip, bdchgvalue, ublocal) )
+                        infeasbdchange = TRUE;
+                     else
                      {
+                        /* round variable down */
                         SCIP_CALL( SCIPchgVarUbProbing(scip, bdchgvar, bdchgvalue) );
+                     }
+                     break;
+                  case SCIP_BRANCHDIR_FIXED:
+                     /* test if bound change is possible, otherwise propagation might have deduced the same
+                      * bound already or numerical troubles might have occurred */
+                     if( SCIPisFeasLT(scip, bdchgvalue, lblocal) || SCIPisFeasGT(scip, bdchgvalue, ublocal) ||
+                           (SCIPisFeasEQ(scip, lblocal, ublocal) && nbdchanges < 2) )
+                        infeasbdchange = TRUE;
+                     else
+                     {
+                        /* fix variable to the bound change value */
+                        if( SCIPisFeasLT(scip, lblocal, bdchgvalue) )
+                        {
+                           SCIP_CALL( SCIPchgVarLbProbing(scip, bdchgvar, bdchgvalue) );
+                        }
+                        if( SCIPisFeasGT(scip, ublocal, bdchgvalue) )
+                        {
+                           SCIP_CALL( SCIPchgVarUbProbing(scip, bdchgvar, bdchgvalue) );
+                        }
                      }
                      break;
                   case SCIP_BRANCHDIR_AUTO:
@@ -623,6 +631,16 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
                      SCIPerrorMessage("Error: Unsupported bound change direction <%d> specified for diving, aborting\n",bdchgdirs[d]);
                      SCIPABORT();
                      return SCIP_INVALIDDATA; /*lint !e527*/
+               }
+               /* if the variable domain has been shrunk in the meantime, numerical troubles may have
+                * occured or variable was fixed by propagation while backtracking => Abort diving!
+                */
+               if( infeasbdchange )
+               {
+                  SCIPdebugMessage("\nSelected variable <%s> domain already [%g,%g] as least as tight as desired bound change, diving aborted \n",
+                     SCIPvarGetName(bdchgvar), lblocal, ublocal);
+                  cutoff = TRUE;
+                  break;
                }
 
                SCIPdebugMessage("newbounds=[%g,%g]\n",
@@ -794,6 +812,7 @@ SCIP_RETCODE SCIPperformGenericDivingAlgorithm(
       SCIPgetNNodes(scip), SCIPdivesetGetName(diveset), nlpcands, SCIPgetProbingDepth(scip), maxdivedepth, SCIPdivesetGetNLPIterations(diveset), maxnlpiterations,
       SCIPretransformObj(scip, SCIPgetLPObjval(scip)), SCIPretransformObj(scip, searchbound), SCIPgetLPSolstat(scip), cutoff);
 
+  TERMINATE:
    /* end probing mode */
    SCIP_CALL( SCIPendProbing(scip) );
 

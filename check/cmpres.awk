@@ -5,7 +5,7 @@
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -35,6 +35,11 @@ function min(x,y)
 function max(x,y)
 {
    return (x) > (y) ? (x) : (y);
+}
+
+function max3(x,y,z)
+{
+   return (x) >= (y) ? max(x,z) : max(y,z);
 }
 
 function ceil(x)
@@ -271,8 +276,10 @@ function parse_time(ref_array,solver_array,time,o,printorder,probidx,problistlen
 }
 
 # copy node array
-function parse_nodes(ref_array,solver_array,nodes,s,p0,probidx,problistlen,status,infinity)
+function parse_nodes(ref_array,solver_array,nodes,o,probidx,problistlen,status,infinity)
 {
+   s = printorder[o];
+   p0 = printorder[0];
    n = 0;
 
    for( i = 0; i < problistlen; i++ )
@@ -280,12 +287,16 @@ function parse_nodes(ref_array,solver_array,nodes,s,p0,probidx,problistlen,statu
       p = problist[i];
       if(probidx[p,p0] != "" && probidx[p,s] != "")
       {
-	 ref_array[n] = nodes[p0,probidx[p,p0]];
-	 solver_array[n] = nodes[s,probidx[p,s]];
 	 if( status[p0,probidx[p,p0]] == "timeout" || status[p0,probidx[p,p0]] == "memlimit" )
 	    ref_array[n] = infinity;
-	 if( status[p0,probidx[p,s]] == "timeout" || status[p0,probidx[p,s]] == "memlimit" )
+	 else
+	    ref_array[n] = nodes[p0,probidx[p,p0]];
+
+	 if( status[s,probidx[p,s]] == "timeout" || status[s,probidx[p,s]] == "memlimit" )
 	    solver_array[n] = infinity;
+	 else
+	    solver_array[n] = nodes[s,probidx[p,s]];
+
 	 n++;
       }
    }
@@ -297,10 +308,10 @@ function filter(ref_array, solver_array, problistlen, rel_epsilon, abs_delta)
 {
    n = 0;
 
-   for( i = 0; i <= problistlen; i++ )
+   for( i = 0; i < problistlen; i++ )
    {
-      if( abs(solver_array[i]-ref_array[i]) > abs_delta &&
-	  (ref_array[i] == 0.0 || solver_array[i]/ref_array[i] > 1.0+rel_epsilon || solver_array[i]/ref_array[i] < 1.0/(1.0+rel_epsilon) ) )
+      diff = abs(solver_array[i] - ref_array[i]);
+      if( diff > abs_delta && diff / max3(abs(solver_array[i]), abs(ref_array[i]), 1.0) > rel_epsilon )
       {
 	 ref_array[n] = ref_array[i];
 	 solver_array[n] = solver_array[i];
@@ -321,16 +332,15 @@ function factorize(ref_array, solver_array, n, maxval)
 	 ref_array[i] = -1.0 * maxval;
       else if( ref_array[i] < maxval && solver_array[i] >= maxval )
 	 ref_array[i] = 1.0 * maxval;
+      else if( ref_array[i] == 0.0 && solver_array[i] == 0.0 )
+         ref_array[i] = 0.0;
       else if( ref_array[i] == 0.0 )
 	 ref_array[i] = 1.0 * maxval;
+      else if( solver_array[i] == 0.0 )
+	 ref_array[i] = -1.0 * maxval;
       else if( solver_array[i] / ref_array[i]  < 1.0 )
-      {
-	 if( solver_array[i] == 0.0 )
-	    ref_array[i] = -1.0 * maxval;
-	 else
-	    ref_array[i] = -1.0 * ref_array[i] / solver_array[i];
-      }
-      else
+	 ref_array[i] = -1.0 * ref_array[i] / solver_array[i];
+       else
 	 ref_array[i] = solver_array[i] / ref_array[i];
 
       solver_array[i] = 0.0;
@@ -766,7 +776,7 @@ END {
 	       if( length(sname) <= 19 )
 		   printf("%19s |", sname);
 	       else
-		   printf("*%18s |", substr(sname, length(sname)-19));
+		   printf("*%16s |", substr(sname, length(sname)-17));
 	   }
 	   else if( printsoltimes )
 	   {
@@ -1555,7 +1565,7 @@ END {
       s = printorder[o];
 
       parse_time(ref_array,solver_array,time,o,printorder,probidx,problistlen);
-      n = filter(ref_array, solver_array, problistlen, 0.01, .99);
+      n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
       factorize(ref_array, solver_array, n, timelimit[s])
 
       z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
@@ -1575,7 +1585,7 @@ END {
 	 s = printorder[o];
 
 	 parse_time(ref_array,solver_array,timetofirst,o,printorder,probidx,problistlen);
-	 n = filter(ref_array, solver_array, problistlen, 0.01, .99);
+	 n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
 	 factorize(ref_array, solver_array, n, timelimit[s])
 
 	 z = wilcoxon(ref_array, solver_array, n, timelimit[s]);
@@ -1590,11 +1600,8 @@ END {
    printf("%-18s  ","               ");
    for( o = 1; o < nsolver; ++o )
    {
-      s = printorder[o];
-      p0 = printorder[0];
-
-      parse_nodes(ref_array,solver_array,nodes,s,p0,probidx,problistlen,status,infinity);
-      n = filter(ref_array, solver_array, problistlen, 0.01, .99);
+      parse_nodes(ref_array,solver_array,nodes,o,probidx,problistlen,status,infinity);
+      n = filter(ref_array, solver_array, problistlen, 0.01, 0.01);
       factorize(ref_array, solver_array, n, infinity)
 
       z = wilcoxon(ref_array, solver_array, n, infinity);

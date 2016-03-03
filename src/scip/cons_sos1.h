@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -162,7 +162,7 @@ SCIP_Bool SCIPvarIsSOS1(
    SCIP_VAR*             var                 /**< variable */
    );
 
-/** returns node of variable in the conflict graph or -1 if variable is not part of in the SOS1 conflict graph */
+/** returns node of variable in the conflict graph or -1 if variable is not part of the SOS1 conflict graph */
 EXTERN
 int SCIPvarGetNodeSOS1(
    SCIP_CONSHDLR*        conshdlr,           /**< SOS1 constraint handler */

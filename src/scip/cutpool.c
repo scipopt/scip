@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -499,6 +499,10 @@ SCIP_RETCODE SCIPcutpoolAddRow(
 {
    assert(cutpool != NULL);
    assert(row != NULL);
+
+   /* only called to ensure that minidx and maxidx are up-to-date */
+   (void) SCIProwGetMaxidx(row, set);
+   assert(row->validminmaxidx);
 
    /* check in hash table, if cut already exists in the pool */
    if( SCIPhashtableRetrieve(cutpool->hashtable, (void*)row) == NULL )

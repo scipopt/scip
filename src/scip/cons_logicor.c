@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1907,7 +1907,7 @@ SCIP_RETCODE detectRedundantConstraints(
    int                   nconss,             /**< number of constraints in constraint set */
    int*                  firstchange,        /**< pointer to store first changed constraint */
    int*                  ndelconss           /**< pointer to count number of deleted constraints */
-)
+   )
 {
    SCIP_HASHTABLE* hashtable;
    int hashtablesize;
@@ -3129,6 +3129,7 @@ SCIP_RETCODE shortenConss(
    for( c = nconss - 1; c >= 0; --c )
    {
       SCIP_Bool redundant = FALSE;
+      SCIP_Bool glbinfeas = FALSE;
       SCIP_CONS* cons = conss[c];
       SCIP_CONSDATA* consdata;
 
@@ -3186,7 +3187,10 @@ SCIP_RETCODE shortenConss(
 
       /* use implications and cliques to derive global fixings and to shrink the number of variables in this constraints */
       SCIP_CALL( SCIPshrinkDisjunctiveVarSet(scip, probvars, bounds, boundtypes, redundants, consdata->nvars, &nredvars,
-            nfixedvars, &redundant, TRUE) );
+            nfixedvars, &redundant, &glbinfeas, TRUE) );
+
+      if( glbinfeas )
+         goto TERMINATE;
 
       /* remove redundant constraint */
       if( redundant )
@@ -4759,7 +4763,7 @@ SCIP_DECL_CONSPARSE(consParseLogicor)
    *success = FALSE;
 
    /* cutoff "logicor" from the constraint string */
-   startptr = strchr(str, '('); /*lint !e158*/
+   startptr = strchr((char*)str, '(');
 
    if( startptr == NULL )
    {

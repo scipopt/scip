@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -21,6 +21,7 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/mem.h"
 #include "scip/misc.h"
@@ -400,6 +401,20 @@ SCIP_RETCODE applyCompression(
  * Callback methods of tree compression
  */
 
+/** copy method for tree compression plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_COMPRCOPY(comprCopyWeakcompr)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(compr != NULL);
+   assert(strcmp(SCIPcomprGetName(compr), COMPR_NAME) == 0);
+
+   /* call inclusion method of primal heuristic */
+   SCIP_CALL( SCIPincludeComprWeakcompr(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** destructor of tree compression to free user data (called when SCIP is exiting) */
 static
 SCIP_DECL_COMPRFREE(comprFreeWeakcompr)
@@ -516,6 +531,7 @@ SCIP_RETCODE SCIPincludeComprWeakcompr(
    assert(compr != NULL);
 
    /* set non fundamental callbacks via setter functions */
+   SCIP_CALL( SCIPsetComprCopy(scip, compr, comprCopyWeakcompr) );
    SCIP_CALL( SCIPsetComprExit(scip, compr, comprExitWeakcompr) );
    SCIP_CALL( SCIPsetComprFree(scip, compr, comprFreeWeakcompr) );
 

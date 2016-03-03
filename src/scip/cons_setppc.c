@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2855,7 +2855,7 @@ SCIP_RETCODE collectCliqueData(
          assert(var != NULL);
 
          /* don't remember fixed vars */
-         if( SCIPvarGetLbLocal(var) > 0.5 && SCIPvarGetUbLocal(var) < 0.5 )
+         if( SCIPvarGetLbLocal(var) > 0.5 || SCIPvarGetUbLocal(var) < 0.5 )
             continue;
 
 	 /* only collect active or negated active varibels */
@@ -5306,17 +5306,13 @@ SCIP_RETCODE addCliques(
 static
 SCIP_RETCODE multiAggregateBinvar(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             linearconshdlrexist,/**< does the linear constraint handler exist, necessaray for
-                                              *   multi-aggregations
-                                              */
-   SCIP_VAR**            vars,               /**< all variables including the variable to which will be
-                                              *   multi-aggregated
-                                              */
+   SCIP_Bool             linearconshdlrexist,/**< does the linear constraint handler exist, necessaray for multi-aggregations */
+   SCIP_VAR**            vars,               /**< all variables including the variable to which will be multi-aggregated */
    int                   nvars,              /**< number of all variables */
    int                   pos,                /**< position of variable for multi-aggregation */
    SCIP_Bool*            infeasible,         /**< pointer to store infeasibility status of aggregation */
    SCIP_Bool*            aggregated          /**< pointer to store aggregation status */
-)
+   )
 {
    SCIP_VAR** tmpvars;
    SCIP_Real* scalars;
@@ -6168,7 +6164,7 @@ SCIP_RETCODE detectRedundantConstraints(
    int*                  firstchange,        /**< pointer to store first changed constraint */
    int*                  ndelconss,          /**< pointer to count number of deleted constraints */
    int*                  nchgsides           /**< pointer to count number of changed left/right hand sides */
-)
+   )
 {
    SCIP_HASHTABLE* hashtable;
    int hashtablesize;

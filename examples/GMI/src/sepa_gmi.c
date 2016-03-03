@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -38,11 +38,11 @@
  *   at the upper bound must be flipped. Nonbasic free variables at zero are currently untested in the cut generator,
  *   but they should be handled properly anyway.
  *
- * - Nonbasic rows can be at lower or upper bound. Non-ranged nonbasic rows are always at the lower bound. SCIP always
- *   adds slack/surplus variables with a coefficient of +1: the variable is nonnegative in case of a <= constraint, it
- *   is nonpositive in case of a >= or ranged constraint. Therefore, slack variables corresponding to >= or ranged
- *   constraints must be flipped if they are at the lower bound. (Ranged constraints at the upper bound do not have to
- *   be flipped because the variable is nonpositive.)
+ * - Nonbasic rows can be at lower or upper bound, depending on whether the lower or upper bound of the row is
+ *   attained. SCIP always adds slack/surplus variables with a coefficient of +1: the slack variable is nonnegative in
+ *   case of a <= constraint, it is nonpositive in case of a >= or ranged constraint. Therefore, slack variables
+ *   corresponding to >= or ranged constraints must be flipped if the row is at its lower bound. (Ranged constraints at
+ *   the upper bound do not have to - * be flipped because the variable is nonpositive.)
  *
  * Generated cuts are modified and their numerical properties are checked before being added to the LP relaxation.
  * Default parameters for cut modification and checking procedures are taken from the paper
@@ -346,7 +346,9 @@ SCIP_Bool getGMIFromRow(
       /* Integer variables */
       if( SCIPcolIsIntegral(col) )
       {
-         cutelem = SCIPfeasFrac(scip, rowelem);
+         /* if cutelem < 0, then we know SCIPisZero(scip, cutelem) is true and hope it doesn't do much damage */
+         cutelem = SCIPfrac(scip, rowelem);
+
          if( cutelem > f0 )
          {
             /* cut element if f > f0 */
@@ -401,7 +403,7 @@ SCIP_Bool getGMIFromRow(
       case SCIP_BASESTAT_LOWER:
          /* Take element if nonbasic at lower bound. */
          rowelem = binvrow[SCIProwGetLPPos(row)];
-         /* But if this is a >= or ranged constraint, we have to flip the row element. */
+         /* But if this is a >= or ranged constraint at the lower bound, we have to flip the row element. */
          if( !SCIPisInfinity(scip, -SCIProwGetLhs(row)) )
             rowelem = -rowelem;
          break;
@@ -424,7 +426,9 @@ SCIP_Bool getGMIFromRow(
        * coefficient */
       if( SCIProwIsIntegral(row) && !SCIProwIsModifiable(row) )
       {
-         cutelem = SCIPfeasFrac(scip, rowelem);
+         /* if cutelem < 0, then we know SCIPisZero(scip, cutelem) is true and hope it doesn't do much damage */
+         cutelem = SCIPfrac(scip, rowelem);
+
          if( cutelem > f0 )
          {
             /* cut element if f > f0 */
@@ -474,7 +478,7 @@ SCIP_Bool getGMIFromRow(
          act = SCIPgetRowLPActivity(scip, row);
          rhsslack = rrhs - act;
 
-         /* Unflip slack variable and adjust rhs if necessary */
+         /* Unflip slack variable and adjust rhs if necessary. */
          if( SCIProwGetBasisStatus(row) == SCIP_BASESTAT_LOWER )
          {
             /* If >= or ranged constraint, flip element back to original */
@@ -485,7 +489,7 @@ SCIP_Bool getGMIFromRow(
          rowcols = SCIProwGetCols(row);
          rowvals = SCIProwGetVals(row);
 
-         /* Eliminate slack variable */
+         /* Eliminate slack variable. */
          for( i = 0; i < SCIProwGetNLPNonz(row); ++i )
             workcoefs[SCIPcolGetLPPos(rowcols[i])] -= cutelem * rowvals[i];
 

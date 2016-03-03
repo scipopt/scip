@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2359,15 +2359,15 @@ SCIP_RETCODE emphasisParse(
    }
 
    /* check which kind of emphasis we want to set */
-   if ( strcmp(paramname, "heuristics") )
+   if ( strcmp(paramname, "heuristics") == 0 )
    {
       SCIP_CALL( SCIPsetSetHeuristics(set, messagehdlr, paramsetting, FALSE) );
    }
-   else if ( strcmp(paramname, "presolving") )
+   else if ( strcmp(paramname, "presolving") == 0 )
    {
       SCIP_CALL( SCIPsetSetPresolving(set, messagehdlr, paramsetting, FALSE) );
    }
-   else if ( strcmp(paramname, "separating") )
+   else if ( strcmp(paramname, "separating") == 0 )
    {
       SCIP_CALL( SCIPsetSetSeparating(set, messagehdlr, paramsetting, FALSE) );
    }
@@ -4106,7 +4106,15 @@ SCIP_RETCODE SCIPparamsetCopyParams(
    }
 
    /* disable reoptimization explicitly */
-   SCIP_CALL( SCIPparamsetSetBool(targetparamset, set, messagehdlr, "reoptimization/enable", FALSE) );
+   if( set->reopt_enable )
+   {
+      if( SCIPsetIsParamFixed(set, "reoptimization/enable") )
+      {
+         SCIP_CALL( SCIPsetChgParamFixed(set, "reoptimization/enable", FALSE) );
+      }
+      SCIP_CALL( SCIPparamsetSetBool(targetparamset, set, messagehdlr, "reoptimization/enable", FALSE) );
+      SCIP_CALL( SCIPsetSetReoptimizationParams(set, messagehdlr) );
+   }
 
    return SCIP_OKAY;
 }

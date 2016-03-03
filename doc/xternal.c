@@ -3,7 +3,7 @@
 /*                  this file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*                  2002-2015 Konrad-Zuse-Zentrum                            */
+/*                  2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -120,7 +120,7 @@
  * @subsection AUTHORS SCIP Authors
  * - <a class="el" href="http://scip.zib.de/#developers">Developers</a>
  *
- * @version  3.2.0.1
+ * @version  3.2.1
  *
  * \image html scippy.png
  *
@@ -261,7 +261,7 @@
  *  </tr>
  *  <tr>
  *  <td>
- *  <a href="http://scip.zib.de/doc/applications/MultiObjective"><b>Multi-objective Optimization</b></a>
+ *  <a href="http://polyscip.zib.de"><b>PolySCIP</b></a>
  *  </td>
  *  <td>
  *  A solver for multi-objective optimization problems.
@@ -940,7 +940,7 @@
  *
  * \code
  * SCIP version 2.0.1 [precision: 8 byte] [memory: block] [mode: optimized] [LP solver: SoPlex 1.5.0]
- * Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (c) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * External codes:
  *   SoPlex 1.5.0         Linear Programming Solver developed at Zuse Institute Berlin (soplex.zib.de)
@@ -6053,7 +6053,7 @@
  *     <a href="http://miplib.zib.de/miplib3/miplib.html">MIPLIB 3.0</a> , we get some output like:
  * \code
  * SCIP version 1.1.0 [precision: 8 byte] [memory: block] [mode: debug] [LP solver: SoPlex 1.4.0]
- * Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
+ * Copyright (c) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)
  *
  * user parameter file <scip.set> not found - using default parameters
  *
@@ -7424,6 +7424,8 @@
  */
 
 /**@page RELEASENOTES Release notes
+ *
+ * \verbinclude SCIP-release-notes-3.2.1
  *
  * \verbinclude SCIP-release-notes-3.2
  *

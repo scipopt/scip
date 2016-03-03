@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -40,12 +40,12 @@
  */
 
 
-/** Execute the branching of nodes with additional constraints. */
+/** execute the branching of nodes with additional constraints */
 static
 SCIP_RETCODE Exec(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_RESULT*          result              /**< pointer to store the result */
-)
+   )
 {
    SCIP_REOPTNODE* reoptnode;
    SCIP_NODE* curnode;
@@ -58,7 +58,6 @@ SCIP_RETCODE Exec(
    int childnodessize;
    int ncreatednodes;
    int c;
-
 
    assert(scip != NULL );
    assert(SCIPisReoptEnabled(scip));
@@ -174,8 +173,7 @@ SCIP_RETCODE Exec(
       if( reopttype == SCIP_REOPTTYPE_STRBRANCHED || reopttype == SCIP_REOPTTYPE_INFSUBTREE )
       {
          /* by default we assume the node get split into two node (because using a constraint to split the node is
-          * the default case
-          */
+          * the default case */
          childnodessize = 2;
       }
       else
@@ -231,9 +229,23 @@ SCIP_RETCODE Exec(
  * Callback methods of branching rule
  */
 
+/** copy method for branchrule plugins (called when SCIP copies plugins) */
+static
+SCIP_DECL_BRANCHCOPY(branchCopyNodereopt)
+{  /*lint --e{715}*/
+   assert(scip != NULL);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   /* call inclusion method of branchrule */
+   SCIP_CALL( SCIPincludeBranchruleNodereopt(scip) );
+
+   return SCIP_OKAY;
+}
+
 /** branching execution method for fractional LP solutions */
 static
-SCIP_DECL_BRANCHEXECLP(branchExeclpnodereopt)
+SCIP_DECL_BRANCHEXECLP(branchExeclpNodereopt)
 {/*lint --e{715}*/
    assert(branchrule != NULL );
    assert(*result != SCIP_BRANCHED);
@@ -281,7 +293,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpnodereopt)
 }
 
 /** branching execution method for external candidates */
-static SCIP_DECL_BRANCHEXECEXT(branchExecextnodereopt)
+static SCIP_DECL_BRANCHEXECEXT(branchExecextNodereopt)
 {/*lint --e{715}*/
    assert(branchrule != NULL );
    assert(*result != SCIP_BRANCHED);
@@ -300,7 +312,7 @@ static SCIP_DECL_BRANCHEXECEXT(branchExecextnodereopt)
 }
 
 /** branching execution method for not completely fixed pseudo solutions */
-static SCIP_DECL_BRANCHEXECPS(branchExecpsnodereopt)
+static SCIP_DECL_BRANCHEXECPS(branchExecpsNodereopt)
 {/*lint --e{715}*/
    assert(branchrule != NULL );
    assert(*result != SCIP_BRANCHED);
@@ -325,7 +337,7 @@ static SCIP_DECL_BRANCHEXECPS(branchExecpsnodereopt)
 /** creates the nodereopt branching rule and includes it in SCIP */
 SCIP_RETCODE SCIPincludeBranchruleNodereopt(
    SCIP*                 scip                /**< SCIP data structure */
-)
+   )
 {
    SCIP_BRANCHRULE* branchrule;
    SCIP_BRANCHRULEDATA* branchruledata;
@@ -342,9 +354,10 @@ SCIP_RETCODE SCIPincludeBranchruleNodereopt(
    assert(branchrule != NULL );
 
    /* set non fundamental callbacks via setter functions */
-   SCIP_CALL(SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpnodereopt));
-   SCIP_CALL(SCIPsetBranchruleExecExt(scip, branchrule, branchExecextnodereopt));
-   SCIP_CALL(SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsnodereopt));
+   SCIP_CALL(SCIPsetBranchruleCopy(scip, branchrule, branchCopyNodereopt));
+   SCIP_CALL(SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpNodereopt));
+   SCIP_CALL(SCIPsetBranchruleExecExt(scip, branchrule, branchExecextNodereopt));
+   SCIP_CALL(SCIPsetBranchruleExecPs(scip, branchrule, branchExecpsNodereopt));
 
    return SCIP_OKAY;
 }

@@ -99,7 +99,7 @@ test:           $(MAINFILE)
 	@-(cd check && ln -fs ../$(SCIPDIR)/check/check.awk);
 	@-(cd check && ln -fs ../$(SCIPDIR)/check/getlastprob.awk);
 	cd check; \
-	$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "interface" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND);
+	$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) "$(GAP)" $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE) $(LOCK) "interface" $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(OPTCOMMAND);
 
 .PHONY: clean
 clean:		$(OBJDIR)

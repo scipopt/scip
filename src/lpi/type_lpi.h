@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -86,8 +86,8 @@ typedef enum SCIP_BaseStat SCIP_BASESTAT;
 /** LP solution quality quantities */
 enum SCIP_LPSolQuality
 {
-   SCIP_LPSOLQUALITY_ESTIMCONDITION,    /**< estimated condition number of (scaled) basis matrix (SCIP_Real) */
-   SCIP_LPSOLQUALITY_EXACTCONDITION     /**< exact condition number of (scaled) basis matrix (SCIP_Real) */
+   SCIP_LPSOLQUALITY_ESTIMCONDITION = 0,    /**< estimated condition number of (scaled) basis matrix (SCIP_Real) */
+   SCIP_LPSOLQUALITY_EXACTCONDITION = 1     /**< exact condition number of (scaled) basis matrix (SCIP_Real) */
 };
 typedef enum SCIP_LPSolQuality SCIP_LPSOLQUALITY;
 

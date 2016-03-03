@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -33,6 +33,16 @@ endif
 
 INSTALLDIR	=
 
+# do not use other open source projects; needs to be set before including make.project
+ifeq ($(OPENSOURCE),false)
+	override EXPRINT	=	none
+	override GMP	=	false
+	override READLINE	=	false
+	override ZLIB	=	false
+	override ZIMPL	=	false
+	override IPOPT	=	false
+endif
+
 #-----------------------------------------------------------------------------
 # load default settings and detect host architecture
 #-----------------------------------------------------------------------------
@@ -43,7 +53,7 @@ include $(SCIPDIR)/make/make.project
 # default settings
 #-----------------------------------------------------------------------------
 
-VERSION		=	3.2.0.1
+VERSION		=	3.2.1
 SCIPGITHASH	=
 SOFTLINKS	=
 MAKESOFTLINKS	=	true
@@ -574,6 +584,8 @@ MAINLINK	=	$(BINDIR)/$(MAINSHORTNAME).$(BASE).$(LPS)$(EXEEXTENSION)
 MAINSHORTLINK	=	$(BINDIR)/$(MAINSHORTNAME)$(EXEEXTENSION)
 ALLSRC		+=	$(MAINSRC)
 
+DLLFILENAME	=	lib$(MAINNAME).$(BASE).$(LPS).dll
+
 LINKSMARKERFILE	=	$(LIBDIR)/linkscreated.$(LPS)-$(LPSOPT).$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX).$(ZIMPL)-$(ZIMPLOPT).$(IPOPT)-$(IPOPTOPT).$(GAMS)
 LASTSETTINGS	=	$(OBJDIR)/make.lastsettings
 
@@ -665,7 +677,7 @@ check:		test
 test:
 		cd check; \
 		$(SHELL) ./check.sh $(TEST) $(MAINFILE) $(SETTINGS) $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
-		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS);
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE);
 
 .PHONY: testcount
 testcount:
@@ -675,12 +687,12 @@ testcount:
 .PHONY: testcplex
 testcplex:
 		cd check; \
-		$(SHELL) ./check_cplex.sh $(TEST) $(CPLEX) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
-
+		$(SHELL) ./check.sh $(TEST) $(CPLEX) $(SETTINGS) $(notdir $(CPLEX)).$(OSTYPE).$(ARCH) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) \
+		$(CONTINUE) $(LOCK) $(VERSION) $(LPS) $(VALGRIND) $(CLIENTTMPDIR) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(MAXJOBS) $(VISUALIZE);
 .PHONY: testxpress
 testxpress:
 		cd check; \
-		$(SHELL) ./check_xpress.sh $(TEST) $(XPRESS) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
+		$(SHELL) ./check_xpress.sh $(TEST) $(XPRESS_BIN) $(SETTINGS) $(OSTYPE).$(ARCH).$(HOSTNAME) $(TIME) $(NODES) $(MEM) $(THREADS) $(FEASTOL) $(DISPFREQ) $(CONTINUE);
 
 .PHONY: testmosek
 testmosek:
@@ -992,6 +1004,17 @@ endif
 
 -include $(LASTSETTINGS)
 
+.PHONY: dll
+dll: $(SCIPLIBOBJFILES) $(MAINOBJFILES) $(LPILIBOBJFILES) $(NLPILIBOBJFILES) $(OBJSCIPLIBOBJFILES) | $(LIBOBJSUBDIRS) $(LIBDIR)
+ifeq ($(COMP),msvc)
+		@echo "-> generating library $@"
+		$(LINKCC) $(LIBBUILDFLAGS) $(LINKCC_L)$(LIBDIR) -dll $(LIBBUILD_o)$(LIBDIR)/$(DLLFILENAME) \
+			$(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(NLPILIBOBJFILES) $(LPILIBOBJFILES) \
+			$(LPSLDFLAGS)
+else
+		@echo "can not use 'make dll' without MSVC"
+endif
+
 .PHONY: touchexternal
 touchexternal:	$(ZLIBDEP) $(GMPDEP) $(READLINEDEP) $(ZIMPLDEP) $(GAMSDEP) $(LPSCHECKDEP) $(PARASCIPDEP) | $(LIBOBJDIR)
 ifeq ($(TOUCHLINKS),true)
@@ -1184,6 +1207,11 @@ endif
 ifneq ($(PARASCIP),true)
 ifneq ($(PARASCIP),false)
 		$(error invalid PARASCIP flag selected: PARASCIP=$(PARASCIP). Possible options are: true false)
+endif
+endif
+ifeq ($(SHARED),true)
+ifeq ($(COMP),msvc)
+		$(error invalid flags selected: SHARED=$(SHARED) and COMP=$(COMP). Please use 'make dll' to generate a dynamic library with MSVC)
 endif
 endif
 

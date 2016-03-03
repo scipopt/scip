@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -254,7 +254,12 @@ void solStamp(
    assert(stat != NULL);
 
    if( checktime )
+   {
       sol->time = SCIPclockGetTime(stat->solvingtime);
+#ifndef NDEBUG
+      sol->lpcount = stat->lpcount;
+#endif
+   }
    else
       sol->time = SCIPclockGetLastTime(stat->solvingtime);
    sol->nodenum = stat->nnodes;
@@ -350,6 +355,9 @@ SCIP_RETCODE SCIPsolCopy(
    (*sol)->obj = sourcesol->obj;
    (*sol)->primalindex = -1;
    (*sol)->time = sourcesol->time;
+#ifndef NDEBUG
+   (*sol)->lpcount = sourcesol->lpcount;
+#endif
    (*sol)->nodenum = sourcesol->nodenum;
    (*sol)->solorigin = sourcesol->solorigin;
    (*sol)->runnum = sourcesol->runnum;
@@ -1043,6 +1051,8 @@ SCIP_RETCODE SCIPsolSetVal(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       assert(!SCIPsolIsOriginal(sol));
+      assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
+         || sol->lpcount == stat->lpcount);
       oldval = solGetArrayVal(sol, var);
       if( !SCIPsetIsEQ(set, val, oldval) )
       {
@@ -1180,6 +1190,9 @@ SCIP_RETCODE SCIPsolIncVal(
    if( SCIPsetIsZero(set, incval) )
       return SCIP_OKAY;
 
+   assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
+      || sol->lpcount == stat->lpcount);
+
    oldval = solGetArrayVal(sol, var);
    if( SCIPsetIsInfinity(set, oldval) || SCIPsetIsInfinity(set, -oldval) )
       return SCIP_OKAY;
@@ -1290,6 +1303,8 @@ SCIP_Real SCIPsolGetVal(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       assert(!SCIPsolIsOriginal(sol));
+      assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
+         || sol->lpcount == stat->lpcount);
       return solGetArrayVal(sol, var);
 
    case SCIP_VARSTATUS_FIXED:
@@ -1463,10 +1478,10 @@ SCIP_RETCODE SCIPsolCheck(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_STAT*            stat,               /**< problem statistics */
    SCIP_PROB*            prob,               /**< transformed problem data */
-   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
-   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            feasible            /**< stores whether solution is feasible */
    )
 {
@@ -1616,6 +1631,8 @@ SCIP_RETCODE SCIPsolRound(
 
       var = prob->vars[v];
       assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE || SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN);
+      assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
+         || sol->lpcount == stat->lpcount);
       solval = solGetArrayVal(sol, var);
 
       /* solutions with unknown entries cannot be rounded */

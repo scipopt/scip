@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -106,6 +106,13 @@ SCIP_RETCODE setupProbingSCIP(
    SCIP_Bool*            success             /**< was copying successful? */
    )
 {
+   /* check if we are already at the maximal tree depth */
+   if( SCIPgetDepthLimit(scip) <= SCIPgetDepth(scip) )
+   {
+      *success = FALSE;
+      return SCIP_OKAY;
+   }
+
    /* initializing the subproblem */
    SCIP_CALL( SCIPcreate(probingscip) );
 
@@ -840,6 +847,10 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
 
          /* set SCIP into probing mode and create root node of the probing tree */
          SCIP_CALL( SCIPstartProbing(probingscip) );
+
+         /* this should always be fulfilled */
+         assert(SCIPgetDepthLimit(probingscip) > SCIPgetDepth(probingscip));
+
          SCIP_CALL( SCIPnewProbingNode(probingscip) );
 
          SCIPdebugMessage("successfully copied SCIP instance -> feasibility pump 2.0 can be used.\n");
@@ -1174,6 +1185,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       }
 
       /* swap the last solutions */
+      SCIP_CALL( SCIPunlinkSol(scip, heurdata->roundedsol) );
       tmpsol = lastroundedsols[heurdata->cyclelength-1];
       for( j = heurdata->cyclelength-1; j > 0; j-- )
       {
@@ -1344,6 +1356,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    }
 
 #endif /* SCIP_STATISTIC */
+
    return SCIP_OKAY;
 }
 

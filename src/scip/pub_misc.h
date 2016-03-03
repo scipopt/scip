@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,8 +16,11 @@
 /**@file   pub_misc.h
  * @brief  public data structures and miscellaneous methods
  * @author Tobias Achterberg
+ * @author Gerald Gamrath
  * @author Stefan Heinz
+ * @author Gregor Hendel
  * @author Michael Winkler
+ * @author Kati Wolter
  *
  * This file contains a bunch of data structures and miscellaneous methods:
  *
@@ -612,56 +615,56 @@ void SCIPhashmapPrintStatistics(
 EXTERN
 SCIP_Bool SCIPhashmapIsEmpty(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-);
+   );
 
 /** gives the number of entries in a hash map */
 EXTERN
 int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-);
+   );
 
 /** gives the number of lists (buckets) in a hash map */
 EXTERN
 int SCIPhashmapGetNLists(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-);
+   );
 
 /** gives a specific list (bucket) in a hash map */
 EXTERN
 SCIP_HASHMAPLIST* SCIPhashmapGetList(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    int                   listindex           /**< index of hash map list */
-);
+   );
 
 /** gives the number of entries in a list of a hash map */
 EXTERN
 int SCIPhashmapListGetNEntries(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list, can be NULL */
-);
+   );
 
 /** retrieves origin of given entry in a hash map */
 EXTERN
 void* SCIPhashmapListGetOrigin(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-);
+   );
 
 /** retrieves image of given entry in a hash map */
 EXTERN
 void* SCIPhashmapListGetImage(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-);
+   );
 
 /** retrieves next entry from given entry in a hash map list, or NULL if at end of list. */
 EXTERN
 SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-);
+   );
 
 /** removes all entries in a hash map. */
 EXTERN
 SCIP_RETCODE SCIPhashmapRemoveAll(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-);
+   );
 
 /**@} */
 

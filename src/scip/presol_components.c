@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -971,7 +971,7 @@ SCIP_RETCODE splitProblem(
    int*                  ndeletedvars,       /**< pointer to store the number of deleted variables */
    int*                  ndeletedconss,      /**< pointer to store the number of deleted constraints */
    SCIP_RESULT*          result              /**< pointer to store the result of the presolving call */
-  )
+   )
 {
    SCIP_HASHMAP* consmap;
    SCIP_CONS** compconss;

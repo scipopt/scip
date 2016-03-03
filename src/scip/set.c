@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -247,7 +247,8 @@
 #define SCIP_DEFAULT_MISC_IMPROVINGSOLS   FALSE /**< should only solutions be checked which improve the primal bound */
 #define SCIP_DEFAULT_MISC_PRINTREASON      TRUE /**< should the reason be printed if a given start solution is infeasible? */
 #define SCIP_DEFAULT_MISC_ESTIMEXTERNMEM   TRUE /**< should the usage of external memory be estimated? */
-#define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the extended space (after presolving)? */
+#define SCIP_DEFAULT_MISC_TRANSORIGSOLS    TRUE /**< should SCIP try to transfer original solutions to the transformed space (after presolving)? */
+#define SCIP_DEFAULT_MISC_TRANSSOLSORIG    TRUE /**< should SCIP try to transfer transformed solutions to the original space (after solving)? */
 #define SCIP_DEFAULT_MISC_CALCINTEGRAL     TRUE /**< should SCIP calculate the primal dual integral? */
 #define SCIP_DEFAULT_MISC_FINITESOLSTORE  FALSE /**< should SCIP try to remove infinite fixings from solutions copied to the solution store? */
 #define SCIP_DEFAULT_MISC_OUTPUTORIGSOL    TRUE /**< should the best solution be transformed to the orignal space and be output in command line run? */
@@ -310,7 +311,7 @@
 #define SCIP_DEFAULT_REOPT_SEPABESTSOL    FALSE /**< separate the optimal solution, i.e., for constraint shortest path problems */
 #define SCIP_DEFAULT_REOPT_STOREVARHISTOTY FALSE/**< use the variable history of the previouse solve if the objective function has changed only slightly */
 #define SCIP_DEFAULT_REOPT_USEPSCOST      FALSE /**< reuse pseudo costs of the objective function changed only slightly */
-#define SCIP_DEFAULT_REOPT_COMMONTIMELIMIT TRUE /**< is the given time limit for all reoptimization round? */
+#define SCIP_DEFAULT_REOPT_COMMONTIMELIMIT FALSE/**< is the given time limit for all reoptimization round? */
 #define SCIP_DEFAULT_REOPT_SHRINKINNER     TRUE /**< replace branched transit nodes by their child nodes, if the number of bound changes is not to large */
 #define SCIP_DEFAULT_REOPT_STRONGBRANCHINIT TRUE/**< try to fix variables before reoptimizing by probing like strong branching */
 #define SCIP_DEFAULT_REOPT_REDUCETOFRONTIER TRUE/**< delete stored nodes which were not reoptimized */
@@ -556,6 +557,133 @@ SCIP_DECL_PARAMCHGD(paramChgdEnableReopt)
    /* create or deconstruct the reoptimization data structures */
 
    SCIP_CALL( SCIPenableReoptimization(scip, SCIPparamGetBool(param)) );
+
+   return SCIP_OKAY;
+}
+
+/** set parameters for reoptimization */
+SCIP_RETCODE SCIPsetSetReoptimizationParams(
+   SCIP_SET*             set,                /**< SCIP data structure */
+   SCIP_MESSAGEHDLR*     messagehdlr         /**< message handler */
+   )
+{
+   assert(set != NULL);
+   assert(messagehdlr != NULL);
+
+   if( set->reopt_enable )
+   {
+      /* disable conflict analysis
+       *
+       * TODO we may want to enable conflict analysis but disable it for bound exceeding LPs. hence, we have
+       * to ensure that conflict analysis based on dual information is not performed, therefore we have treat the case
+       * usesb = TRUE and useboundlp = FALSE with special care.
+       */
+      if( SCIPsetIsParamFixed(set, "conflict/enable") )
+      {
+         SCIP_CALL( SCIPsetChgParamFixed(set, "conflict/enable", FALSE) );
+      }
+      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/enable", FALSE) );
+
+      /* TODO check wheather multi aggregation can be enabled in reoptimization */
+      if( SCIPsetIsParamFixed(set, "presolving/donotmultaggr") )
+      {
+         SCIP_CALL( SCIPsetChgParamFixed(set, "presolving/donotmultaggr", FALSE) );
+      }
+      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "presolving/donotmultaggr", TRUE) );
+
+      /* fix paramters */
+      SCIP_CALL( SCIPsetChgParamFixed(set, "conflict/enable", TRUE) );
+      SCIP_CALL( SCIPsetChgParamFixed(set, "presolving/donotmultaggr", TRUE) );
+
+      if( SCIPsetIsParamFixed(set, "branching/nodereopt/priority") )
+      {
+         SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", FALSE) );
+      }
+      SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "branching/nodereopt/priority", 9000000) );
+      SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", TRUE) );
+
+      /* change priorities of reoptimization heuristics */
+      if( SCIPsetFindHeur(set, "ofins") != NULL )
+      {
+         if( SCIPsetIsParamFixed(set, "heuristics/ofins/freq") )
+         {
+            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/ofins/freq", FALSE) );
+         }
+         SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "heuristics/ofins/freq", 0) );
+      }
+
+      if( SCIPsetFindHeur(set, "reoptsols") != NULL )
+      {
+         if( SCIPsetIsParamFixed(set, "heuristics/reoptsols/freq") )
+         {
+            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/reoptsols/freq", FALSE) );
+         }
+         SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "heuristics/reoptsols/freq", 0) );
+      }
+
+      if( SCIPsetFindHeur(set, "trivialnegation") != NULL )
+      {
+         if( SCIPsetIsParamFixed(set, "heuristics/trivialnegation/freq") )
+         {
+            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/trivialnegation/freq", FALSE) );
+         }
+         SCIP_CALL( SCIPsetSetIntParam(set, messagehdlr, "heuristics/trivialnegation/freq", 0) );
+      }
+   }
+   else
+   {
+      /* disable conflict analysis */
+      if( SCIPsetIsParamFixed(set, "conflict/enable") )
+      {
+         SCIP_CALL( SCIPsetChgParamFixed(set, "conflict/enable", FALSE) );
+      }
+      SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "conflict/enable") );
+
+      /* TODO check wheather multi aggregation can be enabled in reoptimization */
+      if( SCIPsetIsParamFixed(set, "presolving/donotmultaggr") )
+      {
+         SCIP_CALL( SCIPsetChgParamFixed(set, "presolving/donotmultaggr", FALSE) );
+      }
+      SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "presolving/donotmultaggr") );
+
+      /* set the priorities to defeault */
+      if( SCIPsetFindBranchrule(set, "nodereopt") != NULL )
+      {
+         if( SCIPsetIsParamFixed(set, "branching/nodereopt/priority") )
+         {
+            SCIP_CALL( SCIPsetChgParamFixed(set, "branching/nodereopt/priority", FALSE) );
+         }
+         SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "branching/nodereopt/priority") );
+      }
+
+      /* change priorities of reoptimization heuristics */
+      if( SCIPsetFindHeur(set, "ofins") != NULL )
+      {
+         if( SCIPsetIsParamFixed(set, "heuristics/ofins/freq") )
+         {
+            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/ofins/freq", FALSE) );
+         }
+         SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "heuristics/ofins/freq") );
+      }
+
+      if( SCIPsetFindHeur(set, "reoptsols") != NULL )
+      {
+         if( SCIPsetIsParamFixed(set, "heuristics/reoptsols/freq") )
+         {
+            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/reoptsols/freq", FALSE) );
+         }
+         SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "heuristics/reoptsols/freq") );
+      }
+
+      if( SCIPsetFindHeur(set, "trivialnegation") != NULL )
+      {
+         if( SCIPsetIsParamFixed(set, "heuristics/trivialnegation/freq") )
+         {
+            SCIP_CALL( SCIPsetChgParamFixed(set, "heuristics/trivialnegation/freq", FALSE) );
+         }
+         SCIP_CALL( SCIPsetResetParam(set, messagehdlr, "heuristics/trivialnegation/freq") );
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -881,6 +1009,10 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->conflicthdlrssize = 0;
    (*set)->conflicthdlrssorted = FALSE;
    (*set)->conflicthdlrsnamesorted = FALSE;
+
+   (*set)->debugsoldata = NULL;
+   SCIP_CALL( SCIPdebugSolDataCreate(&(*set)->debugsoldata) ); /*lint !e506 !e774*/
+
    (*set)->presols = NULL;
    (*set)->npresols = 0;
    (*set)->presolssize = 0;
@@ -1593,8 +1725,13 @@ SCIP_RETCODE SCIPsetCreate(
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
          "misc/transorigsols",
-         "should SCIP try to transfer original solutions to the extended space (after presolving)?",
+         "should SCIP try to transfer original solutions to the transformed space (after presolving)?",
          &(*set)->misc_transorigsols, FALSE, SCIP_DEFAULT_MISC_TRANSORIGSOLS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "misc/transsolsorig",
+         "should SCIP try to transfer transformed solutions to the original space (after solving)?",
+         &(*set)->misc_transsolsorig, FALSE, SCIP_DEFAULT_MISC_TRANSSOLSORIG,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
             "misc/calcintegral",
@@ -2244,6 +2381,9 @@ SCIP_RETCODE SCIPsetFree(
    }
    BMSfreeMemoryArrayNull(&(*set)->extcodenames);
    BMSfreeMemoryArrayNull(&(*set)->extcodedescs);
+
+   /* free all debug data */
+   SCIP_CALL( SCIPdebugFreeDebugData(*set) ); /*lint !e506 !e774*/
 
    BMSfreeMemory(set);
 
@@ -4763,6 +4903,15 @@ int SCIPsetGetSepaMaxcuts(
       return set->sepa_maxcuts;
 }
 
+/** returns debug solution data */
+SCIP_DEBUGSOLDATA* SCIPsetGetDebugSolData(
+   SCIP_SET*             set                 /**< global SCIP settings */
+   )
+{
+   assert(set != NULL);
+
+   return set->debugsoldata;
+}
 
 
 /*

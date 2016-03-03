@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1908,8 +1908,14 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
       SCIP_VAR* var;
       SCIP_Bool updatepscost;
 
-      SCIP_CALL( SCIPnewProbingNode(scip) );
-      divedepth++;
+      /* open a new probing node if this will not exceed the maximal tree depth, otherwise stop here */
+      if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+      {
+         SCIP_CALL( SCIPnewProbingNode(scip) );
+         divedepth++;
+      }
+      else
+         break;
 
       bestcand = -1;
       bestcandmayround = TRUE;
@@ -2197,8 +2203,19 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                      nlpsolval = MAX(nlpsolval,lb);
                      assert(SCIPvarGetType(covervars[c]) == SCIP_VARTYPE_CONTINUOUS || SCIPisFeasIntegral(scip, nlpsolval));
 
+                     /* open a new probing node if this will not exceed the maximal tree depth,
+                      * otherwise fix all the remaining variables at the same probing node
+                      * @todo do we need a new probing node for each fixing? if one of these fixings leads to a cutoff
+                      *       we backtrack to the last probing node before we started to fix the covervars (and we do
+                      *       not solve the probing LP). thus, it would be less work load in SCIPendProbing
+                      *       and SCIPbacktrackProbing.
+                      */
+                     if( SCIPgetDepthLimit(scip) > SCIPgetDepth(scip) )
+                     {
+                        SCIP_CALL( SCIPnewProbingNode(scip) );
+                     }
+
                      /* fix and propagate */
-                     SCIP_CALL( SCIPnewProbingNode(scip) );
                      assert(SCIPisLbBetter(scip, nlpsolval, lb, ub) || SCIPisUbBetter(scip, nlpsolval, lb, ub));
 
                      if( SCIPisLbBetter(scip, nlpsolval, lb, ub) )
@@ -2384,6 +2401,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                /* backtrack one step */
                SCIPdebugMessage("  *** cutoff detected at level %d - backtracking one step\n", SCIPgetProbingDepth(scip));
                SCIP_CALL( SCIPbacktrackProbing(scip, SCIPgetProbingDepth(scip)-1) );
+
+               /* after backtracking there has to be at least one open node without exceeding the maximal tree depth */
+               assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
+
                SCIP_CALL( SCIPnewProbingNode(scip) );
             }
             else
@@ -2391,6 +2412,10 @@ SCIP_DECL_HEUREXEC(heurExecNlpdiving)
                /* if we have a stored a depth for backtracking, go there */
                SCIPdebugMessage("  *** cutoff detected at level %d - backtracking to depth %d\n", SCIPgetProbingDepth(scip), backtrackdepth);
                SCIP_CALL( SCIPbacktrackProbing(scip, backtrackdepth-1) );
+
+               /* after backtracking there has to be at least one open node without exceeding the maximal tree depth */
+               assert(SCIPgetDepthLimit(scip) > SCIPgetDepth(scip));
+
                SCIP_CALL( SCIPnewProbingNode(scip) );
                divedepth = backtrackdepth;
 
