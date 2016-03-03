@@ -71,7 +71,7 @@ typedef enum Lockcompensation LOCKCOMPENSATION;
 static
 SCIP_RETCODE compensateVarLock(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   col,                /**< variable fixing candidate */
    int                   row,                /**< row index with opposite lock */
    SCIP_Real             val,                /**< value of fixing candidate in the opposite lock constraint */
@@ -473,7 +473,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyDualcomp)
 static
 SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
 {  /*lint --e{715}*/
-   SCIPMILPMATRIX* matrix;
+   SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
 
