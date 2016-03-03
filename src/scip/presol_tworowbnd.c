@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -76,7 +76,7 @@ typedef enum Bndchgtype BNDCHGTYPE;
 static
 void writeLPs(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   otherrow,           /**< other row index */
    int                   numoverlap,         /**< overlap-size */
    int*                  overlapidx,         /**< overlap column indexes */
@@ -223,7 +223,7 @@ void writeLPs(
 static
 void getActivities(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   baserow,            /**< base row index */
    int                   otherrow,           /**< other row index */
    int                   numoverlap,         /**< overlap-size */
@@ -785,7 +785,7 @@ SCIP_Real getMaxResActivity(
 static
 void applyTightening(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   baserow,            /**< base row index */
    int                   otherrow,           /**< other row index */
    int                   numoverlap,         /**< overlap-size */
@@ -955,7 +955,7 @@ void applyTightening(
 static
 void getCoefficients(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   baserow,            /**< base row index */
    int                   otherrow,           /**< other row index */
    int                   numoverlap,         /**< overlap-size */
@@ -1053,7 +1053,7 @@ void getCoefficients(
 static
 void getNumOverlap(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   baserow,            /**< base row index */
    int                   otherrow,           /**< other row index */
    int*                  countings,          /**< overlap counting helper array */
@@ -1112,7 +1112,7 @@ void getNumOverlap(
 static
 void getOverlapBaseOrdered(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   baserow,            /**< base row index */
    int                   otherrow,           /**< other row index */
    int*                  countings,          /**< overlap counting helper array */
@@ -1168,7 +1168,7 @@ void getOverlapBaseOrdered(
 static
 SCIP_RETCODE calcTwoRowBnds(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix object */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix object */
    int                   nbaserows,          /**< number of base rows */
    int*                  baserows,           /**< base rows indexes */
    SCIP_Real*            lowerbds,           /**< lower bounds */
@@ -1339,7 +1339,7 @@ SCIP_RETCODE calcTwoRowBnds(
 static
 SCIP_RETCODE getBaseRows(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
    int*                  nbaserows,          /**< number of present base rows */
    int*                  baserows            /**< indexes of base rows */
    )
@@ -1374,7 +1374,7 @@ SCIP_RETCODE getBaseRows(
 static
 void getBounds(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix */
    SCIP_Real*            lowerbds,           /**< lower bounds */
    SCIP_Real*            upperbds            /**< upper bounds */
    )
@@ -1420,7 +1420,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyTworowbnd)
 static
 SCIP_DECL_PRESOLEXEC(presolExecTworowbnd)
 {  /*lint --e{715}*/
-   SCIPMILPMATRIX* matrix;
+   SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
 

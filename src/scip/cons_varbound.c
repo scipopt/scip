@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3209,6 +3209,9 @@ SCIP_RETCODE tightenCoefs(
       {
          SCIP_Real newcoef;
          SCIP_Real newrhs;
+         SCIP_Real oldrhs;
+
+         oldrhs = consdata->rhs;
 
          /* constraint has positive slack for both non-restricting cases y = 0, or y = 1, respectively
           * -> modify coefficients such that constraint is tight in at least one of the non-restricting cases
@@ -3228,11 +3231,25 @@ SCIP_RETCODE tightenCoefs(
          consdata->rhs = newrhs;
          (*nchgcoefs)++;
          (*nchgsides)++;
+
+         /* some of the cases 1. to 5. might be applicable after changing the rhs to an integral value; one example is
+          * the varbound constraint 0.225 <= x - 1.225 y <= 0.775 for which none of the above cases apply but after
+          * tightening the lhs to 0.0 it is possible to reduce the rhs by applying the 1. reduction
+          */
+         if( !SCIPisFeasIntegral(scip, oldrhs) && SCIPisFeasIntegral(scip, newrhs) )
+         {
+            consdata->tightened = FALSE;
+            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
+            assert(consdata->tightened);
+         }
       }
       else if( consdata->vbdcoef < 0.0 && SCIPisFeasGT(scip, xlb, consdata->lhs) && SCIPisFeasLT(scip, xub, consdata->rhs - consdata->vbdcoef) )
       {
          SCIP_Real newcoef;
          SCIP_Real newlhs;
+         SCIP_Real oldlhs;
+
+         oldlhs = consdata->lhs;
 
          /* constraint has positive slack for both non-restricting cases y = 0, or y = 1, respectively
           * -> modify coefficients such that constraint is tight in at least one of the non-restricting cases
@@ -3252,6 +3269,17 @@ SCIP_RETCODE tightenCoefs(
          consdata->lhs = newlhs;
          (*nchgcoefs)++;
          (*nchgsides)++;
+
+         /* some of the cases 1. to 5. might be applicable after changing the rhs to an integral value; one example is
+          * the varbound constraint 0.225 <= x - 1.225 y <= 0.775 for which none of the above cases apply but after
+          * tightening the lhs to 0.0 it is possible to reduce the rhs by applying the 1. reduction
+          */
+         if( !SCIPisFeasIntegral(scip, oldlhs) && SCIPisFeasIntegral(scip, newlhs) )
+         {
+            consdata->tightened = FALSE;
+            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
+            assert(consdata->tightened);
+         }
       }
    }
    else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )

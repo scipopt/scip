@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1226,7 +1226,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayFiniteSolution)
    {
       SCIP_SOL* sol;
       SCIP_Bool success;
-      SCIP_Bool retcode;
+      SCIP_RETCODE retcode;
 
       /* create copy of solution with finite values */
       retcode = SCIPcreateFiniteSolCopy(scip, &sol, bestsol, &success);
