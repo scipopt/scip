@@ -203,7 +203,7 @@ SCIP_DECL_SORTPTRCOMP(sortCompTreeinfo)
 
 /** insert an array of open nodes (leaves/siblings/children) into the event handler data structures and update the transition information */
 static
-SCIP_RETCODE nodesUpdateRank1Nodes(
+SCIP_RETCODE addNodesInformation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata,      /**< event handler data */
    SCIP_NODE**           nodes,              /**< array of nodes */
@@ -225,9 +225,7 @@ SCIP_RETCODE nodesUpdateRank1Nodes(
       assert(SCIPnodeGetType(node) == SCIP_NODETYPE_CHILD || SCIPnodeGetType(node) == SCIP_NODETYPE_LEAF
             || SCIPnodeGetType(node) == SCIP_NODETYPE_SIBLING);
 
-      /* an open node has rank 1 if it has an estimate at least as small as the best solved node
-       * at this depth
-       */
+      /* an open node has rank 1 if it has an estimate at least as small as the best solved node at this depth */
       if( depthinfo->nsolvednodes == 0 || SCIPisGE(scip, depthinfo->minestimate, SCIPnodeGetEstimate(node)) )
       {
          int pos;
@@ -342,6 +340,7 @@ SCIP_Longint SCIPgetNObjLeaves(
       return -1;
 }
 
+/*todo this information could be stored directly in scip->stat to be accessed easier */
 /** returns the number of leaves which happened to be infeasible */
 static
 SCIP_Longint SCIPgetNInfeasLeaves(
@@ -359,9 +358,9 @@ SCIP_Longint SCIPgetNInfeasLeaves(
       return -1;
 }
 
-/** discards all previous depth information and renews it */
+/** discards all previous node information and renews it */
 static
-SCIP_RETCODE storeRank1Nodes(
+SCIP_RETCODE recomputeNodeInformation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
@@ -393,11 +392,11 @@ SCIP_RETCODE storeRank1Nodes(
    /* get leaves, children, and sibling arrays and update the event handler data structures */
    SCIP_CALL( SCIPgetOpenNodesData(scip, &leaves, &children, &siblings, &nleaves, &nchildren, &nsiblings) );
 
-   SCIP_CALL ( nodesUpdateRank1Nodes(scip, eventhdlrdata, children, nchildren) );
+   SCIP_CALL ( addNodesInformation(scip, eventhdlrdata, children, nchildren) );
 
-   SCIP_CALL ( nodesUpdateRank1Nodes(scip, eventhdlrdata, siblings, nsiblings) );
+   SCIP_CALL ( addNodesInformation(scip, eventhdlrdata, siblings, nsiblings) );
 
-   SCIP_CALL ( nodesUpdateRank1Nodes(scip, eventhdlrdata, leaves, nleaves) );
+   SCIP_CALL ( addNodesInformation(scip, eventhdlrdata, leaves, nleaves) );
 
    return SCIP_OKAY;
 }
@@ -448,7 +447,7 @@ SCIP_RETCODE freeDepthinfo(
 
 /** removes the node itself and updates the data if this node defined an active estimate globally or locally at its depth level */
 static
-void updateDepthinfo(
+void releaseNodeFromDepthInfo(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata,      /**< event handler data */
    SCIP_NODE*            node                /**< node to be removed from the data structures of the event handler */
@@ -487,9 +486,9 @@ void updateDepthinfo(
    ++(depthinfo->nsolvednodes);
 }
 
-/** ensures the capacity of the event handler data structures and removes the current node */
+/** ensures sufficient size for depthInfo array */
 static
-SCIP_RETCODE storeDepthInfo(
+SCIP_RETCODE ensureDepthInfoArraySize (
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata,      /**< event handler data */
    SCIP_NODE*            node                /**< node to be removed from the data structures of the event handler */
@@ -498,15 +497,9 @@ SCIP_RETCODE storeDepthInfo(
    int nodedepth;
    int newsize;
    int oldsize;
-
-   assert(scip != NULL);
-   assert(node != NULL);
-   assert(eventhdlrdata != NULL);
-
    nodedepth = SCIPnodeGetDepth(node);
    oldsize = eventhdlrdata->maxdepth;
    newsize = oldsize;
-
 
    /* create depth info array with small initial size or enlarge the existing array if new node is deeper */
    if( oldsize == 0 )
@@ -534,20 +527,39 @@ SCIP_RETCODE storeDepthInfo(
 
       eventhdlrdata->maxdepth = newsize;
    }
-
    assert(newsize > nodedepth);
+
+   return SCIP_OKAY;
+}
+
+/** ensures the capacity of the event handler data structures and removes the current node */
+static
+SCIP_RETCODE releaseNodeInformation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata,      /**< event handler data */
+   SCIP_NODE*            node                /**< node to be removed from the data structures of the event handler */
+   )
+{
+
+   assert(scip != NULL);
+   assert(node != NULL);
+   assert(eventhdlrdata != NULL);
+
+   /* ensure the depth info data structure can hold this node */
+   SCIP_CALL( ensureDepthInfoArraySize(scip, eventhdlrdata, node) );
+
 
    /* in case that selected nodes were cut off in between two calls to this method, build data structures from scratch again */
    if( SCIPgetNDelayedCutoffs(scip) > eventhdlrdata->lastndelayedcutoffs )
    {
-      SCIP_CALL( storeRank1Nodes(scip, eventhdlrdata) );
+      SCIP_CALL( recomputeNodeInformation(scip, eventhdlrdata) );
 
       eventhdlrdata->lastndelayedcutoffs = SCIPgetNDelayedCutoffs(scip);
    }
    else
    {
       /* remove the node from the data structures */
-      updateDepthinfo(scip, eventhdlrdata, node);
+      releaseNodeFromDepthInfo(scip, eventhdlrdata, node);
    }
 
    return SCIP_OKAY;
@@ -568,7 +580,7 @@ SCIP_RETCODE SCIPstoreTreeInfo(
    eventhdlrdata = SCIPeventhdlrGetData(SCIPfindEventhdlr(scip, EVENTHDLR_NAME));
 
    /* call removal of this node from the event handler data */
-   SCIP_CALL( storeDepthInfo(scip, eventhdlrdata, focusnode) );
+   SCIP_CALL( releaseNodeInformation(scip, eventhdlrdata, focusnode) );
 
    return SCIP_OKAY;
 }
@@ -628,7 +640,7 @@ SCIP_RETCODE freeLeafInfo(
 }
 
 #ifndef NDEBUG
-/* ensures correctness of counters by explicitly summing up all children, leaves, and siblings with small estimates */
+/** ensures correctness of counters by explicitly summing up all children, leaves, and siblings with small estimates */
 static
 int checkLeavesBelowIncumbent(
    SCIP* scip
@@ -717,32 +729,43 @@ SCIP_Real getX(
    return x;
 }
 
-/** get axis intercept of current tangent to logarithmic regression curve */
+
+/** returns the number of observations of this regression */
 static
-SCIP_Real getCurrentRegressionTangentAxisIntercept(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data structure */
+int regressionGetNObservations(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
    )
 {
-   SCIP_REGRESSION* regression;
-   SCIP_Real currentx;
-
-   assert(scip != NULL);
-   assert(eventhdlrdata != NULL);
-
-   regression = eventhdlrdata->regression;
    assert(regression != NULL);
 
-   if( regression->n <= 2 )
-      return SCIPinfinity(scip);
-
-   currentx = getX(scip, eventhdlrdata);
-
-   return regression->slope * currentx + regression->intercept - regression->slope;
+   return regression->n;
 }
 
+/** return the current slope of the regression */
 static
-void updateRegression(
+SCIP_Real regressionGetSlope(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   assert(regression != NULL);
+
+   return regression->slope;
+}
+
+/** get the current y-intercept of the regression */
+static
+SCIP_Real regressionGetIntercept(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   assert(regression != NULL);
+
+   return regression->intercept;
+}
+
+/** update regression by a new observation */
+static
+void updateLogRegression(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_REGRESSION*      regression,         /**< regression data structure */
    SCIP_Real             x,                  /**< X of observation */
@@ -778,15 +801,15 @@ void updateRegression(
    if( regression->n <= 2 )
       return;
 
-   /* compute slope                 */
+   /* compute slope */
    regression->slope = (regression->n * regression->sumxy  -  regression->sumx * regression->sumy) /
        (regression->n * regression->sumx2 - SQUARED(regression->sumx));
 
-   /* compute y-intercept           */
+   /* compute y-intercept */
    regression->intercept = (regression->sumy * regression->sumx2  -  regression->sumx * regression->sumxy) /
        (regression->n * regression->sumx2  -  SQUARED(regression->sumx));
 
-   /* compute correlation coeff     */
+   /* compute correlation coefficient */
    regression->corrcoef = (regression->sumxy - regression->sumx * regression->sumy / regression->n) /
             sqrt((regression->sumx2 - SQUARED(regression->sumx)/regression->n) *
             (regression->sumy2 - SQUARED(regression->sumy)/regression->n));
@@ -836,6 +859,33 @@ void regressionFree(
    SCIPfreeMemory(scip, regression);
 }
 
+/** get axis intercept of current tangent to logarithmic regression curve */
+static
+SCIP_Real getCurrentRegressionTangentAxisIntercept(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data structure */
+   )
+{
+   SCIP_REGRESSION* regression;
+   SCIP_Real currentx;
+   SCIP_Real regressionslope;
+
+   assert(scip != NULL);
+   assert(eventhdlrdata != NULL);
+
+   regression = eventhdlrdata->regression;
+   assert(regression != NULL);
+
+   /* don't rely on too few (<= 2) observations */
+   if( regressionGetNObservations(regression) <= 2 )
+      return SCIPinfinity(scip);
+
+   currentx = getX(scip, eventhdlrdata);
+   regressionslope = regressionGetSlope(regression);
+
+   return regressionslope * currentx + regressionGetIntercept(regression) - regressionslope;
+}
+
 /*
  * Local methods
  */
@@ -878,8 +928,10 @@ SCIP_Bool checkEstimateCriterion(
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
+   assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+
    if( SCIPgetNSols(scip) > 0 )
-      return SCIPgetNNodes(scip) > eventhdlrdata->nodeoffset && SCIPgetNNodesBelowIncumbent(scip) == 0;
+      return ((SCIPgetNNodes(scip) > eventhdlrdata->nodeoffset) && (eventhdlrdata->nnodesbelowincumbent == 0));
    else
       return FALSE;
 }
@@ -985,7 +1037,7 @@ SCIP_Bool transitionPhase3(
          if( checkEstimateCriterion(scip, eventhdlrdata) )
          {
             SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "reached best-estimate transition: nodes: %lld, estimate: %d bound: %9.5g time: %.2f\n",
-                  SCIPgetNNodes(scip), SCIPgetNNodesBelowIncumbent(scip), SCIPgetPrimalbound(scip), SCIPgetSolvingTime(scip));
+                  SCIPgetNNodes(scip), eventhdlrdata->nnodesbelowincumbent, SCIPgetPrimalbound(scip), SCIPgetSolvingTime(scip));
             return TRUE;
          }
          return FALSE;
@@ -1187,6 +1239,95 @@ SCIP_RETCODE applySolvingPhase(
    return SCIP_OKAY;
 }
 
+
+/** update data structures based on the event type caught */
+static
+SCIP_RETCODE updateDataStructures(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata,      /**< data of event handler */
+   SCIP_EVENTTYPE        eventtype           /**< type of the caught event */
+   )
+{
+   SCIP_NODE** children;
+   int nchildren;
+
+   switch( eventtype )
+   {
+      /* recompute all node information from scratch if a new solution was found */
+      /* todo delay this until a node event (can save time if several solutions are found at one node) */
+      case SCIP_EVENTTYPE_BESTSOLFOUND:
+         if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
+         {
+            SCIP_CALL( recomputeNodeInformation(scip, eventhdlrdata) );
+         }
+
+         /* update logarithmic regression of solution process */
+         updateLogRegression(scip, eventhdlrdata->regression, getX(scip, eventhdlrdata), SCIPgetPrimalbound(scip));
+
+         break;
+
+      /* release the focus node from the open node data structures */
+      case SCIP_EVENTTYPE_NODEFOCUSED:
+         assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+         SCIP_CALL( releaseNodeInformation(scip, eventhdlrdata, SCIPgetCurrentNode(scip)));
+
+         assert(eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
+         break;
+
+      /* store node information for child nodes */
+      case SCIP_EVENTTYPE_NODEBRANCHED:
+         assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+         SCIP_CALL( SCIPgetChildren(scip, &children, &nchildren) );
+         SCIP_CALL( addNodesInformation(scip, eventhdlrdata, children, nchildren) );
+         break;
+
+      /* update leaf information for a node that was solved without branching */
+      case SCIP_EVENTTYPE_NODEFEASIBLE:
+      case SCIP_EVENTTYPE_NODEINFEASIBLE:
+         assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
+         updateLeafInfo(scip, eventhdlrdata->leafinfo, eventtype);
+         break;
+      default:
+         break;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** todo test all criteria whether they have been reached */
+static
+void testCriteria(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< data of event handler */
+   )
+{
+   assert(scip != NULL);
+   assert(eventhdlrdata != NULL);
+
+   if( ! eventhdlrdata->logreached && checkLogCriterion(scip, eventhdlrdata) )
+   {
+      eventhdlrdata->logreached = TRUE;
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Log criterion reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+   }
+   if( ! eventhdlrdata->rank1reached && checkRankOneTransition(scip, eventhdlrdata) )
+   {
+      eventhdlrdata->rank1reached = TRUE;
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Rank 1 criterion reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+   }
+
+   if( ! eventhdlrdata->estimatereached && checkEstimateCriterion(scip, eventhdlrdata) )
+   {
+      eventhdlrdata->estimatereached = TRUE;
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Estimate criterion reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+   }
+
+   if( ! eventhdlrdata->optimalreached && checkOptimalSolution(scip, eventhdlrdata) )
+   {
+      eventhdlrdata->optimalreached = TRUE;
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Optimum reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
+   }
+}
+
 /*
  * Callback methods of event handler
  */
@@ -1318,6 +1459,7 @@ SCIP_DECL_EVENTINIT(eventInitSolvingphase)
    return SCIP_OKAY;
 }
 
+
 /** execution method of event handler */
 static
 SCIP_DECL_EVENTEXEC(eventExecSolvingphase)
@@ -1330,45 +1472,16 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingphase)
 
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    eventtype = SCIPeventGetType(event);
-
    assert(eventtype & (EVENTHDLR_EVENT));
+   assert(eventtype != SCIP_EVENTTYPE_NODEFOCUSED || SCIPeventGetNode(event) == SCIPgetCurrentNode(scip));
 
 
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-   {
-      if( eventtype & SCIP_EVENTTYPE_BESTSOLFOUND )
-      {
-         SCIP_CALL( storeRank1Nodes(scip, eventhdlrdata) );
-      }
-      else if (eventtype & SCIP_EVENTTYPE_NODEFOCUSED )
-      {
-         assert(SCIPeventGetNode(event) == SCIPgetCurrentNode(scip));
+   /* update data structures depending on the event */
+   SCIP_CALL( updateDataStructures(scip, eventhdlrdata, eventtype) );
 
-         SCIP_CALL( storeDepthInfo(scip, eventhdlrdata, SCIPeventGetNode(event)));
-
-         assert(eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
-      }
-      else if( eventtype & SCIP_EVENTTYPE_NODEBRANCHED )
-      {
-         SCIP_NODE** children;
-         int nchildren;
-         SCIP_CALL( SCIPgetChildren(scip, &children, &nchildren) );
-         SCIP_CALL ( nodesUpdateRank1Nodes(scip, eventhdlrdata, children, nchildren) );
-      }
-      else if( eventtype & SCIP_EVENTTYPE_NODESOLVED )
-      {
-         updateLeafInfo(scip, eventhdlrdata->leafinfo, eventtype);
-      }
-      assert(eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
-      assert(eventhdlrdata->nnodesbelowincumbent == checkLeavesBelowIncumbent(scip));
-   }
-
-
-
-   if( SCIPeventGetType(event) & SCIP_EVENTTYPE_BESTSOLFOUND )
-   {
-      updateRegression(scip, eventhdlrdata->regression, getX(scip, eventhdlrdata), SCIPgetPrimalbound(scip));
-   }
+   /* ensure that required tree information was correctly computed; only available in solving stage */
+   assert(SCIPgetStage(scip) != SCIP_STAGE_SOLVING || eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
+   assert(SCIPgetStage(scip) != SCIP_STAGE_SOLVING || eventhdlrdata->nnodesbelowincumbent == checkLeavesBelowIncumbent(scip));
 
    /* if the phase-based solver is enabled, we check if a phase transition occurred and alter the settings accordingly */
    if( eventhdlrdata->enabled )
@@ -1380,29 +1493,7 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingphase)
    /* in test mode, we check every transition criterion */
    if( eventhdlrdata->testmode )
    {
-      if( !eventhdlrdata->logreached && checkLogCriterion(scip, eventhdlrdata) )
-      {
-         eventhdlrdata->logreached = TRUE;
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Log criterion reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
-      }
-      if( ! eventhdlrdata->rank1reached && checkRankOneTransition(scip, eventhdlrdata) )
-      {
-         eventhdlrdata->rank1reached = TRUE;
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Rank 1 criterion reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
-      }
-
-      if( ! eventhdlrdata->estimatereached && checkEstimateCriterion(scip, eventhdlrdata) )
-      {
-         eventhdlrdata->estimatereached = TRUE;
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Estimate criterion reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
-      }
-
-      if( ! eventhdlrdata->optimalreached && checkOptimalSolution(scip, eventhdlrdata) )
-      {
-         eventhdlrdata->optimalreached = TRUE;
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  Optimum reached after %lld nodes, %.2f sec.\n", SCIPgetNNodes(scip), SCIPgetSolvingTime(scip));
-      }
-
+      testCriteria(scip, eventhdlrdata);
    }
 
    return SCIP_OKAY;
