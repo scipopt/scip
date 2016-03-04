@@ -42,6 +42,7 @@
 
 #include "scip/event_solvingphase.h"
 #include "string.h"
+#include "scip/pub_misc.h"
 
 #define EVENTHDLR_NAME         "solvingphase"
 #define EVENTHDLR_DESC         "event handler to adjust settings depending on current stage"
@@ -67,7 +68,6 @@
 /* logarithmic regression settings */
 #define DEFAULT_LOGREGRESSION_XTYPE   'n' /**< default type to use for log regression - (t)ime, (n)odes, (l)p iterations */
 #define LOGREGRESSION_XTYPES        "lnt" /**< available types for log regression - (t)ime, (n)odes, (l)p iterations */
-#define SQUARED(x) ((x) * (x))
 /*
  * Data structures
  */
@@ -81,25 +81,6 @@ enum SolvingPhase
    SOLVINGPHASE_PROOF         = 2            /**< current incumbent is optimal */
 };
 typedef enum SolvingPhase SOLVINGPHASE;
-
-
-/** data structure for incremental logarithmic or linear regression of data points (X_i, Y_i)  */
-struct SCIP_Regression
-{
-   SCIP_Real             lastx;              /**< X-value of last observation */
-   SCIP_Real             lasty;              /**< Y-value of last observation */
-   SCIP_Real             intercept;          /**< the current axis intercept of the regression */
-   SCIP_Real             slope;              /**< the current slope of the regression */
-   SCIP_Real             sumx;               /**< accumulated sum of all X observations */
-   SCIP_Real             sumy;               /**< accumulated sum of all Y observations */
-   SCIP_Real             sumxy;              /**< accumulated sum of all products X * Y */
-   SCIP_Real             sumx2;              /**< sum of squares of all X observations */
-   SCIP_Real             sumy2;              /**< sum of squares of all Y observations */
-   SCIP_Real             corrcoef;           /**< correlation coefficient of X and Y */
-   int                   n;                  /**< number of observations so far */
-};
-
-typedef struct SCIP_Regression SCIP_REGRESSION;
 
 /** depth information structure */
 struct DepthInfo
@@ -125,39 +106,41 @@ typedef struct LeafInfo LEAFINFO;
 /** event handler data */
 struct SCIP_EventhdlrData
 {
-   char                 logregression_xtype; /**< type to use for log regression - (t)ime, (n)odes, (l)p iterations */
-   SCIP_Bool            enabled;             /**< should the event handler be executed? */
-   char*                solufilename;        /**< file to parse solution information from */
-   char*                setfilefeasibility;  /**< settings file parameter for the feasibility phase */
-   char*                setfileimprove;      /**< settings file parameter for the improvement phase */
-   char*                setfileproof;        /**< settings file parameter for the proof phase */
-   SCIP_Real            optimalvalue;        /**< value of optimal solution of the problem */
-   SOLVINGPHASE         solvingphase;        /**< the current solving phase */
-   char                 transitionmethod;    /**< transition method from improvement phase -> proof phase?
+   char                  logregression_xtype;/**< type to use for log regression - (t)ime, (n)odes, (l)p iterations */
+   SCIP_Bool             enabled;            /**< should the event handler be executed? */
+   char*                 solufilename;       /**< file to parse solution information from */
+   char*                 setfilefeasibility; /**< settings file parameter for the feasibility phase */
+   char*                 setfileimprove;     /**< settings file parameter for the improvement phase */
+   char*                 setfileproof;       /**< settings file parameter for the proof phase */
+   SCIP_Real             optimalvalue;       /**< value of optimal solution of the problem */
+   SOLVINGPHASE          solvingphase;       /**< the current solving phase */
+   char                  transitionmethod;   /**< transition method from improvement phase -> proof phase?
                                                *  (e)stimate based, (l)ogarithmic regression based, (o)ptimal value based (cheat!),
                                                *  (r)ank-1 node based */
-   SCIP_Longint         nodeoffset;          /**< node offset for triggering rank-1 node based phased transition */
-   SCIP_Longint         lastndelayedcutoffs; /**< the number of delayed cutoffs since the last update of a focus node */
-   SCIP_Bool            fallback;            /**< should the phase transition fall back to improvement phase? */
-   SCIP_Bool            interruptoptimal;    /**< interrupt after optimal solution was found */
-   SCIP_Bool            adjustrelpsweights;  /**< should the relpscost cutoff weights be adjusted? */
-   SCIP_Bool            useweightedquotients;/**< should weighted quotients between infeasible and pruned leaf nodes be considered? */
-   SCIP_Bool            userestart1to2;      /**< should a restart be applied between the feasibility and improvement phase? */
-   SCIP_Bool            userestart2to3;      /**< should a restart be applied between the improvement and the proof phase? */
-   SCIP_Bool            testmode;            /**< should transitions be tested only, but not triggered? */
-   SCIP_Bool            rank1reached;        /**< has the rank-1 transition into proof phase been reached? */
-   SCIP_Bool            estimatereached;     /**< has the best-estimate transition been reached? */
-   SCIP_Bool            optimalreached;      /**< is the incumbent already optimal? */
-   SCIP_Bool            logreached;          /**< has a logarithmic phase transition been reached? */
+   SCIP_Longint          nodeoffset;         /**< node offset for triggering rank-1 node based phased transition */
+   SCIP_Longint          lastndelayedcutoffs;/**< the number of delayed cutoffs since the last update of a focus node */
+   SCIP_Bool             fallback;           /**< should the phase transition fall back to improvement phase? */
+   SCIP_Bool             interruptoptimal;   /**< interrupt after optimal solution was found */
+   SCIP_Bool             adjustrelpsweights; /**< should the relpscost cutoff weights be adjusted? */
+   SCIP_Bool             useweightedquotients;/**< should weighted quotients between infeasible and pruned leaf nodes be considered? */
+   SCIP_Bool             userestart1to2;     /**< should a restart be applied between the feasibility and improvement phase? */
+   SCIP_Bool             userestart2to3;     /**< should a restart be applied between the improvement and the proof phase? */
+   SCIP_Bool             testmode;           /**< should transitions be tested only, but not triggered? */
+   SCIP_Bool             rank1reached;       /**< has the rank-1 transition into proof phase been reached? */
+   SCIP_Bool             estimatereached;    /**< has the best-estimate transition been reached? */
+   SCIP_Bool             optimalreached;     /**< is the incumbent already optimal? */
+   SCIP_Bool             logreached;         /**< has a logarithmic phase transition been reached? */
 
-   SCIP_REGRESSION*     regression;          /**< regression data for log linear regression of the incumbent solutions */
+   SCIP_REGRESSION*      regression;         /**< regression data for log linear regression of the incumbent solutions */
+   SCIP_Real             lastx;              /**< X-value of last observation */
+   SCIP_Real             lasty;              /**< Y-value of last observation */
 
-   int                  eventfilterpos;      /**< the event filter position, or -1, if event has not (yet) been caught */
-   DEPTHINFO**          depthinfos;          /**< array of depth infos for every depth of the search tree */
-   int                  maxdepth;            /**< maximum depth so far */
-   int                  nrank1nodes;         /**< number of rank-1 nodes */
-   int                  nnodesbelowincumbent; /**< number of open nodes with an estimate lower than the current incumbent */
-   LEAFINFO*            leafinfo;            /**< leaf information data structure */
+   int                   eventfilterpos;     /**< the event filter position, or -1, if event has not (yet) been caught */
+   DEPTHINFO**           depthinfos;         /**< array of depth infos for every depth of the search tree */
+   int                   maxdepth;           /**< maximum depth so far */
+   int                   nrank1nodes;        /**< number of rank-1 nodes */
+   int                   nnodesbelowincumbent;/**< number of open nodes with an estimate lower than the current incumbent */
+   LEAFINFO*             leafinfo;           /**< leaf information data structure */
 };
 
 /*
@@ -684,10 +667,6 @@ int checkLeavesBelowIncumbent(
 }
 #endif
 
-/*
- * SCIP regression methods
- */
-
 /** get the point of the X axis for the regression according to the user choice of X type (time/nodes/iterations)*/
 static
 SCIP_Real getX(
@@ -730,134 +709,8 @@ SCIP_Real getX(
 }
 
 
-/** returns the number of observations of this regression */
-static
-int regressionGetNObservations(
-   SCIP_REGRESSION*      regression          /**< regression data structure */
-   )
-{
-   assert(regression != NULL);
 
-   return regression->n;
-}
 
-/** return the current slope of the regression */
-static
-SCIP_Real regressionGetSlope(
-   SCIP_REGRESSION*      regression          /**< regression data structure */
-   )
-{
-   assert(regression != NULL);
-
-   return regression->slope;
-}
-
-/** get the current y-intercept of the regression */
-static
-SCIP_Real regressionGetIntercept(
-   SCIP_REGRESSION*      regression          /**< regression data structure */
-   )
-{
-   assert(regression != NULL);
-
-   return regression->intercept;
-}
-
-/** update regression by a new observation */
-static
-void updateLogRegression(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_REGRESSION*      regression,         /**< regression data structure */
-   SCIP_Real             x,                  /**< X of observation */
-   SCIP_Real             y                   /**< Y of the observation */
-   )
-{
-   assert(scip != NULL);
-   assert(regression != NULL);
-
-   assert(!SCIPisInfinity(scip, y) && !SCIPisInfinity(scip, -y));
-
-   /* replace last observation if too close */
-   if( regression->n > 0 && SCIPisEQ(scip, regression->lastx, x) )
-   {
-      regression->sumx2 -= SQUARED(regression->lastx);
-      regression->sumy2 -= SQUARED(regression->lasty);
-      regression->sumy -= regression->lasty;
-      regression->sumx -= regression->lastx;
-      regression->sumxy -= regression->lastx * regression->lasty;
-   }
-   else
-      ++(regression->n);
-
-   regression->lastx = x;
-   regression->lasty = y;
-   regression->sumx += x;
-   regression->sumx2 += SQUARED(x);
-   regression->sumxy += x * y;
-   regression->sumy += y;
-   regression->sumy2 += SQUARED(y);
-
-   /* return if there are not enough data points available */
-   if( regression->n <= 2 )
-      return;
-
-   /* compute slope */
-   regression->slope = (regression->n * regression->sumxy  -  regression->sumx * regression->sumy) /
-       (regression->n * regression->sumx2 - SQUARED(regression->sumx));
-
-   /* compute y-intercept */
-   regression->intercept = (regression->sumy * regression->sumx2  -  regression->sumx * regression->sumxy) /
-       (regression->n * regression->sumx2  -  SQUARED(regression->sumx));
-
-   /* compute correlation coefficient */
-   regression->corrcoef = (regression->sumxy - regression->sumx * regression->sumy / regression->n) /
-            sqrt((regression->sumx2 - SQUARED(regression->sumx)/regression->n) *
-            (regression->sumy2 - SQUARED(regression->sumy)/regression->n));
-}
-
-/** reset regression data structure */
-static
-void regressionReset(
-   SCIP_REGRESSION*      regression          /**< regression data structure */
-   )
-{
-   regression->intercept = SCIP_INVALID;
-   regression->slope = SCIP_INVALID;
-   regression->sumx = 0;
-   regression->sumx2 = 0;
-   regression->sumxy = 0;
-   regression->sumy = 0;
-   regression->sumy2 = 0;
-}
-
-/** creates and resets a regression */
-static
-SCIP_RETCODE regressionCreate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_REGRESSION**     regression          /**< regression data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(regression != NULL);
-
-   /* allocate necessary memory */
-   SCIP_CALL( SCIPallocMemory(scip, regression) );
-
-   /* reset the regression */
-   regressionReset(*regression);
-
-   return SCIP_OKAY;
-}
-
-/** creates and resets a regression */
-static
-void regressionFree(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_REGRESSION**     regression          /**< regression data structure */
-   )
-{
-   SCIPfreeMemory(scip, regression);
-}
 
 /** get axis intercept of current tangent to logarithmic regression curve */
 static
@@ -877,13 +730,13 @@ SCIP_Real getCurrentRegressionTangentAxisIntercept(
    assert(regression != NULL);
 
    /* don't rely on too few (<= 2) observations */
-   if( regressionGetNObservations(regression) <= 2 )
+   if( SCIPregressionGetNObservations(regression) <= 2 )
       return SCIPinfinity(scip);
 
    currentx = getX(scip, eventhdlrdata);
-   regressionslope = regressionGetSlope(regression);
+   regressionslope = SCIPregressionGetSlope(regression);
 
-   return regressionslope * currentx + regressionGetIntercept(regression) - regressionslope;
+   return regressionslope * currentx + SCIPregressionGetIntercept(regression) - regressionslope;
 }
 
 /*
@@ -1239,6 +1092,32 @@ SCIP_RETCODE applySolvingPhase(
    return SCIP_OKAY;
 }
 
+/** update the logarithmic regression */
+static
+SCIP_RETCODE updateLogRegression(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< data of event handler */
+   )
+{
+   SCIP_Real regressionx;
+   SCIP_Real regressiony;
+
+   regressionx = getX(scip, eventhdlrdata);
+   regressiony = SCIPgetPrimalbound(scip);
+
+   /* remove the last observation if it has been observed at the same x */
+   if( SCIPisEQ(scip, eventhdlrdata->lastx, regressionx) )
+   {
+      SCIPregressionRemoveObservation(eventhdlrdata->regression, eventhdlrdata->lastx, eventhdlrdata->lasty);
+   }
+
+   /* add the new observation to the regression and save it if another update is necessary */
+   SCIPregressionAddObservation(eventhdlrdata->regression, regressionx, regressiony);
+   eventhdlrdata->lastx = regressionx;
+   eventhdlrdata->lasty = regressiony;
+
+   return SCIP_OKAY;
+}
 
 /** update data structures based on the event type caught */
 static
@@ -1262,7 +1141,7 @@ SCIP_RETCODE updateDataStructures(
          }
 
          /* update logarithmic regression of solution process */
-         updateLogRegression(scip, eventhdlrdata->regression, getX(scip, eventhdlrdata), SCIPgetPrimalbound(scip));
+         updateLogRegression(scip, eventhdlrdata);
 
          break;
 
@@ -1359,7 +1238,7 @@ SCIP_DECL_EVENTFREE(eventFreeSolvingphase)
    eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
    assert(eventhdlrdata != NULL);
 
-   regressionFree(scip, &eventhdlrdata->regression);
+   SCIPregressionFree(&eventhdlrdata->regression);
 
    SCIP_CALL( freeLeafInfo(scip, &eventhdlrdata->leafinfo) );
 
@@ -1454,7 +1333,9 @@ SCIP_DECL_EVENTINIT(eventInitSolvingphase)
    }
 
    /* reset solving regression */
-   regressionReset(eventhdlrdata->regression);
+   SCIPregressionReset(eventhdlrdata->regression);
+   eventhdlrdata->lastx = SCIP_INVALID;
+   eventhdlrdata->lasty = SCIP_INVALID;
 
    return SCIP_OKAY;
 }
@@ -1623,7 +1504,7 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
 
    /* create a regression */
    eventhdlrdata->regression = NULL;
-   SCIP_CALL( regressionCreate(scip, &eventhdlrdata->regression) );
+   SCIP_CALL( SCIPregressionCreate(&eventhdlrdata->regression) );
 
    eventhdlr = NULL;
 
