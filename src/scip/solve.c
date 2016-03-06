@@ -4290,6 +4290,7 @@ SCIP_RETCODE SCIPsolveCIP(
    SCIP_CUTPOOL*         delayedcutpool,     /**< global delayed cut pool */
    SCIP_BRANCHCAND*      branchcand,         /**< branching candidate storage */
    SCIP_CONFLICT*        conflict,           /**< conflict analysis data */
+   SCIP_CONFLICTSTORE*   conflictstore,      /**< conflict storage data */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
@@ -4394,7 +4395,7 @@ SCIP_RETCODE SCIPsolveCIP(
 
          /* focus selected node */
          SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt,
-               lp, branchcand, conflict, eventfilter, eventqueue, cliquetable, &cutoff, FALSE) );
+               lp, branchcand, conflict, conflictstore, eventfilter, eventqueue, cliquetable, &cutoff, FALSE) );
          if( cutoff )
             stat->ndelayedcutoffs++;
 
@@ -4694,7 +4695,7 @@ SCIP_RETCODE SCIPsolveCIP(
 
       focusnode = NULL;
       SCIP_CALL( SCIPnodeFocus(&focusnode, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt, lp,
-            branchcand, conflict, eventfilter, eventqueue, cliquetable, &cutoff, FALSE) );
+            branchcand, conflict, conflictstore, eventfilter, eventqueue, cliquetable, &cutoff, FALSE) );
    }
 
    /* check whether we finished solving */

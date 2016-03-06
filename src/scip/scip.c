@@ -12962,7 +12962,7 @@ SCIP_RETCODE initPresolve(
    /* create temporary presolving root node */
    SCIP_CALL( SCIPtreeCreatePresolvingRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->messagehdlr,
          scip->stat, scip->transprob, scip->origprob, scip->primal, scip->lp, scip->branchcand, scip->conflict,
-         scip->eventfilter, scip->eventqueue, scip->cliquetable) );
+         scip->conflictstore, scip->eventfilter, scip->eventqueue, scip->cliquetable) );
 
    /* inform plugins that the presolving is abound to begin */
    SCIP_CALL( SCIPsetInitprePlugins(scip->set, scip->mem->probmem, scip->stat) );
@@ -13098,7 +13098,7 @@ SCIP_RETCODE exitPresolve(
    /* free temporary presolving root node */
    SCIP_CALL( SCIPtreeFreePresolvingRoot(scip->tree, scip->reopt, scip->mem->probmem, scip->set, scip->messagehdlr,
          scip->stat, scip->transprob, scip->origprob, scip->primal, scip->lp, scip->branchcand, scip->conflict,
-         scip->eventfilter, scip->eventqueue, scip->cliquetable) );
+         scip->conflictstore, scip->eventfilter, scip->eventqueue, scip->cliquetable) );
 
    /* switch stage to PRESOLVED */
    scip->set->stage = SCIP_STAGE_PRESOLVED;
@@ -14022,8 +14022,8 @@ SCIP_RETCODE freeSolve(
       SCIP_Bool cutoff;
 
       SCIP_CALL( SCIPnodeFocus(&node, scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->transprob,
-            scip->origprob, scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->conflict, scip->eventfilter,
-            scip->eventqueue, scip->cliquetable, &cutoff, TRUE) );
+            scip->origprob, scip->primal, scip->tree, scip->reopt, scip->lp, scip->branchcand, scip->conflict,
+            scip->conflictstore, scip->eventfilter, scip->eventqueue, scip->cliquetable, &cutoff, TRUE) );
       assert(!cutoff);
    }
 
@@ -14730,7 +14730,8 @@ SCIP_RETCODE SCIPsolve(
          /* continue solution process */
          SCIP_CALL( SCIPsolveCIP(scip->mem->probmem, scip->set, scip->messagehdlr, scip->stat, scip->mem, scip->origprob, scip->transprob,
                scip->primal, scip->tree, scip->reopt, scip->lp, scip->relaxation, scip->pricestore, scip->sepastore,
-               scip->cutpool, scip->delayedcutpool, scip->branchcand, scip->conflict, scip->eventfilter, scip->eventqueue, scip->cliquetable, &restart) );
+               scip->cutpool, scip->delayedcutpool, scip->branchcand, scip->conflict, scip->conflictstore,
+               scip->eventfilter, scip->eventqueue, scip->cliquetable, &restart) );
 
          /* detect, whether problem is solved */
          if( SCIPtreeGetNNodes(scip->tree) == 0 && SCIPtreeGetCurrentNode(scip->tree) == NULL )
