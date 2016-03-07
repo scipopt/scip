@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-#define SCIP_DEBUG
+
 /**@file   heur_lpface.c
  * @brief  lpface primal heuristic
  * @author Gregor Hendel
@@ -1002,11 +1002,11 @@ SCIP_DECL_HEUREXEC(heurExecLpface)
       SCIP_CALL( SCIPtransformProb(subscip) );
       SCIP_CALL( SCIPcatchEvent(subscip, SCIP_EVENTTYPE_LPSOLVED, eventhdlr, (SCIP_EVENTDATA*) heurdata, NULL) );
    }
-#define    WRITELPFACEPROB
+
 #ifdef WRITELPFACEPROB
    {
       char probfilename[] = "./lpface_prob.mps";
-      char paramfilename[] = "./lpface_prob_params.set";
+      char paramfilename[] = "./lpface_prob.set";
       SCIPinfoMessage(scip, NULL, "Writing problem and parameters to file: <%s> <%s>\n", probfilename, paramfilename);
       SCIP_CALL( SCIPwriteOrigProblem(subscip, probfilename, NULL, FALSE) );
       SCIP_CALL( SCIPwriteParams(subscip, paramfilename, TRUE, TRUE) );
