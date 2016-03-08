@@ -11955,12 +11955,6 @@ SCIP_RETCODE SCIPgetLPI(
    SCIP_LPI**            lpi                 /**< pointer to store the LP interface */
    );
 
-/* store the basis of the last solved lp */
-EXTERN
-SCIP_RETCODE SCIPstoreBasis(
-   SCIP*                 scip               /**< SCIP data structure */
-   );
-
 /** return the number of stored basis */
 EXTERN
 int SCIPgetNBasis(

@@ -784,6 +784,7 @@ SCIP_RETCODE SCIPfree(
 
    SCIP_CALL( SCIPfreeProb(*scip) );
    assert((*scip)->set->stage == SCIP_STAGE_INIT);
+   assert((*scip)->basesstore == NULL);
 
    /* switch stage to FREE */
    (*scip)->set->stage = SCIP_STAGE_FREE;
@@ -1564,45 +1565,6 @@ SCIP_BASESTAT getBasestatCons(
       return SCIProwGetBasisStatus(row);
 }
 
-/** returns basis status of given variables and constraints */
-static
-void getBasis(
-   SCIP*                 scip,                /**< SCIP data structure */
-   SCIP_VAR**            vars,                /**< problem variables */
-   SCIP_CONS**           conss,               /**< problem constraints */
-   int*                  vstat,               /**< array to store basis status of variables */
-   int*                  cstat,               /**< array to store basis status of constraints */
-   int                   nvars,               /**< number of variables */
-   int                   nconss,              /**< number of constraints */
-   SCIP_Bool*            success              /**< pointer to store the success */
-   )
-{
-   int i;
-
-   assert(scip != NULL);
-   assert(vars != NULL);
-   assert(conss != NULL);
-   assert(vstat != NULL);
-   assert(cstat != NULL);
-
-   (*success) = TRUE;
-
-   /* get basis status of columns */
-   for( i = 0; i < nvars; i++ )
-   {
-      vstat[i] = getBasestatVar(vars[i]);
-   }
-
-   /* get the basis status of rows */
-   for( i = 0; i < nconss; i++ )
-   {
-      cstat[i] = getBasestatCons(scip, conss[i], success);
-
-      if( !(*success) )
-         return;
-   }
-}
-
 /** copy the last basis of the source scip into the basis storage of the target scip */
 static
 SCIP_RETCODE copyBasis(
@@ -1631,12 +1593,6 @@ SCIP_RETCODE copyBasis(
    assert(sourcescip != NULL);
    assert(targetscip != NULL);
    assert(sourcescip != targetscip);
-
-   /* initialize the basisstore of target-SCIP */
-   if( targetscip->basesstore == NULL )
-   {
-      SCIPbasisstoreCreate(&targetscip->basesstore);
-   }
 
    /* get the variable and constraint data of the source scip */
    vars = sourcescip->transprob->vars;
@@ -1846,6 +1802,10 @@ SCIP_RETCODE copyProb(
    /* creating the solution candidates storage */
    /**@todo copy solution of source SCIP as candidates for the target SCIP */
    SCIP_CALL( SCIPprimalCreate(&targetscip->origprimal) );
+
+   /* initialize the basisstore of SCIP */
+   assert(targetscip->basesstore == NULL);
+   SCIPbasisstoreCreate(&targetscip->basesstore);
 
    if( uselocalvarmap )
    {
@@ -9405,6 +9365,10 @@ SCIP_RETCODE SCIPcreateProb(
    /* create solution pool for original solution candidates */
    SCIP_CALL( SCIPprimalCreate(&scip->origprimal) );
 
+   /* initialize the basisstore of SCIP */
+   assert(scip->basesstore == NULL);
+   SCIPbasisstoreCreate(&scip->basesstore);
+
    /* initialize reoptimization structure, if needed */
    SCIP_CALL( SCIPenableReoptimization(scip, scip->set->reopt_enable) );
 
@@ -9981,6 +9945,11 @@ SCIP_RETCODE SCIPfreeProb(
       }
       assert(scip->set->nactivepricers == 0);
 
+      /* free the basisstore of SCIP */
+      assert(scip->basesstore != NULL);
+      SCIPbasisstoreFree(&scip->basesstore);
+
+
       /* free original primal solution candidate pool, original problem and problem statistics data structures */
       if( scip->set->reopt_enable || scip->reopt != NULL)
       {
@@ -10000,6 +9969,7 @@ SCIP_RETCODE SCIPfreeProb(
       scip->set->stage = SCIP_STAGE_INIT;
    }
    assert(scip->set->stage == SCIP_STAGE_INIT);
+   assert(scip->basesstore == NULL);
 
    return SCIP_OKAY;
 }
@@ -12781,7 +12751,7 @@ SCIP_RETCODE checkSolOrig(
 
             if( printreason )
             {
-               SCIPmessagePrintInfo(scip->messagehdlr, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_HIGH, NULL, "solution violates original bounds of variable <%s> [%g,%g] solution value <%g>\n",
                   SCIPvarGetName(var), lb, ub, solval);
             }
 
@@ -14154,12 +14124,6 @@ SCIP_RETCODE initSolve(
    SCIP_CALL( SCIPvisualInit(scip->stat->visual, scip->mem->probmem, scip->set, scip->messagehdlr) );
 
    /* initialize solution process data structures */
-   if( scip->basesstore == NULL )
-   {
-      /* if we are in a subscip and the basestore is not NULL, we have already stored a starting basis */
-      SCIP_CALL( SCIPbasisstoreCreate(&scip->basesstore) );
-   }
-
    SCIP_CALL( SCIPpricestoreCreate(&scip->pricestore) );
    SCIP_CALL( SCIPsepastoreCreate(&scip->sepastore) );
    SCIP_CALL( SCIPcutpoolCreate(&scip->cutpool, scip->mem->probmem, scip->set, scip->set->sepa_cutagelimit, TRUE) );
@@ -14305,7 +14269,6 @@ SCIP_RETCODE freeSolve(
    SCIP_CALL( SCIPcutpoolFree(&scip->delayedcutpool, scip->mem->probmem, scip->set, scip->lp) );
    SCIP_CALL( SCIPsepastoreFree(&scip->sepastore) );
    SCIP_CALL( SCIPpricestoreFree(&scip->pricestore) );
-   SCIP_CALL( SCIPbasisstoreFree(&scip->basesstore, scip->mem->probmem) );
 
    /* possibly close visualization output file */
    SCIPvisualExit(scip->stat->visual, scip->set, scip->messagehdlr);
@@ -15689,10 +15652,7 @@ SCIP_RETCODE SCIPfreeSolve(
    {
    case SCIP_STAGE_INIT:
    case SCIP_STAGE_TRANSFORMED:
-      return SCIP_OKAY;
-
    case SCIP_STAGE_PROBLEM:
-      SCIP_CALL( SCIPbasisstoreFree(&scip->basesstore, scip->mem->probmem) );
       return SCIP_OKAY;
 
    case SCIP_STAGE_PRESOLVING:
@@ -27525,56 +27485,6 @@ SCIP_RETCODE SCIPgetLPI(
    SCIP_CALL( checkStage(scip, "SCIPgetLPI", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
 
    *lpi = SCIPlpGetLPI(scip->lp);
-
-   return SCIP_OKAY;
-}
-
-/* store the basis of the last solved lp */
-SCIP_RETCODE SCIPstoreBasis(
-   SCIP*                 scip               /**< SCIP data structure */
-   )
-{
-   assert(scip != NULL);
-   assert(scip->basesstore != NULL);
-
-   SCIP_CALL( checkStage(scip, "SCIPstoreBasis", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE) );
-
-   printf("try to store basis:\n");
-
-   if( scip->lp->solved )
-   {
-      SCIP_VAR** vars;
-      SCIP_CONS** conss;
-      SCIP_Bool success;
-      int* vstat;
-      int* cstat;
-      int nvars;
-      int nconss;
-
-      printf("-> LP is solved, solution is basic.\n");
-
-      /* get memory for the basis status */
-      SCIP_CALL( SCIPallocBufferArray(scip, &vstat, scip->transprob->nvars) );
-      SCIP_CALL( SCIPallocBufferArray(scip, &cstat, scip->transprob->nconss) );
-
-      vars = scip->transprob->vars;
-      conss = scip->transprob->conss;
-      nvars = scip->transprob->nvars;
-      nconss = scip->transprob->nconss;
-
-      getBasis(scip, vars, conss, vstat, cstat, nvars, nconss, &success);
-
-      if( success )
-      {
-         SCIP_CALL( SCIPbasisstoreAddBasis(scip->basesstore, scip->mem->probmem, vars, conss, vstat, cstat, nvars, nconss) );
-      }
-
-      /* free buffer */
-      SCIPfreeBufferArrayNull(scip, &cstat);
-      SCIPfreeBufferArrayNull(scip, &vstat);
-   }
-   else
-      printf("-> LP is not solved.\n");
 
    return SCIP_OKAY;
 }

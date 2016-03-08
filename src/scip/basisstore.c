@@ -90,8 +90,7 @@ SCIP_RETCODE SCIPbasisstoreCreate(
 
 /** frees basis storage */
 SCIP_RETCODE SCIPbasisstoreFree(
-   SCIP_BASISSTORE**     basisstore,          /**< basis storage */
-   BMS_BLKMEM*           blkmem               /**< block memory */
+   SCIP_BASISSTORE**     basisstore           /**< basis storage */
    )
 {
    assert(basisstore != NULL);
@@ -110,6 +109,7 @@ SCIP_RETCODE SCIPbasisstoreFree(
 
    SCIPdebugMessage("free basisstore %p.\n", (void*)(*basisstore));
    BMSfreeMemoryNull(&(*basisstore));
+   *basisstore = NULL;
 
    return SCIP_OKAY;
 }

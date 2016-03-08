@@ -45,8 +45,7 @@ SCIP_RETCODE SCIPbasisstoreCreate(
 /** frees separation storage */
 extern
 SCIP_RETCODE SCIPbasisstoreFree(
-   SCIP_BASISSTORE**     basisstore,          /**< basis storage */
-   BMS_BLKMEM*           blkmem               /**< block memory */
+   SCIP_BASISSTORE**     basisstore           /**< basis storage */
    );
 
 /** add a basis to the storage */
