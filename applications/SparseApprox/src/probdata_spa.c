@@ -349,7 +349,7 @@ SCIP_RETCODE SCIPcreateProbSpa(
       for( c1 = 2; c1 < ncluster; ++c1 )
       {
          (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "lexorder_%d_%d", i + 1, c1 + 1);
-         SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 0.0, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->binvars[i][c1], 1.0) );
          for( j = 0; j < i; ++j )
          {
