@@ -36,7 +36,7 @@ def zimpl_to_mop(problem_file, path_for_mop_file, path_to_zimpl):
     splitted = problem_filename.split('.') 
     basename, suffix = splitted[0], splitted[-1]
     file_suffix = ".mzpl"
-    if file_suffix == suffix:
+    if file_suffix == "."+suffix:
         file_suffix = ".multzpl"
 
     mzpl = path_for_mop_file + basename
