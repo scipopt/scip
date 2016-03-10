@@ -297,16 +297,19 @@ SCIP_CONSDATA* nodeGetLinprojectionData(
 
 }
 
+/**< store node information of this node in a constraint */
 static
 SCIP_RETCODE storeNodeInformation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NODESELDATA*     nodeseldata,
-   SCIP_NODE*            node,
-   int                   nodenlpcands
+   SCIP_NODESELDATA*     nodeseldata,        /**< node selector data */
+   SCIP_NODE*            node,               /**< the node for which information should be stored */
+   int                   nodenlpcands        /**< the number of LP branching candidates at this node */
    )
 {
 
    SCIP_CONSDATA* linprojectiondata;
+
+   /* create data if it does not exist already and store the number of branching candidates */
    linprojectiondata = nodeGetLinprojectionData(node, nodeseldata);
    if( linprojectiondata == NULL )
       createConsBasicLinprojection(scip, nodeseldata, node, nodenlpcands);
@@ -316,10 +319,11 @@ SCIP_RETCODE storeNodeInformation(
    return SCIP_OKAY;
 }
 
+/** get stored number of LP candidates at this node */
 static
 int nodeGetNLPCands(
-   SCIP_NODE*           node,
-   SCIP_NODESELDATA*    nodeseldata
+   SCIP_NODE*            node,               /**< node pointer */
+   SCIP_NODESELDATA*     nodeseldata         /**< node selector data */
    )
 {
 
@@ -328,6 +332,7 @@ int nodeGetNLPCands(
    assert(node != NULL);
    assert(nodeseldata != NULL);
 
+   /* get stored number of candidates, or -1 */
    linprojectiondata = nodeGetLinprojectionData(node, nodeseldata);
    if( linprojectiondata == NULL )
       return -1;
@@ -335,19 +340,21 @@ int nodeGetNLPCands(
       return linprojectiondata->nodenlpcands;
 }
 
+/** get modified linear projection estimate for a node */
 static
 SCIP_Real nodeGetLinprojectionEstimate(
-   SCIP_NODE*           node,
-   SCIP_NODESELDATA*    nodeseldata
+   SCIP_NODE*            node,               /**< node pointer */
+   SCIP_NODESELDATA*     nodeseldata         /**< node selector data */
    )
 {
    SCIP_Real nodelowerbound;
-   int       nodenlpcands;
+   int nodenlpcands;
 
+   /* get stored lower bound and number of LP branching candidates at this node */
    nodelowerbound = SCIPnodeGetLowerbound(node);
    nodenlpcands = nodeGetNLPCands(node, nodeseldata);
 
-   /* use parent number of LP cands which is usually an upper bound on the exspected LP candidate number for this node */
+   /* use parent number of LP candidates which is usually an upper bound on the expected LP candidate number for this node */
    if( nodenlpcands == -1 )
    {
       SCIP_NODE* parent;
@@ -356,6 +363,8 @@ SCIP_Real nodeGetLinprojectionEstimate(
          nodenlpcands = nodeGetNLPCands(parent, nodeseldata);
       assert( parent == NULL || nodenlpcands >= 0 );
    }
+
+   /* compute modified best projection based on current slope */
    return nodelowerbound + nodeseldata->projectionslope * nodenlpcands;
 }
 
@@ -373,6 +382,7 @@ void selectBestNode(
 {
    int c;
 
+   /* loop over nodes and select the node with the smallest linear projection estimate */
    for( c = 0; c < nnodes; ++c )
    {
       SCIP_Real nodelinprojectionestimate;
@@ -437,12 +447,13 @@ SCIP_DECL_CONSENFOPS(consEnfopsLinprojection)
    return SCIP_OKAY;
 }
 
+/** update slope of linear projection */
 static
 void updateLinprojectionslope(
-   SCIP*                 scip,
-   SCIP_NODESELDATA*     nodeseldata,
-   SCIP_Real             newminobjective,
-   int                   newmincands
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_NODESELDATA*     nodeseldata,        /**< node selector data */
+   SCIP_Real             newminobjective,    /**< minimum lower bound of a node */
+   int                   newmincands         /**< minimum number of candidate variables for branching */
    )
 {
    SCIP_NODE* root;
@@ -454,16 +465,19 @@ void updateLinprojectionslope(
    root = SCIPgetRootNode(scip);
    assert(root != NULL);
 
+   /* get root node lower bound and candidate variables */
    rootlowerbound = SCIPgetLowerboundRoot(scip);
    assert(nodeseldata->rootnodecons != NULL);
    rootconsdata = SCIPconsGetData(nodeseldata->rootnodecons);
    nrootlpcands = rootconsdata->nodenlpcands;
 
+   /* store minimum lower bound and number of candidate variables */
    nodeseldata->minlowerbound = newminobjective;
    nodeseldata->minnlpcands = newmincands;
    assert(newmincands <= nrootlpcands);
    assert(SCIPisSumGE(scip, newminobjective, rootlowerbound));
 
+   /* update slope of modified best projection */
    if( newmincands < nrootlpcands )
    {
       SCIP_Real objdiff;
@@ -475,6 +489,7 @@ void updateLinprojectionslope(
    else
       nodeseldata->projectionslope = 0.0;
 
+   /* update cutoff bound of node selector */
    nodeseldata->cutoffbound = SCIPgetLowerbound(scip) + nodeseldata->projectionslope * nrootlpcands;
    nodeseldata->cutoffbound = MIN(SCIPgetUpperbound(scip), nodeseldata->cutoffbound);
 }
@@ -505,16 +520,19 @@ SCIP_DECL_EVENTEXEC(eventExecLinprojection)
    focusnode = SCIPgetCurrentNode(scip);
    assert(focusnode != NULL);
 
+   /* get number of candidate variables only if we caught a node branched event */
    if( SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEBRANCHED )
       nlpcands = SCIPgetNLPBranchCands(scip);
    else
       nlpcands = 0;
-   assert(nlpcands == 0 || SCIPeventGetType(event) == SCIP_EVENTTYPE_NODEBRANCHED);
+
    /* init or update the node data */
    SCIP_CALL( storeNodeInformation(scip, nodeseldata, focusnode, nlpcands) );
 
+
    nodelowerbound = SCIPnodeGetLowerbound(focusnode);
    currentupperbound = SCIPgetUpperbound(scip);
+
 
    if( SCIPgetNLimSolsFound(scip) > 0 && SCIPisLT(scip, currentupperbound, nodeseldata->minlowerbound) )
    {
