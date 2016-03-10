@@ -44,6 +44,7 @@ extern "C" {
 /** problem and runtime specific statistics */
 struct SCIP_Stat
 {
+   SCIP_REGRESSION*      regressioncandsobjval;/**< linear regression of pairs (nbranchcands, lpobjval) for every node */
    SCIP_Longint          nlpiterations;      /**< total number of LP iterations */
    SCIP_Longint          nrootlpiterations;  /**< total number of LP iterations in root node */
    SCIP_Longint          nrootfirstlpiterations;/**< number of LP iterations for first LP solved at the root node */

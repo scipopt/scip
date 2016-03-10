@@ -4185,6 +4185,22 @@ SCIP_RETCODE solveNode(
       *infeasible = TRUE;
       SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) ); /*lint !e506 !e774*/
    }
+   else if( !(*unbounded) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OPTIMAL )
+   {
+      /* update the regression statistic nlpbranchcands and LP objective value  */
+      int nlpbranchcands;
+      SCIP_Real lpobjval;
+
+      /* get number of LP candidate variables */
+      SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nlpbranchcands, NULL, NULL);
+
+      /* get LP objective value */
+      lpobjval = SCIPlpGetObjval(lp, set, transprob);
+      assert(lpobjval != SCIP_INVALID && !SCIPsetIsInfinity(set, REALABS(lpobjval)));
+
+      /*add the observation to the regression */
+      SCIPregressionAddObservation(stat->regressioncandsobjval, nlpbranchcands, lpobjval);
+   }
 
    return SCIP_OKAY;
 }

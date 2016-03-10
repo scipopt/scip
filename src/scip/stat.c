@@ -80,6 +80,8 @@ SCIP_RETCODE SCIPstatCreate(
    SCIP_CALL( SCIPhistoryCreate(&(*stat)->glbhistorycrun, blkmem) );
    SCIP_CALL( SCIPvisualCreate(&(*stat)->visual, messagehdlr) );
 
+   SCIP_CALL( SCIPregressionCreate(&(*stat)->regressioncandsobjval) );
+
    (*stat)->status = SCIP_STATUS_UNKNOWN;
    (*stat)->marked_nvaridx = 0;
    (*stat)->marked_ncolidx = 0;
@@ -129,6 +131,8 @@ SCIP_RETCODE SCIPstatFree(
    SCIPhistoryFree(&(*stat)->glbhistory, blkmem);
    SCIPhistoryFree(&(*stat)->glbhistorycrun, blkmem);
    SCIPvisualFree(&(*stat)->visual);
+
+   SCIPregressionFree(&(*stat)->regressioncandsobjval);
 
    BMSfreeMemory(stat);
 
@@ -490,6 +494,8 @@ void SCIPstatResetCurrentRun(
       stat->status = SCIP_STATUS_UNKNOWN;
 
    SCIPhistoryReset(stat->glbhistorycrun);
+
+   SCIPregressionReset(stat->regressioncandsobjval);
 
    SCIPstatResetDisplay(stat);
 }
