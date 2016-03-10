@@ -3,6 +3,7 @@ SCIP version NEXT
 
 fixed bugs:
 - fixed bug in XML reader concerning comments
+- fixed wrong representation of SOC constraints in NLP
 
 SCIP version 3.2.1
 ==================
