@@ -6402,6 +6402,8 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   *infeasible = FALSE;
+
    nref = conshdlrdata->ninitlprefpoints;
 
    if( nref == 0 )
@@ -6549,15 +6551,20 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
                {
                   SCIPdebugMessage("drop row1 for constraint <%s> because range of coefficients is too large: mincoef = %g, maxcoef = %g -> range = %g\n",
                      SCIPconsGetName(conss[c]), SCIPgetRowMinCoef(scip, row1), SCIPgetRowMaxCoef(scip, row1), SCIPgetRowMaxCoef(scip, row1) / SCIPgetRowMinCoef(scip, row1));  /*lint !e613*/
-                  SCIP_CALL( SCIPreleaseRow(scip, &row1) );
                }
                else if( SCIPisInfinity(scip, -SCIProwGetLhs(row1)) )
                {
                   /* row1 should be a cut with finite lhs, but infinite rhs */
                   assert(SCIPisInfinity(scip, SCIProwGetRhs(row1)));
                   SCIPdebugMessage("drop row1 for constraint <%s> because of very large lhs: %g\n", SCIPconsGetName(conss[c]), SCIProwGetLhs(row1));  /*lint !e613*/
-                  SCIP_CALL( SCIPreleaseRow(scip, &row1) );
                }
+               /* add row to LP */
+               else
+               {
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row1, FALSE /* forcecut */, infeasible) );
+                  SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row1, NULL) ) );
+               }
+               SCIP_CALL( SCIPreleaseRow(scip, &row1) );
             }
 
             if( row2 != NULL )
@@ -6566,34 +6573,24 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
                {
                   SCIPdebugMessage("drop row2 for constraint <%s> because range of coefficients is too large: mincoef = %g, maxcoef = %g -> range = %g\n",
                      SCIPconsGetName(conss[c]), SCIPgetRowMinCoef(scip, row2), SCIPgetRowMaxCoef(scip, row2), SCIPgetRowMaxCoef(scip, row2) / SCIPgetRowMinCoef(scip, row2));  /*lint !e613*/
-                  SCIP_CALL( SCIPreleaseRow(scip, &row2) );
                }
                else if( SCIPisInfinity(scip, SCIProwGetRhs(row2)) )
                {
                   /* row2 should be a cut with finite rhs, but infinite lhs */
                   assert(SCIPisInfinity(scip, SCIProwGetRhs(row2)));
                   SCIPdebugMessage("drop row2 for constraint <%s> because of very large rhs: %g\n", SCIPconsGetName(conss[c]), SCIProwGetLhs(row2));  /*lint !e613*/
-                  SCIP_CALL( SCIPreleaseRow(scip, &row2) );
                }
-            }
-
-            /* add to LP */
-            if( row1 != NULL )
-            {
-               SCIP_Bool infeasible;
-               SCIP_CALL( SCIPaddCut(scip, NULL, row1, FALSE /* forcecut */, &infeasible) );
-               assert( ! infeasible );
-               SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row1, NULL) ) );
-               SCIP_CALL( SCIPreleaseRow(scip, &row1) );
-            }
-            if( row2 != NULL )
-            {
-               SCIP_Bool infeasible;
-               SCIP_CALL( SCIPaddCut(scip, NULL, row2, FALSE /* forcecut */, &infeasible) );
-               assert( ! infeasible );
-               SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row2, NULL) ) );
+               /* add row to LP */
+               else if( !(*infeasible) )
+               {
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row2, FALSE /* forcecut */, infeasible) );
+                  SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row2, NULL) ) );
+               }
                SCIP_CALL( SCIPreleaseRow(scip, &row2) );
             }
+
+            if( *infeasible )
+               return SCIP_OKAY;
          }
       }
    }

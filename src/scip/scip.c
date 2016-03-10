@@ -25996,7 +25996,8 @@ SCIP_RETCODE SCIPenfolpCons(
  */
 SCIP_RETCODE SCIPinitlpCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to initialize */
+   SCIP_CONS*            cons,               /**< constraint to initialize */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected while building the LP */
    )
 {
    assert(scip != NULL);
@@ -26005,7 +26006,7 @@ SCIP_RETCODE SCIPinitlpCons(
 
    SCIP_CALL( checkStage(scip, "SCIPinitlpCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPconsInitlp(cons, scip->set) );
+   SCIP_CALL( SCIPconsInitlp(cons, scip->set, infeasible) );
 
    return SCIP_OKAY;
 }

@@ -932,12 +932,11 @@ SCIP_RETCODE createRelaxation(
 static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to check */
+   SCIP_CONS*            cons,               /**< constraint to check */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Bool infeasible;
-
 
    /* in the root LP we only add the weaker relaxation which consists of two rows:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
@@ -950,12 +949,6 @@ SCIP_RETCODE addRelaxation(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-
-   if( consdata->rows == NULL )
-   {
-      /* create the n+1 row relaxation */
-      SCIP_CALL( createRelaxation(scip, cons) );
-   }
 
    /* create the aggregated row */
    if( consdata->aggrrow == NULL )
@@ -972,15 +965,22 @@ SCIP_RETCODE addRelaxation(
    /* insert aggregated LP row as cut */
    if( !SCIProwIsInLP(consdata->aggrrow) )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->aggrrow, FALSE, &infeasible) );
-      assert(!infeasible);  /* this function is only called by initlp() -> the cuts should be feasible */
+      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->aggrrow, FALSE, infeasible) );
    }
 
-   /* add additional row */
-   if( !SCIProwIsInLP(consdata->rows[0]) )
+   if( !(*infeasible) )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[0], FALSE, &infeasible) );
-      assert( ! infeasible );  /* this function is only called by initlp() -> the cuts should be feasible */
+      if( consdata->rows == NULL )
+      {
+         /* create the n+1 row relaxation */
+         SCIP_CALL( createRelaxation(scip, cons) );
+      }
+
+      /* add additional row */
+      if( !SCIProwIsInLP(consdata->rows[0]) )
+      {
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[0], FALSE, infeasible) );
+      }
    }
 
    return SCIP_OKAY;
@@ -4129,10 +4129,12 @@ SCIP_DECL_CONSINITLP(consInitlpAnd)
 {  /*lint --e{715}*/
    int i;
 
-   for( i = 0; i < nconss; i++ )
+   *infeasible = FALSE;
+
+   for( i = 0; i < nconss && !(*infeasible); i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i]) );
+      SCIP_CALL( addRelaxation(scip, conss[i], infeasible) );
    }
 
    return SCIP_OKAY;

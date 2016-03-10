@@ -23,6 +23,8 @@ interface:
 - new function SCIPgetLastStrongbranchingLPSolstat() to query the LP statuses after strong branching on a variable
 - next to the number of found solution, also the number of new best solutions is now printed for each heuristic
   (and relaxation solutions) in the statistics in the "Primal Heuristic" section.
+- CONSINITLP callback now has a new parameter 'infeasible', which is a pointer to store whether infeasibility
+  was detected while building the initial LP relaxation
 
 fixed bugs:
 - fixed bug in XML reader concerning comments

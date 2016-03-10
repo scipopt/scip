@@ -5498,7 +5498,6 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
 {  /*lint --e{715}*/
    SCIP_CONSDATA*     consdata;
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_Bool infeasible;
    SCIP_ROW*          row;
    int                c;
    SCIP_Real          xlb;
@@ -5511,7 +5510,9 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   for( c = 0; c < nconss; ++c )
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(conss[c] != NULL);  /*lint !e613*/
 
@@ -5537,8 +5538,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                {
                   if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                   {
-                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-                     assert( ! infeasible );
+                     assert(!(*infeasible));
+                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
 
                      if( conshdlrdata->conshdlrindicator != NULL && !SCIProwIsLocal(row) )
                      {
@@ -5556,8 +5557,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-                  assert( ! infeasible );
+                  assert(!(*infeasible));
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5568,7 +5569,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
             }
          }
 
-         if( !SCIPisInfinity(scip, xub) )
+         if( !(*infeasible) && !SCIPisInfinity(scip, xub) )
          {
             /* generate tangent in upper bound */
             if( -consdata->root * (xlb+consdata->xoffset) - consdata->xoffset < xub && xub <= INITLPMAXVARVAL )
@@ -5578,8 +5579,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-                  assert( ! infeasible );
+                  assert(!(*infeasible));
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5591,7 +5592,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
          }
       }
 
-      if( !SCIPisInfinity(scip, -consdata->lhs) )
+      if( !(*infeasible) && !SCIPisInfinity(scip, -consdata->lhs) )
       {
          if( !SCIPisInfinity(scip, xub) )
          {
@@ -5604,8 +5605,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                {
                   if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                   {
-                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-                     assert( ! infeasible );
+                     assert(!(*infeasible));
+                     SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
 
                      if( conshdlrdata->conshdlrindicator != NULL && !SCIProwIsLocal(row) )
                      {
@@ -5623,8 +5624,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-                  assert( ! infeasible );
+                  assert(!(*infeasible));
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {
@@ -5635,7 +5636,7 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
             }
          }
 
-         if( !SCIPisInfinity(scip, -xlb) )
+         if( !(*infeasible) && !SCIPisInfinity(scip, -xlb) )
          {
             /* generate tangent in lower bound */
             if( -consdata->root * (xub+consdata->xoffset) - consdata->xoffset > xlb && xlb >= -INITLPMAXVARVAL )
@@ -5645,8 +5646,8 @@ SCIP_DECL_CONSINITLP(consInitlpAbspower)
                assert(row != NULL);
                if( !SCIPisInfinity(scip, SCIProwGetRhs(row)) && SCIPgetRowMaxCoef(scip, row)/SCIPgetRowMinCoef(scip, row) < conshdlrdata->cutmaxrange )
                {
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
-                  assert( ! infeasible );
+                  assert(!(*infeasible));
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
 
                   if( conshdlrdata->conshdlrindicator != NULL )
                   {

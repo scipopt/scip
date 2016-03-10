@@ -87,12 +87,6 @@
 /* scaling factor for gauge function */
 #define GAUGESCALE 0.99999
 
-/* enable assert on feasibility of cuts added in INITLP (see also 82ec3324)
- * off by default, as I (SV) believe we cannot ensure that infeasibility
- * can always be ensured by other means (propagation)
- */
-/* #define ASSERT_INITLP_FEASCUT */
-
 /*
  * Data structures
  */
@@ -10883,7 +10877,9 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   for( c = 0; c < nconss; ++c )
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(conss[c] != NULL);  /*lint !e613 */
 
@@ -10896,16 +10892,11 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
 
       if( consdata->nquadvars == 0 )
       {
-         SCIP_Bool infeasible;
-
          /* if we are actually linear, add the constraint as row to the LP */
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613 */
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-#ifdef ASSERT_INITLP_FEASCUT
-         assert( ! infeasible );
-#endif
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
          continue;
       }
@@ -10952,23 +10943,18 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                   FALSE, -SCIPinfinity(scip)) );  /*lint !e613 */
             if( row != NULL )
             {
-               SCIP_Bool infeasible;
-
                SCIPdebugMessage("initlp adds row <%s> for lambda = %g of conss <%s>\n", SCIProwGetName(row), lambda, SCIPconsGetName(conss[c]));  /*lint !e613 */
                SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
-               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-#ifdef ASSERT_INITLP_FEASCUT
-               assert( ! infeasible );
-#endif
-
+               SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
                SCIP_CALL( SCIPreleaseRow (scip, &row) );
             }
          }
       }
 
       /* for concave parts, add underestimator w.r.t. at most 2 reference points */
-      if( (! consdata->isconvex && !SCIPisInfinity(scip,  consdata->rhs)) || (! consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs)) )
+      if( !(*infeasible) && ((! consdata->isconvex && !SCIPisInfinity(scip,  consdata->rhs))
+            || (! consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs))) )
       {
          SCIP_Bool unbounded;
          SCIP_Bool possquare;
@@ -11029,35 +11015,23 @@ SCIP_DECL_CONSINITLP(consInitlpQuadratic)
                      conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
                if( row != NULL )
                {
-                  SCIP_Bool infeasible;
-
                   SCIPdebugMessage("initlp adds row <%s> for rhs of conss <%s>, round %d\n", SCIProwGetName(row), SCIPconsGetName(conss[c]), k);  /*lint !e613 */
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-#ifdef ASSERT_INITLP_FEASCUT
-                  assert( ! infeasible );
-#endif
-
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
                }
             }
-            if( !consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs) )
+            if( !(*infeasible) && !consdata->isconcave && !SCIPisInfinity(scip, -consdata->lhs) )
             {
                SCIP_CALL( generateCut(scip, conshdlr, conss[c], x, NULL, SCIP_SIDETYPE_LEFT, &row, NULL,
                      conshdlrdata->checkcurvature, -SCIPinfinity(scip)) );  /*lint !e613 */
                if( row != NULL )
                {
-                  SCIP_Bool infeasible;
-
                   SCIPdebugMessage("initlp adds row <%s> for lhs of conss <%s>, round %d\n", SCIProwGetName(row), SCIPconsGetName(conss[c]), k);  /*lint !e613 */
                   SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
 
-                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-#ifdef ASSERT_INITLP_FEASCUT
-                  assert( ! infeasible );
-#endif
-
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
                   SCIP_CALL( SCIPreleaseRow (scip, &row) );
                }
             }

@@ -11122,7 +11122,9 @@ SCIP_RETCODE SCIPenfolpCons(
 EXTERN
 SCIP_RETCODE SCIPinitlpCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to initialize */
+   SCIP_CONS*            cons,               /**< constraint to initialize */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected while building the LP */
+
    );
 
 /** calls separation method of single constraint for LP solution

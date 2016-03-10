@@ -371,7 +371,8 @@ SCIP_RETCODE createRelaxation(
 static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< variable bound constraint */
+   SCIP_CONS*            cons,               /**< variable bound constraint */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -406,12 +407,9 @@ SCIP_RETCODE addRelaxation(
 
    if( !SCIProwIsInLP(consdata->row) )
    {
-      SCIP_Bool infeasible;
-
       SCIPdebugMessage("adding relaxation of variable bound constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, &infeasible) );
-      assert( ! infeasible );   /* this function is only called from initlp -> row should be feasible */
+      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -3772,10 +3770,12 @@ SCIP_DECL_CONSINITLP(consInitlpVarbound)
 {  /*lint --e{715}*/
    int i;
 
-   for( i = 0; i < nconss; i++ )
+   *infeasible = FALSE;
+
+   for( i = 0; i < nconss && !(*infeasible); i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i]) );
+      SCIP_CALL( addRelaxation(scip, conss[i], infeasible) );
    }
 
    return SCIP_OKAY;
