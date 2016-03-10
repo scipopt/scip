@@ -155,6 +155,26 @@ void SCIPstatEnableOrDisableStatClocks(
    SCIP_Bool             enable              /**< should the LP clocks be enabled? */
    );
 
+/** recompute root LP best-estimate from scratch */
+extern
+void SCIPstatComputeRootLPBestEstimate(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             rootlpobjval,       /**< root LP objective value */
+   SCIP_VAR**            vars,               /**< problem variables */
+   int                   nvars               /**< number of variables */
+   );
+
+/** update root LP best-estimate with changed variable pseudo-costs */
+extern
+SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable with changed pseudo costs */
+   SCIP_BRANCHDIR        branchdir,          /**< branching direction (up or down) */
+   SCIP_Real             oldpscostscore      /**< old pseudo cost score in this direction */
+   );
+
 #ifdef __cplusplus
 }
 #endif

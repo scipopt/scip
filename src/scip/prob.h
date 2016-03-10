@@ -381,6 +381,7 @@ extern
 void SCIPprobStoreRootSol(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
    );

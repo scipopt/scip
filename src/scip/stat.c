@@ -35,6 +35,7 @@
 #include "scip/clock.h"
 #include "scip/visual.h"
 #include "scip/mem.h"
+#include "scip/var.h"
 #include "scip/history.h"
 
 
@@ -475,6 +476,7 @@ void SCIPstatResetCurrentRun(
    stat->bestsolnode = 0;
    stat->rootlowerbound = SCIP_REAL_MIN;
    stat->lastbranchvalue = SCIP_UNKNOWN;
+   stat->rootlpbestestimate = SCIP_INVALID;
    stat->lastbranchvar = NULL;
    stat->lastbranchdir = SCIP_BRANCHDIR_DOWNWARDS;
    stat->nrootboundchgsrun = 0;
@@ -580,4 +582,85 @@ void SCIPstatEnableOrDisableStatClocks(
    SCIPclockEnableOrDisable(stat->nlpsoltime, enable);
    SCIPclockEnableOrDisable(stat->copyclock, enable);
    SCIPclockEnableOrDisable(stat->strongpropclock, enable);
+}
+
+/** recompute root LP best-estimate from scratch */
+void SCIPstatComputeRootLPBestEstimate(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             rootlpobjval,       /**< root LP objective value */
+   SCIP_VAR**            vars,               /**< problem variables */
+   int                   nvars               /**< number of variables */
+   )
+{
+   int v;
+   stat->rootlpbestestimate = rootlpobjval;
+
+   /* compute best-estimate contribution for every variable */
+   for( v = 0; v < nvars; ++v )
+   {
+      SCIP_Real rootlpsol;
+
+      /* stop at the first continuous variable */
+      if( !SCIPvarIsIntegral(vars[v]) )
+         break;
+
+      rootlpsol = SCIPvarGetRootSol(vars[v]);
+
+      stat->rootlpbestestimate += SCIPvarGetMinPseudocostScore(vars[v], stat, set, rootlpsol);
+   }
+}
+
+/** update root LP best-estimate with changed variable pseudo-costs */
+SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
+   SCIP_STAT*            stat,               /**< SCIP statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR*             var,                /**< variable with changed pseudo costs */
+   SCIP_BRANCHDIR        branchdir,          /**< branching direction (up or down) */
+   SCIP_Real             oldpscostscore      /**< old pseudo cost score in this direction */
+   )
+{
+   SCIP_Real oldupscore;
+   SCIP_Real olddownscore;
+   SCIP_Real rootlpsol;
+   SCIP_Real solvaldeltaup;
+   SCIP_Real solvaldeltadown;
+
+
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE );
+
+   /* entire root LP best-estimate must be computed from scratch first */
+   if( stat->rootlpbestestimate == SCIP_INVALID )
+      return SCIP_OKAY;
+
+   rootlpsol = SCIPvarGetRootSol(var);
+
+   /* LP root estimate only works for variables with fractional LP root solution */
+   if( SCIPsetIsFeasIntegral(set, rootlpsol) )
+      return SCIP_OKAY;
+
+   /* compute deltas to ceil and floor of root LP solution value */
+   solvaldeltaup = SCIPsetCeil(set, rootlpsol) - rootlpsol;
+   solvaldeltadown = SCIPsetFloor(set, rootlpsol) - rootlpsol;
+
+   /* initialize old scores depending on the branching direction of the current update */
+   if( branchdir == SCIP_BRANCHDIR_UPWARDS )
+   {
+      oldupscore = oldpscostscore;
+      olddownscore = SCIPvarGetPseudocost(var, stat, solvaldeltadown);
+   }
+   else if( branchdir == SCIP_BRANCHDIR_DOWNWARDS )
+   {
+      oldupscore = SCIPvarGetPseudocost(var, stat, solvaldeltaup);
+      olddownscore = oldpscostscore;
+   }
+   else
+      return SCIP_OKAY;
+
+   assert(oldupscore >= 0 && olddownscore >= 0);
+
+   stat->rootlpbestestimate -= MIN(oldupscore, olddownscore);
+   stat->rootlpbestestimate += SCIPvarGetMinPseudocostScore(var, stat, set, rootlpsol);
+
+   return SCIP_OKAY;
 }

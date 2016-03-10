@@ -4174,7 +4174,7 @@ SCIP_RETCODE solveNode(
       /* the root pseudo objective value and pseudo objective value should be equal in the root node */
       assert(SCIPsetIsFeasEQ(set, SCIPlpGetGlobalPseudoObjval(lp, set, transprob), SCIPlpGetPseudoObjval(lp, set, transprob)));
 
-      SCIPprobStoreRootSol(transprob, set, lp, SCIPtreeHasFocusNodeLP(tree));
+      SCIPprobStoreRootSol(transprob, set, stat, lp, SCIPtreeHasFocusNodeLP(tree));
    }
 
    /* check for cutoff */

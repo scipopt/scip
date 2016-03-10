@@ -117,6 +117,7 @@ struct SCIP_Stat
    SCIP_Real             lastdualbound;      /**< last (non-infinite) dual bound (in transformed space) for integral evaluation */
    SCIP_Real             lastlowerbound;     /**< last lower bound (in transformed space) for integral evaluation */
    SCIP_Real             lastupperbound;     /**< last upper bound (in transformed space) for integral evaluation */
+   SCIP_Real             rootlpbestestimate; /**< best-estimate for final root LP solution that changes with every pseudo-cost update */
    SCIP_CLOCK*           solvingtime;        /**< total time used for solving (including presolving) the current problem */
    SCIP_CLOCK*           solvingtimeoverall; /**< total time used for solving (including presolving) during reoptimization */
    SCIP_CLOCK*           presolvingtime;     /**< total time used for presolving the current problem */

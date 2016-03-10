@@ -40434,6 +40434,11 @@ void printRootStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Final Dual Bound : %+21.14e\n", dualboundroot);
    SCIPmessageFPrintInfo(scip->messagehdlr, file,    "  Final Root Iters : %10" SCIP_LONGINT_FORMAT "\n", scip->stat->nrootlpiterations);
 
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Root LP Estimate : ");
+   if( scip->stat->rootlpbestestimate != SCIP_INVALID )
+       SCIPmessageFPrintInfo(scip->messagehdlr, file, "%+21.14e\n", SCIPretransformObj(scip, scip->stat->rootlpbestestimate));
+   else
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "%21s\n","-");
 }
 
 /** display timing statistics */
