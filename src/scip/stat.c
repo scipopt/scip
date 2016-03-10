@@ -600,14 +600,18 @@ void SCIPstatComputeRootLPBestEstimate(
    for( v = 0; v < nvars; ++v )
    {
       SCIP_Real rootlpsol;
+      SCIP_Real varminpseudoscore;
 
       /* stop at the first continuous variable */
       if( !SCIPvarIsIntegral(vars[v]) )
          break;
 
       rootlpsol = SCIPvarGetRootSol(vars[v]);
+      varminpseudoscore = SCIPvarGetMinPseudocostScore(vars[v], stat, set, rootlpsol);
+      assert(varminpseudoscore >= 0);
+      stat->rootlpbestestimate += varminpseudoscore;
 
-      stat->rootlpbestestimate += SCIPvarGetMinPseudocostScore(vars[v], stat, set, rootlpsol);
+      SCIPdebugMessage("Root LP Estimate initialization: <%s> + %15.9f\n", SCIPvarGetName(vars[v]), varminpseudoscore);
    }
 }
 
@@ -616,16 +620,11 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable with changed pseudo costs */
-   SCIP_BRANCHDIR        branchdir,          /**< branching direction (up or down) */
-   SCIP_Real             oldpscostscore      /**< old pseudo cost score in this direction */
+   SCIP_Real             oldrootpscostscore  /**< old minimum pseudo cost score of variable */
    )
 {
-   SCIP_Real oldupscore;
-   SCIP_Real olddownscore;
    SCIP_Real rootlpsol;
-   SCIP_Real solvaldeltaup;
-   SCIP_Real solvaldeltadown;
-
+   SCIP_Real varminpseudoscore;
 
    assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_COLUMN || SCIPvarGetStatus(var) == SCIP_VARSTATUS_LOOSE );
 
@@ -639,28 +638,14 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    if( SCIPsetIsFeasIntegral(set, rootlpsol) )
       return SCIP_OKAY;
 
-   /* compute deltas to ceil and floor of root LP solution value */
-   solvaldeltaup = SCIPsetCeil(set, rootlpsol) - rootlpsol;
-   solvaldeltadown = SCIPsetFloor(set, rootlpsol) - rootlpsol;
+   /* subtract old pseudo cost contribution and add new contribution afterwards */
+   stat->rootlpbestestimate -= oldrootpscostscore;
 
-   /* initialize old scores depending on the branching direction of the current update */
-   if( branchdir == SCIP_BRANCHDIR_UPWARDS )
-   {
-      oldupscore = oldpscostscore;
-      olddownscore = SCIPvarGetPseudocost(var, stat, solvaldeltadown);
-   }
-   else if( branchdir == SCIP_BRANCHDIR_DOWNWARDS )
-   {
-      oldupscore = SCIPvarGetPseudocost(var, stat, solvaldeltaup);
-      olddownscore = oldpscostscore;
-   }
-   else
-      return SCIP_OKAY;
+   varminpseudoscore = SCIPvarGetMinPseudocostScore(var, stat, set, rootlpsol);
+   assert(varminpseudoscore >= 0.0);
+   stat->rootlpbestestimate += varminpseudoscore;
 
-   assert(oldupscore >= 0 && olddownscore >= 0);
-
-   stat->rootlpbestestimate -= MIN(oldupscore, olddownscore);
-   stat->rootlpbestestimate += SCIPvarGetMinPseudocostScore(var, stat, set, rootlpsol);
+   SCIPdebugMessage("Root LP estimate update: <%s> - %15.9f + %15.9f\n", SCIPvarGetName(var), oldrootpscostscore, varminpseudoscore);
 
    return SCIP_OKAY;
 }

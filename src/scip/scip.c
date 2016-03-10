@@ -40436,7 +40436,9 @@ void printRootStatistics(
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Root LP Estimate : ");
    if( scip->stat->rootlpbestestimate != SCIP_INVALID )
+   {
        SCIPmessageFPrintInfo(scip->messagehdlr, file, "%+21.14e\n", SCIPretransformObj(scip, scip->stat->rootlpbestestimate));
+   }
    else
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "%21s\n","-");
 }

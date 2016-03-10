@@ -171,8 +171,7 @@ SCIP_RETCODE SCIPstatUpdateVarRootLPBestEstimate(
    SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_VAR*             var,                /**< variable with changed pseudo costs */
-   SCIP_BRANCHDIR        branchdir,          /**< branching direction (up or down) */
-   SCIP_Real             oldpscostscore      /**< old pseudo cost score in this direction */
+   SCIP_Real             oldrootpscostscore  /**< old minimum pseudo cost score of variable */
    );
 
 #ifdef __cplusplus

@@ -13594,7 +13594,7 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
    SCIP_Real             weight              /**< weight in (0,1] of this update in pseudo cost sum */
    )
 {
-   SCIP_Real oldpseudocosts;
+   SCIP_Real oldrootpseudocosts;
    assert(var != NULL);
    assert(set != NULL);
    assert(var->scip == set->scip);
@@ -13617,6 +13617,18 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
 
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
+      /* store old pseudo-costs for root LP best-estimate update */
+      oldrootpseudocosts = SCIPvarGetMinPseudocostScore(var, stat, set, SCIPvarGetRootSol(var));
+
+      /* update history */
+      SCIPhistoryUpdatePseudocost(var->history, set, solvaldelta, objdelta, weight);
+      SCIPhistoryUpdatePseudocost(var->historycrun, set, solvaldelta, objdelta, weight);
+      SCIPhistoryUpdatePseudocost(stat->glbhistory, set, solvaldelta, objdelta, weight);
+      SCIPhistoryUpdatePseudocost(stat->glbhistorycrun, set, solvaldelta, objdelta, weight);
+
+      /* update root LP best-estimate */
+      SCIP_CALL( SCIPstatUpdateVarRootLPBestEstimate(stat, set, var, oldrootpseudocosts) );
+
       /* append history to file */
 #ifdef SCIP_HISTORYTOFILE
    {
@@ -13633,18 +13645,6 @@ SCIP_RETCODE SCIPvarUpdatePseudocost(
       }
    }
 #endif
-      /* store old pseudo-costs for root LP best-estimate update */
-      oldpseudocosts = SCIPvarGetPseudocost(var, stat, solvaldelta);
-
-      SCIPhistoryUpdatePseudocost(var->history, set, solvaldelta, objdelta, weight);
-      SCIPhistoryUpdatePseudocost(var->historycrun, set, solvaldelta, objdelta, weight);
-      SCIPhistoryUpdatePseudocost(stat->glbhistory, set, solvaldelta, objdelta, weight);
-      SCIPhistoryUpdatePseudocost(stat->glbhistorycrun, set, solvaldelta, objdelta, weight);
-
-      /* update root LP best-estimate */
-      SCIP_CALL( SCIPstatUpdateVarRootLPBestEstimate(stat, set, var,
-           solvaldelta >= 0 ? SCIP_BRANCHDIR_UPWARDS : SCIP_BRANCHDIR_DOWNWARDS, oldpseudocosts) );
-
       return SCIP_OKAY;
 
    case SCIP_VARSTATUS_FIXED:
@@ -13872,9 +13872,14 @@ SCIP_Real SCIPvarGetMinPseudocostScore(
    if( SCIPsetIsFeasIntegral(set, solval) )
       return 0.0;
 
+   /* no min pseudo-cost score is calculated as long as the variable was not initialized in a direction */
+   if( SCIPvarGetPseudocostCount(var, SCIP_BRANCHDIR_DOWNWARDS) < 1.0 || SCIPvarGetPseudocostCount(var, SCIP_BRANCHDIR_UPWARDS) < 1.0 )
+      return 0.0;
+
    /* compute delta's to ceil and floor of root LP solution value */
    solvaldeltaup = SCIPsetCeil(set, solval) - solval;
    solvaldeltadown = SCIPsetFloor(set, solval) - solval;
+
 
    upscore = SCIPvarGetPseudocost(var, stat, solvaldeltaup);
    downscore = SCIPvarGetPseudocost(var, stat, solvaldeltadown);
