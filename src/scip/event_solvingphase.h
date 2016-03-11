@@ -39,17 +39,6 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
-extern
-SCIP_Real SCIPgetOptimalSolutionValue(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
-
-EXTERN
-SCIP_RETCODE SCIPstoreTreeInfo(
-   SCIP* scip,
-   SCIP_NODE* focusnode
-   );
-
 #ifdef __cplusplus
 }
 #endif

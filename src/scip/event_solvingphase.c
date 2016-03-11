@@ -548,26 +548,6 @@ SCIP_RETCODE releaseNodeInformation(
    return SCIP_OKAY;
 }
 
-/** stores information on focus node */
-SCIP_RETCODE SCIPstoreTreeInfo(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_NODE*            focusnode           /**< node data structure */
-   )
-{
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
-
-   /* if the focus node is NULL, we do not need to update event handler data */
-   if( focusnode == NULL )
-      return SCIP_OKAY;
-
-   eventhdlrdata = SCIPeventhdlrGetData(SCIPfindEventhdlr(scip, EVENTHDLR_NAME));
-
-   /* call removal of this node from the event handler data */
-   SCIP_CALL( releaseNodeInformation(scip, eventhdlrdata, focusnode) );
-
-   return SCIP_OKAY;
-}
-
 /** update leaf information based on the solving status of the node */
 static
 void updateLeafInfo(
@@ -742,21 +722,6 @@ SCIP_Real getCurrentRegressionTangentAxisIntercept(
 /*
  * Local methods
  */
-
-/** returns the optimal value for this instance (as passed to the event handler) */
-SCIP_Real SCIPgetOptimalSolutionValue(
-   SCIP*                 scip                /**< SCIP data structure */
-   )
-{
-   SCIP_EVENTHDLR* eventhdlr;
-   SCIP_EVENTHDLRDATA* eventhdlrdata;
-
-   eventhdlr = SCIPfindEventhdlr(scip, EVENTHDLR_NAME);
-   assert(eventhdlr != NULL);
-   eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
-
-   return eventhdlrdata->optimalvalue;
-}
 
 /** checks if rank-1 transition has been reached, that is, when all open nodes have a best-estimate higher than the best
  *  previously checked node at this depth

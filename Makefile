@@ -345,7 +345,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/event_softtimelimit.o \
 			scip/disp_default.o \
 			scip/event_solvingphase.o \
-			scip/event_nodeevent.o \
 			scip/heur_actconsdiving.o \
 			scip/heur_bound.o \
 			scip/heur_clique.o \
