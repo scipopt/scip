@@ -58,24 +58,6 @@
 #define DISP_POSI_NODESLEFT     200
 #define DISP_STRI_NODESLEFT     TRUE
 
-/* display for the number of leaves passing the objective limit */
-#define DISP_NAME_NOBJLEAVES         "nobjleaves"
-#define DISP_DESC_NOBJLEAVES         "current number of encountered objective limit leaves"
-#define DISP_HEAD_NOBJLEAVES         "objleav"
-#define DISP_WIDT_NOBJLEAVES         7
-#define DISP_PRIO_NOBJLEAVES         40000
-#define DISP_POSI_NOBJLEAVES         600
-#define DISP_STRI_NOBJLEAVES         TRUE
-
-
-/* display for number of encountered infeasible leaf nodes */
-#define DISP_NAME_NINFEASLEAVES         "ninfeasleaves"
-#define DISP_DESC_NINFEASLEAVES         "number of encountered infeasible leaves"
-#define DISP_HEAD_NINFEASLEAVES         "infleav"
-#define DISP_WIDT_NINFEASLEAVES         7
-#define DISP_PRIO_NINFEASLEAVES         40000
-#define DISP_POSI_NINFEASLEAVES         800
-#define DISP_STRI_NINFEASLEAVES         TRUE
 
 #define DISP_NAME_LPITERATIONS  "lpiterations"
 #define DISP_DESC_LPITERATIONS  "number of simplex iterations"
@@ -317,6 +299,24 @@
 #define DISP_POSI_NSOLS         30000
 #define DISP_STRI_NSOLS         TRUE
 
+/* display for the number of leaves passing the objective limit */
+#define DISP_NAME_NOBJLEAVES    "nobjleaves"
+#define DISP_DESC_NOBJLEAVES    "current number of encountered objective limit leaves"
+#define DISP_HEAD_NOBJLEAVES    "objleav"
+#define DISP_WIDT_NOBJLEAVES    7
+#define DISP_PRIO_NOBJLEAVES    0
+#define DISP_POSI_NOBJLEAVES    31000
+#define DISP_STRI_NOBJLEAVES    TRUE
+
+
+/* display for number of encountered infeasible leaf nodes */
+#define DISP_NAME_NINFEASLEAVES  "ninfeasleaves"
+#define DISP_DESC_NINFEASLEAVES  "number of encountered infeasible leaves"
+#define DISP_HEAD_NINFEASLEAVES  "infleav"
+#define DISP_WIDT_NINFEASLEAVES  7
+#define DISP_PRIO_NINFEASLEAVES  0
+#define DISP_POSI_NINFEASLEAVES  32000
+#define DISP_STRI_NINFEASLEAVES  TRUE
 
 /*
  * Callback methods
@@ -1038,7 +1038,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_NOBJLEAVES);
    if( tmpdisp == NULL )
    {
-      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NOBJLEAVES, DISP_DESC_NOBJLEAVES, DISP_HEAD_NOBJLEAVES, SCIP_DISPSTATUS_ON,
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NOBJLEAVES, DISP_DESC_NOBJLEAVES, DISP_HEAD_NOBJLEAVES, SCIP_DISPSTATUS_AUTO,
             NULL, NULL, NULL, NULL, NULL, NULL, dispOutputNObjLeaves, NULL, DISP_WIDT_NOBJLEAVES, DISP_PRIO_NOBJLEAVES, DISP_POSI_NOBJLEAVES,
             DISP_STRI_NOBJLEAVES) );
    }
@@ -1047,7 +1047,7 @@ SCIP_RETCODE SCIPincludeDispDefault(
    tmpdisp = SCIPfindDisp(scip, DISP_NAME_NINFEASLEAVES);
    if( tmpdisp == NULL )
    {
-      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NINFEASLEAVES, DISP_DESC_NINFEASLEAVES, DISP_HEAD_NINFEASLEAVES, SCIP_DISPSTATUS_ON,
+      SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NINFEASLEAVES, DISP_DESC_NINFEASLEAVES, DISP_HEAD_NINFEASLEAVES, SCIP_DISPSTATUS_AUTO,
             NULL, NULL, NULL, NULL, NULL, NULL, dispOutputNInfeasLeaves, NULL, DISP_WIDT_NINFEASLEAVES, DISP_PRIO_NINFEASLEAVES, DISP_POSI_NINFEASLEAVES,
             DISP_STRI_NINFEASLEAVES) );
    }

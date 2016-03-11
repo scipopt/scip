@@ -1040,11 +1040,11 @@ SCIP_RETCODE updateDataStructures(
        * or end of a node solution process because we delay the recomputation of the node information)
        */
        assert(SCIPgetStage(scip) != SCIP_STAGE_SOLVING ||
-             (eventtype & SCIP_EVENTTYPE_BESTSOLFOUND) ||
-             eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
+          (eventtype & SCIP_EVENTTYPE_BESTSOLFOUND) ||
+          eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
        assert(SCIPgetStage(scip) != SCIP_STAGE_SOLVING ||
-             (eventtype & SCIP_EVENTTYPE_BESTSOLFOUND) ||
-             eventhdlrdata->nnodesbelowincumbent == checkLeavesBelowIncumbent(scip));
+          (eventtype & SCIP_EVENTTYPE_BESTSOLFOUND) ||
+          eventhdlrdata->nnodesbelowincumbent == checkLeavesBelowIncumbent(scip));
    }
 
    return SCIP_OKAY;
@@ -1308,7 +1308,7 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
    SCIP_EVENTHDLRDATA* eventhdlrdata;
    SCIP_EVENTHDLR* eventhdlr;
 
-   /* create Solvingphase event handler data */
+   /* create solving phase event handler data */
    eventhdlrdata = NULL;
    SCIP_CALL( SCIPallocMemory(scip, &eventhdlrdata) );
    assert(eventhdlrdata != NULL);
@@ -1334,10 +1334,10 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
    assert(eventhdlr != NULL);
 
    /* include the new displays into scip */
-   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NRANK1NODES, DISP_DESC_NRANK1NODES, DISP_HEAD_NRANK1NODES, SCIP_DISPSTATUS_ON,
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NRANK1NODES, DISP_DESC_NRANK1NODES, DISP_HEAD_NRANK1NODES, SCIP_DISPSTATUS_OFF,
          NULL, NULL, NULL, NULL, NULL, NULL, dispOutputNRank1Nodes, NULL, DISP_WIDT_NRANK1NODES, DISP_PRIO_NRANK1NODES, DISP_POSI_NRANK1NODES,
          DISP_STRI_NRANK1NODES) );
-   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NNODESBELOWINC, DISP_DESC_NNODESBELOWINC, DISP_HEAD_NNODESBELOWINC, SCIP_DISPSTATUS_ON,
+   SCIP_CALL( SCIPincludeDisp(scip, DISP_NAME_NNODESBELOWINC, DISP_DESC_NNODESBELOWINC, DISP_HEAD_NNODESBELOWINC, SCIP_DISPSTATUS_OFF,
          NULL, NULL, NULL, NULL, NULL, NULL, dispOutputNnodesbelowinc, NULL, DISP_WIDT_NNODESBELOWINC, DISP_PRIO_NNODESBELOWINC, DISP_POSI_NNODESBELOWINC,
          DISP_STRI_NNODESBELOWINC) );
 
