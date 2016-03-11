@@ -18511,6 +18511,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          }
          case SCIP_LPSOLSTAT_ITERLIMIT:
             ++scip->stat->nsbtimesiterlimhit;
+            /*lint -fallthrough*/
          case SCIP_LPSOLSTAT_TIMELIMIT:
          {
             /* use LP value as estimate */
@@ -18846,8 +18847,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       default:
          SCIPerrorMessage("Error: Unknown parameter value <%c> for branching/firstsbchild parameter:\n",scip->set->branch_firstsbchild);
          SCIPABORT();
-         return SCIP_PARAMETERWRONGVAL;
-      break;
+         return SCIP_PARAMETERWRONGVAL; /*lint !e527*/
    }
 
    downvalidlocal = FALSE;
