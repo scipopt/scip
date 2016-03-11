@@ -55,7 +55,6 @@
 #define DEFAULT_NODEOFFSET             50 /**< default node offset before transition to proof phase is active */
 #define DEFAULT_FALLBACK            FALSE /**< should the phase transition fall back to suboptimal phase? */
 #define DEFAULT_INTERRUPTOPTIMAL    FALSE /**< should solving process be interrupted if optimal solution was found? */
-#define DEFAULT_ADJUSTRELPSWEIGHTS  FALSE /**< should the scoring weights of the hybrid reliability pseudo cost branching rule be adjusted? */
 #define DEFAULT_USEFILEWEIGHTS      FALSE /**< should weights from a weight file be used to adjust branching score weights? */
 #define DEFAULT_USEWEIGHTEDQUOTIENTS TRUE /**< should weighted quotients be used to adjust branching score weights? */
 
@@ -113,7 +112,6 @@ struct SCIP_EventhdlrData
    SCIP_Longint          lastndelayedcutoffs;/**< the number of delayed cutoffs since the last update of a focus node */
    SCIP_Bool             fallback;           /**< should the phase transition fall back to improvement phase? */
    SCIP_Bool             interruptoptimal;   /**< interrupt after optimal solution was found */
-   SCIP_Bool             adjustrelpsweights; /**< should the relpscost cutoff weights be adjusted? */
    SCIP_Bool             useweightedquotients;/**< should weighted quotients between infeasible and pruned leaf nodes be considered? */
    SCIP_Bool             userestart1to2;     /**< should a restart be applied between the feasibility and improvement phase? */
    SCIP_Bool             userestart2to3;     /**< should a restart be applied between the improvement and the proof phase? */
@@ -799,55 +797,6 @@ void determineSolvingPhase(
       eventhdlrdata->solvingphase = SOLVINGPHASE_PROOF;
 }
 
-/**< adjust reliability pseudo cost weights depending on previously observed ratio between infeasible and pruned leaf nodes
- *   todo implement this directly inside relpscost or the core instead of using parameter here.
- */
-static
-SCIP_RETCODE adjustRelpscostWeights(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
-   )
-{
-   SCIP_Longint objleaves;
-   SCIP_Real quotient;
-   SCIP_Real newcutoffweight;
-   SCIP_Real newconflictweight;
-   SCIP_Real cutoffweight;
-   SCIP_Real conflictweight;
-   SCIP_Longint cutoffleaves;
-
-   objleaves = SCIPgetNObjlimLeaves(scip);
-   cutoffleaves = SCIPgetNInfeasibleLeaves(scip);
-   objleaves = MAX(objleaves, 1);
-   cutoffleaves = MAX(cutoffleaves, 1);
-
-   /* ratio between infeasible and pruned leaf nodes (that were actually processed) */
-   quotient = cutoffleaves / (SCIP_Real)objleaves;
-
-   newcutoffweight = quotient;
-   newconflictweight = quotient;
-
-   SCIP_CALL( SCIPgetRealParam(scip, "branching/relpscost/conflictweight", &conflictweight) );
-   SCIP_CALL( SCIPgetRealParam(scip, "branching/relpscost/cutoffweight", &cutoffweight) );
-
-   /* weight the quotient by the respective weights in use before the adjustment */
-   if( eventhdlrdata->useweightedquotients )
-   {
-      newcutoffweight *= cutoffweight;
-      newconflictweight *= conflictweight;
-   }
-
-   /* set new parameter values */
-   SCIP_CALL( SCIPsetRealParam(scip, "branching/relpscost/conflictweight", newconflictweight) );
-   SCIP_CALL( SCIPsetRealParam(scip, "branching/relpscost/cutoffweight", newcutoffweight) );
-
-   SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
-          "  Adjusting relpscost weights, (quot = %.3g): cutoffweight %.4g --> %.4g, confweight: %.4g --> %.4g \n", quotient,
-          cutoffweight, newcutoffweight, conflictweight, newconflictweight);
-
-   return SCIP_OKAY;
-}
-
 /* apply the user-specified phase-based settings: A phase transition invokes the read of phase-specific settings from a file */
 static
 SCIP_RETCODE applySolvingPhase(
@@ -948,13 +897,6 @@ SCIP_RETCODE applySolvingPhase(
       eventhdlrdata->enabled = TRUE;
       eventhdlrdata->transitionmethod = transitionmethod;
       eventhdlrdata->interruptoptimal = interruptoptimal;
-   }
-
-
-   /* adjust hybrid reliability pseudo cost weights */
-   if( eventhdlrdata->solvingphase == SOLVINGPHASE_PROOF && eventhdlrdata->adjustrelpsweights && SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-   {
-      SCIP_CALL(adjustRelpscostWeights(scip, eventhdlrdata) );
    }
 
    return SCIP_OKAY;
@@ -1372,10 +1314,6 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
          &eventhdlrdata->transitionmethod, FALSE, DEFAULT_TRANSITIONMETHOD, TRANSITIONMETHODS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/interruptoptimal", "should the event handler interrupt after optimal solution was found?",
          &eventhdlrdata->interruptoptimal, FALSE, DEFAULT_INTERRUPTOPTIMAL, NULL, NULL) );
-
-   SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/adjustrelpsweights", "should the branching score weights for cutoffs and "
-         "conflicts be adjusted after optimal solution was found?", &eventhdlrdata->adjustrelpsweights, FALSE,
-         DEFAULT_ADJUSTRELPSWEIGHTS, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/useweightedquotients", "use weighted quotients?", &eventhdlrdata->useweightedquotients,
          FALSE, DEFAULT_USEWEIGHTEDQUOTIENTS, NULL, NULL) );

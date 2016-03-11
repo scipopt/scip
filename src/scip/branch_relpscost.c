@@ -65,7 +65,7 @@
 #define DEFAULT_STARTRANDSEED  12345    /**< start random seed for random number generation */
 #define DEFAULT_RANDINITORDER  FALSE    /**< should candidates be initialized in randomized order? */
 #define DEFAULT_USESMALLWEIGHTSITLIM FALSE /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
-
+#define DEFAULT_DYNAMICWEIGHTS FALSE    /**< should the weights of the branching rule be adjusted dynamically during solving based infeasible and objective leaf counters? */
 /** branching rule data */
 struct SCIP_BranchruleData
 {
@@ -96,6 +96,7 @@ struct SCIP_BranchruleData
    SCIP_Bool             usesblocalinfo;     /**< should the scoring function disregard cutoffs for variable if sb-lookahead was feasible ? */
    SCIP_Bool             skipbadinitcands;   /**< should branching rule skip candidates that have a low probability to be
                                                *  better than the best strong-branching or pseudo-candidate? */
+   SCIP_Bool             dynamicweights;     /**< should the weights of the branching rule be adjusted dynamically during solving based on objective and infeasible leaf counters? */
    int                   confidencelevel;    /**< The confidence level for statistical methods, between 0 (Min) and 4 (Max). */
    int*                  nlcount;            /**< array to store nonlinear count values */
    int                   nlcountsize;        /**< length of nlcount array */
@@ -243,7 +244,7 @@ SCIP_RETCODE branchruledataEnsureNlcount(
 
    nvars = SCIPgetNVars(scip);
 
-   /**@todo test whether we want to apply this als if problem has only and constraints */
+   /**@todo test whether we want to apply this as if problem has only and constraints */
    /**@todo update changes in and constraints */
    if( branchruledata->nlscoreweight > 0.0 ) /*  && SCIPisNLPConstructed(scip) */
    {
@@ -323,19 +324,27 @@ SCIP_Real calcScore(
    )
 {
    SCIP_Real score;
+   SCIP_Real dynamicfactor;
 
    assert(branchruledata != NULL);
    assert(0.0 < frac && frac < 1.0);
 
-   score = branchruledata->conflictweight * (1.0 - 1.0/(1.0+conflictscore/avgconflictscore))
-      + branchruledata->conflengthweight * (1.0 - 1.0/(1.0+conflengthscore/avgconflengthscore))
-      + branchruledata->inferenceweight * (1.0 - 1.0/(1.0+inferencescore/avginferencescore))
-      + branchruledata->cutoffweight * (1.0 - 1.0/(1.0+cutoffscore/avgcutoffscore))
-      + branchruledata->pscostweight * (1.0 - 1.0/(1.0+pscostscore/avgpscostscore))
-      + branchruledata->nlscoreweight * nlscore;
+   if( branchruledata->dynamicweights )
+   {
+      dynamicfactor = (SCIPgetNInfeasibleLeaves(scip) + 1.0) / (SCIPgetNObjlimLeaves(scip) + 1.0);
+   }
+   else
+      dynamicfactor = 1.0;
+
+   score = dynamicfactor * (branchruledata->conflictweight * (1.0 - 1.0/(1.0+conflictscore/avgconflictscore))
+            + branchruledata->conflengthweight * (1.0 - 1.0/(1.0+conflengthscore/avgconflengthscore))
+            + branchruledata->inferenceweight * (1.0 - 1.0/(1.0+inferencescore/avginferencescore))
+            + branchruledata->cutoffweight * (1.0 - 1.0/(1.0+cutoffscore/avgcutoffscore)))
+         + branchruledata->pscostweight / dynamicfactor * (1.0 - 1.0/(1.0+pscostscore/avgpscostscore))
+         + branchruledata->nlscoreweight * nlscore;
 
    /* avoid close to integral variables */
-   if( MIN(frac, 1.0 - frac) < 10.0*SCIPfeastol(scip) )
+   if( MIN(frac, 1.0 - frac) < 10.0 * SCIPfeastol(scip) )
       score *= 1e-6;
 
    return score;
@@ -1684,6 +1693,10 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
          &branchruledata->usesmallweightsitlim, TRUE, DEFAULT_USESMALLWEIGHTSITLIM,
          NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/dynamicweights",
+         "should the weights of the branching rule be adjusted dynamically during solving based on objective and infeasible leaf counters?",
+         &branchruledata->randinitorder, TRUE, DEFAULT_DYNAMICWEIGHTS,
+         NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/startrandseed", "start seed for random number generation",
          &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );
 
