@@ -396,7 +396,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/nodesel_dfs.o \
 			scip/nodesel_estimate.o \
 			scip/nodesel_hybridestim.o \
-			scip/nodesel_linprojection.o \
 			scip/nodesel_restartdfs.o \
 			scip/nodesel_uct.o \
 			scip/presol_boundshift.o \
