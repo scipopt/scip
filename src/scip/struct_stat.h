@@ -65,6 +65,9 @@ struct SCIP_Stat
    SCIP_Longint          nconflictlpiterations;/**< number of simplex iterations used in conflict analysis */
    SCIP_Longint          nnodes;             /**< number of nodes processed in current run (including focus node) */
    SCIP_Longint          ninternalnodes;     /**< number of nodes processed in current run where a branching was performed */
+   SCIP_Longint          nobjleaves;         /**< number of leaf nodes processed that reached the cutoff bound */
+   SCIP_Longint          nfeasleaves;        /**< number of leaf nodes processed with feasible relaxation solution */
+   SCIP_Longint          ninfeasleaves;      /**< number of infeasible leaf nodes processed */
    SCIP_Longint          ntotalnodes;        /**< total number of nodes processed in all runs (including focus node) */
    SCIP_Longint          ntotalinternalnodes;/**< total number of nodes processed in all runs where a branching was performed */
    SCIP_Longint          ncreatednodes;      /**< total number of nodes created */
@@ -95,7 +98,7 @@ struct SCIP_Stat
    SCIP_Longint          nsbdowndomchgs;     /**< total number of domain changes generated at down children during strong branching */
    SCIP_Longint          nsbupdomchgs;       /**< total number of domain changes generated at up children during strong branching */
    SCIP_Longint          nsbtimesiterlimhit; /**< total number of times that the strong branching iteration limit was hit */
-   SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */   
+   SCIP_Longint          nnodesbeforefirst;  /**< number of nodes before first primal solution */
    SCIP_Longint          ninitconssadded;    /**< total number of initial constraints added during the solve */
    SCIP_Real             firstlpdualbound;   /**< dual bound of root node computed by first LP solve (without cuts) */
    SCIP_Real             rootlowerbound;     /**< lower bound of root node */

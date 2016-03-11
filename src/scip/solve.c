@@ -2844,7 +2844,7 @@ SCIP_RETCODE solveNodeLP(
 
    /* If pricing was aborted while solving the LP of the node and the node cannot be cut off due to the lower bound computed by the pricer,
    *  the solving of the LP might be stopped due to the objective limit, but the node may not be cut off, since the LP objective
-   *  is not a feasible lower bound for the solutions in the current subtree. 
+   *  is not a feasible lower bound for the solutions in the current subtree.
    *  In this case, the LP has to be solved to optimality by temporarily removing the cutoff bound. 
    */
    if( (*pricingaborted) && (SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT || SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_ITERLIMIT)
@@ -3149,7 +3149,7 @@ SCIP_RETCODE enforceConstraints(
          *branched = TRUE;
          resolved = TRUE;
 
-         /* increase the number of interal nodes */
+         /* increase the number of internal nodes */
          stat->ninternalnodes++;
          stat->ntotalinternalnodes++;
          break;
@@ -4037,7 +4037,7 @@ SCIP_RETCODE solveNode(
             assert(SCIPsepastoreGetNCuts(sepastore) == 0);
             branched = TRUE;
 
-            /* increase the number of interal nodes */
+            /* increase the number of internal nodes */
             stat->ninternalnodes++;
             stat->ntotalinternalnodes++;
             break;
@@ -4181,6 +4181,11 @@ SCIP_RETCODE solveNode(
    if( *cutoff )
    {
       SCIPdebugMessage("node is cut off\n");
+
+      if( SCIPtreeHasFocusNodeLP(tree) && lp->flushed && lp->solved && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+      {
+
+      }
       SCIPnodeUpdateLowerbound(focusnode, stat, set, tree, transprob, origprob, SCIPsetInfinity(set));
       *infeasible = TRUE;
       SCIP_CALL( SCIPdebugRemoveNode(blkmem, set, focusnode) ); /*lint !e506 !e774*/
@@ -4510,6 +4515,9 @@ SCIP_RETCODE SCIPsolveCIP(
                SCIP_CALL( addCurrentSolution(blkmem, set, messagehdlr, stat, origprob, transprob, primal, tree, reopt,
                      lp, eventqueue, eventfilter, FALSE) );
 
+               /* increment number of feasible leaf nodes */
+               stat->nfeasleaves++;
+
                /* issue NODEFEASIBLE event */
                SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEFEASIBLE) );
                SCIP_CALL( SCIPeventChgNode(&event, focusnode) );
@@ -4534,6 +4542,14 @@ SCIP_RETCODE SCIPsolveCIP(
 
                /* issue NODEINFEASIBLE event */
                SCIP_CALL( SCIPeventChgType(&event, SCIP_EVENTTYPE_NODEINFEASIBLE) );
+
+               /* we only increase the number of objective leaf nodes if we hit the LP objective limit; we might have also
+                * hit the objective limit at a node that is actually infeasible, or a dual reduction led to an infeasibility prior
+                * to LP solving such that the node will be marked as infeasible */
+               if( SCIPtreeHasCurrentNodeLP(tree) && SCIPlpGetSolstat(lp) == SCIP_LPSOLSTAT_OBJLIMIT )
+                  stat->nobjleaves++;
+               else
+                  stat->ninfeasleaves++;
 
                if( set->reopt_enable )
                {

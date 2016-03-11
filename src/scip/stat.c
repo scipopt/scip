@@ -489,6 +489,9 @@ void SCIPstatResetCurrentRun(
    stat->nseparounds = 0;
    stat->maxdepth = -1;
    stat->plungedepth = 0;
+   stat->nobjleaves = 0;
+   stat->ninfeasleaves = 0;
+   stat->nfeasleaves = 0;
 
    if( !solved )
       stat->status = SCIP_STATUS_UNKNOWN;
