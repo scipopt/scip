@@ -882,7 +882,7 @@ SCIP_RETCODE SCIPincludeSepaDisjunctive(
    SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolDisjunctive) );
 
    /* add separator parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/strengthen",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/strengthen",
          "strengthen cut if integer variables are present.",
          &sepadata->strengthen, TRUE, DEFAULT_STRENGTHEN, NULL, NULL) );
 

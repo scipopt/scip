@@ -773,7 +773,7 @@ int branch(
    /* increase the number of nodes, and stop solving, if the node limit is exceeded */
    (*ntreenodes)++;
 #ifdef TCLIQUE_DEBUG
-   debugMessage("(level %d, treenode %d) maxclique = %d, curclique = %d [mem=%"SCIP_LONGINT_FORMAT" (%"SCIP_LONGINT_FORMAT"), cliques=%d]\n",
+   debugMessage("(level %d, treenode %d) maxclique = %d, curclique = %d [mem=%" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT "), cliques=%d]\n",
       level, *ntreenodes, *maxcliqueweight, *curcliqueweight,
       BMSgetChunkMemoryUsed(mem), BMSgetMemoryUsed(), cliquehash == NULL ? 0 : cliquehash->ncliques);
 

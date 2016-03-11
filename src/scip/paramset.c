@@ -1281,7 +1281,7 @@ SCIP_RETCODE paramParseLongint(
    assert(set != NULL);
    assert(valuestr != NULL);
 
-   if( sscanf(valuestr, "%"SCIP_LONGINT_FORMAT, &value) == 1 )
+   if( sscanf(valuestr, "%" SCIP_LONGINT_FORMAT, &value) == 1 )
    {
       SCIP_CALL( SCIPparamSetLongint(param, set, messagehdlr, value, TRUE) );
    }

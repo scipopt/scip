@@ -15736,7 +15736,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
       char consname[SCIP_MAXSTRLEN];
 
       /* create a constraint out of the conflict set */
-      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%" SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, nbdchginfos, vars, vals, lhs, SCIPinfinity(scip),
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 
