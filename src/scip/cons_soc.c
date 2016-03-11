@@ -17,6 +17,8 @@
  * @brief  constraint handler for second order cone constraints \f$\sqrt{\gamma + \sum_{i=1}^{n} (\alpha_i\, (x_i + \beta_i))^2} \leq \alpha_{n+1}\, (x_{n+1}+\beta_{n+1})\f$
  * @author Stefan Vigerske
  * @author Marc Pfetsch
+ * @author Felipe Serrano
+ * @author Benjamin Mueller
  *
  * @todo rhsvar == NULL is supported in some routines, but not everywhere
  * @todo merge square terms with same variables in presol/exitpre
@@ -126,6 +128,7 @@ struct SCIP_ConshdlrData
    SCIP_Real             sepanlpmincont;     /**< minimal required fraction of continuous variables in problem to use solution of NLP relaxation in root for separation */
    SCIP_Bool             enfocutsremovable;  /**< are cuts added during enforcement removable from the LP in the same node? */
    SCIP_Bool             generalsocupg;      /**< try to upgrade more general quadratics to soc? */
+   SCIP_Bool             disaggregate;       /**< try to completely disaggregate soc? */
 
    SCIP_NODE*            lastenfolpnode;     /**< the node for which enforcement was called the last time (and some constraint was violated) */
    int                   nenfolprounds;      /**< counter on number of enforcement rounds for the current node */
@@ -2930,6 +2933,198 @@ SCIP_RETCODE polishSolution(
    return SCIP_OKAY;
 }
 
+/** disaggregates a (sufficiently large) SOC constraint into smaller ones; for each term on the lhs we add a quadratic
+ *  constraint (alpha_i * (x_i + beta_i))^2 <= alpha_{n+1} (x_{n+1} + beta_{n+1}) * z_i and a single linear constraint
+ *  sum { z_i } <= alpha_{n+1} * (x_{n+1} + beta_{n+1}); each quadratic constraint might be upgraded to a SOC; since the
+ *  violations of all quadratic constraints sum up we scale each constraint by the number of lhs terms + 1
+ */
+static
+SCIP_RETCODE disaggregate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_CONSDATA*        consdata,           /**< constraint data */
+   int*                  naddconss,          /**< pointer to count total number of added constraints */
+   int*                  ndelconss,          /**< pointer to count total number of deleted constraints */
+   SCIP_Bool*            success             /**< pointer to store whether disaggregation was successful */
+   )
+{
+   SCIP_CONS* discons;
+   SCIP_VAR** disvars;
+   SCIP_Real* discoefs;
+   SCIP_VAR* quadvars1[2];
+   SCIP_VAR* quadvars2[2];
+   SCIP_VAR* linvars[2];
+   SCIP_Real quadcoefs[2];
+   SCIP_Real lincoefs[2];
+   char name[SCIP_MAXSTRLEN];
+   SCIP_Real rhs;
+   SCIP_Real scale;
+   int ndisvars;
+   int nlinvars;
+   int nquadvars;
+   int i;
+
+   assert(naddconss != NULL);
+   assert(ndelconss != NULL);
+   assert(success != NULL);
+
+   *success = FALSE;
+
+   /* disaggregation does not make much sense if there are too few variables */
+   if( consdata->nvars < 3 )
+   {
+      SCIPdebugMessage("can not disaggregate too small soc constraint %s\n", SCIPconsGetName(cons));
+      return SCIP_OKAY;
+   }
+
+   /* there are at most n + 2 many linear varibles */
+   SCIP_CALL( SCIPallocBufferArray(scip, &disvars, consdata->nvars + 2) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &discoefs, consdata->nvars + 2) );
+   ndisvars = 0;
+
+   scale = consdata->nvars + 1;
+
+   /* add (alpha_i * (x_i + beta_i))^2 <= alpha_{n+1} * (x_{n+1} + beta_{n+1}) * z_i */
+   for( i = 0; i < consdata->nvars; ++i )
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "conedis_%s_%d", SCIPvarGetName(consdata->vars[i]), i);
+      SCIP_CALL( SCIPcreateVar(scip, &disvars[i], name, 0.0, SCIPinfinity(scip), 0.0, SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE,
+            NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, disvars[i]) );
+
+      nlinvars = 0;
+
+      /* 2 (alpha_i + beta_i)^2 x_i */
+      if( !SCIPisZero(scip, consdata->offsets[i]) )
+      {
+         lincoefs[nlinvars] = 2.0 * SQR(consdata->coefs[i]) * consdata->offsets[i] * scale;
+         linvars[nlinvars] = consdata->vars[i];
+         ++nlinvars;
+      }
+
+      /* -(alpha_{n+1} * beta_{n+1}) * z_i */
+      if( !SCIPisZero(scip, consdata->rhsoffset) )
+      {
+         lincoefs[nlinvars] = -1.0 * consdata->rhscoeff * consdata->rhsoffset * scale;
+         linvars[nlinvars] = disvars[i];
+         ++nlinvars;
+      }
+
+      /* (alpha_i)^2 * x_i */
+      quadcoefs[0] = SQR(consdata->coefs[i]) * scale;
+      quadvars1[0] = consdata->vars[i];
+      quadvars2[0] = consdata->vars[i];
+      nquadvars = 1;
+
+      if( consdata->rhsvar != NULL )
+      {
+         /* -(alpha_{n+1}) * z_i * x_{n+1} */
+         quadcoefs[1] = -1.0 * consdata->rhscoeff * scale;
+         quadvars1[1] = consdata->rhsvar;
+         quadvars2[1] = disvars[i];
+         nquadvars = 2;
+      }
+
+      /* -(alpha_i * beta_i)^2 */
+      rhs = -1.0 * SQR(consdata->offsets[i] * consdata->coefs[i]) * scale;
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "consdis_%s_%d", SCIPconsGetName(cons), i);
+      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &discons, name, nlinvars, linvars, lincoefs, nquadvars, quadvars1,
+            quadvars2, quadcoefs, -SCIPinfinity(scip), rhs) );
+      SCIP_CALL( SCIPaddCons(scip, discons) );
+#ifdef SCIP_DEBUG
+      SCIP_CALL( SCIPprintCons(scip, discons, NULL) );
+#endif
+      SCIP_CALL( SCIPreleaseCons(scip, &discons) );
+      ++(*naddconss);
+
+
+      /* linear coefficient in the linear constraint */
+      discoefs[ndisvars] = 1.0;
+      ++ndisvars;
+   }
+   assert(ndisvars == consdata->nvars);
+
+   /* add gamma <= alpha_{n+1} * (x_{n+1} + beta_{n+1}) * z_i */
+   if( !SCIPisZero(scip, consdata->constant) )
+   {
+      assert(consdata->rhsvar != NULL);
+
+      SCIP_CALL( SCIPcreateVar(scip, &disvars[ndisvars], "conedis_constant", 0.0, SCIPinfinity(scip), 0.0,
+            SCIP_VARTYPE_CONTINUOUS, TRUE, FALSE, NULL, NULL, NULL, NULL, NULL) );
+      SCIP_CALL( SCIPaddVar(scip, disvars[ndisvars]) );
+
+      nlinvars = 0;
+
+      /* -(alpha_{n+1} * beta_{n+1}) * z_i */
+      if( !SCIPisZero(scip, consdata->rhsoffset) )
+      {
+         lincoefs[nlinvars] = -1.0 * consdata->rhsoffset * consdata->rhscoeff * scale;
+         linvars[nlinvars] = disvars[ndisvars];
+         ++nlinvars;
+      }
+
+      /* -alpha_{n+1} * z_i * x_{n+1} */
+      quadcoefs[0] = -1.0 * consdata->rhscoeff * scale;
+      quadvars1[0] = consdata->rhsvar;
+      quadvars2[0] = disvars[ndisvars];
+
+      /* -gamma */
+      rhs = -1.0 * consdata->constant * scale;
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "consdis_%s_constant", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &discons, name, nlinvars, linvars, lincoefs, 1, quadvars1,
+            quadvars2, quadcoefs, -SCIPinfinity(scip), rhs) );
+      SCIP_CALL( SCIPaddCons(scip, discons) );
+      SCIP_CALL( SCIPreleaseCons(scip, &discons) );
+      ++(*naddconss);
+
+      /* linear coefficient in the linear constraint */
+      discoefs[ndisvars] = 1.0;
+      ++ndisvars;
+   }
+
+   /* create linear constraint sum z_i <= alpha_{n+1} * (x_{n+1} + beta_{n+1}); first add extra coefficient for the rhs
+    * variable (if it exists)
+    */
+   if( consdata->rhsvar != NULL )
+   {
+      discoefs[ndisvars] = -1.0 * consdata->rhscoeff;
+      disvars[ndisvars] = consdata->rhsvar;
+
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "consdis_linear_%s", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateConsBasicLinear(scip, &discons, name, ndisvars + 1, disvars, discoefs, -SCIPinfinity(scip),
+            consdata->rhscoeff * consdata->rhsoffset) );
+   }
+   else
+   {
+      (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "consdis_linear_%s", SCIPconsGetName(cons));
+      SCIP_CALL( SCIPcreateConsBasicLinear(scip, &discons, name, ndisvars, disvars, discoefs, -SCIPinfinity(scip),
+            consdata->rhscoeff * consdata->rhsoffset) );
+   }
+
+   SCIP_CALL( SCIPaddCons(scip, discons) );
+   SCIP_CALL( SCIPreleaseCons(scip, &discons) );
+   ++(*naddconss);
+
+   /* release all variables */
+   for( i = ndisvars - 1; i >= 0; --i )
+   {
+      SCIP_CALL( SCIPreleaseVar(scip, &disvars[i]) );
+   }
+   SCIPfreeBufferArray(scip, &discoefs);
+   SCIPfreeBufferArray(scip, &disvars);
+
+   /* delete constraint */
+   SCIP_CALL( SCIPdelCons(scip, cons) );
+   ++(*ndelconss);
+
+   *success = TRUE;
+
+   return SCIP_OKAY;
+}
+
+
 /*
  * Quadratic constraint upgrading
  */
@@ -4547,6 +4742,23 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
                return SCIP_ERROR;
          } /*lint !e788*/
       }
+
+      /* disaggregate each lhs term to a quadratic constraint by using auxiliary variables */
+      if( conshdlrdata->disaggregate && (presoltiming & SCIP_PRESOLTIMING_EXHAUSTIVE) != 0 )
+      {
+         SCIP_Bool success;
+
+         SCIP_CALL( disaggregate(scip, conss[c], consdata, naddconss, ndelconss, &success) );
+
+         if( success )
+         {
+            SCIPdebugMessage("disaggregated SOC constraint\n");
+
+            /* conss[c] has been deleted */
+            *result = SCIP_SUCCESS;
+            continue;
+         }
+      }
    }
 
    return SCIP_OKAY;
@@ -5051,6 +5263,10 @@ SCIP_RETCODE SCIPincludeConshdlrSOC(
    SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/generalsocupgrade",
          "try to upgrade more general quadratics to soc?",
          &conshdlrdata->generalsocupg, TRUE, TRUE, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "constraints/" CONSHDLR_NAME "/disaggregate",
+         "try to completely disaggregate soc?",
+         &conshdlrdata->disaggregate, TRUE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
