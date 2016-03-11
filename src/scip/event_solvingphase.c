@@ -122,6 +122,7 @@ struct SCIP_EventhdlrData
    SCIP_Bool             estimatereached;    /**< has the best-estimate transition been reached? */
    SCIP_Bool             optimalreached;     /**< is the incumbent already optimal? */
    SCIP_Bool             logreached;         /**< has a logarithmic phase transition been reached? */
+   SCIP_Bool             newbestsol;         /**< has a new incumbent been found since the last node was solved? */
 
    SCIP_REGRESSION*      regression;         /**< regression data for log linear regression of the incumbent solutions */
    SCIP_Real             lastx;              /**< X-value of last observation */
@@ -999,13 +1000,9 @@ SCIP_RETCODE updateDataStructures(
 
    switch( eventtype )
    {
-      /* recompute all node information from scratch if a new solution was found */
-      /* todo delay this until a node event (can save time if several solutions are found at one node) */
+      /* store that a new best solution was found, but delay the update of node information until a node was solved */
       case SCIP_EVENTTYPE_BESTSOLFOUND:
-         if( SCIPgetStage(scip) == SCIP_STAGE_SOLVING )
-         {
-            SCIP_CALL( recomputeNodeInformation(scip, eventhdlrdata) );
-         }
+         eventhdlrdata->newbestsol = TRUE;
 
          /* update logarithmic regression of solution process */
          updateLogRegression(scip, eventhdlrdata);
@@ -1030,11 +1027,30 @@ SCIP_RETCODE updateDataStructures(
       default:
          break;
    }
+   /* recompute all node information from scratch if a new solution was found */
+   if( eventhdlrdata->newbestsol && (eventtype & (SCIP_EVENTTYPE_NODESOLVED | SCIP_EVENTTYPE_NODEFOCUSED)) )
+   {
+      SCIP_CALL( recomputeNodeInformation(scip, eventhdlrdata) );
+      eventhdlrdata->newbestsol = FALSE;
+   }
+   else
+   {
+
+      /* ensure that required tree information was correctly computed; only available in solving stage and at the beginning
+       * or end of a node solution process because we delay the recomputation of the node information)
+       */
+       assert(SCIPgetStage(scip) != SCIP_STAGE_SOLVING ||
+             (eventtype & SCIP_EVENTTYPE_BESTSOLFOUND) ||
+             eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
+       assert(SCIPgetStage(scip) != SCIP_STAGE_SOLVING ||
+             (eventtype & SCIP_EVENTTYPE_BESTSOLFOUND) ||
+             eventhdlrdata->nnodesbelowincumbent == checkLeavesBelowIncumbent(scip));
+   }
 
    return SCIP_OKAY;
 }
 
-/** todo test all criteria whether they have been reached */
+/** test all criteria whether they have been reached */
 static
 void testCriteria(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1120,6 +1136,7 @@ SCIP_DECL_EVENTINITSOL(eventInitsolSolvingphase)
    eventhdlrdata->nnodesbelowincumbent = 0;
    eventhdlrdata->nrank1nodes = 0;
    eventhdlrdata->lastndelayedcutoffs = SCIPgetNDelayedCutoffs(scip);
+   eventhdlrdata->newbestsol = FALSE;
 
    return SCIP_OKAY;
 }
@@ -1216,10 +1233,6 @@ SCIP_DECL_EVENTEXEC(eventExecSolvingphase)
 
    /* update data structures depending on the event */
    SCIP_CALL( updateDataStructures(scip, eventhdlrdata, eventtype) );
-
-   /* ensure that required tree information was correctly computed; only available in solving stage */
-   assert(SCIPgetStage(scip) != SCIP_STAGE_SOLVING || eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
-   assert(SCIPgetStage(scip) != SCIP_STAGE_SOLVING || eventhdlrdata->nnodesbelowincumbent == checkLeavesBelowIncumbent(scip));
 
    /* if the phase-based solver is enabled, we check if a phase transition occurred and alter the settings accordingly */
    if( eventhdlrdata->enabled )
