@@ -565,6 +565,7 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
 
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
+      /* return if infeasibility was detected during LP construction */
       if( cutoff )
          return SCIP_OKAY;
 
