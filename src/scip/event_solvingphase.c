@@ -47,7 +47,7 @@
 #define EVENTHDLR_NAME         "solvingphase"
 #define EVENTHDLR_DESC         "event handler to adjust settings depending on current stage"
 
-#define EVENTHDLR_EVENT SCIP_EVENTTYPE_BESTSOLFOUND | SCIP_EVENTTYPE_NODESOLVED | SCIP_EVENTTYPE_NODEFOCUSED /**< the actual event to be caught */
+#define EVENTHDLR_EVENT SCIP_EVENTTYPE_BESTSOLFOUND | SCIP_EVENTTYPE_NODEBRANCHED | SCIP_EVENTTYPE_NODEFOCUSED /**< the actual event to be caught */
 #define TRANSITIONMETHODS          "elor" /**< which heuristic transition method: (e)stimate based, (l)ogarithmic regression based, (o)ptimal value based (cheat!),
                                             * (r)ank-1 node based? */
 #define DEFAULT_SETNAME     "default.set" /**< default settings file name for all solving phase setting files */
@@ -56,13 +56,13 @@
 #define DEFAULT_FALLBACK            FALSE /**< should the phase transition fall back to suboptimal phase? */
 #define DEFAULT_INTERRUPTOPTIMAL    FALSE /**< should solving process be interrupted if optimal solution was found? */
 #define DEFAULT_USEFILEWEIGHTS      FALSE /**< should weights from a weight file be used to adjust branching score weights? */
-#define DEFAULT_USEWEIGHTEDQUOTIENTS TRUE /**< should weighted quotients be used to adjust branching score weights? */
 
 #define DEFAULT_ENABLED             FALSE /**< should the event handler be executed? */
 #define DEFAULT_TESTMODE            FALSE /**< should the event handler test the criteria? */
 
 #define DEFAULT_USERESTART1TO2      FALSE /**< should a restart be applied between the feasibility and improvement phase? */
 #define DEFAULT_USERESTART2TO3      FALSE /**< should a restart be applied between the improvement and the proof phase? */
+#define DEFAULT_USEEMPHSETTINGS     TRUE  /**< should emphasis settings be used for the different solving phases, or settings files? */
 
 /* logarithmic regression settings */
 #define DEFAULT_LOGREGRESSION_XTYPE   'n' /**< default type to use for log regression - (t)ime, (n)odes, (l)p iterations */
@@ -112,9 +112,10 @@ struct SCIP_EventhdlrData
    SCIP_Longint          lastndelayedcutoffs;/**< the number of delayed cutoffs since the last update of a focus node */
    SCIP_Bool             fallback;           /**< should the phase transition fall back to improvement phase? */
    SCIP_Bool             interruptoptimal;   /**< interrupt after optimal solution was found */
-   SCIP_Bool             useweightedquotients;/**< should weighted quotients between infeasible and pruned leaf nodes be considered? */
    SCIP_Bool             userestart1to2;     /**< should a restart be applied between the feasibility and improvement phase? */
    SCIP_Bool             userestart2to3;     /**< should a restart be applied between the improvement and the proof phase? */
+   SCIP_Bool             useemphsettings;    /**< should emphasis settings for the solving phases be used, or settings files? */
+
    SCIP_Bool             testmode;           /**< should transitions be tested only, but not triggered? */
    SCIP_Bool             rank1reached;       /**< has the rank-1 transition into proof phase been reached? */
    SCIP_Bool             estimatereached;    /**< has the best-estimate transition been reached? */
@@ -132,6 +133,7 @@ struct SCIP_EventhdlrData
    int                   nrank1nodes;        /**< number of rank-1 nodes */
    int                   nnodesbelowincumbent;/**< number of open nodes with an estimate lower than the current incumbent */
 };
+
 
 /*
  * methods for rank-1 and active estimate transition
@@ -336,6 +338,9 @@ SCIP_RETCODE recomputeNodeInformation(
 
    SCIP_CALL ( addNodesInformation(scip, eventhdlrdata, leaves, nleaves) );
 
+   /* information needs to be recomputed from scratch if a new incumbent is found */
+   eventhdlrdata->newbestsol = FALSE;
+
    return SCIP_OKAY;
 }
 
@@ -426,7 +431,7 @@ void releaseNodeFromDepthInfo(
 
 /** ensures sufficient size for depthInfo array */
 static
-SCIP_RETCODE ensureDepthInfoArraySize (
+SCIP_RETCODE ensureDepthInfoArraySize(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_EVENTHDLRDATA*   eventhdlrdata,      /**< event handler data */
    SCIP_NODE*            node                /**< node to be removed from the data structures of the event handler */
@@ -488,7 +493,7 @@ SCIP_RETCODE releaseNodeInformation(
 
 
    /* in case that selected nodes were cut off in between two calls to this method, build data structures from scratch again */
-   if( SCIPgetNDelayedCutoffs(scip) > eventhdlrdata->lastndelayedcutoffs )
+   if( SCIPgetNDelayedCutoffs(scip) > eventhdlrdata->lastndelayedcutoffs || eventhdlrdata->newbestsol )
    {
       SCIP_CALL( recomputeNodeInformation(scip, eventhdlrdata) );
 
@@ -797,6 +802,176 @@ void determineSolvingPhase(
       eventhdlrdata->solvingphase = SOLVINGPHASE_PROOF;
 }
 
+/** changes parameters by using emphasis settings */
+static
+SCIP_RETCODE changeEmphasisParameters(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
+   )
+{
+   SCIP_PARAMEMPHASIS paramemphasis;
+
+   paramemphasis = SCIP_PARAMEMPHASIS_DEFAULT;
+   /* choose the appropriate emphasis settings for the new solving phase */
+   switch(eventhdlrdata->solvingphase)
+   {
+      case SOLVINGPHASE_FEASIBILITY:
+         paramemphasis = SCIP_PARAMEMPHASIS_PHASEFEAS;
+         break;
+      case SOLVINGPHASE_IMPROVEMENT:
+         paramemphasis = SCIP_PARAMEMPHASIS_PHASEIMPROVE;
+         break;
+      case SOLVINGPHASE_PROOF:
+         paramemphasis = SCIP_PARAMEMPHASIS_PHASEPROOF;
+         break;
+      default:
+         SCIPdebugMessage("Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
+         SCIPABORT();
+         break;
+   }
+
+   SCIP_CALL( SCIPsetEmphasis(scip, paramemphasis, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** change general solving strategy of SCIP depending on the phase by reading from settings file */
+static
+SCIP_RETCODE changeParametersUsingSettingsFiles(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
+   )
+{
+   FILE* file;
+   char* paramfilename = NULL;
+
+   /* choose the settings file for the new solving phase */
+   switch(eventhdlrdata->solvingphase)
+   {
+      case SOLVINGPHASE_FEASIBILITY:
+         paramfilename = eventhdlrdata->setfilefeasibility;
+         break;
+      case SOLVINGPHASE_IMPROVEMENT:
+         paramfilename = eventhdlrdata->setfileimprove;
+         break;
+      case SOLVINGPHASE_PROOF:
+         paramfilename = eventhdlrdata->setfileproof;
+         break;
+      default:
+         SCIPdebugMessage("Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
+         SCIPABORT();
+         break;
+   }
+
+   assert(paramfilename != NULL);
+
+   file = fopen(paramfilename, "r");
+
+   /* test if file could be found and print a warning if not */
+   if( file == NULL )
+   {
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Changed solving phase to phase %d.\n", eventhdlrdata->solvingphase);
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Parameter file <%s> not found--keeping settings as before.\n", paramfilename);
+   }
+   else
+   {
+      /* we can close the file */
+      fclose(file);
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Changed solving phase to phase %d.\n", eventhdlrdata->solvingphase);
+
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Reading parameters from file <%s>\n", paramfilename);
+
+
+      SCIP_CALL( SCIPreadParams(scip, paramfilename) );
+
+   }
+
+   return SCIP_OKAY;
+}
+
+/** fix/unfix relevant solving parameters that should not accidentally be set to default values */
+static
+SCIP_RETCODE fixOrUnfixRelevantParameters(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             fix                 /**< should the parameters be fixed (true) or unfixed? */
+   )
+{
+   int p;
+   const char* limitparameters[] = {
+      "limits/time",
+      "limits/nodes",
+      "limits/totalnodes",
+      "limits/stallnodes",
+      "limits/memory",
+      "limits/gap",
+      "limits/absgap",
+      "limits/solutions",
+      "limits/bestsol",
+      "limits/maxsol",
+      "limits/maxorigsol",
+      "limits/restarts",
+      "limits/autorestartnodes",
+      "limits/softtime",
+      "eventhdlr/solvingphase/enabled",
+      "eventhdlr/solvingphase/fallback",
+      "eventhdlr/solvingphase/interruptoptimal",
+      "eventhdlr/solvingphase/nodeoffset",
+      "eventhdlr/solvingphase/nosolsetname",
+      "eventhdlr/solvingphase/optsetname",
+      "eventhdlr/solvingphase/optsolvalue",
+      "eventhdlr/solvingphase/suboptsetname",
+      "eventhdlr/solvingphase/testmode",
+      "eventhdlr/solvingphase/transitionmethod",
+      "eventhdlr/solvingphase/useemphsettings",
+      "eventhdlr/solvingphase/userestart1to2",
+      "eventhdlr/solvingphase/userestart2to3",
+      "eventhdlr/solvingphase/xtype"
+   };
+   int nlimitparameters = 28;
+
+   /* fix or unfix all specified limit parameters */
+   for( p = 0; p < nlimitparameters; ++p )
+   {
+      if( fix )
+      {
+         SCIP_CALL( SCIPfixParam(scip, limitparameters[p]) );
+      }
+      else
+      {
+         SCIP_CALL( SCIPunfixParam(scip, limitparameters[p]) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/** change settings depending whether emphasis settings should be used, or settings files */
+static
+SCIP_RETCODE adaptSolverBehavior(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
+   )
+{
+   /* fix relevant parameters such that they are not overwritten */
+   SCIP_CALL( fixOrUnfixRelevantParameters(scip, TRUE) );
+
+   /* change settings either by using emphasis settings or by settings files */
+   if( eventhdlrdata->useemphsettings )
+   {
+      SCIP_CALL( changeEmphasisParameters(scip, eventhdlrdata) );
+   }
+   else
+   {
+      SCIP_CALL( changeParametersUsingSettingsFiles(scip, eventhdlrdata) );
+   }
+
+   /* unfix relevant parameters that have been fixed for changing emphasis */
+   SCIP_CALL( fixOrUnfixRelevantParameters(scip, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /* apply the user-specified phase-based settings: A phase transition invokes the read of phase-specific settings from a file */
 static
 SCIP_RETCODE applySolvingPhase(
@@ -804,9 +979,7 @@ SCIP_RETCODE applySolvingPhase(
    SCIP_EVENTHDLRDATA*   eventhdlrdata       /**< event handler data */
    )
 {
-   FILE* file;
    SOLVINGPHASE oldsolvingphase;
-   char* paramfilename;
    SCIP_Bool restart;
 
    /* return immediately if we are in the proof phase */
@@ -849,57 +1022,11 @@ SCIP_RETCODE applySolvingPhase(
       SCIP_CALL( SCIPrestartSolve(scip) );
    }
 
-   /* choose the settings file for the new solving phase */
-   switch (eventhdlrdata->solvingphase)
-   {
-   case SOLVINGPHASE_FEASIBILITY:
-      paramfilename = eventhdlrdata->setfilefeasibility;
-      break;
-   case SOLVINGPHASE_IMPROVEMENT:
-      paramfilename = eventhdlrdata->setfileimprove;
-      break;
-   case SOLVINGPHASE_PROOF:
-      paramfilename = eventhdlrdata->setfileproof;
-      break;
-   default:
-      SCIPdebugMessage("Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
-      SCIPABORT();
-      break;
-   }
-   assert(paramfilename != NULL);
-
-   file = fopen(paramfilename, "r");
-
-   /* test if file could be found and print a warning if not */
-   if( file == NULL )
-   {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Changed solving phase to %d.\n", eventhdlrdata->solvingphase);
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Parameter file <%s> not found--keeping settings as before.\n", paramfilename);
-   }
-   else
-   {
-      char transitionmethod;
-      SCIP_Bool interruptoptimal;
-
-      /* we can close the file */
-      fclose(file);
-
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,"Changed solving phase to phase %d \n", eventhdlrdata->solvingphase);
-
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "Reading parameters from file <%s>\n", paramfilename);
-
-      /* save some more event handler specific parameters so that they don't get overwritten */
-      interruptoptimal = eventhdlrdata->interruptoptimal;
-      transitionmethod = eventhdlrdata->transitionmethod;
-
-      SCIP_CALL( SCIPreadParams(scip, paramfilename) );
-
-      eventhdlrdata->enabled = TRUE;
-      eventhdlrdata->transitionmethod = transitionmethod;
-      eventhdlrdata->interruptoptimal = interruptoptimal;
-   }
+   /* change general solving settings depending on solving strategy */
+   SCIP_CALL( adaptSolverBehavior(scip, eventhdlrdata) );
 
    return SCIP_OKAY;
+
 }
 
 /** update the logarithmic regression */
@@ -955,39 +1082,42 @@ SCIP_RETCODE updateDataStructures(
       case SCIP_EVENTTYPE_NODEFOCUSED:
          assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
          SCIP_CALL( releaseNodeInformation(scip, eventhdlrdata, SCIPgetCurrentNode(scip)));
-
          assert(eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
+
          break;
 
       /* store node information for child nodes */
       case SCIP_EVENTTYPE_NODEBRANCHED:
          assert(SCIPgetStage(scip) == SCIP_STAGE_SOLVING);
-         SCIP_CALL( SCIPgetChildren(scip, &children, &nchildren) );
-         SCIP_CALL( addNodesInformation(scip, eventhdlrdata, children, nchildren) );
+
+         /* in the case of new best solution, we recompute node information from scratch */
+         if( eventhdlrdata->newbestsol )
+         {
+            SCIP_CALL( recomputeNodeInformation(scip, eventhdlrdata) );
+            eventhdlrdata->newbestsol = FALSE;
+
+            return SCIP_OKAY;
+         }
+         else
+         {
+            SCIP_CALL( SCIPgetChildren(scip, &children, &nchildren) );
+            SCIP_CALL( addNodesInformation(scip, eventhdlrdata, children, nchildren) );
+         }
          break;
 
       default:
          break;
    }
-   /* recompute all node information from scratch if a new solution was found */
-   if( eventhdlrdata->newbestsol && (eventtype & (SCIP_EVENTTYPE_NODESOLVED | SCIP_EVENTTYPE_NODEFOCUSED)) )
-   {
-      SCIP_CALL( recomputeNodeInformation(scip, eventhdlrdata) );
-      eventhdlrdata->newbestsol = FALSE;
-   }
-   else
-   {
 
-      /* ensure that required tree information was correctly computed; only available in solving stage and at the beginning
-       * or end of a node solution process because we delay the recomputation of the node information)
-       */
-       assert(SCIPgetStage(scip) != SCIP_STAGE_SOLVING ||
+   /* ensure that required tree information was correctly computed; only available in solving stage and at the beginning
+    * or end of a node solution process because we delay the recomputation of the node information)
+    */
+   assert(SCIPgetStage(scip) != SCIP_STAGE_SOLVING ||
           (eventtype & SCIP_EVENTTYPE_BESTSOLFOUND) ||
           eventhdlrdata->nnodesbelowincumbent <= SCIPgetNNodesLeft(scip));
-       assert(SCIPgetStage(scip) != SCIP_STAGE_SOLVING ||
+   assert(SCIPgetStage(scip) != SCIP_STAGE_SOLVING ||
           (eventtype & SCIP_EVENTTYPE_BESTSOLFOUND) ||
           eventhdlrdata->nnodesbelowincumbent == checkLeavesBelowIncumbent(scip));
-   }
 
    return SCIP_OKAY;
 }
@@ -1031,6 +1161,9 @@ void testCriteria(
  */
 
 /** copy method for event handler (called when SCIP copies plugins) */
+/* todo this code needs to stay disabled as long as the soft limit event handler is not copied, because we save
+ * the soft time limit parameter but this will crash as soon as we are in a SCIP copy */
+#ifdef SCIP_DISABLED_CODE
 static
 SCIP_DECL_EVENTCOPY(eventCopySolvingphase)
 {  /*lint --e{715}*/
@@ -1043,6 +1176,9 @@ SCIP_DECL_EVENTCOPY(eventCopySolvingphase)
 
    return SCIP_OKAY;
 }
+#else
+#define eventCopySolvingphase NULL
+#endif
 
 /** destructor of event handler to free user data (called when SCIP is exiting) */
 static
@@ -1315,9 +1451,6 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/interruptoptimal", "should the event handler interrupt after optimal solution was found?",
          &eventhdlrdata->interruptoptimal, FALSE, DEFAULT_INTERRUPTOPTIMAL, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/useweightedquotients", "use weighted quotients?", &eventhdlrdata->useweightedquotients,
-         FALSE, DEFAULT_USEWEIGHTEDQUOTIENTS, NULL, NULL) );
-
    SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/userestart1to2",
          "should a restart be applied between the feasibility and improvement phase?",
          &eventhdlrdata->userestart1to2, FALSE, DEFAULT_USERESTART1TO2, NULL, NULL) );
@@ -1332,6 +1465,10 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
    /* add parameter for logarithmic regression */
    SCIP_CALL( SCIPaddCharParam(scip, "eventhdlr/"EVENTHDLR_NAME"/xtype", "x type for log regression - (t)ime, (n)odes, (l)p iterations",
         &eventhdlrdata->logregression_xtype, FALSE, DEFAULT_LOGREGRESSION_XTYPE, LOGREGRESSION_XTYPES, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "eventhdlr/"EVENTHDLR_NAME"/useemphsettings",
+      "should emphasis settings for the solving phases be used, or settings files?",
+      &eventhdlrdata->useemphsettings, FALSE, DEFAULT_USEEMPHSETTINGS, NULL, NULL) );
 
    return SCIP_OKAY;
 }

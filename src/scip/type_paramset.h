@@ -44,7 +44,7 @@ enum SCIP_ParamType
 };
 typedef enum SCIP_ParamType SCIP_PARAMTYPE;
 
-/** possible parameter settings - used to determine the behavior of different SCIP components, e.g., heuristics, separtors, ... */
+/** possible parameter settings - used to determine the behavior of different SCIP components, e.g., heuristics, separators, ... */
 enum SCIP_ParamSetting
 {
    SCIP_PARAMSETTING_DEFAULT     = 0,        /**< use default values */
@@ -65,7 +65,10 @@ enum SCIP_ParamEmphasis
    SCIP_PARAMEMPHASIS_FEASIBILITY = 3,        /**< detect feasibility fast */
    SCIP_PARAMEMPHASIS_HARDLP      = 4,        /**< be capable to handle hard LPs */
    SCIP_PARAMEMPHASIS_OPTIMALITY  = 5,        /**< prove optimality fast */
-   SCIP_PARAMEMPHASIS_COUNTER     = 6         /**< get a feasible and "fast" counting process */
+   SCIP_PARAMEMPHASIS_COUNTER     = 6,        /**< get a feasible and "fast" counting process */
+   SCIP_PARAMEMPHASIS_PHASEFEAS   = 7,        /**< feasibility phase settings during 3-phase solving approach */
+   SCIP_PARAMEMPHASIS_PHASEIMPROVE= 8,        /**< improvement phase settings during 3-phase solving approach */
+   SCIP_PARAMEMPHASIS_PHASEPROOF  = 9         /**< proof phase settings during 3-phase solving approach */
 };
 typedef enum SCIP_ParamEmphasis SCIP_PARAMEMPHASIS;
 
