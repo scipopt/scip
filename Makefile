@@ -660,7 +660,7 @@ endif
 
 .PHONY: doc
 doc:
-		cd doc; $(DOXY) $(MAINSHORTNAME).dxy > /dev/null; $(DOXY) $(MAINSHORTNAME)devel.dxy > /dev/null
+		cd doc; $(DOXY) $(MAINSHORTNAME).dxy; $(DOXY) $(MAINSHORTNAME)devel.dxy > /dev/null
 
 .PHONY: docpreview
 docpreview:

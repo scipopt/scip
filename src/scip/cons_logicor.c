@@ -4993,7 +4993,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
       char consname[SCIP_MAXSTRLEN];
 
       /* create a constraint out of the conflict set */
-      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );

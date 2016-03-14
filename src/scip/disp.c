@@ -520,7 +520,7 @@ void SCIPdispLongint(
       if( val < 0 )
          SCIPmessageFPrintInfo(messagehdlr, file, "-");
       else if( val < 10 )
-         SCIPmessageFPrintInfo(messagehdlr, file, "%"SCIP_LONGINT_FORMAT, val);
+         SCIPmessageFPrintInfo(messagehdlr, file, "%" SCIP_LONGINT_FORMAT, val);
       else
          SCIPmessageFPrintInfo(messagehdlr, file, "+");
    }

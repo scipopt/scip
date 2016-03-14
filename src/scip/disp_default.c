@@ -934,7 +934,7 @@ SCIP_DECL_DISPOUTPUT(SCIPdispOutputPrimalgap)
 static
 SCIP_DECL_DISPOUTPUT(SCIPdispOutputNSols)
 {  /*lint --e{715}*/
-   SCIPinfoMessage(scip, file, "%5"SCIP_LONGINT_FORMAT, SCIPgetNSolsFound(scip));
+   SCIPinfoMessage(scip, file, "%5" SCIP_LONGINT_FORMAT, SCIPgetNSolsFound(scip));
 
    return SCIP_OKAY;
 }
