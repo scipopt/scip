@@ -639,12 +639,13 @@ SCIP_DECL_HEUREXEC(heurExecClique)
 
    if( !SCIPisLPConstructed(scip) && solvelp )
    {
-      SCIP_Bool nodecutoff;
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
 
-      SCIP_CALL( SCIPconstructLP(scip, &nodecutoff) );
-      SCIP_CALL( SCIPflushLP(scip) );
-      if( nodecutoff )
+      /* return if infeasibility was detected during LP construction */
+      if( cutoff )
          goto TERMINATE;
+
+      SCIP_CALL( SCIPflushLP(scip) );
    }
 
    *result = SCIP_DIDNOTFIND;

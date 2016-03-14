@@ -1457,12 +1457,13 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
 
    if( !SCIPisLPConstructed(scip) )
    {
-      SCIP_Bool nodecutoff;
-
-      nodecutoff = FALSE;
       /* @note this call can have the side effect that variables are created */
-      SCIP_CALL( SCIPconstructLP(scip, &nodecutoff) );
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
       SCIP_CALL( SCIPflushLP(scip) );
+
+      /* return if infeasibility was detected during LP construction */
+      if( cutoff )
+         return SCIP_OKAY;
    }
 
    SCIPstatistic( heurdata->nlpiters = SCIPgetNLPIterations(scip) );
@@ -1827,6 +1828,7 @@ SCIP_DECL_HEUREXEC(heurExecShiftandpropagate)
    }
 
    cutoff = FALSE;
+
    lastindexofsusp = -1;
    probing = heurdata->probing;
    infeasible = FALSE;

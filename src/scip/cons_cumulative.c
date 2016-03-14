@@ -8667,7 +8667,8 @@ static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< cumulative constraint */
-   SCIP_Bool             cutsasconss         /**< should the cumulative constraint create the cuts as constraints? */
+   SCIP_Bool             cutsasconss,        /**< should the cumulative constraint create the cuts as constraints? */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
    SCIP_CONSDATA* consdata;
@@ -8681,15 +8682,12 @@ SCIP_RETCODE addRelaxation(
       SCIP_CALL( createRelaxation(scip, cons, cutsasconss) );
    }
 
-   for( r = 0; r < consdata->ndemandrows; ++r )
+   for( r = 0; r < consdata->ndemandrows && !(*infeasible); ++r )
    {
       if( !SCIProwIsInLP(consdata->demandrows[r]) )
       {
-         SCIP_Bool infeasible;
-
          assert(consdata->demandrows[r] != NULL);
-         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->demandrows[r], FALSE, &infeasible) );
-         assert( ! infeasible );  /* this function is only called by initlp -> the cut should be feasible */
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->demandrows[r], FALSE, infeasible) );
       }
    }
 
@@ -12661,15 +12659,17 @@ SCIP_DECL_CONSINITLP(consInitlpCumulative)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   *infeasible = FALSE;
+
    SCIPdebugMessage("initialize LP relaxation for %d cumulative constraints\n", nconss);
 
    if( conshdlrdata->usebinvars )
    {
       /* add rows to LP */
-      for( c = 0; c < nconss; ++c )
+      for( c = 0; c < nconss && !(*infeasible); ++c )
       {
          assert(SCIPconsIsInitial(conss[c]));
-         SCIP_CALL( addRelaxation(scip, conss[c], conshdlrdata->cutsasconss) );
+         SCIP_CALL( addRelaxation(scip, conss[c], conshdlrdata->cutsasconss, infeasible) );
 
          if( conshdlrdata->cutsasconss )
          {

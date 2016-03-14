@@ -535,6 +535,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
          /* cases with exactly one uplock */
          if( SCIPvarGetNLocksUp(var) == 1 && SCIPisLE(scip, SCIPvarGetObj(var), 0.0) )
          {
+            row = -1;
+            val = 0.0;
             inspect = FALSE;
             colpnt = SCIPmatrixGetColIdxPtr(matrix, i);
             colend = colpnt + SCIPmatrixGetColNNonzs(matrix, i);
@@ -574,6 +576,9 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
 
             if( inspect )
             {
+               assert(row >= 0);
+               assert(!SCIPisZero(scip, val));
+
                /* try to fix variable i at the upper bound */
                SCIP_CALL( compensateVarLock(scip, matrix, i, row, val,
                      twosides, COMPENSATE_UPLOCK, varstofix, &nfixings) );
@@ -582,6 +587,8 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
          /* cases with exactly one downlock */
          else if( SCIPvarGetNLocksDown(var) == 1 && SCIPisGE(scip, SCIPvarGetObj(var), 0.0) )
          {
+            row = -1;
+            val = 0.0;
             inspect = FALSE;
             colpnt = SCIPmatrixGetColIdxPtr(matrix, i);
             colend = colpnt + SCIPmatrixGetColNNonzs(matrix, i);
@@ -617,12 +624,13 @@ SCIP_DECL_PRESOLEXEC(presolExecDualcomp)
                   twosides = TRUE;
                   break;
                }
-               else
-                  assert(0);
             }
 
             if( inspect )
             {
+               assert(row >= 0);
+               assert(!SCIPisZero(scip, val));
+
                /* try to fix variable i at the lower bound */
                SCIP_CALL( compensateVarLock(scip, matrix, i, row, val,
                      twosides, COMPENSATE_DOWNLOCK, varstofix, &nfixings) );

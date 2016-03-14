@@ -562,8 +562,13 @@ SCIP_DECL_HEUREXEC(heurExecOneopt)
    if( heurtiming == SCIP_HEURTIMING_BEFORENODE && (SCIPhasCurrentNodeLP(scip) || heurdata->forcelpconstruction) )
    {
       SCIP_Bool cutoff;
-      cutoff = FALSE;
+
       SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+
+      /* return if infeasibility was detected during LP construction */
+      if( cutoff )
+         return SCIP_OKAY;
+
       SCIP_CALL( SCIPflushLP(scip) );
 
       /* get problem variables again, SCIPconstructLP() might have added new variables */
