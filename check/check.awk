@@ -46,7 +46,7 @@ BEGIN {
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
    useshortnames = 1;           # should problem name be truncated to fit into column?
    writesolufile = 0;           # should a solution file be created from the results
-   printsoltimes = 0;           # should the times until first and best solution be shown
+   printsoltimes = 1;           # should the times until first and best solution be shown
    checksol = 1;                # should the solution check of SCIP be parsed and counted as a fail if best solution is not feasible?
    NEWSOLUFILE = "new_solufile.solu";
    infty = +1e+20;
@@ -426,11 +426,11 @@ BEGIN {
 /problem is solved/ { timeout = 0; }
 /best solution is not feasible in original problem/  { bestsolfeas = 0; }
 
-/Check SOL:/ { 
+/Check SOL:/ {
    intcheck = $4;
    conscheck = $6;
    objcheck = $8;
-   if( !intcheck || !conscheck || !objcheck ) 
+   if( !intcheck || !conscheck || !objcheck )
       bestsolfeas = 0;
 }
 
