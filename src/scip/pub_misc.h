@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,8 +16,11 @@
 /**@file   pub_misc.h
  * @brief  public data structures and miscellaneous methods
  * @author Tobias Achterberg
+ * @author Gerald Gamrath
  * @author Stefan Heinz
+ * @author Gregor Hendel
  * @author Michael Winkler
+ * @author Kati Wolter
  *
  * This file contains a bunch of data structures and miscellaneous methods:
  *

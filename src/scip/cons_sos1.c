@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -107,7 +107,7 @@
 #define DEFAULT_MAXEXTENSIONS         1 /**< maximal number of extensions that will be computed for each SOS1 constraint */
 #define DEFAULT_MAXTIGHTENBDS         5 /**< maximal number of bound tightening rounds per presolving round (-1: no limit) */
 #define DEFAULT_PERFIMPLANALYSIS   TRUE /**< if TRUE then perform implication graph analysis (might add additional SOS1 constraints) */
-#define DEFAULT_DEPTHIMPLANALYSIS    -1 /**< maximal depth for implication graph analysis (-1: no limit) */
+#define DEFAULT_DEPTHIMPLANALYSIS    -1 /**< number of recursive calls of implication graph analysis (-1: no limit) */
 
 /* propagation */
 #define DEFAULT_CONFLICTPROP      TRUE /**< whether to use conflict graph propagation */
@@ -239,7 +239,7 @@ struct SCIP_ConshdlrData
    int                   maxextensions;      /**< maximal number of extensions that will be computed for each SOS1 constraint */
    int                   maxtightenbds;      /**< maximal number of bound tightening rounds per presolving round (-1: no limit) */
    SCIP_Bool             perfimplanalysis;   /**< if TRUE then perform implication graph analysis (might add additional SOS1 constraints) */
-   int                   depthimplanalysis;  /**< maximal depth for implication graph analysis (-1: no limit) */
+   int                   depthimplanalysis;  /**< number of recursive calls of implication graph analysis (-1: no limit) */
    /* propagation */
    SCIP_Bool             conflictprop;       /**< whether to use conflict graph propagation */
    SCIP_Bool             implprop;           /**< whether to use implication graph propagation */
@@ -1229,7 +1229,7 @@ SCIP_RETCODE extensionOperatorSOS1(
          SCIPsortInt(cliques[*ncliques], cliquesizes[*ncliques]);
 
          /* create new constraint */
-         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "extsos1_%"SCIP_LONGINT_FORMAT, conshdlrdata->cntextsos1, conshdlrdata->cntextsos1);
+         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "extsos1_%" SCIP_LONGINT_FORMAT, conshdlrdata->cntextsos1, conshdlrdata->cntextsos1);
 
          SCIP_CALL( SCIPcreateConsSOS1(scip, &newcons, consname, cliquesizes[*ncliques], vars, weights,
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
@@ -9209,12 +9209,12 @@ SCIP_DECL_CONSINITLP(consInitlpSOS1)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
+   *infeasible = FALSE;
+
    /* checking for initial rows for SOS1 constraints */
    if( conshdlrdata->boundcutsfromsos1 || conshdlrdata->switchcutsfromsos1 )
    {
-      SCIP_Bool cutoff;
-      SCIP_CALL( initsepaBoundInequalityFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, NULL, FALSE, -1, NULL, &cutoff) );
-      assert( ! cutoff );
+      SCIP_CALL( initsepaBoundInequalityFromSOS1Cons(scip, conshdlr, conshdlrdata, conss, nconss, NULL, FALSE, -1, NULL, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -10122,8 +10122,8 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
          "if TRUE then perform implication graph analysis (might add additional SOS1 constraints)",
          &conshdlrdata->perfimplanalysis, TRUE, DEFAULT_PERFIMPLANALYSIS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/depthimplanalysis",
-         "maximal depth for implication graph analysis (-1: no limit)",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/depthimplanalysis",
+         "number of recursive calls of implication graph analysis (-1: no limit)",
          &conshdlrdata->depthimplanalysis, TRUE, DEFAULT_DEPTHIMPLANALYSIS, -1, INT_MAX, NULL, NULL) );
 
    /* propagation parameters */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1049,6 +1049,12 @@ extern
 int SCIPsetGetSepaMaxcuts(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_Bool             root                /**< are we at the root node? */
+   );
+
+/** returns user defined objective value (in original space) for reference purposes */
+extern
+SCIP_Real SCIPsetGetReferencevalue(
+   SCIP_SET*             set                 /**< global SCIP settings */
    );
 
 /** returns debug solution data */

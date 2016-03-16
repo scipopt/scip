@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -99,18 +99,19 @@ do
     fi
 done
 
-# if cutoff should be passed, check for solu file
+SOLUFILE=""
+for SOLU in testset/$TSTNAME.solu testset/all.solu
+do
+    if test -e $SOLU
+    then
+        SOLUFILE=$SOLU
+        break
+    fi
+done
+
+# if cutoff should be passed, solu file must exist
 if test $SETCUTOFF = 1
 then
-    SOLUFILE=""
-    for SOLU in testset/$TSTNAME.solu testset/all.solu
-    do
-        if test -e $SOLU
-        then
-            SOLUFILE=$SOLU
-            break
-        fi
-    done
     if test $SOLUFILE = ""
     then
         echo "Skipping test: SETCUTOFF=1 set, but no .solu file (testset/$TSTNAME.solu or testset/all.solu) available"

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2043,7 +2043,7 @@ SCIP_RETCODE SCIPconshdlrCreate(
    /* the interface change from delay flags to timings cannot be recognized at compile time: Exit with an appropriate
     * error message
     */
-   if( presoltiming < SCIP_PRESOLTIMING_FAST || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
+   if( presoltiming < SCIP_PRESOLTIMING_NONE || presoltiming > SCIP_PRESOLTIMING_ALWAYS )
    {
       SCIPmessagePrintError("ERROR: 'PRESOLDELAY'-flag no longer available since SCIP 3.2, use an appropriate "
          "'SCIP_PRESOLTIMING' for <%s> constraint handler instead.\n", name);
@@ -2676,15 +2676,19 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_Bool             initkeptconss       /**< Also initialize constraints which are valid at a more global node,
+   SCIP_Bool             initkeptconss,      /**< Also initialize constraints which are valid at a more global node,
                                               *   but were not activated there? Should be FALSE for repeated calls at
                                               *   one node or if the current focusnode is a child of the former one */
+   SCIP_Bool*            cutoff              /**< pointer to store whether infeasibility was detected while building the LP */
    )
 {
    assert(conshdlr != NULL);
+   assert(cutoff != NULL);
 #ifdef MORE_DEBUG
    assert(stat->nnodes > 1 || conshdlr->ninitconsskept == 0 || SCIPtreeProbing(tree));
 #endif
+
+   *cutoff = FALSE;
 
    if( conshdlr->consinitlp != NULL )
    {
@@ -2728,7 +2732,7 @@ SCIP_RETCODE SCIPconshdlrInitLP(
 
       /* call external method */
       SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &conshdlr->initconss[conshdlr->ninitconsskept],
-            conshdlr->ninitconss - conshdlr->ninitconsskept) );
+            conshdlr->ninitconss - conshdlr->ninitconsskept, cutoff) );
 
       /* stop timing */
       SCIPclockStop(conshdlr->sepatime, set);
@@ -7129,13 +7133,15 @@ SCIP_RETCODE SCIPconsEnfolp(
 /** calls LP initialization method for single constraint */
 SCIP_RETCODE SCIPconsInitlp(
    SCIP_CONS*            cons,               /**< constraint to initialize */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected while building the LP */
    )
 {
    SCIP_CONSHDLR* conshdlr;
 
    assert(cons != NULL);
    assert(set != NULL);
+   assert(infeasible != NULL);
    assert(cons->scip == set->scip);
 
    conshdlr = cons->conshdlr;
@@ -7144,7 +7150,7 @@ SCIP_RETCODE SCIPconsInitlp(
    /* call external method */
    if( conshdlr->consinitlp != NULL )
    {
-      SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &cons, 1) );
+      SCIP_CALL( conshdlr->consinitlp(set->scip, conshdlr, &cons, 1, infeasible) );
    }
 
    return SCIP_OKAY;

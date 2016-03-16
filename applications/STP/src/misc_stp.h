@@ -107,7 +107,7 @@ void SCIPintListNodeFree(
    IDX**                 node                /**< pointer to the last list node */
    );
 
-/* compares distances of two GNODE structures */
+/** compares distances of two GNODE structures */
 extern
 int GNODECmpByDist(
    void                  *first_arg,         /**< first argument */
@@ -136,6 +136,15 @@ void SCIPlinkcuttreeLink(
 extern
 void SCIPlinkcuttreeCut(
    NODE*                 v                   /**< node to cut at */
+   );
+
+/** finds minimal non-key-node value between node 'v' and the root of the tree **/
+NODE* SCIPlinkcuttreeFindMinMW(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Real*            nodeweight,         /**< node weight array */
+   int*                  tail,                  /**< arcs tails */
+   int*                  stdeg,              /**< degree in Steiner tree */
+   NODE*                 v                   /**< the node */
    );
 
 /** finds the max value between node 'v' and the root of the tree **/

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1690,7 +1690,7 @@ SCIP_RETCODE generateEstimatingHyperplane(
    tryother = FALSE;
    if( x0y0[1] <= ylb + (yub - ylb)/(xub - xlb) * (x0y0[0] - xlb) )
    {
-      SCIP_CALL( SCIPgetAlphaBetaGammaDelta(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p3[0], p3[1], p3val, &alpha,
+      SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p3[0], p3[1], p3val, &alpha,
             &beta, &gamma_, &delta) );
 
       assert(SCIPisInfinity(scip, delta) || SCIPisFeasEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
@@ -1703,7 +1703,7 @@ SCIP_RETCODE generateEstimatingHyperplane(
    }
    else
    {
-      SCIP_CALL( SCIPgetAlphaBetaGammaDelta(scip, p1[0], p1[1], p1val, p3[0], p3[1], p3val, p4[0], p4[1], p4val, &alpha,
+      SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p3[0], p3[1], p3val, p4[0], p4[1], p4val, &alpha,
             &beta, &gamma_, &delta) );
 
       assert(SCIPisInfinity(scip, delta) || SCIPisFeasEQ(scip, alpha * p1[0] + beta * p1[1] + gamma_ * p1val, delta));
@@ -1719,7 +1719,7 @@ SCIP_RETCODE generateEstimatingHyperplane(
    {
       if( x0y0[1] <= yub + (ylb - yub)/(xub - xlb) * (x0y0[0] - xlb) )
       {
-         SCIP_CALL( SCIPgetAlphaBetaGammaDelta(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p4[0], p4[1], p4val,
+         SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p1[0], p1[1], p1val, p2[0], p2[1], p2val, p4[0], p4[1], p4val,
                &alpha, &beta, &gamma_, &delta) );
 
          /* hyperplane should be above (p3,f(p3)) and other points should lie on hyperplane */
@@ -1730,7 +1730,7 @@ SCIP_RETCODE generateEstimatingHyperplane(
       }
       else
       {
-         SCIP_CALL( SCIPgetAlphaBetaGammaDelta(scip, p2[0], p2[1], p2val, p3[0], p3[1], p3val, p4[0], p4[1], p4val,
+         SCIP_CALL( SCIPcomputeHyperplaneThreePoints(scip, p2[0], p2[1], p2val, p3[0], p3[1], p3val, p4[0], p4[1], p4val,
                &alpha, &beta, &gamma_, &delta) );
 
          /* hyperplane should be above (p1,f(p1)) and other points should lie on hyperplane */
@@ -6402,6 +6402,8 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
+   *infeasible = FALSE;
+
    nref = conshdlrdata->ninitlprefpoints;
 
    if( nref == 0 )
@@ -6549,15 +6551,20 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
                {
                   SCIPdebugMessage("drop row1 for constraint <%s> because range of coefficients is too large: mincoef = %g, maxcoef = %g -> range = %g\n",
                      SCIPconsGetName(conss[c]), SCIPgetRowMinCoef(scip, row1), SCIPgetRowMaxCoef(scip, row1), SCIPgetRowMaxCoef(scip, row1) / SCIPgetRowMinCoef(scip, row1));  /*lint !e613*/
-                  SCIP_CALL( SCIPreleaseRow(scip, &row1) );
                }
                else if( SCIPisInfinity(scip, -SCIProwGetLhs(row1)) )
                {
                   /* row1 should be a cut with finite lhs, but infinite rhs */
                   assert(SCIPisInfinity(scip, SCIProwGetRhs(row1)));
                   SCIPdebugMessage("drop row1 for constraint <%s> because of very large lhs: %g\n", SCIPconsGetName(conss[c]), SCIProwGetLhs(row1));  /*lint !e613*/
-                  SCIP_CALL( SCIPreleaseRow(scip, &row1) );
                }
+               /* add row to LP */
+               else
+               {
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row1, FALSE /* forcecut */, infeasible) );
+                  SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row1, NULL) ) );
+               }
+               SCIP_CALL( SCIPreleaseRow(scip, &row1) );
             }
 
             if( row2 != NULL )
@@ -6566,34 +6573,24 @@ SCIP_DECL_CONSINITLP(consInitlpBivariate)
                {
                   SCIPdebugMessage("drop row2 for constraint <%s> because range of coefficients is too large: mincoef = %g, maxcoef = %g -> range = %g\n",
                      SCIPconsGetName(conss[c]), SCIPgetRowMinCoef(scip, row2), SCIPgetRowMaxCoef(scip, row2), SCIPgetRowMaxCoef(scip, row2) / SCIPgetRowMinCoef(scip, row2));  /*lint !e613*/
-                  SCIP_CALL( SCIPreleaseRow(scip, &row2) );
                }
                else if( SCIPisInfinity(scip, SCIProwGetRhs(row2)) )
                {
                   /* row2 should be a cut with finite rhs, but infinite lhs */
                   assert(SCIPisInfinity(scip, SCIProwGetRhs(row2)));
                   SCIPdebugMessage("drop row2 for constraint <%s> because of very large rhs: %g\n", SCIPconsGetName(conss[c]), SCIProwGetLhs(row2));  /*lint !e613*/
-                  SCIP_CALL( SCIPreleaseRow(scip, &row2) );
                }
-            }
-
-            /* add to LP */
-            if( row1 != NULL )
-            {
-               SCIP_Bool infeasible;
-               SCIP_CALL( SCIPaddCut(scip, NULL, row1, FALSE /* forcecut */, &infeasible) );
-               assert( ! infeasible );
-               SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row1, NULL) ) );
-               SCIP_CALL( SCIPreleaseRow(scip, &row1) );
-            }
-            if( row2 != NULL )
-            {
-               SCIP_Bool infeasible;
-               SCIP_CALL( SCIPaddCut(scip, NULL, row2, FALSE /* forcecut */, &infeasible) );
-               assert( ! infeasible );
-               SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row2, NULL) ) );
+               /* add row to LP */
+               else if( !(*infeasible) )
+               {
+                  SCIP_CALL( SCIPaddCut(scip, NULL, row2, FALSE /* forcecut */, infeasible) );
+                  SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row2, NULL) ) );
+               }
                SCIP_CALL( SCIPreleaseRow(scip, &row2) );
             }
+
+            if( *infeasible )
+               return SCIP_OKAY;
          }
       }
    }

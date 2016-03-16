@@ -1,0 +1,56 @@
+PolySCIP uses data structures of the Lemon Graph Library (https://lemon.cs.elte.hu/trac/lemon).
+
+Lemon as well as PolySCIP use cmake. Make sure you have cmake (https://cmake.org/)
+installed (preferably a version >= 3.0). 
+
+1.) Download the Lemon Graph Library and follow the steps given in its INSTALL file. 
+(In case of compilations problems, use a cmake version >= 3.0 and try
+to execute 'cmake .. -DLEMON_ENABLE_SOPLEX=no' instead of just 'cmake ..'.)
+After you have installed Lemon, proceed to 2.)
+
+2.) Build SCIP and SoPlex.
+(If you have downloaded the SCIP Optimisation Suite at
+http://scip.zib.de/#scipoptsuite, then it should be enough to build
+SCIP and SOPLeX via 'make scipoptlib' or 'make scipoptlib SHARED=true', respectively.) 
+
+If you have built SCIP (and SOPLEX) successfully, you are ready to build PolySCIP.
+Proceed to 3.)
+
+3) Change into the PolySCIP directory. 
+
+4.) Execute 'mkdir build' followed by 'cd build'
+
+5.a) If Lemon was installed globally at /usr/local,
+
+execute 'cmake ..'
+
+If Lemon was not installed at /usr/local, but a user-specified path, see 5.b)
+
+5.b) Specify the Lemon include directory via the variable -DLEMON_INC= 
+
+E.g, if Lemon is installed on your machine at /home/user/lemon and, hence,
+its include directory is located at /home/user/lemon/include, then
+
+execute 'cmake .. -DLEMON_INC=/home/user/lemon/include' 
+
+PolySCIP tries to locate all other necessary includes and libraries. 
+In case of other errors, it is also possible to specifiy the path to the 
+SCIP directory on the command line:
+
+Assume that the SCIP directory is located at '/home/user/scipoptsuite-3.2.1/scip-3.2.1'.
+Then you can specify the root directory of SCIP via -DSCIP_ROOT_DIR= and, in this case,
+execute 'cmake .. -DLEMON_INC=/home/user/lemon/include -DSCIP_ROOT_DIR=/home/user/scipoptsuite-3.2.1/scip-3.2.1'
+
+6.) Execute 'make' 
+
+If there occur (linker) problems, then try to compile SoPlex and SCIP
+with the least possible dependencies, i.e., rebuild SoPlex with 'make GMP=false' and 
+rebuild SCIP with 'make ZLIB=false READLINE=false GMP=false'.
+Then try again to build PolySCIP as described in 5.)
+
+7.) Execute 'make doc' to build the doxygen documentation in the 'doc' directory 
+
+
+
+
+
