@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -85,7 +85,7 @@ typedef enum Fixingdirection FIXINGDIRECTION;
 static
 void printRow(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   row                 /**< row index for printing */
    )
 {
@@ -138,7 +138,7 @@ void printRow(
 static
 SCIP_RETCODE printRowsOfCol(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   col                 /**< column index for printing */
    )
 {
@@ -176,7 +176,7 @@ SCIP_RETCODE printRowsOfCol(
 static
 SCIP_RETCODE printDomRelInfo(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    SCIP_VAR*             dominatingvar,      /**< dominating variable */
    int                   dominatingidx,      /**< index of dominating variable */
    SCIP_VAR*             dominatedvar,       /**< dominated variable */
@@ -224,7 +224,7 @@ SCIP_RETCODE printDomRelInfo(
 static
 void getActivityResidualsUpperBound(
    SCIP*                 scip,
-   SCIPMILPMATRIX*     matrix,
+   SCIP_MATRIX*          matrix,
    int                   row,
    int                   col,
    SCIP_Real             coef,
@@ -401,7 +401,7 @@ void getActivityResidualsUpperBound(
 static
 void getActivityResidualsLowerBound(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   row,                /**< row index */
    int                   col,                /**< column index */
    SCIP_Real             coef,               /**< coefficient of the column in this row */
@@ -580,7 +580,7 @@ void getActivityResidualsLowerBound(
 static
 SCIP_RETCODE calcVarBoundsDominated(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   row,                /**< current row index */
    int                   coldominating,      /**< column index of dominating variable */
    SCIP_Real             valdominating,      /**< row coefficient of dominating variable */
@@ -755,7 +755,7 @@ SCIP_RETCODE calcVarBoundsDominated(
 static
 SCIP_RETCODE calcVarBoundsDominating(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   row,                /**< current row index */
    int                   coldominating,      /**< column index of dominating variable */
    SCIP_Real             valdominating,      /**< row coefficient of dominating variable */
@@ -928,7 +928,7 @@ SCIP_RETCODE calcVarBoundsDominating(
 static
 SCIP_RETCODE updateBounds(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   row,                /**< row index */
    int                   col1,               /**< dominating variable index */
    SCIP_Real             val1,               /**< dominating variable coefficient */
@@ -1008,7 +1008,7 @@ SCIP_RETCODE updateBounds(
 static
 SCIP_RETCODE detectParallelCols(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int*                  pclass,             /**< parallel column classes */
    SCIP_Bool*            varineq             /**< indicating if variable is within an equation */
    )
@@ -1375,7 +1375,7 @@ SCIP_RETCODE predBndStr(
 static
 SCIP_RETCODE findFixings(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< constraint matrix structure */
+   SCIP_MATRIX*          matrix,             /**< constraint matrix structure */
    SCIP_VAR*             dominatingvar,      /**< dominating variable */
    int                   dominatingidx,      /**< column index of the dominating variable */
    SCIP_Real             dominatingub,       /**< predicted upper bound of the dominating variable */
@@ -1513,7 +1513,7 @@ SCIP_RETCODE findFixings(
 static
 SCIP_RETCODE findDominancePairs(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    SCIP_PRESOLDATA*      presoldata,         /**< presolver data */
    int*                  searchcols,         /**< indexes of variables for pair comparisons */
    int                   searchsize,         /**< number of variables for pair comparisons */
@@ -1978,7 +1978,7 @@ static
 SCIP_DECL_PRESOLEXEC(presolExecDomcol)
 {  /*lint --e{715}*/
    SCIP_PRESOLDATA* presoldata;
-   SCIPMILPMATRIX* matrix;
+   SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1944,11 +1944,12 @@ SCIP_RETCODE sortAndMergeClique(
                nzeros++;
          }
          else
-            /* var is different from variable pointed at by z */
+            /* var is different from variable at index curr */
             break;
 
          --curr;
       }
+      assert(nzeros + nones <= *nclqvars);
 
       /* single occurrence of the variable */
       if( nones + nzeros == 1 )
@@ -1984,7 +1985,7 @@ SCIP_RETCODE sortAndMergeClique(
             }
          }
 
-         /* we fix the variable into the direction of less occurrences */
+         /* we fix the variable into the direction of fewer occurrences */
          fixvalue = nones >= 2 ? FALSE : TRUE;
 
          /* a variable multiple times in one clique forces this variable to be zero */
@@ -2061,6 +2062,9 @@ SCIP_RETCODE sortAndMergeClique(
          }
          *nclqvars = 0;
          *isequation = FALSE;
+
+         /* break main loop */
+         break;
       }
 
       /* otherwise, we would have an endless loop */
@@ -2536,6 +2540,9 @@ SCIP_RETCODE cliqueCleanup(
       int w;
 
       w = clique->startcleanup;
+
+      SCIPdebugMessage("Starting clean up of clique %d (size %d) from position %d\n", clique->id, clique->nvars, w);
+
       /* exchange inactive by active variables */
       for( v = w; v < clique->nvars; ++v )
       {

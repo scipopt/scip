@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   heur_rec.h
- * @brief  primal recombination heuristic for Steiner problems
+ * @brief  Primal recombination heuristic for Steiner problems
  * @author Daniel Rehfeldt
  *
  * This file implements a recombination heuristic for Steiner problems, see

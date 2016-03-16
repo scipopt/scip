@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2262,11 +2262,16 @@ SCIP_DECL_PROPEXITPRE(propExitpreGenvbounds)
          /* free genvbound and fill gap */
          SCIP_CALL( freeGenVBound(scip, propdata->genvboundstore[i]) );
          --(propdata->ngenvbounds);
-         propdata->genvboundstore[i] = propdata->genvboundstore[propdata->ngenvbounds];
-         propdata->genvboundstore[i]->index = i;
 
-         /* mark genvbounds array to be resorted */
-         propdata->issorted = FALSE;
+         /* move the last genvbound to the i-th position */
+         if( i < propdata->ngenvbounds )
+         {
+            propdata->genvboundstore[i] = propdata->genvboundstore[propdata->ngenvbounds];
+            propdata->genvboundstore[i]->index = i;
+
+            /* mark genvbounds array to be resorted */
+            propdata->issorted = FALSE;
+         }
       }
       else
          ++i;
