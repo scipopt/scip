@@ -2,6 +2,11 @@ SCIP version NEXT
 ==================
 
 features:
+- new statistic computed: "Root LP Estimate" that shows the root LP best-estimate with every pseudo-cost update
+- new SCIP_REGRESSION data structure in pub_misc.h to incrementally compute a best-fit line through pairs of observations
+- added leaf statistics about LP objective limit|feasible|infeasible leaves to the statistics output and
+  to the callable library: SCIPgetNObjlimLeaves(), SCIPgetNFeasibleLeaves(), SCIPgetNInfeasibleLeaves()
+- added adaptive solving behavior of SCIP based on solving phases and heuristic transitions, if enabled via "solvingphases/enabled"
 - new presolving step for variables contained in a single quadratic constraint with proper square coefficients
 - can now solve relaxations within probing
 - can now separate perspective cuts for indicator constraints
@@ -13,6 +18,8 @@ features:
   a child node with lower bound smaller than the reference value was available.
 
 parameters:
+- new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
+  in the solvingphases-section to control how to switch the parameters, and whether a restart should be performed between the phases.
 - new parameter misc/referencevalue to pass a reference value for further analysis of the tree search, see also in 'features'
 - new parameter sepaperspective to turn on separation of perspective cuts for indicator contraints
 - new parameter sepapersplocal to decide whether local cuts can be used for perspective cuts for indicator contraints
