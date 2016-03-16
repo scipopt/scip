@@ -7,17 +7,22 @@ features:
 - can now separate perspective cuts for indicator constraints
 - added write callback for reader_bnd
 - new target "dll" to build Windows dlls with MSVC
+- added possibility to use a reference value for advanced analysis of the tree search. If a finite reference value
+  (an objective value in original objective space) is passed via misc/referencevalue, SCIP keeps track of the
+  number of nodes exceeding the reference value and the number of early backtracks -- path switches in the tree when
+  a child node with lower bound smaller than the reference value was available.
 
 parameters:
+- new parameter misc/referencevalue to pass a reference value for further analysis of the tree search, see also in 'features'
 - new parameter sepaperspective to turn on separation of perspective cuts for indicator contraints
 - new parameter sepapersplocal to decide whether local cuts can be used for perspective cuts for indicator contraints
 - new parameter branching/relpscost/usesmallweightsitlim to use smaller weights for pseudo cost updates when LP iteration limit was hit
-- spx2 is the new default LP solver interface
 - new parameter lp/randomseed to set the initial seed of the LP solver
 
 performance improvements:
 
 interface:
+- spx2 is the new default LP solver interface
 - new function SCIPsolveProbingRelax() to solve a relaxation within probing
 - new function SCIPgetIntVarXor() to access integer variable of XOR constraints
 - new function SCIPgetLastStrongbranchingLPSolstat() to query the LP statuses after strong branching on a variable
