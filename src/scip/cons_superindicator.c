@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -137,9 +137,9 @@ SCIP_RETCODE consdataCheckSuperindicator(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< pointer to superindicator constraint data */
    SCIP_SOL*             sol,                /**< pointer to the solution to be checked */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result of the test */
    )
 {
@@ -288,7 +288,7 @@ SCIP_RETCODE upgradeIndicatorSuperindicator(
    SCIP_CONS*            cons,               /**< superindicator constraint to be upgraded */
    SCIP_Bool*            success,            /**< pointer to store if the upgrading was successful */
    SCIP_Bool*            deleted             /**< pointer to store if the constraint was deleted */
-)
+   )
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
@@ -404,7 +404,7 @@ SCIP_RETCODE upgradeLinearSuperindicator(
    SCIP_CONS*            cons,               /**< superindicator constraint to be upgraded */
    SCIP_Bool*            success,            /**< pointer to store if the upgrading was successful */
    SCIP_Bool*            deleted             /**< pointer to store if the constraint was deleted */
-)
+   )
 {
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
@@ -770,10 +770,13 @@ SCIP_DECL_CONSINITLP(consInitlpSuperindicator)
 
    assert(scip != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
 
    SCIPdebugMessage("executing initlp callback\n");
 
-   for( c = nconss-1; c >= 0; c-- )
+   for( c = nconss-1; c >= 0 && !(*infeasible); c-- )
    {
       SCIP_CONSDATA* consdata;
 
@@ -789,7 +792,7 @@ SCIP_DECL_CONSINITLP(consInitlpSuperindicator)
          SCIPdebugMessage("binvar <%s> == 1 --> SCIPinitlpCons() on constraint <%s>\n",
             SCIPvarGetName(consdata->binvar), SCIPconsGetName(consdata->slackcons));
 
-         SCIP_CALL( SCIPinitlpCons(scip, consdata->slackcons) );
+         SCIP_CALL( SCIPinitlpCons(scip, consdata->slackcons, infeasible) );
       }
    }
 

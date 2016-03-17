@@ -30,5 +30,6 @@ $(BINOBJDIR)/cppmain.o: src/cppmain.cpp src/scip/scip.h src/scip/def.h \
  src/scip/scip.h src/scip/struct_scip.h src/scip/type_interrupt.h \
  src/scip/type_mem.h src/scip/type_primal.h src/scip/type_pricestore.h \
  src/scip/type_sepastore.h src/scip/set.h src/scip/struct_set.h \
- src/scip/message.h src/scip/tree.h src/scip/misc.h src/scip/var.h \
- src/scip/event.h src/scip/struct_event.h src/scip/scipshell.h
+ src/scip/message.h src/scip/debug.h src/scip/tree.h src/scip/misc.h \
+ src/scip/var.h src/scip/event.h src/scip/struct_event.h \
+ src/scip/scipshell.h

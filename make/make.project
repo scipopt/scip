@@ -3,7 +3,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic Licence.         *
@@ -57,6 +57,7 @@ CLIENTTMPDIR    =       /tmp
 REOPT		=	false
 OPTCOMMAND	=	optimize
 SETCUTOFF	=	0
+VISUALIZE       =       false
 MAXJOBS         =       1
 
 
@@ -64,7 +65,7 @@ MAXJOBS         =       1
 VERBOSE		=	false
 OPT		=	opt
 COMP		=	gnu
-LPS		=	spx
+LPS		=	spx2
 STATICLIBEXT	=	a
 SHAREDLIBEXT	=	so
 LIBEXT		=	$(STATICLIBEXT)
@@ -78,6 +79,7 @@ NOBLKBUFMEM	=	false
 PARASCIP	=	false
 
 #third party compiling parameters
+OPENSOURCE   =         true
 READLINE	=	true
 ZLIB		=	true
 GMP		=	true
@@ -131,7 +133,7 @@ CBC		=	cbc
 CBCPARALLEL	=	cbc-parallel
 MOSEK           =       mosek
 GUROBI          =       gurobi_cl
-XPRESS		=	xpress
+XPRESS_BIN      =       xpress
 GLPK            =       glpsol
 SYMPHONY        =       symphony
 BLIS            =       blis
@@ -236,6 +238,10 @@ endif
 # LP Solver Interface
 #-----------------------------------------------------------------------------
 
+ifeq ($(LPS),spx)
+override LPS	=	spx2
+endif
+
 LPILIBNAME	=	lpi$(LPS)
 
 ifeq ($(LPS),cpx)
@@ -259,7 +265,7 @@ LPSLDFLAGS	+=	$(LINKCC_l)mosek.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) \
 			$(LINKCXX_l)iomp5.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
 
-ifeq ($(LPS),spx)
+ifeq ($(LPS),spx1)
 LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 
 ifeq ($(LPSCHECK),true)
@@ -268,15 +274,11 @@ endif
 endif
 
 ifeq ($(LPS),spx2)
-LPSLDFLAGS  += $(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCXX_l)soplex.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 
 ifeq ($(LPSCHECK),true)
-LPSLDFLAGS  += $(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
+LPSLDFLAGS	+=	$(LINKCC_l)cplex.$(OSTYPE).$(ARCH).$(COMP)$(LINKLIBSUFFIX) $(LINKCC_l)pthread$(LINKLIBSUFFIX)
 endif
-endif
-
-ifeq ($(LPS),spx132)
-LPSLDFLAGS	+=	$(LINKCXX_l)soplex132.$(OSTYPE).$(ARCH).$(COMP).$(LPSOPT)$(LINKLIBSUFFIX)
 endif
 
 ifeq ($(LPS),clp)
@@ -390,8 +392,14 @@ LIBBUILD	=	$(LINKCXX)
 else
 LIBBUILD	=	$(LINKCC)
 endif
+
+ifeq ($(COMP),msvc)
+LIBBUILDFLAGS	+=      -dll
+LIBBUILD_o	= 	-out:
+else
 LIBBUILDFLAGS	+=      -shared
 LIBBUILD_o	= 	-o # the trailing space is important
+endif
 ARFLAGS		=
 RANLIB		=
 endif

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -932,12 +932,11 @@ SCIP_RETCODE createRelaxation(
 static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to check */
+   SCIP_CONS*            cons,               /**< constraint to check */
+   SCIP_Bool*            infeasible          /**< pointer to store whether an infeasibility was detected */
    )
 {
    SCIP_CONSDATA* consdata;
-   SCIP_Bool infeasible;
-
 
    /* in the root LP we only add the weaker relaxation which consists of two rows:
     *   - one additional row:             resvar - v1 - ... - vn >= 1-n
@@ -950,12 +949,6 @@ SCIP_RETCODE addRelaxation(
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
-
-   if( consdata->rows == NULL )
-   {
-      /* create the n+1 row relaxation */
-      SCIP_CALL( createRelaxation(scip, cons) );
-   }
 
    /* create the aggregated row */
    if( consdata->aggrrow == NULL )
@@ -972,15 +965,22 @@ SCIP_RETCODE addRelaxation(
    /* insert aggregated LP row as cut */
    if( !SCIProwIsInLP(consdata->aggrrow) )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->aggrrow, FALSE, &infeasible) );
-      assert(!infeasible);  /* this function is only called by initlp() -> the cuts should be feasible */
+      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->aggrrow, FALSE, infeasible) );
    }
 
-   /* add additional row */
-   if( !SCIProwIsInLP(consdata->rows[0]) )
+   if( !(*infeasible) )
    {
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[0], FALSE, &infeasible) );
-      assert( ! infeasible );  /* this function is only called by initlp() -> the cuts should be feasible */
+      if( consdata->rows == NULL )
+      {
+         /* create the n+1 row relaxation */
+         SCIP_CALL( createRelaxation(scip, cons) );
+      }
+
+      /* add additional row */
+      if( !SCIProwIsInLP(consdata->rows[0]) )
+      {
+         SCIP_CALL( SCIPaddCut(scip, NULL, consdata->rows[0], FALSE, infeasible) );
+      }
    }
 
    return SCIP_OKAY;
@@ -992,8 +992,8 @@ SCIP_RETCODE checkCons(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons,               /**< constraint to check */
    SCIP_SOL*             sol,                /**< solution to check, NULL for current solution */
-   SCIP_Bool             checklprows,        /**< should LP rows be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
    SCIP_Bool*            violated            /**< pointer to store whether the constraint is violated */
    )
 {
@@ -3303,7 +3303,7 @@ SCIP_RETCODE detectRedundantConstraints(
    SCIP_Bool*            cutoff,             /**< pointer to store TRUE, if a cutoff was found */
    int*                  naggrvars,          /**< pointer to count number of aggregated variables */
    int*                  ndelconss           /**< pointer to count number of deleted constraints */
-)
+   )
 {
    SCIP_HASHTABLE* hashtable;
    int hashtablesize;
@@ -4129,10 +4129,12 @@ SCIP_DECL_CONSINITLP(consInitlpAnd)
 {  /*lint --e{715}*/
    int i;
 
-   for( i = 0; i < nconss; i++ )
+   *infeasible = FALSE;
+
+   for( i = 0; i < nconss && !(*infeasible); i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i]) );
+      SCIP_CALL( addRelaxation(scip, conss[i], infeasible) );
    }
 
    return SCIP_OKAY;
@@ -4681,7 +4683,7 @@ SCIP_DECL_CONSPARSE(consParseAnd)
       char* startptr;
 
       /* cutoff "== and(" form the constraint string */
-      startptr = strchr(str, '('); /*lint !e158*/
+      startptr = strchr((char*)str, '(');
 
       if( startptr == NULL )
       {

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -16,8 +16,11 @@
 /**@file   pub_misc.h
  * @brief  public data structures and miscellaneous methods
  * @author Tobias Achterberg
+ * @author Gerald Gamrath
  * @author Stefan Heinz
+ * @author Gregor Hendel
  * @author Michael Winkler
+ * @author Kati Wolter
  *
  * This file contains a bunch of data structures and miscellaneous methods:
  *
@@ -107,6 +110,67 @@ SCIP_Real SCIPnormalCDF(
    SCIP_Real             mean,               /**< the mean value of the distribution */
    SCIP_Real             variance,           /**< the square of the deviation of the distribution */
    SCIP_Real             value               /**< the upper limit of the calculated distribution integral */
+   );
+
+/**@} */
+
+/**@} */
+
+/**@defgroup Regression Regression methods for linear regression
+ *
+ * @{
+ */
+
+/** returns the number of observations of this regression */
+EXTERN
+int SCIPregressionGetNObservations(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   );
+
+/** return the current slope of the regression */
+EXTERN
+SCIP_Real SCIPregressionGetSlope(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   );
+
+/** get the current y-intercept of the regression */
+EXTERN
+SCIP_Real SCIPregressionGetIntercept(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   );
+
+/** removes an observation (x,y) from the regression */
+EXTERN
+void SCIPregressionRemoveObservation(
+   SCIP_REGRESSION*      regression,         /**< regression data structure */
+   SCIP_Real             x,                  /**< X of observation */
+   SCIP_Real             y                   /**< Y of the observation */
+   );
+
+/** update regression by a new observation (x,y) */
+EXTERN
+void SCIPregressionAddObservation(
+   SCIP_REGRESSION*      regression,         /**< regression data structure */
+   SCIP_Real             x,                  /**< X of observation */
+   SCIP_Real             y                   /**< Y of the observation */
+   );
+
+/** reset regression data structure */
+EXTERN
+void SCIPregressionReset(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   );
+
+/** creates and resets a regression */
+EXTERN
+SCIP_RETCODE SCIPregressionCreate(
+   SCIP_REGRESSION**     regression          /**< regression data structure */
+   );
+
+/** frees a regression */
+EXTERN
+void SCIPregressionFree(
+   SCIP_REGRESSION**     regression          /**< regression data structure */
    );
 
 /**@} */
@@ -612,56 +676,56 @@ void SCIPhashmapPrintStatistics(
 EXTERN
 SCIP_Bool SCIPhashmapIsEmpty(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-);
+   );
 
 /** gives the number of entries in a hash map */
 EXTERN
 int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-);
+   );
 
 /** gives the number of lists (buckets) in a hash map */
 EXTERN
 int SCIPhashmapGetNLists(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-);
+   );
 
 /** gives a specific list (bucket) in a hash map */
 EXTERN
 SCIP_HASHMAPLIST* SCIPhashmapGetList(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    int                   listindex           /**< index of hash map list */
-);
+   );
 
 /** gives the number of entries in a list of a hash map */
 EXTERN
 int SCIPhashmapListGetNEntries(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list, can be NULL */
-);
+   );
 
 /** retrieves origin of given entry in a hash map */
 EXTERN
 void* SCIPhashmapListGetOrigin(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-);
+   );
 
 /** retrieves image of given entry in a hash map */
 EXTERN
 void* SCIPhashmapListGetImage(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-);
+   );
 
 /** retrieves next entry from given entry in a hash map list, or NULL if at end of list. */
 EXTERN
 SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-);
+   );
 
 /** removes all entries in a hash map. */
 EXTERN
 SCIP_RETCODE SCIPhashmapRemoveAll(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-);
+   );
 
 /**@} */
 

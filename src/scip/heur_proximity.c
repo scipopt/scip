@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -61,6 +61,7 @@
 #define DEFAULT_USEFINALLP    FALSE      /* should the heuristic solve a final LP in case of continuous objective variables? */
 #define DEFAULT_LPITERSQUOT   0.2        /* default quotient of sub-MIP LP iterations with respect to LP iterations so far */
 #define DEFAULT_COPYLPBASIS   FALSE      /**< should a LP starting basis copyied from the source SCIP? */
+#define DEFAULT_USEUCT        FALSE      /* should uct node selection be used at the beginning of the search?     */
 
 /*
  * Data structures
@@ -102,6 +103,7 @@ struct SCIP_HeurData
    SCIP_Bool             restart;            /* should the heuristic immediately run again on its newly found solution? */
    SCIP_Bool             usefinallp;         /* should the heuristic solve a final LP in case of continuous objective variables? */
    SCIP_Bool             copylpbasis;        /**< should a LP starting basis copyied from the source SCIP? */
+   SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
 
 
@@ -112,10 +114,10 @@ struct SCIP_HeurData
 /** optimizes the continuous variables in an LP diving by fixing all integer variables to the given solution values */
 static
 SCIP_RETCODE solveLp(
-   SCIP*                 scip,               /* SCIP data structure */
-   SCIP_SOL*             sol,                /* candidate solution for which continuous variables should be optimized */
-   SCIP_Bool*            success             /* was the dive successful? */
-)
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL*             sol,                /**< candidate solution for which continuous variables should be optimized */
+   SCIP_Bool*            success             /**< was the dive successful? */
+   )
 {
    SCIP_VAR** vars;
    SCIP_RETCODE retstat;
@@ -292,6 +294,7 @@ SCIP_RETCODE createNewSol(
 /** sets solving parameters for the subproblem created by the heuristic */
 static
 SCIP_RETCODE setupSubproblem(
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data structure */
    SCIP*                 subscip             /**< copied SCIP data structure */
    )
 {
@@ -306,10 +309,16 @@ SCIP_RETCODE setupSubproblem(
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
 
-   /* use best dfs node selection */
-   if( SCIPfindNodesel(subscip, "dfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/dfs/stdpriority") )
+   /* use restart dfs node selection */
+   if( SCIPfindNodesel(subscip, "restartdfs") != NULL && !SCIPisParamFixed(subscip, "nodeselection/restartdfs/stdpriority") )
    {
-      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/dfs/stdpriority", INT_MAX/4) );
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/restartdfs/stdpriority", INT_MAX/4) );
+   }
+
+   /* activate uct node selection at the top of the tree */
+   if( heurdata->useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
    }
 
    /* disable expensive presolving
@@ -328,9 +337,9 @@ SCIP_RETCODE setupSubproblem(
 
 
    /* todo: check branching rule in sub-SCIP */
-   if( SCIPfindBranchrule(subscip, "leastinf") != NULL && !SCIPisParamFixed(subscip, "branching/leastinf/priority") )
+   if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
-	   SCIP_CALL( SCIPsetIntParam(subscip, "branching/leastinf/priority", INT_MAX/4) );
+	   SCIP_CALL( SCIPsetIntParam(subscip, "branching/inference/priority", INT_MAX/4) );
    }
 
    /* disable feasibility pump and fractional diving */
@@ -968,7 +977,7 @@ SCIP_RETCODE SCIPapplyProximity(
       }
 
       /* set up parameters for the copied instance */
-      SCIP_CALL( setupSubproblem(subscip) );
+      SCIP_CALL( setupSubproblem(heurdata, subscip) );
 
       /* create the objective constraint in the sub scip, first without variables and values which will be added later */
       SCIP_CALL( SCIPcreateConsBasicLinear(subscip, &objcons, "objbound_of_origscip", 0, NULL, NULL, -SCIPinfinity(subscip), SCIPinfinity(subscip)) );
@@ -1260,6 +1269,11 @@ SCIP_RETCODE SCIPincludeHeurProximity(
    SCIP_CALL( SCIPaddRealParam(scip, "heuristics/" HEUR_NAME "/mingap",
          "minimum primal-dual gap for which the heuristic is executed",
          &heurdata->mingap, TRUE, DEFAULT_MINGAP, 0.0, SCIPinfinity(scip), NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
+         "should uct node selection be used at the beginning of the search?",
+         &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }

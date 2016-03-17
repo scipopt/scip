@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -319,6 +319,7 @@ SCIP_RETCODE SCIPprobCreate(
    (*prob)->objisintegral = FALSE;
    (*prob)->transformed = transformed;
    (*prob)->nlpenabled = FALSE;
+   (*prob)->permuted = FALSE;
 
    return SCIP_OKAY;
 }
@@ -571,6 +572,9 @@ SCIP_RETCODE SCIPprobTransform(
 
    /* copy the nlpenabled flag */
    (*target)->nlpenabled = source->nlpenabled;
+
+   /* mark the transformed problem to be permuted iff the source problem is permuted */
+   (*target)->permuted = source->permuted;
 
    return SCIP_OKAY;
 }
@@ -1657,6 +1661,7 @@ SCIP_RETCODE SCIPprobScaleObj(
 void SCIPprobStoreRootSol(
    SCIP_PROB*            prob,               /**< problem data */
    SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< SCIP statistics */
    SCIP_LP*              lp,                 /**< current LP data */
    SCIP_Bool             roothaslp           /**< is the root solution from LP? */
    )
@@ -1673,6 +1678,9 @@ void SCIPprobStoreRootSol(
 
       SCIPlpSetRootLPIsRelax(lp, SCIPlpIsRelax(lp));
       SCIPlpStoreRootObjval(lp, set, prob);
+
+      /* compute root LP best-estimate */
+      SCIPstatComputeRootLPBestEstimate(stat, set, SCIPlpGetColumnObjval(lp), prob->vars, prob->nbinvars + prob->nintvars + prob->nimplvars);
    }
 }
 
@@ -2074,6 +2082,8 @@ void SCIPprobPrintStatistics(
  * However, we want to have them in the library anyways, so we have to undef the defines.
  */
 
+#undef SCIPprobIsPermuted
+#undef SCIPprobMarkPermuted
 #undef SCIPprobIsTransformed
 #undef SCIPprobIsObjIntegral
 #undef SCIPprobAllColsInLP
@@ -2087,6 +2097,26 @@ void SCIPprobPrintStatistics(
 #undef SCIPprobGetNContVars
 #undef SCIPprobGetVars
 #undef SCIPprobGetObjoffset
+
+/** is the problem permuted */
+SCIP_Bool SCIPprobIsPermuted(
+   SCIP_PROB*            prob
+   )
+{
+   assert(prob != NULL);
+
+   return prob->permuted;
+}
+
+/** mark the problem as permuted */
+void SCIPprobMarkPermuted(
+   SCIP_PROB*            prob
+   )
+{
+   assert(prob != NULL);
+
+   prob->permuted = TRUE;
+}
 
 /** is the problem data transformed */
 SCIP_Bool SCIPprobIsTransformed(

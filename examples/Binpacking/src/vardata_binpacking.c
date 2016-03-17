@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -26,9 +26,9 @@
 #include "probdata_binpacking.h"
 #include "vardata_binpacking.h"
 
-/** @brief Variable data which is attached to all variables.
+/** Variable data which is attached to all variables.
  *
- *  This variables data is used to know in which constraints this variables appears. Therefore, the variable data
+ *  This variable data is used to store in which constraints this variable appears. Therefore, the variable data
  *  contains the ids of constraints in which the variable is part of. Hence, that data give us a column view.
  */
 struct SCIP_VarData
@@ -104,7 +104,7 @@ SCIP_RETCODE SCIPvardataCreateBinpacking(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_VARDATA**        vardata,            /**< pointer to vardata */
    int*                  consids,            /**< array of constraints ids */
-   int                   nconsids              /**< number of constraints */
+   int                   nconsids            /**< number of constraints */
    )
 {
    SCIP_CALL( vardataCreate(scip, vardata, consids, nconsids) );
@@ -119,6 +119,7 @@ int SCIPvardataGetNConsids(
 {
    return vardata->nconsids;
 }
+
 /** returns sorted constraint id array */
 int* SCIPvardataGetConsids(
    SCIP_VARDATA*         vardata             /**< variable data */
@@ -136,7 +137,6 @@ int* SCIPvardataGetConsids(
 
    return vardata->consids;
 }
-
 
 /** creates variable */
 SCIP_RETCODE SCIPcreateVarBinpacking(
@@ -170,7 +170,6 @@ SCIP_RETCODE SCIPcreateVarBinpacking(
 
    return SCIP_OKAY;
 }
-
 
 /** prints vardata to file stream */
 void SCIPvardataPrint(

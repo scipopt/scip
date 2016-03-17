@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -52,6 +52,7 @@
                                          * of the original scip be copied to constraints of the subscip
                                          */
 #define DEFAULT_COPYLPBASIS   TRUE      /**< should a LP starting basis copyied from the source SCIP? */
+#define DEFAULT_USEUCT        FALSE     /* should uct node selection be used at the beginning of the search?     */
 
 /* event handler properties */
 #define EVENTHDLR_NAME         "Rins"
@@ -80,6 +81,7 @@ struct SCIP_HeurData
                                               */
    SCIP_Bool             copylpbasis;        /**< should a starting basis should be copied into the subscip? */
    int                   ncreatedsubmips;    /**< counter for the number of created sub-MIPs                          */
+   SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
 
 /*
@@ -245,7 +247,7 @@ SCIP_RETCODE createNewSol(
    SCIP_HEUR*            heur,               /**< RINS heuristic structure                            */
    SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
    SCIP_Bool*            success             /**< used to store whether new solution was found or not */
-)
+   )
 {
    SCIP_VAR** vars;                          /* the original problem's variables                */
    int        nvars;
@@ -633,6 +635,12 @@ SCIP_DECL_HEUREXEC(heurExecRins)
       SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
    }
 
+   /* activate uct node selection at the top of the tree */
+   if( heurdata->useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
+   }
+
    /* use inference branching */
    if( SCIPfindBranchrule(subscip, "inference") != NULL && !SCIPisParamFixed(subscip, "branching/inference/priority") )
    {
@@ -831,6 +839,11 @@ SCIP_RETCODE SCIPincludeHeurRins(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copylpbasis",
          "should a LP starting basis copyied from the source SCIP?",
          &heurdata->copylpbasis, TRUE, DEFAULT_COPYLPBASIS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
+         "should uct node selection be used at the beginning of the search?",
+         &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }
