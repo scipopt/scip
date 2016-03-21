@@ -16987,7 +16987,9 @@ SCIP_RETCODE SCIPlpUpdateAges(
       assert(lpirows[r] == lp->rows[r]);
 
       if( lpirows[r]->dualsol == 0.0 ) /* basic rows to remove are exactly at 0.0 */
+      {
          lpirows[r]->age++;
+      }
       else
       {
          lpirows[r]->activeinlpcounter++;

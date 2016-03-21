@@ -2015,7 +2015,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-      if( sscanf(valuestr, "%"SCIP_LONGINT_FORMAT, &longintval) != 1 )
+      if( sscanf(valuestr, "%" SCIP_LONGINT_FORMAT, &longintval) != 1 )
       {
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
@@ -2138,7 +2138,7 @@ SCIP_DECL_DIALOGDESC(SCIPdialogDescSetParam)
       break;
 
    case SCIP_PARAMTYPE_LONGINT:
-      (void) SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%"SCIP_LONGINT_FORMAT, SCIPparamGetLongint(param));
+      (void) SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%" SCIP_LONGINT_FORMAT, SCIPparamGetLongint(param));
       break;
 
    case SCIP_PARAMTYPE_REAL:

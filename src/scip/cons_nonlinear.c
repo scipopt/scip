@@ -7335,7 +7335,9 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   for( c = 0; c < nconss; ++c )
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(conss[c] != NULL);  /*lint !e613*/
 
@@ -7348,14 +7350,12 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
 
       if( consdata->nexprtrees == 0 )
       {
-         SCIP_Bool infeasible;
-
          assert(consdata->exprgraphnode == NULL);
          /* if we are actually linear, add the constraint as row to the LP */
          SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, SCIPconsGetHdlr(conss[c]), SCIPconsGetName(conss[c]), consdata->lhs, consdata->rhs,
                SCIPconsIsLocal(conss[c]), FALSE , TRUE) );  /*lint !e613*/
          SCIP_CALL( SCIPaddVarsToRow(scip, row, consdata->nlinvars, consdata->linvars, consdata->lincoefs) );
-         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
+         SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
          SCIP_CALL( SCIPreleaseRow (scip, &row) );
          continue;
       }
@@ -7405,27 +7405,26 @@ SCIP_DECL_CONSINITLP(consInitlpNonlinear)
       /* for inequalities that are convex or that have bounded variables, try to generate a cut */
       if( !SCIPisInfinity(scip,  consdata->rhs) && ((consdata->curvature & SCIP_EXPRCURV_CONVEX)  || !haveunboundedvar) )
       {
-         SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], x, NULL, TRUE, SCIP_SIDETYPE_RIGHT, &row, conshdlrdata->cutmaxrange, FALSE, FALSE) );  /*lint !e613*/
+         SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], x, NULL, TRUE, SCIP_SIDETYPE_RIGHT, &row,
+               conshdlrdata->cutmaxrange, FALSE, FALSE) );  /*lint !e613*/
 
          if( row != NULL )
          {
-            SCIP_Bool infeasible;
-
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }
       }
 
-      if( !SCIPisInfinity(scip, -consdata->lhs) && ((consdata->curvature & SCIP_EXPRCURV_CONCAVE) || !haveunboundedvar) )
+      if( !(*infeasible) && !SCIPisInfinity(scip, -consdata->lhs) &&
+         ((consdata->curvature & SCIP_EXPRCURV_CONCAVE) || !haveunboundedvar) )
       {
-         SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], x, NULL, TRUE, SCIP_SIDETYPE_LEFT, &row, conshdlrdata->cutmaxrange, FALSE, FALSE) );  /*lint !e613*/
+         SCIP_CALL( generateCut(scip, conshdlrdata->exprinterpreter, conss[c], x, NULL, TRUE, SCIP_SIDETYPE_LEFT, &row,
+               conshdlrdata->cutmaxrange, FALSE, FALSE) );  /*lint !e613*/
 
          if( row != NULL )
          {
-            SCIP_Bool infeasible;
-
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, &infeasible) );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE /* forcecut */, infeasible) );
             SCIPdebug( SCIP_CALL( SCIPprintRow(scip, row, NULL) ) );
             SCIP_CALL( SCIPreleaseRow(scip, &row) );
          }

@@ -12100,14 +12100,14 @@ SCIP_DECL_CONSTRANS(consTransKnapsack)
 static
 SCIP_DECL_CONSINITLP(consInitlpKnapsack)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff;
    int i;
 
-   for( i = 0; i < nconss; i++ )
+   *infeasible = FALSE;
+
+   for( i = 0; i < nconss && !(*infeasible); i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i], NULL, &cutoff) );
-      /* ignore cutoff: cannot return status */
+      SCIP_CALL( addRelaxation(scip, conss[i], NULL, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -12739,7 +12739,7 @@ SCIP_DECL_CONSPRINT(consPrintKnapsack)
    {
       if( i > 0 )
          SCIPinfoMessage(scip, file, " ");
-      SCIPinfoMessage(scip, file, "%+"SCIP_LONGINT_FORMAT, consdata->weights[i]);
+      SCIPinfoMessage(scip, file, "%+" SCIP_LONGINT_FORMAT, consdata->weights[i]);
       SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[i], TRUE) );
    }
    SCIPinfoMessage(scip, file, " <= %" SCIP_LONGINT_FORMAT "", consdata->capacity);
@@ -12865,7 +12865,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
 
    if( *success )
    {
-      if( sscanf(str, "%"SCIP_LONGINT_FORMAT, &capacity) != 1 )
+      if( sscanf(str, "%" SCIP_LONGINT_FORMAT, &capacity) != 1 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity from '%s'\n", str);
          *success = FALSE;

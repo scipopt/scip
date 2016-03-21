@@ -723,9 +723,9 @@ SCIP_RETCODE SCIPincludeComprLargestrepr(
    SCIP_CALL( SCIPsetComprFree(scip, compr, comprFreeLargestrepr) );
 
    /* add largestrepr tree compression parameters */
-   SCIP_CALL( SCIPaddIntParam(scip, "compression/"COMPR_NAME"/iterations", "number of runs in the constrained part.",
+   SCIP_CALL( SCIPaddIntParam(scip, "compression/" COMPR_NAME "/iterations", "number of runs in the constrained part.",
          &comprdata->niters, FALSE, DEFAULT_ITERS, 1, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip, "compression/"COMPR_NAME"/mincommonvars", "minimal number of common variables.",
+   SCIP_CALL( SCIPaddIntParam(scip, "compression/" COMPR_NAME "/mincommonvars", "minimal number of common variables.",
          &comprdata->mincomvars, FALSE, DEFAULT_MINCOMMONVARS, 1, INT_MAX, NULL, NULL) );
 
    return SCIP_OKAY;

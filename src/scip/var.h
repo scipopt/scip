@@ -1336,6 +1336,15 @@ SCIP_Real SCIPvarGetPseudocostCountCurrentRun(
    SCIP_BRANCHDIR        dir                 /**< branching direction (downwards, or upwards) */
    );
 
+
+/** compares both possible directions for rounding the given solution value and returns the minimum pseudo-costs of the variable */
+SCIP_Real SCIPvarGetMinPseudocostScore(
+   SCIP_VAR*             var,                /**< problem variable */
+   SCIP_STAT*            stat,               /**< problem statistics */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Real             solval              /**< solution value, e.g., LP solution value */
+   );
+
 /** gets the an estimate of the variable's pseudo cost variance in direction \p dir */
 extern
 SCIP_Real SCIPvarGetPseudocostVariance(

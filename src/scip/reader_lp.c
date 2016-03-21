@@ -3405,11 +3405,11 @@ SCIP_RETCODE SCIPincludeReaderLp(
 
    /* add lp-reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/linearize-and-constraints",
+         "reading/" READER_NAME "/linearize-and-constraints",
          "should possible \"and\" constraint be linearized when writing the lp file?",
          &readerdata->linearizeands, TRUE, DEFAULT_LINEARIZE_ANDS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/aggrlinearization-ands",
+         "reading/" READER_NAME "/aggrlinearization-ands",
          "should an aggregated linearization for and constraints be used?",
          &readerdata->aggrlinearizationands, TRUE, DEFAULT_AGGRLINEARIZATION_ANDS, NULL, NULL) );
 
@@ -3877,7 +3877,7 @@ SCIP_RETCODE SCIPwriteLp(
          }
          else
          {
-            SCIPwarningMessage(scip, "change parameter \"reading/"READER_NAME"/linearize-and-constraints\" to TRUE to print and-constraints\n");
+            SCIPwarningMessage(scip, "change parameter \"reading/" READER_NAME "/linearize-and-constraints\" to TRUE to print and-constraints\n");
             SCIPinfoMessage(scip, file, "\\ ");
             SCIP_CALL( SCIPprintCons(scip, cons, file) );
             SCIPinfoMessage(scip, file, ";\n");

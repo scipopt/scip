@@ -50,6 +50,13 @@ SOLUFILE=${20}   # - solu file, only necessary if $SETCUTOFF is 1
 #set solfile
 SOLFILE=$CLIENTTMPDIR/${USER}-tmpdir/$SOLBASENAME.sol
 
+if test -e "$SOLUFILE"
+then
+    OBJECTIVEVAL=`grep "$SHORTPROBNAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
+else
+    OBJECTIVEVAL=""
+fi
+echo "Reference value $OBJECTIVEVAL $SOLUFILE"
 # reset TMPFILE
 echo > $TMPFILE
 
@@ -78,6 +85,11 @@ fi
 if test "$LPS" = "none"
 then
     echo set lp solvefreq -1           >> $TMPFILE
+fi
+if test "$OBJECTIVEVAL" != ""
+then
+    echo "Reference value $OBJECTIVEVAL"
+    echo set misc referencevalue $OBJECTIVEVAL      >> $TMPFILE
 fi
 echo set limits time $TIMELIMIT        >> $TMPFILE
 echo set limits nodes $NODELIMIT       >> $TMPFILE
@@ -109,14 +121,14 @@ then
             echo Exiting test because no solu file can be found for this test
             exit
         fi
-        CUTOFF=`grep "$SHORTPROBNAME " $SOLUFILE | grep -v =feas= | grep -v =inf= | tail -n 1 | awk '{print $3}'`
-        if test ""$CUTOFF != ""
+        if test ""$OBJECTIVEVAL != ""
         then
-            echo set limits objective $CUTOFF      >> $TMPFILE
+            echo set limits objective $OBJECTIVEVAL >> $TMPFILE
             echo set heur emph off                 >> $TMPFILE
         fi
     fi
 
+    echo display parameters                >> $TMPFILE
     echo $OPTCOMMAND                       >> $TMPFILE
     echo display statistics                >> $TMPFILE
     echo checksol                          >> $TMPFILE

@@ -201,6 +201,8 @@ BEGIN {
    # get name of LP solver
    if( $13 == "SoPlex" )
       lpsname = "spx";
+   else if( $13 == "SoPlex2" )
+      lpsname = "spx2";
    else if( $13 == "SoPlex1" )
       lpsname = "spx1";
    else if( $13 == "CPLEX" )
