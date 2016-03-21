@@ -72,6 +72,7 @@ extern "C" {
  * large size_t values. This is then checked within the functions. */
 
 #define BMSallocMemory(ptr)                   ASSIGN((ptr), BMSallocMemory_call( sizeof(**(ptr)), __FILE__, __LINE__ ))
+#define BMSallocClearMemory(ptr)              ASSIGN((ptr), BMSallocClearMemory_call((size_t)(1), sizeof(**(ptr)), __FILE__, __LINE__ ))
 #define BMSallocMemorySize(ptr,size)          ASSIGN((ptr), BMSallocMemory_call( (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ ))
 #define BMSallocMemoryCPP(size)               BMSallocMemory_call( (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ )
 #define BMSallocClearMemorySize(ptr,size)     ASSIGN((ptr), BMSallocClearMemory_call((size_t)(1), (size_t)(ptrdiff_t)(size), __FILE__, __LINE__ ))
