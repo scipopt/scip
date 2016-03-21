@@ -47,9 +47,9 @@ extern "C" {
 #define SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* consexprhdlr, \
-   SCIP_CONSEXPR_OPERANDDATA** operanddata, \
-   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr, \
-   SCIP_CONSEXPR_OPERANDDATA* sourceoperanddata)
+   SCIP* sourcescip, \
+   SCIP_CONSHDLR* sourceconsexprhdlr, \
+   SCIP_CONSEXPR_OPERANDHDLR* sourceoperandhdlr)
 
 /** expression operator handler free method
  *

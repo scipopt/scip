@@ -25,6 +25,7 @@
 
 #include "scip/cons_expr.h"
 #include "scip/struct_cons_expr.h"
+#include "scip/cons_expr_var.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "expr"
@@ -90,6 +91,8 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_OPERANDHDLR** ophdlrs;     /**< operand handlers */
    int                         nophdlrs;    /**< number of operand handlers */
    int                         ophdlrssize; /**< size of ophdlrs array */
+
+   SCIP_CONSEXPR_OPERANDHDLR*  opvarhdlr;    /**< variable operand handler */
 };
 
 
@@ -662,6 +665,13 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
 
    /* add expr constraint handler parameters */
    /* TODO: (optional) add constraint handler specific parameters with SCIPaddTypeParam() here */
+
+
+   /* NOTE: we should not do the below when copying the constraint handler (in that case, we should call the copy callback of the operator handler */
+   /* include and remember handler for variable operator */
+   SCIP_CALL( SCIPincludeExprOperandVar(scip, conshdlr) );
+   assert(conshdlrdata->nophdlrs > 0 && strcmp(conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1]->name, "var") == 0);
+   conshdlrdata->opvarhdlr = conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1];
 
    return SCIP_OKAY;
 }
