@@ -60,6 +60,8 @@ typedef struct Component
    SCIP*                 subscip;            /** sub-SCIP representing the component */
    SCIP_VAR**            vars;               /** variables belonging to this component (in complete problem) */
    SCIP_VAR**            subvars;            /** variables belonging to this component (in subscip) */
+   SCIP_VAR**            fixedvars;          /** variables in the sub-SCIP which were copied while copying the component's
+                                              *  constraints, but do not count to the subvars, because they were locally fixed */
    SCIP_Real             lastdualbound;      /** dual bound after last optimization call for this component */
    SCIP_Real             lastprimalbound;    /** primal bound after last optimization call for this component */
    SCIP_Longint          lastnodelimit;      /** node limit of last optimization call for this component */
@@ -68,6 +70,7 @@ typedef struct Component
    int                   ncalls;             /** number of optimization calls for this component */
    int                   lastsolindex;       /** index of best solution after last optimization call for this component */
    int                   nvars;              /** number of variables belonging to this component */
+   int                   nfixedvars;         /** number of fixed variables copied during constraint copying */
    int                   number;             /** component number */
 
    SCIP_PQUEUE*          subproblemqueue;    /** subproblems (nodes of the branch and bound tree of the component) treated individually */
@@ -156,6 +159,11 @@ SCIP_DECL_SORTPTRCOMP(subproblemSort)
    return prob1->lowerbound - prob2->lowerbound;
 }
 
+/** forward declaration: free subproblem structure */
+static
+SCIP_RETCODE freeProblem(PROBLEM**);
+
+
 /** initialize component structure */
 static
 SCIP_RETCODE initComponent(
@@ -179,6 +187,7 @@ SCIP_RETCODE initComponent(
    component->subscip = NULL;
    component->vars = NULL;
    component->subvars = NULL;
+   component->fixedvars = NULL;
    component->subproblemqueue = NULL;
    component->lastdualbound = -SCIPinfinity(scip);
    component->lastprimalbound = SCIPinfinity(scip);
@@ -188,6 +197,7 @@ SCIP_RETCODE initComponent(
    component->ncalls = 0;
    component->lastsolindex = -1;
    component->nvars = 0;
+   component->nfixedvars = 0;
    component->number = index;
 
    return SCIP_OKAY;
@@ -213,6 +223,20 @@ SCIP_RETCODE freeComponent(
 
    SCIPdebugMessage("freeing component %d of problem <%s>\n", (*component)->number, (*component)->problem->name);
 
+   if( (*component)->subproblemqueue != NULL )
+   {
+      PROBLEM* subproblem;
+
+      while( SCIPpqueueNElems((*component)->subproblemqueue) > 0 )
+      {
+         subproblem = (PROBLEM*)SCIPpqueueRemove((*component)->subproblemqueue);
+
+         freeProblem(&subproblem);
+      }
+
+      SCIPpqueueFree(&(*component)->subproblemqueue);
+   }
+
    if( (*component)->subscip != NULL )
    {
       SCIP_CALL( SCIPfree(&(*component)->subscip) );
@@ -223,6 +247,10 @@ SCIP_RETCODE freeComponent(
    {
       SCIPfreeMemoryArray(scip, &(*component)->vars);
       SCIPfreeMemoryArray(scip, &(*component)->subvars);
+   }
+   if( (*component)->fixedvars != NULL )
+   {
+      SCIPfreeMemoryArray(scip, &(*component)->fixedvars);
    }
 
    SCIPfreeMemory(scip, component);
@@ -349,8 +377,8 @@ SCIP_RETCODE componentCreateSubscip(
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/maxorigsol", 0) );
 
    /* reduce the effort spent for hash tables */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usevartable", FALSE) );
-   SCIP_CALL( SCIPsetBoolParam(subscip, "misc/useconstable", FALSE) );
+   //SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usevartable", FALSE) );
+   //SCIP_CALL( SCIPsetBoolParam(subscip, "misc/useconstable", FALSE) );
 
    /* do not catch control-C */
    //SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
@@ -366,7 +394,7 @@ SCIP_RETCODE componentCreateSubscip(
    SCIP_CALL( SCIPcreateProb(subscip, name, NULL, NULL, NULL, NULL, NULL, NULL, NULL) );
 
    /* copy variables */
-   for( v = 0; v < component->nvars; ++v )
+   for( v = 0; v < nvars; ++v )
    {
       SCIP_CALL( SCIPgetVarCopy(scip, subscip, component->vars[v], &component->subvars[v], varmap, consmap, FALSE, success) );
 
@@ -374,6 +402,7 @@ SCIP_RETCODE componentCreateSubscip(
       if( !(*success) )
          goto TERMINATE;
    }
+   assert(SCIPgetNVars(subscip) == nvars);
 
    for( i = 0; i < nconss; ++i )
    {
@@ -392,6 +421,32 @@ SCIP_RETCODE componentCreateSubscip(
 
       SCIP_CALL( SCIPaddCons(subscip, newcons) );
       SCIP_CALL( SCIPreleaseCons(subscip, &newcons) );
+   }
+
+   if( SCIPgetNVars(subscip) > nvars )
+   {
+      SCIP_VAR** vars = SCIPgetVars(subscip);
+      int nnewvars = SCIPgetNVars(subscip);
+      int index = 0;
+
+      component->nfixedvars = nnewvars - nvars;
+      SCIP_CALL( SCIPallocMemoryArray(scip, &component->fixedvars, component->nfixedvars) );
+
+      for( v = 0; v < nnewvars; ++v )
+      {
+         if( SCIPvarGetIndex(vars[v]) >= nvars )
+         {
+            assert(SCIPisEQ(subscip, SCIPvarGetLbGlobal(vars[v]),
+                  SCIPvarGetUbGlobal(vars[v])));
+
+            component->fixedvars[index] = vars[v];
+            ++index;
+         }
+#ifndef NDEBUG
+         else
+            assert(SCIPisLT(subscip, SCIPvarGetLbGlobal(vars[v]), SCIPvarGetUbGlobal(vars[v])));
+#endif
+      }
    }
 
 
@@ -415,9 +470,9 @@ SCIP_RETCODE componentCreateSubscip(
     * handler could do something more clever.
     */
 #ifdef SCIP_MORE_DEBUG
-   if( component->nvars > SCIPgetNVars(subscip) )
+   if( nvars > SCIPgetNVars(subscip) )
    {
-      SCIPinfoMessage(scip, NULL, "copying component %d reduced number of variables: %d -> %d\n", component->number, component->nvars,
+      SCIPinfoMessage(scip, NULL, "copying component %d reduced number of variables: %d -> %d\n", component->number, nvars,
          SCIPgetNVars(subscip));
    }
 #endif
@@ -476,13 +531,59 @@ SCIP_RETCODE solveComponent(
    scip = problem->scip;
    assert(scip != NULL);
 
-   *result = SCIP_DIDNOTRUN;
-
-   SCIPdebugMessage("solve component %d (ncalls=%d, absgap=%16.9g)\n",
-      component->number, component->ncalls, component->lastprimalbound - component->lastdualbound);
-
    subscip = component->subscip;
    assert(subscip != NULL);
+
+   *result = SCIP_DIDNOTRUN;
+
+   SCIPdebugMessage("solve component <%s> (ncalls=%d, absgap=%.9g)\n",
+      SCIPgetProbName(subscip), component->ncalls, component->lastprimalbound - component->lastdualbound);
+
+   /* update best solution of component */
+   if( problem->nfeascomps == problem->ncomponents )
+   {
+      SCIP_SOL* bestsol = problem->bestsol;
+      SCIP_SOL* compsol;
+      SCIP_VAR** vars = component->vars;
+      SCIP_VAR** subvars = component->subvars;
+      int nvars = component->nvars;
+      int v;
+
+      SCIP_CALL( SCIPcreateOrigSol(subscip, &compsol, NULL) );
+
+      for( v = 0; v < nvars; ++v )
+      {
+         SCIP_CALL( SCIPsetSolVal(subscip, compsol, subvars[v], SCIPgetSolVal(scip, bestsol, vars[v])) );
+      }
+      for( v = 0; v < component->nfixedvars; ++v )
+      {
+         SCIP_CALL( SCIPsetSolVal(subscip, compsol, component->fixedvars[v], SCIPvarGetLbGlobal(component->fixedvars[v])) );
+      }
+
+      if( SCIPisLT(subscip, SCIPgetSolOrigObj(subscip, compsol), SCIPgetPrimalbound(subscip)) )
+      {
+         SCIP_Bool feasible;
+
+         SCIPdebugMessage("install new solution in component <%s> inherited from problem <%s>: primal bound %.9g --> %.9g\n",
+            SCIPgetProbName(subscip), problem->name, SCIPgetPrimalbound(subscip), SCIPgetSolOrigObj(subscip, compsol));
+
+         SCIP_CALL( SCIPcheckSolOrig(subscip, compsol, &feasible, FALSE, FALSE) );
+         if( feasible )
+         {
+            SCIP_CALL( SCIPaddSol(subscip, compsol, &feasible) );
+            assert(feasible);
+         }
+         else
+         {
+            // ??????????????????????????????????
+            //SCIP_CALL( SCIPupdateCutoffbound(subscip, ) );
+         }
+      }
+
+      SCIP_CALL( SCIPfreeSol(subscip, &compsol) );
+   }
+
+
 
    /* check if we rather want to continue solving one of the subproblems */
    if( componentHasSubproblems(component) )
@@ -500,7 +601,7 @@ SCIP_RETCODE solveComponent(
          (void)SCIPpqueueRemove(component->subproblemqueue);
 
          /* update best solution of problem */
-         if( SCIPisLT(subscip, SCIPgetUpperbound(subscip), SCIPgetSolOrigObj(subscip, bestproblem->bestsol)) )
+         if( SCIPisLT(subscip, SCIPgetUpperbound(subscip), SCIPgetSolTransObj(subscip, bestproblem->bestsol)) )
          {
             SCIP_SOL* bestsol = SCIPgetBestSol(subscip);
             SCIP_VAR** vars = SCIPgetVars(subscip);
@@ -508,6 +609,10 @@ SCIP_RETCODE solveComponent(
             int v;
 
             assert(bestsol != NULL);
+
+            SCIPdebugMessage("update best solution in problem <%s> after better solution was found in component <%s>: upper bound %.9g --> %.9g\n",
+               bestproblem->name, SCIPgetProbName(subscip), SCIPgetSolTransObj(subscip, bestproblem->bestsol),
+               SCIPgetUpperbound(subscip));
 
             for( v = 0; v < nvars; ++v )
             {
@@ -524,14 +629,20 @@ SCIP_RETCODE solveComponent(
          {
             SCIPpqueueInsert(component->subproblemqueue, bestproblem);
          }
+         else
+         {
+            assert(SCIPisLE(subscip, SCIPgetUpperbound(subscip), SCIPgetSolOrigObj(subscip, bestproblem->bestsol)));
+            freeProblem(&bestproblem);
+         }
+         goto EVALUATE;
       }
    }
-   else
+
    {
       assert(component->laststatus != SCIP_STATUS_OPTIMAL);
 
-      SCIPdebugMessage("solve sub-SCIP for component %d (ncalls=%d, absgap=%16.9g)\n",
-         component->number, component->ncalls, component->lastprimalbound - component->lastdualbound);
+      SCIPdebugMessage("solve sub-SCIP for component <%s> (ncalls=%d, absgap=%16.9g)\n",
+         SCIPgetProbName(component->subscip), component->ncalls, component->lastprimalbound - component->lastdualbound);
 
       /* update time limit */
       SCIP_CALL( SCIPgetRealParam(scip, "limits/time", &timelimit) );
@@ -576,8 +687,9 @@ SCIP_RETCODE solveComponent(
       }
       else
       {
-         nodelimit = 2 * SCIPgetNNodes(component->subscip);
-         nodelimit = MAX(nodelimit, 500LL);
+         nodelimit = SCIPgetNNodes(component->subscip) + 1;
+         //nodelimit = 2 * SCIPgetNNodes(component->subscip);
+         //nodelimit = MAX(nodelimit, 500LL);
 
          /* set a gap limit of half the current gap (at most 10%) */
          if( SCIPgetGap(component->subscip) < 0.2 )
@@ -638,6 +750,7 @@ SCIP_RETCODE solveComponent(
       }
    }
 
+  EVALUATE:
    /* evaluate call */
    if( *result == SCIP_SUCCESS )
    {
@@ -686,7 +799,7 @@ SCIP_RETCODE solveComponent(
                (SCIPgetSolOrigObj(scip, problem->bestsol) - SCIPretransformObj(scip, problem->lowerbound)) / MAX(ABS(SCIPretransformObj(scip, problem->lowerbound)),SCIPgetSolOrigObj(scip, problem->bestsol)) : SCIPinfinity(scip),
                problem->nfeascomps == problem->ncomponents ?
                SCIPgetSolOrigObj(scip, problem->bestsol) - SCIPretransformObj(scip, problem->lowerbound) : SCIPinfinity(scip));
-            SCIP_CALL( SCIPupdateLocalLowerbound(scip, problem->lowerbound) );
+            //SCIP_CALL( SCIPupdateLocalLowerbound(scip, problem->lowerbound) );
          }
 
          /* store dual bound of this call */
@@ -1039,8 +1152,8 @@ SCIP_RETCODE splitProblem(
 
          assert(ncompconss > 0 || component->nvars == 1);
 
-         SCIPdebugMessage("build sub-SCIP for component %d: %d vars (%d bin, %d int, %d cont), %d conss\n",
-            component->number, component->nvars, nbinvars, nintvars, component->nvars - nintvars - nbinvars, ncompconss);
+         SCIPdebugMessage("build sub-SCIP for component %d of problem <%s>: %d vars (%d bin, %d int, %d cont), %d conss\n",
+            component->number, problem->name, component->nvars, nbinvars, nintvars, component->nvars - nintvars - nbinvars, ncompconss);
 #if 0
          {
             int i;
