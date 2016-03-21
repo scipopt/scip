@@ -38,6 +38,22 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
+/** creates the handler for an expression operand and includes it into the expression constraint handler */
+EXTERN
+SCIP_RETCODE SCIPincludeOperandHdlrConshdlrExpr(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   const char*                name,          /**< name of operand (must not be NULL) */
+   const char*                desc,          /**< description of operand (can be NULL) */
+   SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR((*copyhdlr)), /**< handler copy method (can be NULL) */
+   SCIP_DECL_CONSEXPR_OPERANDFREEHDLR((*freehdlr)), /**< handler free method (can be NULL) */
+   SCIP_DECL_CONSEXPR_OPERANDCOPYDATA((*copydata)), /**< copy method of operand data (can be NULL for operands without data) */
+   SCIP_DECL_CONSEXPR_OPERANDFREEDATA((*freedata)), /**< free method of operand data (can be NULL for operands without data) */
+   SCIP_DECL_CONSEXPR_OPERANDPRINT((*print)),       /**< print method of operand data (can be NULL) */
+   SCIP_CONSEXPR_OPERANDHDLRDATA* data       /**< data of operand handler */
+   );
+
+
 /** creates and captures a expr constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()

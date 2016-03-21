@@ -32,12 +32,18 @@
 extern "C" {
 #endif
 
-/** operator data of an expression */
-union SCIP_ConsExpr_OperatorData
+/** generic data and callback methods of an expression operand handler */
+struct SCIP_ConsExpr_OperandHdlr
 {
-   int                   intval;             /**< index of a parameter or a constant integer value */
-   SCIP_Real             dbl;                /**< a constant double value */
-   void*                 data;               /**< pointer to some data structure */
+   char*                          name;    /**< operand name */
+   char*                          desc;    /**< operand description (can be NULL) */
+   SCIP_CONSEXPR_OPERANDHDLRDATA* data;    /**< data of handler */
+
+   SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR((*copyhdlr));  /**< handler copy method (can be NULL) */
+   SCIP_DECL_CONSEXPR_OPERANDFREEHDLR((*freehdlr));  /**< handler free method (can be NULL) */
+   SCIP_DECL_CONSEXPR_OPERANDCOPYDATA((*copydata));  /**< data copy method, or NULL for operands that have no data */
+   SCIP_DECL_CONSEXPR_OPERANDFREEDATA((*freedata));  /**< data free method, or NULL for operands that have no data */
+   SCIP_DECL_CONSEXPR_OPERANDPRINT((*print));        /**< print method of operand data (can be NULL) */
 };
 
 /** union for storing one, two, or many children */
@@ -61,13 +67,13 @@ union SCIP_ConsExpr_Children
 /** a node in the expression graph that is handled by the expression constraint handler */
 struct SCIP_ConsExpr_Expr
 {
-   SCIP_CONSEXPR_OPERAND     op;             /**< operand of expression */
-   SCIP_CONSEXPR_OPERANDDATA opdata;         /**< operand data */
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr;         /**< operand of expression (as pointer to its handler) */
+   SCIP_CONSEXPR_OPERANDDATA* opdata;         /**< operand data */
 
-   SCIP_CONSEXPR_VARIABILITY variability;    /**< variability of constraint (in-, uni-, bi-, multivariate) */
-   SCIP_CONSEXPR_CHILDREN    children;       /**< children of expression, interpretation of union depends on variability */
+   SCIP_CONSEXPR_VARIABILITY  variability;    /**< variability of expression (in-, uni-, bi-, multivariate) */
+   SCIP_CONSEXPR_CHILDREN     children;       /**< children of expression, interpretation of union depends on variability */
 
-   int                       nuses;          /**< reference counter */
+   int                        nuses;          /**< reference counter */
 };
 
 

@@ -21,13 +21,14 @@
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
 #include <assert.h>
+#include <string.h>
 
 #include "scip/cons_expr.h"
 #include "scip/struct_cons_expr.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "expr"
-#define CONSHDLR_DESC          "expressions constraint handler"
+#define CONSHDLR_DESC          "constraint handler for expressions"
 #define CONSHDLR_ENFOPRIORITY       -60 /**< priority of the constraint handler for constraint enforcing */
 #define CONSHDLR_CHECKPRIORITY -4000010 /**< priority of the constraint handler for checking feasibility */
 #define CONSHDLR_EAGERFREQ          100 /**< frequency for using all instead of only the useful constraints in separation,
@@ -46,14 +47,29 @@
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_ALWAYS /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
 
-//#define INTERVALINFTY             1E+43 /**< value for infinity in interval operations */
-//#define BOUNDTIGHTENING_MINSTRENGTH 0.05/**< minimal required bound tightening strength in expression graph domain tightening for propagating bound change */
-
 
 
 /* enable nonlinear constraint upgrading */
 #include "scip/cons_nonlinear.h"
 #define NONLINCONSUPGD_PRIORITY   100000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
+
+
+
+/** ensures that a block memory array has at least a given size
+ *
+ *  if cursize is 0, then *array1 can be NULL
+ */
+#define ENSUREBLOCKMEMORYARRAYSIZE(scip, array1, cursize, minsize)      \
+   do {                                                                 \
+      int __newsize;                                                    \
+      assert((scip)  != NULL);                                          \
+      if( (cursize) >= (minsize) )                                      \
+         break;                                                         \
+      __newsize = SCIPcalcMemGrowSize(scip, minsize);                   \
+      assert(__newsize >= (minsize));                                   \
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(array1), cursize, __newsize) ); \
+      (cursize) = __newsize;                                            \
+   } while( FALSE )
 
 
 /*
@@ -65,11 +81,15 @@
 /** constraint data for expr constraints */
 struct SCIP_ConsData
 {
+   SCIP_CONSEXPR_EXPR*         expr;        /**< expression that represents this constraint (must evaluate to 0 (FALSE) or 1 (TRUE)) */
 };
 
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
+   SCIP_CONSEXPR_OPERANDHDLR** ophdlrs;     /**< operand handlers */
+   int                         nophdlrs;    /**< number of operand handlers */
+   int                         ophdlrssize; /**< size of ophdlrs array */
 };
 
 
@@ -110,18 +130,36 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyExpr)
 #endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
-#if 0
 static
 SCIP_DECL_CONSFREE(consFreeExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr;
+   int i;
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   for( i = 0; i < conshdlrdata->nophdlrs; ++i )
+   {
+      ophdlr = conshdlrdata->ophdlrs[i];
+      assert(ophdlr != NULL);
+
+      if( ophdlr->freehdlr != NULL )
+      {
+         SCIP_CALL( (*ophdlr->freehdlr)(scip, conshdlr, ophdlr, ophdlr->data) );
+      }
+
+      SCIPfreeMemory(scip, &ophdlr);
+   }
+
+   SCIPfreeBlockMemoryArray(scip, &conshdlrdata->ophdlrs, conshdlrdata->ophdlrssize);
+
+   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPconshdlrSetData(conshdlr, NULL);
 
    return SCIP_OKAY;
 }
-#else
-#define consFreeExpr NULL
-#endif
 
 
 /** initialization method of constraint handler (called after problem was transformed) */
@@ -260,7 +298,7 @@ SCIP_DECL_CONSINITLP(consInitlpExpr)
 
 
 /** separation method of constraint handler for LP solutions */
-#if 0
+#if 1
 static
 SCIP_DECL_CONSSEPALP(consSepalpExpr)
 {  /*lint --e{715}*/
@@ -323,7 +361,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
 
 
 /** domain propagation method of constraint handler */
-#if 0
+#if 1
 static
 SCIP_DECL_CONSPROP(consPropExpr)
 {  /*lint --e{715}*/
@@ -553,8 +591,7 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    SCIP_CONSHDLR* conshdlr;
 
    /* create expr constraint handler data */
-   conshdlrdata = NULL;
-   /* TODO: (optional) create constraint handler specific data here */
+   SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
 
    conshdlr = NULL;
 
@@ -628,6 +665,57 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
 
    return SCIP_OKAY;
 }
+
+/** creates the handler for an expression operand and includes it into the expression constraint handler */
+SCIP_RETCODE SCIPincludeOperandHdlrConshdlrExpr(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   const char*                name,          /**< name of operand (must not be NULL) */
+   const char*                desc,          /**< description of operand (can be NULL) */
+   SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR((*copyhdlr)), /**< handler copy method (can be NULL) */
+   SCIP_DECL_CONSEXPR_OPERANDFREEHDLR((*freehdlr)), /**< handler free method (can be NULL) */
+   SCIP_DECL_CONSEXPR_OPERANDCOPYDATA((*copydata)), /**< copy method of operand data (can be NULL for operands without data) */
+   SCIP_DECL_CONSEXPR_OPERANDFREEDATA((*freedata)), /**< free method of operand data (can be NULL for operands without data) */
+   SCIP_DECL_CONSEXPR_OPERANDPRINT((*print)),       /**< print method of operand data (can be NULL) */
+   SCIP_CONSEXPR_OPERANDHDLRDATA* data       /**< data of operand handler */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(name != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   SCIP_CALL( SCIPallocMemory(scip, &ophdlr) );
+
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &ophdlr->name, name, strlen(name)+1) );
+   if( desc != NULL )
+   {
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &ophdlr->desc, desc, strlen(desc)+1) );
+   }
+   else
+      ophdlr->desc = NULL;
+
+   ophdlr->data = data;
+   ophdlr->copyhdlr = copyhdlr;
+   ophdlr->freehdlr = freehdlr;
+   ophdlr->copydata = copydata;
+   ophdlr->freedata = freedata;
+   ophdlr->print = print;
+
+   ENSUREBLOCKMEMORYARRAYSIZE(scip, conshdlrdata->ophdlrs, conshdlrdata->ophdlrssize, conshdlrdata->nophdlrs+1);
+
+   conshdlrdata->ophdlrs[conshdlrdata->nophdlrs] = ophdlr;
+   ++conshdlrdata->nophdlrs;
+
+   return SCIP_OKAY;
+}
+
 
 /** creates and captures a expr constraint
  *

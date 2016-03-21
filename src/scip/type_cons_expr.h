@@ -31,32 +31,102 @@ extern "C" {
 #endif
 
 
-/** Operators of expressions. */
-enum SCIP_ConsExpr_Operand
-{
-   /**@name Terminals (Leaves) */
-   /**@{ */
-   SCIP_CONSEXPR_VAR       =  1,  /**< variable given by SCIP_VAR* (stored in data.ptr) */
-   SCIP_CONSEXPR_CONST     =  2,  /**< floating-point constant (value stored in data.dbl) */
-   /* SCIP_CONSEXPR_PARAM     =  3, */  /**< parameter = a constant that can be modified (should not be simplified away) */
-   /**@} */
+/** expression operator handler copy method
+ *
+ * the method includes the expression operator handler into a expression constraint handler
+ *
+ * This method is usually called when doing a copy of an expression constraint handler.
+ *
+ *  input:
+ *  - scip              : target SCIP main data structure
+ *  - consexprhdlr      : target expression constraint handler
+ *  - sourcescip        : source SCIP main data structure
+ *  - sourceconsexprhdlr : expression constraint handler in source SCIP
+ *  - sourceoperandhdlr : expression operand handler in source SCIP
+ */
+#define SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* consexprhdlr, \
+   SCIP_CONSEXPR_OPERANDDATA** operanddata, \
+   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr, \
+   SCIP_CONSEXPR_OPERANDDATA* sourceoperanddata)
 
-   /**@name Import and frequently used operands */
-   /**@{ */
-   SCIP_CONSEXPR_SUM       =  4,  /**< summation with coefficients and a constant */
-   SCIP_CONSEXPR_PRODUCT   =  5,  /**< a signomial, i.e., product a with a coefficient and rational-valued exponents */
-   SCIP_CONSEXPR_INBOUNDS  =  6,  /**< indicator (0 or 1) whether child is within some constant (possibly infinite) bounds */
-   /**@} */
+/** expression operator handler free method
+ *
+ * the method frees the data of an expression operand handler
+ *
+ *  input:
+ *  - scip          : SCIP main data structure
+ *  - consexprhdlr  : expression constraint handler
+ *  - operandhdlr   : expression operand handler
+ *  - operandhdlrdata : operand handler data to be freed
+ */
+#define SCIP_DECL_CONSEXPR_OPERANDFREEHDLR(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* consexprhdlr, \
+   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr, \
+   SCIP_CONSEXPR_OPERANDHDLRDATA* operandhdlrdata)
 
-   /**@name Further operands
-    */
-   /**@{ */
-   SCIP_CONSEXPR_EXP       = 8,  /**< exponential (e^x, 1 operand) */
-   SCIP_CONSEXPR_LOG       = 9,  /**< natural logarithm (ln(x), 1 operand) */
-   /**@} */
+/** expression operator data copy method
+ *
+ * the method copies the data of an expression operand
+ *
+ * This method is called when creating copies of an expression within
+ * the same or between different SCIP instances.
+ *
+ *  input:
+ *  - targetscip         : target SCIP main data structure
+ *  - targetconsexprhdlr : expression constraint handler in target SCIP
+ *  - targetoperandhdlr  : operand handler in target SCIP
+ *  - targetoperanddata  : pointer to store the copied operand data
+ *  - sourcescip         : source SCIP main data structure
+ *  - sourceconsexprhdlr : expression constraint handler in source SCIP
+ *  - sourceoperandhdlr  : expression operand handler in source SCIP
+ *  - sourceoperanddata  : the operand data (in source SCIP) to be copied
+ */
+#define SCIP_DECL_CONSEXPR_OPERANDCOPYDATA(x) SCIP_RETCODE x (\
+   SCIP* targetscip, \
+   SCIP_CONSHDLR* targetconsexprhdlr, \
+   SCIP_CONSEXPR_OPERANDHDLR* targetoperandhdlr, \
+   SCIP_CONSEXPR_OPERANDDATA** targetoperanddata, \
+   SCIP* sourcescip, \
+   SCIP_CONSHDLR* sourceconsexprhdlr, \
+   SCIP_CONSEXPR_OPERANDHDLR* sourceoperandhdlr, \
+   SCIP_CONSEXPR_OPERANDDATA* sourceoperanddata)
 
-   SCIP_CONSEXPR_LAST      = 10   /**< no expression, used for counting reasons */
-};
+/** expression operator data free method
+ *
+ * the method frees the data of an expression operand
+ *
+ *  input:
+ *  - scip          : SCIP main data structure
+ *  - consexprhdlr  : expression constraint handler
+ *  - operandhdlr   : expression operand handler
+ *  - operanddata   : operand data to be freed
+ */
+#define SCIP_DECL_CONSEXPR_OPERANDFREEDATA(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* consexprhdlr, \
+   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr, \
+   SCIP_CONSEXPR_OPERANDDATA* operanddata)
+
+/** expression operator print method
+ *
+ * the method prints the data of an expression operand
+ *
+ * input:
+ *  - scip          : SCIP main data structure
+ *  - consexprhdlr  : expression constraint handler
+ *  - operandhdlr   : expression operand handler
+ *  - operanddata   : operand data to print
+ *  - file          : the file to print to
+ */
+#define SCIP_DECL_CONSEXPR_OPERANDPRINT(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* consexprhdlr, \
+   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr, \
+   SCIP_CONSEXPR_OPERANDDATA* operanddata, \
+   FILE* file)
 
 /** variability of expression operands */
 enum SCIP_ConsExpr_Variability
@@ -69,8 +139,9 @@ enum SCIP_ConsExpr_Variability
 
 typedef enum  SCIP_ConsExpr_Variability  SCIP_CONSEXPR_VARIABILITY; /**< variability of expression operands */
 typedef union SCIP_ConsExpr_Children     SCIP_CONSEXPR_CHILDREN;    /**< storage type for children of an expression */
-typedef enum  SCIP_ConsExpr_Operand      SCIP_CONSEXPR_OPERAND;     /**< expression operand */
-typedef union SCIP_ConsExpr_OperatorData SCIP_CONSEXPR_OPERANDDATA; /**< expression operand data */
+typedef struct SCIP_ConsExpr_OperandData SCIP_CONSEXPR_OPERANDDATA; /**< expression operand data */
+typedef struct SCIP_ConsExpr_OperandHdlr SCIP_CONSEXPR_OPERANDHDLR; /**< expression operand handler */
+typedef struct SCIP_ConsExpr_OperandHdlrData SCIP_CONSEXPR_OPERANDHDLRDATA; /**< expression operand handler data */
 
 typedef struct SCIP_ConsExpr_Expr        SCIP_CONSEXPR_EXPR;        /**< expression */
 
