@@ -16,6 +16,7 @@ features:
   (an objective value in original objective space) is passed via misc/referencevalue, SCIP keeps track of the
   number of nodes exceeding the reference value and the number of early backtracks -- path switches in the tree when
   a child node with lower bound smaller than the reference value was available.
+- add new presolving step to disaggregate second order cone constraints
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
