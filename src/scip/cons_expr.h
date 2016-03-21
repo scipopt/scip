@@ -26,6 +26,7 @@
 
 
 #include "scip/scip.h"
+#include "scip/type_cons_expr.h"
 
 #ifdef __cplusplus
 extern "C" {

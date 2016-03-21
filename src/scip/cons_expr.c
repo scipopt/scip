@@ -23,7 +23,7 @@
 #include <assert.h>
 
 #include "scip/cons_expr.h"
-
+#include "scip/struct_cons_expr.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "expr"
