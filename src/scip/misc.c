@@ -6625,6 +6625,7 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
    assert(nstorednodes == digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx]);
 
    /* to simplify the iteration over all strongly connected components */
+   assert(*nstrongcomponents < digraph->nnodes + 1);
    strongcompstartidx[*nstrongcomponents] = nstorednodes;
 
    assert(retcode == SCIP_OKAY);
