@@ -2937,10 +2937,10 @@ SCIP_RETCODE polishSolution(
  *  constraint (alpha_i * (x_i + beta_i))^2 <= alpha_{n+1} (x_{n+1} + beta_{n+1}) * z_i and a single linear constraint
  *  sum { z_i } <= alpha_{n+1} * (x_{n+1} + beta_{n+1}); each quadratic constraint might be upgraded to a SOC; since the
  *  violations of all quadratic constraints sum up we scale each constraint by the number of lhs terms + 1
- */
-/* FIXME: if rhsvar is NULL, then the disaggregation does not produce further cones. Should it then be upgraded
- * to a quadratic and let the quadratic desaggregate it?
- * The code assumes now that the rhsvar is not NULL in order build the direct SOC -> SOC disaggregation
+ *
+ *  @todo if rhsvar is NULL, then the disaggregation does not produce further cones. Should it then be upgraded
+ *  to a quadratic and let the quadratic desaggregate it?
+ *  The code assumes now that the rhsvar is not NULL in order build the direct SOC -> SOC disaggregation
  */
 static
 SCIP_RETCODE disaggregate(
@@ -3026,7 +3026,7 @@ SCIP_RETCODE disaggregate(
       scalars[1] = 1.0;
       constant    = consdata->rhscoeff * consdata->rhsoffset;
       SCIP_CALL( SCIPmultiaggregateVar(scip, sumvars[i], 2, aggvars, scalars, constant, &infeas, success) );
-      /* TODO: what shall we do if multiagg fails? */
+      /* @todo what shall we do if multiagg fails? */
       assert(!infeas && *success);
 
       scalars[1] = -1.0;
@@ -4763,7 +4763,7 @@ SCIP_DECL_CONSPRESOL(consPresolSOC)
       {
          SCIP_Bool success;
 
-         SCIP_CALL( disaggregate(scip, conss[c], consdata, naddconss, ndelconss, &success) );
+         SCIP_CALL( disaggregate(scip, conss[c], consdata, naddconss, ndelconss, &success) ); /*lint !e613*/
 
          if( success )
          {
