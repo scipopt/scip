@@ -40,6 +40,11 @@ interface:
   was detected while building the initial LP relaxation
 
 fixed bugs:
+
+SCIP version 3.2.2
+==================
+
+fixed bugs:
 - fixed bug in XML reader concerning comments
 - fixed wrong representation of SOC constraints in NLP
 - fixed possible segmentation fault in genvbounds propagator
