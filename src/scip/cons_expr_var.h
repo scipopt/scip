@@ -48,6 +48,13 @@ SCIP_RETCODE SCIPcreateExprOperandVar(
    SCIP_VAR*                   var                 /**< variable to be stored */
    );
 
+/** gets the variable of a variable operand */
+EXTERN
+SCIP_VAR* SCIPgetVarOperandVar(
+   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< variable operand handler */
+   SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< operand data */
+   );
+
 
 #ifdef __cplusplus
 }

@@ -85,3 +85,14 @@ SCIP_RETCODE SCIPcreateExprOperandVar(
 
    return SCIP_OKAY;
 }
+
+/** gets the variable of a variable operand */
+SCIP_VAR* SCIPgetVarOperandVar(
+   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< variable operand handler */
+   SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< operand data */
+   )
+{
+   assert(operanddata != NULL);
+
+   return (SCIP_VAR*)operanddata;
+}
