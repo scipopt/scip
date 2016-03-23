@@ -26,6 +26,7 @@
 #include "scip/cons_expr.h"
 #include "scip/struct_cons_expr.h"
 #include "scip/cons_expr_var.h"
+#include "scip/cons_expr_value.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "expr"
@@ -93,6 +94,7 @@ struct SCIP_ConshdlrData
    int                         ophdlrssize; /**< size of ophdlrs array */
 
    SCIP_CONSEXPR_OPERANDHDLR*  opvarhdlr;    /**< variable operand handler */
+   SCIP_CONSEXPR_OPERANDHDLR*  opvalhdlr;    /**< value operand handler */
 };
 
 
@@ -675,6 +677,11 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    SCIP_CALL( SCIPincludeExprOperandVar(scip, conshdlr) );
    assert(conshdlrdata->nophdlrs > 0 && strcmp(conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1]->name, "var") == 0);
    conshdlrdata->opvarhdlr = conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1];
+
+   /* include and remember handler for constant value operator */
+   SCIP_CALL( SCIPincludeExprOperandValue(scip, conshdlr) );
+   assert(conshdlrdata->nophdlrs > 0 && strcmp(conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1]->name, "val") == 0);
+   conshdlrdata->opvalhdlr = conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1];
 
    return SCIP_OKAY;
 }
