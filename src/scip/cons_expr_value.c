@@ -27,7 +27,7 @@
 static
 SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR(copyhdlrValue)
 {
-   SCIP_CALL( SCIPincludeExprOperandValue(scip, consexprhdlr) );
+   SCIP_CALL( SCIPincludeOperandHdlrValue(scip, consexprhdlr) );
 
    return SCIP_OKAY;
 }
@@ -47,32 +47,32 @@ SCIP_DECL_CONSEXPR_OPERANDPRINT(printValue)
 {
    assert(operanddata != NULL);
 
-   SCIPinfoMessage(scip, file, "%g", SCIPgetValueOperandValue(operandhdlr, operanddata));
+   SCIPinfoMessage(scip, file, "%g", SCIPgetOperandValueValue(operandhdlr, operanddata));
 
    return SCIP_OKAY;
 }
 
 
 /** creates the handler for constant value operands and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeExprOperandValue(
+SCIP_RETCODE SCIPincludeOperandHdlrValue(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    )
 {
    SCIP_CONSEXPR_OPERANDHDLR* ophdlr;
 
-   SCIP_CALL( SCIPincludeOperandHdlrBasicConshdlrExpr(scip, consexprhdlr, &ophdlr, "val", "constant value", NULL) );
+   SCIP_CALL( SCIPincludeOperandHdlrBasic(scip, consexprhdlr, &ophdlr, "val", "constant value", NULL) );
    assert(ophdlr != NULL);
 
-   SCIP_CALL( SCIPsetOperandHdlrCopyFreeHdlrConshdlrExpr(scip, consexprhdlr, ophdlr, copyhdlrValue, NULL) );
-   SCIP_CALL( SCIPsetOperandHdlrCopyFreeDataConshdlrExpr(scip, consexprhdlr, ophdlr, copydataValue, NULL) );
-   SCIP_CALL( SCIPsetOperandHdlrPrintConshdlrExpr(scip, consexprhdlr, ophdlr, printValue) );
+   SCIP_CALL( SCIPsetOperandHdlrCopyFreeHdlr(scip, consexprhdlr, ophdlr, copyhdlrValue, NULL) );
+   SCIP_CALL( SCIPsetOperandHdlrCopyFreeData(scip, consexprhdlr, ophdlr, copydataValue, NULL) );
+   SCIP_CALL( SCIPsetOperandHdlrPrint(scip, consexprhdlr, ophdlr, printValue) );
 
    return SCIP_OKAY;
 }
 
 /** creates the data of a constant value operand */
-SCIP_RETCODE SCIPcreateExprOperandValue(
+SCIP_RETCODE SCIPcreateOperandValue(
    SCIP*                       scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< constant value operand handler */
@@ -89,7 +89,7 @@ SCIP_RETCODE SCIPcreateExprOperandValue(
 }
 
 /** gets the value of a constant value operand */
-SCIP_Real SCIPgetValueOperandValue(
+SCIP_Real SCIPgetOperandValueValue(
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< variable operand handler */
    SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< operand data */
    )

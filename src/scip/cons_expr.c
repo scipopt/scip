@@ -677,22 +677,22 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
 
    /* NOTE: we should not do the below when copying the constraint handler (in that case, we should call the copy callback of the operator handler */
    /* include and remember handler for variable operator */
-   SCIP_CALL( SCIPincludeExprOperandVar(scip, conshdlr) );
+   SCIP_CALL( SCIPincludeOperandHdlrVar(scip, conshdlr) );
    assert(conshdlrdata->nophdlrs > 0 && strcmp(conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1]->name, "var") == 0);
    conshdlrdata->opvarhdlr = conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1];
 
    /* include and remember handler for constant value operator */
-   SCIP_CALL( SCIPincludeExprOperandValue(scip, conshdlr) );
+   SCIP_CALL( SCIPincludeOperandHdlrValue(scip, conshdlr) );
    assert(conshdlrdata->nophdlrs > 0 && strcmp(conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1]->name, "val") == 0);
    conshdlrdata->opvalhdlr = conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1];
 
    /* include and remember handler for sum operator */
-   SCIP_CALL( SCIPincludeExprOperandSum(scip, conshdlr) );
+   SCIP_CALL( SCIPincludeOperandHdlrSum(scip, conshdlr) );
    assert(conshdlrdata->nophdlrs > 0 && strcmp(conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1]->name, "sum") == 0);
    conshdlrdata->opsumhdlr = conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1];
 
    /* include and remember handler for product operator */
-   SCIP_CALL( SCIPincludeExprOperandProduct(scip, conshdlr) );
+   SCIP_CALL( SCIPincludeOperandHdlrProduct(scip, conshdlr) );
    assert(conshdlrdata->nophdlrs > 0 && strcmp(conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1]->name, "prod") == 0);
    conshdlrdata->opsumhdlr = conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1];
 
@@ -700,7 +700,7 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
 }
 
 /** creates the handler for an expression operand and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeOperandHdlrBasicConshdlrExpr(
+SCIP_RETCODE SCIPincludeOperandHdlrBasic(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_OPERANDHDLR** ophdlr,       /**< buffer where to store operand handler */
@@ -739,7 +739,7 @@ SCIP_RETCODE SCIPincludeOperandHdlrBasicConshdlrExpr(
 }
 
 /** set the operand handler callbacks to copy and free an operand handler */
-SCIP_RETCODE SCIPsetOperandHdlrCopyFreeHdlrConshdlrExpr(
+SCIP_RETCODE SCIPsetOperandHdlrCopyFreeHdlr(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< buffer where to store operand handler */
@@ -756,7 +756,7 @@ SCIP_RETCODE SCIPsetOperandHdlrCopyFreeHdlrConshdlrExpr(
 }
 
 /** set the operand handler callbacks to copy and free operand data */
-SCIP_RETCODE SCIPsetOperandHdlrCopyFreeDataConshdlrExpr(
+SCIP_RETCODE SCIPsetOperandHdlrCopyFreeData(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< buffer where to store operand handler */
@@ -773,7 +773,7 @@ SCIP_RETCODE SCIPsetOperandHdlrCopyFreeDataConshdlrExpr(
 }
 
 /** set the print callback of an operand handler */
-SCIP_RETCODE SCIPsetOperandHdlrPrintConshdlrExpr(
+SCIP_RETCODE SCIPsetOperandHdlrPrint(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< buffer where to store operand handler */
@@ -788,7 +788,7 @@ SCIP_RETCODE SCIPsetOperandHdlrPrintConshdlrExpr(
 }
 
 /** gives the name of an operand handler */
-const char* SCIPgetNameOperandHdlr(
+const char* SCIPgetOperandHdlrName(
    SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
 )
 {
@@ -798,7 +798,7 @@ const char* SCIPgetNameOperandHdlr(
 }
 
 /** gives the description of an operand handler (can be NULL) */
-const char* SCIPgetDescriptionOperandHdlr(
+const char* SCIPgetOperandHdlrDescription(
    SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
 )
 {
@@ -808,7 +808,7 @@ const char* SCIPgetDescriptionOperandHdlr(
 }
 
 /** gives the data of an operand handler */
-SCIP_CONSEXPR_OPERANDHDLRDATA* SCIPgetDataOperandHdlr(
+SCIP_CONSEXPR_OPERANDHDLRDATA* SCIPgetOperandHdlrData(
    SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
 )
 {
@@ -888,7 +888,7 @@ SCIP_RETCODE SCIPcreateConsExpr(
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
  */
-SCIP_RETCODE SCIPcreateConsBasicExpr(
+SCIP_RETCODE SCIPcreateConsExprBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */

@@ -33,14 +33,14 @@ extern "C" {
 
 /** creates the handler for sum operands and includes it into the expression constraint handler */
 EXTERN
-SCIP_RETCODE SCIPincludeExprOperandSum(
+SCIP_RETCODE SCIPincludeOperandHdlrSum(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 /** creates the data of a summation operand */
 EXTERN
-SCIP_RETCODE SCIPcreateExprOperandSum(
+SCIP_RETCODE SCIPcreateOperandSum(
    SCIP*                       scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< variable operand handler */
@@ -52,14 +52,14 @@ SCIP_RETCODE SCIPcreateExprOperandSum(
 
 /** gets the coefficients of a summation operand */
 EXTERN
-SCIP_Real* SCIPgetCoefsOperandSum(
+SCIP_Real* SCIPgetOperandSumCoefs(
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< sum operand handler */
    SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< data of operand */
    );
 
 /** gets the constant of a summation operand */
 EXTERN
-SCIP_Real SCIPgetConstantOperandSum(
+SCIP_Real SCIPgetOperandSumConstant(
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< sum operand handler */
    SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< data of operand */
    );
@@ -67,14 +67,14 @@ SCIP_Real SCIPgetConstantOperandSum(
 
 /** creates the handler for product operands and includes it into the expression constraint handler */
 EXTERN
-SCIP_RETCODE SCIPincludeExprOperandProduct(
+SCIP_RETCODE SCIPincludeOperandHdlrProduct(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 /** creates the data of a product operand */
 EXTERN
-SCIP_RETCODE SCIPcreateExprOperandProduct(
+SCIP_RETCODE SCIPcreateOperandProduct(
    SCIP*                       scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< variable operand handler */
@@ -86,14 +86,14 @@ SCIP_RETCODE SCIPcreateExprOperandProduct(
 
 /** gets the exponents of a product operand */
 EXTERN
-SCIP_Real* SCIPgetCoefsOperandProduct(
+SCIP_Real* SCIPgetOperandProductExponents(
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< product operand handler */
    SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< data of operand */
    );
 
 /** gets the constant coefficient of a product operand */
 EXTERN
-SCIP_Real SCIPgetConstantOperandProduct(
+SCIP_Real SCIPgetOperandProductCoef(
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< product operand handler */
    SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< data of operand */
    );

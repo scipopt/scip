@@ -25,7 +25,7 @@
 static
 SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR(copyhdlrVar)
 {
-   SCIP_CALL( SCIPincludeExprOperandVar(scip, consexprhdlr) );
+   SCIP_CALL( SCIPincludeOperandHdlrVar(scip, consexprhdlr) );
 
    return SCIP_OKAY;
 }
@@ -53,25 +53,25 @@ SCIP_DECL_CONSEXPR_OPERANDPRINT(printVar)
 
 
 /** creates the handler for variable operands and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeExprOperandVar(
+SCIP_RETCODE SCIPincludeOperandHdlrVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    )
 {
    SCIP_CONSEXPR_OPERANDHDLR* ophdlr;
 
-   SCIP_CALL( SCIPincludeOperandHdlrBasicConshdlrExpr(scip, consexprhdlr, &ophdlr, "var", "variable", NULL) );
+   SCIP_CALL( SCIPincludeOperandHdlrBasic(scip, consexprhdlr, &ophdlr, "var", "variable", NULL) );
    assert(ophdlr != NULL);
 
-   SCIP_CALL( SCIPsetOperandHdlrCopyFreeHdlrConshdlrExpr(scip, consexprhdlr, ophdlr, copyhdlrVar, NULL) );
-   SCIP_CALL( SCIPsetOperandHdlrCopyFreeDataConshdlrExpr(scip, consexprhdlr, ophdlr, copydataVar, NULL) );
-   SCIP_CALL( SCIPsetOperandHdlrPrintConshdlrExpr(scip, consexprhdlr, ophdlr, printVar) );
+   SCIP_CALL( SCIPsetOperandHdlrCopyFreeHdlr(scip, consexprhdlr, ophdlr, copyhdlrVar, NULL) );
+   SCIP_CALL( SCIPsetOperandHdlrCopyFreeData(scip, consexprhdlr, ophdlr, copydataVar, NULL) );
+   SCIP_CALL( SCIPsetOperandHdlrPrint(scip, consexprhdlr, ophdlr, printVar) );
 
    return SCIP_OKAY;
 }
 
 /** creates the data of a variable operand */
-SCIP_RETCODE SCIPcreateExprOperandVar(
+SCIP_RETCODE SCIPcreateOperandVar(
    SCIP*                       scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< variable operand handler */
@@ -87,7 +87,7 @@ SCIP_RETCODE SCIPcreateExprOperandVar(
 }
 
 /** gets the variable of a variable operand */
-SCIP_VAR* SCIPgetVarOperandVar(
+SCIP_VAR* SCIPgetOperandVarVar(
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< variable operand handler */
    SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< operand data */
    )

@@ -33,14 +33,14 @@ extern "C" {
 
 /** creates the handler for variable operands and includes it into the expression constraint handler */
 EXTERN
-SCIP_RETCODE SCIPincludeExprOperandVar(
+SCIP_RETCODE SCIPincludeOperandHdlrVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 /** creates the data of a variable operand */
 EXTERN
-SCIP_RETCODE SCIPcreateExprOperandVar(
+SCIP_RETCODE SCIPcreateOperandVar(
    SCIP*                       scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< variable operand handler */
@@ -50,7 +50,7 @@ SCIP_RETCODE SCIPcreateExprOperandVar(
 
 /** gets the variable of a variable operand */
 EXTERN
-SCIP_VAR* SCIPgetVarOperandVar(
+SCIP_VAR* SCIPgetOperandVarVar(
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< variable operand handler */
    SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< operand data */
    );

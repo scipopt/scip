@@ -69,7 +69,7 @@ SCIP_RETCODE createData(
 static
 SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR(copyhdlrSum)
 {
-   SCIP_CALL( SCIPincludeExprOperandSum(scip, consexprhdlr) );
+   SCIP_CALL( SCIPincludeOperandHdlrSum(scip, consexprhdlr) );
 
    return SCIP_OKAY;
 }
@@ -77,7 +77,7 @@ SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR(copyhdlrSum)
 static
 SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR(copyhdlrProduct)
 {
-   SCIP_CALL( SCIPincludeExprOperandProduct(scip, consexprhdlr) );
+   SCIP_CALL( SCIPincludeOperandHdlrProduct(scip, consexprhdlr) );
 
    return SCIP_OKAY;
 }
@@ -116,7 +116,7 @@ SCIP_DECL_CONSEXPR_OPERANDPRINT(printSumProduct)
 
    assert(operanddata != NULL);
 
-   SCIPinfoMessage(scip, file, "%s[%g", SCIPgetNameOperandHdlr(operandhdlr), *(SCIP_Real*)operanddata);
+   SCIPinfoMessage(scip, file, "%s[%g", SCIPgetOperandHdlrName(operandhdlr), *(SCIP_Real*)operanddata);
 
    for( i = 0; i < nchildren; ++i )
    {
@@ -130,25 +130,25 @@ SCIP_DECL_CONSEXPR_OPERANDPRINT(printSumProduct)
 
 
 /** creates the handler for sum operands and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeExprOperandSum(
+SCIP_RETCODE SCIPincludeOperandHdlrSum(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    )
 {
    SCIP_CONSEXPR_OPERANDHDLR* ophdlr;
 
-   SCIP_CALL( SCIPincludeOperandHdlrBasicConshdlrExpr(scip, consexprhdlr, &ophdlr, "sum", "summation with coefficients and a constant", NULL) );
+   SCIP_CALL( SCIPincludeOperandHdlrBasic(scip, consexprhdlr, &ophdlr, "sum", "summation with coefficients and a constant", NULL) );
    assert(ophdlr != NULL);
 
-   SCIP_CALL( SCIPsetOperandHdlrCopyFreeHdlrConshdlrExpr(scip, consexprhdlr, ophdlr, copyhdlrSum, NULL) );
-   SCIP_CALL( SCIPsetOperandHdlrCopyFreeDataConshdlrExpr(scip, consexprhdlr, ophdlr, copydataSumProduct, freedataSumProduct) );
-   SCIP_CALL( SCIPsetOperandHdlrPrintConshdlrExpr(scip, consexprhdlr, ophdlr, printSumProduct) );
+   SCIP_CALL( SCIPsetOperandHdlrCopyFreeHdlr(scip, consexprhdlr, ophdlr, copyhdlrSum, NULL) );
+   SCIP_CALL( SCIPsetOperandHdlrCopyFreeData(scip, consexprhdlr, ophdlr, copydataSumProduct, freedataSumProduct) );
+   SCIP_CALL( SCIPsetOperandHdlrPrint(scip, consexprhdlr, ophdlr, printSumProduct) );
 
    return SCIP_OKAY;
 }
 
 /** creates the data of a summation operand */
-SCIP_RETCODE SCIPcreateExprOperandSum(
+SCIP_RETCODE SCIPcreateOperandSum(
    SCIP*                       scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< variable operand handler */
@@ -165,7 +165,7 @@ SCIP_RETCODE SCIPcreateExprOperandSum(
 
 /** gets the coefficients of a summation operand */
 EXTERN
-SCIP_Real* SCIPgetCoefsOperandSum(
+SCIP_Real* SCIPgetOperandSumCoefs(
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< sum operand handler */
    SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< data of operand */
    )
@@ -177,7 +177,7 @@ SCIP_Real* SCIPgetCoefsOperandSum(
 
 /** gets the constant of a summation operand */
 EXTERN
-SCIP_Real SCIPgetConstantOperandSum(
+SCIP_Real SCIPgetOperandSumConstant(
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< sum operand handler */
    SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< data of operand */
    )
@@ -189,25 +189,25 @@ SCIP_Real SCIPgetConstantOperandSum(
 
 
 /** creates the handler for product operands and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeExprOperandProduct(
+SCIP_RETCODE SCIPincludeOperandHdlrProduct(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    )
 {
    SCIP_CONSEXPR_OPERANDHDLR* ophdlr;
 
-   SCIP_CALL( SCIPincludeOperandHdlrBasicConshdlrExpr(scip, consexprhdlr, &ophdlr, "prod", "product of children with exponents (actually a signomial)", NULL) );
+   SCIP_CALL( SCIPincludeOperandHdlrBasic(scip, consexprhdlr, &ophdlr, "prod", "product of children with exponents (actually a signomial)", NULL) );
    assert(ophdlr != NULL);
 
-   SCIP_CALL( SCIPsetOperandHdlrCopyFreeHdlrConshdlrExpr(scip, consexprhdlr, ophdlr, copyhdlrProduct, NULL) );
-   SCIP_CALL( SCIPsetOperandHdlrCopyFreeDataConshdlrExpr(scip, consexprhdlr, ophdlr, copydataSumProduct, freedataSumProduct) );
-   SCIP_CALL( SCIPsetOperandHdlrPrintConshdlrExpr(scip, consexprhdlr, ophdlr, printSumProduct) );
+   SCIP_CALL( SCIPsetOperandHdlrCopyFreeHdlr(scip, consexprhdlr, ophdlr, copyhdlrProduct, NULL) );
+   SCIP_CALL( SCIPsetOperandHdlrCopyFreeData(scip, consexprhdlr, ophdlr, copydataSumProduct, freedataSumProduct) );
+   SCIP_CALL( SCIPsetOperandHdlrPrint(scip, consexprhdlr, ophdlr, printSumProduct) );
 
    return SCIP_OKAY;
 }
 
 /** creates the data of a product operand */
-SCIP_RETCODE SCIPcreateExprOperandProduct(
+SCIP_RETCODE SCIPcreateOperandProduct(
    SCIP*                       scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< variable operand handler */
@@ -223,7 +223,7 @@ SCIP_RETCODE SCIPcreateExprOperandProduct(
 }
 
 /** gets the exponents of a product operand */
-SCIP_Real* SCIPgetCoefsOperandProduct(
+SCIP_Real* SCIPgetOperandProductExponents(
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< product operand handler */
    SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< data of operand */
    )
@@ -234,7 +234,7 @@ SCIP_Real* SCIPgetCoefsOperandProduct(
 }
 
 /** gets the constant coefficient of a product operand */
-SCIP_Real SCIPgetConstantOperandProduct(
+SCIP_Real SCIPgetOperandProductCoef(
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< product operand handler */
    SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< data of operand */
    )

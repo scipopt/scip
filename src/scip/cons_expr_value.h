@@ -33,14 +33,14 @@ extern "C" {
 
 /** creates the handler for constant value operands and includes it into the expression constraint handler */
 EXTERN
-SCIP_RETCODE SCIPincludeExprOperandValue(
+SCIP_RETCODE SCIPincludeOperandHdlrValue(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
 /** creates the data of a constant value operand */
 EXTERN
-SCIP_RETCODE SCIPcreateExprOperandValue(
+SCIP_RETCODE SCIPcreateOperandValue(
    SCIP*                       scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
    SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< constant value operand handler */
@@ -50,7 +50,7 @@ SCIP_RETCODE SCIPcreateExprOperandValue(
 
 /** gets the value of a constant value operand */
 EXTERN
-SCIP_Real SCIPgetValueOperandValue(
+SCIP_Real SCIPgetOperandValueValue(
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< variable operand handler */
    SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< operand data */
    );
