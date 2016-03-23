@@ -102,9 +102,11 @@ SCIP_DECL_CONSEXPR_OPERANDFREEDATA(freedataSumProduct)
    SCIP_Real* opdata;
 
    assert(operanddata != NULL);
-   opdata = (SCIP_Real*)operanddata;
+   assert(*operanddata != NULL);
+   opdata = (SCIP_Real*)*operanddata;
 
    SCIPfreeBlockMemoryArray(scip, &opdata, nchildren + 1);
+   assert(*operanddata == NULL);
 
    return SCIP_OKAY;
 }

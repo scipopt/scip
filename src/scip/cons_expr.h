@@ -32,11 +32,8 @@
 extern "C" {
 #endif
 
-/** creates the handler for expr constraints and includes it in SCIP */
-EXTERN
-SCIP_RETCODE SCIPincludeConshdlrExpr(
-   SCIP*                 scip                /**< SCIP data structure */
-   );
+/**@name Expression Operand Methods */
+/**@{ */
 
 /** creates the handler for an expression operand and includes it into the expression constraint handler */
 EXTERN
@@ -96,6 +93,109 @@ SCIP_CONSEXPR_OPERANDHDLRDATA* SCIPgetOperandHdlrData(
    SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
 );
 
+/** frees operand data */
+EXTERN
+SCIP_RETCODE SCIPfreeOperandData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
+   SCIP_CONSEXPR_OPERANDDATA** opdata,       /**< operand data to be freed, if *opdata is not NULL */
+   int                   nchildren           /**< number of children of corresponding expression */
+);
+
+/** @} */
+
+/**@name Expression Methods */
+/**@{ */
+
+/** creates and captures a multivariate expression with given operand and children */
+EXTERN
+SCIP_RETCODE SCIPcreateConsExprExprMultivariate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
+   SCIP_CONSEXPR_OPERANDDATA* opdata,        /**< operand data (expression assumes ownership) */
+   int                   nchildren,          /**< number of children */
+   SCIP_CONSEXPR_EXPR*   children            /**< children */
+   );
+
+/** creates and captures a bivariate expression with given operand and children */
+EXTERN
+SCIP_RETCODE SCIPcreateConsExprExprBivariate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
+   SCIP_CONSEXPR_OPERANDDATA* opdata,        /**< operand data */
+   SCIP_CONSEXPR_EXPR*   child1,             /**< first child */
+   SCIP_CONSEXPR_EXPR*   child2              /**< second child */
+   );
+
+/** creates and captures a univariate expression with given operand and child */
+EXTERN
+SCIP_RETCODE SCIPcreateConsExprExprUnivariate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
+   SCIP_CONSEXPR_OPERANDDATA* opdata,        /**< operand data */
+   SCIP_CONSEXPR_EXPR*   child               /**< child */
+   );
+
+/** creates and captures a variate expression with given operand */
+EXTERN
+SCIP_RETCODE SCIPcreateConsExprExprInvariate(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
+   SCIP_CONSEXPR_OPERANDDATA* opdata         /**< operand data */
+   );
+
+/** captures an expression (increments usage count) */
+EXTERN
+void SCIPcaptureConsExprExpr(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression to be captured */
+   );
+
+/** releases an expression (decrements usage count and possibly frees expression) */
+EXTERN
+SCIP_RETCODE SCIPreleaseConsExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR**  expr                /**< pointer to expression to be released */
+   );
+
+/** gives the number of children of an expression */
+EXTERN
+int SCIPgetConsExprExprNChildren(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** gives the child of a univariate expression */
+EXTERN
+SCIP_CONSEXPR_EXPR* SCIPgetConsExprExprChild(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** gives the children of a non-invariate expression */
+EXTERN
+SCIP_CONSEXPR_EXPR** SCIPgetConsExprExprChildren(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** @} */
+
+
+
+/**@name Expression Constraint Handler Methods */
+/**@{ */
+
+/** creates the handler for expr constraints and includes it in SCIP */
+EXTERN
+SCIP_RETCODE SCIPincludeConshdlrExpr(
+   SCIP*                 scip                /**< SCIP data structure */
+   );
+
 /** creates and captures a expr constraint
  *
  *  @note the constraint gets captured, hence at one point you have to release it using the method SCIPreleaseCons()
@@ -151,6 +251,8 @@ SCIP_RETCODE SCIPcreateConsExprBasic(
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs                 /**< right hand side of constraint */
    );
+
+/** @} */
 
 #ifdef __cplusplus
 }

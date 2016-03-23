@@ -65,7 +65,7 @@ extern "C" {
    SCIP* scip, \
    SCIP_CONSHDLR* consexprhdlr, \
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr, \
-   SCIP_CONSEXPR_OPERANDHDLRDATA* operandhdlrdata)
+   SCIP_CONSEXPR_OPERANDHDLRDATA** operandhdlrdata)
 
 /** expression operator data copy method
  *
@@ -109,9 +109,8 @@ extern "C" {
  */
 #define SCIP_DECL_CONSEXPR_OPERANDFREEDATA(x) SCIP_RETCODE x (\
    SCIP* scip, \
-   SCIP_CONSHDLR* consexprhdlr, \
-   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr, \
-   SCIP_CONSEXPR_OPERANDDATA* operanddata, \
+   SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr, \
+   SCIP_CONSEXPR_OPERANDDATA** operanddata, \
    int nchildren)
 
 /** expression operator print method

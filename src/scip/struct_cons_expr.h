@@ -49,12 +49,8 @@ struct SCIP_ConsExpr_OperandHdlr
 /** union for storing one, two, or many children */
 union SCIP_ConsExpr_Children
 {
-   SCIP_CONSEXPR_EXPR*   child;              /**< child expression of a univariate expression */
-   struct
-   {
-      SCIP_CONSEXPR_EXPR* child1;            /**< first child of a bivariate expression */
-      SCIP_CONSEXPR_EXPR* child2;            /**< second child of a bivariate expression */
-   } pair;
+   SCIP_CONSEXPR_EXPR*   single;             /**< child expression of a univariate expression */
+   SCIP_CONSEXPR_EXPR*   pair[2];            /**< children of a bivariate expression */
    struct
    {
       int                  nchildren;        /**< number of children of a multivariate expression */
