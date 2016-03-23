@@ -692,7 +692,7 @@ $(LIBOBJDIR)/scip/cons_expr.o: src/scip/cons_expr.c src/scip/cons_expr.h src/sci
  src/nlpi/type_exprinterpret.h src/scip/presolve.h \
  src/scip/type_cons_expr.h src/scip/struct_cons_expr.h \
  src/scip/cons_expr_var.h src/scip/cons_expr_value.h \
- src/scip/cons_nonlinear.h
+ src/scip/cons_expr_sumprod.h src/scip/cons_nonlinear.h
 $(LIBOBJDIR)/scip/cons_expr_sumprod.o: src/scip/cons_expr_sumprod.c \
  src/scip/cons_expr_sumprod.h src/scip/scip.h src/scip/def.h \
  src/scip/type_retcode.h src/scip/pub_message.h src/scip/type_message.h \

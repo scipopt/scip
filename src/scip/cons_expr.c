@@ -97,6 +97,7 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_OPERANDHDLR*  opvarhdlr;    /**< variable operand handler */
    SCIP_CONSEXPR_OPERANDHDLR*  opvalhdlr;    /**< value operand handler */
    SCIP_CONSEXPR_OPERANDHDLR*  opsumhdlr;    /**< summation operand handler */
+   SCIP_CONSEXPR_OPERANDHDLR*  opprodhdlr;   /**< product operand handler */
 };
 
 
@@ -690,6 +691,11 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    assert(conshdlrdata->nophdlrs > 0 && strcmp(conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1]->name, "sum") == 0);
    conshdlrdata->opsumhdlr = conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1];
 
+   /* include and remember handler for product operator */
+   SCIP_CALL( SCIPincludeExprOperandProduct(scip, conshdlr) );
+   assert(conshdlrdata->nophdlrs > 0 && strcmp(conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1]->name, "prod") == 0);
+   conshdlrdata->opsumhdlr = conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1];
+
    return SCIP_OKAY;
 }
 
@@ -779,6 +785,36 @@ SCIP_RETCODE SCIPsetOperandHdlrPrintConshdlrExpr(
    ophdlr->print = print;
 
    return SCIP_OKAY;
+}
+
+/** gives the name of an operand handler */
+const char* SCIPgetNameOperandHdlr(
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
+)
+{
+   assert(ophdlr != NULL);
+
+   return ophdlr->name;
+}
+
+/** gives the description of an operand handler (can be NULL) */
+const char* SCIPgetDescriptionOperandHdlr(
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
+)
+{
+   assert(ophdlr != NULL);
+
+   return ophdlr->desc;
+}
+
+/** gives the data of an operand handler */
+SCIP_CONSEXPR_OPERANDHDLRDATA* SCIPgetDataOperandHdlr(
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
+)
+{
+   assert(ophdlr != NULL);
+
+   return ophdlr->data;
 }
 
 

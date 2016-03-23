@@ -54,7 +54,7 @@ EXTERN
 SCIP_RETCODE SCIPsetOperandHdlrCopyFreeHdlrConshdlrExpr(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< buffer where to store operand handler */
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
    SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR((*copyhdlr)), /**< handler copy method (can be NULL) */
    SCIP_DECL_CONSEXPR_OPERANDFREEHDLR((*freehdlr)) /**< handler free method (can be NULL) */
 );
@@ -64,7 +64,7 @@ EXTERN
 SCIP_RETCODE SCIPsetOperandHdlrCopyFreeDataConshdlrExpr(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< buffer where to store operand handler */
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
    SCIP_DECL_CONSEXPR_OPERANDCOPYDATA((*copydata)), /**< copy method of operand data (can be NULL for operands without data) */
    SCIP_DECL_CONSEXPR_OPERANDFREEDATA((*freedata))  /**< free method of operand data (can be NULL if data does not need to be freed) */
 );
@@ -74,10 +74,27 @@ EXTERN
 SCIP_RETCODE SCIPsetOperandHdlrPrintConshdlrExpr(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< buffer where to store operand handler */
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
    SCIP_DECL_CONSEXPR_OPERANDPRINT((*print)) /**< print method of operand data (can be NULL) */
 );
 
+/** gives the name of an operand handler */
+EXTERN
+const char* SCIPgetNameOperandHdlr(
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
+);
+
+/** gives the description of an operand handler (can be NULL) */
+EXTERN
+const char* SCIPgetDescriptionOperandHdlr(
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
+);
+
+/** gives the data of an operand handler */
+EXTERN
+SCIP_CONSEXPR_OPERANDHDLRDATA* SCIPgetDataOperandHdlr(
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
+);
 
 /** creates and captures a expr constraint
  *

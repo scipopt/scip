@@ -34,74 +34,8 @@
 #include "scip/cons_expr_sumprod.h"
 
 static
-SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR(copyhdlrSum)
-{
-   SCIP_CALL( SCIPincludeExprOperandSum(scip, consexprhdlr) );
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_DECL_CONSEXPR_OPERANDCOPYDATA(copydataSum)
-{
-   SCIP_Real* opdata;
-
-   assert(targetoperanddata != NULL);
-
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(targetscip, &opdata, (SCIP_Real*)sourceoperanddata, nchildren + 1) );
-
-   *targetoperanddata = (SCIP_CONSEXPR_OPERANDDATA*)opdata;
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_DECL_CONSEXPR_OPERANDFREEDATA(freedataSum)
-{
-   SCIP_Real* opdata;
-
-   assert(operanddata != NULL);
-   opdata = (SCIP_Real*)operanddata;
-
-   SCIPfreeBlockMemoryArray(scip, &opdata, nchildren + 1);
-
-   return SCIP_OKAY;
-}
-
-static
-SCIP_DECL_CONSEXPR_OPERANDPRINT(printSum)
-{
-   assert(operanddata != NULL);
-
-   //SCIPinfoMessage(scip, file, "%s", SCIPvarGetName((SCIP_VAR*)(operanddata)));
-
-   return SCIP_OKAY;
-}
-
-
-/** creates the handler for sum operands and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeExprOperandSum(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
-   )
-{
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr;
-
-   SCIP_CALL( SCIPincludeOperandHdlrBasicConshdlrExpr(scip, consexprhdlr, &ophdlr, "sum", "summation with coefficients and a constant", NULL) );
-   assert(ophdlr != NULL);
-
-   SCIP_CALL( SCIPsetOperandHdlrCopyFreeHdlrConshdlrExpr(scip, consexprhdlr, ophdlr, copyhdlrSum, NULL) );
-   SCIP_CALL( SCIPsetOperandHdlrCopyFreeDataConshdlrExpr(scip, consexprhdlr, ophdlr, copydataSum, freedataSum) );
-   SCIP_CALL( SCIPsetOperandHdlrPrintConshdlrExpr(scip, consexprhdlr, ophdlr, printSum) );
-
-   return SCIP_OKAY;
-}
-
-/** creates the data of a summation operand */
-SCIP_RETCODE SCIPcreateExprOperandSum(
+SCIP_RETCODE createData(
    SCIP*                       scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< variable operand handler */
    SCIP_CONSEXPR_OPERANDDATA** operanddata,        /**< pointer where to store data of operand */
    int                         ncoefficients,      /**< number of coefficients (i.e., number of children) */
    SCIP_Real*                  coefficients,       /**< array with coefficients for all operands (or NULL if all 1.0) */
@@ -131,6 +65,104 @@ SCIP_RETCODE SCIPcreateExprOperandSum(
    return SCIP_OKAY;
 }
 
+
+static
+SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR(copyhdlrSum)
+{
+   SCIP_CALL( SCIPincludeExprOperandSum(scip, consexprhdlr) );
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR(copyhdlrProduct)
+{
+   SCIP_CALL( SCIPincludeExprOperandProduct(scip, consexprhdlr) );
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPR_OPERANDCOPYDATA(copydataSumProduct)
+{
+   SCIP_Real* opdata;
+
+   assert(targetoperanddata != NULL);
+
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(targetscip, &opdata, (SCIP_Real*)sourceoperanddata, nchildren + 1) );
+
+   *targetoperanddata = (SCIP_CONSEXPR_OPERANDDATA*)opdata;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPR_OPERANDFREEDATA(freedataSumProduct)
+{
+   SCIP_Real* opdata;
+
+   assert(operanddata != NULL);
+   opdata = (SCIP_Real*)operanddata;
+
+   SCIPfreeBlockMemoryArray(scip, &opdata, nchildren + 1);
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPR_OPERANDPRINT(printSumProduct)
+{
+   int i;
+
+   assert(operanddata != NULL);
+
+   SCIPinfoMessage(scip, file, "%s[%g", SCIPgetNameOperandHdlr(operandhdlr), *(SCIP_Real*)operanddata);
+
+   for( i = 0; i < nchildren; ++i )
+   {
+      SCIPinfoMessage(scip, file, "%c%g", i ? ',' : ';', ((SCIP_Real*)operanddata)[i+1]);
+   }
+
+   SCIPinfoMessage(scip, file, "]");
+
+   return SCIP_OKAY;
+}
+
+
+/** creates the handler for sum operands and includes it into the expression constraint handler */
+SCIP_RETCODE SCIPincludeExprOperandSum(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+   )
+{
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr;
+
+   SCIP_CALL( SCIPincludeOperandHdlrBasicConshdlrExpr(scip, consexprhdlr, &ophdlr, "sum", "summation with coefficients and a constant", NULL) );
+   assert(ophdlr != NULL);
+
+   SCIP_CALL( SCIPsetOperandHdlrCopyFreeHdlrConshdlrExpr(scip, consexprhdlr, ophdlr, copyhdlrSum, NULL) );
+   SCIP_CALL( SCIPsetOperandHdlrCopyFreeDataConshdlrExpr(scip, consexprhdlr, ophdlr, copydataSumProduct, freedataSumProduct) );
+   SCIP_CALL( SCIPsetOperandHdlrPrintConshdlrExpr(scip, consexprhdlr, ophdlr, printSumProduct) );
+
+   return SCIP_OKAY;
+}
+
+/** creates the data of a summation operand */
+SCIP_RETCODE SCIPcreateExprOperandSum(
+   SCIP*                       scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< variable operand handler */
+   SCIP_CONSEXPR_OPERANDDATA** operanddata,        /**< pointer where to store data of operand */
+   int                         ncoefficients,      /**< number of coefficients (i.e., number of children) */
+   SCIP_Real*                  coefficients,       /**< array with coefficients for all operands (or NULL if all 1.0) */
+   SCIP_Real                   constant            /**< constant term of sum */
+   )
+{
+   SCIP_CALL( createData(scip, operanddata, ncoefficients, coefficients, constant) );
+
+   return SCIP_OKAY;
+}
+
 /** gets the coefficients of a summation operand */
 EXTERN
 SCIP_Real* SCIPgetCoefsOperandSum(
@@ -147,6 +179,63 @@ SCIP_Real* SCIPgetCoefsOperandSum(
 EXTERN
 SCIP_Real SCIPgetConstantOperandSum(
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< sum operand handler */
+   SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< data of operand */
+   )
+{
+   assert(operanddata != NULL);
+
+   return *(SCIP_Real*)operanddata;
+}
+
+
+/** creates the handler for product operands and includes it into the expression constraint handler */
+SCIP_RETCODE SCIPincludeExprOperandProduct(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
+   )
+{
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr;
+
+   SCIP_CALL( SCIPincludeOperandHdlrBasicConshdlrExpr(scip, consexprhdlr, &ophdlr, "prod", "product of children with exponents (actually a signomial)", NULL) );
+   assert(ophdlr != NULL);
+
+   SCIP_CALL( SCIPsetOperandHdlrCopyFreeHdlrConshdlrExpr(scip, consexprhdlr, ophdlr, copyhdlrProduct, NULL) );
+   SCIP_CALL( SCIPsetOperandHdlrCopyFreeDataConshdlrExpr(scip, consexprhdlr, ophdlr, copydataSumProduct, freedataSumProduct) );
+   SCIP_CALL( SCIPsetOperandHdlrPrintConshdlrExpr(scip, consexprhdlr, ophdlr, printSumProduct) );
+
+   return SCIP_OKAY;
+}
+
+/** creates the data of a product operand */
+SCIP_RETCODE SCIPcreateExprOperandProduct(
+   SCIP*                       scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< variable operand handler */
+   SCIP_CONSEXPR_OPERANDDATA** operanddata,        /**< pointer where to store data of operand */
+   int                         nexponents,         /**< number of exponents (i.e., number of children) */
+   SCIP_Real*                  exponents,          /**< array with exponents for all operands (or NULL if all 1.0) */
+   SCIP_Real                   constant            /**< constant coefficient of product */
+   )
+{
+   SCIP_CALL( createData(scip, operanddata, nexponents, exponents, constant) );
+
+   return SCIP_OKAY;
+}
+
+/** gets the exponents of a product operand */
+SCIP_Real* SCIPgetCoefsOperandProduct(
+   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< product operand handler */
+   SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< data of operand */
+   )
+{
+   assert(operanddata != NULL);
+
+   return ((SCIP_Real*)operanddata) + 1;
+}
+
+/** gets the constant coefficient of a product operand */
+SCIP_Real SCIPgetConstantOperandProduct(
+   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< product operand handler */
    SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< data of operand */
    )
 {
