@@ -40,18 +40,43 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
 
 /** creates the handler for an expression operand and includes it into the expression constraint handler */
 EXTERN
-SCIP_RETCODE SCIPincludeOperandHdlrConshdlrExpr(
+SCIP_RETCODE SCIPincludeOperandHdlrBasicConshdlrExpr(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_OPERANDHDLR** ophdlr,       /**< buffer where to store operand handler */
    const char*                name,          /**< name of operand (must not be NULL) */
    const char*                desc,          /**< description of operand (can be NULL) */
-   SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR((*copyhdlr)), /**< handler copy method (can be NULL) */
-   SCIP_DECL_CONSEXPR_OPERANDFREEHDLR((*freehdlr)), /**< handler free method (can be NULL) */
-   SCIP_DECL_CONSEXPR_OPERANDCOPYDATA((*copydata)), /**< copy method of operand data (can be NULL for operands without data) */
-   SCIP_DECL_CONSEXPR_OPERANDFREEDATA((*freedata)), /**< free method of operand data (can be NULL for operands without data) */
-   SCIP_DECL_CONSEXPR_OPERANDPRINT((*print)),       /**< print method of operand data (can be NULL) */
-   SCIP_CONSEXPR_OPERANDHDLRDATA* data       /**< data of operand handler */
+   SCIP_CONSEXPR_OPERANDHDLRDATA* data       /**< data of operand handler (can be NULL) */
    );
+
+/** set the operand handler callbacks to copy and free an operand handler */
+EXTERN
+SCIP_RETCODE SCIPsetOperandHdlrCopyFreeHdlrConshdlrExpr(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< buffer where to store operand handler */
+   SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR((*copyhdlr)), /**< handler copy method (can be NULL) */
+   SCIP_DECL_CONSEXPR_OPERANDFREEHDLR((*freehdlr)) /**< handler free method (can be NULL) */
+);
+
+/** set the operand handler callbacks to copy and free operand data */
+EXTERN
+SCIP_RETCODE SCIPsetOperandHdlrCopyFreeDataConshdlrExpr(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< buffer where to store operand handler */
+   SCIP_DECL_CONSEXPR_OPERANDCOPYDATA((*copydata)), /**< copy method of operand data (can be NULL for operands without data) */
+   SCIP_DECL_CONSEXPR_OPERANDFREEDATA((*freedata))  /**< free method of operand data (can be NULL if data does not need to be freed) */
+);
+
+/** set the print callback of an operand handler */
+EXTERN
+SCIP_RETCODE SCIPsetOperandHdlrPrintConshdlrExpr(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< buffer where to store operand handler */
+   SCIP_DECL_CONSEXPR_OPERANDPRINT((*print)) /**< print method of operand data (can be NULL) */
+);
 
 
 /** creates and captures a expr constraint

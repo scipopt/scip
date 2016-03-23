@@ -677,51 +677,89 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
 }
 
 /** creates the handler for an expression operand and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeOperandHdlrConshdlrExpr(
+SCIP_RETCODE SCIPincludeOperandHdlrBasicConshdlrExpr(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_OPERANDHDLR** ophdlr,       /**< buffer where to store operand handler */
    const char*                name,          /**< name of operand (must not be NULL) */
    const char*                desc,          /**< description of operand (can be NULL) */
-   SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR((*copyhdlr)), /**< handler copy method (can be NULL) */
-   SCIP_DECL_CONSEXPR_OPERANDFREEHDLR((*freehdlr)), /**< handler free method (can be NULL) */
-   SCIP_DECL_CONSEXPR_OPERANDCOPYDATA((*copydata)), /**< copy method of operand data (can be NULL for operands without data) */
-   SCIP_DECL_CONSEXPR_OPERANDFREEDATA((*freedata)), /**< free method of operand data (can be NULL for operands without data) */
-   SCIP_DECL_CONSEXPR_OPERANDPRINT((*print)),       /**< print method of operand data (can be NULL) */
    SCIP_CONSEXPR_OPERANDHDLRDATA* data       /**< data of operand handler */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr;
 
    assert(scip != NULL);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(name != NULL);
+   assert(ophdlr != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( SCIPallocMemory(scip, &ophdlr) );
+   SCIP_CALL( SCIPallocClearMemory(scip, ophdlr) );
 
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &ophdlr->name, name, strlen(name)+1) );
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*ophdlr)->name, name, strlen(name)+1) );
    if( desc != NULL )
    {
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &ophdlr->desc, desc, strlen(desc)+1) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*ophdlr)->desc, desc, strlen(desc)+1) );
    }
-   else
-      ophdlr->desc = NULL;
 
-   ophdlr->data = data;
-   ophdlr->copyhdlr = copyhdlr;
-   ophdlr->freehdlr = freehdlr;
-   ophdlr->copydata = copydata;
-   ophdlr->freedata = freedata;
-   ophdlr->print = print;
+   (*ophdlr)->data = data;
 
    ENSUREBLOCKMEMORYARRAYSIZE(scip, conshdlrdata->ophdlrs, conshdlrdata->ophdlrssize, conshdlrdata->nophdlrs+1);
 
-   conshdlrdata->ophdlrs[conshdlrdata->nophdlrs] = ophdlr;
+   conshdlrdata->ophdlrs[conshdlrdata->nophdlrs] = *ophdlr;
    ++conshdlrdata->nophdlrs;
+
+   return SCIP_OKAY;
+}
+
+/** set the operand handler callbacks to copy and free an operand handler */
+SCIP_RETCODE SCIPsetOperandHdlrCopyFreeHdlrConshdlrExpr(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< buffer where to store operand handler */
+   SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR((*copyhdlr)), /**< handler copy method (can be NULL) */
+   SCIP_DECL_CONSEXPR_OPERANDFREEHDLR((*freehdlr)) /**< handler free method (can be NULL) */
+)
+{
+   assert(ophdlr != NULL);
+
+   ophdlr->copyhdlr = copyhdlr;
+   ophdlr->freehdlr = freehdlr;
+
+   return SCIP_OKAY;
+}
+
+/** set the operand handler callbacks to copy and free operand data */
+SCIP_RETCODE SCIPsetOperandHdlrCopyFreeDataConshdlrExpr(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< buffer where to store operand handler */
+   SCIP_DECL_CONSEXPR_OPERANDCOPYDATA((*copydata)), /**< copy method of operand data (can be NULL for operands without data) */
+   SCIP_DECL_CONSEXPR_OPERANDFREEDATA((*freedata))  /**< free method of operand data (can be NULL if data does not need to be freed) */
+)
+{
+   assert(ophdlr != NULL);
+
+   ophdlr->copydata = copydata;
+   ophdlr->freedata = freedata;
+
+   return SCIP_OKAY;
+}
+
+/** set the print callback of an operand handler */
+SCIP_RETCODE SCIPsetOperandHdlrPrintConshdlrExpr(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< buffer where to store operand handler */
+   SCIP_DECL_CONSEXPR_OPERANDPRINT((*print)) /**< print method of operand data (can be NULL) */
+)
+{
+   assert(ophdlr != NULL);
+
+   ophdlr->print = print;
 
    return SCIP_OKAY;
 }

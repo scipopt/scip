@@ -58,10 +58,14 @@ SCIP_RETCODE SCIPincludeExprOperandVar(
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    )
 {
-   SCIP_CALL( SCIPincludeOperandHdlrConshdlrExpr(
-      scip, consexprhdlr, "var", "variable",
-      copyhdlrVar, NULL, copydataVar, NULL, printVar,
-      NULL) );
+   SCIP_CONSEXPR_OPERANDHDLR* ophdlr;
+
+   SCIP_CALL( SCIPincludeOperandHdlrBasicConshdlrExpr(scip, consexprhdlr, &ophdlr, "var", "variable", NULL) );
+   assert(ophdlr != NULL);
+
+   SCIP_CALL( SCIPsetOperandHdlrCopyFreeHdlrConshdlrExpr(scip, consexprhdlr, ophdlr, copyhdlrVar, NULL) );
+   SCIP_CALL( SCIPsetOperandHdlrCopyFreeDataConshdlrExpr(scip, consexprhdlr, ophdlr, copydataVar, NULL) );
+   SCIP_CALL( SCIPsetOperandHdlrPrintConshdlrExpr(scip, consexprhdlr, ophdlr, printVar) );
 
    return SCIP_OKAY;
 }
