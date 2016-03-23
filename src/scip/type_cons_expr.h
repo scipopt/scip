@@ -82,7 +82,8 @@ extern "C" {
  *  - sourcescip         : source SCIP main data structure
  *  - sourceconsexprhdlr : expression constraint handler in source SCIP
  *  - sourceoperandhdlr  : expression operand handler in source SCIP
- *  - sourceoperanddata  : the operand data (in source SCIP) to be copied
+ *  - sourceoperanddata  : operand data (in source SCIP) to be copied
+ *  - nchildren          : number of children in the corresponding expression
  */
 #define SCIP_DECL_CONSEXPR_OPERANDCOPYDATA(x) SCIP_RETCODE x (\
    SCIP* targetscip, \
@@ -92,7 +93,8 @@ extern "C" {
    SCIP* sourcescip, \
    SCIP_CONSHDLR* sourceconsexprhdlr, \
    SCIP_CONSEXPR_OPERANDHDLR* sourceoperandhdlr, \
-   SCIP_CONSEXPR_OPERANDDATA* sourceoperanddata)
+   SCIP_CONSEXPR_OPERANDDATA* sourceoperanddata, \
+   int nchildren)
 
 /** expression operator data free method
  *
@@ -103,12 +105,14 @@ extern "C" {
  *  - consexprhdlr  : expression constraint handler
  *  - operandhdlr   : expression operand handler
  *  - operanddata   : operand data to be freed
+ *  - nchildren     : number of children in the corresponding expression
  */
 #define SCIP_DECL_CONSEXPR_OPERANDFREEDATA(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* consexprhdlr, \
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr, \
-   SCIP_CONSEXPR_OPERANDDATA* operanddata)
+   SCIP_CONSEXPR_OPERANDDATA* operanddata, \
+   int nchildren)
 
 /** expression operator print method
  *
@@ -119,6 +123,7 @@ extern "C" {
  *  - consexprhdlr  : expression constraint handler
  *  - operandhdlr   : expression operand handler
  *  - operanddata   : operand data to print
+ *  - nchildren     : number of children in corresponding expression
  *  - file          : the file to print to
  */
 #define SCIP_DECL_CONSEXPR_OPERANDPRINT(x) SCIP_RETCODE x (\
@@ -126,6 +131,7 @@ extern "C" {
    SCIP_CONSHDLR* consexprhdlr, \
    SCIP_CONSEXPR_OPERANDHDLR* operandhdlr, \
    SCIP_CONSEXPR_OPERANDDATA* operanddata, \
+   int nchildren, \
    FILE* file)
 
 /** variability of expression operands */

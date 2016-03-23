@@ -27,6 +27,7 @@
 #include "scip/struct_cons_expr.h"
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_value.h"
+#include "scip/cons_expr_sumprod.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "expr"
@@ -95,6 +96,7 @@ struct SCIP_ConshdlrData
 
    SCIP_CONSEXPR_OPERANDHDLR*  opvarhdlr;    /**< variable operand handler */
    SCIP_CONSEXPR_OPERANDHDLR*  opvalhdlr;    /**< value operand handler */
+   SCIP_CONSEXPR_OPERANDHDLR*  opsumhdlr;    /**< summation operand handler */
 };
 
 
@@ -682,6 +684,11 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    SCIP_CALL( SCIPincludeExprOperandValue(scip, conshdlr) );
    assert(conshdlrdata->nophdlrs > 0 && strcmp(conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1]->name, "val") == 0);
    conshdlrdata->opvalhdlr = conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1];
+
+   /* include and remember handler for sum operator */
+   SCIP_CALL( SCIPincludeExprOperandSum(scip, conshdlr) );
+   assert(conshdlrdata->nophdlrs > 0 && strcmp(conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1]->name, "sum") == 0);
+   conshdlrdata->opsumhdlr = conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1];
 
    return SCIP_OKAY;
 }
