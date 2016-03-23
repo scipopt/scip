@@ -153,6 +153,9 @@ SCIP_DECL_CONSFREE(consFreeExpr)
          SCIP_CALL( (*ophdlr->freehdlr)(scip, conshdlr, ophdlr, ophdlr->data) );
       }
 
+      SCIPfreeMemory(scip, &ophdlr->name);
+      SCIPfreeMemoryNull(scip, &ophdlr->desc);
+
       SCIPfreeMemory(scip, &ophdlr);
    }
 
