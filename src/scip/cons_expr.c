@@ -119,10 +119,19 @@ SCIP_RETCODE freeExpr(
    assert(expr != NULL);
    assert(*expr != NULL);
 
-   /* free operator data */
-   SCIP_CALL( SCIPfreeOperandData(scip, (*expr)->ophdlr, &(*expr)->opdata, SCIPgetConsExprExprNChildren(*expr)) );
+   /* free operator data, if any */
+   if( (*expr)->opdata != NULL )
+   {
+      if ( (*expr)->ophdlr->freedata != NULL )
+      {
+         SCIP_CALL( (*expr)->ophdlr->freedata(scip, *expr) );
+         assert((*expr)->opdata == NULL);
+      }
+   }
 
-   /* release children */
+   /* release children
+    * TODO we should avoid recursions of unknown depth
+    */
    children = SCIPgetConsExprExprChildren(*expr);
    for( c = SCIPgetConsExprExprNChildren(*expr)-1; c >= 0; --c )
    {
@@ -743,33 +752,6 @@ SCIP_CONSEXPR_OPERANDHDLRDATA* SCIPgetOperandHdlrData(
    return ophdlr->data;
 }
 
-/** frees operand data */
-SCIP_RETCODE SCIPfreeOperandData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
-   SCIP_CONSEXPR_OPERANDDATA** opdata,       /**< operand data to be freed, if *opdata is not NULL */
-   int                   nchildren           /**< number of children of corresponding expression */
-)
-{
-   assert(opdata != NULL);
-
-   /* if nothing to free, then free nothing */
-   if( *opdata == NULL )
-      return SCIP_OKAY;
-
-   /* if there is no callback to free data, then free nothing */
-   if( ophdlr->freedata == NULL )
-   {
-      *opdata = NULL;
-      return SCIP_OKAY;
-   }
-
-   SCIP_CALL( ophdlr->freedata(scip, ophdlr, opdata, nchildren) );
-   assert(*opdata == NULL);
-
-   return SCIP_OKAY;
-}
-
 
 
 /** creates and captures a multivariate expression with given operand and children */
@@ -982,6 +964,46 @@ SCIP_CONSEXPR_EXPR** SCIPgetConsExprExprChildren(
          return NULL;
    }
 }
+
+/** gets the operator handler of an expression
+ *
+ * This identifies the type of the expression (sum, variable, ...).
+ */
+SCIP_CONSEXPR_OPERANDHDLR* SCIPgetConsExprExprOperatorHdlr(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->ophdlr;
+}
+
+/** gets the operator data of an expression */
+SCIP_CONSEXPR_OPERANDDATA* SCIPgetConsExprExprOperatorData(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->opdata;
+}
+
+/** sets the operator data of an expression
+ *
+ * The pointer to possible old data is overwritten and the
+ * freedata-callback is not called before.
+ * This function is intended to be used by operand handler.
+ */
+void SCIPsetConsExprExprOperatorData(
+   SCIP_CONSEXPR_EXPR*        expr,          /**< expression */
+   SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< operand data to be set (can be NULL) */
+   )
+{
+   assert(expr != NULL);
+
+   expr->opdata = operanddata;
+}
+
 
 
 /*

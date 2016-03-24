@@ -93,15 +93,6 @@ SCIP_CONSEXPR_OPERANDHDLRDATA* SCIPgetOperandHdlrData(
    SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
 );
 
-/** frees operand data */
-EXTERN
-SCIP_RETCODE SCIPfreeOperandData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
-   SCIP_CONSEXPR_OPERANDDATA** opdata,       /**< operand data to be freed, if *opdata is not NULL */
-   int                   nchildren           /**< number of children of corresponding expression */
-);
-
 /** @} */
 
 /**@name Expression Methods */
@@ -181,6 +172,33 @@ SCIP_CONSEXPR_EXPR* SCIPgetConsExprExprChild(
 EXTERN
 SCIP_CONSEXPR_EXPR** SCIPgetConsExprExprChildren(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** gets the operator handler of an expression
+ *
+ * This identifies the type of the expression (sum, variable, ...).
+ */
+EXTERN
+SCIP_CONSEXPR_OPERANDHDLR* SCIPgetConsExprExprOperatorHdlr(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** gets the operator data of an expression */
+EXTERN
+SCIP_CONSEXPR_OPERANDDATA* SCIPgetConsExprExprOperatorData(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
+   );
+
+/** sets the operator data of an expression
+ *
+ * The pointer to possible old data is overwritten and the
+ * freedata-callback is not called before.
+ * This function is intended to be used by operand handler.
+ */
+EXTERN
+void SCIPsetConsExprExprOperatorData(
+   SCIP_CONSEXPR_EXPR*        expr,          /**< expression */
+   SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< operand data to be set (can be NULL) */
    );
 
 /** @} */

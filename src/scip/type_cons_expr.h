@@ -72,7 +72,10 @@ extern "C" {
  * the method copies the data of an expression operand
  *
  * This method is called when creating copies of an expression within
- * the same or between different SCIP instances.
+ * the same or between different SCIP instances. It is given the
+ * source expression which operand data shall be copied. It expects
+ * that *targetoperanddata will be set. This data will then be used
+ * to create a new expression.
  *
  *  input:
  *  - targetscip         : target SCIP main data structure
@@ -81,9 +84,7 @@ extern "C" {
  *  - targetoperanddata  : pointer to store the copied operand data
  *  - sourcescip         : source SCIP main data structure
  *  - sourceconsexprhdlr : expression constraint handler in source SCIP
- *  - sourceoperandhdlr  : expression operand handler in source SCIP
- *  - sourceoperanddata  : operand data (in source SCIP) to be copied
- *  - nchildren          : number of children in the corresponding expression
+ *  - sourceexpr         : expression in source SCIP which data is to be copied
  */
 #define SCIP_DECL_CONSEXPR_OPERANDCOPYDATA(x) SCIP_RETCODE x (\
    SCIP* targetscip, \
@@ -92,26 +93,20 @@ extern "C" {
    SCIP_CONSEXPR_OPERANDDATA** targetoperanddata, \
    SCIP* sourcescip, \
    SCIP_CONSHDLR* sourceconsexprhdlr, \
-   SCIP_CONSEXPR_OPERANDHDLR* sourceoperandhdlr, \
-   SCIP_CONSEXPR_OPERANDDATA* sourceoperanddata, \
-   int nchildren)
+   SCIP_CONSEXPR_EXPR* sourceexpr)
 
 /** expression operator data free method
  *
- * the method frees the data of an expression operand
+ * The method frees the data of an expression operand.
+ * It assumes that expr->opdata will be set to NULL.
  *
  *  input:
  *  - scip          : SCIP main data structure
- *  - consexprhdlr  : expression constraint handler
- *  - operandhdlr   : expression operand handler
- *  - operanddata   : operand data to be freed
- *  - nchildren     : number of children in the corresponding expression
+ *  - expr          : the expression which operand data to be freed
  */
 #define SCIP_DECL_CONSEXPR_OPERANDFREEDATA(x) SCIP_RETCODE x (\
    SCIP* scip, \
-   SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr, \
-   SCIP_CONSEXPR_OPERANDDATA** operanddata, \
-   int nchildren)
+   SCIP_CONSEXPR_EXPR* expr)
 
 /** expression operator print method
  *
@@ -120,17 +115,13 @@ extern "C" {
  * input:
  *  - scip          : SCIP main data structure
  *  - consexprhdlr  : expression constraint handler
- *  - operandhdlr   : expression operand handler
- *  - operanddata   : operand data to print
- *  - nchildren     : number of children in corresponding expression
+ *  - expr          : expression which data is to be printed
  *  - file          : the file to print to
  */
 #define SCIP_DECL_CONSEXPR_OPERANDPRINT(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* consexprhdlr, \
-   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr, \
-   SCIP_CONSEXPR_OPERANDDATA* operanddata, \
-   int nchildren, \
+   SCIP_CONSEXPR_EXPR* expr, \
    FILE* file)
 
 /** variability of expression operands */

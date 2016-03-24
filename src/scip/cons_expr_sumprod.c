@@ -85,11 +85,16 @@ SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR(copyhdlrProduct)
 static
 SCIP_DECL_CONSEXPR_OPERANDCOPYDATA(copydataSumProduct)
 {
+   SCIP_Real* sourceopdata;
    SCIP_Real* opdata;
 
    assert(targetoperanddata != NULL);
+   assert(sourceexpr != NULL);
 
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(targetscip, &opdata, (SCIP_Real*)sourceoperanddata, nchildren + 1) );
+   sourceopdata = (SCIP_Real*)SCIPgetConsExprExprOperatorData(sourceexpr);
+   assert(sourceopdata != NULL);
+
+   SCIP_CALL( SCIPduplicateBlockMemoryArray(targetscip, &opdata, sourceopdata, SCIPgetConsExprExprNChildren(sourceexpr) + 1) );
 
    *targetoperanddata = (SCIP_CONSEXPR_OPERANDDATA*)opdata;
 
@@ -101,12 +106,14 @@ SCIP_DECL_CONSEXPR_OPERANDFREEDATA(freedataSumProduct)
 {
    SCIP_Real* opdata;
 
-   assert(operanddata != NULL);
-   assert(*operanddata != NULL);
-   opdata = (SCIP_Real*)*operanddata;
+   assert(expr != NULL);
 
-   SCIPfreeBlockMemoryArray(scip, &opdata, nchildren + 1);
-   assert(*operanddata == NULL);
+   opdata = (SCIP_Real*)SCIPgetConsExprExprOperatorData(expr);
+   assert(opdata != NULL);
+
+   SCIPfreeBlockMemoryArray(scip, &opdata, SCIPgetConsExprExprNChildren(expr) + 1);
+
+   SCIPsetConsExprExprOperatorData(expr, NULL);
 
    return SCIP_OKAY;
 }
@@ -114,15 +121,20 @@ SCIP_DECL_CONSEXPR_OPERANDFREEDATA(freedataSumProduct)
 static
 SCIP_DECL_CONSEXPR_OPERANDPRINT(printSumProduct)
 {
+   SCIP_Real* opdata;
+   int nchildren;
    int i;
 
-   assert(operanddata != NULL);
+   assert(expr != NULL);
 
-   SCIPinfoMessage(scip, file, "%s[%g", SCIPgetOperandHdlrName(operandhdlr), *(SCIP_Real*)operanddata);
+   opdata = (SCIP_Real*)SCIPgetConsExprExprOperatorData(expr);
 
+   SCIPinfoMessage(scip, file, "%s[%g", SCIPgetOperandHdlrName(SCIPgetConsExprExprOperatorHdlr(expr)), opdata[0]);
+
+   nchildren = SCIPgetConsExprExprNChildren(expr);
    for( i = 0; i < nchildren; ++i )
    {
-      SCIPinfoMessage(scip, file, "%c%g", i ? ',' : ';', ((SCIP_Real*)operanddata)[i+1]);
+      SCIPinfoMessage(scip, file, "%c%g", i ? ',' : ';', opdata[i+1]);
    }
 
    SCIPinfoMessage(scip, file, "]");

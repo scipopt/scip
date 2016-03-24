@@ -51,7 +51,6 @@ SCIP_RETCODE SCIPcreateOperandValue(
 /** gets the value of a constant value operand */
 EXTERN
 SCIP_Real SCIPgetOperandValueValue(
-   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< variable operand handler */
    SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< operand data */
    );
 

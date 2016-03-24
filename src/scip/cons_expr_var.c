@@ -33,10 +33,12 @@ SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR(copyhdlrVar)
 static
 SCIP_DECL_CONSEXPR_OPERANDCOPYDATA(copydataVar)
 {
-   assert(targetscip == sourcescip);  /* if this is a copy from one SCIP to another, we need to get the variable mapping */
+   assert(targetscip == sourcescip);  /* TODO if this is a copy from one SCIP to another, we need to get the variable mapping */
    assert(targetoperanddata != NULL);
+   assert(sourceexpr != NULL);
 
-   *targetoperanddata = sourceoperanddata;
+   *targetoperanddata = SCIPgetConsExprExprOperatorData(sourceexpr);
+   assert(*targetoperanddata != NULL);
 
    return SCIP_OKAY;
 }
@@ -44,9 +46,10 @@ SCIP_DECL_CONSEXPR_OPERANDCOPYDATA(copydataVar)
 static
 SCIP_DECL_CONSEXPR_OPERANDPRINT(printVar)
 {
-   assert(operanddata != NULL);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprOperatorData(expr) != NULL);
 
-   SCIPinfoMessage(scip, file, "%s", SCIPvarGetName((SCIP_VAR*)(operanddata)));
+   SCIPinfoMessage(scip, file, "%s", SCIPvarGetName((SCIP_VAR*)SCIPgetConsExprExprOperatorData(expr)));
 
    return SCIP_OKAY;
 }

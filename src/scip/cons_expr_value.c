@@ -36,8 +36,10 @@ static
 SCIP_DECL_CONSEXPR_OPERANDCOPYDATA(copydataValue)
 {
    assert(targetoperanddata != NULL);
+   assert(sourceexpr != NULL);
 
-   *targetoperanddata = sourceoperanddata;
+   *targetoperanddata = SCIPgetConsExprExprOperatorData(sourceexpr);
+   assert(*targetoperanddata != NULL);
 
    return SCIP_OKAY;
 }
@@ -45,9 +47,9 @@ SCIP_DECL_CONSEXPR_OPERANDCOPYDATA(copydataValue)
 static
 SCIP_DECL_CONSEXPR_OPERANDPRINT(printValue)
 {
-   assert(operanddata != NULL);
+   assert(expr != NULL);
 
-   SCIPinfoMessage(scip, file, "%g", SCIPgetOperandValueValue(operandhdlr, operanddata));
+   SCIPinfoMessage(scip, file, "%g", SCIPgetOperandValueValue(SCIPgetConsExprExprOperatorData(expr)));
 
    return SCIP_OKAY;
 }
@@ -90,13 +92,11 @@ SCIP_RETCODE SCIPcreateOperandValue(
 
 /** gets the value of a constant value operand */
 SCIP_Real SCIPgetOperandValueValue(
-   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< variable operand handler */
    SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< operand data */
    )
 {
    SCIP_Real v;
 
-   assert(operanddata != NULL);
    assert(sizeof(SCIP_Real) <= sizeof(SCIP_CONSEXPR_OPERANDDATA*));
 
    memcpy(&v, operanddata, sizeof(SCIP_Real));
