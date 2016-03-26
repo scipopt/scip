@@ -20716,6 +20716,8 @@ void SCIPprintReal(
 
 #define SCIPallocBlockMemory(scip,ptr)          ( (BMSallocBlockMemory(SCIPblkmem(scip), (ptr)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
+#define SCIPallocClearBlockMemory(scip,ptr)     ( (BMSallocClearBlockMemory(SCIPblkmem(scip), (ptr)) == NULL) \
+                                                       ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPallocBlockMemoryArray(scip,ptr,num) ( (BMSallocBlockMemoryArray(SCIPblkmem(scip), (ptr), (num)) == NULL) \
                                                        ? SCIP_NOMEMORY : SCIP_OKAY )
 #define SCIPallocBlockMemorySize(scip,ptr,size) ( (BMSallocBlockMemorySize(SCIPblkmem(scip), (ptr), (size)) == NULL) \
