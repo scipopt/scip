@@ -24,6 +24,8 @@
 
 #include "scip/scip.h"
 #include "scip/cons_expr.h"
+#include "scip/cons_expr_var.h"
+#include "scip/cons_expr_sumprod.h"
 
 /** macro to check the return of tests
  *
@@ -58,6 +60,11 @@ SCIP_RETCODE testCons(void)
 {
    SCIP* scip;
    SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_CONSEXPR_EXPR* expr_x;
+   SCIP_CONSEXPR_EXPR* expr_y;
+   SCIP_CONSEXPR_EXPR* prod_xy;
 
    conshdlr = NULL;
 
@@ -74,7 +81,20 @@ SCIP_RETCODE testCons(void)
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
-   /* I don't have access to the operator hdlr, so basically I can't do anything */
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+
+   /* create expressions for variables x and y */
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
+
+   /* create expression for product of x and y (TODO should have something easy for product of 2 args */
+   {
+      SCIP_CONSEXPR_EXPR* xy[2] = {expr_x, expr_y};
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prod_xy, 2, xy, NULL, 2.0) );
+   }
 
    /* test something? */
 
