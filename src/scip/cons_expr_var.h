@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_expr_var.h
- * @brief  variable operand handler
+ * @brief  variable expression handler
  * @author Stefan Vigerske
  */
 
@@ -31,28 +31,27 @@
 extern "C" {
 #endif
 
-/** creates the handler for variable operands and includes it into the expression constraint handler */
+/** creates the handler for variable expression and includes it into the expression constraint handler */
 EXTERN
-SCIP_RETCODE SCIPincludeOperandHdlrVar(
+SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
-/** creates the data of a variable operand */
+/** creates the data of a variable expression */
 EXTERN
-SCIP_RETCODE SCIPcreateOperandVar(
-   SCIP*                       scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< variable operand handler */
-   SCIP_CONSEXPR_OPERANDDATA** operanddata,        /**< pointer where to store data of operand */
-   SCIP_VAR*                   var                 /**< variable to be stored */
+SCIP_RETCODE SCIPcreateConsExprExprVar(
+   SCIP*                    scip,            /**< SCIP data structure */
+   SCIP_CONSHDLR*           consexprhdlr,    /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*  exprhdlr,        /**< variable expression handler */
+   SCIP_CONSEXPR_EXPRDATA** exprdata,        /**< pointer where to store data of expression */
+   SCIP_VAR*                var              /**< variable to be stored */
    );
 
-/** gets the variable of a variable operand */
+/** gets the variable of a variable expression */
 EXTERN
-SCIP_VAR* SCIPgetOperandVarVar(
-   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< variable operand handler */
-   SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< operand data */
+SCIP_VAR* SCIPgetConsExprExprVarVar(
+   SCIP_CONSEXPR_EXPR*   expr                /**< variable expression */
    );
 
 

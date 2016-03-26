@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_expr_sumprod.h
- * @brief  sum and product operand handlers
+ * @brief  sum and product expression handlers
  * @author Stefan Vigerske
  */
 
@@ -31,71 +31,67 @@
 extern "C" {
 #endif
 
-/** creates the handler for sum operands and includes it into the expression constraint handler */
+/** creates the handler for sum expressions and includes it into the expression constraint handler */
 EXTERN
-SCIP_RETCODE SCIPincludeOperandHdlrSum(
+SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
-/** creates the data of a summation operand */
+/** creates the data of a summation expression */
 EXTERN
-SCIP_RETCODE SCIPcreateOperandSum(
-   SCIP*                       scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< variable operand handler */
-   SCIP_CONSEXPR_OPERANDDATA** operanddata,        /**< pointer where to store data of operand */
-   int                         ncoefficients,      /**< number of coefficients (i.e., number of children) */
-   SCIP_Real*                  coefficients,       /**< array with coefficients for all operands (or NULL if all 1.0) */
-   SCIP_Real                   constant            /**< constant term of sum */
+SCIP_RETCODE SCIPcreateConsExprExprSum(
+   SCIP*                    scip,            /**< SCIP data structure */
+   SCIP_CONSHDLR*           consexprhdlr,    /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*  exprhdlr,        /**< sum expression handler */
+   SCIP_CONSEXPR_EXPRDATA** exprdata,        /**< pointer where to store expression data */
+   int                      ncoefficients,   /**< number of coefficients (i.e., number of children) */
+   SCIP_Real*               coefficients,    /**< array with coefficients for all children (or NULL if all 1.0) */
+   SCIP_Real                constant         /**< constant term of sum */
    );
 
-/** gets the coefficients of a summation operand */
+/** gets the coefficients of a summation expression */
 EXTERN
-SCIP_Real* SCIPgetOperandSumCoefs(
-   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< sum operand handler */
-   SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< data of operand */
+SCIP_Real* SCIPgetConsExprExprSumCoefs(
+   SCIP_CONSEXPR_EXPR*   expr                /**< sum expression */
    );
 
-/** gets the constant of a summation operand */
+/** gets the constant of a summation expression */
 EXTERN
-SCIP_Real SCIPgetOperandSumConstant(
-   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< sum operand handler */
-   SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< data of operand */
+SCIP_Real SCIPgetConsExprExprSumConstant(
+   SCIP_CONSEXPR_EXPR*   expr                /**< sum expression */
    );
 
 
-/** creates the handler for product operands and includes it into the expression constraint handler */
+/** creates the handler for product expressions and includes it into the expression constraint handler */
 EXTERN
-SCIP_RETCODE SCIPincludeOperandHdlrProduct(
+SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
-/** creates the data of a product operand */
+/** creates the data of a product expression */
 EXTERN
-SCIP_RETCODE SCIPcreateOperandProduct(
-   SCIP*                       scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< variable operand handler */
-   SCIP_CONSEXPR_OPERANDDATA** operanddata,        /**< pointer where to store data of operand */
-   int                         nexponents,         /**< number of exponents (i.e., number of children) */
-   SCIP_Real*                  exponents,          /**< array with exponents for all operands (or NULL if all 1.0) */
-   SCIP_Real                   constant            /**< constant coefficient of product */
+SCIP_RETCODE SCIPcreateConsExprExprProduct(
+   SCIP*                    scip,            /**< SCIP data structure */
+   SCIP_CONSHDLR*           consexprhdlr,    /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*  exprhdlr,        /**< product expression handler */
+   SCIP_CONSEXPR_EXPRDATA** exprdata,        /**< pointer where to store expression data */
+   int                      nexponents,      /**< number of exponents (i.e., number of children) */
+   SCIP_Real*               exponents,       /**< array with exponents for all children (or NULL if all 1.0) */
+   SCIP_Real                constant         /**< constant coefficient of product */
    );
 
-/** gets the exponents of a product operand */
+/** gets the exponents of a product expression */
 EXTERN
-SCIP_Real* SCIPgetOperandProductExponents(
-   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< product operand handler */
-   SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< data of operand */
+SCIP_Real* SCIPgetConsExprExprProductExponents(
+   SCIP_CONSEXPR_EXPR*   expr                /**< product expression */
    );
 
-/** gets the constant coefficient of a product operand */
+/** gets the constant coefficient of a product expression */
 EXTERN
-SCIP_Real SCIPgetOperandProductCoef(
-   SCIP_CONSEXPR_OPERANDHDLR* operandhdlr,   /**< product operand handler */
-   SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< data of operand */
+SCIP_Real SCIPgetConsExprExprProductCoef(
+   SCIP_CONSEXPR_EXPR*   expr                /**< product expression */
    );
 
 #ifdef __cplusplus

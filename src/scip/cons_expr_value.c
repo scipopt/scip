@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_expr_constant.c
- * @brief  constant value operand handler
+ * @brief  constant value expression handler
  * @author Stefan Vigerske
  */
 
@@ -25,81 +25,81 @@
 #include "scip/cons_expr_value.h"
 
 static
-SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR(copyhdlrValue)
+SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrValue)
 {
-   SCIP_CALL( SCIPincludeOperandHdlrValue(scip, consexprhdlr) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrValue(scip, consexprhdlr) );
 
    return SCIP_OKAY;
 }
 
 static
-SCIP_DECL_CONSEXPR_OPERANDCOPYDATA(copydataValue)
+SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataValue)
 {
-   assert(targetoperanddata != NULL);
+   assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
 
-   *targetoperanddata = SCIPgetConsExprExprOperatorData(sourceexpr);
-   assert(*targetoperanddata != NULL);
+   *targetexprdata = SCIPgetConsExprExprData(sourceexpr);
+   assert(*targetexprdata != NULL);
 
    return SCIP_OKAY;
 }
 
 static
-SCIP_DECL_CONSEXPR_OPERANDPRINT(printValue)
+SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
 {
    assert(expr != NULL);
 
-   SCIPinfoMessage(scip, file, "%g", SCIPgetOperandValueValue(SCIPgetConsExprExprOperatorData(expr)));
+   SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprValueValue(expr));
 
    return SCIP_OKAY;
 }
 
 
-/** creates the handler for constant value operands and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeOperandHdlrValue(
+/** creates the handler for constant value expression and includes it into the expression constraint handler */
+SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    )
 {
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr;
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeOperandHdlrBasic(scip, consexprhdlr, &ophdlr, "val", "constant value", NULL) );
-   assert(ophdlr != NULL);
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "val", "constant value", NULL) );
+   assert(exprhdlr != NULL);
 
-   SCIP_CALL( SCIPsetOperandHdlrCopyFreeHdlr(scip, consexprhdlr, ophdlr, copyhdlrValue, NULL) );
-   SCIP_CALL( SCIPsetOperandHdlrCopyFreeData(scip, consexprhdlr, ophdlr, copydataValue, NULL) );
-   SCIP_CALL( SCIPsetOperandHdlrPrint(scip, consexprhdlr, ophdlr, printValue) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrValue, NULL) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataValue, NULL) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printValue) );
 
    return SCIP_OKAY;
 }
 
-/** creates the data of a constant value operand */
-SCIP_RETCODE SCIPcreateOperandValue(
-   SCIP*                       scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< constant value operand handler */
-   SCIP_CONSEXPR_OPERANDDATA** operanddata,        /**< pointer where to store data of operand */
-   SCIP_Real                   value               /**< value to be stored */
+/** creates the data of a constant value expression */
+SCIP_RETCODE SCIPcreateConsExprExprValue(
+   SCIP*                    scip,            /**< SCIP data structure */
+   SCIP_CONSHDLR*           consexprhdlr,    /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*  exprhdlr,        /**< constant value expression handler */
+   SCIP_CONSEXPR_EXPRDATA** exprdata,        /**< pointer where to store data of expression */
+   SCIP_Real                value            /**< value to be stored */
    )
 {
-   assert(operanddata != NULL);
-   assert(sizeof(SCIP_Real) <= sizeof(SCIP_CONSEXPR_OPERANDDATA*));
+   assert(exprdata != NULL);
+   assert(sizeof(SCIP_Real) <= sizeof(SCIP_CONSEXPR_EXPRDATA*));
 
-   memcpy(operanddata, &value, sizeof(SCIP_Real));
+   memcpy(exprdata, &value, sizeof(SCIP_Real));
 
    return SCIP_OKAY;
 }
 
-/** gets the value of a constant value operand */
-SCIP_Real SCIPgetOperandValueValue(
-   SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< operand data */
+/** gets the value of a constant value expression */
+SCIP_Real SCIPgetConsExprExprValueValue(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
    SCIP_Real v;
 
-   assert(sizeof(SCIP_Real) <= sizeof(SCIP_CONSEXPR_OPERANDDATA*));
+   assert(sizeof(SCIP_Real) <= sizeof(SCIP_CONSEXPR_EXPRDATA*));
 
-   memcpy(&v, operanddata, sizeof(SCIP_Real));
+   memcpy(&v, SCIPgetConsExprExprData(expr), sizeof(SCIP_Real));
 
    return v;
 }

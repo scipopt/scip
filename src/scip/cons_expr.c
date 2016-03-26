@@ -84,20 +84,20 @@
 /** constraint data for expr constraints */
 struct SCIP_ConsData
 {
-   SCIP_CONSEXPR_EXPR*         expr;        /**< expression that represents this constraint (must evaluate to 0 (FALSE) or 1 (TRUE)) */
+   SCIP_CONSEXPR_EXPR*   expr;               /**< expression that represents this constraint (must evaluate to 0 (FALSE) or 1 (TRUE)) */
 };
 
 /** constraint handler data */
 struct SCIP_ConshdlrData
 {
-   SCIP_CONSEXPR_OPERANDHDLR** ophdlrs;     /**< operand handlers */
-   int                         nophdlrs;    /**< number of operand handlers */
-   int                         ophdlrssize; /**< size of ophdlrs array */
+   SCIP_CONSEXPR_EXPRHDLR** exprhdlrs;       /**< expression handlers */
+   int                      nexprhdlrs;      /**< number of expression handlers */
+   int                      exprhdlrssize;   /**< size of exprhdlrs array */
 
-   SCIP_CONSEXPR_OPERANDHDLR*  opvarhdlr;    /**< variable operand handler */
-   SCIP_CONSEXPR_OPERANDHDLR*  opvalhdlr;    /**< value operand handler */
-   SCIP_CONSEXPR_OPERANDHDLR*  opsumhdlr;    /**< summation operand handler */
-   SCIP_CONSEXPR_OPERANDHDLR*  opprodhdlr;   /**< product operand handler */
+   SCIP_CONSEXPR_EXPRHDLR*  exprvarhdlr;     /**< variable expression handler */
+   SCIP_CONSEXPR_EXPRHDLR*  exprvalhdlr;     /**< value expression handler */
+   SCIP_CONSEXPR_EXPRHDLR*  exprsumhdlr;     /**< summation expression handler */
+   SCIP_CONSEXPR_EXPRHDLR*  exprprodhdlr;    /**< product expression handler */
 };
 
 
@@ -119,13 +119,13 @@ SCIP_RETCODE freeExpr(
    assert(expr != NULL);
    assert(*expr != NULL);
 
-   /* free operator data, if any */
-   if( (*expr)->opdata != NULL )
+   /* free expression data, if any */
+   if( (*expr)->exprdata != NULL )
    {
-      if ( (*expr)->ophdlr->freedata != NULL )
+      if ( (*expr)->exprhdlr->freedata != NULL )
       {
-         SCIP_CALL( (*expr)->ophdlr->freedata(scip, *expr) );
-         assert((*expr)->opdata == NULL);
+         SCIP_CALL( (*expr)->exprhdlr->freedata(scip, *expr) );
+         assert((*expr)->exprdata == NULL);
       }
    }
 
@@ -186,29 +186,29 @@ static
 SCIP_DECL_CONSFREE(consFreeExpr)
 {  /*lint --e{715}*/
    SCIP_CONSHDLRDATA* conshdlrdata;
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr;
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
    int i;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   for( i = 0; i < conshdlrdata->nophdlrs; ++i )
+   for( i = 0; i < conshdlrdata->nexprhdlrs; ++i )
    {
-      ophdlr = conshdlrdata->ophdlrs[i];
-      assert(ophdlr != NULL);
+      exprhdlr = conshdlrdata->exprhdlrs[i];
+      assert(exprhdlr != NULL);
 
-      if( ophdlr->freehdlr != NULL )
+      if( exprhdlr->freehdlr != NULL )
       {
-         SCIP_CALL( (*ophdlr->freehdlr)(scip, conshdlr, ophdlr, &ophdlr->data) );
+         SCIP_CALL( (*exprhdlr->freehdlr)(scip, conshdlr, exprhdlr, &exprhdlr->data) );
       }
 
-      SCIPfreeMemory(scip, &ophdlr->name);
-      SCIPfreeMemoryNull(scip, &ophdlr->desc);
+      SCIPfreeMemory(scip, &exprhdlr->name);
+      SCIPfreeMemoryNull(scip, &exprhdlr->desc);
 
-      SCIPfreeMemory(scip, &ophdlr);
+      SCIPfreeMemory(scip, &exprhdlr);
    }
 
-   SCIPfreeBlockMemoryArray(scip, &conshdlrdata->ophdlrs, conshdlrdata->ophdlrssize);
+   SCIPfreeBlockMemoryArray(scip, &conshdlrdata->exprhdlrs, conshdlrdata->exprhdlrssize);
 
    SCIPfreeMemory(scip, &conshdlrdata);
    SCIPconshdlrSetData(conshdlr, NULL);
@@ -634,14 +634,14 @@ SCIP_DECL_CONSGETDIVEBDCHGS(consGetDiveBdChgsExpr)
 
 
 
-/** creates the handler for an expression operand and includes it into the expression constraint handler */
-SCIP_RETCODE SCIPincludeOperandHdlrBasic(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR** ophdlr,       /**< buffer where to store operand handler */
-   const char*                name,          /**< name of operand (must not be NULL) */
-   const char*                desc,          /**< description of operand (can be NULL) */
-   SCIP_CONSEXPR_OPERANDHDLRDATA* data       /**< data of operand handler */
+/** creates the handler for an expression handler and includes it into the expression constraint handler */
+SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
+   SCIP*                       scip,         /**< SCIP data structure */
+   SCIP_CONSHDLR*              conshdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR**    exprhdlr,     /**< buffer where to store expression handler */
+   const char*                 name,         /**< name of expression handler (must not be NULL) */
+   const char*                 desc,         /**< description of expression handler (can be NULL) */
+   SCIP_CONSEXPR_EXPRHDLRDATA* data          /**< data of expression handler (can be NULL) */
    )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
@@ -650,131 +650,131 @@ SCIP_RETCODE SCIPincludeOperandHdlrBasic(
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(name != NULL);
-   assert(ophdlr != NULL);
+   assert(exprhdlr != NULL);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
 
-   SCIP_CALL( SCIPallocClearMemory(scip, ophdlr) );
+   SCIP_CALL( SCIPallocClearMemory(scip, exprhdlr) );
 
-   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*ophdlr)->name, name, strlen(name)+1) );
+   SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*exprhdlr)->name, name, strlen(name)+1) );
    if( desc != NULL )
    {
-      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*ophdlr)->desc, desc, strlen(desc)+1) );
+      SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*exprhdlr)->desc, desc, strlen(desc)+1) );
    }
 
-   (*ophdlr)->data = data;
+   (*exprhdlr)->data = data;
 
-   ENSUREBLOCKMEMORYARRAYSIZE(scip, conshdlrdata->ophdlrs, conshdlrdata->ophdlrssize, conshdlrdata->nophdlrs+1);
+   ENSUREBLOCKMEMORYARRAYSIZE(scip, conshdlrdata->exprhdlrs, conshdlrdata->exprhdlrssize, conshdlrdata->nexprhdlrs+1);
 
-   conshdlrdata->ophdlrs[conshdlrdata->nophdlrs] = *ophdlr;
-   ++conshdlrdata->nophdlrs;
+   conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs] = *exprhdlr;
+   ++conshdlrdata->nexprhdlrs;
 
    return SCIP_OKAY;
 }
 
-/** set the operand handler callbacks to copy and free an operand handler */
-SCIP_RETCODE SCIPsetOperandHdlrCopyFreeHdlr(
+/** set the expression handler callbacks to copy and free an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrCopyFreeHdlr(
+   SCIP*                      scip,              /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,          /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,          /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRCOPYHDLR((*copyhdlr)), /**< handler copy callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRFREEHDLR((*freehdlr))  /**< handler free callback (can be NULL) */
+)
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->copyhdlr = copyhdlr;
+   exprhdlr->freehdlr = freehdlr;
+
+   return SCIP_OKAY;
+}
+
+/** set the expression handler callbacks to copy and free expression data */
+SCIP_RETCODE SCIPsetConsExprExprHdlrCopyFreeData(
+   SCIP*                      scip,              /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,          /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,          /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRCOPYDATA((*copydata)), /**< expression data copy callback (can be NULL for expressions without data) */
+   SCIP_DECL_CONSEXPR_EXPRFREEDATA((*freedata))  /**< expression data free callback (can be NULL if data does not need to be freed) */
+)
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->copydata = copydata;
+   exprhdlr->freedata = freedata;
+
+   return SCIP_OKAY;
+}
+
+/** set the print callback of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrPrint(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< buffer where to store operand handler */
-   SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR((*copyhdlr)), /**< handler copy method (can be NULL) */
-   SCIP_DECL_CONSEXPR_OPERANDFREEHDLR((*freehdlr)) /**< handler free method (can be NULL) */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRPRINT((*print))    /**< print callback (can be NULL) */
 )
 {
-   assert(ophdlr != NULL);
+   assert(exprhdlr != NULL);
 
-   ophdlr->copyhdlr = copyhdlr;
-   ophdlr->freehdlr = freehdlr;
+   exprhdlr->print = print;
 
    return SCIP_OKAY;
 }
 
-/** set the operand handler callbacks to copy and free operand data */
-SCIP_RETCODE SCIPsetOperandHdlrCopyFreeData(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< buffer where to store operand handler */
-   SCIP_DECL_CONSEXPR_OPERANDCOPYDATA((*copydata)), /**< copy method of operand data (can be NULL for operands without data) */
-   SCIP_DECL_CONSEXPR_OPERANDFREEDATA((*freedata))  /**< free method of operand data (can be NULL if data does not need to be freed) */
+/** gives the name of an expression handler */
+const char* SCIPgetConsExprExprHdlrName(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
 )
 {
-   assert(ophdlr != NULL);
+   assert(exprhdlr != NULL);
 
-   ophdlr->copydata = copydata;
-   ophdlr->freedata = freedata;
-
-   return SCIP_OKAY;
+   return exprhdlr->name;
 }
 
-/** set the print callback of an operand handler */
-SCIP_RETCODE SCIPsetOperandHdlrPrint(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< buffer where to store operand handler */
-   SCIP_DECL_CONSEXPR_OPERANDPRINT((*print)) /**< print method of operand data (can be NULL) */
+/** gives the description of an expression handler (can be NULL) */
+const char* SCIPgetConsExprExprHdlrDescription(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
 )
 {
-   assert(ophdlr != NULL);
+   assert(exprhdlr != NULL);
 
-   ophdlr->print = print;
-
-   return SCIP_OKAY;
+   return exprhdlr->desc;
 }
 
-/** gives the name of an operand handler */
-const char* SCIPgetOperandHdlrName(
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
+/** gives the data of an expression handler */
+SCIP_CONSEXPR_EXPRHDLRDATA* SCIPgetConsExprExprHdlrData(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr      /**< expression handler */
 )
 {
-   assert(ophdlr != NULL);
+   assert(exprhdlr != NULL);
 
-   return ophdlr->name;
-}
-
-/** gives the description of an operand handler (can be NULL) */
-const char* SCIPgetOperandHdlrDescription(
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
-)
-{
-   assert(ophdlr != NULL);
-
-   return ophdlr->desc;
-}
-
-/** gives the data of an operand handler */
-SCIP_CONSEXPR_OPERANDHDLRDATA* SCIPgetOperandHdlrData(
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
-)
-{
-   assert(ophdlr != NULL);
-
-   return ophdlr->data;
+   return exprhdlr->data;
 }
 
 
 
-/** creates and captures a multivariate expression with given operand and children */
+/** creates and captures a multivariate expression with given expression data and children */
 SCIP_RETCODE SCIPcreateConsExprExprMultivariate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
-   SCIP_CONSEXPR_OPERANDDATA* opdata,        /**< operand data */
-   int                   nchildren,          /**< number of children */
-   SCIP_CONSEXPR_EXPR*   children            /**< children */
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr,         /**< expression handler */
+   SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data (expression assumes ownership) */
+   int                     nchildren,        /**< number of children */
+   SCIP_CONSEXPR_EXPR*     children          /**< children */
    )
 {
    int c;
 
    assert(expr != NULL);
-   assert(ophdlr != NULL);
+   assert(exprhdlr != NULL);
    assert(children != NULL || nchildren == 0);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, expr) );
 
-   (*expr)->ophdlr = ophdlr;
-   (*expr)->opdata = opdata;
+   (*expr)->exprhdlr = exprhdlr;
+   (*expr)->exprdata = exprdata;
    (*expr)->variability = SCIP_CONSEXPR_MULTIVARIATE;
 
    if( nchildren > 0 )
@@ -799,26 +799,26 @@ SCIP_RETCODE SCIPcreateConsExprExprMultivariate(
    return SCIP_OKAY;
 }
 
-/** creates and captures a bivariate expression with given operand and children */
+/** creates and captures a bivariate expression with given expression data and children */
 SCIP_RETCODE SCIPcreateConsExprExprBivariate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
-   SCIP_CONSEXPR_OPERANDDATA* opdata,        /**< operand data */
-   SCIP_CONSEXPR_EXPR*   child1,             /**< first child */
-   SCIP_CONSEXPR_EXPR*   child2              /**< second child */
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr,         /**< expression handler */
+   SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data */
+   SCIP_CONSEXPR_EXPR*     child1,           /**< first child */
+   SCIP_CONSEXPR_EXPR*     child2            /**< second child */
    )
 {
    assert(expr != NULL);
-   assert(ophdlr != NULL);
+   assert(exprhdlr != NULL);
    assert(child1 != NULL);
    assert(child2 != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, expr) );
 
-   (*expr)->ophdlr = ophdlr;
-   (*expr)->opdata = opdata;
+   (*expr)->exprhdlr = exprhdlr;
+   (*expr)->exprdata = exprdata;
    (*expr)->variability = SCIP_CONSEXPR_BIVARIATE;
    (*expr)->children.pair[0] = child1;
    (*expr)->children.pair[1] = child2;
@@ -832,24 +832,24 @@ SCIP_RETCODE SCIPcreateConsExprExprBivariate(
    return SCIP_OKAY;
 }
 
-/** creates and captures a univariate expression with given operand and child */
+/** creates and captures a univariate expression with given expression data and child */
 SCIP_RETCODE SCIPcreateConsExprExprUnivariate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
-   SCIP_CONSEXPR_OPERANDDATA* opdata,        /**< operand data */
-   SCIP_CONSEXPR_EXPR*   child               /**< child */
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr,         /**< expression handler */
+   SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data */
+   SCIP_CONSEXPR_EXPR*     child             /**< child */
    )
 {
    assert(expr != NULL);
-   assert(ophdlr != NULL);
+   assert(exprhdlr != NULL);
    assert(child != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, expr) );
 
-   (*expr)->ophdlr = ophdlr;
-   (*expr)->opdata = opdata;
+   (*expr)->exprhdlr = exprhdlr;
+   (*expr)->exprdata = exprdata;
    (*expr)->variability = SCIP_CONSEXPR_UNIVARIATE;
    (*expr)->children.single = child;
 
@@ -861,22 +861,22 @@ SCIP_RETCODE SCIPcreateConsExprExprUnivariate(
    return SCIP_OKAY;
 }
 
-/** creates and captures a variate expression with given operand */
+/** creates and captures a invariate expression with given expression data */
 SCIP_RETCODE SCIPcreateConsExprExprInvariate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
-   SCIP_CONSEXPR_OPERANDDATA* opdata         /**< operand data */
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr,         /**< expression handler */
+   SCIP_CONSEXPR_EXPRDATA* exprdata          /**< expression data */
    )
 {
    assert(expr != NULL);
-   assert(ophdlr != NULL);
+   assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPallocBlockMemory(scip, expr) );
 
-   (*expr)->ophdlr = ophdlr;
-   (*expr)->opdata = opdata;
+   (*expr)->exprhdlr = exprhdlr;
+   (*expr)->exprdata = exprdata;
    (*expr)->variability = SCIP_CONSEXPR_INVARIATE;
 
    (*expr)->nuses = 0;
@@ -965,43 +965,44 @@ SCIP_CONSEXPR_EXPR** SCIPgetConsExprExprChildren(
    }
 }
 
-/** gets the operator handler of an expression
+/** gets the handler of an expression
  *
  * This identifies the type of the expression (sum, variable, ...).
  */
-SCIP_CONSEXPR_OPERANDHDLR* SCIPgetConsExprExprOperatorHdlr(
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlr(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
    assert(expr != NULL);
 
-   return expr->ophdlr;
+   return expr->exprhdlr;
 }
 
-/** gets the operator data of an expression */
-SCIP_CONSEXPR_OPERANDDATA* SCIPgetConsExprExprOperatorData(
+/** gets the expression data of an expression */
+SCIP_CONSEXPR_EXPRDATA* SCIPgetConsExprExprData(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
    assert(expr != NULL);
 
-   return expr->opdata;
+   return expr->exprdata;
 }
 
-/** sets the operator data of an expression
+/** sets the expression data of an expression
  *
  * The pointer to possible old data is overwritten and the
  * freedata-callback is not called before.
- * This function is intended to be used by operand handler.
+ * This function is intended to be used by expression handler.
  */
-void SCIPsetConsExprExprOperatorData(
-   SCIP_CONSEXPR_EXPR*        expr,          /**< expression */
-   SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< operand data to be set (can be NULL) */
+EXTERN
+void SCIPsetConsExprExprData(
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_CONSEXPR_EXPRDATA* exprdata          /**< expression data to be set (can be NULL) */
    )
 {
    assert(expr != NULL);
 
-   expr->opdata = operanddata;
+   expr->exprdata = exprdata;
 }
 
 
@@ -1092,26 +1093,26 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* TODO: (optional) add constraint handler specific parameters with SCIPaddTypeParam() here */
 
 
-   /* NOTE: we should not do the below when copying the constraint handler (in that case, we should call the copy callback of the operator handler */
-   /* include and remember handler for variable operator */
-   SCIP_CALL( SCIPincludeOperandHdlrVar(scip, conshdlr) );
-   assert(conshdlrdata->nophdlrs > 0 && strcmp(conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1]->name, "var") == 0);
-   conshdlrdata->opvarhdlr = conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1];
+   /* NOTE: we should not do the below when copying the constraint handler (in that case, we should call the copy callback of the expression handler */
+   /* include and remember handler for variable expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrVar(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "var") == 0);
+   conshdlrdata->exprvarhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
 
-   /* include and remember handler for constant value operator */
-   SCIP_CALL( SCIPincludeOperandHdlrValue(scip, conshdlr) );
-   assert(conshdlrdata->nophdlrs > 0 && strcmp(conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1]->name, "val") == 0);
-   conshdlrdata->opvalhdlr = conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1];
+   /* include and remember handler for constant value expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrValue(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "val") == 0);
+   conshdlrdata->exprvalhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
 
-   /* include and remember handler for sum operator */
-   SCIP_CALL( SCIPincludeOperandHdlrSum(scip, conshdlr) );
-   assert(conshdlrdata->nophdlrs > 0 && strcmp(conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1]->name, "sum") == 0);
-   conshdlrdata->opsumhdlr = conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1];
+   /* include and remember handler for sum expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrSum(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "sum") == 0);
+   conshdlrdata->exprsumhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
 
-   /* include and remember handler for product operator */
-   SCIP_CALL( SCIPincludeOperandHdlrProduct(scip, conshdlr) );
-   assert(conshdlrdata->nophdlrs > 0 && strcmp(conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1]->name, "prod") == 0);
-   conshdlrdata->opsumhdlr = conshdlrdata->ophdlrs[conshdlrdata->nophdlrs-1];
+   /* include and remember handler for product expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrProduct(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "prod") == 0);
+   conshdlrdata->exprprodhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
 
    return SCIP_OKAY;
 }

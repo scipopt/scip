@@ -32,18 +32,18 @@
 extern "C" {
 #endif
 
-/** generic data and callback methods of an expression operand handler */
-struct SCIP_ConsExpr_OperandHdlr
+/** generic data and callback methods of an expression handler */
+struct SCIP_ConsExpr_ExprHdlr
 {
-   char*                          name;    /**< operand name */
-   char*                          desc;    /**< operand description (can be NULL) */
-   SCIP_CONSEXPR_OPERANDHDLRDATA* data;    /**< data of handler */
+   char*                          name;      /**< expression handler name */
+   char*                          desc;      /**< expression handler description (can be NULL) */
+   SCIP_CONSEXPR_EXPRHDLRDATA*    data;      /**< data of handler */
 
-   SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR((*copyhdlr));  /**< handler copy method (can be NULL) */
-   SCIP_DECL_CONSEXPR_OPERANDFREEHDLR((*freehdlr));  /**< handler free method (can be NULL) */
-   SCIP_DECL_CONSEXPR_OPERANDCOPYDATA((*copydata));  /**< data copy method, or NULL for operands that have no data */
-   SCIP_DECL_CONSEXPR_OPERANDFREEDATA((*freedata));  /**< data free method, or NULL for operands that have no data */
-   SCIP_DECL_CONSEXPR_OPERANDPRINT((*print));        /**< print method of operand data (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRCOPYHDLR((*copyhdlr));  /**< handler copy callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRFREEHDLR((*freehdlr));  /**< handler free callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRCOPYDATA((*copydata));  /**< data copy callback, or NULL for expressions that have no data */
+   SCIP_DECL_CONSEXPR_EXPRFREEDATA((*freedata));  /**< data free callback, or NULL for expressions that have no data or which data does not need to be freed */
+   SCIP_DECL_CONSEXPR_EXPRPRINT((*print));        /**< print callback (can be NULL) */
 };
 
 /** union for storing one, two, or many children */
@@ -63,13 +63,13 @@ union SCIP_ConsExpr_Children
 /** a node in the expression graph that is handled by the expression constraint handler */
 struct SCIP_ConsExpr_Expr
 {
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr;         /**< operand of expression (as pointer to its handler) */
-   SCIP_CONSEXPR_OPERANDDATA* opdata;         /**< operand data */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr;      /**< expression type (as pointer to its handler) */
+   SCIP_CONSEXPR_EXPRDATA*    exprdata;      /**< expression data */
 
-   SCIP_CONSEXPR_VARIABILITY  variability;    /**< variability of expression (in-, uni-, bi-, multivariate) */
-   SCIP_CONSEXPR_CHILDREN     children;       /**< children of expression, interpretation of union depends on variability */
+   SCIP_CONSEXPR_VARIABILITY  variability;   /**< variability of expression (in-, uni-, bi-, multivariate) */
+   SCIP_CONSEXPR_CHILDREN     children;      /**< children of expression, interpretation of union depends on variability */
 
-   int                        nuses;          /**< reference counter */
+   int                        nuses;         /**< reference counter */
 };
 
 

@@ -32,65 +32,65 @@
 extern "C" {
 #endif
 
-/**@name Expression Operand Methods */
+/**@name Expression Handler Methods */
 /**@{ */
 
-/** creates the handler for an expression operand and includes it into the expression constraint handler */
+/** creates the handler for an expression handler and includes it into the expression constraint handler */
 EXTERN
-SCIP_RETCODE SCIPincludeOperandHdlrBasic(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR** ophdlr,       /**< buffer where to store operand handler */
-   const char*                name,          /**< name of operand (must not be NULL) */
-   const char*                desc,          /**< description of operand (can be NULL) */
-   SCIP_CONSEXPR_OPERANDHDLRDATA* data       /**< data of operand handler (can be NULL) */
+SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
+   SCIP*                       scip,         /**< SCIP data structure */
+   SCIP_CONSHDLR*              conshdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR**    exprhdlr,     /**< buffer where to store expression handler */
+   const char*                 name,         /**< name of expression handler (must not be NULL) */
+   const char*                 desc,         /**< description of expression handler (can be NULL) */
+   SCIP_CONSEXPR_EXPRHDLRDATA* data          /**< data of expression handler (can be NULL) */
    );
 
-/** set the operand handler callbacks to copy and free an operand handler */
+/** set the expression handler callbacks to copy and free an expression handler */
 EXTERN
-SCIP_RETCODE SCIPsetOperandHdlrCopyFreeHdlr(
+SCIP_RETCODE SCIPsetConsExprExprHdlrCopyFreeHdlr(
+   SCIP*                      scip,              /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,          /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,          /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRCOPYHDLR((*copyhdlr)), /**< handler copy callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRFREEHDLR((*freehdlr))  /**< handler free callback (can be NULL) */
+);
+
+/** set the expression handler callbacks to copy and free expression data */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrCopyFreeData(
+   SCIP*                      scip,              /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,          /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,          /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRCOPYDATA((*copydata)), /**< expression data copy callback (can be NULL for expressions without data) */
+   SCIP_DECL_CONSEXPR_EXPRFREEDATA((*freedata))  /**< expression data free callback (can be NULL if data does not need to be freed) */
+);
+
+/** set the print callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrPrint(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
-   SCIP_DECL_CONSEXPR_OPERANDCOPYHDLR((*copyhdlr)), /**< handler copy method (can be NULL) */
-   SCIP_DECL_CONSEXPR_OPERANDFREEHDLR((*freehdlr)) /**< handler free method (can be NULL) */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRPRINT((*print))    /**< print callback (can be NULL) */
 );
 
-/** set the operand handler callbacks to copy and free operand data */
+/** gives the name of an expression handler */
 EXTERN
-SCIP_RETCODE SCIPsetOperandHdlrCopyFreeData(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
-   SCIP_DECL_CONSEXPR_OPERANDCOPYDATA((*copydata)), /**< copy method of operand data (can be NULL for operands without data) */
-   SCIP_DECL_CONSEXPR_OPERANDFREEDATA((*freedata))  /**< free method of operand data (can be NULL if data does not need to be freed) */
+const char* SCIPgetConsExprExprHdlrName(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
 );
 
-/** set the print callback of an operand handler */
+/** gives the description of an expression handler (can be NULL) */
 EXTERN
-SCIP_RETCODE SCIPsetOperandHdlrPrint(
-   SCIP*                      scip,          /**< SCIP data structure */
-   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
-   SCIP_DECL_CONSEXPR_OPERANDPRINT((*print)) /**< print method of operand data (can be NULL) */
+const char* SCIPgetConsExprExprHdlrDescription(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
 );
 
-/** gives the name of an operand handler */
+/** gives the data of an expression handler */
 EXTERN
-const char* SCIPgetOperandHdlrName(
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
-);
-
-/** gives the description of an operand handler (can be NULL) */
-EXTERN
-const char* SCIPgetOperandHdlrDescription(
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
-);
-
-/** gives the data of an operand handler */
-EXTERN
-SCIP_CONSEXPR_OPERANDHDLRDATA* SCIPgetOperandHdlrData(
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr         /**< operand handler */
+SCIP_CONSEXPR_EXPRHDLRDATA* SCIPgetConsExprExprHdlrData(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr      /**< expression handler */
 );
 
 /** @} */
@@ -98,49 +98,49 @@ SCIP_CONSEXPR_OPERANDHDLRDATA* SCIPgetOperandHdlrData(
 /**@name Expression Methods */
 /**@{ */
 
-/** creates and captures a multivariate expression with given operand and children */
+/** creates and captures a multivariate expression with given expression data and children */
 EXTERN
 SCIP_RETCODE SCIPcreateConsExprExprMultivariate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
-   SCIP_CONSEXPR_OPERANDDATA* opdata,        /**< operand data (expression assumes ownership) */
-   int                   nchildren,          /**< number of children */
-   SCIP_CONSEXPR_EXPR*   children            /**< children */
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr,         /**< expression handler */
+   SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data (expression assumes ownership) */
+   int                     nchildren,        /**< number of children */
+   SCIP_CONSEXPR_EXPR*     children          /**< children */
    );
 
-/** creates and captures a bivariate expression with given operand and children */
+/** creates and captures a bivariate expression with given expression data and children */
 EXTERN
 SCIP_RETCODE SCIPcreateConsExprExprBivariate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
-   SCIP_CONSEXPR_OPERANDDATA* opdata,        /**< operand data */
-   SCIP_CONSEXPR_EXPR*   child1,             /**< first child */
-   SCIP_CONSEXPR_EXPR*   child2              /**< second child */
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr,         /**< expression handler */
+   SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data */
+   SCIP_CONSEXPR_EXPR*     child1,           /**< first child */
+   SCIP_CONSEXPR_EXPR*     child2            /**< second child */
    );
 
-/** creates and captures a univariate expression with given operand and child */
+/** creates and captures a univariate expression with given expression data and child */
 EXTERN
 SCIP_RETCODE SCIPcreateConsExprExprUnivariate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
-   SCIP_CONSEXPR_OPERANDDATA* opdata,        /**< operand data */
-   SCIP_CONSEXPR_EXPR*   child               /**< child */
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr,         /**< expression handler */
+   SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data */
+   SCIP_CONSEXPR_EXPR*     child             /**< child */
    );
 
-/** creates and captures a variate expression with given operand */
+/** creates and captures a invariate expression with given expression data */
 EXTERN
 SCIP_RETCODE SCIPcreateConsExprExprInvariate(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
-   SCIP_CONSEXPR_OPERANDHDLR* ophdlr,        /**< operand handler */
-   SCIP_CONSEXPR_OPERANDDATA* opdata         /**< operand data */
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr,         /**< expression handler */
+   SCIP_CONSEXPR_EXPRDATA* exprdata          /**< expression data */
    );
 
 /** captures an expression (increments usage count) */
@@ -174,31 +174,31 @@ SCIP_CONSEXPR_EXPR** SCIPgetConsExprExprChildren(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-/** gets the operator handler of an expression
+/** gets the handler of an expression
  *
  * This identifies the type of the expression (sum, variable, ...).
  */
 EXTERN
-SCIP_CONSEXPR_OPERANDHDLR* SCIPgetConsExprExprOperatorHdlr(
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlr(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-/** gets the operator data of an expression */
+/** gets the expression data of an expression */
 EXTERN
-SCIP_CONSEXPR_OPERANDDATA* SCIPgetConsExprExprOperatorData(
+SCIP_CONSEXPR_EXPRDATA* SCIPgetConsExprExprData(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
-/** sets the operator data of an expression
+/** sets the expression data of an expression
  *
  * The pointer to possible old data is overwritten and the
  * freedata-callback is not called before.
- * This function is intended to be used by operand handler.
+ * This function is intended to be used by expression handler.
  */
 EXTERN
-void SCIPsetConsExprExprOperatorData(
-   SCIP_CONSEXPR_EXPR*        expr,          /**< expression */
-   SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< operand data to be set (can be NULL) */
+void SCIPsetConsExprExprData(
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_CONSEXPR_EXPRDATA* exprdata          /**< expression data to be set (can be NULL) */
    );
 
 /** @} */

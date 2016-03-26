@@ -14,14 +14,14 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_expr_constant.h
- * @brief  constant value operand handler
+ * @brief  constant value expression handler
  * @author Stefan Vigerske
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_CONS_EXPR_CONSTANT_H__
-#define __SCIP_CONS_EXPR_CONSTANT_H__
+#ifndef __SCIP_CONS_EXPR_VALUE_H__
+#define __SCIP_CONS_EXPR_VALUE_H__
 
 
 #include "scip/scip.h"
@@ -31,27 +31,27 @@
 extern "C" {
 #endif
 
-/** creates the handler for constant value operands and includes it into the expression constraint handler */
+/** creates the handler for constant value expression and includes it into the expression constraint handler */
 EXTERN
-SCIP_RETCODE SCIPincludeOperandHdlrValue(
+SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
-/** creates the data of a constant value operand */
+/** creates the data of a constant value expression */
 EXTERN
-SCIP_RETCODE SCIPcreateOperandValue(
-   SCIP*                       scip,               /**< SCIP data structure */
-   SCIP_CONSHDLR*              consexprhdlr,       /**< expression constraint handler */
-   SCIP_CONSEXPR_OPERANDHDLR*  operandhdlr,        /**< constant value operand handler */
-   SCIP_CONSEXPR_OPERANDDATA** operanddata,        /**< pointer where to store data of operand */
-   SCIP_Real                   value               /**< value to be stored */
+SCIP_RETCODE SCIPcreateConsExprExprValue(
+   SCIP*                    scip,            /**< SCIP data structure */
+   SCIP_CONSHDLR*           consexprhdlr,    /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*  exprhdlr,        /**< constant value expression handler */
+   SCIP_CONSEXPR_EXPRDATA** exprdata,        /**< pointer where to store data of expression */
+   SCIP_Real                value            /**< value to be stored */
    );
 
-/** gets the value of a constant value operand */
+/** gets the value of a constant value expression */
 EXTERN
-SCIP_Real SCIPgetOperandValueValue(
-   SCIP_CONSEXPR_OPERANDDATA* operanddata    /**< operand data */
+SCIP_Real SCIPgetConsExprExprValueValue(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    );
 
 
@@ -59,4 +59,4 @@ SCIP_Real SCIPgetOperandValueValue(
 }
 #endif
 
-#endif /* __SCIP_CONS_EXPR_CONSTANT_H__ */
+#endif /* __SCIP_CONS_EXPR_VALUE_H__ */
