@@ -75,6 +75,49 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrPrint(
    SCIP_DECL_CONSEXPR_EXPRPRINT((*print))    /**< print callback (can be NULL) */
 );
 
+/** gives expression handlers */
+EXTERN
+SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
+   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+);
+
+/** gives number of expression handlers */
+EXTERN
+int SCIPgetConsExprExprNHdlrs(
+   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+);
+
+/** returns an expression handler of a given name (or NULL if not found) */
+EXTERN
+SCIP_CONSEXPR_EXPRHDLR* SCIPfindConsExprExprHdlr(
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   const char*                name           /**< name of expression handler */
+   );
+
+/** returns expression handler for variable expressions */
+EXTERN
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrVar(
+   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+   );
+
+/** returns expression handler for constant value expressions */
+EXTERN
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrValue(
+   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+   );
+
+/** returns expression handler for sum expressions */
+EXTERN
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrSum(
+   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+   );
+
+/** returns expression handler for product expressions */
+EXTERN
+SCIP_CONSEXPR_EXPRHDLR* SCIPgetConsExprExprHdlrProduct(
+   SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
+   );
+
 /** gives the name of an expression handler */
 EXTERN
 const char* SCIPgetConsExprExprHdlrName(
