@@ -25,6 +25,7 @@
 #include "scip/scip.h"
 #include "scip/cons_expr.h"
 #include "scip/cons_expr_var.h"
+#include "scip/cons_expr_value.h"
 #include "scip/cons_expr_sumprod.h"
 
 /** macro to check the return of tests
@@ -64,7 +65,8 @@ SCIP_RETCODE testCons(void)
    SCIP_VAR* y;
    SCIP_CONSEXPR_EXPR* expr_x;
    SCIP_CONSEXPR_EXPR* expr_y;
-   SCIP_CONSEXPR_EXPR* prod_xy;
+   SCIP_CONSEXPR_EXPR* expr_5;
+   SCIP_CONSEXPR_EXPR* expr_xy5;
 
    conshdlr = NULL;
 
@@ -90,13 +92,31 @@ SCIP_RETCODE testCons(void)
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
 
-   /* create expression for product of x and y (TODO should have something easy for product of 2 args */
+   /* create expression for constant 5 */
+   SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr_5, 5.0) );
+
+   /* create expression for product of 5, x, and y (TODO should have something to add children to an existing product expr) */
    {
-      SCIP_CONSEXPR_EXPR* xy[2] = {expr_x, expr_y};
-      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prod_xy, 2, xy, NULL, 2.0) );
+      SCIP_CONSEXPR_EXPR* xy5[3] = {expr_x, expr_y, expr_5};
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 3, xy5, NULL, 2.0) );
    }
 
+   /* release leaf expressions (this should not free them yet, as they are captured by prod_xy5) */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_5) );
+
+   /* release product expression (this should free the product and its children) */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
+
+   /* give up scip */
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPfree(&scip) );
+
    /* test something? */
+
+   BMScheckEmptyMemory();
 
    return SCIP_OKAY;
 }

@@ -1031,10 +1031,11 @@ SCIP_CONSEXPR_EXPR** SCIPgetConsExprExprChildren(
    )
 {
    assert(expr != NULL);
-   assert(expr->variability != SCIP_CONSEXPR_INVARIATE);
 
    switch( expr->variability )
    {
+      case SCIP_CONSEXPR_INVARIATE :
+         return NULL;
       case SCIP_CONSEXPR_UNIVARIATE :
          return &expr->children.single;
       case SCIP_CONSEXPR_BIVARIATE :
@@ -1042,7 +1043,6 @@ SCIP_CONSEXPR_EXPR** SCIPgetConsExprExprChildren(
       case SCIP_CONSEXPR_MULTIVARIATE :
          return expr->children.array.children;
       default:
-         /* invariate case handled in assert above */
          SCIPABORT();
          return NULL;
    }
