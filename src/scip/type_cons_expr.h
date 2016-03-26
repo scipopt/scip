@@ -120,7 +120,6 @@ extern "C" {
  */
 #define SCIP_DECL_CONSEXPR_EXPRPRINT(x) SCIP_RETCODE x (\
    SCIP* scip, \
-   SCIP_CONSHDLR* consexprhdlr, \
    SCIP_CONSEXPR_EXPR* expr, \
    FILE* file)
 
@@ -133,13 +132,12 @@ enum SCIP_ConsExpr_Variability
    SCIP_CONSEXPR_MULTIVARIATE = 3    /**< arbitrary number of children */
 };
 
-typedef enum  SCIP_ConsExpr_Variability  SCIP_CONSEXPR_VARIABILITY; /**< variability of expression */
-typedef union SCIP_ConsExpr_Children     SCIP_CONSEXPR_CHILDREN;    /**< storage type for children of an expression */
-typedef struct SCIP_ConsExpr_OperandData SCIP_CONSEXPR_EXPRDATA;    /**< expression data */
-typedef struct SCIP_ConsExpr_ExprHdlr SCIP_CONSEXPR_EXPRHDLR;    /**< expression handler */
-typedef struct SCIP_ConsExpr_OperandHdlrData SCIP_CONSEXPR_EXPRHDLRDATA; /**< expression handler data */
-
-typedef struct SCIP_ConsExpr_Expr        SCIP_CONSEXPR_EXPR;        /**< expression */
+typedef enum  SCIP_ConsExpr_Variability   SCIP_CONSEXPR_VARIABILITY;  /**< variability of expression */
+typedef union SCIP_ConsExpr_Children      SCIP_CONSEXPR_CHILDREN;     /**< storage type for children of an expression */
+typedef struct SCIP_ConsExpr_ExprData     SCIP_CONSEXPR_EXPRDATA;     /**< expression data */
+typedef struct SCIP_ConsExpr_ExprHdlr     SCIP_CONSEXPR_EXPRHDLR;     /**< expression handler */
+typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_CONSEXPR_EXPRHDLRDATA; /**< expression handler data */
+typedef struct SCIP_ConsExpr_Expr         SCIP_CONSEXPR_EXPR;         /**< expression */
 
 
 #ifdef __cplusplus
