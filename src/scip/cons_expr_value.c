@@ -89,7 +89,7 @@ SCIP_RETCODE SCIPcreateConsExprExprValue(
    assert(sizeof(SCIP_Real) <= sizeof(SCIP_CONSEXPR_EXPRDATA*));
    memcpy(&exprdata, &value, sizeof(SCIP_Real));
 
-   SCIP_CALL( SCIPcreateConsExprExprInvariate(scip, consexprhdlr, expr, SCIPgetConsExprExprHdlrValue(consexprhdlr), exprdata) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, consexprhdlr, expr, SCIPgetConsExprExprHdlrValue(consexprhdlr), exprdata, 0, NULL) );
 
    return SCIP_OKAY;
 }

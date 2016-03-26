@@ -85,7 +85,7 @@ SCIP_RETCODE SCIPcreateConsExprExprVar(
    assert(expr != NULL);
    assert(var != NULL);
 
-   SCIP_CALL( SCIPcreateConsExprExprInvariate(scip, consexprhdlr, expr, SCIPgetConsExprExprHdlrVar(consexprhdlr), (SCIP_CONSEXPR_EXPRDATA*)var) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, consexprhdlr, expr, SCIPgetConsExprExprHdlrVar(consexprhdlr), (SCIP_CONSEXPR_EXPRDATA*)var, 0, NULL) );
 
    return SCIP_OKAY;
 }

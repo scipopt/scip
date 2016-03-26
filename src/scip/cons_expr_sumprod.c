@@ -176,7 +176,7 @@ SCIP_RETCODE SCIPcreateConsExprExprSum(
 
    SCIP_CALL( createData(scip, &exprdata, nchildren, coefficients, constant) );
 
-   SCIP_CALL( SCIPcreateConsExprExprMultivariate(scip, consexprhdlr, expr, SCIPgetConsExprExprHdlrSum(consexprhdlr), exprdata, nchildren, children) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, consexprhdlr, expr, SCIPgetConsExprExprHdlrSum(consexprhdlr), exprdata, nchildren, children) );
 
    return SCIP_OKAY;
 }
@@ -235,7 +235,7 @@ SCIP_RETCODE SCIPcreateConsExprExprProduct(
 
    SCIP_CALL( createData(scip, &exprdata, nchildren, exponents, constant) );
 
-   SCIP_CALL( SCIPcreateConsExprExprMultivariate(scip, consexprhdlr, expr, SCIPgetConsExprExprHdlrProduct(consexprhdlr), exprdata, nchildren, children) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, consexprhdlr, expr, SCIPgetConsExprExprHdlrProduct(consexprhdlr), exprdata, nchildren, children) );
 
    return SCIP_OKAY;
 }

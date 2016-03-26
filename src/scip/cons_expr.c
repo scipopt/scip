@@ -113,7 +113,6 @@ SCIP_RETCODE freeExpr(
    SCIP_CONSEXPR_EXPR**  expr                /**< expression to be freed */
    )
 {
-   SCIP_CONSEXPR_EXPR** children;
    int c = 0;
 
    assert(expr != NULL);
@@ -132,17 +131,13 @@ SCIP_RETCODE freeExpr(
    /* release children
     * TODO we should avoid recursions of unknown depth
     */
-   children = SCIPgetConsExprExprChildren(*expr);
-   for( c = SCIPgetConsExprExprNChildren(*expr)-1; c >= 0; --c )
+   for( c = 0; c < (*expr)->nchildren; ++c )
    {
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[c]) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*expr)->children[c]) );
    }
 
-   /* free children array, if multivariate */
-   if( (*expr)->variability == SCIP_CONSEXPR_MULTIVARIATE )
-   {
-      SCIPfreeBlockMemoryArrayNull(scip, (*expr)->children.array.children, (*expr)->children.array.childrensize);
-   }
+   /* free children array, if any */
+   SCIPfreeBlockMemoryArrayNull(scip, &(*expr)->children, (*expr)->childrensize);
 
    SCIPfreeBlockMemory(scip, expr);
    assert(*expr == NULL);
@@ -837,15 +832,15 @@ SCIP_CONSEXPR_EXPRHDLRDATA* SCIPgetConsExprExprHdlrData(
 
 
 
-/** creates and captures a multivariate expression with given expression data and children */
-SCIP_RETCODE SCIPcreateConsExprExprMultivariate(
+/** creates and captures an expression with given expression data and children */
+SCIP_RETCODE SCIPcreateConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr,         /**< expression handler */
    SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data (expression assumes ownership) */
    int                     nchildren,        /**< number of children */
-   SCIP_CONSEXPR_EXPR**    children          /**< children */
+   SCIP_CONSEXPR_EXPR**    children          /**< children (can be NULL if nchildren is 0) */
    )
 {
    int c;
@@ -854,43 +849,35 @@ SCIP_RETCODE SCIPcreateConsExprExprMultivariate(
    assert(exprhdlr != NULL);
    assert(children != NULL || nchildren == 0);
 
-   SCIP_CALL( SCIPallocBlockMemory(scip, expr) );
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, expr) );
 
    (*expr)->exprhdlr = exprhdlr;
    (*expr)->exprdata = exprdata;
-   (*expr)->variability = SCIP_CONSEXPR_MULTIVARIATE;
 
    if( nchildren > 0 )
    {
-      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*expr)->children.array.children, children, nchildren) );
-      (*expr)->children.array.nchildren = nchildren;
-      (*expr)->children.array.childrensize = nchildren;
+      SCIP_CALL( SCIPduplicateBlockMemoryArray(scip, &(*expr)->children, children, nchildren) );
+      (*expr)->nchildren = nchildren;
+      (*expr)->childrensize = nchildren;
 
       for( c = 0; c < nchildren; ++c )
-         SCIPcaptureConsExprExpr((*expr)->children.array.children[c]);
-   }
-   else
-   {
-      SCIP_CALL( SCIPallocBlockMemoryArray(scip, &(*expr)->children.array.children, 2) );
-      (*expr)->children.array.nchildren = 0;
-      (*expr)->children.array.childrensize = 2;
+         SCIPcaptureConsExprExpr((*expr)->children[c]);
    }
 
-   (*expr)->nuses = 0;
    SCIPcaptureConsExprExpr(*expr);
 
    return SCIP_OKAY;
 }
 
-/** creates and captures a bivariate expression with given expression data and children */
-SCIP_RETCODE SCIPcreateConsExprExprBivariate(
+/** creates and captures an expression with up to two children */
+SCIP_RETCODE SCIPcreateConsExprExpr2(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
    SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr,         /**< expression handler */
    SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data */
-   SCIP_CONSEXPR_EXPR*     child1,           /**< first child */
-   SCIP_CONSEXPR_EXPR*     child2            /**< second child */
+   SCIP_CONSEXPR_EXPR*     child1,           /**< first child (can be NULL) */
+   SCIP_CONSEXPR_EXPR*     child2            /**< second child (can be NULL) */
    )
 {
    assert(expr != NULL);
@@ -898,72 +885,21 @@ SCIP_RETCODE SCIPcreateConsExprExprBivariate(
    assert(child1 != NULL);
    assert(child2 != NULL);
 
-   SCIP_CALL( SCIPallocBlockMemory(scip, expr) );
+   if( child1 != NULL && child2 != NULL )
+   {
+      SCIP_CONSEXPR_EXPR* pair[2] = {child1, child2};
 
-   (*expr)->exprhdlr = exprhdlr;
-   (*expr)->exprdata = exprdata;
-   (*expr)->variability = SCIP_CONSEXPR_BIVARIATE;
-   (*expr)->children.pair[0] = child1;
-   (*expr)->children.pair[1] = child2;
-
-   SCIPcaptureConsExprExpr(child1);
-   SCIPcaptureConsExprExpr(child2);
-
-   (*expr)->nuses = 0;
-   SCIPcaptureConsExprExpr(*expr);
-
-   return SCIP_OKAY;
-}
-
-/** creates and captures a univariate expression with given expression data and child */
-SCIP_RETCODE SCIPcreateConsExprExprUnivariate(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr,         /**< expression handler */
-   SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data */
-   SCIP_CONSEXPR_EXPR*     child             /**< child */
-   )
-{
-   assert(expr != NULL);
-   assert(exprhdlr != NULL);
-   assert(child != NULL);
-
-   SCIP_CALL( SCIPallocBlockMemory(scip, expr) );
-
-   (*expr)->exprhdlr = exprhdlr;
-   (*expr)->exprdata = exprdata;
-   (*expr)->variability = SCIP_CONSEXPR_UNIVARIATE;
-   (*expr)->children.single = child;
-
-   SCIPcaptureConsExprExpr(child);
-
-   (*expr)->nuses = 0;
-   SCIPcaptureConsExprExpr(*expr);
-
-   return SCIP_OKAY;
-}
-
-/** creates and captures a invariate expression with given expression data */
-SCIP_RETCODE SCIPcreateConsExprExprInvariate(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
-   SCIP_CONSEXPR_EXPRHDLR* exprhdlr,         /**< expression handler */
-   SCIP_CONSEXPR_EXPRDATA* exprdata          /**< expression data */
-   )
-{
-   assert(expr != NULL);
-   assert(exprhdlr != NULL);
-
-   SCIP_CALL( SCIPallocBlockMemory(scip, expr) );
-
-   (*expr)->exprhdlr = exprhdlr;
-   (*expr)->exprdata = exprdata;
-   (*expr)->variability = SCIP_CONSEXPR_INVARIATE;
-
-   (*expr)->nuses = 0;
-   SCIPcaptureConsExprExpr(*expr);
+      SCIP_CALL( SCIPcreateConsExprExpr(scip, consexprhdlr, expr, exprhdlr, exprdata, 2, pair) );
+   }
+   else if( child2 == NULL )
+   {
+      SCIP_CALL( SCIPcreateConsExprExpr(scip, consexprhdlr, expr, exprhdlr, exprdata, child1 == NULL ? 0 : 1, &child1) );
+   }
+   else
+   {
+      /* child2 != NULL, child1 == NULL */
+      SCIP_CALL( SCIPcreateConsExprExpr(scip, consexprhdlr, expr, exprhdlr, exprdata, 1, &child2) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1007,45 +943,17 @@ int SCIPgetConsExprExprNChildren(
 {
    assert(expr != NULL);
 
-   if( expr->variability == SCIP_CONSEXPR_MULTIVARIATE )
-      return expr->children.array.nchildren;
-
-   /* the enum values correspond to the number of children, if not multivariate */
-   return (int)expr->variability;
+   return expr->nchildren;
 }
 
-/** gives the child of a univariate expression */
-SCIP_CONSEXPR_EXPR* SCIPgetConsExprExprChild(
-   SCIP_CONSEXPR_EXPR*   expr               /**< expression */
-   )
-{
-   assert(expr != NULL);
-   assert(expr->variability == SCIP_CONSEXPR_UNIVARIATE);
-
-   return expr->children.single;
-}
-
-/** gives the children of a non-invariate expression */
+/** gives the children of an expression (can be NULL if no children) */
 SCIP_CONSEXPR_EXPR** SCIPgetConsExprExprChildren(
    SCIP_CONSEXPR_EXPR*   expr               /**< expression */
    )
 {
    assert(expr != NULL);
 
-   switch( expr->variability )
-   {
-      case SCIP_CONSEXPR_INVARIATE :
-         return NULL;
-      case SCIP_CONSEXPR_UNIVARIATE :
-         return &expr->children.single;
-      case SCIP_CONSEXPR_BIVARIATE :
-         return expr->children.pair;
-      case SCIP_CONSEXPR_MULTIVARIATE :
-         return expr->children.array.children;
-      default:
-         SCIPABORT();
-         return NULL;
-   }
+   return expr->children;
 }
 
 /** gets the handler of an expression

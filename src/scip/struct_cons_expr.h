@@ -46,30 +46,17 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPRPRINT((*print));        /**< print callback (can be NULL) */
 };
 
-/** union for storing one, two, or many children */
-union SCIP_ConsExpr_Children
-{
-   SCIP_CONSEXPR_EXPR*   single;             /**< child expression of a univariate expression */
-   SCIP_CONSEXPR_EXPR*   pair[2];            /**< children of a bivariate expression */
-   struct
-   {
-      int                  nchildren;        /**< number of children of a multivariate expression */
-      int                  childrensize;     /**< length of children array */
-      SCIP_CONSEXPR_EXPR** children;         /**< children expressions of multivariate expression */
-   } array;
-};
-
-
 /** a node in the expression graph that is handled by the expression constraint handler */
 struct SCIP_ConsExpr_Expr
 {
-   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr;      /**< expression type (as pointer to its handler) */
-   SCIP_CONSEXPR_EXPRDATA*    exprdata;      /**< expression data */
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr;      /**< expression type (as pointer to its handler) */
+   SCIP_CONSEXPR_EXPRDATA* exprdata;      /**< expression data */
 
-   SCIP_CONSEXPR_VARIABILITY  variability;   /**< variability of expression (in-, uni-, bi-, multivariate) */
-   SCIP_CONSEXPR_CHILDREN     children;      /**< children of expression, interpretation of union depends on variability */
+   int                     nchildren;     /**< number of children */
+   int                     childrensize;  /**< length of children array */
+   SCIP_CONSEXPR_EXPR**    children;      /**< children expressions */
 
-   int                        nuses;         /**< reference counter */
+   int                     nuses;         /**< reference counter */
 };
 
 

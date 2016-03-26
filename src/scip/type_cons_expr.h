@@ -113,27 +113,16 @@ extern "C" {
  * the method prints the data of an expression
  *
  * input:
- *  - scip          : SCIP main data structure
- *  - consexprhdlr  : expression constraint handler
- *  - expr          : expression which data is to be printed
- *  - file          : the file to print to
+ *  - scip : SCIP main data structure
+ *  - expr : expression which data is to be printed
+ *  - file : the file to print to
  */
 #define SCIP_DECL_CONSEXPR_EXPRPRINT(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
    FILE* file)
 
-/** variability of expression */
-enum SCIP_ConsExpr_Variability
-{
-   SCIP_CONSEXPR_INVARIATE    = 0,   /**< no children */
-   SCIP_CONSEXPR_UNIVARIATE   = 1,   /**< exactly one child */
-   SCIP_CONSEXPR_BIVARIATE    = 2,   /**< exactly two children */
-   SCIP_CONSEXPR_MULTIVARIATE = 3    /**< arbitrary number of children */
-};
 
-typedef enum  SCIP_ConsExpr_Variability   SCIP_CONSEXPR_VARIABILITY;  /**< variability of expression */
-typedef union SCIP_ConsExpr_Children      SCIP_CONSEXPR_CHILDREN;     /**< storage type for children of an expression */
 typedef struct SCIP_ConsExpr_ExprData     SCIP_CONSEXPR_EXPRDATA;     /**< expression data */
 typedef struct SCIP_ConsExpr_ExprHdlr     SCIP_CONSEXPR_EXPRHDLR;     /**< expression handler */
 typedef struct SCIP_ConsExpr_ExprHdlrData SCIP_CONSEXPR_EXPRHDLRDATA; /**< expression handler data */
