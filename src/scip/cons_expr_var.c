@@ -73,18 +73,19 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    return SCIP_OKAY;
 }
 
-/** creates the data of a variable expression */
+/** creates a variable expression */
 SCIP_RETCODE SCIPcreateConsExprExprVar(
-   SCIP*                    scip,            /**< SCIP data structure */
-   SCIP_CONSHDLR*           consexprhdlr,    /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*  exprhdlr,        /**< variable expression handler */
-   SCIP_CONSEXPR_EXPRDATA** exprdata,        /**< pointer where to store data of expression */
-   SCIP_VAR*                var              /**< variable to be stored */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   SCIP_VAR*             var                 /**< variable to be stored */
    )
 {
-   assert(exprdata != NULL);
+   assert(consexprhdlr != NULL);
+   assert(expr != NULL);
+   assert(var != NULL);
 
-   *exprdata = (void*)var;
+   SCIP_CALL( SCIPcreateConsExprExprInvariate(scip, consexprhdlr, expr, SCIPgetConsExprExprHdlrVar(consexprhdlr), (SCIP_CONSEXPR_EXPRDATA*)var) );
 
    return SCIP_OKAY;
 }

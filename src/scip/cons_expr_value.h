@@ -38,14 +38,13 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
-/** creates the data of a constant value expression */
+/** creates constant value expression */
 EXTERN
 SCIP_RETCODE SCIPcreateConsExprExprValue(
-   SCIP*                    scip,            /**< SCIP data structure */
-   SCIP_CONSHDLR*           consexprhdlr,    /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*  exprhdlr,        /**< constant value expression handler */
-   SCIP_CONSEXPR_EXPRDATA** exprdata,        /**< pointer where to store data of expression */
-   SCIP_Real                value            /**< value to be stored */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   SCIP_Real             value               /**< value to be stored */
    );
 
 /** gets the value of a constant value expression */

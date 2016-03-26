@@ -38,14 +38,13 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
    );
 
-/** creates the data of a variable expression */
+/** creates a variable expression */
 EXTERN
 SCIP_RETCODE SCIPcreateConsExprExprVar(
-   SCIP*                    scip,            /**< SCIP data structure */
-   SCIP_CONSHDLR*           consexprhdlr,    /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*  exprhdlr,        /**< variable expression handler */
-   SCIP_CONSEXPR_EXPRDATA** exprdata,        /**< pointer where to store data of expression */
-   SCIP_VAR*                var              /**< variable to be stored */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   SCIP_VAR*             var                 /**< variable to be stored */
    );
 
 /** gets the variable of a variable expression */

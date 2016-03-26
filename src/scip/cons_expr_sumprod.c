@@ -161,18 +161,22 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    return SCIP_OKAY;
 }
 
-/** creates the data of a summation expression */
+/** creates a sum expression */
 SCIP_RETCODE SCIPcreateConsExprExprSum(
-   SCIP*                    scip,            /**< SCIP data structure */
-   SCIP_CONSHDLR*           consexprhdlr,    /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*  exprhdlr,        /**< sum expression handler */
-   SCIP_CONSEXPR_EXPRDATA** exprdata,        /**< pointer where to store expression data */
-   int                      ncoefficients,   /**< number of coefficients (i.e., number of children) */
-   SCIP_Real*               coefficients,    /**< array with coefficients for all children (or NULL if all 1.0) */
-   SCIP_Real                constant         /**< constant term of sum */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   int                   nchildren,          /**< number of children */
+   SCIP_CONSEXPR_EXPR**  children,           /**< children */
+   SCIP_Real*            coefficients,       /**< array with coefficients for all children (or NULL if all 1.0) */
+   SCIP_Real             constant            /**< constant term of sum */
    )
 {
-   SCIP_CALL( createData(scip, exprdata, ncoefficients, coefficients, constant) );
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
+   SCIP_CALL( createData(scip, &exprdata, nchildren, coefficients, constant) );
+
+   SCIP_CALL( SCIPcreateConsExprExprMultivariate(scip, consexprhdlr, expr, SCIPgetConsExprExprHdlrSum(consexprhdlr), exprdata, nchildren, children) );
 
    return SCIP_OKAY;
 }
@@ -216,18 +220,22 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    return SCIP_OKAY;
 }
 
-/** creates the data of a product expression */
+/** creates a product expression */
 SCIP_RETCODE SCIPcreateConsExprExprProduct(
-   SCIP*                    scip,            /**< SCIP data structure */
-   SCIP_CONSHDLR*           consexprhdlr,    /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*  exprhdlr,        /**< product expression handler */
-   SCIP_CONSEXPR_EXPRDATA** exprdata,        /**< pointer where to store expression data */
-   int                      nexponents,      /**< number of exponents (i.e., number of children) */
-   SCIP_Real*               exponents,       /**< array with exponents for all children (or NULL if all 1.0) */
-   SCIP_Real                constant         /**< constant coefficient of product */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   int                   nchildren,          /**< number of children */
+   SCIP_CONSEXPR_EXPR**  children,           /**< children */
+   SCIP_Real*            exponents,          /**< array with exponents for all children (or NULL if all 1.0) */
+   SCIP_Real             constant            /**< constant coefficient of product */
    )
 {
-   SCIP_CALL( createData(scip, exprdata, nexponents, exponents, constant) );
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
+   SCIP_CALL( createData(scip, &exprdata, nchildren, exponents, constant) );
+
+   SCIP_CALL( SCIPcreateConsExprExprMultivariate(scip, consexprhdlr, expr, SCIPgetConsExprExprHdlrProduct(consexprhdlr), exprdata, nchildren, children) );
 
    return SCIP_OKAY;
 }

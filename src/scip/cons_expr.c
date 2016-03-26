@@ -845,7 +845,7 @@ SCIP_RETCODE SCIPcreateConsExprExprMultivariate(
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr,         /**< expression handler */
    SCIP_CONSEXPR_EXPRDATA* exprdata,         /**< expression data (expression assumes ownership) */
    int                     nchildren,        /**< number of children */
-   SCIP_CONSEXPR_EXPR*     children          /**< children */
+   SCIP_CONSEXPR_EXPR**    children          /**< children */
    )
 {
    int c;

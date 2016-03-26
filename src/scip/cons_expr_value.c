@@ -73,22 +73,27 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    return SCIP_OKAY;
 }
 
-/** creates the data of a constant value expression */
+/** creates constant value expression */
 SCIP_RETCODE SCIPcreateConsExprExprValue(
-   SCIP*                    scip,            /**< SCIP data structure */
-   SCIP_CONSHDLR*           consexprhdlr,    /**< expression constraint handler */
-   SCIP_CONSEXPR_EXPRHDLR*  exprhdlr,        /**< constant value expression handler */
-   SCIP_CONSEXPR_EXPRDATA** exprdata,        /**< pointer where to store data of expression */
-   SCIP_Real                value            /**< value to be stored */
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**  expr,               /**< pointer where to store expression */
+   SCIP_Real             value               /**< value to be stored */
    )
 {
-   assert(exprdata != NULL);
-   assert(sizeof(SCIP_Real) <= sizeof(SCIP_CONSEXPR_EXPRDATA*));
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
 
-   memcpy(exprdata, &value, sizeof(SCIP_Real));
+   assert(consexprhdlr != NULL);
+   assert(expr != NULL);
+
+   assert(sizeof(SCIP_Real) <= sizeof(SCIP_CONSEXPR_EXPRDATA*));
+   memcpy(&exprdata, &value, sizeof(SCIP_Real));
+
+   SCIP_CALL( SCIPcreateConsExprExprInvariate(scip, consexprhdlr, expr, SCIPgetConsExprExprHdlrValue(consexprhdlr), exprdata) );
 
    return SCIP_OKAY;
 }
+
 
 /** gets the value of a constant value expression */
 SCIP_Real SCIPgetConsExprExprValueValue(
