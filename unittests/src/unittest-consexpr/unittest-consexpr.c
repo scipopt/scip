@@ -45,6 +45,8 @@
    }                                             \
    while( FALSE )
 
+/* BIG = 75000 produces a seg fault because of stack overflow */
+#define BIG 10000
 
 /*
  * Local methods for tests
@@ -55,18 +57,14 @@
  * TESTS
  */
 
-/** test something */
+/** test freeing method */
 static
-SCIP_RETCODE testCons(void)
+SCIP_RETCODE testFree(void)
 {
    SCIP* scip;
    SCIP_CONSHDLR* conshdlr;
    SCIP_VAR* x;
    SCIP_VAR* y;
-   SCIP_CONSEXPR_EXPR* expr_x;
-   SCIP_CONSEXPR_EXPR* expr_y;
-   SCIP_CONSEXPR_EXPR* expr_5;
-   SCIP_CONSEXPR_EXPR* expr_xy5;
 
    conshdlr = NULL;
 
@@ -88,26 +86,161 @@ SCIP_RETCODE testCons(void)
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
 
-   /* create expressions for variables x and y */
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
-
-   /* create expression for constant 5 */
-   SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr_5, 5.0) );
-
-   /* create expression for product of 5, x, and y (TODO should have something to add children to an existing product expr) */
+   /* create expression 5*x*y and free it */
    {
-      SCIP_CONSEXPR_EXPR* xy5[3] = {expr_x, expr_y, expr_5};
-      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 3, xy5, NULL, 2.0) );
+      SCIP_CONSEXPR_EXPR* expr_x;
+      SCIP_CONSEXPR_EXPR* expr_y;
+      SCIP_CONSEXPR_EXPR* expr_5;
+      SCIP_CONSEXPR_EXPR* expr_xy5;
+
+      /* create expressions for variables x and y */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
+
+      /* create expression for constant 5 */
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr_5, 5.0) );
+
+      /* create expression for product of 5, x, and y (TODO should have something to add children to an existing product expr) */
+      {
+         SCIP_CONSEXPR_EXPR* xy5[3] = {expr_x, expr_y, expr_5};
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 3, xy5, NULL, 2.0) );
+      }
+
+      /* release leaf expressions (this should not free them yet, as they are captured by prod_xy5) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_5) );
+
+      /* release product expression (this should free the product and its children) */
+      printf("freeing simple expression\n");
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
    }
 
-   /* release leaf expressions (this should not free them yet, as they are captured by prod_xy5) */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_5) );
+   /* create expression sum x_i where x_i = x for all i and free it */
+   {
+      int i;
+      SCIP_CONSEXPR_EXPR* exprs[BIG];
+      SCIP_Real           coefs[BIG];
+      SCIP_CONSEXPR_EXPR* expr_x;
+      SCIP_CONSEXPR_EXPR* sumexpr;
 
-   /* release product expression (this should free the product and its children) */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
+      /* create expressions for variables x */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
+
+      for( i = 0; i < BIG; i++ )
+      {
+         exprs[i] = expr_x;
+         coefs[i] = i;
+      }
+      printf("finish big loop\n");
+
+      /* create expression for sum */
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr, BIG, exprs, coefs, -1.0) );
+
+      /* release leaf expressions (this should not free them yet, as they are captured by sumexpr) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+
+      /* release sum expression (this should free the sum and its children) */
+      printf("freeing large expression\n");
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+   }
+
+   /* create expression sum x_i where x_i = x for all i but now it is deep and free it */
+   {
+      int i;
+      SCIP_CONSEXPR_EXPR* sumexprs[BIG];
+      SCIP_CONSEXPR_EXPR* expr_x;
+      SCIP_CONSEXPR_EXPR* sumexpr;
+
+      /* create expressions for variables x */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
+
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexprs[0], 1, &expr_x, NULL, 0.0) );
+      for( i = 1; i < BIG; i++ )
+      {
+         /* create expressions for sum */
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexprs[i], 1, &sumexprs[i-1], NULL, 1.0 * i) );
+      }
+      printf("finish big loop\n");
+
+      /* create expressions for sum */
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr, 1, &sumexprs[BIG-1], NULL, 1.0 * BIG) );
+
+      /* release leaf expressions (this should not free them yet, as they are captured by sumexpr) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+      for( i = 0; i < BIG; i++ )
+      {
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexprs[i]) );
+      }
+
+      /* release sum expression (this should free the sum and its children) */
+      printf("freeing deep expression\n");
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+   }
+
+   /* create expression 5*x*y and free it */
+   {
+      SCIP_CONSEXPR_EXPR* expr_x;
+      SCIP_CONSEXPR_EXPR* expr_y;
+      SCIP_CONSEXPR_EXPR* prodexprs[BIG];
+      SCIP_CONSEXPR_EXPR* xysum[3];
+      SCIP_CONSEXPR_EXPR* exprs[BIG];
+      SCIP_CONSEXPR_EXPR* sumexpr;
+      SCIP_CONSEXPR_EXPR* crazyexpr;
+      SCIP_Real           coefs[BIG];
+      int i;
+
+      /* create expressions for variables x and y */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
+
+      /* create long sum */
+      for( i = 0; i < BIG; i++ )
+      {
+         exprs[i] = expr_x;
+         coefs[i] = i;
+      }
+      printf("finish big loop\n");
+
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr, BIG, exprs, coefs, -1.0) );
+
+      /* create deep product of y * x * long sum */
+      xysum[0] = expr_x; xysum[1] = expr_y; xysum[2] = sumexpr;
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prodexprs[0], 3, (SCIP_CONSEXPR_EXPR**)&xysum, NULL, 1.0) );
+
+      for( i = 1; i < BIG; i++ )
+      {
+         /* create expressions for product */
+         if( BIG % 2 == 1 )
+         {
+            xysum[0] = sumexpr; xysum[1] = prodexprs[i-1]; xysum[2] = expr_y;
+            SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prodexprs[i], 3, (SCIP_CONSEXPR_EXPR**)&xysum, NULL, 1.0 * i) );
+         }
+         else
+         {
+            exprs[0] = prodexprs[i-1]; exprs[1] = prodexprs[i-1]; exprs[2] = expr_y;
+            SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &prodexprs[i], BIG, exprs, coefs, -1.0) );
+         }
+
+      }
+
+      /* create expressions for crazy expr */
+      xysum[0] = sumexpr; xysum[1] = prodexprs[BIG-1]; xysum[2] = sumexpr;
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &crazyexpr, 3, (SCIP_CONSEXPR_EXPR**)&xysum, NULL, 1.0 * BIG) );
+
+      /* release leaf expressions (this should not free them yet, as they are captured by sumexpr) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+      for( i = 0; i < BIG; i++ )
+      {
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexprs[i]) );
+      }
+
+      /* release product expression (this should free the product and its children) */
+      printf("freeing complicated expression\n");
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &crazyexpr) );
+   }
 
    /* give up scip */
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
@@ -115,7 +248,6 @@ SCIP_RETCODE testCons(void)
    SCIP_CALL( SCIPfree(&scip) );
 
    /* test something? */
-
    BMScheckEmptyMemory();
 
    return SCIP_OKAY;
@@ -136,7 +268,7 @@ main(
    printf("@01 unittest-consexpr ===========\n");
    printf("=opt=  unittest-consexpr 0\n\n");
 
-   CHECK_TEST( testCons() );
+   CHECK_TEST( testFree() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");
