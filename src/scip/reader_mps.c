@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -4274,7 +4274,7 @@ SCIP_DECL_READERWRITE(readerWriteMps)
             /* and constraint printing not enabled; mark this with SCIPinfinity(scip) */
             rhss[c] = SCIPinfinity(scip);
 
-            SCIPwarningMessage(scip, "change parameter \"reading/"READER_NAME"/linearize-and-constraints\" to TRUE to print and-constraints\n");
+            SCIPwarningMessage(scip, "change parameter \"reading/" READER_NAME "/linearize-and-constraints\" to TRUE to print and-constraints\n");
          }
       }
       else
@@ -4743,11 +4743,11 @@ SCIP_RETCODE SCIPincludeReaderMps(
 
    /* add lp-reader parameters */
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/linearize-and-constraints",
+         "reading/" READER_NAME "/linearize-and-constraints",
          "should possible \"and\" constraint be linearized when writing the mps file?",
          &readerdata->linearizeands, TRUE, DEFAULT_LINEARIZE_ANDS, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip,
-         "reading/"READER_NAME"/aggrlinearization-ands",
+         "reading/" READER_NAME "/aggrlinearization-ands",
          "should an aggregated linearization for and constraints be used?",
          &readerdata->aggrlinearizationands, TRUE, DEFAULT_AGGRLINEARIZATION_ANDS, NULL, NULL) );
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1229,7 +1229,7 @@ SCIP_RETCODE extensionOperatorSOS1(
          SCIPsortInt(cliques[*ncliques], cliquesizes[*ncliques]);
 
          /* create new constraint */
-         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "extsos1_%"SCIP_LONGINT_FORMAT, conshdlrdata->cntextsos1, conshdlrdata->cntextsos1);
+         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "extsos1_%" SCIP_LONGINT_FORMAT, conshdlrdata->cntextsos1, conshdlrdata->cntextsos1);
 
          SCIP_CALL( SCIPcreateConsSOS1(scip, &newcons, consname, cliquesizes[*ncliques], vars, weights,
                SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons),
@@ -10122,7 +10122,7 @@ SCIP_RETCODE SCIPincludeConshdlrSOS1(
          "if TRUE then perform implication graph analysis (might add additional SOS1 constraints)",
          &conshdlrdata->perfimplanalysis, TRUE, DEFAULT_PERFIMPLANALYSIS, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddIntParam(scip, "constraints/"CONSHDLR_NAME"/depthimplanalysis",
+   SCIP_CALL( SCIPaddIntParam(scip, "constraints/" CONSHDLR_NAME "/depthimplanalysis",
          "number of recursive calls of implication graph analysis (-1: no limit)",
          &conshdlrdata->depthimplanalysis, TRUE, DEFAULT_DEPTHIMPLANALYSIS, -1, INT_MAX, NULL, NULL) );
 
