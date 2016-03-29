@@ -4198,14 +4198,14 @@ SCIP_RETCODE solveNode(
       SCIP_Real lpobjval;
 
       /* get number of LP candidate variables */
-      SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nlpbranchcands, NULL, NULL);
+      SCIP_CALL( SCIPbranchcandGetLPCands(branchcand, set, stat, lp, NULL, NULL, NULL, &nlpbranchcands, NULL, NULL) );
 
       /* get LP objective value */
       lpobjval = SCIPlpGetObjval(lp, set, transprob);
-      assert(lpobjval != SCIP_INVALID && !SCIPsetIsInfinity(set, REALABS(lpobjval)));
+      assert(lpobjval != SCIP_INVALID && !SCIPsetIsInfinity(set, REALABS(lpobjval))); /*lint !e777*/
 
-      /*add the observation to the regression */
-      SCIPregressionAddObservation(stat->regressioncandsobjval, nlpbranchcands, lpobjval);
+      /* add the observation to the regression */
+      SCIPregressionAddObservation(stat->regressioncandsobjval, (SCIP_Real)nlpbranchcands, lpobjval);
    }
 
    return SCIP_OKAY;

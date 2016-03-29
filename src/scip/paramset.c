@@ -3821,7 +3821,7 @@ SCIP_RETCODE SCIPparamsetSetEmphasis(
             char paramname[SCIP_MAXSTRLEN];
             if( SCIPheurUsesSubscip(heurs[h]) )
             {
-               SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/useuct", SCIPheurGetName(heurs[h]));
+               (void) SCIPsnprintf(paramname, SCIP_MAXSTRLEN, "heuristics/%s/useuct", SCIPheurGetName(heurs[h]));
 
                if( (SCIP_PARAM*)SCIPhashtableRetrieve(paramset->hashtable, (void*)paramname) != NULL )
                {

@@ -52,10 +52,9 @@
                                             * (r)ank-1 node based? */
 #define DEFAULT_SETNAME     "default.set" /**< default settings file name for all solving phase setting files */
 #define DEFAULT_TRANSITIONMETHOD      'r' /**< the default transition method */
-#define DEFAULT_NODEOFFSET             50 /**< default node offset before transition to proof phase is active */
+#define DEFAULT_NODEOFFSET            50L /**< default node offset before transition to proof phase is active */
 #define DEFAULT_FALLBACK            FALSE /**< should the phase transition fall back to suboptimal phase? */
 #define DEFAULT_INTERRUPTOPTIMAL    FALSE /**< should solving process be interrupted if optimal solution was found? */
-#define DEFAULT_USEFILEWEIGHTS      FALSE /**< should weights from a weight file be used to adjust branching score weights? */
 
 #define DEFAULT_ENABLED             FALSE /**< should the event handler be executed? */
 #define DEFAULT_TESTMODE            FALSE /**< should the event handler test the criteria? */
@@ -99,7 +98,6 @@ struct SCIP_EventhdlrData
 {
    char                  logregression_xtype;/**< type to use for log regression - (t)ime, (n)odes, (l)p iterations */
    SCIP_Bool             enabled;            /**< should the event handler be executed? */
-   char*                 solufilename;       /**< file to parse solution information from */
    char*                 setfilefeasibility; /**< settings file parameter for the feasibility phase */
    char*                 setfileimprove;     /**< settings file parameter for the improvement phase */
    char*                 setfileproof;       /**< settings file parameter for the proof phase */
@@ -208,7 +206,8 @@ SCIP_RETCODE addNodesInformation(
          /* allocate additional memory to hold new node */
          if( depthinfo->nminnodes == depthinfo->minnodescapacity )
          {
-            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &depthinfo->minnodes, depthinfo->minnodescapacity, 2 * depthinfo->minnodescapacity) );
+            SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &depthinfo->minnodes, depthinfo->minnodescapacity,
+                  2 * depthinfo->minnodescapacity) ); /*lint !e647*/
             depthinfo->minnodescapacity *= 2;
          }
 
@@ -453,7 +452,7 @@ SCIP_RETCODE ensureDepthInfoArraySize(
    else if( nodedepth + 1 >= eventhdlrdata->maxdepth )
    {
       assert(nodedepth > 0);
-      SCIP_CALL( SCIPreallocMemoryArray(scip, &eventhdlrdata->depthinfos, 2 * nodedepth) );
+      SCIP_CALL( SCIPreallocMemoryArray(scip, &eventhdlrdata->depthinfos, 2 * nodedepth) ); /*lint !e647*/
       newsize = 2 * nodedepth;
    }
 
@@ -516,13 +515,15 @@ int checkLeavesBelowIncumbent(
    )
 {
    SCIP_NODE** nodes;
+   SCIP_RETCODE retcode;
    int nnodes;
    int n;
    SCIP_Real upperbound = SCIPgetUpperbound(scip);
    int nodesbelow = 0;
 
    /* compare children estimate and current upper bound */
-   SCIPgetChildren(scip, &nodes, &nnodes);
+   retcode = SCIPgetChildren(scip, &nodes, &nnodes);
+   assert(retcode == SCIP_OKAY);
 
    for( n = 0; n < nnodes; ++n )
    {
@@ -531,7 +532,8 @@ int checkLeavesBelowIncumbent(
    }
 
    /* compare sibling estimate and current upper bound */
-   SCIPgetSiblings(scip, &nodes, &nnodes);
+   retcode = SCIPgetSiblings(scip, &nodes, &nnodes);
+   assert(retcode == SCIP_OKAY);
 
    for( n = 0; n < nnodes; ++n )
    {
@@ -540,7 +542,8 @@ int checkLeavesBelowIncumbent(
    }
 
    /* compare leaf node and current upper bound */
-   SCIPgetLeaves(scip, &nodes, &nnodes);
+   retcode = SCIPgetLeaves(scip, &nodes, &nnodes);
+   assert(retcode == SCIP_OKAY);
 
    for( n = 0; n < nnodes; ++n )
    {
@@ -714,7 +717,7 @@ SCIP_Bool checkOptimalSolution(
 
    if(!SCIPisInfinity(scip, REALABS(primalbound)) && !SCIPisInfinity(scip, referencevalue) )
    {
-      SCIP_Real max = MAX3(1.0, REALABS(primalbound), REALABS(referencevalue));
+      SCIP_Real max = MAX3(1.0, REALABS(primalbound), REALABS(referencevalue)); /*lint !e666*/
 
       if( EPSZ((primalbound - referencevalue)/max, 1e-9) )
          return TRUE;
@@ -765,7 +768,6 @@ SCIP_Bool transitionPhase3(
             return TRUE;
          }
          return FALSE;
-         break;
       case 'l':
 
          /* check logarithmic transition */
@@ -777,7 +779,6 @@ SCIP_Bool transitionPhase3(
          break;
       default:
          return FALSE;
-      break;
    }
 
    return FALSE;
@@ -824,6 +825,7 @@ SCIP_RETCODE changeEmphasisParameters(
       case SOLVINGPHASE_PROOF:
          paramemphasis = SCIP_PARAMEMPHASIS_PHASEPROOF;
          break;
+      case SOLVINGPHASE_UNINITIALIZED:
       default:
          SCIPdebugMessage("Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
          SCIPABORT();
@@ -860,6 +862,7 @@ SCIP_RETCODE changeParametersUsingSettingsFiles(
       case SOLVINGPHASE_PROOF:
          paramfilename = eventhdlrdata->setfileproof;
          break;
+      case SOLVINGPHASE_UNINITIALIZED:
       default:
          SCIPdebugMessage("Unknown solving phase: %d -> ABORT!\n ", eventhdlrdata->solvingphase);
          SCIPABORT();
@@ -1077,7 +1080,7 @@ SCIP_RETCODE updateDataStructures(
          eventhdlrdata->newbestsol = TRUE;
 
          /* update logarithmic regression of solution process */
-         updateLogRegression(scip, eventhdlrdata);
+         SCIP_CALL( updateLogRegression(scip, eventhdlrdata) );
 
          break;
 
@@ -1199,7 +1202,7 @@ SCIP_DECL_EVENTFREE(eventFreeSolvingphase)
    SCIPregressionFree(&eventhdlrdata->regression);
 
    SCIPfreeMemory(scip, &eventhdlrdata);
-   eventhdlrdata = NULL;
+   SCIPeventhdlrSetData(eventhdlr, NULL);
 
    return SCIP_OKAY;
 }
@@ -1375,7 +1378,7 @@ SCIP_DECL_DISPOUTPUT(dispOutputNnodesbelowinc)
    assert(scip != NULL);
 
    /* display the number of nodes with an estimate below the the current incumbent */
-   SCIPdispLongint(SCIPgetMessagehdlr(scip), file, getNNodesBelowIncumbent(scip), DISP_WIDT_NNODESBELOWINC);
+   SCIPdispInt(SCIPgetMessagehdlr(scip), file, getNNodesBelowIncumbent(scip), DISP_WIDT_NNODESBELOWINC);
 
    return SCIP_OKAY;
 }
@@ -1445,7 +1448,7 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
          &eventhdlrdata->setfileproof, FALSE, DEFAULT_SETNAME, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip, EVENTHDLR_NAME"s/nodeoffset", "node offset for rank-1 and estimate transitions", &eventhdlrdata->nodeoffset,
-         FALSE, DEFAULT_NODEOFFSET, 1, SCIP_LONGINT_MAX, NULL, NULL) );
+         FALSE, DEFAULT_NODEOFFSET, 1L, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME"s/fallback", "should the event handler fall back from optimal phase?",
          &eventhdlrdata->fallback, FALSE, DEFAULT_FALLBACK, NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip ,EVENTHDLR_NAME"s/transitionmethod",
