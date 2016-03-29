@@ -106,7 +106,31 @@ struct SCIP_ConshdlrData
  */
 
 /* put your local methods here, and declare them static */
+static
+SCIP_RETCODE freeExprData(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression whose data is to be freed */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
 
+   /* free expression data, if any */
+   if( expr->exprdata != NULL )
+   {
+      if ( expr->exprhdlr->freedata != NULL )
+      {
+         SCIP_CALL( expr->exprhdlr->freedata(scip, expr) );
+         assert(expr->exprdata == NULL);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
+/* frees the expression traversing the tree in pre-order; a leaf is any node that has nuses > 1 or has no children this
+ * means that if a node has nuses > 1 and is the root of a very large subtree, then we do not explore that subtree
+ * TODO: write it more readable */
 static
 SCIP_RETCODE freeExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -114,27 +138,73 @@ SCIP_RETCODE freeExpr(
    )
 {
    int c = 0;
+   SCIP_CONSEXPR_EXPR* root;
+   SCIP_CONSEXPR_EXPR* child;
 
    assert(expr != NULL);
    assert(*expr != NULL);
 
    /* free expression data, if any */
-   if( (*expr)->exprdata != NULL )
+   SCIP_CALL( freeExprData(scip, *expr) );
+
+   root = *expr;
+   root->currentchild = 0;
+   root->parent = NULL;
+
+   /* traverse the tree */
+   while( TRUE )
    {
-      if ( (*expr)->exprhdlr->freedata != NULL )
+      /* if there are no more child to visit, try to go up */
+      if( root->currentchild >= root->nchildren )
       {
-         SCIP_CALL( (*expr)->exprhdlr->freedata(scip, *expr) );
-         assert((*expr)->exprdata == NULL);
+         assert(root->currentchild == root->nchildren);
+
+         /* if we are the the real root, break */
+         if( root->parent == NULL )
+            break;
+
+         /* go up and visit next children */
+         root = root->parent;
+
+         assert(root != NULL);
+
+         ++root->currentchild;
+
+         continue;
+      }
+
+      child = root->children[root->currentchild];
+
+      if( child->nuses == 1 && child->nchildren > 0 )
+      {
+         /* keep on going down; remember the parent and set the first child that should be visited of the new root */
+         child->parent = root;
+         root = child;
+         root->currentchild = 0;
+      }
+      else if( child->nuses == 1 && child->nchildren == 0 )
+      {
+         /* removable leaf: release child and go to next one */
+         SCIP_CALL( freeExprData(scip, child) );
+
+         /* free children array of child, if any */
+         SCIPfreeBlockMemoryArrayNull(scip, &child->children, child->childrensize);
+
+         SCIPfreeBlockMemory(scip, &child);
+         assert(child == NULL);
+
+         ++root->currentchild;
+      }
+      else
+      {
+         /* non-removable leaf: decrease nuses of child and visit next child */
+         assert(child->nuses > 1);
+         --child->nuses;
+         ++root->currentchild;
       }
    }
 
-   /* release children
-    * TODO we should avoid recursions of unknown depth
-    */
-   for( c = 0; c < (*expr)->nchildren; ++c )
-   {
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*expr)->children[c]) );
-   }
+   assert(root == *expr);
 
    /* free children array, if any */
    SCIPfreeBlockMemoryArrayNull(scip, &(*expr)->children, (*expr)->childrensize);

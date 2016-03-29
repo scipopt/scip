@@ -57,6 +57,10 @@ struct SCIP_ConsExpr_Expr
    SCIP_CONSEXPR_EXPR**    children;      /**< children expressions */
 
    int                     nuses;         /**< reference counter */
+
+   /* data to help algorithms */
+   SCIP_CONSEXPR_EXPR*     parent;        /**< to remember the current */
+   int                     currentchild;  /**< to remember which child we are visiting */
 };
 
 
