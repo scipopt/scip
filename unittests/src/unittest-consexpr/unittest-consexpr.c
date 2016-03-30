@@ -57,6 +57,115 @@
  * TESTS
  */
 
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(walk_printnode)
+{
+   assert(expr != NULL);
+
+   printf("stage %d node %p curchild %d %s\n", stage, (void*)expr, SCIPgetConsExprExprWalkCurrentChild(expr), SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   return SCIP_OKAY;
+}
+
+typedef struct
+{
+   SCIP_CONSEXPR_EXPR* e[10];
+   int next;
+} EXPRCOLLECT;
+
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(walk_collect)
+{
+   EXPRCOLLECT* collect;
+   assert(expr != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTERNODE);
+
+   collect = (EXPRCOLLECT*)data;
+   collect->e[collect->next++] = expr;
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   return SCIP_OKAY;
+}
+
+/** test freeing method */
+static
+SCIP_RETCODE testWalk(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* currently expr constraints cannot be created */
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+
+   /* create expression 5*x*y and walk it
+    * TODO: do this on a bit more interesting expression (at least one more depth)
+    */
+   {
+      SCIP_CONSEXPR_EXPR* expr_x;
+      SCIP_CONSEXPR_EXPR* expr_y;
+      SCIP_CONSEXPR_EXPR* expr_5;
+      SCIP_CONSEXPR_EXPR* expr_xy5;
+      EXPRCOLLECT collect;
+
+      /* create expressions for variables x and y */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
+
+      /* create expression for constant 5 */
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr_5, 5.0) );
+
+      /* create expression for product of 5, x, and y (TODO should have something to add children to an existing product expr) */
+      {
+         SCIP_CONSEXPR_EXPR* xy5[3] = {expr_x, expr_y, expr_5};
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 3, xy5, NULL, 2.0) );
+      }
+
+      /* release leaf expressions (this should not free them yet, as they are captured by prod_xy5) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_5) );
+
+
+      /* print walk */
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr_xy5, walk_printnode, walk_printnode, walk_printnode, walk_printnode, NULL) );
+
+      /* collect expression during walk (in initnode stage) and check that they come in the expected order */
+      collect.next = 0;
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr_xy5, walk_collect, NULL, NULL, NULL, &collect) );
+      assert(collect.next == 4);
+      assert(collect.e[0] == expr_xy5);
+      assert(collect.e[1] == SCIPgetConsExprExprChildren(expr_xy5)[0]);
+      assert(collect.e[2] == SCIPgetConsExprExprChildren(expr_xy5)[1]);
+      assert(collect.e[3] == SCIPgetConsExprExprChildren(expr_xy5)[2]);
+
+
+      /* release product expression (this should free the product and its children) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** test freeing method */
 static
 SCIP_RETCODE testFree(void)
@@ -269,6 +378,8 @@ main(
    printf("=opt=  unittest-consexpr 0\n\n");
 
    CHECK_TEST( testFree() );
+
+   CHECK_TEST( testWalk() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");

@@ -122,6 +122,43 @@ extern "C" {
    SCIP_CONSEXPR_EXPR* expr, \
    FILE* file)
 
+/** stages of expression walker in which the walker callbacks are called */
+typedef enum
+{
+   SCIP_CONSEXPREXPRWALK_ENTEREXPR,          /**< an expression is visited the first time (before any of its children are visited) */
+   SCIP_CONSEXPREXPRWALK_VISITINGCHILD,      /**< a child of an expression is to be visited */
+   SCIP_CONSEXPREXPRWALK_VISITEDCHILD,       /**< a child of an expression has been visited */
+   SCIP_CONSEXPREXPRWALK_LEAVEEXPR           /**< an expression is to be left (all of its children have been processed) */
+} SCIP_CONSEXPREXPRWALK_STAGE;
+
+/** feedback from expression walker callback to expression walker to direct the walk
+ *
+ * The return code SCIP_CONSEXPREXPRWALK_SKIP is only allowed in the stages SCIP_CONSEXPREXPRWALK_ENTERNODE and SCIP_CONSEXPREXPRWALK_VISITINGCHILD.
+ */
+typedef enum
+{
+   SCIP_CONSEXPREXPRWALK_CONTINUE,           /**< continue the walk */
+   SCIP_CONSEXPREXPRWALK_SKIP,               /**< skip this node (if in ENTEREXPR stage) or the next child (if in VISITINGCHILD stage) */
+   SCIP_CONSEXPREXPRWALK_ABORT,              /**< abort the walk */
+} SCIP_CONSEXPREXPRWALK_RESULT;
+
+
+/** expression graph walk callback
+ *
+ * input:
+ *  - scip   : SCIP main data structure
+ *  - expr   : expression node that is visited
+ *  - stage  : the current stage of the expression walker
+ *  - data   : pointer to user data
+ *  - result : buffer to store how to proceed in the walk
+ */
+#define SCIP_DECL_CONSEXPREXPRWALK_VISIT(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPREXPRWALK_STAGE stage, \
+   void* data, \
+   SCIP_CONSEXPREXPRWALK_RESULT* result)
+
 
 typedef struct SCIP_ConsExpr_ExprData     SCIP_CONSEXPR_EXPRDATA;     /**< expression data */
 typedef struct SCIP_ConsExpr_ExprHdlr     SCIP_CONSEXPR_EXPRHDLR;     /**< expression handler */

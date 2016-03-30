@@ -58,9 +58,9 @@ struct SCIP_ConsExpr_Expr
 
    int                     nuses;         /**< reference counter */
 
-   /* data to help algorithms */
-   SCIP_CONSEXPR_EXPR*     parent;        /**< to remember the current */
-   int                     currentchild;  /**< to remember which child we are visiting */
+   /* expression walker data */
+   SCIP_CONSEXPR_EXPR*     walkparent;    /**< parent expression in expression walk */
+   int                     walkcurrentchild; /**< child that is currently visited (or will be visited next) by expression walk */
 };
 
 

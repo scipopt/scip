@@ -128,7 +128,7 @@ SCIP_RETCODE freeExprData(
    return SCIP_OKAY;
 }
 
-/* frees the expression traversing the tree in pre-order; a leaf is any node that has nuses > 1 or has no children this
+/** frees the expression traversing the tree in pre-order; a leaf is any node that has nuses > 1 or has no children this
  * means that if a node has nuses > 1 and is the root of a very large subtree, then we do not explore that subtree
  * TODO: write it more readable */
 static
@@ -137,7 +137,6 @@ SCIP_RETCODE freeExpr(
    SCIP_CONSEXPR_EXPR**  expr                /**< expression to be freed */
    )
 {
-   int c = 0;
    SCIP_CONSEXPR_EXPR* root;
    SCIP_CONSEXPR_EXPR* child;
 
@@ -148,39 +147,39 @@ SCIP_RETCODE freeExpr(
    SCIP_CALL( freeExprData(scip, *expr) );
 
    root = *expr;
-   root->currentchild = 0;
-   root->parent = NULL;
+   root->walkcurrentchild = 0;
+   root->walkparent = NULL;
 
    /* traverse the tree */
    while( TRUE )
    {
       /* if there are no more child to visit, try to go up */
-      if( root->currentchild >= root->nchildren )
+      if( root->walkcurrentchild >= root->nchildren )
       {
-         assert(root->currentchild == root->nchildren);
+         assert(root->walkcurrentchild == root->nchildren);
 
          /* if we are the the real root, break */
-         if( root->parent == NULL )
+         if( root->walkparent == NULL )
             break;
 
          /* go up and visit next children */
-         root = root->parent;
+         root = root->walkparent;
 
          assert(root != NULL);
 
-         ++root->currentchild;
+         ++root->walkcurrentchild;
 
          continue;
       }
 
-      child = root->children[root->currentchild];
+      child = root->children[root->walkcurrentchild];
 
       if( child->nuses == 1 && child->nchildren > 0 )
       {
          /* keep on going down; remember the parent and set the first child that should be visited of the new root */
-         child->parent = root;
+         child->walkparent = root;
          root = child;
-         root->currentchild = 0;
+         root->walkcurrentchild = 0;
       }
       else if( child->nuses == 1 && child->nchildren == 0 )
       {
@@ -193,14 +192,14 @@ SCIP_RETCODE freeExpr(
          SCIPfreeBlockMemory(scip, &child);
          assert(child == NULL);
 
-         ++root->currentchild;
+         ++root->walkcurrentchild;
       }
       else
       {
          /* non-removable leaf: decrease nuses of child and visit next child */
          assert(child->nuses > 1);
          --child->nuses;
-         ++root->currentchild;
+         ++root->walkcurrentchild;
       }
    }
 
@@ -1066,6 +1065,204 @@ void SCIPsetConsExprExprData(
    expr->exprdata = exprdata;
 }
 
+/** walks the expression graph in depth-first manner and executes callbacks at certain places
+ *
+ * Consider an expression (x*y) + z + log(x-y).
+ * The corresponding expression graph is
+ * <pre>
+ *           [+]
+ *       /    |   \
+ *    [*]     |    [log]
+ *    / \     |      |
+ *   /   \    |     [-]
+ *   |   |    |     / \
+ *  [x] [y]  [z]  [x] [y]
+ * </pre>
+ * (where [x] and [y] are actually the same expression).
+ *
+ * If given a pointer to the [+] expression is given as root to this expression, it will walk
+ * the graph in a depth-first manner and call the given callback methods at various stages.
+ * - When entering an expression, it calls the enterexpr callback.
+ *   The SCIPgetConsExprExprWalkParent() function indicates from where the expression has been entered (NULL for the root expression).
+ * - Before visiting a child of an expression, it calls the visitingchild callback.
+ *   The SCIPgetConsExprExprWalkCurrentChild() function returns which child will be visited (as an index in the current expr's children array).
+ * - When returning from visiting a child of an expression, the visitedchild callback is called.
+ *   Again the SCIPgetConsExprExprWalkCurrentChild() function returns which child has been visited.
+ * - When leaving an expression, it calls the leaveexpr callback.
+ *
+ * Thus, for the above expression, the callbacks are called in the following order:
+ * - enterexpr([+])
+ * - visitingchild([+])  currentchild == 0
+ * - enterexpr([*])
+ * - visitingchild([*])  currentchild == 0
+ * - enterexpr([x])
+ * - leaveexpr([x])
+ * - visitedchild([*])   currentchild == 0
+ * - visitingchild([*])  currentchild == 1
+ * - enterexpr([y])
+ * - leaveexpr([y])
+ * - visitedchild([*])   currentchild == 1
+ * - leaveexpr([*])
+ * - visitedchild([+])   currentchild == 0
+ * - visitingchild([+])  currentchild == 1
+ * - enterexpr([z])
+ * - leaveexpr([z])
+ * - visitedchild([+])   currentchild == 1
+ * - visitingchild([+])  currentchild == 2
+ * - enterexpr([log])
+ * - visitingchild([log]) currentchild == 0
+ * - enterexpr([-])
+ * - visitingchild([-])  currentchild == 0
+ * - enterexpr([x])
+ * - leaveexpr([x])
+ * - visitedchild([-])   currentchild == 0
+ * - visitingchild([-])  currentchild == 1
+ * - enterexpr([y])
+ * - leaveexpr([y])
+ * - visitedchild([-])   currentchild == 1
+ * - leaveexpr([-])
+ * - visitedchild([log]) currentchild == 0
+ * - leaveexpr([log])
+ * - visitedchild([+])   currentchild == 2
+ * - leaveexpr([+])
+ *
+ * The callbacks can direct the walking method to skip parts of the tree or abort.
+ * If returning SCIP_CONSEXPREXPRWALK_SKIP as result of an enterexpr callback, all children of that expression will be skipped. The leaveexpr callback will still be called.
+ * If returning SCIP_CONSEXPREXPRWALK_SKIP as result of an visitingchild callback, visiting the current child will be skipped.
+ * If returning SCIP_CONSEXPREXPRWALK_ABORT in any of the callbacks, the walk will be aborted immediately.
+ */
+SCIP_RETCODE SCIPwalkConsExprExprDF(
+   SCIP*                 scip,                         /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   root,                         /**< the root expression from where to start the walk */
+   SCIP_DECL_CONSEXPREXPRWALK_VISIT((*enterexpr)),     /**< callback to be called when entering an expression, or NULL */
+   SCIP_DECL_CONSEXPREXPRWALK_VISIT((*visitingchild)), /**< callback to be called before visiting a child, or NULL */
+   SCIP_DECL_CONSEXPREXPRWALK_VISIT((*visitedchild)),  /**< callback to be called when returning from a child, or NULL */
+   SCIP_DECL_CONSEXPREXPRWALK_VISIT((*leaveexpr)),     /**< callback to be called when leaving an expression, or NULL */
+   void*                 data                          /**< data to be passed on to callback methods, or NULL */
+   )
+{
+   SCIP_CONSEXPREXPRWALK_RESULT result;
+   SCIP_CONSEXPR_EXPR* child;
+
+   assert(root != NULL);
+
+   root->walkcurrentchild = 0;
+   root->walkparent = NULL;
+
+   /* traverse the tree */
+   while( TRUE )
+   {
+      if( root->walkcurrentchild == 0 && enterexpr != NULL )
+      {
+         SCIP_CALL( (*enterexpr)(scip, root, SCIP_CONSEXPREXPRWALK_ENTEREXPR, data, &result) );
+         switch( result )
+         {
+            case SCIP_CONSEXPREXPRWALK_CONTINUE :
+               break;
+            case SCIP_CONSEXPREXPRWALK_SKIP :
+               root->walkcurrentchild = root->nchildren;
+               break;
+            case SCIP_CONSEXPREXPRWALK_ABORT :
+               return SCIP_OKAY;
+         }
+      }
+
+      /* if there are no more children to visit, try to go up */
+      if( root->walkcurrentchild >= root->nchildren )
+      {
+         assert(root->walkcurrentchild == root->nchildren);
+
+         if( leaveexpr != NULL )
+         {
+            SCIP_CALL( (*leaveexpr)(scip, root, SCIP_CONSEXPREXPRWALK_LEAVEEXPR, data, &result) );
+            switch( result )
+            {
+               case SCIP_CONSEXPREXPRWALK_CONTINUE :
+                  break;
+               case SCIP_CONSEXPREXPRWALK_SKIP :
+                  /* this result is not allowed here */
+                  SCIPABORT();
+                  break;
+               case SCIP_CONSEXPREXPRWALK_ABORT :
+                  return SCIP_OKAY;
+            }
+         }
+
+         /* if we are the real root, we are done */
+         if( root->walkparent == NULL )
+            return SCIP_OKAY;
+
+         /* go up */
+         root = root->walkparent;
+         assert(root != NULL);
+
+         if( visitedchild != NULL )
+         {
+            SCIP_CALL( (*visitedchild)(scip, root, SCIP_CONSEXPREXPRWALK_VISITEDCHILD, data, &result) );
+            switch( result )
+            {
+               case SCIP_CONSEXPREXPRWALK_CONTINUE :
+                  break;
+               case SCIP_CONSEXPREXPRWALK_SKIP :
+                  /* this result is not allowed here */
+                  SCIPABORT();
+                  break;
+               case SCIP_CONSEXPREXPRWALK_ABORT :
+                  return SCIP_OKAY;
+            }
+         }
+
+         /* visit next child of parent (if any) */
+         ++root->walkcurrentchild;
+
+         continue;
+      }
+
+      /* keep on going down (visit next child) */
+      if( visitingchild != NULL )
+      {
+         SCIP_CALL( (*visitingchild)(scip, root, SCIP_CONSEXPREXPRWALK_VISITINGCHILD, data, &result) );
+         if( result == SCIP_CONSEXPREXPRWALK_SKIP )
+         {
+            /* ok, we don't go down, but skip the child: continue and try again with next child (if any) */
+            ++root->walkcurrentchild;
+            continue;
+         }
+         else if( result == SCIP_CONSEXPREXPRWALK_ABORT )
+         {
+            return SCIP_OKAY;
+         }
+      }
+
+      /* remember the parent and set the first child that should be visited of the new root */
+      child = root->children[root->walkcurrentchild];
+      child->walkparent = root;
+      child->walkcurrentchild = 0;
+      root = child;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** Gives the parent of an expression in an expression graph walk.
+ *
+ * During an expression walk, this function returns the expression from which the given expression has been accessed.
+ * If not in an expression walk, the returned pointer is undefined.
+ */
+SCIP_CONSEXPR_EXPR* SCIPgetConsExprExprWalkParent(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression which parent to get */
+   )
+{
+   return expr->walkparent;
+}
+
+/** Gives the index of the child that will be visited next (or is currently visited) by an expression walk. */
+int SCIPgetConsExprExprWalkCurrentChild(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression which nextchild to get */
+   )
+{
+   return expr->walkcurrentchild;
+}
 
 
 /*
