@@ -16680,6 +16680,21 @@ SCIP_RETCODE SCIPprintTransSol(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    );
 
+/** check whether the dual solution is available
+ *
+ * @note This is used when calling \ref SCIPprintDualSol()
+ *
+ * @return is dual solution available?
+ *
+ * @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+EXTERN
+SCIP_Bool SCIPisDualSolAvailable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             printreason         /**< print warning message if dualsol is not available? */
+   );
+
 /** outputs dual solution from LP solver to file stream
  *
  *  @note This only works if no presolving has been performed, which can be checked by calling method \ref

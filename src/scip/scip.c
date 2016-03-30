@@ -35707,6 +35707,71 @@ SCIP_RETCODE printDualSol(
    return SCIP_OKAY;
 }
 
+/** check whether the dual solution is available
+ *
+ * @note This is used when calling \ref SCIPprintDualSol()
+ *
+ * @return is dual solution available?
+ *
+ * @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Bool SCIPisDualSolAvailable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             printreason         /**< print warning message if dualsol is not available? */
+   )
+{
+   int c;
+
+   assert(scip != NULL);
+
+   SCIP_CALL( checkStage(scip, "SCIPprintDualSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVED )
+   {
+      if( printreason )
+         SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "No dual solution available.\n");
+      return FALSE;
+   }
+
+   assert(scip->stat != NULL);
+   assert(scip->transprob != NULL);
+
+   /* dual solution only useful when no presolving was performed */
+   if( scip->stat->performpresol )
+   {
+      if( printreason )
+         SCIPwarningMessage(scip, "No dual information available when presolving was performed.\n");
+      return FALSE;
+   }
+
+   /* dual solution is created by LP solver and therefore only available for pure LPs */
+   if( scip->transprob->nvars != scip->transprob->ncontvars )
+   {
+      if( printreason )
+         SCIPwarningMessage(scip, "Dual information only available for pure LPs (only continuous variables).\n");
+      return FALSE;
+   }
+
+   /* dual solution is created by LP solver and therefore only available for linear constraints */
+   for( c = scip->transprob->nconss - 1; c >= 0; --c )
+   {
+      SCIP_CONSHDLR* conshdlr;
+
+      conshdlr = SCIPconsGetHdlr(scip->transprob->conss[c]);
+      assert(conshdlr != NULL);
+
+      if( strcmp(SCIPconshdlrGetName(conshdlr), "linear" ) != 0 )
+      {
+         if( printreason )
+            SCIPwarningMessage(scip, "Dual information only available for pure LPs (only linear constraints).\n");
+         return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+
 /** outputs dual solution from LP solver to file stream
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -35720,52 +35785,11 @@ SCIP_RETCODE SCIPprintDualSol(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
-   int c;
-
-   assert(scip != NULL);
-
-   SCIP_CALL( checkStage(scip, "SCIPprintDualSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVED )
+   if( SCIPisDualSolAvailable(scip, TRUE) )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "No dual solution available.\n");
-      return SCIP_OKAY;
+      /* print dual solution */
+      SCIP_CALL( printDualSol(scip, file, printzeros) );
    }
-
-   assert(scip->stat != NULL);
-   assert(scip->transprob != NULL);
-
-   /* dual solution only useful when no presolving was performed */
-   if( scip->stat->performpresol )
-   {
-      SCIPwarningMessage(scip, "No dual information available when presolving was performed.\n");
-      return SCIP_OKAY;
-   }
-
-   /* dual solution is created by LP solver and therefore only available for pure LPs */
-   if( scip->transprob->nvars != scip->transprob->ncontvars )
-   {
-      SCIPwarningMessage(scip, "Dual information only available for pure LPs (only continuous variables).\n");
-      return SCIP_OKAY;
-   }
-
-   /* dual solution is created by LP solver and therefore only available for linear constraints */
-   for( c = scip->transprob->nconss - 1; c >= 0; --c )
-   {
-      SCIP_CONSHDLR* conshdlr;
-
-      conshdlr = SCIPconsGetHdlr(scip->transprob->conss[c]);
-      assert(conshdlr != NULL);
-
-      if( strcmp(SCIPconshdlrGetName(conshdlr), "linear" ) != 0 )
-      {
-         SCIPwarningMessage(scip, "Dual information only available for pure LPs (only linear constraints).\n");
-         return SCIP_OKAY;
-      }
-   }
-
-   /* print dual solution */
-   SCIP_CALL( printDualSol(scip, file, printzeros) );
 
    return SCIP_OKAY;
 }
