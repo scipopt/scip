@@ -651,7 +651,8 @@ SCIP_RETCODE SCIPpropExec(
             && *result != SCIP_REDUCEDDOM
             && *result != SCIP_DIDNOTFIND
             && *result != SCIP_DIDNOTRUN
-            && *result != SCIP_DELAYED )
+            && *result != SCIP_DELAYED
+            && *result != SCIP_DELAYNODE )
          {
             SCIPerrorMessage("execution method of propagator <%s> returned invalid result <%d>\n", 
                prop->name, *result);

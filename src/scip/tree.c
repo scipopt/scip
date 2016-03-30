@@ -3539,7 +3539,8 @@ SCIP_RETCODE nodeToLeaf(
    SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
    )
 {
-   assert(SCIPnodeGetType(*node) == SCIP_NODETYPE_SIBLING || SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD);
+   assert(SCIPnodeGetType(*node) == SCIP_NODETYPE_SIBLING || SCIPnodeGetType(*node) == SCIP_NODETYPE_CHILD
+      || SCIPnodeGetType(*node) == SCIP_NODETYPE_FOCUSNODE);
    assert(stat != NULL);
    assert(lpstatefork == NULL || lpstatefork->depth < (*node)->depth);
    assert(lpstatefork == NULL || lpstatefork->active || SCIPsetIsGE(set, (*node)->lowerbound, cutoffbound));
@@ -3745,6 +3746,36 @@ SCIP_RETCODE focusnodeToDeadend(
    return SCIP_OKAY;
 }
 
+/** converts the focus node into a leaf node (if it was postponed) */
+static
+SCIP_RETCODE focusnodeToLeaf(
+   BMS_BLKMEM*           blkmem,             /**< block memory buffers */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic problem statistics */
+   SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
+   SCIP_PROB*            prob,               /**< transformed problem after presolve */
+   SCIP_TREE*            tree,               /**< branch and bound tree */
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_LP*              lp,                 /**< current LP data */
+   SCIP_NODE*            lpstatefork,        /**< LP state defining fork of the node */
+   SCIP_Real             cutoffbound         /**< cutoff bound: all nodes with lowerbound >= cutoffbound are cut off */
+
+   )
+{  /*lint --e{715}*/
+   assert(tree != NULL);
+   assert(!SCIPtreeProbing(tree));
+   assert(tree->focusnode != NULL);
+   assert(tree->focusnode->active);
+   assert(SCIPnodeGetType(tree->focusnode) == SCIP_NODETYPE_FOCUSNODE);
+
+   SCIPdebugMessage("focusnode #%" SCIP_LONGINT_FORMAT " to leaf at depth %d\n",
+      SCIPnodeGetNumber(tree->focusnode), SCIPnodeGetDepth(tree->focusnode));
+
+   SCIP_CALL( nodeToLeaf(&tree->focusnode, blkmem, set, stat, eventqueue, tree, reopt, lp, lpstatefork, cutoffbound));
+
+   return SCIP_OKAY;
+}
+
 /** converts the focus node into a junction node */
 static
 SCIP_RETCODE focusnodeToJunction(
@@ -3754,8 +3785,7 @@ SCIP_RETCODE focusnodeToJunction(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_PROB*            prob,               /**< transformed problem after presolve */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_LP*              lp,                 /**< current LP data */
-   SCIP_BRANCHCAND*      branchcand          /**< branching candidate storage */
+   SCIP_LP*              lp                  /**< current LP data */
    )
 {  /*lint --e{715}*/
    assert(tree != NULL);
@@ -3913,7 +3943,7 @@ SCIP_RETCODE focusnodeToFork(
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
 
       /* convert node into a junction */
-      SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, transprob, tree, lp, branchcand) );
+      SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, transprob, tree, lp) );
 
       return SCIP_OKAY;
    }
@@ -4037,7 +4067,7 @@ SCIP_RETCODE focusnodeToSubroot(
       SCIP_CALL( SCIPlpShrinkRows(lp, blkmem, set, eventqueue, eventfilter, SCIPlpGetNRows(lp) - SCIPlpGetNNewrows(lp)) );
 
       /* convert node into a junction */
-      SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, transprob, tree, lp, branchcand) );
+      SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, transprob, tree, lp) );
 
       return SCIP_OKAY;
    }
@@ -4166,6 +4196,7 @@ SCIP_RETCODE SCIPnodeFocus(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_CLIQUETABLE*     cliquetable,        /**< clique table data structure */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the given node can be cut off */
+   SCIP_Bool             postponed,          /**< was the current focus node postponed? */
    SCIP_Bool             exitsolve           /**< are we in exitsolve stage, so we only need to loose the children */
    )
 {
@@ -4185,6 +4216,8 @@ SCIP_RETCODE SCIPnodeFocus(
    assert(*node == NULL || !(*node)->active);
    assert(stat != NULL);
    assert(tree != NULL);
+   assert(!postponed || *node == NULL);
+   assert(!postponed || tree->focusnode != NULL);
    assert(!SCIPtreeProbing(tree));
    assert(lp != NULL);
    assert(cutoff != NULL);
@@ -4231,7 +4264,7 @@ SCIP_RETCODE SCIPnodeFocus(
 
    assert(tree->cutoffdepth == INT_MAX);
    assert(fork == NULL || fork->active);
-   assert(lpfork == NULL || fork != NULL);
+   //assert(lpfork == NULL || fork != NULL);
    assert(lpstatefork == NULL || lpfork != NULL);
    assert(subroot == NULL || lpstatefork != NULL);
 
@@ -4299,10 +4332,19 @@ SCIP_RETCODE SCIPnodeFocus(
    }
 
    /* convert the old focus node into a fork or subroot node, if it has children;
-    * otherwise, convert it into a dead-end, which will be freed later in treeSwitchPath()
+    * otherwise, convert it into a dead-end, which will be freed later in treeSwitchPath();
+    * if the node was postponed, make it a leaf.
     */
    childrenlpstatefork = tree->focuslpstatefork;
-   if( tree->nchildren > 0 )
+   if( postponed )
+   {
+      assert(tree->nchildren == 0);
+      assert(*node == NULL);
+
+      SCIP_CALL( focusnodeToLeaf(blkmem, set, stat, eventqueue, transprob, tree, reopt, lp, tree->focuslpstatefork,
+            primal->cutoffbound) );
+   }
+   else if( tree->nchildren > 0 )
    {
       SCIP_Bool selectedchild;
 
@@ -4382,7 +4424,7 @@ SCIP_RETCODE SCIPnodeFocus(
          SCIPlpMarkSize(lp);
 
          /* convert old focus node into junction */
-         SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, transprob, tree, lp, branchcand) );
+         SCIP_CALL( focusnodeToJunction(blkmem, set, stat, eventqueue, transprob, tree, lp) );
       }
    }
    else if( tree->focusnode != NULL )
@@ -4823,7 +4865,7 @@ SCIP_RETCODE SCIPtreeCreatePresolvingRoot(
 
    /* install the temporary root node as focus node */
    SCIP_CALL( SCIPnodeFocus(&tree->root, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
-         conflict, eventfilter, eventqueue, cliquetable, &cutoff, FALSE) );
+         conflict, eventfilter, eventqueue, cliquetable, &cutoff, FALSE, FALSE) );
    assert(!cutoff);
 
    return SCIP_OKAY;
@@ -4859,7 +4901,7 @@ SCIP_RETCODE SCIPtreeFreePresolvingRoot(
    /* unfocus the temporary root node */
    node = NULL;
    SCIP_CALL( SCIPnodeFocus(&node, blkmem, set, messagehdlr, stat, transprob, origprob, primal, tree, reopt, lp, branchcand,
-         conflict, eventfilter, eventqueue, cliquetable, &cutoff, FALSE) );
+         conflict, eventfilter, eventqueue, cliquetable, &cutoff, FALSE, FALSE) );
    assert(!cutoff);
    assert(tree->root == NULL);
    assert(tree->focusnode == NULL);
