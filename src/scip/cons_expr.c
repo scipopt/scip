@@ -106,114 +106,79 @@ struct SCIP_ConshdlrData
  */
 
 /* put your local methods here, and declare them static */
+
 static
-SCIP_RETCODE freeExprData(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr                /**< expression whose data is to be freed */
-   )
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
 {
-   assert(scip != NULL);
    assert(expr != NULL);
 
-   /* free expression data, if any */
-   if( expr->exprdata != NULL )
+   /* the expression should not be used by more than the parent that is also freed */
+   assert(expr->nuses == 1);
+
+   switch( stage )
    {
-      if ( expr->exprhdlr->freedata != NULL )
+      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
       {
-         SCIP_CALL( expr->exprhdlr->freedata(scip, expr) );
-         assert(expr->exprdata == NULL);
+         /* free expression data, if any, when entering expression */
+
+         if( expr->exprdata != NULL && expr->exprhdlr->freedata != NULL )
+         {
+            SCIP_CALL( expr->exprhdlr->freedata(scip, expr) );
+            assert(expr->exprdata == NULL);
+         }
+
+         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+         return SCIP_OKAY;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+      {
+         /* check whether a child needs to be visited (nuses == 1)
+          * if not, then we still have to release it
+          */
+         SCIP_CONSEXPR_EXPR* child;
+
+         assert(expr->walkcurrentchild < expr->nchildren);
+
+         child = expr->children[expr->walkcurrentchild];
+         if( child->nuses > 1 )
+         {
+            /* child is not going to be freed: just release it */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &child) );
+            *result = SCIP_CONSEXPREXPRWALK_SKIP;
+         }
+         else
+         {
+            assert(child->nuses == 1);
+            *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+         }
+
+         return SCIP_OKAY;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+      {
+         /* free expression when leaving it */
+
+         /* free children array, if any */
+         SCIPfreeBlockMemoryArrayNull(scip, &expr->children, expr->childrensize);
+
+         SCIPfreeBlockMemory(scip, &expr);
+         assert(expr == NULL);
+
+         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+         return SCIP_OKAY;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+      default:
+      {
+         SCIPABORT(); /* we should never be called in this stage */
+         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+         return SCIP_OKAY;
       }
    }
-
-   return SCIP_OKAY;
 }
-
-/** frees the expression traversing the tree in pre-order; a leaf is any node that has nuses > 1 or has no children this
- * means that if a node has nuses > 1 and is the root of a very large subtree, then we do not explore that subtree
- * TODO: write it more readable */
-static
-SCIP_RETCODE freeExpr(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR**  expr                /**< expression to be freed */
-   )
-{
-   SCIP_CONSEXPR_EXPR* root;
-   SCIP_CONSEXPR_EXPR* child;
-
-   assert(expr != NULL);
-   assert(*expr != NULL);
-
-   /* free expression data, if any */
-   SCIP_CALL( freeExprData(scip, *expr) );
-
-   root = *expr;
-   root->walkcurrentchild = 0;
-   root->walkparent = NULL;
-
-   /* traverse the tree */
-   while( TRUE )
-   {
-      /* if there are no more child to visit, try to go up */
-      if( root->walkcurrentchild >= root->nchildren )
-      {
-         assert(root->walkcurrentchild == root->nchildren);
-
-         /* if we are the the real root, break */
-         if( root->walkparent == NULL )
-            break;
-
-         /* go up and visit next children */
-         root = root->walkparent;
-
-         assert(root != NULL);
-
-         ++root->walkcurrentchild;
-
-         continue;
-      }
-
-      child = root->children[root->walkcurrentchild];
-
-      if( child->nuses == 1 && child->nchildren > 0 )
-      {
-         /* keep on going down; remember the parent and set the first child that should be visited of the new root */
-         child->walkparent = root;
-         root = child;
-         root->walkcurrentchild = 0;
-      }
-      else if( child->nuses == 1 && child->nchildren == 0 )
-      {
-         /* removable leaf: release child and go to next one */
-         SCIP_CALL( freeExprData(scip, child) );
-
-         /* free children array of child, if any */
-         SCIPfreeBlockMemoryArrayNull(scip, &child->children, child->childrensize);
-
-         SCIPfreeBlockMemory(scip, &child);
-         assert(child == NULL);
-
-         ++root->walkcurrentchild;
-      }
-      else
-      {
-         /* non-removable leaf: decrease nuses of child and visit next child */
-         assert(child->nuses > 1);
-         --child->nuses;
-         ++root->walkcurrentchild;
-      }
-   }
-
-   assert(root == *expr);
-
-   /* free children array, if any */
-   SCIPfreeBlockMemoryArrayNull(scip, &(*expr)->children, (*expr)->childrensize);
-
-   SCIPfreeBlockMemory(scip, expr);
-   assert(*expr == NULL);
-
-   return SCIP_OKAY;
-}
-
 
 /*
  * Callback methods of constraint handler
@@ -994,7 +959,8 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
 
    if( (*expr)->nuses == 1 )
    {
-      SCIP_CALL( freeExpr(scip, expr) );
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, *expr, freeExpr, freeExpr, NULL, freeExpr, NULL) );
+      *expr = NULL;
 
       return SCIP_OKAY;
    }
@@ -1174,6 +1140,8 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
 
          if( leaveexpr != NULL )
          {
+            SCIP_CONSEXPR_EXPR* parent = root->walkparent;   /* store parent in case the callback frees root */
+
             SCIP_CALL( (*leaveexpr)(scip, root, SCIP_CONSEXPREXPRWALK_LEAVEEXPR, data, &result) );
             switch( result )
             {
@@ -1186,16 +1154,21 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
                case SCIP_CONSEXPREXPRWALK_ABORT :
                   return SCIP_OKAY;
             }
+
+            /* go up */
+            root = parent;
+         }
+         else
+         {
+            /* go up */
+            root = root->walkparent;
          }
 
-         /* if we are the real root, we are done */
-         if( root->walkparent == NULL )
+         /* if we finished with the real root (walkparent == NULL), we are done */
+         if( root == NULL )
             return SCIP_OKAY;
 
-         /* go up */
-         root = root->walkparent;
-         assert(root != NULL);
-
+         /* call visitedchild of parent (now root) */
          if( visitedchild != NULL )
          {
             SCIP_CALL( (*visitedchild)(scip, root, SCIP_CONSEXPREXPRWALK_VISITEDCHILD, data, &result) );
