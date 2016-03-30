@@ -107,6 +107,7 @@ struct SCIP_ConshdlrData
 
 /* put your local methods here, and declare them static */
 
+/** expression walk callback to free an expression including its children (if not used anywhere else) */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
 {
@@ -179,6 +180,61 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(freeExpr)
       }
    }
 }
+
+/** expression walk callback to print an expression */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExpr)
+{
+   FILE* file;
+
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+
+   file = (FILE*)data;
+
+   if( expr->exprhdlr->print == NULL )
+   {
+      /* default: <hdlrname>(<child1>, <child2>, ...) */
+      switch( stage )
+      {
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+         {
+            SCIPinfoMessage(scip, file, SCIPgetConsExprExprHdlrName(expr->exprhdlr));
+            if( expr->nchildren > 0 )
+            {
+               SCIPinfoMessage(scip, file, "(");
+            }
+            break;
+         }
+
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+         {
+            if( SCIPgetConsExprExprWalkCurrentChild(expr) < expr->nchildren-1 )
+            {
+               SCIPinfoMessage(scip, file, ", ");
+            }
+            else
+            {
+               SCIPinfoMessage(scip, file, ")");
+            }
+
+            break;
+         }
+
+         default: ;
+      }
+   }
+   else
+   {
+      /* redirect to expression callback */
+      SCIP_CALL( (*expr->exprhdlr->print)(scip, expr, stage, file) );
+   }
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Callback methods of constraint handler
@@ -1020,7 +1076,6 @@ SCIP_CONSEXPR_EXPRDATA* SCIPgetConsExprExprData(
  * freedata-callback is not called before.
  * This function is intended to be used by expression handler.
  */
-EXTERN
 void SCIPsetConsExprExprData(
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_CONSEXPR_EXPRDATA* exprdata          /**< expression data to be set (can be NULL) */
@@ -1030,6 +1085,22 @@ void SCIPsetConsExprExprData(
 
    expr->exprdata = exprdata;
 }
+
+/** print an expression as info-message */
+SCIP_RETCODE SCIPprintConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be printed */
+   FILE*                   file              /**< file to print to, or NULL for stdout */
+   )
+{
+   assert(expr != NULL);
+
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, printExpr, printExpr, printExpr, printExpr, (void*)file) );
+
+   return SCIP_OKAY;
+}
+
+
 
 /** walks the expression graph in depth-first manner and executes callbacks at certain places
  *

@@ -49,7 +49,10 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
 {
    assert(expr != NULL);
 
-   SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprValueValue(expr));
+   if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR )
+   {
+      SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprValueValue(expr));
+   }
 
    return SCIP_OKAY;
 }
@@ -100,11 +103,13 @@ SCIP_Real SCIPgetConsExprExprValueValue(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression */
    )
 {
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_Real v;
 
    assert(sizeof(SCIP_Real) <= sizeof(SCIP_CONSEXPR_EXPRDATA*));
 
-   memcpy(&v, SCIPgetConsExprExprData(expr), sizeof(SCIP_Real));
+   exprdata = SCIPgetConsExprExprData(expr);
+   memcpy(&v, &exprdata, sizeof(SCIP_Real));
 
    return v;
 }

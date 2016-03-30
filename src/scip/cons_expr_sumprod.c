@@ -119,29 +119,87 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataSumProduct)
 }
 
 static
-SCIP_DECL_CONSEXPR_EXPRPRINT(printSumProduct)
+SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
 {
    SCIP_Real* exprdata;
-   int nchildren;
-   int i;
 
    assert(expr != NULL);
 
    exprdata = (SCIP_Real*)SCIPgetConsExprExprData(expr);
 
-   SCIPinfoMessage(scip, file, "%s[%g", SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), exprdata[0]);
-
-   nchildren = SCIPgetConsExprExprNChildren(expr);
-   for( i = 0; i < nchildren; ++i )
+   switch( stage )
    {
-      SCIPinfoMessage(scip, file, "%c%g", i ? ',' : ';', exprdata[i+1]);
-   }
+      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+      {
+         /* print constant, if nonzero */
+         if( exprdata[0] != 0.0 )
+         {
+            SCIPinfoMessage(scip, file, "%g", exprdata[SCIPgetConsExprExprWalkCurrentChild(expr)]);
+         }
+         break;
+      }
 
-   SCIPinfoMessage(scip, file, "]");
+      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+      {
+         /* print coefficient (with plus or minus sign) and opening parenthesis */
+         SCIPinfoMessage(scip, file, "%+g * (", exprdata[SCIPgetConsExprExprWalkCurrentChild(expr)]);
+         break;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+      {
+         /* print closing parenthesis */
+         SCIPinfoMessage(scip, file, ")");
+         break;
+      }
+
+      default: ;
+   }
 
    return SCIP_OKAY;
 }
 
+
+static
+SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
+{
+   SCIP_Real* exprdata;
+
+   assert(expr != NULL);
+
+   exprdata = (SCIP_Real*)SCIPgetConsExprExprData(expr);
+
+   switch( stage )
+   {
+      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+      {
+         /* print constant, if nonzero */
+         if( exprdata[0] != 0.0 )
+         {
+            SCIPinfoMessage(scip, file, "%g", exprdata[SCIPgetConsExprExprWalkCurrentChild(expr)]);
+         }
+         break;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+      {
+         /* print coefficient (with plus or minus sign) and opening parenthesis */
+         SCIPinfoMessage(scip, file, " * (%g) * (", exprdata[SCIPgetConsExprExprWalkCurrentChild(expr)]);
+         break;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+      {
+         /* print closing parenthesis */
+         SCIPinfoMessage(scip, file, ")");
+         break;
+      }
+
+      default: ;
+   }
+
+   return SCIP_OKAY;
+}
 
 /** creates the handler for sum expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
@@ -156,7 +214,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrSum, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSumProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSum) );
 
    return SCIP_OKAY;
 }
@@ -215,7 +273,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrProduct, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSumProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printProduct) );
 
    return SCIP_OKAY;
 }

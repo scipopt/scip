@@ -49,7 +49,10 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printVar)
    assert(expr != NULL);
    assert(SCIPgetConsExprExprData(expr) != NULL);
 
-   SCIPinfoMessage(scip, file, "%s", SCIPvarGetName((SCIP_VAR*)SCIPgetConsExprExprData(expr)));
+   if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR )
+   {
+      SCIPinfoMessage(scip, file, "%s", SCIPvarGetName((SCIP_VAR*)SCIPgetConsExprExprData(expr)));
+   }
 
    return SCIP_OKAY;
 }

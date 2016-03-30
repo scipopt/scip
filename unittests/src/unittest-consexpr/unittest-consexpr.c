@@ -80,7 +80,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(walk_collect)
 {
    EXPRCOLLECT* collect;
    assert(expr != NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTERNODE);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
 
    collect = (EXPRCOLLECT*)data;
    collect->e[collect->next++] = expr;
@@ -145,6 +145,9 @@ SCIP_RETCODE testWalk(void)
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_5) );
 
+      /* print expression */
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr_xy5, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
 
       /* print walk */
       SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr_xy5, walk_printnode, walk_printnode, walk_printnode, walk_printnode, NULL) );

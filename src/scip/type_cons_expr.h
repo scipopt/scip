@@ -110,16 +110,19 @@ extern "C" {
 
 /** expression print callback
  *
- * the method prints the data of an expression
+ * the method prints an expression
+ * it is called during an expression walk at different stages of the walk
  *
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression which data is to be printed
+ *  - stage: stage of expression print walk
  *  - file : the file to print to
  */
 #define SCIP_DECL_CONSEXPR_EXPRPRINT(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPREXPRWALK_STAGE stage, \
    FILE* file)
 
 /** stages of expression walker in which the walker callbacks are called */

@@ -217,6 +217,15 @@ void SCIPsetConsExprExprData(
    SCIP_CONSEXPR_EXPRDATA* exprdata          /**< expression data to be set (can be NULL) */
    );
 
+/** print an expression as info-message */
+EXTERN
+SCIP_RETCODE SCIPprintConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be printed */
+   FILE*                   file              /**< file to print to, or NULL for stdout */
+   );
+
+
 /** walks the expression graph in depth-first manner and executes callbacks at certain places
  *
  * Consider an expression (x*y) + z + log(x-y).
