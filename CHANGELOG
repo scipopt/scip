@@ -38,6 +38,7 @@ interface:
   (and relaxation solutions) in the statistics in the "Primal Heuristic" section.
 - CONSINITLP callback now has a new parameter 'infeasible', which is a pointer to store whether infeasibility
   was detected while building the initial LP relaxation
+- new function SCIPisDualSolAvailable() to query the dual solution availability
 
 fixed bugs:
 
