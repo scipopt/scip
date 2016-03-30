@@ -52,7 +52,7 @@
 /** get next number from string s */
 static
 SCIP_Real getNextNumber(
-   char**            s                    /**< pointer to the pointer of the current position in the string */
+   char**                s                   /**< pointer to the pointer of the current position in the string */
 )
 {
    SCIP_Real tmp;
@@ -67,28 +67,6 @@ SCIP_Real getNextNumber(
    return tmp;
 }
 
-/** prints the problem file. Used only for debugging */
-static
-void printProblemSpa(
-   int               nedges,              /**< The number of edges*/
-   int               nbins,               /**< The number of bins*/
-   SCIP_Real**       edges,               /**< Array with all the edges*/
-   SCIP_Real*        sd                   /**< Array with the stationary distribution*/
-)
-{
-   int i;
-
-   printf( "printing data for matrix with %d bins and %d edges \n", nbins, nedges );
-   for( i=0; i< nedges; ++i )
-   {
-      printf("%d %d %f \n", (int)edges[i][0], (int)edges[i][1], edges[i][2]);
-   }
-   for ( i = 0; i < nbins; ++i )
-   {
-      printf("%f \n", sd[i]);
-   }
-}
-
 /** read LP in Spa File Format.
  * That means first line is "p edges nbins nedges(in pmatrix) ncluster".
  * Then a list of all edges in pmatrix with <startnode> <endnode> <weight>
@@ -97,8 +75,8 @@ void printProblemSpa(
 */
 static
 SCIP_RETCODE readSpa(
-   SCIP*             scip,                /**< SCIP data structure */
-   const char*       filename             /**< name of the input file */
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename            /**< name of the input file */
 )
 {
    SCIP_FILE* fp;               /* file-reader */
@@ -233,7 +211,7 @@ SCIP_RETCODE readSpa(
       return SCIP_READERROR;
    }
 
-   ncluster = 3;
+   ncluster = 3 ;
    /* create problem data */
    SCIP_CALL( SCIPcreateProbSpa(scip, filename, nbins, nedges, ncluster, edges, sd) );
    SCIPinfoMessage(scip, NULL, "Original problem: \n");
@@ -290,7 +268,7 @@ SCIP_DECL_READERREAD(readerReadSpa)
 
 /** includes the spa file reader in SCIP */
 SCIP_RETCODE SCIPincludeReaderSpa(
-   SCIP*             scip                 /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
 )
 {
    SCIP_READERDATA* readerdata;

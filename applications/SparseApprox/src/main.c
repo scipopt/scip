@@ -101,7 +101,6 @@ SCIP_RETCODE fromCommandLine(
    SCIPinfoMessage(scip, NULL, "Coherence bound is set to %f \n", eps);
    SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
    SCIPinfoMessage(scip, NULL, "=============\n\n");
-
    SCIP_CALL( SCIPsolve(scip) );
 
    /*******************
@@ -149,10 +148,10 @@ SCIP_RETCODE fromCommandLine(
 /** process the arguments and set up the problem */
 static
 SCIP_RETCODE processArguments(
-   SCIP*                      scip,
-   int                        argc,               /**< number of shell parameters */
-   char**                     argv,               /**< array with shell parameters */
-   const char*                defaultsetname      /**< name of default settings file */
+   SCIP*                 scip,
+   int                   argc,               /**< number of shell parameters */
+   char**                argv,               /**< array with shell parameters */
+   const char*           defaultsetname      /**< name of default settings file */
 )
 {
    char* probname = NULL;
@@ -356,9 +355,9 @@ SCIP_RETCODE processArguments(
 /** Set up the problem-structure and solve the clustering problem */
 static
 SCIP_RETCODE SCIPrunSpa(
-   int                        argc,               /**< number of shell parameters */
-   char**                     argv,               /**< array with shell parameters */
-   const char*                defaultsetname      /**< name of default settings file */
+   int                   argc,               /**< number of shell parameters */
+   char**                argv,               /**< array with shell parameters */
+   const char*           defaultsetname      /**< name of default settings file */
 )
 {
    SCIP* scip = NULL;
@@ -393,8 +392,8 @@ SCIP_RETCODE SCIPrunSpa(
 /** main method */
 int
 main(
-   int                        argc,
-   char**                     argv
+   int                   argc,
+   char**                argv
 )
 {
    SCIP_RETCODE retcode;

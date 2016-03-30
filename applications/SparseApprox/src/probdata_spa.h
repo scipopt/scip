@@ -53,6 +53,11 @@ SCIP_VAR*** SCIPspaGetBinvars(
 );
 
 extern
+SCIP_VAR***** SCIPspaGetEdgevars(
+   SCIP*             scip              /**< SCIP data structure*/
+);
+
+extern
 SCIP_VAR** SCIPspaGetIndvars(
    SCIP*             scip              /**< SCIP data structure*/
 );

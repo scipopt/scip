@@ -29,10 +29,11 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_indicator.h"
 #include "event_newsol.h"
+#include "sepa_sparseapprox.h"
 
 /** includes default plugins for coloring into SCIP */
 SCIP_RETCODE SCIPincludeSpaPlugins(
-   SCIP*             scip                 /**< SCIP data structure */
+   SCIP*                 scip                /**< SCIP data structure */
 )
 {
    SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
@@ -40,8 +41,10 @@ SCIP_RETCODE SCIPincludeSpaPlugins(
    SCIP_CALL( SCIPincludeHeurSpaGreedy(scip) );
    SCIP_CALL( SCIPincludeHeurSpaswitch(scip) );
    SCIP_CALL( SCIPincludeEventHdlrNewsol(scip) );
+   SCIP_CALL( SCIPincludeSepaSparseApprox(scip) );
 
    SCIP_CALL( SCIPaddRealParam(scip,"coherence_bound","lower bound to within-cluster coherence", NULL, FALSE, 0.1, 0.0, 1.0, NULL, NULL ) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "edge_representation", "true, if the edge represantation should be used. Otherwise the bin represantation is used", NULL, FALSE, TRUE, NULL, NULL) );
 
    return SCIP_OKAY;
 }
