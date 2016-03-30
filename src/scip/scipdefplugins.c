@@ -56,6 +56,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeConshdlrSuperindicator(scip) );
    SCIP_CALL( SCIPincludeConshdlrVarbound(scip) );
    SCIP_CALL( SCIPincludeConshdlrXor(scip) );
+   SCIP_CALL( SCIPincludeConshdlrComponents(scip) );
    SCIP_CALL( SCIPincludeReaderBnd(scip) );
    SCIP_CALL( SCIPincludeReaderCcg(scip) );
    SCIP_CALL( SCIPincludeReaderCip(scip) );
@@ -154,7 +155,6 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeHeurVbounds(scip) );
    SCIP_CALL( SCIPincludeHeurVeclendiving(scip) );
    SCIP_CALL( SCIPincludeHeurZirounding(scip) );
-   SCIP_CALL( SCIPincludePropComponents(scip) );
    SCIP_CALL( SCIPincludePropDualfix(scip) );
    SCIP_CALL( SCIPincludePropGenvbounds(scip) );
    SCIP_CALL( SCIPincludePropObbt(scip) );

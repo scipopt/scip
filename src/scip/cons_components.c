@@ -13,11 +13,11 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #define SCIP_DEBUG
-//#define SCIP_MORE_DEBUG
-/**@file   prop_components.c
- * @brief  identify and solve independent components
+/**@file   cons_components.c
+ * @brief  constraint handler for handling independent components
  * @author Gerald Gamrath
  *
+ * This constraint handler looks for independent components.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -25,27 +25,24 @@
 #include <assert.h>
 #include <string.h>
 
-#include "scip/prop_components.h"
+#include "scip/cons_components.h"
 
-#define PROP_NAME            "components"
-#define PROP_DESC            "components propagator"
-#define PROP_TIMING                 (SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP)
+#define CONSHDLR_NAME          "components"
+#define CONSHDLR_DESC          "independent components constraint handler"
+#define CONSHDLR_ENFOPRIORITY         0 /**< priority of the constraint handler for constraint enforcing */
+#define CONSHDLR_CHECKPRIORITY        0 /**< priority of the constraint handler for checking feasibility */
+#define CONSHDLR_EAGERFREQ           -1 /**< frequency for using all instead of only the useful constraints in separation,
+                                              *   propagation and enforcement, -1 for no eager evaluations, 0 for first only */
+#define CONSHDLR_NEEDSCONS        FALSE /**< should the constraint handler be skipped, if no constraints are available? */
 
+#define CONSHDLR_PROPFREQ             1 /**< frequency for propagating domains; zero means only preprocessing propagation */
+#define CONSHDLR_MAXPREROUNDS        -1 /**< maximal number of presolving rounds the constraint handler participates in (-1: no limit) */
+#define CONSHDLR_DELAYPROP         TRUE /**< should propagation method be delayed, if other propagators found reductions? */
 
-#define PROP_PRIORITY               -8000000 /**< propagation priority */
-#define PROP_FREQ                          1 /**< propagation frequency */
-#define PROP_DELAY                      TRUE /**< should propagation method be delayed, if other propagators found
-                                              *   reductions? */
-#define PROP_PRESOL_PRIORITY        -8000000 /**< priority of the propagator (>= 0: before, < 0: after constraint handlers) */
-#define PROP_PRESOL_MAXROUNDS             -1 /**< maximal number of propagation rounds the propagator participates in (-1: no limit) */
-#define PROP_PRESOLTIMING           SCIP_PRESOLTIMING_EXHAUSTIVE /* timing of the presolving method (fast, medium, or exhaustive) */
+#define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_EXHAUSTIVE /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
+#define CONSHDLR_PROP_TIMING     (SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP)
 
 #define INTFACTOR 10
-
-#ifdef SCIP_STATISTIC
-static int NCATEGORIES = 6;
-static int CATLIMITS[] = {0,20,50,100,500};
-#endif
 
 /*
  * Data structures
@@ -94,15 +91,10 @@ struct Problem
 
 
 /** control parameters */
-struct SCIP_PropData
+struct SCIP_ConshdlrData
 {
    PROBLEM*              problem;            /** the main problem */
    COMPONENT*            component;          /** component the current SCIP instance belongs to */
-#ifdef SCIP_STATISTIC
-   int*                  compspercat;        /** number of components of the different categories */
-   SCIP_Real             subsolvetime;       /** total solving time of the subproblems */
-   int                   nsinglevars;        /** number of components with a single variable without constraint */
-#endif
 };
 
 
@@ -292,23 +284,23 @@ SCIP_Bool componentHasSubproblems(
 
 
 static
-void SCIPpropComponentsSetComponent(
+void SCIPconshdlrComponentsSetComponent(
    SCIP*                 scip,               /**< SCIP data structure */
    COMPONENT*            component           /**< component */
    )
 {
-   SCIP_PROP* prop;
-   SCIP_PROPDATA* propdata;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
    assert(scip != NULL);
 
-   prop = SCIPfindProp(scip, PROP_NAME);
-   assert(prop != NULL);
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
 
-   propdata = SCIPpropGetData(prop);
-   assert(propdata != NULL);
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
-   propdata->component = component;
+   conshdlrdata->component = component;
 }
 
 
@@ -355,7 +347,7 @@ SCIP_RETCODE componentCreateSubscip(
    SCIP_CALL( SCIPcopyPlugins(scip, subscip, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE,
          TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, TRUE, success) );
 
-   SCIPpropComponentsSetComponent(subscip, component);
+   SCIPconshdlrComponentsSetComponent(subscip, component);
 
    /* abort if the plugins were not successfully copied */
    if( !(*success) )
@@ -956,12 +948,40 @@ SCIP_RETCODE freeProblem(
    return SCIP_OKAY;
 }
 
+/** creates and captures a components constraint */
+static
+SCIP_RETCODE createConsComponents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
+   const char*           name,               /**< name of constraint */
+   PROBLEM*              problem             /**< problem to be stored in the constraint */
+   )
+{
+   SCIP_CONSHDLR* conshdlr;
+
+   /* find the samediff constraint handler */
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   if( conshdlr == NULL )
+   {
+      SCIPerrorMessage("components constraint handler not found\n");
+      return SCIP_PLUGINNOTFOUND;
+   }
+
+   /* create constraint */
+   SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, (SCIP_CONSDATA*)problem,
+         FALSE, FALSE, FALSE, FALSE, TRUE,
+         TRUE, FALSE, FALSE, FALSE, TRUE) );
+
+   return SCIP_OKAY;
+}
+
+
 /** ???
  */
 static
 SCIP_RETCODE splitProblem(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROPDATA*        propdata,           /**< propagator data */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_DIGRAPH*         digraph,
    SCIP_CONS**           conss,              /**< constraints */
    SCIP_VAR**            vars,               /**< variables */
@@ -969,10 +989,9 @@ SCIP_RETCODE splitProblem(
    int                   nconss,             /**< number of constraints */
    int                   nvars,              /**< number of variables */
    int*                  firstvaridxpercons, /**< array with index of first variable in vars array for each constraint */
-   SCIP_RESULT*          result
+   PROBLEM**             problem             /**< created sub-problem, if problem can be split, NULL otherwise */
    )
 {
-   PROBLEM* problem;
    COMPONENT* component;
    SCIP_HASHMAP* consmap;
    SCIP_HASHMAP* varmap;
@@ -996,12 +1015,12 @@ SCIP_RETCODE splitProblem(
    int c;
 
    assert(scip != NULL);
-   assert(propdata != NULL);
+   assert(conshdlrdata != NULL);
    assert(digraph != NULL);
    assert(conss != NULL);
    assert(vars != NULL);
    assert(firstvaridxpercons != NULL);
-   assert(result != NULL);
+   assert(problem != NULL);
 
    ncomponents = SCIPdigraphGetNComponents(digraph);
    nrealcomponents = 0;
@@ -1040,9 +1059,6 @@ SCIP_RETCODE splitProblem(
       ncontvars = ncvars - nintvars - nbinvars;
       compsize[c] = ((1000 * (nbinvars + INTFACTOR * nintvars) + (950.0 * ncontvars)/nvars));
 
-      /* collect some statistical information */
-      SCIPstatistic( updateStatisticsComp(propdata, nbinvars, nintvars) );
-
       /* decide if this component should be created ?????????? */
       if( ncvars > 0 )
          ++nrealcomponents;
@@ -1080,26 +1096,25 @@ SCIP_RETCODE splitProblem(
    SCIPsortIntPtr(conscomponent, (void**)conss, nconss);
 
    /* init subproblem data structure */
-   SCIP_CALL( initProblem(scip, &problem) );
+   SCIP_CALL( initProblem(scip, problem) );
 
-   if( propdata->component == NULL )
+   if( conshdlrdata->component == NULL )
    {
-      assert(propdata->problem == NULL);
-      propdata->problem = problem;
+      assert(conshdlrdata->problem == NULL);
+      conshdlrdata->problem = *problem;
    }
    else
    {
-      SCIP_CALL( componentAddSubproblem(propdata->component, problem) );
-      *result = SCIP_CUTOFF;
+      SCIP_CALL( componentAddSubproblem(conshdlrdata->component, *problem) );
    }
 
-   SCIP_CALL( SCIPallocMemoryArray(scip, &problem->components, nrealcomponents) );
-   SCIP_CALL( SCIPpqueueCreate(&problem->compqueue, (int)(1.1*nrealcomponents), 1.2, componentSort) );
-   problem->ncomponents = nrealcomponents;
-   problem->nlowerboundinf = nrealcomponents;
+   SCIP_CALL( SCIPallocMemoryArray(scip, &(*problem)->components, nrealcomponents) );
+   SCIP_CALL( SCIPpqueueCreate(&(*problem)->compqueue, (int)(1.1*nrealcomponents), 1.2, componentSort) );
+   (*problem)->ncomponents = nrealcomponents;
+   (*problem)->nlowerboundinf = nrealcomponents;
 
-   problem->nfeascomps = 0;
-   problem->nsolvedcomps = 0;
+   (*problem)->nfeascomps = 0;
+   (*problem)->nsolvedcomps = 0;
 
    /* hashmap mapping from original constraints to constraints in the sub-SCIPs (for performance reasons) */
    SCIP_CALL( SCIPhashmapCreate(&consmap, SCIPblkmem(scip), 10 * nconss) );
@@ -1134,9 +1149,9 @@ SCIP_RETCODE splitProblem(
       /* decide if this component should be created (see above) ?????????? */
       if( v - compvarsstart > 0 )
       {
-         SCIP_CALL( initComponent(problem, ncreatedcomps) );
-         assert(problem->components[ncreatedcomps] != NULL);
-         component = problem->components[ncreatedcomps];
+         SCIP_CALL( initComponent(*problem, ncreatedcomps) );
+         assert((*problem)->components[ncreatedcomps] != NULL);
+         component = (*problem)->components[ncreatedcomps];
          ++ncreatedcomps;
 
          /* get component variables and store them in component structure */
@@ -1153,7 +1168,7 @@ SCIP_RETCODE splitProblem(
          assert(ncompconss > 0 || component->nvars == 1);
 
          SCIPdebugMessage("build sub-SCIP for component %d of problem <%s>: %d vars (%d bin, %d int, %d cont), %d conss\n",
-            component->number, problem->name, component->nvars, nbinvars, nintvars, component->nvars - nintvars - nbinvars, ncompconss);
+            component->number, (*problem)->name, component->nvars, nbinvars, nintvars, component->nvars - nintvars - nbinvars, ncompconss);
 #if 0
          {
             int i;
@@ -1166,7 +1181,7 @@ SCIP_RETCODE splitProblem(
          /* build subscip for component */
          SCIP_CALL( componentCreateSubscip(component, varmap, consmap, compconss, ncompconss, &success) );
 
-         SCIP_CALL( SCIPpqueueInsert(problem->compqueue, problem->components[comp]) );
+         SCIP_CALL( SCIPpqueueInsert((*problem)->compqueue, (*problem)->components[comp]) );
 
          SCIPhashmapFree(&varmap);
 
@@ -1183,6 +1198,17 @@ SCIP_RETCODE splitProblem(
    SCIPhashmapFree(&consmap);
  TERMINATE:
    SCIPfreeBufferArray(scip, &conscomponent);
+
+   if( nrealcomponents > 0 )
+   {
+      SCIP_CONS* cons;
+
+      assert((*problem) != NULL);
+
+      SCIP_CALL( createConsComponents(scip, &cons, (*problem)->name, (*problem)) );
+      SCIP_CALL( SCIPaddConsNode(scip, SCIPgetCurrentNode(scip), cons, NULL) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
 
    return SCIP_OKAY;
 }
@@ -1246,139 +1272,6 @@ SCIP_RETCODE solveIteratively(
 
    return SCIP_OKAY;
 }
-
-
-/*
- * Statistic methods
- */
-
-#ifdef SCIP_STATISTIC
-/** initialize data for statistics */
-static
-SCIP_RETCODE initStatistics(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROPDATA*        propdata            /**< propagator data */
-   )
-{
-   assert(scip != NULL);
-   assert(propdata != NULL);
-
-   SCIP_CALL( SCIPallocMemoryArray(scip, &propdata->compspercat, NCATEGORIES) );
-   BMSclearMemoryArray(propdata->compspercat, NCATEGORIES);
-
-   propdata->nsinglevars = 0;
-   propdata->subsolvetime = 0.0;
-
-   return SCIP_OKAY;
-}
-
-/** free data for statistics */
-static
-void freeStatistics(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROPDATA*        propdata            /**< propagator data */
-   )
-{
-   assert(scip != NULL);
-   assert(propdata != NULL);
-
-   SCIPfreeMemoryArray(scip, &propdata->compspercat);
-}
-
-/** reset data for statistics */
-static
-void resetStatistics(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_PROPDATA*        propdata            /**< propagator data */
-   )
-{
-   assert(scip != NULL);
-   assert(propdata != NULL);
-
-   BMSclearMemoryArray(propdata->compspercat, NCATEGORIES);
-
-   propdata->nsinglevars = 0;
-   propdata->subsolvetime = 0.0;
-}
-
-
-/** statistics: categorize the component with the given number of binary and integer variables */
-static
-void updateStatisticsComp(
-   SCIP_PROPDATA*        propdata,           /**< propagator data */
-   int                   nbinvars,           /**< number of binary variables */
-   int                   nintvars            /**< number of integer variables */
-   )
-{
-   int ndiscretevars;
-   int i;
-
-   assert(propdata != NULL);
-
-   ndiscretevars = nbinvars + nintvars;
-
-   /* check into which category the component belongs by looking at the number of discrete variables */
-   for( i = 0; i < (NCATEGORIES - 1); ++i )
-   {
-      if( ndiscretevars <= CATLIMITS[i] )
-      {
-         propdata->compspercat[i]++;
-         break;
-      }
-   }
-
-   /* number of discrete variables greater than all limits, so component belongs to last category */
-   if( i == (NCATEGORIES - 1) )
-      propdata->compspercat[i]++;
-}
-
-/** statistics: increase the number of components with a single variable and no constraints */
-static
-void updateStatisticsSingleVar(
-   SCIP_PROPDATA*        propdata            /**< propagator data */
-   )
-{
-   assert(propdata != NULL);
-
-   propdata->nsinglevars++;
-}
-
-/** statistics: update the total subproblem solving time */
-static
-void updateStatisticsSubsolvetime(
-   SCIP_PROPDATA*        propdata,           /**< propagator data */
-   SCIP_Real             subsolvetime        /**< subproblem solving time to add to the statistics */
-   )
-{
-   assert(propdata != NULL);
-
-   propdata->subsolvetime += subsolvetime;
-}
-
-/** print statistics */
-static
-void printStatistics(
-   SCIP_PROPDATA*        propdata            /**< propagator data */
-   )
-{
-   int i;
-
-   assert(propdata != NULL);
-
-   printf("############\n");
-   printf("# Connected Components Propagator Statistics:\n");
-
-   printf("# Categorization:");
-   for( i = 0; i < NCATEGORIES - 1; ++i )
-   {
-      printf("[<= %d: %d]", CATLIMITS[i], propdata->compspercat[i]);
-   }
-   printf("[> %d: %d]\n", CATLIMITS[NCATEGORIES - 2], propdata->compspercat[NCATEGORIES - 1]);
-   printf("# Components without constraints: %d\n", propdata->nsinglevars);
-   printf("# Total subproblem solving time: %.2f\n", propdata->subsolvetime);
-   printf("############\n");
-}
-#endif
 
 
 /*
@@ -1530,13 +1423,12 @@ SCIP_RETCODE fillDigraph(
 
 /** performs propagation by searching for components */
 static
-SCIP_RETCODE propComponents(
+SCIP_RETCODE findComponents(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIP_PROP*            prop,               /**< the propagator itself */
-   SCIP_RESULT*          result              /**< pointer to store the result of the propagation call */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< the components constraint handler data */
+   PROBLEM**             problem             /**< created sub-problem, if problem can be split, NULL otherwise */
    )
 {
-   SCIP_PROPDATA* propdata;
    SCIP_CONS** conss;
    SCIP_CONS** tmpconss;
    SCIP_Bool success;
@@ -1547,37 +1439,10 @@ SCIP_RETCODE propComponents(
    int c;
 
    assert(scip != NULL);
-   assert(prop != NULL);
-   assert(result != NULL);
-
-   *result = SCIP_DIDNOTRUN;
-
-   /* do not run in probing mode */
-   if( SCIPinProbing(scip) )
-      return SCIP_OKAY;
-
-   /* do not run, if not all variables are explicitly known */
-   if( SCIPgetNActivePricers(scip) > 0 )
-      return SCIP_OKAY;
-
-   propdata = SCIPpropGetData(prop);
-   assert(propdata != NULL);
-
-   nvars = SCIPgetNVars(scip);
-
-   /* we do not want to run, if there are no variables left */
-   if( nvars == 0 )
-      return SCIP_OKAY;
-
-   /* check for a reached timelimit */
-   if( SCIPisStopped(scip) )
-      return SCIP_OKAY;
-
-   SCIPstatistic( resetStatistics(scip, propdata) );
-
-   *result = SCIP_DIDNOTFIND;
+   assert(problem != NULL);
 
    ncomponents = 0;
+   nvars = SCIPgetNVars(scip);
 
    /* collect checked constraints for component propagator */
    ntmpconss = SCIPgetNConss(scip);
@@ -1665,9 +1530,9 @@ SCIP_RETCODE propComponents(
 
                SCIPnodeSetNComponents(SCIPgetCurrentNode(scip), ncomponents);
 
-               /* create subproblems from independent components and solve them in dependence of their size */
-               SCIP_CALL( splitProblem(scip, propdata, digraph, conss, vars, varcomponent, nconss, nunfixedvars,
-                     firstvaridxpercons, result) );
+               /* create subproblems from independent components */
+               SCIP_CALL( splitProblem(scip, conshdlrdata, digraph, conss, vars, varcomponent, nconss, nunfixedvars,
+                     firstvaridxpercons, problem) );
             }
 
             SCIPfreeBufferArray(scip, &varcomponent);
@@ -1684,99 +1549,62 @@ SCIP_RETCODE propComponents(
 
    SCIPfreeBufferArray(scip, &conss);
 
-   if( propdata->problem != NULL )
-   {
-      SCIP_CALL( solveIteratively(propdata->problem, result) );
-
-      SCIP_CALL( freeProblem(&propdata->problem) );
-   }
-
-   /* print statistics */
-   SCIPstatistic( printStatistics(propdata) );
-
    return SCIP_OKAY;
 }
 
 
 /*
- * Callback methods of propagator
+ * Callback methods of constraint handler
  */
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
 static
-SCIP_DECL_PROPCOPY(propCopyComponents)
+SCIP_DECL_CONSHDLRCOPY(conshdlrCopyComponents)
 {  /*lint --e{715}*/
    assert(scip != NULL);
-   assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
-   /* call inclusion method of propagator */
-   SCIP_CALL( SCIPincludePropComponents(scip) );
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrComponents(scip) );
 
-   return SCIP_OKAY;
-}
-
-/** destructor of propagator to free user data (called when SCIP is exiting) */
-static
-SCIP_DECL_PROPFREE(propFreeComponents)
-{  /*lint --e{715}*/
-   SCIP_PROPDATA* propdata;
-
-   /* free propagator data */
-   propdata = SCIPpropGetData(prop);
-   assert(propdata != NULL);
-
-   SCIPfreeMemory(scip, &propdata);
-   SCIPpropSetData(prop, NULL);
+   *valid = TRUE;
 
    return SCIP_OKAY;
 }
 
-/** initialization method of propagator (called after problem was transformed) */
+/** destructor of constraint handler to free user data (called when SCIP is exiting) */
 static
-SCIP_DECL_PROPINIT(propInitComponents)
+SCIP_DECL_CONSFREE(conshdlrFreeComponents)
 {  /*lint --e{715}*/
-   SCIP_PROPDATA* propdata;
+   SCIP_CONSHDLRDATA* conshdlrdata;
 
-   /* free propagator data */
-   propdata = SCIPpropGetData(prop);
-   assert(propdata != NULL);
+   /* free constraint handler data */
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
-   /* initialize statistics */
-   SCIPstatistic( SCIP_CALL( initStatistics(scip, propdata) ) );
+   SCIPfreeMemory(scip, &conshdlrdata);
+   SCIPconshdlrSetData(conshdlr, NULL);
 
    return SCIP_OKAY;
 }
 
-#ifdef SCIP_STATISTIC
-/** deinitialization method of propagator (called before transformed problem is freed) */
+/** domain propagation method of constraint handler */
 static
-SCIP_DECL_PROPEXIT(propExitComponents)
+SCIP_DECL_CONSPROP(consPropComponents)
 {  /*lint --e{715}*/
-   SCIP_PROPDATA* propdata;
-
-   /* free propagator data */
-   propdata = SCIPpropGetData(prop);
-   assert(propdata != NULL);
-
-   SCIPstatistic( freeStatistics(scip, propdata) );
-
-   return SCIP_OKAY;
-}
-#endif
-
-
-/** execution method of propagator */
-static
-SCIP_DECL_PROPEXEC(propExecComponents)
-{  /*lint --e{715}*/
+   PROBLEM* problem;
+   SCIP_CONSHDLRDATA* conshdlrdata;
    int nfixedvars;
-   SCIP_Bool cutoff;
-   SCIP_Bool unbounded;
 
-   assert(prop != NULL);
-   assert(strcmp(SCIPpropGetName(prop), PROP_NAME) == 0);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(result != NULL);
+   assert(SCIPconshdlrGetNActiveConss(conshdlr) >= 0);
+   assert(SCIPconshdlrGetNActiveConss(conshdlr) <= 1);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
 
    *result = SCIP_DIDNOTRUN;
 
@@ -1787,29 +1615,94 @@ SCIP_DECL_PROPEXEC(propExecComponents)
    if( SCIPinProbing(scip) || SCIPinRepropagation(scip) )
       return SCIP_OKAY;
 
+   /* do not run, if not all variables are explicitly known */
+   if( SCIPgetNActivePricers(scip) > 0 )
+      return SCIP_OKAY;
+
+   /* we do not want to run, if there are no variables left */
+   if( SCIPgetNVars(scip) == 0 )
+      return SCIP_OKAY;
+
+   /* check for a reached timelimit */
+   if( SCIPisStopped(scip) )
+      return SCIP_OKAY;
+
    /* only at the root node do we want to run after the node */
    if( proptiming == SCIP_PROPTIMING_AFTERLPLOOP && SCIPgetDepth(scip) > 0 )
       return SCIP_OKAY;
 
-   cutoff = FALSE;
-   unbounded = FALSE;
-   nfixedvars = 0;
+   problem = NULL;
+   *result = SCIP_DIDNOTFIND;
 
-   SCIP_CALL( propComponents(scip, prop, result) );
+   if( SCIPconshdlrGetNActiveConss(conshdlr) >= 1 )
+   {
+      assert(SCIPconshdlrGetNActiveConss(conshdlr) == 1);
 
-   /* evaluate propagation result */
-   if( cutoff )
-      *result = SCIP_CUTOFF;
-   else if( unbounded )
-      *result = SCIP_UNBOUNDED;
-   else if( nfixedvars > 0 )
-      *result = SCIP_REDUCEDDOM;
+      problem = (PROBLEM*)SCIPconsGetData(SCIPconshdlrGetConss(conshdlr)[0]);
+   }
    else
-      *result = SCIP_DIDNOTFIND;
+   {
+      SCIP_CALL( findComponents(scip, conshdlrdata, &problem) );
+   }
+
+   if( problem != NULL )
+   {
+
+   }
+
+   assert(SCIPconshdlrGetNActiveConss(conshdlr) >= 0);
+   assert(SCIPconshdlrGetNActiveConss(conshdlr) <= 1);
+
+   if( conshdlrdata->problem != NULL )
+   {
+      assert(SCIPconshdlrGetNActiveConss(conshdlr) <= 1);
+
+      SCIP_CALL( solveProblem(problem, TRUE, result) );
+
+      if( *result == SCIP_SUCCESS )
+      {
+         if( SCIPpqueueNElems(problem->compqueue) == 0 )
+            *result = SCIP_CUTOFF;
+         else
+            *result = SCIP_DELAYNODE;
+      }
+   }
 
    return SCIP_OKAY;
 }
 
+/** frees specific constraint data */
+static
+SCIP_DECL_CONSDELETE(consDeleteComponents)
+{  /*lint --e{715}*/
+   PROBLEM* problem;
+
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(consdata != NULL);
+   assert(*consdata != NULL);
+
+   problem = (PROBLEM*)(*consdata);
+
+   SCIP_CALL( freeProblem(&problem) );
+
+   *consdata = NULL;
+
+   return SCIP_OKAY;
+}
+
+
+/** variable rounding lock method of constraint handler */
+static
+SCIP_DECL_CONSLOCK(consLockComponents)
+{  /*lint --e{715}*/
+   return SCIP_OKAY;
+}
+
+
+#define consEnfolpComponents NULL
+#define consEnfopsComponents NULL
+#define consCheckComponents NULL
 
 /**@} */
 
@@ -1818,28 +1711,32 @@ SCIP_DECL_PROPEXEC(propExecComponents)
  * @{
  */
 
-/** creates the components propagator and includes it in SCIP */
-SCIP_RETCODE SCIPincludePropComponents(
+/** creates the components constraint handler and includes it in SCIP */
+SCIP_RETCODE SCIPincludeConshdlrComponents(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-   SCIP_PROPDATA* propdata;
-   SCIP_PROP* prop;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
 
    /* create components propagator data */
-   SCIP_CALL( SCIPallocMemory(scip, &propdata) );
-   propdata->component = NULL;
-   propdata->problem = NULL;
+   SCIP_CALL( SCIPallocMemory(scip, &conshdlrdata) );
+   conshdlrdata->component = NULL;
+   conshdlrdata->problem = NULL;
 
-   /* include propagator */
-   SCIP_CALL( SCIPincludePropBasic(scip, &prop, PROP_NAME, PROP_DESC, PROP_PRIORITY, PROP_FREQ, PROP_DELAY, PROP_TIMING,
-         propExecComponents, propdata) );
-   assert(prop != NULL);
+   /* include constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrBasic(scip, &conshdlr, CONSHDLR_NAME, CONSHDLR_DESC, CONSHDLR_ENFOPRIORITY,
+         CONSHDLR_CHECKPRIORITY, CONSHDLR_EAGERFREQ, CONSHDLR_NEEDSCONS,
+         consEnfolpComponents, consEnfopsComponents, consCheckComponents, consLockComponents,
+         conshdlrdata) );
+   assert(conshdlr != NULL);
 
-   SCIP_CALL( SCIPsetPropFree(scip, prop, propFreeComponents) );
-   SCIP_CALL( SCIPsetPropInit(scip, prop, propInitComponents) );
-   SCIP_CALL( SCIPsetPropCopy(scip, prop, propCopyComponents) );
-   SCIPstatistic( SCIP_CALL( SCIPsetPropExit(scip, prop, propExitComponents) ) );
+   SCIP_CALL( SCIPsetConshdlrProp(scip, conshdlr, consPropComponents,
+         CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING));
+
+   SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, conshdlrFreeComponents) );
+   SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyComponents, NULL) );
+   SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteComponents) );
 
    return SCIP_OKAY;
 }

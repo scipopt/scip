@@ -13,18 +13,17 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   prop_components.h
- * @brief  components propagator
+/**@file   cons_components.h
+ * @brief  constraint handler for handling independent components
  * @author Gerald Gamrath
- * @author Dieter Weninger
  *
- * This propagator looks for independent components.
+ * This constraint handler looks for independent components.
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PROP_COMPONENTS_H__
-#define __SCIP_PROP_COMPONENTS_H__
+#ifndef __SCIP_CONS_COMPONENTS_H__
+#define __SCIP_CONS_COMPONENTS_H__
 
 
 #include "scip/scip.h"
@@ -33,9 +32,9 @@
 extern "C" {
 #endif
 
-/** creates the components propagator and includes it in SCIP */
+/** creates the components constraint handler and includes it in SCIP */
 EXTERN
-SCIP_RETCODE SCIPincludePropComponents(
+SCIP_RETCODE SCIPincludeConshdlrComponents(
    SCIP*                 scip                /**< SCIP data structure */
    );
 

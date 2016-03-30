@@ -341,6 +341,7 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/cons_superindicator.o \
 			scip/cons_varbound.o \
 			scip/cons_xor.o \
+			scip/cons_components.o \
 			scip/dialog_default.o \
 			scip/event_softtimelimit.o \
 			scip/disp_default.o \
@@ -410,7 +411,6 @@ SCIPPLUGINLIBOBJ=       scip/branch_allfullstrong.o \
 			scip/presol_trivial.o \
 			scip/presol_tworowbnd.o \
 			scip/presol_stuffing.o \
-			scip/prop_components.o \
 			scip/prop_dualfix.o \
 			scip/prop_genvbounds.o \
 			scip/prop_obbt.o \

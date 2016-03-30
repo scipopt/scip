@@ -3666,9 +3666,10 @@ SCIP_RETCODE SCIPconshdlrPropagate(
                && *result != SCIP_REDUCEDDOM
                && *result != SCIP_DIDNOTFIND
                && *result != SCIP_DIDNOTRUN
-               && *result != SCIP_DELAYED )
+               && *result != SCIP_DELAYED
+               && *result != SCIP_DELAYNODE )
             {
-               SCIPerrorMessage("propagation method of constraint handler <%s> returned invalid result <%d>\n", 
+               SCIPerrorMessage("propagation method of constraint handler <%s> returned invalid result <%d>\n",
                   conshdlr->name, *result);
                return SCIP_INVALIDRESULT;
             }
@@ -5498,7 +5499,7 @@ SCIP_RETCODE SCIPconsCreate(
    assert(name != NULL);
    assert(conshdlr != NULL);
    assert(!original || deleteconsdata);
-
+#if 0
    /* constraints of constraint handlers that don't need constraints cannot be created */
    if( !conshdlr->needscons )
    {
@@ -5506,7 +5507,7 @@ SCIP_RETCODE SCIPconsCreate(
          name, conshdlr->name);
       return SCIP_INVALIDCALL;
    }
-
+#endif
    /* create constraint data */
    SCIP_ALLOC( BMSallocBlockMemory(blkmem, cons) );
    SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &(*cons)->name, name, strlen(name)+1) );
