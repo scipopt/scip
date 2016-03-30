@@ -726,6 +726,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
    SCIP_CONSEXPR_EXPRHDLR**    exprhdlr,     /**< buffer where to store expression handler */
    const char*                 name,         /**< name of expression handler (must not be NULL) */
    const char*                 desc,         /**< description of expression handler (can be NULL) */
+   int                         precedence,   /**< precedence of expression operation (used for printing) */
    SCIP_CONSEXPR_EXPRHDLRDATA* data          /**< data of expression handler (can be NULL) */
    )
 {
@@ -748,6 +749,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
       SCIP_CALL( SCIPduplicateMemoryArray(scip, &(*exprhdlr)->desc, desc, strlen(desc)+1) );
    }
 
+   (*exprhdlr)->precedence = precedence;
    (*exprhdlr)->data = data;
 
    ENSUREBLOCKMEMORYARRAYSIZE(scip, conshdlrdata->exprhdlrs, conshdlrdata->exprhdlrssize, conshdlrdata->nexprhdlrs+1);
@@ -908,6 +910,16 @@ const char* SCIPgetConsExprExprHdlrDescription(
    assert(exprhdlr != NULL);
 
    return exprhdlr->desc;
+}
+
+/** gives the precedence of an expression handler */
+int SCIPgetConsExprExprHdlrPrecedence(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+)
+{
+   assert(exprhdlr != NULL);
+
+   return exprhdlr->precedence;
 }
 
 /** gives the data of an expression handler */

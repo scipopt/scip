@@ -43,6 +43,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
    SCIP_CONSEXPR_EXPRHDLR**    exprhdlr,     /**< buffer where to store expression handler */
    const char*                 name,         /**< name of expression handler (must not be NULL) */
    const char*                 desc,         /**< description of expression handler (can be NULL) */
+   int                         precedence,   /**< precedence of expression operation (used for printing) */
    SCIP_CONSEXPR_EXPRHDLRDATA* data          /**< data of expression handler (can be NULL) */
    );
 
@@ -127,6 +128,12 @@ const char* SCIPgetConsExprExprHdlrName(
 /** gives the description of an expression handler (can be NULL) */
 EXTERN
 const char* SCIPgetConsExprExprHdlrDescription(
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
+);
+
+/** gives the precedence of an expression handler */
+EXTERN
+int SCIPgetConsExprExprHdlrPrecedence(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
 );
 
