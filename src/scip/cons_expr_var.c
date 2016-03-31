@@ -57,6 +57,16 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printVar)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSEXPR_EXPREVAL(evalVar)
+{
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprData(expr) != NULL);
+
+   *val = SCIPgetSolVal(scip, sol, (SCIP_VAR*)SCIPgetConsExprExprData(expr));
+
+   return SCIP_OKAY;
+}
 
 /** creates the handler for variable expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
@@ -66,7 +76,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "var", "variable", 0, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "var", "variable", 0, evalVar, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrVar, NULL) );

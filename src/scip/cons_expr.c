@@ -100,6 +100,13 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_EXPRHDLR*  exprprodhdlr;    /**< product expression handler */
 };
 
+/* data passed on during expression evaluation */
+typedef struct
+{
+   SCIP_SOL*             sol;                /**< solution that is evaluated */
+   unsigned int          soltag;             /**< solution tag */
+   SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an evaluation error */
+} EXPREVAL_DATA;
 
 /*
  * Local methods
@@ -235,6 +242,65 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExpr)
    return SCIP_OKAY;
 }
 
+/** expression walk callback when evaluating expression, called before child is visited */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprVisitChild)
+{
+   EXPREVAL_DATA* evaldata;
+
+   assert(expr != NULL);
+   assert(data != NULL);
+
+   evaldata = (EXPREVAL_DATA*)data;
+
+   /* skip child if it has been evaluated for that solution already */
+   if( evaldata->soltag != 0 && evaldata->soltag == expr->children[expr->walkcurrentchild]->evaltag )
+   {
+      if( expr->children[expr->walkcurrentchild]->evalvalue == SCIP_INVALID )
+      {
+         evaldata->aborted = TRUE;
+         *result = SCIP_CONSEXPREXPRWALK_ABORT;
+      }
+      else
+      {
+         *result = SCIP_CONSEXPREXPRWALK_SKIP;
+      }
+   }
+   else
+   {
+      *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** expression walk callback when evaluating expression, called when expression is left */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprLeaveExpr)
+{
+   EXPREVAL_DATA* evaldata;
+
+   assert(expr != NULL);
+   assert(data != NULL);
+   assert(expr->exprhdlr->eval != NULL);
+
+   evaldata = (EXPREVAL_DATA*)data;
+
+   SCIP_CALL( (*expr->exprhdlr->eval)(scip, expr, &expr->evalvalue, evaldata->sol) );
+   expr->evaltag = evaldata->soltag;
+
+   if( expr->evalvalue == SCIP_INVALID )
+   {
+      evaldata->aborted = TRUE;
+      *result = SCIP_CONSEXPREXPRWALK_ABORT;
+   }
+   else
+   {
+      *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+   }
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of constraint handler
@@ -727,6 +793,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
    const char*                 name,         /**< name of expression handler (must not be NULL) */
    const char*                 desc,         /**< description of expression handler (can be NULL) */
    int                         precedence,   /**< precedence of expression operation (used for printing) */
+   SCIP_DECL_CONSEXPR_EXPREVAL((*eval)),     /**< point evaluation callback (can not be NULL) */
    SCIP_CONSEXPR_EXPRHDLRDATA* data          /**< data of expression handler (can be NULL) */
    )
 {
@@ -750,6 +817,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
    }
 
    (*exprhdlr)->precedence = precedence;
+   (*exprhdlr)->eval = eval;
    (*exprhdlr)->data = data;
 
    ENSUREBLOCKMEMORYARRAYSIZE(scip, conshdlrdata->exprhdlrs, conshdlrdata->exprhdlrssize, conshdlrdata->nexprhdlrs+1);
@@ -1112,7 +1180,79 @@ SCIP_RETCODE SCIPprintConsExprExpr(
    return SCIP_OKAY;
 }
 
+/** evaluate an expression in a point
+ *
+ * Initiates an expression walk to also evaluate children, if necessary.
+ * Value can be received via SCIPgetConsExprExprEvalValue().
+ * If an evaluation error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ *
+ * If a nonzero \p soltag is passed, then only (sub)expressions are
+ * reevaluated that have a different solution tag. If a soltag of 0
+ * is passed, then subexpressions are always reevaluated.
+ * The tag is stored together with the value and can be received via
+ * SCIPgetConsExprExprEvalTag().
+ */
+SCIP_RETCODE SCIPevalConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
+   SCIP_SOL*               sol,              /**< solution to be evaluated */
+   unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
+   )
+{
+   EXPREVAL_DATA evaldata;
 
+   /* if value is up-to-date, then nothing to do */
+   if( soltag != 0 && expr->evaltag == soltag )
+      return SCIP_OKAY;
+
+   evaldata.sol = sol;
+   evaldata.soltag = soltag;
+   evaldata.aborted = FALSE;
+
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, evalExprVisitChild, NULL, evalExprLeaveExpr, &evaldata) );
+
+   if( evaldata.aborted )
+   {
+      expr->evalvalue = SCIP_INVALID;
+      expr->evaltag = soltag;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */
+SCIP_Real SCIPgetConsExprExprValue(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->evalvalue;
+}
+
+/** gives the evaluation tag from the last evaluation, or 0 */
+SCIP_Real SCIPgetConsExprExprEvalTag(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->evaltag;
+}
+
+/** sets the evaluation value */
+void SCIPsetConsExprExprEvalValue(
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_Real               value,            /**< value to set */
+   unsigned int            tag               /**< tag of solution that was evaluated, or 0 */
+   )
+{
+   assert(expr != NULL);
+
+   expr->evalvalue = value;
+   expr->evaltag = tag;
+}
 
 /** walks the expression graph in depth-first manner and executes callbacks at certain places
  *

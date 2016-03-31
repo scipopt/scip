@@ -44,6 +44,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
    const char*                 name,         /**< name of expression handler (must not be NULL) */
    const char*                 desc,         /**< description of expression handler (can be NULL) */
    int                         precedence,   /**< precedence of expression operation (used for printing) */
+   SCIP_DECL_CONSEXPR_EXPREVAL((*eval)),     /**< point evaluation callback (can not be NULL) */
    SCIP_CONSEXPR_EXPRHDLRDATA* data          /**< data of expression handler (can be NULL) */
    );
 
@@ -160,7 +161,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr(
    SCIP_CONSEXPR_EXPR**    children          /**< children (can be NULL if nchildren is 0) */
    );
 
-/** creates and captures an expression with up to two children */
+/** creates and captures an expression with given expression data and up to two children */
 EXTERN
 SCIP_RETCODE SCIPcreateConsExprExpr2(
    SCIP*                   scip,             /**< SCIP data structure */
@@ -230,6 +231,47 @@ SCIP_RETCODE SCIPprintConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be printed */
    FILE*                   file              /**< file to print to, or NULL for stdout */
+   );
+
+/** evaluate an expression in a point
+ *
+ * Initiates an expression walk to also evaluate children, if necessary.
+ * Value can be received via SCIPgetConsExprExprEvalValue().
+ * If an evaluation error (division by zero, ...) occurs, this value will
+ * be set to SCIP_INVALID.
+ *
+ * If a nonzero \p soltag is passed, then only (sub)expressions are
+ * reevaluated that have a different solution tag. If a soltag of 0
+ * is passed, then subexpressions are always reevaluated.
+ * The tag is stored together with the value and can be received via
+ * SCIPgetConsExprExprEvalTag().
+ */
+EXTERN
+SCIP_RETCODE SCIPevalConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
+   SCIP_SOL*               sol,              /**< solution to be evaluated */
+   unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
+   );
+
+/** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */
+EXTERN
+SCIP_Real SCIPgetConsExprExprValue(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   );
+
+/** gives the evaluation tag from the last evaluation, or 0 */
+EXTERN
+SCIP_Real SCIPgetConsExprExprEvalTag(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   );
+
+/** sets the evaluation value */
+EXTERN
+void SCIPsetConsExprExprEvalValue(
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_Real               value,            /**< value to set */
+   unsigned int            tag               /**< tag of solution that was evaluated, or 0 */
    );
 
 

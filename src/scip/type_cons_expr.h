@@ -125,6 +125,24 @@ extern "C" {
    SCIP_CONSEXPREXPRWALK_STAGE stage, \
    FILE* file)
 
+/** expression (point-) evaluation callback
+ *
+ * The method evaluates an expression by taking the values of its children into account.
+ * We might extend this later to store (optionally) also information for
+ * gradient and Hessian computations.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - val : buffer where to store value
+ *  - expr : expression to be evaluated
+ *  - sol : solution that is evaluated (can be NULL)
+ */
+#define SCIP_DECL_CONSEXPR_EXPREVAL(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_Real* val, \
+   SCIP_SOL* sol)
+
 /** stages of expression walker in which the walker callbacks are called */
 typedef enum
 {

@@ -45,6 +45,7 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPRCOPYDATA((*copydata));  /**< data copy callback, or NULL for expressions that have no data */
    SCIP_DECL_CONSEXPR_EXPRFREEDATA((*freedata));  /**< data free callback, or NULL for expressions that have no data or which data does not need to be freed */
    SCIP_DECL_CONSEXPR_EXPRPRINT((*print));        /**< print callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPREVAL((*eval));          /**< point evaluation callback (can never be NULL) */
 };
 
 /** a node in the expression graph that is handled by the expression constraint handler */
@@ -58,6 +59,10 @@ struct SCIP_ConsExpr_Expr
    SCIP_CONSEXPR_EXPR**    children;      /**< children expressions */
 
    int                     nuses;         /**< reference counter */
+
+   /* point-evaluation */
+   unsigned int            evaltag;       /**< tag of point for which the expression has been evaluated last, or 0 */
+   SCIP_Real               evalvalue;     /**< value of expression from last evaluation (corresponding to evaltag) */
 
    /* expression walker data */
    SCIP_CONSEXPR_EXPR*     walkparent;    /**< parent expression in expression walk */

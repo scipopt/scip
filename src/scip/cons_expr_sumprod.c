@@ -265,6 +265,49 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSEXPR_EXPREVAL(evalSum)
+{
+   SCIP_Real* exprdata;
+   int c;
+
+   assert(expr != NULL);
+
+   exprdata = (SCIP_Real*)SCIPgetConsExprExprData(expr);
+
+   *val = exprdata[0];
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]) != SCIP_INVALID);
+
+      *val += exprdata[c+1] * SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]);
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
+{
+   SCIP_Real* exprdata;
+   int c;
+
+   assert(expr != NULL);
+
+   exprdata = (SCIP_Real*)SCIPgetConsExprExprData(expr);
+
+   *val = exprdata[0];
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]) != SCIP_INVALID);
+
+      /* TODO handle integer exponents */
+      *val *= pow(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]), exprdata[c+1]);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for sum expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -273,7 +316,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "sum", "summation with coefficients and a constant", SUM_PRECEDENCE, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "sum", "summation with coefficients and a constant", SUM_PRECEDENCE, evalSum, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrSum, NULL) );
@@ -332,7 +375,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "prod", "product of children with exponents (actually a signomial)", PRODUCT_PRECEDENCE, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "prod", "product of children with exponents (actually a signomial)", PRODUCT_PRECEDENCE, evalProduct, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrProduct, NULL) );
