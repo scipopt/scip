@@ -117,7 +117,7 @@ SCIP_RETCODE testWalk(void)
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
 
-   /* create expression 5*x*y and walk it
+   /* create expression x*y*(-5) and walk it
     * TODO: do this on a bit more interesting expression (at least one more depth)
     */
    {
@@ -132,7 +132,7 @@ SCIP_RETCODE testWalk(void)
       SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
 
       /* create expression for constant 5 */
-      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr_5, 5.0) );
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr_5, -5.0) );
 
       /* create expression for product of 5, x, and y (TODO should have something to add children to an existing product expr) */
       {

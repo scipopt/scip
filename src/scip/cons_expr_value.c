@@ -51,7 +51,16 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
 
    if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR )
    {
-      SCIPinfoMessage(scip, file, "%g", SCIPgetConsExprExprValueValue(expr));
+      SCIP_Real v = SCIPgetConsExprExprValueValue(expr);
+      if( v < 0.0 )
+      {
+         /* TODO use precedence to figure out when we can skip parenthesis */
+         SCIPinfoMessage(scip, file, "(%g)", v);
+      }
+      else
+      {
+         SCIPinfoMessage(scip, file, "%g", v);
+      }
    }
 
    return SCIP_OKAY;
