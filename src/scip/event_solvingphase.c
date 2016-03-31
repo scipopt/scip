@@ -1432,48 +1432,48 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
    SCIP_CALL( SCIPsetEventhdlrExitsol(scip, eventhdlr, eventExitsolSolvingphase) );
 
    /* add Solvingphase event handler parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME"s/enabled", "should the event handler adapt the solver behavior?",
+   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME "s/enabled", "should the event handler adapt the solver behavior?",
          &eventhdlrdata->enabled, FALSE, DEFAULT_ENABLED, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME"s/testmode", "should the event handler test all phase transitions?",
+   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME "s/testmode", "should the event handler test all phase transitions?",
          &eventhdlrdata->testmode, FALSE, DEFAULT_TESTMODE, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddStringParam(scip, EVENTHDLR_NAME"s/feassetname", "settings file for feasibility phase",
+   SCIP_CALL( SCIPaddStringParam(scip, EVENTHDLR_NAME "s/feassetname", "settings file for feasibility phase",
          &eventhdlrdata->setfilefeasibility, FALSE, DEFAULT_SETNAME, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddStringParam(scip, EVENTHDLR_NAME"s/improvesetname", "settings file for improvement phase",
+   SCIP_CALL( SCIPaddStringParam(scip, EVENTHDLR_NAME "s/improvesetname", "settings file for improvement phase",
          &eventhdlrdata->setfileimprove, FALSE, DEFAULT_SETNAME, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddStringParam(scip, EVENTHDLR_NAME"s/proofsetname", "settings file for proof phase",
+   SCIP_CALL( SCIPaddStringParam(scip, EVENTHDLR_NAME "s/proofsetname", "settings file for proof phase",
          &eventhdlrdata->setfileproof, FALSE, DEFAULT_SETNAME, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddLongintParam(scip, EVENTHDLR_NAME"s/nodeoffset", "node offset for rank-1 and estimate transitions", &eventhdlrdata->nodeoffset,
-         FALSE, DEFAULT_NODEOFFSET, 1L, SCIP_LONGINT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME"s/fallback", "should the event handler fall back from optimal phase?",
+   SCIP_CALL( SCIPaddLongintParam(scip, EVENTHDLR_NAME "s/nodeoffset", "node offset for rank-1 and estimate transitions", &eventhdlrdata->nodeoffset,
+         FALSE, DEFAULT_NODEOFFSET, 1, SCIP_LONGINT_MAX, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME "s/fallback", "should the event handler fall back from optimal phase?",
          &eventhdlrdata->fallback, FALSE, DEFAULT_FALLBACK, NULL, NULL) );
-   SCIP_CALL( SCIPaddCharParam(scip ,EVENTHDLR_NAME"s/transitionmethod",
+   SCIP_CALL( SCIPaddCharParam(scip ,EVENTHDLR_NAME "s/transitionmethod",
          "transition method: Possible options are 'e'stimate,'l'ogarithmic regression,'o'ptimal-value based,'r'ank-1",
          &eventhdlrdata->transitionmethod, FALSE, DEFAULT_TRANSITIONMETHOD, TRANSITIONMETHODS, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME"s/interruptoptimal",
+   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME "s/interruptoptimal",
          "should the event handler interrupt the solving process after optimal solution was found?",
          &eventhdlrdata->interruptoptimal, FALSE, DEFAULT_INTERRUPTOPTIMAL, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME"s/userestart1to2",
+   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME "s/userestart1to2",
          "should a restart be applied between the feasibility and improvement phase?",
          &eventhdlrdata->userestart1to2, FALSE, DEFAULT_USERESTART1TO2, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME"s/userestart2to3",
+   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME "s/userestart2to3",
          "should a restart be applied between the improvement and the proof phase?",
          &eventhdlrdata->userestart2to3, FALSE, DEFAULT_USERESTART2TO3, NULL, NULL) );
 
-   SCIP_CALL(SCIPaddRealParam(scip, EVENTHDLR_NAME"s/optimalvalue", "optimal solution value for problem",
+   SCIP_CALL(SCIPaddRealParam(scip, EVENTHDLR_NAME "s/optimalvalue", "optimal solution value for problem",
          &eventhdlrdata->optimalvalue, FALSE, SCIP_INVALID, SCIP_REAL_MIN, SCIP_REAL_MAX, NULL, NULL) );
 
    /* add parameter for logarithmic regression */
-   SCIP_CALL( SCIPaddCharParam(scip, EVENTHDLR_NAME"s/xtype", "x-type for logarithmic regression - (t)ime, (n)odes, (l)p iterations",
+   SCIP_CALL( SCIPaddCharParam(scip, EVENTHDLR_NAME "s/xtype", "x-type for logarithmic regression - (t)ime, (n)odes, (l)p iterations",
         &eventhdlrdata->logregression_xtype, FALSE, DEFAULT_LOGREGRESSION_XTYPE, LOGREGRESSION_XTYPES, NULL, NULL) );
 
-   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME"s/useemphsettings",
+   SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME "s/useemphsettings",
       "should emphasis settings for the solving phases be used, or settings files?",
       &eventhdlrdata->useemphsettings, FALSE, DEFAULT_USEEMPHSETTINGS, NULL, NULL) );
 
