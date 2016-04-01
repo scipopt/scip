@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -39,10 +39,10 @@ extern "C" {
  *  @note: in contrast to other timings, these timings need to start from 0x0002u in order to avoid confusion with
  *         the now obsolete '(presol)delay' boolean flag used until SCIP version 3.1.1
  */
-#define SCIP_PRESOLTIMING_NONE            0x000u  /**< presolving disabled */
-#define SCIP_PRESOLTIMING_FAST            0x002u  /**< timing for fast presolving methods */
-#define SCIP_PRESOLTIMING_MEDIUM          0x004u  /**< timing for more expensive presolving methods */
-#define SCIP_PRESOLTIMING_EXHAUSTIVE      0x008u  /**< timing for most expensive presolving methods */
+#define SCIP_PRESOLTIMING_NONE            0x002u  /**< presolving disabled */
+#define SCIP_PRESOLTIMING_FAST            0x004u  /**< timing for fast presolving methods */
+#define SCIP_PRESOLTIMING_MEDIUM          0x008u  /**< timing for more expensive presolving methods */
+#define SCIP_PRESOLTIMING_EXHAUSTIVE      0x010u  /**< timing for most expensive presolving methods */
 
 /** call presolver in every timing */
 #define SCIP_PRESOLTIMING_ALWAYS (SCIP_PRESOLTIMING_FAST | SCIP_PRESOLTIMING_MEDIUM | SCIP_PRESOLTIMING_EXHAUSTIVE )

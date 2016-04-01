@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -72,7 +72,7 @@ typedef enum SideChange SIDECHANGE;
 static
 SCIP_Real getMinColActWithoutRow(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   col,                /**< column index */
    int                   withoutrow,         /**< exclude row index */
    SCIP_Real*            lbdual[2],          /**< lower bounds of dual variables */
@@ -190,7 +190,7 @@ SCIP_Real getMinColActWithoutRow(
 static
 SCIP_Real getMinColActWithoutBound(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   col,                /**< column index */
    SCIP_Real*            lbdual[2],          /**< lower bounds of dual variables */
    SCIP_Real*            ubdual[2],          /**< upper bounds of dual variables */
@@ -277,7 +277,7 @@ SCIP_Real getMinColActWithoutBound(
 static
 void calcColActResidualCommon(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   col,                /**< column index */
    int                   row,                /**< row index */
    SCIP_Real             val,                /**< matrix coefficient */
@@ -356,7 +356,7 @@ void calcColActResidualCommon(
 static
 void calcColActResidualExplicitBound(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   col,                /**< column index */
    SCIP_Real*            lbdual[2],          /**< lower bounds of dual variables */
    SCIP_Real*            ubdual[2],          /**< upper bounds of dual variables */
@@ -442,7 +442,7 @@ void calcColActResidualExplicitBound(
 static
 void calcColActivity(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   startcol,           /**< start column index */
    int                   stopcol,            /**< stop column index */
    SCIP_Real*            lbdual[2],          /**< lower bounds of dual variables */
@@ -578,7 +578,7 @@ void calcColActivity(
 static
 void updateDualBounds(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    SCIP_Real             objval,             /**< objective function value */
    SCIP_Real             val,                /**< matrix coefficient */
    int                   row,                /**< row index */
@@ -643,7 +643,7 @@ void updateDualBounds(
 static
 void updateDualBoundsExplicit(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    SCIP_Real             objval,             /**< objective function value */
    int                   col,                /**< column index */
    SCIP_Real             mincolresact,       /**< minimal column residual activity */
@@ -715,7 +715,7 @@ void updateDualBoundsExplicit(
 static
 void infCntUpdate(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    SCIP_Real             val,                /**< matrix coefficient */
    int                   row,                /**< row index */
    SCIP_Real*            lbdual[2],          /**< lower bounds of dual variables */
@@ -817,7 +817,7 @@ void infCntUpdate(
 static
 void infCntUpdateExplicit(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    int                   col,                /**< column index */
    SCIP_Real*            lbdual[2],          /**< lower bounds of dual variables */
    SCIP_Real*            ubdual[2],          /**< upper bounds of dual variables */
@@ -883,7 +883,7 @@ void infCntUpdateExplicit(
 static
 SCIP_RETCODE dualBoundStrengthening(
    SCIP*                 scip,               /**< SCIP main data structure */
-   SCIPMILPMATRIX*       matrix,             /**< matrix containing the constraints */
+   SCIP_MATRIX*          matrix,             /**< matrix containing the constraints */
    FIXINGDIRECTION*      varstofix,          /**< array holding information for later upper/lower bound fixing */
    int*                  npossiblefixings,   /**< number of possible fixings */
    SIDECHANGE*           sidestochange,      /**< array holding if this is an implied equality */
@@ -1120,7 +1120,7 @@ SCIP_DECL_PRESOLCOPY(presolCopyDualinfer)
 static
 SCIP_DECL_PRESOLEXEC(presolExecDualinfer)
 {  /*lint --e{715}*/
-   SCIPMILPMATRIX* matrix;
+   SCIP_MATRIX* matrix;
    SCIP_Bool initialized;
    SCIP_Bool complete;
 
