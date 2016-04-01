@@ -584,9 +584,9 @@ SCIP_RETCODE SCIPcreateProbSpa(
          for( c2 = 0; c2 < c1; ++c2 )
          {
             (void)SCIPsnprintf( consname, SCIP_MAXSTRLEN, "irrev1_%d_%d", c1 + 1, c2 + 1 );
-            SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0 * nbins) );
+            SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0 ) );
             SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->targetvar, 1.0) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c1 + ncluster * c2], 1.0 * nbins) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c1 + ncluster * c2], 1.0) );
             /* add all cut edges between cluster c1 and c2 */
             for( i = 0; i < nbins; ++i )
             {
@@ -601,9 +601,9 @@ SCIP_RETCODE SCIPcreateProbSpa(
 
 
             (void)SCIPsnprintf( consname, SCIP_MAXSTRLEN, "irrev2_%d_%d", c1 + 1, (c1 + 2) % ncluster );
-            SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0 * nbins) );
+            SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0) );
             SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->targetvar, 1.0) );
-            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c2 + ncluster * c1], 1.0 * nbins) );
+            SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c2 + ncluster * c1], 1.0) );
             for( i = 0; i < nbins; ++i )
             {
                for( j = 0; j < i; ++j )
@@ -658,9 +658,9 @@ SCIP_RETCODE SCIPcreateProbSpa(
          {
             (void)SCIPsnprintf( consname, SCIP_MAXSTRLEN, "irrev1_%d_%d", c1 + 1,c2 + 1 );
             /* use the absolute value for the irreversibility-measure */
-            SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, -SCIPinfinity(scip), 1.0 * nbins) );
+            SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, -SCIPinfinity(scip), 1.0 ) );
             SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, probdata->targetvar, 1.0) );
-            SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, probdata->absvar[c1 + ncluster * c2], 1.0 * nbins) );
+            SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, probdata->absvar[c1 + ncluster * c2], 1.0) );
 
             /* add all the bilinear terms to the constraint */
             for( i = 0; i < nbins; ++i )
@@ -679,9 +679,9 @@ SCIP_RETCODE SCIPcreateProbSpa(
 
             /* add the second part of the constraint */
             (void)SCIPsnprintf( consname, SCIP_MAXSTRLEN, "irrev2_%d_%d", c1 + 1, c2 + 1 );
-            SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, -SCIPinfinity(scip), 1.0 * nbins) );
+            SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, -SCIPinfinity(scip), 1.0) );
             SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, probdata->targetvar, 1.0) );
-            SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, probdata->absvar[c2 + ncluster * c1], 1.0 * nbins) );
+            SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, probdata->absvar[c2 + ncluster * c1], 1.0) );
 
             /* add all the bilinear terms to the constraint */
             for( i = 0; i < nbins; ++i )
