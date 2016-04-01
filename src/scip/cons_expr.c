@@ -85,6 +85,8 @@
 struct SCIP_ConsData
 {
    SCIP_CONSEXPR_EXPR*   expr;               /**< expression that represents this constraint (must evaluate to 0 (FALSE) or 1 (TRUE)) */
+   SCIP_Real             lhs;                /**< left-hand side */
+   SCIP_Real             rhs;                /**< right-hand side */
 };
 
 /** constraint handler data */
@@ -459,18 +461,19 @@ SCIP_DECL_CONSEXITSOL(consExitsolExpr)
 
 
 /** frees specific constraint data */
-#if 0
 static
 SCIP_DECL_CONSDELETE(consDeleteExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(consdata != NULL);
+   assert(*consdata != NULL);
+   assert((*consdata)->expr != NULL);
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*consdata)->expr) );
+
+   SCIPfreeBlockMemory(scip, consdata);
 
    return SCIP_OKAY;
 }
-#else
-#define consDeleteExpr NULL
-#endif
 
 
 /** transforms constraint data into data belonging to the transformed problem */
@@ -1579,9 +1582,7 @@ SCIP_RETCODE SCIPcreateConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            coefs,              /**< array with coefficients of constraint entries */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression of constraint (must not be NULL) */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs,                /**< right hand side of constraint */
    SCIP_Bool             initial,            /**< should the LP relaxation of constraint be in the initial LP?
@@ -1614,8 +1615,7 @@ SCIP_RETCODE SCIPcreateConsExpr(
    SCIP_CONSHDLR* conshdlr;
    SCIP_CONSDATA* consdata;
 
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527} --e{715}*/
+   assert(expr != NULL);
 
    /* find the expr constraint handler */
    conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
@@ -1626,8 +1626,13 @@ SCIP_RETCODE SCIPcreateConsExpr(
    }
 
    /* create constraint data */
-   consdata = NULL;
-   /* TODO: create and store constraint specific data here */
+   SCIP_CALL( SCIPallocClearBlockMemory(scip, &consdata) );
+   consdata->expr = expr;
+   consdata->lhs = lhs;
+   consdata->rhs = rhs;
+
+   /* capture expression */
+   SCIPcaptureConsExprExpr(consdata->expr);
 
    /* create constraint */
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
@@ -1645,14 +1650,12 @@ SCIP_RETCODE SCIPcreateConsExprBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   int                   nvars,              /**< number of variables in the constraint */
-   SCIP_VAR**            vars,               /**< array with variables of constraint entries */
-   SCIP_Real*            coefs,              /**< array with coefficients of constraint entries */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression of constraint (must not be NULL) */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs                 /**< right hand side of constraint */
    )
 {
-   SCIP_CALL( SCIPcreateConsExpr(scip, cons, name, nvars, vars, coefs, lhs, rhs,
+   SCIP_CALL( SCIPcreateConsExpr(scip, cons, name, expr, lhs, rhs,
          TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
 
    return SCIP_OKAY;
