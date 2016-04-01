@@ -290,6 +290,8 @@ static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
 {
    SCIP_Real* exprdata;
+   SCIP_Real childval;
+   SCIP_Real powval;
    int c;
 
    assert(expr != NULL);
@@ -299,10 +301,22 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
    *val = exprdata[0];
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
-      assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]) != SCIP_INVALID);
+      childval = SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]);
+      assert(childval != SCIP_INVALID);
 
-      /* TODO handle integer exponents */
-      *val *= pow(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]), exprdata[c+1]);
+      /* according to the man page of pow(), this should also work fine for cases like pow(<negative>, <integer>) */
+      powval = pow(childval, exprdata[c+1]);
+
+      /* if there is a domain, pole, or range error, pow() should return some kind of NaN, infinity, or HUGE_VAL
+       * we could also work with floating point exceptions or errno, but I am not sure this would be thread-safe
+       */
+      if( !SCIPisFinite(powval) || powval == HUGE_VAL || powval == -HUGE_VAL )
+      {
+         *val = SCIP_INVALID;
+         return SCIP_OKAY;
+      }
+
+      *val *= powval;
    }
 
    return SCIP_OKAY;
