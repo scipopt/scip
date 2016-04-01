@@ -117,7 +117,7 @@ SCIP_RETCODE testWalk(void)
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
 
-   /* create expression x*y*(-5) and walk it
+   /* create expression x/y*(-5) and walk it
     * TODO: do this on a bit more interesting expression (at least one more depth)
     */
    {
@@ -136,8 +136,9 @@ SCIP_RETCODE testWalk(void)
 
       /* create expression for product of 5, x, and y (TODO should have something to add children to an existing product expr) */
       {
+         SCIP_Real exponents[3] = {1.0, -1.0, 1.0};
          SCIP_CONSEXPR_EXPR* xy5[3] = {expr_x, expr_y, expr_5};
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 3, xy5, NULL, 2.0) );
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 3, xy5, exponents, 2.0) );
       }
 
       /* release leaf expressions (this should not free them yet, as they are captured by prod_xy5) */

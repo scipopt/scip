@@ -218,17 +218,35 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
          /* print constant coefficient, if nonzero */
          if( exprdata[0] != 0.0 )
          {
-            SCIPinfoMessage(scip, file, "%g", exprdata[SCIPgetConsExprExprWalkCurrentChild(expr)]);
+            SCIPinfoMessage(scip, file, "%g", exprdata[0]);
          }
          break;
       }
 
       case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
       {
-         /* print multiplication sign, if not first factor */
-         if( exprdata[0] != 0.0 || SCIPgetConsExprExprWalkCurrentChild(expr) > 0 )
+         int childidx = SCIPgetConsExprExprWalkCurrentChild(expr);
+
+         if( exprdata[childidx+1] >= 0.0 )
          {
-            SCIPinfoMessage(scip, file, "*");
+            /* print multiplication sign, if not first factor */
+            if( exprdata[0] != 0.0 || childidx > 0 )
+            {
+               SCIPinfoMessage(scip, file, "*");
+            }
+         }
+         else
+         {
+            if( exprdata[0] != 0.0 || childidx > 0 )
+            {
+               /* print division sign, if not first factor */
+               SCIPinfoMessage(scip, file, "/");
+            }
+            else
+            {
+               /* print "1/", if first factor */
+               SCIPinfoMessage(scip, file, "1/");
+            }
          }
          break;
       }
@@ -238,12 +256,9 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
          SCIP_Real exponent;
          exponent = exprdata[SCIPgetConsExprExprWalkCurrentChild(expr)+1];
 
-         /* print exponent, if not 1.0; put into parenthesis, if negative */
-         if( exponent < 0.0 )
-         {
-            SCIPinfoMessage(scip, file, "^(%g)", exponent);
-         }
-         else if( exponent != 1.0 )
+         /* print absolute value of exponent, if not 1.0 (sign is taken care of in VISITINGCHILD) */
+         exponent = REALABS(exponent);
+         if( exponent != 1.0 )
          {
             SCIPinfoMessage(scip, file, "^%g", exponent);
          }
