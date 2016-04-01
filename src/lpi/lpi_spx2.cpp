@@ -169,7 +169,7 @@ using namespace soplex;
 
 /** SCIP's SoPlex class */
 class SPxSCIP : public SoPlex
-{
+{/*lint !e1790*/
    bool                  _lpinfo;
    bool                  _fromscratch;
    char*                 _probname;
@@ -226,7 +226,7 @@ public:
       (void) CPXfreeprob(_cpxenv, &_cpxlp);
       (void) CPXcloseCPLEX(&_cpxenv);
 #endif
-   }
+   }/*lint -e1579*/
 
    // we might need these methods to return the original values SCIP provided, even if they could not be set
    /** return feastol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */

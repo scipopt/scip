@@ -1448,7 +1448,7 @@ SCIP_RETCODE SCIPincludeEventHdlrSolvingphase(
          &eventhdlrdata->setfileproof, FALSE, DEFAULT_SETNAME, NULL, NULL) );
 
    SCIP_CALL( SCIPaddLongintParam(scip, EVENTHDLR_NAME "s/nodeoffset", "node offset for rank-1 and estimate transitions", &eventhdlrdata->nodeoffset,
-         FALSE, DEFAULT_NODEOFFSET, 1, SCIP_LONGINT_MAX, NULL, NULL) );
+         FALSE, DEFAULT_NODEOFFSET, 1L, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddBoolParam(scip, EVENTHDLR_NAME "s/fallback", "should the event handler fall back from optimal phase?",
          &eventhdlrdata->fallback, FALSE, DEFAULT_FALLBACK, NULL, NULL) );
    SCIP_CALL( SCIPaddCharParam(scip ,EVENTHDLR_NAME "s/transitionmethod",
