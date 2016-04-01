@@ -51,7 +51,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printVar)
 
    if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR )
    {
-      SCIPinfoMessage(scip, file, "%s", SCIPvarGetName((SCIP_VAR*)SCIPgetConsExprExprData(expr)));
+      SCIPinfoMessage(scip, file, "<%s>", SCIPvarGetName((SCIP_VAR*)SCIPgetConsExprExprData(expr)));
    }
 
    return SCIP_OKAY;
