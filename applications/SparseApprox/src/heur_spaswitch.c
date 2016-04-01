@@ -351,20 +351,6 @@ SCIP_DECL_HEURFREE(heurFreeSpaswitch)
 }
 
 
-/** solving process initialization method of primal heuristic (called when branch and bound process is about to begin) */
-static
-SCIP_DECL_HEURINITSOL(heurInitsolSpaswitch)
-{
-   SCIP_HEURDATA* heurdata;
-
-   assert(strcmp(SCIPheurGetName(heur), HEUR_NAME) == 0);
-
-   /* create heuristic data */
-   heurdata = SCIPheurGetData(heur);
-   assert(heurdata != NULL);
-
-   return SCIP_OKAY;
-}
 
 /** solving process deinitialization method of primal heuristic (called before branch and bound process data is freed) */
 static
@@ -714,7 +700,6 @@ SCIP_RETCODE SCIPincludeHeurSpaswitch(
    /* set non-NULL pointers to callback methods */
    SCIP_CALL( SCIPsetHeurCopy(scip, heur, heurCopySpaswitch) );
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeSpaswitch) );
-   SCIP_CALL( SCIPsetHeurInitsol(scip, heur, heurInitsolSpaswitch) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolSpaswitch) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitSpaswitch) );
 
