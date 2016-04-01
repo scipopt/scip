@@ -202,7 +202,7 @@ SCIP_RETCODE assignVars(
       }
       /* set indicatorvar whether cluster is nonempty */
 
-      if( !isempty && SCIPisPositive(scip, SCIPvarGetUbGlobal(indvars[c])) )
+      if( !isempty && SCIPisEQ(scip, SCIPvarGetUbGlobal(indvars[c]), 1.0) )
          SCIP_CALL( SCIPsetSolVal(scip, sol, indvars[c], 1.0) );
       else
       {
@@ -214,9 +214,9 @@ SCIP_RETCODE assignVars(
       for ( i = 0; i < nbins; ++i )
       {
          /* check if the clusterassignment ist feasible for the variable bounds. If not do not assign the variable */
-         if( SCIPisPositive(scip, SCIPvarGetLbGlobal(binvars[i][c])) && clustering[i][c] == 0 )
+         if( SCIPisGT(scip, SCIPvarGetLbGlobal(binvars[i][c]), clustering[i][c]) )
             continue;
-         if( SCIPisLT(scip, SCIPvarGetUbGlobal(binvars[i][c]), 1) && clustering[i][c] == 1 )
+         if( SCIPisLT(scip, SCIPvarGetUbGlobal(binvars[i][c]), clustering[i][c]) )
             continue;
          /* if the assignment respects the variable bounds, assign the binvars */
          SCIP_CALL( SCIPsetSolVal( scip, sol, binvars[i][c], clustering[i][c]) );
@@ -226,21 +226,22 @@ SCIP_RETCODE assignVars(
       /* set the value for the edgevariables */
       for( i = 0; i < nbins; ++i )
       {
-         for( j = 0; j < i; ++j )
+         for( j = 0; j < nbins; ++j )
          {
+            if( j == i )
+               continue;
+            if( j < i )
+            {
+               if( SCIPisGE(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c]), clustering[j][c] * clustering[i][c]) && SCIPisLE(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c]), clustering[j][c] * clustering[i][c]) )
+                  SCIP_CALL( SCIPsetSolVal( scip, sol, edgevars[i][j][c][c], clustering[j][c] * clustering[i][c]  ) );
+            }
             for( c2 = 0; c2 < c; ++c2 )
             {
-               if( SCIPisEQ(scip, 1.0, clustering[j][c2] * clustering[i][c]) && SCIPisLT(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c2]), 1) )
+               if( SCIPisLT(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c2]), clustering[j][c2] * clustering[i][c]) || SCIPisGT(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c2]), clustering[j][c2] * clustering[i][c]) )
                   continue;
                else
                   SCIP_CALL( SCIPsetSolVal( scip, sol, edgevars[i][j][c][c2], clustering[j][c2] * clustering[i][c] ) );
-               if( SCIPisEQ(scip, 1.0, clustering[j][c] * clustering[i][c2]) && SCIPisLT(scip, SCIPvarGetUbGlobal(edgevars[j][i][c][c2]), 1) )
-                  continue;
-               else
-                  SCIP_CALL( SCIPsetSolVal( scip, sol, edgevars[j][i][c][c2], clustering[j][c] * clustering[i][c2] ) );
             }
-            if( SCIPisGE(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c]), clustering[j][c] * clustering[i][c]) )
-               SCIP_CALL( SCIPsetSolVal( scip, sol, edgevars[i][j][c][c], clustering[j][c] * clustering[i][c]  ) );
          }
       }
 
@@ -252,16 +253,16 @@ SCIP_RETCODE assignVars(
          /* set the absolute-value vars. Always check if the found values are feasible for the bounds of the variables */
          if( SCIPisGT(scip, q1, q2) )
          {
-            if( SCIPisPositive(scip, SCIPvarGetUbGlobal(absvars[i + ncluster * c])) )
+            if( SCIPisEQ(scip, SCIPvarGetUbGlobal(absvars[i + ncluster * c]), 1.0) )
                SCIP_CALL( SCIPsetSolVal(scip, sol, absvars[i + ncluster * c], 1.0) );
-            if( SCIPisLT(scip, SCIPvarGetLbGlobal(absvars[c + ncluster * i]), 1) )
+            if( SCIPisZero(scip, SCIPvarGetLbGlobal(absvars[c + ncluster * i])) )
                SCIP_CALL( SCIPsetSolVal(scip, sol, absvars[c + ncluster * i], 0.0) );
          }
          else if( SCIPisGT(scip, q2, q1) )
          {
-            if( SCIPisPositive(scip, SCIPvarGetUbGlobal(absvars[c + ncluster * i])) )
+            if( SCIPisEQ(scip, SCIPvarGetUbGlobal(absvars[c + ncluster * i]), 1.0) )
                SCIP_CALL( SCIPsetSolVal(scip, sol, absvars[c + ncluster * i], 1.0) );
-            if( SCIPisLT(scip, SCIPvarGetLbGlobal(absvars[i + ncluster * c]), 1) )
+            if( SCIPisZero(scip, SCIPvarGetLbGlobal(absvars[i + ncluster * c])) )
                SCIP_CALL( SCIPsetSolVal(scip, sol, absvars[i + ncluster * c], 0.0) );
          }
          else
