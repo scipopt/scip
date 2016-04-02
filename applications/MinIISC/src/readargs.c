@@ -23,7 +23,7 @@
 
 /** get problem name
  *
- *  Returns 0 on error
+ *  Returns 0 if maxsize is not sufficient and 1 otherwise.
  */
 int getProblemName(
    const char*           filename,           /**< file name */
@@ -31,43 +31,43 @@ int getProblemName(
    int                   maxsize             /**< max length of problem name */
    )
 {
-   int i = 0;
    int result = 1;
+   int i = 0;
    int l;
    int j;
 
    /* first find end of string */
-   while ( filename[i] != 0) /* find end of string */
+   while ( filename[i] != 0)
       ++i;
-   l = i;                /* end of string */
+   l = i; /* end of string */
 
    /* if we found ".gz" */
    if ( l > 3 && filename[l-3] == '.' && filename[l-2] == 'g' && filename[l-1] == 'z' )
    {
-      l = l - 4;
+      l -= 4;
       i = l;
    }
 
    /* go back until '.' or '/' appears */
-   while ((i > 0) && (filename[i] != '.') && (filename[i] != '/'))
+   while (i > 0 && filename[i] != '.' && filename[i] != '/')
       --i;
-   assert(i > 0);
+   assert( i > 0 );
 
    /* if we found '.', search for '/' */
-   if (filename[i] == '.')
+   if ( filename[i] == '.' )
    {
       l = i;
-      while ((i > 0) && (filename[i] != '/'))
+      while ( i > 0 && filename[i] != '/' )
 	 --i;
    }
 
    /* correct counter */
-   if (filename[i] == '/')
+   if ( filename[i] == '/' )
       ++i;
 
    /* copy name */
    j = 0;
-   while ( (i < l) && (filename[i] != 0) )
+   while ( i < l && filename[i] != 0 )
    {
       probname[j++] = filename[i++];
       if ( j >= maxsize-1 )
@@ -129,18 +129,19 @@ SCIP_RETCODE readArguments(
    for (i = 1; i < argc; ++i)
    {
       /* check for settings */
-      if ( ! strcmp(argv[i], "-s") )
+      if ( strcmp(argv[i], "-s") == 0 )
       {
          if ( *settingsname != NULL )
          {
-	    printf("Error: %s\n", usage);
-            return SCIP_ERROR;
+            (void) fprintf(stderr, "Error: Setting name already supplied.\n");
+	    (void) fprintf(stderr, "%s\n", usage);
+            return SCIP_INVALIDDATA;
          }
          if ( i == argc-1 )
          {
-            printf("No setting file name supplied.\n");
-            printf("%s\n", usage);
-            return SCIP_ERROR;
+            fprintf(stderr, "Error: No setting file name supplied.\n");
+            fprintf(stderr, "%s\n", usage);
+            return SCIP_INVALIDDATA;
          }
          ++i;
          *settingsname = argv[i];
@@ -149,13 +150,13 @@ SCIP_RETCODE readArguments(
       else
       {
          /* check for time limit */
-         if ( ! strcmp(argv[i], "-t") )
+         if ( strcmp(argv[i], "-t") == 0 )
          {
             if ( i == argc-1 )
             {
-               printf("No time limit supplied.\n");
-               printf("%s\n", usage);
-               return SCIP_ERROR;
+               fprintf(stderr, "Erro: No time limit supplied.\n");
+               fprintf(stderr, "%s\n", usage);
+               return SCIP_INVALIDDATA;
             }
             ++i;
             *timelimit = atof(argv[i]);
@@ -164,13 +165,13 @@ SCIP_RETCODE readArguments(
          else
          {
             /* check for memory limit */
-            if ( ! strcmp(argv[i], "-m") )
+            if ( strcmp(argv[i], "-m") == 0 )
             {
                if ( i == argc-1 )
                {
-                  printf("No memory limit supplied.\n");
-                  printf("%s\n", usage);
-                  return SCIP_ERROR;
+                  fprintf(stderr, "Error: No memory limit supplied.\n");
+                  fprintf(stderr, "%s\n", usage);
+                  return SCIP_INVALIDDATA;
                }
                ++i;
                *memlimit = atof(argv[i]);
@@ -179,13 +180,13 @@ SCIP_RETCODE readArguments(
             else
             {
                /* check for memory limit */
-               if ( ! strcmp(argv[i], "-n") )
+               if ( strcmp(argv[i], "-n") == 0 )
                {
                   if ( i == argc-1 )
                   {
-                     printf("No node limit supplied.\n");
-                     printf("%s\n", usage);
-                     return SCIP_ERROR;
+                     fprintf(stderr, "Error: No node limit supplied.\n");
+                     fprintf(stderr, "%s\n", usage);
+                     return SCIP_INVALIDDATA;
                   }
                   ++i;
                   *nodelimit = atol(argv[i]);
@@ -194,13 +195,13 @@ SCIP_RETCODE readArguments(
                else
                {
                   /* check for display frequency */
-                  if ( ! strcmp(argv[i], "-d") )
+                  if ( strcmp(argv[i], "-d") == 0 )
                   {
                      if ( i == argc-1 )
                      {
-                        printf("No display frequency supplied.\n");
-                        printf("%s\n", usage);
-                        return SCIP_ERROR;
+                        fprintf(stderr, "Error: No display frequency supplied.\n");
+                        fprintf(stderr, "%s\n", usage);
+                        return SCIP_INVALIDDATA;
                      }
                      ++i;
                      *dispfreq = atoi(argv[i]);
@@ -211,7 +212,8 @@ SCIP_RETCODE readArguments(
                      /* if filename is already specified */
                      if ( *filename != NULL )
                      {
-                        printf("%s\n", usage);
+                        fprintf(stderr, "Error: file name already specified.\n");
+                        fprintf(stderr, "%s\n", usage);
                         return SCIP_ERROR;
                      }
                      *filename = argv[i];
@@ -224,9 +226,9 @@ SCIP_RETCODE readArguments(
 
    if ( *filename == NULL )
    {
-      printf("No filename supplied.\n");
-      printf("%s\n", usage);
-      return SCIP_ERROR;
+      fprintf(stderr, "Error: No filename supplied.\n");
+      fprintf(stderr, "%s\n", usage);
+      return SCIP_INVALIDDATA;
    }
 
    return SCIP_OKAY;
