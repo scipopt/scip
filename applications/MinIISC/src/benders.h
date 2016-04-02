@@ -17,7 +17,7 @@
  * @brief  run Benders algorithm
  * @author Marc Pfetsch
  *
- * The algorithm uses an oracle for solving the subproblems and solves the master problem to optimality.
+ * Run Benders algorithm using an oracle for solving the subproblems and solving the master problem to optimality.
  */
 
 #ifndef __BENDERS_H__

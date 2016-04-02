@@ -17,7 +17,7 @@
  * @brief  run Benders algorithm
  * @author Marc Pfetsch
  *
- * The algorithm uses an oracle for solving the subproblems and solves the master problem to optimality.
+ * Run Benders algorithm using an oracle for solving the subproblems and solving the master problem to optimality.
  */
 
 #include "benders.h"
@@ -154,14 +154,14 @@ SCIP_RETCODE printLongStatistics(
    SCIPinfoMessage(masterscip, NULL, "  Problem name     : %s\n", SCIPgetProbName(masterscip));
    SCIPinfoMessage(masterscip, NULL, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
       SCIPgetNVars(masterscip), SCIPgetNOrigVars(masterscip), 0, 0, 0);
-   SCIPinfoMessage(masterscip, NULL, "  Constraints      : %d initial, %d maximal\n", 0, SCIPgetNOrigConss(masterscip));
+   SCIPinfoMessage(masterscip, NULL, "  Constraints      : %d initial, %d maximal\n", 1, SCIPgetNOrigConss(masterscip));
    SCIPinfoMessage(masterscip, NULL, "  Objective sense  : minimize\n");
 
    SCIPinfoMessage(masterscip, NULL, "Presolved Problem  :\n");
    SCIPinfoMessage(masterscip, NULL, "  Problem name     : %s\n", SCIPgetProbName(masterscip));
    SCIPinfoMessage(masterscip, NULL, "  Variables        : %d (%d binary, %d integer, %d implicit integer, %d continuous)\n",
-      SCIPgetNVars(masterscip), SCIPgetNOrigVars(masterscip), 0, 0, 0);
-   SCIPinfoMessage(masterscip, NULL, "  Constraints      : %d initial, %d maximal\n", 0, SCIPgetNOrigConss(masterscip));
+      SCIPgetNVars(masterscip), SCIPgetNBinVars(masterscip), SCIPgetNIntVars(masterscip), SCIPgetNImplVars(masterscip), SCIPgetNContVars(masterscip));
+   SCIPinfoMessage(masterscip, NULL, "  Constraints      : %d initial, %d maximal\n", SCIPgetNConss(masterscip), SCIPgetNOrigConss(masterscip));
 
    SCIPinfoMessage(masterscip, NULL, "Constraints        :     Number  MaxNumber  #Separate #Propagate    #EnfoLP    #EnfoPS     #Check   #ResProp    Cutoffs    DomReds       Cuts    Applied      Conss   Children\n");
    SCIPinfoMessage(masterscip, NULL, "  %-17.17s: %10d %10d %10d %10d %10d %10d %10d %10d %10d %10d %10d %10d %10" SCIP_LONGINT_FORMAT " %10d\n",
