@@ -42,6 +42,8 @@
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_EXHAUSTIVE /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_PROP_TIMING     (SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP)
 
+#define DEFAULT_MAXDEPTH 2
+
 #define INTFACTOR 10
 
 /*
@@ -492,14 +494,12 @@ SCIP_RETCODE solveComponent(
             SCIPdebugMessage("... feasible\n");
 
             SCIP_CALL( SCIPaddSol(subscip, compsol, &feasible) );
-            assert(feasible);
          }
          else
          {
-            SCIPdebugMessage("... infeasible\n");
+            SCIPdebugMessage("... infeasible, update cutoff bound\n");
 
-            // ??????????????????????????????????
-            //SCIP_CALL( SCIPupdateCutoffbound(subscip, ) );
+            SCIP_CALL( SCIPupdateCutoffbound(subscip, SCIPgetSolOrigObj(subscip, compsol)) );
          }
       }
    }
@@ -1473,6 +1473,13 @@ SCIP_DECL_CONSPROP(consPropComponents)
    if( proptiming == SCIP_PROPTIMING_AFTERLPLOOP && SCIPgetDepth(scip) > 0 )
       return SCIP_OKAY;
 
+   if( SCIPgetDepth(scip) > conshdlrdata->maxdepth )
+   {
+      assert(SCIPconshdlrGetNActiveConss(conshdlr) == 0);
+
+      return SCIP_OKAY;
+   }
+
    problem = NULL;
    *result = SCIP_DIDNOTFIND;
 
@@ -1561,6 +1568,12 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, conshdlrFreeComponents) );
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyComponents, NULL) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteComponents) );
+
+   SCIP_CALL( SCIPaddIntParam(scip,
+         "constraints/" CONSHDLR_NAME "/maxdepth",
+         "maximal depth",
+         &conshdlrdata->maxdepth, FALSE, DEFAULT_MAXDEPTH, -1, INT_MAX, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }
