@@ -422,8 +422,12 @@ SCIP_Real reoptSimilarity(
 
    if( !SCIPsetIsZero(set, norm_obj1) && !SCIPsetIsZero(set, norm_obj2) )
       similarity /= (norm_obj1 * norm_obj2);
-   else
-      return MIN(similarity, 1.0);
+
+   /* make sure that we are between -1.0 und +1.0 */
+   similarity = MAX(similarity, -1.0);
+   similarity = MIN(similarity, 1.0);
+
+   return similarity;
 }
 
 /** delete the given reoptimization node */
@@ -788,17 +792,20 @@ SCIP_RETCODE solnodeAddChild(
 
       curnode->child = *child;
 
+#ifdef SCIP_MORE_DEBUG
       SCIPdebugMessage("-> create new node %p: value=%g, sibling=%p\n", (void*) solnode, solnode->value,
             (void*) solnode->sibling);
+#endif
    }
    else
    {
       /* we traverse through all children */
       while( *child != NULL )
       {
+#ifdef SCIP_MORE_DEBUG
          SCIPdebugMessage("-> check %p: father=%p, value=%g, sibling=%p\n", (void*) *child, (void*) (*child)->father,
                (*child)->value, (void*) (*child)->sibling);
-
+#endif
          /* we found a node repesenting this solution value */
          if( SCIPsetIsEQ(set, val, (*child)->value) )
             break;
@@ -820,20 +827,22 @@ SCIP_RETCODE solnodeAddChild(
             solnode->sibling = NULL;
             (*child)->sibling = solnode;
 
+#ifdef SCIP_MORE_DEBUG
             SCIPdebugMessage("-> create new node %p: value=%g, sibling=%p\n", (void*) solnode, solnode->value,
                   (void*) solnode->sibling);
-
+#endif
             /* the given value is lower than the current, insertion before the current node would be correct
              * in this case we do not have to change the child pointer
              */
             if( SCIPsetIsLT(set, val, (*child)->value) )
             {
+#ifdef SCIP_MORE_DEBUG
                SCIPdebugMessage("-> need to switch:");
                SCIPdebugMessage("   before switching: node %p witch child=%p, sibling=%p, sol=%p, value=%g\n",
                      (void*) (*child), (void*) (*child)->child, (void*) (*child)->sibling, (void*) (*child)->sol, (*child)->value);
                SCIPdebugMessage("                     node %p witch child=%p, sibling=%p, sol=%p, value=%g\n",
                      (void*) solnode, (void*) solnode->child, (void*) solnode->sibling, (void*) solnode->sol, solnode->value);
-
+#endif
                /* switch child pointer */
                solnode->child = (*child)->child;
                (*child)->child = NULL;
@@ -846,11 +855,12 @@ SCIP_RETCODE solnodeAddChild(
                /* switch solution pointer */
                solnode->sol = (*child)->sol;
                (*child)->sol = NULL;
-
+#ifdef SCIP_MORE_DEBUG
                SCIPdebugMessage("    after switching: node %p witch child=%p, sibling=%p, sol=%p, value=%g\n",
                      (void*) (*child), (void*) (*child)->child, (void*) (*child)->sibling, (void*) (*child)->sol, (*child)->value);
                SCIPdebugMessage("                     node %p witch child=%p, sibling=%p, sol=%p, value=%g\n",
                      (void*) solnode, (void*) solnode->child, (void*) solnode->sibling, (void*) solnode->sol, solnode->value);
+#endif
             }
             /* set the child pointer to the new created solnode */
             else
@@ -878,10 +888,10 @@ SCIP_RETCODE solnodeAddChild(
             (*child)->sibling = solnode;
 
             *child = solnode;
-
+#ifdef SCIP_MORE_DEBUG
             SCIPdebugMessage("-> create new node %p: value=%g, sibling=%p\n", (void*) solnode, solnode->value,
                   (void*) solnode->sibling);
-
+#endif
             break;
          }
 
@@ -1307,12 +1317,12 @@ SCIP_RETCODE updateConstraintPropagation(
 
 /** save bound changes made after the first bound change based on dual information, e.g., mode by strong branching
  *
- *  This method is can be used during reoptimization. if we want to reconstruct a node containing dual bound changes we
- *  have to split the node into the original one and at least one node representing the pruned part. all bound changes,
+ *  This method can be used during reoptimization. If we want to reconstruct a node containing dual bound changes we
+ *  have to split the node into the original one and at least one node representing the pruned part. All bound changes,
  *  i.e., (constraint) propagation, made after the first bound change based on dual information are still valid for
  *  the original node after changing the objective function. thus, we can store them for the following iterations.
  *
- *  It should be noted, that these bound change will be found by (constraint) propagation methods anyway after changing
+ *  It should be noted, that these bound changes will be found by (constraint) propagation methods anyway after changing
  *  the objective function. do not saving these information and find them again might be useful for conflict analysis.
  */
 static
@@ -2269,6 +2279,7 @@ SCIP_RETCODE addNode(
       /* store in*/
       if( saveafterdual )
       {
+         assert(reopttype == SCIP_REOPTTYPE_STRBRANCHED);
          SCIP_CALL( saveAfterDualBranchings(reopt, blkmem, node, id, &transintoorig) );
       }
 
@@ -2289,6 +2300,7 @@ SCIP_RETCODE addNode(
          reopt->reopttree->reoptnodes[id]->lowerbound = lowerbound;
 
 #ifdef SCIP_MORE_DEBUG
+      {
          int varnr;
          SCIPdebugMessage(" -> saved variables:\n");
          for (varnr = 0; varnr < reopt->reopttree->reoptnodes[id]->nvars; varnr++)
@@ -2303,6 +2315,7 @@ SCIP_RETCODE addNode(
                reopt->reopttree->reoptnodes[id]->afterdualvarboundtypes[varnr] == SCIP_BOUNDTYPE_LOWER ?
                "=>" : "<=", reopt->reopttree->reoptnodes[id]->afterdualvarbounds[varnr]);
          }
+      }
 #endif
 
       /* update LPI state if node is pseudobranched or feasible */
@@ -2570,6 +2583,7 @@ SCIP_RETCODE addNode(
       /* save bound changes after some dual reduction */
       if( saveafterdual )
       {
+         assert(reopttype == SCIP_REOPTTYPE_STRBRANCHED);
          SCIP_CALL( saveAfterDualBranchings(reopt, blkmem, node, id, &transintoorig) );
       }
       else
@@ -2621,6 +2635,7 @@ SCIP_RETCODE addNode(
          }
       }
 #endif
+   }
 
    switch( reopttype )
    {
@@ -2649,7 +2664,7 @@ SCIP_RETCODE addNode(
 
       /* get all the dual information and decide if the constraint need
        * to be added next or after next */
-      SCIP_CALL( collectDualInformation(reopt, blkmem, node, id, reopttype) );
+      SCIP_CALL( collectDualInformation(reopt, set, blkmem, node, id, reopttype) );
 
       break;
 
@@ -4260,7 +4275,6 @@ SCIP_RETCODE reoptSaveNewObj(
    )
 {
    int probidx;
-   SCIP_Real norm = 0.0;
    int v;
 
    assert(reopt != NULL);
@@ -5662,7 +5676,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
       else if( eventtype == SCIP_EVENTTYPE_NODEBRANCHED )
       {
          /* store or update the information */
-         SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_TRANSIT, TRUE, isrootnode, lowerbound) );
+         SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_TRANSIT, FALSE, isrootnode, lowerbound) );
       }
       else if( eventtype == SCIP_EVENTTYPE_NODEFEASIBLE )
       {
@@ -5714,6 +5728,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
 
       /* delete strong branching information of some exists */
       deleteLastDualBndchgs(reopt);
+      strongbranched = FALSE;
 
       SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_FEASIBLE, FALSE, isrootnode, lowerbound) );
       break;
@@ -5731,18 +5746,18 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
          if( SCIPnodeGetNumber(node) == reopt->lastbranched )
          {
             deleteLastDualBndchgs(reopt);
+            strongbranched = FALSE;
             break;
          }
 
-         /* If the node is strong branched we possible detect an infeasible subtree, if not,
-          * the whole node is either infeasible or exceeds the cutoff bound.
+         /* If the node is strong branched, we possibly detect an infeasible subtree;
+          * otherwise, the whole node is either infeasible or exceeds the cutoff bound.
           */
          if( strongbranched )
          {
-            /* 1. the LP is not solved or infeasible: the subnode is infeasible and can be discarded
-             *    because either the LP proves infeasibility or a constraint handler.
-             *    We have to store an infeasible subtree constraint
-             * 2. the LP exceeds the objective limit, we have to store the node and can delete the
+            /* 1. the LP is infeasible: the (sub-)node is infeasible and can be discarded
+             *    because the LP proves infeasibility. We have to store an infeasible subtree separated by a constraint.
+             * 2. the LP exceeds the objective limit or was not solved, we have to store the node and can delete the
              *    strong branching information
              */
             if( lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE )
@@ -5763,53 +5778,39 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
             {
                assert(SCIP_LPSOLSTAT_OBJLIMIT || SCIP_LPSOLSTAT_OPTIMAL || SCIP_LPSOLSTAT_NOTSOLVED);
 
-               SCIPdebugMessage(" -> new reopttype   : %d\n", SCIP_REOPTTYPE_PRUNED);
-
-               /* delete strong branching information of some exists */
+               /* delete strong branching information if some exists */
                deleteLastDualBndchgs(reopt);
-            }
-         }
+               strongbranched = FALSE;
 
-         /* we have to check the depth of the current node. if the depth is equal to the effective
-          * root depth, then all information about bound changes based on dual information already exists,
-          * else we have to look at the domchg-data-structure.
-          */
-         if (SCIPnodeGetDepth(node) == effectiverootdepth)
-         {
-            /* Save the node if there are added constraints, because this means the node is a copy create by the
-             * reoptimization plug-in and contains at least one logic-or-constraint */
-            if( strongbranched )
-            {
-               SCIPdebugMessage(" -> new reopttype   : %d\n", SCIP_REOPTTYPE_STRBRANCHED);
-               SCIPdebugMessage(" -> new constype    : %d\n", REOPT_CONSTYPE_DUALREDS);
-               SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_STRBRANCHED, TRUE, isrootnode, lowerbound) );
+               SCIPdebugMessage(" -> new reopttype   : %d\n", SCIP_REOPTTYPE_PRUNED);
+               SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_PRUNED, FALSE, isrootnode, lowerbound) );
             }
          }
          else
          {
-            /* 1. the LP is not solved or infeasible: the whole node is infeasible and can be discarded
-             *    because either the LP proves infeasibility or a constraint handler.
-             * 2. the LP exceeds the objective limit, we have to store the node and can delete the
-             *    strong branching information
+            /* 1. the LP is infeasible: the whole node is infeasible and can be discarded
+             * 2. the LP was not solved or exceeds the objective limit, we have to store the node
              */
             if( lpsolstat == SCIP_LPSOLSTAT_INFEASIBLE )
             {
-               SCIPdebugMessage(" -> new reopttype   : %d\n", SCIP_REOPTTYPE_STRBRANCHED);
-               SCIPdebugMessage(" -> new constype    : %d\n", REOPT_CONSTYPE_DUALREDS);
-               SCIP_CALL( SCIPreoptAddDualBndchg(reopt, set, blkmem, node, NULL, 0.0, 1.0) );
-               SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_STRBRANCHED, TRUE, isrootnode, lowerbound) );
-            }
-            else if( SCIPreoptGetNAddedConss(reopt, node) > 0 )
-            {
-               SCIPdebugMessage(" -> new reopttype   : %d\n", SCIP_REOPTTYPE_LOGICORNODE);
-               SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_LOGICORNODE, TRUE, isrootnode, lowerbound) );
+               SCIPdebugMessage(" -> new reopttype   : %d\n", SCIP_REOPTTYPE_INFSUBTREE);
+               SCIP_CALL( SCIPreoptAddInfNode(reopt, set, blkmem, node) );
             }
             else
             {
-               SCIPdebugMessage(" -> new reopttype   : %d\n", SCIP_REOPTTYPE_PRUNED);
+               assert(lpsolstat == SCIP_LPSOLSTAT_NOTSOLVED || lpsolstat == SCIP_LPSOLSTAT_OBJLIMIT
+                  || lpsolstat == SCIP_LPSOLSTAT_OPTIMAL);
 
-               /* store the node */
-               SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_PRUNED, TRUE, isrootnode, lowerbound) );
+               if( SCIPreoptGetNAddedConss(reopt, node) > 0 )
+               {
+                  SCIPdebugMessage(" -> new reopttype   : %d\n", SCIP_REOPTTYPE_LOGICORNODE);
+                  SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_LOGICORNODE, FALSE, isrootnode, lowerbound) );
+               }
+               else
+               {
+                  SCIPdebugMessage(" -> new reopttype   : %d\n", SCIP_REOPTTYPE_PRUNED);
+                  SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_PRUNED, FALSE, isrootnode, lowerbound) );
+               }
             }
          }
       }
@@ -5818,7 +5819,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
          SCIPdebugMessage(" -> new reopttype   : %d\n", SCIP_REOPTTYPE_PRUNED);
 
          /* if the node was created by branch_nodereopt, nothing happens */
-         SCIP_CALL(addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_PRUNED, TRUE, isrootnode, lowerbound) );
+         SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_PRUNED, FALSE, isrootnode, lowerbound) );
 
       }
       break;
@@ -5840,7 +5841,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
          if( strongbranched )
          {
             SCIPdebugMessage(" -> new reopttype   : %d\n", SCIP_REOPTTYPE_STRBRANCHED);
-            SCIPdebugMessage(" -> new constype    : %d\n", REOPT_CONSTYPE_STRBRANCHED);
+            SCIPdebugMessage(" -> new constype    : %d\n", REOPT_CONSTYPE_DUALREDS);
             SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_STRBRANCHED, TRUE, isrootnode, lowerbound) );
          }
          else if( SCIPreoptGetNAddedConss(reopt, node) > 0 )
@@ -5866,19 +5867,19 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
          if( strongbranched )
          {
             SCIPdebugMessage(" -> new reopttype   : %d\n", SCIP_REOPTTYPE_STRBRANCHED);
-            SCIPdebugMessage(" -> new constype    : %d\n", REOPT_CONSTYPE_STRBRANCHED);
+            SCIPdebugMessage(" -> new constype    : %d\n", REOPT_CONSTYPE_DUALREDS);
             SCIP_CALL( SCIPreoptAddDualBndchg(reopt, set, blkmem, node, NULL, 0.0, 1.0) );
             SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_STRBRANCHED, TRUE, isrootnode, lowerbound) );
          }
          else if( SCIPreoptGetNAddedConss(reopt, node) > 0 )
          {
             SCIPdebugMessage(" -> new reopttype   : %d\n", SCIP_REOPTTYPE_LOGICORNODE);
-            SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_LOGICORNODE, TRUE, isrootnode, lowerbound) );
+            SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_LOGICORNODE, FALSE, isrootnode, lowerbound) );
          }
          else
          {
             SCIPdebugMessage(" -> new reopttype   : %d\n", SCIP_REOPTTYPE_TRANSIT);
-            SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_TRANSIT, TRUE, isrootnode, lowerbound) );
+            SCIP_CALL( addNode(reopt, set, blkmem, node, SCIP_REOPTTYPE_TRANSIT, FALSE, isrootnode, lowerbound) );
          }
       }
       break;
