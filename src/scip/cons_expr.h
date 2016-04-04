@@ -262,7 +262,7 @@ SCIP_Real SCIPgetConsExprExprValue(
 
 /** gives the evaluation tag from the last evaluation, or 0 */
 EXTERN
-SCIP_Real SCIPgetConsExprExprEvalTag(
+unsigned int SCIPgetConsExprExprEvalTag(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
