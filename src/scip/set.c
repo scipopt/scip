@@ -390,7 +390,7 @@
 /* Writing */
 
 #define SCIP_DEFAULT_WRITE_ALLCONSS       FALSE /**< should all constraints be written (including the redundant constraints)? */
-
+#define SCIP_DEFAULT_PRINTZEROS           FALSE /**< should varibales set to zero be printed? */
 
 
 
@@ -2215,6 +2215,11 @@ SCIP_RETCODE SCIPsetCreate(
          "write/allconss",
          "should all constraints be written (including the redundant constraints)?",
          &(*set)->write_allconss, FALSE, SCIP_DEFAULT_WRITE_ALLCONSS,
+         NULL, NULL) );
+   SCIP_CALL( SCIPsetAddBoolParam(*set, messagehdlr, blkmem,
+         "write/printzeros",
+         "should varibales set to zero be printed?",
+         &(*set)->write_printzeros, FALSE, SCIP_DEFAULT_PRINTZEROS,
          NULL, NULL) );
    SCIP_CALL( SCIPsetAddIntParam(*set, messagehdlr, blkmem,
          "write/genericnamesoffset",
