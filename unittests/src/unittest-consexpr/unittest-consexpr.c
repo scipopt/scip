@@ -366,7 +366,7 @@ SCIP_RETCODE testFree(void)
    return SCIP_OKAY;
 }
 
-/* creates expression for f(x,y) = 0.5 * ( (x^2*y^3*5^(-4))^2 * (x + 1)^3 ) */
+/* creates expression for f(x,y) = 0.5 * ( (x^2*y^(-1)*5^(-4))^2 * (x + 1)^(-3) ) */
 static
 SCIP_RETCODE createExpr(
    SCIP*                 scip,               /**< SCIP data structure */
