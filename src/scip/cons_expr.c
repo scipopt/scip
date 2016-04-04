@@ -22,6 +22,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "scip/cons_expr.h"
 #include "scip/struct_cons_expr.h"
@@ -114,7 +115,12 @@ typedef struct
  * Local methods
  */
 
-/* put your local methods here, and declare them static */
+/*
+ * Walking methods: several operations need to traverse the whole expression tree: print, evaluate, free, etc.
+ * These operations have a very natural recursive implementation. However, deep recursion can raise stack overflows.
+ * To avoid this issue, the method SCIPwalkConsExprExprDF is introduce to traverse the tree and execute callbacks
+ * at different places. Here are the callbacks needed for performing the mentioned operations
+ */
 
 /** expression walk callback to free an expression including its children (if not used anywhere else) */
 static
@@ -730,18 +736,425 @@ SCIP_DECL_CONSCOPY(consCopyExpr)
 
 
 /** constraint parsing method of constraint handler */
-#if 0
+/* Here is an attempt at defining the grammar of an expression. Will use uppercase names for variables (in the grammar sense)
+ * and terminals will be between "". A Factor will be any "block", a Term is a product of Factors and an Expression are
+ * sums of Terms (see below for the actual definition)
+ * Expression -> ["+" | "-"] Term { ("+" | "-") Term }
+ * Term       -> Factor { ("+" | "-" | "^" ) Factor }
+ * Factor     -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")"
+ *
+ * where [a|b] means a or b or none, (a|b) means a or b, {a} means 0 or more a
+ *
+ * Note that Op and OpExpression are undefined. Op corresponds to the name of an expression handler and
+ * OpExpression to whatever string the expression handler accepts (through its parse method)
+ *
+ * Each parse(Expr|Factor|Term) returns an consexpr_expr: for the time being we assume that
+ * Expr is always a exprsum
+ * Term is always a exprprod
+ * Factor can be exprvalue exprvar or other expression
+ * In particular, this means that a Term -> Factor ^ Factor will only succeed when the ^ Factor is a Value expression
+ * in which case we will remove the expression and keep the value as the exponent
+ */
+static
+SCIP_RETCODE parseExpr(SCIP*, SCIP_CONSHDLR*, char* , char**, SCIP_CONSEXPR_EXPR**);
+
+static
+SCIP_RETCODE parseFactor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   char*                 expr,               /**< expr that we are parsing */
+   char**                newpos,             /**< buffer to store the position of expr where we finished reading */
+   SCIP_CONSEXPR_EXPR**  factortree          /**< buffer to store the expr parsed by Factor */
+   )
+{
+   SCIP_VAR* var;
+
+   printf("parsing factor from %s\n", expr);
+
+   /* ignore whitespace */
+   while( isspace((unsigned char)*expr) )
+      ++expr;
+
+   if( expr[0] == '<' )
+   {
+      // if seeing <
+      // parse varname
+      // expect >
+      SCIP_CALL( SCIPparseVarName(scip, expr, &var, &expr) );
+      printf("Parsed variable %s, creating expression\n", SCIPvarGetName(var));
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, factortree, var) );
+   }
+   else if( *expr == '(' )
+   {
+      parseExpr(scip, conshdlr, ++expr, newpos, factortree);
+      expr = *newpos;
+      if( *expr != ')' )
+      {
+         printf("I was expecting a ), instead got %c from %s\n", *expr, expr);
+         assert(*expr == ')');
+      }
+      ++expr;
+   }
+   else if( isdigit(*expr) )
+   {
+      // parse number
+      SCIP_Real value;
+      if( !SCIPstrToRealValue(expr, &value, &expr) )
+      {
+         SCIPerrorMessage("error parsing number from <%s>\n", expr);
+         return SCIP_READERROR;
+      }
+      printf("Parsed value %g, creating exprvalue\n", value);
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, factortree, value) );
+   }
+   else if( isalpha(*expr) )
+   {
+      char operatorname[SCIP_MAXSTRLEN];
+      int i;
+      // else if seeing name
+      // seek exprhandler with that name
+      // expect (
+      // call exprhandler's parse
+      // expect )
+      i = 0;
+      while( *expr != '(' && !isspace((unsigned char)*expr) )
+      {
+         operatorname[i] = *expr;
+         ++expr;
+         i++;
+      }
+      operatorname[i] = '\0';
+      printf("should search for exprhandler %s and give everything that is inside the parenthesis\n", operatorname);
+      assert(expr != NULL);
+   }
+   else
+   {
+      printf("Error, I do not know what am seeing: %s\n", expr);
+      exit(1);
+   }
+   *newpos = expr;
+}
+
+static
+SCIP_RETCODE parseTerm(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   char*                 expr,               /**< expr that we are parsing */
+   char**                newpos,             /**< buffer to store the position of expr where we finished reading */
+   SCIP_CONSEXPR_EXPR**  termtree            /**< buffer to store the expr parsed by Term */
+   )
+{
+   SCIP_CONSEXPR_EXPR* factortree;
+
+   printf("parsing term from %s\n", expr);
+
+   /* ignore whitespace */
+   while( isspace((unsigned char)*expr) )
+      ++expr;
+   // parse factor
+   parseFactor(scip, conshdlr, expr, newpos, &factortree);
+
+   printf("back to parsing term (we have a factor), continue parsing from %s\n", expr);
+   *termtree = factortree;
+
+   // loop:
+   // find operand
+   // parse factor
+   expr = *newpos;
+   while( isspace((unsigned char)*expr) )
+      ++expr;
+   while( *expr == '*' || *expr == '/' || *expr == '^' )
+   {
+      SCIP_CONSEXPR_EXPR* children[2];
+      ++expr;
+      parseFactor(scip, conshdlr, expr, newpos, &factortree);
+      expr = *newpos;
+
+      //build (binary) tree TODO: handle power correctly, and / as well
+      children[0] = *termtree;
+      children[1] = factortree;
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, termtree, 2, children, NULL, 1.0) );
+
+      while( isspace((unsigned char)*expr) )
+         ++expr;
+   }
+   *newpos = expr;
+}
+static
+SCIP_RETCODE parseExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   char*                 expr,               /**< expr that we are parsing */
+   char**                newpos,             /**< buffer to store the position of expr where we finished reading */
+   SCIP_CONSEXPR_EXPR**  exprtree            /**< buffer to store the expr parsed by Expr */
+   )
+{
+   SCIP_Real sign;
+   SCIP_CONSEXPR_EXPR* termtree;
+
+   printf("parsing expression %s\n", expr);
+
+   /* ignore whitespace */
+   while( isspace((unsigned char)*expr) )
+      ++expr;
+   // if + or -, store it
+   if( *expr == '+' )
+   {
+      sign = 1.0;
+      ++expr;
+   }
+   if( *expr == '-' )
+   {
+      sign = -1.0;
+      ++expr;
+   }
+
+   parseTerm(scip, conshdlr, expr, newpos, &termtree);
+
+
+   printf("back to parsing expression (we have a term), continue parsing from %s\n", expr);
+   // TODO: handle correctly the -, currently we just don't handle it
+   *exprtree = termtree;
+
+   // loop:
+   // find symbol
+   // parse term
+   expr = *newpos;
+   while( isspace((unsigned char)*expr) )
+      ++expr;
+   while( *expr == '+' || *expr == '-' )
+   {
+      SCIP_CONSEXPR_EXPR* children[2]; /* just because we can't append */
+      ++expr;
+      parseTerm(scip, conshdlr, expr, newpos, &termtree);
+      expr = *newpos;
+
+      //build (binary) tree
+      children[0] = *exprtree;
+      children[1] = termtree;
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, exprtree, 2, children, NULL, 0.0) );
+
+      while( isspace((unsigned char)*expr) )
+         ++expr;
+   }
+   *newpos = expr;
+}
+
 static
 SCIP_DECL_CONSPARSE(consParseExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_VAR** exprvars;
+   SCIP_RETCODE retcode;
+   int        nvars;
+   SCIP_Real  lhs;
+   SCIP_Real  rhs;
+   const char* endptr;
+   char*       nonconstendptr;
+   const char* exprstart;
+   const char* exprlastchar;
+   int* varnames;
+   int* curvarname;
+   int i;
 
-   return SCIP_OKAY;
+   SCIPdebugMessage("cons_nonlinear::consparse parsing %s\n",str);
+
+   assert(scip != NULL);
+   assert(success != NULL);
+   assert(str != NULL);
+   assert(name != NULL);
+   assert(cons != NULL);
+
+   /* return if string empty */
+   if( !*str )
+      return SCIP_OKAY;
+
+   endptr = str;
+
+   //expr = NULL;
+   nvars = 0;
+
+   /* set left and right hand side to their default values */
+   lhs = -SCIPinfinity(scip);
+   rhs =  SCIPinfinity(scip);
+
+   /* parse constraint to get lhs, rhs, and expression in between (from cons_linear.c::consparse, but parsing whole string first, then getting expression) */
+
+   /* check for left hand side */
+   if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
+   {
+      /* there is a number coming, maybe it is a left-hand-side */
+      if( !SCIPstrToRealValue(str, &lhs, &nonconstendptr) )
+      {
+         SCIPerrorMessage("error parsing number from <%s>\n", str);
+         return SCIP_READERROR;
+      }
+      endptr = nonconstendptr;
+
+      /* ignore whitespace */
+      while( isspace((unsigned char)*endptr) )
+         ++endptr;
+
+      if( endptr[0] != '<' || endptr[1] != '=' )
+      {
+         /* no '<=' coming, so it was the first coefficient, but not a left-hand-side */
+         lhs = -SCIPinfinity(scip);
+      }
+      else
+      {
+         /* it was indeed a left-hand-side, so continue parsing after it */
+         str = endptr + 2;
+
+         /* ignore whitespace */
+         while( isspace((unsigned char)*str) )
+            ++str;
+      }
+   }
+
+   printf("str should start at beginning of expr: %s\n", str);
+
+   /* Move endptr forward until we find end of expression */
+   endptr = str;
+   while( !(strncmp(endptr, "[free]", 6) == 0)    &&
+          !(endptr[0] == '<' && endptr[1] == '=') &&
+          !(endptr[0] == '=' && endptr[1] == '=') &&
+          !(endptr[0] == '>' && endptr[1] == '=') &&
+          !(endptr[0] == '\0') )
+      ++endptr;
+
+   printf("just found end of expr: %s\n", endptr);
+   exprstart = str;
+   exprlastchar = endptr - 1;
+
+   *success = FALSE;
+   str = endptr;
+
+   /* check for left or right hand side */
+   while( isspace((unsigned char)*str) )
+      ++str;
+
+   /* check for free constraint */
+   if( strncmp(str, "[free]", 6) == 0 )
+   {
+      if( !SCIPisInfinity(scip, -lhs) )
+      {
+         SCIPerrorMessage("cannot have left hand side and [free] status \n");
+         return SCIP_OKAY;
+      }
+      (*success) = TRUE;
+   }
+   else
+   {
+      switch( *str )
+      {
+         case '<':
+            *success = SCIPstrToRealValue(str+2, &rhs, &nonconstendptr);
+            break;
+         case '=':
+            if( !SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPerrorMessage("cannot have == on rhs if there was a <= on lhs\n");
+               return SCIP_OKAY;
+            }
+            else
+            {
+               *success = SCIPstrToRealValue(str+2, &rhs, &nonconstendptr);
+               lhs = rhs;
+            }
+            break;
+         case '>':
+            if( !SCIPisInfinity(scip, -lhs) )
+            {
+               SCIPerrorMessage("cannot have => on rhs if there was a <= on lhs\n");
+               return SCIP_OKAY;
+            }
+            else
+            {
+               *success = SCIPstrToRealValue(str+2, &lhs, &nonconstendptr);
+               break;
+            }
+         case '\0':
+            *success = TRUE;
+            break;
+         default:
+            SCIPerrorMessage("unexpected character %c\n", *str);
+            return SCIP_OKAY;
+      }
+   }
+
+   printf("This are the current string before start parsing:\nstr: %s\nexprstart: %s\nexprlastchar: %s\nendptr: %s\n",
+         str, exprstart, exprlastchar, endptr);
+
+   /* alloc some space for variable names incl. indices; shouldn't be longer than expression string, and we even give it sizeof(int) times this length (plus 5) */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varnames, (int) (exprlastchar - exprstart) + 5) );
+
+   /* parse expression */
+   {
+      char newstr[SCIP_MAXSTRLEN];
+      char* newpos;
+      SCIP_CONSEXPR_EXPR* consexprtree;
+
+      snprintf(newstr, exprlastchar - exprstart + 1, "%s", exprstart);
+      printf("here i should start parsing %s\n", newstr);
+      parseExpr(scip, conshdlr, newstr, &newpos, &consexprtree);
+
+      printf("finish parsing, printing what i got:\n");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, consexprtree, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+      printf("done printing\n");
+      return SCIP_OKAY;
+   }
+   /* GARBAGE */
+   //retcode = SCIPexprParse(SCIPblkmem(scip), SCIPgetMessagehdlr(scip), &expr, exprstart, exprlastchar, &nvars, varnames);
+
+   if( retcode != SCIP_OKAY )
+   {
+      SCIPfreeBufferArray(scip, &varnames);
+      return retcode;
+   }
+
+   /* get SCIP variables corresponding to variable names stored in varnames buffer */
+   SCIP_CALL( SCIPallocBufferArray(scip, &exprvars, nvars) );
+
+   assert( retcode == SCIP_OKAY );
+   curvarname = varnames;
+   for( i = 0; i < nvars; ++i )
+   {
+      assert(*curvarname == i);
+      ++curvarname;
+
+      exprvars[i] = SCIPfindVar(scip, (char*)curvarname);
+      if( exprvars[i] == NULL )
+      {
+         SCIPerrorMessage("Unknown SCIP variable <%s> encountered in expression.\n", (char*)curvarname);
+         retcode = SCIP_READERROR;
+         goto TERMINATE;
+      }
+
+      curvarname += (strlen((char*)curvarname) + 1)/sizeof(int) + 1;
+   }
+
+   /* create expression tree */
+   //SCIP_CALL( SCIPexprtreeCreate(SCIPblkmem(scip), &exprtree, expr, nvars, 0, NULL) );
+   //SCIP_CALL( SCIPexprtreeSetVars(exprtree, nvars, exprvars) );
+
+   /* create constraint */
+   //SCIP_CALL( SCIPcreateConsNonlinear(scip, cons, name,
+   //   0, NULL, NULL,
+   //   1, &exprtree, NULL,
+   //   lhs, rhs,
+   //   initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+   SCIPdebugMessage("created nonlinear constraint:\n");
+   //SCIPdebugPrintCons(scip, *cons, NULL);
+
+   //SCIP_CALL( SCIPexprtreeFree(&exprtree) );
+
+ TERMINATE:
+   SCIPfreeBufferArray(scip, &exprvars);
+   SCIPfreeBufferArray(scip, &varnames);
+
+   return retcode;
 }
-#else
-#define consParseExpr NULL
-#endif
 
 
 /** constraint method of constraint handler which returns the variables (if possible) */
