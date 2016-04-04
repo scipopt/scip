@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -418,7 +418,7 @@ SCIP_EXPRGRAPH* SCIPgetExprgraphNonlinear(
  * alpha * x1 + beta * x2 + gamma * x3 = delta and gamma >= 0.0.
  */
 EXTERN
-SCIP_RETCODE SCIPgetAlphaBetaGammaDelta(
+SCIP_RETCODE SCIPcomputeHyperplaneThreePoints(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real             a1,                 /**< first coordinate of a */
    SCIP_Real             a2,                 /**< second coordinate of a */

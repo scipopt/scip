@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1007,7 +1007,7 @@ SCIP_RETCODE SCIPsetCreate(
    (*set)->conflicthdlrsnamesorted = FALSE;
 
    (*set)->debugsoldata = NULL;
-   SCIP_CALL( SCIPdebugSolDataCreate(&(*set)->debugsoldata) );
+   SCIP_CALL( SCIPdebugSolDataCreate(&(*set)->debugsoldata) ); /*lint !e506 !e774*/
 
    (*set)->presols = NULL;
    (*set)->npresols = 0;

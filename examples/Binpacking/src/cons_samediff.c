@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -448,18 +448,18 @@ SCIP_DECL_CONSACTIVE(consActiveSamediff)
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
    assert(cons != NULL);
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-   assert(consdata->npropagatedvars <= SCIPprobdataGetNVars(SCIPgetProbData(scip)));
-
    probdata = SCIPgetProbData(scip);
    assert(probdata != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+   assert(consdata->npropagatedvars <= SCIPprobdataGetNVars(probdata));
 
    SCIPdebugMessage("activate constraint <%s> at node <%"SCIP_LONGINT_FORMAT"> in depth <%d>: ",
       SCIPconsGetName(cons), SCIPnodeGetNumber(consdata->node), SCIPnodeGetDepth(consdata->node));
    SCIPdebug( consdataPrint(scip, consdata, NULL) );
 
-   if( consdata->npropagatedvars != SCIPprobdataGetNVars(SCIPgetProbData(scip)) )
+   if( consdata->npropagatedvars != SCIPprobdataGetNVars(probdata) )
    {
       SCIPdebugMessage("-> mark constraint to be repropagated\n");
       consdata->propagated = FALSE;

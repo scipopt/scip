@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -78,11 +78,20 @@ then
     mkdir $SCIPPATH/../settings
 fi
 
+# figure out the correct settings file extension
+if test $BINNAME = cplex
+then
+    SETEXTEXTENSION="prm"
+else
+    SETEXTEXTENSION="set"
+fi
+
+
 # check if all settings files exist
 SETTINGSLIST=(${SETNAMES//,/ })
 for SETNAME in ${SETTINGSLIST[@]}
 do
-    SETTINGS=$SCIPPATH/../settings/$SETNAME.set
+    SETTINGS="${SCIPPATH}/../settings/${SETNAME}.${SETEXTEXTENSION}"
     if test $SETNAME != "default" && test ! -e $SETTINGS
     then
         echo Skipping test since the settings file $SETTINGS does not exist.

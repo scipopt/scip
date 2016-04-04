@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,7 +47,6 @@
 #include "lpi/lpi.h"
 
 
-#define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
 #define MAXREPROPMARK       511  /**< maximal subtree repropagation marker; must correspond to node data structure */
 
 
@@ -5415,7 +5414,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
          /* create child nodes with x <= x'-1, x = x', and x >= x'+1 */
          assert(SCIPsetIsEQ(set, SCIPsetFeasCeil(set, val), SCIPsetFeasFloor(set, val)));
 
-         fixval = val;
+         fixval = SCIPsetFeasCeil(set, val); /* get rid of numerical issues */
 
          /* create child node with x <= x'-1, if this would be feasible */
          if( SCIPsetIsFeasGE(set, fixval-1.0, lb) )
@@ -6985,6 +6984,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeGetNSiblings
 #undef SCIPtreeGetNNodes
 #undef SCIPtreeIsPathComplete
+#undef SCIPtreeGetDepthLimit
 #undef SCIPtreeProbing
 #undef SCIPtreeGetProbingRoot
 #undef SCIPtreeGetProbingDepth

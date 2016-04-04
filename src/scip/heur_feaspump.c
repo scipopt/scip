@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1185,6 +1185,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
       }
 
       /* swap the last solutions */
+      SCIP_CALL( SCIPunlinkSol(scip, heurdata->roundedsol) );
       tmpsol = lastroundedsols[heurdata->cyclelength-1];
       for( j = heurdata->cyclelength-1; j > 0; j-- )
       {
@@ -1355,6 +1356,7 @@ SCIP_DECL_HEUREXEC(heurExecFeaspump)
    }
 
 #endif /* SCIP_STATISTIC */
+
    return SCIP_OKAY;
 }
 
