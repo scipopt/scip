@@ -34296,6 +34296,27 @@ SCIP_RETCODE SCIPcreateCurrentSol(
    return SCIP_OKAY;
 }
 
+/** creates a partial primal solution, initialized to unknown values
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ */
+SCIP_RETCODE SCIPcreatePartialSol(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_SOL**            sol,                /**< pointer to store the solution */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPcreatePartialSol", FALSE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+
+   SCIP_CALL( SCIPsolCreatePartial(sol, scip->mem->probmem, scip->set, scip->stat, scip->origprimal, heur) );
+
+   return SCIP_OKAY;
+}
+
 /** creates a primal solution, initialized to unknown values
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -36196,7 +36217,6 @@ SCIP_RETCODE readSolFile(
    assert(sol != NULL);
    assert(*sol != NULL);
    assert(error != NULL);
-   assert(partial != NULL);
 
    /* open input file */
    file = SCIPfopen(filename, "r");
@@ -36209,7 +36229,8 @@ SCIP_RETCODE readSolFile(
 
    /* read the file */
    *error = FALSE;
-   *partial = FALSE;
+   if( partial != NULL )
+      *partial = FALSE;
    unknownvariablemessage = FALSE;
    lineno = 0;
 
@@ -36268,7 +36289,8 @@ SCIP_RETCODE readSolFile(
       else if( strncasecmp(valuestring, "unknown", 7) == 0 )
       {
          value = SCIP_UNKNOWN;
-         *partial = TRUE;
+         if( partial != NULL )
+            *partial = TRUE;
       }
       else
       {
@@ -36315,7 +36337,7 @@ SCIP_RETCODE readSolFile(
    /* close input file */
    SCIPfclose(file);
 
-   if( *partial )
+   if( partial != NULL && *partial )
    {
       SCIP_CALL( SCIPmarkSolPartial(scip, *sol) );
    }

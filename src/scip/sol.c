@@ -672,6 +672,39 @@ SCIP_RETCODE SCIPsolCreateCurrentSol(
    return SCIP_OKAY;
 }
 
+/** creates partial primal CIP solution, initialized to unknown values */
+SCIP_RETCODE SCIPsolCreatePartial(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   )
+{
+   assert(sol != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
+   assert(primal != NULL);
+
+   SCIP_ALLOC( BMSallocBlockMemory(blkmem, sol) );
+   SCIP_CALL( SCIPrealarrayCreate(&(*sol)->vals, blkmem) );
+   SCIP_CALL( SCIPboolarrayCreate(&(*sol)->valid, blkmem) );
+   (*sol)->heur = heur;
+   (*sol)->solorigin = SCIP_SOLORIGIN_PARTIAL;
+   (*sol)->obj = SCIP_UNKNOWN;
+   (*sol)->primalindex = -1;
+   (*sol)->index = stat->solindex;
+   (*sol)->hasinfval = FALSE;
+   stat->solindex++;
+   solStamp(*sol, stat, NULL, TRUE);
+
+   SCIP_CALL( SCIPprimalSolCreated(primal, set, *sol) );
+
+   return SCIP_OKAY;
+}
+
 /** creates primal CIP solution, initialized to unknown values */
 SCIP_RETCODE SCIPsolCreateUnknown(
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution */

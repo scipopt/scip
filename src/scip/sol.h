@@ -174,6 +174,17 @@ SCIP_RETCODE SCIPsolCreateCurrentSol(
    SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
    );
 
+/** creates partial primal CIP solution, initialized to unknown values */
+extern
+SCIP_RETCODE SCIPsolCreatePartial(
+   SCIP_SOL**            sol,                /**< pointer to primal CIP solution */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< problem statistics data */
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_HEUR*            heur                /**< heuristic that found the solution (or NULL if it's from the tree) */
+   );
+
 /** creates primal CIP solution, initialized to unknown values */
 extern
 SCIP_RETCODE SCIPsolCreateUnknown(
