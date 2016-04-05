@@ -16,6 +16,7 @@
 /**@file   type_cons_expr.h
  * @brief  (public) types of expression constraint
  * @author Stefan Vigerske
+ * @author Benjamin Müller
  *
  * These are in particular types that define the expressions in cons_expr
  * and that need to be accessed by the linear estimation plugins of cons_expr.
@@ -142,6 +143,20 @@ extern "C" {
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_Real* val, \
    SCIP_SOL* sol)
+
+/** expression propagation callback
+ *
+ * The method propagates an expression by taking the intervals of its children into account.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - interval : buffer where to store interval
+ *  - expr : expression to be propagated
+ */
+#define SCIP_DECL_CONSEXPR_EXPRPROP(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_INTERVAL* interval)
 
 /** stages of expression walker in which the walker callbacks are called */
 typedef enum

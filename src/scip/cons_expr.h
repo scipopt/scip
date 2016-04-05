@@ -17,6 +17,7 @@
  * @ingroup CONSHDLRS
  * @brief  constraint handler for expression constraints (in particular, nonlinear constraints)
  * @author Stefan Vigerske
+ * @author Benjamin Müller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -45,6 +46,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
    const char*                 desc,         /**< description of expression handler (can be NULL) */
    int                         precedence,   /**< precedence of expression operation (used for printing) */
    SCIP_DECL_CONSEXPR_EXPREVAL((*eval)),     /**< point evaluation callback (can not be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRPROP((*prop)),     /**< propagation callback (can be NULL) */
    SCIP_CONSEXPR_EXPRHDLRDATA* data          /**< data of expression handler (can be NULL) */
    );
 
@@ -254,9 +256,28 @@ SCIP_RETCODE SCIPevalConsExprExpr(
    unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
    );
 
+/** propagates an expression for the current (local) bounds
+ *
+ * Initiates an expression walk to also propagate children, if necessary.
+ * Value can be received via SCIPgetConsExprExprEvalInterval().
+ * If an evaluation error (division by zero, ...) occurs, this value will
+ * be set to an empty interval.
+ */
+EXTERN
+SCIP_RETCODE SCIPpropConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to be propagated */
+   );
+
 /** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */
 EXTERN
 SCIP_Real SCIPgetConsExprExprValue(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   );
+
+/** returns the interval from the last propagation of an expression (interval is empty if there was an propagation error) */
+EXTERN
+SCIP_INTERVAL* SCIPgetConsExprExprInterval(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 

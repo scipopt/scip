@@ -16,6 +16,7 @@
 /**@file   cons_expr_constant.c
  * @brief  constant value expression handler
  * @author Stefan Vigerske
+ * @author Benjamin Müller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -79,6 +80,22 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalValue)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSEXPR_EXPRPROP(propValue)
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_Real val;
+
+   assert(expr != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   memcpy(&val, &exprdata, sizeof(SCIP_Real));
+
+   SCIPintervalSet(interval, val);
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for constant value expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -87,7 +104,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "val", "constant value", 0, evalValue, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "val", "constant value", 0, evalValue, propValue, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrValue, NULL) );

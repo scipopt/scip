@@ -610,6 +610,90 @@ SCIP_RETCODE testExpreval(void)
    return SCIP_OKAY;
 }
 
+/** helper function to check propagation intervals of an expression */
+static
+SCIP_RETCODE checkPropExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression to propagate */
+   SCIP_Real             targetinf,          /**< target infimum */
+   SCIP_Real             targetsup,          /**< target supremum */
+   SCIP_Bool             empty               /**< should the result being empty? */
+   )
+{
+   SCIP_INTERVAL* interval;
+
+   assert(expr != NULL);
+
+   SCIP_CALL( SCIPpropConsExprExpr(scip, expr) );
+   interval = SCIPgetConsExprExprInterval(expr);
+
+   printf("[%e,%e]\n", SCIPintervalGetInf(*interval), SCIPintervalGetSup(*interval));
+
+   if( SCIPintervalIsEmpty(SCIPinfinity(scip), *interval) != empty
+      || !SCIPisEQ(scip, SCIPintervalGetInf(*interval), targetinf)
+      || !SCIPisEQ(scip, SCIPintervalGetSup(*interval), targetsup) )
+      return SCIP_ERROR;
+
+   return SCIP_OKAY;
+}
+
+/* Test expression propagation method */
+static
+SCIP_RETCODE testExprprop(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_CONSEXPR_EXPR* constexpr;
+   SCIP_CONSEXPR_EXPR* xexpr;
+   SCIP_CONSEXPR_EXPR* yexpr;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 10.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -5.0, 5.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+
+   /* create variable and constant expressions */
+   SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &constexpr, 5.0) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
+
+   /* check propagation method for constant expressions */
+   printf("check propagation of constant expressions\n");
+   SCIP_CALL( checkPropExpr(scip, constexpr, 5.0, 5.0, FALSE) );
+
+   /* check propagation method for variable expressions */
+   printf("check propagation of variable expressions\n");
+   SCIP_CALL( checkPropExpr(scip, xexpr, 0.0, 10.0, FALSE) );
+   SCIP_CALL( checkPropExpr(scip, yexpr, -5.0, 5.0, FALSE) );
+
+   /* release all expressions */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &constexpr) );
+
+   /* release SCIP */
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
+
 /** main function */
 int
 main(
@@ -626,6 +710,8 @@ main(
    CHECK_TEST( testFree() );
 
    CHECK_TEST( testExpreval() );
+
+   CHECK_TEST( testExprprop() );
 
    CHECK_TEST( testWalk() );
 

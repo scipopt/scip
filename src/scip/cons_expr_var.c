@@ -16,6 +16,7 @@
 /**@file   cons_expr_var.c
  * @brief  variable expression handler
  * @author Stefan Vigerske
+ * @author Benjamin Müller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -68,6 +69,23 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalVar)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSEXPR_EXPRPROP(propVar)
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_VAR* var;
+
+   assert(expr != NULL);
+
+   var = (SCIP_VAR*) SCIPgetConsExprExprData(expr);
+   assert(var != NULL);
+
+   SCIPintervalSetBounds(interval, MIN(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)),
+      MAX(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for variable expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -76,7 +94,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "var", "variable", 0, evalVar, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "var", "variable", 0, evalVar, propVar, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrVar, NULL) );
