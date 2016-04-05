@@ -117,6 +117,7 @@ SCIP_RETCODE testWalk(void)
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
 
+
    /* create expression x/y*(-5) and walk it
     * TODO: do this on a bit more interesting expression (at least one more depth)
     */
@@ -165,6 +166,60 @@ SCIP_RETCODE testWalk(void)
 
       /* release product expression (this should free the product and its children) */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** test parsing method */
+static
+SCIP_RETCODE testParse(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* currently expr constraints cannot be created */
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+
+   /* create expression x/y*(5) */
+   {
+      SCIP_CONS* consexpr_xy5;
+      SCIP_CONSEXPR_EXPR* expr_xy5;
+      SCIP_Bool success;
+
+      /* create expression for product of 5, x, and y */
+      success = FALSE;
+      SCIP_CALL( SCIPparseCons(scip, &consexpr_xy5, "[expr] <test1>: <x>[C] / <y>[I] *(5);",
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+      assert(success);
+
+      expr_xy5 = SCIPgetExprConsExpr(scip, consexpr_xy5);
+
+      /* print expression */
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr_xy5, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /* release product expression (this should free the product and its children) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
+
+      /* todo: remoeve constraint? */
    }
 
    return SCIP_OKAY;
@@ -573,6 +628,8 @@ main(
    CHECK_TEST( testExpreval() );
 
    CHECK_TEST( testWalk() );
+
+   CHECK_TEST( testParse() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");
