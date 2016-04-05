@@ -89,6 +89,7 @@
 #include "scip/debug.h"
 #include "scip/dialog_default.h"
 #include "scip/message_default.h"
+#include "xml/xml.h"
 
 /* We include the linear constraint handler to be able to copy a (multi)aggregation of variables (to a linear constraint).
  * The better way would be to handle the distinction between original and transformed variables via a flag 'isoriginal'
@@ -36172,6 +36173,337 @@ SCIP_RETCODE SCIPreadSol(
 
    /* we pass the reading of the solution file on to reader_sol via the following call */
    SCIP_CALL( SCIPreadProb(scip, filename, "sol") );
+
+   return SCIP_OKAY;
+}
+
+/** reads a given solution file and store the solution values in the given solution pointer */
+static
+SCIP_RETCODE readSolFile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename,           /**< name of the input file */
+   SCIP_SOL**            sol,                /**< solution pointer */
+   SCIP_SOLORIGIN        solorig,            /**< solution origin */
+   SCIP_Bool*            partial,            /**< pointer to store if the solution is partial */
+   SCIP_Bool*            error               /**< pointer store if an error occured */
+   )
+{
+   SCIP_FILE* file;
+   SCIP_Bool unknownvariablemessage;
+   int lineno;
+
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(*sol != NULL);
+   assert(error != NULL);
+   assert(partial != NULL);
+
+   /* open input file */
+   file = SCIPfopen(filename, "r");
+   if( file == NULL )
+   {
+      SCIPerrorMessage("cannot open file <%s> for reading\n", filename);
+      SCIPprintSysError(filename);
+      return SCIP_NOFILE;
+   }
+
+   /* read the file */
+   *error = FALSE;
+   *partial = FALSE;
+   unknownvariablemessage = FALSE;
+   lineno = 0;
+
+   while( !SCIPfeof(file) && !(*error) )
+   {
+      char buffer[SCIP_MAXSTRLEN];
+      char varname[SCIP_MAXSTRLEN];
+      char valuestring[SCIP_MAXSTRLEN];
+      char objstring[SCIP_MAXSTRLEN];
+      SCIP_VAR* var;
+      SCIP_Real value;
+      int nread;
+
+      /* get next line */
+      if( SCIPfgets(buffer, (int) sizeof(buffer), file) == NULL )
+         break;
+      lineno++;
+
+      /* there are some lines which may preceed the solution information */
+      if( strncasecmp(buffer, "solution status:", 16) == 0 || strncasecmp(buffer, "objective value:", 16) == 0 ||
+         strncasecmp(buffer, "Log started", 11) == 0 || strncasecmp(buffer, "Variable Name", 13) == 0 ||
+         strncasecmp(buffer, "All other variables", 19) == 0 || strncasecmp(buffer, "\n", 1) == 0 ||
+         strncasecmp(buffer, "NAME", 4) == 0 || strncasecmp(buffer, "ENDATA", 6) == 0 )    /* allow parsing of SOL-format on the MIPLIB 2003 pages */
+         continue;
+
+      /* parse the line */
+      nread = sscanf(buffer, "%s %s %s\n", varname, valuestring, objstring);
+      if( nread < 2 )
+      {
+         SCIPerrorMessage("Invalid input line %d in solution file <%s>: <%s>.\n", lineno, filename, buffer);
+         *error = TRUE;
+         break;
+      }
+
+      /* find the variable */
+      var = SCIPfindVar(scip, varname);
+      if( var == NULL )
+      {
+         if( !unknownvariablemessage )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "unknown variable <%s> in line %d of solution file <%s>\n",
+               varname, lineno, filename);
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  (further unknown variables are ignored)\n");
+            unknownvariablemessage = TRUE;
+         }
+         continue;
+      }
+
+      /* cast the value */
+      if( strncasecmp(valuestring, "inv", 3) == 0 )
+         continue;
+      else if( strncasecmp(valuestring, "+inf", 4) == 0 || strncasecmp(valuestring, "inf", 3) == 0 )
+         value = SCIPinfinity(scip);
+      else if( strncasecmp(valuestring, "-inf", 4) == 0 )
+         value = -SCIPinfinity(scip);
+      else if( strncasecmp(valuestring, "unknown", 7) == 0 )
+      {
+         value = SCIP_UNKNOWN;
+         *partial = TRUE;
+      }
+      else
+      {
+         nread = sscanf(valuestring, "%lf", &value);
+         if( nread != 1 )
+         {
+            SCIPerrorMessage("Invalid solution value <%s> for variable <%s> in line %d of solution file <%s>.\n",
+               valuestring, varname, lineno, filename);
+            *error = TRUE;
+            break;
+         }
+      }
+
+      /* set the solution value of the variable, if not multiaggregated */
+      if( SCIPisTransformed(scip) && SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n", SCIPvarGetName(var));
+      }
+      else
+      {
+         SCIP_RETCODE retcode;
+         retcode = SCIPsetSolVal(scip, *sol, var, value);
+
+         if( retcode == SCIP_INVALIDDATA )
+         {
+            if( SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_FIXED )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored conflicting solution value for fixed variable <%s>\n",
+                  SCIPvarGetName(var));
+            }
+            else
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n",
+                  SCIPvarGetName(var));
+            }
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+      }
+   }
+
+   /* close input file */
+   SCIPfclose(file);
+
+   if( *partial )
+   {
+      SCIP_CALL( SCIPmarkSolPartial(scip, *sol) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** reads a given xml solution file and store the solution values in the given solution pointer */
+static
+SCIP_RETCODE readXmlSolFile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename,           /**< name of the input file */
+   SCIP_SOL**            sol,                /**< solution pointer */
+   SCIP_SOLORIGIN        solorig,            /**< solution origin */
+   SCIP_Bool*            partial,            /**< pointer to store if the solution is partial */
+   SCIP_Bool*            error               /**< pointer store if an error occured */
+   )
+{
+   SCIP_Bool unknownvariablemessage;
+   XML_NODE* start;
+   const XML_NODE* varsnode;
+   const XML_NODE* varnode;
+   const char* tag;
+
+   /* read xml file */
+   start = xmlProcess(filename);
+
+   if( start == NULL )
+   {
+      SCIPerrorMessage("Some error occured during parsing the XML solution file.\n");
+      return SCIP_READERROR;
+   }
+
+   *error = FALSE;
+
+   /* find variable sections */
+   tag = "variables";
+   varsnode = xmlFindNodeMaxdepth(start, tag, 0, 3);
+   if( varsnode == NULL )
+   {
+      /* free xml data */
+      xmlFreeNode(start);
+
+      SCIPerrorMessage("Variable section not found.\n");
+      return SCIP_READERROR;
+   }
+
+   /* loop through all variables */
+   unknownvariablemessage = FALSE;
+   for( varnode = xmlFirstChild(varsnode); varnode != NULL; varnode = xmlNextSibl(varnode) )
+   {
+      SCIP_VAR* var;
+      const char* varname;
+      const char* valuestring;
+      SCIP_Real value;
+      int nread;
+
+      /* find variable name */
+      varname = xmlGetAttrval(varnode, "name");
+      if( varname == NULL )
+      {
+         SCIPerrorMessage("Attribute \"name\" of variable not found.\n");
+         *error = TRUE;
+         break;
+      }
+
+      /* find the variable */
+      var = SCIPfindVar(scip, varname);
+      if( var == NULL )
+      {
+         if( !unknownvariablemessage )
+         {
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "unknown variable <%s> of solution file <%s>\n",
+               varname, filename);
+            SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "  (further unknown variables are ignored)\n");
+            unknownvariablemessage = TRUE;
+         }
+         continue;
+      }
+
+      /* find value of variable */
+      valuestring = xmlGetAttrval(varnode, "value");
+      if( valuestring == NULL )
+      {
+         SCIPerrorMessage("Attribute \"value\" of variable not found.\n");
+         *error = TRUE;
+         break;
+      }
+
+      /* cast the value */
+      if( strncasecmp(valuestring, "inv", 3) == 0 )
+         continue;
+      else if( strncasecmp(valuestring, "+inf", 4) == 0 || strncasecmp(valuestring, "inf", 3) == 0 )
+         value = SCIPinfinity(scip);
+      else if( strncasecmp(valuestring, "-inf", 4) == 0 )
+         value = -SCIPinfinity(scip);
+      else if( strncasecmp(valuestring, "unknown", 7) == 0 )
+      {
+         value = SCIP_UNKNOWN;
+         *partial = TRUE;
+      }
+      else
+      {
+         nread = sscanf(valuestring, "%lf", &value);
+         if( nread != 1 )
+         {
+            SCIPwarningMessage(scip, "invalid solution value <%s> for variable <%s> in XML solution file <%s>\n", valuestring, varname, filename);
+            *error = TRUE;
+            break;
+         }
+      }
+
+      /* set the solution value of the variable, if not multiaggregated */
+      if( SCIPisTransformed(scip) && SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_MULTAGGR )
+      {
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n", SCIPvarGetName(var));
+      }
+      else
+      {
+         SCIP_RETCODE retcode;
+         retcode = SCIPsetSolVal(scip, *sol, var, value);
+
+         if( retcode == SCIP_INVALIDDATA )
+         {
+            if( SCIPvarGetStatus(SCIPvarGetProbvar(var)) == SCIP_VARSTATUS_FIXED )
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored conflicting solution value for fixed variable <%s>\n",
+                  SCIPvarGetName(var));
+            }
+            else
+            {
+               SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "ignored solution value for multiaggregated variable <%s>\n",
+                  SCIPvarGetName(var));
+            }
+         }
+         else
+         {
+            SCIP_CALL( retcode );
+         }
+      }
+   }
+
+   /* free xml data */
+   xmlFreeNode(start);
+
+   if( *partial )
+   {
+      SCIP_CALL( SCIPmarkSolPartial(scip, *sol) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** reads a given solution file and store the solution values in the given solution pointer
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+SCIP_RETCODE SCIPreadSolFile(
+   SCIP*                 scip,               /**< SCIP data structure */
+   const char*           filename,           /**< name of the input file */
+   SCIP_SOL**            sol,                /**< solution pointer */
+   SCIP_SOLORIGIN        solorig,            /**< solution origin */
+   SCIP_Bool             xml,                /**< true, iff the given solution in written in XML */
+   SCIP_Bool*            partial,            /**< pointer to store if the solution is partial */
+   SCIP_Bool*            error               /**< pointer store if an error occured */
+   )
+{
+   SCIP_CALL( checkStage(scip, "SCIPreadSolFile", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   if( xml )
+   {
+      SCIP_CALL( readXmlSolFile(scip, filename, sol, solorig, partial, error) );
+   }
+   else
+   {
+      SCIP_CALL( readSolFile(scip, filename, sol, solorig, partial, error) );
+   }
 
    return SCIP_OKAY;
 }
