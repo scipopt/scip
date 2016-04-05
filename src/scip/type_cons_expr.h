@@ -181,7 +181,7 @@ typedef enum
 {
    SCIP_CONSEXPREXPRWALK_CONTINUE,           /**< continue the walk */
    SCIP_CONSEXPREXPRWALK_SKIP,               /**< skip this node (if in ENTEREXPR stage) or the next child (if in VISITINGCHILD stage) */
-   SCIP_CONSEXPREXPRWALK_ABORT,              /**< abort the walk */
+   SCIP_CONSEXPREXPRWALK_ABORT               /**< abort the walk */
 } SCIP_CONSEXPREXPRWALK_RESULT;
 
 

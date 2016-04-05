@@ -428,7 +428,7 @@ SCIP_RETCODE parseBase(
       }
       if( exprhdlr->parse == NULL )
       {
-         SCIPerrorMessage("Expression handler %s has no parsing method!d.\n", operatorname);
+         SCIPerrorMessage("Expression handler %s has no parsing method.\n", operatorname);
          return SCIP_READERROR;
       }
 
@@ -482,7 +482,6 @@ SCIP_RETCODE parseFactor(
    SCIP_CONSEXPR_EXPR**  factortree          /**< buffer to store the expr parsed by Factor */
    )
 {
-   SCIP_VAR* var;
    SCIP_CONSEXPR_EXPR*  basetree;
 
    debugParse("parsing factor from %s\n", expr);
@@ -612,7 +611,7 @@ SCIP_RETCODE parseTerm(
       SCIP_CALL( parseFactor(scip, conshdlr, expr, newpos, &factortree) );
       expr = *newpos;
 
-      //build (binary) tree TODO: handle power correctly, and / as well
+      /* build (binary) tree */
       children[0] = *termtree;
       children[1] = factortree;
       SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, termtree, 2, children, exponents, 1.0) );
@@ -627,6 +626,7 @@ SCIP_RETCODE parseTerm(
 /** Expression -> ["+" | "-"] Term { ("+" | "-") Term }
  * builds consexprsum where each term is a children
  */
+static
 SCIP_RETCODE parseExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
@@ -1131,9 +1131,6 @@ SCIP_DECL_CONSCOPY(consCopyExpr)
 static
 SCIP_DECL_CONSPARSE(consParseExpr)
 {  /*lint --e{715}*/
-   SCIP_VAR** exprvars;
-   SCIP_RETCODE retcode;
-   int        nvars;
    SCIP_Real  lhs;
    SCIP_Real  rhs;
    const char* endptr;
@@ -1141,8 +1138,6 @@ SCIP_DECL_CONSPARSE(consParseExpr)
    const char* exprstart;
    const char* exprlastchar;
    int* varnames;
-   int* curvarname;
-   int i;
    SCIP_CONSEXPR_EXPR* consexprtree;
 
    SCIPdebugMessage("cons_nonlinear::consparse parsing %s\n",str);
@@ -1158,9 +1153,6 @@ SCIP_DECL_CONSPARSE(consParseExpr)
       return SCIP_OKAY;
 
    endptr = str;
-
-   //expr = NULL;
-   nvars = 0;
 
    /* set left and right hand side to their default values */
    lhs = -SCIPinfinity(scip);
@@ -1286,7 +1278,6 @@ SCIP_DECL_CONSPARSE(consParseExpr)
       /* should probably process the return value separately to free data when fail */
       SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, newstr, &newpos, &consexprtree) );
    }
-   //retcode = SCIPexprParse(SCIPblkmem(scip), SCIPgetMessagehdlr(scip), &expr, exprstart, exprlastchar, &nvars, varnames);
 
    /* create constraint */
    SCIP_CALL( SCIPcreateConsExpr(scip, cons, name,
@@ -1296,14 +1287,6 @@ SCIP_DECL_CONSPARSE(consParseExpr)
    assert(*cons != NULL);
 
    debugParse("created expression constraint: <%s>\n", SCIPconsGetName(*cons));
-   //SCIP_CALL( SCIPprintConsExprExpr(scip, (*cons)->expr, NULL) );
-   //SCIPinfoMessage(scip, NULL, "\n");
-
-   //SCIP_CALL( SCIPexprtreeFree(&exprtree) );
-
- TERMINATE:
-   //SCIPfreeBufferArrayNull(scip, &exprvars);
-   //SCIPfreeBufferArrayNull(scip, &varnames);
 
    return SCIP_OKAY;
 }
