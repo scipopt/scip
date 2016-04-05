@@ -46,7 +46,7 @@
    while( FALSE )
 
 /* BIG = 75000 produces a seg fault because of stack overflow */
-#define BIG 10000
+#define BIG 100
 
 /*
  * Local methods for tests
@@ -198,7 +198,41 @@ SCIP_RETCODE testParse(void)
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
 
-   /* create expression x/y*(5) */
+   /* create expression x/y*(5) from string */
+   {
+      SCIP_CONSEXPR_EXPR* expr_xy5;
+      char* howtogetridofthisvariable; /*?*/
+
+      /* create expression for product of 5, x, and y */
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>[C] / <y>[I] *(-5)", &howtogetridofthisvariable, &expr_xy5) );
+
+      /* print expression */
+      printf("printing expression from string\n");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr_xy5, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /* release product expression (this should free the product and its children) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
+   }
+
+   /* create more crazy expressions from string */
+   {
+      SCIP_CONSEXPR_EXPR* crazyexpr;
+      char* howtogetridofthisvariable; /*?*/
+
+      /* create expression */
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"-<x>[C] * <y>[I] ^(-1) + (<x>[C]+<y>[C])^2", &howtogetridofthisvariable, &crazyexpr) );
+
+      /* print expression */
+      printf("printing expression from string\n");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, crazyexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /* release product expression (this should free the product and its children) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &crazyexpr) );
+   }
+
+   /* create constraint holding x/y*(5) <= 1 from string */
    {
       SCIP_CONS* consexpr_xy5;
       SCIP_CONSEXPR_EXPR* expr_xy5;
@@ -206,20 +240,21 @@ SCIP_RETCODE testParse(void)
 
       /* create expression for product of 5, x, and y */
       success = FALSE;
-      SCIP_CALL( SCIPparseCons(scip, &consexpr_xy5, "[expr] <test1>: <x>[C] / <y>[I] *(5);",
+      SCIP_CALL( SCIPparseCons(scip, &consexpr_xy5, "[expr] <test1>: <x>[C] / <y>[I] *(5) <= 1;",
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
       assert(success);
 
       expr_xy5 = SCIPgetExprConsExpr(scip, consexpr_xy5);
 
-      /* print expression */
+      /* print expression: this should actually be consprint, but we are not there yet */
+      printf("printing constraint-expression from string\n");
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr_xy5, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 
       /* release product expression (this should free the product and its children) */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
 
-      /* todo: remoeve constraint? */
+      /* todo: remove constraint? */
    }
 
    return SCIP_OKAY;
