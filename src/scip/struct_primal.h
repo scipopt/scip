@@ -46,7 +46,7 @@ struct SCIP_Primal
                                               *   integral, cutoffbound is equal to ceil(upperbound) - 1.0 (+eps) */
    SCIP_SOL**            sols;               /**< primal CIP solutions */
    SCIP_SOL**            partinfsols;        /**< partial and infeasible solutions */
-   SCIP_SOL**            existingsols;       /**< all existing primal solutions (feasible and infeasible) */
+   SCIP_SOL**            existingsols;       /**< all existing primal solutions (feasible, partial, and infeasible) */
    SCIP_SOL*             currentsol;         /**< internal solution for temporarily storing the current solution */
    SCIP_SOL*             primalray;          /**< solution representing the primal ray for (infeasible or) unbounded problems;
                                               *   warning: this does not have to be a feasible solution */

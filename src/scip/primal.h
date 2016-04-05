@@ -184,7 +184,7 @@ SCIP_RETCODE SCIPprimalAddOrigSol(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob,               /**< original problem data */
+   SCIP_PROB*            prob,               /**< original problem after presolve */
    SCIP_SOL*             sol,                /**< primal CIP solution; is cleared in function call */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    );

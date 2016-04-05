@@ -172,6 +172,7 @@ SCIP_Real solGetArrayVal(
       case SCIP_SOLORIGIN_PSEUDOSOL:
          return SCIPvarGetPseudoSol(var);
 
+      case SCIP_SOLORIGIN_PARTIAL:
       case SCIP_SOLORIGIN_UNKNOWN:
          return SCIP_UNKNOWN;
 
@@ -994,6 +995,7 @@ SCIP_RETCODE SCIPsolSetVal(
    assert(sol != NULL);
    assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL
       || sol->solorigin == SCIP_SOLORIGIN_ZERO
+      || sol->solorigin == SCIP_SOLORIGIN_PARTIAL
       || sol->solorigin == SCIP_SOLORIGIN_UNKNOWN
       || (sol->nodenum == stat->nnodes && sol->runnum == stat->nruns));
    assert(stat != NULL);
@@ -1270,7 +1272,7 @@ SCIP_Real SCIPsolGetVal(
    /* if the value of a transformed variable in an original solution is requested, we need to project the variable back
     * to the original space, the opposite case is handled below
     */
-   if( (SCIPsolIsOriginal(sol) || SCIPsolIsPartial(sol)) && SCIPvarIsTransformed(var) )
+   if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(var) )
    {
       SCIP_RETCODE retcode;
       SCIP_VAR* origvar;
@@ -1299,7 +1301,7 @@ SCIP_Real SCIPsolGetVal(
    switch( SCIPvarGetStatus(var) )
    {
    case SCIP_VARSTATUS_ORIGINAL:
-      if( SCIPsolIsOriginal(sol) || SCIPsolIsPartial(sol) )
+      if( SCIPsolIsOriginal(sol) )
          return solGetArrayVal(sol, var);
       else
          return SCIPsolGetVal(sol, set, stat, SCIPvarGetTransVar(var));
@@ -1307,14 +1309,12 @@ SCIP_Real SCIPsolGetVal(
    case SCIP_VARSTATUS_LOOSE:
    case SCIP_VARSTATUS_COLUMN:
       assert(!SCIPsolIsOriginal(sol));
-      assert(!SCIPsolIsPartial(sol));
       assert(sol->solorigin != SCIP_SOLORIGIN_LPSOL || SCIPboolarrayGetVal(sol->valid, SCIPvarGetIndex(var))
          || sol->lpcount == stat->lpcount);
       return solGetArrayVal(sol, var);
 
    case SCIP_VARSTATUS_FIXED:
       assert(!SCIPsolIsOriginal(sol));
-      assert(!SCIPsolIsPartial(sol));
       assert(SCIPvarGetLbGlobal(var) == SCIPvarGetUbGlobal(var)); /*lint !e777*/
       assert(SCIPvarGetLbLocal(var) == SCIPvarGetUbLocal(var)); /*lint !e777*/
       assert(SCIPvarGetLbGlobal(var) == SCIPvarGetLbLocal(var)); /*lint !e777*/
@@ -1485,6 +1485,7 @@ SCIP_RETCODE SCIPsolMarkPartial(
    int                   nvars               /**< number of problem variables */
    )
 {
+   SCIP_Real* vals;
    int v;
 
    assert(sol != NULL);
@@ -1493,6 +1494,12 @@ SCIP_RETCODE SCIPsolMarkPartial(
 
    if( nvars == 0 )
       return SCIP_OKAY;;
+
+   SCIP_CALL( SCIPsetAllocBufferArray(set, &vals, nvars) );
+
+   /* get values SCIP_UNKNOWN */
+   for( v = 0; v < nvars; v++ )
+      vals[v] = SCIPsolGetVal(sol, set, stat, vars[v]);
 
    for( v = 0; v < nvars; v++ )
    {
@@ -1507,20 +1514,29 @@ SCIP_RETCODE SCIPsolMarkPartial(
 
       idx = SCIPvarGetIndex(vars[v]);
 
-      if( SCIPsetIsEQ(set, SCIPsolGetVal(sol, set, stat, vars[v]), 0.0) )
-      {
-         /* from now on, variable must not be deleted */
-         SCIPvarMarkNotDeletable(vars[v]);
+      /* from now on, variable must not be deleted */
+      SCIPvarMarkNotDeletable(vars[v]);
 
+      if( vals[v] != SCIP_UNKNOWN )
+      {
          /* mark the variable valid */
          SCIP_CALL( SCIPboolarraySetVal(sol->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
 
          /* set the value in the solution array */
-         SCIP_CALL( SCIPrealarraySetVal(sol->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, 0.0) );
+         SCIP_CALL( SCIPrealarraySetVal(sol->vals, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, vals[v]) );
+      }
+      else
+      {
+         /* mark the variable valid */
+         SCIP_CALL( SCIPboolarraySetVal(sol->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, FALSE) );
       }
    }
 
+   /* change origin to partial */
    sol->solorigin = SCIP_SOLORIGIN_PARTIAL;
+
+   /* free buffer */
+   SCIPsetFreeBufferArray(set, &vals);
 
    return SCIP_OKAY;
 }
@@ -2237,10 +2253,10 @@ SCIP_Bool SCIPsolIsOriginal(
 {
    assert(sol != NULL);
 
-   return (sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
+   return (sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || sol->solorigin == SCIP_SOLORIGIN_PARTIAL);
 }
 
-/** returns whether the given solution is defined on original variables */
+/** returns whether the given solution is defined on original variables and containes unknown solution values */
 SCIP_Bool SCIPsolIsPartial(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    )

@@ -36612,7 +36612,7 @@ SCIP_RETCODE SCIPaddSolFree(
    {
    case SCIP_STAGE_PROBLEM:
    case SCIP_STAGE_FREETRANS:
-      assert(SCIPsolIsOriginal(*sol) || SCIPsolIsPartial(*sol));
+      assert(SCIPsolIsOriginal(*sol));
       SCIP_CALL( SCIPprimalAddOrigSolFree(scip->origprimal, scip->mem->probmem, scip->set, scip->stat, scip->origprob, sol, stored) );
       return SCIP_OKAY;
 
@@ -36822,7 +36822,7 @@ SCIP_RETCODE SCIPtrySolFree(
       SCIP_CALL( SCIPsolRetransform(*sol, scip->set, scip->stat, scip->origprob, scip->transprob, &hasinfval) );
    }
 
-   if( SCIPsolIsOriginal(*sol) || SCIPsolIsPartial(*sol))
+   if( SCIPsolIsOriginal(*sol) )
    {
       SCIP_Bool feasible;
 
