@@ -143,7 +143,7 @@ extern "C" {
    SCIP* scip, \
    SCIP_CONSHDLR* consexprhdlr, \
    const char* string, \
-   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_CONSEXPR_EXPR** expr, \
    SCIP_Bool* success)
 
 /** expression (point-) evaluation callback
