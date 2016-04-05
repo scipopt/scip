@@ -2178,3 +2178,27 @@ SCIP_RETCODE SCIPcreateConsExprBasic(
 
    return SCIP_OKAY;
 }
+
+/** returns the expression of the given expression constraint */
+SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
+   {
+      SCIPerrorMessage("constraint is not expression\n");
+      SCIPABORT();
+      return NULL;  /*lint !e527*/
+   }
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return consdata->expr;
+}

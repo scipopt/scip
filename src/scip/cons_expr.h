@@ -436,6 +436,17 @@ SCIP_RETCODE SCIPcreateConsExprBasic(
 
 /** @} */
 
+/**@name Expression Constraint Methods */
+/**@{ */
+
+/** returns the expression of the given expression constraint */
+EXTERN
+SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+/** @} */
+
 #ifdef __cplusplus
 }
 #endif
