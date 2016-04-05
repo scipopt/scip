@@ -66,9 +66,9 @@ function setStatusToLimit()
 }
 
 # set a file status and increase timers and counters accordingly
-function setStatusToFail()
+function setStatusToFail(statusstr)
 {
-   status = "fail";
+   status = statusstr;
    failtime += tottime;
    fail++;
 }
@@ -104,6 +104,18 @@ function isPrimalDualBoundEqual()
       return 0;
 }
 
+function writeToSoluFile(status, thepb)
+{
+   printf("=%s= %-18s",status, prob) > NEWSOLUFILE;
+   if( status == "opt" || status == "best" )
+   {
+      printf(" %16.9g", thepb) > NEWSOLUFILE;
+   }
+
+   printf("\n") > NEWSOLUFILE;
+
+}
+
 BEGIN {
    timegeomshift = 10.0;
    nodegeomshift = 100.0;
@@ -113,7 +125,8 @@ BEGIN {
    onlyintestfile = 0;          # should only instances be reported that are included in the .test file?  TEMPORARY HACK!
    onlypresolvereductions = 0;  # should only instances with presolve reductions be shown?
    useshortnames = 1;           # should problem name be truncated to fit into column?
-   writesolufile = 0;           # should a solution file be created from the results
+   writesolufile = 0;           # should a solution file be created from the results? Use '1' for writing a new solution file, or '2' for writing an update
+                                # respecting the previous solu file information and updating it by better solution values for previously unsolved instances
    printsoltimes = 0;           # should the times until first and best solution be shown
    checksol = 1;                # should the solution check of SCIP be parsed and counted as a fail if best solution is not feasible?
    NEWSOLUFILE = "new_solufile.solu";
@@ -177,9 +190,9 @@ BEGIN {
    intestfile[prob] = 1;
 }
 /=opt=/  { solstatus[$2] = "opt"; sol[$2] = $3; }   # get optimum
-/=inf=/  { solstatus[$2] = "inf"; }                 # problem infeasible (no feasible solution exists)
+/=inf=/  { solstatus[$2] = "inf"; sol[$2] = +infty} # problem infeasible (no feasible solution exists)
 /=best=/ { solstatus[$2] = "best"; sol[$2] = $3; }  # get best known solution value
-/=unkn=/ { solstatus[$2] = "unkn"; }                # no feasible solution known
+/=unkn=/ { solstatus[$2] = "unkn"; sol[$2] = $3; }  # no feasible solution known
 #
 # problem name
 #
@@ -846,23 +859,19 @@ BEGIN {
       abstol = 1e-4;
 
       if( readerror ) {
-         status = "readerror";
-         failtime += tottime;
-         fail++;
+         setStatusToFail("readerror");
       }
       else if( aborted ) {
-         status = "abort";
-         failtime += tottime;
-         fail++;
+         setStatusToFail("abort");
       }
       else if( checksol && !bestsolfeas ) {
-         setStatusToFail();
+         setStatusToFail("fail (solution infeasible)");
       }
       else if( solstatus[prob] == "opt" ) {
 
          # in case a solution was found we compare primal and dual bound
          if( feasible && ( isPrimalBoundBetter() || isDualBoundBetter() ) ) {
-            setStatusToFail();
+            setStatusToFail("fail (objective value)");
          }
          else if( !feasible && objlimitreached ) {
             # if the objective limit was at least as tight as the optimal solution value, we accept the infeasibility
@@ -871,7 +880,7 @@ BEGIN {
                pass++;
             }
             else {
-               setStatusToFail()
+               setStatusToFail("fail (objective value)")
             }
          }
          else if( isLimitReached() ) {
@@ -882,14 +891,14 @@ BEGIN {
             pass++;
          }
          else {
-            setStatusToFail();
+            setStatusToFail("fail");
          }
       }
       else if( solstatus[prob] == "best" ) {
 
          # objsense = 1 -> minimize; objsense = -1 -> maximize
          if( isDualBoundBetter() ) {
-            setStatusToFail();
+            setStatusToFail("fail (dual bound)");
          }
          else if( isLimitReached() ) {
             setStatusToLimit();
@@ -899,11 +908,11 @@ BEGIN {
             }
          }
          else if( isPrimalDualBoundEqual() ) {
-                 status = "solved not verified";
-                 pass++;
+               status = "solved not verified";
+               pass++;
          }
          else {
-             setStatusToFail();
+             setStatusToFail("fail");
          }
       }
       else if( solstatus[prob] == "unkn" ) {
@@ -934,7 +943,7 @@ BEGIN {
             }
          }
          else {
-            setStatusToFail();
+            setStatusToFail("fail (solution on infeasible instance)");
          }
       }
       else {
@@ -951,18 +960,39 @@ BEGIN {
       }
 
       if( valgrinderror > 0 || valgrindleaks > 0 ) {
-         setStatusToFail()
+         setStatusToFail("fail (valgrind)")
       }
 
+
+      # write some solu file information
       if( writesolufile ) {
+         newsolpb = pb;
+
          if( pb == +infty && db == +infty )
-            printf("=inf= %-18s\n",prob)>NEWSOLUFILE;
-         else if( pb == db )
-            printf("=opt= %-18s %16.9g\n",prob,pb)>NEWSOLUFILE;
-         else if( pb < +infty )
-            printf("=best= %-18s %16.9g\n",prob,pb)>NEWSOLUFILE;
+             newsolstatus = "inf";
+         else if( isPrimalDualBoundEqual() )
+            newsolstatus = "opt";
+         else if( abs(pb) < +infty )
+            newsolstatus = "best";
          else
-            printf("=unkn= %-18s\n",prob)>NEWSOLUFILE;
+            newsolstatus = "unkn";
+
+         # in update mode, use values from this run only if the primal bound is strictly better than the current best known
+         # in case of a tie, we trust the solu-file more than the current results
+         if( writesolufile == 2 )
+         {
+            # an opt or inf status from the solu-file always wins. In case of a best status in the solu-file, we use the value of this run
+            # if the primal bound is strictly better or the instance was solved to proven optimality respecting the value from the solu file
+            if( solstatus[prob] == "opt" ||
+                solstatus[prob] == "inf" ||
+                (solstatus[prob] == "best" && !isPrimalBoundBetter() && (!isPrimalDualBoundEqual() || isDualBoundBetter())) )
+            {
+               newsolstatus = solstatus[prob];
+               newsolpb = sol[prob];
+            }
+         }
+
+         writeToSoluFile(newsolstatus, newsolpb);
       }
 
       #write output to both the tex file and the console depending on whether printsoltimes is activated or not
