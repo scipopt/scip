@@ -380,7 +380,7 @@ SCIP_RETCODE parseBase(
       /* expect ')' */
       if( *expr != ')' )
       {
-         SCIPerrorMessage("I was expecting a ')', instead got %c from %s\n", *expr, expr);
+         SCIPerrorMessage("I was expecting a ')', instead got <%c> from <%s>\n", *expr, expr);
          return SCIP_READERROR;
       }
       ++expr;
@@ -400,8 +400,12 @@ SCIP_RETCODE parseBase(
    else if( isalpha(*expr) )
    {
       /* a name is coming, should find exprhandler which such name */
-      char operatorname[SCIP_MAXSTRLEN];
       int i;
+      int npar;
+      char* init;
+      char operatorname[SCIP_MAXSTRLEN];
+      SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+      SCIP_Bool success;
 
       /* get name */
       i = 0;
@@ -413,15 +417,53 @@ SCIP_RETCODE parseBase(
       }
       operatorname[i] = '\0';
 
-      /* search */
-      printf("should search for exprhandler %s and give everything that is inside the parenthesis\n", operatorname);
-      /* extract expression between ( ) */
-      assert(expr != NULL);
+      /* search for expression handler */
+      exprhdlr = SCIPfindConsExprExprHdlr(conshdlr, operatorname);
+
+      /* check expression handler exists and has a parsing method */
+      if( exprhdlr == NULL )
+      {
+         SCIPerrorMessage("No expression handler called %s found.\n", operatorname);
+         return SCIP_READERROR;
+      }
+      if( exprhdlr->parse == NULL )
+      {
+         SCIPerrorMessage("Expression handler %s has no parsing method!d.\n", operatorname);
+         return SCIP_READERROR;
+      }
+
+      /* in case we would need to extract expression between () */
+      ++expr;
+      init = expr;
+      npar = 0;
+      while( *expr != ')' && npar > 0 )
+      {
+         if( *expr == '(' )
+            ++npar;
+         if( *expr == ')' )
+            ++npar;
+         ++expr;
+
+         assert(npar >= 0);
+      }
+      assert(*expr == ')');
+
+      /* call exprhdlr parser */
+      *expr = '\0';
+      SCIP_CALL( exprhdlr->parse(scip, conshdlr, init, baseexpr, &success) );
+
+      if( !success )
+      {
+         SCIPerrorMessage("Error while expression handler %s was parsing %s\n", operatorname, init);
+         return SCIP_READERROR;
+      }
+
+      *expr = ')';
    }
    else
    {
       /* Base -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ") */
-      SCIPerrorMessage("I was expecting a number, (exp), <varname>, Opname(Opexpr), instead got %c from %s\n", *expr, expr);
+      SCIPerrorMessage("I was expecting a number, (expression), <varname>, Opname(Opexpr), instead got %c from %s\n", *expr, expr);
       return SCIP_READERROR;
    }
    *newpos = expr;
