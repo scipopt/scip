@@ -604,12 +604,12 @@ SCIP_RETCODE testExpreval(void)
    /* create all expressions */
    SCIP_CALL( createExpr(scip, conshdlr, x, y, &xexpr, &yexpr, &const_expr, &prodexpr, &sumexpr, &mainexpr) );
 
-   /* create two solutions */
+   /* create solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 4.0) );
 
-   /* evaluate main expressen and check values for sub-expressions */
+   /* evaluate main expression and check values for sub-expressions */
    printf("evaluate and check expressions\n");
    SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, sol, 1) );
    SCIP_CALL( checkExpr(scip, xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, 2.0, 4.0, 1) );
@@ -621,7 +621,7 @@ SCIP_RETCODE testExpreval(void)
    SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, sol, 1) );
    SCIP_CALL( checkExpr(scip, xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, 2.0, 4.0, 1) );
 
-   /* modify solution and evaluate expression with a different tag; values should change again */
+   /* evaluate expression with a different tag; values should have changed */
    printf("evaluate expression with a new tag\n");
    SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, sol, 2) );
    SCIP_CALL( checkExpr(scip, xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, -2.0, -5.0, 2) );
@@ -655,7 +655,7 @@ SCIP_RETCODE testExpreval(void)
       SCIP_CALL( checkExpr(scip, xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, i*i, 1.0 / i, i) );
    }
 
-   /* free solutions */
+   /* free solution */
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
 
    /* release all expressions */
