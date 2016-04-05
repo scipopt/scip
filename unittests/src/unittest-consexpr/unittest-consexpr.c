@@ -118,55 +118,78 @@ SCIP_RETCODE testWalk(void)
    SCIP_CALL( SCIPaddVar(scip, y) );
 
 
-   /* create expression x/y*(-5) and walk it
-    * TODO: do this on a bit more interesting expression (at least one more depth)
-    */
+   /* create expression x + (-2)*x/y*(-5) and walk it */
    {
       SCIP_CONSEXPR_EXPR* expr_x;
       SCIP_CONSEXPR_EXPR* expr_y;
       SCIP_CONSEXPR_EXPR* expr_5;
       SCIP_CONSEXPR_EXPR* expr_xy5;
+      SCIP_CONSEXPR_EXPR* expr_sum;
       EXPRCOLLECT collect;
 
       /* create expressions for variables x and y */
       SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
       SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
 
-      /* create expression for constant 5 */
+      /* create expression for constant -5 */
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr_5, -5.0) );
 
-      /* create expression for product of 5, x, and y (TODO should have something to add children to an existing product expr) */
+      /* create expression for product of -5, x, and y, and constant factor -2 (TODO should have something to add children to an existing product expr) */
       {
          SCIP_Real exponents[3] = {1.0, -1.0, 1.0};
          SCIP_CONSEXPR_EXPR* xy5[3] = {expr_x, expr_y, expr_5};
-         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 3, xy5, exponents, 2.0) );
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 3, xy5, exponents, -2.0) );
       }
 
-      /* release leaf expressions (this should not free them yet, as they are captured by prod_xy5) */
+      /* create expression for sum of x and product (expr_xy5) */
+      {
+         SCIP_CONSEXPR_EXPR* terms[2] = {expr_x, expr_xy5};
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr_sum, 2, terms, NULL, 0) );
+      }
+
+      /* release leaf expressions (this should not free them yet, as they are captured by expr_xy5) */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_5) );
 
       /* print expression */
-      SCIP_CALL( SCIPprintConsExprExpr(scip, expr_xy5, NULL) );
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr_sum, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 
       /* print walk */
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr_xy5, walk_printnode, walk_printnode, walk_printnode, walk_printnode, NULL) );
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr_sum, walk_printnode, walk_printnode, walk_printnode, walk_printnode, NULL) );
 
       /* collect expression during walk (in initnode stage) and check that they come in the expected order */
       collect.next = 0;
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr_xy5, walk_collect, NULL, NULL, NULL, &collect) );
-      assert(collect.next == 4);
-      assert(collect.e[0] == expr_xy5);
-      assert(collect.e[1] == SCIPgetConsExprExprChildren(expr_xy5)[0]);
-      assert(collect.e[2] == SCIPgetConsExprExprChildren(expr_xy5)[1]);
-      assert(collect.e[3] == SCIPgetConsExprExprChildren(expr_xy5)[2]);
-
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr_sum, walk_collect, NULL, NULL, NULL, &collect) );
+      assert(collect.next == 6);
+      assert(collect.e[0] == expr_sum);
+      if( SCIPgetConsExprExprChildren(expr_sum)[0] == expr_x )
+      {
+         /* if expr_sum holds the children in the same order as they have been given to SCIPcreateConsExprExprSum */
+         assert(collect.e[1] == expr_x);
+         assert(collect.e[2] == expr_xy5);
+         assert(collect.e[3] == SCIPgetConsExprExprChildren(expr_xy5)[0]);
+         assert(collect.e[4] == SCIPgetConsExprExprChildren(expr_xy5)[1]);
+         assert(collect.e[5] == SCIPgetConsExprExprChildren(expr_xy5)[2]);
+      }
+      else
+      {
+         /* if expr_sum swapped the children */
+         assert(collect.e[1] == expr_xy5);
+         assert(collect.e[2] == SCIPgetConsExprExprChildren(expr_xy5)[0]);
+         assert(collect.e[3] == SCIPgetConsExprExprChildren(expr_xy5)[1]);
+         assert(collect.e[4] == SCIPgetConsExprExprChildren(expr_xy5)[2]);
+         assert(collect.e[5] == expr_x);
+      }
 
       /* release product expression (this should free the product and its children) */
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sum) );
    }
+
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPfree(&scip) );
 
    return SCIP_OKAY;
 }
@@ -658,11 +681,11 @@ main(
    printf("@01 unittest-consexpr ===========\n");
    printf("=opt=  unittest-consexpr 0\n\n");
 
+   CHECK_TEST( testWalk() );
+
    CHECK_TEST( testFree() );
 
    CHECK_TEST( testExpreval() );
-
-   CHECK_TEST( testWalk() );
 
    CHECK_TEST( testParse() );
 
