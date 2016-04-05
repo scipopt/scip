@@ -1146,18 +1146,9 @@ SCIP_RETCODE SCIPprimalAddSol(
 
    insertpos = -1;
 
-   if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL )
-   {
-      assert(0); // ????? this should never happen
+   assert(!SCIPsolIsPartial(sol));
 
-      /* create a copy of the solution */
-      SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
-
-      SCIP_CALL( primalAddPartinfsol(primal, blkmem, set, stat, &solcopy) );
-
-      *stored = TRUE;
-   }
-   else if( solOfInterest(primal, set, stat, origprob, transprob, sol, &insertpos, &replace) )
+   if( solOfInterest(primal, set, stat, origprob, transprob, sol, &insertpos, &replace) )
    {
 #ifdef SCIP_MORE_DEBUG
       int i;
