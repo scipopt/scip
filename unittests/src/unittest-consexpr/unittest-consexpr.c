@@ -226,10 +226,9 @@ SCIP_RETCODE testParse(void)
    /* create expression x/y*(5) from string */
    {
       SCIP_CONSEXPR_EXPR* expr_xy5;
-      char* howtogetridofthisvariable; /*?*/
 
       /* create expression for product of 5, x, and y */
-      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>[C] / <y>[I] *(-5)", &howtogetridofthisvariable, &expr_xy5) );
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>[C] / <y>[I] *(-5)", NULL, &expr_xy5) );
 
       /* print expression */
       printf("printing expression from string\n");
@@ -243,10 +242,9 @@ SCIP_RETCODE testParse(void)
    /* create more crazy expressions from string */
    {
       SCIP_CONSEXPR_EXPR* crazyexpr;
-      char* howtogetridofthisvariable; /*?*/
 
       /* create expression */
-      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"-<x>[C] * <y>[I] ^(-1) + (<x>[C]+<y>[C])^2", &howtogetridofthisvariable, &crazyexpr) );
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"-<x>[C] * <y>[I] ^(-1) + (<x>[C]+<y>[C])^2", NULL, &crazyexpr) );
 
       /* print expression */
       printf("printing expression from string\n");

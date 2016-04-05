@@ -391,7 +391,7 @@ SCIP_RETCODE SCIPparseConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
    char*                 exprstr,            /**< string with the expr to parse */
-   char**                finalpos,           /**< buffer to store the position of exprstr where we finished reading */
+   char**                finalpos,           /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
    SCIP_CONSEXPR_EXPR**  expr                /**< pointer to store the expr parsed */
    );
 
