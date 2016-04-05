@@ -40,7 +40,7 @@
 
 /* default values for heuristic plugins */
 #define DEFAULT_MAXNODES      5000LL    /**< maximum number of nodes to regard in the subproblem */
-#define DEFAULT_MAXUNKRATE    0.50      /**< maximum percentage of unknown solution values */
+#define DEFAULT_MAXUNKRATE    0.85      /**< maximum percentage of unknown solution values */
 #define DEFAULT_ADDALLSOLS   FALSE      /**< should all subproblem solutions be added to the original SCIP? */
 #define DEFAULT_MINNODES      50LL      /**< minimum number of nodes to regard in the subproblem */
 #define DEFAULT_NODESOFS      500LL     /**< number of nodes added to the contingent of the total nodes */
