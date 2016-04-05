@@ -251,8 +251,50 @@ SCIP_RETCODE testParse(void)
       SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
       SCIP_CALL( SCIPprintConsExprExpr(scip, crazyexpr, NULL) );
 
-      /* release product expression (this should free the product and its children) */
+      /* release expression (this should free the expression and its children) */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &crazyexpr) );
+   }
+
+   /* create even more crazy expression from string */
+   {
+      SCIP_CONSEXPR_EXPR* crazyexpr;
+      SCIP_SOL* crazysol;
+      const char* input = "<x>*<y>^2/<x>^4 - 2*<x>*(<x>-<y>)*(<x>+<y>)^(-3.5)";
+      const SCIP_Real vals[3][2] = { {1.0, 2.0}, {0.0, 0.0}, {42.0, 17.0} };
+      int p;
+
+#define CRAZYEVAL(x, y) ((x)*pow(y,2)/pow(x,4) - 2*(x)*((x)-(y)) * pow((x)+(y), -3.5))
+
+      /* create expression */
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &crazyexpr) );
+
+      /* print expression */
+      SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
+      SCIP_CALL( SCIPprintConsExprExpr(scip, crazyexpr, NULL) );
+
+      /* test expression by evaluating it */
+      SCIP_CALL( SCIPcreateSol(scip, &crazysol, NULL) );
+
+      for( p = 0; p < 3; ++p )
+      {
+         SCIP_Real expvalue = CRAZYEVAL(vals[p][0], vals[p][1]);
+
+         SCIP_CALL( SCIPsetSolVal(scip, crazysol, x, vals[p][0]) );
+         SCIP_CALL( SCIPsetSolVal(scip, crazysol, y, vals[p][1]) );
+
+         SCIP_CALL( SCIPevalConsExprExpr(scip, crazyexpr, crazysol, 0) );
+         SCIPinfoMessage(scip, NULL, "value for x=%g y=%g is %g, expected: %g\n", vals[p][0], vals[p][1], SCIPgetConsExprExprValue(crazyexpr), expvalue);
+         if( SCIPgetConsExprExprValue(crazyexpr) == SCIP_INVALID )
+            assert(!SCIPisFinite(expvalue));
+         else
+            assert(SCIPisEQ(scip, SCIPgetConsExprExprValue(crazyexpr), expvalue));
+      }
+
+      /* release expression (this should free the expression and its children) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &crazyexpr) );
+
+      /* release solution */
+      SCIP_CALL( SCIPfreeSol(scip, &crazysol) );
    }
 
    /* create constraint holding x/y*(5) <= 1 from string */
@@ -276,6 +318,21 @@ SCIP_RETCODE testParse(void)
 
       /* release constraint */
       SCIP_CALL( SCIPreleaseCons(scip, &consexpr_xy5) );
+   }
+
+   /* try to create expressions from invalid strings */
+   {
+      SCIP_CONSEXPR_EXPR* e;
+
+      /* there is no variable with name "xx" */
+      /* FIXME assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<xx>", NULL, &e) == SCIP_READERROR); */
+
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x> +-*5 ", NULL, &e) == SCIP_READERROR);
+
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x> / (<y>-5 ", NULL, &e) == SCIP_READERROR);
+
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"donothave(<x>) ", NULL, &e) == SCIP_READERROR);
+
    }
 
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
