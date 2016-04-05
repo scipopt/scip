@@ -226,14 +226,14 @@ SCIP_RETCODE testParse(void)
    /* create expression x/y*(5) from string */
    {
       SCIP_CONSEXPR_EXPR* expr_xy5;
+      const char* input = "<x>[C] / <y>[I] *(-5)";
 
       /* create expression for product of 5, x, and y */
-      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>[C] / <y>[I] *(-5)", NULL, &expr_xy5) );
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr_xy5) );
 
       /* print expression */
-      printf("printing expression from string\n");
+      SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr_xy5, NULL) );
-      SCIPinfoMessage(scip, NULL, "\n");
 
       /* release product expression (this should free the product and its children) */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
@@ -242,14 +242,14 @@ SCIP_RETCODE testParse(void)
    /* create more crazy expressions from string */
    {
       SCIP_CONSEXPR_EXPR* crazyexpr;
+      const char* input = "-<x>[C] * <y>[I] ^(-1) + (<x>[C]+<y>[C])^2";
 
       /* create expression */
-      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)"-<x>[C] * <y>[I] ^(-1) + (<x>[C]+<y>[C])^2", NULL, &crazyexpr) );
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &crazyexpr) );
 
       /* print expression */
-      printf("printing expression from string\n");
+      SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
       SCIP_CALL( SCIPprintConsExprExpr(scip, crazyexpr, NULL) );
-      SCIPinfoMessage(scip, NULL, "\n");
 
       /* release product expression (this should free the product and its children) */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &crazyexpr) );
@@ -260,24 +260,22 @@ SCIP_RETCODE testParse(void)
       SCIP_CONS* consexpr_xy5;
       SCIP_CONSEXPR_EXPR* expr_xy5;
       SCIP_Bool success;
+      const char* input = "[expr] <test1>: <x>[C] / <y>[I] *(5) <= 1;";
 
       /* create expression for product of 5, x, and y */
       success = FALSE;
-      SCIP_CALL( SCIPparseCons(scip, &consexpr_xy5, "[expr] <test1>: <x>[C] / <y>[I] *(5) <= 1;",
+      SCIP_CALL( SCIPparseCons(scip, &consexpr_xy5, input,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
       assert(success);
 
       expr_xy5 = SCIPgetExprConsExpr(scip, consexpr_xy5);
 
       /* print expression: this should actually be consprint, but we are not there yet */
-      printf("printing constraint-expression from string\n");
+      SCIPinfoMessage(scip, NULL, "printing expression of %s after parsing from string: ", input);
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr_xy5, NULL) );
-      SCIPinfoMessage(scip, NULL, "\n");
 
-      /* release product expression (this should free the product and its children) */
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
-
-      /* todo: remove constraint? */
+      /* release constraint */
+      SCIP_CALL( SCIPreleaseCons(scip, &consexpr_xy5) );
    }
 
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
