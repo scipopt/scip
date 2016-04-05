@@ -218,7 +218,14 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
          /* print constant coefficient, if nonzero */
          if( exprdata[0] != 0.0 )
          {
-            SCIPinfoMessage(scip, file, "%g", exprdata[0]);
+            if( exprdata[0] < 0 && SCIPgetConsExprExprWalkParent(expr) != NULL && SCIPgetConsExprExprHdlrPrecedence(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprWalkParent(expr))) > PRODUCT_PRECEDENCE )
+            {
+               SCIPinfoMessage(scip, file, "(%g)", exprdata[0]);
+            }
+            else
+            {
+               SCIPinfoMessage(scip, file, "%g", exprdata[0]);
+            }
          }
          break;
       }
