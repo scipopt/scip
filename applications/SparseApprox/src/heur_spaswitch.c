@@ -202,24 +202,17 @@ SCIP_RETCODE assignVars(
       }
       /* set indicatorvar whether cluster is nonempty */
 
-      if( !isempty && SCIPisEQ(scip, SCIPvarGetUbGlobal(indvars[c]), 1.0) )
+      if( !isempty && SCIPisEQ(scip, SCIPvarGetUbGlobal(indvars[c]), 1.0) && SCIPvarGetStatus(indvars[c]) != SCIP_VARSTATUS_MULTAGGR )
          SCIP_CALL( SCIPsetSolVal(scip, sol, indvars[c], 1.0) );
-      else
-      {
-         if( SCIPisZero(scip, SCIPvarGetLbGlobal(indvars[c])) )
-            SCIP_CALL( SCIPsetSolVal(scip, sol, indvars[c], 0.0) );
-      }
+      else if( SCIPisZero(scip, SCIPvarGetLbGlobal(indvars[c])) && SCIPvarGetStatus(indvars[c]) != SCIP_VARSTATUS_MULTAGGR )
+         SCIP_CALL( SCIPsetSolVal(scip, sol, indvars[c], 0.0) );
 
       /* set values of binary variables */
       for ( i = 0; i < nbins; ++i )
       {
          /* check if the clusterassignment ist feasible for the variable bounds. If not do not assign the variable */
-         if( SCIPisGT(scip, SCIPvarGetLbGlobal(binvars[i][c]), clustering[i][c]) )
-            continue;
-         if( SCIPisLT(scip, SCIPvarGetUbGlobal(binvars[i][c]), clustering[i][c]) )
-            continue;
-         /* if the assignment respects the variable bounds, assign the binvars */
-         SCIP_CALL( SCIPsetSolVal( scip, sol, binvars[i][c], clustering[i][c]) );
+         if( SCIPisLE(scip, SCIPvarGetLbGlobal(binvars[i][c]), clustering[i][c]) && SCIPisGE(scip, SCIPvarGetUbGlobal(binvars[i][c]), clustering[i][c]) && SCIPvarGetStatus(binvars[i][c]) != SCIP_VARSTATUS_MULTAGGR )
+            SCIP_CALL( SCIPsetSolVal( scip, sol, binvars[i][c], clustering[i][c]) );
          assert( SCIPisIntegral(scip, clustering[i][c]) );
       }
 
@@ -232,14 +225,12 @@ SCIP_RETCODE assignVars(
                continue;
             if( j < i )
             {
-               if( SCIPisGE(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c]), clustering[j][c] * clustering[i][c]) && SCIPisLE(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c]), clustering[j][c] * clustering[i][c]) )
+               if( SCIPisGE(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c]), clustering[j][c] * clustering[i][c]) && SCIPisLE(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c]), clustering[j][c] * clustering[i][c]) && SCIPvarGetStatus(edgevars[i][j][c][c]) != SCIP_VARSTATUS_MULTAGGR )
                   SCIP_CALL( SCIPsetSolVal( scip, sol, edgevars[i][j][c][c], clustering[j][c] * clustering[i][c]  ) );
             }
             for( c2 = 0; c2 < c; ++c2 )
             {
-               if( SCIPisLT(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c2]), clustering[j][c2] * clustering[i][c]) || SCIPisGT(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c2]), clustering[j][c2] * clustering[i][c]) )
-                  continue;
-               else
+               if( SCIPisGE(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c2]), clustering[j][c2] * clustering[i][c]) && SCIPisLE(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c2]), clustering[j][c2] * clustering[i][c]) && SCIPvarGetStatus(edgevars[i][j][c][c2]) != SCIP_VARSTATUS_MULTAGGR )
                   SCIP_CALL( SCIPsetSolVal( scip, sol, edgevars[i][j][c][c2], clustering[j][c2] * clustering[i][c] ) );
             }
          }
@@ -251,6 +242,8 @@ SCIP_RETCODE assignVars(
          q1 = qmatrix[c][i];
          q2 = qmatrix[i][c];
          /* set the absolute-value vars. Always check if the found values are feasible for the bounds of the variables */
+         if( SCIPvarGetStatus(absvars[i + ncluster * c]) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(absvars[c + ncluster * i]) == SCIP_VARSTATUS_MULTAGGR )
+            continue;
          if( SCIPisGT(scip, q1, q2) )
          {
             if( SCIPisEQ(scip, SCIPvarGetUbGlobal(absvars[i + ncluster * c]), 1.0) )
@@ -273,10 +266,8 @@ SCIP_RETCODE assignVars(
       }
    }
    /* set the value of the target-function variable */
-   if( SCIPisGT(scip, epsI, SCIPvarGetLbGlobal(targetvar)) && SCIPisLT(scip, epsI, SCIPvarGetUbGlobal(targetvar)) )
-   {
+   if( SCIPisGT(scip, epsI, SCIPvarGetLbGlobal(targetvar)) && SCIPisLT(scip, epsI, SCIPvarGetUbGlobal(targetvar)) && SCIPvarGetStatus(targetvar) != SCIP_VARSTATUS_MULTAGGR )
       SCIP_CALL( SCIPsetSolVal( scip, sol, targetvar, epsI) );
-   }
 
    /* set the and variables that scip introduces in presoving */
    {
@@ -302,13 +293,12 @@ SCIP_RETCODE assignVars(
                   temp = temp * SCIPgetSolVal(scip, sol, vars[k]);
                   assert(SCIPisIntegral(scip, temp));
                }
+               if( SCIPvarGetStatus(resultant) != SCIP_VARSTATUS_MULTAGGR )
                SCIP_CALL( SCIPsetSolVal(scip, sol, resultant, temp) );
             }
          }
       }
    }
-
-   /* retransform the solution to original space, as the solution may be infeasible in transformed space due to presolving */
 
    return SCIP_OKAY;
 }

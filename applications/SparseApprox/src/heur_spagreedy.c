@@ -271,7 +271,6 @@ SCIP_RETCODE assignVars(
    binvars = SCIPspaGetBinvars(scip);
    targetvar = SCIPspaGetTargetvar(scip);
    edgevars = SCIPspaGetEdgevars(scip);
-
    SCIPallocClearMemoryArray(scip, &matrixtest, ncluster);
    for( i = 0; i < ncluster; ++i )
    {
@@ -293,10 +292,8 @@ SCIP_RETCODE assignVars(
       for ( i = 0; i < nbins; ++i )
       {
          /* check if the clusterassignment ist feasible for the variable bounds. If not do not assign the variable */
-         if( SCIPisGT(scip, SCIPvarGetLbGlobal(binvars[i][c]), clusterassignment[c][i]) || SCIPisLT(scip, SCIPvarGetUbGlobal(binvars[i][c]), clusterassignment[c][i]) )
-            continue;
-         /* if the assignment respects the variable bounds, assign the binvars */
-         SCIP_CALL( SCIPsetSolVal( scip, sol, binvars[i][c], clusterassignment[c][i]) );
+         if( SCIPisLE(scip, SCIPvarGetLbGlobal(binvars[i][c]), clusterassignment[c][i]) && SCIPisGE(scip, SCIPvarGetUbGlobal(binvars[i][c]), clusterassignment[c][i]) && SCIPvarGetStatus(binvars[i][c]) != SCIP_VARSTATUS_MULTAGGR )
+            SCIP_CALL( SCIPsetSolVal( scip, sol, binvars[i][c], clusterassignment[c][i]) );
          assert( SCIPisIntegral(scip, clusterassignment[c][i]) );
       }
 
@@ -309,12 +306,12 @@ SCIP_RETCODE assignVars(
                continue;
             if( j < i )
             {
-               if( SCIPisGE(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c]), clusterassignment[c][j] * clusterassignment[c][i]) && SCIPisLE(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c]), clusterassignment[c][j] * clusterassignment[c][i]) )
+               if( SCIPisGE(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c]), clusterassignment[c][j] * clusterassignment[c][i]) && SCIPisLE(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c]), clusterassignment[c][j] * clusterassignment[c][i]) && SCIPvarGetStatus(edgevars[i][j][c][c]) != SCIP_VARSTATUS_MULTAGGR )
                   SCIP_CALL( SCIPsetSolVal( scip, sol, edgevars[i][j][c][c], clusterassignment[c][j] * clusterassignment[c][i]  ) );
             }
             for( c2 = 0; c2 < c; ++c2 )
             {
-               if( SCIPisGE(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c2]), clusterassignment[c2][j] * clusterassignment[c][i]) && SCIPisLE(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c2]),clusterassignment[c2][j] * clusterassignment[c][i]) )
+               if( SCIPisGE(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c2]), clusterassignment[c2][j] * clusterassignment[c][i]) && SCIPisLE(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c2]),clusterassignment[c2][j] * clusterassignment[c][i]) && SCIPvarGetStatus(edgevars[i][j][c][c2]) != SCIP_VARSTATUS_MULTAGGR )
                   SCIP_CALL( SCIPsetSolVal( scip, sol, edgevars[i][j][c][c2], clusterassignment[c2][j] * clusterassignment[c][i]  ) );
             }
          }
@@ -326,6 +323,8 @@ SCIP_RETCODE assignVars(
          q1 = qmatrix[c][i];
          q2 = qmatrix[i][c];
          /* set the absolute-value vars. Always check if the found values are feasible for the bounds of the variables */
+         if( SCIPvarGetStatus(absvars[i + ncluster * c]) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(absvars[c + ncluster * i]) == SCIP_VARSTATUS_MULTAGGR )
+            continue;
          if( SCIPisGT(scip, q1, q2) )
          {
             if( SCIPisEQ(scip, SCIPvarGetUbGlobal(absvars[i + ncluster * c]), 1.0) )
@@ -348,7 +347,7 @@ SCIP_RETCODE assignVars(
       }
    }
    /* set the value of the target-function variable */
-   if( SCIPisGT(scip, epsI, SCIPvarGetLbGlobal(targetvar)) && SCIPisLT(scip, epsI, SCIPvarGetUbGlobal(targetvar)) )
+   if( SCIPisGT(scip, epsI, SCIPvarGetLbGlobal(targetvar)) && SCIPisLT(scip, epsI, SCIPvarGetUbGlobal(targetvar)) &&  SCIPvarGetStatus(targetvar) != SCIP_VARSTATUS_MULTAGGR )
    {
       SCIP_CALL( SCIPsetSolVal( scip, sol, targetvar, epsI) );
    }
@@ -374,11 +373,11 @@ SCIP_RETCODE assignVars(
                temp = temp * SCIPgetSolVal(scip, sol, vars[k]);
                assert(SCIPisIntegral(scip, temp));
             }
-            SCIP_CALL( SCIPsetSolVal(scip, sol, resultant, temp) );
+            if ( SCIPvarGetStatus(resultant) != SCIP_VARSTATUS_MULTAGGR )
+               SCIP_CALL( SCIPsetSolVal(scip, sol, resultant, temp) );
          }
       }
    }
-
    /* retransform the solution to original space, as the solution may be infeasible in transformed space due to presolving */
    SCIPretransformSol(scip, sol);
    /* free the allocated memory */
