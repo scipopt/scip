@@ -368,6 +368,32 @@ int SCIPgetConsExprExprWalkCurrentChild(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression which nextchild to get */
    );
 
+/** Creates an expression from a string.
+ * We specify the grammar that defines the syntax of an expression. Loosely speaking, a Base will be any "block",
+ * a Factor is a Base to a power, a Term is a product of Factors and an Expression is a sum of terms
+ * The actual definition:
+ *
+ * Expression -> ["+" | "-"] Term { ("+" | "-") Term }
+ * Term       -> Factor { ("*" | "/" ) Factor }
+ * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
+ * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
+ *
+ * where [a|b] means a or b or none, (a|b) means a or b, {a} means 0 or more a
+ *
+ * Note that Op and OpExpression are undefined. Op corresponds to the name of an expression handler and
+ * OpExpression to whatever string the expression handler accepts (through its parse method)
+ *
+ * @todo: we can change the grammar so that Factor becomes base and we allow a Term to be
+ * Term       -> Factor { ("*" | "/" | "^") Factor }
+ */
+EXTERN
+SCIP_RETCODE SCIPparseConsExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
+   char*                 exprstr,            /**< string with the expr to parse */
+   char**                finalpos,           /**< buffer to store the position of exprstr where we finished reading */
+   SCIP_CONSEXPR_EXPR**  expr                /**< pointer to store the expr parsed */
+   );
 
 /** @} */
 
