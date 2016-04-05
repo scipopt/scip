@@ -191,6 +191,8 @@ SCIP_RETCODE testWalk(void)
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPfree(&scip) );
 
+   BMScheckEmptyMemory();
+
    return SCIP_OKAY;
 }
 
@@ -279,6 +281,12 @@ SCIP_RETCODE testParse(void)
 
       /* todo: remove constraint? */
    }
+
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   BMScheckEmptyMemory();
 
    return SCIP_OKAY;
 }
