@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3129,6 +3129,7 @@ SCIP_RETCODE shortenConss(
    for( c = nconss - 1; c >= 0; --c )
    {
       SCIP_Bool redundant = FALSE;
+      SCIP_Bool glbinfeas = FALSE;
       SCIP_CONS* cons = conss[c];
       SCIP_CONSDATA* consdata;
 
@@ -3186,7 +3187,10 @@ SCIP_RETCODE shortenConss(
 
       /* use implications and cliques to derive global fixings and to shrink the number of variables in this constraints */
       SCIP_CALL( SCIPshrinkDisjunctiveVarSet(scip, probvars, bounds, boundtypes, redundants, consdata->nvars, &nredvars,
-            nfixedvars, &redundant, TRUE) );
+            nfixedvars, &redundant, &glbinfeas, TRUE) );
+
+      if( glbinfeas )
+         goto TERMINATE;
 
       /* remove redundant constraint */
       if( redundant )
@@ -4031,14 +4035,14 @@ SCIP_DECL_CONSTRANS(consTransLogicor)
 static
 SCIP_DECL_CONSINITLP(consInitlpLogicor)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff = FALSE;
    int c;
 
-   for( c = 0; c < nconss; ++c )
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addCut(scip, conss[c], NULL, &cutoff) );
-      /* ignore cutoff, cannot return value */
+      SCIP_CALL( addCut(scip, conss[c], NULL, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -4989,7 +4993,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLogicor)
       char consname[SCIP_MAXSTRLEN];
 
       /* create a constraint out of the conflict set */
-      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3077,6 +3077,36 @@ SCIP_RETCODE lpSetTiming(
    return SCIP_OKAY;
 }
 
+/** sets the initial random seed of the LP solver */
+static
+SCIP_RETCODE lpSetRandomseed(
+   SCIP_LP*              lp,                 /**< current LP data */
+   int                   randomseed,         /**< new initial random seed */
+   SCIP_Bool*            success             /**< pointer to store whether the parameter was successfully changed */
+   )
+{
+   assert(lp != NULL);
+   assert(success != NULL);
+
+   /* we don't check this parameter because SoPlex will always return its current random seed, not the initial one */
+
+   if( randomseed == 0 )
+   {
+      lp->lpirandomseed = randomseed;
+      *success = TRUE;
+   }
+   else if( randomseed != lp->lpirandomseed )  /*lint !e777*/
+   {
+      SCIP_CALL( lpSetIntpar(lp, SCIP_LPPAR_RANDOMSEED, randomseed, success) );
+      if( *success )
+         lp->lpirandomseed = randomseed;
+   }
+   else
+      *success = FALSE;
+
+   return SCIP_OKAY;
+}
+
 
 /*
  * Column methods
@@ -5796,9 +5826,9 @@ void SCIProwSort(
       if( !row->delaysort )
       {
          for( c = 1; c < row->nlpcols; ++c )
-            assert(row->cols[c]->index > row->cols[c-1]->index);
+            assert(row->cols[c]->index >= row->cols[c-1]->index);
          for( c = row->nlpcols + 1; c < row->len; ++c )
-            assert(row->cols[c]->index > row->cols[c-1]->index);
+            assert(row->cols[c]->index >= row->cols[c-1]->index);
       }
    }
 #endif
@@ -8770,6 +8800,7 @@ SCIP_RETCODE SCIPlpCreate(
    (*lp)->lastlpalgo = SCIP_LPALGO_DUALSIMPLEX;
    (*lp)->lpithreads = set->lp_threads;
    (*lp)->lpitiming = (int) set->time_clocktype;
+   (*lp)->lpirandomseed = set->lp_randomseed;
    (*lp)->storedsolvals = NULL;
 
    /* allocate arrays for diving */
@@ -8881,6 +8912,17 @@ SCIP_RETCODE SCIPlpCreate(
       SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
          "LP Solver <%s>: number of threads settings not available -- SCIP parameter has no effect\n",
          SCIPlpiGetSolverName());
+   }
+   /* keep the default LP random seed if this parameter is set to 0 (current default) */
+   if( (*lp)->lpirandomseed != 0 )
+   {
+      SCIP_CALL( lpSetIntpar(*lp, SCIP_LPPAR_RANDOMSEED, (*lp)->lpirandomseed, &success) );
+      if( !success )
+      {
+         SCIPmessagePrintVerbInfo(messagehdlr, set->disp_verblevel, SCIP_VERBLEVEL_FULL,
+            "LP Solver <%s>: random seed parameter not available -- SCIP parameter has no effect\n",
+            SCIPlpiGetSolverName());
+      }
    }
 
    return SCIP_OKAY;
@@ -13750,6 +13792,7 @@ SCIP_RETCODE lpSolveStable(
    SCIP_CALL( lpSetLPInfo(lp, set->disp_lpinfo) );
    SCIP_CALL( lpSetConditionLimit(lp, set->lp_conditionlimit, &success) );
    SCIP_CALL( lpSetTiming(lp, set->time_clocktype, set->time_enabled, &success) );
+   SCIP_CALL( lpSetRandomseed(lp, set->lp_randomseed, &success) );
    SCIP_CALL( lpAlgorithm(lp, set, stat, lpalgo, resolve, keepsol, timelimit, lperror) );
    resolve = FALSE; /* only the first solve should be counted as resolving call */
 
@@ -16944,7 +16987,9 @@ SCIP_RETCODE SCIPlpUpdateAges(
       assert(lpirows[r] == lp->rows[r]);
 
       if( lpirows[r]->dualsol == 0.0 ) /* basic rows to remove are exactly at 0.0 */
+      {
          lpirows[r]->age++;
+      }
       else
       {
          lpirows[r]->activeinlpcounter++;

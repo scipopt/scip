@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -48,13 +48,13 @@
 #define EVENTHDLR_NAME         "pseudoobj"
 #define EVENTHDLR_DESC         "bound change event handler for pseudo objective function propagator"
 
-#define DEFAULT_MINUSELESS          100 /**< minimal number of successive none binary variable propagator whithout a
+#define DEFAULT_MINUSELESS          100 /**< minimal number of successive nonbinary variable propagator whithout a
                                          *   bound reduction before aborted */
-#define DEFAULT_MAXVARSFRAC         0.1 /**< maximal fraction of none binary variables with non-zero objective
+#define DEFAULT_MAXVARSFRAC         0.1 /**< maximal fraction of nonbinary variables with non-zero objective
                                          *   without a bound reduction before aborted */
 #define DEFAULT_PROPFULLINROOT     TRUE /**< do we want to propagate all non-binary variables if we are propagating the root node? */
 #define DEFAULT_PROPCUTOFFBOUND    TRUE /**< propagate new cutoff bound directly globally */
-#define DEFAULT_FORCE             FALSE /**< should the propagator be forced even active pricer are present? Note that
+#define DEFAULT_FORCE             FALSE /**< should the propagator be forced even if active pricer are present? Note that
                                          *   can be done if it is known that the pseudo objective activity is given by
                                          *   the zero bound for all variables which are currently not present in the
                                          *   problem */
@@ -90,21 +90,21 @@ struct SCIP_PropData
    SCIP_VAR**            maxactvars;         /**< binary variables with non-zero objective contribution w.r.t. maximum activity of the objective function */
    SCIP_Real*            maxactchgs;         /**< the maximal potential change of the objective if the binary variable
                                               *   is fixed to its best bound w.r.t. maximum activity of the objective function */
-   SCIP_VAR**            objintvars;         /**< none binary variable with non-zero objective coefficient */
+   SCIP_VAR**            objintvars;         /**< nonbinary variable with non-zero objective coefficient */
    SCIP_HASHTABLE*       addedvars;          /**< hash table used during resolving of a bound change (conflict analysis) */
    SCIP_Real             lastlowerbound;     /**< last lower bound which was propagated */
    SCIP_Real             cutoffbound;        /**< last cutoff bound used for propagation */
    SCIP_Real             glbpseudoobjval;    /**< last global pseudo objective used in presolving */
-   SCIP_Real             maxvarsfrac;        /**< maximal fraction of none binary variables with non-zero objective
+   SCIP_Real             maxvarsfrac;        /**< maximal fraction of nonbinary variables with non-zero objective
                                               *   without a bound reduction before aborted */
    SCIP_Real             maxpseudoobjact;    /**< maximal global pseudo objective activity */
    int                   maxpseudoobjactinf; /**< number of coefficients contributing with infinite value to maxpseudoobjact */
    int                   nminactvars;        /**< number of binary variables with non-zero objective contribution w.r.t. minimum activity of the objective function */
    int                   nmaxactvars;        /**< number of binary variables with non-zero objective contribution w.r.t. maximum activity of the objective function */
-   int                   nobjintvars;        /**< number of none binary variables with non-zero objective */
-   int                   minuseless;         /**< minimal number of successive none binary variable propagator whithout
+   int                   nobjintvars;        /**< number of nonbinary variables with non-zero objective */
+   int                   minuseless;         /**< minimal number of successive nonbinary variable propagator whithout
                                               *   a bound reduction before aborted */
-   int                   lastvarnum;         /**< last none binary variable number that was looked at */
+   int                   lastvarnum;         /**< last nonbinary variable number that was looked at */
    int                   glbfirstnonfixed;   /**< index of first globally non-fixed binary variable in minactvars array */
    int                   maxactfirstnonfixed;/**< index of first globally non-fixed binary variable in maxctvars array */
    int                   firstnonfixed;      /**< index of first locally non-fixed binary variable in minactvars array */
@@ -1385,7 +1385,7 @@ SCIP_RETCODE collectMinactVar(
          SCIP_BOUNDTYPE_LOWER, 0, nlbcontributors);
 
       /* ignore implications if the variable has a zero objective coefficient and implications only one variable, since
-       * this covered by that implied variable
+       * this is covered by that implied variable
        */
       if( !(*collect) && nlbcontributors == 1 )
       {
@@ -1405,7 +1405,7 @@ SCIP_RETCODE collectMinactVar(
          SCIP_BOUNDTYPE_UPPER, 0, nubcontributors);
 
       /* ignore implications if the variable has a zero objective coefficient and implications only one variable, since
-       * this covered by that implied variable
+       * this is covered by that implied variable
        */
       if( !(*collect) && nubcontributors == 1 )
       {
@@ -1669,7 +1669,7 @@ SCIP_RETCODE propdataInit(
          }
          else
          {
-            /* only consider none binary variables with a non-zero objective */
+            /* only consider nonbinary variables with a non-zero objective */
             if( SCIPisZero(scip, objval) )
                continue;
 
@@ -1790,7 +1790,7 @@ SCIP_RETCODE propdataInit(
    return SCIP_OKAY;
 }
 
-/** adds for the given none binary variable a conflict bound depending on its objective contribution */
+/** adds for the given nonbinary variable a conflict bound depending on its objective contribution */
 static
 SCIP_RETCODE addConflictBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1819,7 +1819,9 @@ SCIP_RETCODE addConflictBounds(
          SCIPdebugMessage("  add bound change <%s>[%g] >= <%g>\n", SCIPvarGetName(var), objval, loclb);
          SCIP_CALL( SCIPaddConflictLb(scip, var, bdchgidx) );
 
-         assert(SCIPisPositive(scip, (loclb - glblb) * objval));
+         /* hard comparison  is enough to make requiredpseudoobjval nonincreasing */
+         assert((loclb - glblb) * objval > 0.0);
+
          (*reqpseudoobjval) -= (loclb - glblb) * objval;
       }
    }
@@ -1838,7 +1840,9 @@ SCIP_RETCODE addConflictBounds(
          SCIPdebugMessage("  add bound change <%s>[%g] <= <%g>\n", SCIPvarGetName(var), objval, locub);
          SCIP_CALL( SCIPaddConflictUb(scip, var, bdchgidx) );
 
-         assert(SCIPisPositive(scip, (locub - glbub) * objval));
+         /* hard comparison  is enough to make requiredpseudoobjval nonincreasing */
+         assert((locub - glbub) * objval > 0.0);
+
          (*reqpseudoobjval) -= (locub - glbub) * objval;
       }
    }
@@ -2137,10 +2141,10 @@ SCIP_RETCODE resolvePropagation(
     *  - obj < 0 and local ub < global ub
     *
     * collect all variables which contribute positively to the pseudo objective value (minimum activity) until we
-    * reached the (adjusted) required minimum activity for the inference bound chnage
+    * reached the (adjusted) required minimum activity for the inference bound change
     */
 
-   /* first consider the binary variables */
+   /* first, consider the binary variables */
    if( nvars > 0 )
    {
       SCIP_OBJIMPLICS** minactimpls;
@@ -2158,7 +2162,7 @@ SCIP_RETCODE resolvePropagation(
       if( infinity )
       {
          /* if the required minimum activity is minus infinity, we have to add all variables which contribute the local
-          * prseudo objective activity
+          * pseudo objective activity
           */
 
          for( v = propdata->glbfirstnonfixed; v < nvars; ++v )
@@ -2200,7 +2204,7 @@ SCIP_RETCODE resolvePropagation(
    nvars = propdata->nobjintvars;
    assert(nvars == 0 || vars != NULL);
 
-   /* second consider the none binary variables */
+   /* second, consider the non-binary variables */
    for( v = 0; v < nvars && (infinity || SCIPisPositive(scip, reqpseudoobjval)); ++v )
    {
       var = vars[v];
@@ -2539,7 +2543,7 @@ SCIP_RETCODE propagateCutoffboundGlobally(
 #endif
 #endif
 
-   /* propagate the none binary variables completely */
+   /* propagate the nonbinary variables completely */
    for( v = 0; v < nobjintvars; ++v )
    {
       var = objintvars[v];
@@ -2722,7 +2726,7 @@ SCIP_RETCODE propagateCutoffbound(
    if( SCIPisInfinity(scip, cutoffbound) )
       return SCIP_OKAY;
 
-   /* @note A new global pseudo objective value could be used to retrive global fixings. There is, however, no need to
+   /* @note A new global pseudo objective value could be used to retrieve global fixings. There is, however, no need to
     *       check if a new global pseudo objective value is available. This is the case since a new (better) global
     *       pseudo activity implicis that a global bound change was performed. That causes that the root node of the
     *       search tree get marked for repropagation. That will result in propagation call of the pseudo objective
@@ -2804,7 +2808,7 @@ SCIP_RETCODE propagateCutoffbound(
       return SCIP_OKAY;
    }
 
-   /* tighten domains of none binary variables, if they would increase the pseudo objective value above the cutoff
+   /* tighten domains of nonbinary variables, if they would increase the pseudo objective value above the cutoff
     * bound
     */
    if( propdata->propfullinroot && SCIPgetDepth(scip) == 0 )
@@ -2819,7 +2823,7 @@ SCIP_RETCODE propagateCutoffbound(
       nobjintvars = propdata->nobjintvars;
       assert(nobjintvars == 0 || objintvars != NULL);
 
-      /* propagate all none binary variables */
+      /* propagate all nonbinary variables */
       for( v = 0; v < nobjintvars; ++v )
       {
          var = objintvars[v];
@@ -3246,7 +3250,7 @@ SCIP_RETCODE propagateLowerbound(
             /* the binary variables are sorted in non-increasing manner w.r.t. the absolute value of their objective
              * contribution w.r.t. maximum activity of the objective function; These values are the decrease we would
              * get with the maximum pseudo objective activity if we fix the variable to its best bound; hence, we can
-             * stop if for a variable this potential decrease is not enough anymore too fall below the lower bound.
+             * stop if for a variable this potential decrease is not enough anymore to fall below the lower bound.
              *
              * @note In case a fixing was performed. The variable might not be globally fixed right away since this would
              *       destroy the local internal data structure of a search node; the bound change is in that case pending;
@@ -3544,7 +3548,7 @@ SCIP_DECL_PROPEXEC(propExecPseudoobj)
    if( !SCIPallowObjProp(scip) )
       return SCIP_OKAY;
 
-   /* check if enough new variable are added (due to column generatition to reinitialized the propgator data) */
+   /* check if enough new variable are added (due to column generation to reinitialized the propagator data) */
    if( !propdata->initialized || propdata->nnewvars > propdata->maxnewvars )
    {
       /* free current propdata data */
@@ -3694,17 +3698,17 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    /* add pseudoobj propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/minuseless",
-         "minimal number of successive none binary variable propagator whithout a bound reduction before aborted",
+         "minimal number of successive nonbinary variable propagator whithout a bound reduction before aborted",
          &propdata->minuseless, TRUE, DEFAULT_MINUSELESS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "propagating/" PROP_NAME "/maxvarsfrac",
-         "maximal fraction of none binary variables with non-zero objective without a bound reduction before aborted",
+         "maximal fraction of nonbinary variables with non-zero objective without a bound reduction before aborted",
          &propdata->maxvarsfrac, TRUE, DEFAULT_MAXVARSFRAC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/propfullinroot",
-         "do we want to propagate all none binary variables if we are propagating the root node",
+         "do we want to propagate all nonbinary variables if we are propagating the root node",
          &propdata->propfullinroot, TRUE, DEFAULT_PROPFULLINROOT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
@@ -3714,7 +3718,7 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/force",
-         "should the propagator be forced even active pricer are present?",
+         "should the propagator be forced even if active pricer are present?",
          &propdata->force, TRUE, DEFAULT_FORCE, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip,

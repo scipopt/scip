@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -308,7 +308,7 @@ SCIP_RETCODE SCIPrelaxExec(
    *result = SCIP_DIDNOTRUN;
 
    /* check, if the relaxation is already solved */
-   if( relax->lastsolvednode == stat->ntotalnodes )
+   if( relax->lastsolvednode == stat->ntotalnodes && ! SCIPinProbing(set->scip) )
       return SCIP_OKAY;
 
    relax->lastsolvednode = stat->ntotalnodes;

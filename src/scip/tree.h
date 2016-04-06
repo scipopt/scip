@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -29,6 +29,7 @@
 #include "blockmemshell/memory.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
+#include "scip/type_cons.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
 #include "scip/type_var.h"

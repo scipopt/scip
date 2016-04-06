@@ -32,3 +32,7 @@ LIBEXT	=	lib
 STATICLIBEXT    =	lib
 SHAREDLIBEXT	=	dll
 LINKLIBSUFFIX	=	.lib
+
+# NOTE: use this flag throughout the whole compilation process
+CFLAGS  +=      -MD
+CXXFLAGS  +=      -MD
