@@ -333,6 +333,10 @@ SCIP_RETCODE testParse(void)
 
       assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"donothave(<x>) ", NULL, &e) == SCIP_READERROR);
 
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"donothave(<x> ", NULL, &e) == SCIP_READERROR);
+
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"val(1) ", NULL, &e) == SCIP_READERROR);
+
    }
 
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
