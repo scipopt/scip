@@ -302,6 +302,7 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalSum)
    return SCIP_OKAY;
 }
 
+/** expression propagation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRPROP(propSum)
 {
@@ -321,10 +322,10 @@ SCIP_DECL_CONSEXPR_EXPRPROP(propSum)
 
       childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]);
       assert(childinterval != NULL);
-      assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), *childinterval));
+      assert(!SCIPintervalIsEmpty(INTERVALINFINITY, *childinterval));
 
       /* add childinterval the the so far computed interval */
-      SCIPintervalAdd(SCIPinfinity(scip), interval, *interval, *childinterval);
+      SCIPintervalAdd(INTERVALINFINITY, interval, *interval, *childinterval);
   }
 
    return SCIP_OKAY;
@@ -366,6 +367,7 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
    return SCIP_OKAY;
 }
 
+/** expression propagation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRPROP(propProduct)
 {
@@ -387,16 +389,16 @@ SCIP_DECL_CONSEXPR_EXPRPROP(propProduct)
       assert(childinterval != NULL);
 
       /* compute interval resulting from childinterval^exprdata[c+1] */
-      SCIPintervalPowerScalar(SCIPinfinity(scip), &powinterval, *childinterval, exprdata[c+1]);
+      SCIPintervalPowerScalar(INTERVALINFINITY, &powinterval, *childinterval, exprdata[c+1]);
 
-      if( SCIPintervalIsEmpty(SCIPinfinity(scip), powinterval) )
+      if( SCIPintervalIsEmpty(INTERVALINFINITY, powinterval) )
       {
          SCIPintervalSetEmpty(interval);
          return SCIP_OKAY;
       }
 
       /* multiply powinterval with the so far computed interval */
-      SCIPintervalMul(SCIPinfinity(scip), interval, *interval, powinterval);
+      SCIPintervalMul(INTERVALINFINITY, interval, *interval, powinterval);
    }
 
    return SCIP_OKAY;

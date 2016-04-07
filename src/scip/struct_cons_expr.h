@@ -67,6 +67,7 @@ struct SCIP_ConsExpr_Expr
    SCIP_Real               evalvalue;     /**< value of expression from last evaluation (corresponding to evaltag) */
 
    /* propagation interval */
+   unsigned int            proptag;       /**< tag of domains for which tag for which the expression has been propagated last, or 0 */
    SCIP_INTERVAL           interval;      /**< interval from the last propagation */
 
    /* expression walker data */

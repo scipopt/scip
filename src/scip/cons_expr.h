@@ -29,6 +29,11 @@
 #include "scip/scip.h"
 #include "scip/type_cons_expr.h"
 
+
+/* TODO remove this; how can we access the infinity value stored in the conshdlrdata in cons_expr_xyz? */
+#define INTERVALINFINITY 1e+43
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -262,11 +267,18 @@ SCIP_RETCODE SCIPevalConsExprExpr(
  * Value can be received via SCIPgetConsExprExprEvalInterval().
  * If an evaluation error (division by zero, ...) occurs, this value will
  * be set to an empty interval.
+ *
+ * If a nonzero \p tag is passed, then only (sub)expressions are
+ * reevaluated that have a different propagation tag. If a tag of 0
+ * is passed, then subexpressions are always repropagated.
+ * The tag is stored together with the interval and can be received via
+ * SCIPgetConsExprExprPropTag().
  */
 EXTERN
 SCIP_RETCODE SCIPpropConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression to be propagated */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be propagated */
+   unsigned int            proptag           /**< propagation tag that uniquely identifies the current variable domains (with its values), or 0. */
    );
 
 /** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */
@@ -287,6 +299,12 @@ unsigned int SCIPgetConsExprExprEvalTag(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
+/** gives the propagation tag from the last propagation, or 0 */
+EXTERN
+unsigned int SCIPgetConsExprExprPropTag(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   );
+
 /** sets the evaluation value */
 EXTERN
 void SCIPsetConsExprExprEvalValue(
@@ -295,6 +313,13 @@ void SCIPsetConsExprExprEvalValue(
    unsigned int            tag               /**< tag of solution that was evaluated, or 0 */
    );
 
+/** sets the propagation interval */
+EXTERN
+void SCIPsetConsExprExprPropInterval(
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_INTERVAL*          interval,         /**< interval to set */
+   unsigned int            proptag           /**< tag of variable domains that were propagated, or 0. */
+   );
 
 /** walks the expression graph in depth-first manner and executes callbacks at certain places
  *

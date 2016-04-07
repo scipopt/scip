@@ -69,6 +69,7 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalVar)
    return SCIP_OKAY;
 }
 
+/** expression propagation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRPROP(propVar)
 {
