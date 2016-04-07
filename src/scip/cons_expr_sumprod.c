@@ -354,15 +354,15 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalSum)
 static
 SCIP_DECL_CONSEXPR_EXPRPROP(propSum)
 {
-   SCIP_Real* exprdata;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
    int c;
 
    assert(expr != NULL);
 
-   exprdata = (SCIP_Real*)SCIPgetConsExprExprData(expr);
+   exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   SCIPintervalSet(interval, exprdata[0]);
+   SCIPintervalSet(interval, exprdata->constant);
 
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
@@ -420,15 +420,16 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
 static
 SCIP_DECL_CONSEXPR_EXPRPROP(propProduct)
 {
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_INTERVAL powinterval;
-   SCIP_Real* exprdata;
    int c;
 
    assert(expr != NULL);
 
-   exprdata = (SCIP_Real*)SCIPgetConsExprExprData(expr);
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
 
-   SCIPintervalSet(interval, exprdata[0]);
+   SCIPintervalSet(interval, exprdata->constant);
 
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
@@ -437,8 +438,8 @@ SCIP_DECL_CONSEXPR_EXPRPROP(propProduct)
       childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]);
       assert(childinterval != NULL);
 
-      /* compute interval resulting from childinterval^exprdata[c+1] */
-      SCIPintervalPowerScalar(INTERVALINFINITY, &powinterval, *childinterval, exprdata[c+1]);
+      /* compute interval resulting from childinterval^exprdata->coefficients[c] */
+      SCIPintervalPowerScalar(INTERVALINFINITY, &powinterval, *childinterval, exprdata->coefficients[c]);
 
       if( SCIPintervalIsEmpty(INTERVALINFINITY, powinterval) )
       {

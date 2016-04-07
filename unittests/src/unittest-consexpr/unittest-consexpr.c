@@ -672,19 +672,19 @@ SCIP_RETCODE testExpreval(void)
    /* evaluate main expression and check values for sub-expressions */
    printf("evaluate and check expressions\n");
    SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, sol, 1) );
-   SCIP_CALL( checkExprEval(scip, xexpr, yexpr, constexpr, prodexpr, sumexpr, mainexpr, 2.0, 4.0, 1) );
+   SCIP_CALL( checkExprEval(scip, xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, 2.0, 4.0, 1) );
 
    /* modify solution and evaluate expression with the same tag again; values should not change */
    printf("evaluate and check expressions with a modified solution but the same tag\n");
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, -2.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, -5.0) );
    SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, sol, 1) );
-   SCIP_CALL( checkExprEval(scip, xexpr, yexpr, constexpr, prodexpr, sumexpr, mainexpr, 2.0, 4.0, 1) );
+   SCIP_CALL( checkExprEval(scip, xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, 2.0, 4.0, 1) );
 
    /* evaluate expression with a different tag; values should have changed */
    printf("evaluate expression with a new tag\n");
    SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, sol, 2) );
-   SCIP_CALL( checkExprEval(scip, xexpr, yexpr, constexpr, prodexpr, sumexpr, mainexpr, -2.0, -5.0, 2) );
+   SCIP_CALL( checkExprEval(scip, xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, -2.0, -5.0, 2) );
 
    /* evaluate solution with zero tag */
    printf("evaluate expression with a zero tag\n");
@@ -693,7 +693,7 @@ SCIP_RETCODE testExpreval(void)
       SCIP_CALL( SCIPsetSolVal(scip, sol, x, i*i) );
       SCIP_CALL( SCIPsetSolVal(scip, sol, y, -5.0/i) );
       SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, sol, 0) );
-      SCIP_CALL( checkExprEval(scip, xexpr, yexpr, constexpr, prodexpr, sumexpr, mainexpr, i*i, -5.0 / i, 0) );
+      SCIP_CALL( checkExprEval(scip, xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, i*i, -5.0 / i, 0) );
    }
 
    /* mainexpr is not defined for x = -1 or y = 0; the result should be SCIP_INVALID */
@@ -712,7 +712,7 @@ SCIP_RETCODE testExpreval(void)
       SCIPsetConsExprExprEvalValue(xexpr, i*i, i);
       SCIPsetConsExprExprEvalValue(yexpr, 1.0 / i, i);
       SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, NULL, i) );
-      SCIP_CALL( checkExprEval(scip, xexpr, yexpr, constexpr, prodexpr, sumexpr, mainexpr, i*i, 1.0 / i, i) );
+      SCIP_CALL( checkExprEval(scip, xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, i*i, 1.0 / i, i) );
    }
 
    /* free solution */
@@ -780,7 +780,7 @@ SCIP_RETCODE testExprprop(void)
    SCIP_VAR* y;
    SCIP_CONSEXPR_EXPR* xexpr;
    SCIP_CONSEXPR_EXPR* yexpr;
-   SCIP_CONSEXPR_EXPR* constexpr;
+   SCIP_CONSEXPR_EXPR* const_expr;
    SCIP_CONSEXPR_EXPR* prodexpr;
    SCIP_CONSEXPR_EXPR* sumexpr;
    SCIP_CONSEXPR_EXPR* mainexpr;
@@ -808,15 +808,15 @@ SCIP_RETCODE testExprprop(void)
 
    /* create different kind of expressions */
    exponent = 0.5;
-   SCIP_CALL( createExpr(scip, conshdlr, x, y, &xexpr, &yexpr, &constexpr, &prodexpr, &sumexpr, &mainexpr) );
+   SCIP_CALL( createExpr(scip, conshdlr, x, y, &xexpr, &yexpr, &const_expr, &prodexpr, &sumexpr, &mainexpr) );
    SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &sqrtexpr, 1, &xexpr, &exponent, 1.0) );
 
    /*
     * check propagation method for constant expressions
     */
    printf("check propagation of constant expressions\n");
-   SCIP_CALL( SCIPpropConsExprExpr(scip, constexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, constexpr, 5.0, 5.0, FALSE, 0) );
+   SCIP_CALL( SCIPpropConsExprExpr(scip, const_expr, 0) );
+   SCIP_CALL( checkExprProp(scip, const_expr, 5.0, 5.0, FALSE, 0) );
 
    /*
     * check propagation method for variable expressions
@@ -838,7 +838,7 @@ SCIP_RETCODE testExprprop(void)
    SCIP_CALL( checkExprProp(scip, xexpr, 2.0, 7.5, FALSE, 0) );
 
    /*
-    * check propagation method for product expression: (x^2 / (y*5^(4)))
+    * check propagation method for product expression: (x^2 / (y*5^(-4)))
     */
    printf("check propagation of product expression\n");
    SCIP_CALL( SCIPchgVarLb(scip, x, 0.5) );
@@ -884,7 +884,7 @@ SCIP_RETCODE testExprprop(void)
                SCIP_CALL( checkExprProp(scip, prodexpr, inf, sup, FALSE, 0) );
                SCIP_CALL( checkExprProp(scip, xexpr, xlb, xub, FALSE, 0) );
                SCIP_CALL( checkExprProp(scip, yexpr, ylb, yub, FALSE, 0) );
-               SCIP_CALL( checkExprProp(scip, constexpr, 5.0, 5.0, FALSE, 0) );
+               SCIP_CALL( checkExprProp(scip, const_expr, 5.0, 5.0, FALSE, 0) );
             }
 
    /*
@@ -968,7 +968,7 @@ SCIP_RETCODE testExprprop(void)
       SCIP_CALL( checkExprProp(scip, sumexpr, 1.0, 1.0, FALSE, tag) );
       SCIP_CALL( checkExprProp(scip, xexpr, 0.0, 0.0, FALSE, tag) );
       SCIP_CALL( checkExprProp(scip, yexpr, 1.0, 1.0, FALSE, tag) );
-      SCIP_CALL( checkExprProp(scip, constexpr, 5.0, 5.0, FALSE, tag) );
+      SCIP_CALL( checkExprProp(scip, const_expr, 5.0, 5.0, FALSE, tag) );
    }
 
    /* set another tag for some subexpression; result should not change */
@@ -1008,7 +1008,7 @@ SCIP_RETCODE testExprprop(void)
    /* release all expressions */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &constexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &const_expr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &mainexpr) );
