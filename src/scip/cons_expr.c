@@ -581,7 +581,9 @@ SCIP_RETCODE parseTerm(
    )
 {
    SCIP_CONSEXPR_EXPR* factortree;
+   SCIP_Real one;
 
+   one = 1.0;
    debugParse("parsing term from %s\n", expr);
 
    /* parse Factor */
@@ -593,28 +595,26 @@ SCIP_RETCODE parseTerm(
    expr = *newpos;
 
    debugParse("back to parsing Term (we have a Factor), continue parsing from %s\n", expr);
-   *termtree = factortree;
 
-   /* check if there are more factors to parse */
+   /* initialize termtree as a product expression with a single term */
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, termtree, 1, &factortree, &one, one) );
+
+   /* loop: find symbol and parse factor */
    while( isspace((unsigned char)*expr) )
       ++expr;
    while( *expr == '*' || *expr == '/' )
    {
-      SCIP_CONSEXPR_EXPR* children[2];
-      SCIP_Real exponents[2];
+      SCIP_Real exponent;
 
-      exponents[0] = 1.0;
-      exponents[1] = *expr == '*' ? 1.0 : -1.0;
+      exponent = (*expr == '*') ? 1.0 : -1.0;
 
       debugParse("while parsing term, read char %c\n", *expr);
       ++expr;
       SCIP_CALL( parseFactor(scip, conshdlr, expr, newpos, &factortree) );
       expr = *newpos;
 
-      /* build (binary) tree */
-      children[0] = *termtree;
-      children[1] = factortree;
-      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, termtree, 2, children, exponents, 1.0) );
+      /* append newly created factor */
+      SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, *termtree, factortree, exponent) );
 
       while( isspace((unsigned char)*expr) )
          ++expr;
@@ -645,6 +645,7 @@ SCIP_RETCODE parseExpr(
       ++expr;
 
    /* if '+' or '-', store it */
+   sign = 1.0;
    if( *expr == '+' || *expr == '-' )
    {
       debugParse("while parsing expression, read char %c\n", *expr);
@@ -657,41 +658,25 @@ SCIP_RETCODE parseExpr(
 
    debugParse("back to parsing expression (we have the following term), continue parsing from %s\n", expr);
 
-   /* handle '-' */
-   if( sign < 0 )
-   {
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, exprtree, 1, &termtree, &sign, 0.0) );
-   }
-   else
-   {
-      *exprtree = termtree;
-   }
+   /* initialize exprtree as a sum expression with a single term */
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, exprtree, 1, &termtree, &sign, 0.0) );
 
    /* loop: find symbol and parse term */
    while( isspace((unsigned char)*expr) )
       ++expr;
    while( *expr == '+' || *expr == '-' )
    {
-      SCIP_CONSEXPR_EXPR* children[2]; /* just because we can't append */
-      SCIP_Real coeffs[2];
+      SCIP_Real coef;
 
-      coeffs[0] = 1.0;
-      coeffs[1] = *expr == '+' ? 1.0 : -1.0;
+      coef = (*expr == '+') ? 1.0 : -1.0;
 
       debugParse("while parsing expression, read char %c\n", *expr);
       ++expr;
       SCIP_CALL( parseTerm(scip, conshdlr, expr, newpos, &termtree) );
       expr = *newpos;
 
-      /* build (binary) tree */
-      children[0] = *exprtree;
-      children[1] = termtree;
-      debugParse("building sum expr from exprtree:\n");
-      /*SCIP_CALL( SCIPprintConsExprExpr(scip, *exprtree, NULL) );*/
-      debugParse("and termtree:\n");
-      /*SCIP_CALL( SCIPprintConsExprExpr(scip, termtree, NULL) );*/
-
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, exprtree, 2, children, coeffs, 0.0) );
+      /* append newly created term */
+      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *exprtree, termtree, coef) );
 
       while( isspace((unsigned char)*expr) )
          ++expr;
