@@ -344,12 +344,16 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprLeaveExpr)
 #else
 #define debugParse                      while( FALSE ) printf
 #endif
+static
+SCIP_RETCODE parseExpr(SCIP*, SCIP_CONSHDLR*, SCIP_HASHMAP*, char*, char**, SCIP_CONSEXPR_EXPR**);
+
 /** Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
  * builds consexprvalue, consexprvar, consexprsum or custom expr */
 static
 SCIP_RETCODE parseBase(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
    char*                 expr,               /**< expr that we are parsing */
    char**                newpos,             /**< buffer to store the position of expr where we finished reading */
    SCIP_CONSEXPR_EXPR**  baseexpr            /**< buffer to store the expr parsed by Factor */
@@ -368,13 +372,24 @@ SCIP_RETCODE parseBase(
       /* parse a var */
       SCIP_CALL( SCIPparseVarName(scip, expr, &var, &expr) );
 
-      debugParse("Parsed variable %s, Should create var expression\n", SCIPvarGetName(var));
-      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, baseexpr, var) );
+      /* check if we have already created an expression out of this var */
+      if( SCIPhashmapExists(vartoexprvarmap, (void *)var) )
+      {
+         debugParse("Variable %s has been parsed, increasing nuses\n", SCIPvarGetName(var));
+         *baseexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(vartoexprvarmap, (void *)var);
+         ++(*baseexpr)->nuses;
+      }
+      else
+      {
+         debugParse("First time parsing variable %s, creating varexpr and adding it to hashmap\n", SCIPvarGetName(var));
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, baseexpr, var) );
+         SCIP_CALL( SCIPhashmapInsert(vartoexprvarmap, (void*)var, (void*)(*baseexpr)) );
+      }
    }
    else if( *expr == '(' )
    {
       /* parse expression */
-      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, ++expr, newpos, baseexpr) );
+      SCIP_CALL( parseExpr(scip, conshdlr, vartoexprvarmap, ++expr, newpos, baseexpr) );
       expr = *newpos;
 
       /* expect ')' */
@@ -477,6 +492,7 @@ static
 SCIP_RETCODE parseFactor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
    char*                 expr,               /**< expr that we are parsing */
    char**                newpos,             /**< buffer to store the position of expr where we finished reading */
    SCIP_CONSEXPR_EXPR**  factortree          /**< buffer to store the expr parsed by Factor */
@@ -491,7 +507,7 @@ SCIP_RETCODE parseFactor(
    while( isspace((unsigned char)*expr) )
       ++expr;
 
-   SCIP_CALL( parseBase(scip, conshdlr, expr, newpos, &basetree) );
+   SCIP_CALL( parseBase(scip, conshdlr, vartoexprvarmap, expr, newpos, &basetree) );
    *factortree = basetree;
    expr = *newpos;
 
@@ -575,6 +591,7 @@ static
 SCIP_RETCODE parseTerm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
    char*                 expr,               /**< expr that we are parsing */
    char**                newpos,             /**< buffer to store the position of expr where we finished reading */
    SCIP_CONSEXPR_EXPR**  termtree            /**< buffer to store the expr parsed by Term */
@@ -591,7 +608,7 @@ SCIP_RETCODE parseTerm(
    while( isspace((unsigned char)*expr) )
       ++expr;
 
-   SCIP_CALL( parseFactor(scip, conshdlr, expr, newpos, &factortree) );
+   SCIP_CALL( parseFactor(scip, conshdlr, vartoexprvarmap, expr, newpos, &factortree) );
    expr = *newpos;
 
    debugParse("back to parsing Term (we have a Factor), continue parsing from %s\n", expr);
@@ -610,7 +627,7 @@ SCIP_RETCODE parseTerm(
 
       debugParse("while parsing term, read char %c\n", *expr);
       ++expr;
-      SCIP_CALL( parseFactor(scip, conshdlr, expr, newpos, &factortree) );
+      SCIP_CALL( parseFactor(scip, conshdlr, vartoexprvarmap, expr, newpos, &factortree) );
       expr = *newpos;
 
       /* append newly created factor */
@@ -630,6 +647,7 @@ static
 SCIP_RETCODE parseExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
+   SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
    char*                 expr,               /**< expr that we are parsing */
    char**                newpos,             /**< buffer to store the position of expr where we finished reading */
    SCIP_CONSEXPR_EXPR**  exprtree            /**< buffer to store the expr parsed by Expr */
@@ -653,7 +671,7 @@ SCIP_RETCODE parseExpr(
       ++expr;
    }
 
-   SCIP_CALL( parseTerm(scip, conshdlr, expr, newpos, &termtree) );
+   SCIP_CALL( parseTerm(scip, conshdlr, vartoexprvarmap, expr, newpos, &termtree) );
    expr = *newpos;
 
    debugParse("back to parsing expression (we have the following term), continue parsing from %s\n", expr);
@@ -672,7 +690,7 @@ SCIP_RETCODE parseExpr(
 
       debugParse("while parsing expression, read char %c\n", *expr);
       ++expr;
-      SCIP_CALL( parseTerm(scip, conshdlr, expr, newpos, &termtree) );
+      SCIP_CALL( parseTerm(scip, conshdlr, vartoexprvarmap, expr, newpos, &termtree) );
       expr = *newpos;
 
       /* append newly created term */
@@ -2261,8 +2279,13 @@ SCIP_RETCODE SCIPparseConsExprExpr(
    )
 {
    char* finalpos_;
+   SCIP_HASHMAP* vartoexprvarmap;
 
-   SCIP_CALL( parseExpr(scip, consexprhdlr, exprstr, &finalpos_, expr) );
+   SCIP_CALL( SCIPhashmapCreate(&vartoexprvarmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * SCIPgetNVars(scip))) );
+
+   SCIP_CALL( parseExpr(scip, consexprhdlr, vartoexprvarmap, exprstr, &finalpos_, expr) );
+
+   SCIPhashmapFree(&vartoexprvarmap);
 
    if( finalpos != NULL )
       *finalpos = finalpos_;
