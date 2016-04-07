@@ -523,6 +523,58 @@ SCIP_Real SCIPgetConsExprExprProductCoef(
    return exprdata->constant;
 }
 
+/** appends an expression to a sum expression */
+SCIP_RETCODE SCIPappendConsExprExprSumExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_CONSEXPR_EXPR*   child,              /**< expression to be appended */
+   SCIP_Real             childcoef           /**< child's coefficient */
+   )
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   int nchildren;
+
    assert(expr != NULL);
 
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   nchildren = SCIPgetConsExprExprNChildren(expr);
+
+   ENSUREBLOCKMEMORYARRAYSIZE(scip, exprdata->coefficients, exprdata->coefssize, nchildren + 1);
+
+   assert(exprdata->coefssize > nchildren);
+   exprdata->coefficients[nchildren] = childcoef;
+
+   SCIP_CALL( SCIPappendConsExprExpr(scip, expr, child) );
+
+   return SCIP_OKAY;
+}
+
+/** appends an expression to a product expression */
+SCIP_RETCODE SCIPappendConsExprExprProductExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< product expression */
+   SCIP_CONSEXPR_EXPR*   child,              /**< expression to be appended */
+   SCIP_Real             childcoef           /**< child's coefficient */
+   )
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   int nchildren;
+
+   assert(expr != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   nchildren = SCIPgetConsExprExprNChildren(expr);
+
+   ENSUREBLOCKMEMORYARRAYSIZE(scip, exprdata->coefficients, exprdata->coefssize, nchildren + 1);
+
+   assert(exprdata->coefssize > nchildren);
+   exprdata->coefficients[nchildren] = childcoef;
+
+   SCIP_CALL( SCIPappendConsExprExpr(scip, expr, child) );
+
+   return SCIP_OKAY;
 }
