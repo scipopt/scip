@@ -126,6 +126,27 @@ extern "C" {
    SCIP_CONSEXPREXPRWALK_STAGE stage, \
    FILE* file)
 
+/** expression parse callback
+ *
+ * the method parses an expression
+ * it is called when parsing a constraint and an operator with the expr handler name is found
+ *
+ * input:
+ *  - scip         : SCIP main data structure
+ *  - consexprhdlr : expression constraint handler
+ *  - string       : string containing expression to be parse
+ *
+ *  output:
+ *  - expr         : pointer to store the parsed expression
+ *  - success      : pointer to store whether the parsing was successful or not
+ */
+#define SCIP_DECL_CONSEXPR_EXPRPARSE(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSHDLR* consexprhdlr, \
+   const char* string, \
+   SCIP_CONSEXPR_EXPR** expr, \
+   SCIP_Bool* success)
+
 /** expression (point-) evaluation callback
  *
  * The method evaluates an expression by taking the values of its children into account.
@@ -175,7 +196,7 @@ typedef enum
 {
    SCIP_CONSEXPREXPRWALK_CONTINUE,           /**< continue the walk */
    SCIP_CONSEXPREXPRWALK_SKIP,               /**< skip this node (if in ENTEREXPR stage) or the next child (if in VISITINGCHILD stage) */
-   SCIP_CONSEXPREXPRWALK_ABORT,              /**< abort the walk */
+   SCIP_CONSEXPREXPRWALK_ABORT               /**< abort the walk */
 } SCIP_CONSEXPREXPRWALK_RESULT;
 
 

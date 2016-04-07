@@ -95,6 +95,23 @@ SCIP_Real SCIPgetConsExprExprProductCoef(
    SCIP_CONSEXPR_EXPR*   expr                /**< product expression */
    );
 
+/** appends an expression to a sum expression */
+EXTERN
+SCIP_RETCODE SCIPappendConsExprExprSumExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_CONSEXPR_EXPR*   child,              /**< expression to be appended */
+   SCIP_Real             childcoef           /**< child's coefficient */
+   );
+
+/** appends an expression to a product expression */
+EXTERN
+SCIP_RETCODE SCIPappendConsExprExprProductExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< product expression */
+   SCIP_CONSEXPR_EXPR*   child,              /**< expression to be appended */
+   SCIP_Real             childcoef           /**< child's coefficient */
+   );
 #ifdef __cplusplus
 }
 #endif

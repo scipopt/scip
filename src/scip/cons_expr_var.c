@@ -41,6 +41,25 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataVar)
    *targetexprdata = SCIPgetConsExprExprData(sourceexpr);
    assert(*targetexprdata != NULL);
 
+   SCIP_CALL( SCIPcaptureVar(targetscip, (SCIP_VAR*)*targetexprdata) );
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataVar)
+{
+   SCIP_VAR* var;
+
+   assert(expr != NULL);
+
+   var = (SCIP_VAR*)SCIPgetConsExprExprData(expr);
+   assert(var != NULL);
+
+   SCIP_CALL( SCIPreleaseVar(scip, &var) );
+
+   SCIPsetConsExprExprData(expr, NULL);
+
    return SCIP_OKAY;
 }
 
@@ -98,7 +117,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrVar, NULL) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataVar, NULL) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataVar, freedataVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printVar) );
 
    return SCIP_OKAY;
@@ -115,6 +134,8 @@ SCIP_RETCODE SCIPcreateConsExprExprVar(
    assert(consexprhdlr != NULL);
    assert(expr != NULL);
    assert(var != NULL);
+
+   SCIP_CALL( SCIPcaptureVar(scip, var) );
 
    SCIP_CALL( SCIPcreateConsExprExpr(scip, consexprhdlr, expr, SCIPgetConsExprExprHdlrVar(consexprhdlr), (SCIP_CONSEXPR_EXPRDATA*)var, 0, NULL) );
 
