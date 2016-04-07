@@ -2068,7 +2068,7 @@ void SCIPintervalPowerScalar(
          else
             resultant->sup = SCIPintervalPowerScalarIntegerSup(MAX(-operand1.inf, operand1.sup), (int)operand2);
       }
-      else if( operand2 <= 0.0 && ceil(operand2/2) != operand2/2 )
+      else if( operand2 <= 0.0 && ceil(operand2/2) == operand2/2 )
       {
          /* n even negative integer */
          resultant->sup = infinity;  /* since 0^n = infinity */
