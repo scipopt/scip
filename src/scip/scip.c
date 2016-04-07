@@ -12708,6 +12708,10 @@ SCIP_RETCODE SCIPtransformProb(
       }
    }
 
+   /* update upper bound and cutoff bound due to objective limit in primal data */
+   SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+
    if( !scip->set->reopt_enable )
    {
       oldnsolsfound = scip->primal->nsolsfound;
@@ -12774,10 +12778,6 @@ SCIP_RETCODE SCIPtransformProb(
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
          "all %d solutions given by solution candidate storage are infeasible\n\n", ncandsols);
    }
-
-   /* update upper bound and cutoff bound due to objective limit in primal data */
-   SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
 
    /* print transformed problem statistics */
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
