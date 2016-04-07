@@ -72,7 +72,6 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalVar)
 static
 SCIP_DECL_CONSEXPR_EXPRPROP(propVar)
 {
-   SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_VAR* var;
 
    assert(expr != NULL);

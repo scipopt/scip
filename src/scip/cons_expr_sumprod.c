@@ -319,10 +319,9 @@ SCIP_DECL_CONSEXPR_EXPRPROP(propSum)
    {
       SCIP_INTERVAL* childinterval;
 
-      assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]) != SCIP_INVALID);
-
       childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]);
       assert(childinterval != NULL);
+      assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), *childinterval));
 
       /* add childinterval the the so far computed interval */
       SCIPintervalAdd(SCIPinfinity(scip), interval, *interval, *childinterval);
@@ -388,7 +387,7 @@ SCIP_DECL_CONSEXPR_EXPRPROP(propProduct)
       assert(childinterval != NULL);
 
       /* compute interval resulting from childinterval^exprdata[c+1] */
-      SCIPintervalPowerScalar(SCIPinfinity(scip), &powinterval, *interval, exprdata[c+1]);
+      SCIPintervalPowerScalar(SCIPinfinity(scip), &powinterval, *childinterval, exprdata[c+1]);
 
       if( SCIPintervalIsEmpty(SCIPinfinity(scip), powinterval) )
       {
