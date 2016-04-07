@@ -215,10 +215,10 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
             SCIPinfoMessage(scip, file, "(");
          }
 
-         /* print constant coefficient, if nonzero */
-         if( exprdata[0] != 0.0 )
+         /* print constant coefficient, if not one */
+         if( exprdata[0] != 1.0 )
          {
-            if( exprdata[0] < 0 && SCIPgetConsExprExprWalkParent(expr) != NULL && SCIPgetConsExprExprHdlrPrecedence(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprWalkParent(expr))) > PRODUCT_PRECEDENCE )
+            if( exprdata[0] < 0.0 && SCIPgetConsExprExprWalkParent(expr) != NULL && SCIPgetConsExprExprHdlrPrecedence(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprWalkParent(expr))) > PRODUCT_PRECEDENCE )
             {
                SCIPinfoMessage(scip, file, "(%g)", exprdata[0]);
             }
@@ -237,14 +237,14 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
          if( exprdata[childidx+1] >= 0.0 )
          {
             /* print multiplication sign, if not first factor */
-            if( exprdata[0] != 0.0 || childidx > 0 )
+            if( exprdata[0] != 1.0 || childidx > 0 )
             {
                SCIPinfoMessage(scip, file, "*");
             }
          }
          else
          {
-            if( exprdata[0] != 0.0 || childidx > 0 )
+            if( exprdata[0] != 1.0 || childidx > 0 )
             {
                /* print division sign, if not first factor */
                SCIPinfoMessage(scip, file, "/");
