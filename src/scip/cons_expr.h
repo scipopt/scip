@@ -480,6 +480,13 @@ SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS*            cons                /**< constraint data */
    );
+
+EXTERN
+SCIP_RETCODE SCIPappendConsExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
+   );
 /** @} */
 
 #ifdef __cplusplus

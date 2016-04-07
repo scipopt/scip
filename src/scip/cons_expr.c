@@ -2267,7 +2267,6 @@ SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
  * @todo: we can change the grammar so that Factor becomes base and we allow a Term to be
  * Term       -> Factor { ("*" | "/" | "^") Factor }
  */
-EXTERN
 SCIP_RETCODE SCIPparseConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
@@ -2282,6 +2281,21 @@ SCIP_RETCODE SCIPparseConsExprExpr(
 
    if( finalpos != NULL )
       *finalpos = finalpos_;
+
+   return SCIP_OKAY;
+}
+
+/** appends child to the children list of expr */
+SCIP_RETCODE SCIPappendConsExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
+   )
+{
+   ENSUREBLOCKMEMORYARRAYSIZE(scip, expr->children, expr->childrensize, expr->nchildren + 1);
+
+   expr->children[expr->nchildren] = child;
+   ++expr->nchildren;
 
    return SCIP_OKAY;
 }
