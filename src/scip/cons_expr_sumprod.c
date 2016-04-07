@@ -36,6 +36,38 @@
 #define SUM_PRECEDENCE     100000
 #define PRODUCT_PRECEDENCE  50000
 
+/** ensures that a block memory array has at least a given size
+ *
+ *  if cursize is 0, then *array1 can be NULL
+ */
+#define ENSUREBLOCKMEMORYARRAYSIZE(scip, array1, cursize, minsize)      \
+   do {                                                                 \
+      int __newsize;                                                    \
+      assert((scip)  != NULL);                                          \
+      if( (cursize) >= (minsize) )                                      \
+         break;                                                         \
+      __newsize = SCIPcalcMemGrowSize(scip, minsize);                   \
+      assert(__newsize >= (minsize));                                   \
+      SCIP_CALL( SCIPreallocBlockMemoryArray(scip, &(array1), cursize, __newsize) ); \
+      (cursize) = __newsize;                                            \
+   } while( FALSE )
+
+/*
+ * Data structures
+ */
+
+struct SCIP_ConsExpr_ExprData
+{
+   SCIP_Real  constant;     /* I guess we would like to have it this way? */
+   SCIP_Real* coefficients; /* array with constant and coefficients of childrens */
+   int        ncoefs;       /* number of coefficients (i.e., number of children) */
+   int        coefssize;    /* size of the coefficients array */
+};
+
+/*
+ * Local methods
+ */
+
 static
 SCIP_RETCODE createData(
    SCIP*                    scip,            /**< SCIP data structure */
@@ -49,24 +81,31 @@ SCIP_RETCODE createData(
 
    assert(exprdata != NULL);
 
-   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &edata, ncoefficients + 1) );
-   edata[0] = constant;
+   SCIP_CALL( SCIPallocBlockMemory(scip, exprdata) );
+   SCIP_CALL( SCIPallocBlockMemoryArray(scip, &edata, ncoefficients) );
 
    if( coefficients != NULL )
    {
-      memcpy(edata+1, coefficients, ncoefficients * sizeof(SCIP_Real));
+      memcpy(edata, coefficients, ncoefficients * sizeof(SCIP_Real));
    }
    else
    {
       int i;
-      for( i = 1; i <= ncoefficients; ++i )
+      for( i = 0; i < ncoefficients; ++i )
          edata[i] = 1.0;
    }
 
-   *exprdata = (SCIP_CONSEXPR_EXPRDATA*) edata;
+   (*exprdata)->coefficients = edata;
+   (*exprdata)->coefssize    = ncoefficients;
+   (*exprdata)->constant     = constant;
 
    return SCIP_OKAY;
 }
+
+
+/*
+ * Callback methods of expression handler
+ */
 
 
 static
@@ -88,18 +127,16 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrProduct)
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataSumProduct)
 {
-   SCIP_Real* sourceexprdata;
-   SCIP_Real* exprdata;
+   SCIP_CONSEXPR_EXPRDATA* sourceexprdata;
 
    assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
 
-   sourceexprdata = (SCIP_Real*)SCIPgetConsExprExprData(sourceexpr);
+   sourceexprdata = SCIPgetConsExprExprData(sourceexpr);
    assert(sourceexprdata != NULL);
 
-   SCIP_CALL( SCIPduplicateBlockMemoryArray(targetscip, &exprdata, sourceexprdata, SCIPgetConsExprExprNChildren(sourceexpr) + 1) );
-
-   *targetexprdata = (SCIP_CONSEXPR_EXPRDATA*)exprdata;
+   SCIP_CALL( createData(targetscip, targetexprdata, SCIPgetConsExprExprNChildren(sourceexpr),
+            sourceexprdata->coefficients, sourceexprdata->constant) );
 
    return SCIP_OKAY;
 }
@@ -107,14 +144,15 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataSumProduct)
 static
 SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataSumProduct)
 {
-   SCIP_Real* exprdata;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
 
-   exprdata = (SCIP_Real*)SCIPgetConsExprExprData(expr);
+   exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   SCIPfreeBlockMemoryArray(scip, &exprdata, SCIPgetConsExprExprNChildren(expr) + 1);
+   SCIPfreeBlockMemoryArray(scip, &(exprdata->coefficients), exprdata->coefssize);
+   SCIPfreeBlockMemory(scip, &exprdata);
 
    SCIPsetConsExprExprData(expr, NULL);
 
@@ -124,11 +162,12 @@ SCIP_DECL_CONSEXPR_EXPRFREEDATA(freedataSumProduct)
 static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
 {
-   SCIP_Real* exprdata;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
 
-   exprdata = (SCIP_Real*)SCIPgetConsExprExprData(expr);
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
 
    switch( stage )
    {
@@ -141,9 +180,9 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
          }
 
          /* print constant, if nonzero */
-         if( exprdata[0] != 0.0 )
+         if( exprdata->constant != 0.0 )
          {
-            SCIPinfoMessage(scip, file, "%g", exprdata[SCIPgetConsExprExprWalkCurrentChild(expr)]);
+            SCIPinfoMessage(scip, file, "%g", exprdata->constant);
          }
          break;
       }
@@ -154,13 +193,13 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
          SCIP_Real coef;
 
          childidx = SCIPgetConsExprExprWalkCurrentChild(expr);
-         coef = exprdata[childidx+1];
+         coef = exprdata->coefficients[childidx];
 
          /* print coefficient, if necessary */
          if( coef == 1.0 )
          {
             /* if coefficient is 1.0, then print only "+" if not the first term */
-            if( exprdata[0] != 0.0 || childidx > 0 )
+            if( exprdata->constant != 0.0 || childidx > 0 )
             {
                SCIPinfoMessage(scip, file, "+");
             }
@@ -173,7 +212,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
          else
          {
             /* force "+" sign on positive coefficient if not the first term */
-            SCIPinfoMessage(scip, file, (exprdata[0] != 0.0 || childidx > 0) ? "%+g*" : "%g*", coef);
+            SCIPinfoMessage(scip, file, (exprdata->constant != 0.0 || childidx > 0) ? "%+g*" : "%g*", coef);
          }
 
          break;
@@ -199,11 +238,12 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
 static
 SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
 {
-   SCIP_Real* exprdata;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
 
    assert(expr != NULL);
 
-   exprdata = (SCIP_Real*)SCIPgetConsExprExprData(expr);
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
 
    switch( stage )
    {
@@ -215,16 +255,16 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
             SCIPinfoMessage(scip, file, "(");
          }
 
-         /* print constant coefficient, if not one */
-         if( exprdata[0] != 1.0 )
+         /* print constant factor, if not one */
+         if( exprdata->constant != 1.0 )
          {
-            if( exprdata[0] < 0.0 && SCIPgetConsExprExprWalkParent(expr) != NULL && SCIPgetConsExprExprHdlrPrecedence(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprWalkParent(expr))) > PRODUCT_PRECEDENCE )
+            if( exprdata->constant < 0.0 && SCIPgetConsExprExprWalkParent(expr) != NULL && SCIPgetConsExprExprHdlrPrecedence(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprWalkParent(expr))) > PRODUCT_PRECEDENCE )
             {
-               SCIPinfoMessage(scip, file, "(%g)", exprdata[0]);
+               SCIPinfoMessage(scip, file, "(%g)", exprdata->constant);
             }
             else
             {
-               SCIPinfoMessage(scip, file, "%g", exprdata[0]);
+               SCIPinfoMessage(scip, file, "%g", exprdata->constant);
             }
          }
          break;
@@ -234,17 +274,17 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
       {
          int childidx = SCIPgetConsExprExprWalkCurrentChild(expr);
 
-         if( exprdata[childidx+1] >= 0.0 )
+         if( exprdata->coefficients[childidx] >= 0.0 )
          {
             /* print multiplication sign, if not first factor */
-            if( exprdata[0] != 1.0 || childidx > 0 )
+            if( exprdata->constant != 1.0 || childidx > 0 )
             {
                SCIPinfoMessage(scip, file, "*");
             }
          }
          else
          {
-            if( exprdata[0] != 1.0 || childidx > 0 )
+            if( exprdata->constant != 1.0 || childidx > 0 )
             {
                /* print division sign, if not first factor */
                SCIPinfoMessage(scip, file, "/");
@@ -261,7 +301,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
       case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
       {
          SCIP_Real exponent;
-         exponent = exprdata[SCIPgetConsExprExprWalkCurrentChild(expr)+1];
+         exponent = exprdata->coefficients[SCIPgetConsExprExprWalkCurrentChild(expr)];
 
          /* print absolute value of exponent, if not 1.0 (sign is taken care of in VISITINGCHILD) */
          exponent = REALABS(exponent);
@@ -290,19 +330,20 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalSum)
 {
-   SCIP_Real* exprdata;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
    int c;
 
    assert(expr != NULL);
 
-   exprdata = (SCIP_Real*)SCIPgetConsExprExprData(expr);
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
 
-   *val = exprdata[0];
+   *val = exprdata->constant;
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
       assert(SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]) != SCIP_INVALID);
 
-      *val += exprdata[c+1] * SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]);
+      *val += exprdata->coefficients[c] * SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]);
    }
 
    return SCIP_OKAY;
@@ -311,23 +352,24 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalSum)
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
 {
-   SCIP_Real* exprdata;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_Real childval;
    SCIP_Real powval;
    int c;
 
    assert(expr != NULL);
 
-   exprdata = (SCIP_Real*)SCIPgetConsExprExprData(expr);
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
 
-   *val = exprdata[0];
+   *val = exprdata->constant;
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
       childval = SCIPgetConsExprExprValue(SCIPgetConsExprExprChildren(expr)[c]);
       assert(childval != SCIP_INVALID);
 
       /* according to the man page of pow(), this should also work fine for cases like pow(<negative>, <integer>) */
-      powval = pow(childval, exprdata[c+1]);
+      powval = pow(childval, exprdata->coefficients[c]);
 
       /* if there is a domain, pole, or range error, pow() should return some kind of NaN, infinity, or HUGE_VAL
        * we could also work with floating point exceptions or errno, but I am not sure this would be thread-safe
@@ -387,9 +429,14 @@ SCIP_Real* SCIPgetConsExprExprSumCoefs(
    SCIP_CONSEXPR_EXPR*   expr                /**< sum expression */
    )
 {
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
    assert(expr != NULL);
 
-   return ((SCIP_Real*)SCIPgetConsExprExprData(expr)) + 1;
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   return exprdata->coefficients;
 }
 
 /** gets the constant of a summation expression */
@@ -397,9 +444,14 @@ SCIP_Real SCIPgetConsExprExprSumConstant(
    SCIP_CONSEXPR_EXPR*   expr                /**< sum expression */
    )
 {
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
    assert(expr != NULL);
 
-   return *(SCIP_Real*)SCIPgetConsExprExprData(expr);
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   return exprdata->constant;
 }
 
 
@@ -446,9 +498,14 @@ SCIP_Real* SCIPgetConsExprExprProductExponents(
    SCIP_CONSEXPR_EXPR*   expr                /**< product expression */
    )
 {
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
    assert(expr != NULL);
 
-   return ((SCIP_Real*)SCIPgetConsExprExprData(expr)) + 1;
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   return exprdata->coefficients;
 }
 
 /** gets the constant coefficient of a product expression */
@@ -456,7 +513,16 @@ SCIP_Real SCIPgetConsExprExprProductCoef(
    SCIP_CONSEXPR_EXPR*   expr                /**< product expression */
    )
 {
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
    assert(expr != NULL);
 
-   return *(SCIP_Real*)SCIPgetConsExprExprData(expr);
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   return exprdata->constant;
+}
+
+   assert(expr != NULL);
+
 }
