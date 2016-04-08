@@ -447,6 +447,7 @@ SCIP_DECL_CONSEXPR_EXPRPROP(propProduct)
 
       childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]);
       assert(childinterval != NULL);
+      assert(!SCIPintervalIsEmpty(INTERVALINFINITY, *childinterval));
 
       /* compute interval resulting from childinterval^exprdata->coefficients[c] */
       SCIPintervalPowerScalar(INTERVALINFINITY, &powinterval, *childinterval, exprdata->coefficients[c]);
