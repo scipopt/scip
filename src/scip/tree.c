@@ -4341,8 +4341,24 @@ SCIP_RETCODE SCIPnodeFocus(
       assert(tree->nchildren == 0);
       assert(*node == NULL);
 
-      SCIP_CALL( focusnodeToLeaf(blkmem, set, stat, eventqueue, transprob, tree, reopt, lp, tree->focuslpstatefork,
-            primal->cutoffbound) );
+      /* if the node is infeasible, convert it into a deadend; otherwise, put it into the LEAF queue */
+      if( SCIPsetIsGE(set, tree->focusnode->lowerbound, primal->cutoffbound) )
+      {
+         /* in case the LP was not constructed (due to the parameter settings for example) we have the finally remember the
+          * old size of the LP (if it was constructed in an earlier node) before we change the current node into a deadend
+          */
+         if( !tree->focuslpconstructed )
+            SCIPlpMarkSize(lp);
+
+         /* convert old focus node into deadend */
+         SCIP_CALL( focusnodeToDeadend(blkmem, set, stat, eventqueue, transprob, origprob, tree, reopt, lp, branchcand,
+               cliquetable) );
+      }
+      else
+      {
+         SCIP_CALL( focusnodeToLeaf(blkmem, set, stat, eventqueue, transprob, tree, reopt, lp, tree->focuslpstatefork,
+               SCIPsetInfinity(set)) );
+      }
    }
    else if( tree->nchildren > 0 )
    {
@@ -4430,7 +4446,7 @@ SCIP_RETCODE SCIPnodeFocus(
    else if( tree->focusnode != NULL )
    {
       /* in case the LP was not constructed (due to the parameter settings for example) we have the finally remember the
-       * old size of the LP (if it was constructed in an earlier node) before we change the current node into a junction
+       * old size of the LP (if it was constructed in an earlier node) before we change the current node into a deadend
        */
       if( !tree->focuslpconstructed )
          SCIPlpMarkSize(lp);

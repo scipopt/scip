@@ -232,6 +232,7 @@ SCIP_RETCODE freeComponent(
 static
 SCIP_RETCODE componentCreateSubscip(
    COMPONENT*            component,          /**< pointer to component structure */
+   SCIP_CONSHDLRDATA*    conshdlrdata,       /**< constraint handler data */
    SCIP_HASHMAP*         varmap,             /**< variable hashmap used to improve performance */
    SCIP_HASHMAP*         consmap,            /**< constraint hashmap used to improve performance */
    SCIP_CONS**           conss,              /**< constraints contained in this component */
@@ -287,6 +288,9 @@ SCIP_RETCODE componentCreateSubscip(
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/solutions", -1) );
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", -1) );
 
+   SCIP_CALL( SCIPsetIntParam(subscip, "constraints/" CONSHDLR_NAME "/maxdepth",
+         conshdlrdata->maxdepth - SCIPgetDepth(scip)) );
+
    /* reduce the effort spent for hash tables */
    //SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usevartable", FALSE) );
    //SCIP_CALL( SCIPsetBoolParam(subscip, "misc/useconstable", FALSE) );
@@ -338,42 +342,53 @@ SCIP_RETCODE componentCreateSubscip(
 
    SCIP_CALL( SCIPcreateOrigSol(subscip, &(component->workingsol), NULL) );
 
-   printf("workingsol: %p\n", component->workingsol);
-
    if( SCIPgetNOrigVars(subscip) > nvars )
    {
       SCIP_VAR** vars = SCIPgetOrigVars(subscip);
       int nnewvars = SCIPgetNOrigVars(subscip);
       int index = 0;
+      int ninactive = 0;
 
-      component->nfixedvars = nnewvars - nvars;
-      SCIP_CALL( SCIPallocMemoryArray(scip, &component->fixedvars, component->nfixedvars) );
+      SCIP_CALL( SCIPallocMemoryArray(scip, &component->fixedvars, nnewvars - nvars) );
 
       for( v = 0; v < nnewvars; ++v )
       {
          if( SCIPvarGetIndex(vars[v]) >= nvars )
          {
-            assert(SCIPisEQ(subscip, SCIPvarGetLbGlobal(vars[v]),
-                  SCIPvarGetUbGlobal(vars[v])));
+            /* the variable is either locally fixed or could be an inactive variable present in a constraint
+             * for which an aggregation constraint linking it to the active variable was created in the subscip
+             */
+            assert(SCIPisZero(subscip, SCIPvarGetObj(vars[v])) ||
+               SCIPisEQ(subscip, SCIPvarGetLbGlobal(vars[v]), SCIPvarGetUbGlobal(vars[v])));
 
-            component->fixedvarsobjsum += SCIPvarGetLbGlobal(vars[v]) * SCIPvarGetObj(vars[v]);
+            /* locally fixed variable */
+            if( SCIPisEQ(subscip, SCIPvarGetLbGlobal(vars[v]), SCIPvarGetUbGlobal(vars[v])) )
+            {
+               component->fixedvarsobjsum += SCIPvarGetLbGlobal(vars[v]) * SCIPvarGetObj(vars[v]);
 
-            component->fixedvars[index] = vars[v];
-            ++index;
+               component->fixedvars[index] = vars[v];
+               ++index;
 
-            SCIP_CALL( SCIPsetSolVal(subscip, component->workingsol, vars[v], SCIPvarGetLbGlobal(vars[v])) );
+               SCIP_CALL( SCIPsetSolVal(subscip, component->workingsol, vars[v], SCIPvarGetLbGlobal(vars[v])) );
+            }
+            /* inactive variable */
+            else
+            {
+               ++ninactive;
+
+               assert(SCIPisZero(subscip, SCIPvarGetObj(vars[v])));
+               assert(ninactive <= SCIPgetNOrigConss(subscip) - nconss);
+            }
          }
 #ifndef NDEBUG
          else
             assert(SCIPisLT(subscip, SCIPvarGetLbGlobal(vars[v]), SCIPvarGetUbGlobal(vars[v])));
 #endif
       }
+      component->nfixedvars = index;
       SCIPdebugMessage("%d locally fixed variables have been copied, objective contribution: %g\n",
          component->nfixedvars, component->fixedvarsobjsum);
    }
-   SCIPdebugMessage("%d locally fixed variables have been copied, objective contribution: %g\n",
-      component->nfixedvars, component->fixedvarsobjsum);
-
 
 #if 0 /* for more debugging */
    /* write the problem, if requested */
@@ -665,7 +680,7 @@ SCIP_RETCODE solveComponent(
                (SCIPgetSolOrigObj(scip, problem->bestsol) - SCIPretransformObj(scip, problem->lowerbound)) / MAX(ABS(SCIPretransformObj(scip, problem->lowerbound)),SCIPgetSolOrigObj(scip, problem->bestsol)) : SCIPinfinity(scip),
                problem->nfeascomps == problem->ncomponents ?
                SCIPgetSolOrigObj(scip, problem->bestsol) - SCIPretransformObj(scip, problem->lowerbound) : SCIPinfinity(scip));
-            //SCIP_CALL( SCIPupdateLocalLowerbound(scip, problem->lowerbound) );
+            SCIP_CALL( SCIPupdateLocalLowerbound(scip, problem->lowerbound) );
          }
 
          /* store dual bound of this call */
@@ -688,6 +703,7 @@ SCIP_RETCODE solveComponent(
             subvar = component->subvars[v];
             assert(var != NULL);
             assert(subvar != NULL);
+            assert(SCIPvarIsActive(var));
 
             SCIP_CALL( SCIPsetSolVal(scip, problem->bestsol, var, SCIPgetSolVal(subscip, sol, subvar)) );
          }
@@ -1037,6 +1053,12 @@ SCIP_RETCODE splitProblem(
 
          SCIPdebugMessage("build sub-SCIP for component %d of problem <%s>: %d vars (%d bin, %d int, %d cont), %d conss\n",
             component->number, (*problem)->name, component->nvars, nbinvars, nintvars, component->nvars - nintvars - nbinvars, ncompconss);
+
+         {
+            int i;
+            for( i = 0; i < component->nvars; ++i )
+               assert(SCIPvarIsActive(component->vars[i]));
+         }
 #if 0
          {
             int i;
@@ -1047,7 +1069,7 @@ SCIP_RETCODE splitProblem(
          }
 #endif
          /* build subscip for component */
-         SCIP_CALL( componentCreateSubscip(component, varmap, consmap, compconss, ncompconss, &success) );
+         SCIP_CALL( componentCreateSubscip(component, conshdlrdata, varmap, consmap, compconss, ncompconss, &success) );
 
          SCIP_CALL( SCIPpqueueInsert((*problem)->compqueue, (*problem)->components[comp]) );
 
@@ -1328,7 +1350,7 @@ SCIP_RETCODE findComponents(
        */
       for( v = 0; v < nvars; ++v )
       {
-         if( SCIPisFeasLT(scip, SCIPvarGetLbLocal(vars[v]), SCIPvarGetUbLocal(vars[v])) )
+         if( SCIPisLT(scip, SCIPvarGetLbLocal(vars[v]), SCIPvarGetUbLocal(vars[v])) )
          {
             assert(nunfixedvars <= v);
             vars[nunfixedvars] = vars[v];
@@ -1361,10 +1383,10 @@ SCIP_RETCODE findComponents(
 #ifndef NDEBUG
             SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL,
                "prop components found %d undirected components at node %lld, depth %d\n",
-               SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), ncomponents);
+               ncomponents, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip));
 #else
             SCIPdebugMessage("prop components found %d undirected components at node %lld, depth %d\n",
-               SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip), ncomponents);
+               ncomponents, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip));
 #endif
 
             if( ncomponents > 1 )
@@ -1532,6 +1554,29 @@ SCIP_DECL_CONSLOCK(consLockComponents)
    return SCIP_OKAY;
 }
 
+/** solving process initialization method of constraint handler (called when branch and bound process is about to begin) */
+static
+SCIP_DECL_CONSINITSOL(consInitsolComponents)
+{  /*lint --e{715}*/
+   assert(nconss == 0);
+
+   return SCIP_OKAY;
+}
+
+/** solving process deinitialization method of constraint handler (called before branch and bound process data is freed) */
+static
+SCIP_DECL_CONSEXITSOL(consExitsolComponents)
+{  /*lint --e{715}*/
+   if( nconss > 0 )
+   {
+      assert(nconss == 1);
+
+      SCIP_CALL( SCIPdelCons(scip, conss[0]) );
+   }
+
+   return SCIP_OKAY;
+}
+
 
 #define consEnfolpComponents NULL
 #define consEnfopsComponents NULL
@@ -1566,6 +1611,8 @@ SCIP_RETCODE SCIPincludeConshdlrComponents(
          CONSHDLR_PROPFREQ, CONSHDLR_DELAYPROP, CONSHDLR_PROP_TIMING));
 
    SCIP_CALL( SCIPsetConshdlrFree(scip, conshdlr, conshdlrFreeComponents) );
+   SCIP_CALL( SCIPsetConshdlrInitsol(scip, conshdlr, consInitsolComponents) );
+   SCIP_CALL( SCIPsetConshdlrExitsol(scip, conshdlr, consExitsolComponents) );
    SCIP_CALL( SCIPsetConshdlrCopy(scip, conshdlr, conshdlrCopyComponents, NULL) );
    SCIP_CALL( SCIPsetConshdlrDelete(scip, conshdlr, consDeleteComponents) );
 

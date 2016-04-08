@@ -11541,7 +11541,7 @@ SCIP_RETCODE SCIPdelCons(
 {
    assert(cons != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPdelCons", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPdelCons", FALSE, TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE, FALSE, FALSE) );
 
    switch( scip->set->stage )
    {
@@ -11559,7 +11559,9 @@ SCIP_RETCODE SCIPdelCons(
       /*lint -fallthrough*/
 
    case SCIP_STAGE_PRESOLVING:
+   case SCIP_STAGE_INITSOLVE:
    case SCIP_STAGE_SOLVING:
+   case SCIP_STAGE_EXITSOLVE:
       SCIP_CALL( SCIPconsDelete(cons, scip->mem->probmem, scip->set, scip->stat, scip->transprob) );
       return SCIP_OKAY;
 
