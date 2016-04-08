@@ -16,7 +16,7 @@
 /**@file   cons_expr.c
  * @brief  constraint handler for expression constraints (in particular, nonlinear constraints)
  * @author Stefan Vigerske
- * @author Benjamin Müller
+ * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/

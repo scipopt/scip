@@ -15,7 +15,7 @@
 
 /**@file   sepa_eccuts.c
  * @brief  edge concave cut separator
- * @author Benjamin Müller
+ * @author Benjamin Mueller
  */
 
 /**@todo only count number of fixed variables in the edge concave terms */

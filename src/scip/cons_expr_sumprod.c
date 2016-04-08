@@ -16,7 +16,7 @@
 /**@file   cons_expr_sumprod.c
  * @brief  sum and product expression handlers
  * @author Stefan Vigerske
- * @author Benjamin Müller
+ * @author Benjamin Mueller
  *
  * Implementation of the sum expression, representing a summation of a constant
  * and the arguments, each multiplied by a coefficients, i.e., sum_i a_i*x_i + constant.

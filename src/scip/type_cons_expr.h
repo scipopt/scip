@@ -16,7 +16,7 @@
 /**@file   type_cons_expr.h
  * @brief  (public) types of expression constraint
  * @author Stefan Vigerske
- * @author Benjamin Müller
+ * @author Benjamin Mueller
  *
  * These are in particular types that define the expressions in cons_expr
  * and that need to be accessed by the linear estimation plugins of cons_expr.
