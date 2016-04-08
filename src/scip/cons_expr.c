@@ -1905,14 +1905,14 @@ SCIP_Real SCIPgetConsExprExprValue(
    return expr->evalvalue;
 }
 
-/** gives the interval from the last propagation of an expression (interval is empty if there was an propagation error) */
-SCIP_INTERVAL* SCIPgetConsExprExprInterval(
+/** gives the interval from the last propagation of an expression (interval is empty if there was a propagation error) */
+SCIP_INTERVAL SCIPgetConsExprExprInterval(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    )
 {
    assert(expr != NULL);
 
-   return &(expr->interval);
+   return expr->interval;
 }
 
 /** gives the evaluation tag from the last evaluation, or 0 */

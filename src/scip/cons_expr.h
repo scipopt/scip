@@ -296,9 +296,9 @@ SCIP_Real SCIPgetConsExprExprValue(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
-/** returns the interval from the last propagation of an expression (interval is empty if there was an propagation error) */
+/** returns the interval from the last propagation of an expression (interval is empty if there was a propagation error) */
 EXTERN
-SCIP_INTERVAL* SCIPgetConsExprExprInterval(
+SCIP_INTERVAL SCIPgetConsExprExprInterval(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
