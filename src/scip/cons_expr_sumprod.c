@@ -16,6 +16,7 @@
 /**@file   cons_expr_sumprod.c
  * @brief  sum and product expression handlers
  * @author Stefan Vigerske
+ * @author Benjamin Mueller
  *
  * Implementation of the sum expression, representing a summation of a constant
  * and the arguments, each multiplied by a coefficients, i.e., sum_i a_i*x_i + constant.
@@ -349,6 +350,43 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalSum)
    return SCIP_OKAY;
 }
 
+/** expression interval evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_INTERVAL suminterval;
+   int c;
+
+   assert(expr != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   SCIPintervalSet(interval, exprdata->constant);
+
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      SCIP_INTERVAL childinterval;
+
+      childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]);
+      assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
+
+      /* compute coefficients[c] * childinterval and add the result to the so far computed interval */
+      if( exprdata->coefficients[c] == 1.0 )
+      {
+         SCIPintervalAdd(SCIPinfinity(scip), interval, *interval, childinterval);
+      }
+      else
+      {
+         SCIPintervalMulScalar(SCIPinfinity(scip), &suminterval, childinterval, exprdata->coefficients[c]);
+         SCIPintervalAdd(SCIPinfinity(scip), interval, *interval, suminterval);
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
 {
@@ -386,6 +424,44 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
    return SCIP_OKAY;
 }
 
+/** expression interval evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_INTERVAL powinterval;
+   int c;
+
+   assert(expr != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   SCIPintervalSet(interval, exprdata->constant);
+
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      SCIP_INTERVAL childinterval;
+
+      childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]);
+      assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
+
+      /* compute interval resulting from childinterval^exprdata->coefficients[c] */
+      SCIPintervalPowerScalar(SCIPinfinity(scip), &powinterval, childinterval, exprdata->coefficients[c]);
+
+      if( SCIPintervalIsEmpty(SCIPinfinity(scip), powinterval) )
+      {
+         SCIPintervalSetEmpty(interval);
+         return SCIP_OKAY;
+      }
+
+      /* multiply powinterval with the so far computed interval */
+      SCIPintervalMul(SCIPinfinity(scip), interval, *interval, powinterval);
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for sum expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -394,12 +470,14 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "sum", "summation with coefficients and a constant", SUM_PRECEDENCE, evalSum, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "sum", "summation with coefficients and a constant",
+         SUM_PRECEDENCE, evalSum, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrSum, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSum) );
 
    return SCIP_OKAY;
 }
@@ -463,12 +541,14 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "prod", "product of children with exponents (actually a signomial)", PRODUCT_PRECEDENCE, evalProduct, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "prod",
+         "product of children with exponents (actually a signomial)", PRODUCT_PRECEDENCE, evalProduct, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrProduct, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalProduct) );
 
    return SCIP_OKAY;
 }

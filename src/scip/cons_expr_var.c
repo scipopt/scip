@@ -16,6 +16,7 @@
 /**@file   cons_expr_var.c
  * @brief  variable expression handler
  * @author Stefan Vigerske
+ * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -87,6 +88,23 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalVar)
    return SCIP_OKAY;
 }
 
+/** expression interval evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
+{
+   SCIP_VAR* var;
+
+   assert(expr != NULL);
+
+   var = (SCIP_VAR*) SCIPgetConsExprExprData(expr);
+   assert(var != NULL);
+
+   SCIPintervalSetBounds(interval, MIN(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)),
+      MAX(SCIPvarGetLbLocal(var), SCIPvarGetUbLocal(var)));
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for variable expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -101,6 +119,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrVar, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataVar, freedataVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printVar) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalVar) );
 
    return SCIP_OKAY;
 }

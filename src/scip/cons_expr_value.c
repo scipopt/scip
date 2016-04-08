@@ -16,6 +16,7 @@
 /**@file   cons_expr_constant.c
  * @brief  constant value expression handler
  * @author Stefan Vigerske
+ * @author Benjamin Mueller
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -66,6 +67,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
    return SCIP_OKAY;
 }
 
+/** expression point evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalValue)
 {
@@ -75,6 +77,23 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalValue)
 
    exprdata = SCIPgetConsExprExprData(expr);
    memcpy(val, &exprdata, sizeof(SCIP_Real));
+
+   return SCIP_OKAY;
+}
+
+/** expression interval evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalValue)
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_Real val;
+
+   assert(expr != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   memcpy(&val, &exprdata, sizeof(SCIP_Real));
+
+   SCIPintervalSet(interval, val);
 
    return SCIP_OKAY;
 }
@@ -93,6 +112,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrValue, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataValue, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printValue) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalValue) );
 
    return SCIP_OKAY;
 }

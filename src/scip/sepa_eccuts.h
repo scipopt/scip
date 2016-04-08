@@ -16,7 +16,7 @@
 /**@file   sepa_eccuts.h
  * @ingroup SEPARATORS
  * @brief  edge concave cut separator
- * @author Benjamin Müller
+ * @author Benjamin Mueller
  *
  * We call \f$ f \f$ an edge-concave function on a polyhedron \f$P\f$ iff it is concave in all edge directions of
  * \f$P\f$. For the special case \f$ P = [\ell,u]\f$ this is equivalent to \f$f\f$ being concave componentwise.
