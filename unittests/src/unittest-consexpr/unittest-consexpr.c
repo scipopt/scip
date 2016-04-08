@@ -547,7 +547,7 @@ SCIP_RETCODE testFree(void)
    return SCIP_OKAY;
 }
 
-/* creates expression for f(x,y) = 0.5 * ( (x^2*y^(-1)*5^(-4))^2 * (x + 1)^(-1) ) */
+/* creates expression for f(x,y) = 0.5 * ( (x^2*y^(-1)*5^(-4))^2 * (2*x + 1)^(-1) ) */
 static
 SCIP_RETCODE createExpr(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -564,7 +564,7 @@ SCIP_RETCODE createExpr(
 {
    SCIP_CONSEXPR_EXPR* exprs[] = {NULL, NULL, NULL};
    SCIP_Real exponents[3] = {2.0, -1.0, -4.0};
-   SCIP_Real coef = 1.0;
+   SCIP_Real coef = 2.0;
 
    /* create variable and constant expressions */
    SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, xexpr, x) );
@@ -605,7 +605,7 @@ SCIP_RETCODE checkExprEval(
    SCIP_Real sumval;
 
    prodval = pow(x,2)*pow(y,-1)*pow(5,-4);
-   sumval = x + 1;
+   sumval = 2*x + 1;
 
    /* check values */
    if( !SCIPisEQ(scip, SCIPgetConsExprExprValue(mainexpr), 0.5 * pow(prodval,2) * pow(sumval,-1) )
@@ -834,7 +834,7 @@ SCIP_RETCODE testExprprop(void)
    SCIP_CALL( SCIPchgVarLb(scip, x, 2.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 7.5) );
    SCIP_CALL( SCIPpropConsExprExpr(scip, sumexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, sumexpr, 3.0, 8.5, FALSE, 0) );
+   SCIP_CALL( checkExprProp(scip, sumexpr, 5.0, 16.0, FALSE, 0) );
    SCIP_CALL( checkExprProp(scip, xexpr, 2.0, 7.5, FALSE, 0) );
 
    /*
@@ -851,7 +851,7 @@ SCIP_RETCODE testExprprop(void)
    SCIP_CALL( checkExprProp(scip, yexpr, 1.0, 2.0, FALSE, 0) );
 
    /*
-    * check propagation for a complicated expression: 0.5 * ( (x^2*y^(-1)*5^(-4))^2 * (x + 1)^(-1) )
+    * check propagation for a complicated expression: 0.5 * ( (x^2*y^(-1)*5^(-4))^2 * (2x + 1)^(-1) )
     */
    printf("check propagation of a complicated expression\n");
    for( xub = 0.0; xub <= 10.0; xub += 1.0 )
@@ -869,8 +869,8 @@ SCIP_RETCODE testExprprop(void)
                /* compute range of mainexpr */
                inf = (pow(5.0,-8) / 2.0) * MIN(pow(xlb,4), pow(xub,4)) * pow(yub, -2);
                sup = (pow(5.0,-8) / 2.0) * MAX(pow(xlb,4), pow(xub,4)) * pow(ylb, -2);
-               a = MIN(1.0 / (1.0 + xlb), 1.0 / (1.0 + xub));
-               b = MAX(1.0 / (1.0 + xlb), 1.0 / (1.0 + xub));
+               a = MIN(1.0 / (1.0 + 2 * xlb), 1.0 / (1.0 + 2 * xub));
+               b = MAX(1.0 / (1.0 + 2 * xlb), 1.0 / (1.0 + 2 * xub));
                inf *= b < 0 ? b : a;
                sup *= b < 0 ? a : b;
 
@@ -878,7 +878,7 @@ SCIP_RETCODE testExprprop(void)
 
                /* check all expressions */
                SCIP_CALL( checkExprProp(scip, mainexpr, MIN(inf,sup), MAX(inf,sup), FALSE, 0) );
-               SCIP_CALL( checkExprProp(scip, sumexpr, xlb + 1.0, xub + 1.0, FALSE, 0) );
+               SCIP_CALL( checkExprProp(scip, sumexpr, 2*xlb + 1.0, 2*xub + 1.0, FALSE, 0) );
                inf = MIN(xlb*xlb, xub*xub) * (1.0/yub) * pow(5,-4);
                sup = MAX(xlb*xlb, xub*xub) * (1.0/ylb) * pow(5,-4);
                SCIP_CALL( checkExprProp(scip, prodexpr, inf, sup, FALSE, 0) );
@@ -888,18 +888,18 @@ SCIP_RETCODE testExprprop(void)
             }
 
    /*
-    * check if propagation for 1/(1+x)^3 or 1/y leads to infinite bounds
+    * check if propagation for 1/(1+2*x)^3 or 1/y leads to infinite bounds
     */
    printf("check propagation for expressions containing functions like 1/f(x)\n");
-   SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
-   SCIP_CALL( SCIPchgVarUb(scip, x, -1.0) );
+   SCIP_CALL( SCIPchgVarLb(scip, x, -0.5) );
+   SCIP_CALL( SCIPchgVarUb(scip, x, -0.5) );
    SCIP_CALL( SCIPchgVarLb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
    SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 0) );
    SCIP_CALL( checkExprProp(scip, mainexpr, -INTERVALINFINITY, INTERVALINFINITY, FALSE, 0) );
 
-   SCIP_CALL( SCIPchgVarLb(scip, x, -2.0) );
-   SCIP_CALL( SCIPchgVarUb(scip, x, 2.0) );
+   SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
+   SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
    SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 0) );
    SCIP_CALL( checkExprProp(scip, mainexpr, -INTERVALINFINITY, INTERVALINFINITY, FALSE, 0) );
 
@@ -916,7 +916,7 @@ SCIP_RETCODE testExprprop(void)
    SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 0) );
    SCIP_CALL( checkExprProp(scip, mainexpr, 0.0, INTERVALINFINITY, FALSE, 0) );
 
-   /* (1/y)^2 should lead to [0,inf] but because of 1/(1+x)^3 we should get [-inf,inf] */
+   /* (1/y)^2 should lead to [0,inf] but because of 1/(1+2*x)^3 we should get [-inf,inf] */
    SCIP_CALL( SCIPchgVarLb(scip, y, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarLb(scip, x, -10.0) );
