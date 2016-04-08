@@ -310,33 +310,33 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprLeaveExpr)
    return SCIP_OKAY;
 }
 
-/*
- * Parsing methods
- * Here is an attempt at defining the grammar of an expression. Will use uppercase names for variables (in the grammar sense)
- * and terminals will be between "".
+/** @name Parsing methods
+ * @{
+ * Here is an attempt at defining the grammar of an expression.
+ * We use upper case names for variables (in the grammar sense) and terminals are between "".
  * Loosely speaking, a Base will be any "block", a Factor is a Base to a power, a Term is a product of Factors
- * and an Expression is a sum of terms
+ * and an Expression is a sum of terms.
  * The actual definition:
- *
+ * <pre>
  * Expression -> ["+" | "-"] Term { ("+" | "-") Term }
  * Term       -> Factor { ("*" | "/" ) Factor }
  * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
  * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
- *
- * where [a|b] means a or b or none, (a|b) means a or b, {a} means 0 or more a
+ * </pre>
+ * where [a|b] means a or b or none, (a|b) means a or b, {a} means 0 or more a.
  *
  * Note that Op and OpExpression are undefined. Op corresponds to the name of an expression handler and
- * OpExpression to whatever string the expression handler accepts (through its parse method)
+ * OpExpression to whatever string the expression handler accepts (through its parse method).
  *
- * Each parse(Expr|Factor|Term|Base) returns an consexpr_expr: for the time being we assume that
- * Expr is always a exprsum
- * Term is always a exprprod
- * Factor is always a exprprod
- * Base can be anything
+ * Each parse(Expr|Factor|Term|Base) returns an SCIP_CONSEXPR_EXPR.
+ * For the time being we assume that
+ * - Expr is always a exprsum,
+ * - Term is always a exprprod,
+ * - Factor is always a exprprod,
+ * - Base can be anything.
  *
- * @todo: we can change the grammar so that Factor becomes base and we allow a Term to be
- * Term       -> Factor { ("*" | "/" | "^") Factor }
- *
+ * @todo We can change the grammar so that Factor becomes base and we allow a Term to be
+ *       <pre> Term       -> Factor { ("*" | "/" | "^") Factor } </pre>
  */
 
 #ifdef PARSE_DEBUG
@@ -347,13 +347,16 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprLeaveExpr)
 static
 SCIP_RETCODE parseExpr(SCIP*, SCIP_CONSHDLR*, SCIP_HASHMAP*, char*, char**, SCIP_CONSEXPR_EXPR**);
 
-/** Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
- * builds consexprvalue, consexprvar, consexprsum or custom expr */
+/** Parses base to build a value, variable, sum, or function-like ("func(...)") expression.
+ * <pre>
+ * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
+ * </pre>
+ */
 static
 SCIP_RETCODE parseBase(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
-   SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
+   SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between SCIP vars and var expressions */
    char*                 expr,               /**< expr that we are parsing */
    char**                newpos,             /**< buffer to store the position of expr where we finished reading */
    SCIP_CONSEXPR_EXPR**  baseexpr            /**< buffer to store the expr parsed by Factor */
@@ -367,17 +370,23 @@ SCIP_RETCODE parseBase(
    while( isspace((unsigned char)*expr) )
       ++expr;
 
-   if( expr[0] == '<' )
+   if( *expr == '\0' )
    {
-      /* parse a var */
+      SCIPerrorMessage("Unexpected end of expression string\n");
+      return SCIP_READERROR;
+   }
+
+   if( *expr == '<' )
+   {
+      /* parse a variable */
       SCIP_CALL( SCIPparseVarName(scip, expr, &var, &expr) );
 
       /* check if we have already created an expression out of this var */
       if( SCIPhashmapExists(vartoexprvarmap, (void *)var) )
       {
-         debugParse("Variable %s has been parsed, increasing nuses\n", SCIPvarGetName(var));
+         debugParse("Variable %s has been parsed, capturing its expression\n", SCIPvarGetName(var));
          *baseexpr = (SCIP_CONSEXPR_EXPR*)SCIPhashmapGetImage(vartoexprvarmap, (void *)var);
-         ++(*baseexpr)->nuses;
+         SCIPcaptureConsExprExpr(*baseexpr);
       }
       else
       {
@@ -396,6 +405,7 @@ SCIP_RETCODE parseBase(
       if( *expr != ')' )
       {
          SCIPerrorMessage("I was expecting a ')', instead got <%c> from <%s>\n", *expr, expr);
+         /* TODO release baseexpr ? */
          return SCIP_READERROR;
       }
       ++expr;
@@ -409,12 +419,12 @@ SCIP_RETCODE parseBase(
          SCIPerrorMessage("error parsing number from <%s>\n", expr);
          return SCIP_READERROR;
       }
-      debugParse("Parsed value %g, Should create a expression value?\n", value);
+      debugParse("Parsed value %g, creating a value-expression.\n", value);
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, baseexpr, value) );
    }
    else if( isalpha(*expr) )
    {
-      /* a name is coming, should find exprhandler which such name */
+      /* a (function) name is coming, should find exprhandler with such name */
       int i;
       int npar;
       char* init;
@@ -424,13 +434,19 @@ SCIP_RETCODE parseBase(
 
       /* get name */
       i = 0;
-      while( *expr != '(' && !isspace((unsigned char)*expr) )
+      while( *expr != '(' && !isspace((unsigned char)*expr) && *expr != '\0' )
       {
          operatorname[i] = *expr;
          ++expr;
-         i++;
+         ++i;
       }
       operatorname[i] = '\0';
+
+      if( *expr != '(' )
+      {
+         SCIPerrorMessage("Expected '(' after operator name <%s>, but got %s.\n", operatorname, expr);
+         return SCIP_READERROR;
+      }
 
       /* search for expression handler */
       exprhdlr = SCIPfindConsExprExprHdlr(conshdlr, operatorname);
@@ -438,12 +454,12 @@ SCIP_RETCODE parseBase(
       /* check expression handler exists and has a parsing method */
       if( exprhdlr == NULL )
       {
-         SCIPerrorMessage("No expression handler called %s found.\n", operatorname);
+         SCIPerrorMessage("No expression handler with name <%s> found.\n", operatorname);
          return SCIP_READERROR;
       }
       if( exprhdlr->parse == NULL )
       {
-         SCIPerrorMessage("Expression handler %s has no parsing method.\n", operatorname);
+         SCIPerrorMessage("Expression handler <%s> has no parsing method.\n", operatorname);
          return SCIP_READERROR;
       }
 
@@ -453,10 +469,16 @@ SCIP_RETCODE parseBase(
       npar = 0;
       while( *expr != ')' && npar > 0 )
       {
+         if( *expr == '\0' )
+         {
+            SCIPerrorMessage("Unexpected end of expression string when parsing '%s(%s'\n", operatorname, init);
+            return SCIP_READERROR;
+         }
+
          if( *expr == '(' )
             ++npar;
-         if( *expr == ')' )
-            ++npar;
+         else if( *expr == ')' )
+            --npar;
          ++expr;
 
          assert(npar >= 0);
@@ -469,7 +491,8 @@ SCIP_RETCODE parseBase(
 
       if( !success )
       {
-         SCIPerrorMessage("Error while expression handler %s was parsing %s\n", operatorname, init);
+         SCIPerrorMessage("Error while expression handler <%s> was parsing %s\n", operatorname, init);
+         /* TODO release baseexpr ? */
          return SCIP_READERROR;
       }
 
@@ -478,15 +501,19 @@ SCIP_RETCODE parseBase(
    else
    {
       /* Base -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ") */
-      SCIPerrorMessage("I was expecting a number, (expression), <varname>, Opname(Opexpr), instead got %c from %s\n", *expr, expr);
+      SCIPerrorMessage("Expected a number, (expression), <varname>, Opname(Opexpr), instead got <%c> from %s\n", *expr, expr);
       return SCIP_READERROR;
    }
+
    *newpos = expr;
+
    return SCIP_OKAY;
 }
 
-/** Factor -> Base [ "^" "number" | "^(" "number" ")" ]
- * builds consexprprod if there is an exponent, otherwise returns base
+/** Parses a factor and builds a product-expression if there is an exponent, otherwise returns the base expression.
+ * <pre>
+ * Factor -> Base [ "^" "number" | "^(" "number" ")" ]
+ * </pre>
  */
 static
 SCIP_RETCODE parseFactor(
@@ -501,6 +528,12 @@ SCIP_RETCODE parseFactor(
    SCIP_CONSEXPR_EXPR*  basetree;
 
    debugParse("parsing factor from %s\n", expr);
+
+   if( *expr == '\0' )
+   {
+      SCIPerrorMessage("Unexpected end of expression string.\n");
+      return SCIP_READERROR;
+   }
 
    /* parse Base */
    /* ignore whitespace */
@@ -519,16 +552,31 @@ SCIP_RETCODE parseFactor(
    {
       SCIP_Real exponent;
 
-      /* check if it is power with parenthesis */
       ++expr;
       while( isspace((unsigned char)*expr) )
          ++expr;
+
+      if( *expr == '\0' )
+      {
+         SCIPerrorMessage("Unexpected end of expression string after '^'.\n");
+         /* TODO release basetree */
+         return SCIP_READERROR;
+      }
+
       if( *expr == '(' )
       {
+         /* it is power with parenthesis */
 
          ++expr;
          while( isspace((unsigned char)*expr) )
             ++expr;
+
+         if( *expr == '\0' )
+         {
+            SCIPerrorMessage("Unexpected end of expression string after '^('.\n");
+            /* TODO release basetree */
+            return SCIP_READERROR;
+         }
 
          /* expect '-' or a digit */
          if( isdigit(*expr) || *expr == '-' )
@@ -536,12 +584,14 @@ SCIP_RETCODE parseFactor(
             if( !SCIPstrToRealValue(expr, &exponent, &expr) )
             {
                SCIPerrorMessage("error parsing number from <%s>\n", expr);
+               /* TODO release basetree */
                return SCIP_READERROR;
             }
          }
          else
          {
-            SCIPerrorMessage("error in parsing exponent, expected '-' or a digit, received %c from <%s>\n", *expr,  expr);
+            SCIPerrorMessage("error in parsing exponent, expected '-' or a digit, received <%c> from <%s>\n", *expr,  expr);
+            /* TODO release basetree */
             return SCIP_READERROR;
          }
 
@@ -550,7 +600,8 @@ SCIP_RETCODE parseFactor(
             ++expr;
          if( *expr != ')' )
          {
-            SCIPerrorMessage("error in parsing exponent: expected ')', received %c from <%s>\n", *expr,  expr);
+            SCIPerrorMessage("error in parsing exponent: expected ')', received <%c> from <%s>\n", *expr,  expr);
+            /* TODO release basetree */
             return SCIP_READERROR;
          }
          ++expr;
@@ -565,27 +616,32 @@ SCIP_RETCODE parseFactor(
             if( !SCIPstrToRealValue(expr, &exponent, &expr) )
             {
                SCIPerrorMessage("error parsing number from <%s>\n", expr);
+               /* TODO release basetree */
                return SCIP_READERROR;
             }
          }
          else
          {
-            SCIPerrorMessage("error in parsing exponent, expected a digit, received %c from <%s>\n", *expr,  expr);
+            SCIPerrorMessage("error in parsing exponent, expected a digit, received <%c> from <%s>\n", *expr,  expr);
+            /* TODO release basetree */
             return SCIP_READERROR;
          }
       }
 
-      debugParse("parsed the exponen %g\n", exponent);
+      debugParse("parsed the exponent %g\n", exponent);
       /* build expression with exponent */
       SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, factortree, 1, &basetree, &exponent, 1.0) );
    }
 
    *newpos = expr;
+
    return SCIP_OKAY;
 }
 
-/** Term -> Factor { ("*" | "/" ) Factor }
- * builds consexprprod where each factor is a children
+/** Parses a term and builds a product-expression, where each factor is a child.
+ * <pre>
+ * Term -> Factor { ("*" | "/" ) Factor }
+ * </pre>
  */
 static
 SCIP_RETCODE parseTerm(
@@ -627,6 +683,12 @@ SCIP_RETCODE parseTerm(
 
       debugParse("while parsing term, read char %c\n", *expr);
       ++expr;
+
+      /* TODO When parsing something like "*x^2", it creates a product-expression for x^2
+       *      and then adds this product-expression with exponent 1 to the factortree.
+       *      If parseFactor would return the base expression and the exponent as a number,
+       *      we could avoid the extra product-expression for "x^2".
+       * TODO release factortree, if parseFactor fails with a read-error */
       SCIP_CALL( parseFactor(scip, conshdlr, vartoexprvarmap, expr, newpos, &factortree) );
       expr = *newpos;
 
@@ -636,12 +698,16 @@ SCIP_RETCODE parseTerm(
       while( isspace((unsigned char)*expr) )
          ++expr;
    }
+
    *newpos = expr;
+
    return SCIP_OKAY;
 }
 
-/** Expression -> ["+" | "-"] Term { ("+" | "-") Term }
- * builds consexprsum where each term is a children
+/** Parses an expression and builds a sum-expression with children.
+ * <pre>
+ * Expression -> ["+" | "-"] Term { ("+" | "-") Term }
+ * </pre>
  */
 static
 SCIP_RETCODE parseExpr(
@@ -686,10 +752,15 @@ SCIP_RETCODE parseExpr(
    {
       SCIP_Real coef;
 
+      /* TODO Maybe try a SCIPstrToRealValue to get not only the sign of a possible coefficient?
+       *      Thus avoid creating a product-expression for "+2*x" ?
+       */
       coef = (*expr == '+') ? 1.0 : -1.0;
 
       debugParse("while parsing expression, read char %c\n", *expr);
       ++expr;
+
+      /* TODO release exprtree if parseTerm fails with an read-error */
       SCIP_CALL( parseTerm(scip, conshdlr, vartoexprvarmap, expr, newpos, &termtree) );
       expr = *newpos;
 
@@ -704,6 +775,7 @@ SCIP_RETCODE parseExpr(
    return SCIP_OKAY;
 }
 
+/** @} */
 
 /*
  * Callback methods of constraint handler
