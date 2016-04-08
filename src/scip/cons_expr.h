@@ -381,19 +381,18 @@ int SCIPgetConsExprExprWalkCurrentChild(
  * We specify the grammar that defines the syntax of an expression. Loosely speaking, a Base will be any "block",
  * a Factor is a Base to a power, a Term is a product of Factors and an Expression is a sum of terms
  * The actual definition:
- *
+ * <pre>
  * Expression -> ["+" | "-"] Term { ("+" | "-") Term }
  * Term       -> Factor { ("*" | "/" ) Factor }
  * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
  * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
- *
- * where [a|b] means a or b or none, (a|b) means a or b, {a} means 0 or more a
+ * </pre>
+ * where [a|b] means a or b or none, (a|b) means a or b, {a} means 0 or more a.
  *
  * Note that Op and OpExpression are undefined. Op corresponds to the name of an expression handler and
- * OpExpression to whatever string the expression handler accepts (through its parse method)
+ * OpExpression to whatever string the expression handler accepts (through its parse method).
  *
- * @todo: we can change the grammar so that Factor becomes base and we allow a Term to be
- * Term       -> Factor { ("*" | "/" | "^") Factor }
+ * See also @ref parseExpr.
  */
 EXTERN
 SCIP_RETCODE SCIPparseConsExprExpr(

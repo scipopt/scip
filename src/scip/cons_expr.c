@@ -379,7 +379,14 @@ SCIP_RETCODE parseBase(
    if( *expr == '<' )
    {
       /* parse a variable */
-      SCIP_CALL( SCIPparseVarName(scip, expr, &var, &expr) );
+      SCIP_CALL( SCIPparseVarName(scip, expr, &var, newpos) );
+
+      if( var == NULL )
+      {
+         SCIPerrorMessage("Could not find variable with name '%s'\n", expr);
+         return SCIP_READERROR;
+      }
+      expr = *newpos;
 
       /* check if we have already created an expression out of this var */
       if( SCIPhashmapExists(vartoexprvarmap, (void *)var) )
@@ -404,7 +411,7 @@ SCIP_RETCODE parseBase(
       /* expect ')' */
       if( *expr != ')' )
       {
-         SCIPerrorMessage("I was expecting a ')', instead got <%c> from <%s>\n", *expr, expr);
+         SCIPerrorMessage("Expected ')', but got <%c> from <%s>\n", *expr, expr);
          /* TODO release baseexpr ? */
          return SCIP_READERROR;
       }
@@ -463,7 +470,9 @@ SCIP_RETCODE parseBase(
          return SCIP_READERROR;
       }
 
-      /* in case we would need to extract expression between () */
+      /* in case we would need to extract expression between ()
+       * TODO what about parenthesis in variable names, e.g., "log(<x((>)" ?
+       * */
       ++expr;
       init = expr;
       npar = 0;
@@ -699,6 +708,8 @@ SCIP_RETCODE parseTerm(
          ++expr;
    }
 
+   /* TODO if termtree has only one expression with exponent 1.0, replace termtree by it's child */
+
    *newpos = expr;
 
    return SCIP_OKAY;
@@ -770,7 +781,10 @@ SCIP_RETCODE parseExpr(
       while( isspace((unsigned char)*expr) )
          ++expr;
    }
+
    *newpos = expr;
+
+   /* TODO if exprtree has only one expression with coefficient 1.0, replace exprtree by it's child */
 
    return SCIP_OKAY;
 }
@@ -2328,19 +2342,18 @@ SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
  * We specify the grammar that defines the syntax of an expression. Loosely speaking, a Base will be any "block",
  * a Factor is a Base to a power, a Term is a product of Factors and an Expression is a sum of terms
  * The actual definition:
- *
+ * <pre>
  * Expression -> ["+" | "-"] Term { ("+" | "-") Term }
  * Term       -> Factor { ("*" | "/" ) Factor }
  * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
  * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
- *
- * where [a|b] means a or b or none, (a|b) means a or b, {a} means 0 or more a
+ * </pre>
+ * where [a|b] means a or b or none, (a|b) means a or b, {a} means 0 or more a.
  *
  * Note that Op and OpExpression are undefined. Op corresponds to the name of an expression handler and
- * OpExpression to whatever string the expression handler accepts (through its parse method)
+ * OpExpression to whatever string the expression handler accepts (through its parse method).
  *
- * @todo: we can change the grammar so that Factor becomes base and we allow a Term to be
- * Term       -> Factor { ("*" | "/" | "^") Factor }
+ * See also @ref parseExpr.
  */
 SCIP_RETCODE SCIPparseConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */

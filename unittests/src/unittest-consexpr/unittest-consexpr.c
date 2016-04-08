@@ -204,6 +204,7 @@ SCIP_RETCODE testParse(void)
    SCIP_CONSHDLR* conshdlr;
    SCIP_VAR* x;
    SCIP_VAR* y;
+   SCIP_VAR* z;
 
    SCIP_CALL( SCIPcreate(&scip) );
 
@@ -220,22 +221,24 @@ SCIP_RETCODE testParse(void)
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z(  ", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
 
    /* create expression x/y*(5) from string */
    {
       SCIP_CONSEXPR_EXPR* expr_xy5;
       const char* input = "<x>[C] / <y>[I] *(-5)";
 
-      /* create expression for product of 5, x, and y */
+      /* create expression for product of -5, x, and y */
       SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr_xy5) );
 
       /* print expression */
       SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr_xy5, NULL) );
 
-      /* release product expression (this should free the product and its children) */
+      /* release expression */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
    }
 
@@ -297,6 +300,22 @@ SCIP_RETCODE testParse(void)
       SCIP_CALL( SCIPfreeSol(scip, &crazysol) );
    }
 
+   /* create expression from string with unusual variable name */
+   {
+      SCIP_CONSEXPR_EXPR* expr;
+      const char* input = "(<x> - <y>) /   <z(  >^2";
+
+      /* parse */
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
+
+      /* print expression */
+      SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+
+      /* release expression */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   }
+
 #if 0
    /* release cons is not releasing correctly */
    /* create constraint holding x/y*(5) <= 1 from string */
@@ -330,6 +349,8 @@ SCIP_RETCODE testParse(void)
       /* there is no variable with name "xx" */
       /* FIXME assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<xx>", NULL, &e) == SCIP_READERROR); */
 
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"5/<donothave> ", NULL, &e) == SCIP_READERROR);
+
       assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x> +-*5 ", NULL, &e) == SCIP_READERROR);
 
       assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x> / (<y>-5 ", NULL, &e) == SCIP_READERROR);
@@ -344,6 +365,7 @@ SCIP_RETCODE testParse(void)
 
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPfree(&scip) );
 
    BMScheckEmptyMemory();
