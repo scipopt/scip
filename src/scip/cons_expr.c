@@ -1655,8 +1655,8 @@ SCIP_RETCODE SCIPcreateConsExprExpr(
    (*expr)->exprhdlr = exprhdlr;
    (*expr)->exprdata = exprdata;
 
-   /* initialize an empty intervalfor propagation */
-   SCIPintervalSetEntire(INTERVALINFINITY, &(*expr)->interval);
+   /* initialize an empty interval for propagation */
+   SCIPintervalSetEntire(SCIPinfinity(scip), &(*expr)->interval);
 
    if( nchildren > 0 )
    {

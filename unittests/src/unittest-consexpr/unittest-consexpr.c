@@ -747,7 +747,7 @@ SCIP_RETCODE checkExprProp(
    unsigned int          targettag           /**< target tag*/
    )
 {
-   SCIP_INTERVAL* interval;
+   SCIP_INTERVAL interval;
 
    assert(expr != NULL);
 
@@ -759,12 +759,12 @@ SCIP_RETCODE checkExprProp(
 
    /* check if interval is and should be empty */
    if( empty )
-      return SCIPintervalIsEmpty(INTERVALINFINITY, *interval) ? SCIP_OKAY : SCIP_ERROR;
+      return SCIPintervalIsEmpty(SCIPinfinity(scip), interval) ? SCIP_OKAY : SCIP_ERROR;
 
    /* check interval */
-   if(  SCIPintervalIsEmpty(INTERVALINFINITY, *interval)
-      || !SCIPisEQ(scip, SCIPintervalGetInf(*interval) - targetinf, 0.0)
-      || !SCIPisEQ(scip, SCIPintervalGetSup(*interval) - targetsup, 0.0) )
+   if(  SCIPintervalIsEmpty(SCIPinfinity(scip), interval)
+      || !SCIPisEQ(scip, SCIPintervalGetInf(interval) - targetinf, 0.0)
+      || !SCIPisEQ(scip, SCIPintervalGetSup(interval) - targetsup, 0.0) )
       return SCIP_ERROR;
 
    return SCIP_OKAY;
@@ -896,17 +896,17 @@ SCIP_RETCODE testExprprop(void)
    SCIP_CALL( SCIPchgVarLb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
    SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, mainexpr, -INTERVALINFINITY, INTERVALINFINITY, FALSE, 0) );
+   SCIP_CALL( checkExprProp(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
    SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, mainexpr, -INTERVALINFINITY, INTERVALINFINITY, FALSE, 0) );
+   SCIP_CALL( checkExprProp(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    SCIP_CALL( SCIPchgVarLb(scip, y, 0.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 0.0) );
    SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, mainexpr, -INTERVALINFINITY, INTERVALINFINITY, FALSE, 0) );
+   SCIP_CALL( checkExprProp(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    /* (1/y)^2 should lead to [0,inf] */
    SCIP_CALL( SCIPchgVarLb(scip, y, -1.0) );
@@ -914,7 +914,7 @@ SCIP_RETCODE testExprprop(void)
    SCIP_CALL( SCIPchgVarLb(scip, x, 0.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
    SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, mainexpr, 0.0, INTERVALINFINITY, FALSE, 0) );
+   SCIP_CALL( checkExprProp(scip, mainexpr, 0.0, SCIPinfinity(scip), FALSE, 0) );
 
    /* (1/y)^2 should lead to [0,inf] but because of 1/(1+2*x)^3 we should get [-inf,inf] */
    SCIP_CALL( SCIPchgVarLb(scip, y, -1.0) );
@@ -922,7 +922,7 @@ SCIP_RETCODE testExprprop(void)
    SCIP_CALL( SCIPchgVarLb(scip, x, -10.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 10.0) );
    SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, mainexpr, -INTERVALINFINITY, INTERVALINFINITY, FALSE, 0) );
+   SCIP_CALL( checkExprProp(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    /*
     * check if propagation aborts for some cases like (-1)^2

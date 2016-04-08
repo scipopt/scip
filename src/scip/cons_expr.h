@@ -30,10 +30,6 @@
 #include "scip/type_cons_expr.h"
 
 
-/* TODO remove this; how can we access the infinity value stored in the conshdlrdata in cons_expr_xyz? */
-#define INTERVALINFINITY 1e+43
-
-
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -367,21 +367,20 @@ SCIP_DECL_CONSEXPR_EXPRPROP(propSum)
 
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
-      SCIP_INTERVAL* childinterval;
+      SCIP_INTERVAL childinterval;
 
       childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]);
-      assert(childinterval != NULL);
-      assert(!SCIPintervalIsEmpty(INTERVALINFINITY, *childinterval));
+      assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
 
       /* compute coefficients[c] * childinterval and add the result to the so far computed interval */
       if( exprdata->coefficients[c] == 1.0 )
       {
-         SCIPintervalAdd(INTERVALINFINITY, interval, *interval, *childinterval);
+         SCIPintervalAdd(SCIPinfinity(scip), interval, *interval, childinterval);
       }
       else
       {
-         SCIPintervalMulScalar(INTERVALINFINITY, &suminterval, *childinterval, exprdata->coefficients[c]);
-         SCIPintervalAdd(INTERVALINFINITY, interval, *interval, suminterval);
+         SCIPintervalMulScalar(SCIPinfinity(scip), &suminterval, childinterval, exprdata->coefficients[c]);
+         SCIPintervalAdd(SCIPinfinity(scip), interval, *interval, suminterval);
       }
 
   }
@@ -443,23 +442,22 @@ SCIP_DECL_CONSEXPR_EXPRPROP(propProduct)
 
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
-      SCIP_INTERVAL* childinterval;
+      SCIP_INTERVAL childinterval;
 
       childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]);
-      assert(childinterval != NULL);
-      assert(!SCIPintervalIsEmpty(INTERVALINFINITY, *childinterval));
+      assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
 
       /* compute interval resulting from childinterval^exprdata->coefficients[c] */
-      SCIPintervalPowerScalar(INTERVALINFINITY, &powinterval, *childinterval, exprdata->coefficients[c]);
+      SCIPintervalPowerScalar(SCIPinfinity(scip), &powinterval, childinterval, exprdata->coefficients[c]);
 
-      if( SCIPintervalIsEmpty(INTERVALINFINITY, powinterval) )
+      if( SCIPintervalIsEmpty(SCIPinfinity(scip), powinterval) )
       {
          SCIPintervalSetEmpty(interval);
          return SCIP_OKAY;
       }
 
       /* multiply powinterval with the so far computed interval */
-      SCIPintervalMul(INTERVALINFINITY, interval, *interval, powinterval);
+      SCIPintervalMul(SCIPinfinity(scip), interval, *interval, powinterval);
    }
 
    return SCIP_OKAY;
