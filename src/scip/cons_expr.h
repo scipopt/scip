@@ -47,7 +47,6 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
    const char*                 desc,         /**< description of expression handler (can be NULL) */
    int                         precedence,   /**< precedence of expression operation (used for printing) */
    SCIP_DECL_CONSEXPR_EXPREVAL((*eval)),     /**< point evaluation callback (can not be NULL) */
-   SCIP_DECL_CONSEXPR_EXPRPROP((*prop)),     /**< propagation callback (can be NULL) */
    SCIP_CONSEXPR_EXPRHDLRDATA* data          /**< data of expression handler (can be NULL) */
    );
 
@@ -87,6 +86,15 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrParse(
             SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
             SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
             SCIP_DECL_CONSEXPR_EXPRPARSE((*parse))    /**< parse callback (can be NULL) */
+);
+
+/** set the interval evaluation callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrProp(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRPROP((*prop))      /**< interval evaluation callback (can be NULL) */
 );
 
 /** gives expression handlers */

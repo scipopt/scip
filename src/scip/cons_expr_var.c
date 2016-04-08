@@ -113,12 +113,13 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "var", "variable", 0, evalVar, propVar, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "var", "variable", 0, evalVar, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrVar, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataVar, freedataVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printVar) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrProp(scip, consexprhdlr, exprhdlr, propVar) );
 
    return SCIP_OKAY;
 }

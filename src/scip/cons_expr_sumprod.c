@@ -472,12 +472,13 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
    SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "sum", "summation with coefficients and a constant",
-         SUM_PRECEDENCE, evalSum, propSum, NULL) );
+         SUM_PRECEDENCE, evalSum, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrSum, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrProp(scip, consexprhdlr, exprhdlr, propSum) );
 
    return SCIP_OKAY;
 }
@@ -542,12 +543,13 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
    SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "prod",
-         "product of children with exponents (actually a signomial)", PRODUCT_PRECEDENCE, evalProduct, propProduct, NULL) );
+         "product of children with exponents (actually a signomial)", PRODUCT_PRECEDENCE, evalProduct, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrProduct, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrProp(scip, consexprhdlr, exprhdlr, propProduct) );
 
    return SCIP_OKAY;
 }
