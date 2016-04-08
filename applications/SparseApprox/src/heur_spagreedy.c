@@ -44,12 +44,12 @@
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
-#define HEUR_USESSUBSCIP      TRUE                         /**< does the heuristic use a secondary SCIP instance? */
+#define HEUR_USESSUBSCIP      FALSE                         /**< does the heuristic use a secondary SCIP instance? */
 
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   int                   lasteffectrootdepth;/**< index of the last solution for which oneopt was performed */
+   int                  lasteffectrootdepth;/**< index of the last solution for which oneopt was performed */
    SCIP_Bool            local;
 };
 
@@ -281,18 +281,18 @@ SCIP_RETCODE assignVars(
    for ( c = 0; c < ncluster; ++c )
    {
       /* set indicatorvar whether cluster is nonempty */
-      if( binsincluster[c] > 0 && SCIPisEQ(scip, SCIPvarGetUbGlobal(indvars[c]), 1.0) )
+      if( NULL != indvars[c] && binsincluster[c] > 0 && SCIPisEQ(scip, SCIPvarGetUbGlobal(indvars[c]), 1.0) )
          SCIP_CALL( SCIPsetSolVal(scip, sol, indvars[c], 1.0) );
       else
       {
-         if( SCIPisZero(scip, SCIPvarGetLbGlobal(indvars[c])) )
+         if( NULL != indvars[c] && SCIPisZero(scip, SCIPvarGetLbGlobal(indvars[c])) )
             SCIP_CALL( SCIPsetSolVal(scip, sol, indvars[c], 0.0) );
       }
       /* set values of binary variables */
       for ( i = 0; i < nbins; ++i )
       {
          /* check if the clusterassignment ist feasible for the variable bounds. If not do not assign the variable */
-         if( SCIPisLE(scip, SCIPvarGetLbGlobal(binvars[i][c]), clusterassignment[c][i]) && SCIPisGE(scip, SCIPvarGetUbGlobal(binvars[i][c]), clusterassignment[c][i]) && SCIPvarGetStatus(binvars[i][c]) != SCIP_VARSTATUS_MULTAGGR )
+         if( NULL != binvars[i][c] && SCIPisLE(scip, SCIPvarGetLbGlobal(binvars[i][c]), clusterassignment[c][i]) && SCIPisGE(scip, SCIPvarGetUbGlobal(binvars[i][c]), clusterassignment[c][i]) && SCIPvarGetStatus(binvars[i][c]) != SCIP_VARSTATUS_MULTAGGR )
             SCIP_CALL( SCIPsetSolVal( scip, sol, binvars[i][c], clusterassignment[c][i]) );
          assert( SCIPisIntegral(scip, clusterassignment[c][i]) );
       }
@@ -306,12 +306,12 @@ SCIP_RETCODE assignVars(
                continue;
             if( j < i )
             {
-               if( SCIPisGE(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c]), clusterassignment[c][j] * clusterassignment[c][i]) && SCIPisLE(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c]), clusterassignment[c][j] * clusterassignment[c][i]) && SCIPvarGetStatus(edgevars[i][j][c][c]) != SCIP_VARSTATUS_MULTAGGR )
+               if( NULL != edgevars[i][j][c][c] &&NULL != edgevars[i][j][c][c] && SCIPisGE(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c]), clusterassignment[c][j] * clusterassignment[c][i]) && SCIPisLE(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c]), clusterassignment[c][j] * clusterassignment[c][i]) && SCIPvarGetStatus(edgevars[i][j][c][c]) != SCIP_VARSTATUS_MULTAGGR )
                   SCIP_CALL( SCIPsetSolVal( scip, sol, edgevars[i][j][c][c], clusterassignment[c][j] * clusterassignment[c][i]  ) );
             }
             for( c2 = 0; c2 < c; ++c2 )
             {
-               if( SCIPisGE(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c2]), clusterassignment[c2][j] * clusterassignment[c][i]) && SCIPisLE(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c2]),clusterassignment[c2][j] * clusterassignment[c][i]) && SCIPvarGetStatus(edgevars[i][j][c][c2]) != SCIP_VARSTATUS_MULTAGGR )
+               if( NULL != edgevars[i][j][c][c2] && SCIPisGE(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c2]), clusterassignment[c2][j] * clusterassignment[c][i]) && SCIPisLE(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c2]),clusterassignment[c2][j] * clusterassignment[c][i]) && SCIPvarGetStatus(edgevars[i][j][c][c2]) != SCIP_VARSTATUS_MULTAGGR )
                   SCIP_CALL( SCIPsetSolVal( scip, sol, edgevars[i][j][c][c2], clusterassignment[c2][j] * clusterassignment[c][i]  ) );
             }
          }
@@ -323,7 +323,7 @@ SCIP_RETCODE assignVars(
          q1 = qmatrix[c][i];
          q2 = qmatrix[i][c];
          /* set the absolute-value vars. Always check if the found values are feasible for the bounds of the variables */
-         if( SCIPvarGetStatus(absvars[i + ncluster * c]) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(absvars[c + ncluster * i]) == SCIP_VARSTATUS_MULTAGGR )
+         if( NULL == absvars[i + ncluster * c] || NULL == absvars[c + ncluster * i] || SCIPvarGetStatus(absvars[i + ncluster * c]) == SCIP_VARSTATUS_MULTAGGR || SCIPvarGetStatus(absvars[c + ncluster * i]) == SCIP_VARSTATUS_MULTAGGR )
             continue;
          if( SCIPisGT(scip, q1, q2) )
          {
@@ -368,6 +368,7 @@ SCIP_RETCODE assignVars(
 
             vars = SCIPgetVarsAnd(scip, cons[j]);
             resultant = SCIPgetResultantAnd(scip, cons[j]);
+            assert( resultant != NULL );
             for( k = 0; k < nvars; ++k )
             {
                temp = temp * SCIPgetSolVal(scip, sol, vars[k]);
@@ -897,6 +898,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
    SCIP_Real** cmatrix;
    SCIP_Real** qmatrix;
    SCIP_VAR*** binvars;
+   SCIP_VAR***** edgevars;
    SCIP_VAR** absvars;
    int nbins;
    int ncluster;
@@ -906,7 +908,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
    SCIP_Bool* isassigned;     /* TRUE if a bin has already bin assigned to a cluster */
    int i;
    int j;
-   int c;
+   int k;
    int amountassigned = 0;    /* total amount of bins assigned */
    SCIP_SOL* sol;
    SCIP_Bool feasible;
@@ -927,6 +929,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
    ncluster = SCIPspaGetNrCluster(scip);
    q_minvalue = getMinNonZero(scip, cmatrix, nbins);
    binvars = SCIPspaGetBinvars(scip);
+   edgevars = SCIPspaGetEdgevars(scip);
    absvars = SCIPspaGetAbsvars(scip);
    assert( nbins > 0 && ncluster > 0 );
 
@@ -954,30 +957,41 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
       }
    }
 
-   /* get the already fixed bin-variables from scip */
+   /* get the already fixed bin-variables from scip. An assignment of -1 one means unassigned. 0 is fixed to 0, 1 is fixed to 1 */
    for( i = 0; i < nbins; ++i )
    {
       for( j = 0; j < ncluster; ++j )
       {
-         SCIP_Real lb = SCIPvarGetLbGlobal(binvars[i][j]);
-         SCIP_Real ub = SCIPvarGetUbGlobal(binvars[i][j]);
-         /* if the bounds determine a fixed binary variable, then fix the variable in the clusterassignment */
-         if( lb > 0 )
+         /* if the variable is not active or got deleted in presolvin, find out the fixation over the constraints */
+         if( NULL == binvars[i][j] || !SCIPvarIsActive(binvars[i][j]) )
          {
-            /* if the lb is 1, then the assignment is fixed and we can set all other clusters to 0 for this bin */
-            for( c = 0; c < ncluster; ++c )
+            for( k = 0; k < ncluster; ++k )
             {
-               clusterassignment[c][i] = 0;
+               if( k != j )
+               {
+                  int h = 0;
+                  while((binvars[h][k] == NULL || !SCIPvarIsActive(binvars[h][k]) || h == i) && h < nbins)
+                     h++;
+                  if( h < nbins )
+                  {
+                     if( NULL != edgevars[i][h][j][k] && SCIPvarIsActive(edgevars[i][h][j][k]) )
+                        clusterassignment[j][i] = 1;
+                     else
+                        clusterassignment[j][i] = 0;
+                  }
+               }
             }
-            clusterassignment[j][i] = 1;
-            binsincluster[j]++;
-            isassigned[i] = TRUE;
-            amountassigned++;
          }
-         if( ub < 1 )
+
+         /* if the bounds determine a fixed binary variable, then fix the variable in the clusterassignment */
+         if( SCIPisEQ(scip, SCIPvarGetLbGlobal(binvars[i][j]), SCIPvarGetUbGlobal(binvars[i][j])) )
          {
-            /* if the bin is fixed to 0 we can only set this in the clusterassignment */
-            clusterassignment[j][i] = 0;
+            clusterassignment[j][i] = SCIPvarGetLbGlobal(binvars[i][j]);
+            if( SCIPisEQ(scip, 1.0, clusterassignment[j][i]) )
+            {
+               binsincluster[j]++;
+               isassigned[i] = TRUE;
+            }
          }
       }
    }
@@ -989,6 +1003,8 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
       {
          SCIP_Real lb = SCIPvarGetLbGlobal(absvars[i + j * ncluster]);
          SCIP_Real ub = SCIPvarGetUbGlobal(absvars[i + j * ncluster]);
+         if( NULL == absvars[i + j * ncluster] )
+            continue;
          if( SCIPisPositive(scip, lb) )
             fixedabsvars[i][j] = 1;
          if( SCIPisLT(scip, ub, 1) )

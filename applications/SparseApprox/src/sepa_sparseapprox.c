@@ -58,6 +58,25 @@ SCIP_DECL_SEPACOPY(sepaCopySparseApprox)
    return SCIP_OKAY;
 }
 
+/** destructor of separator to free user data (called when SCIP is exiting) */
+static
+SCIP_DECL_SEPAFREE(sepaFreeSparseApprox)
+{  /*lint --e{715}*/
+   SCIP_SEPADATA* sepadata;
+
+   assert(strcmp(SCIPsepaGetName(sepa), SEPA_NAME) == 0);
+
+   /* free separator data */
+   sepadata = SCIPsepaGetData(sepa);
+   assert(sepadata != NULL);
+
+   SCIPfreeMemory(scip, &sepadata);
+
+   SCIPsepaSetData(sepa, NULL);
+
+   return SCIP_OKAY;
+}
+
 /** LP solution separation method of separator */
 static
 SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
@@ -141,7 +160,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
    SCIP_CALL( SCIPallocClearMemoryArray(scip, &partition, nbins) );
 
    /* check and add violated triangle inequalities */
-#if 1
    for( i = 0; i < nbins; ++i )
    {
       for( j = 0; j < i; ++j )
@@ -151,9 +169,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
             SCIP_Real triangleval1 = 0;
             SCIP_Real triangleval2= 0;
             SCIP_Real triangleval3 = 0;
-
             for( k = 0; k < ncluster; ++k )
             {
+               if( NULL == edgevars[i][j][k][k] || edgevars[j][h][k][k] || edgevars[i][h][k][k] )
+                  break;
                triangleval1 += SCIPvarGetLPSol(edgevars[i][j][k][k]) + SCIPvarGetLPSol(edgevars[j][h][k][k]) - SCIPvarGetLPSol(edgevars[h][i][k][k]);
                triangleval2 += SCIPvarGetLPSol(edgevars[i][j][k][k]) - SCIPvarGetLPSol(edgevars[j][h][k][k]) + SCIPvarGetLPSol(edgevars[h][i][k][k]);
                triangleval3 += - SCIPvarGetLPSol(edgevars[i][j][k][k]) + SCIPvarGetLPSol(edgevars[j][h][k][k]) + SCIPvarGetLPSol(edgevars[h][i][k][k]);
@@ -236,7 +255,6 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
          }
       }
    }
-#endif
    if( *result != SCIP_SEPARATED )
    {
       for( i = 0; i < nbins; ++i )
@@ -254,6 +272,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
             /* only add bins where there is a fractional uncut value on the edge */
             for( k = 0; k < ncluster; ++k )
             {
+               if( NULL == edgevars[i][j][k][k])
+                  continue;
                lpval += SCIPvarGetLPSol(edgevars[i][j][k][k]);
             }
             if( lpval > 0 && lpval < 1 && candidate[counter - 1] != j )
@@ -280,9 +300,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
             {
                for( k = 0; k < ncluster; ++k )
                {
-                  if( candidate[j] < partition[w] && SCIPvarGetLPSol(edgevars[partition[w]][candidate[j]][k][k]) != 0 )
+                  if( candidate[j] < partition[w] && NULL != edgevars[partition[w]][candidate[j]] && SCIPvarGetLPSol(edgevars[partition[w]][candidate[j]][k][k]) != 0 )
                      addtopartition = FALSE;
-                  if( candidate[j] > partition[w] && SCIPvarGetLPSol(edgevars[candidate[j]][partition[w]][k][k]) != 0 )
+                  if( candidate[j] > partition[w] && NULL != edgevars[candidate[j]][partition[w]][k][k] && SCIPvarGetLPSol(edgevars[candidate[j]][partition[w]][k][k]) != 0 )
                      addtopartition = FALSE;
                }
 
@@ -301,9 +321,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
          {
             for( k = 0; k < ncluster; ++k )
             {
-               if( i > partition[j])
+               if( i > partition[j] && NULL != edgevars[i][partition[j]][k][k] )
                   lpsum += SCIPvarGetLPSol(edgevars[i][partition[j]][k][k]);
-               else
+               else if( NULL != edgevars[partition[j]][i][k][k] )
                   lpsum += SCIPvarGetLPSol(edgevars[partition[j]][i][k][k]);
             }
          }
@@ -316,9 +336,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
             {
                for( k = 0; k < ncluster; ++k )
                {
-                  if( i < partition[j] )
+                  if( i < partition[j] && NULL != edgevars[i][partition[j]][k][k] )
                      SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][partition[j]][k][k], 1.0) );
-                  else
+                  else if( NULL != edgevars[partition[j]][i][k][k] )
                      SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[partition[j]][i][k][k], 1.0) );
                }
             }
@@ -353,7 +373,8 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
                lpval = 0;
                for( k = 0; k < ncluster; ++k )
                {
-                  lpval += SCIPvarGetLPSol(edgevars[i][j][k][k]);
+                  if( NULL != edgevars[i][j][k][k] )
+                     lpval += SCIPvarGetLPSol(edgevars[i][j][k][k]);
                }
                if( lpval > 0 && lpval < 1 && candidate[counter - 1] != j )
                {
@@ -377,9 +398,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
                {
                   for( k = 0; k < ncluster; ++k )
                   {
-                     if( candidate[j] < partition[w] )
+                     if( candidate[j] < partition[w] && NULL != edgevars[partition[w]][candidate[j]][k][k] )
                         sum += SCIPvarGetLPSol(edgevars[partition[w]][candidate[j]][k][k]);
-                     else
+                     else if( NULL != edgevars[candidate[j]][partition[w]][k][k] )
                         sum += SCIPvarGetLPSol(edgevars[candidate[j]][partition[w]][k][k]);
                   }
                }
@@ -387,9 +408,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
                lpval = 0;
                for( k = 0; k < ncluster; ++k )
                {
-                  if ( candidate[j] < 1 )
+                  if ( candidate[j] < 1 && NULL != edgevars[i][candidate[j]][k][k] )
                      lpval += SCIPvarGetLPSol(edgevars[i][candidate[j]][k][k]);
-                  else
+                  else if( NULL != edgevars[candidate[j]][i][k][k] )
                      lpval += SCIPvarGetLPSol(edgevars[candidate[j]][i][k][k]);
                }
                if( lpval - sum > 0 )
@@ -406,9 +427,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
             {
                for( k = 0; k < ncluster; ++k )
                {
-                  if( i > partition[j])
+                  if( i > partition[j] && NULL != edgevars[i][partition[j]][k][k] )
                      lpsum += SCIPvarGetLPSol(edgevars[i][partition[j]][k][k]);
-                  else
+                  else if( NULL != edgevars[partition[j]][i][k][k] )
                      lpsum += SCIPvarGetLPSol(edgevars[partition[j]][i][k][k]);
                }
             }
@@ -421,9 +442,9 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
                {
                   for( k = 0; k < ncluster; ++k )
                   {
-                     if( i < partition[j] )
+                     if( i < partition[j] && NULL != edgevars[i][partition[j]][k][k] )
                         SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[i][partition[j]][k][k], 1.0));
-                     else
+                     else if( NULL != edgevars[partition[j]][i][k][k] )
                         SCIP_CALL( SCIPaddVarToRow(scip, cut, edgevars[partition[j]][i][k][k], 1.0) );
                   }
                }
@@ -452,6 +473,7 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
    return SCIP_OKAY;
 }
 
+
 /** creates the SparseApprox separator and includes it in SCIP */
 SCIP_RETCODE SCIPincludeSepaSparseApprox(
    SCIP*                 scip                /**< SCIP data structure */
@@ -475,6 +497,7 @@ SCIP_RETCODE SCIPincludeSepaSparseApprox(
 
    /* set non fundamental callbacks via setter functions */
    SCIP_CALL( SCIPsetSepaCopy(scip, sepa, sepaCopySparseApprox) );
+   SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeSparseApprox) );
 
    /* add SparseApprox separator parameters */
 
