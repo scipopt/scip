@@ -90,11 +90,11 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrParse(
 
 /** set the interval evaluation callback of an expression handler */
 EXTERN
-SCIP_RETCODE SCIPsetConsExprExprHdlrProp(
+SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRPROP((*prop))      /**< interval evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval))/**< interval evaluation callback (can be NULL) */
 );
 
 /** gives expression handlers */
@@ -274,24 +274,26 @@ SCIP_RETCODE SCIPevalConsExprExpr(
    unsigned int            soltag            /**< tag that uniquely identifies the solution (with its values), or 0. */
    );
 
-/** propagates an expression for the current (local) bounds
+/** evaluates an expression over a box
  *
- * Initiates an expression walk to also propagate children, if necessary.
- * Value can be received via SCIPgetConsExprExprEvalInterval().
- * If an evaluation error (division by zero, ...) occurs, this value will
- * be set to an empty interval.
+ * Initiates an expression walk to also evaluate children, if necessary.
+ * The resulting interval can be received via SCIPgetConsExprExprEvalInterval().
+ * If the box does not overlap with the domain of the function behind the expression
+ * (e.g., sqrt([-2,-1]) or 1/[0,0]) this interval will be empty.
  *
- * If a nonzero \p tag is passed, then only (sub)expressions are
- * reevaluated that have a different propagation tag. If a tag of 0
- * is passed, then subexpressions are always repropagated.
+ * For variables, the local variable bounds are used as interval.
+ *
+ * If a nonzero \p boxtag is passed, then only (sub)expressions are
+ * reevaluated that have a different tag. If a tag of 0 is passed,
+ * then subexpressions are always reevaluated.
  * The tag is stored together with the interval and can be received via
- * SCIPgetConsExprExprPropTag().
+ * SCIPgetConsExprExprEvalIntervalTag().
  */
 EXTERN
-SCIP_RETCODE SCIPpropConsExprExpr(
+SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be propagated */
-   unsigned int            proptag           /**< propagation tag that uniquely identifies the current variable domains (with its values), or 0. */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
+   unsigned int            boxtag            /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
    );
 
 /** gives the value from the last evaluation of an expression (or SCIP_INVALID if there was an eval error) */
@@ -300,7 +302,7 @@ SCIP_Real SCIPgetConsExprExprValue(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
-/** returns the interval from the last propagation of an expression (interval is empty if there was a propagation error) */
+/** returns the interval from the last interval evaluation of an expression (interval can be empty) */
 EXTERN
 SCIP_INTERVAL SCIPgetConsExprExprInterval(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
@@ -312,9 +314,9 @@ unsigned int SCIPgetConsExprExprEvalTag(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
-/** gives the propagation tag from the last propagation, or 0 */
+/** gives the box tag from the last interval evaluation, or 0 */
 EXTERN
-unsigned int SCIPgetConsExprExprPropTag(
+unsigned int SCIPgetConsExprExprEvalIntervalTag(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );
 
@@ -326,12 +328,12 @@ void SCIPsetConsExprExprEvalValue(
    unsigned int            tag               /**< tag of solution that was evaluated, or 0 */
    );
 
-/** sets the propagation interval */
+/** sets the evaluation interval */
 EXTERN
-void SCIPsetConsExprExprPropInterval(
+void SCIPsetConsExprExprEvalInterval(
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_INTERVAL*          interval,         /**< interval to set */
-   unsigned int            proptag           /**< tag of variable domains that were propagated, or 0. */
+   unsigned int            tag               /**< tag of variable domains that were evaluated, or 0. */
    );
 
 /** walks the expression graph in depth-first manner and executes callbacks at certain places

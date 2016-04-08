@@ -165,16 +165,16 @@ extern "C" {
    SCIP_Real* val, \
    SCIP_SOL* sol)
 
-/** expression propagation callback
+/** expression (interval-) evaluation callback
  *
- * The method propagates an expression by taking the intervals of its children into account.
+ * The method evaluates an expression by taking the intervals of its children into account.
  *
  * input:
  *  - scip : SCIP main data structure
  *  - interval : buffer where to store interval
- *  - expr : expression to be propagated
+ *  - expr : expression to be evaluated
  */
-#define SCIP_DECL_CONSEXPR_EXPRPROP(x) SCIP_RETCODE x (\
+#define SCIP_DECL_CONSEXPR_EXPRINTEVAL(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_INTERVAL* interval)

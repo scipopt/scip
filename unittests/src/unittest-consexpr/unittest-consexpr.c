@@ -736,14 +736,14 @@ SCIP_RETCODE testExpreval(void)
    return SCIP_OKAY;
 }
 
-/** helper function to check propagation intervals of an expression */
+/** helper function to check interval evaluation of an expression */
 static
-SCIP_RETCODE checkExprProp(
+SCIP_RETCODE checkExprIntEval(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< expression to propagate */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression to evaluate */
    SCIP_Real             targetinf,          /**< target infimum */
    SCIP_Real             targetsup,          /**< target supremum */
-   SCIP_Bool             empty,              /**< should the result being empty? */
+   SCIP_Bool             empty,              /**< should the result be empty? */
    unsigned int          targettag           /**< target tag*/
    )
 {
@@ -753,8 +753,8 @@ SCIP_RETCODE checkExprProp(
 
    interval = SCIPgetConsExprExprInterval(expr);
 
-   /* check propagation tag */
-   if( targettag != SCIPgetConsExprExprPropTag(expr) )
+   /* check evaluation tag */
+   if( targettag != SCIPgetConsExprExprEvalIntervalTag(expr) )
       return SCIP_ERROR;
 
    /* check if interval is and should be empty */
@@ -770,9 +770,9 @@ SCIP_RETCODE checkExprProp(
    return SCIP_OKAY;
 }
 
-/* Test expression propagation method */
+/* Test expression interval evaluation method */
 static
-SCIP_RETCODE testExprprop(void)
+SCIP_RETCODE testExprinteval(void)
 {
    SCIP* scip;
    SCIP_CONSHDLR* conshdlr;
@@ -812,48 +812,48 @@ SCIP_RETCODE testExprprop(void)
    SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &sqrtexpr, 1, &xexpr, &exponent, 1.0) );
 
    /*
-    * check propagation method for constant expressions
+    * check interval evaluation method for constant expressions
     */
-   printf("check propagation of constant expressions\n");
-   SCIP_CALL( SCIPpropConsExprExpr(scip, const_expr, 0) );
-   SCIP_CALL( checkExprProp(scip, const_expr, 5.0, 5.0, FALSE, 0) );
+   printf("check interval-evaluation of constant expressions\n");
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, const_expr, 0) );
+   SCIP_CALL( checkExprIntEval(scip, const_expr, 5.0, 5.0, FALSE, 0) );
 
    /*
-    * check propagation method for variable expressions
+    * check interval evaluation method for variable expressions
     */
-   printf("check propagation of variable expressions\n");
-   SCIP_CALL( SCIPpropConsExprExpr(scip, xexpr, 0) );
-   SCIP_CALL( SCIPpropConsExprExpr(scip, yexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, xexpr, 0.0, 10.0, FALSE, 0) );
-   SCIP_CALL( checkExprProp(scip, yexpr, -5.0, 5.0, FALSE, 0) );
+   printf("check interval-evaluation of variable expressions\n");
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, xexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, yexpr, 0) );
+   SCIP_CALL( checkExprIntEval(scip, xexpr, 0.0, 10.0, FALSE, 0) );
+   SCIP_CALL( checkExprIntEval(scip, yexpr, -5.0, 5.0, FALSE, 0) );
 
    /*
-    * check propagation method for sum expression
+    * check interval evaluation method for sum expression
     */
-   printf("check propagation of sum expression\n");
+   printf("check interval-evaluation of sum expression\n");
    SCIP_CALL( SCIPchgVarLb(scip, x, 2.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 7.5) );
-   SCIP_CALL( SCIPpropConsExprExpr(scip, sumexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, sumexpr, 5.0, 16.0, FALSE, 0) );
-   SCIP_CALL( checkExprProp(scip, xexpr, 2.0, 7.5, FALSE, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sumexpr, 0) );
+   SCIP_CALL( checkExprIntEval(scip, sumexpr, 5.0, 16.0, FALSE, 0) );
+   SCIP_CALL( checkExprIntEval(scip, xexpr, 2.0, 7.5, FALSE, 0) );
 
    /*
-    * check propagation method for product expression: (x^2 / (y*5^(-4)))
+    * check interval evaluation method for product expression: (x^2 / (y*5^(-4)))
     */
-   printf("check propagation of product expression\n");
+   printf("check interval-evaluation of product expression\n");
    SCIP_CALL( SCIPchgVarLb(scip, x, 0.5) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
    SCIP_CALL( SCIPchgVarLb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 2.0) );
-   SCIP_CALL( SCIPpropConsExprExpr(scip, prodexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, prodexpr, pow(5,-4.0) / 8.0 , pow(5,-4.0), FALSE, 0) );
-   SCIP_CALL( checkExprProp(scip, xexpr, 0.5, 1.0, FALSE, 0) );
-   SCIP_CALL( checkExprProp(scip, yexpr, 1.0, 2.0, FALSE, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, 0) );
+   SCIP_CALL( checkExprIntEval(scip, prodexpr, pow(5,-4.0) / 8.0 , pow(5,-4.0), FALSE, 0) );
+   SCIP_CALL( checkExprIntEval(scip, xexpr, 0.5, 1.0, FALSE, 0) );
+   SCIP_CALL( checkExprIntEval(scip, yexpr, 1.0, 2.0, FALSE, 0) );
 
    /*
-    * check propagation for a complicated expression: 0.5 * ( (x^2*y^(-1)*5^(-4))^2 * (2x + 1)^(-1) )
+    * check interval-evaluation for a complicated expression: 0.5 * ( (x^2*y^(-1)*5^(-4))^2 * (2x + 1)^(-1) )
     */
-   printf("check propagation of a complicated expression\n");
+   printf("check interval evaluation of a complicated expression\n");
    for( xub = 0.0; xub <= 10.0; xub += 1.0 )
       for( xlb = 0.0; xlb <= xub; xlb += 1.0 )
          for( yub = 1.0; yub <= 10.0; yub += 1.0 )
@@ -874,83 +874,83 @@ SCIP_RETCODE testExprprop(void)
                inf *= b < 0 ? b : a;
                sup *= b < 0 ? a : b;
 
-               SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 0) );
+               SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
 
                /* check all expressions */
-               SCIP_CALL( checkExprProp(scip, mainexpr, MIN(inf,sup), MAX(inf,sup), FALSE, 0) );
-               SCIP_CALL( checkExprProp(scip, sumexpr, 2*xlb + 1.0, 2*xub + 1.0, FALSE, 0) );
+               SCIP_CALL( checkExprIntEval(scip, mainexpr, MIN(inf,sup), MAX(inf,sup), FALSE, 0) );
+               SCIP_CALL( checkExprIntEval(scip, sumexpr, 2*xlb + 1.0, 2*xub + 1.0, FALSE, 0) );
                inf = MIN(xlb*xlb, xub*xub) * (1.0/yub) * pow(5,-4);
                sup = MAX(xlb*xlb, xub*xub) * (1.0/ylb) * pow(5,-4);
-               SCIP_CALL( checkExprProp(scip, prodexpr, inf, sup, FALSE, 0) );
-               SCIP_CALL( checkExprProp(scip, xexpr, xlb, xub, FALSE, 0) );
-               SCIP_CALL( checkExprProp(scip, yexpr, ylb, yub, FALSE, 0) );
-               SCIP_CALL( checkExprProp(scip, const_expr, 5.0, 5.0, FALSE, 0) );
+               SCIP_CALL( checkExprIntEval(scip, prodexpr, inf, sup, FALSE, 0) );
+               SCIP_CALL( checkExprIntEval(scip, xexpr, xlb, xub, FALSE, 0) );
+               SCIP_CALL( checkExprIntEval(scip, yexpr, ylb, yub, FALSE, 0) );
+               SCIP_CALL( checkExprIntEval(scip, const_expr, 5.0, 5.0, FALSE, 0) );
             }
 
    /*
-    * check if propagation for 1/(1+2*x)^3 or 1/y leads to infinite bounds
+    * check if interval evaluation for 1/(1+2*x)^3 or 1/y leads to infinite bounds
     */
-   printf("check propagation for expressions containing functions like 1/f(x)\n");
+   printf("check interval-evaluation for expressions containing functions like 1/f(x)\n");
    SCIP_CALL( SCIPchgVarLb(scip, x, -0.5) );
    SCIP_CALL( SCIPchgVarUb(scip, x, -0.5) );
    SCIP_CALL( SCIPchgVarLb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
-   SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+   SCIP_CALL( checkExprIntEval(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
-   SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+   SCIP_CALL( checkExprIntEval(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    SCIP_CALL( SCIPchgVarLb(scip, y, 0.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 0.0) );
-   SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+   SCIP_CALL( checkExprIntEval(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    /* (1/y)^2 should lead to [0,inf] */
    SCIP_CALL( SCIPchgVarLb(scip, y, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarLb(scip, x, 0.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
-   SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, mainexpr, 0.0, SCIPinfinity(scip), FALSE, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+   SCIP_CALL( checkExprIntEval(scip, mainexpr, 0.0, SCIPinfinity(scip), FALSE, 0) );
 
    /* (1/y)^2 should lead to [0,inf] but because of 1/(1+2*x)^3 we should get [-inf,inf] */
    SCIP_CALL( SCIPchgVarLb(scip, y, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarLb(scip, x, -10.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 10.0) );
-   SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+   SCIP_CALL( checkExprIntEval(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    /*
-    * check if propagation aborts for some cases like (-1)^2
+    * check if interval evaluation aborts for some cases like (-1)^2
     */
-   printf("check propagation for undefined expressions like (-1)^2\n");
+   printf("check interval-evaluation for undefined expressions like (-1)^2\n");
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, -1.0) );
-   SCIP_CALL( SCIPpropConsExprExpr(scip, sqrtexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, sqrtexpr, 0, 0, TRUE, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, 0) );
+   SCIP_CALL( checkExprIntEval(scip, sqrtexpr, 0, 0, TRUE, 0) );
 
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, -0.5) );
-   SCIP_CALL( SCIPpropConsExprExpr(scip, sqrtexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, sqrtexpr, 0, 0, TRUE, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, 0) );
+   SCIP_CALL( checkExprIntEval(scip, sqrtexpr, 0, 0, TRUE, 0) );
 
    /* the result of sqrt([-1,2]) should be [0,sqrt(2)] and not an empty interval */
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 2.0) );
-   SCIP_CALL( SCIPpropConsExprExpr(scip, sqrtexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, sqrtexpr, 0, sqrt(2), FALSE, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, 0) );
+   SCIP_CALL( checkExprIntEval(scip, sqrtexpr, 0, sqrt(2), FALSE, 0) );
 
    SCIP_CALL( SCIPchgVarLb(scip, x, 0.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
-   SCIP_CALL( SCIPpropConsExprExpr(scip, sqrtexpr, 0) );
-   SCIP_CALL( checkExprProp(scip, sqrtexpr, 0.0, 1.0, FALSE, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, 0) );
+   SCIP_CALL( checkExprIntEval(scip, sqrtexpr, 0.0, 1.0, FALSE, 0) );
 
    /*
-    * check propagation tags
+    * check interval evaluation tags
     */
    printf("check interval tag behavior\n");
    SCIP_CALL( SCIPchgVarLb(scip, x, 0.0) );
@@ -958,52 +958,52 @@ SCIP_RETCODE testExprprop(void)
    SCIP_CALL( SCIPchgVarLb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
 
-   /* do the expression store the propagation tag correctly? */
+   /* do the expression store the box tag correctly? */
    for( i = 0; i < 10; ++i )
    {
       int tag = i % 3;
-      SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, tag) );
-      SCIP_CALL( checkExprProp(scip, mainexpr, 0.0, 0.0, FALSE, tag) );
-      SCIP_CALL( checkExprProp(scip, prodexpr, 0.0, 0.0, FALSE, tag) );
-      SCIP_CALL( checkExprProp(scip, sumexpr, 1.0, 1.0, FALSE, tag) );
-      SCIP_CALL( checkExprProp(scip, xexpr, 0.0, 0.0, FALSE, tag) );
-      SCIP_CALL( checkExprProp(scip, yexpr, 1.0, 1.0, FALSE, tag) );
-      SCIP_CALL( checkExprProp(scip, const_expr, 5.0, 5.0, FALSE, tag) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, tag) );
+      SCIP_CALL( checkExprIntEval(scip, mainexpr, 0.0, 0.0, FALSE, tag) );
+      SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, tag) );
+      SCIP_CALL( checkExprIntEval(scip, sumexpr, 1.0, 1.0, FALSE, tag) );
+      SCIP_CALL( checkExprIntEval(scip, xexpr, 0.0, 0.0, FALSE, tag) );
+      SCIP_CALL( checkExprIntEval(scip, yexpr, 1.0, 1.0, FALSE, tag) );
+      SCIP_CALL( checkExprIntEval(scip, const_expr, 5.0, 5.0, FALSE, tag) );
    }
 
    /* set another tag for some subexpression; result should not change */
-   SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 1) );
-   SCIP_CALL( checkExprProp(scip, mainexpr, 0.0, 0.0, FALSE, 1) );
-   SCIP_CALL( checkExprProp(scip, prodexpr, 0.0, 0.0, FALSE, 1) );
-   SCIP_CALL( checkExprProp(scip, sumexpr, 1.0, 1.0, FALSE, 1) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 1) );
+   SCIP_CALL( checkExprIntEval(scip, mainexpr, 0.0, 0.0, FALSE, 1) );
+   SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, 1) );
+   SCIP_CALL( checkExprIntEval(scip, sumexpr, 1.0, 1.0, FALSE, 1) );
 
-   SCIP_CALL( SCIPpropConsExprExpr(scip, prodexpr, 2) );
-   SCIP_CALL( SCIPpropConsExprExpr(scip, sumexpr, 2) );
-   SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 1) ); /* this should not trigger a repropagation */
-   SCIP_CALL( checkExprProp(scip, mainexpr, 0.0, 0.0, FALSE, 1) );
-   SCIP_CALL( checkExprProp(scip, prodexpr, 0.0, 0.0, FALSE, 2) );
-   SCIP_CALL( checkExprProp(scip, sumexpr, 1.0, 1.0, FALSE, 2) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, 2) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sumexpr, 2) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 1) ); /* this should not trigger a reevaluation */
+   SCIP_CALL( checkExprIntEval(scip, mainexpr, 0.0, 0.0, FALSE, 1) );
+   SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, 2) );
+   SCIP_CALL( checkExprIntEval(scip, sumexpr, 1.0, 1.0, FALSE, 2) );
 
-   SCIP_CALL( SCIPpropConsExprExpr(scip, mainexpr, 3) ); /* this should trigger a repropagation */
-   SCIP_CALL( checkExprProp(scip, mainexpr, 0.0, 0.0, FALSE, 3) );
-   SCIP_CALL( checkExprProp(scip, prodexpr, 0.0, 0.0, FALSE, 3) );
-   SCIP_CALL( checkExprProp(scip, sumexpr, 1.0, 1.0, FALSE, 3) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 3) ); /* this should trigger a reevaluation */
+   SCIP_CALL( checkExprIntEval(scip, mainexpr, 0.0, 0.0, FALSE, 3) );
+   SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, 3) );
+   SCIP_CALL( checkExprIntEval(scip, sumexpr, 1.0, 1.0, FALSE, 3) );
 
-   /* manipulate propagation interval */
-   SCIP_CALL( SCIPpropConsExprExpr(scip, prodexpr, 1) );
-   SCIP_CALL( checkExprProp(scip, prodexpr, 0.0, 0.0, FALSE, 1) );
-   SCIP_CALL( checkExprProp(scip, xexpr, 0.0, 0.0, FALSE, 1) );
-   SCIP_CALL( checkExprProp(scip, yexpr, 1.0, 1.0, FALSE, 1) );
+   /* manipulate evaluation interval */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, 1) );
+   SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, 1) );
+   SCIP_CALL( checkExprIntEval(scip, xexpr, 0.0, 0.0, FALSE, 1) );
+   SCIP_CALL( checkExprIntEval(scip, yexpr, 1.0, 1.0, FALSE, 1) );
 
-   /* set bounds of x to [1,1] in xepr */
+   /* set bounds of x to [1,1] in xexpr */
    SCIPintervalSetBounds(&interval, 1.0, 1.0);
-   SCIPsetConsExprExprPropInterval(xexpr, &interval, 2);
-   SCIP_CALL( SCIPpropConsExprExpr(scip, prodexpr, 2) ); /* should use [1,1] for xexpr */
-   SCIP_CALL( checkExprProp(scip, prodexpr, pow(5.0,-4), pow(5.0,-4), FALSE, 2) );
-   SCIP_CALL( checkExprProp(scip, xexpr, 1.0, 1.0, FALSE, 2) );
-   SCIP_CALL( SCIPpropConsExprExpr(scip, prodexpr, 3) ); /* should use [0,0] for xexpr */
-   SCIP_CALL( checkExprProp(scip, prodexpr, 0.0, 0.0, FALSE, 3) );
-   SCIP_CALL( checkExprProp(scip, xexpr, 0.0, 0.0, FALSE, 3) );
+   SCIPsetConsExprExprEvalInterval(xexpr, &interval, 2);
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, 2) ); /* should use [1,1] for xexpr */
+   SCIP_CALL( checkExprIntEval(scip, prodexpr, pow(5.0,-4), pow(5.0,-4), FALSE, 2) );
+   SCIP_CALL( checkExprIntEval(scip, xexpr, 1.0, 1.0, FALSE, 2) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, 3) ); /* should use [0,0] for xexpr */
+   SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, 3) );
+   SCIP_CALL( checkExprIntEval(scip, xexpr, 0.0, 0.0, FALSE, 3) );
 
    /* release all expressions */
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
@@ -1043,7 +1043,7 @@ main(
 
    CHECK_TEST( testExpreval() );
 
-   CHECK_TEST( testExprprop() );
+   CHECK_TEST( testExprinteval() );
 
    CHECK_TEST( testParse() );
 

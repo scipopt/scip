@@ -67,6 +67,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
    return SCIP_OKAY;
 }
 
+/** expression point evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalValue)
 {
@@ -80,9 +81,9 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalValue)
    return SCIP_OKAY;
 }
 
-/** expression propagation callback */
+/** expression interval evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRPROP(propValue)
+SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalValue)
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_Real val;
@@ -111,7 +112,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrValue, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataValue, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printValue) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrProp(scip, consexprhdlr, exprhdlr, propValue) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalValue) );
 
    return SCIP_OKAY;
 }

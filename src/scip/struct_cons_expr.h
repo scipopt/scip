@@ -48,7 +48,7 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPRPRINT((*print));        /**< print callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRPARSE((*parse));        /**< parse callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPREVAL((*eval));          /**< point evaluation callback (can never be NULL) */
-   SCIP_DECL_CONSEXPR_EXPRPROP((*prop));          /**< propagation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval));    /**< interval evaluation callback (can be NULL) */
 };
 
 /** a node in the expression graph that is handled by the expression constraint handler */
@@ -67,9 +67,9 @@ struct SCIP_ConsExpr_Expr
    unsigned int            evaltag;       /**< tag of point for which the expression has been evaluated last, or 0 */
    SCIP_Real               evalvalue;     /**< value of expression from last evaluation (corresponding to evaltag) */
 
-   /* propagation interval */
-   unsigned int            proptag;       /**< tag of domains for which tag for which the expression has been propagated last, or 0 */
-   SCIP_INTERVAL           interval;      /**< interval from the last propagation */
+   /* interval-evaluation */
+   unsigned int            intevaltag;    /**< tag of domains for which tag for which the expression has been evaluated last, or 0 */
+   SCIP_INTERVAL           interval;      /**< interval from the last interval evaluation */
 
    /* expression walker data */
    SCIP_CONSEXPR_EXPR*     walkparent;    /**< parent expression in expression walk */

@@ -350,9 +350,9 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalSum)
    return SCIP_OKAY;
 }
 
-/** expression propagation callback */
+/** expression interval evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRPROP(propSum)
+SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_INTERVAL suminterval;
@@ -382,8 +382,7 @@ SCIP_DECL_CONSEXPR_EXPRPROP(propSum)
          SCIPintervalMulScalar(SCIPinfinity(scip), &suminterval, childinterval, exprdata->coefficients[c]);
          SCIPintervalAdd(SCIPinfinity(scip), interval, *interval, suminterval);
       }
-
-  }
+   }
 
    return SCIP_OKAY;
 }
@@ -425,9 +424,9 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
    return SCIP_OKAY;
 }
 
-/** expression propagation callback */
+/** expression interval evaluation callback */
 static
-SCIP_DECL_CONSEXPR_EXPRPROP(propProduct)
+SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
    SCIP_INTERVAL powinterval;
@@ -478,7 +477,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrSum, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrProp(scip, consexprhdlr, exprhdlr, propSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSum) );
 
    return SCIP_OKAY;
 }
@@ -549,7 +548,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrProduct, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printProduct) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrProp(scip, consexprhdlr, exprhdlr, propProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalProduct) );
 
    return SCIP_OKAY;
 }

@@ -104,7 +104,7 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_EXPRHDLR*  exprprodhdlr;    /**< product expression handler */
 };
 
-/* data passed on during expression evaluation */
+/* data passed on during expression evaluation in a point */
 typedef struct
 {
    SCIP_SOL*             sol;                /**< solution that is evaluated */
@@ -112,12 +112,12 @@ typedef struct
    SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an evaluation error */
 } EXPREVAL_DATA;
 
-/* data passed on during expression propagation */
+/* data passed on during expression evaluation over a box */
 typedef struct
 {
-   unsigned int          proptag;            /**< propagation tag */
-   SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to a propagation error */
-} EXPRPROP_DATA;
+   unsigned int          boxtag;             /**< box tag */
+   SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an empty interval */
+} EXPRINTEVAL_DATA;
 
 /*
  * Local methods
@@ -318,19 +318,19 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(evalExprLeaveExpr)
    return SCIP_OKAY;
 }
 
-/** expression walk callback when propagating expression, called when expression is left */
+/** expression walk callback when evaluating expression on intervals, called before child is visited */
 static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(propExprVisitChild)
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprVisitChild)
 {
-   EXPRPROP_DATA* propdata;
+   EXPRINTEVAL_DATA* propdata;
 
    assert(expr != NULL);
    assert(data != NULL);
 
-   propdata = (EXPRPROP_DATA*)data;
+   propdata = (EXPRINTEVAL_DATA*)data;
 
-   /* skip child if it has been propagated already */
-   if( propdata->proptag != 0 && propdata->proptag == expr->children[expr->walkcurrentchild]->proptag )
+   /* skip child if it has been evaluated already */
+   if( propdata->boxtag != 0 && propdata->boxtag == expr->children[expr->walkcurrentchild]->intevaltag )
    {
       if( SCIPintervalIsEmpty(SCIPinfinity(scip), expr->children[expr->walkcurrentchild]->interval) )
       {
@@ -350,22 +350,22 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(propExprVisitChild)
    return SCIP_OKAY;
 }
 
-/** expression walk callback when evaluating expression, called before child is visited */
+/** expression walk callback when evaluating expression on intervals, called when expression is left */
 static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(propExprLeaveExpr)
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
 {
-   EXPRPROP_DATA* propdata;
+   EXPRINTEVAL_DATA* propdata;
 
    assert(expr != NULL);
    assert(data != NULL);
 
-   propdata = (EXPRPROP_DATA*)data;
+   propdata = (EXPRINTEVAL_DATA*)data;
 
-   /* set propagation tag in any case */
-   expr->proptag = propdata->proptag;
+   /* set tag in any case */
+   expr->intevaltag = propdata->boxtag;
 
-   /* set interval to [-inf,+inf] if propagation callback is not implemented */
-   if( expr->exprhdlr->prop == NULL )
+   /* set interval to [-inf,+inf] if interval evaluation callback is not implemented */
+   if( expr->exprhdlr->inteval == NULL )
    {
       SCIPintervalSetEntire(SCIPinfinity(scip), &expr->interval);
       *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
@@ -373,8 +373,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(propExprLeaveExpr)
       return SCIP_OKAY;
    }
 
-   /* propagate current expression and move on */
-   SCIP_CALL( (*expr->exprhdlr->prop)(scip, expr, &expr->interval) );
+   /* evaluate current expression and move on */
+   SCIP_CALL( (*expr->exprhdlr->inteval)(scip, expr, &expr->interval) );
 
    /* stop if callback returned an empty interval */
    if( SCIPintervalIsEmpty(SCIPinfinity(scip), expr->interval) )
@@ -1509,16 +1509,16 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrParse(
 }
 
 /** set the interval evaluation callback of an expression handler */
-SCIP_RETCODE SCIPsetConsExprExprHdlrProp(
+SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    SCIP*                      scip,          /**< SCIP data structure */
    SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
-   SCIP_DECL_CONSEXPR_EXPRPROP((*prop))      /**< interval evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval))/**< interval evaluation callback (can be NULL) */
 )
 {
    assert(exprhdlr != NULL);
 
-   exprhdlr->prop = prop;
+   exprhdlr->inteval = inteval;
 
    return SCIP_OKAY;
 }
@@ -1668,7 +1668,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr(
    (*expr)->exprhdlr = exprhdlr;
    (*expr)->exprdata = exprdata;
 
-   /* initialize an empty interval for propagation */
+   /* initialize an empty interval for interval evaluation */
    SCIPintervalSetEntire(SCIPinfinity(scip), &(*expr)->interval);
 
    if( nchildren > 0 )
@@ -1869,40 +1869,42 @@ SCIP_RETCODE SCIPevalConsExprExpr(
    return SCIP_OKAY;
 }
 
-/** propagates an expression for the current (local) bounds
+/** evaluates an expression over a box
  *
- * Initiates an expression walk to also propagate children, if necessary.
- * Value can be received via SCIPgetConsExprExprEvalInterval().
- * If an evaluation error (division by zero, ...) occurs, this value will
- * be set to an empty interval.
+ * Initiates an expression walk to also evaluate children, if necessary.
+ * The resulting interval can be received via SCIPgetConsExprExprEvalInterval().
+ * If the box does not overlap with the domain of the function behind the expression
+ * (e.g., sqrt([-2,-1]) or 1/[0,0]) this interval will be empty.
  *
- * If a nonzero \p tag is passed, then only (sub)expressions are
- * reevaluated that have a different propagation tag. If a tag of 0
- * is passed, then subexpressions are always repropagated.
+ * For variables, the local variable bounds are used as interval.
+ *
+ * If a nonzero \p boxtag is passed, then only (sub)expressions are
+ * reevaluated that have a different tag. If a tag of 0 is passed,
+ * then subexpressions are always reevaluated.
  * The tag is stored together with the interval and can be received via
- * SCIPgetConsExprExprPropTag().
+ * SCIPgetConsExprExprEvalIntervalTag().
  */
-SCIP_RETCODE SCIPpropConsExprExpr(
+SCIP_RETCODE SCIPevalConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be propagated */
-   unsigned int            proptag           /**< propagation tag that uniquely identifies the current variable domains (with its values), or 0. */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be evaluated */
+   unsigned int            boxtag            /**< tag that uniquely identifies the current variable domains (with its values), or 0 */
    )
 {
-   EXPRPROP_DATA propdata;
+   EXPRINTEVAL_DATA propdata;
 
    /* if value is up-to-date, then nothing to do */
-   if( proptag != 0 && expr->proptag == proptag )
+   if( boxtag != 0 && expr->intevaltag == boxtag )
       return SCIP_OKAY;
 
    propdata.aborted = FALSE;
-   propdata.proptag = proptag;
+   propdata.boxtag = boxtag;
 
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, propExprVisitChild, NULL, propExprLeaveExpr, &propdata) );
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, intevalExprVisitChild, NULL, intevalExprLeaveExpr, &propdata) );
 
    if( propdata.aborted )
    {
       SCIPintervalSetEmpty(&expr->interval);
-      expr->proptag = proptag;
+      expr->intevaltag = boxtag;
    }
 
    return SCIP_OKAY;
@@ -1918,7 +1920,7 @@ SCIP_Real SCIPgetConsExprExprValue(
    return expr->evalvalue;
 }
 
-/** gives the interval from the last propagation of an expression (interval is empty if there was a propagation error) */
+/** returns the interval from the last interval evaluation of an expression (interval can be empty) */
 SCIP_INTERVAL SCIPgetConsExprExprInterval(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    )
@@ -1938,14 +1940,14 @@ unsigned int SCIPgetConsExprExprEvalTag(
    return expr->evaltag;
 }
 
-/** gives the propagation tag from the last propagation, or 0 */
-unsigned int SCIPgetConsExprExprPropTag(
+/** gives the box tag from the last interval evaluation, or 0 */
+unsigned int SCIPgetConsExprExprEvalIntervalTag(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    )
 {
    assert(expr != NULL);
 
-   return expr->proptag;
+   return expr->intevaltag;
 }
 
 /** sets the evaluation value */
@@ -1961,17 +1963,17 @@ void SCIPsetConsExprExprEvalValue(
    expr->evaltag = tag;
 }
 
-/** sets the propagation interval */
-void SCIPsetConsExprExprPropInterval(
+/** sets the evaluation interval */
+void SCIPsetConsExprExprEvalInterval(
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_INTERVAL*          interval,         /**< interval to set */
-   unsigned int            proptag           /**< tag of variable domains that were propagated, or 0. */
+   unsigned int            tag               /**< tag of variable domains that were evaluated, or 0. */
    )
 {
    assert(expr != NULL);
 
    SCIPintervalSetBounds(&expr->interval, SCIPintervalGetInf(*interval), SCIPintervalGetSup(*interval));
-   expr->proptag = proptag;
+   expr->intevaltag = tag;
 }
 
 /** walks the expression graph in depth-first manner and executes callbacks at certain places
