@@ -418,12 +418,12 @@ BEGIN {
    close(command)
 }
 
-/solving was interrupted/ { timeout = 1; }
-/gap limit reached/ { gapreached = 1; }
+/solving was interrupted/ { timeout = 1; nodelimitreached = 0; }
+/gap limit reached/ { gapreached = 1; nodelimitreached = 0; }
 /solution limit reached/ { sollimitreached = 1; }
 /memory limit reached/ { memlimitreached = 1; }
 /node limit reached/ { nodelimitreached = 1; }
-/problem is solved/ { timeout = 0; }
+/problem is solved/ { timeout = 0; nodelimitreached = 0; }
 /best solution is not feasible in original problem/  { bestsolfeas = 0; }
 
 /Check SOL:/ { 
