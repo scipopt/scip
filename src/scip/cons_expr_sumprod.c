@@ -355,6 +355,7 @@ static
 SCIP_DECL_CONSEXPR_EXPRPROP(propSum)
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_INTERVAL suminterval;
    int c;
 
    assert(expr != NULL);
@@ -372,8 +373,17 @@ SCIP_DECL_CONSEXPR_EXPRPROP(propSum)
       assert(childinterval != NULL);
       assert(!SCIPintervalIsEmpty(INTERVALINFINITY, *childinterval));
 
-      /* add childinterval the the so far computed interval */
-      SCIPintervalAdd(INTERVALINFINITY, interval, *interval, *childinterval);
+      /* compute coefficients[c] * childinterval and add the result to the so far computed interval */
+      if( exprdata->coefficients[c] == 1.0 )
+      {
+         SCIPintervalAdd(INTERVALINFINITY, interval, *interval, *childinterval);
+      }
+      else
+      {
+         SCIPintervalMulScalar(INTERVALINFINITY, &suminterval, *childinterval, exprdata->coefficients[c]);
+         SCIPintervalAdd(INTERVALINFINITY, interval, *interval, suminterval);
+      }
+
   }
 
    return SCIP_OKAY;
