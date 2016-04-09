@@ -772,11 +772,7 @@ SCIP_RETCODE parseTerm(
          debugParse("while parsing term, read char %c\n", *expr);
          ++expr;
 
-         /* TODO When parsing something like "*x^2", it creates a product-expression for x^2
-          *      and then adds this product-expression with exponent 1 to the factortree.
-          *      If parseFactor would return the base expression and the exponent as a number,
-          *      we could avoid the extra product-expression for "x^2".
-          * TODO release factortree, if parseFactor fails with a read-error */
+         /* TODO release factortree, if parseFactor fails with a read-error */
          SCIP_CALL( parseFactor(scip, conshdlr, vartoexprvarmap, expr, newpos, &exponent, &factortree) );
          expr = *newpos;
 
