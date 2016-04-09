@@ -439,7 +439,7 @@ SCIP_RETCODE parseBase(
    SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between SCIP vars and var expressions */
    char*                 expr,               /**< expr that we are parsing */
    char**                newpos,             /**< buffer to store the position of expr where we finished reading */
-   SCIP_CONSEXPR_EXPR**  baseexpr            /**< buffer to store the expr parsed by Factor */
+   SCIP_CONSEXPR_EXPR**  baseexpr            /**< buffer to store the expr parsed by Base */
    )
 {
    SCIP_VAR* var;
@@ -517,6 +517,7 @@ SCIP_RETCODE parseBase(
       char* init;
       char operatorname[SCIP_MAXSTRLEN];
       SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
+      SCIP_Bool insidevarname;
       SCIP_Bool success;
 
       /* get name */
@@ -550,28 +551,40 @@ SCIP_RETCODE parseBase(
          return SCIP_READERROR;
       }
 
-      /* in case we would need to extract expression between ()
-       * TODO what about parenthesis in variable names, e.g., "log(<x((>)" ?
-       * */
+      /* in case we would need to extract expression between () */
       ++expr;
       init = expr;
       npar = 0;
+      insidevarname = FALSE;
       while( *expr != ')' && npar > 0 )
       {
+         /* if we achieve the end of string, probably the expression has unbalanced parenthesis */
          if( *expr == '\0' )
          {
             SCIPerrorMessage("Unexpected end of expression string when parsing '%s(%s'\n", operatorname, init);
             return SCIP_READERROR;
          }
 
-         if( *expr == '(' )
-            ++npar;
-         else if( *expr == ')' )
-            --npar;
-         ++expr;
+         /* count parenthesis if not inside a variable name */
+         if( !insidevarname )
+         {
+            if( *expr == '(' )
+               ++npar;
+            else if( *expr == ')' )
+               --npar;
+         }
 
+         /* check if we are entering or leaving a variable name */
+         if( insidevarname && *expr == '>' )
+            insidevarname = FALSE;
+         if( !insidevarname && *expr == '<' )
+            insidevarname = TRUE;
+
+         ++expr;
          assert(npar >= 0);
       }
+      assert(npar == 0);
+      assert(!insidevarname);
       assert(*expr == ')');
 
       /* call exprhdlr parser */
