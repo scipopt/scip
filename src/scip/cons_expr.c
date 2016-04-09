@@ -765,23 +765,29 @@ SCIP_RETCODE parseTerm(
       /* loop: parse Factor, find next symbol */
       do
       {
+         SCIP_RETCODE retcode;
          SCIP_Bool isdivision;
 
          isdivision = (*expr == '/') ? TRUE : FALSE;
 
          debugParse("while parsing term, read char %c\n", *expr);
+
          ++expr;
+         retcode = parseFactor(scip, conshdlr, vartoexprvarmap, expr, newpos, &exponent, &factortree);
 
-         /* TODO release factortree, if parseFactor fails with a read-error */
-         SCIP_CALL( parseFactor(scip, conshdlr, vartoexprvarmap, expr, newpos, &exponent, &factortree) );
-         expr = *newpos;
-
-         debugParse("back to parsing Term (we have a Factor with exponent %g), continue parsing from %s\n", exponent, expr);
+         /* release termtree, if parseFactor fails with a read-error */
+         if( retcode == SCIP_READERROR )
+         {
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, termtree) );
+         }
+         SCIP_CALL( retcode );
 
          /* append newly created factor */
          exponent = isdivision ? -exponent : exponent;
          SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, *termtree, factortree, exponent) );
 
+         /* find next symbol */
+         expr = *newpos;
          while( isspace((unsigned char)*expr) )
             ++expr;
       } while( *expr == '*' || *expr == '/' );
@@ -851,6 +857,7 @@ SCIP_RETCODE parseExpr(
       /* loop: parse Term, find next symbol */
       do
       {
+         SCIP_RETCODE retcode;
          SCIP_Real coef;
 
          /* TODO Maybe try a SCIPstrToRealValue to get not only the sign of a possible coefficient?
@@ -859,15 +866,22 @@ SCIP_RETCODE parseExpr(
          coef = (*expr == '+') ? 1.0 : -1.0;
 
          debugParse("while parsing expression, read char %c\n", *expr);
-         ++expr;
 
-         /* TODO release exprtree if parseTerm fails with an read-error */
-         SCIP_CALL( parseTerm(scip, conshdlr, vartoexprvarmap, expr, newpos, &termtree) );
-         expr = *newpos;
+         ++expr;
+         retcode = parseTerm(scip, conshdlr, vartoexprvarmap, expr, newpos, &termtree);
+
+         /* release exprtree if parseTerm fails with an read-error */
+         if( retcode == SCIP_READERROR )
+         {
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, exprtree) );
+         }
+         SCIP_CALL( retcode );
 
          /* append newly created term */
          SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *exprtree, termtree, coef) );
 
+         /* find next symbol */
+         expr = *newpos;
          while( isspace((unsigned char)*expr) )
             ++expr;
       } while( *expr == '+' || *expr == '-' );
@@ -2554,18 +2568,20 @@ SCIP_RETCODE SCIPparseConsExprExpr(
    )
 {
    char* finalpos_;
+   SCIP_RETCODE retcode;
    SCIP_HASHMAP* vartoexprvarmap;
 
    SCIP_CALL( SCIPhashmapCreate(&vartoexprvarmap, SCIPblkmem(scip), SCIPcalcHashtableSize(5 * SCIPgetNVars(scip))) );
 
-   SCIP_CALL( parseExpr(scip, consexprhdlr, vartoexprvarmap, exprstr, &finalpos_, expr) );
+   /* if parseExpr fails, we still want to free hashmap */
+   retcode = parseExpr(scip, consexprhdlr, vartoexprvarmap, exprstr, &finalpos_, expr);
 
    SCIPhashmapFree(&vartoexprvarmap);
 
    if( finalpos != NULL )
       *finalpos = finalpos_;
 
-   return SCIP_OKAY;
+   return retcode;
 }
 
 /** appends child to the children list of expr */
