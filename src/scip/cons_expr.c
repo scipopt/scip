@@ -492,7 +492,7 @@ SCIP_RETCODE parseBase(
       if( *expr != ')' )
       {
          SCIPerrorMessage("Expected ')', but got <%c> from <%s>\n", *expr, expr);
-         /* TODO release basetree ? */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, basetree) );
          return SCIP_READERROR;
       }
       ++expr;
@@ -595,7 +595,7 @@ SCIP_RETCODE parseBase(
       if( !success )
       {
          SCIPerrorMessage("Error while expression handler <%s> was parsing %s\n", operatorname, init);
-         /* TODO release basetree ? */
+         assert(*basetree == NULL);
          return SCIP_READERROR;
       }
 
