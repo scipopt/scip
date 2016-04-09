@@ -661,7 +661,7 @@ SCIP_RETCODE parseFactor(
       if( *expr == '\0' )
       {
          SCIPerrorMessage("Unexpected end of expression string after '^'.\n");
-         /* TODO release basetree */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, baseexpr) );
          return SCIP_READERROR;
       }
 
@@ -676,7 +676,7 @@ SCIP_RETCODE parseFactor(
          if( *expr == '\0' )
          {
             SCIPerrorMessage("Unexpected end of expression string after '^('.\n");
-            /* TODO release basetree */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, baseexpr) );
             return SCIP_READERROR;
          }
 
@@ -686,14 +686,14 @@ SCIP_RETCODE parseFactor(
             if( !SCIPstrToRealValue(expr, &exponent, &expr) )
             {
                SCIPerrorMessage("error parsing number from <%s>\n", expr);
-               /* TODO release basetree */
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, baseexpr) );
                return SCIP_READERROR;
             }
          }
          else
          {
             SCIPerrorMessage("error in parsing exponent, expected '-' or a digit, received <%c> from <%s>\n", *expr,  expr);
-            /* TODO release basetree */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, baseexpr) );
             return SCIP_READERROR;
          }
 
@@ -703,7 +703,7 @@ SCIP_RETCODE parseFactor(
          if( *expr != ')' )
          {
             SCIPerrorMessage("error in parsing exponent: expected ')', received <%c> from <%s>\n", *expr,  expr);
-            /* TODO release basetree */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, baseexpr) );
             return SCIP_READERROR;
          }
          ++expr;
@@ -718,14 +718,14 @@ SCIP_RETCODE parseFactor(
             if( !SCIPstrToRealValue(expr, &exponent, &expr) )
             {
                SCIPerrorMessage("error parsing number from <%s>\n", expr);
-               /* TODO release basetree */
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, baseexpr) );
                return SCIP_READERROR;
             }
          }
          else
          {
             SCIPerrorMessage("error in parsing exponent, expected a digit, received <%c> from <%s>\n", *expr,  expr);
-            /* TODO release basetree */
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, baseexpr) );
             return SCIP_READERROR;
          }
       }
