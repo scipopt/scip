@@ -771,37 +771,44 @@ SCIP_RETCODE parseTerm(
 
    debugParse("back to parsing Term (we have a Factor), continue parsing from %s\n", expr);
 
-   /* initialize termtree as a product expression with a single term */
-   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, termtree, 1, &factortree, &one, one) );
-
-   /* loop: find symbol and parse factor */
+   /* check if Terms has another Factor incoming */
    while( isspace((unsigned char)*expr) )
       ++expr;
-   while( *expr == '*' || *expr == '/' )
+   if( *expr == '*' || *expr == '/' )
    {
-      SCIP_Real exponent;
+      /* initialize termtree as a product expression with a single term, so after we can append the extra Factors */
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, termtree, 1, &factortree, &one, one) );
 
-      exponent = (*expr == '*') ? 1.0 : -1.0;
+      /* loop: parse Factor, find next symbol */
+      do
+      {
+         SCIP_Real exponent;
 
-      debugParse("while parsing term, read char %c\n", *expr);
-      ++expr;
+         exponent = (*expr == '*') ? 1.0 : -1.0;
 
-      /* TODO When parsing something like "*x^2", it creates a product-expression for x^2
-       *      and then adds this product-expression with exponent 1 to the factortree.
-       *      If parseFactor would return the base expression and the exponent as a number,
-       *      we could avoid the extra product-expression for "x^2".
-       * TODO release factortree, if parseFactor fails with a read-error */
-      SCIP_CALL( parseFactor(scip, conshdlr, vartoexprvarmap, expr, newpos, &factortree) );
-      expr = *newpos;
-
-      /* append newly created factor */
-      SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, *termtree, factortree, exponent) );
-
-      while( isspace((unsigned char)*expr) )
+         debugParse("while parsing term, read char %c\n", *expr);
          ++expr;
-   }
 
-   /* TODO if termtree has only one expression with exponent 1.0, replace termtree by it's child */
+         /* TODO When parsing something like "*x^2", it creates a product-expression for x^2
+          *      and then adds this product-expression with exponent 1 to the factortree.
+          *      If parseFactor would return the base expression and the exponent as a number,
+          *      we could avoid the extra product-expression for "x^2".
+          * TODO release factortree, if parseFactor fails with a read-error */
+         SCIP_CALL( parseFactor(scip, conshdlr, vartoexprvarmap, expr, newpos, &factortree) );
+         expr = *newpos;
+
+         /* append newly created factor */
+         SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, *termtree, factortree, exponent) );
+
+         while( isspace((unsigned char)*expr) )
+            ++expr;
+      } while( *expr == '*' || *expr == '/' );
+   }
+   else
+   {
+      /* Term consists of this unique factor */
+      *termtree = factortree;
+   }
 
    *newpos = expr;
 
