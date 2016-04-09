@@ -759,7 +759,7 @@ SCIP_RETCODE parseTerm(
       ++expr;
    if( *expr == '*' || *expr == '/' )
    {
-      /* initialize termtree as a product expression with a single term, so after we can append the extra Factors */
+      /* initialize termtree as a product expression with a single term, so we can append the extra Factors */
       SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, termtree, 1, &factortree, &exponent, 1.0) );
 
       /* loop: parse Factor, find next symbol */
@@ -840,38 +840,51 @@ SCIP_RETCODE parseExpr(
 
    debugParse("back to parsing expression (we have the following term), continue parsing from %s\n", expr);
 
-   /* initialize exprtree as a sum expression with a single term */
-   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, exprtree, 1, &termtree, &sign, 0.0) );
-
-   /* loop: find symbol and parse term */
+   /* check if Expr has another Term incoming */
    while( isspace((unsigned char)*expr) )
       ++expr;
-   while( *expr == '+' || *expr == '-' )
+   if( *expr == '+' || *expr == '-' )
    {
-      SCIP_Real coef;
+      /* initialize exprtree as a sum expression with a single term, so we can append the extra Terms */
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, exprtree, 1, &termtree, &sign, 0.0) );
 
-      /* TODO Maybe try a SCIPstrToRealValue to get not only the sign of a possible coefficient?
-       *      Thus avoid creating a product-expression for "+2*x" ?
-       */
-      coef = (*expr == '+') ? 1.0 : -1.0;
+      /* loop: parse Term, find next symbol */
+      do
+      {
+         SCIP_Real coef;
 
-      debugParse("while parsing expression, read char %c\n", *expr);
-      ++expr;
+         /* TODO Maybe try a SCIPstrToRealValue to get not only the sign of a possible coefficient?
+          *      Thus avoid creating a product-expression for "+2*x" ?
+          */
+         coef = (*expr == '+') ? 1.0 : -1.0;
 
-      /* TODO release exprtree if parseTerm fails with an read-error */
-      SCIP_CALL( parseTerm(scip, conshdlr, vartoexprvarmap, expr, newpos, &termtree) );
-      expr = *newpos;
-
-      /* append newly created term */
-      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *exprtree, termtree, coef) );
-
-      while( isspace((unsigned char)*expr) )
+         debugParse("while parsing expression, read char %c\n", *expr);
          ++expr;
+
+         /* TODO release exprtree if parseTerm fails with an read-error */
+         SCIP_CALL( parseTerm(scip, conshdlr, vartoexprvarmap, expr, newpos, &termtree) );
+         expr = *newpos;
+
+         /* append newly created term */
+         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *exprtree, termtree, coef) );
+
+         while( isspace((unsigned char)*expr) )
+            ++expr;
+      } while( *expr == '+' || *expr == '-' );
+   }
+   else
+   {
+      /* Expr consists of this unique ['+' | '-'] Term */
+      if( sign  < 0.0 )
+      {
+         assert(sign == -1.0);
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, exprtree, 1, &termtree, &sign, 0.0) );
+      }
+      else
+         *exprtree = termtree;
    }
 
    *newpos = expr;
-
-   /* TODO if exprtree has only one expression with coefficient 1.0, replace exprtree by it's child */
 
    return SCIP_OKAY;
 }
