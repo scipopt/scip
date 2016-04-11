@@ -33,7 +33,7 @@
  * @par
  * Martin Ballerstein, Dennis Michaels, and Stefan Vigerske@n
  * Linear Underestimators for bivariate functions with a fixed convexity behavior@n
- * ZIB Report 13-02, 2013. http://opus4.kobv.de/opus4-zib/frontdoor/index/index/docId/1764
+ * ZIB Report 13-02, 2013. http://nbn-resolving.de/urn:nbn:de:0297-zib-17641
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
