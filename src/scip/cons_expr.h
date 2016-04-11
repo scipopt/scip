@@ -338,6 +338,23 @@ void SCIPsetConsExprExprEvalInterval(
 
 /** walks the expression graph in depth-first manner and executes callbacks at certain places
  *
+ * Many algorithms over expression trees need to traverse the tree in depth-first manner and a
+ * natural way of implementing this algorithms is using recursion.
+ * In general, a function which traverses the tree in depth-first looks like
+ * <pre>
+ * fun( expr )
+ *    enterexpr()
+ *    continue skip or abort
+ *       for( child in expr->children )
+ *          visitingchild()
+ *          continue skip or abort
+ *          fun(child, data, proceed)
+ *          visitedchild()
+ *          continue skip or abort
+ *    leaveexpr()
+ * </pre>
+ * Given that some expressions might be quite deep we provide this functionality in an iterative fashion.
+ *
  * Consider an expression (x*y) + z + log(x-y).
  * The corresponding expression graph is
  * <pre>
