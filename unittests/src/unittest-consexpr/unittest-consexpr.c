@@ -346,8 +346,10 @@ SCIP_RETCODE testParse(void)
    {
       SCIP_CONSEXPR_EXPR* e;
 
+      SCIPmessageSetErrorPrinting(NULL, NULL);
+
       /* there is no variable with name "xx" */
-      /* FIXME assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<xx>", NULL, &e) == SCIP_READERROR); */
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<xx>", NULL, &e) == SCIP_READERROR);
 
       assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"5/<donothave> ", NULL, &e) == SCIP_READERROR);
 
@@ -361,6 +363,7 @@ SCIP_RETCODE testParse(void)
 
       assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"val(1) ", NULL, &e) == SCIP_READERROR);
 
+      SCIPmessageSetErrorPrintingDefault();
    }
 
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
