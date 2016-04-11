@@ -1877,8 +1877,11 @@ SCIP_RETCODE getConflictImplics(
       assert(var != NULL);
       assert(SCIPvarIsBinary(var));
 
-      lb = SCIPvarGetLbAtIndex(var, bdchgidx, FALSE);
-      ub = SCIPvarGetUbAtIndex(var, bdchgidx, FALSE);
+      /* we need to take the bounds after the bdchgidx here, since the variable of the bound change may be the implied one;
+       * we already counted its contribution before, so we want to see it as fixed here, which it is after the bound change.
+       */
+      lb = SCIPvarGetLbAtIndex(var, bdchgidx, TRUE);
+      ub = SCIPvarGetUbAtIndex(var, bdchgidx, TRUE);
 
       if( lb < 0.5 && ub > 0.5 && !SCIPhashtableExists(addedvars, (void*)var) )
       {
