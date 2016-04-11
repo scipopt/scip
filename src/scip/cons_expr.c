@@ -860,14 +860,34 @@ SCIP_RETCODE parseExpr(
          SCIP_RETCODE retcode;
          SCIP_Real coef;
 
-         /* TODO Maybe try a SCIPstrToRealValue to get not only the sign of a possible coefficient?
-          *      Thus avoid creating a product-expression for "+2*x" ?
-          */
-         coef = (*expr == '+') ? 1.0 : -1.0;
+         /* check if a number is following as in "coef * <term>" */
+         if( SCIPstrToRealValue(expr, &coef, newpos) )
+         {
+            expr = *newpos;
 
-         debugParse("while parsing expression, read char %c\n", *expr);
+            while( isspace((unsigned char)*expr) )
+               ++expr;
 
-         ++expr;
+            if( *expr != '*' )
+            {
+               SCIPerrorMessage("after coefficient %g, expected <*> at the beginning of %s\n", coef, expr);
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, exprtree) );
+               return SCIP_READERROR;
+            }
+
+            ++expr;
+
+            while( isspace((unsigned char)*expr) )
+               ++expr;
+         }
+         else
+         {
+            coef = (*expr == '+') ? 1.0 : -1.0;
+            ++expr;
+         }
+
+         debugParse("while parsing expression, read coefficient %g\n", coef);
+
          retcode = parseTerm(scip, conshdlr, vartoexprvarmap, expr, newpos, &termtree);
 
          /* release exprtree if parseTerm fails with an read-error */

@@ -262,11 +262,11 @@ SCIP_RETCODE testParse(void)
    {
       SCIP_CONSEXPR_EXPR* crazyexpr;
       SCIP_SOL* crazysol;
-      const char* input = "<x>*<y>^2/<x>^4 - 2*<x>*(<x>-<y>)*(<x>+<y>)^(-3.5)";
+      const char* input = "<x>*<y>^2/<x>^4 - 2*<x>*(3+5*<x>-2*<y>)*(<x>+<y>)^(-3.5)";
       const SCIP_Real vals[3][2] = { {1.0, 2.0}, {0.0, 0.0}, {42.0, 17.0} };
       int p;
 
-#define CRAZYEVAL(x, y) ((x)*pow(y,2)/pow(x,4) - 2*(x)*((x)-(y)) * pow((x)+(y), -3.5))
+#define CRAZYEVAL(x, y) ((x)*pow(y,2)/pow(x,4) - 2*(x)*(3+5*(x)-2*(y)) * pow((x)+(y), -3.5))
 
       /* create expression */
       SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &crazyexpr) );
