@@ -232,7 +232,7 @@ SCIP_RETCODE testParse(void)
       const char* input = "<x>[C] / <y>[I] *(-5)";
 
       /* create expression for product of -5, x, and y */
-      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr_xy5) );
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr_xy5) == SCIP_OKAY);
 
       /* print expression */
       SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
@@ -248,7 +248,7 @@ SCIP_RETCODE testParse(void)
       const char* input = "-<x>[C] * <y>[I] ^(-1) + (<x>[C]+<y>[C])^2";
 
       /* create expression */
-      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &crazyexpr) );
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &crazyexpr) == SCIP_OKAY);
 
       /* print expression */
       SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
@@ -269,7 +269,7 @@ SCIP_RETCODE testParse(void)
 #define CRAZYEVAL(x, y) ((x)*pow(y,2)/pow(x,4) - 2*(x)*(3+5*(x)-2*(y)) * pow((x)+(y), -3.5))
 
       /* create expression */
-      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &crazyexpr) );
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &crazyexpr) == SCIP_OKAY);
 
       /* print expression */
       SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
@@ -306,7 +306,7 @@ SCIP_RETCODE testParse(void)
       const char* input = "(<x> - <y>) /   <z(  >^2";
 
       /* parse */
-      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) );
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) == SCIP_OKAY);
 
       /* print expression */
       SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
@@ -364,6 +364,22 @@ SCIP_RETCODE testParse(void)
       assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"val(1) ", NULL, &e) == SCIP_READERROR);
 
       SCIPmessageSetErrorPrintingDefault();
+   }
+
+   /* these expressions shouldn't fail */
+   {
+      SCIP_CONSEXPR_EXPR* e;
+
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>", NULL, &e) == SCIP_OKAY);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &e) );
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x> +5*<y>", NULL, &e) == SCIP_OKAY);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &e) );
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x> + <x>*5*<y>", NULL, &e) == SCIP_OKAY);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &e) );
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x> +5", NULL, &e) == SCIP_OKAY);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &e) );
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x> +5 + <y>", NULL, &e) == SCIP_OKAY);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &e) );
    }
 
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
