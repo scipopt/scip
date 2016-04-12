@@ -1518,10 +1518,13 @@ SCIP_DECL_CONSPROP(consPropComponents)
       SCIP_CALL( findComponents(scip, conshdlrdata, &problem) );
    }
 
-   if( problem != NULL )
+   do
    {
-      SCIP_CALL( solveProblem(problem, result) );
-   }
+      if( problem != NULL )
+      {
+         SCIP_CALL( solveProblem(problem, result) );
+      }
+   } while( *result == SCIP_DELAYNODE && SCIPgetDepth(scip) == 0 );
 
    return SCIP_OKAY;
 }
