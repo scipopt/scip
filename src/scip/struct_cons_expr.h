@@ -39,7 +39,7 @@ struct SCIP_ConsExpr_ExprHdlr
    char*                         name;       /**< expression handler name */
    char*                         desc;       /**< expression handler description (can be NULL) */
    SCIP_CONSEXPR_EXPRHDLRDATA*   data;       /**< data of handler */
-   int                           precedence; /**< precedence of expression operation relative to other expression (used for printing) */
+   unsigned int                  precedence; /**< precedence of expression operation relative to other expression (used for printing) */
 
    SCIP_DECL_CONSEXPR_EXPRCOPYHDLR((*copyhdlr));  /**< handler copy callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPRFREEHDLR((*freehdlr));  /**< handler free callback (can be NULL) */

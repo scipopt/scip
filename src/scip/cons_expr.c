@@ -1571,7 +1571,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
    SCIP_CONSEXPR_EXPRHDLR**    exprhdlr,     /**< buffer where to store expression handler */
    const char*                 name,         /**< name of expression handler (must not be NULL) */
    const char*                 desc,         /**< description of expression handler (can be NULL) */
-   int                         precedence,   /**< precedence of expression operation (used for printing) */
+   unsigned int                precedence,   /**< precedence of expression operation (used for printing) */
    SCIP_DECL_CONSEXPR_EXPREVAL((*eval)),     /**< point evaluation callback (can not be NULL) */
    SCIP_CONSEXPR_EXPRHDLRDATA* data          /**< data of expression handler (can be NULL) */
    )
@@ -1790,7 +1790,7 @@ const char* SCIPgetConsExprExprHdlrDescription(
 }
 
 /** gives the precedence of an expression handler */
-int SCIPgetConsExprExprHdlrPrecedence(
+unsigned int SCIPgetConsExprExprHdlrPrecedence(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
 )
 {
@@ -2351,6 +2351,8 @@ SCIP_CONSEXPR_EXPR* SCIPgetConsExprExprWalkParent(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression which parent to get */
    )
 {
+   assert(expr != NULL);
+
    return expr->walkparent;
 }
 
@@ -2359,9 +2361,26 @@ int SCIPgetConsExprExprWalkCurrentChild(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression which nextchild to get */
    )
 {
+   assert(expr != NULL);
+
    return expr->walkcurrentchild;
 }
 
+/** Gives the precedence of the expression handler of the parent expression in an expression graph walk.
+ *
+ * If there is no parent, then 0 is returned.
+ */
+unsigned int SCIPgetConsExprExprWalkParentPrecedence(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression which parent to get */
+   )
+{
+   assert(expr != NULL);
+
+   if( expr->walkparent == NULL )
+      return 0;
+
+   return expr->walkparent->exprhdlr->precedence;
+}
 
 /*
  * constraint specific interface methods

@@ -25,6 +25,8 @@
 
 #include "scip/cons_expr_value.h"
 
+#define VALUE_PRECEDENCE     10000
+
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrValue)
 {
@@ -53,9 +55,8 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printValue)
    if( stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR )
    {
       SCIP_Real v = SCIPgetConsExprExprValueValue(expr);
-      if( v < 0.0 )
+      if( v < 0.0 && VALUE_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr)  )
       {
-         /* TODO use precedence to figure out when we can skip parenthesis */
          SCIPinfoMessage(scip, file, "(%g)", v);
       }
       else
@@ -106,7 +107,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrValue(
 {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
 
-   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "val", "constant value", 0, evalValue, NULL) );
+   SCIP_CALL( SCIPincludeConsExprExprHdlrBasic(scip, consexprhdlr, &exprhdlr, "val", "constant value", VALUE_PRECEDENCE, evalValue, NULL) );
    assert(exprhdlr != NULL);
 
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrValue, NULL) );

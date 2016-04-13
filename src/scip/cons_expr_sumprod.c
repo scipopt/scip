@@ -34,7 +34,7 @@
 
 #include "scip/cons_expr_sumprod.h"
 
-#define SUM_PRECEDENCE     100000
+#define SUM_PRECEDENCE      40000
 #define PRODUCT_PRECEDENCE  50000
 
 /** ensures that a block memory array has at least a given size
@@ -175,7 +175,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
       case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
       {
          /* print opening parenthesis, if necessary */
-         if( SCIPgetConsExprExprWalkParent(expr) != NULL && SCIPgetConsExprExprHdlrPrecedence(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprWalkParent(expr))) <= SUM_PRECEDENCE )
+         if( SUM_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
          {
             SCIPinfoMessage(scip, file, "(");
          }
@@ -222,7 +222,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printSum)
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
       {
          /* print closing parenthesis, if necessary */
-         if( SCIPgetConsExprExprWalkParent(expr) != NULL && SCIPgetConsExprExprHdlrPrecedence(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprWalkParent(expr))) <= SUM_PRECEDENCE )
+         if( SUM_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
          {
             SCIPinfoMessage(scip, file, ")");
          }
@@ -251,7 +251,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
       case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
       {
          /* print opening parenthesis, if necessary */
-         if( SCIPgetConsExprExprWalkParent(expr) != NULL && SCIPgetConsExprExprHdlrPrecedence(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprWalkParent(expr))) <= PRODUCT_PRECEDENCE )
+         if( PRODUCT_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
          {
             SCIPinfoMessage(scip, file, "(");
          }
@@ -259,7 +259,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
          /* print constant factor, if not one */
          if( exprdata->constant != 1.0 )
          {
-            if( exprdata->constant < 0.0 && SCIPgetConsExprExprWalkParent(expr) != NULL && SCIPgetConsExprExprHdlrPrecedence(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprWalkParent(expr))) > PRODUCT_PRECEDENCE )
+            if( exprdata->constant < 0.0 && PRODUCT_PRECEDENCE > SCIPgetConsExprExprWalkParentPrecedence(expr) )
             {
                SCIPinfoMessage(scip, file, "(%g)", exprdata->constant);
             }
@@ -317,7 +317,7 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printProduct)
       case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
       {
          /* print closing parenthesis, if necessary */
-         if( SCIPgetConsExprExprWalkParent(expr) != NULL && SCIPgetConsExprExprHdlrPrecedence(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprWalkParent(expr))) <= PRODUCT_PRECEDENCE )
+         if( PRODUCT_PRECEDENCE <= SCIPgetConsExprExprWalkParentPrecedence(expr) )
          {
             SCIPinfoMessage(scip, file, ")");
          }

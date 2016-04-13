@@ -45,7 +45,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrBasic(
    SCIP_CONSEXPR_EXPRHDLR**    exprhdlr,     /**< buffer where to store expression handler */
    const char*                 name,         /**< name of expression handler (must not be NULL) */
    const char*                 desc,         /**< description of expression handler (can be NULL) */
-   int                         precedence,   /**< precedence of expression operation (used for printing) */
+   unsigned int                precedence,   /**< precedence of expression operation (used for printing) */
    SCIP_DECL_CONSEXPR_EXPREVAL((*eval)),     /**< point evaluation callback (can not be NULL) */
    SCIP_CONSEXPR_EXPRHDLRDATA* data          /**< data of expression handler (can be NULL) */
    );
@@ -154,7 +154,7 @@ const char* SCIPgetConsExprExprHdlrDescription(
 
 /** gives the precedence of an expression handler */
 EXTERN
-int SCIPgetConsExprExprHdlrPrecedence(
+unsigned int SCIPgetConsExprExprHdlrPrecedence(
    SCIP_CONSEXPR_EXPRHDLR*    exprhdlr       /**< expression handler */
 );
 
@@ -444,6 +444,15 @@ SCIP_CONSEXPR_EXPR* SCIPgetConsExprExprWalkParent(
 EXTERN
 int SCIPgetConsExprExprWalkCurrentChild(
    SCIP_CONSEXPR_EXPR*   expr                /**< expression which nextchild to get */
+   );
+
+/** Gives the precedence of the expression handler of the parent expression in an expression graph walk.
+ *
+ * If there is no parent, then 0 is returned.
+ */
+EXTERN
+unsigned int SCIPgetConsExprExprWalkParentPrecedence(
+   SCIP_CONSEXPR_EXPR*   expr                /**< expression which parent to get */
    );
 
 /** Creates an expression from a string.
