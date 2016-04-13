@@ -425,7 +425,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
 #define debugParse                      while( FALSE ) printf
 #endif
 static
-SCIP_RETCODE parseExpr(SCIP*, SCIP_CONSHDLR*, SCIP_HASHMAP*, char*, char**, SCIP_CONSEXPR_EXPR**);
+SCIP_RETCODE parseExpr(SCIP*, SCIP_CONSHDLR*, SCIP_HASHMAP*, const char*, const char**, SCIP_CONSEXPR_EXPR**);
 
 /** Parses base to build a value, variable, sum, or function-like ("func(...)") expression.
  * <pre>
@@ -437,8 +437,8 @@ SCIP_RETCODE parseBase(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between SCIP vars and var expressions */
-   char*                 expr,               /**< expr that we are parsing */
-   char**                newpos,             /**< buffer to store the position of expr where we finished reading */
+   const char*           expr,               /**< expr that we are parsing */
+   const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
    SCIP_CONSEXPR_EXPR**  basetree            /**< buffer to store the expr parsed by Base */
    )
 {
@@ -459,7 +459,7 @@ SCIP_RETCODE parseBase(
    if( *expr == '<' )
    {
       /* parse a variable */
-      SCIP_CALL( SCIPparseVarName(scip, expr, &var, newpos) );
+      SCIP_CALL( SCIPparseVarName(scip, expr, &var, (char**)newpos) );
 
       if( var == NULL )
       {
@@ -502,7 +502,7 @@ SCIP_RETCODE parseBase(
    {
       /* parse number */
       SCIP_Real value;
-      if( !SCIPstrToRealValue(expr, &value, &expr) )
+      if( !SCIPstrToRealValue(expr, &value, (char**)&expr) )
       {
          SCIPerrorMessage("error parsing number from <%s>\n", expr);
          return SCIP_READERROR;
@@ -515,7 +515,7 @@ SCIP_RETCODE parseBase(
       /* a (function) name is coming, should find exprhandler with such name */
       int i;
       int npar;
-      char* init;
+      const char* init;
       char operatorname[SCIP_MAXSTRLEN];
       SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
       SCIP_Bool insidevarname;
@@ -588,8 +588,8 @@ SCIP_RETCODE parseBase(
       assert(!insidevarname);
       assert(*expr == ')');
 
-      /* call exprhdlr parser */
-      *expr = '\0';
+      /* temporarily set null-byte and call exprhdlr parser */
+      *(char*)expr = '\0';
       SCIP_CALL( exprhdlr->parse(scip, conshdlr, init, basetree, &success) );
 
       if( !success )
@@ -599,7 +599,7 @@ SCIP_RETCODE parseBase(
          return SCIP_READERROR;
       }
 
-      *expr = ')';
+      *(char*)expr = ')';
    }
    else
    {
@@ -623,8 +623,8 @@ SCIP_RETCODE parseFactor(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
-   char*                 expr,               /**< expr that we are parsing */
-   char**                newpos,             /**< buffer to store the position of expr where we finished reading */
+   const char*           expr,               /**< expr that we are parsing */
+   const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
    SCIP_Real*            exponent,           /**< buffer to store exponent of Factor */
    SCIP_CONSEXPR_EXPR**  factortree          /**< buffer to store the expr parsed by Factor */
    )
@@ -671,7 +671,7 @@ SCIP_RETCODE parseFactor(
          ++expr;
 
          /* it is exponent with parenthesis; expect number possibly starting with + or - */
-         if( !SCIPstrToRealValue(expr, exponent, &expr) )
+         if( !SCIPstrToRealValue(expr, exponent, (char**)&expr) )
          {
             SCIPerrorMessage("error parsing number from <%s>\n", expr);
             SCIP_CALL( SCIPreleaseConsExprExpr(scip, &basetree) );
@@ -696,7 +696,7 @@ SCIP_RETCODE parseFactor(
          /* expect a digit */
          if( isdigit(*expr) )
          {
-            if( !SCIPstrToRealValue(expr, exponent, &expr) )
+            if( !SCIPstrToRealValue(expr, exponent, (char**)&expr) )
             {
                SCIPerrorMessage("error parsing number from <%s>\n", expr);
                SCIP_CALL( SCIPreleaseConsExprExpr(scip, &basetree) );
@@ -734,8 +734,8 @@ SCIP_RETCODE parseTerm(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
-   char*                 expr,               /**< expr that we are parsing */
-   char**                newpos,             /**< buffer to store the position of expr where we finished reading */
+   const char*           expr,               /**< expr that we are parsing */
+   const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
    SCIP_CONSEXPR_EXPR**  termtree            /**< buffer to store the expr parsed by Term */
    )
 {
@@ -818,8 +818,8 @@ SCIP_RETCODE parseExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        conshdlr,           /**< expression constraint handler */
    SCIP_HASHMAP*         vartoexprvarmap,    /**< hashmap to map between scip vars and var expressions */
-   char*                 expr,               /**< expr that we are parsing */
-   char**                newpos,             /**< buffer to store the position of expr where we finished reading */
+   const char*           expr,               /**< expr that we are parsing */
+   const char**          newpos,             /**< buffer to store the position of expr where we finished reading */
    SCIP_CONSEXPR_EXPR**  exprtree            /**< buffer to store the expr parsed by Expr */
    )
 {
@@ -870,7 +870,7 @@ SCIP_RETCODE parseExpr(
          SCIP_Real coef;
 
          /* check if we have a "coef * <term>" */
-         if( SCIPstrToRealValue(expr, &coef, newpos) )
+         if( SCIPstrToRealValue(expr, &coef, (char**)newpos) )
          {
             while( isspace((unsigned char)**newpos) )
                ++(*newpos);
@@ -1449,7 +1449,7 @@ SCIP_DECL_CONSPARSE(consParseExpr)
    debugParse("str should start at beginning of expr: %s\n", str);
 
    /* parse expression: so far we did not allocate memory, so can just return in case of readerror */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)str, (char**)&str, &consexprtree) );
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, str, &str, &consexprtree) );
 
    /* check for left or right hand side */
    while( isspace((unsigned char)*str) )
@@ -2624,12 +2624,12 @@ SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
 SCIP_RETCODE SCIPparseConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */
-   char*                 exprstr,            /**< string with the expr to parse */
-   char**                finalpos,           /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
+   const char*           exprstr,            /**< string with the expr to parse */
+   const char**          finalpos,           /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
    SCIP_CONSEXPR_EXPR**  expr                /**< pointer to store the expr parsed */
    )
 {
-   char* finalpos_;
+   const char* finalpos_;
    SCIP_RETCODE retcode;
    SCIP_HASHMAP* vartoexprvarmap;
 
