@@ -851,8 +851,17 @@ SCIP_RETCODE parseExpr(
       ++expr;
    if( *expr == '+' || *expr == '-' )
    {
-      /* initialize exprtree as a sum expression with a single term, so we can append the extra Terms */
-      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, exprtree, 1, &termtree, &sign, 0.0) );
+      if( SCIPgetConsExprExprHdlr(termtree) == SCIPgetConsExprExprHdlrValue(conshdlr) )
+      {
+         /* initialize exprtree as a sum expression with a constant only, so we can append the following terms */
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, exprtree, 0, NULL, NULL, sign * SCIPgetConsExprExprValueValue(termtree)) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &termtree) );
+      }
+      else
+      {
+         /* initialize exprtree as a sum expression with a single term, so we can append the following terms */
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, exprtree, 1, &termtree, &sign, 0.0) );
+      }
 
       /* loop: parse Term, find next symbol */
       do

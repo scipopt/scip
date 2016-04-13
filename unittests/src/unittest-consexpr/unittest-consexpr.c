@@ -20,6 +20,11 @@
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+/* we assume that asserts are always executed */
+#ifdef NDEBUG
+#undef NDEBUG
+#endif
+
 #include <string.h>
 
 #include "scip/scip.h"
@@ -369,6 +374,14 @@ SCIP_RETCODE testParse(void)
    /* these expressions shouldn't fail */
    {
       SCIP_CONSEXPR_EXPR* e;
+
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"-5+<x>", NULL, &e) == SCIP_OKAY);
+      assert(SCIPgetConsExprExprHdlr(e) == SCIPgetConsExprExprHdlrSum(conshdlr));
+      assert(SCIPgetConsExprExprSumConstant(e) == -5.0);
+      assert(SCIPgetConsExprExprNChildren(e) == 1);
+      assert(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(e)[0]) == SCIPgetConsExprExprHdlrVar(conshdlr));
+      assert(SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(e)[0]) == x);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &e) );
 
       assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"<x>", NULL, &e) == SCIP_OKAY);
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &e) );
