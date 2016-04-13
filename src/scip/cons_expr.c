@@ -1370,8 +1370,9 @@ SCIP_DECL_CONSPARSE(consParseExpr)
    char*       nonconstendptr;
    const char* exprstart;
    const char* exprlastchar;
-   int* varnames;
    SCIP_CONSEXPR_EXPR* consexprtree;
+   char newstr[SCIP_MAXSTRLEN];
+   char* newpos;
 
    SCIPdebugMessage("cons_nonlinear::consparse parsing %s\n",str);
 
@@ -1498,19 +1499,13 @@ SCIP_DECL_CONSPARSE(consParseExpr)
 
    debugParse("This are the current string before start parsing:\nstr: %s\nexprstart: %s\nexprlastchar: %s\nendptr: %s\n", str, exprstart, exprlastchar, endptr);
 
-   /* alloc some space for variable names incl. indices; shouldn't be longer than expression string, and we even give it sizeof(int) times this length (plus 5) */
-   SCIP_CALL( SCIPallocBufferArray(scip, &varnames, (int) (exprlastchar - exprstart) + 5) );
+   /* create string consisting of expression only */
+   assert(exprlastchar - exprstart + 1 < SCIP_MAXSTRLEN);
+   strncpy(newstr, exprstart, exprlastchar - exprstart + 1);
+   newstr[exprlastchar - exprstart + 1] = '\0';
 
-   /* parse expression */
-   {
-      char newstr[SCIP_MAXSTRLEN];
-      char* newpos;
-
-      snprintf(newstr, exprlastchar - exprstart + 1, "%s", exprstart);
-
-      /* should probably process the return value separately to free data when fail */
-      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, newstr, &newpos, &consexprtree) );
-   }
+   /* parse expression: so far we did not allocate memory, so can just return in case of readerror, too */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, newstr, &newpos, &consexprtree) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateConsExpr(scip, cons, name,

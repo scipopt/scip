@@ -321,8 +321,6 @@ SCIP_RETCODE testParse(void)
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    }
 
-#if 0
-   /* release cons is not releasing correctly */
    /* create constraint holding x/y*(5) <= 1 from string */
    {
       SCIP_CONS* consexpr_xy5;
@@ -345,7 +343,6 @@ SCIP_RETCODE testParse(void)
       /* release constraint */
       SCIP_CALL( SCIPreleaseCons(scip, &consexpr_xy5) );
    }
-#endif
 
    /* try to create expressions from invalid strings */
    {
@@ -375,9 +372,10 @@ SCIP_RETCODE testParse(void)
    {
       SCIP_CONSEXPR_EXPR* e;
 
-      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"-5+<x>", NULL, &e) == SCIP_OKAY);
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)"-5+3*<x>", NULL, &e) == SCIP_OKAY);
       assert(SCIPgetConsExprExprHdlr(e) == SCIPgetConsExprExprHdlrSum(conshdlr));
       assert(SCIPgetConsExprExprSumConstant(e) == -5.0);
+      assert(SCIPgetConsExprExprSumCoefs(e)[0] == 3.0);
       assert(SCIPgetConsExprExprNChildren(e) == 1);
       assert(SCIPgetConsExprExprHdlr(SCIPgetConsExprExprChildren(e)[0]) == SCIPgetConsExprExprHdlrVar(conshdlr));
       assert(SCIPgetConsExprExprVarVar(SCIPgetConsExprExprChildren(e)[0]) == x);
