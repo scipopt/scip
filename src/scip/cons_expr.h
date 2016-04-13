@@ -541,7 +541,7 @@ SCIP_RETCODE SCIPcreateConsExprBasic(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           cons,               /**< pointer to hold the created constraint */
    const char*           name,               /**< name of constraint */
-   SCIP_CONSEXPR_EXPR*    expr,              /**< expression of constraint (must not be NULL) */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression of constraint (must not be NULL) */
    SCIP_Real             lhs,                /**< left hand side of constraint */
    SCIP_Real             rhs                 /**< right hand side of constraint */
    );

@@ -242,6 +242,7 @@ SCIP_RETCODE testParse(void)
       /* print expression */
       SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr_xy5, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
 
       /* release expression */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
@@ -258,6 +259,7 @@ SCIP_RETCODE testParse(void)
       /* print expression */
       SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
       SCIP_CALL( SCIPprintConsExprExpr(scip, crazyexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
 
       /* release expression (this should free the expression and its children) */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &crazyexpr) );
@@ -279,6 +281,7 @@ SCIP_RETCODE testParse(void)
       /* print expression */
       SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
       SCIP_CALL( SCIPprintConsExprExpr(scip, crazyexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
 
       /* test expression by evaluating it */
       SCIP_CALL( SCIPcreateSol(scip, &crazysol, NULL) );
@@ -316,6 +319,7 @@ SCIP_RETCODE testParse(void)
       /* print expression */
       SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
 
       /* release expression */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -324,24 +328,43 @@ SCIP_RETCODE testParse(void)
    /* create constraint holding x/y*(5) <= 1 from string */
    {
       SCIP_CONS* consexpr_xy5;
-      SCIP_CONSEXPR_EXPR* expr_xy5;
       SCIP_Bool success;
-      const char* input = "[expr] <test1>: <x>[C] / <y>[I] *(5) <= 1;";
+      const char* input = "[expr] <test1>: <x>[C] / <y>[I] *(5) >= 1;";
 
-      /* create expression for product of 5, x, and y */
+      /* parse constraint */
       success = FALSE;
       SCIP_CALL( SCIPparseCons(scip, &consexpr_xy5, input,
                TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
       assert(success);
 
-      expr_xy5 = SCIPgetExprConsExpr(scip, consexpr_xy5);
-
-      /* print expression: this should actually be consprint, but we are not there yet */
-      SCIPinfoMessage(scip, NULL, "printing expression of %s after parsing from string: ", input);
-      SCIP_CALL( SCIPprintConsExprExpr(scip, expr_xy5, NULL) );
+      /* print constraint */
+      SCIPinfoMessage(scip, NULL, "printing constraint %s after parsing from string:", input);
+      SCIP_CALL( SCIPprintCons(scip, consexpr_xy5, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
 
       /* release constraint */
       SCIP_CALL( SCIPreleaseCons(scip, &consexpr_xy5) );
+   }
+
+   /* create constraint holding 1 <= x/y*(5) - z <= 2 from string */
+   {
+      SCIP_CONS* cons;
+      SCIP_Bool success;
+      const char* input = "[expr] <test2>: 1 <= <x>[C] / <y>[I] *(5) - <x> <= 2;";
+
+      /* parse constraint */
+      success = FALSE;
+      SCIP_CALL( SCIPparseCons(scip, &cons, input,
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+      assert(success);
+
+      /* print constraint */
+      SCIPinfoMessage(scip, NULL, "printing constraint %s after parsing from string:", input);
+      SCIP_CALL( SCIPprintCons(scip, cons, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /* release constraint */
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
    /* try to create expressions from invalid strings */

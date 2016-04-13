@@ -1331,18 +1331,43 @@ SCIP_DECL_CONSDELVARS(consDelvarsExpr)
 
 
 /** constraint display method of constraint handler */
-#if 0
 static
 SCIP_DECL_CONSPRINT(consPrintExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   SCIP_CONSDATA* consdata;
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* print left hand side for ranged constraints */
+   if( !SCIPisInfinity(scip, -consdata->lhs)
+      && !SCIPisInfinity(scip, consdata->rhs)
+      && !SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+      SCIPinfoMessage(scip, file, "%.15g <= ", consdata->lhs);
+
+   /* print expression */
+   if( consdata->expr != NULL )
+   {
+      SCIP_CALL( SCIPprintConsExprExpr(scip, consdata->expr, file) );
+   }
+   else
+   {
+      SCIPinfoMessage(scip, file, "0");
+   }
+
+   /* print right hand side */
+   if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
+      SCIPinfoMessage(scip, file, " == %.15g", consdata->rhs);
+   else if( !SCIPisInfinity(scip, consdata->rhs) )
+      SCIPinfoMessage(scip, file, " <= %.15g", consdata->rhs);
+   else if( !SCIPisInfinity(scip, -consdata->lhs) )
+      SCIPinfoMessage(scip, file, " >= %.15g", consdata->lhs);
+   else
+      SCIPinfoMessage(scip, file, " [free]");
 
    return SCIP_OKAY;
 }
-#else
-#define consPrintExpr NULL
-#endif
 
 
 /** constraint copying method of constraint handler */
@@ -1367,12 +1392,7 @@ SCIP_DECL_CONSPARSE(consParseExpr)
    SCIP_Real  lhs;
    SCIP_Real  rhs;
    const char* endptr;
-   char*       nonconstendptr;
-   const char* exprstart;
-   const char* exprlastchar;
    SCIP_CONSEXPR_EXPR* consexprtree;
-   char newstr[SCIP_MAXSTRLEN];
-   char* newpos;
 
    SCIPdebugMessage("cons_nonlinear::consparse parsing %s\n",str);
 
@@ -1381,6 +1401,8 @@ SCIP_DECL_CONSPARSE(consParseExpr)
    assert(str != NULL);
    assert(name != NULL);
    assert(cons != NULL);
+
+   *success = FALSE;
 
    /* return if string empty */
    if( !*str )
@@ -1398,13 +1420,11 @@ SCIP_DECL_CONSPARSE(consParseExpr)
    if( isdigit((unsigned char)str[0]) || ((str[0] == '-' || str[0] == '+') && isdigit((unsigned char)str[1])) )
    {
       /* there is a number coming, maybe it is a left-hand-side */
-      if( !SCIPstrToRealValue(str, &lhs, &nonconstendptr) )
+      if( !SCIPstrToRealValue(str, &lhs, (char**)&endptr) )
       {
          SCIPerrorMessage("error parsing number from <%s>\n", str);
          return SCIP_READERROR;
       }
-
-      endptr = nonconstendptr;
 
       /* ignore whitespace */
       while( isspace((unsigned char)*endptr) )
@@ -1412,7 +1432,7 @@ SCIP_DECL_CONSPARSE(consParseExpr)
 
       if( endptr[0] != '<' || endptr[1] != '=' )
       {
-         /* no '<=' coming, so it was the first coefficient, but not a left-hand-side */
+         /* no '<=' coming, so it was the beginning of the expression and not a left-hand-side */
          lhs = -SCIPinfinity(scip);
       }
       else
@@ -1428,21 +1448,8 @@ SCIP_DECL_CONSPARSE(consParseExpr)
 
    debugParse("str should start at beginning of expr: %s\n", str);
 
-   /* Move endptr forward until we find end of expression */
-   endptr = str;
-   while( !(strncmp(endptr, "[free]", 6) == 0)    &&
-          !(endptr[0] == '<' && endptr[1] == '=') &&
-          !(endptr[0] == '=' && endptr[1] == '=') &&
-          !(endptr[0] == '>' && endptr[1] == '=') &&
-          !(endptr[0] == '\0') )
-      ++endptr;
-
-   debugParse("just found end of expr: %s\n", endptr);
-   exprstart = str;
-   exprlastchar = endptr - 1;
-
-   *success = FALSE;
-   str = endptr;
+   /* parse expression: so far we did not allocate memory, so can just return in case of readerror */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, (char*)str, (char**)&str, &consexprtree) );
 
    /* check for left or right hand side */
    while( isspace((unsigned char)*str) )
@@ -1454,26 +1461,28 @@ SCIP_DECL_CONSPARSE(consParseExpr)
       if( !SCIPisInfinity(scip, -lhs) )
       {
          SCIPerrorMessage("cannot have left hand side and [free] status \n");
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consexprtree) );
          return SCIP_OKAY;
       }
-      (*success) = TRUE;
+      *success = TRUE;
    }
    else
    {
       switch( *str )
       {
          case '<':
-            *success = SCIPstrToRealValue(str+2, &rhs, &nonconstendptr);
+            *success = SCIPstrToRealValue(str+2, &rhs, (char**)&endptr);
             break;
          case '=':
             if( !SCIPisInfinity(scip, -lhs) )
             {
                SCIPerrorMessage("cannot have == on rhs if there was a <= on lhs\n");
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consexprtree) );
                return SCIP_OKAY;
             }
             else
             {
-               *success = SCIPstrToRealValue(str+2, &rhs, &nonconstendptr);
+               *success = SCIPstrToRealValue(str+2, &rhs, (char**)&endptr);
                lhs = rhs;
             }
             break;
@@ -1481,11 +1490,12 @@ SCIP_DECL_CONSPARSE(consParseExpr)
             if( !SCIPisInfinity(scip, -lhs) )
             {
                SCIPerrorMessage("cannot have => on rhs if there was a <= on lhs\n");
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consexprtree) );
                return SCIP_OKAY;
             }
             else
             {
-               *success = SCIPstrToRealValue(str+2, &lhs, &nonconstendptr);
+               *success = SCIPstrToRealValue(str+2, &lhs, (char**)&endptr);
                break;
             }
          case '\0':
@@ -1493,26 +1503,18 @@ SCIP_DECL_CONSPARSE(consParseExpr)
             break;
          default:
             SCIPerrorMessage("unexpected character %c\n", *str);
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consexprtree) );
             return SCIP_OKAY;
       }
    }
-
-   debugParse("This are the current string before start parsing:\nstr: %s\nexprstart: %s\nexprlastchar: %s\nendptr: %s\n", str, exprstart, exprlastchar, endptr);
-
-   /* create string consisting of expression only */
-   assert(exprlastchar - exprstart + 1 < SCIP_MAXSTRLEN);
-   strncpy(newstr, exprstart, exprlastchar - exprstart + 1);
-   newstr[exprlastchar - exprstart + 1] = '\0';
-
-   /* parse expression: so far we did not allocate memory, so can just return in case of readerror, too */
-   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, newstr, &newpos, &consexprtree) );
 
    /* create constraint */
    SCIP_CALL( SCIPcreateConsExpr(scip, cons, name,
       consexprtree, lhs, rhs,
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
-   assert(cons != NULL);
    assert(*cons != NULL);
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consexprtree) );
 
    debugParse("created expression constraint: <%s>\n", SCIPconsGetName(*cons));
 
@@ -1986,7 +1988,6 @@ SCIP_RETCODE SCIPprintConsExprExpr(
    assert(expr != NULL);
 
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, printExpr, printExpr, printExpr, printExpr, (void*)file) );
-   SCIPinfoMessage(scip, NULL, "\n");
 
    return SCIP_OKAY;
 }
