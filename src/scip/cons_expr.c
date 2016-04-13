@@ -860,25 +860,26 @@ SCIP_RETCODE parseExpr(
          SCIP_RETCODE retcode;
          SCIP_Real coef;
 
-         /* check if a number is following as in "coef * <term>" */
+         /* check if we have a "coef * <term>" */
          if( SCIPstrToRealValue(expr, &coef, newpos) )
          {
-            expr = *newpos;
+            while( isspace((unsigned char)**newpos) )
+               ++(*newpos);
 
-            while( isspace((unsigned char)*expr) )
-               ++expr;
-
-            if( *expr != '*' )
+            if( **newpos != '*' )
             {
-               SCIPerrorMessage("after coefficient %g, expected <*> at the beginning of %s\n", coef, expr);
-               SCIP_CALL( SCIPreleaseConsExprExpr(scip, exprtree) );
-               return SCIP_READERROR;
-            }
-
-            ++expr;
-
-            while( isspace((unsigned char)*expr) )
+               /* no '*', so fall back to parsing term after sign */
+               coef = (*expr == '+') ? 1.0 : -1.0;
                ++expr;
+            }
+            else
+            {
+               /* keep coefficient in coef and continue parsing term after coefficient */
+               expr = (*newpos)+1;
+
+               while( isspace((unsigned char)*expr) )
+                  ++expr;
+            }
          }
          else
          {
