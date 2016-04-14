@@ -16937,7 +16937,6 @@ SCIP_RETCODE SCIPreadSolFile(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< name of the input file */
    SCIP_SOL**            sol,                /**< solution pointer */
-   SCIP_SOLORIGIN        solorig,            /**< solution origin */
    SCIP_Bool             xml,                /**< true, iff the given solution in written in XML */
    SCIP_Bool*            partial,            /**< pointer to store if the solution is partial */
    SCIP_Bool*            error               /**< pointer store if an error occured */

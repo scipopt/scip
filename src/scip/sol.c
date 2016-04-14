@@ -1044,6 +1044,7 @@ SCIP_RETCODE SCIPsolSetVal(
       if( SCIPsolIsOriginal(sol) )
       {
          oldval = solGetArrayVal(sol, var);
+
          if( !SCIPsetIsEQ(set, val, oldval) )
          {
             SCIP_Real obj;
@@ -2049,7 +2050,9 @@ SCIP_RETCODE SCIPsolPrint(
    {
       assert(prob->fixedvars[v] != NULL);
       solval = SCIPsolGetVal(sol, set, stat, prob->fixedvars[v]);
-      if( printzeros || !SCIPsetIsZero(set, solval) )
+      if( printzeros
+         || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !SCIPsetIsZero(set, solval))
+         || (sol->solorigin == SCIP_SOLORIGIN_PARTIAL && solval != SCIP_UNKNOWN) )
       {
          SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->fixedvars[v]));
          if( solval == SCIP_UNKNOWN ) /*lint !e777*/
@@ -2068,7 +2071,9 @@ SCIP_RETCODE SCIPsolPrint(
    {
       assert(prob->vars[v] != NULL);
       solval = SCIPsolGetVal(sol, set, stat, prob->vars[v]);
-      if( printzeros || !SCIPsetIsZero(set, solval) )
+      if( printzeros
+         || (sol->solorigin != SCIP_SOLORIGIN_PARTIAL && !SCIPsetIsZero(set, solval))
+         || (sol->solorigin == SCIP_SOLORIGIN_PARTIAL && solval != SCIP_UNKNOWN) )
       {
          SCIPmessageFPrintInfo(messagehdlr, file, "%-32s", SCIPvarGetName(prob->vars[v]));
          if( solval == SCIP_UNKNOWN ) /*lint !e777*/

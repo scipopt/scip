@@ -451,7 +451,54 @@ SCIP_RETCODE copyAndSolveComponent(
 
    if( presoldata->maxintvars == -1 || (SCIPgetNBinVars(subscip) + presoldata->intfactor * SCIPgetNIntVars(subscip) <= presoldata->maxintvars) )
    {
+      SCIP_SOL** partialsols;
       SCIP_RETCODE retcode;
+      int npartialsols = 0;
+      int partialsolssize = 1;
+      int s;
+
+      /* copy stored partial solutions into the components */
+      SCIP_CALL( SCIPallocBufferArray(scip, &partialsols, partialsolssize) );
+      SCIP_CALL( SCIPgetPartialSols(scip, partialsols, partialsolssize, &npartialsols) );
+
+      if( partialsolssize < npartialsols )
+      {
+         partialsolssize = npartialsols;
+         SCIP_CALL( SCIPreallocBufferArray(scip, &partialsols, partialsolssize) );
+         SCIP_CALL( SCIPgetPartialSols(scip, partialsols, partialsolssize, &npartialsols) );
+         assert(npartialsols <= partialsolssize);
+      }
+
+      for( s = 0; s < npartialsols; s++ )
+      {
+         SCIP_VAR* subvar;
+         SCIP_SOL* sol;
+         SCIP_Real solval;
+         SCIP_Bool stored;
+         int v;
+
+         SCIP_CALL( SCIPcreatePartialSol(subscip, &sol, NULL) );
+         assert(sol != NULL);
+
+         for( v = 0; v < nvars; v++ )
+         {
+            solval = SCIPgetSolVal(scip, partialsols[s], vars[v]);
+
+            /* skip unknown variables */
+            if( solval == SCIP_UNKNOWN )
+               continue;
+
+            subvar = SCIPhashmapGetImage(varmap, vars[v]);
+            assert(subvar != NULL);
+
+            SCIP_CALL( SCIPsetSolVal(subscip, sol, subvar, solval) );
+         }
+
+         SCIP_CALL( SCIPaddSolFree(subscip, &sol, &stored) );
+      }
+
+      /* free memory */
+      SCIPfreeBufferArray(scip, &partialsols);
 
       /* solve the subproblem */
       retcode = SCIPsolve(subscip);

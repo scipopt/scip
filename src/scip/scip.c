@@ -36204,13 +36204,13 @@ SCIP_RETCODE readSolFile(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< name of the input file */
    SCIP_SOL**            sol,                /**< solution pointer */
-   SCIP_SOLORIGIN        solorig,            /**< solution origin */
    SCIP_Bool*            partial,            /**< pointer to store if the solution is partial */
    SCIP_Bool*            error               /**< pointer store if an error occured */
    )
 {
    SCIP_FILE* file;
    SCIP_Bool unknownvariablemessage;
+   SCIP_Bool localpartial;
    int lineno;
 
    assert(scip != NULL);
@@ -36227,13 +36227,13 @@ SCIP_RETCODE readSolFile(
       return SCIP_NOFILE;
    }
 
-   /* read the file */
    *error = FALSE;
-   if( partial != NULL )
-      *partial = FALSE;
+   localpartial = FALSE;
+
    unknownvariablemessage = FALSE;
    lineno = 0;
 
+   /* read the file */
    while( !SCIPfeof(file) && !(*error) )
    {
       char buffer[SCIP_MAXSTRLEN];
@@ -36289,8 +36289,7 @@ SCIP_RETCODE readSolFile(
       else if( strncasecmp(valuestring, "unknown", 7) == 0 )
       {
          value = SCIP_UNKNOWN;
-         if( partial != NULL )
-            *partial = TRUE;
+         localpartial = TRUE;
       }
       else
       {
@@ -36312,6 +36311,7 @@ SCIP_RETCODE readSolFile(
       else
       {
          SCIP_RETCODE retcode;
+
          retcode = SCIPsetSolVal(scip, *sol, var, value);
 
          if( retcode == SCIP_INVALIDDATA )
@@ -36337,10 +36337,13 @@ SCIP_RETCODE readSolFile(
    /* close input file */
    SCIPfclose(file);
 
-   if( partial != NULL && *partial )
+   if( localpartial )
    {
       SCIP_CALL( SCIPmarkSolPartial(scip, *sol) );
    }
+
+   if( partial != NULL )
+      *partial = localpartial;
 
    return SCIP_OKAY;
 }
@@ -36351,12 +36354,12 @@ SCIP_RETCODE readXmlSolFile(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< name of the input file */
    SCIP_SOL**            sol,                /**< solution pointer */
-   SCIP_SOLORIGIN        solorig,            /**< solution origin */
-   SCIP_Bool*            partial,            /**< pointer to store if the solution is partial */
+   SCIP_Bool*            partial,            /**< pointer to store if the solution is partial (or NULL if not needed) */
    SCIP_Bool*            error               /**< pointer store if an error occured */
    )
 {
    SCIP_Bool unknownvariablemessage;
+   SCIP_Bool localpartial;
    XML_NODE* start;
    const XML_NODE* varsnode;
    const XML_NODE* varnode;
@@ -36372,6 +36375,7 @@ SCIP_RETCODE readXmlSolFile(
    }
 
    *error = FALSE;
+   localpartial = FALSE;
 
    /* find variable sections */
    tag = "variables";
@@ -36437,7 +36441,7 @@ SCIP_RETCODE readXmlSolFile(
       else if( strncasecmp(valuestring, "unknown", 7) == 0 )
       {
          value = SCIP_UNKNOWN;
-         *partial = TRUE;
+         localpartial = TRUE;
       }
       else
       {
@@ -36483,10 +36487,13 @@ SCIP_RETCODE readXmlSolFile(
    /* free xml data */
    xmlFreeNode(start);
 
-   if( *partial )
+   if( localpartial )
    {
       SCIP_CALL( SCIPmarkSolPartial(scip, *sol) );
    }
+
+   if( partial != NULL )
+      *partial = localpartial;
 
    return SCIP_OKAY;
 }
@@ -36510,7 +36517,6 @@ SCIP_RETCODE SCIPreadSolFile(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< name of the input file */
    SCIP_SOL**            sol,                /**< solution pointer */
-   SCIP_SOLORIGIN        solorig,            /**< solution origin */
    SCIP_Bool             xml,                /**< true, iff the given solution in written in XML */
    SCIP_Bool*            partial,            /**< pointer to store if the solution is partial */
    SCIP_Bool*            error               /**< pointer store if an error occured */
@@ -36520,11 +36526,11 @@ SCIP_RETCODE SCIPreadSolFile(
 
    if( xml )
    {
-      SCIP_CALL( readXmlSolFile(scip, filename, sol, solorig, partial, error) );
+      SCIP_CALL( readXmlSolFile(scip, filename, sol, partial, error) );
    }
    else
    {
-      SCIP_CALL( readSolFile(scip, filename, sol, solorig, partial, error) );
+      SCIP_CALL( readSolFile(scip, filename, sol, partial, error) );
    }
 
    return SCIP_OKAY;
@@ -36976,7 +36982,7 @@ SCIP_RETCODE SCIPgetPartialSols(
    assert(scip != NULL);
    assert(partialsols != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPgetPartialSols", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL( checkStage(scip, "SCIPgetPartialSols", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPprimalGetPartialSols(scip->origprimal, partialsols, partialsolssize, npartialsols) );
 

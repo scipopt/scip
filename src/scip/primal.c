@@ -1137,7 +1137,6 @@ SCIP_RETCODE SCIPprimalAddSol(
    assert(origprob != NULL);
    assert(transprob != NULL);
    assert(tree != NULL);
-   assert(reopt != NULL);
    assert(lp != NULL);
    assert(eventqueue != NULL);
    assert(eventfilter != NULL);

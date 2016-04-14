@@ -66,7 +66,7 @@ SCIP_RETCODE readSol(
    /* create zero solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 
-   SCIP_CALL( SCIPreadSolFile(scip, fname, &sol, SCIP_SOLORIGIN_ORIGINAL, xml, &partial, &error) );
+   SCIP_CALL( SCIPreadSolFile(scip, fname, &sol, xml, &partial, &error) );
 
    if( !error )
    {

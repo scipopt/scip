@@ -113,7 +113,7 @@ int SCIPsolGetIndex(
  */
 
 #define SCIPsolGetOrigin(sol)           ((sol)->solorigin)
-#define SCIPsolIsOriginal(sol)          ((sol)->solorigin == SCIP_SOLORIGIN_ORIGINAL)
+#define SCIPsolIsOriginal(sol)          ((sol)->solorigin == SCIP_SOLORIGIN_ORIGINAL || (sol)->solorigin == SCIP_SOLORIGIN_PARTIAL)
 #define SCIPsolGetOrigObj(sol)          (sol)->obj
 #define SCIPsolGetTime(sol)             (sol)->time
 #define SCIPsolGetNodenum(sol)          (sol)->nodenum
