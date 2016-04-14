@@ -17,7 +17,7 @@ features:
   number of nodes exceeding the reference value and the number of early backtracks -- path switches in the tree when
   a child node with lower bound smaller than the reference value was available.
 - add new presolving step to disaggregate second order cone constraints
-- now can read partial solutions *.mst
+- added reading capabilities for partial solutions with extension *.mst
 - new heuristic that tries to complete partial solutions
 
 parameters:
@@ -65,8 +65,6 @@ features:
 - MultiObjective application renamed to PolySCIP; several improvements: better command line argument processing,
   overhaul of much of the source code, installation via CMake
 - extended python interface supporting callbacks and linear and quadratic expressions
-- can now read partial/incomplete solutions
-- new heuristic that tries to complete partial/incomplete solutions
 
 parameters:
 - new parameter misc/transsolorig for transfering transformed solutions to the original space (default: true)
