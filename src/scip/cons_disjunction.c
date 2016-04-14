@@ -452,6 +452,8 @@ SCIP_DECL_CONSINITLP(consInitlpDisjunction)
    SCIP_CONSDATA* consdata;
    int c;
 
+   *infeasible = FALSE;
+
    for( c = 0; c < nconss; ++c )
    {
       consdata = SCIPconsGetData(conss[c]);

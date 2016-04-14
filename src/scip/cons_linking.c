@@ -1993,10 +1993,11 @@ static
 SCIP_DECL_CONSINITLP(consInitlpLinking)
 {  /*lint --e{715}*/
    SCIP_CONSDATA* consdata;
-   SCIP_Bool cutoff;
    int c;
 
-   for( c = 0; c < nconss; ++c )
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
 
@@ -2006,8 +2007,7 @@ SCIP_DECL_CONSINITLP(consInitlpLinking)
       if( consdata->nbinvars <= 1 )
          continue;
 
-      /* ignore cutoff, cannot return value */
-      SCIP_CALL( addCuts(scip, conss[c], NULL, &cutoff) );
+      SCIP_CALL( addCuts(scip, conss[c], NULL, infeasible) );
    }
 
    return SCIP_OKAY;

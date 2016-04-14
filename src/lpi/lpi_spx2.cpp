@@ -169,7 +169,7 @@ using namespace soplex;
 
 /** SCIP's SoPlex class */
 class SPxSCIP : public SoPlex
-{
+{/*lint !e1790*/
    bool                  _lpinfo;
    bool                  _fromscratch;
    char*                 _probname;
@@ -226,7 +226,7 @@ public:
       (void) CPXfreeprob(_cpxenv, &_cpxlp);
       (void) CPXcloseCPLEX(&_cpxenv);
 #endif
-   }
+   }/*lint -e1579*/
 
    // we might need these methods to return the original values SCIP provided, even if they could not be set
    /** return feastol set by SCIPlpiSetRealpar(), which might be tighter than what SoPlex accepted */
@@ -908,9 +908,9 @@ const char* SCIPlpiGetSolverName(
    SCIPdebugMessage("calling SCIPlpiGetSolverName()\n");
 
 #if (SOPLEX_SUBVERSION > 0)
-   sprintf(spxname, "SoPlex2 %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
+   sprintf(spxname, "SoPlex %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
 #else
-   sprintf(spxname, "SoPlex2 %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
+   sprintf(spxname, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
 #endif
    return spxname;
 }
@@ -2897,6 +2897,8 @@ SCIP_RETCODE SCIPlpiGetSol(
    assert(lpi != NULL);
    assert(lpi->spx != NULL);
 
+   bool success = true;
+
    if( objval != NULL )
       *objval = lpi->spx->objValueReal();
 
@@ -2905,22 +2907,26 @@ SCIP_RETCODE SCIPlpiGetSol(
       if( primsol != NULL )
       {
          Vector tmp(lpi->spx->numColsReal(), primsol);
-         (void)lpi->spx->getPrimalReal(tmp);
+         success &= lpi->spx->getPrimalReal(tmp); /*lint !e514 !e1786*/
+         assert(success);
       }
       if( dualsol != NULL )
       {
          Vector tmp(lpi->spx->numRowsReal(), dualsol);
-         (void)lpi->spx->getDualReal(tmp);
+         success &= lpi->spx->getDualReal(tmp); /*lint !e514 !e1786*/
+         assert(success);
       }
       if( activity != NULL )
       {
          Vector tmp(lpi->spx->numRowsReal(), activity);
-         (void)lpi->spx->getSlacksReal(tmp);  /* in SoPlex, the activities are called "slacks" */
+         success &= lpi->spx->getSlacksReal(tmp);  /* in SoPlex, the activities are called "slacks" */ /*lint !e514 !e1786*/
+         assert(success);
       }
       if( redcost != NULL )
       {
          Vector tmp(lpi->spx->numColsReal(), redcost);
-         (void)lpi->spx->getRedCostReal(tmp);
+         success &= lpi->spx->getRedCostReal(tmp); /*lint !e514 !e1786*/
+         assert(success);
       }
    }
    catch(const SPxException& x)
@@ -2931,6 +2937,9 @@ SCIP_RETCODE SCIPlpiGetSol(
 #endif
       return SCIP_LPERROR;
    }
+
+   if( !success ) /*lint !e774*/
+      return SCIP_INVALIDCALL;
 
    return SCIP_OKAY;
 }
@@ -3801,6 +3810,11 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = (int) (lpi->spx->intParam(SoPlex::TIMER));
       break;
 #endif
+#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
+   case SCIP_LPPAR_RANDOMSEED:
+      *ival = (int) lpi->spx->randomSeed();
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -3873,6 +3887,11 @@ SCIP_RETCODE SCIPlpiSetIntpar(
    case SCIP_LPPAR_TIMING:
       assert(ival >= 0 && ival < 3);
       (void) lpi->spx->setIntParam(SoPlex::TIMER, ival);
+      break;
+#endif
+#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
+   case SCIP_LPPAR_RANDOMSEED:
+      lpi->spx->setRandomSeed((unsigned int) ival);
       break;
 #endif
    default:

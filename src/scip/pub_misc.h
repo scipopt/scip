@@ -114,6 +114,67 @@ SCIP_Real SCIPnormalCDF(
 
 /**@} */
 
+/**@} */
+
+/**@defgroup Regression Regression methods for linear regression
+ *
+ * @{
+ */
+
+/** returns the number of observations of this regression */
+EXTERN
+int SCIPregressionGetNObservations(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   );
+
+/** return the current slope of the regression */
+EXTERN
+SCIP_Real SCIPregressionGetSlope(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   );
+
+/** get the current y-intercept of the regression */
+EXTERN
+SCIP_Real SCIPregressionGetIntercept(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   );
+
+/** removes an observation (x,y) from the regression */
+EXTERN
+void SCIPregressionRemoveObservation(
+   SCIP_REGRESSION*      regression,         /**< regression data structure */
+   SCIP_Real             x,                  /**< X of observation */
+   SCIP_Real             y                   /**< Y of the observation */
+   );
+
+/** update regression by a new observation (x,y) */
+EXTERN
+void SCIPregressionAddObservation(
+   SCIP_REGRESSION*      regression,         /**< regression data structure */
+   SCIP_Real             x,                  /**< X of observation */
+   SCIP_Real             y                   /**< Y of the observation */
+   );
+
+/** reset regression data structure */
+EXTERN
+void SCIPregressionReset(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   );
+
+/** creates and resets a regression */
+EXTERN
+SCIP_RETCODE SCIPregressionCreate(
+   SCIP_REGRESSION**     regression          /**< regression data structure */
+   );
+
+/** frees a regression */
+EXTERN
+void SCIPregressionFree(
+   SCIP_REGRESSION**     regression          /**< regression data structure */
+   );
+
+/**@} */
+
 /*
  * GML graphical printing methods
  * For a detailed format decription see http://docs.yworks.com/yfiles/doc/developers-guide/gml.html

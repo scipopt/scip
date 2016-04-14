@@ -12124,14 +12124,14 @@ SCIP_DECL_CONSTRANS(consTransKnapsack)
 static
 SCIP_DECL_CONSINITLP(consInitlpKnapsack)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff;
    int i;
 
-   for( i = 0; i < nconss; i++ )
+   *infeasible = FALSE;
+
+   for( i = 0; i < nconss && !(*infeasible); i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i], NULL, &cutoff) );
-      /* ignore cutoff: cannot return status */
+      SCIP_CALL( addRelaxation(scip, conss[i], NULL, infeasible) );
    }
 
    return SCIP_OKAY;

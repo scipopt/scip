@@ -1584,9 +1584,9 @@ const char* SCIPlpiGetSolverName(
    SCIPdebugMessage("calling SCIPlpiGetSolverName()\n");
 
 #if (SOPLEX_SUBVERSION > 0)
-   sprintf(spxname, "SoPlex %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
+   sprintf(spxname, "SoPlex1 %d.%d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10, SOPLEX_SUBVERSION); /*lint !e778*/
 #else
-   sprintf(spxname, "SoPlex %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
+   sprintf(spxname, "SoPlex1 %d.%d.%d", SOPLEX_VERSION/100, (SOPLEX_VERSION % 100)/10, SOPLEX_VERSION % 10); /*lint !e778*/
 #endif
    return spxname;
 }
@@ -4945,6 +4945,11 @@ SCIP_RETCODE SCIPlpiGetIntpar(
       *ival = (int) lpi->spx->getTiming();
       break;
 #endif
+#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
+   case SCIP_LPPAR_RANDOMSEED:
+      *ival = (int) lpi->spx->random.getSeed();
+      break;
+#endif
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/
@@ -5019,6 +5024,12 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->spx->setTiming((Timer::TYPE) ival);
       break;
 #endif
+#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
+   case SCIP_LPPAR_RANDOMSEED:
+      lpi->spx->random.setSeed((unsigned int) ival);
+      break;
+#endif
+
    default:
       return SCIP_PARAMETERUNKNOWN;
    }  /*lint !e788*/

@@ -47,6 +47,7 @@
  */
 
 #define SQRTOFTWO                  1.4142136 /**< the square root of 2 with sufficient precision */
+#define SQUARED(x) ((x) * (x))
 
 /**< contains all critical values for a one-sided two sample t-test up to 15 degrees of freedom
  *   a critical value represents a threshold for rejecting the null-hypothesis in hypothesis testing at
@@ -232,6 +233,163 @@ SCIP_Real SCIPnormalCDF(
 
       return 0.5 - erfresult / 2.0;
    }
+}
+
+/*
+ * SCIP regression methods
+ */
+
+/** returns the number of observations of this regression */
+int SCIPregressionGetNObservations(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   assert(regression != NULL);
+
+   return regression->nobservations;
+}
+
+/** return the current slope of the regression */
+SCIP_Real SCIPregressionGetSlope(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   assert(regression != NULL);
+
+   return regression->slope;
+}
+
+/** get the current y-intercept of the regression */
+SCIP_Real SCIPregressionGetIntercept(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   assert(regression != NULL);
+
+   return regression->intercept;
+}
+
+/** recomputes regression coefficients from available observation data */
+static
+void regressionRecompute(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   SCIP_Real xvariance;
+   SCIP_Real squaredsumx;
+
+   /* compute variance in x observations */
+   squaredsumx = SQUARED(regression->sumx);
+   xvariance = regression->nobservations * regression->sumx2 - squaredsumx;
+
+   /* regression coefficients require two or more observations and variance in x */
+   if( regression->nobservations <= 1 || EPSZ(xvariance, 1e-9) )
+   {
+      regression->slope = SCIP_INVALID;
+      regression->intercept = SCIP_INVALID;
+      regression->corrcoef = SCIP_INVALID;
+
+      return;
+   }
+
+   /* compute slope */
+   regression->slope = (regression->nobservations * regression->sumxy  - regression->sumx * regression->sumy) / xvariance;
+
+   /* compute y-intercept */
+   regression->intercept = (regression->sumy * regression->sumx2  -  regression->sumx * regression->sumxy) / xvariance;
+
+   /* compute empirical correlation coefficient */
+   regression->corrcoef = (regression->sumxy - regression->sumx * regression->sumy / regression->nobservations) /
+            sqrt((regression->sumx2 - squaredsumx / regression->nobservations) *
+            (regression->sumy2 - SQUARED(regression->sumy)/regression->nobservations));
+}
+
+/** removes an observation (x,y) from the regression */
+void SCIPregressionRemoveObservation(
+   SCIP_REGRESSION*      regression,         /**< regression data structure */
+   SCIP_Real             x,                  /**< X of observation */
+   SCIP_Real             y                   /**< Y of the observation */
+   )
+{
+   assert(regression != NULL);
+   assert(regression->nobservations > 0);
+
+   /* simply call the reset function in the case of a single remaining observation to avoid numerical troubles */
+   if( regression->nobservations == 1 )
+   {
+      SCIPregressionReset(regression);
+   }
+   else
+   {
+      regression->sumx2 -= SQUARED(x);
+      regression->sumy2 -= SQUARED(y);
+      regression->sumy -= y;
+      regression->sumx -= x;
+      regression->sumxy -= (x * y);
+      --regression->nobservations;
+   }
+
+   /* recompute regression parameters */
+   regressionRecompute(regression);
+}
+
+/** update regression by a new observation (x,y) */
+void SCIPregressionAddObservation(
+   SCIP_REGRESSION*      regression,         /**< regression data structure */
+   SCIP_Real             x,                  /**< X of observation */
+   SCIP_Real             y                   /**< Y of the observation */
+   )
+{
+   assert(regression != NULL);
+
+   ++(regression->nobservations);
+
+   regression->sumx += x;
+   regression->sumx2 += SQUARED(x);
+   regression->sumxy += x * y;
+   regression->sumy += y;
+   regression->sumy2 += SQUARED(y);
+
+   regressionRecompute(regression);
+}
+
+/** reset regression data structure */
+void SCIPregressionReset(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   regression->intercept = SCIP_INVALID;
+   regression->slope = SCIP_INVALID;
+   regression->sumx = 0;
+   regression->sumx2 = 0;
+   regression->sumxy = 0;
+   regression->sumy = 0;
+   regression->sumy2 = 0;
+   regression->nobservations = 0;
+}
+
+/** creates and resets a regression */
+SCIP_RETCODE SCIPregressionCreate(
+   SCIP_REGRESSION**     regression          /**< regression data structure */
+   )
+{
+   assert(regression != NULL);
+
+   /* allocate necessary memory */
+   SCIP_ALLOC (BMSallocMemory(regression) );
+
+   /* reset the regression */
+   SCIPregressionReset(*regression);
+
+   return SCIP_OKAY;
+}
+
+/** creates and resets a regression */
+void SCIPregressionFree(
+   SCIP_REGRESSION**     regression          /**< regression data structure */
+   )
+{
+   BMSfreeMemory(regression);
 }
 
 /** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */

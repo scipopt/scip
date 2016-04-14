@@ -82,6 +82,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludePresolDomcol(scip) );
    SCIP_CALL( SCIPincludePresolImplfree(scip) );
    SCIP_CALL( SCIPincludePresolDualagg(scip) );
+   SCIP_CALL( SCIPincludePresolDualcomp(scip) );
    SCIP_CALL( SCIPincludePresolDualinfer(scip) );
    SCIP_CALL( SCIPincludePresolGateextraction(scip) );
    SCIP_CALL( SCIPincludePresolImplics(scip) );
@@ -109,6 +110,7 @@ SCIP_RETCODE SCIPincludeDefaultPlugins(
    SCIP_CALL( SCIPincludeBranchrulePscost(scip) );
    SCIP_CALL( SCIPincludeBranchruleRandom(scip) );
    SCIP_CALL( SCIPincludeBranchruleRelpscost(scip) );
+   SCIP_CALL( SCIPincludeEventHdlrSolvingphase(scip) );
    SCIP_CALL( SCIPincludeComprLargestrepr(scip) );
    SCIP_CALL( SCIPincludeComprWeakcompr(scip) );
    SCIP_CALL( SCIPincludeHeurActconsdiving(scip) );

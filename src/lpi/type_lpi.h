@@ -56,7 +56,8 @@ enum SCIP_LPParam
                                          *   if number of rows divided by number of columns exceeds this value */
    SCIP_LPPAR_THREADS        = 15,      /**< number of threads used to solve the LP */
    SCIP_LPPAR_CONDITIONLIMIT = 16,      /**< maximum condition number of LP basis counted as stable */
-   SCIP_LPPAR_TIMING         = 17       /**< type of timer (1 - cpu, 2 - wallclock, 0 - off) */
+   SCIP_LPPAR_TIMING         = 17,      /**< type of timer (1 - cpu, 2 - wallclock, 0 - off) */
+   SCIP_LPPAR_RANDOMSEED     = 18       /**< inital random seed, e.g. for perturbations in the simplex (0: LP default) */
 };
 typedef enum SCIP_LPParam SCIP_LPPARAM;
 

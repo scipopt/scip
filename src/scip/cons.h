@@ -188,9 +188,10 @@ SCIP_RETCODE SCIPconshdlrInitLP(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< dynamic problem statistics */
    SCIP_TREE*            tree,               /**< branch and bound tree */
-   SCIP_Bool             initkeptconss       /**< Also initialize constraints which are valid at a more global node,
+   SCIP_Bool             initkeptconss,      /**< Also initialize constraints which are valid at a more global node,
                                               *   but were not activated there? Should be FALSE for repeated calls at
                                               *   one node or if the current focusnode is a child of the former one */
+   SCIP_Bool*            cutoff              /**< pointer to store whether infeasibility was detected while building the LP */
    );
 
 /** calls separator method of constraint handler to separate LP solution */
@@ -789,7 +790,8 @@ SCIP_RETCODE SCIPconsEnfolp(
 extern
 SCIP_RETCODE SCIPconsInitlp(
    SCIP_CONS*            cons,               /**< constraint to initialize */
-   SCIP_SET*             set                 /**< global SCIP settings */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected while building the LP */
    );
 
 /** calls separation method of single constraint for LP solution */

@@ -58,6 +58,7 @@
 #define DEFAULT_PERMUTE       FALSE          /* should the subproblem be permuted to increase diversification?        */
 #define HASHSIZE_SOLS         11113          /* size of hash table for solution tuples in crossover heuristic         */
 #define DEFAULT_BESTSOLLIMIT   -1            /* limit on number of improving incumbent solutions in sub-CIP            */
+#define DEFAULT_USEUCT        FALSE          /* should uct node selection be used at the beginning of the search?     */
 /* event handler properties */
 #define EVENTHDLR_NAME         "Crossover"
 #define EVENTHDLR_DESC         "LP event handler for " HEUR_NAME " heuristic"
@@ -99,6 +100,7 @@ struct SCIP_HeurData
                                               *   to constraints in subproblem?                                     */
    SCIP_Bool             permute;            /**< should the subproblem be permuted to increase diversification?    */
    int                   bestsollimit;       /**< limit on number of improving incumbent solutions in sub-CIP       */
+   SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
 
 /** n-tuple of solutions and their hashkey */
@@ -892,6 +894,7 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
 
    success = FALSE;
 
+   /* disable output to console */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 0) );
    /* create a new problem, which fixes variables with same value in a certain set of solutions */
    SCIP_CALL( setupSubproblem(scip, subscip, subvars, selection, heurdata, &success) );
@@ -915,12 +918,15 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    /* do not abort subproblem on CTRL-C */
    SCIP_CALL( SCIPsetBoolParam(subscip, "misc/catchctrlc", FALSE) );
 
-   /* disable output to console */
+   /* disable statistic timing inside sub SCIP */
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
 
 #ifdef SCIP_DEBUG
    /* for debugging crossover, enable MIP output */
    SCIP_CALL( SCIPsetIntParam(subscip, "display/verblevel", 5) );
    SCIP_CALL( SCIPsetIntParam(subscip, "display/freq", 1) );
+   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", TRUE) );
+
 #endif
 
    /* check whether there is enough time and memory left */
@@ -941,9 +947,6 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    if( timelimit <= 0.0 || memorylimit <= 2.0*SCIPgetMemExternEstim(scip)/1048576.0 )
       goto TERMINATE;
 
-   /* disable statistic timing inside sub SCIP */
-   SCIP_CALL( SCIPsetBoolParam(subscip, "timing/statistictiming", FALSE) );
-
    /* set limits for the subproblem */
    heurdata->nodelimit = nstallnodes;
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nstallnodes) );
@@ -963,6 +966,12 @@ SCIP_DECL_HEUREXEC(heurExecCrossover)
    if( SCIPfindNodesel(subscip, "estimate") != NULL && !SCIPisParamFixed(subscip, "nodeselection/estimate/stdpriority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
+   }
+
+   /* activate uct node selection at the top of the tree */
+   if( heurdata->useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
    }
 
    /* use inference branching */
@@ -1227,5 +1236,8 @@ SCIP_RETCODE SCIPincludeHeurCrossover(
          "limit on number of improving incumbent solutions in sub-CIP",
          &heurdata->bestsollimit, FALSE, DEFAULT_BESTSOLLIMIT, -1, INT_MAX, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
+         "should uct node selection be used at the beginning of the search?",
+         &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
    return SCIP_OKAY;
 }

@@ -1609,7 +1609,7 @@ SCIP_RETCODE copyProb(
       sourceprob = sourcescip->origprob;
 
    /* create the statistics data structure */
-   SCIP_CALL( SCIPstatCreate(&targetscip->stat, targetscip->mem->probmem, targetscip->set, targetscip->messagehdlr) );
+   SCIP_CALL( SCIPstatCreate(&targetscip->stat, targetscip->mem->probmem, targetscip->set, targetscip->transprob, targetscip->origprob, targetscip->messagehdlr) );
    targetscip->stat->subscipdepth = sourcescip->stat->subscipdepth + 1;
 
    /* create the problem by copying the source problem */
@@ -4347,13 +4347,16 @@ SCIP_RETCODE SCIPresetParams(
 
 /** sets parameters to
  *
- *  - SCIP_PARAMEMPHASIS_DEFAULT to use default values (see also SCIPresetParams())
- *  - SCIP_PARAMEMPHASIS_COUNTER to get feasible and "fast" counting process
- *  - SCIP_PARAMEMPHASIS_CPSOLVER to get CP like search (e.g. no LP relaxation)
- *  - SCIP_PARAMEMPHASIS_EASYCIP to solve easy problems fast
- *  - SCIP_PARAMEMPHASIS_FEASIBILITY to detect feasibility fast
- *  - SCIP_PARAMEMPHASIS_HARDLP to be capable to handle hard LPs
- *  - SCIP_PARAMEMPHASIS_OPTIMALITY to prove optimality fast
+ *  - \ref SCIP_PARAMEMPHASIS_DEFAULT to use default values (see also SCIPresetParams())
+ *  - \ref SCIP_PARAMEMPHASIS_COUNTER to get feasible and "fast" counting process
+ *  - \ref SCIP_PARAMEMPHASIS_CPSOLVER to get CP like search (e.g. no LP relaxation)
+ *  - \ref SCIP_PARAMEMPHASIS_EASYCIP to solve easy problems fast
+ *  - \ref SCIP_PARAMEMPHASIS_FEASIBILITY to detect feasibility fast
+ *  - \ref SCIP_PARAMEMPHASIS_HARDLP to be capable to handle hard LPs
+ *  - \ref SCIP_PARAMEMPHASIS_OPTIMALITY to prove optimality fast
+ *  - \ref SCIP_PARAMEMPHASIS_PHASEFEAS to find feasible solutions during a 3 phase solution process
+ *  - \ref SCIP_PARAMEMPHASIS_PHASEIMPROVE to find improved solutions during a 3 phase solution process
+ *  - \ref SCIP_PARAMEMPHASIS_PHASEPROOF to proof optimality during a 3 phase solution process
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -9038,7 +9041,7 @@ SCIP_RETCODE SCIPcreateProb(
    /* switch stage to PROBLEM */
    scip->set->stage = SCIP_STAGE_PROBLEM;
 
-   SCIP_CALL( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set, scip->messagehdlr) );
+   SCIP_CALL( SCIPstatCreate(&scip->stat, scip->mem->probmem, scip->set, NULL, NULL, scip->messagehdlr) );
 
    SCIP_CALL( SCIPprobCreate(&scip->origprob, scip->mem->probmem, scip->set, name,
          probdelorig, probtrans, probdeltrans, probinitsol, probexitsol, probcopy, probdata, FALSE) );
@@ -12721,6 +12724,10 @@ SCIP_RETCODE SCIPtransformProb(
       }
    }
 
+   /* update upper bound and cutoff bound due to objective limit in primal data */
+   SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+
    if( !scip->set->reopt_enable )
    {
       oldnsolsfound = scip->primal->nsolsfound;
@@ -12787,10 +12794,6 @@ SCIP_RETCODE SCIPtransformProb(
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
          "all %d solutions given by solution candidate storage are infeasible\n\n", ncandsols);
    }
-
-   /* update upper bound and cutoff bound due to objective limit in primal data */
-   SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
 
    /* print transformed problem statistics */
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -12882,7 +12885,7 @@ SCIP_RETCODE initPresolve(
    SCIP_CALL( SCIPprimalRetransformSolutions(scip->primal, scip->set, scip->stat, scip->origprob, scip->transprob) );
 
    /* reset statistics for presolving and current branch and bound run */
-   SCIPstatResetPresolving(scip->stat);
+   SCIPstatResetPresolving(scip->stat, scip->set, scip->transprob, scip->origprob);
 
    /* increase number of branch and bound runs */
    scip->stat->nruns++;
@@ -13820,7 +13823,7 @@ SCIP_RETCODE initSolve(
    if( !solved )
    {
       /* reset statistics for current branch and bound run */
-      SCIPstatResetCurrentRun(scip->stat, solved);
+      SCIPstatResetCurrentRun(scip->stat, scip->set, scip->transprob, scip->origprob, solved);
       SCIPstatEnforceLPUpdates(scip->stat);
 
       /* LP is empty anyway; mark empty LP to be solved and update validsollp counter */
@@ -14003,9 +14006,9 @@ SCIP_RETCODE freeSolve(
 
    /* reset statistics for current branch and bound run */
    if( scip->stat->status == SCIP_STATUS_INFEASIBLE || scip->stat->status == SCIP_STATUS_OPTIMAL || scip->stat->status == SCIP_STATUS_UNBOUNDED || scip->stat->status == SCIP_STATUS_INFORUNBD )
-      SCIPstatResetCurrentRun(scip->stat, TRUE);
+      SCIPstatResetCurrentRun(scip->stat, scip->set, scip->transprob, scip->origprob, TRUE);
    else
-      SCIPstatResetCurrentRun(scip->stat, FALSE);
+      SCIPstatResetCurrentRun(scip->stat, scip->set, scip->transprob, scip->origprob, FALSE);
 
    /* switch stage to TRANSFORMED */
    scip->set->stage = SCIP_STAGE_TRANSFORMED;
@@ -14144,7 +14147,7 @@ SCIP_RETCODE freeTransform(
    if( scip->set->misc_resetstat )
    {
       /* reset statistics to the point before the problem was transformed */
-      SCIPstatReset(scip->stat, scip->set);
+      SCIPstatReset(scip->stat, scip->set, scip->transprob, scip->origprob);
    }
    else
    {
@@ -18468,6 +18471,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          {
          case SCIP_LPSOLSTAT_OPTIMAL:
          {
+            SCIP_Longint oldnbestsolsfound = scip->primal->nbestsolsfound;
             *value = SCIPgetLPObjval(scip);
             assert(SCIPisLT(scip, *value, SCIPgetCutoffbound(scip)));
 
@@ -18509,6 +18513,11 @@ SCIP_RETCODE performStrongbranchWithPropagation(
 
                   scip->stat->nsbsolsfound++;
 
+                  if( scip->primal->nbestsolsfound != oldnbestsolsfound )
+                  {
+                     scip->stat->nsbbestsolsfound++;
+                  }
+
                   if( SCIPisGE(scip, *value, SCIPgetCutoffbound(scip)) )
                      *cutoff = TRUE;
                }
@@ -18521,6 +18530,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
          }
          case SCIP_LPSOLSTAT_ITERLIMIT:
             ++scip->stat->nsbtimesiterlimhit;
+            /*lint -fallthrough*/
          case SCIP_LPSOLSTAT_TIMELIMIT:
          {
             /* use LP value as estimate */
@@ -18856,8 +18866,7 @@ SCIP_RETCODE SCIPgetVarStrongbranchWithPropagation(
       default:
          SCIPerrorMessage("Error: Unknown parameter value <%c> for branching/firstsbchild parameter:\n",scip->set->branch_firstsbchild);
          SCIPABORT();
-         return SCIP_PARAMETERWRONGVAL;
-      break;
+         return SCIP_PARAMETERWRONGVAL; /*lint !e527*/
    }
 
    downvalidlocal = FALSE;
@@ -26006,7 +26015,8 @@ SCIP_RETCODE SCIPenfolpCons(
  */
 SCIP_RETCODE SCIPinitlpCons(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< constraint to initialize */
+   SCIP_CONS*            cons,               /**< constraint to initialize */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected while building the LP */
    )
 {
    assert(scip != NULL);
@@ -26015,7 +26025,7 @@ SCIP_RETCODE SCIPinitlpCons(
 
    SCIP_CALL( checkStage(scip, "SCIPinitlpCons", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPconsInitlp(cons, scip->set) );
+   SCIP_CALL( SCIPconsInitlp(cons, scip->set, infeasible) );
 
    return SCIP_OKAY;
 }
@@ -35734,6 +35744,71 @@ SCIP_RETCODE printDualSol(
    return SCIP_OKAY;
 }
 
+/** check whether the dual solution is available
+ *
+ * @note This is used when calling \ref SCIPprintDualSol()
+ *
+ * @return is dual solution available?
+ *
+ * @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Bool SCIPisDualSolAvailable(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_Bool             printreason         /**< print warning message if dualsol is not available? */
+   )
+{
+   int c;
+
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPprintDualSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
+
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVED )
+   {
+      if( printreason )
+         SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "No dual solution available.\n");
+      return FALSE;
+   }
+
+   assert(scip->stat != NULL);
+   assert(scip->transprob != NULL);
+
+   /* dual solution only useful when no presolving was performed */
+   if( scip->stat->performpresol )
+   {
+      if( printreason )
+         SCIPwarningMessage(scip, "No dual information available when presolving was performed.\n");
+      return FALSE;
+   }
+
+   /* dual solution is created by LP solver and therefore only available for pure LPs */
+   if( scip->transprob->nvars != scip->transprob->ncontvars )
+   {
+      if( printreason )
+         SCIPwarningMessage(scip, "Dual information only available for pure LPs (only continuous variables).\n");
+      return FALSE;
+   }
+
+   /* dual solution is created by LP solver and therefore only available for linear constraints */
+   for( c = scip->transprob->nconss - 1; c >= 0; --c )
+   {
+      SCIP_CONSHDLR* conshdlr;
+
+      conshdlr = SCIPconsGetHdlr(scip->transprob->conss[c]);
+      assert(conshdlr != NULL);
+
+      if( strcmp(SCIPconshdlrGetName(conshdlr), "linear" ) != 0 )
+      {
+         if( printreason )
+            SCIPwarningMessage(scip, "Dual information only available for pure LPs (only linear constraints).\n");
+         return FALSE;
+      }
+   }
+
+   return TRUE;
+}
+
 /** outputs dual solution from LP solver to file stream
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -35747,52 +35822,11 @@ SCIP_RETCODE SCIPprintDualSol(
    SCIP_Bool             printzeros          /**< should variables set to zero be printed? */
    )
 {
-   int c;
-
-   assert(scip != NULL);
-
-   SCIP_CALL( checkStage(scip, "SCIPprintDualSol", TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE) );
-
-   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVED )
+   if( SCIPisDualSolAvailable(scip, TRUE) )
    {
-      SCIPmessageFPrintInfo(scip->messagehdlr, NULL, "No dual solution available.\n");
-      return SCIP_OKAY;
+      /* print dual solution */
+      SCIP_CALL( printDualSol(scip, file, printzeros) );
    }
-
-   assert(scip->stat != NULL);
-   assert(scip->transprob != NULL);
-
-   /* dual solution only useful when no presolving was performed */
-   if( scip->stat->performpresol )
-   {
-      SCIPwarningMessage(scip, "No dual information available when presolving was performed.\n");
-      return SCIP_OKAY;
-   }
-
-   /* dual solution is created by LP solver and therefore only available for pure LPs */
-   if( scip->transprob->nvars != scip->transprob->ncontvars )
-   {
-      SCIPwarningMessage(scip, "Dual information only available for pure LPs (only continuous variables).\n");
-      return SCIP_OKAY;
-   }
-
-   /* dual solution is created by LP solver and therefore only available for linear constraints */
-   for( c = scip->transprob->nconss - 1; c >= 0; --c )
-   {
-      SCIP_CONSHDLR* conshdlr;
-
-      conshdlr = SCIPconsGetHdlr(scip->transprob->conss[c]);
-      assert(conshdlr != NULL);
-
-      if( strcmp(SCIPconshdlrGetName(conshdlr), "linear" ) != 0 )
-      {
-         SCIPwarningMessage(scip, "Dual information only available for pure LPs (only linear constraints).\n");
-         return SCIP_OKAY;
-      }
-   }
-
-   /* print dual solution */
-   SCIP_CALL( printDualSol(scip, file, printzeros) );
 
    return SCIP_OKAY;
 }
@@ -38007,6 +38041,115 @@ int SCIPgetNNodesLeft(
    return SCIPtreeGetNNodes(scip->tree);
 }
 
+/** gets number of leaf nodes processed with feasible relaxation solution
+ *
+ * @return number of leaf nodes processed with feasible relaxation solution
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_Longint SCIPgetNFeasibleLeaves(
+   SCIP*                scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNDelayedCutoffs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->nfeasleaves;
+}
+
+/** gets number of infeasible leaf nodes processed
+ *
+ * @return number of infeasible leaf nodes processed
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_Longint SCIPgetNInfeasibleLeaves(
+   SCIP*                scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNDelayedCutoffs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->ninfeasleaves;
+}
+
+/** gets number of processed leaf nodes that hit LP objective limit
+ *
+ * @return number of processed leaf nodes that hit LP objective limit
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_Longint SCIPgetNObjlimLeaves(
+   SCIP*                scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNDelayedCutoffs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->nobjleaves;
+}
+
+
+/** gets number of times a selected node was from a cut off subtree
+ *
+ *  @return number of times a selected node was from a cut off subtree
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_TRANSFORMING
+ *       - \ref SCIP_STAGE_TRANSFORMED
+ *       - \ref SCIP_STAGE_INITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVING
+ *       - \ref SCIP_STAGE_EXITPRESOLVE
+ *       - \ref SCIP_STAGE_PRESOLVED
+ *       - \ref SCIP_STAGE_INITSOLVE
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ *       - \ref SCIP_STAGE_EXITSOLVE
+ *       - \ref SCIP_STAGE_FREETRANS
+ */
+SCIP_Longint SCIPgetNDelayedCutoffs(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNDelayedCutoffs", FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE) );
+
+   return scip->stat->ndelayedcutoffs;
+}
+
 /** gets total number of LPs solved so far
  *
  *  @return the total number of LPs solved so far
@@ -39076,6 +39219,14 @@ SCIP_Real SCIPgetFirstLPLowerboundRoot(
       return SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, scip->stat->firstlpdualbound);
 }
 
+/** the primal bound of the very first solution */
+SCIP_Real SCIPgetFirstPrimalBound(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   return scip->stat->firstprimalbound;
+}
+
 /** gets global primal bound (objective value of best solution or user objective limit) for the original problem
  *
  *  @return the global primal bound (objective value of best solution or user objective limit) for the original problem
@@ -39422,6 +39573,8 @@ SCIP_Real SCIPgetAvgPseudocostCurrentRun(
    return SCIPhistoryGetPseudocost(scip->stat->glbhistorycrun, solvaldelta);
 }
 
+
+
 /** gets the average number of pseudo cost updates for the given direction over all variables
  *
  *  @return the average number of pseudo cost updates for the given direction over all variables
@@ -39483,6 +39636,55 @@ SCIP_Real SCIPgetAvgPseudocostScore(
    pscostup = SCIPhistoryGetPseudocost(scip->stat->glbhistory, +0.5);
 
    return SCIPbranchGetScore(scip->set, NULL, pscostdown, pscostup);
+}
+
+/** returns the variance of pseudo costs for all variables in the requested direction
+ *
+ *  @return the variance of pseudo costs for all variables in the requested direction
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetPseudocostVariance(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHDIR        branchdir,          /**< the branching direction, up or down */
+   SCIP_Bool             onlycurrentrun      /**< use only history of current run? */
+   )
+{
+   SCIP_HISTORY* history;
+
+   assert(scip != NULL);
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPseudocostVariance", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   history = (onlycurrentrun ? scip->stat->glbhistorycrun : scip->stat->glbhistory);
+   assert(history != NULL);
+
+   return SCIPhistoryGetPseudocostVariance(history, branchdir);
+}
+
+/** gets the number of pseudo cost updates for the given direction over all variables
+ *
+ *  @return the number of pseudo cost updates for the given direction over all variables
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
+ */
+SCIP_Real SCIPgetPseudocostCount(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_BRANCHDIR        dir,                /**< branching direction (downwards, or upwards) */
+   SCIP_Bool             onlycurrentrun      /**< use only history of current run? */
+   )
+{
+   SCIP_HISTORY* history;
+
+   assert(scip != NULL);
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPseudocostCount", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   history = (onlycurrentrun ? scip->stat->glbhistorycrun : scip->stat->glbhistory);
+
+   return SCIPhistoryGetPseudocostCount(history, dir);
 }
 
 /** gets the average pseudo cost score value over all variables, assuming a fractionality of 0.5,
@@ -40370,15 +40572,15 @@ void printHeuristicStatistics(
    assert(scip->tree != NULL);
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "Primal Heuristics  :   ExecTime  SetupTime      Calls      Found       Best\n");
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  LP solutions     : %10.2f          -          - %10" SCIP_LONGINT_FORMAT "          -\n",
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  LP solutions     : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPclockGetTime(scip->stat->lpsoltime),
-      scip->stat->nlpsolsfound);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  pseudo solutions : %10.2f          -          - %10" SCIP_LONGINT_FORMAT "          -\n",
+      scip->stat->nlpsolsfound, scip->stat->nlpbestsolsfound);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  pseudo solutions : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPclockGetTime(scip->stat->pseudosoltime),
-      scip->stat->npssolsfound);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  strong branching : %10.2f          -          - %10" SCIP_LONGINT_FORMAT "          -\n",
+      scip->stat->npssolsfound, scip->stat->npsbestsolsfound);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  strong branching : %10.2f          -          - %10" SCIP_LONGINT_FORMAT " %10" SCIP_LONGINT_FORMAT "\n",
       SCIPclockGetTime(scip->stat->sbsoltime),
-      scip->stat->nsbsolsfound);
+      scip->stat->nsbsolsfound, scip->stat->nsbbestsolsfound);
 
    /* sort heuristics w.r.t. their names */
    SCIPsetSortHeursName(scip->set);
@@ -40629,6 +40831,9 @@ void printTreeStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file,
       "  nodes            : %10" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT " internal, %" SCIP_LONGINT_FORMAT " leaves)\n",
       scip->stat->nnodes, scip->stat->ninternalnodes, scip->stat->nnodes - scip->stat->ninternalnodes );
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  feasible leaves  : %10d\n", scip->stat->nfeasleaves);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  infeas. leaves   : %10d\n", scip->stat->ninfeasleaves);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  objective leaves : %10d\n", scip->stat->nobjleaves);
    SCIPmessageFPrintInfo(scip->messagehdlr, file,
       "  nodes (total)    : %10" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT " internal, %" SCIP_LONGINT_FORMAT " leaves)\n",
       scip->stat->ntotalnodes, scip->stat->ntotalinternalnodes, scip->stat->ntotalnodes - scip->stat->ntotalinternalnodes);
@@ -40637,6 +40842,11 @@ void printTreeStatistics(
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  max depth (total): %10d\n", scip->stat->maxtotaldepth);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  backtracks       : %10" SCIP_LONGINT_FORMAT " (%.1f%%)\n", scip->stat->nbacktracks,
       scip->stat->nnodes > 0 ? 100.0 * (SCIP_Real)scip->stat->nbacktracks / (SCIP_Real)scip->stat->nnodes : 0.0);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  early backtracks : %10" SCIP_LONGINT_FORMAT " (%.1f%%)\n", scip->stat->nearlybacktracks,
+       scip->stat->nbacktracks > 0 ? 100.0 * (SCIP_Real)scip->stat->nearlybacktracks / (SCIP_Real)scip->stat->nbacktracks : 0.0);
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  nodes exc. ref.  : %10" SCIP_LONGINT_FORMAT " (%.1f%%)\n", scip->stat->nnodesaboverefbound,
+       scip->stat->nnodes > 0 ? 100.0 * (SCIP_Real)scip->stat->nnodesaboverefbound / (SCIP_Real)scip->stat->nnodes : 0.0);
+
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  delayed cutoffs  : %10" SCIP_LONGINT_FORMAT "\n", scip->stat->ndelayedcutoffs);
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "  repropagations   : %10" SCIP_LONGINT_FORMAT " (%" SCIP_LONGINT_FORMAT " domain reductions, %" SCIP_LONGINT_FORMAT " cutoffs)\n",
       scip->stat->nreprops, scip->stat->nrepropboundchgs, scip->stat->nrepropcutoffs);
@@ -40842,6 +41052,13 @@ void printRootStatistics(
       SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Final Dual Bound : %+21.14e\n", dualboundroot);
    SCIPmessageFPrintInfo(scip->messagehdlr, file,    "  Final Root Iters : %10" SCIP_LONGINT_FORMAT "\n", scip->stat->nrootlpiterations);
 
+   SCIPmessageFPrintInfo(scip->messagehdlr, file, "  Root LP Estimate : ");
+   if( scip->stat->rootlpbestestimate != SCIP_INVALID ) /*lint !e777*/
+   {
+       SCIPmessageFPrintInfo(scip->messagehdlr, file, "%+21.14e\n", SCIPretransformObj(scip, scip->stat->rootlpbestestimate));
+   }
+   else
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "%21s\n","-");
 }
 
 /** display timing statistics */

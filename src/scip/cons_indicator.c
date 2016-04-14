@@ -5902,6 +5902,8 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
+   *infeasible = FALSE;
+
    /* check whether coupling constraints should be added */
    if ( ! conshdlrdata->addcoupling )
       return SCIP_OKAY;
@@ -5913,7 +5915,7 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
    SCIPdebugMessage("Handle initial rows for %d indicator constraints.\n", nconss);
 
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for (c = 0; c < nconss && !(*infeasible); ++c)
    {
       SCIP_CONSDATA* consdata;
       SCIP_Real ub;
@@ -5960,7 +5962,6 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
          else
          {
             SCIP_ROW* row;
-            SCIP_Bool infeasible;
 
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -5973,10 +5974,12 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-            assert( ! infeasible );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
 
-            SCIP_CALL( SCIPaddPoolCut(scip, row) );
+            if( !(*infeasible) )
+            {
+               SCIP_CALL( SCIPaddPoolCut(scip, row) );
+            }
             SCIP_CALL( SCIPreleaseRow(scip, &row));
          }
       }

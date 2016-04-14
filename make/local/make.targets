@@ -13,6 +13,15 @@ testcluster: check/check_cluster.sh check/configuration_cluster.sh check/configu
 		$(QUEUETYPE) $(QUEUE) $(PPN) $(CLIENTTMPDIR) \
 		$(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
 
+.PHONY: testnodes
+testnodes:
+		cd check; \
+                $(SHELL) ./check_nodes.sh $(TEST) $(MAINFILE) $(SETTINGS) \
+                $(notdir $(MAINFILE)) $(TIME) $(NODES) $(MEM) \
+                $(THREADS) $(FEASTOL) $(LPS) $(DISPFREQ) $(CONTINUE) \
+                $(QUEUETYPE) $(QUEUE) $(NODES) $(PPN) $(CLIENTTMPDIR) \
+                $(NOWAITCLUSTER) $(EXCLUSIVE) $(PERMUTE) $(VALGRIND) $(REOPT) $(OPTCOMMAND) $(SETCUTOFF) $(VISUALIZE);
+
 .PHONY: testclustercpx
 testclustercpx:
 		cd check; \

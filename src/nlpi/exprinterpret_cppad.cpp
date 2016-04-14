@@ -1216,7 +1216,7 @@ SCIP_RETCODE exprEvalUser(
    Type* hessian
    )
 {
-   return SCIPexprEvalUser(expr, x, &funcval, gradient, hessian);
+   return SCIPexprEvalUser(expr, x, &funcval, gradient, hessian); /*lint !e429*/
 }
 
 template<>
