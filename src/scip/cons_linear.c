@@ -5795,8 +5795,9 @@ SCIP_RETCODE rangedRowPropagation(
          /* determine last possible solution for better bounding */
          if( nsols == 3 )
          {
+#ifndef NDEBUG
             SCIP_Real secondsolval = maxvalue;
-
+#endif
             value = SCIPfloor(scip, maxactinfvars + SCIPfeastol(scip));
 
             /* check how many possible solutions exist */
