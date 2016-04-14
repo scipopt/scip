@@ -5768,7 +5768,7 @@ SCIP_RETCODE rangedRowPropagation(
          SCIP_Real maxvalue = SCIP_INVALID;
          int nsols = 0;
 
-         value = minactinfvars;
+         value = SCIPceil(scip, minactinfvars - SCIPfeastol(scip));
 
          /* check how many possible solutions exist */
          while( SCIPisLE(scip, value, maxactinfvars) )
@@ -5792,24 +5792,27 @@ SCIP_RETCODE rangedRowPropagation(
          }
          assert(nsols < 2 || minvalue <= maxvalue);
 
-	 /* determine last possible solution for better bounding */
-	 if( nsols == 3 )
-	 {
-	    value = maxactinfvars;
+         /* determine last possible solution for better bounding */
+         if( nsols == 3 )
+         {
+            SCIP_Real secondsolval = maxvalue;
 
-	    /* check how many possible solutions exist */
-	    while( SCIPisGE(scip, value, minactinfvars) )
-	    {
-	       value2 = value + gcd * (SCIPfloor(scip, (rhs - value) / gcd));
+            value = SCIPfloor(scip, maxactinfvars + SCIPfeastol(scip));
 
-	       if( SCIPisGE(scip, value2, lhs) && SCIPisLE(scip, value2, rhs) )
-	       {
-		  maxvalue = value;
-		  assert(maxvalue > minvalue);
-		  break;
-	       }
-	       value -= gcdinfvars;
-	    }
+            /* check how many possible solutions exist */
+            while( SCIPisGE(scip, value, minactinfvars) )
+            {
+               value2 = value + gcd * (SCIPfloor(scip, (rhs - value) / gcd));
+
+               if( SCIPisGE(scip, value2, lhs) && SCIPisLE(scip, value2, rhs) )
+               {
+                  maxvalue = value;
+                  assert(maxvalue > minvalue);
+                  break;
+               }
+               value -= gcdinfvars;
+            }
+            assert(maxvalue > secondsolval);
          }
 
          SCIPdebugMessage("here nsols %s %d, minsolvalue = %g, maxsolvalue = %g, ninfcheckvars = %d, nunfixedvars = %d\n",
