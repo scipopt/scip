@@ -42,7 +42,7 @@
 #define CONSHDLR_PRESOLTIMING    SCIP_PRESOLTIMING_EXHAUSTIVE /**< presolving timing of the constraint handler (fast, medium, or exhaustive) */
 #define CONSHDLR_PROP_TIMING     (SCIP_PROPTIMING_BEFORELP | SCIP_PROPTIMING_AFTERLPLOOP)
 
-#define DEFAULT_MAXDEPTH 2
+#define DEFAULT_MAXDEPTH 0
 
 #define INTFACTOR 10
 
@@ -202,7 +202,7 @@ SCIP_RETCODE freeComponent(
    scip = problem->scip;
    assert(scip != NULL);
 
-   SCIPdebugMessage("freeing component %d of problem <%s>\n", (*component)->number, (*component)->problem->name);
+   SCIPinfoMessage(scip, NULL, "freeing component %d of problem <%s>\n", (*component)->number, (*component)->problem->name);
 
    assert(((*component)->vars != NULL) == ((*component)->subvars != NULL));
    if( (*component)->vars != NULL )
@@ -289,7 +289,7 @@ SCIP_RETCODE componentCreateSubscip(
    SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", -1) );
 
    SCIP_CALL( SCIPsetIntParam(subscip, "constraints/" CONSHDLR_NAME "/maxdepth",
-         conshdlrdata->maxdepth - SCIPgetDepth(scip)) );
+         MAX(-1,conshdlrdata->maxdepth - SCIPgetDepth(scip))) );
 
    /* reduce the effort spent for hash tables */
    //SCIP_CALL( SCIPsetBoolParam(subscip, "misc/usevartable", FALSE) );
@@ -386,7 +386,7 @@ SCIP_RETCODE componentCreateSubscip(
 #endif
       }
       component->nfixedvars = index;
-      SCIPdebugMessage("%d locally fixed variables have been copied, objective contribution: %g\n",
+      SCIPinfoMessage(scip, NULL, "%d locally fixed variables have been copied, objective contribution: %g\n",
          component->nfixedvars, component->fixedvarsobjsum);
    }
 
@@ -394,11 +394,11 @@ SCIP_RETCODE componentCreateSubscip(
    /* write the problem, if requested */
    {
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s.cip", SCIPgetProbName(subscip));
-      SCIPdebugMessage("write problem to file %s\n", name);
+      SCIPinfoMessage(scip, NULL, "write problem to file %s\n", name);
       SCIP_CALL( SCIPwriteOrigProblem(subscip, name, NULL, FALSE) );
 
       (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "%s.set", SCIPgetProbName(subscip));
-      SCIPdebugMessage("write settings to file %s\n", name);
+      SCIPinfoMessage(scip, NULL, "write settings to file %s\n", name);
       SCIP_CALL( SCIPwriteParams(subscip, name, TRUE, TRUE) );
    }
 #endif
@@ -467,7 +467,7 @@ SCIP_RETCODE solveComponent(
 
    *result = SCIP_DIDNOTRUN;
 
-   SCIPdebugMessage("solve component <%s> (ncalls=%d, absgap=%.9g)\n",
+   SCIPinfoMessage(scip, NULL, "solve component <%s> (ncalls=%d, absgap=%.9g)\n",
       SCIPgetProbName(subscip), component->ncalls, component->lastprimalbound - component->lastdualbound);
 
    bestsol = SCIPgetBestSol(scip);
@@ -499,20 +499,20 @@ SCIP_RETCODE solveComponent(
       {
          SCIP_Bool feasible;
 
-         SCIPdebugMessage("install new solution in component <%s> inherited from problem <%s>: primal bound %.9g --> %.9g\n",
+         SCIPinfoMessage(scip, NULL, "install new solution in component <%s> inherited from problem <%s>: primal bound %.9g --> %.9g\n",
             SCIPgetProbName(subscip), problem->name,
             SCIPgetStage(subscip) == SCIP_STAGE_PROBLEM ? SCIPinfinity(subscip) : SCIPgetPrimalbound(subscip), SCIPgetSolOrigObj(subscip, compsol));
 
          SCIP_CALL( SCIPcheckSolOrig(subscip, compsol, &feasible, FALSE, FALSE) );
          if( feasible )
          {
-            SCIPdebugMessage("... feasible\n");
+            SCIPinfoMessage(scip, NULL, "... feasible\n");
 
             SCIP_CALL( SCIPaddSol(subscip, compsol, &feasible) );
          }
          else
          {
-            SCIPdebugMessage("... infeasible, update cutoff bound\n");
+            SCIPinfoMessage(scip, NULL, "... infeasible, update cutoff bound\n");
 
             SCIP_CALL( SCIPupdateCutoffbound(subscip, SCIPgetSolOrigObj(subscip, compsol)) );
          }
@@ -522,7 +522,7 @@ SCIP_RETCODE solveComponent(
    {
       assert(component->laststatus != SCIP_STATUS_OPTIMAL);
 
-      SCIPdebugMessage("solve sub-SCIP for component <%s> (ncalls=%d, absgap=%16.9g)\n",
+      SCIPinfoMessage(scip, NULL, "solve sub-SCIP for component <%s> (ncalls=%d, absgap=%16.9g)\n",
          SCIPgetProbName(component->subscip), component->ncalls, component->lastprimalbound - component->lastdualbound);
 
       /* update time limit */
@@ -552,7 +552,7 @@ SCIP_RETCODE solveComponent(
       // todo memory limit
       if( timelimit <= 0.0 )
       {
-         SCIPdebugMessage("--> not solved (not enough memory or time left)\n");
+         SCIPinfoMessage(scip, NULL, "--> not solved (not enough memory or time left)\n");
          return SCIP_OKAY;
       }
 
@@ -614,7 +614,7 @@ SCIP_RETCODE solveComponent(
       component->laststatus = status;
       ++component->ncalls;
 
-      SCIPdebugMessage("--> (status=%d, nodes=%lld, time=%.2f): gap: %12.5g%% absgap: %16.9g\n",
+      SCIPinfoMessage(scip, NULL, "--> (status=%d, nodes=%lld, time=%.2f): gap: %12.5g%% absgap: %16.9g\n",
          status, SCIPgetNNodes(subscip), SCIPgetSolvingTime(subscip), 100.0*SCIPgetGap(subscip),
          SCIPgetPrimalbound(subscip) - SCIPgetDualbound(subscip));
 
@@ -674,7 +674,7 @@ SCIP_RETCODE solveComponent(
          /* update problem dual bound if all problem components have a finite dual bound */
          if( problem->nlowerboundinf == 0 )
          {
-            SCIPdebugMessage("component <%s>: dual bound increased from %16.9g to %16.9g, new dual bound of problem <%s>: %16.9g (gap: %16.9g, absgap: %16.9g)\n",
+            SCIPinfoMessage(scip, NULL, "component <%s>: dual bound increased from %16.9g to %16.9g, new dual bound of problem <%s>: %16.9g (gap: %16.9g, absgap: %16.9g)\n",
                SCIPgetProbName(subscip), component->lastdualbound, newdualbound, problem->name, SCIPretransformObj(scip, problem->lowerbound),
                problem->nfeascomps == problem->ncomponents ?
                (SCIPgetSolOrigObj(scip, problem->bestsol) - SCIPretransformObj(scip, problem->lowerbound)) / MAX(ABS(SCIPretransformObj(scip, problem->lowerbound)),SCIPgetSolOrigObj(scip, problem->bestsol)) : SCIPinfinity(scip),
@@ -718,7 +718,7 @@ SCIP_RETCODE solveComponent(
 
             SCIP_CALL( SCIPaddSol(scip, problem->bestsol, &feasible) );
 
-            SCIPdebugMessage("component <%s>: primal bound decreased from %16.9g to %16.9g, new primal bound of problem <%s>: %16.9g (gap: %16.9g, absgap: %16.9g)\n",
+            SCIPinfoMessage(scip, NULL, "component <%s>: primal bound decreased from %16.9g to %16.9g, new primal bound of problem <%s>: %16.9g (gap: %16.9g, absgap: %16.9g)\n",
                SCIPgetProbName(subscip), component->lastprimalbound, SCIPgetPrimalbound(subscip), problem->name, SCIPgetSolOrigObj(scip, problem->bestsol),
                problem->nfeascomps == problem->ncomponents ?
                (SCIPgetSolOrigObj(scip, problem->bestsol) - SCIPretransformObj(scip, problem->lowerbound)) / MAX(ABS(SCIPretransformObj(scip, problem->lowerbound)),SCIPgetSolOrigObj(scip, problem->bestsol)) : SCIPinfinity(scip),
@@ -796,7 +796,7 @@ SCIP_RETCODE initProblem(
       }
    }
 
-   SCIPdebugMessage("initialized problem <%s>\n", (*problem)->name);
+   SCIPinfoMessage(scip, NULL, "initialized problem <%s>\n", (*problem)->name);
 
    return SCIP_OKAY;
 }
@@ -816,7 +816,7 @@ SCIP_RETCODE freeProblem(
    scip = (*problem)->scip;
    assert(scip != NULL);
 
-   SCIPdebugMessage("freeing problem <%s>\n", (*problem)->name);
+   SCIPinfoMessage(scip, NULL, "freeing problem <%s>\n", (*problem)->name);
 
    if( (*problem)->bestsol != NULL )
    {
@@ -1051,7 +1051,7 @@ SCIP_RETCODE splitProblem(
 
          assert(ncompconss > 0 || component->nvars == 1);
 
-         SCIPdebugMessage("build sub-SCIP for component %d of problem <%s>: %d vars (%d bin, %d int, %d cont), %d conss\n",
+         SCIPinfoMessage(scip, NULL, "build sub-SCIP for component %d of problem <%s>: %d vars (%d bin, %d int, %d cont), %d conss\n",
             component->number, (*problem)->name, component->nvars, nbinvars, nintvars, component->nvars - nintvars - nbinvars, ncompconss);
 
          {
@@ -1118,7 +1118,7 @@ SCIP_RETCODE solveProblem(
 
    *result = SCIP_SUCCESS;
 
-   SCIPdebugMessage("solving problem <%s>: %d components left\n", problem->name, SCIPpqueueNElems(problem->compqueue));
+   SCIPinfoMessage(problem->scip, NULL, "solving problem <%s>: %d components left\n", problem->name, SCIPpqueueNElems(problem->compqueue));
 
    component = (COMPONENT*)SCIPpqueueRemove(problem->compqueue);
 
@@ -1385,7 +1385,7 @@ SCIP_RETCODE findComponents(
                "prop components found %d undirected components at node %lld, depth %d\n",
                ncomponents, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip));
 #else
-            SCIPdebugMessage("prop components found %d undirected components at node %lld, depth %d\n",
+            SCIPinfoMessage(scip, NULL, "prop components found %d undirected components at node %lld, depth %d\n",
                ncomponents, SCIPnodeGetNumber(SCIPgetCurrentNode(scip)), SCIPgetDepth(scip));
 #endif
 
