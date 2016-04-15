@@ -131,7 +131,7 @@ SCIP_RETCODE createSubproblem(
    *success = TRUE;
    hasfiniteprimalbound = !SCIPisInfinity(scip, SCIPgetPrimalbound(scip));
 
-   /* calculate objective coefficients for all potentiel epsilons */
+   /* calculate objective coefficients for all potential epsilons */
    if( SCIPisEQ(scip, heurdata->objweight, 1.0) )
       return SCIP_OKAY;
    else if( hasfiniteprimalbound )
