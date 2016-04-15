@@ -127,10 +127,10 @@ SCIP_DECL_SEPAEXECLP(sepaExeclpSparseApprox)
    {
       binvars = SCIPspaGetBinvars(scip);
       sepadata->lexordered = TRUE;
-      /*create symmetry-breaking constraint (permutation of the clusters leads to same value in the target function). Add these only as LP-rows*/
-      for( i = 0; i < nbins; ++i )
+      /* create symmetry-breaking constraint (permutation of the clusters leads to same value in the target function). Add these only as LP-rows*/
+      for( i = 1; i < nbins; ++i )
       {
-         for( k = 2; k < ncluster; ++k )
+         for( k = 1; k < ncluster; ++k )
          {
             (void)SCIPsnprintf(cutname, SCIP_MAXSTRLEN, "lexorder_%d_%d", i + 1, k + 1 );
             SCIP_CALL( SCIPcreateEmptyRowSepa(scip, &cut, sepa, cutname, -SCIPinfinity(scip), 0.0, FALSE, FALSE, FALSE) );
@@ -500,7 +500,6 @@ SCIP_RETCODE SCIPincludeSepaSparseApprox(
    SCIP_CALL( SCIPsetSepaFree(scip, sepa, sepaFreeSparseApprox) );
 
    /* add SparseApprox separator parameters */
-
    SCIP_CALL( SCIPaddBoolParam(scip,
       "separating/sparseapprox/lexorder",
       "have the lexorder constraints been separated?",

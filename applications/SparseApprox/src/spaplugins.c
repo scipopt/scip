@@ -41,6 +41,7 @@ SCIP_RETCODE SCIPincludeSpaPlugins(
 
    SCIP_CALL( SCIPaddRealParam(scip,"coherence_bound","lower bound to within-cluster coherence", NULL, FALSE, 0.1, 0.0, 1.0, NULL, NULL ) );
    SCIP_CALL( SCIPaddBoolParam(scip, "edge_representation", "true, if the edge represantation should be used. Otherwise the bin represantation is used", NULL, FALSE, TRUE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "irrev_relaxation", "should the abs-value be inside the sum (relaxing the constraint by triangle-inequality)", NULL, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

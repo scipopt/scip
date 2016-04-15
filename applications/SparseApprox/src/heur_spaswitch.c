@@ -304,6 +304,35 @@ SCIP_RETCODE assignVars(
    return SCIP_OKAY;
 }
 
+#ifndef NDEBUG
+/** checks if the assignment is finished, i.e. all columns have exactly one 1 and rest 0 values */
+static
+SCIP_Bool isPartition(
+   SCIP_Real**                 clustering,  /**< The matrix containing the clustering */
+   int                   nbins,              /**< The number of bins */
+   int                   ncluster            /**< The number of clusters */
+)
+{
+   int colsum;
+   int i;
+   int c;
+   SCIP_Bool validassignment = TRUE;
+   for( i = 0; i < nbins; ++i )
+   {
+      colsum = 0;
+      for( c = 0; c < ncluster; ++c )
+      {
+         if( clustering[i][c] == -1 )
+            validassignment = FALSE;
+         colsum += clustering[i][c];
+      }
+      if( colsum != 1 )
+         validassignment = FALSE;
+   }
+   return validassignment;
+}
+#endif
+
 /*
  * Callback methods of primal heuristic
  */
@@ -389,6 +418,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
 
    SCIP_VAR*** varmatrix;                     /* SCIP variables                */
    SCIP_VAR***** edgevars;
+   SCIP_VAR* targetvar;
    SCIP_Real** solclustering;                 /* the working cluster-assignment. We start with the one given by the solution */
    SCIP_Bool** binfixed;
    SCIP_Real** cmatrix;
@@ -426,15 +456,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
    if( bestsol == NULL || heurdata->lastsolindex == SCIPsolGetIndex(bestsol) )
       return SCIP_OKAY;
 
-   heurdata->lastsolindex = SCIPsolGetIndex(bestsol);
-   if( !SCIPsolIsOriginal(bestsol) )
-   {
-      SCIPretransformSol(scip, bestsol);
-   }
 
-   objective = SCIPsolGetOrigObj(bestsol);
-   if( objective == 0.0 )
-      return SCIP_OKAY;
    /* reset the timing mask to its default value (at the root node it could be different) */
    if( SCIPgetNNodes(scip) > 1 )
       SCIPheurSetTimingmask(heur, HEUR_TIMING);
@@ -448,6 +470,11 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
    varmatrix = SCIPspaGetBinvars(scip);
    edgevars = SCIPspaGetEdgevars(scip);
    cmatrix = SCIPspaGetCmatrix(scip);
+   targetvar = SCIPspaGetTargetvar(scip);
+
+   objective = SCIPvarGetLbGlobal(targetvar);
+   if( objective == 0.0 )
+      return SCIP_OKAY;
    assert(nbins >= 0);
    assert(ncluster >= 0);
    assert(varmatrix != NULL);
@@ -468,13 +495,22 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
       SCIPallocClearMemoryArray(scip, &binfixed[i], ncluster);
       for( c = 0; c < ncluster; ++c )
       {
-         if( varmatrix[i][c] != NULL && SCIPvarIsActive(varmatrix[i][c]) && !(SCIPisEQ(scip, SCIPvarGetUbGlobal(varmatrix[i][c]), SCIPvarGetLbGlobal(varmatrix[i][c]))) )
+         if( varmatrix[i][c] != NULL && SCIPvarIsActive(varmatrix[i][c]))
          {
-            SCIP_Real solval = SCIPgetSolVal(scip, bestsol, varmatrix[i][c]);
-            assert(SCIPisIntegral(scip, solval));
-            solclustering[i][c] = solval;
-            if( SCIPisEQ(scip, solval, 1.0) )
-               clusterofbin[i] = c;
+            if( (SCIPisEQ(scip, SCIPvarGetUbGlobal(varmatrix[i][c]), SCIPvarGetLbGlobal(varmatrix[i][c]))) )
+            {
+               solclustering[i][c] = SCIPgetSolVal(scip, bestsol, varmatrix[i][c]);
+               binfixed[i][c] = TRUE;
+               if( SCIPisEQ(scip, solclustering[i][c], 1) )
+                  clusterofbin[i] = c;
+            }else
+            {
+               SCIP_Real solval = SCIPgetSolVal(scip, bestsol, varmatrix[i][c]);
+               assert(SCIPisIntegral(scip, solval));
+               solclustering[i][c] = solval;
+               if( SCIPisEQ(scip, solval, 1.0) )
+                  clusterofbin[i] = c;
+            }
          }
          else
          {
@@ -583,6 +619,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
                   objective = getIrrevBound(scip, qmatrix, ncluster);
 
                   SCIPretransformSol(scip, copysol);
+                  assert(isPartition(solclustering, nbins, ncluster));
                   SCIPtrySolFree(scip, &copysol , FALSE, FALSE, FALSE, FALSE, &feasible);
                   if( feasible )
                   {
@@ -657,6 +694,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
                objective = getIrrevBound(scip, qmatrix, ncluster);
 
                SCIPretransformSol(scip, copysol);
+               assert(isPartition(solclustering, nbins, ncluster));
                SCIPtrySolFree(scip, &copysol , FALSE, FALSE, FALSE, FALSE, &feasible);
                if( feasible )
                {
@@ -668,7 +706,6 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
          }
       }
    }
-
    /* update the found solution, so that we do not run again immediatly */
    if( *result == SCIP_FOUNDSOL )
    {

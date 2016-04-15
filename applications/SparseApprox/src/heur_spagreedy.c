@@ -680,6 +680,8 @@ SCIP_RETCODE assignNextBin(
             col = 0;
             while(!binfound)
             {
+               if( row == ncluster )
+                  break;
                if( clusterassignment[row][col] != -1 )
                {
                   ++col;
@@ -975,22 +977,31 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
                   if( h < nbins )
                   {
                      if( NULL != edgevars[i][h][j][k] && SCIPvarIsActive(edgevars[i][h][j][k]) )
+                     {
                         clusterassignment[j][i] = 1;
+                        binsincluster[j]++;
+                        isassigned[i] = TRUE;
+                        amountassigned++;
+                     }
                      else
                         clusterassignment[j][i] = 0;
                   }
                }
+               if( clusterassignment[j][i] != -1 )
+                  break;
             }
-         }
-
-         /* if the bounds determine a fixed binary variable, then fix the variable in the clusterassignment */
-         if( SCIPisEQ(scip, SCIPvarGetLbGlobal(binvars[i][j]), SCIPvarGetUbGlobal(binvars[i][j])) )
+         } else
          {
-            clusterassignment[j][i] = SCIPvarGetLbGlobal(binvars[i][j]);
-            if( SCIPisEQ(scip, 1.0, clusterassignment[j][i]) )
+            /* if the bounds determine a fixed binary variable, then fix the variable in the clusterassignment */
+            if( SCIPisEQ(scip, SCIPvarGetLbGlobal(binvars[i][j]), SCIPvarGetUbGlobal(binvars[i][j])) )
             {
-               binsincluster[j]++;
-               isassigned[i] = TRUE;
+               clusterassignment[j][i] = SCIPvarGetLbGlobal(binvars[i][j]);
+               if( SCIPisEQ(scip, 1.0, clusterassignment[j][i]) )
+               {
+                  binsincluster[j]++;
+                  isassigned[i] = TRUE;
+                  amountassigned++;
+               }
             }
          }
       }
@@ -1001,42 +1012,39 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
    {
       for( j = 0; j < ncluster; ++j )
       {
-         SCIP_Real lb = SCIPvarGetLbGlobal(absvars[i + j * ncluster]);
-         SCIP_Real ub = SCIPvarGetUbGlobal(absvars[i + j * ncluster]);
          if( NULL == absvars[i + j * ncluster] )
             continue;
-         if( SCIPisPositive(scip, lb) )
-            fixedabsvars[i][j] = 1;
-         if( SCIPisLT(scip, ub, 1) )
-            fixedabsvars[i][j] = 0;
+         if( SCIPisEQ(scip, SCIPvarGetLbGlobal(absvars[i + j * ncluster]), SCIPvarGetUbGlobal(absvars[i + j * ncluster])) )
+            fixedabsvars[i][j] = SCIPvarGetLbGlobal(absvars[i + j * ncluster]);
       }
    }
-
-   /* initialize the qmatrix and the lower irreversibility bound */
-   computeIrrevMat(clusterassignment, qmatrix, cmatrix, nbins, ncluster);
-   epsI = getIrrevBound(scip, qmatrix, q_minvalue, ncluster);
-   /* if no bins are assigned, then choose the first two bins manually */
-   if( 0 == amountassigned )
+   if( amountassigned < nbins )
    {
-      assignFirstPair(scip, clusterassignment, cmatrix, qmatrix, isassigned, nbins, ncluster, amountassigned, binsincluster, &epsI);
-      amountassigned = 2;
-   }
-   /* assign bins iteratively until all bins are assigned */
-   while( amountassigned < nbins )
-   {
-      SCIP_CALL( assignNextBin(scip, heurdata->local, clusterassignment, cmatrix, qmatrix, fixedabsvars, isassigned, nbins, ncluster, amountassigned, binsincluster, &epsI ) );
-      amountassigned++;
-   }
-   /* assert that the assignment is valid in the sense that it is a partition of the bins. Feasibility is not checked in this method */
-   assert(isPartition(clusterassignment, nbins, ncluster));
-   /* update the qmatrix */
-   computeIrrevMat(clusterassignment, qmatrix, cmatrix, nbins, ncluster);
+      /* initialize the qmatrix and the lower irreversibility bound */
+      computeIrrevMat(clusterassignment, qmatrix, cmatrix, nbins, ncluster);
+      epsI = getIrrevBound(scip, qmatrix, q_minvalue, ncluster);
+      /* if no bins are assigned, then choose the first two bins manually */
+      if( 0 == amountassigned )
+      {
+         assignFirstPair(scip, clusterassignment, cmatrix, qmatrix, isassigned, nbins, ncluster, amountassigned, binsincluster, &epsI);
+         amountassigned = 2;
+      }
+      /* assign bins iteratively until all bins are assigned */
+      while( amountassigned < nbins )
+      {
+         SCIP_CALL( assignNextBin(scip, heurdata->local, clusterassignment, cmatrix, qmatrix, fixedabsvars, isassigned, nbins, ncluster, amountassigned, binsincluster, &epsI ) );
+         amountassigned++;
+      }
+      /* assert that the assignment is valid in the sense that it is a partition of the bins. Feasibility is not checked in this method */
+      assert(isPartition(clusterassignment, nbins, ncluster));
+      /* update the qmatrix */
+      computeIrrevMat(clusterassignment, qmatrix, cmatrix, nbins, ncluster);
 
-   /* set the variables the problem to the found clustering and test feasibility */
-   SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
-   SCIP_CALL( assignVars( scip, sol, clusterassignment, binsincluster, nbins, ncluster, qmatrix) );
-   SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, &feasible) );
-
+      /* set the variables the problem to the found clustering and test feasibility */
+      SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
+      SCIP_CALL( assignVars( scip, sol, clusterassignment, binsincluster, nbins, ncluster, qmatrix) );
+      SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, FALSE, FALSE, FALSE, &feasible) );
+   }
    if( feasible )
       *result = SCIP_FOUNDSOL;
    else
