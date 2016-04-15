@@ -460,7 +460,7 @@ unsigned int SCIPgetConsExprExprWalkParentPrecedence(
  * a Factor is a Base to a power, a Term is a product of Factors and an Expression is a sum of terms
  * The actual definition:
  * <pre>
- * Expression -> ["+" | "-"] Term { ("+" | "-") Term }
+ * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
  * Term       -> Factor { ("*" | "/" ) Factor }
  * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
  * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")

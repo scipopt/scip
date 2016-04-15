@@ -398,7 +398,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
  * and an Expression is a sum of terms.
  * The actual definition:
  * <pre>
- * Expression -> ["+" | "-"] Term { ("+" | "-") Term }
+ * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
  * Term       -> Factor { ("*" | "/" ) Factor }
  * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
  * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
@@ -810,7 +810,7 @@ SCIP_RETCODE parseTerm(
 
 /** Parses an expression and builds a sum-expression with children.
  * <pre>
- * Expression -> ["+" | "-"] Term { ("+" | "-") Term }
+ * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
  * </pre>
  */
 static
@@ -2609,7 +2609,7 @@ SCIP_CONSEXPR_EXPR* SCIPgetExprConsExpr(
  * a Factor is a Base to a power, a Term is a product of Factors and an Expression is a sum of terms
  * The actual definition:
  * <pre>
- * Expression -> ["+" | "-"] Term { ("+" | "-") Term }
+ * Expression -> ["+" | "-"] Term { ("+" | "-" | "number *") ] Term }
  * Term       -> Factor { ("*" | "/" ) Factor }
  * Factor     -> Base [ "^" "number" | "^(" "number" ")" ]
  * Base       -> "number" | "<varname>" | "(" Expression ")" | Op "(" OpExpression ")
