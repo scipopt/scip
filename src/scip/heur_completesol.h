@@ -15,7 +15,7 @@
 
 /**@file   heur_completesol.h
  * @ingroup PRIMALHEURISTICS
- * @brief  COMPLETESOL - primal heuristic trying to complete given partial solutions
+ * @brief  primal heuristic trying to complete given partial solutions
  * @author Jakob Witzig
  */
 

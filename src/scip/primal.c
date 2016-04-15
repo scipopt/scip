@@ -695,51 +695,6 @@ SCIP_RETCODE primalAddSol(
 
 /** adds primal solution to solution storage at given position */
 static
-SCIP_RETCODE primalAddPartinfsol(
-   SCIP_PRIMAL*          primal,             /**< primal data */
-   BMS_BLKMEM*           blkmem,             /**< block memory */
-   SCIP_SET*             set,                /**< global SCIP settings */
-   SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_SOL**            solptr              /**< pointer to primal CIP solution */
-   )
-{
-   SCIP_SOL* sol;
-   int pos;
-
-   assert(primal != NULL);
-   assert(blkmem != NULL);
-   assert(set != NULL);
-   assert(stat != NULL);
-   assert(solptr != NULL);
-
-   sol = *solptr;
-   assert(sol != NULL);
-
-   /* allocate memory for solution storage */
-   SCIP_CALL( ensurePartinfsolsSize(primal, set, set->limit_maxsol) );
-
-   /* if set->limit_maxsol was decreased in the meantime, free all solutions exceeding the limit */
-   for( pos = set->limit_maxsol; pos < primal->npartinfsols; ++pos )
-   {
-      SCIP_CALL( SCIPsolFree(&primal->partinfsols[pos], blkmem, primal) );
-   }
-   primal->npartinfsols = MIN(primal->npartinfsols, set->limit_maxsol);
-
-   if( primal->npartinfsols == set->limit_maxsol )
-   {
-      SCIP_CALL( SCIPsolFree(&primal->partinfsols[set->limit_maxsol - 1], blkmem, primal) );
-   }
-   assert(primal->npartinfsols < set->limit_maxsol);
-
-   /* insert solution at correct position */
-   primal->partinfsols[primal->npartinfsols] = sol;
-   ++primal->npartinfsols;
-
-   return SCIP_OKAY;
-}
-
-/** adds primal solution to solution storage at given position */
-static
 SCIP_RETCODE primalAddOrigSol(
    SCIP_PRIMAL*          primal,             /**< primal data */
    BMS_BLKMEM*           blkmem,             /**< block memory */
@@ -790,7 +745,7 @@ SCIP_RETCODE primalAddOrigSol(
    return SCIP_OKAY;
 }
 
-/** adds primal solution to solution storage at given position */
+/** adds primal solution to solution storage */
 static
 SCIP_RETCODE primalAddOrigPartialSol(
    SCIP_PRIMAL*          primal,             /**< primal data */
@@ -1125,7 +1080,6 @@ SCIP_RETCODE SCIPprimalAddSol(
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {
-   SCIP_SOL* solcopy;
    SCIP_Bool replace;
    int insertpos;
 
@@ -1149,6 +1103,7 @@ SCIP_RETCODE SCIPprimalAddSol(
 
    if( solOfInterest(primal, set, stat, origprob, transprob, sol, &insertpos, &replace) )
    {
+      SCIP_SOL* solcopy;
 #ifdef SCIP_MORE_DEBUG
       int i;
 #endif
@@ -1236,7 +1191,7 @@ SCIP_RETCODE SCIPprimalAddOrigSol(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
-   SCIP_PROB*            prob,               /**< original problem after presolve */
+   SCIP_PROB*            prob,               /**< original problem data */
    SCIP_SOL*             sol,                /**< primal CIP solution; is cleared in function call */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
@@ -1260,7 +1215,7 @@ SCIP_RETCODE SCIPprimalAddOrigSol(
       /* create a copy of the solution */
       SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
 
-      SCIP_CALL( primalAddPartinfsol(primal, blkmem, set, stat, &solcopy) );
+      SCIP_CALL( primalAddOrigPartialSol(primal, blkmem, set, prob, solcopy) );
 
       *stored = TRUE;
    }
@@ -1312,8 +1267,9 @@ SCIP_RETCODE SCIPprimalAddOrigSolFree(
       SCIP_CALL( primalAddOrigPartialSol(primal, blkmem, set, prob, *sol) );
 
       /* clear the pointer, such that the user cannot access the solution anymore */
-      *stored = TRUE;
       *sol = NULL;
+
+      *stored = TRUE;
    }
    else if( origsolOfInterest(primal, set, stat, prob, *sol, &insertpos) )
    {

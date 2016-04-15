@@ -85,9 +85,6 @@ SCIP_RETCODE solSetArrayVal(
    /* store whether the solution has infinite values assigned to variables */
    if( val != SCIP_UNKNOWN ) /*lint !e777*/
       sol->hasinfval = (sol->hasinfval || SCIPsetIsInfinity(set, val) || SCIPsetIsInfinity(set, -val));
-   /* mark the solution as partial */
-   else if( sol->solorigin == SCIP_SOLORIGIN_ZERO )
-      sol->solorigin = SCIP_SOLORIGIN_PARTIAL;
 
    return SCIP_OKAY;
 }
@@ -1052,31 +1049,35 @@ SCIP_RETCODE SCIPsolSetVal(
 
             SCIP_CALL( solSetArrayVal(sol, set, var, val) );
 
-            /* update objective: an unknown solution value does not count towards the objective */
-            obj = SCIPvarGetObj(var);
-            if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
+            /* update the objective value; we do not need to do this for partial solutions */
+            if( !SCIPsolIsPartial(sol) )
             {
-               objcont = obj * oldval;
+               /* an unknown solution value does not count towards the objective */
+               obj = SCIPvarGetObj(var);
+               if( oldval != SCIP_UNKNOWN ) /*lint !e777*/
+               {
+                  objcont = obj * oldval;
 
-               /* we want to use a clean infinity */
-               if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, sol->obj-objcont) )
-                  sol->obj = SCIPsetInfinity(set);
-               else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj-objcont)) )
-                  sol->obj = -SCIPsetInfinity(set);
-               else
-                  sol->obj -= objcont;
-            }
-            if( val != SCIP_UNKNOWN ) /*lint !e777*/
-            {
-               objcont = obj * val;
+                  /* we want to use a clean infinity */
+                  if( SCIPsetIsInfinity(set, -objcont) || SCIPsetIsInfinity(set, sol->obj-objcont) )
+                     sol->obj = SCIPsetInfinity(set);
+                  else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj-objcont)) )
+                     sol->obj = -SCIPsetInfinity(set);
+                  else
+                     sol->obj -= objcont;
+               }
+               if( val != SCIP_UNKNOWN ) /*lint !e777*/
+               {
+                  objcont = obj * val;
 
-               /* we want to use a clean infinity */
-               if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, sol->obj+objcont) )
-                  sol->obj = SCIPsetInfinity(set);
-               else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj+objcont)) )
-                  sol->obj = -SCIPsetInfinity(set);
-               else
-                  sol->obj += objcont;
+                  /* we want to use a clean infinity */
+                  if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, sol->obj+objcont) )
+                     sol->obj = SCIPsetInfinity(set);
+                  else if( SCIPsetIsInfinity(set, objcont) || SCIPsetIsInfinity(set, -(sol->obj+objcont)) )
+                     sol->obj = -SCIPsetInfinity(set);
+                  else
+                     sol->obj += objcont;
+               }
             }
 
             solStamp(sol, stat, tree, FALSE);
@@ -1523,7 +1524,7 @@ SCIP_RETCODE SCIPsolMarkPartial(
    int v;
 
    assert(sol != NULL);
-   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL || sol->solorigin == SCIP_SOLORIGIN_ZERO);
+   assert(sol->solorigin == SCIP_SOLORIGIN_ORIGINAL);
    assert(nvars == 0 || vars != NULL);
 
    if( nvars == 0 )
@@ -1531,28 +1532,26 @@ SCIP_RETCODE SCIPsolMarkPartial(
 
    SCIP_CALL( SCIPsetAllocBufferArray(set, &vals, nvars) );
 
-   /* get values SCIP_UNKNOWN */
-   for( v = 0; v < nvars; v++ )
-      vals[v] = SCIPsolGetVal(sol, set, stat, vars[v]);
-
+   /* get values */
    for( v = 0; v < nvars; v++ )
    {
-      int idx;
+      assert(!SCIPvarIsTransformed(vars[v]));
+      vals[v] = SCIPsolGetVal(sol, set, stat, vars[v]);
+   }
 
-      if( SCIPsolIsOriginal(sol) && SCIPvarIsTransformed(vars[v]) )
-      {
-         SCIPerrorMessage("cannot set value of transformed variable <%s> in original space solution\n",
-            SCIPvarGetName(vars[v]));
-         return SCIP_INVALIDCALL;
-      }
+   /* change origin to partial */
+   sol->solorigin = SCIP_SOLORIGIN_PARTIAL;
 
-      idx = SCIPvarGetIndex(vars[v]);
-
-      /* from now on, variable must not be deleted */
-      SCIPvarMarkNotDeletable(vars[v]);
+   /* set values */
+   for( v = 0; v < nvars; v++ )
+   {
+      int idx = SCIPvarGetIndex(vars[v]);
 
       if( vals[v] != SCIP_UNKNOWN )
       {
+         /* from now on, variable must not be deleted */
+         SCIPvarMarkNotDeletable(vars[v]);
+
          /* mark the variable valid */
          SCIP_CALL( SCIPboolarraySetVal(sol->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, TRUE) );
 
@@ -1561,13 +1560,10 @@ SCIP_RETCODE SCIPsolMarkPartial(
       }
       else
       {
-         /* mark the variable valid */
+         /* mark the variable invalid */
          SCIP_CALL( SCIPboolarraySetVal(sol->valid, set->mem_arraygrowinit, set->mem_arraygrowfac, idx, FALSE) );
       }
    }
-
-   /* change origin to partial */
-   sol->solorigin = SCIP_SOLORIGIN_PARTIAL;
 
    /* free buffer */
    SCIPsetFreeBufferArray(set, &vals);

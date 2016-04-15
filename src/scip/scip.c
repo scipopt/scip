@@ -12467,7 +12467,7 @@ SCIP_RETCODE checkSolOrig(
             if( !messageprinted )
             {
                SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Note: The current solution is only partial, we skip "
-                     "checking bound of variables with unknown solution values. (This is only reported once per solution)\n");
+                     "checking bounds of variables with unknown solution values. (This is only reported once per solution)\n");
                messageprinted = TRUE;
             }
             continue;
@@ -35579,13 +35579,21 @@ SCIP_RETCODE SCIPprintSol(
    }
 
    SCIPmessageFPrintInfo(scip->messagehdlr, file, "objective value:                 ");
-   if( SCIPsolIsOriginal(sol) )
-      objvalue = SCIPsolGetOrigObj(sol);
-   else
-      objvalue = SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
 
-   SCIPprintReal(scip, file, objvalue, 20, 15);
-   SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
+   if( SCIPsolIsPartial(sol) )
+   {
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "unknown\n");
+   }
+   else
+   {
+      if( SCIPsolIsOriginal(sol) )
+         objvalue = SCIPsolGetOrigObj(sol);
+      else
+         objvalue = SCIPprobExternObjval(scip->transprob, scip->origprob, scip->set, SCIPsolGetObj(sol, scip->set, scip->transprob, scip->origprob));
+
+      SCIPprintReal(scip, file, objvalue, 20, 15);
+      SCIPmessageFPrintInfo(scip->messagehdlr, file, "\n");
+   }
 
    SCIP_CALL( SCIPsolPrint(sol, scip->set, scip->messagehdlr, scip->stat, scip->origprob, scip->transprob, file, printzeros) );
 
@@ -36237,8 +36245,8 @@ static
 SCIP_RETCODE readSolFile(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< name of the input file */
-   SCIP_SOL**            sol,                /**< solution pointer */
-   SCIP_Bool*            partial,            /**< pointer to store if the solution is partial */
+   SCIP_SOL*             sol,                /**< solution pointer */
+   SCIP_Bool*            partial,            /**< pointer to store if the solution is partial (or NULL, if not needed) */
    SCIP_Bool*            error               /**< pointer store if an error occured */
    )
 {
@@ -36249,7 +36257,6 @@ SCIP_RETCODE readSolFile(
 
    assert(scip != NULL);
    assert(sol != NULL);
-   assert(*sol != NULL);
    assert(error != NULL);
 
    /* open input file */
@@ -36262,7 +36269,7 @@ SCIP_RETCODE readSolFile(
    }
 
    *error = FALSE;
-   localpartial = FALSE;
+   localpartial = SCIPsolIsPartial(sol);
 
    unknownvariablemessage = FALSE;
    lineno = 0;
@@ -36346,7 +36353,7 @@ SCIP_RETCODE readSolFile(
       {
          SCIP_RETCODE retcode;
 
-         retcode = SCIPsetSolVal(scip, *sol, var, value);
+         retcode = SCIPsetSolVal(scip, sol, var, value);
 
          if( retcode == SCIP_INVALIDDATA )
          {
@@ -36371,9 +36378,14 @@ SCIP_RETCODE readSolFile(
    /* close input file */
    SCIPfclose(file);
 
-   if( localpartial )
+   if( localpartial && !SCIPsolIsPartial(sol) )
    {
-      SCIP_CALL( SCIPmarkSolPartial(scip, *sol) );
+      if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
+      {
+         SCIP_CALL( SCIPsolMarkPartial(sol, scip->set, scip->stat, scip->origprob->vars, scip->origprob->nvars) );
+      }
+      else
+         *error = TRUE;
    }
 
    if( partial != NULL )
@@ -36387,7 +36399,7 @@ static
 SCIP_RETCODE readXmlSolFile(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< name of the input file */
-   SCIP_SOL**            sol,                /**< solution pointer */
+   SCIP_SOL*             sol,                /**< solution pointer */
    SCIP_Bool*            partial,            /**< pointer to store if the solution is partial (or NULL if not needed) */
    SCIP_Bool*            error               /**< pointer store if an error occured */
    )
@@ -36399,6 +36411,10 @@ SCIP_RETCODE readXmlSolFile(
    const XML_NODE* varnode;
    const char* tag;
 
+   assert(scip != NULL);
+   assert(sol != NULL);
+   assert(error != NULL);
+
    /* read xml file */
    start = xmlProcess(filename);
 
@@ -36409,7 +36425,7 @@ SCIP_RETCODE readXmlSolFile(
    }
 
    *error = FALSE;
-   localpartial = FALSE;
+   localpartial = SCIPsolIsPartial(sol);
 
    /* find variable sections */
    tag = "variables";
@@ -36496,7 +36512,7 @@ SCIP_RETCODE readXmlSolFile(
       else
       {
          SCIP_RETCODE retcode;
-         retcode = SCIPsetSolVal(scip, *sol, var, value);
+         retcode = SCIPsetSolVal(scip, sol, var, value);
 
          if( retcode == SCIP_INVALIDDATA )
          {
@@ -36521,9 +36537,14 @@ SCIP_RETCODE readXmlSolFile(
    /* free xml data */
    xmlFreeNode(start);
 
-   if( localpartial )
+   if( localpartial && !SCIPsolIsPartial(sol)  )
    {
-      SCIP_CALL( SCIPmarkSolPartial(scip, *sol) );
+      if( SCIPgetStage(scip) == SCIP_STAGE_PROBLEM )
+      {
+         SCIP_CALL( SCIPsolMarkPartial(sol, scip->set, scip->stat, scip->origprob->vars, scip->origprob->nvars) );
+      }
+      else
+         *error = TRUE;
    }
 
    if( partial != NULL )
@@ -36550,7 +36571,7 @@ SCIP_RETCODE readXmlSolFile(
 SCIP_RETCODE SCIPreadSolFile(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< name of the input file */
-   SCIP_SOL**            sol,                /**< solution pointer */
+   SCIP_SOL*             sol,                /**< solution pointer */
    SCIP_Bool             xml,                /**< true, iff the given solution in written in XML */
    SCIP_Bool*            partial,            /**< pointer to store if the solution is partial */
    SCIP_Bool*            error               /**< pointer store if an error occured */
@@ -36978,41 +36999,6 @@ SCIP_RETCODE SCIPtryCurrentSol(
    return SCIP_OKAY;
 }
 
-/** marks a solution as partial
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_SOLVING
- */
-SCIP_RETCODE SCIPmarkSolPartial(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< primal CIP solution */
-   )
-{
-   assert(scip != NULL);
-   assert(sol != NULL);
-
-   SCIP_CALL( checkStage(scip, "SCIPmarkSolPartial", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
-
-   switch ( scip->set->stage) {
-      case SCIP_STAGE_PROBLEM:
-         SCIP_CALL( SCIPsolMarkPartial(sol, scip->set, scip->stat, scip->origprob->vars, scip->origprob->nvars) );
-         break;
-      case SCIP_STAGE_PRESOLVING:
-      case SCIP_STAGE_SOLVING:
-         SCIP_CALL( SCIPsolMarkPartial(sol, scip->set, scip->stat, scip->transprob->vars, scip->transprob->nvars) );
-         break;
-      default:
-         break;
-   }
-
-   return SCIP_OKAY;
-}
-
 /** returns all partial solutions
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
@@ -37031,7 +37017,7 @@ SCIP_RETCODE SCIPgetPartialSols(
    assert(scip != NULL);
    assert(partialsols != NULL);
 
-   SCIP_CALL( checkStage(scip, "SCIPgetPartialSols", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPartialSols", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    SCIP_CALL( SCIPprimalGetPartialSols(scip->origprimal, partialsols, partialsolssize, npartialsols) );
 

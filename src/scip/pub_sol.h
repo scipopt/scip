@@ -50,7 +50,7 @@ SCIP_Bool SCIPsolIsOriginal(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
-/** returns whether the given solution is defined on original variables */
+/** returns whether the given solution is partial */
 EXTERN
 SCIP_Bool SCIPsolIsPartial(
    SCIP_SOL*             sol                 /**< primal CIP solution */

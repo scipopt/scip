@@ -200,7 +200,7 @@ SCIP_RETCODE createSubproblem(
       idx = SCIPvarGetProbindex(vars[i]);
       assert(idx >= 0);
 
-      /* skip varibales where we already found some bound tightenings */
+      /* skip variables where we already found some bound tightenings */
       if( tightend[idx] == FALSE )
       {
          SCIP_CONS* conspos;
@@ -212,7 +212,7 @@ SCIP_RETCODE createSubproblem(
          char varnamepos[SCIP_MAXSTRLEN];
          char varnameneg[SCIP_MAXSTRLEN];
 
-         /* create two new varibales */
+         /* create two new variables */
          (void)SCIPsnprintf(varnamepos, SCIP_MAXSTRLEN, "eps_%s_pos", SCIPvarGetName(subvars[i]));
          (void)SCIPsnprintf(varnameneg, SCIP_MAXSTRLEN, "eps_%s_neq", SCIPvarGetName(subvars[i]));
 
@@ -239,7 +239,7 @@ SCIP_RETCODE createSubproblem(
          SCIP_CALL( SCIPaddCons(subscip, consneg) );
          SCIP_CALL( SCIPreleaseCons(subscip, &consneg) );
 
-         /* release the varibales */
+         /* release the variables */
          SCIP_CALL( SCIPreleaseVar(subscip, &epspos) );
          SCIP_CALL( SCIPreleaseVar(subscip, &epsneg) );
       }
@@ -303,7 +303,7 @@ SCIP_RETCODE createNewSol(
    return SCIP_OKAY;
 }
 
-/** perform a probing bound change or fixes the varibale */
+/** perform a probing bound change or fixes the variable */
 static
 SCIP_RETCODE chgProbingBound(
    SCIP*                 scip,               /**< original SCIP data structure */
@@ -347,14 +347,14 @@ SCIP_RETCODE chgProbingBound(
    return SCIP_OKAY;
 }
 
-/** tries varibales bound changes guided by the given solution */
+/** tries variables bound changes guided by the given solution */
 static
 SCIP_RETCODE tightenVariables(
    SCIP*                 scip,               /**< original SCIP data structure */
-   SCIP_VAR**            vars,               /**< problem varibales */
+   SCIP_VAR**            vars,               /**< problem variables */
    int                   nvars,              /**< number of problem variables */
    SCIP_SOL*             sol,                /**< solution to guide the bound changes */
-   SCIP_Bool**           tightend            /**< array to store if varibale bound could be tightened */
+   SCIP_Bool**           tightend            /**< array to store if variable bound could be tightened */
    )
 {
    SCIP_Bool cutoff;
@@ -385,7 +385,7 @@ SCIP_RETCODE tightenVariables(
 
       solval = SCIPgetSolVal(scip, sol, vars[v]);
 
-      /* skip unknows varibales */
+      /* skip unknows variables */
       if( solval == SCIP_UNKNOWN )
          continue;
       assert(!SCIPisInfinity(scip, solval) && !SCIPisInfinity(scip, -solval));
@@ -393,14 +393,14 @@ SCIP_RETCODE tightenVariables(
       cutoff = FALSE;
       ndomreds = 0;
 
-      /* varibale is binary or integer */
+      /* variable is binary or integer */
       if( SCIPvarIsIntegral(vars[v]) )
       {
          /* the solution value is integral, try to fix them */
          if( SCIPisIntegral(scip, solval) )
          {
             /* open a new probing node */
-            if( SCIPgetProbingDepth(scip) < SCIPgetDepthLimit(scip)-10 )
+            if( SCIPgetProbingDepth(scip) < SCIPgetDepthLimit(scip) - 10 )
             {
                SCIP_CALL( SCIPnewProbingNode(scip) );
             }
@@ -647,9 +647,7 @@ SCIP_RETCODE applyCompletesol(
    nvars = SCIPgetNVars(scip);
 
    /* get buffer memory and initialize it to FALSE */
-   SCIP_CALL( SCIPallocBufferArray(scip, &tightend, nvars) );
-   for( i = 0; i < nvars; i++ )
-      tightend[i] = FALSE;
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &tightend, nvars) );
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
@@ -759,7 +757,7 @@ SCIP_RETCODE applyCompletesol(
 #ifndef NDEBUG
       SCIP_CALL( retcode );
 #endif
-      SCIPwarningMessage(scip, "Error while solving subproblem in Completesol heuristic; sub-SCIP terminated with code <%d>\n", retcode);
+      SCIPwarningMessage(scip, "Error while solving subproblem in completesol heuristic; sub-SCIP terminated with code <%d>\n", retcode);
    }
 
    /* print solving statistics of subproblem if we are in SCIP's debug mode */

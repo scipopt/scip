@@ -63,7 +63,7 @@ SCIP_RETCODE readMst(
    /* create zero solution */
    SCIP_CALL( SCIPcreatePartialSol(scip, &sol, NULL) );
 
-   SCIP_CALL( SCIPreadSolFile(scip, fname, &sol, xml, NULL, &error) );
+   SCIP_CALL( SCIPreadSolFile(scip, fname, sol, xml, NULL, &error) );
 
    if( !error )
    {
@@ -73,8 +73,8 @@ SCIP_RETCODE readMst(
       SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
 
       /* display result */
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal partial solution from solution file <%s> was %s\n",
-         fname, stored ? "accepted as candidate, will be checked when solving starts" : "rejected - at least one variable violates the bounds.");
+      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "partial primal solution from solution file <%s> was accepted as candidate, will be completed and checked when solving starts\n",
+         fname);
 
       return SCIP_OKAY;
    }
@@ -130,13 +130,10 @@ SCIP_DECL_READERREAD(readerReadMst)
       return SCIP_READERROR;
    }
 
-   if( SCIPgetStage(scip) == SCIP_STAGE_SOLVED )
+   if( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM )
    {
-      SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL,
-         "primal partial solution from solution file <%s> was ignored - problem is already solved to optimality\n",
-         filename);
-      *result = SCIP_SUCCESS;
-      return SCIP_OKAY;
+      SCIPerrorMessage("reading of partial solution file is only possible before the solving process is started\n");
+      return SCIP_READERROR;
    }
 
    /* open input file in order to determine type */

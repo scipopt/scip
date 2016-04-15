@@ -16957,7 +16957,7 @@ EXTERN
 SCIP_RETCODE SCIPreadSolFile(
    SCIP*                 scip,               /**< SCIP data structure */
    const char*           filename,           /**< name of the input file */
-   SCIP_SOL**            sol,                /**< solution pointer */
+   SCIP_SOL*             sol,                /**< solution pointer */
    SCIP_Bool             xml,                /**< true, iff the given solution in written in XML */
    SCIP_Bool*            partial,            /**< pointer to store if the solution is partial */
    SCIP_Bool*            error               /**< pointer store if an error occured */
@@ -17096,22 +17096,6 @@ SCIP_RETCODE SCIPtryCurrentSol(
    SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
    SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
-   );
-
-/** marks a solution as partial
- *
- *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
- *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
- *
- *  @pre This method can be called if SCIP is in one of the following stages:
- *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_PRESOLVING
- *       - \ref SCIP_STAGE_SOLVING
- */
-EXTERN
-SCIP_RETCODE SCIPmarkSolPartial(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
 /** returns all partial solutions

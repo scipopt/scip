@@ -66,7 +66,7 @@ SCIP_RETCODE readSol(
    /* create zero solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
 
-   SCIP_CALL( SCIPreadSolFile(scip, fname, &sol, xml, &partial, &error) );
+   SCIP_CALL( SCIPreadSolFile(scip, fname, sol, xml, &partial, &error) );
 
    if( !error )
    {
@@ -74,6 +74,7 @@ SCIP_RETCODE readSol(
       if( SCIPisTransformed(scip) )
       {
          assert(!partial);
+         assert(!SCIPsolIsPartial(sol));
 
          SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, TRUE, TRUE, TRUE, &stored) );
 
@@ -87,8 +88,8 @@ SCIP_RETCODE readSol(
          SCIP_CALL( SCIPaddSolFree(scip, &sol, &stored) );
 
          /* display result */
-         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "primal%s solution from solution file <%s> was %s\n",
-            partial ? " partial" : "", fname, stored ? "accepted as candidate, will be checked when solving starts" : "rejected - solution objective too poor");
+         SCIPverbMessage(scip, SCIP_VERBLEVEL_NORMAL, NULL, "%sprimal solution from solution file <%s> was %s\n",
+            partial ? "partial " : "", fname, stored ? "accepted as candidate, will be checked when solving starts" : "rejected - solution objective too poor");
       }
 
       return SCIP_OKAY;
