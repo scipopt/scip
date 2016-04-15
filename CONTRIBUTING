@@ -1,24 +1,17 @@
-ZIB DEVELOPER'S CERTIFICATE OF ORIGIN
-Version July 4, 2014
+# Contributing
+Before making a contribution to SCIP, you'll need to agree to the terms outlined in the [Contributor License Agreement](CLA)
 
-By making a contribution to this project, I certify that:
+## Workflow
+Please see the [wiki](https://wiki.zib.de/confluence/display/SCIPOPTSUITE/Development+Workflow) for information about our contribution workflow with git. If you don't have access to this page, request it from @bzfhende or @bzfmilte.
 
-(a) The contribution was created in whole or in part by me and I
-    have the right to submit it under the ZIB Academic License; or
+## Bug Reports
+Use the following template in the Issue description to ensure consistency across bug reports.
 
-(b) The contribution is based upon previous work that, to the best
-    of my knowledge, is covered under an appropriate open source
-    license and I have the right under that license to submit that
-    work with modifications, whether created in whole or in part
-    by me, under the ZIB Academic License; or
+```
+commit: [<SHA>][/integer/scip/commit/<SHA>]
+```
 
-(c) The contribution was provided directly to me by some other
-    person who certified (a), (b) or (c) and I have not modified
-    it.
+Ensure to always apply the ~bug label when using the above template.
 
-(d) I understand and agree that this project and the contribution
-    are public and that a record of the contribution (including all
-    personal information I submit with it, including my sign-off) is
-    maintained indefinitely and may be redistributed by ZIB under
-    any license of its choice, especially, but not only, the ZIB
-    Academic License.
+
+## Style
