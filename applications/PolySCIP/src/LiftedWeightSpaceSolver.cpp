@@ -146,6 +146,10 @@ SCIP_RETCODE LiftedWeightSpaceSolver::loadWeight(bool initPhase) {
     weight_ = initialWeight_;
   else
     weight_ = skeleton_->nextWeight(); 
+
+  std::cout << "loading weight: ";
+  for (auto i=weight_->begin(); i!=weight_->end(); ++i)
+    std::cout << *i << " ";
   if( SCIPisTransformed(scip_) )
     SCIP_CALL( SCIPfreeTransform(scip_) );
   
@@ -246,8 +250,7 @@ SCIP_RETCODE LiftedWeightSpaceSolver::initialise(bool beVerbose) {
   }
 
   if (foundNewOptimum_ && nObjs_ > 1) {
-    skeleton_ = new Skeleton(scip_, nObjs_);
-    skeleton_->init(objCounter, cost_vector_, cost_rays_);
+    skeleton_ = new Skeleton(nObjs_, cost_vector_, cost_rays_);
     solving_stage_ = MULTIOPT_SOLVING;
   }
   else {
@@ -367,6 +370,7 @@ SCIP_RETCODE LiftedWeightSpaceSolver::evalSolution() {
     assert( cost_vector_ != NULL);
     assert( !hasInfiniteComponent(cost_vector_) );
     foundNewOptimum_ = skeleton_->isExtremal(cost_vector_);
+    
     if (foundNewOptimum_) 
       addSolAndObjValsAndWeight();
     else {
@@ -383,7 +387,12 @@ SCIP_RETCODE LiftedWeightSpaceSolver::evalSolution() {
 	      (mip_status_ == SCIP_STATUS_INFORUNBD || mip_status_ == SCIP_STATUS_UNBOUNDED));
       SCIP_CALL( SCIPsetPresolving(scip_, SCIP_PARAMSETTING_DEFAULT, TRUE) );
     }
+    std::cout << "Ray found\n";
     cost_vector_ = setPrimalRayAndGetCostVector();
+    std::cout << "corresponding weight: ";
+    for (auto i=weight_->begin(); i!=weight_->end(); ++i)
+      std::cout << *i << " ";
+    std::cout << "\n";
     primal_ray_weights_.push_back(new vector<SCIP_Real>(*weight_));
     assert( cost_vector_ != NULL);
     cost_rays_.push_back(cost_vector_);

@@ -176,16 +176,16 @@ void  WeightSpaceVertex::calculate_weight(
    }
 
    SCIP_Real factor_adj = lhs_obs / (lhs_obs - lhs_adj);
+   if (new_facet->back() == 0) //facet belongs to ray
+     factor_adj += 0.0001; //avoid unbounded solution for new WeightSpaceVertex
    SCIP_Real factor_obs = 1. - factor_adj;
-
 
    weight_ = new std::vector<SCIP_Real>(nobjs_);
    weighted_objective_value_ = factor_obs * wov_obs + factor_adj * wov_adj;
 
    for( unsigned int i = 0; i < nobjs_; ++i )
-   {
      (*weight_)[i] += factor_obs * (*weight_obs)[i] + factor_adj * (*weight_adj)[i];
-   }
+   
 
 }
 
@@ -217,6 +217,7 @@ void WeightSpaceVertex::updateFacet(const std::vector<SCIP_Real>* facet)
        
        weighted_objective_value_ = std::inner_product(weight_->begin(), weight_->end(),
 						      facet->begin(), 0.0);
+       
        return;
      }
    }
@@ -224,7 +225,7 @@ void WeightSpaceVertex::updateFacet(const std::vector<SCIP_Real>* facet)
 
 /** writes weight space vertex to an output stream */
 void WeightSpaceVertex::print(std::ostream& os) const {
-  os << "incident facets:\n" << std::endl;
+  os << "incident facets: " << std::endl;
   std::ostream_iterator<SCIP_Real> os_it(os, " ");
   for (auto it=incident_facets_.begin(); it!=incident_facets_.end(); ++it) {
     os << "[ ";

@@ -123,7 +123,9 @@ int main(int argc, char* argv[]) {
 
       if (solver.hasUncheckedWeight())
 	cout << "\n#Weight space phase:\n";
-      while (solver.hasUncheckedWeight()) {
+      int iteration = 0;
+      while (solver.hasUncheckedWeight() && iteration < 10) {
+	++iteration;
     	SCIP_CALL( solver.solveUncheckedWeight(beVerbose) );
 	if (solver.foundNewUnbounded()) 
 	  solver.printRayInfo(cout, true, true);

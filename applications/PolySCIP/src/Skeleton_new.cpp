@@ -27,39 +27,136 @@
 
 #include <algorithm> // std::copy
 #include <iosfwd>
+#include <numeric>  // std::inner_product
 #include <set>
 #include <vector>
 
 using std::vector;
+using std::set;
+
+
 
 /** constructor */
-Skeleton::Skeleton(
-		   SCIP*                 scip,                /**< SCIP solver */
-		   unsigned              nObjs 
-   )
-   : scip_(scip),
-     graph_(),
+Skeleton::Skeleton(unsigned nObjs, 
+		   vector<SCIP_Real> nondom_point, 
+		   vector< vector<SCIP_Real>* >& cost_rays,
+		   bool nondom_point_from_unit_weight,
+		   unsigned unit_weight_index)
+  :  graph_(),
      nObjs_(nObjs),
      vertex_map_(graph_),
-     last_returned_node_(lemon::INVALID),
+     last_considered_node_(lemon::INVALID),
      n_new_nodes_(0),
-     n_proc_nodes_(0),
-     new_facet_(NULL),
-     new_vertices_(NULL),
-     unscanned_nodes_(NULL),
-     obsolete_nodes_(NULL),
-     cut_edges_(NULL)
+     n_proc_nodes_(0)
 {
+  assert (nObjs_ == nondom_point.size());
+  init(nondom_point, cost_rays, nondom_point_from_unit_weight, unit_weight_index);
 }
 
 /** destructor */
 Skeleton::~Skeleton() {
-  for (auto it=vertices_.begin(); it!=vertices_.end(); ++it)
-    delete *it;
+  for (const WeightSpaceVertex* v : vertices_)
+    delete v;
 
-  for (auto it=facets_.begin(); it!=facets_.end(); ++it)
-    delete *it;
+  for (const Skeleton::Facet* f : facets_)
+    delete f->vals;
 }
+
+/** create all facets defining the inital weight space polyhedron */
+WeightSpaceVertex const * const Skeleton::createInitialFacetsAndWeightSpaceVerts(
+     const vector<SCIP_Real>* nondom_point,	   /**< cost vector of first solution */
+     bool nondom_point_from_unit_weight,
+     unsigned unit_weight_index
+ ) {
+  
+  /* create weight space boundary facets */
+  for (unsigned i=0; i<nObjs_; ++i) {
+    auto w_coeffs = new vector<SCIP_Real>(nObjs_, 0.);
+    (*w_coeffs)[i] = 1.;
+    facets_.push_back(new Skeleton::Facet(w_coeffs,0.));
+  }
+  /* create first nondom point based facet */
+  auto w_coeffs = new vector<SCIP_Real>(nondom_point->begin(),nondom_point->end());
+  facets_.push_back(new Skeleton::Facet(w_coeffs,1.));
+
+  /* create initial weight space vertices */
+  unsigned current_index = 0;
+  while (current_index != nObjs_;) {
+    vector<unsigned> facet_inds;
+    for (unsigned i=0; i<facets_.size(); ++i) {
+      if (i != current_index)
+	facet_inds.push_back(i);
+    }
+    auto weight = new vector<SCIP_Real>(nObjs_,0.);
+    (*weight)[current_index] = 1.;
+    vertices_.push_back(new WeightSpaceVertex(facet_inds, weight, nondom_point[current_index]));
+    ++current_index;
+  }
+  
+  /* while loop starts from 0 increasing current_index by 1; that
+     means index of weight space vertex with weight corresponding to
+     unit_weight_index in vertices_ coincides with
+     unit_weight_index; */
+  return nondom_point_from_unit_weight ? vertices_[unit_weight_index] : nullptr;
+}
+
+void Skeleton::createInitialWeightSpacePolyhedron(
+  const vector<SCIP_Real>* nondom_point,
+  const vector<const vector<SCIP_Real>* >& cost_rays,
+  WeightSpaceVertex const * const unit_weight_vertex
+ ) {
+  /* create nodes of 1-skeleton graph */
+  for (WeightSpaceVertex* v : vertices_) {
+    assert (v != nullptr);
+    lemon::ListGraph::Node new_node = graph_.addNode();
+    nodes_to_verts_[new_node] = v;
+    verts_to_nodes_.insert( {v,new_node} );
+    if (v != unit_weight_vertex)
+      untested_nodes_.insert(new_node);
+  }
+  /* create edges of 1-skeleton graph */
+  for (unsigned i=0; i<vertices_.size(); ++i) {
+    for (unsigned j=i+1; j<vertices_.size(); ++j) {
+      
+    }
+  }
+}
+
+
+/** initialize the polyhedron with the first solution
+ * by creating a node and vertex for every corner of the weight space and a complete graph between them */
+void Skeleton::init(
+   const std::vector<SCIP_Real>* nondom_point,  /**< cost vector of first solution */
+   const std::vector< const std::vector<SCIP_Real>* >& cost_rays,  /**< unbounded cost rays */
+   bool nondom_point_from_unit_weight,
+   unsigned unit_weight_index
+ ) {
+  WeightSpaceVertex* unit_weight_v = 
+    createInitialFacetsAndWeightSpaceVerts(nondom_point,
+					   nondom_point_from_unit_weight,
+					   unit_weight_index);
+  createInitalWeightSpacePolyhedron(nondom_point, cost_rays);
+  
+  if (cost_rays.size() != 0)
+    updateWeightSpace(cost_rays);
+
+   vector<WeightSpaceVertex*> new_vertices;
+   for (unsigned i=0; i<nObjs_; ++i) {
+     vertex = createCorner(i);
+     lemon::ListGraph::Node node = (i == unitWeightPosition) ? addNode(vertex,false) : addNode(vertex);
+     for (auto it = new_vertices.begin(); it!=new_vertices.end(); ++it)  
+       graph_.addEdge(node, (**it).getNode());
+     new_vertices.push_back(vertex);
+     vertices_.push_back(vertex);
+     std::cout << "Weight Space Vertex\n";
+     vertex->print(std::cout);
+   }
+   if (cost_rays.size() > 0)
+     addPrimalRays(cost_rays);
+   
+   assert(graphIsValid());
+}
+
 
 
 
@@ -81,6 +178,8 @@ void Skeleton::init(
        graph_.addEdge(node, (**it).getNode());
      new_vertices.push_back(vertex);
      vertices_.push_back(vertex);
+     std::cout << "Weight Space Vertex\n";
+     vertex->print(std::cout);
    }
    if (cost_rays.size() > 0)
      addPrimalRays(cost_rays);
@@ -132,12 +231,38 @@ const std::vector<SCIP_Real>* Skeleton::nextWeight() {
   return (vertex_map_[last_returned_node_]->getWeight());
 }
 
-/** returns true and updates the polyhedron if cost vector is a new nondominated point.
- * It is a nondominated point if and only if it has a better weighted objective value
- * than all previous nondominated points with respect to the weight it optimizes */
-bool Skeleton::isExtremal(
-   const std::vector<SCIP_Real>*        cost_vector    /**< potential new nondominated point */
-   ) {
+/** returns true if point is a new non-dominated point; otherwise false
+ * It is a new non-dominated point if it has a better weighted
+ * objective value than the last considered vertex with
+ * respect to the weight of the last considered vertex */
+bool Skeleton::isNewNondomPoint(
+    const std::vector<SCIP_Real>* facet,       /**< potential new nondominated point */
+    double comp_val                            /**< value used for checking inequality */
+				) {
+  WeightSpaceVertex* vert = vertex_map_[last_considered_node_];
+  vector<SCIP_Real>* weight = vert->getWeight();
+  assert (facet->size()-1 == weight->size());
+  SCIP_Real weightedObjVal = vert->getWeightedObjVal();
+
+  /* check whether weight^T point - weightObjVal*point[last_index] < comparator */
+  SCIP_Real val = std::inner_product(weight->begin(),
+				     weight->end(),
+				     facet->begin(),
+				     -weightedObjVal*point->back());
+  return val < comp_val;
+}   
+
+
+/** updates weight space polyhedron if point is new non-dominated point */
+void Skeleton::updateWeightSpacePolyhedron(
+   const std::vector<SCIP_Real>* point    /**< potential new nondominated point */
+					   ) {
+  
+  if (isNewNondomPoint(point)) {
+    
+  }
+  
+
   /* graph must be initialized */
   assert( lemon::ListGraph::NodeIt(graph_) != lemon::INVALID );
   const std::vector<SCIP_Real>* facet = createFacetFromCost(cost_vector);
@@ -336,6 +461,9 @@ void Skeleton::updateGraph() {
   createNewEdges();
   for (std::set<lemon::ListGraph::Node>::iterator it=obsolete_nodes_->begin();
        it!=obsolete_nodes_->end(); ++it) {
+    std::cout << "deleting vertex : ";
+    vertex_map_[*it]->print(std::cout);
+    std::cout << "end delete\n";
     graph_.erase(*it);
   }
   delete new_vertices_;
@@ -347,7 +475,10 @@ void Skeleton::createNewVertices() {
   
   for (std::vector<lemon::ListGraph::Edge>::iterator it=cut_edges_->begin();
        it!=cut_edges_->end(); ++it) {
+    std::cout << "making intermediate vertex: ";
     makeIntermediateVertex(*it);
+    std::cout << "done making\n";
+    
   }
 
   for (std::set<lemon::ListGraph::Node>::iterator it=obsolete_nodes_->begin();
