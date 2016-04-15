@@ -1524,7 +1524,7 @@ SCIP_DECL_CONSPROP(consPropComponents)
       {
          SCIP_CALL( solveProblem(problem, result) );
       }
-   } while( *result == SCIP_DELAYNODE && SCIPgetDepth(scip) == 0 );
+   } while( *result == SCIP_DELAYNODE && SCIPgetDepth(scip) == 0 && !SCIPisStopped(scip) );
 
    return SCIP_OKAY;
 }
