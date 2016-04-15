@@ -145,19 +145,10 @@ SCIP_RETCODE consdataCheckSuperindicator(
 {
    SCIP_Real binval;
 
-   assert(sol != NULL);
-
    /* not to be called if infeasibility is already detected */
    assert(*result == SCIP_FEASIBLE || *result == SCIP_DIDNOTRUN);
 
    binval = SCIPgetSolVal(scip, sol, consdata->binvar);
-
-   /* we cannot check variables with unknown solution values in partial solutions */
-   if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && binval == SCIP_UNKNOWN )
-   {
-      *result = SCIP_FEASIBLE;
-      return SCIP_OKAY;
-   }
 
    /* check integrality of binary variable */
    if( checkintegrality && !SCIPisIntegral(scip, binval) )

@@ -783,15 +783,6 @@ SCIP_RETCODE computeViolation(
    xyvals[1] = SCIPgetSolVal(scip, sol, y);
    zval = SCIPgetSolVal(scip, sol, consdata->z);
 
-   if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL
-    && (xyvals[0] == SCIP_UNKNOWN || xyvals[1] == SCIP_UNKNOWN || zval == SCIP_UNKNOWN) )
-   {
-      consdata->activity = SCIP_UNKNOWN;
-      consdata->lhsviol = SCIP_UNKNOWN;
-      consdata->rhsviol = SCIP_UNKNOWN;
-      return SCIP_OKAY;
-   }
-
    /* @todo proper handling of variables at infinity
     * for now, just say infeasible and keep fingers crossed
     */
@@ -6928,12 +6919,6 @@ SCIP_DECL_CONSCHECK(consCheckBivariate)
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
-
-      if( consdata->activity == SCIP_UNKNOWN || consdata->lhsviol == SCIP_UNKNOWN || consdata->rhsviol == SCIP_UNKNOWN )
-      {
-         *result = SCIP_FEASIBLE;
-         break;
-      }
 
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {

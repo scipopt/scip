@@ -806,11 +806,6 @@ SCIP_RETCODE computeViolation(
       consdata->violation = consdata->rhscoeff < 0.0 ? 0.0 : SCIPinfinity(scip);
       return SCIP_OKAY;
    }
-   if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && rhsval == SCIP_UNKNOWN )
-   {
-      consdata->violation = SCIP_UNKNOWN;
-      return SCIP_OKAY;
-   }
    if( sol == NULL )
    {
       SCIP_Real lb = SCIPvarGetLbLocal(consdata->rhsvar);
@@ -899,16 +894,10 @@ SCIP_RETCODE computeViolations(
    for( c = 0; c < nconss; ++c )
    {
       SCIP_CALL( computeViolation(scip, conshdlr, conss[c], sol) );  /*lint !e613*/
-
       if( maxviolcons != NULL )
       {
          consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
          assert(consdata != NULL);
-
-         /* we cannot check constraints that contain variables with unknown solution values */
-         if( consdata->violation == SCIP_UNKNOWN )
-            continue;
-
          if( consdata->violation > maxviol && SCIPisGT(scip, consdata->violation, SCIPfeastol(scip)) )
          {
             maxviol      = consdata->violation;
@@ -4595,10 +4584,6 @@ SCIP_DECL_CONSCHECK(consCheckSOC)
 
       consdata = SCIPconsGetData(conss[c]);  /*lint !e613*/
       assert(consdata != NULL);
-
-      /* we cannot check constraints that contain variables with unknown solution value */
-      if( consdata->violation == SCIP_UNKNOWN )
-         continue;
 
       /* if feasible, just continue */
       if( !SCIPisGT(scip, consdata->violation, SCIPfeastol(scip)) )

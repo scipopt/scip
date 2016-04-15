@@ -3690,16 +3690,6 @@ SCIP_RETCODE computeViolation(
    {
       var = consdata->linvars[i];
       varval = SCIPgetSolVal(scip, sol, var);
-
-      /* we cannot chekc constraints that contain variables with unknown solution value in partial solutions */
-      if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && varval == SCIP_UNKNOWN )
-      {
-         consdata->activity = SCIP_UNKNOWN;
-         consdata->lhsviol = SCIP_UNKNOWN;
-         consdata->rhsviol = SCIP_UNKNOWN;
-         return SCIP_OKAY;
-      }
-
       if( SCIPisInfinity(scip, REALABS(varval)) )
       {
          consdata->activity = SCIPinfinity(scip);
@@ -3784,15 +3774,6 @@ SCIP_RETCODE computeViolation(
          SCIPfreeBufferArray(scip, &x);
       }
 
-      /* we cannot check constraints that contain variables with unknown solution value in partial solutions */
-      if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && val == SCIP_UNKNOWN )
-      {
-         consdata->activity = SCIP_UNKNOWN;
-         consdata->lhsviol = SCIP_UNKNOWN;
-         consdata->rhsviol = SCIP_UNKNOWN;
-         return SCIP_OKAY;
-      }
-
       if( SCIPisInfinity(scip, REALABS(val)) || !SCIPisFinite(val) )
       {
          consdata->activity = SCIPinfinity(scip);
@@ -3812,8 +3793,7 @@ SCIP_RETCODE computeViolation(
       assert(SCIPgetStage(scip) >= SCIP_STAGE_INITPRESOLVE && SCIPgetStage(scip) <= SCIP_STAGE_EXITPRESOLVE);
 
       val = SCIPexprgraphGetNodeVal(consdata->exprgraphnode);
-      assert(val != SCIP_INVALID); /*lint !e777*/
-      assert(val != SCIP_UNKNOWN); /*lint !e777*/
+      assert(val != SCIP_INVALID);  /*lint !e777*/
 
       if( !SCIPisFinite(val) || SCIPisInfinity(scip, REALABS(val)) )
       {

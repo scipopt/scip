@@ -1991,14 +1991,6 @@ SCIP_RETCODE computeViolation(
    xval = SCIPgetSolVal(scip, sol, consdata->x);
    zval = SCIPgetSolVal(scip, sol, consdata->z);
 
-   if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && (xval == SCIP_UNKNOWN || zval == SCIP_UNKNOWN) )
-   {
-      consdata->lhsviol = SCIP_UNKNOWN;
-      consdata->rhsviol = SCIP_UNKNOWN;
-      *viol = SCIP_UNKNOWN;
-      return SCIP_OKAY;
-   }
-
    if( SCIPisInfinity(scip, REALABS(xval)) )
    {
       consdata->lhsviol = (SCIPisInfinity(scip, -consdata->lhs) ? 0.0 : SCIPinfinity(scip));
@@ -6618,7 +6610,6 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSDATA*     consdata;
    SCIP_Bool          dolinfeasshift;
-   SCIP_Bool          hasunknownval;
    SCIP_Real          maxviol;
    SCIP_Real          viol;
    int                c;
@@ -6634,7 +6625,6 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
 
    maxviol = 0.0;
    viol = SCIP_INVALID;
-   hasunknownval = FALSE;
 
    dolinfeasshift = conshdlrdata->linfeasshift && (conshdlrdata->trysolheur != NULL) && SCIPgetStage(scip) > SCIP_STAGE_PROBLEM && SCIPgetStage(scip) < SCIP_STAGE_SOLVED;
    for( c = 0; c < nconss; ++c )
@@ -6644,12 +6634,6 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
 
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
-
-      if( consdata->lhsviol == SCIP_UNKNOWN || consdata->rhsviol == SCIP_UNKNOWN || viol == SCIP_UNKNOWN )
-      {
-         hasunknownval = TRUE;
-         continue;
-      }
 
       if( SCIPisGT(scip, consdata->lhsviol, SCIPfeastol(scip)) || SCIPisGT(scip, consdata->rhsviol, SCIPfeastol(scip)) )
       {
@@ -6670,12 +6654,12 @@ SCIP_DECL_CONSCHECK(consCheckAbspower)
       }
    }
 
-   if( *result == SCIP_INFEASIBLE && dolinfeasshift && !hasunknownval )
+   if( *result == SCIP_INFEASIBLE && dolinfeasshift )
    {
       SCIP_CALL( proposeFeasibleSolution(scip, conshdlr, conss, nconss, sol) );
    }
 
-   if( *result == SCIP_INFEASIBLE && conshdlrdata->subnlpheur != NULL && sol != NULL && !hasunknownval )
+   if( *result == SCIP_INFEASIBLE && conshdlrdata->subnlpheur != NULL && sol != NULL )
    {
       SCIP_CALL( SCIPupdateStartpointHeurSubNlp(scip, conshdlrdata->subnlpheur, sol, maxviol) );
    }

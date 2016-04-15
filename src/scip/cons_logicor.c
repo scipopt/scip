@@ -1535,22 +1535,12 @@ SCIP_RETCODE checkCons(
       assert(SCIPvarIsBinary(vars[v]));
 
       solval = SCIPgetSolVal(scip, sol, vars[v]);
-
-      /* we cannot check constraints contain variables with unknown solution status in a partial solution */
-      if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
-      {
-         *violated = FALSE;
-         goto TERMINATE;
-      }
-
       assert(SCIPisFeasGE(scip, solval, 0.0) && SCIPisFeasLE(scip, solval, 1.0));
 
       sum += solval;
    }
 
    *violated = SCIPisFeasLT(scip, sum, 1.0);
-
-  TERMINATE:
 
    return SCIP_OKAY;
 }

@@ -36784,11 +36784,19 @@ SCIP_RETCODE SCIPtrySol(
 {
    SCIP_SOL* bestsol;
 
+   assert(sol != NULL);
    assert(stored != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPtrySol", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    bestsol = SCIPgetBestSol(scip);
+
+   /* we cannot check partial solutions */
+   if( SCIPsolIsPartial(sol) )
+   {
+      SCIPerrorMessage("Cannot check feasibility of partial solutions.\n");
+      return SCIP_INVALIDDATA;
+   }
 
    /* if the solution is added during presolving and it is not defined on original variables,
     * presolving operations will destroy its validity, so we retransform it to the original space
@@ -36872,6 +36880,13 @@ SCIP_RETCODE SCIPtrySolFree(
    SCIP_CALL( checkStage(scip, "SCIPtrySolFree", FALSE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
    bestsol = SCIPgetBestSol(scip);
+
+   /* we cannot check partial solutions */
+   if( SCIPsolIsPartial(*sol) )
+   {
+      SCIPerrorMessage("Cannot check feasibility of partial solutions.\n");
+      return SCIP_INVALIDDATA;
+   }
 
    /* if the solution is added during presolving and it is not defined on original variables,
     * presolving operations will destroy its validity, so we retransform it to the original space

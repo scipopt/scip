@@ -1775,16 +1775,8 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
       /* check all variables */
       for (j = 0; j < consdata->nvars; ++j)
       {
-         SCIP_Real solval;
-
-         solval = SCIPgetSolVal(scip, sol, consdata->vars[j]);
-
-         /* we cannot check variables with unknown solution values in partial solutions */
-         if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
-            continue;
-
          /* if variable is nonzero */
-         if ( ! SCIPisFeasZero(scip, solval) )
+         if ( ! SCIPisFeasZero(scip, SCIPgetSolVal(scip, sol, consdata->vars[j])) )
          {
             if ( firstNonzero < 0 )
                firstNonzero = j;
@@ -1804,7 +1796,7 @@ SCIP_DECL_CONSCHECK(consCheckSOS2)
                         SCIPvarGetName(consdata->vars[firstNonzero]),
                         SCIPgetSolVal(scip, sol, consdata->vars[firstNonzero]),
                         SCIPvarGetName(consdata->vars[j]),
-                        solval);
+                        SCIPgetSolVal(scip, sol, consdata->vars[j]));
                   }
 
                   SCIPdebugMessage("SOS2 constraint <%s> infeasible.\n", SCIPconsGetName(conss[c]));

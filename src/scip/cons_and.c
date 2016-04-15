@@ -1042,12 +1042,6 @@ SCIP_RETCODE checkCons(
       {
          solval = SCIPgetSolVal(scip, sol, consdata->vars[i]);
 
-         if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
-         {
-            *violated = FALSE;
-            return SCIP_OKAY;
-         }
-
         /* @todo If "upgraded resultants to varstatus implicit" is fully allowed, than the following assert does not hold
          *       anymore, therefor we need to stop the check and return with the status not violated, because the
          *       integrality condition of this violated operand needs to be enforced by another constraint.
@@ -1066,13 +1060,6 @@ SCIP_RETCODE checkCons(
        * in case of an implicit integer resultant variable, we need to ensure the integrality of the solution value
        */
       solval = SCIPgetSolVal(scip, sol, consdata->resvar);
-
-      if( sol != NULL && SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
-      {
-         *violated = FALSE;
-         return SCIP_OKAY;
-      }
-
       assert(SCIPvarGetType(consdata->resvar) == SCIP_VARTYPE_IMPLINT || SCIPisFeasIntegral(scip, solval));
 
       if( !SCIPisFeasIntegral(scip, solval) || (i == consdata->nvars) != (solval > 0.5) )
@@ -4231,7 +4218,7 @@ SCIP_DECL_CONSENFOLP(consEnfolpAnd)
       {
          if( conshdlrdata->enforcecuts )
          {
-	    SCIP_Bool consseparated;
+            SCIP_Bool consseparated;
 
             SCIP_CALL( separateCons(scip, conss[i], NULL, &consseparated, &cutoff) );
             if ( cutoff )
@@ -4239,18 +4226,18 @@ SCIP_DECL_CONSENFOLP(consEnfolpAnd)
                *result = SCIP_CUTOFF;
                return SCIP_OKAY;
             }
-	    separated = separated || consseparated;
+            separated = separated || consseparated;
 
-	    /* following assert is wrong in the case some variables were not in LP (dynamic columns),
-	     *
-	     * e.g. the resultant, which has a negative objective value, is in the lp solution on its upper bound
-	     * (variables with status loose are in an lp solution on it's best bound), but already creating a row, and
-	     * thereby creating the column, changes the solution value (variable than has status column, and the
-	     * initialization sets the lp solution value) to 0.0, and this already could lead to no violation of the
-	     * rows, which then are not seperated into the lp
-	     */
+            /* following assert is wrong in the case some variables were not in LP (dynamic columns),
+            *
+            * e.g. the resultant, which has a negative objective value, is in the lp solution on its upper bound
+            * (variables with status loose are in an lp solution on it's best bound), but already creating a row, and
+            * thereby creating the column, changes the solution value (variable than has status column, and the
+            * initialization sets the lp solution value) to 0.0, and this already could lead to no violation of the
+            * rows, which then are not seperated into the lp
+            */
 #if 0
-	    assert(consseparated); /* because the solution is integral, the separation always finds a cut */
+            assert(consseparated); /* because the solution is integral, the separation always finds a cut */
 #endif
          }
          else
