@@ -250,7 +250,9 @@ SCIP_RETCODE LiftedWeightSpaceSolver::initialise(bool beVerbose) {
   }
 
   if (foundNewOptimum_ && nObjs_ > 1) {
-    skeleton_ = new Skeleton(nObjs_, cost_vector_, cost_rays_);
+    //skeleton_ = new Skeleton(nObjs_, cost_vector_, cost_rays_);
+    skeleton_ = new Skeleton(scip_, nObjs_);
+    skeleton_->init(objCounter, cost_vector_, cost_rays_);
     solving_stage_ = MULTIOPT_SOLVING;
   }
   else {
