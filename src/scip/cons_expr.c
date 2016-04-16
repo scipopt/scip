@@ -2235,8 +2235,14 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
 {
    SCIP_CONSEXPREXPRWALK_RESULT result;
    SCIP_CONSEXPR_EXPR* child;
+   SCIP_CONSEXPR_EXPR* oldparent;
+   int                 oldcurrentchild;
 
    assert(root != NULL);
+
+   /* remember the current child of and parent of incoming root, in case we are called from within another walk */
+   oldcurrentchild = root->walkcurrentchild;
+   oldparent = root->walkparent;
 
    root->walkcurrentchild = 0;
    root->walkparent = NULL;
@@ -2339,6 +2345,10 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
       child->walkcurrentchild = 0;
       root = child;
    }
+
+   /* recover previous information */
+   root->walkcurrentchild = oldcurrentchild;
+   root->walkparent = oldparent;
 
    return SCIP_OKAY;
 }

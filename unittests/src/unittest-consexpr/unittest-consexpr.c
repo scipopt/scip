@@ -95,6 +95,40 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(walk_collect)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(walk_count)
+{
+   int* nnodes;
+   assert(expr != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+
+   nnodes = (int *)data;
+   ++*nnodes;
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(walk_count_all)
+{
+   int nnodes;
+   int *ntotalnodes;
+   assert(expr != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+
+   /* count number of nodes in sub-expression */
+   nnodes = 0;
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, walk_count, NULL, NULL, NULL, &nnodes) );
+
+   /* add to total nodes */
+   ntotalnodes = (int *)data;
+   *ntotalnodes += nnodes;
+
+   return SCIP_OKAY;
+}
+
 /** test freeing method */
 static
 SCIP_RETCODE testWalk(void)
@@ -187,6 +221,57 @@ SCIP_RETCODE testWalk(void)
          assert(collect.e[4] == SCIPgetConsExprExprChildren(expr_xy5)[2]);
          assert(collect.e[5] == expr_x);
       }
+
+      /* release product expression (this should free the product and its children) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sum) );
+   }
+
+   /* test walk in walk; counts subexpressions of x + (-2)*x/y*(-5) */
+   {
+      SCIP_CONSEXPR_EXPR* expr_x;
+      SCIP_CONSEXPR_EXPR* expr_y;
+      SCIP_CONSEXPR_EXPR* expr_5;
+      SCIP_CONSEXPR_EXPR* expr_xy5;
+      SCIP_CONSEXPR_EXPR* expr_sum;
+      int nnodes;
+
+      /* create expressions for variables x and y */
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_x, x) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &expr_y, y) );
+
+      /* create expression for constant -5 */
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr_5, -5.0) );
+
+      /* create expression for product of -5, x, and y, and constant factor -2 */
+      {
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 1, &expr_x, NULL, -2.0) );
+         SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_xy5, expr_y, -1.0) );
+         SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr_xy5, expr_5, 1.0) );
+      }
+
+      /* create expression for sum of x and product (expr_xy5) */
+      {
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr_sum, 1, &expr_x, NULL, 0) );
+         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr_sum, expr_xy5, 1.0) );
+      }
+
+      /* release leaf expressions (this should not free them yet, as they are captured by expr_xy5) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_5) );
+      assert(expr_y != NULL);
+      assert(expr_x != NULL);
+      assert(expr_5 != NULL);
+
+      /* returns sum_{expr in expr_sum} 1 */
+      nnodes = 0;
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr_sum, walk_count, NULL, NULL, NULL, &nnodes) );
+      assert(nnodes == 6);
+
+      /* returns sum_{expr in expr_sum} nchild(expr) by recursively calling walk_count */
+      nnodes = 0;
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr_sum, NULL, NULL, NULL, walk_count_all, &nnodes) );
+      assert(nnodes == 14);
 
       /* release product expression (this should free the product and its children) */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sum) );
