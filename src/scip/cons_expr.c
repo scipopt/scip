@@ -2658,5 +2658,8 @@ SCIP_RETCODE SCIPappendConsExprExpr(
    expr->children[expr->nchildren] = child;
    ++expr->nchildren;
 
+   /* capture child */
+   ++child->nuses;
+
    return SCIP_OKAY;
 }
