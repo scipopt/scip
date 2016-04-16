@@ -636,7 +636,7 @@ SCIP_RETCODE SCIPappendConsExprExprProductExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< product expression */
    SCIP_CONSEXPR_EXPR*   child,              /**< expression to be appended */
-   SCIP_Real             childcoef           /**< child's coefficient */
+   SCIP_Real             childexponent       /**< child's exponent */
    )
 {
    SCIP_CONSEXPR_EXPRDATA* exprdata;
@@ -652,7 +652,7 @@ SCIP_RETCODE SCIPappendConsExprExprProductExpr(
    ENSUREBLOCKMEMORYARRAYSIZE(scip, exprdata->coefficients, exprdata->coefssize, nchildren + 1);
 
    assert(exprdata->coefssize > nchildren);
-   exprdata->coefficients[nchildren] = childcoef;
+   exprdata->coefficients[nchildren] = childexponent;
 
    SCIP_CALL( SCIPappendConsExprExpr(scip, expr, child) );
 
