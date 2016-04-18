@@ -95,16 +95,13 @@ SCIP_RETCODE createSubproblem(
 {
    SCIP_VAR** vars;                          /* original scip variables                    */
    SCIP_SOL* sol;                            /* pool of solutions                          */
-   SCIP_Bool* marked;                        /* array of markers, which variables to fixed */
-   SCIP_Bool fixingmarker;                   /* which flag should label a fixed variable?  */
+   SCIP_VAR** varscopy;                      /* copy of the variables array that gets permuted */
 
    int nvars;
    int nbinvars;
    int nintvars;
    int i;
-   int j;
-   int nmarkers;
-   int maxiters;
+   int nvarstofix;
 
    *success = TRUE;
 
@@ -113,79 +110,54 @@ SCIP_RETCODE createSubproblem(
    sol = SCIPgetBestSol(scip);
    assert(sol != NULL);
 
+   /* determine the number of variables that must be fixed */
+   nvarstofix = SCIPceil(scip, minfixingrate * (nbinvars + nintvars));
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &marked, nbinvars+nintvars) );
-
-   if( minfixingrate > 0.5 )
-   {
-      nmarkers = nbinvars + nintvars - (int) SCIPfloor(scip, minfixingrate*(nbinvars+nintvars));
-      fixingmarker = FALSE;
-   }
-   else
-   {
-      nmarkers = (int) SCIPceil(scip, minfixingrate*(nbinvars+nintvars));
-      fixingmarker = TRUE;
-   }
-   assert( 0 <= nmarkers && nmarkers <=  SCIPceil(scip,(nbinvars+nintvars)/2.0 ) );
-
-   j = 0;
-   BMSclearMemoryArray(marked, nbinvars+nintvars);
-
-   /* leave the loop after at most that many iterations
-    * @todo change this method to a single random permutation, which is guaranteed to succeed, and maybe even faster */
-   maxiters = 3 * (nbinvars + nintvars);
-
-   while( j < nmarkers && maxiters > 0 )
-   {
-      do
-      {
-         i = SCIPgetRandomInt(0, nbinvars+nintvars-1, randseed);
-         --maxiters;
-      }
-      while( marked[i] && maxiters > 0 );
-
-      j = marked[i] ? j : j+1;
-      marked[i] = TRUE;
-   }
-
-   /* abort if it was not possible to fix enough variables */
-   if( j < nmarkers )
+   /* on problems with very few variables or with a very small fixing rate, the minimum fixing rate might require fixing all or no variable */
+   if( nvarstofix == nbinvars + nintvars || nvarstofix == 0 )
    {
       *success = FALSE;
-      assert(maxiters == 0);
-      goto TERMINATE;
+      return SCIP_OKAY;
    }
 
-   assert( j == nmarkers );
+   /* copy binary and integer variables into buffer array */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &varscopy, vars, nbinvars+nintvars) );
 
-   /* change bounds of variables of the subproblem */
-   for( i = 0; i < nbinvars + nintvars; i++ )
+   /* shuffle variables */
+   SCIPpermuteArray((void **)varscopy, 0, nbinvars + nintvars, randseed);
+
+   /* fix the first 'nvarstofix' many variables of the subproblem in the shuffled array */
+   for( i = 0; i < nvarstofix; i++ )
    {
-      /* fix all randomly marked variables */
-      if( marked[i] == fixingmarker )
-      {
-         SCIP_Real solval;
-         SCIP_Real lb;
-         SCIP_Real ub;
+      SCIP_VAR* subvar;
+      SCIP_VAR* var;
+      SCIP_Real solval;
+      SCIP_Real lb;
+      SCIP_Real ub;
 
-         solval = SCIPgetSolVal(scip, sol, vars[i]);
-         lb = SCIPvarGetLbGlobal(subvars[i]);
-         ub = SCIPvarGetUbGlobal(subvars[i]);
-         assert(SCIPisLE(scip, lb, ub));
+      var = varscopy[i];
+      assert(var != NULL);
+      assert(SCIPvarGetProbindex(var) >= 0);
+      assert(SCIPvarGetProbindex(var) < nbinvars + nintvars);
+      subvar = subvars[SCIPvarGetProbindex(var)];
 
-         /* due to dual reductions, it may happen that the solution value is not in
+      solval = SCIPgetSolVal(scip, sol, var);
+      lb = SCIPvarGetLbGlobal(subvar);
+      ub = SCIPvarGetUbGlobal(subvar);
+      assert(SCIPisLE(scip, lb, ub));
+
+      /* due to dual reductions, it may happen that the solution value is not in
             the variable's domain anymore */
-         if( SCIPisLT(scip, solval, lb) )
-            solval = lb;
-         else if( SCIPisGT(scip, solval, ub) )
-            solval = ub;
+      if( SCIPisLT(scip, solval, lb) )
+         solval = lb;
+      else if( SCIPisGT(scip, solval, ub) )
+         solval = ub;
 
-         /* perform the bound change */
-         if( !SCIPisInfinity(scip, solval) && !SCIPisInfinity(scip, -solval) )
-         {
-            SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], solval) );
-            SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], solval) );
-         }
+      /* perform the bound change */
+      if( !SCIPisInfinity(scip, solval) && !SCIPisInfinity(scip, -solval) )
+      {
+         SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvar, solval) );
+         SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvar, solval) );
       }
    }
 
@@ -208,6 +180,7 @@ SCIP_RETCODE createSubproblem(
          SCIP_Real rhs;
          SCIP_Real* vals;
          int nnonz;
+         int j;
 
          /* ignore rows that are only locally valid */
          if( SCIProwIsLocal(rows[i]) )
@@ -239,8 +212,7 @@ SCIP_RETCODE createSubproblem(
       }
    }
 
- TERMINATE:
-   SCIPfreeBufferArray(scip, &marked);
+   SCIPfreeBufferArray(scip, &varscopy);
    return SCIP_OKAY;
 }
 
