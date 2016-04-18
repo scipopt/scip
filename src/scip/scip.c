@@ -1172,10 +1172,6 @@ void SCIPdisableDebugSol(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
- *  @pre this method can be called in one of the following stages of the SCIP solving process:
- *       - \ref SCIP_STAGE_INIT
- *       - \ref SCIP_STAGE_PROBLEM
- *
  *  @note The currently installed messages handler gets freed if this SCIP instance is its last user (w.r.t. capture/release).
  */
 SCIP_RETCODE SCIPsetMessagehdlr(
@@ -1184,8 +1180,6 @@ SCIP_RETCODE SCIPsetMessagehdlr(
    )
 {
    int i;
-
-   SCIP_CALL( checkStage(scip, "SCIPsetMessagehdlr", TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE) );
 
    assert(scip != NULL);
    assert(scip->set != NULL);
@@ -15395,7 +15389,7 @@ SCIP_RETCODE SCIPfreeTransform(
       assert(scip->stat->status != SCIP_STATUS_OPTIMAL);
 
       /* exit presolving */
-      SCIP_CALL( exitPresolve(scip, FALSE, &infeasible) );
+      SCIP_CALL( exitPresolve(scip, TRUE, &infeasible) );
       assert(scip->set->stage == SCIP_STAGE_PRESOLVED);
    }
 
