@@ -202,7 +202,7 @@ SCIP_RETCODE freeComponent(
    scip = problem->scip;
    assert(scip != NULL);
 
-   SCIPinfoMessage(scip, NULL, "freeing component %d of problem <%s>\n", (*component)->number, (*component)->problem->name);
+   //SCIPinfoMessage(scip, NULL, "freeing component %d of problem <%s>\n", (*component)->number, (*component)->problem->name);
 
    assert(((*component)->vars != NULL) == ((*component)->subvars != NULL));
    if( (*component)->vars != NULL )
@@ -816,7 +816,7 @@ SCIP_RETCODE freeProblem(
    scip = (*problem)->scip;
    assert(scip != NULL);
 
-   SCIPinfoMessage(scip, NULL, "freeing problem <%s>\n", (*problem)->name);
+   //SCIPinfoMessage(scip, NULL, "freeing problem <%s>\n", (*problem)->name);
 
    if( (*problem)->bestsol != NULL )
    {
