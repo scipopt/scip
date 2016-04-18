@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -15,8 +15,8 @@
 #define SCIP_DEBUG
 #define SCIP_STATISTIC
 /**@file   heur_vardegree.c
- * @brief  LNS heuristic that tries to randomly mutate the incumbent solution
- * @author Timo Berthold
+ * @brief  LNS heuristic that tries to delimit the search region to a neighborhood in the constraint graph
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -39,18 +39,22 @@
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
 #define HEUR_USESSUBSCIP      TRUE  /**< does the heuristic use a secondary SCIP instance? */
 
-#define DEFAULT_NODESOFS      500           /* number of nodes added to the contingent of the total nodes          */
-#define DEFAULT_MAXNODES      5000          /* maximum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINIMPROVE    0.01          /* factor by which Vardegree should at least improve the incumbent      */
-#define DEFAULT_MINNODES      500           /* minimum number of nodes to regard in the subproblem                 */
-#define DEFAULT_MINFIXINGRATE 0.8           /* minimum percentage of integer variables that have to be fixed       */
-#define DEFAULT_NODESQUOT     0.1           /* subproblem nodes in relation to nodes of the original problem       */
-#define DEFAULT_NWAITINGNODES 200           /* number of nodes without incumbent change that heuristic should wait */
-#define DEFAULT_USELPROWS     FALSE         /* should subproblem be created out of the rows in the LP rows,
-                                             * otherwise, the copy constructors of the constraints handlers are used */
-#define DEFAULT_COPYCUTS      TRUE          /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
-                                             * cutpool of the original scip be copied to constraints of the subscip */
-#define DEFAULT_BESTSOLLIMIT   3            /* limit on number of improving incumbent solutions in sub-CIP            */
+#define DEFAULT_NODESOFS      500           /**< number of nodes added to the contingent of the total nodes */
+#define DEFAULT_MAXNODES      5000          /**< maximum number of nodes to regard in the subproblem */
+#define DEFAULT_MINIMPROVE    0.01          /**< factor by which Vardegree should at least improve the incumbent */
+#define DEFAULT_MINNODES      500           /**< minimum number of nodes to regard in the subproblem */
+#define DEFAULT_MINFIXINGRATE 0.66          /**< minimum percentage of integer variables that have to be fixed */
+#define DEFAULT_NODESQUOT     0.15          /**< subproblem nodes in relation to nodes of the original problem */
+#define DEFAULT_NWAITINGNODES 20            /**< number of nodes without incumbent change that heuristic should wait */
+#define DEFAULT_USELPROWS     FALSE         /**< should subproblem be created out of the rows in the LP rows,
+                                             **< otherwise, the copy constructors of the constraints handlers are used */
+#define DEFAULT_COPYCUTS      TRUE          /**< if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
+                                             **< cutpool of the original scip be copied to constraints of the subscip */
+#define DEFAULT_BESTSOLLIMIT   3            /**< limit on number of improving incumbent solutions in sub-CIP */
+#define DEFAULT_FIXCONTVARS FALSE           /**< should continuous variables outside the neighborhoods get fixed? */
+#define DEFAULT_POTENTIAL      'r'          /**< the reference point to compute the neighborhood potential: (r)oot or (p)seudo solution */
+#define DEFAULT_MAXDISTANCE     3           /**< maximum distance to selected variable to enter the subproblem, or -1 to
+                                             *   select the distance that best approximates the minimum fixing rate from below */
 
 /*
  * Data structures
@@ -59,27 +63,31 @@
 /** primal heuristic data */
 struct SCIP_HeurData
 {
-   int                   nodesofs;           /**< number of nodes added to the contingent of the total nodes          */
-   int                   maxnodes;           /**< maximum number of nodes to regard in the subproblem                 */
-   int                   minnodes;           /**< minimum number of nodes to regard in the subproblem                 */
-   SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed       */
+   int                   nodesofs;           /**< number of nodes added to the contingent of the total nodes */
+   int                   maxnodes;           /**< maximum number of nodes to regard in the subproblem */
+   int                   minnodes;           /**< minimum number of nodes to regard in the subproblem */
+   SCIP_Real             minfixingrate;      /**< minimum percentage of integer variables that have to be fixed */
    int                   nwaitingnodes;      /**< number of nodes without incumbent change that heuristic should wait */
-   SCIP_Real             minimprove;         /**< factor by which Vardegree should at least improve the incumbent      */
-   SCIP_Longint          usednodes;          /**< nodes already used by Vardegree in earlier calls                     */
-   SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem       */
-   unsigned int          randseed;           /**< seed value for random number generator                              */
-   SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows?        */
+   SCIP_Real             minimprove;         /**< factor by which Vardegree should at least improve the incumbent */
+   SCIP_Longint          usednodes;          /**< nodes already used by Vardegree in earlier calls */
+   SCIP_Real             nodesquot;          /**< subproblem nodes in relation to nodes of the original problem */
+   unsigned int          randseed;           /**< seed value for random number generator */
+   SCIP_Bool             uselprows;          /**< should subproblem be created out of the rows in the LP rows? */
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
-                                              *   to constraints in subproblem?
-                                              */
-   int                   bestsollimit;       /**< limit on number of improving incumbent solutions in sub-CIP            */
-   int                   maxdistance;        /**< maximum distance to selected variable to enter the subproblem          */
-   int                   lastsolidx;         /**< index of last processed solution */
+                                              *   to constraints in subproblem? */
+   SCIP_Bool             fixcontvars;        /**< should continuous variables outside the neighborhoods get fixed? */
+   int                   bestsollimit;       /**< limit on number of improving incumbent solutions in sub-CIP */
+   int                   maxdistance;        /**< maximum distance to selected variable to enter the subproblem, or -1 to
+                                              *   select the distance that best approximates the minimum fixing rate from below */
    int                   sumneighborhoodvars;/**< neighborhood variables sum over all seen neighborhoods */
    int                   sumdiscneighborhoodvars; /**< neighborhood discrete variables sum over all seen neighboorhoods */
    int                   nneighborhoods;     /**< number of calculated neighborhoods */
+   char                  potential;          /**< the reference point to compute the neighborhood potential: (r)oot or (p)seudo solution */
 };
 
+/** variable graph data structure;
+ *
+ *  a bipartite graph with variables and global constraints as nodes, and edges if a variable is part of the constraint */
 struct VariableGraph
 {
    SCIP_CONS***          varconss;           /**< constraints of each variable */
@@ -87,6 +95,10 @@ struct VariableGraph
    int*                  varconssize;        /**< size array for every varconss entry */
 };
 typedef struct VariableGraph VARIABLEGRAPH;
+
+/*
+ * Local methods
+ */
 
 /* breadth first search on the variable constraint graph; uses a special kind of queue data structure that holds two queue levels
  * at the same time: the variables at the current distance and the ones at the next distance
@@ -110,8 +122,6 @@ SCIP_RETCODE variablegraphBreadthFirst(
    int increment = 1;
    int currentdistance;
    SCIP_VAR** varbuffer;
-
-
 
    assert(scip != NULL);
    assert(vargraph != NULL);
@@ -171,7 +181,7 @@ SCIP_RETCODE variablegraphBreadthFirst(
          if( !success )
             continue;
 
-         /*request constraint to write its variables into this buffer here */
+         /* request constraint to write its variables into this buffer here */
          SCIP_CALL( SCIPgetConsVars(scip, cons, varbuffer, nvars, &success) );
 
          if( !success )
@@ -199,6 +209,7 @@ SCIP_RETCODE variablegraphBreadthFirst(
          } /* end constraint variables loop */
       } /* end constraint loop */
 
+      queue[currlvlidx] = -1;
       currlvlidx += increment;
 
       /* check if we need to swap current and next level index and reverse the increment */
@@ -219,7 +230,7 @@ SCIP_RETCODE variablegraphBreadthFirst(
          }
       }
    }
-   while( distances[currlvlidx] >= currentdistance );
+   while( queue[currlvlidx] != -1 && distances[queue[currlvlidx]] >= currentdistance );
 
 
 
@@ -229,7 +240,10 @@ SCIP_RETCODE variablegraphBreadthFirst(
    return SCIP_OKAY;
 }
 
-
+/* fills variable graph data structure
+ *
+ * loops over global problem constraints and updates a mapping from the variables to their respective constraints
+ */
 static
 SCIP_RETCODE fillVariableGraph(
    SCIP*                scip,                /**< SCIP data structure */
@@ -316,7 +330,7 @@ SCIP_RETCODE fillVariableGraph(
    return SCIP_OKAY;
 }
 
-
+/** initialization method of variable graph data structure */
 static
 SCIP_RETCODE variableGraphCreate(
    SCIP*                scip,                /**< SCIP data structure */
@@ -345,6 +359,7 @@ SCIP_RETCODE variableGraphCreate(
    return SCIP_OKAY;
 }
 
+/** deinitialization method of variable graph data structure */
 static
 SCIP_RETCODE variableGraphFree(
    SCIP*                scip,                /**< SCIP data structure */
@@ -363,8 +378,6 @@ SCIP_RETCODE variableGraphFree(
       SCIPfreeMemoryArrayNull(scip, &(*vargraph)->varconss[v]);
    }
 
-
-
    /* allocate and clear memory */
    SCIPfreeMemoryArray(scip, &(*vargraph)->varconss);
    SCIPfreeMemoryArray(scip, &(*vargraph)->nvarconss);
@@ -374,14 +387,11 @@ SCIP_RETCODE variableGraphFree(
 
    return SCIP_OKAY;
 }
-
-/*
- * Local methods
- */
-/* get the potential of a subset of variables (distance to their pseudo-solution) */
+/** get the potential of a subset of variables (distance to a reference point such as the pseudo-solution or root LP solution) */
 static
 SCIP_Real getPotential(
    SCIP*                scip,                /**< SCIP data structure */
+   SCIP_HEURDATA*       heurdata,            /**< heuristic data */
    SCIP_SOL*            sol,                 /**< solution */
    SCIP_VAR**           vars,                /**< variable array */
    int                  nvars                /**< length of variable array */
@@ -403,7 +413,7 @@ SCIP_Real getPotential(
    {
       SCIP_Real objdelta;
       SCIP_VAR* var;
-      SCIP_Real bestbound;
+      SCIP_Real referencepoint;
       SCIP_Real varobj;
 
       var = vars[i];
@@ -413,19 +423,36 @@ SCIP_Real getPotential(
       if( SCIPisZero(scip, varobj) )
          continue;
 
-      bestbound = SCIPvarGetObj(var) > 0.0 ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
+      /* determine the reference point for potential computation */
+      switch( heurdata->potential )
+      {
+         /* use difference to pseudo solution using the bound in the objective direction */
+         case 'p':
+            referencepoint = SCIPvarGetObj(var) > 0.0 ? SCIPvarGetLbGlobal(var) : SCIPvarGetUbGlobal(var);
+            break;
+         /* use root LP solution difference */
+         case 'r':
+            referencepoint = SCIPvarGetRootSol(var);
+            break;
+         default:
+            SCIPerrorMessage("Unknown potential computation %c specified\n", heurdata->potential);
+            SCIPABORT();
+            referencepoint = SCIPgetSolVal(scip, sol, var);
+            break;
+      }
       /* calculate the delta to the variables best bound */
 
-      if( SCIPisInfinity(scip, REALABS(bestbound)) )
+      if( SCIPisInfinity(scip, REALABS(referencepoint)) )
          continue;
 
-      objdelta = (SCIPgetSolVal(scip, sol, var) - bestbound) * SCIPvarGetObj(var);
+      objdelta = (SCIPgetSolVal(scip, sol, var) - referencepoint) * SCIPvarGetObj(var);
       potential += objdelta;
    }
 
    return potential;
 }
 
+/** gets the average neighborhood size of all selected variables */
 static
 SCIP_Real heurdataAvgNeighborhoodSize(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
@@ -434,6 +461,7 @@ SCIP_Real heurdataAvgNeighborhoodSize(
    return heurdata->sumneighborhoodvars / (MAX(1.0, (SCIP_Real)heurdata->nneighborhoods));
 }
 
+/** gets the average size of a discrete neighborhood over all variables tested */
 static
 SCIP_Real heurdataAvgDiscreteNeighborhoodSize(
    SCIP_HEURDATA*        heurdata            /**< heuristic data */
@@ -442,211 +470,108 @@ SCIP_Real heurdataAvgDiscreteNeighborhoodSize(
    return heurdata->sumdiscneighborhoodvars / (MAX(1.0, (SCIP_Real)heurdata->nneighborhoods));
 }
 
-/** creates a subproblem for subscip by fixing a number of variables */
+/** is the variable in the current neighborhood which is given by the breadth-first distances from a central variable? */
 static
-SCIP_RETCODE createSubproblem(
-   SCIP*                 scip,               /**< original SCIP data structure                                  */
-   SCIP*                 subscip,            /**< SCIP data structure for the subproblem                        */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                               */
-   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
-   SCIP_Real             minfixingrate,      /**< percentage of integer variables that have to be fixed         */
-   unsigned int*         randseed,           /**< a seed value for the random number generator                  */
-   SCIP_Bool             uselprows,          /**< should subproblem be created out of the rows in the LP rows?  */
-   int                   maxdistance,        /**< maximum distance to consider                                  */
-   SCIP_Bool*            success             /**< used to store whether the creation of the subproblem worked   */
+SCIP_Bool isVariableInNeighborhood(
+   SCIP_VAR*             var,                /**< problem variable */
+   int*                  distances,          /**< breadth-first distances indexed by Probindex of variables */
+   int                   maxdistance         /**< maximum distance (inclusive) to be considered for neighborhoods */
    )
 {
-   SCIP_VAR** vars;                          /* original scip variables                    */
-   SCIP_VAR** varscopy;
-   SCIP_SOL* sol;                            /* pool of solutions                          */
-   int* distances;
-   VARIABLEGRAPH* vargraph;
-   SCIP_VAR* selectedvar;
-   SCIP_Real maxpotential;
-   int nintegralvarsleft; /* the number of remaining discrete variables after deletion of previous neighborhood from graph */
-   int nvars;
-   int nfixings;
-   int nbinvars;
-   int nintvars;
-   int nimplvars;
+   assert(var != NULL);
+   assert(distances != NULL);
+   assert(maxdistance >= 0);
+   assert(SCIPvarGetProbindex(var) >= 0);
+
+   return (distances[SCIPvarGetProbindex(var)] != -1 && distances[SCIPvarGetProbindex(var)] <= maxdistance);
+}
+
+/** creates subproblem out of LP rows */
+static
+SCIP_RETCODE createConstraintsFromRows(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
+   SCIP_VAR**            subvars             /**< the variables of the subproblem */
+   )
+{
+   SCIP_ROW** rows;   /* original scip rows */
+   int nrows;
    int i;
    int j;
-   int nintegralvarsbound;
-   int nsearched;
-   int searchlimit;
 
+   /* get the rows and their number */
+   SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
 
-   *success = TRUE;
-
-   /* get required data of the original problem */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, &nimplvars, NULL) );
-   sol = SCIPgetBestSol(scip);
-   assert(sol != NULL);
-
-   /* create variable graph */
-   SCIPdebugMessage("Creating variable constraint graph\n");
-   SCIP_CALL( variableGraphCreate(scip, &vargraph) );
-
-   /* allocate buffer memory to hold distances */
-   SCIP_CALL( SCIPallocBufferArray(scip, &distances, nvars) );
-
-   /* select a variable */
-   selectedvar = NULL;
-
-#if 0
-   maxdelta = SCIP_REAL_MIN;
-   /* single variable potential */
-   for( i = 0; i < nbinvars + nintvars; ++i )
+   /* copy all rows to linear constraints */
+   for( i = 0; i < nrows; i++ )
    {
-      SCIP_Real potential;
-      SCIP_VAR* var = vars[i];
+      SCIP_CONS* cons;
+      SCIP_VAR** consvars;
+      SCIP_COL** cols;
+      SCIP_Real constant;
+      SCIP_Real lhs;
+      SCIP_Real rhs;
+      SCIP_Real* vals;
+      int nnonz;
 
-      if( !SCIPvarIsActive(var) )
+      /* ignore rows that are only locally valid */
+      if( SCIProwIsLocal(rows[i]) )
          continue;
 
-      potential = getPotential(scip, sol, &(var), 1);
+      /* get the row's data */
+      constant = SCIProwGetConstant(rows[i]);
+      lhs = SCIProwGetLhs(rows[i]) - constant;
+      rhs = SCIProwGetRhs(rows[i]) - constant;
+      vals = SCIProwGetVals(rows[i]);
+      nnonz = SCIProwGetNNonz(rows[i]);
+      cols = SCIProwGetCols(rows[i]);
 
-      if( potential > maxdelta )
-      {
-         maxdelta = potential;
-         selectedvar = var;
-      }
-   }
-#endif
+      assert( lhs <= rhs );
 
-   /* copy SCIP variables */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &varscopy, vars, nbinvars + nintvars + nimplvars) );
-   nsearched = 0;
-   maxpotential = SCIP_REAL_MIN;
+      /* allocate memory array to be filled with the corresponding subproblem variables */
+      SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
+      for( j = 0; j < nnonz; j++ )
+         consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
 
-   /* determine lower bound on neighborhood size */
-   nintegralvarsbound = (int)((1.0 - minfixingrate) * (nbinvars + nintvars));
+      /* create a new linear constraint and add it to the subproblem */
+      SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
+            TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
+      SCIP_CALL( SCIPaddCons(subscip, cons) );
+      SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
 
-   nintegralvarsleft  = nbinvars + nintvars + nimplvars;
-
-   /* adjust the search limit (todo: rather select the neighborhoodsize dynamically) */
-   searchlimit = heurdata->nneighborhoods < 10 ? 5 : (int)(nintegralvarsleft / heurdataAvgDiscreteNeighborhoodSize(heurdata));
-   /* multi variable potential: choose different disjoint neighborhoods, compare their potential */
-   while( nsearched < searchlimit && nintegralvarsleft > 0 )
-   {
-      SCIP_VAR** neighborhood;
-      SCIP_VAR* choosevar;
-      int neighborhoodsize;
-      int v;
-      int ndiscvarsneighborhood;
-
-      ++nsearched;
-
-      /* select a variable to start with randomly, but make sure it is active */
-      choosevar = NULL;
-      do
-      {
-         int index = SCIPgetRandomInt(0, nintegralvarsleft, randseed);
-         choosevar = varscopy[index];
-         /* sort inactive variables to the end */
-         if( !SCIPvarIsActive(choosevar) )
-         {
-            varscopy[index] = varscopy[nintegralvarsleft - 1];
-            --nintegralvarsleft;
-         }
-      }
-      while( choosevar != NULL && SCIPvarGetProbindex(choosevar) < 0 );
-
-      /* if there was no variable chosen, there are no active variables left */
-      if( choosevar == NULL )
-      {
-         SCIPdebugMessage("No active variable left to perform breadth first search\n");
-         break;
-      }
-
-      assert(SCIPvarIsIntegral(choosevar));
-      /* get some neighborhood storage */
-      SCIP_CALL( SCIPallocBufferArray(scip, &neighborhood, nvars) );
-
-      /* determine the neighborhood */
-      variablegraphBreadthFirst(scip, vargraph, choosevar, distances, maxdistance);
-
-      ndiscvarsneighborhood = 0;
-      neighborhoodsize = 0;
-
-      /* loop over variables and determine neighborhood */
-      for( v = nvars - 1; v >= 0; --v )
-      {
-         SCIP_VAR* currvar;
-         currvar = vars[v];
-
-         if( distances[SCIPvarGetProbindex(currvar)] != -1 && distances[SCIPvarGetProbindex(currvar)] <= maxdistance )
-         {
-            neighborhood[neighborhoodsize++] = currvar;
-
-            if( SCIPvarIsIntegral(currvar) )
-               ++ndiscvarsneighborhood;
-         }
-      }
-
-      /* compare the neighborhood potential to the previous one */
-      for( v = nintegralvarsleft - 1; v >= 0; --v )
-      {
-         SCIP_VAR* currvar;
-         currvar = vars[v];
-
-         /* sort inactive variables to the end */
-         if( !SCIPvarIsActive(currvar) || (distances[SCIPvarGetProbindex(currvar)] != -1 && distances[SCIPvarGetProbindex(currvar)] <= maxdistance) )
-         {
-            varscopy[v] = varscopy[nintegralvarsleft - 1];
-            --nintegralvarsleft;
-         }
-      }
-
-      /* check if neighborhood contains too many integer variables in order to satisfy the minimum fixing rate */
-      if( ndiscvarsneighborhood >= nintegralvarsbound || ndiscvarsneighborhood == 0 )
-      {
-         SCIPdebugMessage("Too many or too few discrete variables in neighboorhood: %d (%d)\n", ndiscvarsneighborhood, nbinvars + nintvars);
-      }
-      else
-      {
-         SCIP_Real potential;
-
-         /* compare the neighborhood potential to the best potential found so far */
-         potential = getPotential(scip, sol, neighborhood, neighborhoodsize);
-
-         /* big potential, take this variable */
-         if( potential > maxpotential )
-         {
-            maxpotential = potential;
-            selectedvar = choosevar;
-         }
-      }
-
-      heurdata->sumdiscneighborhoodvars += ndiscvarsneighborhood;
-      heurdata->sumneighborhoodvars += neighborhoodsize;
-      ++heurdata->nneighborhoods;
-
-      /* free current neighborhood */
-      SCIPfreeBufferArray(scip, &neighborhood);
+      /* free temporary memory */
+      SCIPfreeBufferArray(scip, &consvars);
    }
 
-   SCIPfreeBufferArray(scip, &varscopy);
+   return SCIP_OKAY;
+}
 
-   /* maybe no variable has a positive delta */
-   if( !SCIPisPositive(scip, maxpotential) || selectedvar == NULL )
-   {
-      SCIPdebugMessage("Stopping with maxpotential %15.9f and selected variable %s\n",
-         maxpotential, selectedvar != NULL ? SCIPvarGetName(selectedvar) : "none");
-      *success = FALSE;
-      goto TERMINATE;
-   }
+/** fixes variables in subproblem based on long breadth-first distances in variable graph */
+static
+SCIP_RETCODE fixNonNeighborhoodVariables(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_SOL*             sol,                /**< solution in main SCIP for fixing values */
+   SCIP_VAR**            vars,               /**< variables in the main SCIP */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
+   int*                  distances,          /**< breadth-first distances indexed by Probindex of variables */
+   int                   maxdistance,        /**< maximum distance (inclusive) to be considered for neighborhoods */
+   int*                  nfixings            /**< pointer to store number of fixed variables */
+   )
+{
+   int i;
+   int nbinvars;
+   int nintvars;
+   int nvars;
+   int nvarstofix;
 
-   SCIPdebugMessage("Selected variable <%s> as central variable for vardegree heuristic\n", SCIPvarGetName(selectedvar));
+   SCIP_CALL( SCIPgetVarsData(scip, NULL, &nvars, &nbinvars, &nintvars, NULL, NULL) );
 
-   assert(selectedvar != NULL);
-
-   /* collect distances in the variable graph of all variables to the selected variable */
-   SCIP_CALL( variablegraphBreadthFirst(scip, vargraph, selectedvar, distances, maxdistance) );
-
-   nfixings = 0;
+   nvarstofix = heurdata->fixcontvars ? nvars : nbinvars + nintvars;
+   *nfixings = 0;
    /* change bounds of variables of the subproblem */
-   for( i = 0; i < nbinvars + nintvars; i++ )
+   for( i = 0; i < nvarstofix; i++ )
    {
       /* fix all variables that are too far away from this variable according to maxdistance */
       if( distances[i] == -1 || distances[i] > maxdistance )
@@ -672,68 +597,291 @@ SCIP_RETCODE createSubproblem(
          {
             SCIP_CALL( SCIPchgVarLbGlobal(subscip, subvars[i], solval) );
             SCIP_CALL( SCIPchgVarUbGlobal(subscip, subvars[i], solval) );
-            ++nfixings;
+            ++(*nfixings);
          }
       }
    }
 
-   /* compare actual number of fixings to limit; if we fixed not enough variables we abort here; we also abort if no discrete variables are left */
-   if( nfixings < minfixingrate * (nbinvars + nintvars) || nfixings == nbinvars + nintvars )
+   return SCIP_OKAY;
+}
+
+/** determine the maximum allowed distance to stay within the restriction to fix at least minfixingrate many non neighborhood variables */
+static
+SCIP_RETCODE determineMaxDistance(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   int*                  distances,          /**< breadth-first distances indexed by Probindex of variables */
+   int*                  choosevardistance   /**< pointer to store the computed maximum distance */
+   )
+{
+   int* distancestmp;
+   int nrelevantdistances;
+   int criticalidx;
+   int zeropos;
+   int nvars;
+   int nbinvars;
+   int nintvars;
+
+   SCIP_CALL( SCIPgetVarsData(scip, NULL, &nvars, &nbinvars, &nintvars, NULL, NULL) );
+
+   nrelevantdistances = (heurdata->fixcontvars ?  nvars : (nbinvars + nintvars));
+
+   /* copy the relevant distances of either the discrete or all problem variables and sort them */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &distancestmp, distances, nrelevantdistances) );
+   SCIPsortInt(distancestmp, nrelevantdistances);
+
+   /* distances can be infinite in the case of multiple connected components; therefore, search for the index of the
+    * zero entry, which is the unique representative of the chosen variable in the sorted distances */
+   zeropos = -1;
+   SCIPsortedvecFindInt(distancestmp, 0, nrelevantdistances, &zeropos);
+   assert(zeropos >= 0);
+
+   /* determine the critical index to look for an appropriate neighborhood distance, starting from the zero position */
+   criticalidx = zeropos + (int)((1.0 - heurdata->minfixingrate) * nrelevantdistances);
+   criticalidx = MIN(criticalidx, nrelevantdistances - 1);
+
+   /* determine the maximum breadth-first distance such that the neighborhood size stays small enough (below 1-minfixingrate)*/
+   *choosevardistance = distancestmp[criticalidx];
+
+   /* we set the distance to exactly the distance at the critical index. If the distance at critical index is not the
+    * last one before the distance increases, we decrease the choosevardistance such that the entire neighborhood
+    * fits into the minfixingrate restriction
+    */
+   if( criticalidx != nrelevantdistances - 1 && distancestmp[criticalidx + 1] == *choosevardistance )
+      (*choosevardistance)--;
+
+   SCIPfreeBufferArray(scip, &distancestmp);
+
+   return SCIP_OKAY;
+}
+
+/** creates a subproblem for subscip by fixing a number of variables */
+static
+SCIP_RETCODE createSubproblem(
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP data structure for the subproblem */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
+   SCIP_HEURDATA*        heurdata,           /**< heuristic data */
+   SCIP_Real             minfixingrate,      /**< percentage of integer variables that have to be fixed */
+   unsigned int*         randseed,           /**< a seed value for the random number generator */
+   SCIP_Bool             uselprows,          /**< should subproblem be created out of the rows in the LP rows? */
+   SCIP_Bool*            success             /**< used to store whether the creation of the subproblem worked */
+   )
+{
+   SCIP_VAR** vars;                          /* original scip variables */
+   SCIP_VAR** varscopy;
+   SCIP_SOL* sol;                            /* pool of solutions */
+   int* distances;
+   VARIABLEGRAPH* vargraph;
+   SCIP_VAR* selvar;
+   SCIP_Real maxpotential;
+   int nintegralvarsleft; /* the number of remaining discrete variables after deletion of previous neighborhood from graph */
+   int nvars;
+   int nfixings;
+   int nbinvars;
+   int nintvars;
+   int nimplvars;
+   int nintegralvarsbound;
+   int nsearched;
+   int searchlimit;
+   int fixthreshold;
+   int v;
+   int maxdistance;
+   int selvarmaxdistance;
+
+
+   *success = TRUE;
+
+   /* get required data of the original problem */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, &nimplvars, NULL) );
+   sol = SCIPgetBestSol(scip);
+   assert(sol != NULL);
+
+   /* create variable graph */
+   SCIPdebugMessage("Creating variable constraint graph\n");
+   SCIP_CALL( variableGraphCreate(scip, &vargraph) );
+
+   /* allocate buffer memory to hold distances */
+   SCIP_CALL( SCIPallocBufferArray(scip, &distances, nvars) );
+
+
+
+   /* copy SCIP variables */
+   SCIP_CALL( SCIPduplicateBufferArray(scip, &varscopy, vars, nbinvars + nintvars + nimplvars) );
+   nsearched = 0;
+   maxpotential = SCIP_REAL_MIN;
+
+   /* determine upper bound on neighborhood size */
+   nintegralvarsbound = (int)((1.0 - minfixingrate) * (nbinvars + nintvars));
+
+   nintegralvarsleft  = nbinvars + nintvars + nimplvars;
+   selvar = NULL;
+
+   /* sort inactive variables to the end of the array */
+   for( v = nintegralvarsleft - 1; v >= 0; --v )
    {
-      SCIPdebugMessage("Fixed %d/%d variables in vardegree heuristic, stopping", nfixings, nbinvars + nintvars);
+      if( ! SCIPvarIsActive(varscopy[v]) )
+      {
+         varscopy[v] = varscopy[nintegralvarsleft - 1];
+         --nintegralvarsleft;
+      }
+   }
+
+   /* maximum distance from selected variable for breadth-first search (if set to -1, we compute an exhaustive breadth-first search and sort the variables by their distance) */
+   maxdistance = (heurdata->maxdistance == - 1 ? INT_MAX : heurdata->maxdistance);
+
+   /* adjust the search limit */
+   searchlimit = heurdata->nneighborhoods < 10 ? 5 : (int)(nintegralvarsleft / heurdataAvgDiscreteNeighborhoodSize(heurdata));
+   searchlimit = MIN(searchlimit, 10);
+   /* multi variable potential: choose different disjoint neighborhoods, compare their potential */
+   while( nsearched < searchlimit && nintegralvarsleft > 0 )
+   {
+      SCIP_VAR** neighborhood;
+      SCIP_VAR* choosevar;
+      int neighborhoodsize;
+      int ndiscvarsneighborhood;
+      int choosevardistance;
+
+      ++nsearched;
+
+      /* select a variable to start with randomly, but make sure it is active */
+      choosevar = NULL;
+      do
+      {
+         int index = SCIPgetRandomInt(0, nintegralvarsleft - 1, randseed);
+         choosevar = varscopy[index];
+         /* sort inactive variables to the end */
+         if( SCIPvarGetProbindex(choosevar) < 0 )
+         {
+            varscopy[index] = varscopy[nintegralvarsleft - 1];
+            --nintegralvarsleft;
+         }
+      }
+      while( choosevar != NULL && SCIPvarGetProbindex(choosevar) < 0 && nintegralvarsleft > 0);
+
+      /* if there was no variable chosen, there are no active variables left */
+      if( choosevar == NULL || SCIPvarGetProbindex(choosevar) < 0 )
+      {
+         SCIPdebugMessage("No active variable left to perform breadth first search\n");
+         break;
+      }
+
+      assert(SCIPvarIsIntegral(choosevar));
+
+      /* get neighborhood storage */
+      SCIP_CALL( SCIPallocBufferArray(scip, &neighborhood, nvars) );
+
+      /* determine breadth-first distances from the chosen variable */
+      variablegraphBreadthFirst(scip, vargraph, choosevar, distances, maxdistance);
+
+      /* use either automatic or user-defined max-distance for neighborhood in variable constraint graph */
+      if( heurdata->maxdistance != -1 )
+      {
+         choosevardistance = heurdata->maxdistance;
+      }
+      else
+      {
+         SCIP_CALL( determineMaxDistance(scip, heurdata, distances, &choosevardistance) );
+      }
+
+      ndiscvarsneighborhood = 0;
+      neighborhoodsize = 0;
+
+      /* loop over variables and determine neighborhood */
+      for( v = nvars - 1; v >= 0; --v )
+      {
+         SCIP_VAR* currvar;
+         currvar = vars[v];
+
+         /* put variable in the neighborhood */
+         if( isVariableInNeighborhood(currvar, distances, choosevardistance) )
+         {
+            neighborhood[neighborhoodsize++] = currvar;
+
+            /* increase discrete variables counter */
+            if( SCIPvarIsIntegral(currvar) )
+               ++ndiscvarsneighborhood;
+         }
+      }
+
+      /* check if neighborhood contains too many integer variables in order to satisfy the minimum fixing rate */
+      if( ndiscvarsneighborhood >= nintegralvarsbound || ndiscvarsneighborhood <= 1 )
+      {
+         SCIPdebugMessage("Too many or too few discrete variables in neighboorhood: %d (%d)\n", ndiscvarsneighborhood, nbinvars + nintvars);
+      }
+      else
+      {
+         /* compare the neighborhood potential to the previous one */
+         SCIP_Real potential;
+
+         /* compare the neighborhood potential to the best potential found so far */
+         potential = getPotential(scip, heurdata, sol, neighborhood, neighborhoodsize);
+
+         /* big potential, take this variable */
+         if( potential > maxpotential )
+         {
+            maxpotential = potential;
+            selvar = choosevar;
+            selvarmaxdistance = choosevardistance;
+         }
+      }
+
+      /* sort neighborhood variables to the end so that this neighborhood is not considered in further samples */
+      for( v = nintegralvarsleft - 1; v >= 0; --v )
+      {
+         SCIP_VAR* currvar;
+         currvar = vars[v];
+
+         if( isVariableInNeighborhood(currvar, distances, choosevardistance) )
+         {
+            varscopy[v] = varscopy[nintegralvarsleft - 1];
+            --nintegralvarsleft;
+         }
+      }
+
+      heurdata->sumdiscneighborhoodvars += ndiscvarsneighborhood;
+      heurdata->sumneighborhoodvars += neighborhoodsize;
+      ++heurdata->nneighborhoods;
+
+      /* free current neighborhood */
+      SCIPfreeBufferArray(scip, &neighborhood);
+   }
+
+   SCIPfreeBufferArray(scip, &varscopy);
+
+   /* maybe no variable has a positive delta */
+   if( !SCIPisPositive(scip, maxpotential) || selvar == NULL )
+   {
+      SCIPdebugMessage("Stopping with maxpotential %15.9f and selected variable %s\n",
+         maxpotential, selvar != NULL ? SCIPvarGetName(selvar) : "none");
+      *success = FALSE;
+      goto TERMINATE;
+   }
+
+   assert(selvar != NULL);
+   SCIPdebugMessage("Selected variable <%s> as central variable for a <%d>-neighborhood\n", SCIPvarGetName(selvar), selvarmaxdistance);
+
+   /* collect distances in the variable graph of all variables to the selected variable */
+   SCIP_CALL( variablegraphBreadthFirst(scip, vargraph, selvar, distances, selvarmaxdistance) );
+
+   /* fix variables that are not in the neighborhood around the selected variable */
+   SCIP_CALL( fixNonNeighborhoodVariables(scip, subscip, heurdata, sol, vars, subvars, distances, selvarmaxdistance, &nfixings) );
+
+   fixthreshold = (int)(minfixingrate * (heurdata->fixcontvars ? nvars : (nbinvars + nintvars)));
+
+   /* compare actual number of fixings to limit; if we fixed not enough variables we terminate here; we also terminate if no discrete variables are left */
+   if( nfixings < fixthreshold )
+   {
+      SCIPdebugMessage("Fixed %d/%d variables in vardegree heuristic, stopping", nfixings, fixthreshold);
       *success = FALSE;
       goto TERMINATE;
 
    }
 
+   /* create problem constraints from rows. If uselprows is FALSE, the entire problem was copied already, including constraints */
    if( uselprows )
    {
-      SCIP_ROW** rows;   /* original scip rows */
-      int nrows;
-
-      /* get the rows and their number */
-      SCIP_CALL( SCIPgetLPRowsData(scip, &rows, &nrows) );
-
-      /* copy all rows to linear constraints */
-      for( i = 0; i < nrows; i++ )
-      {
-         SCIP_CONS* cons;
-         SCIP_VAR** consvars;
-         SCIP_COL** cols;
-         SCIP_Real constant;
-         SCIP_Real lhs;
-         SCIP_Real rhs;
-         SCIP_Real* vals;
-         int nnonz;
-
-         /* ignore rows that are only locally valid */
-         if( SCIProwIsLocal(rows[i]) )
-            continue;
-
-         /* get the row's data */
-         constant = SCIProwGetConstant(rows[i]);
-         lhs = SCIProwGetLhs(rows[i]) - constant;
-         rhs = SCIProwGetRhs(rows[i]) - constant;
-         vals = SCIProwGetVals(rows[i]);
-         nnonz = SCIProwGetNNonz(rows[i]);
-         cols = SCIProwGetCols(rows[i]);
-
-         assert( lhs <= rhs );
-
-         /* allocate memory array to be filled with the corresponding subproblem variables */
-         SCIP_CALL( SCIPallocBufferArray(scip, &consvars, nnonz) );
-         for( j = 0; j < nnonz; j++ )
-            consvars[j] = subvars[SCIPvarGetProbindex(SCIPcolGetVar(cols[j]))];
-
-         /* create a new linear constraint and add it to the subproblem */
-         SCIP_CALL( SCIPcreateConsLinear(subscip, &cons, SCIProwGetName(rows[i]), nnonz, consvars, vals, lhs, rhs,
-               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, TRUE, TRUE, FALSE) );
-         SCIP_CALL( SCIPaddCons(subscip, cons) );
-         SCIP_CALL( SCIPreleaseCons(subscip, &cons) );
-
-         /* free temporary memory */
-         SCIPfreeBufferArray(scip, &consvars);
-      }
+      SCIP_CALL( createConstraintsFromRows(scip, subscip, subvars) );
    }
 
  TERMINATE:
@@ -745,17 +893,17 @@ SCIP_RETCODE createSubproblem(
 /** creates a new solution for the original problem by copying the solution of the subproblem */
 static
 SCIP_RETCODE createNewSol(
-   SCIP*                 scip,               /**< original SCIP data structure                        */
-   SCIP*                 subscip,            /**< SCIP structure of the subproblem                    */
-   SCIP_VAR**            subvars,            /**< the variables of the subproblem                     */
-   SCIP_HEUR*            heur,               /**< vardegree heuristic structure                        */
-   SCIP_SOL*             subsol,             /**< solution of the subproblem                          */
+   SCIP*                 scip,               /**< original SCIP data structure */
+   SCIP*                 subscip,            /**< SCIP structure of the subproblem */
+   SCIP_VAR**            subvars,            /**< the variables of the subproblem */
+   SCIP_HEUR*            heur,               /**< vardegree heuristic structure */
+   SCIP_SOL*             subsol,             /**< solution of the subproblem */
    SCIP_Bool*            success             /**< used to store whether new solution was found or not */
 )
 {
-   SCIP_VAR** vars;                          /* the original problem's variables                */
+   SCIP_VAR** vars;                          /* the original problem's variables */
    int        nvars;
-   SCIP_Real* subsolvals;                    /* solution values of the subproblem               */
+   SCIP_Real* subsolvals;                    /* solution values of the subproblem */
    SCIP_SOL*  newsol;                        /* solution to be created for the original problem */
 
    assert(scip != NULL);
@@ -765,6 +913,7 @@ SCIP_RETCODE createNewSol(
 
    /* get variables' data */
    SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, NULL, NULL, NULL, NULL) );
+
    /* sub-SCIP may have more variables than the number of active (transformed) variables in the main SCIP
     * since constraint copying may have required the copy of variables that are fixed in the main SCIP
     */
@@ -842,7 +991,6 @@ SCIP_DECL_HEURINIT(heurInitVardegree)
    /* initialize data */
    heurdata->usednodes = 0;
    heurdata->randseed = 0;
-   heurdata->lastsolidx = -1;
    heurdata->sumdiscneighborhoodvars = heurdata->sumneighborhoodvars = 0;
    heurdata->nneighborhoods = 0;
 
@@ -875,21 +1023,21 @@ static
 SCIP_DECL_HEUREXEC(heurExecVardegree)
 {  /*lint --e{715}*/
    SCIP_Longint maxnnodes;
-   SCIP_Longint nsubnodes;                   /* node limit for the subproblem                       */
+   SCIP_Longint nsubnodes;                   /* node limit for the subproblem */
 
-   SCIP_HEURDATA* heurdata;                  /* heuristic's data                                    */
-   SCIP* subscip;                            /* the subproblem created by vardegree                  */
-   SCIP_VAR** vars;                          /* original problem's variables                        */
-   SCIP_VAR** subvars;                       /* subproblem's variables                              */
+   SCIP_HEURDATA* heurdata;                  /* heuristic's data */
+   SCIP* subscip;                            /* the subproblem created by vardegree */
+   SCIP_VAR** vars;                          /* original problem's variables */
+   SCIP_VAR** subvars;                       /* subproblem's variables */
    SCIP_HASHMAP* varmapfw;                   /* mapping of SCIP variables to sub-SCIP variables */
 
-   SCIP_Real cutoff;                         /* objective cutoff for the subproblem                 */
+   SCIP_Real cutoff;                         /* objective cutoff for the subproblem */
    SCIP_Real maxnnodesr;
    SCIP_Real memorylimit;
-   SCIP_Real timelimit;                      /* timelimit for the subproblem                        */
+   SCIP_Real timelimit;                      /* timelimit for the subproblem */
    SCIP_Real upperbound;
 
-   int nvars;                                /* number of original problem's variables              */
+   int nvars;                                /* number of original problem's variables */
    int i;
 
    SCIP_Bool success;
@@ -913,10 +1061,6 @@ SCIP_DECL_HEUREXEC(heurExecVardegree)
    /* only call heuristic, if the best solution comes from transformed problem */
    assert( SCIPgetBestSol(scip) != NULL );
    if( SCIPsolIsOriginal(SCIPgetBestSol(scip)) )
-      return SCIP_OKAY;
-
-   /* do not run several times on the same solution */
-   if( SCIPsolGetIndex(SCIPgetBestSol(scip)) == heurdata->lastsolidx )
       return SCIP_OKAY;
 
    /* only call heuristic, if enough nodes were processed since last incumbent */
@@ -999,9 +1143,8 @@ SCIP_DECL_HEUREXEC(heurExecVardegree)
 
    /* create a new problem, by fixing all variables except for a small neighborhood */
    SCIP_CALL( createSubproblem(scip, subscip, subvars, heurdata, heurdata->minfixingrate, &heurdata->randseed,
-         heurdata->uselprows, heurdata->maxdistance, &success) );
+         heurdata->uselprows, &success) );
 
-   heurdata->lastsolidx = SCIPsolGetIndex(SCIPgetBestSol(scip));
    /* terminate if it was not possible to create the subproblem */
    if( !success )
    {
@@ -1230,13 +1373,22 @@ SCIP_RETCODE SCIPincludeHeurVardegree(
          "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
 
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/fixcontvars",
+         "should continuous variables outside the neighborhoods be fixed?",
+         &heurdata->fixcontvars, TRUE, DEFAULT_FIXCONTVARS, NULL, NULL) );
+
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/bestsollimit",
          "limit on number of improving incumbent solutions in sub-CIP",
          &heurdata->bestsollimit, FALSE, DEFAULT_BESTSOLLIMIT, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxdistance",
-         "maximum distance to selected variable to enter the subproblem",
-         &heurdata->maxdistance, FALSE, DEFAULT_BESTSOLLIMIT, 0, INT_MAX, NULL, NULL) );
+         "maximum distance to selected variable to enter the subproblem, or -1 to select the distance "
+         "that best approximates the minimum fixing rate from below",
+         &heurdata->maxdistance, FALSE, DEFAULT_BESTSOLLIMIT, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddCharParam(scip, "heuristics/" HEUR_NAME "/potential",
+         "the reference point to compute the neighborhood potential: (r)oot or (p)seudo solution",
+         &heurdata->potential, TRUE, DEFAULT_POTENTIAL, "pr", NULL, NULL) );
 
    return SCIP_OKAY;
 }
