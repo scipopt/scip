@@ -56,7 +56,7 @@ then
 else
     OBJECTIVEVAL=""
 fi
-echo "Reference value $OBJECTIVEVAL $SOLUFILE"
+#echo "Reference value $OBJECTIVEVAL $SOLUFILE"
 # reset TMPFILE
 echo > $TMPFILE
 
@@ -88,7 +88,7 @@ then
 fi
 if test "$OBJECTIVEVAL" != ""
 then
-    echo "Reference value $OBJECTIVEVAL"
+    #echo "Reference value $OBJECTIVEVAL"
     echo set misc referencevalue $OBJECTIVEVAL      >> $TMPFILE
 fi
 echo set limits time $TIMELIMIT        >> $TMPFILE
