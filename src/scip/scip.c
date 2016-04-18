@@ -12434,7 +12434,6 @@ SCIP_RETCODE checkSolOrig(
    )
 {
    SCIP_RESULT result;
-   SCIP_Bool messageprinted;
    int v;
    int c;
    int h;
@@ -12446,7 +12445,6 @@ SCIP_RETCODE checkSolOrig(
    SCIP_CALL( checkStage(scip, "checkSolOrig", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    *feasible = TRUE;
-   messageprinted = FALSE;
 
    /* check bounds */
    if( checkbounds )
@@ -12460,18 +12458,6 @@ SCIP_RETCODE checkSolOrig(
 
          var = scip->origprob->vars[v];
          solval = SCIPsolGetVal(sol, scip->set, scip->stat, var);
-
-         /* skip unknown variables in partial solutions, this is a partial check */
-         if( SCIPsolGetOrigin(sol) == SCIP_SOLORIGIN_PARTIAL && solval == SCIP_UNKNOWN )
-         {
-            if( !messageprinted )
-            {
-               SCIPverbMessage(scip, SCIP_VERBLEVEL_FULL, NULL, "Note: The current solution is only partial, we skip "
-                     "checking bounds of variables with unknown solution values. (This is only reported once per solution)\n");
-               messageprinted = TRUE;
-            }
-            continue;
-         }
 
          lb = SCIPvarGetLbOriginal(var);
          ub = SCIPvarGetUbOriginal(var);
@@ -37007,21 +36993,35 @@ SCIP_RETCODE SCIPtryCurrentSol(
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_SOLVING
  */
-SCIP_RETCODE SCIPgetPartialSols(
-   SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_SOL**            partialsols,        /**< primal partial CIP solution array */
-   int                   partialsolssize,    /**< size of partialsols array */
-   int*                  npartialsols        /**< pointer to store the number of partial solutions */
+SCIP_SOL** SCIPgetPartialSols(
+   SCIP*                 scip                /**< SCIP data structure */
    )
 {
    assert(scip != NULL);
-   assert(partialsols != NULL);
 
    SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPartialSols", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPprimalGetPartialSols(scip->origprimal, partialsols, partialsolssize, npartialsols) );
+   return scip->origprimal->partialsols;
 
-   return SCIP_OKAY;
+}
+
+/** returns number of partial solutions
+ *
+ *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
+ *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
+ *
+ *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_SOLVING
+ */
+int SCIPgetNPartialSols(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   assert(scip != NULL);
+
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPartialSols", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+
+   return scip->origprimal->npartialsols;
 }
 
 /** checks solution for feasibility without adding it to the solution store
@@ -37051,6 +37051,13 @@ SCIP_RETCODE SCIPcheckSol(
    )
 {
    SCIP_CALL( checkStage(scip, "SCIPcheckSol", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* return immediately if the solution is of type partial */
+   if( SCIPsolIsPartial(sol) )
+   {
+      SCIPerrorMessage("Cannot check feasibility of partial solutions.");
+      return SCIP_INVALIDDATA;
+   }
 
    /* if we want to solve exactly, the constraint handlers cannot rely on the LP's feasibility */
    checklprows = checklprows || scip->set->misc_exactsolve;
@@ -37099,6 +37106,13 @@ SCIP_RETCODE SCIPcheckSolOrig(
    assert(feasible != NULL);
 
    SCIP_CALL( checkStage(scip, "SCIPcheckSolOrig", FALSE, TRUE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE) );
+
+   /* return immediately if the solution is of type partial */
+   if( SCIPsolIsPartial(sol) )
+   {
+      SCIPerrorMessage("Cannot check feasibility of partial solutions.");
+      return SCIP_INVALIDDATA;
+   }
 
    /* check solution in original problem; that includes bounds, integrality, and non modifiable constraints */
    SCIP_CALL( checkSolOrig(scip, sol, feasible, printreason, completely, TRUE, TRUE, TRUE, FALSE) );

@@ -45,15 +45,15 @@ struct SCIP_Primal
    SCIP_Real             cutoffbound;        /**< upper bound for better primal solutions (if objective value is always
                                               *   integral, cutoffbound is equal to ceil(upperbound) - 1.0 (+eps) */
    SCIP_SOL**            sols;               /**< primal CIP solutions */
-   SCIP_SOL**            partinfsols;        /**< partial and infeasible solutions */
+   SCIP_SOL**            partialsols;        /**< partial solutions */
    SCIP_SOL**            existingsols;       /**< all existing primal solutions (feasible, partial, and infeasible) */
    SCIP_SOL*             currentsol;         /**< internal solution for temporarily storing the current solution */
    SCIP_SOL*             primalray;          /**< solution representing the primal ray for (infeasible or) unbounded problems;
                                               *   warning: this does not have to be a feasible solution */
    int                   solssize;           /**< size of sols array */
-   int                   partinfsolssize;    /**< size of partinfsols array */
+   int                   partialsolssize;    /**< size of partialsols array */
    int                   nsols;              /**< number of primal CIP solutions stored in sols array */
-   int                   npartinfsols;       /**< number of partial and infeasible solutions stored in partingarray */
+   int                   npartialsols;       /**< number of partial solutions stored in partialsol array */
    int                   existingsolssize;   /**< size of existingsols array */
    int                   nexistingsols;      /**< number of primal CIP solutions stored in existingsols array */
 };

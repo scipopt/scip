@@ -453,21 +453,12 @@ SCIP_RETCODE copyAndSolveComponent(
    {
       SCIP_SOL** partialsols;
       SCIP_RETCODE retcode;
-      int npartialsols = 0;
-      int partialsolssize = 1;
+      int npartialsols;
       int s;
 
       /* copy stored partial solutions into the components */
-      SCIP_CALL( SCIPallocBufferArray(scip, &partialsols, partialsolssize) );
-      SCIP_CALL( SCIPgetPartialSols(scip, partialsols, partialsolssize, &npartialsols) );
-
-      if( partialsolssize < npartialsols )
-      {
-         partialsolssize = npartialsols;
-         SCIP_CALL( SCIPreallocBufferArray(scip, &partialsols, partialsolssize) );
-         SCIP_CALL( SCIPgetPartialSols(scip, partialsols, partialsolssize, &npartialsols) );
-         assert(npartialsols <= partialsolssize);
-      }
+      npartialsols = SCIPgetNPartialSols(scip);
+      partialsols = SCIPgetPartialSols(scip);
 
       for( s = 0; s < npartialsols; s++ )
       {
@@ -496,9 +487,6 @@ SCIP_RETCODE copyAndSolveComponent(
 
          SCIP_CALL( SCIPaddSolFree(subscip, &sol, &stored) );
       }
-
-      /* free memory */
-      SCIPfreeBufferArray(scip, &partialsols);
 
       /* solve the subproblem */
       retcode = SCIPsolve(subscip);
