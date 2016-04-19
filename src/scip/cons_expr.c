@@ -444,12 +444,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  * Note that Op and OpExpression are undefined. Op corresponds to the name of an expression handler and
  * OpExpression to whatever string the expression handler accepts (through its parse method).
  *
- * Each parse(Expr|Factor|Term|Base) returns an SCIP_CONSEXPR_EXPR.
- * For the time being we assume that
- * - Expr is always a exprsum,
- * - Term is always a exprprod,
- * - Factor is always a exprprod,
- * - Base can be anything.
+ * parse(Expr|Term|Base) returns an SCIP_CONSEXPR_EXPR, while parseFactor returns also the exponent
  *
  * @todo We can change the grammar so that Factor becomes base and we allow a Term to be
  *       <pre> Term       -> Factor { ("*" | "/" | "^") Factor } </pre>
