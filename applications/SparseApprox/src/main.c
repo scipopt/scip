@@ -40,11 +40,9 @@ SCIP_RETCODE readParams(
 {
    if( SCIPfileExists(filename) )
    {
-      int i;
       /* read params from settingsfile */
       SCIPinfoMessage(scip, NULL, "reading user parameter file <%s>\n", filename);
       SCIP_CALL( SCIPreadParams(scip, filename) );
-      SCIP_CALL( SCIPgetIntParam(scip, "heuristics/SpaGreedy/freq", &i) );
    }
    else
       SCIPinfoMessage(scip, NULL, "user parameter file <%s> not found - using default parameters\n", filename);

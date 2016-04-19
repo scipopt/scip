@@ -252,13 +252,18 @@ SCIP_DECL_PROBCOPY(probcopySpa)
             SCIP_CALL( SCIPallocMemoryArray(scip, &((*targetdata)->edgevars[i][j][c1]), ncluster) );
             for( c2 = 0; c2 < ncluster; ++c2 )
             {
-               SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcedata->edgevars[i][j][c1][c2], &var) );
-               if( SCIPvarIsActive(var) )
+               if( sourcedata->edgevars[i][j][c1][c2] != NULL )
                {
-                  SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &((*targetdata)->edgevars[i][j][c1][c2]), varmap, consmap, global, &success) );
-                  assert(success);
-                  assert((*targetdata)->edgevars[i][j][c1][c2] != NULL);
-                  SCIP_CALL( SCIPcaptureVar(scip, (*targetdata)->edgevars[i][j][c1][c2]) );
+                  SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcedata->edgevars[i][j][c1][c2], &var) );
+                  if( SCIPvarIsActive(var) )
+                  {
+                     SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &((*targetdata)->edgevars[i][j][c1][c2]), varmap, consmap, global, &success) );
+                     assert(success);
+                     assert((*targetdata)->edgevars[i][j][c1][c2] != NULL);
+                     SCIP_CALL( SCIPcaptureVar(scip, (*targetdata)->edgevars[i][j][c1][c2]) );
+                  }
+                  else
+                     (*targetdata)->edgevars[i][j][c1][c2] = NULL;
                }
                else
                   (*targetdata)->edgevars[i][j][c1][c2] = NULL;
@@ -288,19 +293,29 @@ SCIP_DECL_PROBCOPY(probcopySpa)
 
    for( i = 0; i < ncluster * ncluster; ++i )
    {
-      SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcedata->absvar[i], &var) );
-      if( SCIPvarIsActive(var) )
+      if( sourcedata->absvar[i] != NULL )
       {
-         SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &((*targetdata)->absvar[i]), varmap, consmap, global, &success) );
-         assert(success);
-         assert((*targetdata)->absvar[i] != NULL);
-         SCIP_CALL( SCIPcaptureVar(scip, (*targetdata)->absvar[i]) );
+         SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcedata->absvar[i], &var) );
+
+         if( SCIPvarIsActive(var) )
+         {
+            SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &((*targetdata)->absvar[i]), varmap, consmap, global, &success) );
+            assert(success);
+            assert((*targetdata)->absvar[i] != NULL);
+            SCIP_CALL( SCIPcaptureVar(scip, (*targetdata)->absvar[i]) );
+         }
+         else
+            (*targetdata)->absvar[i] = NULL;
+
       }
       else
          (*targetdata)->absvar[i] = NULL;
+
       if( i < ncluster )
       {
-         if( SCIPvarIsActive(var) )
+         SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcedata->indicatorvar[i], &var) );
+
+         if( SCIPvarIsActive(var) && sourcedata->indicatorvar[i] != NULL )
          {
             SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcedata->indicatorvar[i], &var) );
             SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &((*targetdata)->indicatorvar[i]), varmap, consmap, global, &success) );

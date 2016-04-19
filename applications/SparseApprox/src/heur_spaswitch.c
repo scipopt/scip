@@ -721,7 +721,9 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
    {
       SCIPfreeMemoryArray(scip, &qmatrix[c]);
    }
-   SCIPfreeSol(scip, &worksol);
+
+   SCIP_CALL( SCIPfreeSol(scip, &worksol) );
+
    SCIPfreeMemoryArray(scip, &qmatrix);
    SCIPfreeMemoryArray(scip, &bincoherence);
    SCIPfreeMemoryArray(scip, &mincoherence);
@@ -729,6 +731,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
    SCIPfreeMemoryArray(scip, &solclustering);
    SCIPfreeMemoryArray(scip, &binfixed);
    SCIPfreeMemoryArray(scip, &clusterofbin);
+
    return SCIP_OKAY;
 }
 

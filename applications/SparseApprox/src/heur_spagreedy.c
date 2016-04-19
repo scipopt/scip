@@ -36,7 +36,7 @@
 #include "heur_spagreedy.h"
 #include "scip/cons_and.c"
 
-#define HEUR_NAME             "SpaGreedy"
+#define HEUR_NAME             "spagreedy"
 #define HEUR_DESC             "primal heuristic template"
 #define HEUR_DISPCHAR         'h'
 #define HEUR_PRIORITY         536870911
