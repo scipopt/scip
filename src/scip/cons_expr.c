@@ -2669,7 +2669,7 @@ SCIP_RETCODE SCIPappendConsExprExpr(
    ++expr->nchildren;
 
    /* capture child */
-   ++child->nuses;
+   SCIPcaptureConsExprExpr(child);
 
    return SCIP_OKAY;
 }
