@@ -171,7 +171,7 @@ SCIP_RETCODE processArguments(
     ********************/
 
    quiet = FALSE;
-   paramerror = FALSE;
+   paramerror = (argc == 1);
    interactive = FALSE;
 
    /* read the arguments from commandLine */
@@ -212,56 +212,6 @@ SCIP_RETCODE processArguments(
          else
          {
             printf("missing problem filename after parameter '-f'\n");
-            paramerror = TRUE;
-         }
-      }
-      else if( strcmp(argv[i], "-c") == 0 )
-      {
-         i++;
-         if( i < argc )
-         {
-            SCIP_CALL( SCIPaddDialogInputLine(scip, argv[i]) );
-            interactive = TRUE;
-         }
-         else
-         {
-            printf("missing command line after parameter '-c'\n");
-            paramerror = TRUE;
-         }
-      }
-      else if( strcmp(argv[i], "-b") == 0 )
-      {
-         i++;
-         if( i < argc )
-         {
-            SCIP_FILE* file;
-
-            file = SCIPfopen(argv[i], "r");
-            if( file == NULL )
-            {
-               printf("cannot read command batch file <%s>\n", argv[i]);
-               SCIPprintSysError(argv[i]);
-               paramerror = TRUE;
-            }
-            else
-            {
-               while( !SCIPfeof(file) )
-               {
-                  char buffer[SCIP_MAXSTRLEN];
-
-                  (void)SCIPfgets(buffer, (int) sizeof(buffer), file);
-                  if( buffer[0] != '\0' )
-                  {
-                     SCIP_CALL( SCIPaddDialogInputLine(scip, buffer) );
-                  }
-               }
-               SCIPfclose(file);
-               interactive = TRUE;
-            }
-         }
-         else
-         {
-            printf("missing command batch filename after parameter '-b'\n");
             paramerror = TRUE;
          }
       }
@@ -338,13 +288,11 @@ SCIP_RETCODE processArguments(
    }
    else
    {
-      printf("\nsyntax: %s [-l <logfile>] [-q] [-s <settings>] [-f <problem>] [-b <batchfile>] [-c \"command\"]\n"
+      printf("\nsyntax: %s [-l <logfile>] [-q] [-s <settings>] [-f <problem>]\n"
          "  -l <logfile>  : copy output into log file\n"
          "  -q            : suppress screen messages\n"
          "  -s <settings> : load parameter settings (.set) file\n"
-         "  -f <problem>  : load and solve problem file\n"
-         "  -b <batchfile>: load and execute dialog command batch file (can be used multiple times)\n"
-         "  -c \"command\"  : execute single line of dialog commands (can be used multiple times)\n\n",
+         "  -f <problem>  : load and solve problem file\n\n",
          argv[0]);
    }
 
