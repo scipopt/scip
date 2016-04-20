@@ -51,7 +51,7 @@
 #define DEFAULT_MINIMPROVE    0.01      /**< factor by which the incumbent should be improved at least */
 #define DEFAULT_MINOBJWEIGHT 1e-3       /**< minimal weight for original objective function (zero could lead to infinite solutions) */
 #define DEFAULT_IGNORECONT  FALSE       /**< should solution values for continuous variables be ignored? */
-#define DEFAULT_SOLUTIONS       1       /**< heuristic stops, if the given number of solutions were found (-1: no limit) */
+#define DEFAULT_BESTSOLS        5       /**< heuristic stops, if the given number of improving solutions were found (-1: no limit) */
 #define DEFAULT_MAXPROPROUNDS  10       /**< maximal number of iterations in proagation (-1: no limit) */
 
 /* event handler properties */
@@ -73,7 +73,7 @@ struct SCIP_HeurData
    SCIP_Real             objweight;          /**< weight of the original objective function (1: only original obj, 0: try to keep to given solution) */
    SCIP_Real             minimprove;         /**< factor by which the incumbent should be improved at least */
    SCIP_Bool             ignorecont;         /**< should solution values for continuous variables be ignored? */
-   int                   solutions;          /**< heuristic stops, if the given number of solutions were found (-1: no limit) */
+   int                   bestsols;           /**< heuristic stops, if the given number of improving solutions were found (-1: no limit) */
    int                   maxproprounds;      /**< maximal number of iterations in proagation (-1: no limit) */
 };
 
@@ -757,7 +757,7 @@ SCIP_RETCODE applyCompletesol(
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", heurdata->maxnodes) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
-   SCIP_CALL( SCIPsetIntParam(subscip, "limits/solutions", heurdata->solutions) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->bestsols) );
 
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
@@ -1104,8 +1104,8 @@ SCIP_RETCODE SCIPincludeHeurCompletesol(
          &heurdata->ignorecont, FALSE, DEFAULT_IGNORECONT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/solutions",
-         "heuristic stops, if the given number of solutions were found (-1: no limit)",
-         &heurdata->solutions, FALSE, DEFAULT_SOLUTIONS, -1, INT_MAX, NULL, NULL) );
+         "heuristic stops, if the given number of improving solutions were found (-1: no limit)",
+         &heurdata->bestsols, FALSE, DEFAULT_BESTSOLS, -1, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/maxproprounds",
          "maximal number of iterations in proagation (-1: no limit)",
