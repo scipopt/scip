@@ -115,7 +115,7 @@ SCIP_RETCODE createSubproblem(
    SCIP_HEURDATA*        heurdata,           /**< heuristic's private data structure */
    SCIP_VAR**            subvars,            /**< the variables of the subproblem */
    SCIP_SOL*             partialsol,         /**< partial solution */
-   SCIP_Bool*            tightend,           /**< array to store for which variables we have found bound tightenings */
+   SCIP_Bool*            tightened,          /**< array to store for which variables we have found bound tightenings */
    SCIP_Bool*            success             /**< pointer to store whether the creation was successfull */
    )
 {
@@ -228,7 +228,7 @@ SCIP_RETCODE createSubproblem(
       assert(idx >= 0);
 
       /* skip variables where we already found some bound tightenings */
-      if( tightend[idx] == FALSE )
+      if( tightened[idx] == FALSE )
       {
          /* special case: vars[i] is binary; we do not add an extra variable. in case of a minimization problem, var[v]
           * gets an objective coefficient of 1.0 or -1.0 if solval <= 1/2 or solval > 1/2, resp.
@@ -393,7 +393,7 @@ SCIP_RETCODE tightenVariables(
    SCIP_VAR**            vars,               /**< problem variables */
    int                   nvars,              /**< number of problem variables */
    SCIP_SOL*             sol,                /**< solution to guide the bound changes */
-   SCIP_Bool**           tightend            /**< array to store if variable bound could be tightened */
+   SCIP_Bool**           tightened           /**< array to store if variable bound could be tightened */
    )
 {
 #ifndef NDEBUG
@@ -420,7 +420,7 @@ SCIP_RETCODE tightenVariables(
    incontsection = FALSE;
 #endif
 
-   /* there is at least one integral varibale; open one probing node for all non-continuous variables */
+   /* there is at least one integral variable; open one probing node for all non-continuous variables */
    if( nvars - SCIPgetNContVars(scip) > 0 )
    {
       SCIP_CALL( SCIPnewProbingNode(scip) );
@@ -462,7 +462,7 @@ SCIP_RETCODE tightenVariables(
          if( SCIPisIntegral(scip, solval) )
          {
             SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_FIXED) );
-            (*tightend)[SCIPvarGetProbindex(vars[v])] = TRUE;
+            (*tightened)[SCIPvarGetProbindex(vars[v])] = TRUE;
             ++nbndtightenings;
 
 #ifdef SCIP_MORE_DEBUG
@@ -479,7 +479,7 @@ SCIP_RETCODE tightenVariables(
             if( SCIPisLT(scip, ub, SCIPvarGetUbLocal(vars[v])) )
             {
                SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_DOWNWARDS) );
-               (*tightend)[SCIPvarGetProbindex(vars[v])] = TRUE;
+               (*tightened)[SCIPvarGetProbindex(vars[v])] = TRUE;
                ++nbndtightenings;
 
 #ifdef SCIP_MORE_DEBUG
@@ -492,7 +492,7 @@ SCIP_RETCODE tightenVariables(
             if( SCIPisGT(scip, lb, SCIPvarGetLbLocal(vars[v])) )
             {
                SCIP_CALL( chgProbingBound(scip, vars[v], solval, SCIP_BRANCHDIR_UPWARDS) );
-               (*tightend)[SCIPvarGetProbindex(vars[v])] = TRUE;
+               (*tightened)[SCIPvarGetProbindex(vars[v])] = TRUE;
                ++nbndtightenings;
 
 #ifdef SCIP_MORE_DEBUG
@@ -509,7 +509,7 @@ SCIP_RETCODE tightenVariables(
          if( SCIPisEQ(scip, solval, SCIPvarGetLbLocal(vars[v])) || SCIPisEQ(scip, solval, SCIPvarGetUbLocal(vars[v])) )
          {
             /* open a new probing node */
-            if( SCIPgetProbingDepth(scip) < SCIPgetDepthLimit(scip)-10 )
+            if( SCIPgetProbingDepth(scip) < SCIPgetDepthLimit(scip) - 1 )
             {
                SCIP_CALL( SCIPnewProbingNode(scip) );
             }
@@ -524,7 +524,7 @@ SCIP_RETCODE tightenVariables(
             else
             {
                assert(SCIPvarGetProbindex(vars[v]) >= 0);
-               (*tightend)[SCIPvarGetProbindex(vars[v])] = TRUE;
+               (*tightened)[SCIPvarGetProbindex(vars[v])] = TRUE;
                ++nbndtightenings;
 #ifdef SCIP_MORE_DEBUG
                SCIPdebugMessage("> fix variable <%s> = [%g,%g] to %g (ndomreds=%lld)\n", SCIPvarGetName(vars[v]),
@@ -576,7 +576,7 @@ SCIP_RETCODE tightenVariables(
                else
                {
                   assert(SCIPvarGetProbindex(vars[v]) >= 0);
-                  (*tightend)[SCIPvarGetProbindex(vars[v])] = TRUE;
+                  (*tightened)[SCIPvarGetProbindex(vars[v])] = TRUE;
                   ++nbndtightenings;
 #ifdef SCIP_MORE_DEBUG
                   SCIPdebugMessage("> tighten upper bound of variable <%s>: %g to %g (ndomreds=%lld)\n",
@@ -604,7 +604,7 @@ SCIP_RETCODE tightenVariables(
                else
                {
                   assert(SCIPvarGetProbindex(vars[v]) >= 0);
-                  (*tightend)[SCIPvarGetProbindex(vars[v])] = TRUE;
+                  (*tightened)[SCIPvarGetProbindex(vars[v])] = TRUE;
                   ++nbndtightenings;
 #ifdef SCIP_MORE_DEBUG
                   SCIPdebugMessage("> tighten lower bound of variable <%s>: %g to %g (ndomreds=%lld)\n",
@@ -638,7 +638,7 @@ SCIP_RETCODE applyCompletesol(
    SCIP_HASHMAP* varmapf;
    SCIP_VAR** vars;
    SCIP_VAR** subvars;
-   SCIP_Bool* tightend;
+   SCIP_Bool* tightened;
    SCIP_EVENTHDLR* eventhdlr;
    SCIP_Real timelimit;
    SCIP_Real memorylimit;
@@ -691,11 +691,11 @@ SCIP_RETCODE applyCompletesol(
    nvars = SCIPgetNVars(scip);
 
    /* get buffer memory and initialize it to FALSE */
-   SCIP_CALL( SCIPallocClearBufferArray(scip, &tightend, nvars) );
+   SCIP_CALL( SCIPallocClearBufferArray(scip, &tightened, nvars) );
 
    SCIP_CALL( SCIPstartProbing(scip) );
 
-   SCIP_CALL( tightenVariables(scip, heurdata, vars, nvars, partialsol, &tightend) );
+   SCIP_CALL( tightenVariables(scip, heurdata, vars, nvars, partialsol, &tightened) );
 
    /* initialize the subproblem */
    SCIP_CALL( SCIPcreate(&subscip) );
@@ -729,7 +729,7 @@ SCIP_RETCODE applyCompletesol(
    SCIPhashmapFree(&varmapf);
 
    /* create a new problem, which fixes variables with same value in bestsol and LP relaxation */
-   SCIP_CALL( createSubproblem(scip, subscip, heurdata, subvars, partialsol, tightend, &success) );
+   SCIP_CALL( createSubproblem(scip, subscip, heurdata, subvars, partialsol, tightened, &success) );
    if( !success )
    {
       SCIPdebugMessage("Error while creating completesol subproblem wrt partial solurion <%p>.\n", (void*)partialsol);
@@ -827,7 +827,7 @@ SCIP_RETCODE applyCompletesol(
   TERMINATE:
    /* free subproblem */
    SCIPfreeBufferArray(scip, &subvars);
-   SCIPfreeBufferArray(scip, &tightend);
+   SCIPfreeBufferArray(scip, &tightened);
    SCIP_CALL( SCIPfree(&subscip) );
 
    SCIP_CALL( SCIPendProbing(scip) );
@@ -914,6 +914,13 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
    if( SCIPgetNRuns(scip) > 1 )
       return SCIP_OKAY;
 
+   /* get variable data and return of no variables are left in the problem */
+   vars = SCIPgetVars(scip);
+   nvars = SCIPgetNVars(scip);
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
    /* calculate the maximal number of branching nodes until heuristic is aborted */
    nstallnodes = (SCIP_Longint)(heurdata->nodesquot * SCIPgetNNodes(scip));
 
@@ -928,13 +935,12 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
    /* check whether we have enough nodes left to call subproblem solving */
    if( nstallnodes < heurdata->minnodes )
    {
-      SCIPdebugMessage("skipping Complete: nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n", nstallnodes, heurdata->minnodes);
+      SCIPdebugMessage("skipping Complete: nstallnodes=%" SCIP_LONGINT_FORMAT ", minnodes=%" SCIP_LONGINT_FORMAT "\n",
+         nstallnodes, heurdata->minnodes);
       return SCIP_OKAY;
    }
 
-   /* get variable data and check which coefficient has changed  */
-   vars = SCIPgetVars(scip);
-   nvars = SCIPgetNVars(scip);
+   /* check the number of variables with unknown value and continuous variables with fractional value */
    nunknown = 0;
    nfracints = 0;
 
@@ -978,11 +984,11 @@ SCIP_DECL_HEUREXEC(heurExecCompletesol)
          unknownrate = nunknown/((SCIP_Real)nvars);
       SCIPdebugMessage("%d (rate %.4f) unknown solution values\n", nunknown, unknownrate);
 
-      /* run the heuristic, if not too many coefficients have changed */
+      /* run the heuristic, if not too many unknown variables exist */
       if( unknownrate > heurdata->maxunknownrate )
          continue;
 
-      /* all variables have a finite/known solution value and the all integer values have an integral solution value,
+      /* all variables have a finite/known solution value and the all integer variables have an integral solution value,
        * create a new solution without solving a sub-SCIP
        */
       if( nunknown == 0 && nfracints == 0 )

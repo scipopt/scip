@@ -36991,7 +36991,10 @@ SCIP_RETCODE SCIPtryCurrentSol(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_SOL** SCIPgetPartialSols(
    SCIP*                 scip                /**< SCIP data structure */
@@ -36999,7 +37002,7 @@ SCIP_SOL** SCIPgetPartialSols(
 {
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPartialSols", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetPartialSols", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return scip->origprimal->partialsols;
 
@@ -37011,7 +37014,10 @@ SCIP_SOL** SCIPgetPartialSols(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if SCIP is in one of the following stages:
+ *       - \ref SCIP_STAGE_PROBLEM
+ *       - \ref SCIP_STAGE_PRESOLVING
  *       - \ref SCIP_STAGE_SOLVING
+ *       - \ref SCIP_STAGE_SOLVED
  */
 int SCIPgetNPartialSols(
    SCIP*                 scip                /**< SCIP data structure */
@@ -37019,7 +37025,7 @@ int SCIPgetNPartialSols(
 {
    assert(scip != NULL);
 
-   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPartialSols", FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, FALSE) );
+   SCIP_CALL_ABORT( checkStage(scip, "SCIPgetNPartialSols", FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, FALSE, FALSE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
    return scip->origprimal->npartialsols;
 }
