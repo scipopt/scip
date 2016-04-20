@@ -50,6 +50,12 @@ SCIP_Bool SCIPsolIsOriginal(
    SCIP_SOL*             sol                 /**< primal CIP solution */
    );
 
+/** returns whether the given solution is partial */
+EXTERN
+SCIP_Bool SCIPsolIsPartial(
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   );
+
 /** gets objective value of primal CIP solution which lives in the original problem space */
 EXTERN
 SCIP_Real SCIPsolGetOrigObj(
@@ -107,7 +113,7 @@ int SCIPsolGetIndex(
  */
 
 #define SCIPsolGetOrigin(sol)           ((sol)->solorigin)
-#define SCIPsolIsOriginal(sol)          ((sol)->solorigin == SCIP_SOLORIGIN_ORIGINAL)
+#define SCIPsolIsOriginal(sol)          ((sol)->solorigin == SCIP_SOLORIGIN_ORIGINAL || (sol)->solorigin == SCIP_SOLORIGIN_PARTIAL)
 #define SCIPsolGetOrigObj(sol)          (sol)->obj
 #define SCIPsolGetTime(sol)             (sol)->time
 #define SCIPsolGetNodenum(sol)          (sol)->nodenum
