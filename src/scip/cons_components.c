@@ -204,6 +204,11 @@ SCIP_RETCODE freeComponent(
 
    //SCIPinfoMessage(scip, NULL, "freeing component %d of problem <%s>\n", (*component)->number, (*component)->problem->name);
 
+   if( SCIPgetStage(scip) <= SCIP_STAGE_SOLVED )
+   {
+      SCIP_CALL( SCIPprintStatistics((*component)->subscip, NULL) );
+   }
+
    assert(((*component)->vars != NULL) == ((*component)->subvars != NULL));
    if( (*component)->vars != NULL )
    {
@@ -514,7 +519,12 @@ SCIP_RETCODE solveComponent(
          {
             SCIPinfoMessage(scip, NULL, "... infeasible, update cutoff bound\n");
 
-            SCIP_CALL( SCIPupdateCutoffbound(subscip, SCIPgetSolOrigObj(subscip, compsol)) );
+            assert(!SCIPisSumGT(subscip, SCIPgetSolOrigObj(subscip, compsol), SCIPgetCutoffbound(subscip)));
+
+            if( SCIPgetSolOrigObj(subscip, compsol) < SCIPgetCutoffbound(subscip) )
+            {
+               SCIP_CALL( SCIPupdateCutoffbound(subscip, SCIPgetSolOrigObj(subscip, compsol)) );
+            }
          }
       }
    }
@@ -568,10 +578,10 @@ SCIP_RETCODE solveComponent(
       }
       else
       {
-         nodelimit = SCIPgetNNodes(component->subscip) + 1;
+         //nodelimit = SCIPgetNNodes(component->subscip) + 1;
          gaplimit = 0.0;
-         //nodelimit = 2 * SCIPgetNNodes(component->subscip);
-         //nodelimit = MAX(nodelimit, 500LL);
+         nodelimit = 2 * SCIPgetNNodes(component->subscip);
+         nodelimit = MAX(nodelimit, 500LL);
 
          /* set a gap limit of half the current gap (at most 10%) */
          //if( SCIPgetGap(component->subscip) < 0.2 )
