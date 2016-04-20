@@ -230,18 +230,26 @@ SCIP_RETCODE createSubproblem(
       /* skip variables where we already found some bound tightenings */
       if( tightened[idx] == FALSE )
       {
-         /* special case: vars[i] is binary; we do not add an extra variable. in case of a minimization problem, var[v]
-          * gets an objective coefficient of 1.0 or -1.0 if solval <= 1/2 or solval > 1/2, resp.
+         /* special case: vars[i] is binary; we do not add an extra variable, but we mimic the behaviour we would get with it.
+          * E.g., if the solval is 0.3, setting the variable to 0 would give a cost of 0.3 * epsobj, setting it to 1 gives
+          * 0.7 * epsobj. Thus, 0.3 * epsobj can be treated as a constant in the objective function and the variable gets
+          * an objective coefficient of 0.4 * epsobj.
           */
          if( SCIPvarIsBinary(vars[i]) )
          {
+            SCIP_Real frac = SCIPfeasFrac(scip, solval);
+            SCIP_Real objcoef;
+
+            frac = MIN(frac, 1-frac);
+            objcoef = (1 - 2*frac) * epsobj * SCIPgetObjsense(scip);
+
             if( solval > 0.5 )
             {
-               SCIP_CALL( SCIPchgVarObj(scip, vars[i], -1.0 * SCIPgetObjsense(scip)) );
+               SCIP_CALL( SCIPchgVarObj(scip, vars[i], -objcoef) );
             }
             else
             {
-               SCIP_CALL( SCIPchgVarObj(scip, vars[i], 1.0 * SCIPgetObjsense(scip)) );
+               SCIP_CALL( SCIPchgVarObj(scip, vars[i], objcoef) );
             }
          }
          else
