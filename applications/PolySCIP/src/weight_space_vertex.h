@@ -12,10 +12,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   weight_space_vertex.h
- * @brief  Weight space vertex class declarations
- * @author Sebastian Schenker
- * @author Timo Strunk
+/** * @brief  Class representing a weight space vertex
  *
  * Data structure storing combinatorial and geometric information
  * about a vertex of the weight space polyhedron. A weight space
@@ -83,9 +80,9 @@ namespace polyscip {
     void print(bool printFacets = false) const;
 
   private:
-    FacetContainer facets_;                         /**< defining facets */
-    std::shared_ptr<Polyscip::WeightType> weight_;  /**< weight */
-    Polyscip::ValueType weighted_obj_val_;          /**< weighted objective value */
+    FacetContainer incident_facets_;                /**< incident facets */
+    std::shared_ptr<Polyscip::WeightType> weight_;  /**< used weight */
+    Polyscip::ValueType weighted_obj_val_;          /**< corresponding weighted objective value */
 
   };
 

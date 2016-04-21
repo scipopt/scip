@@ -12,24 +12,41 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   weight_space_facet.cpp
- * @brief  Weight space facet class definitions
- * @author Sebastian Schenker
- */
-
 #include "weight_space_facet.h"
 
 #include <iostream>
+#include <vector>
+
+#include "polyscip.h"
 
 using std::cout;
+using std::vector;
+
 
 namespace polyscip {
+  
+  using Polyscip::PointType;
+  using Polyscip::ValueType;
 
-  WeightSpaceFacet::WeightSpaceFacet(const CoeffContainer& coeffs, ValueType rhs) 
-    : coeffs_(coeffs),
-      rhs_(rhs)
+  // WeightSpaceFacet::WeightSpaceFacet(const CoeffContainer& coeffs, ValueType rhs) 
+  //   : coeffs_(coeffs),
+  //     rhs_(rhs)
+  // {};
+
+  WeightSpaceFacet::WeightSpaceFacet(unsigned num_objs,
+				     unsigned index) 
+    : lhs_(num_objs,0.),
+      rhs_(0) {
+    lhs_.at(index) = 1.; 
+  }
+
+  WeightSpaceFacet::WeightSpaceFacet(unsigned num_objs,
+				     const PointType& point,
+				     ValueType weighted_obj_val) 
+    : lhs_(point.begin(),point.end()),
+      rhs_(weighted_obj_val)
   {};
-
+  
   WeightSpaceFacet::~WeightSpaceFacet() {};
 
   void WeightSpaceFacet::print() const {

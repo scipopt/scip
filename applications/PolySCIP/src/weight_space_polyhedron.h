@@ -12,10 +12,10 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   weight_space_polyhedron.h
- * @brief  The (partial) weight space polyhedron
- * @author Sebastian Schenker
- * @author Timo Strunk
+/** @file   weight_space_polyhedron.h
+ *  @brief  The (partial) weight space polyhedron
+ *  @author Sebastian Schenker
+ *  @author Timo Strunk
  *
  * This class represents the (partial) weight space polyhedron P =
  * {(w,a) \in \Lambda \times R : w \cdot y >= a \forall y \in Y'}
@@ -30,6 +30,7 @@
 #include <queue>
 #include <tuple>
 #include <unordered_map>
+#include <utility> // std::pair
 #include <vector>
 
 #include "lemon/list_graph.h"
@@ -41,14 +42,17 @@
 namespace polyscip {
 
   /** @brief 1-skeleton of the (partial) weight space polyhedron. */
-  class Skeleton {
+  class WeightSpacePolyhedron {
   public:
+    /** Container used to store the weight space vertices; needs to support: push_back */
     using VertexContainer = std::vector< std::shared_ptr<WeightSpaceVertex> >;
 
+    /** Container used to store the weight space facets; needs to support; push_back */
     using FacetContainer = std::vector< std::shared_ptr<WeightSpaceFacet> >;
 
-    /** Constraint: UntestedVertexContainer needs to come with
-	'empty()' member function; see hasUntestedVertex() function */
+    /** Container used to store the untested weight space vertices;
+	Needs to support: empty(),
+    */
     using UntestedVertexContainer = std::queue< std::shared_ptr<WeightSpaceVertex> >; 
 
     using RayInfoType = std::tuple< std::shared_ptr<RayType>, std::shared_ptr<WeightType> >;
@@ -56,18 +60,25 @@ namespace polyscip {
     /** @brief Creates the skeleton of the initial (partial) weight
 	space polyhedron P = {(w,a) \in \Lambda \times R : w \cdot y^1
 	>= a}
-	@param nondom_point first computed non-dominated point
-	@param rays_info rays and corresp. weight found while computing first non-dominated point 
+	@param num_objs number of objectives of given problem
+	@param point first computed (weakly non-dominated) point
+	@param point_weighted_obj_val weighted objective value of first point
+	@param unit_weight_used indicates whether first point was computed by using 
+	a unit weight; if unit_weight_used.first is true, then unit_weight_used.second containts 
+	index of 1 in used unit weight
     */
-    Skeleton(const PointType& nondom_point, const std::vector<RayInfoType>& rays_info);
+    WeightSpacePolyhedron(unsigned num_objs,
+			  const Polyscip::PointType& point, 
+			  PolySCIP::ValueType point_weighted_obj_val,
+			  std::pair<bool,unsigned> unit_weight_used);
 
     /** @brief Destructor */
-    ~Skeleton();
+    ~WeightSpacePolyhedron();
   
     /** @brief Checks whether there is an untested weight space vertex
      *  @return true if there is an untested weight space vertex; false otherwise
      */
-    bool hasUntestedVertex();
+    bool hasUntestedVertex() const;
 
     /** @brief Returns an untested weight space vertex
      *  @return an untested weight space vertex
@@ -102,25 +113,34 @@ namespace polyscip {
     using NodeMap = Graph::NodeMap< std::shared_ptr<WeightSpaceVertex> >;
     using VertexMap = std::unordered_map<std::shared_ptr<WeightSpaceVertex>, Node>;
 
+    /** Creates initial weight space boundary facets w_i >= 0 for i \in [num_objs]
+     *  @param num_objs number of objectives of given problem
+     */
+    void createInitialBoundaryFacets(unsigned num_objs);
 
-    /** initialize the polyhedron with the first solution */
-    void init(
-	      const std::vector<SCIP_Real>* cost_vector, /**< cost vector of first solution */
-	      const std::vector< const std::vector<SCIP_Real>* >& cost_rays,  /**< list of known unbounded cost rays */
-	      bool nondom_point_from_unit_weight,
-	      unsigned unit_weight_index
-	      );
+    /** Creates initial weight space vertices
+     *  @param num_objs number of objectives of given problem
+     *  @param point first computed (weakly non-dominated) point
+     *	@param weighted_obj_val weighted objective value of given point
+    */
+    void createInitialWeightSpaceVertices(unsigned num_objs,
+					  const Polyscip::PointType& point,
+					  Polyscip::ValueType weighted_obj_val);
 
-    /** create all facets defining the inital weight space polyhedron */
-    WeightSpaceVertex const * const  createInitialFacetsAndWeightSpaceVerts(
-									    const std::vector<SCIP_Real>* nondom_point,      /**< first nondom_point that was found */
-									    bool nondom_point_from_unit_weight,
-									    unsigned unit_weight_index
-									    );
+    /** Creates initial 1-skeleton of complete graph with number of
+	objectives many vertices
+     */
+    void createInitialSkeleton() {};
 
-    void createInitialWeightSpacePolyhedron(const std::vector<SCIP_Real>* nondom_point,
-					    const std::vector<const std::vector<SCIP_Real>* >& cost_rays,
-					    WeightSpaceVertex const * const unit_weight_index);
+    /** Establishes the vertices that need to be tested
+     *  @param unit_weight_used true if first (weakly non-dominated) point was computed by 
+     *  using a unit weight, otherwise false
+     *  @param unit_weight_index index of 1 in unit weight if unit weight was used, otherwise 
+     *  not used
+     */
+    void establishUntestedVertices(bool unit_weight_used,
+				   unsigned unit_weight_index);
+
 
     VertexContainer vertices_;                   /**< all computed weight space vertices */
     FacetContainer facets_;                      /**< all computed weight space facets */

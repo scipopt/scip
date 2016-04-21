@@ -81,7 +81,7 @@ WeightSpaceVertex const * const Skeleton::createInitialFacetsAndWeightSpaceVerts
 
   /* create initial weight space vertices */
   unsigned current_index = 0;
-  while (current_index != nObjs_;) {
+  while (current_index != nObjs_) {
     vector<unsigned> facet_inds;
     for (unsigned i=0; i<facets_.size(); ++i) {
       if (i != current_index)

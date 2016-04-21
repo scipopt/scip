@@ -33,15 +33,13 @@ using std::vector;
 
 namespace polyscip {
 
-  WeightSpaceVertex::WeightSpaceVertex(const FacetContainer& incident_facets,
+  WeightSpaceVertex::WeightSpaceVertex(const vector< shared_ptr<const WeightSpaceFacet> >& incident_facets,
 				       shared_ptr<const WeightType> weight,
 				       ValueType weighted_obj_val)
-    : facet_(incident_facets),
+    : incident_facets_(incident_facets.begin(),incident_facets_.end()),
       weight_(weight),
       weighted_obj_val_(weighted_obj_val)
-  {
-    assert (!facets_.empty());
-  }
+  {};
 
   WeightSpaceVertex::~WeightSpaceVertex() {};
 

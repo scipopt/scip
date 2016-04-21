@@ -12,15 +12,13 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   weight_space_facet.h
- * @brief  Weight space facet class declarations
- * @author Sebastian Schenker
+/** @brief Class representing a facet of the weight space polyhedron
  *
  * Data structure representing a facet of the (partial) weight space
  * polyhedron P={(w,a) : w \cdot y >= a \forall y \in Y} where Y is
- * the (current) set of non-dominated points. A facet (coeffs,rhs) is
- * represented by coefficients 'coeffs' and a right hand side 'rhs'
- * yielding an inequality of the form coeffs \cdot w >= rhs 
+ * the (current) set of non-dominated points. A facet (lhs,rhs) is
+ * represented by coefficients 'lhs_' and a right hand side 'rhs_'
+ * yielding an inequality of the form lhs_ \cdot w >= rhs_ 
  */
 
 #ifndef POLYSCIP_SRC_WEIGHT_SPACE_FACET_H_INCLUDED
@@ -28,33 +26,35 @@
 
 #include <vector>
 
+#include "polyscip.h"
+
 namespace polyscip {
 
-  /** @brief Facet of the (partial) weight space polyhedron. */
+  /** Facet of the (partial) weight space polyhedron. */
   class WeightSpaceFacet {
-
   public: 
-    using ValueType = SCIP_Real;
-    using CoeffContainer = std::vector<ValueType>;
-    
-    /** @brief Creates a facet coeffs \cdot >= rhs of the (partial)
-     *  weight space polyhedron.  
-     *  @param coeffs Left hand side coefficients of the facet inequality
-     *  @param rhs Right hand side value of the facet inequality
+    /** Creates the facet point \cdot w >= weighted_obj_val   
+     *  @param point computed (weakly non-dominated) point in objective space
+     *  @param weighted_obj_val weighted objective value of point
      */
-    WeightSpaceFacet(const CoeffContainer& coeffs, ValueType rhs);
+    WeightSpaceFacet(const Polyscip::PointType point, Polyscip::ValueType weighted_obj_val);
     
-    /** @brief Destructor */
+    /** Creates the weight space facet w_i >= 0
+     *  @param num_objs number of objectives of given problem
+     *  @param index index i of w_i >= 0
+     */
+    WeightSpaceFacet(unsigned num_objs, unsigned index);
+
+    /** Destructor */
     ~WeightSpaceFacet();
 
-    /** @brief Prints facet information to standard output.
+    /** Prints facet information to standard output.
      */
     void print() const;
 
   private:
-    CoeffContainer coeffs_;  /**< left hand side coefficients of the facet inequality */
-    ValueType rhs_;          /**< right hand side value of the facet inequality */
-
+    std::vector<Polyscip::ValueType> lhs_; /**< left hand side coefficients of the facet inequality */
+    Polyscip::ValueType rhs_;              /**< right hand side value of the facet inequality */
   };
 
 }

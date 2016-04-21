@@ -31,7 +31,8 @@ namespace polyscip {
   class Polyscip {
   public:
     using ValueType = SCIP_Real;               /**< type for computed values */
-    using PointType = std::vector<ValueType>;  /**< type for points in outcome space */
+    using PointType = std::vector<ValueType>;  /**< type for points in outcome space; 
+						  needs to support: begin(), operator[] */
     using RayType = std::vector<ValueType>;     /**< type for rays in outcome space */
     using WeightType = std::vector<ValueType>; /**< type for weights */
     
