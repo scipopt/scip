@@ -199,6 +199,14 @@ typedef enum
    SCIP_CONSEXPREXPRWALK_ABORT               /**< abort the walk */
 } SCIP_CONSEXPREXPRWALK_RESULT;
 
+/** user data storage type for expression walker */
+typedef union
+{
+   SCIP_Real             realval;            /**< a floating-point value */
+   int                   intval;             /**< an integer value */
+   void*                 ptrval;             /**< a pointer */
+} SCIP_CONSEXPREXPRWALK_IO;
+
 
 /** expression graph walk callback
  *
