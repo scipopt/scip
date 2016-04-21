@@ -11,7 +11,7 @@ Use the following sample template in the Issue description to ensure consistency
 |||
 | --- | --- |
 | Affected Versions | 3.2.2, 3.2.1 |
-| Commit | 8eec1de1206 |
+| SCIP Commit | 8eec1de1206 |
 | LP Solver | [c155d8895e3](https://git.zib.de/integer/soplex/commit/c155d8895e3)|
 | OS | Linux |
 | Architecture | x86 64-bit |
