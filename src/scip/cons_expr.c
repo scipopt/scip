@@ -119,6 +119,14 @@ typedef struct
    SCIP_Bool             aborted;            /**< whether the evaluation has been aborted due to an empty interval */
 } EXPRINTEVAL_DATA;
 
+/* data passed on during variable locking  */
+typedef struct
+{
+   SCIP_CONSEXPR_EXPRHDLR* exprvarhdlr;      /**< handler for variable expressions (to recognize variable expressions) */
+   int                     nlockspos;        /**< number of positive locks */
+   int                     nlocksneg;        /**< number of negative locks */
+} EXPRLOCK_DATA;
+
 /*
  * Local methods
  */
@@ -389,6 +397,30 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
 
    return SCIP_OKAY;
 }
+
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
+{
+   EXPRLOCK_DATA* lockdata;
+
+   assert(expr != NULL);
+   assert(data != NULL);
+   assert(result != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+
+   lockdata = (EXPRLOCK_DATA*)data;
+
+   if( SCIPgetConsExprExprHdlr(expr) == lockdata->exprvarhdlr )
+   {
+      /* if a variable, lock in both directions */
+      SCIP_CALL( SCIPaddVarLocks(scip, SCIPgetConsExprExprVarVar(expr), lockdata->nlockspos, lockdata->nlocksneg) );
+   }
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   return SCIP_OKAY;
+}
+
 
 /** @name Parsing methods
  * @{
@@ -1249,8 +1281,27 @@ SCIP_DECL_CONSRESPROP(consRespropExpr)
 static
 SCIP_DECL_CONSLOCK(consLockExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA* consdata;
+   EXPRLOCK_DATA lockdata;
+
+   assert(conshdlr != NULL);
+   assert(cons != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   if( consdata->expr == NULL )
+      return SCIP_OKAY;
+
+   lockdata.exprvarhdlr = conshdlrdata->exprvarhdlr;
+   lockdata.nlockspos = nlockspos;
+   lockdata.nlocksneg = nlocksneg;
+
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, lockVar, NULL, NULL, NULL, &lockdata) );
 
    return SCIP_OKAY;
 }
