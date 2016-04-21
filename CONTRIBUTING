@@ -12,12 +12,11 @@ Use the following sample template in the Issue description to ensure consistency
 | --- | --- |
 | Affected Versions | 3.2.2, 3.2.1 |
 | Commit | 8eec1de1206 |
-| Solver Commit | [c155d8895e3](https://git.zib.de/integer/soplex/commit/c155d8895e3)|
+| LP Solver | [c155d8895e3](https://git.zib.de/integer/soplex/commit/c155d8895e3)|
 | OS | Linux |
 | Architecture | 64-bit |
 | Compile command | `make OPT=dbg LP=spx` |
 | Compiler | gcc-4.8.4 |
-| Hostname | opt57.zib.de |
 | Attachments | |
 
 ## Steps to Reproduce
