@@ -58,6 +58,10 @@
 #include "scip/cons_nonlinear.h"
 #define NONLINCONSUPGD_PRIORITY   100000 /**< priority of the constraint handler for upgrading of nonlinear constraints */
 
+/* enable quadratic constraint upgrading */
+#include "scip/cons_quadratic.h"
+#define QUADCONSUPGD_PRIORITY     100000 /**< priority of the constraint handler for upgrading of quadratic constraints */
+
 
 
 /** ensures that a block memory array has at least a given size
@@ -973,6 +977,131 @@ SCIP_RETCODE parseExpr(
 
 /* TODO: Implement all necessary constraint handler methods. The methods with #if 0 ... #else #define ... are optional */
 
+
+/** upgrades quadratic constraint to expr constraint */
+static
+SCIP_DECL_QUADCONSUPGD(quadconsUpgdExpr)
+{  /*lint --e{715}*/
+   SCIP_CONSHDLR* consexprhdlr;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* varexpr;
+   SCIP_CONSEXPR_EXPR** varexprs;
+   SCIP_CONSEXPR_EXPR* prodexpr;
+   SCIP_CONSEXPR_EXPR* twoexprs[2];
+   SCIP_QUADVARTERM* quadvarterm;
+   SCIP_BILINTERM* bilinterm;
+   SCIP_Real two = 2.0;
+   int pos;
+   int i;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(nupgdconss != NULL);
+   assert(upgdconss  != NULL);
+
+   *nupgdconss = 0;
+
+   SCIPdebugMessage("quadconsUpgdExpr called for constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugPrintCons(scip, cons, NULL);
+
+   /* no interest in linear constraints */
+   if( SCIPgetNQuadVarTermsQuadratic(scip, cons) == 0 )
+      return SCIP_OKAY;
+
+   if( upgdconsssize < 1 )
+   {
+      /* signal that we need more memory */
+      *nupgdconss = -1;
+      return SCIP_OKAY;
+   }
+
+   if( SCIPgetNBilinTermsQuadratic(scip, cons) > 0 )
+   {
+      /* we will need SCIPfindQuadVarTermQuadratic later, so ensure now that quad var terms are sorted */
+      SCIP_CALL( SCIPsortQuadVarTermsQuadratic(scip, cons) );
+   }
+
+   consexprhdlr = SCIPfindConshdlr(scip, "expr");
+   assert(consexprhdlr != NULL);
+
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &expr, 0, NULL, NULL, 0.0) );
+
+   /* append linear terms */
+   for( i = 0; i < SCIPgetNLinearVarsQuadratic(scip, cons); ++i )
+   {
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &varexpr, SCIPgetLinearVarsQuadratic(scip, cons)[i]) );
+      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, varexpr, SCIPgetCoefsLinearVarsQuadratic(scip, cons)[i]) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
+   }
+
+   /* array to store variable expression for each quadratic variable */
+   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, SCIPgetNQuadVarTermsQuadratic(scip, cons)) );
+
+   /* create var exprs for quadratic vars; append linear and square part of quadratic terms */
+   for( i = 0; i < SCIPgetNQuadVarTermsQuadratic(scip, cons); ++i )
+   {
+      quadvarterm = &SCIPgetQuadVarTermsQuadratic(scip, cons)[i];
+
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &varexprs[i], quadvarterm->var) );
+
+      if( quadvarterm->lincoef != 0.0 )
+      {
+         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, varexprs[i], quadvarterm->lincoef) );
+      }
+
+      if( quadvarterm->sqrcoef != 0.0 )
+      {
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 1, &varexprs[i], &two, 1.0) );
+         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, prodexpr, quadvarterm->sqrcoef) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
+      }
+   }
+
+   /* append bilinear terms */
+   for( i = 0; i < SCIPgetNBilinTermsQuadratic(scip, cons); ++i)
+   {
+      bilinterm = &SCIPgetBilinTermsQuadratic(scip, cons)[i];
+
+      SCIP_CALL( SCIPfindQuadVarTermQuadratic(scip, cons, bilinterm->var1, &pos) );
+      assert(pos >= 0);
+      assert(pos < SCIPgetNQuadVarTermsQuadratic(scip, cons));
+      assert(SCIPgetQuadVarTermsQuadratic(scip, cons)[pos].var == bilinterm->var1);
+      twoexprs[0] = varexprs[pos];
+
+      SCIP_CALL( SCIPfindQuadVarTermQuadratic(scip, cons, bilinterm->var2, &pos) );
+      assert(pos >= 0);
+      assert(pos < SCIPgetNQuadVarTermsQuadratic(scip, cons));
+      assert(SCIPgetQuadVarTermsQuadratic(scip, cons)[pos].var == bilinterm->var2);
+      twoexprs[1] = varexprs[pos];
+
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prodexpr, 2, twoexprs, NULL, 1.0) );
+      SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, prodexpr, bilinterm->coef) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
+   }
+
+   /* release variable expressions */
+   for( i = 0; i < SCIPgetNQuadVarTermsQuadratic(scip, cons); ++i )
+   {
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexprs[i]) );
+   }
+
+   SCIPfreeBufferArray(scip, &varexprs);
+
+   *nupgdconss = 1;
+   SCIP_CALL( SCIPcreateConsExpr(scip, upgdconss, SCIPconsGetName(cons),
+      expr, SCIPgetLhsQuadratic(scip, cons), SCIPgetRhsQuadratic(scip, cons),
+      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons),  SCIPconsIsLocal(cons),
+      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+      SCIPconsIsStickingAtNode(cons)) );
+
+   SCIPdebugMessage("created expr constraint:\n");
+   SCIPdebugPrintCons(scip, *upgdconss, NULL);
+
+   return SCIP_OKAY;
+}
+
+/** upgrades nonlinear constraint to expr constraint */
 static
 SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdExpr)
 {
@@ -988,6 +1117,9 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdExpr)
 
    exprgraph = SCIPgetExprgraphNonlinear(scip, SCIPconsGetHdlr(cons));
    node = SCIPgetExprgraphNodeNonlinear(scip, cons);
+
+   SCIPdebugMessage("nonlinconsUpgdExpr called for constraint <%s>\n", SCIPconsGetName(cons));
+   SCIPdebugPrintCons(scip, cons, NULL);
 
    /* no interest in linear constraints */
    if( node == NULL )
@@ -1036,10 +1168,15 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdExpr)
    }
 
    *nupgdconss = 1;
-   SCIP_CALL( SCIPcreateConsExpr(scip, upgdconss, SCIPconsGetName(cons), expr, SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons),
+   SCIP_CALL( SCIPcreateConsExpr(scip, upgdconss, SCIPconsGetName(cons),
+      expr, SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons),
       SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
       SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
-      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), FALSE) );
+      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons),
+      SCIPconsIsStickingAtNode(cons)) );
+
+   SCIPdebugMessage("created expr constraint:\n");
+   SCIPdebugPrintCons(scip, *upgdconss, NULL);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
@@ -2848,6 +2985,12 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    SCIP_CALL( SCIPsetConshdlrSepa(scip, conshdlr, consSepalpExpr, consSepasolExpr, CONSHDLR_SEPAFREQ, CONSHDLR_SEPAPRIORITY, CONSHDLR_DELAYSEPA) );
    SCIP_CALL( SCIPsetConshdlrTrans(scip, conshdlr, consTransExpr) );
 #endif
+
+   if( SCIPfindConshdlr(scip, "quadratic") != NULL )
+   {
+      /* include function that upgrades quadratic constraint to expr constraints */
+      SCIP_CALL( SCIPincludeQuadconsUpgrade(scip, quadconsUpgdExpr, QUADCONSUPGD_PRIORITY, TRUE, CONSHDLR_NAME) );
+   }
 
    if( SCIPfindConshdlr(scip, "nonlinear") != NULL )
    {
