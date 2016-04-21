@@ -14,8 +14,8 @@ Use the following sample template in the Issue description to ensure consistency
 | Commit | 8eec1de1206 |
 | LP Solver | [c155d8895e3](https://git.zib.de/integer/soplex/commit/c155d8895e3)|
 | OS | Linux |
-| Architecture | 64-bit |
-| Compile command | `make OPT=dbg LP=spx` |
+| Architecture | x86 64-bit |
+| Compile command | `make OPT=dbg LPS=spx` |
 | Compiler | gcc-4.8.4 |
 | Attachments | |
 
