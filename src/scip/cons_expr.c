@@ -976,9 +976,72 @@ SCIP_RETCODE parseExpr(
 static
 SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdExpr)
 {
+   SCIP_CONSHDLR* consexprhdlr;
+   SCIP_EXPRGRAPH* exprgraph;
+   SCIP_EXPRGRAPHNODE* node;
+   SCIP_CONSEXPR_EXPR* expr;
+
    assert(nupgdconss != NULL);
+   assert(upgdconss != NULL);
 
    *nupgdconss = 0;
+
+   exprgraph = SCIPgetExprgraphNonlinear(scip, SCIPconsGetHdlr(cons));
+   node = SCIPgetExprgraphNodeNonlinear(scip, cons);
+
+   /* no interest in linear constraints */
+   if( node == NULL )
+      return SCIP_OKAY;
+
+   consexprhdlr = SCIPfindConshdlr(scip, "expr");
+   assert(consexprhdlr != NULL);
+
+   /* try to create a cons_expr expression from an expression graph node */
+   SCIP_CALL( SCIPcreateConsExprExpr3(scip, consexprhdlr, &expr, exprgraph, node) );
+
+   /* if that didn't work, then because we do not support a certain expression type yet -> no upgrade */
+   if( expr == NULL )
+      return SCIP_OKAY;
+
+   if( upgdconsssize < 1 )
+   {
+      /* request larger upgdconss array */
+      *nupgdconss = -1;
+      return SCIP_OKAY;
+   }
+
+   if( SCIPgetNLinearVarsNonlinear(scip, cons) > 0 )
+   {
+      /* add linear terms */
+      SCIP_CONSEXPR_EXPR* varexpr;
+      int i;
+
+      /* ensure expr is a sum expression */
+      if( SCIPgetConsExprExprHdlr(expr) != SCIPgetConsExprExprHdlrSum(consexprhdlr) )
+      {
+         SCIP_CONSEXPR_EXPR* sumexpr;
+
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, &sumexpr, 1, &expr, NULL, 0.0) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+         expr = sumexpr;
+      }
+
+      for( i = 0; i < SCIPgetNLinearVarsNonlinear(scip, cons); ++i )
+      {
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, &varexpr, SCIPgetLinearVarsNonlinear(scip, cons)[i]) );
+         SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, varexpr, SCIPgetLinearCoefsNonlinear(scip, cons)[i]) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &varexpr) );
+      }
+   }
+
+   *nupgdconss = 1;
+   SCIP_CALL( SCIPcreateConsExpr(scip, upgdconss, SCIPconsGetName(cons), expr, SCIPgetLhsNonlinear(scip, cons), SCIPgetRhsNonlinear(scip, cons),
+      SCIPconsIsInitial(cons), SCIPconsIsSeparated(cons), SCIPconsIsEnforced(cons),
+      SCIPconsIsChecked(cons), SCIPconsIsPropagated(cons), SCIPconsIsLocal(cons),
+      SCIPconsIsModifiable(cons), SCIPconsIsDynamic(cons), SCIPconsIsRemovable(cons), FALSE) );
+
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
 
    return SCIP_OKAY;
 }
@@ -1933,6 +1996,272 @@ SCIP_RETCODE SCIPcreateConsExprExpr2(
       /* child2 != NULL, child1 == NULL */
       SCIP_CALL( SCIPcreateConsExprExpr(scip, consexprhdlr, expr, exprhdlr, exprdata, 1, &child2) );
    }
+
+   return SCIP_OKAY;
+}
+
+/** creates and captures an expression from a node in an (old-style) expression graph */
+SCIP_RETCODE SCIPcreateConsExprExpr3(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   SCIP_EXPRGRAPH*         exprgraph,        /**< expression graph */
+   SCIP_EXPRGRAPHNODE*     node              /**< expression graph node */
+   )
+{
+   SCIP_CONSEXPR_EXPR** children = NULL;
+   int nchildren;
+   int c = 0;
+
+   assert(expr != NULL);
+   assert(node != NULL);
+
+   *expr = NULL;
+   nchildren = SCIPexprgraphGetNodeNChildren(node);
+
+   if( nchildren > 0 )
+   {
+      SCIP_CALL( SCIPallocBufferArray(scip, &children, nchildren) );
+
+      for( c = 0; c < nchildren; ++c )
+      {
+         SCIP_CALL( SCIPcreateConsExprExpr3(scip, consexprhdlr, &children[c], exprgraph, SCIPexprgraphGetNodeChildren(node)[c]) );
+         if( children[c] == NULL )
+            goto TERMINATE;
+      }
+
+   }
+
+   switch( SCIPexprgraphGetNodeOperator(node) )
+   {
+      case SCIP_EXPR_CONST :
+         SCIP_CALL( SCIPcreateConsExprExprValue(scip, consexprhdlr, expr, SCIPexprgraphGetNodeOperatorReal(node)) );
+         break;
+
+      case SCIP_EXPR_VARIDX :
+      {
+         int varidx;
+
+         varidx = SCIPexprgraphGetNodeOperatorIndex(node);
+         assert(varidx >= 0);
+         assert(varidx < SCIPexprgraphGetNVars(exprgraph));
+
+         SCIP_CALL( SCIPcreateConsExprExprVar(scip, consexprhdlr, expr, SCIPexprgraphGetVars(exprgraph)[varidx]) );
+
+         break;
+      }
+
+      case SCIP_EXPR_PLUS:
+      {
+         assert(nchildren == 2);
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, 2, children, NULL, 0.0) );
+
+         break;
+      }
+
+      case SCIP_EXPR_MINUS:
+      {
+         SCIP_Real coefs[2] = {1.0, -1.0};
+
+         assert(nchildren == 2);
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, 2, children, coefs, 0.0) );
+
+         break;
+      }
+
+      case SCIP_EXPR_MUL:
+      {
+         assert(nchildren == 2);
+
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 2, children, NULL, 1.0) );
+
+         break;
+      }
+
+      case SCIP_EXPR_DIV:
+      {
+         SCIP_Real coefs[2] = {1.0, -1.0};
+
+         assert(nchildren == 2);
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 2, children, coefs, 1.0) );
+
+         break;
+      }
+
+      case SCIP_EXPR_SQUARE:
+      {
+         SCIP_Real two = 2.0;
+
+         assert(nchildren == 1);
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 1, children, &two, 1.0) );
+
+         break;
+      }
+
+      case SCIP_EXPR_SQRT:
+      {
+         SCIP_Real half = 0.5;
+
+         assert(nchildren == 1);
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 1, children, &half, 1.0) );
+
+         break;
+      }
+
+      case SCIP_EXPR_REALPOWER:
+      {
+         SCIP_Real exponent;
+
+         exponent = SCIPexprgraphGetNodeOperatorReal(node);
+
+         assert(nchildren == 1);
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 1, children, &exponent, 1.0) );
+
+         break;
+      }
+
+      case SCIP_EXPR_INTPOWER:
+      {
+         SCIP_Real exponent;
+
+         exponent = (SCIP_Real)SCIPexprgraphGetNodeOperatorIndex(node);
+
+         assert(nchildren == 1);
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, 1, children, &exponent, 1.0) );
+
+         break;
+      }
+
+      case SCIP_EXPR_SUM:
+      {
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, nchildren, children, NULL, 0.0) );
+
+         break;
+      }
+
+      case SCIP_EXPR_PRODUCT:
+      {
+         SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, expr, nchildren, children, NULL, 0.0) );
+
+         break;
+      }
+
+      case SCIP_EXPR_LINEAR:
+      {
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, nchildren, children, SCIPexprgraphGetNodeLinearCoefs(node), SCIPexprgraphGetNodeLinearConstant(node)) );
+
+         break;
+      }
+
+      case SCIP_EXPR_QUADRATIC:
+      {
+         SCIP_QUADELEM quadelem;
+         SCIP_CONSEXPR_EXPR* prod;
+         int i;
+
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, 0, NULL, NULL, SCIPexprgraphGetNodeQuadraticConstant(node)) );
+
+         /* append linear terms */
+         if( SCIPexprgraphGetNodeQuadraticLinearCoefs(node) != NULL )
+         {
+            for( i = 0; i < nchildren; ++i )
+            {
+               if( SCIPexprgraphGetNodeQuadraticLinearCoefs(node)[i] != 0.0 )
+               {
+                  SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *expr, children[i], SCIPexprgraphGetNodeQuadraticLinearCoefs(node)[i]) );
+               }
+            }
+         }
+
+         /* append quadratic terms */
+         for( i = 0; i < SCIPexprgraphGetNodeQuadraticNQuadElements(node); ++i )
+         {
+            quadelem = SCIPexprgraphGetNodeQuadraticQuadElements(node)[i];
+
+            if( quadelem.idx1 == quadelem.idx2 )
+            {
+               SCIP_Real two = 2.0;
+               SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prod, 1, &children[quadelem.idx1], &two, 1.0) );
+            }
+            else
+            {
+               SCIP_CONSEXPR_EXPR* prodchildren[2] = {children[quadelem.idx1], children[quadelem.idx2]};
+               SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prod, 2, prodchildren, NULL, 1.0) );
+            }
+
+            SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *expr, prod, quadelem.coef) );
+
+            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prod) );
+         }
+
+         break;
+      }
+
+      case SCIP_EXPR_POLYNOMIAL :
+      {
+         SCIP_EXPRDATA_MONOMIAL* monom;
+         int m;
+
+         SCIP_CALL( SCIPcreateConsExprExprSum(scip, consexprhdlr, expr, 0, NULL, NULL, SCIPexprgraphGetNodePolynomialConstant(node)) );
+
+         /* append monomials */
+         for( m = 0; m < SCIPexprgraphGetNodePolynomialNMonomials(node); ++m )
+         {
+            SCIP_Real* exponents;
+
+            monom = SCIPexprgraphGetNodePolynomialMonomials(node)[m];
+            exponents = SCIPexprGetMonomialExponents(monom);
+
+            if( SCIPexprGetMonomialNFactors(monom) == 1 && (exponents == NULL || exponents[0] == 1.0) )
+            {
+               /* monom is linear in child -> append child itself */
+               SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *expr, children[SCIPexprGetMonomialChildIndices(monom)[0]], SCIPexprGetMonomialCoef(monom)) );
+            }
+            else
+            {
+               /* monom is nonlinear -> translate into a product expression */
+               SCIP_CONSEXPR_EXPR* monomial;
+               int f;
+
+               SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &monomial, 0, NULL, NULL, 1.0) );
+
+               for( f = 0; f < SCIPexprGetMonomialNFactors(monom); ++f )
+               {
+                  SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, monomial, children[SCIPexprGetMonomialChildIndices(monom)[f]], exponents ? exponents[f] : 1.0) );
+               }
+
+               SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *expr, monomial, SCIPexprGetMonomialCoef(monom)) );
+               SCIP_CALL( SCIPreleaseConsExprExpr(scip, &monomial) );
+            }
+         }
+
+         break;
+      }
+
+      case SCIP_EXPR_SIGNPOWER:
+      case SCIP_EXPR_EXP:
+      case SCIP_EXPR_LOG:
+      case SCIP_EXPR_SIN:
+      case SCIP_EXPR_COS:
+      case SCIP_EXPR_TAN:
+      case SCIP_EXPR_MIN:
+      case SCIP_EXPR_MAX:
+      case SCIP_EXPR_ABS:
+      case SCIP_EXPR_SIGN:
+      case SCIP_EXPR_USER:
+      default:
+         goto TERMINATE;
+   }
+
+
+TERMINATE:
+   /* release all created children expressions (c-1...0) */
+   for( --c; c >= 0; --c )
+   {
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[c]) );
+   }
+
+   SCIPfreeBufferArrayNull(scip, &children);
 
    return SCIP_OKAY;
 }

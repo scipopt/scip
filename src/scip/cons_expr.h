@@ -193,6 +193,16 @@ SCIP_RETCODE SCIPcreateConsExprExpr2(
    SCIP_CONSEXPR_EXPR*     child2            /**< second child (can be NULL) */
    );
 
+/** creates and captures an expression from a node in an (old-style) expression graph */
+EXTERN
+SCIP_RETCODE SCIPcreateConsExprExpr3(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSHDLR*          consexprhdlr,     /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPR**    expr,             /**< pointer where to store expression */
+   SCIP_EXPRGRAPH*         exprgraph,        /**< expression graph */
+   SCIP_EXPRGRAPHNODE*     node              /**< expression graph node */
+   );
+
 /** captures an expression (increments usage count) */
 EXTERN
 void SCIPcaptureConsExprExpr(
