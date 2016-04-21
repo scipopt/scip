@@ -2,16 +2,28 @@
 Before making a contribution to SCIP, you'll need to agree to the terms outlined in the [Contributor License Agreement](CLA)
 
 ## Workflow
-Please see the [wiki](https://wiki.zib.de/confluence/display/SCIPOPTSUITE/Development+Workflow) for information about our contribution workflow with git. If you don't have access to this page, request it from @bzfhende or @bzfmilte.
+Please see the [wiki](https://wiki.zib.de/confluence/display/SCIPOPTSUITE/Development+Workflow) for information about our contribution workflow with git. If you don't have access to this page, request it from @bzfgleix.
 
 ## Bug Reports
-Use the following template in the Issue description to ensure consistency across bug reports.
+Use the following sample template in the Issue description to ensure consistency across bug reports.
 
 ```
-commit: [<SHA>][/integer/scip/commit/<SHA>]
+|||
+| --- | --- |
+| Affected Versions | 3.2.2, 3.2.1 |
+| Commit | 8eec1de1206 |
+| Solver Commit | [c155d8895e3](https://git.zib.de/integer/soplex/commit/c155d8895e3)|
+| OS | Linux |
+| Architecture | 64-bit |
+| Compile command | `make OPT=dbg LP=spx` |
+| Compiler | gcc-4.8.4 |
+| Hostname | opt57.zib.de |
+| Attachments | |
+
+## Steps to Reproduce
+
+## Extended Description
 ```
 
-Ensure to always apply the ~bug label when using the above template.
+When creating SCIP issues in the SCIP repository, all or part of the commit hash will auto-link to the commit. Commit hashes from other repositories, however, won't autolink, so be sure to include an explicit link. Also, please apply the ~bug label when using the above template.
 
-
-## Style
