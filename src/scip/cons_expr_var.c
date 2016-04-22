@@ -138,7 +138,7 @@ SCIP_RETCODE SCIPcreateConsExprExprVar(
 
    SCIP_CALL( SCIPcaptureVar(scip, var) );
 
-   SCIP_CALL( SCIPcreateConsExprExpr(scip, consexprhdlr, expr, SCIPgetConsExprExprHdlrVar(consexprhdlr), (SCIP_CONSEXPR_EXPRDATA*)var, 0, NULL) );
+   SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, SCIPgetConsExprExprHdlrVar(consexprhdlr), (SCIP_CONSEXPR_EXPRDATA*)var, 0, NULL) );
 
    return SCIP_OKAY;
 }
