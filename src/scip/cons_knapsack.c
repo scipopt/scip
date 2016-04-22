@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -182,7 +182,7 @@ struct SCIP_ConsData
    SCIP_Longint          weightsum;          /**< sum of all weights */
    SCIP_Longint          onesweightsum;      /**< sum of weights of variables fixed to one */
    unsigned int          propagated:1;       /**< is the knapsack constraint already propagated? */
-   unsigned int          presolvedtiming:4;  /**< max level in which the knapsack constraint is already presolved */
+   unsigned int          presolvedtiming:5;  /**< max level in which the knapsack constraint is already presolved */
    unsigned int          sorted:1;           /**< are the knapsack items sorted by weight? */
    unsigned int          cliquepartitioned:1;/**< is the clique partition valid? */
    unsigned int          negcliquepartitioned:1;/**< is the negated clique partition valid? */
@@ -5540,14 +5540,18 @@ SCIP_RETCODE SCIPseparateKnapsackCuts(
    int ntightened;
 
    assert(scip != NULL);
-   assert(vars != NULL);
-   assert(nvars > 0);
-   assert(weights != NULL);
    assert(capacity >= 0);
    assert(cutoff != NULL);
    assert(ncuts != NULL);
 
    *cutoff = FALSE;
+
+   if( nvars == 0 )
+      return SCIP_OKAY;
+
+   assert(vars != NULL);
+   assert(nvars > 0);
+   assert(weights != NULL);
 
    /* increase age of constraint (age is reset to zero, if a cut was found) */
    if( cons != NULL )
@@ -5801,6 +5805,16 @@ SCIP_RETCODE SCIPseparateRelaxedKnapsack(
       usegubs = conshdlrdata->usegubs;
 
       SCIP_CALL( SCIPallocBufferArray(scip, &tmpindices, nknapvars) );
+
+      /* increase array size to avoid an endless loop in the next block; this might happen if continuous variables
+       * change their types to SCIP_VARTYPE_BINARY during presolving
+       */
+      if( conshdlrdata->reals1size == 0 )
+      {
+         conshdlrdata->reals1size = 1;
+         SCIP_CALL( SCIPreallocMemoryArray(scip, &conshdlrdata->reals1, 1) );
+         conshdlrdata->reals1[0] = 0.0;
+      }
 
       assert(conshdlrdata->reals1size > 0);
 
@@ -12393,6 +12407,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
    int oldnchgsides;
    int firstchange;
    int c;
+   SCIP_Bool newchanges;
 
    /* remember old preprocessing counters */
    cutoff = FALSE;
@@ -12403,6 +12418,8 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
    oldnchgcoefs = *nchgcoefs;
    oldnchgsides = *nchgsides;
    firstchange = INT_MAX;
+
+   newchanges = (nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgbds > 0 || nnewupgdconss > 0);
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert(conshdlrdata != NULL);
@@ -12416,6 +12433,15 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       consdata = SCIPconsGetData(cons);
       assert(consdata != NULL);
 
+      /* update data structures */
+      /* todo if UBTIGHTENED events were caught, we could move this block after the continue */
+      if( newchanges || *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds )
+      {
+         SCIP_CALL( applyFixings(scip, cons, &cutoff) );
+         if( cutoff )
+            break;
+      }
+
       /* force presolving the constraint in the initial round */
       if( nrounds == 0 )
          consdata->presolvedtiming = 0;
@@ -12425,14 +12451,6 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
       SCIPdebugMessage("presolving knapsack constraint <%s>\n", SCIPconsGetName(cons));
       SCIPdebugPrintCons(scip, cons, NULL);
       consdata->presolvedtiming = presoltiming;
-
-      if( nrounds == 0 || nnewfixedvars > 0 || nnewaggrvars > 0 || nnewchgbds > 0
-         || nnewupgdconss > 0 || *nfixedvars > oldnfixedvars || *nchgbds > oldnchgbds )
-      {
-         SCIP_CALL( applyFixings(scip, cons, &cutoff) );
-         if( cutoff )
-            break;
-      }
 
       thisnfixedvars = *nfixedvars;
       thisnchgbds = *nchgbds;
@@ -12467,7 +12485,7 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
          if( cutoff )
             break;
 
-	 thisnfixedvars = *nfixedvars;
+         thisnfixedvars = *nfixedvars;
       }
 
       if( !SCIPconsIsModifiable(cons) )
@@ -12494,13 +12512,13 @@ SCIP_DECL_CONSPRESOL(consPresolKnapsack)
             if( SCIPconsIsDeleted(cons) )
                continue;
 
-	    /* remove again all fixed variables, if further fixings were found */
-	    if( *nfixedvars > thisnfixedvars )
-	    {
-	       SCIP_CALL( applyFixings(scip, cons, &cutoff) );
-	       if( cutoff )
-		  break;
-	    }
+            /* remove again all fixed variables, if further fixings were found */
+            if( *nfixedvars > thisnfixedvars )
+            {
+               SCIP_CALL(applyFixings(scip, cons, &cutoff));
+               if( cutoff )
+                  break;
+            }
          }
 
          /* tighten capacity and weights */
@@ -12721,7 +12739,7 @@ SCIP_DECL_CONSPRINT(consPrintKnapsack)
    {
       if( i > 0 )
          SCIPinfoMessage(scip, file, " ");
-      SCIPinfoMessage(scip, file, "%+"SCIP_LONGINT_FORMAT, consdata->weights[i]);
+      SCIPinfoMessage(scip, file, "%+" SCIP_LONGINT_FORMAT, consdata->weights[i]);
       SCIP_CALL( SCIPwriteVarName(scip, file, consdata->vars[i], TRUE) );
    }
    SCIPinfoMessage(scip, file, " <= %" SCIP_LONGINT_FORMAT "", consdata->capacity);
@@ -12847,7 +12865,7 @@ SCIP_DECL_CONSPARSE(consParseKnapsack)
 
    if( *success )
    {
-      if( sscanf(str, "%"SCIP_LONGINT_FORMAT, &capacity) != 1 )
+      if( sscanf(str, "%" SCIP_LONGINT_FORMAT, &capacity) != 1 )
       {
          SCIPverbMessage(scip, SCIP_VERBLEVEL_MINIMAL, NULL, "error parsing capacity from '%s'\n", str);
          *success = FALSE;

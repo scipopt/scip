@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -9230,8 +9230,8 @@ SCIP_RETCODE SCIPsetProbCopy(
  *       - \ref SCIP_STAGE_EXITSOLVE
  *
  *  @post After the method was called, \SCIP is in one of the following stages:
- *       -\ref SCIP_STAGE_INIT if reading failed (usually, when a SCIP_READERROR occurs)
- *       - ref SCIP_STAGE_PROBLEM if the problem file was successfully read
+ *       - \ref SCIP_STAGE_INIT if reading failed (usually, when a SCIP_READERROR occurs)
+ *       - \ref SCIP_STAGE_PROBLEM if the problem file was successfully read
  */
 SCIP_RETCODE SCIPreadProb(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -12705,6 +12705,10 @@ SCIP_RETCODE SCIPtransformProb(
       }
    }
 
+   /* update upper bound and cutoff bound due to objective limit in primal data */
+   SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
+         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
+
    if( !scip->set->reopt_enable )
    {
       oldnsolsfound = scip->primal->nsolsfound;
@@ -12771,10 +12775,6 @@ SCIP_RETCODE SCIPtransformProb(
       SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
          "all %d solutions given by solution candidate storage are infeasible\n\n", ncandsols);
    }
-
-   /* update upper bound and cutoff bound due to objective limit in primal data */
-   SCIP_CALL( SCIPprimalUpdateObjlimit(scip->primal, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue,
-         scip->transprob, scip->origprob, scip->tree, scip->reopt, scip->lp) );
 
    /* print transformed problem statistics */
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_FULL,
@@ -13640,8 +13640,6 @@ SCIP_RETCODE presolve(
          /* switch status to OPTIMAL */
          if( scip->primal->nlimsolsfound > 0 )
          {
-            assert(scip->primal->nsols > 0 && SCIPsetIsFeasLE(scip->set, SCIPsolGetObj(scip->primal->sols[0], scip->set, scip->transprob, scip->origprob),
-                  SCIPprobInternObjval(scip->transprob, scip->origprob, scip->set, SCIPprobGetObjlim(scip->transprob, scip->set))));
             scip->stat->status = SCIP_STATUS_OPTIMAL;
          }
          else /* switch status to INFEASIBLE */
@@ -13964,7 +13962,7 @@ SCIP_RETCODE freeSolve(
    SCIPlpInvalidateRootObjval(scip->lp);
 
    /* resets the debug environment */
-   SCIP_CALL( SCIPdebugReset(scip->set) );
+   SCIP_CALL( SCIPdebugReset(scip->set) ); /*lint !e506 !e774*/
 
    /* clear all row references in internal data structures */
    SCIP_CALL( SCIPcutpoolClear(scip->cutpool, scip->mem->probmem, scip->set, scip->lp) );
@@ -14116,7 +14114,11 @@ SCIP_RETCODE freeTransform(
    SCIP_CALL( SCIPcliquetableFree(&scip->cliquetable, scip->mem->probmem) );
    SCIP_CALL( SCIPconflictFree(&scip->conflict, scip->mem->probmem) );
    SCIP_CALL( SCIPtreeFree(&scip->tree, scip->mem->probmem, scip->set, scip->stat, scip->eventqueue, scip->lp) );
+
+   /* free the debug solution which might live in transformed primal data structure */
+   SCIP_CALL( SCIPdebugFreeSol(scip->set) ); /*lint !e506 !e774*/
    SCIP_CALL( SCIPprimalFree(&scip->primal, scip->mem->probmem) );
+
    SCIP_CALL( SCIPrelaxationFree(&scip->relaxation) );
    SCIP_CALL( SCIPlpFree(&scip->lp, scip->mem->probmem, scip->set, scip->eventqueue, scip->eventfilter) );
    SCIP_CALL( SCIPbranchcandFree(&scip->branchcand) );
@@ -14794,16 +14796,11 @@ SCIP_RETCODE SCIPsolve(
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
  *  @pre This method can be called if @p scip is in one of the following stages:
- *       - \ref SCIP_STAGE_INIT
  *       - \ref SCIP_STAGE_PROBLEM
- *       - \ref SCIP_STAGE_TRANSFORMED
- *       - \ref SCIP_STAGE_PRESOLVED
- *       - \ref SCIP_STAGE_SOLVING
- *       - \ref SCIP_STAGE_SOLVED
  */
 SCIP_RETCODE SCIPenableReoptimization(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_Bool             enable              /**< enable reoptimization */
+   SCIP_Bool             enable              /**< enable reoptimization (TRUE) or disable it (FALSE) */
    )
 {
    assert(scip != NULL);
@@ -17143,7 +17140,8 @@ SCIP_RETCODE SCIPgetTransformedVars(
    return SCIP_OKAY;
 }
 
-/** gets negated variable x' = lb + ub - x of variable x; negated variable is created, if not yet existing
+/** gets negated variable x' = lb + ub - x of variable x; negated variable is created, if not yet existing;
+ *  in difference to \ref SCIPcreateVar, the negated variable must not be released (unless captured explicitly)
  *
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
@@ -18382,7 +18380,7 @@ SCIP_RETCODE performStrongbranchWithPropagation(
       if( valid != NULL )
          *valid = FALSE;
 
-      if( cutoff != NULL )
+      if( cutoff != NULL ) /*lint !e774*/
          *cutoff = FALSE;
 
       if( conflict != NULL )
@@ -21439,6 +21437,66 @@ SCIP_Real SCIPcomputeVarUbLocal(
       return SCIPvarGetMultaggrUbLocal(var, scip->set);
    else
       return SCIPvarGetUbLocal(var);
+}
+
+/** for a multi-aggregated variable, gives the global lower bound computed by adding the global bounds from all
+ *  aggregation variables, this global bound may be tighter than the one given by SCIPvarGetLbGlobal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
+ */
+SCIP_Real SCIPgetVarMultaggrLbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to compute the bound for */
+   )
+{
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+   return SCIPvarGetMultaggrLbGlobal(var, scip->set);
+}
+
+/** for a multi-aggregated variable, gives the global upper bound computed by adding the global bounds from all
+ *  aggregation variables, this upper bound may be tighter than the one given by SCIPvarGetUbGlobal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
+ */
+SCIP_Real SCIPgetVarMultaggrUbGlobal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to compute the bound for */
+   )
+{
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+   return SCIPvarGetMultaggrUbGlobal(var, scip->set);
+}
+
+/** for a multi-aggregated variable, gives the local lower bound computed by adding the local bounds from all
+ *  aggregation variables, this lower bound may be tighter than the one given by SCIPvarGetLbLocal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
+ */
+SCIP_Real SCIPgetVarMultaggrLbLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to compute the bound for */
+   )
+{
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+   return SCIPvarGetMultaggrLbLocal(var, scip->set);
+}
+
+/** for a multi-aggregated variable, gives the local upper bound computed by adding the local bounds from all
+ *  aggregation variables, this upper bound may be tighter than the one given by SCIPvarGetUbLocal, since the latter is
+ *  not updated if bounds of aggregation variables are changing
+ *
+ *  calling this function for a non-multi-aggregated variable is not allowed
+ */
+SCIP_Real SCIPgetVarMultaggrUbLocal(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_VAR*             var                 /**< variable to compute the bound for */
+   )
+{
+   assert(SCIPvarGetStatus(var) == SCIP_VARSTATUS_MULTAGGR);
+   return SCIPvarGetMultaggrUbLocal(var, scip->set);
 }
 
 /** returns solution value and index of variable lower bound that is closest to the variable's value in the given primal
@@ -38514,6 +38572,10 @@ SCIP_Real SCIPgetCutoffbound(
  *  @return \ref SCIP_OKAY is returned if everything worked. Otherwise a suitable error code is passed. See \ref
  *          SCIP_Retcode "SCIP_RETCODE" for a complete list of error codes.
  *
+ *  @note using this method in the solving stage can lead to an erroneous SCIP solving status; in particular,
+ *        if a solution not respecting the cutoff bound was found before installing a cutoff bound which
+ *        renders the remaining problem infeasible, this solution may be reported as optimal
+ *
  *  @pre This method can be called if SCIP is in one of the following stages:
  *       - \ref SCIP_STAGE_TRANSFORMED
  *       - \ref SCIP_STAGE_PRESOLVING
@@ -41505,40 +41567,6 @@ void SCIPprintMemoryDiagnostic(
 #undef SCIPisUpdateUnreliable
 #undef SCIPisHugeValue
 #undef SCIPgetHugeValue
-#undef SCIPcreateRealarray
-#undef SCIPfreeRealarray
-#undef SCIPextendRealarray
-#undef SCIPclearRealarray
-#undef SCIPgetRealarrayVal
-#undef SCIPsetRealarrayVal
-#undef SCIPincRealarrayVal
-#undef SCIPgetRealarrayMinIdx
-#undef SCIPgetRealarrayMaxIdx
-#undef SCIPcreateIntarray
-#undef SCIPfreeIntarray
-#undef SCIPextendIntarray
-#undef SCIPclearIntarray
-#undef SCIPgetIntarrayVal
-#undef SCIPsetIntarrayVal
-#undef SCIPincIntarrayVal
-#undef SCIPgetIntarrayMinIdx
-#undef SCIPgetIntarrayMaxIdx
-#undef SCIPcreateBoolarray
-#undef SCIPfreeBoolarray
-#undef SCIPextendBoolarray
-#undef SCIPclearBoolarray
-#undef SCIPgetBoolarrayVal
-#undef SCIPsetBoolarrayVal
-#undef SCIPgetBoolarrayMinIdx
-#undef SCIPgetBoolarrayMaxIdx
-#undef SCIPcreatePtrarray
-#undef SCIPfreePtrarray
-#undef SCIPextendPtrarray
-#undef SCIPclearPtrarray
-#undef SCIPgetPtrarrayVal
-#undef SCIPsetPtrarrayVal
-#undef SCIPgetPtrarrayMinIdx
-#undef SCIPgetPtrarrayMaxIdx
 
 /** checks, if values are in range of epsilon */
 SCIP_Bool SCIPisEQ(

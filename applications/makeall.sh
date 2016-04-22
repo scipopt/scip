@@ -3,7 +3,7 @@
 # run with bash -e makeall.sh to stop on errors
 #
 
-APPLICATIONS=(Coloring MultiObjective Scheduler STP)
+APPLICATIONS=(Coloring Scheduler STP)
 LPSOLVERS=(clp cpx none spx spx2)
 OPTS=(opt dbg)
 
