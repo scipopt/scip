@@ -135,8 +135,11 @@ typedef struct
 typedef struct
 {
    SCIP*                   targetscip;       /**< target SCIP pointer */
-   SCIP_VAR*               (*mapvar)(SCIP_VAR*, void*); /**< mapvar callback */
-   void*                   mapvardata;       /**< mapvar data */
+   SCIP_Bool               transform;        /**< should transform instead of copy */
+   SCIP_HASHMAP*           varmap;           /**< SCIP_HASHMAP mapping variables of the source SCIP to corresponding variables of the target SCIP */
+   SCIP_HASHMAP*           consmap;          /**< SCIP_HASHMAP mapping constraints of the source SCIP to corresponding constraints of the target SCIP */
+   SCIP_Bool               global;           /**< should a global or a local copy be created */
+   SCIP_Bool*              valid;            /**< pointer to store whether the copy was valid */
 } COPY_DATA;
 
 /*
@@ -180,8 +183,11 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
                      &targetexpr->exprdata,
                      scip,
                      expr,
-                     copydata->mapvar,
-                     copydata->mapvardata) );
+                     copydata->transform,
+                     copydata->varmap,
+                     copydata->consmap,
+                     copydata->global,
+                     copydata->valid) );
             assert(targetexpr->exprdata != NULL);
          }
          else
@@ -209,7 +215,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
          assert(expr->walkcurrentchild < expr->nchildren);
 
          child = expr->children[expr->walkcurrentchild];
-         copydata = (COPY_DATA* )data;
+         copydata = (COPY_DATA*)data;
 
          /* get copy of child and append it to copyexpr */
          targetchild = (SCIP_CONSEXPR_EXPR *)child->walkio.ptrval;
@@ -3299,8 +3305,9 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
    COPY_DATA copydata;
 
    copydata.targetscip = scip;
-   copydata.mapvar = NULL;
-   copydata.mapvardata = NULL;
+   copydata.transform = FALSE;
+   copydata.varmap = NULL;
+   copydata.consmap = NULL;
 
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, copyExpr, NULL, copyExpr, NULL, &copydata) );
    *copyexpr = (SCIP_CONSEXPR_EXPR*)expr->walkio.ptrval;

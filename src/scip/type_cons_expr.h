@@ -93,8 +93,11 @@ extern "C" {
    SCIP_CONSEXPR_EXPRDATA** targetexprdata, \
    SCIP* sourcescip, \
    SCIP_CONSEXPR_EXPR* sourceexpr, \
-   SCIP_VAR* (*mapvar)(SCIP_VAR*, void*), \
-   void *mapvardata)
+   SCIP_Bool transform, \
+   SCIP_HASHMAP* varmap, \
+   SCIP_HASHMAP* consmap, \
+   SCIP_Bool global, \
+   SCIP_Bool* valid)
 
 /** expression data free callback
  *
