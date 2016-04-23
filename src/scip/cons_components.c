@@ -581,13 +581,13 @@ SCIP_RETCODE solveComponent(
          //nodelimit = SCIPgetNNodes(component->subscip) + 1;
          gaplimit = 0.0;
          nodelimit = 2 * SCIPgetNNodes(component->subscip);
-         nodelimit = MAX(nodelimit, 500LL);
+         nodelimit = MAX(nodelimit, 10LL);
 
          /* set a gap limit of half the current gap (at most 10%) */
-         //if( SCIPgetGap(component->subscip) < 0.2 )
-         //   gaplimit = 0.5 * SCIPgetGap(component->subscip);
-         //else
-         //   gaplimit = 0.1;
+         if( SCIPgetGap(component->subscip) < 0.2 )
+            gaplimit = 0.5 * SCIPgetGap(component->subscip);
+         else
+            gaplimit = 0.1;
 
          if( lastcomponent )
          {
