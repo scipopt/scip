@@ -89,12 +89,12 @@ extern "C" {
  */
 #define SCIP_DECL_CONSEXPR_EXPRCOPYDATA(x) SCIP_RETCODE x (\
    SCIP* targetscip, \
-   SCIP_CONSHDLR* targetconsexprhdlr, \
    SCIP_CONSEXPR_EXPRHDLR* targetexprhdlr, \
    SCIP_CONSEXPR_EXPRDATA** targetexprdata, \
    SCIP* sourcescip, \
-   SCIP_CONSHDLR* sourceconsexprhdlr, \
-   SCIP_CONSEXPR_EXPR* sourceexpr)
+   SCIP_CONSEXPR_EXPR* sourceexpr, \
+   SCIP_VAR* (*mapvar)(SCIP_VAR*, void*), \
+   void *mapvardata)
 
 /** expression data free callback
  *
