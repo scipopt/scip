@@ -1439,18 +1439,38 @@ SCIP_DECL_CONSDELETE(consDeleteExpr)
 
 
 /** transforms constraint data into data belonging to the transformed problem */
-#if 0
 static
 SCIP_DECL_CONSTRANS(consTransExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   COPY_DATA copydata;
+   SCIP_CONSEXPR_EXPR* sourceexpr;
+   SCIP_CONSEXPR_EXPR* targetexpr;
+   SCIP_CONSDATA* sourcedata;
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert(sourcedata != NULL);
+
+   sourceexpr = sourcedata->expr;
+
+   copydata.targetscip = scip;
+   copydata.transform = TRUE;
+   copydata.varmap = NULL;
+   copydata.consmap = NULL;
+
+   /* get a copy of sourceexpr with transformed vars */
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, sourceexpr, copyExpr, NULL, copyExpr, NULL, &copydata) );
+   targetexpr = (SCIP_CONSEXPR_EXPR*)sourceexpr->walkio.ptrval;
+
+   /* create transformed cons */
+   SCIP_CALL( SCIPcreateConsExpr(scip, targetcons, SCIPconsGetName(sourcecons),
+      targetexpr, sourcedata->lhs, sourcedata->rhs,
+      SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
+      SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
+      SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
+      SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
 
    return SCIP_OKAY;
 }
-#else
-#define consTransExpr NULL
-#endif
 
 
 /** LP initialization method of constraint handler (called before the initial LP relaxation at a node is solved) */

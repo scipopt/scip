@@ -34,6 +34,8 @@
 #include "scip/cons_expr_sumprod.h"
 #include "scip/struct_cons_expr.h"
 
+#include "scip/nodesel_bfs.h" /* to be able to transform a problem */
+
 /** macro to check the return of tests
  *
  *  @note assumes the existence of SCIP_RETCODE retcode
@@ -1243,7 +1245,6 @@ SCIP_RETCODE testDuplicate(void)
    /* create expression 1.1*x*y/z + 3.2*x^2*y^(-5)*z + 0.5*z^3 from string */
    {
       SCIP_CONSEXPR_EXPR* expr;
-      SCIP_CONSEXPR_EXPR* exprptr;
       SCIP_CONSEXPR_EXPR* duplicate;
       const char* input = "1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3";
 
@@ -1269,7 +1270,82 @@ SCIP_RETCODE testDuplicate(void)
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &duplicate) );
    }
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPfree(&scip) );
 
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
+
+/** test transforming of cons expression */
+static
+SCIP_RETCODE testTransform(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_VAR* z;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
+
+   /* create constraint 1.1*x*y/z + 3.2*x^2*y^(-5)*z + 0.5*z^3 from string */
+   {
+      SCIP_CONS* consexpr;
+      SCIP_CONS* transconsexpr;
+      SCIP_Bool success;
+      const char* input = "[expr] <test>: 1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3 == 2;";
+
+      /* parse constraint */
+      success = FALSE;
+      SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+      assert(success);
+
+      /* print constraint */
+      SCIPinfoMessage(scip, NULL, "printing constraint %s after parsing from string:", input);
+      SCIP_CALL( SCIPprintCons(scip, consexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /* transform problem; we need a nodeselector for this */
+      SCIP_CALL( SCIPincludeNodeselBfs(scip) );
+      SCIP_CALL( SCIPtransformProb(scip) );
+
+      /* transform constraint */
+      SCIP_CALL( SCIPtransformCons(scip, consexpr, &transconsexpr) );
+
+      /* print transformed constraint */
+      SCIPinfoMessage(scip, NULL, "printing copy: ");
+      SCIP_CALL( SCIPprintCons(scip, transconsexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /* free transproblem */
+      SCIP_CALL( SCIPfreeTransform(scip) );
+
+      /* release constraints */
+      SCIP_CALL( SCIPreleaseCons(scip, &transconsexpr) );
+      SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+   }
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
@@ -1304,6 +1380,8 @@ main(
    CHECK_TEST( testParse() );
 
    CHECK_TEST( testDuplicate() );
+
+   CHECK_TEST( testTransform() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");

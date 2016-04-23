@@ -34,14 +34,48 @@ SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrVar)
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataVar)
 {
-   assert(targetscip == sourcescip);  /* TODO if this is a copy from one SCIP to another, we need to get the variable mapping */
    assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
 
-   *targetexprdata = SCIPgetConsExprExprData(sourceexpr);
-   assert(*targetexprdata != NULL);
+   if( !transform && varmap == NULL )
+   {
+      /* duplicate var */
+      assert(targetscip == sourcescip);
+      assert(consmap == NULL);
 
-   SCIP_CALL( SCIPcaptureVar(targetscip, (SCIP_VAR*)*targetexprdata) );
+      *targetexprdata = SCIPgetConsExprExprData(sourceexpr);
+      assert(*targetexprdata != NULL);
+
+      SCIP_CALL( SCIPcaptureVar(targetscip, (SCIP_VAR*)*targetexprdata) );
+   }
+   else if( transform )
+   {
+      SCIP_VAR* var;
+
+      assert(targetscip == sourcescip);
+      assert(consmap == NULL && varmap == NULL);
+
+      var = (SCIP_VAR*)SCIPgetConsExprExprData(sourceexpr);
+
+      SCIP_CALL( SCIPgetTransformedVar(sourcescip, var, &var) );
+
+      *targetexprdata = (SCIP_CONSEXPR_EXPRDATA*)var;
+      assert(*targetexprdata != NULL);
+   }
+   else
+   {
+      SCIP_VAR* var;
+
+      assert(sourcescip != targetscip); /* does this always holds? */
+      assert(consmap != NULL && varmap != NULL && valid != NULL);
+
+      var = (SCIP_VAR*)SCIPgetConsExprExprData(sourceexpr);
+
+      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, var, &var, varmap, consmap, global, valid) );
+
+      *targetexprdata = (SCIP_CONSEXPR_EXPRDATA*)var;
+      assert(*targetexprdata != NULL);
+   }
 
    return SCIP_OKAY;
 }
