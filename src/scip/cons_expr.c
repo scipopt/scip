@@ -792,6 +792,7 @@ SCIP_RETCODE parseTerm(
    {
       /* initialize termtree as a product expression with a single term, so we can append the extra Factors */
       SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, termtree, 1, &factortree, &exponent, 1.0) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &factortree) );
 
       /* loop: parse Factor, find next symbol */
       do
@@ -816,6 +817,7 @@ SCIP_RETCODE parseTerm(
          /* append newly created factor */
          exponent = isdivision ? -exponent : exponent;
          SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, *termtree, factortree, exponent) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &factortree) );
 
          /* find next symbol */
          expr = *newpos;
@@ -829,6 +831,7 @@ SCIP_RETCODE parseTerm(
       if( exponent != 1.0 )
       {
          SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, termtree, 1, &factortree, &exponent, 1.0) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &factortree) );
       }
       else
          *termtree = factortree;
@@ -892,6 +895,7 @@ SCIP_RETCODE parseExpr(
       {
          /* initialize exprtree as a sum expression with a single term, so we can append the following terms */
          SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, exprtree, 1, &termtree, &sign, 0.0) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &termtree) );
       }
 
       /* loop: parse Term, find next symbol */
@@ -940,6 +944,7 @@ SCIP_RETCODE parseExpr(
 
          /* append newly created term */
          SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, *exprtree, termtree, coef) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &termtree) );
 
          /* find next symbol */
          expr = *newpos;
@@ -954,6 +959,7 @@ SCIP_RETCODE parseExpr(
       {
          assert(sign == -1.0);
          SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, exprtree, 1, &termtree, &sign, 0.0) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &termtree) );
       }
       else
          *exprtree = termtree;

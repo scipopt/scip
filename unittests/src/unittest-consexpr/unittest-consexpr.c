@@ -32,6 +32,7 @@
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_sumprod.h"
+#include "scip/struct_cons_expr.h"
 
 /** macro to check the return of tests
  *
@@ -79,6 +80,25 @@ typedef struct
    SCIP_CONSEXPR_EXPR* e[10];
    int next;
 } EXPRCOLLECT;
+
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(check_nuses)
+{
+   assert(expr != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+
+   if( expr->nuses > 1 )
+   {
+      printf("following expression is captured too many times\n");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+      assert(expr->nuses == 1);
+   }
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   return SCIP_OKAY;
+}
 
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(walk_collect)
@@ -331,6 +351,8 @@ SCIP_RETCODE testParse(void)
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr_xy5, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 
+      /* check that the expression is capture correctly */
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr_xy5, check_nuses, NULL, NULL, NULL, NULL) );
       /* release expression */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
    }
@@ -408,6 +430,8 @@ SCIP_RETCODE testParse(void)
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 
+      /* check that the expression is capture correctly */
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, check_nuses, NULL, NULL, NULL, NULL) );
       /* release expression */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    }
