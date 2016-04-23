@@ -126,6 +126,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(walk_count_all)
    ntotalnodes = (int *)data;
    *ntotalnodes += nnodes;
 
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
    return SCIP_OKAY;
 }
 
