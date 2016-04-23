@@ -1582,7 +1582,10 @@ SCIP_Real SCIPsetDualfeasFrac(
    SCIP_Real             val                 /**< value to return fractional part for */
    );
 
-/** checks, if the given new lower bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks, if the given new lower bound is at least min(oldub - oldlb, |oldlb|) times the bound
+ *  strengthening epsilon better than the old one or the change in the lower bound would fix the
+ *  sign of the variable
+ */
 extern
 SCIP_Bool SCIPsetIsLbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -1591,7 +1594,10 @@ SCIP_Bool SCIPsetIsLbBetter(
    SCIP_Real             oldub               /**< old upper bound */
    );
 
-/** checks, if the given new upper bound is tighter (w.r.t. bound strengthening epsilon) than the old one */
+/** checks, if the given new upper bound is at least min(oldub - oldlb, |oldub|) times the bound
+ *  strengthening epsilon better than the old one or the change in the upper bound would fix the
+ *  sign of the variable
+ */
 extern
 SCIP_Bool SCIPsetIsUbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */

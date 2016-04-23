@@ -5977,7 +5977,8 @@ SCIP_Real SCIPsetDualfeasFrac(
 }
 
 /** checks, if the given new lower bound is at least min(oldub - oldlb, |oldlb|) times the bound
- *  strengthening epsilon better than the old one
+ *  strengthening epsilon better than the old one or the change in the lower bound would fix the
+ *  sign of the variable
  */
 SCIP_Bool SCIPsetIsLbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -5991,13 +5992,18 @@ SCIP_Bool SCIPsetIsLbBetter(
    assert(set != NULL);
    assert(SCIPsetIsLE(set, oldlb, oldub));
 
+   /* if lower bound is moved to 0 or higher, always accept bound change */
+   if( oldlb < 0.0 && newlb >= 0.0 )
+      return TRUE;
+
    eps = REALABS(oldlb);
    eps = MIN(oldub - oldlb, eps);
    return EPSGT(newlb, oldlb, set->num_boundstreps * MAX(eps, 1e-3));
 }
 
 /** checks, if the given new upper bound is at least min(oldub - oldlb, |oldub|) times the bound
- *  strengthening epsilon better than the old one
+ *  strengthening epsilon better than the old one or the change in the upper bound would fix the
+ *  sign of the variable
  */
 SCIP_Bool SCIPsetIsUbBetter(
    SCIP_SET*             set,                /**< global SCIP settings */
@@ -6010,6 +6016,10 @@ SCIP_Bool SCIPsetIsUbBetter(
 
    assert(set != NULL);
    assert(SCIPsetIsLE(set, oldlb, oldub));
+
+   /* if upper bound is moved to 0 or lower, always accept bound change */
+   if( oldub > 0.0 && newub <= 0.0 )
+      return TRUE;
 
    eps = REALABS(oldub);
    eps = MIN(oldub - oldlb, eps);
