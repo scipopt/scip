@@ -131,6 +131,14 @@ typedef struct
    int                     nlocksneg;        /**< number of negative locks */
 } EXPRLOCK_DATA;
 
+/* data passed on during coping */
+typedef struct
+{
+   SCIP*                   targetscip;       /**< target SCIP pointer */
+   SCIP_VAR*               (*mapvar)(SCIP_VAR*, void*); /**< mapvar callback */
+   void*                   mapvardata;       /**< mapvar data */
+} COPY_DATA;
+
 /*
  * Local methods
  */
@@ -141,6 +149,90 @@ typedef struct
  * To avoid this issue, the method SCIPwalkConsExprExprDF is introduce to traverse the tree and execute callbacks
  * at different places. Here are the callbacks needed for performing the mentioned operations
  */
+
+/** expression walk callback to copy an expression; in expr->walkio is given the targetexpr
+ * which is expected to hold the copy of expr */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
+{
+   assert(expr != NULL);
+
+   switch( stage )
+   {
+      case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
+      {
+         /* create expr that will hold the copy */
+         SCIP_CONSEXPR_EXPR* targetexpr;
+         COPY_DATA* copydata;
+
+         copydata = (COPY_DATA* )data;
+
+         /* @todo: should probably get the exprhdlr of the target scip */
+         SCIP_CALL( SCIPcreateConsExprExpr(copydata->targetscip, &targetexpr,
+                  SCIPgetConsExprExprHdlr(expr), NULL, 0, 0) );
+
+         /* copy data to targetexpr's data */
+         if( expr->exprhdlr->copydata != NULL )
+         {
+            SCIP_CALL( expr->exprhdlr->copydata(
+                     copydata->targetscip,
+                     SCIPgetConsExprExprHdlr(expr),
+                     &targetexpr->exprdata,
+                     scip,
+                     expr,
+                     copydata->mapvar,
+                     copydata->mapvardata) );
+            assert(targetexpr->exprdata != NULL);
+         }
+         else
+         {
+            assert(expr->exprdata == NULL);
+         }
+
+         /* store targetexpr */
+         expr->walkio.ptrval = targetexpr;
+
+         /* continue */
+         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+         return SCIP_OKAY;
+      }
+
+
+      case SCIP_CONSEXPREXPRWALK_VISITEDCHILD :
+      {
+         /* just visited child so a copy of himself should be available; append it */
+         SCIP_CONSEXPR_EXPR* child;
+         SCIP_CONSEXPR_EXPR* targetchild;
+         SCIP_CONSEXPR_EXPR* targetexpr;
+         COPY_DATA* copydata;
+
+         assert(expr->walkcurrentchild < expr->nchildren);
+
+         child = expr->children[expr->walkcurrentchild];
+         copydata = (COPY_DATA* )data;
+
+         /* get copy of child and append it to copyexpr */
+         targetchild = (SCIP_CONSEXPR_EXPR *)child->walkio.ptrval;
+         targetexpr = (SCIP_CONSEXPR_EXPR *)expr->walkio.ptrval;
+         SCIP_CALL( SCIPappendConsExprExpr(copydata->targetscip, targetexpr, targetchild) );
+
+         /* release targetchild */
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &targetchild) );
+
+         return SCIP_OKAY;
+      }
+
+      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR :
+      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD :
+      default:
+      {
+         /* just visited child so a copy of himself should be available; append it */
+         SCIPABORT(); /* we should never be called in this stage */
+         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+         return SCIP_OKAY;
+      }
+   }
+}
 
 /** expression walk callback to free an expression including its children (if not used anywhere else) */
 static
@@ -3193,6 +3285,25 @@ SCIP_RETCODE SCIPappendConsExprExpr(
 
    /* capture child */
    SCIPcaptureConsExprExpr(child);
+
+   return SCIP_OKAY;
+}
+
+/** duplicates the given expression */
+SCIP_RETCODE SCIPduplicateConsExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
+   SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
+   )
+{
+   COPY_DATA copydata;
+
+   copydata.targetscip = scip;
+   copydata.mapvar = NULL;
+   copydata.mapvardata = NULL;
+
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, copyExpr, NULL, copyExpr, NULL, &copydata) );
+   *copyexpr = (SCIP_CONSEXPR_EXPR*)expr->walkio.ptrval;
 
    return SCIP_OKAY;
 }

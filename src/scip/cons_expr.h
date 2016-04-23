@@ -573,6 +573,14 @@ SCIP_RETCODE SCIPappendConsExprExpr(
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
    SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
    );
+
+/** duplicates the given expression */
+EXTERN
+SCIP_RETCODE SCIPduplicateConsExprExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
+   SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
+   );
 /** @} */
 
 #ifdef __cplusplus

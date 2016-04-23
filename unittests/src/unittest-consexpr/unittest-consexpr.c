@@ -1210,6 +1210,76 @@ SCIP_RETCODE testExprinteval(void)
    return SCIP_OKAY;
 }
 
+
+/** test duplicating expressions */
+static
+SCIP_RETCODE testDuplicate(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_VAR* z;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
+
+   /* create expression 1.1*x*y/z + 3.2*x^2*y^(-5)*z + 0.5*z^3 from string */
+   {
+      SCIP_CONSEXPR_EXPR* expr;
+      SCIP_CONSEXPR_EXPR* exprptr;
+      SCIP_CONSEXPR_EXPR* duplicate;
+      const char* input = "1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3";
+
+      /* create expression from input string */
+      assert(SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr) == SCIP_OKAY);
+
+      /* print expression */
+      SCIPinfoMessage(scip, NULL, "printing expression %s after parsing from string: ", input);
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /* duplicate expression */
+      SCIP_CALL( SCIPduplicateConsExprExpr(scip, expr, &duplicate) );
+
+      /* print duplicate */
+      SCIPinfoMessage(scip, NULL, "printing copy: ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, duplicate, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /* evaluate both expressions on different points */
+
+      /* release expressions */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &duplicate) );
+   }
+
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
+
 /** main function */
 int
 main(
@@ -1232,6 +1302,8 @@ main(
    CHECK_TEST( testExprinteval() );
 
    CHECK_TEST( testParse() );
+
+   CHECK_TEST( testDuplicate() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");
