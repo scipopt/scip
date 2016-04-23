@@ -1260,7 +1260,7 @@ SCIP_RETCODE testDuplicate(void)
       SCIP_CALL( SCIPduplicateConsExprExpr(scip, expr, &duplicate) );
 
       /* print duplicate */
-      SCIPinfoMessage(scip, NULL, "printing copy: ");
+      SCIPinfoMessage(scip, NULL, "printing duplicate: ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, duplicate, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 
@@ -1269,6 +1269,96 @@ SCIP_RETCODE testDuplicate(void)
       /* release expressions */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &duplicate) );
+   }
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
+
+/** test copy of cons expression */
+static
+SCIP_RETCODE testCopy(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_VAR* z;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
+
+   /* create constraint 1.1*x*y/z + 3.2*x^2*y^(-5)*z + 0.5*z^3 from string */
+   {
+      SCIP* subscip;
+      SCIP_CONS* consexpr;
+      SCIP_CONS* copyconsexpr;
+      SCIP_Bool success;
+      SCIP_Bool valid;
+      const char* input = "[expr] <test>: 1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3 == 2;";
+
+      /* parse constraint and add it to SCIP */
+      success = FALSE;
+      SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+      assert(success);
+
+      SCIP_CALL( SCIPaddCons(scip, consexpr) );
+
+      /* print constraint */
+      SCIPinfoMessage(scip, NULL, "printing constraint %s after parsing from string:", input);
+      SCIP_CALL( SCIPprintCons(scip, consexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /* copy constraint: it seems scip needs to be transformed before copy :-/ */
+      /* transform problem; we need a nodeselector for this */
+      SCIP_CALL( SCIPincludeNodeselBfs(scip) );
+      SCIP_CALL( SCIPtransformProb(scip) );
+
+      SCIP_CALL( SCIPcreate(&subscip) );
+      SCIP_CALL( SCIPcopy(scip, subscip, NULL, NULL, "copytest_", TRUE, FALSE, FALSE, &valid) );
+      /*SCIP_CALL( SCIPcopyConss(scip, subscip, NULL, NULL, TRUE, FALSE, &valid) );*/
+      /*SCIP_CALL( SCIPgetConsCopy(scip, subscip, consexpr, &copyconsexpr, conshdlr, NULL, NULL, "copycons",
+               TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, &valid) );*/
+      assert(valid);
+      assert(SCIPgetNConss(subscip) == 1);
+
+      /* get and print copied constraint; note that the subscip needs to be used to print copyconsexpr */
+      copyconsexpr = SCIPgetConss(subscip)[0];
+      SCIPinfoMessage(subscip, NULL, "printing copy: ");
+      SCIP_CALL( SCIPprintCons(subscip, copyconsexpr, NULL) );
+      SCIPinfoMessage(subscip, NULL, "\n");
+
+
+      /* release transformed problem */
+      SCIP_CALL( SCIPfreeTransform(scip) );
+
+      /* release constraint */
+      SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+
+      /* release subscip */
+      SCIP_CALL( SCIPfree(&subscip) );
    }
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
@@ -1335,7 +1425,7 @@ SCIP_RETCODE testTransform(void)
       SCIP_CALL( SCIPtransformCons(scip, consexpr, &transconsexpr) );
 
       /* print transformed constraint */
-      SCIPinfoMessage(scip, NULL, "printing copy: ");
+      SCIPinfoMessage(scip, NULL, "printing transform: ");
       SCIP_CALL( SCIPprintCons(scip, transconsexpr, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 
@@ -1382,6 +1472,8 @@ main(
    CHECK_TEST( testDuplicate() );
 
    CHECK_TEST( testTransform() );
+
+   CHECK_TEST( testCopy() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");

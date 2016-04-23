@@ -1283,18 +1283,20 @@ SCIP_DECL_NONLINCONSUPGD(nonlinconsUpgdExpr)
 }
 
 /** copy method for constraint handler plugins (called when SCIP copies plugins) */
-#if 0
 static
 SCIP_DECL_CONSHDLRCOPY(conshdlrCopyExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+
+   /* call inclusion method of constraint handler */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   *valid = TRUE;
 
    return SCIP_OKAY;
 }
-#else
-#define conshdlrCopyExpr NULL
-#endif
 
 /** destructor of constraint handler to free constraint handler data (called when SCIP is exiting) */
 static
@@ -1741,18 +1743,37 @@ SCIP_DECL_CONSPRINT(consPrintExpr)
 
 
 /** constraint copying method of constraint handler */
-#if 0
 static
 SCIP_DECL_CONSCOPY(consCopyExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   COPY_DATA copydata;
+   SCIP_CONSEXPR_EXPR* sourceexpr;
+   SCIP_CONSEXPR_EXPR* targetexpr;
+   SCIP_CONSDATA* sourcedata;
+
+   sourcedata = SCIPconsGetData(sourcecons);
+   assert(sourcedata != NULL);
+
+   sourceexpr = sourcedata->expr;
+
+   copydata.targetscip = scip;
+   copydata.transform = FALSE;
+   copydata.varmap = varmap;
+   copydata.consmap = consmap;
+   copydata.global = global;
+   copydata.valid = valid;
+
+   /* get a copy of sourceexpr with transformed vars */
+   SCIP_CALL( SCIPwalkConsExprExprDF(sourcescip, sourceexpr, copyExpr, NULL, copyExpr, NULL, &copydata) );
+   targetexpr = (SCIP_CONSEXPR_EXPR*)sourceexpr->walkio.ptrval;
+
+   /* create copy */
+   SCIP_CALL( SCIPcreateConsExpr(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
+      targetexpr, sourcedata->lhs, sourcedata->rhs,
+      initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
 
    return SCIP_OKAY;
 }
-#else
-#define consCopyExpr NULL
-#endif
 
 
 /** constraint parsing method of constraint handler */
