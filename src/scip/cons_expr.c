@@ -3274,7 +3274,7 @@ SCIP_RETCODE SCIPparseConsExprExpr(
 /** appends child to the children list of expr */
 SCIP_RETCODE SCIPappendConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_CONSEXPR_EXPR*   expr,               /**< expression */
    SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
    )
 {
