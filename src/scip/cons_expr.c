@@ -85,8 +85,6 @@
  * Data structures
  */
 
-/* TODO: fill in the necessary constraint data */
-
 /** constraint data for expr constraints */
 struct SCIP_ConsData
 {
@@ -203,11 +201,14 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    return SCIP_OKAY;
 }
 
-/*
- * Walking methods: several operations need to traverse the whole expression tree: print, evaluate, free, etc.
+/** @name Walking methods
+ *
+ * Several operations need to traverse the whole expression tree: print, evaluate, free, etc.
  * These operations have a very natural recursive implementation. However, deep recursion can raise stack overflows.
- * To avoid this issue, the method SCIPwalkConsExprExprDF is introduce to traverse the tree and execute callbacks
- * at different places. Here are the callbacks needed for performing the mentioned operations
+ * To avoid this issue, the method SCIPwalkConsExprExprDF is introduced to traverse the tree and execute callbacks
+ * at different places. Here are the callbacks needed for performing the mentioned operations.
+ *
+ * @{
  */
 
 /** expression walk callback to copy an expression
@@ -628,6 +629,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
 
    return SCIP_OKAY;
 }
+
+/**@} */  /* end of walking methods */
 
 
 /** @name Parsing methods
