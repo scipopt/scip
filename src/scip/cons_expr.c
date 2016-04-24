@@ -145,7 +145,8 @@ typedef struct
 /*
  * Local methods
  */
-/** create, include conshdlr to SCIP and set everything except for expression handlers */
+
+/** create and include conshdlr to SCIP and set everything except for expression handlers */
 static
 SCIP_RETCODE includeConshdlrExprBasic(SCIP* scip);
 
@@ -192,6 +193,12 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
          *valid = FALSE;
       }
    }
+
+   /* set pointer to important expression handlers in conshdlr of target SCIP */
+   conshdlrdata->exprvarhdlr = SCIPfindConsExprExprHdlr(conshdlr, "var");
+   conshdlrdata->exprvalhdlr = SCIPfindConsExprExprHdlr(conshdlr, "val");
+   conshdlrdata->exprsumhdlr = SCIPfindConsExprExprHdlr(conshdlr, "sum");
+   conshdlrdata->exprprodhdlr = SCIPfindConsExprExprHdlr(conshdlr, "prod");
 
    return SCIP_OKAY;
 }
@@ -3175,7 +3182,7 @@ unsigned int SCIPgetConsExprExprWalkParentPrecedence(
  * constraint specific interface methods
  */
 
-/** create, include conshdlr to SCIP and set everything except for expression handlers */
+/** create and include conshdlr to SCIP and set everything except for expression handlers */
 static
 SCIP_RETCODE includeConshdlrExprBasic(
    SCIP*                 scip                /**< SCIP data structure */
