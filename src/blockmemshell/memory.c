@@ -2333,8 +2333,8 @@ void BMSdisplayBlockMemory_call(
    printInfo("\n");
 }
 
-/** outputs warning messages, if there are allocated elements in the block memory */
-void BMScheckEmptyBlockMemory_call(
+/** outputs warning messages, if there are allocated elements in the block memory and returns number of unfreed bytes */
+long long BMScheckEmptyBlockMemory_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    )
 {
@@ -2398,6 +2398,8 @@ void BMScheckEmptyBlockMemory_call(
 
    if( allocedmem != freemem )
       printInfo("%" LONGINT_FORMAT " bytes not freed in total.\n", allocedmem - freemem);
+
+   return allocedmem - freemem;
 }
 
 
