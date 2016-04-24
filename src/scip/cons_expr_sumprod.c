@@ -59,10 +59,10 @@
 
 struct SCIP_ConsExpr_ExprData
 {
-   SCIP_Real  constant;     /* I guess we would like to have it this way? */
-   SCIP_Real* coefficients; /* array with constant and coefficients of childrens */
-   int        ncoefs;       /* number of coefficients (i.e., number of children) */
-   int        coefssize;    /* size of the coefficients array */
+   SCIP_Real  constant;     /**< constant coefficient */
+   SCIP_Real* coefficients; /**< coefficients / exponents of children */
+   int        ncoefs;       /**< number of coefficients (usually also number of children, but don't count on it) */
+   int        coefssize;    /**< size of the coefficients array */
 };
 
 /*

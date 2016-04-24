@@ -40,7 +40,7 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataVar)
 
    if( !transform && varmap == NULL )
    {
-      /* duplicate var */
+      /* duplicate var expr */
       assert(targetscip == sourcescip);
       assert(consmap == NULL);
 
@@ -51,10 +51,12 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataVar)
    }
    else if( transform )
    {
+      /* transform var */
       SCIP_VAR* var;
 
       assert(targetscip == sourcescip);
-      assert(consmap == NULL && varmap == NULL);
+      assert(consmap == NULL);
+      assert(varmap == NULL);
 
       var = (SCIP_VAR*)SCIPgetConsExprExprData(sourceexpr);
 
@@ -65,10 +67,13 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataVar)
    }
    else
    {
+      /* copy expr to other scip */
       SCIP_VAR* var;
 
       assert(sourcescip != targetscip); /* does this always holds? */
-      assert(consmap != NULL && varmap != NULL && valid != NULL);
+      assert(consmap != NULL);
+      assert(varmap != NULL);
+      assert(valid != NULL);
 
       var = (SCIP_VAR*)SCIPgetConsExprExprData(sourceexpr);
 

@@ -426,6 +426,7 @@ void SCIPsetConsExprExprEvalInterval(
  * The callbacks can direct the walking method to skip parts of the tree or abort.
  * If returning SCIP_CONSEXPREXPRWALK_SKIP as result of an enterexpr callback, all children of that expression will be skipped. The leaveexpr callback will still be called.
  * If returning SCIP_CONSEXPREXPRWALK_SKIP as result of an visitingchild callback, visiting the current child will be skipped.
+ * If returning SCIP_CONSEXPREXPRWALK_SKIP as result of an visitedchild callback, visiting the remaining children will be skipped.
  * If returning SCIP_CONSEXPREXPRWALK_ABORT in any of the callbacks, the walk will be aborted immediately.
  */
 EXTERN
@@ -575,7 +576,10 @@ SCIP_RETCODE SCIPappendConsExprExpr(
    SCIP_CONSEXPR_EXPR*   child               /**< expression to be appended */
    );
 
-/** duplicates the given expression */
+/** duplicates the given expression
+ *
+ * If a copy could not be created (e.g., due to missing copy callbacks in expression handlers), *copyexpr will be set to NULL.
+ */
 EXTERN
 SCIP_RETCODE SCIPduplicateConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
