@@ -113,6 +113,7 @@ static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrSum)
 {
    SCIP_CALL( SCIPincludeConsExprExprHdlrSum(scip, consexprhdlr) );
+   *valid = TRUE;
 
    return SCIP_OKAY;
 }
@@ -121,6 +122,7 @@ static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrProduct)
 {
    SCIP_CALL( SCIPincludeConsExprExprHdlrProduct(scip, consexprhdlr) );
+   *valid = TRUE;
 
    return SCIP_OKAY;
 }

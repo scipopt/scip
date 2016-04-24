@@ -48,9 +48,9 @@ extern "C" {
 #define SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSHDLR* consexprhdlr, \
-   SCIP* sourcescip, \
    SCIP_CONSHDLR* sourceconsexprhdlr, \
-   SCIP_CONSEXPR_EXPRHDLR* sourceexprhdlr)
+   SCIP_CONSEXPR_EXPRHDLR* sourceexprhdlr, \
+   SCIP_Bool* valid)
 
 /** expression handler free callback
  *

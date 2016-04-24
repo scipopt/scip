@@ -27,6 +27,7 @@ static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrVar)
 {
    SCIP_CALL( SCIPincludeConsExprExprHdlrVar(scip, consexprhdlr) );
+   *valid = TRUE;
 
    return SCIP_OKAY;
 }

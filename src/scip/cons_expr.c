@@ -145,6 +145,48 @@ typedef struct
 /*
  * Local methods
  */
+/** create, include conshdlr to SCIP and set everything except for expression handlers */
+static
+SCIP_RETCODE includeConshdlrExprBasic(SCIP* scip);
+
+/** copy expression handlers from sourceconshdlr to (target's) scip consexprhdlr */
+static
+SCIP_RETCODE copyConshdlrExprExprHdlr(
+   SCIP*                 scip,               /**< (target) SCIP data structure */
+   SCIP_CONSHDLR*        sourceconshdlr,     /**< source constraint expression handler */
+   SCIP_Bool*            valid               /**< was the copying process valid? */
+   )
+{
+   int                i;
+   SCIP_CONSHDLR*     conshdlr;
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLRDATA* sourceconshdlrdata;
+
+   assert(strcmp(SCIPconshdlrGetName(sourceconshdlr), CONSHDLR_NAME) == 0);
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+   assert(conshdlr != sourceconshdlr);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+   sourceconshdlrdata = SCIPconshdlrGetData(sourceconshdlr);
+   assert(sourceconshdlrdata != NULL);
+
+   /* copy expression handlers */
+   *valid = TRUE;
+   for( i = 0; i < sourceconshdlrdata->nexprhdlrs; i++ )
+   {
+      SCIP_Bool localvalid;
+      SCIP_CONSEXPR_EXPRHDLR* sourceexprhdlr;
+
+      sourceexprhdlr = sourceconshdlrdata->exprhdlrs[i];
+      SCIP_CALL( sourceexprhdlr->copyhdlr(scip, conshdlr, sourceconshdlr, sourceexprhdlr, &localvalid) );
+      *valid &= localvalid;
+   }
+
+   return SCIP_OKAY;
+}
 
 /*
  * Walking methods: several operations need to traverse the whole expression tree: print, evaluate, free, etc.
@@ -1288,12 +1330,14 @@ SCIP_DECL_CONSHDLRCOPY(conshdlrCopyExpr)
 {  /*lint --e{715}*/
    assert(scip != NULL);
    assert(conshdlr != NULL);
+   assert(valid != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
-   /* call inclusion method of constraint handler */
-   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+   /* create basic data of constraint handler and include it to scip */
+   SCIP_CALL( includeConshdlrExprBasic(scip) );
 
-   *valid = TRUE;
+   /* copy expression handlers */
+   SCIP_CALL( copyConshdlrExprExprHdlr(scip, conshdlr, valid) );
 
    return SCIP_OKAY;
 }
@@ -3053,8 +3097,9 @@ unsigned int SCIPgetConsExprExprWalkParentPrecedence(
  * constraint specific interface methods
  */
 
-/** creates the handler for expr constraints and includes it in SCIP */
-SCIP_RETCODE SCIPincludeConshdlrExpr(
+/** create, include conshdlr to SCIP and set everything except for expression handlers */
+static
+SCIP_RETCODE includeConshdlrExprBasic(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
@@ -3140,8 +3185,26 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* add expr constraint handler parameters */
    /* TODO: (optional) add constraint handler specific parameters with SCIPaddTypeParam() here */
 
+   return SCIP_OKAY;
+}
 
-   /* NOTE: we should not do the below when copying the constraint handler (in that case, we should call the copy callback of the expression handler */
+
+/** creates the handler for expr constraints and includes it in SCIP */
+SCIP_RETCODE SCIPincludeConshdlrExpr(
+   SCIP*                 scip                /**< SCIP data structure */
+   )
+{
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSHDLR* conshdlr;
+
+   SCIP_CALL( includeConshdlrExprBasic(scip) );
+
+   conshdlr = SCIPfindConshdlr(scip, CONSHDLR_NAME);
+   assert(conshdlr != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
    /* include and remember handler for variable expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrVar(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "var") == 0);
