@@ -207,21 +207,38 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
       case SCIP_CONSEXPREXPRWALK_ENTEREXPR :
       {
          /* create expr that will hold the copy */
-         SCIP_CONSEXPR_EXPR* targetexpr;
+         SCIP_CONSEXPR_EXPR*     targetexpr;
+         SCIP_CONSEXPR_EXPRHDLR* targetexprhdlr;
          COPY_DATA* copydata;
 
          copydata = (COPY_DATA* )data;
 
-         /* @todo: should probably get the exprhdlr of the target scip */
-         SCIP_CALL( SCIPcreateConsExprExpr(copydata->targetscip, &targetexpr,
-                  SCIPgetConsExprExprHdlr(expr), NULL, 0, 0) );
+         /* get the exprhdlr of the target scip */
+         if( copydata->targetscip != scip )
+         {
+            SCIP_CONSHDLR* targetconsexprhdlr;
+
+            targetconsexprhdlr = SCIPfindConshdlr(copydata->targetscip, "expr");
+            assert(targetconsexprhdlr != NULL);
+
+            targetexprhdlr = SCIPfindConsExprExprHdlr(targetconsexprhdlr,
+                  SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)));
+         }
+         else
+         {
+            targetexprhdlr = SCIPgetConsExprExprHdlr(expr);
+         }
+         assert(targetexprhdlr != NULL);
+
+         /* crate in targetexpr an empty expression of the same type as expr */
+         SCIP_CALL( SCIPcreateConsExprExpr(copydata->targetscip, &targetexpr, targetexprhdlr, NULL, 0, 0) );
 
          /* copy data to targetexpr's data */
          if( expr->exprhdlr->copydata != NULL )
          {
             SCIP_CALL( expr->exprhdlr->copydata(
                      copydata->targetscip,
-                     SCIPgetConsExprExprHdlr(expr),
+                     targetexprhdlr,
                      &targetexpr->exprdata,
                      scip,
                      expr,
