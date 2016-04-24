@@ -38,48 +38,21 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataVar)
    assert(targetexprdata != NULL);
    assert(sourceexpr != NULL);
 
-   if( !transform && varmap == NULL )
+   if( mapvar == NULL )
    {
-      /* duplicate var expr */
+      /* identical mapping: just copy data pointer */
       assert(targetscip == sourcescip);
-      assert(consmap == NULL);
 
       *targetexprdata = SCIPgetConsExprExprData(sourceexpr);
       assert(*targetexprdata != NULL);
 
       SCIP_CALL( SCIPcaptureVar(targetscip, (SCIP_VAR*)*targetexprdata) );
-   }
-   else if( transform )
-   {
-      /* transform var */
-      SCIP_VAR* var;
-
-      assert(targetscip == sourcescip);
-      assert(consmap == NULL);
-      assert(varmap == NULL);
-
-      var = (SCIP_VAR*)SCIPgetConsExprExprData(sourceexpr);
-
-      SCIP_CALL( SCIPgetTransformedVar(sourcescip, var, &var) );
-
-      *targetexprdata = (SCIP_CONSEXPR_EXPRDATA*)var;
-      assert(*targetexprdata != NULL);
+      *valid = TRUE;
    }
    else
    {
-      /* copy expr to other scip */
-      SCIP_VAR* var;
-
-      assert(sourcescip != targetscip); /* does this always holds? */
-      assert(consmap != NULL);
-      assert(varmap != NULL);
-      assert(valid != NULL);
-
-      var = (SCIP_VAR*)SCIPgetConsExprExprData(sourceexpr);
-
-      SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, var, &var, varmap, consmap, global, valid) );
-
-      *targetexprdata = (SCIP_CONSEXPR_EXPRDATA*)var;
+      /* call mapvar callback (captures targetvar) */
+      SCIP_CALL( (*mapvar)(targetscip, (SCIP_VAR**)targetexprdata, sourcescip, (SCIP_VAR*)SCIPgetConsExprExprData(sourceexpr), mapvardata, valid) );
       assert(*targetexprdata != NULL);
    }
 

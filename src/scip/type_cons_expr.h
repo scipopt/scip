@@ -68,6 +68,28 @@ extern "C" {
    SCIP_CONSEXPR_EXPRHDLR* exprhdlr, \
    SCIP_CONSEXPR_EXPRHDLRDATA** exprhdlrdata)
 
+/** variable mapping callback for expression data callback
+ *
+ * The method maps a variable (in a source SCIP instance) to a variable
+ * (in a target SCIP instance) and captures the target variable.
+ *
+ *  input:
+ *  - targetscip         : target SCIP main data structure
+ *  - targetvar          : pointer to store the mapped variable
+ *  - sourcescip         : source SCIP main data structure
+ *  - sourcevar          : variable to be mapped
+ *  - mapvardata         : data of callback
+ *  - valid              : pointer to store whether target variable is valid
+ */
+#define SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(x) SCIP_RETCODE x (\
+   SCIP* targetscip, \
+   SCIP_VAR** targetvar, \
+   SCIP* sourcescip, \
+   SCIP_VAR* sourcevar, \
+   void* mapvardata, \
+   SCIP_Bool* valid \
+   )
+
 /** expression data copy callback
  *
  * the method copies the data of an expression
@@ -80,12 +102,13 @@ extern "C" {
  *
  *  input:
  *  - targetscip         : target SCIP main data structure
- *  - targetconsexprhdlr : expression constraint handler in target SCIP
  *  - targetexprhdlr     : expression handler in target SCIP
  *  - targetexprdata     : pointer to store the copied expression data
  *  - sourcescip         : source SCIP main data structure
- *  - sourceconsexprhdlr : expression constraint handler in source SCIP
- *  - sourceexpr         : expression in source SCIP which data is to be copied
+ *  - sourceexpr         : expression in source SCIP which data is to be copied,
+ *  - mapvar             : variable mapping callback for use by variable expression handler
+ *  - mapvardata         : data of variable mapping callback
+ *  - valid              : pointer to store whether copy is valid
  */
 #define SCIP_DECL_CONSEXPR_EXPRCOPYDATA(x) SCIP_RETCODE x (\
    SCIP* targetscip, \
@@ -93,10 +116,8 @@ extern "C" {
    SCIP_CONSEXPR_EXPRDATA** targetexprdata, \
    SCIP* sourcescip, \
    SCIP_CONSEXPR_EXPR* sourceexpr, \
-   SCIP_Bool transform, \
-   SCIP_HASHMAP* varmap, \
-   SCIP_HASHMAP* consmap, \
-   SCIP_Bool global, \
+   SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(mapvar), \
+   void* mapvardata, \
    SCIP_Bool* valid)
 
 /** expression data free callback
