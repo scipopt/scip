@@ -334,7 +334,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
          SCIP_CALL( SCIPappendConsExprExpr(copydata->targetscip, targetexpr, targetchild) );
 
          /* release targetchild (captured by targetexpr) */
-         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &targetchild) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(copydata->targetscip, &targetchild) );
 
          return SCIP_OKAY;
       }
