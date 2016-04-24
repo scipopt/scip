@@ -135,7 +135,6 @@ typedef struct
    SCIP*                   targetscip;                 /**< target SCIP pointer */
    SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR((*mapvar));  /**< variable mapping function, or NULL for identity mapping (used in handler for var-expressions) */
    void*                   mapvardata;                 /**< data of variable mapping function */
-   SCIP_Bool*              valid;                      /**< pointer to store whether the copy was valid */
 } COPY_DATA;
 
 /** variable mapping data passed on during copying expressions when copying SCIP instances */
@@ -144,6 +143,7 @@ typedef struct
    SCIP_HASHMAP*           varmap;           /**< SCIP_HASHMAP mapping variables of the source SCIP to corresponding variables of the target SCIP */
    SCIP_HASHMAP*           consmap;          /**< SCIP_HASHMAP mapping constraints of the source SCIP to corresponding constraints of the target SCIP */
    SCIP_Bool               global;           /**< should a global or a local copy be created */
+   SCIP_Bool               valid;            /**< indicates whether every variable copy was valid */
 } COPY_MAPVAR_DATA;
 
 /*
@@ -273,8 +273,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(copyExpr)
                      scip,
                      expr,
                      copydata->mapvar,
-                     copydata->mapvardata,
-                     copydata->valid) );
+                     copydata->mapvardata) );
             assert(targetexprdata != NULL);
          }
          else if( expr->exprdata != NULL )
@@ -362,8 +361,6 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(transformVar)
    SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcevar, targetvar) );
    assert(*targetvar != NULL);
 
-   *valid = TRUE;
-
    return SCIP_OKAY;
 }
 
@@ -371,6 +368,7 @@ static
 SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(copyVar)
 {
    COPY_MAPVAR_DATA* data;
+   SCIP_Bool valid;
 
    assert(sourcevar != NULL);
    assert(targetvar != NULL);
@@ -378,10 +376,15 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(copyVar)
 
    data = (COPY_MAPVAR_DATA*)mapvardata;
 
-   SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevar, targetvar, data->varmap, data->consmap, data->global, valid) );
-   SCIP_CALL( SCIPcaptureVar(targetscip, *targetvar) );
-
+   SCIP_CALL( SCIPgetVarCopy(sourcescip, targetscip, sourcevar, targetvar, data->varmap, data->consmap, data->global, &valid) );
    assert(*targetvar != NULL);
+
+   /* if copy was not valid, store so in mapvar data */
+   if( !valid )
+      data->valid = FALSE;
+
+   /* caller assumes that target variable has been captured */
+   SCIP_CALL( SCIPcaptureVar(targetscip, *targetvar) );
 
    return SCIP_OKAY;
 }
@@ -1598,7 +1601,6 @@ SCIP_DECL_CONSTRANS(consTransExpr)
    SCIP_CONSEXPR_EXPR* sourceexpr;
    SCIP_CONSEXPR_EXPR* targetexpr;
    SCIP_CONSDATA* sourcedata;
-   SCIP_Bool valid;
 
    sourcedata = SCIPconsGetData(sourcecons);
    assert(sourcedata != NULL);
@@ -1607,7 +1609,6 @@ SCIP_DECL_CONSTRANS(consTransExpr)
 
    copydata.targetscip = scip;
    copydata.mapvar = transformVar;
-   copydata.valid = &valid;
 
    /* get a copy of sourceexpr with transformed vars */
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, sourceexpr, copyExpr, NULL, copyExpr, NULL, &copydata) );
@@ -1918,11 +1919,11 @@ SCIP_DECL_CONSCOPY(consCopyExpr)
    mapvardata.varmap = varmap;
    mapvardata.consmap = consmap;
    mapvardata.global = global;
+   mapvardata.valid = TRUE; /* hope the best */
 
    copydata.targetscip = scip;
    copydata.mapvar = copyVar;
    copydata.mapvardata = &mapvardata;
-   copydata.valid = valid;
 
    /* get a copy of sourceexpr with transformed vars */
    SCIP_CALL( SCIPwalkConsExprExprDF(sourcescip, sourceexpr, copyExpr, NULL, copyExpr, NULL, &copydata) );
@@ -1935,6 +1936,9 @@ SCIP_DECL_CONSCOPY(consCopyExpr)
 
       return SCIP_OKAY;
    }
+
+   /* validity depends only on the SCIPgetVarCopy() returns from copyVar, which are accumulated in mapvardata.valid */
+   *valid = mapvardata.valid;
 
    /* create copy */
    SCIP_CALL( SCIPcreateConsExpr(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
@@ -3540,15 +3544,12 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
    )
 {
    COPY_DATA copydata;
-   SCIP_Bool valid;
 
    copydata.targetscip = scip;
    copydata.mapvar = NULL;
-   copydata.valid = &valid;
 
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, copyExpr, NULL, copyExpr, NULL, &copydata) );
    *copyexpr = (SCIP_CONSEXPR_EXPR*)expr->walkio.ptrval;
-   assert(valid);
 
    return SCIP_OKAY;
 }

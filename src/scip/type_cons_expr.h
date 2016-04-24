@@ -79,15 +79,13 @@ extern "C" {
  *  - sourcescip         : source SCIP main data structure
  *  - sourcevar          : variable to be mapped
  *  - mapvardata         : data of callback
- *  - valid              : pointer to store whether target variable is valid
  */
 #define SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(x) SCIP_RETCODE x (\
    SCIP* targetscip, \
    SCIP_VAR** targetvar, \
    SCIP* sourcescip, \
    SCIP_VAR* sourcevar, \
-   void* mapvardata, \
-   SCIP_Bool* valid \
+   void* mapvardata \
    )
 
 /** expression data copy callback
@@ -108,7 +106,6 @@ extern "C" {
  *  - sourceexpr         : expression in source SCIP which data is to be copied,
  *  - mapvar             : variable mapping callback for use by variable expression handler
  *  - mapvardata         : data of variable mapping callback
- *  - valid              : pointer to store whether copy is valid
  */
 #define SCIP_DECL_CONSEXPR_EXPRCOPYDATA(x) SCIP_RETCODE x (\
    SCIP* targetscip, \
@@ -117,8 +114,7 @@ extern "C" {
    SCIP* sourcescip, \
    SCIP_CONSEXPR_EXPR* sourceexpr, \
    SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(mapvar), \
-   void* mapvardata, \
-   SCIP_Bool* valid)
+   void* mapvardata)
 
 /** expression data free callback
  *

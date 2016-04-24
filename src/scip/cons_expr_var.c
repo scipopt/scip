@@ -47,12 +47,11 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA(copydataVar)
       assert(*targetexprdata != NULL);
 
       SCIP_CALL( SCIPcaptureVar(targetscip, (SCIP_VAR*)*targetexprdata) );
-      *valid = TRUE;
    }
    else
    {
       /* call mapvar callback (captures targetvar) */
-      SCIP_CALL( (*mapvar)(targetscip, (SCIP_VAR**)targetexprdata, sourcescip, (SCIP_VAR*)SCIPgetConsExprExprData(sourceexpr), mapvardata, valid) );
+      SCIP_CALL( (*mapvar)(targetscip, (SCIP_VAR**)targetexprdata, sourcescip, (SCIP_VAR*)SCIPgetConsExprExprData(sourceexpr), mapvardata) );
       assert(*targetexprdata != NULL);
    }
 
