@@ -1774,7 +1774,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
       consdata = SCIPconsGetData(conss[c]);
       assert(consdata != NULL);
 
-      if( SCIPisFeasGE(scip, consdata->lhsviol, 0.0) || SCIPisFeasGE(scip, consdata->rhsviol, 0.0) )
+      if( SCIPisFeasGT(scip, consdata->lhsviol, 0.0) || SCIPisFeasGT(scip, consdata->rhsviol, 0.0) )
       {
          *result = SCIP_INFEASIBLE;
 
