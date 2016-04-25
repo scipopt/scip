@@ -713,8 +713,8 @@ SCIP_RETCODE computeViolation(
    }
 
    /* compute violations */
-   consdata->lhsviol = SCIPisInfinity(scip, -consdata->lhs) ? 0.0 : consdata->lhs  - activity;
-   consdata->rhsviol = SCIPisInfinity(scip, consdata->rhs) ? 0.0 : activity - consdata->rhs;
+   consdata->lhsviol = SCIPisInfinity(scip, -consdata->lhs) ? -SCIPinfinity(scip) : consdata->lhs  - activity;
+   consdata->rhsviol = SCIPisInfinity(scip,  consdata->rhs) ? -SCIPinfinity(scip) : activity - consdata->rhs;
 
    return SCIP_OKAY;
 }
