@@ -92,7 +92,6 @@ struct SCIP_ConsData
    SCIP_Real             lhs;                /**< left-hand side */
    SCIP_Real             rhs;                /**< right-hand side */
 
-   SCIP_Real             activity;           /**< activity of nonlinear function w.r.t. current solution */
    SCIP_Real             lhsviol;            /**< violation of left-hand side by current solution (used temporarily inside constraint handler) */
    SCIP_Real             rhsviol;            /**< violation of right-hand side by current solution (used temporarily inside constraint handler) */
 };
@@ -684,7 +683,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
 /**@} */  /* end of walking methods */
 
 
-/** computes activity and violation of a constraint */
+/** computes violation of a constraint */
 static
 SCIP_RETCODE computeViolation(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -694,6 +693,7 @@ SCIP_RETCODE computeViolation(
    )
 {
    SCIP_CONSDATA* consdata;
+   SCIP_Real activity;
 
    assert(scip != NULL);
    assert(cons != NULL);
@@ -702,10 +702,10 @@ SCIP_RETCODE computeViolation(
    assert(consdata != NULL);
 
    SCIP_CALL( SCIPevalConsExprExpr(scip, consdata->expr, sol, soltag) );
-   consdata->activity = SCIPgetConsExprExprValue(consdata->expr);
+   activity = SCIPgetConsExprExprValue(consdata->expr);
 
    /* consider constraint as violated if it is undefined in the current point */
-   if( consdata->activity == SCIP_INVALID )
+   if( activity == SCIP_INVALID )
    {
       consdata->lhsviol = SCIPinfinity(scip);
       consdata->rhsviol = SCIPinfinity(scip);
@@ -713,8 +713,8 @@ SCIP_RETCODE computeViolation(
    }
 
    /* compute violations */
-   consdata->lhsviol = SCIPisInfinity(scip, -consdata->lhs) ? 0.0 : consdata->lhs  - consdata->activity;
-   consdata->rhsviol = SCIPisInfinity(scip, consdata->rhs) ? 0.0 : consdata->activity - consdata->rhs;
+   consdata->lhsviol = SCIPisInfinity(scip, -consdata->lhs) ? 0.0 : consdata->lhs  - activity;
+   consdata->rhsviol = SCIPisInfinity(scip, consdata->rhs) ? 0.0 : activity - consdata->rhs;
 
    return SCIP_OKAY;
 }
@@ -1778,7 +1778,7 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
       {
          *result = SCIP_INFEASIBLE;
 
-         /* print reason */
+         /* print reason for infeasibility */
          if( printreason )
          {
             SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
@@ -1786,11 +1786,11 @@ SCIP_DECL_CONSCHECK(consCheckExpr)
 
             if( SCIPisFeasGE(scip, consdata->lhsviol, 0.0) )
             {
-               SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g (scaled: %.15g)\n", consdata->lhs - consdata->activity, consdata->lhsviol);
+               SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhsviol);
             }
             if( SCIPisFeasGE(scip, consdata->rhsviol, 0.0) )
             {
-               SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g (scaled: %.15g)\n", consdata->activity - consdata->rhs, consdata->rhsviol);
+               SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", consdata->rhsviol);
             }
          }
       }
@@ -3513,7 +3513,6 @@ SCIP_RETCODE SCIPcreateConsExpr(
    consdata->expr = expr;
    consdata->lhs = lhs;
    consdata->rhs = rhs;
-   consdata->activity = SCIP_INVALID;
 
    /* capture expression */
    SCIPcaptureConsExprExpr(consdata->expr);
