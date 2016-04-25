@@ -43,6 +43,7 @@
 #define CHECK_TEST(x)                            \
    do                                            \
    {                                             \
+      printf("-----Start test " #x "\n");        \
       retcode = (x);                             \
       if( retcode != SCIP_OKAY )                 \
       {                                          \
@@ -50,6 +51,7 @@
          SCIPprintError(retcode);                \
          return -1;                              \
       }                                          \
+      printf("-----Finish test " #x "\n\n");     \
    }                                             \
    while( FALSE )
 
@@ -246,7 +248,8 @@ SCIP_RETCODE testWalk(void)
          assert(collect.e[5] == expr_x);
       }
 
-      /* release product expression (this should free the product and its children) */
+      /* release the rest of the expressions (this should free the product and its children) */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sum) );
    }
 
@@ -279,13 +282,11 @@ SCIP_RETCODE testWalk(void)
          SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr_sum, expr_xy5, 1.0) );
       }
 
-      /* release leaf expressions (this should not free them yet, as they are captured by expr_xy5) */
+      /* release all but expr_sum */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_5) );
-      assert(expr_y != NULL);
-      assert(expr_x != NULL);
-      assert(expr_5 != NULL);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
 
       /* returns sum_{expr in expr_sum} 1 */
       nnodes = 0;
@@ -297,7 +298,7 @@ SCIP_RETCODE testWalk(void)
       SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr_sum, NULL, NULL, NULL, walk_count_all, &nnodes) );
       assert(nnodes == 14);
 
-      /* release product expression (this should free the product and its children) */
+      /* release expr_sum (this should free its children) */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sum) );
    }
 
@@ -1430,10 +1431,10 @@ SCIP_RETCODE testTransform(void)
       SCIPinfoMessage(scip, NULL, "\n");
 
       /* free transproblem */
+      SCIP_CALL( SCIPreleaseCons(scip, &transconsexpr) );
       SCIP_CALL( SCIPfreeTransform(scip) );
 
       /* release constraints */
-      SCIP_CALL( SCIPreleaseCons(scip, &transconsexpr) );
       SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
    }
    SCIP_CALL( SCIPreleaseVar(scip, &x) );

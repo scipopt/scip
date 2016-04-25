@@ -357,9 +357,12 @@ SCIP_DECL_CONSEXPR_EXPRCOPYDATA_MAPVAR(transformVar)
    assert(targetvar != NULL);
    assert(sourcescip == targetscip);
 
-   /* transform variable, transformed variable is captured already */
+   /* transform variable (does not capture target variable) */
    SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcevar, targetvar) );
    assert(*targetvar != NULL);
+
+   /* caller assumes that target variable has been captured */
+   SCIP_CALL( SCIPcaptureVar(sourcescip, *targetvar) );
 
    return SCIP_OKAY;
 }
@@ -1620,13 +1623,16 @@ SCIP_DECL_CONSTRANS(consTransExpr)
       return SCIP_ERROR;
    }
 
-   /* create transformed cons */
+   /* create transformed cons (captures targetexpr) */
    SCIP_CALL( SCIPcreateConsExpr(scip, targetcons, SCIPconsGetName(sourcecons),
       targetexpr, sourcedata->lhs, sourcedata->rhs,
       SCIPconsIsInitial(sourcecons), SCIPconsIsSeparated(sourcecons), SCIPconsIsEnforced(sourcecons),
       SCIPconsIsChecked(sourcecons), SCIPconsIsPropagated(sourcecons),
       SCIPconsIsLocal(sourcecons), SCIPconsIsModifiable(sourcecons),
       SCIPconsIsDynamic(sourcecons), SCIPconsIsRemovable(sourcecons), SCIPconsIsStickingAtNode(sourcecons)) );
+
+   /* release target expr */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &targetexpr) );
 
    return SCIP_OKAY;
 }
@@ -1940,10 +1946,13 @@ SCIP_DECL_CONSCOPY(consCopyExpr)
    /* validity depends only on the SCIPgetVarCopy() returns from copyVar, which are accumulated in mapvardata.valid */
    *valid = mapvardata.valid;
 
-   /* create copy */
+   /* create copy (captures targetexpr) */
    SCIP_CALL( SCIPcreateConsExpr(scip, cons, name != NULL ? name : SCIPconsGetName(sourcecons),
       targetexpr, sourcedata->lhs, sourcedata->rhs,
       initial, separate, enforce, check, propagate, local, modifiable, dynamic, removable, stickingatnode) );
+
+   /* release target expr */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &targetexpr) );
 
    return SCIP_OKAY;
 }
