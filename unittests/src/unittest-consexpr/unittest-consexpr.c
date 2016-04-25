@@ -212,11 +212,6 @@ SCIP_RETCODE testWalk(void)
          SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr_sum, 2, terms, NULL, 0) );
       }
 
-      /* release leaf expressions (this should not free them yet, as they are captured by expr_xy5) */
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
-      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_5) );
-
       /* print expression */
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr_sum, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
@@ -248,7 +243,10 @@ SCIP_RETCODE testWalk(void)
          assert(collect.e[5] == expr_x);
       }
 
-      /* release the rest of the expressions (this should free the product and its children) */
+      /* release expressions */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_x) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_y) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_5) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_xy5) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr_sum) );
    }

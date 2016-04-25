@@ -2753,6 +2753,7 @@ SCIP_RETCODE SCIPreleaseConsExprExpr(
 
    --(*expr)->nuses;
    assert((*expr)->nuses > 0);
+   *expr = NULL;
 
    return SCIP_OKAY;
 }
