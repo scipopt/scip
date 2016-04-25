@@ -91,6 +91,9 @@ struct SCIP_ConsData
    SCIP_CONSEXPR_EXPR*   expr;               /**< expression that represents this constraint (must evaluate to 0 (FALSE) or 1 (TRUE)) */
    SCIP_Real             lhs;                /**< left-hand side */
    SCIP_Real             rhs;                /**< right-hand side */
+
+   SCIP_Real             lhsviol;            /**< violation of left-hand side by current solution (used temporarily inside constraint handler) */
+   SCIP_Real             rhsviol;            /**< violation of right-hand side by current solution (used temporarily inside constraint handler) */
 };
 
 /** constraint handler data */
@@ -104,6 +107,8 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_EXPRHDLR*  exprvalhdlr;     /**< value expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprsumhdlr;     /**< summation expression handler */
    SCIP_CONSEXPR_EXPRHDLR*  exprprodhdlr;    /**< product expression handler */
+
+   unsigned int             lastsoltag;      /**< last solution tag used to evaluate current solution */
 };
 
 /** data passed on during expression evaluation in a point */
@@ -677,6 +682,42 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
 
 /**@} */  /* end of walking methods */
 
+
+/** computes violation of a constraint */
+static
+SCIP_RETCODE computeViolation(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons,               /**< constraint */
+   SCIP_SOL*             sol,                /**< solution or NULL if LP solution should be used */
+   unsigned int          soltag              /**< tag that uniquely identifies the solution (with its values), or 0. */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_Real activity;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   SCIP_CALL( SCIPevalConsExprExpr(scip, consdata->expr, sol, soltag) );
+   activity = SCIPgetConsExprExprValue(consdata->expr);
+
+   /* consider constraint as violated if it is undefined in the current point */
+   if( activity == SCIP_INVALID )
+   {
+      consdata->lhsviol = SCIPinfinity(scip);
+      consdata->rhsviol = SCIPinfinity(scip);
+      return SCIP_OKAY;
+   }
+
+   /* compute violations */
+   consdata->lhsviol = SCIPisInfinity(scip, -consdata->lhs) ? 0.0 : consdata->lhs  - activity;
+   consdata->rhsviol = SCIPisInfinity(scip, consdata->rhs) ? 0.0 : activity - consdata->rhs;
+
+   return SCIP_OKAY;
+}
 
 /** @name Parsing methods
  * @{
@@ -1709,8 +1750,51 @@ SCIP_DECL_CONSENFOPS(consEnfopsExpr)
 static
 SCIP_DECL_CONSCHECK(consCheckExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CONSHDLRDATA* conshdlrdata;
+   SCIP_CONSDATA*     consdata;
+   int soltag;
+   int c;
+
+   assert(scip != NULL);
+   assert(conshdlr != NULL);
+   assert(conss != NULL || nconss == 0);
+   assert(result != NULL);
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert(conshdlrdata != NULL);
+
+   *result = SCIP_FEASIBLE;
+   soltag = ++(conshdlrdata->lastsoltag);
+
+   /* check all nonlinear constraints for feasibility */
+   for( c = 0; c < nconss; ++c )
+   {
+      SCIP_CALL( computeViolation(scip, conss[c], sol, soltag) );
+
+      consdata = SCIPconsGetData(conss[c]);
+      assert(consdata != NULL);
+
+      if( SCIPisFeasGT(scip, consdata->lhsviol, 0.0) || SCIPisFeasGT(scip, consdata->rhsviol, 0.0) )
+      {
+         *result = SCIP_INFEASIBLE;
+
+         /* print reason for infeasibility */
+         if( printreason )
+         {
+            SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) );
+            SCIPinfoMessage(scip, NULL, ";\n");
+
+            if( SCIPisFeasGE(scip, consdata->lhsviol, 0.0) )
+            {
+               SCIPinfoMessage(scip, NULL, "violation: left hand side is violated by %.15g\n", consdata->lhsviol);
+            }
+            if( SCIPisFeasGE(scip, consdata->rhsviol, 0.0) )
+            {
+               SCIPinfoMessage(scip, NULL, "violation: right hand side is violated by %.15g\n", consdata->rhsviol);
+            }
+         }
+      }
+   }
 
    return SCIP_OKAY;
 }
@@ -3252,6 +3336,7 @@ SCIP_RETCODE includeConshdlrExprBasic(
 
    /* create expr constraint handler data */
    SCIP_CALL( SCIPallocClearMemory(scip, &conshdlrdata) );
+   conshdlrdata->lastsoltag = 1;
 
    conshdlr = NULL;
 
