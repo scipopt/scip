@@ -1445,6 +1445,101 @@ SCIP_RETCODE testTransform(void)
    return SCIP_OKAY;
 }
 
+/** test CONSCHECK callback of cons expression */
+static
+SCIP_RETCODE testCheck(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_VAR* z;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 5.0, 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 5.0, 2.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 5.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
+
+   /* create constraint 1.1*x*y/z + 3.2*x^2*y^(-5)*z + 0.5*z^3 from string */
+   {
+      SCIP_SOL* sol;
+      SCIP_CONS* consexpr;
+      SCIP_Bool success;
+      const char* input = "[expr] <test>: 1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3 <= 2;";
+
+      /* parse constraint */
+      success = FALSE;
+      SCIP_CALL( SCIPparseCons(scip, &consexpr, input,
+               TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE, &success) );
+      assert(success);
+      SCIP_CALL( SCIPaddCons(scip, consexpr) );
+
+      /* create solution */
+      SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+
+      /* create an infeasible solution */
+      SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1) );
+      SCIP_CALL( SCIPsetSolVal(scip, sol, y, 2) );
+      SCIP_CALL( SCIPsetSolVal(scip, sol, z, 3) );
+      SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, FALSE, FALSE, FALSE, &success) );
+      if( success )
+      {
+         assert(FALSE);
+         return SCIP_ERROR;
+      }
+
+      /* create a feasible solution */
+      SCIP_CALL( SCIPsetSolVal(scip, sol, x, 0) );
+      SCIP_CALL( SCIPsetSolVal(scip, sol, y, 1) );
+      SCIP_CALL( SCIPsetSolVal(scip, sol, z, 1) );
+      SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, FALSE, FALSE, FALSE, &success) );
+      if( !success )
+      {
+         assert(FALSE);
+         return SCIP_ERROR;
+      }
+
+      /* create an undefined solution */
+      SCIP_CALL( SCIPsetSolVal(scip, sol, x, 1) );
+      SCIP_CALL( SCIPsetSolVal(scip, sol, y, 1) );
+      SCIP_CALL( SCIPsetSolVal(scip, sol, z, 0) );
+      SCIP_CALL( SCIPcheckSol(scip, sol, TRUE, FALSE, FALSE, FALSE, &success) );
+      if( success )
+      {
+         assert(FALSE);
+         return SCIP_ERROR;
+      }
+
+      /* release solution */
+      SCIP_CALL( SCIPfreeSol(scip, &sol) );
+
+      /* release constraints */
+      SCIP_CALL( SCIPreleaseCons(scip, &consexpr) );
+   }
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
+
 /** main function */
 int
 main(
@@ -1473,6 +1568,8 @@ main(
    CHECK_TEST( testTransform() );
 
    CHECK_TEST( testCopy() );
+
+   CHECK_TEST( testCheck() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");
