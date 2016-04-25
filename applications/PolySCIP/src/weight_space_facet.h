@@ -37,13 +37,14 @@ namespace polyscip {
      *  @param point computed (weakly non-dominated) point in objective space
      *  @param weighted_obj_val weighted objective value of point
      */
-    WeightSpaceFacet(const Polyscip::PointType point, Polyscip::ValueType weighted_obj_val);
+    explicit WeightSpaceFacet(Polyscip::PointType point, 
+			      Polyscip::ValueType weighted_obj_val);
     
     /** Creates the weight space facet w_i >= 0
      *  @param num_objs number of objectives of given problem
      *  @param index index i of w_i >= 0
      */
-    WeightSpaceFacet(unsigned num_objs, unsigned index);
+    explicit WeightSpaceFacet(unsigned num_objs, unsigned index);
 
     /** Destructor */
     ~WeightSpaceFacet();
@@ -53,7 +54,7 @@ namespace polyscip {
     void print() const;
 
   private:
-    std::vector<Polyscip::ValueType> lhs_; /**< left hand side coefficients of the facet inequality */
+    Polyscip::PointType lhs_; /**< left hand side coefficients of the facet inequality */
     Polyscip::ValueType rhs_;              /**< right hand side value of the facet inequality */
   };
 

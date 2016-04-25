@@ -34,55 +34,50 @@
 
 namespace polyscip {
   
-  /** @brief Vertex of the weight space polyhedron. */
+  /** Vertex of the weight space polyhedron. */
   class WeightSpaceVertex {
 
   public:
-    using FacetContainer = std::vector< std::shared_ptr<const WeightSpaceFacet> >;
+    using FacetContainer = std::vector<std::shared_ptr<const WeightSpaceFacet>>;
 
-    /** @brief Creates a vertex of the (partial) weight space polyhedron.
+    /** Creates a vertex of the (partial) weight space polyhedron.
      *  @param incident_facets Facets defining of the weight space polyhedron defining the vertex
      *  @param weight Corresponding weight
      *  @param weighted_obj_val Corresponding maximal weight objective val in weight space polyhedron
      */
-    WeightSpaceVertex(const FacetContainer& incident_facets, 
-		      std::shared_ptr(const Polyscip::WeightType) weight,         
-		      Polyscip::ValueType weighted_obj_val                     
-		      );
+    explicit WeightSpaceVertex(FacetContainer incident_facets, 
+			       std::shared_ptr<const Polyscip::WeightType> weight,         
+			       Polyscip::ValueType weighted_obj_);
     
-    /** @brief Destructor */
+    /** Destructor */
     ~WeightSpaceVertex();
   
-    /** @brief Checks adjacency of two vertices.
+    /** Checks adjacency of two vertices.
      *  @param other_vertex another weight space vertex
      *  @return true if other_vertex is adjacent, false otherwise
      */
     //    bool isAdjacent(std::shared_ptr<const WeightSpaceVertex> other_vertex) const;
 
-    /** @brief Returns associated weighted objective value.
+    /** Returns associated weighted objective value.
      *  @return weighted objective value
      */
     Polyscip::ValueType getWeightedObjVal() const;
 
-    /** @brief Returns associated weight.
-     *  @return weight of vertex
+    /** Checks whether weight of vertex corresponds to unit weight 
+     *  @param index index of 1 in unit weight
+     *  @return true if weight of vertex is unit weight with 1 at index; false otherwise
      */
-    std::shared_ptr<const Polyscip::WeightType> getWeight() const;
+    bool hasUnitWeight(Polyscip::WeightType::size_type index) const;
    
-    /** @brief Returns associated facets defining the vertex.
-     *  @return Defining facets of the vertex
-     */
-    std::shared_ptr<const FacetContainer> getFacets() const;
-
-    /** @brief Prints weight space vertex information to standard output stream. 
+    /** Prints weight space vertex information to standard output. 
      *  @param printFacets if true, then defining facets are printed
      */
     void print(bool printFacets = false) const;
 
   private:
-    FacetContainer incident_facets_;                /**< incident facets */
-    std::shared_ptr<Polyscip::WeightType> weight_;  /**< used weight */
-    Polyscip::ValueType weighted_obj_val_;          /**< corresponding weighted objective value */
+    FacetContainer incident_facets_;                     /**< incident facets */
+    std::shared_ptr<const Polyscip::WeightType> weight_; /**< used weight */
+    Polyscip::ValueType weighted_obj_val_;               /**< corresponding weighted objective value */
 
   };
 

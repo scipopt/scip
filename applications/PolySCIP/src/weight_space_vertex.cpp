@@ -19,13 +19,14 @@
  */
 
 #include "weight_space_vertex.h"
-#include "scip/def.h"
 
 #include <algorithm> // std::copy, std::set_intersection
 #include <iostream>  // std::cout
 #include <iterator>  // std::ostream_iterator, std::inserter
-#include <memory>
+#include <memory>    // std::shared_ptr;
 #include <numeric>   // std::inner_product;
+
+#include "polyscip.h"
 
 using std::cout;
 using std::shared_ptr;
@@ -33,15 +34,18 @@ using std::vector;
 
 namespace polyscip {
 
-  WeightSpaceVertex::WeightSpaceVertex(const vector< shared_ptr<const WeightSpaceFacet> >& incident_facets,
+  using WeightType = Polyscip::WeightType;
+  using ValueType = Polyscip::ValueType;
+
+  WeightSpaceVertex::WeightSpaceVertex(FacetContainer incident_facets,
 				       shared_ptr<const WeightType> weight,
 				       ValueType weighted_obj_val)
-    : incident_facets_(incident_facets.begin(),incident_facets_.end()),
-      weight_(weight),
+    : incident_facets_(std::move(incident_facets)),
+      weight_(std::move(weight)),
       weighted_obj_val_(weighted_obj_val)
-  {};
+  {}
 
-  WeightSpaceVertex::~WeightSpaceVertex() {};
+  WeightSpaceVertex::~WeightSpaceVertex() {}
 
   // bool WeightSpaceVertex::isAdjacent(shared_ptr<const WeightSpaceVertex> other_vertex) const {
     
@@ -61,23 +65,29 @@ namespace polyscip {
     return weighted_obj_val_;
   }
 
-  shared_ptr<const WeightType> WeightSpaceVertex::getWeight() const {
-    return weight_;
-  }
-
-  shared_ptr<const FacetContainer> WeightSpaceVertex::getFacets() const {
-    return facets_;
+  bool WeightSpaceVertex::hasUnitWeight(Polyscip::WeightType::size_type index) const {
+    assert (index < weight_->size());
+    for (auto i=0; i!=weight_->size(); ++i) {
+      if (i == index) { // check whether i-th element is 1.
+	if ((*weight_)[i] != 1.)
+	  return false;
+      }
+      else { // check whether i-th element is 0.
+	if ((*weight_)[i] != 0.)
+	  return false;
+      }
+    }
+    return true;
   }
 
   void WeightSpaceVertex::print(bool printFacets) const {
-    cout << "Weight space vertex: weighted objective value = ";
-    cout << weighted_obj_val_ << " weight = [ ";
+    cout << "WeightSpaceVertex:\n weight = [ ";
     std::ostream_iterator<ValueType> out_it(cout, " ");
-    std::copy(weight_->begin(), weight_->end(), out_it);
-    cout << "]";
+    std::copy(weight_->cbegin(), weight_->cend(), out_it);
+    cout << "]\n weighted objective value = " << weighted_obj_val_ << "\n";
     if (printFacets) {
-      cout << "defining facets: \n";
-      for (const auto& facet : facets_) 
+      cout << " defining facets: \n";
+      for (const auto& facet : incident_facets_)
 	facet->print();
     }
   }

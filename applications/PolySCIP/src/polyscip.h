@@ -12,9 +12,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   polyscip.h
- * @brief  PolySCIP solver class
- * @author Sebastian Schenker
+/** @brief  PolySCIP solver class
  *
  * The PolySCIP solver class.
  */
@@ -22,9 +20,10 @@
 #ifndef POLYSCIP_SRC_POLYSCIP_H_INCLUDED
 #define POLYSCIP_SRC_POLYSCIP_H_INCLUDED
 
-#include "scip/def.h"
-
+#include <utility> // std::pair
 #include <vector>
+
+#include "scip/def.h"
 
 namespace polyscip {
   
@@ -33,13 +32,17 @@ namespace polyscip {
     using ValueType = SCIP_Real;               /**< type for computed values */
     using PointType = std::vector<ValueType>;  /**< type for points in outcome space; 
 						  needs to support: begin(), operator[] */
-    using RayType = std::vector<ValueType>;     /**< type for rays in outcome space */
-    using WeightType = std::vector<ValueType>; /**< type for weights */
-    
+    using RayType = std::vector<ValueType>;     /**< type for rays in outcome space 
+						   needs to support: size() */
+    using WeightType = std::vector<ValueType>; /**< type for weights
+						  needs to support: at(), size() */
+    using PointContainer = std::vector<std::pair<PointType,WeightType>>;
+    using RayContainer = std::vector<std::pair<RayType,WeightType>>; /**< Container type for 
+									  computed rays
+									Needs to support: empty() */
   private: 
-    /** returns true if point is a new non-dominated point; otherwise false */
-    bool isNewNondomPoint(const std::vector<SCIP_Real>* point, /**< potential new nondominated point */			  double comp_val = 0.0              /**< value used for checking inequality */ 
-			  ) const;
+    PointContainer supported_nondom_points_;
+    RayContainer unbounded_nondom_rays_;
 
   };
 
