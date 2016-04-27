@@ -1540,6 +1540,64 @@ SCIP_RETCODE testCheck(void)
    return SCIP_OKAY;
 }
 
+/** test exponential expressions */
+static
+SCIP_RETCODE testExp(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_VAR* z;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* currently expr constraints cannot be created */
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
+
+   /* easy exponential expression */
+   {
+      SCIP_CONSEXPR_EXPR* expr;
+      const char* input = "exp(<x>[C]) + exp(<x>[C])";
+
+      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr)) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   }
+
+   /* crazy exponential expression */
+   {
+      SCIP_CONSEXPR_EXPR* expr;
+      const char* input = "(exp(exp(<x>[C])) * exp(<y>[C]))^2";
+
+      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr)) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   }
+
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
+
 /** main function */
 int
 main(
@@ -1570,6 +1628,8 @@ main(
    CHECK_TEST( testCopy() );
 
    CHECK_TEST( testCheck() );
+
+   CHECK_TEST( testExp() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");
