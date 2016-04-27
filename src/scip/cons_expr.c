@@ -877,12 +877,14 @@ SCIP_RETCODE parseBase(
       }
 
       /* in case we would need to extract expression between () */
-      ++expr;
       init = expr;
-      npar = 0;
+      npar = 1;
       insidevarname = FALSE;
-      while( *expr != ')' && npar > 0 )
+
+      while( npar > 0 )
       {
+         ++expr;
+
          /* if we achieve the end of string, probably the expression has unbalanced parenthesis */
          if( *expr == '\0' )
          {
@@ -905,9 +907,9 @@ SCIP_RETCODE parseBase(
          if( !insidevarname && *expr == '<' )
             insidevarname = TRUE;
 
-         ++expr;
          assert(npar >= 0);
       }
+
       assert(npar == 0);
       assert(!insidevarname);
       assert(*expr == ')');
