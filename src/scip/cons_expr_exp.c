@@ -107,6 +107,11 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printExp)
    return SCIP_OKAY;
 }
 
+static
+SCIP_DECL_CONSEXPR_EXPRPARSE(parseExp)
+{
+   return SCIP_OKAY;
+}
 
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalExp)
@@ -154,6 +159,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeHdlr(scip, consexprhdlr, exprhdlr, copyhdlrExp, NULL) );
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataExp, freedataExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printExp) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalExp) );
 
    return SCIP_OKAY;
