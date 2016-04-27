@@ -842,6 +842,7 @@ SCIP_RETCODE parseBase(
       int npar;
       const char* init;
       char operatorname[SCIP_MAXSTRLEN];
+      char args[SCIP_MAXSTRLEN];
       SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
       SCIP_Bool insidevarname;
       SCIP_Bool success;
@@ -915,8 +916,9 @@ SCIP_RETCODE parseBase(
       assert(!insidevarname);
       assert(*expr == ')');
 
-      /* temporarily set null-byte and call exprhdlr parser */
-      *(char*)expr = '\0';
+      /* copy arguments into extra string and call exprhdlr parser */
+      memcpy(args, init, expr-init);
+      args[expr-init] = '\0';
       SCIP_CALL( exprhdlr->parse(scip, conshdlr, init, basetree, &success) );
 
       if( !success )
@@ -925,8 +927,6 @@ SCIP_RETCODE parseBase(
          assert(*basetree == NULL);
          return SCIP_READERROR;
       }
-
-      *(char*)expr = ')';
    }
    else
    {
