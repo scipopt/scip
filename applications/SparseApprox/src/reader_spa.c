@@ -211,7 +211,7 @@ SCIP_RETCODE readSpa(
       return SCIP_READERROR;
    }
 
-   ncluster = 3 ;
+   ncluster = 3;
    /* create problem data */
    SCIP_CALL( SCIPcreateProbSpa(scip, filename, nbins, nedges, ncluster, edges, sd) );
    SCIPinfoMessage(scip, NULL, "Original problem: \n");

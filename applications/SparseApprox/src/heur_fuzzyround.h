@@ -1,3 +1,4 @@
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -13,36 +14,32 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   spaplugins.c
- * @brief  SCIP plugins for Sparse Approximation of Transition Networks
+/**@file   heur_fuzzyround.h
+ * @ingroup PRIMALHEURISTICS
+ * @brief  fuzzy rounding primal heuristic
  * @author Leon Eifler
+ *
  */
 
-/*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
+#ifndef __SCIP_HEUR_FUZZYROUND_H__
+#define __SCIP_HEUR_FUZZYROUND_H__
 
-#include "spaplugins.h"
 
-#include "scip/debug.h"
-#include "scip/scipdefplugins.h"
-#include "event_newsol.h"
-#include "sepa_sparseapprox.h"
-#include "heur_fuzzyround.h"
+#include "scip/scip.h"
 
-/** includes default plugins for coloring into SCIP */
-SCIP_RETCODE SCIPincludeSpaPlugins(
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/** creates the spaGreedy primal heuristic and includes it in SCIP */
+EXTERN
+SCIP_RETCODE SCIPincludeHeurFuzzyround(
    SCIP*                 scip                /**< SCIP data structure */
-)
-{
-   SCIP_CALL( SCIPincludeDefaultPlugins(scip) );
-   SCIP_CALL( SCIPincludeReaderSpa(scip) );
-   /*SCIP_CALL( SCIPincludeHeurSpaGreedy(scip) );
-   SCIP_CALL( SCIPincludeHeurSpaswitch(scip) );
-   SCIP_CALL( SCIPincludeEventHdlrNewsol(scip) );
-   SCIP_CALL( SCIPincludeSepaSparseApprox(scip) );
-   SCIP_CALL( SCIPincludeHeurFuzzyround(scip ) );*/
+   );
 
-   SCIP_CALL( SCIPaddRealParam(scip,"coherence_bound","lower bound to within-cluster coherence", NULL, FALSE, 0.1, 0.0, 1.0, NULL, NULL ) );
-   SCIP_CALL( SCIPaddCharParam(scip, "model_variant", "which variant of the problem should be used", NULL, FALSE, 'e', "ebrc", NULL, NULL) );
-
-   return SCIP_OKAY;
+#ifdef __cplusplus
 }
+#endif
+
+
+#endif /* APPLICATIONS_SPARSEAPPROX_SRC_HEUR_FUZZYROUND_H_ */

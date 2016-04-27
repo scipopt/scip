@@ -37,7 +37,7 @@
 #define HEUR_FREQ             1
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
-#define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
+#define HEUR_TIMING           SCIP_HEURTIMING_BEFORENODE
 #define HEUR_USESSUBSCIP      FALSE          /**< does the heuristic use a secondary SCIP instance? */
 
 /*
@@ -176,6 +176,7 @@ SCIP_RETCODE assignVars(
    SCIP_Real q1;
    SCIP_Real q2;
    SCIP_VAR** vars;
+   SCIP_VAR* var;
    SCIP_VAR* resultant;
    SCIP_VAR* targetvar;
    SCIP_VAR** indvars;
@@ -210,10 +211,17 @@ SCIP_RETCODE assignVars(
       /* set values of binary variables */
       for ( i = 0; i < nbins; ++i )
       {
-         /* check if the clusterassignment ist feasible for the variable bounds. If not do not assign the variable */
-         if( binvars[i][c] != NULL && SCIPisLE(scip, SCIPvarGetLbGlobal(binvars[i][c]), clustering[i][c]) && SCIPisGE(scip, SCIPvarGetUbGlobal(binvars[i][c]), clustering[i][c]) && SCIPvarGetStatus(binvars[i][c]) != SCIP_VARSTATUS_MULTAGGR )
-            SCIP_CALL( SCIPsetSolVal( scip, sol, binvars[i][c], clustering[i][c]) );
-         assert( SCIPisIntegral(scip, clustering[i][c]) );
+         if( NULL != binvars[i][c] )
+         {
+            if( SCIPvarIsTransformed(binvars[i][c]) )
+               var = binvars[i][c];
+            else
+               var = SCIPvarGetTransVar(binvars[i][c] );
+            /* check if the clusterassignment ist feasible for the variable bounds. If not do not assign the variable */
+            if( var != NULL && SCIPisLE(scip, SCIPvarGetLbGlobal(var), clustering[i][c]) && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
+               SCIP_CALL( SCIPsetSolVal( scip, sol, var, clustering[i][c]) );
+            assert( SCIPisIntegral(scip, clustering[i][c]) );
+         }
       }
 
       /* set the value for the edgevariables */
@@ -225,12 +233,24 @@ SCIP_RETCODE assignVars(
                continue;
             if( j < i )
             {
-               if( edgevars[i][j][c][c] != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c]), clustering[j][c] * clustering[i][c]) && SCIPisLE(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c]), clustering[j][c] * clustering[i][c]) && SCIPvarGetStatus(edgevars[i][j][c][c]) != SCIP_VARSTATUS_MULTAGGR )
-                  SCIP_CALL( SCIPsetSolVal( scip, sol, edgevars[i][j][c][c], clustering[j][c] * clustering[i][c]  ) );
+               if( NULL == edgevars[i][j][c][c] )
+                  continue;
+               if( SCIPvarIsTransformed(edgevars[i][j][c][c]) )
+                  var = edgevars[i][j][c][c];
+               else
+                  var = SCIPvarGetTransVar(edgevars[i][j][c][c]);
+               if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c] * clustering[i][c]) && SCIPisLE(scip, SCIPvarGetLbGlobal(var), clustering[j][c] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
+                  SCIP_CALL( SCIPsetSolVal( scip, sol, var, clustering[j][c] * clustering[i][c]  ) );
             }
             for( c2 = 0; c2 < c; ++c2 )
             {
-               if( edgevars[i][j][c][c2] != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(edgevars[i][j][c][c2]), clustering[j][c2] * clustering[i][c]) && SCIPisLE(scip, SCIPvarGetLbGlobal(edgevars[i][j][c][c2]), clustering[j][c2] * clustering[i][c]) && SCIPvarGetStatus(edgevars[i][j][c][c2]) != SCIP_VARSTATUS_MULTAGGR )
+               if( NULL == edgevars[i][j][c][c2] )
+                  continue;
+               if( SCIPvarIsTransformed(edgevars[i][j][c][c2]) )
+                  var = edgevars[i][j][c][c2];
+               else
+                  var = SCIPvarGetTransVar(edgevars[i][j][c][c]);
+               if( var != NULL && SCIPisGE(scip, SCIPvarGetUbGlobal(var), clustering[j][c2] * clustering[i][c]) && SCIPisLE(scip, SCIPvarGetLbGlobal(var), clustering[j][c2] * clustering[i][c]) && SCIPvarGetStatus(var) != SCIP_VARSTATUS_MULTAGGR )
                   SCIP_CALL( SCIPsetSolVal( scip, sol, edgevars[i][j][c][c2], clustering[j][c2] * clustering[i][c] ) );
             }
          }
@@ -415,6 +435,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
    SCIP_SOL* copysol;                        /* we need this to be able to retransform to orignial space */
    SCIP_HEURDATA* heurdata;
    SCIP_Bool feasible;
+   SCIP_Bool possible = TRUE;
 
    SCIP_VAR*** varmatrix;                     /* SCIP variables                */
    SCIP_VAR***** edgevars;
@@ -495,7 +516,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
       SCIPallocClearMemoryArray(scip, &binfixed[i], ncluster);
       for( c = 0; c < ncluster; ++c )
       {
-         if( varmatrix[i][c] != NULL && SCIPvarIsActive(varmatrix[i][c]))
+         if( varmatrix[i][c] != NULL )
          {
             if( (SCIPisEQ(scip, SCIPvarGetUbGlobal(varmatrix[i][c]), SCIPvarGetLbGlobal(varmatrix[i][c]))) )
             {
@@ -520,8 +541,12 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
                if( k != c )
                {
                   j = 0;
-                  while((varmatrix[j][k] == NULL || !SCIPvarIsActive(varmatrix[j][k]) || j == i) && j < nbins)
+                  while((varmatrix[j][k] == NULL || SCIPvarGetStatus(varmatrix[j][k]) == SCIP_VARSTATUS_FIXED || j == i))
+                  {
                      j++;
+                     if ( j == nbins - 1 )
+                        break;
+                  }
                   if( j < nbins )
                   {
                      if( NULL != edgevars[i][j][c][k] && SCIPvarIsActive(edgevars[i][j][c][k]) )
@@ -538,81 +563,175 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
       }
    }
 
+   /* check if the assignment violates paritioning, e.g. because we are in a subscip */
+   for( i = 0; i < nbins; ++i )
+   {
+      int amountzeros = 0;
+      int sum = 0;
+      for( j = 0; j < ncluster; ++j )
+      {
+         if( 0 == solclustering[i][j] )
+            amountzeros++;
+         if( 1 == solclustering[i][j] )
+            sum++;
+      }
+      if( ncluster == amountzeros || sum > 1 )
+         possible = FALSE;
+   }
+
    /* initialize qmatrix */
+
    for( c = 0; c < ncluster; ++c )
    {
       SCIPallocMemoryArray(scip, &qmatrix[c], ncluster);
       mincoherence[c] = 1.0;
    }
-   computeIrrevMat(solclustering, qmatrix, cmatrix, nbins, ncluster);
-
-   *result = SCIP_DIDNOTFIND;
-   /* continue switching assignments until local optimum is reached */
-   improvement = TRUE;
-   while( improvement )
+   if( possible )
    {
-      improvement = FALSE;
-      /* try the minimal coherence switches */
+      computeIrrevMat(solclustering, qmatrix, cmatrix, nbins, ncluster);
 
-      /* get the minimal coherence-bin from each cluster */
-      for( i = 0; i < nbins; ++i )
+      *result = SCIP_DIDNOTFIND;
+      /* continue switching assignments until local optimum is reached */
+      improvement = TRUE;
+      while( improvement )
       {
-         for( j = 0; j < nbins; ++j )
-         {
-            bincoherence[i] += cmatrix[i][j] * (clusterofbin[i] == clusterofbin[j]);
-         }
-         if( SCIPisLT(scip, bincoherence[i], mincoherence[clusterofbin[i]]) )
-         {
-            mincoherence[clusterofbin[i]] = bincoherence[i];
-            minbin[clusterofbin[i]] = i;
-         }
+         improvement = FALSE;
+         /* try the minimal coherence switches */
 
-      }
-
-      for( i = 0; i < nbins; ++i )
-      {
-         assert( SCIPisEQ(scip, solclustering[i][clusterofbin[i]], 1.0) );
-      }
-      /* try to switch 1opt with any of the bins */
-
-      for( bin = 0; bin < nbins; ++bin )
-      {
-         for( k = 0; k < ncluster; ++k )
+         /* get the minimal coherence-bin from each cluster */
+         for( i = 0; i < nbins; ++i )
          {
-            /* calculate the irreversibility after bin was moved from k to l */
-            for( l = 0; l < ncluster; ++l )
+            for( j = 0; j < nbins; ++j )
             {
+               bincoherence[i] += cmatrix[i][j] * (clusterofbin[i] == clusterofbin[j]);
+            }
+            if( SCIPisLT(scip, bincoherence[i], mincoherence[clusterofbin[i]]) )
+            {
+               mincoherence[clusterofbin[i]] = bincoherence[i];
+               minbin[clusterofbin[i]] = i;
+            }
+
+         }
+
+         for( i = 0; i < nbins; ++i )
+         {
+            assert( SCIPisEQ(scip, solclustering[i][clusterofbin[i]], 1.0) );
+         }
+         /* try to switch 1opt with any of the bins */
+
+         for( bin = 0; bin < nbins; ++bin )
+         {
+            for( k = 0; k < ncluster; ++k )
+            {
+               /* calculate the irreversibility after bin was moved from k to l */
+               for( l = 0; l < ncluster; ++l )
+               {
+                  qkl = qmatrix[k][l];
+                  qlk = qmatrix[l][k];
+                  if( SCIPisZero(scip, solclustering[bin][k]) || binfixed[bin][k] || binfixed[bin][l] )
+                     continue;
+                  if( k == l )
+                     continue;
+                  /* do not open new clusters for now as the coherence would never be satisfied */
+                  if( 1 == mincoherence[l] )
+                     continue;
+                  for( i = 0; i < nbins; ++i )
+                  {
+                     qkl -= solclustering[i][l] * cmatrix[bin][i];
+                     qlk -= solclustering[i][l] * cmatrix[i][bin];
+
+                     solclustering[bin][k] = 0;
+                     solclustering[bin][l] = 1;
+
+                     qlk += solclustering[i][k] * cmatrix[bin][i];
+                     qkl += solclustering[i][k] * cmatrix[i][bin];
+
+                     solclustering[bin][k] = 1;
+                     solclustering[bin][l] = 0;
+
+                  }
+                  neweps = REALABS(qkl - qlk);
+                  /* if we found an improvement, update the datastructures and try to add the solution to scip */
+                  if( SCIPisGT(scip, neweps, objective) && SCIPisEQ(scip, SCIPvarGetUbGlobal(varmatrix[bin][l]), 1) && SCIPisEQ(scip, SCIPvarGetLbGlobal(varmatrix[bin][k]), 0) )
+                  {
+                     setBinToCluster(solclustering, cmatrix, qmatrix, bin, k, FALSE, nbins, ncluster);
+                     setBinToCluster(solclustering, cmatrix, qmatrix, bin, l, TRUE, nbins, ncluster);
+                     clusterofbin[bin] = l;
+
+                     assignVars(scip, worksol, solclustering, nbins, ncluster, qmatrix);
+                     SCIPcreateSolCopy(scip, &copysol, worksol);
+                     objective = getIrrevBound(scip, qmatrix, ncluster);
+
+                     SCIPretransformSol(scip, copysol);
+                     assert(isPartition(solclustering, nbins, ncluster));
+                     SCIPtrySolFree(scip, &copysol , FALSE, FALSE, FALSE, FALSE, &feasible);
+                     if( feasible )
+                     {
+                        improvement = TRUE;
+                        *result = SCIP_FOUNDSOL;
+                        changecounter++;
+                     }
+                  }
+               }
+            }
+         }
+         for( i = 0; i < nbins; ++i )
+         {
+            assert( SCIPisEQ(scip, solclustering[i][clusterofbin[i]], 1.0) );
+         }
+         /* do a 2-opt i.e. trade any two bins between two clusters until local */
+
+
+         for( bin1 = 0; bin1 < nbins; ++bin1 )
+         {
+            for( bin2 = 0; bin2 < nbins; ++bin2 )
+            {
+               k = clusterofbin[bin1];
+               l = clusterofbin[bin2];
+               /* if the bins are the same or in the same cluster, do nothing */
+               if( bin1 == bin2 || k == l || binfixed[bin1][k] || binfixed[bin1][l] || binfixed[bin2][k] || binfixed[bin2][l] )
+                  continue;
+               assert( SCIPisEQ(scip, solclustering[bin1][k], 1.0) && SCIPisEQ(scip, solclustering[bin2][l], 1.0) );
+
                qkl = qmatrix[k][l];
                qlk = qmatrix[l][k];
-               if( SCIPisZero(scip, solclustering[bin][k]) || binfixed[bin][k] || binfixed[bin][l] )
-                  continue;
-               if( k == l )
-                  continue;
-               /* do not open new clusters for now as the coherence would never be satisfied */
-               if( 1 == mincoherence[l] )
-                  continue;
+               /* calculate irreversibility after bin1 traded clusters with bin2 */
                for( i = 0; i < nbins; ++i )
                {
-                  qkl -= solclustering[i][l] * cmatrix[bin][i];
-                  qlk -= solclustering[i][l] * cmatrix[i][bin];
+                  if( solclustering[i][l] == -1 || solclustering[i][k] == -1)
+                     continue;
+                  qkl -= solclustering[i][l] * cmatrix[bin1][i];
+                  qlk -= solclustering[i][l] * cmatrix[i][bin1];
 
-                  solclustering[bin][k] = 0;
-                  solclustering[bin][l] = 1;
+                  qkl -= solclustering[i][k] * cmatrix[i][bin2];
+                  qlk -= solclustering[i][k] * cmatrix[bin2][i];
 
-                  qlk += solclustering[i][k] * cmatrix[bin][i];
-                  qkl += solclustering[i][k] * cmatrix[i][bin];
+                  solclustering[bin1][k] = 0;
+                  solclustering[bin1][l] = 1;
+                  solclustering[bin2][l] = 0;
+                  solclustering[bin2][k] = 1;
 
-                  solclustering[bin][k] = 1;
-                  solclustering[bin][l] = 0;
+                  qlk += solclustering[i][k] * cmatrix[bin1][i];
+                  qkl += solclustering[i][k] * cmatrix[i][bin1];
 
+                  qlk += solclustering[i][l] * cmatrix[i][bin2];
+                  qkl += solclustering[i][l] * cmatrix[bin2][i];
+
+                  solclustering[bin1][k] = 1;
+                  solclustering[bin1][l] = 0;
+                  solclustering[bin2][l] = 1;
+                  solclustering[bin2][k] = 0;
                }
-               neweps = REALABS(qkl - qlk);
+               neweps = fabs(qkl - qlk);
                /* if we found an improvement, update the datastructures and try to add the solution to scip */
-               if( SCIPisGT(scip, neweps, objective) && SCIPisEQ(scip, SCIPvarGetUbGlobal(varmatrix[bin][l]), 1) && SCIPisEQ(scip, SCIPvarGetLbGlobal(varmatrix[bin][k]), 0) )
+               if( neweps > objective  )
                {
-                  setBinToCluster(solclustering, cmatrix, qmatrix, bin, k, FALSE, nbins, ncluster);
-                  setBinToCluster(solclustering, cmatrix, qmatrix, bin, l, TRUE, nbins, ncluster);
-                  clusterofbin[bin] = l;
+                  setBinToCluster(solclustering, cmatrix, qmatrix, bin1, k, FALSE, nbins, ncluster);
+                  setBinToCluster(solclustering, cmatrix, qmatrix, bin2, l, FALSE, nbins, ncluster);
+                  setBinToCluster(solclustering, cmatrix, qmatrix, bin1, l, TRUE, nbins, ncluster);
+                  setBinToCluster(solclustering, cmatrix, qmatrix, bin2, k, TRUE, nbins, ncluster);
+                  clusterofbin[bin1] = l;
+                  clusterofbin[bin2] = k;
 
                   assignVars(scip, worksol, solclustering, nbins, ncluster, qmatrix);
                   SCIPcreateSolCopy(scip, &copysol, worksol);
@@ -631,86 +750,11 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
             }
          }
       }
-      for( i = 0; i < nbins; ++i )
-      {
-         assert( SCIPisEQ(scip, solclustering[i][clusterofbin[i]], 1.0) );
-      }
-      /* do a 2-opt i.e. trade any two bins between two clusters until local */
-
-
-      for( bin1 = 0; bin1 < nbins; ++bin1 )
-      {
-         for( bin2 = 0; bin2 < nbins; ++bin2 )
-         {
-            k = clusterofbin[bin1];
-            l = clusterofbin[bin2];
-            /* if the bins are the same or in the same cluster, do nothing */
-            if( bin1 == bin2 || k == l || binfixed[bin1][k] || binfixed[bin1][l] || binfixed[bin2][k] || binfixed[bin2][l] )
-               continue;
-            assert( SCIPisEQ(scip, solclustering[bin1][k], 1.0) && SCIPisEQ(scip, solclustering[bin2][l], 1.0) );
-
-            qkl = qmatrix[k][l];
-            qlk = qmatrix[l][k];
-            /* calculate irreversibility after bin1 traded clusters with bin2 */
-            for( i = 0; i < nbins; ++i )
-            {
-               if( solclustering[i][l] == -1 || solclustering[i][k] == -1)
-                  continue;
-               qkl -= solclustering[i][l] * cmatrix[bin1][i];
-               qlk -= solclustering[i][l] * cmatrix[i][bin1];
-
-               qkl -= solclustering[i][k] * cmatrix[i][bin2];
-               qlk -= solclustering[i][k] * cmatrix[bin2][i];
-
-               solclustering[bin1][k] = 0;
-               solclustering[bin1][l] = 1;
-               solclustering[bin2][l] = 0;
-               solclustering[bin2][k] = 1;
-
-               qlk += solclustering[i][k] * cmatrix[bin1][i];
-               qkl += solclustering[i][k] * cmatrix[i][bin1];
-
-               qlk += solclustering[i][l] * cmatrix[i][bin2];
-               qkl += solclustering[i][l] * cmatrix[bin2][i];
-
-               solclustering[bin1][k] = 1;
-               solclustering[bin1][l] = 0;
-               solclustering[bin2][l] = 1;
-               solclustering[bin2][k] = 0;
-            }
-            neweps = fabs(qkl - qlk);
-            /* if we found an improvement, update the datastructures and try to add the solution to scip */
-            if( neweps > objective  )
-            {
-               setBinToCluster(solclustering, cmatrix, qmatrix, bin1, k, FALSE, nbins, ncluster);
-               setBinToCluster(solclustering, cmatrix, qmatrix, bin2, l, FALSE, nbins, ncluster);
-               setBinToCluster(solclustering, cmatrix, qmatrix, bin1, l, TRUE, nbins, ncluster);
-               setBinToCluster(solclustering, cmatrix, qmatrix, bin2, k, TRUE, nbins, ncluster);
-               clusterofbin[bin1] = l;
-               clusterofbin[bin2] = k;
-
-               assignVars(scip, worksol, solclustering, nbins, ncluster, qmatrix);
-               SCIPcreateSolCopy(scip, &copysol, worksol);
-               objective = getIrrevBound(scip, qmatrix, ncluster);
-
-               SCIPretransformSol(scip, copysol);
-               assert(isPartition(solclustering, nbins, ncluster));
-               SCIPtrySolFree(scip, &copysol , FALSE, FALSE, FALSE, FALSE, &feasible);
-               if( feasible )
-               {
-                  improvement = TRUE;
-                  *result = SCIP_FOUNDSOL;
-                  changecounter++;
-               }
-            }
-         }
-      }
    }
    /* update the found solution, so that we do not run again immediatly */
-   if( *result == SCIP_FOUNDSOL )
-   {
-      heurdata->lastsolindex = SCIPsolGetIndex(SCIPgetBestSol(scip));
-   }
+
+   heurdata->lastsolindex = SCIPsolGetIndex(SCIPgetBestSol(scip));
+
    /* free all data-structures */
    for( i = 0; i < nbins; ++i )
    {

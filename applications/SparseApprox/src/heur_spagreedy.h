@@ -16,7 +16,7 @@
 
 /**@file   heur_spagreedy.h
  * @ingroup PRIMALHEURISTICS
- * @brief  xyz primal heuristic
+ * @brief  spagreedy primal heuristic
  * @author Leon Eifler
  *
  */

@@ -45,6 +45,7 @@ MAINOBJ		=	probdata_spa.o \
 			reader_spa.o \
 			heur_spagreedy.o \
 			heur_spaswitch.o \
+			heur_fuzzyround.o \
 			event_newsol.o \
 			sepa_sparseapprox.o \
 			spaplugins.o \

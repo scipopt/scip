@@ -77,6 +77,7 @@ SCIP_DECL_EVENTEXEC(eventExecNewsol)
    SCIP_VAR*** varmatrix;
    SCIP_SOL* newsol;
    SCIP_CONS* cons;
+   SCIP_Bool varfound = FALSE;
    char name[SCIP_MAXSTRLEN];
    int nbins;
    int ncluster;
@@ -88,6 +89,8 @@ SCIP_DECL_EVENTEXEC(eventExecNewsol)
    assert(event != NULL);
    assert(scip != NULL);
    assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND || SCIPeventGetType(event) == SCIP_EVENTTYPE_POORSOLFOUND);
+   if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
+      return SCIP_OKAY;
 
    SCIPdebugMessage("exec method of event handler for newsol solution found\n");
 
@@ -118,7 +121,8 @@ SCIP_DECL_EVENTEXEC(eventExecNewsol)
          SCIP_Real solval;
 
          var = varmatrix[b][c];
-         assert(var != NULL);
+         if( NULL == var )
+            continue;
          assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
 
          if( !SCIPvarIsNegated(var) )
@@ -154,6 +158,7 @@ SCIP_DECL_EVENTEXEC(eventExecNewsol)
 
          /* add variable to constraint */
          SCIP_CALL( SCIPaddCoefLogicor(scip, cons, var) );
+         varfound = TRUE;
 
          /* we can break at this point, because there is at most one varibale set to 1.0 per cluster */
          break;
@@ -161,7 +166,8 @@ SCIP_DECL_EVENTEXEC(eventExecNewsol)
    }
 
    /* add and release constraint */
-   SCIP_CALL( SCIPaddCons(scip, cons) );
+   if( varfound )
+      SCIP_CALL( SCIPaddCons(scip, cons) );
    SCIP_CALL( SCIPreleaseCons(scip, &cons) );
 
    return SCIP_OKAY;
