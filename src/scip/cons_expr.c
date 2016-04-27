@@ -30,6 +30,7 @@
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_sumprod.h"
+#include "scip/cons_expr_exp.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "expr"
@@ -3458,6 +3459,10 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    SCIP_CALL( SCIPincludeConsExprExprHdlrProduct(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "prod") == 0);
    conshdlrdata->exprprodhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
+
+   /* include exponential expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrExp(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "exp") == 0);
 
    return SCIP_OKAY;
 }
