@@ -157,6 +157,7 @@ extern "C" {
  *  - string       : string containing expression to be parse
  *
  *  output:
+ *  - endstring    : pointer to store the position of string after parsing
  *  - expr         : pointer to store the parsed expression
  *  - success      : pointer to store whether the parsing was successful or not
  */
@@ -164,6 +165,7 @@ extern "C" {
    SCIP* scip, \
    SCIP_CONSHDLR* consexprhdlr, \
    const char* string, \
+   const char** endstring, \
    SCIP_CONSEXPR_EXPR** expr, \
    SCIP_Bool* success)
 
