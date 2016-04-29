@@ -14,124 +14,210 @@
 
 #include "weight_space_polyhedron.h"
 
-#include <iostream> 
+#include <iostream>
+#include <list>
 #include <memory> // std::shared_ptr
 #include <numeric> // std::inner_product
+#include <ostream>
 #include <utility> // std::move, std::pair
 #include <vector>
+
+#include "lemon/list_graph.h"
 
 #include "polyscip.h"
 #include "weight_space_facet.h"
 #include "weight_space_vertex.h"
 
 using std::inner_product;
+using std::list;
 using std::make_shared;
-using std::shared_ptr;
+using std::ostream;
 using std::vector;
 
 namespace polyscip {
 
-  using PointType = Polyscip::PointType;
-  using ValueType = Polyscip::ValueType;
-  using WeightType = Polyscip::WeightType;
-  using RayContainer = Polyscip::RayContainer;
-  using FacetContainer = WeightSpaceVertex::FacetContainer;
 
-  WeightSpacePolyhedron::WeightSpacePolyhedron(unsigned num_objs,
-					       PointType point,
-					       ValueType weighted_obj_val,
-					       std::pair<bool,WeightType::size_type> unit_weight_info) 
-    : skeleton_(),
-      nodes_to_vertices_(skeleton_)
-  {
-    /* create initial boundary facets w_i > 0 for i \in [num_objs] */
-    auto facets = FacetContainer{};
-    for (auto i=0; i<num_objs; ++i)
-      facets.emplace_back(make_shared<const WeightSpaceFacet>(num_objs, i));
-    createInitialVertices(num_objs, std::move(point), weighted_obj_val, std::move(facets));
-    createInitialSkeleton();
-    if (unit_weight_info.first)
-      setMarkedVertex(unit_weight_info.second);
-    //    if (!computed_rays.empty()) 
-    //updateVertexWeightsWithRayInfo(ray_info);
-  }
+    using OutcomeType = Polyscip::OutcomeType;
+    using ValueType = Polyscip::ValueType;
+    using WeightType = Polyscip::WeightType;
+    using ResContainer = Polyscip::ResultContainer;
+    using FacetContainer = WeightSpaceVertex::FacetContainer;
 
-  WeightSpacePolyhedron::~WeightSpacePolyhedron() {}
-
-  bool WeightSpacePolyhedron::hasUnmarkedVertex() const {
-    return !unmarked_vertices_.empty();
-  }
-  
-  void WeightSpacePolyhedron::createInitialVertices(unsigned num_objs,
-						    PointType point,
-						    ValueType weighted_obj_val,
-						    FacetContainer boundary_facets) {
-    /* make facet: point \cdot w >= weighted_obj_val to facets_ */
-    auto point_facet = make_shared<const WeightSpaceFacet>(point, weighted_obj_val);
-    /* create initial weight space vertices */
-    for (auto i=0; i<num_objs; ++i) {
-      auto facets = FacetContainer(begin(boundary_facets), end(boundary_facets));
-      facets.at(i) = point_facet; // replace i-th boundary facet 
-      auto weight = make_shared<WeightType>(num_objs, 0.);
-      (*weight)[i] = 1.; // set unit weight
-      unmarked_vertices_.emplace_back(make_shared<WeightSpaceVertex>(std::move(facets), 
-								     std::move(weight), 
-								     point.at(i)));
-    }
-  }
-
-  void WeightSpacePolyhedron::createInitialSkeleton() {
-    for (const auto vertex : unmarked_vertices_) {
-      Node new_node = skeleton_.addNode(); 
-      for (const auto& pair : vertices_to_nodes_) // add edge between all previous nodes and new_node
-	skeleton_.addEdge(pair.second, new_node); 
-      nodes_to_vertices_[new_node] = vertex;
-      vertices_to_nodes_.insert({vertex, new_node});
-    }
-  }
-
-  void WeightSpacePolyhedron::setMarkedVertex(WeightType::size_type unit_weight_index) {
-    for (auto it=begin(unmarked_vertices_); it!=end(unmarked_vertices_); ++it) {
-      if ((*it)->hasUnitWeight(unit_weight_index)) {
-	marked_vertices_.emplace_back(std::move(*it));
-	unmarked_vertices_.erase(it);
-	return;
+    WeightSpacePolyhedron::WeightSpacePolyhedron(unsigned num_objs,
+                                                 OutcomeType point,
+                                                 ValueType weighted_obj_val,
+                                                 std::pair<bool, WeightType::size_type> unit_weight_info,
+                                                 const ResContainer& initial_rays)
+            : curr_investigated_vertex_(nullptr),
+              skeleton_(),
+              nodes_to_vertices_(skeleton_) {
+      // create initial boundary facets w_i > 0 for i \in [num_objs]
+      auto facets = FacetContainer{};
+      for (auto i = 0; i < num_objs; ++i)
+        facets.emplace_back(make_shared<const WeightSpaceFacet>(num_objs, i));
+      createInitialVertices(num_objs, std::move(point), weighted_obj_val, std::move(facets));
+      createInitialSkeleton();
+      if (unit_weight_info.first)
+        setMarkedVertex(unit_weight_info.second);
+      for (const auto &pair : initial_rays) { //incorporate found unbounded ray information
+          auto wspoly_changed = updateInitialWeightSpacePolyhedron(pair.first, pair.second);
+          if (!wspoly_changed)
+              print(pair.second,
+                    {"INITIAL WEIGHT SPACE POLYHEDRON UNCHANGED: no vertex found with weight = "});
       }
     }
 
-  }
-  
-  // void WeightSpacePolyhedron::updateVertexWeightsWithRayInfo(const RayContainer& ray_info, 
-  // 							     double zero) {
-  //   for (const auto& rayPair : ray_info) {
-  //     for (shared_ptr<const WeightSpaceVertex>& v : untested_vertices_) {
-  // 	/* check whether vertex weight \cdot ray < zero, i.e., whether the ray 
-  // 	   yields an unbounded objective value w.r.t the vertex weight */
-  // 	assert (v->getWeight->size() == rayPair.first.size());
-  // 	ValueType res = inner_product(begin(*(v->getWeight())),
-  // 				      end(*(v->getWeight())),
-  // 				      begin(rayPair.first),
-  // 				      0.);
-  // 	if (res < zero) { // ray yields unbounded value w.r.t vertex weight
-  // 	  ;
-  // 	}
+    WeightSpacePolyhedron::~WeightSpacePolyhedron() {
+        for (auto& v_ptr : marked_vertices_)
+            delete v_ptr;
+        for (auto& v_ptr : unmarked_vertices_)
+            delete v_ptr;
+        for (auto& v_ptr : obsolete_vertices_)
+            delete v_ptr;
+        delete curr_investigated_vertex_;
+    }
 
-  //     }
-  //   }
+    bool WeightSpacePolyhedron::hasUntestedWeight() const {
+      return !unmarked_vertices_.empty();
+    }
 
-  // }
+    WeightType WeightSpacePolyhedron::getUntestedWeight() {
+        assert (!unmarked_vertices_.empty());
+        curr_investigated_vertex_ = unmarked_vertices_.front();
+        unmarked_vertices_.pop_front();
+        return curr_investigated_vertex_->getWeight();
+    }
 
-  void WeightSpacePolyhedron::printUnmarkedVertices(bool detailed) const {
-    std::cout << "UNMARKED VERTICES: \n";
-    for (const auto& vertex : unmarked_vertices_)
-      vertex->print(detailed);
-  }
+    bool WeightSpacePolyhedron::updateInitialWeightSpacePolyhedron(const OutcomeType& ray,
+                                                                   const WeightType& ray_weight) {
+        for (auto& vertex : unmarked_vertices_) {
+            if (vertex->hasSameWeight(ray_weight)) { // find vertex with same weight as ray
+                auto node = vertices_to_nodes_.at(vertex);
+                // iterate over all adjacent nodes
+                for (Graph::IncEdgeIt edge(skeleton_,node); edge != lemon::INVALID; ++edge) {
+                    auto adj_node = skeleton_.oppositeNode(node, edge);
+                    auto adj_vertex = nodes_to_vertices_[adj_node];
 
-  void WeightSpacePolyhedron::printMarkedVertices(bool detailed) const {
-    std::cout << "MARKED VERTICES: \n";
-    for (const auto& vertex : marked_vertices_)
-      vertex->print(detailed);
-  }
+                }
+
+            }
+        }
+        return false;
+
+    }
+
+    WeightType WeightSpacePolyhedron::calculateWeight(const WeightType &weight1,
+                                                      const WeightType &weight2,
+                                                      const OutcomeType &outcome) {
+
+    }
+
+    void WeightSpacePolyhedron::createInitialVertices(unsigned num_objs,
+                                                      OutcomeType point,
+                                                      ValueType weighted_obj_val,
+                                                      FacetContainer boundary_facets) {
+        // make facet: point \cdot w >= weighted_obj_val to facets_
+        auto point_facet = make_shared<const WeightSpaceFacet>(point, weighted_obj_val);
+        // create initial weight space vertices
+        for (auto i = 0; i < num_objs; ++i) {
+            auto facets = FacetContainer(begin(boundary_facets), end(boundary_facets));
+            facets.at(i) = point_facet; // replace i-th boundary facet
+            auto weight = WeightType(num_objs, 0.);
+            weight[i] = 1.; // set unit weight
+            unmarked_vertices_.push_back(new WeightSpaceVertex(std::move(facets),
+                                                               std::move(weight),
+                                                               point.at(i)));
+        }
+    }
+
+    void WeightSpacePolyhedron::createInitialSkeleton() {
+      for (auto& vertex : unmarked_vertices_) {
+          Node new_node = skeleton_.addNode();
+          nodes_to_vertices_[new_node] = vertex; // map from node to vertex
+          for (const auto& pair : vertices_to_nodes_) // add edge between all previous nodes and new_node
+              skeleton_.addEdge(pair.second, new_node);
+          // above for loop needs to come before insertion in order to keep ordering:
+          // second node has edge to first node; third node has edge to first node and second node; etc
+          vertices_to_nodes_.insert({vertex, new_node}); // map from vertex to node
+      }
+    }
+
+    void WeightSpacePolyhedron::setMarkedVertex(WeightType::size_type unit_weight_index) {
+        for (auto vertex_it = begin(unmarked_vertices_); vertex_it != end(unmarked_vertices_); ++vertex_it) {
+            if ((*vertex_it)->hasUnitWeight(unit_weight_index)) {
+                marked_vertices_.push_back(*vertex_it);
+                unmarked_vertices_.erase(vertex_it);
+                return;
+        }
+      }
+    }
+
+
+    void WeightSpacePolyhedron::incorporateOutcome(const OutcomeType& outcome,
+                                                   const WeightType& weight,
+                                                   bool outcome_is_ray) {
+        assert (curr_investigated_vertex_ != nullptr);
+        assert (curr_investigated_vertex_->hasSameWeight(weight));
+        if (isNewOutcome(outcome, outcome_is_ray)) {
+            incorporateNewOutcome(outcome, outcome_is_ray);
+        }
+        else {
+            assert (!outcome_is_ray);
+            incorporateOldOutcome(outcome);
+        }
+    }
+
+
+    bool WeightSpacePolyhedron::isNewOutcome(const Polyscip::OutcomeType &outcome,
+                                                   bool outcome_is_ray) {
+        if (outcome_is_ray)
+            return curr_investigated_vertex_->isMadeObsolete(outcome,0.);
+        else
+            return curr_investigated_vertex_->isMadeObsolete(outcome);
+    }
+
+    void WeightSpacePolyhedron::incorporateOldOutcome(const Polyscip::OutcomeType &outcome) {
+        marked_vertices_.push_back(curr_investigated_vertex_);
+        curr_investigated_vertex_ = nullptr;
+    }
+
+    void WeightSpacePolyhedron::incorporateNewOutcome(const OutcomeType& outcome,
+                                                      bool outcome_is_ray) {
+        // adjacent nodes of obsolete node might also be made obsolete by outcome
+        auto unscanned_nodes = list<Node>{vertices_to_nodes_.at(curr_investigated_vertex_)};
+        curr_investigated_vertex_ = nullptr;
+        auto cut_edges = list<Graph::Edge>(); // container for edges between obsolete and non-obsolete nodes
+        while (!unscanned_nodes.empty()) { // find all vertices which are made obsolete
+            auto node = unscanned_nodes.front();
+            for (Graph::IncEdgeIt edge(skeleton_,node); edge != lemon::INVALID; ++edge) {
+                auto adj_node = skeleton_.oppositeNode(node,edge);
+                auto adj_vertex = nodes_to_vertices_[adj_node];
+                // check whether adjacent vertex is made obsolete by outcome
+                auto is_obsolete = (outcome_is_ray) ? adj_vertex->isMadeObsolete(outcome,0.) :
+                                   adj_vertex->isMadeObsolete(outcome);
+                if (is_obsolete) {
+                    //todo
+                    ;
+                }
+                else {
+                    //todo cut_edges
+                }
+            }
+            unscanned_nodes.pop_front(); // discard node
+        }
+    }
+
+    void WeightSpacePolyhedron::printUnmarkedVertices(ostream& os, bool printFacets) const {
+        printVertices(unmarked_vertices_, {"UNMARKED VERTICES:"}, os, printFacets);
+    }
+
+    void WeightSpacePolyhedron::printMarkedVertices(ostream& os, bool printFacets) const {
+        printVertices(marked_vertices_, {"MARKED VERTICES:"}, os, printFacets);
+    }
+
+    void WeightSpacePolyhedron::printObsoleteVertices(ostream& os, bool printFacets) const {
+        printVertices(obsolete_vertices_, {"OBSOLETE VERTICES:"}, os, printFacets);
+    }
 
 }
 

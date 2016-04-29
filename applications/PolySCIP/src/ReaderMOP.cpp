@@ -2191,8 +2191,8 @@ SCIP* scip /**< SCIP data structure */
          if( cons == NULL )
          {
             /* row is objective */
-	   bool added = probdata->addObjValue(var, mpsinputField4(mpsi), val);
-	   assert(added);
+      	   bool added = probdata->addObjValue(var, mpsinputField4(mpsi), val);
+	      assert(added);
          }
          else if( !SCIPisZero(scip, val) )
          {

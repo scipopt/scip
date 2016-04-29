@@ -12,38 +12,24 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-#include "weight_space_facet.h"
-
-#include <ostream>
-#include <vector>
-
 #include "polyscip.h"
 
+#include <ostream>
+
 using std::ostream;
-using std::vector;
 
 namespace polyscip {
 
-    using OutcomeType = Polyscip::OutcomeType;
-    using ValueType = Polyscip::ValueType;
-
-    WeightSpaceFacet::WeightSpaceFacet(unsigned num_objs,
-                                       unsigned index)
-            : lhs_(num_objs, 0.),
-              rhs_{0.} {
-      lhs_.at(index) = 1.;
+    void Polyscip::printPoint(const OutcomeType& point, ostream& os) {
+        print(point, {"Point = "}, os);
     }
 
-    WeightSpaceFacet::WeightSpaceFacet(const OutcomeType& point,
-                                       ValueType weighted_obj_val)
-            : lhs_(point.begin(), point.end()),
-              rhs_{weighted_obj_val} {}
+    void Polyscip::printRay(const OutcomeType& ray, ostream& os) {
+        print(ray, {"Ray = "}, os);
+    }
 
-    void WeightSpaceFacet::print(ostream& os) const {
-      os << " Facet: lhs_coeffs = [ ";
-      for (const auto &coeff : lhs_)
-        os << coeff << " ";
-      os << "], rhs = " << rhs_ << "\n";
+    void Polyscip::printWeight(const WeightType& weight, ostream& os) {
+        print(weight, {"Weight = "}, os);
     }
 
 }

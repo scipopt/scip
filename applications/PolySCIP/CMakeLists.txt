@@ -12,7 +12,7 @@ set(DOC doc)
 set(CMAKE cmake)
 set(EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR})
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/${CMAKE})
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall -Werror")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
 
 
 # configure a header file to pass CMake settings to source code

@@ -20,32 +20,63 @@
 #ifndef POLYSCIP_SRC_POLYSCIP_H_INCLUDED
 #define POLYSCIP_SRC_POLYSCIP_H_INCLUDED
 
+#include <iostream>
+#include <ostream>
+#include <string>
 #include <utility> // std::pair
 #include <vector>
 
 #include "scip/def.h"
 
 namespace polyscip {
-  
-  class Polyscip {
-  public:
-    using ValueType = SCIP_Real;               /**< type for computed values */
-    using PointType = std::vector<ValueType>;  /**< type for points in outcome space; 
-						  needs to support: begin(), operator[] */
-    using RayType = std::vector<ValueType>;     /**< type for rays in outcome space 
-						   needs to support: size() */
-    using WeightType = std::vector<ValueType>; /**< type for weights
-						  needs to support: at(), size() */
-    using PointContainer = std::vector<std::pair<PointType,WeightType>>;
-    using RayContainer = std::vector<std::pair<RayType,WeightType>>; /**< Container type for 
-									  computed rays
-									Needs to support: empty() */
-  private: 
-    PointContainer supported_nondom_points_;
-    RayContainer unbounded_nondom_rays_;
 
-  };
+    /** General print function
+    * @param container Container to be printed
+    * @param description Corresponding description
+    * @param os Output stream to print to
+    */
+    template <typename Container>
+    void print(const Container& container,
+               std::string description,
+               std::ostream& os = std::cout) {
+        os << description << "[ ";
+        for (const auto& elem : container)
+            os << elem << " ";
+        os << "]\n";
+    }
 
+    class Polyscip {
+    public:
+        /**< type for computed values */
+        using ValueType = SCIP_Real;
+        /**< type for points, rays in outcome space; needs to support: begin(), size(), operator[] */
+        using OutcomeType = std::vector<ValueType>;
+        /**< type for weights; needs to support: at(), size() */
+        using WeightType = std::vector<ValueType>;
+        /**< container type for results; needs to support: empty() */
+        using ResultContainer = std::vector <std::pair<OutcomeType, WeightType>>;
+
+        void computeSupportedNondomPoints() = delete;
+        void computeUnSupportedNondomPoints() = delete;
+
+        /** Prints given weight to given output stream
+         */
+        void printWeight(const WeightType& weight, std::ostream& os = std::cout);
+
+        /** Prints given point to given output stream
+         */
+        void printPoint(const OutcomeType& point, std::ostream& os = std::cout);
+
+        /** Prints given ray to given output stream
+         */
+        void printRay(const OutcomeType& ray, std::ostream& os = std::cout);
+
+    private:
+        ResultContainer supported_nondom_points_;
+        ResultContainer unsupported_nondom_points_;
+        ResultContainer unbounded_nondom_rays_;
+
+    };
 
 }
 

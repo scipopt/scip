@@ -24,39 +24,39 @@
 #ifndef POLYSCIP_SRC_WEIGHT_SPACE_FACET_H_INCLUDED
 #define POLYSCIP_SRC_WEIGHT_SPACE_FACET_H_INCLUDED
 
+#include <iosfwd>
 #include <vector>
 
 #include "polyscip.h"
 
 namespace polyscip {
 
-  /** Facet of the (partial) weight space polyhedron. */
-  class WeightSpaceFacet {
-  public: 
-    /** Creates the facet point \cdot w >= weighted_obj_val   
-     *  @param point computed (weakly non-dominated) point in objective space
-     *  @param weighted_obj_val weighted objective value of point
-     */
-    explicit WeightSpaceFacet(Polyscip::PointType point, 
-			      Polyscip::ValueType weighted_obj_val);
-    
-    /** Creates the weight space facet w_i >= 0
-     *  @param num_objs number of objectives of given problem
-     *  @param index index i of w_i >= 0
-     */
-    explicit WeightSpaceFacet(unsigned num_objs, unsigned index);
+    /** Facet of the (partial) weight space polyhedron. */
+    class WeightSpaceFacet {
+    public:
+        /** Creates the facet point \cdot w >= weighted_obj_val
+         *  @param point computed (weakly non-dominated) point in objective space
+         *  @param weighted_obj_val weighted objective value of point
+         */
+        explicit WeightSpaceFacet(const Polyscip::OutcomeType& point,
+                                  Polyscip::ValueType weighted_obj_val);
 
-    /** Destructor */
-    ~WeightSpaceFacet();
+        /** Creates the weight space facet w_i >= 0
+         *  @param num_objs number of objectives of given problem
+         *  @param index index i of w_i >= 0
+         */
+        explicit WeightSpaceFacet(unsigned num_objs, unsigned index);
 
-    /** Prints facet information to standard output.
-     */
-    void print() const;
+        /** Prints facet information to output stream.
+         */
+        void print(std::ostream& os) const;
 
-  private:
-    Polyscip::PointType lhs_; /**< left hand side coefficients of the facet inequality */
-    Polyscip::ValueType rhs_;              /**< right hand side value of the facet inequality */
-  };
+    private:
+        /**< left hand side coefficients of the facet inequality */
+        std::vector<Polyscip::ValueType> lhs_;
+        /**< right hand side value of the facet inequality */
+        Polyscip::ValueType rhs_;
+    };
 
 }
 
