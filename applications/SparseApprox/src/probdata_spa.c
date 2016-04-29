@@ -10,6 +10,7 @@
 #include "scip/cons_linear.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_nonlinear.h"
+#include "scip/var.h"
 
 #include <math.h>
 #include <assert.h>
@@ -63,21 +64,22 @@ SCIP_RETCODE createCMatrix(
 
       cmatrix[(int)edges[i][0] - 1][(int)edges[i][1] - 1] = sd[(int)edges[i][0] - 1] * edges[i][2];
       sum[(int)edges[i][0] - 1] += edges[i][2];
-      if( edges[i][2] > 1.0 || edges[i][2] < 0 )
+      /*if( edges[i][2] > 1.0 || edges[i][2] < 0 )
       {
          SCIPerrorMessage( "The given C-matrix is has an entry at %d, %d with illegal value %f \n", (int)edges[i][0], (int)edges[i][1] , edges[i][2] );
          return SCIP_READERROR;
-      }
+      }*/
    }
 
-   for ( i = 0; i < nbins; ++i )
+   /*for ( i = 0; i < nbins; ++i )
    {
       if( SCIPisGT(scip, fabs(1.0 - sum[i]) , 10e-4) )
       {
          SCIPerrorMessage( "The given T-matrix is not stochastic, the row-sum in row %d is %f \n", i, sum[i] );
          return SCIP_READERROR;
       }
-   }
+   }*/
+
    SCIPfreeMemoryArray(scip, &sum);
    return SCIP_OKAY;
 }
@@ -153,6 +155,7 @@ SCIP_RETCODE createVariables(
          (void)SCIPsnprintf(varname, SCIP_MAXSTRLEN, "x_%d_%d", i+1 , j+1 );
          SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->binvars[i][j], varname, 0.0, 1.0, 0.0, SCIP_VARTYPE_BINARY) );
          SCIP_CALL( SCIPaddVar(scip, probdata->binvars[i][j]) );
+         SCIP_CALL( SCIPvarChgBranchPriority(probdata->binvars[i][j], 5) );
       }
    }
    SCIP_CALL( SCIPfixVar(scip, probdata->binvars[0][0], 1.0, &dummy, &dummy  ) );
@@ -358,7 +361,8 @@ SCIP_RETCODE createProbEdgeRep(
             for( j = 0; j < i; ++j )
             {
                SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[i][j][c1][c2], (probdata->cmatrix[j][i]) - (probdata->cmatrix[i][j])) );
-               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][i][c1][c2], -(probdata->cmatrix[j][i]) + (probdata->cmatrix[i][j])) );            }
+               SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->edgevars[j][i][c1][c2], -(probdata->cmatrix[j][i]) + (probdata->cmatrix[i][j])) );
+            }
          }
          SCIP_CALL( SCIPaddCons(scip, temp) );
          SCIP_CALL( SCIPreleaseCons(scip, &temp) );
@@ -437,6 +441,7 @@ SCIP_RETCODE createProbEdgeRep(
    {
       SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->indicatorvar[c1], -1.0) );
    }
+
    SCIP_CALL( SCIPaddCons(scip, temp) );
    SCIP_CALL( SCIPreleaseCons(scip, &temp) );
 
