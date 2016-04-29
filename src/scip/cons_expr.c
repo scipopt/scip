@@ -30,6 +30,7 @@
 #include "scip/cons_expr_var.h"
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_sumprod.h"
+#include "scip/cons_expr_exp.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "expr"
@@ -838,12 +839,8 @@ SCIP_RETCODE parseBase(
    {
       /* a (function) name is coming, should find exprhandler with such name */
       int i;
-      int npar;
-      const char* init;
       char operatorname[SCIP_MAXSTRLEN];
-      char args[SCIP_MAXSTRLEN];
       SCIP_CONSEXPR_EXPRHDLR* exprhdlr;
-      SCIP_Bool insidevarname;
       SCIP_Bool success;
 
       /* get name */
@@ -856,6 +853,7 @@ SCIP_RETCODE parseBase(
       }
       operatorname[i] = '\0';
 
+      /* after name we must see a '(' */
       if( *expr != '(' )
       {
          SCIPerrorMessage("Expected '(' after operator name <%s>, but got %s.\n", operatorname, expr);
@@ -877,53 +875,23 @@ SCIP_RETCODE parseBase(
          return SCIP_READERROR;
       }
 
-      /* in case we would need to extract expression between () */
+      /* give control to exprhdlr's parser */
       ++expr;
-      init = expr;
-      npar = 1;
-      insidevarname = FALSE;
-      while( *expr != ')' && npar > 0 )
-      {
-         /* if we achieve the end of string, probably the expression has unbalanced parenthesis */
-         if( *expr == '\0' )
-         {
-            SCIPerrorMessage("Unexpected end of expression string when parsing '%s(%s'\n", operatorname, init);
-            return SCIP_READERROR;
-         }
-
-         /* count parenthesis if not inside a variable name */
-         if( !insidevarname )
-         {
-            if( *expr == '(' )
-               ++npar;
-            else if( *expr == ')' )
-               --npar;
-         }
-
-         /* check if we are entering or leaving a variable name */
-         if( insidevarname && *expr == '>' )
-            insidevarname = FALSE;
-         if( !insidevarname && *expr == '<' )
-            insidevarname = TRUE;
-
-         ++expr;
-         assert(npar >= 0);
-      }
-      assert(npar == 0);
-      assert(!insidevarname);
-      assert(*expr == ')');
-
-      /* copy arguments into extra string and call exprhdlr parser */
-      memcpy(args, init, expr-init);
-      args[expr-init] = '\0';
-      SCIP_CALL( exprhdlr->parse(scip, conshdlr, init, basetree, &success) );
+      SCIP_CALL( exprhdlr->parse(scip, conshdlr, expr, newpos, basetree, &success) );
 
       if( !success )
       {
-         SCIPerrorMessage("Error while expression handler <%s> was parsing %s\n", operatorname, init);
+         SCIPerrorMessage("Error while expression handler <%s> was parsing %s\n", operatorname, expr);
          assert(*basetree == NULL);
          return SCIP_READERROR;
       }
+      expr = *newpos;
+
+      /* we should see the ')' of Op "(" OpExpression ") */
+      assert(*expr == ')');
+
+      /* move one character forward */
+      ++expr;
    }
    else
    {
@@ -3456,6 +3424,10 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    SCIP_CALL( SCIPincludeConsExprExprHdlrProduct(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "prod") == 0);
    conshdlrdata->exprprodhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
+
+   /* include exponential expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrExp(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "exp") == 0);
 
    return SCIP_OKAY;
 }
