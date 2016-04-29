@@ -14,7 +14,7 @@
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
 /**@file   cons_expr_exp.c
- * @brief  exponential expression handlers
+ * @brief  exponential expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
  *
@@ -161,7 +161,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalExp)
    return SCIP_OKAY;
 }
 
-/** creates the handler for exponential function and includes it into the expression constraint handler */
+/** creates the handler for exponential expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr        /**< expression constraint handler */
@@ -182,7 +182,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
    return SCIP_OKAY;
 }
 
-/** creates an exp expression */
+/** creates an exponential expression */
 SCIP_RETCODE SCIPcreateConsExprExprExp(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSHDLR*        consexprhdlr,       /**< expression constraint handler */

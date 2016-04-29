@@ -13,8 +13,8 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   cons_expr_sumprod.h
- * @brief  sum and product expression handlers
+/**@file   cons_expr_exp.h
+ * @brief  exponential expression handler
  * @author Stefan Vigerske
  * @author Benjamin Mueller
  */
@@ -32,7 +32,7 @@
 extern "C" {
 #endif
 
-/** creates an exp expression */
+/** creates an exponential expression */
 EXTERN
 SCIP_RETCODE SCIPcreateConsExprExprExp(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -41,7 +41,7 @@ SCIP_RETCODE SCIPcreateConsExprExprExp(
    SCIP_CONSEXPR_EXPR*   child               /**< single child */
    );
 
-/** creates the handler for exponential function and includes it into the expression constraint handler */
+/** creates the handler for exponential expressions and includes it into the expression constraint handler */
 EXTERN
 SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
    SCIP*                 scip,               /**< SCIP data structure */
