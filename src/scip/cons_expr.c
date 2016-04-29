@@ -3426,7 +3426,7 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "prod") == 0);
    conshdlrdata->exprprodhdlr = conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1];
 
-   /* include exponential expression */
+   /* include handler for exponential expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrExp(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "exp") == 0);
 
