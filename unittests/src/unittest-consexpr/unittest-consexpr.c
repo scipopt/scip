@@ -1549,7 +1549,6 @@ SCIP_RETCODE testExp(void)
    SCIP_SOL* sol;
    SCIP_VAR* x;
    SCIP_VAR* y;
-   SCIP_VAR* z;
    int i;
 
    SCIP_CALL( SCIPcreate(&scip) );
@@ -1566,11 +1565,9 @@ SCIP_RETCODE testExp(void)
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", 0.0, 1.0, 0.0, SCIP_VARTYPE_INTEGER) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
-   SCIP_CALL( SCIPaddVar(scip, z) );
 
    /* create solution */
    SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
@@ -1578,10 +1575,11 @@ SCIP_RETCODE testExp(void)
    /* easy exponential expression */
    {
       SCIP_CONSEXPR_EXPR* expr;
+      SCIP_INTERVAL interval;
       const char* input = "exp(<x>[C]) + exp(<x>[C])";
 
       SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr)) );
-      SCIPinfoMessage(scip, NULL, "printing easy exponential expression: ");
+      SCIPinfoMessage(scip, NULL, "testing expression: ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 
@@ -1594,6 +1592,12 @@ SCIP_RETCODE testExp(void)
          assert(SCIPisRelEQ(scip, SCIPgetConsExprExprValue(expr), exp(i) + exp(i)));
 
          /* propagate expression */
+         SCIP_CALL( SCIPchgVarLb(scip, x, i) );
+         SCIP_CALL( SCIPchgVarUb(scip, x, i + 1.0 / (ABS(i) + 1)) );
+         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0) );
+         interval = SCIPgetConsExprExprInterval(expr);
+         assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), 2*exp(i)));
+         assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), 2*exp(i + 1.0 / (ABS(i) + 1))));
       }
 
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -1602,10 +1606,11 @@ SCIP_RETCODE testExp(void)
    /* complicated exponential expression */
    {
       SCIP_CONSEXPR_EXPR* expr;
+      SCIP_INTERVAL interval;
       const char* input = "exp(exp(<x>[C])) * exp(<y>[C])^2";
 
       SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr)) );
-      SCIPinfoMessage(scip, NULL, "printing complicate exponential expression: ");
+      SCIPinfoMessage(scip, NULL, "testing expression: ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
       SCIPinfoMessage(scip, NULL, "\n");
 
@@ -1613,12 +1618,20 @@ SCIP_RETCODE testExp(void)
       for( i = 1; i <= 10; ++i )
       {
          /* evaluate expression */
-         SCIP_CALL( SCIPsetSolVal(scip, sol, x, (SCIP_Real) -i) );
+         SCIP_CALL( SCIPsetSolVal(scip, sol, x, (SCIP_Real) 1.0 / i) );
          SCIP_CALL( SCIPsetSolVal(scip, sol, y, (SCIP_Real) i) );
          SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, 0) );
-         assert(SCIPisRelEQ(scip, SCIPgetConsExprExprValue(expr), exp(exp(-i)) * exp(i) * exp(i)));
+         assert(SCIPisRelEQ(scip, SCIPgetConsExprExprValue(expr), exp(exp(1.0 / i)) * exp(2*i)));
 
          /* propagate expression */
+         SCIP_CALL( SCIPchgVarLb(scip, x, -1.0 / i) );
+         SCIP_CALL( SCIPchgVarUb(scip, x,  1.0 / i) );
+         SCIP_CALL( SCIPchgVarLb(scip, y, i) );
+         SCIP_CALL( SCIPchgVarUb(scip, y, i + 1.0 / i) );
+         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0) );
+         interval = SCIPgetConsExprExprInterval(expr);
+         assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), exp(exp(-1.0 / i)) * exp(2*i)));
+         assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), exp(exp(1.0 / i)) * exp(2*i + 2.0 / i)));
       }
 
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
@@ -1628,7 +1641,6 @@ SCIP_RETCODE testExp(void)
    SCIP_CALL( SCIPfreeSol(scip, &sol) );
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
-   SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPfree(&scip) );
 
    BMScheckEmptyMemory();
