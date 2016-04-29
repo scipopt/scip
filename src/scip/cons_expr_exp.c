@@ -110,6 +110,23 @@ SCIP_DECL_CONSEXPR_EXPRPRINT(printExp)
 static
 SCIP_DECL_CONSEXPR_EXPRPARSE(parseExp)
 {
+   SCIP_CONSEXPR_EXPR* childexpr;
+
+   assert(expr != NULL);
+
+   /* parse child expression from remaining string */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, consexprhdlr, string, endstring, &childexpr) );
+   assert(childexpr != NULL);
+
+   /* create exponential expression */
+   SCIP_CALL( SCIPcreateConsExprExprExp(scip, consexprhdlr, expr, childexpr) );
+   assert(*expr != NULL);
+
+   /* release child expression since it has been captured by the exponential expression */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &childexpr) );
+
+   *success = TRUE;
+
    return SCIP_OKAY;
 }
 
