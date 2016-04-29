@@ -31,6 +31,7 @@
 #include "scip/cons_expr_value.h"
 #include "scip/cons_expr_sumprod.h"
 #include "scip/cons_expr_exp.h"
+#include "scip/cons_expr_log.h"
 
 /* fundamental constraint handler properties */
 #define CONSHDLR_NAME          "expr"
@@ -3428,6 +3429,10 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include exponential expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrExp(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "exp") == 0);
+
+   /* include handler for logarithmic expression */
+   SCIP_CALL( SCIPincludeConsExprExprHdlrLog(scip, conshdlr) );
+   assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "log") == 0);
 
    return SCIP_OKAY;
 }
