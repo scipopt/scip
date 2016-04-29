@@ -1546,9 +1546,11 @@ SCIP_RETCODE testExp(void)
 {
    SCIP* scip;
    SCIP_CONSHDLR* conshdlr;
+   SCIP_SOL* sol;
    SCIP_VAR* x;
    SCIP_VAR* y;
    SCIP_VAR* z;
+   int i;
 
    SCIP_CALL( SCIPcreate(&scip) );
 
@@ -1570,24 +1572,60 @@ SCIP_RETCODE testExp(void)
    SCIP_CALL( SCIPaddVar(scip, y) );
    SCIP_CALL( SCIPaddVar(scip, z) );
 
+   /* create solution */
+   SCIP_CALL( SCIPcreateSol(scip, &sol, NULL) );
+
    /* easy exponential expression */
    {
       SCIP_CONSEXPR_EXPR* expr;
       const char* input = "exp(<x>[C]) + exp(<x>[C])";
 
       SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr)) );
+      SCIPinfoMessage(scip, NULL, "printing easy exponential expression: ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /* evaluate expression for different points */
+      for( i = -10; i <= 10; ++i )
+      {
+         /* evaluate expression */
+         SCIP_CALL( SCIPsetSolVal(scip, sol, x, (SCIP_Real) i) );
+         SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, 0) );
+         assert(SCIPisRelEQ(scip, SCIPgetConsExprExprValue(expr), exp(i) + exp(i)));
+
+         /* propagate expression */
+      }
+
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    }
 
-   /* crazy exponential expression */
+   /* complicated exponential expression */
    {
       SCIP_CONSEXPR_EXPR* expr;
-      const char* input = "(exp(exp(<x>[C])) * exp(<y>[C]))^2";
+      const char* input = "exp(exp(<x>[C])) * exp(<y>[C])^2";
 
       SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, (char*)input, NULL, &expr)) );
+      SCIPinfoMessage(scip, NULL, "printing complicate exponential expression: ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /* evaluate expression for different points */
+      for( i = 1; i <= 10; ++i )
+      {
+         /* evaluate expression */
+         SCIP_CALL( SCIPsetSolVal(scip, sol, x, (SCIP_Real) -i) );
+         SCIP_CALL( SCIPsetSolVal(scip, sol, y, (SCIP_Real) i) );
+         SCIP_CALL( SCIPevalConsExprExpr(scip, expr, sol, 0) );
+         assert(SCIPisRelEQ(scip, SCIPgetConsExprExprValue(expr), exp(exp(-i)) * exp(i) * exp(i)));
+
+         /* propagate expression */
+      }
+
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    }
 
+   /* free allocated memory */
+   SCIP_CALL( SCIPfreeSol(scip, &sol) );
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPreleaseVar(scip, &z) );
