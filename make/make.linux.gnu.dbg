@@ -27,14 +27,14 @@ SANITZERFLAGS = -fsanitize=address
 endif
 
 # enable UndefinedBehaviorSanitizer
-SANITZERFLAGS += -fsanitize=undefined -fsanitize=float-cast-overflow
+SANITZERFLAGS += -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
 
 endif
 
 ifeq ($(SANITIZE),true)
 
 # enable UndefinedBehaviorSanitizer
-SANITZERFLAGS += -fsanitize=undefined -fsanitize=float-cast-overflow
+SANITZERFLAGS += -fsanitize=undefined -fsanitize=float-cast-overflow -fsanitize=float-divide-by-zero
 
 endif
 
