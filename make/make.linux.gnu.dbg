@@ -8,7 +8,7 @@ CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time
 GCCVERSION := $(shell $(CC) -dumpversion | cut -f1-2 -d.)
 SANITIZE = $(word $(shell expr \( $(GCCVERSION) \>= 4.9 \) + 1), false, true)
 
-ifeq ($(SANITIZE),true)
+ifeq ($(SANITIZE),full)
 
 # -fsanitize=address does not work together with -fsanitize=thread
 # -fsanitize=leak is included in -fsanitize=address, but works together with -fsanitize=thread
@@ -27,10 +27,17 @@ SANITZERFLAGS = -fsanitize=address
 endif
 
 # enable UndefinedBehaviorSanitizer
-SANITZERFLAGS += -fsanitize=undefined
+SANITZERFLAGS += -fsanitize=undefined -fsanitize=float-cast-overflow
+
+endif
+
+ifeq ($(SANITIZE),true)
+
+# enable UndefinedBehaviorSanitizer
+SANITZERFLAGS += -fsanitize=undefined -fsanitize=float-cast-overflow
+
+endif
 
 CFLAGS += $(SANITZERFLAGS)
 CXXFLAGS += $(SANITZERFLAGS)
 LDFLAGS += $(SANITZERFLAGS)
-
-endif
