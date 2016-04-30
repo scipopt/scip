@@ -276,14 +276,18 @@ void regressionRecompute(
    )
 {
    SCIP_Real xvariance;
+   SCIP_Real yvariance;
    SCIP_Real squaredsumx;
+   SCIP_Real squaredsumy;
 
    /* compute variance in x observations */
    squaredsumx = SQUARED(regression->sumx);
+   squaredsumy = SQUARED(regression->sumy);
    xvariance = regression->nobservations * regression->sumx2 - squaredsumx;
+   yvariance = regression->nobservations * regression->sumy2 - squaredsumy;
 
-   /* regression coefficients require two or more observations and variance in x */
-   if( regression->nobservations <= 1 || EPSZ(xvariance, 1e-9) )
+   /* regression coefficients require two or more observations and variance in x and y */
+   if( regression->nobservations <= 1 || EPSZ(xvariance, 1e-9) || EPSZ(yvariance, 1e-9) )
    {
       regression->slope = SCIP_INVALID;
       regression->intercept = SCIP_INVALID;
@@ -301,7 +305,7 @@ void regressionRecompute(
    /* compute empirical correlation coefficient */
    regression->corrcoef = (regression->sumxy - regression->sumx * regression->sumy / regression->nobservations) /
             sqrt((regression->sumx2 - squaredsumx / regression->nobservations) *
-            (regression->sumy2 - SQUARED(regression->sumy)/regression->nobservations));
+                 (regression->sumy2 - squaredsumy / regression->nobservations));
 }
 
 /** removes an observation (x,y) from the regression */
