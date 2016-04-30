@@ -66,10 +66,10 @@ SCIP_RETCODE SCIPmemFree(
    BMSdestroyBufferMemory(&(*mem)->cleanbuffer);
    BMSdestroyBufferMemory(&(*mem)->buffer);
 
-   /* check that block memory is empty */
+   /* print unfreed memory */
 #ifndef NDEBUG
-   BMSblockMemoryCheckEmpty((*mem)->setmem);
-   BMSblockMemoryCheckEmpty((*mem)->probmem);
+   BMSblockMemoryCheckEmpty((*mem)->setmem, NULL);
+   BMSblockMemoryCheckEmpty((*mem)->probmem, NULL);
 #endif
 
    /* free block memory */
