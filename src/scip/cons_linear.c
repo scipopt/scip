@@ -10135,7 +10135,7 @@ SCIP_RETCODE dualPresolve(
       maxotherlocks = 1;
 
    /* if this constraint has both sides, it also provides a lock for the other side and thus we can allow one more lock */
-   if( lhsexists && rhsexists )
+   if( lhsexists && rhsexists && maxotherlocks < INT_MAX )
       maxotherlocks++;
 
    for( i = 0; i < consdata->nvars && bestisint; ++i )
