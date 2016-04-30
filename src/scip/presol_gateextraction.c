@@ -253,7 +253,7 @@ SCIP_DECL_HASHKEYVAL(setppcHashdataKeyValCons)
     * all variables these bitfields are combined by an or operation to get a good hashvalue for distinguishing the data
     */
    for( v = 1; v >= 0; --v )
-      hashval |= (1 << (SCIPvarGetIndex(hashdata->vars[v]) % 32)); /*lint !e701*/
+      hashval |= (1U << (SCIPvarGetIndex(hashdata->vars[v]) % 32)); /*lint !e701*/
 
    return hashval;
 }
