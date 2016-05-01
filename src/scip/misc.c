@@ -303,6 +303,8 @@ void regressionRecompute(
    regression->intercept = (regression->sumy * regression->sumx2  -  regression->sumx * regression->sumxy) / xvariance;
 
    /* compute empirical correlation coefficient */
+   assert(regression->sumx2 - squaredsumx / regression->nobservations != 0.0);
+   assert(regression->sumy2 - squaredsumy / regression->nobservations != 0.0);
    regression->corrcoef = (regression->sumxy - regression->sumx * regression->sumy / regression->nobservations) /
             sqrt((regression->sumx2 - squaredsumx / regression->nobservations) *
                  (regression->sumy2 - squaredsumy / regression->nobservations));
