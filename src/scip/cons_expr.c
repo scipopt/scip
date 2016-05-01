@@ -688,7 +688,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  * This is largely inspired in Joel Cohen's
  * Computer algebra and symbolic computation: Mathematical methods
  * In particular Chapter 3
- * The other fountain of inspiration is the current simplifying method in cons_nonlinear
+ * The other fountain of inspiration is the current simplifying methods in expr.c.
  *
  * Note: 1) some parts might not apply to what we want to do. This is just for recording
  *          the information and discussion
@@ -706,7 +706,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  *    - no child with integer exponent is a product
  *    - every product child has constant 1.0
  *    - no child is a value (values should go in the constant of the product)
- *    - no two child are the same expression (those should be multiplied)
+ *    - no two children are the same expression (those should be multiplied)
  *    - the children are sorted [commutative rule]
  *    - no exponent is 0
  *    ? at most one child is an exp
@@ -715,9 +715,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  *    - every child is simplified
  *    - no child is a sum
  *    - no child is a value (values should go in the constant of the sum)
- *    - no two child are the same expression (those should be summed up)
+ *    - no two children are the same expression (those should be summed up)
  *    - the children are sorted [commutative rule]
- *    ? any product child has constant 1.0
+ *    - any product child has constant 1.0
  * - it is a function with simplified arguments
  * ? a logarithm doesn't have a product as a child
  * ? the exponent of an exponential is always 1
@@ -728,7 +728,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  * This is a partial order for *simplified* expressions. Just a copy of the order from
  * the book so feel very free to modify.
  * - u,v value expressions: u < v <=> val(u) < val(v)
- * - u,v var expressions: u < v <=> if u is lexicographically smaller than v
+ * - u,v var expressions: u < v <=> SCIPvarGetIndex(var(u)) < SCIPvarGetIndex(var(v)) <=> SCIPvarCompare(var(u),var(v))
  * - u,v are both sum or product expression: < is a lexicographical order on the terms,
  *    starting from the _last_ finds the first index i where they differ and u < v <=> u_i < v_i
  *    If they are the same in all indices, then u < v <=> nchildren(u) < nchildren(v)
@@ -755,7 +755,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  * RULES
  * ============================================
  * - Distributive: sums up identical terms (a*u + b*u -> (a+b)*u)
- *                 multiplies upp identical factors ( u^a * u^b -> u^(a+b) )
+ *                 multiplies up identical factors ( u^a * u^b -> u^(a+b) )
  *    Note: 1 + x + (1 + x) is not transformed into 2(1 + x), since the tree is
  *          +--------
  *          |   |   |
@@ -773,21 +773,21 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  *    Example: 1) x + 2*(y + z) = x + 2*y + 2*z (if represented correctly)
  *             2) x * (y * z)^n = x * y^n * z^n
  *
- * - Commutative: sorts operands in sums and product in an specified order
+ * - Commutative: sorts operands in sums and products in a specified order
  *    Example: 1) x*z*3*y = 3*x*y*z
  *
  * - Basic identities: u * 0 -> 0
  *                     u + 0 -> u
  *                     u * 1 -> u
  *                     0^p   -> 0 where p positive otherwise invalid expr (= infeasible?)
- *                     1^w   -> 1 with w whathever (!= infinity)
+ *                     1^w   -> 1 with w whatever (!= infinity)
  *                     v^0   -> 1 (this is actually tricky, because v has to be != 0)
  *                     v^1   -> v
  *
  * - Numerical: no sum/product has more than one constant operand
- *              no function has a constant arugment (?)
+ *              no function has only constant arguments
  *
- * - Unary: no sum/product has a unique child with 1 as coefficient/exponent
+ * - Unary: no sum/product has only one child with 1 as coefficient/exponent
  *
  * ============================================
  * Algorithm
@@ -795,19 +795,14 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  * The recursive version of the algorithm is
  *
  * EXPR simplify(expr)
- *    EXPR localexpr
- *    if expr is value or var
- *       return expr
- *    end
- *    for c in expr->children
- *       simpc = simplify(c)
- *       localexpr.append(simpc)
+ *    for c in 1..expr->nchildren
+ *       expr->children[c] = simplify(expr->children[c])
  *    end
  *    return expr->exprhdlr->simplify(expr)
  * end
  *
  * For example, the algorithm for simplifying a product is as follows
- * 1. If some child is 0 or undefine -> return 0 or undefine
+ * 1. If some child is 0 or undefined -> return 0 or undefined
  * 2. If it is a single child with no exponent nor constant -> return child
  * 3. Start simplifying the children: (simplifyProdRec)
  *    1. if it has only two children [c1,c2] and none is a product with integer exponent
@@ -815,7 +810,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  *          if one is constant, return the non-constant (with the corrected coefficient)
  *          if they are the same expr, add exponents and simplify [eg, x^0.5 * x^-0.5 -> 1]
  *          otherwise, just sort them: return [c1,c2] if c1 < c2, else [c2,c1]
- *    2. if they are two [c1,c2] but now one of them is a product with integer exponent
+ *    2. if there are two [c1,c2] but now one of them is a product with integer exponent
  *          depending on whether both or only one is a product, we have to merge their childrens
  *          Note: Since c1 and c2 are sorted (because they were simplified before),
  *                we can keep the children sorted while merging (a la mergesort). (See mergeChildrenProduct)
@@ -828,15 +823,15 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  *
  * simplifyProd(list exprs, exponents, coef)
  *    Expr localexpr
- *    if some expr in exprs is undefine: return undefine
+ *    if some expr in exprs is undefined: return undefined
  *    if some expr in exprs is 0: return 0
  *    if len(exprs) == 1
  *       if exponents[0] is 1 and coef is 1: return exprs[0]
  *       return coef * exprs[0]^exponents[0]
  *    simplifyProdRec(exprs, exponents, coef)
  *    if len(exprs) == 0:
- *       return 1
- *    if len(exprs) == 1
+ *       return coef
+ *    if len(exprs) == 1:
  *       if exponents[0] is 1 and coef is 1: return exprs[0]
  *       return coef * exprs[0]^exponents[0]
  *
@@ -845,21 +840,21 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  *       if both are constant: return coef * expr[0]^exponents[0] * expr[1]^exponents[1]
  *       if one children is constant:
  *          return coef * constant * non-constant-expr^exponent
- *       if both are the same expr
+ *       if both are the same expr:
  *          exponent = exponents[0]+exponents[1]
  *          expr <- simplifyPow(coef * exprs[0]^exponent) (simplifyPow or simplify expression?)
  *          return expr
  *       if exprs[1] < exprs[0]:
- *          return return coef * expr[1]^exponents[1] * expr[0]^exponents[0]
+ *          return coef * expr[1]^exponents[1] * expr[0]^exponents[0]
  *    if nchildren(list) == 2 and at least one is a product
  *       if both are products:
  *          assume exprs[0] = [u_1, ..., u_n], exprs[1] = [v_1, ..., v_m]
  *          update coef with expr[0|1]'s coefs and set expr[0|1]'s coefs to 1.0
  *          mergeChildrenProduct([u_1, ..., u_n], [v_1, ..., v_m]) //has to take care of updating expr's constant
- *       if exprs[0] is product
+ *       if exprs[0] is product:
  *          update coef with expr[0]'s coefs and set expr[0]'s coefs to 1.0
  *          mergeChildrenProduct([u_1, ..., u_n], [exprs[1]])
- *       else
+ *       else:
  *          idem but 0 <-> 1
  *    if length(exprs) > 2 # exprs[1:] means the expression without its first child
  *       let w = simplifyProdRec(exprs[1:], exponents[1:], 1.0)
