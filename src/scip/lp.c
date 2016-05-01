@@ -7443,6 +7443,8 @@ SCIP_Real SCIProwGetParallelism(
    {
    case 'e':
       scalarprod = SCIProwGetScalarProduct(row1, row2);
+      assert(scalarprod == 0.0 || SCIProwGetNorm(row1) != 0.0);
+      assert(scalarprod == 0.0 || SCIProwGetNorm(row2) != 0.0);
       parallelism = scalarprod != 0.0 ? (REALABS(scalarprod) / (SCIProwGetNorm(row1) * SCIProwGetNorm(row2))) : 0.0;
       break;
    case 'd':
