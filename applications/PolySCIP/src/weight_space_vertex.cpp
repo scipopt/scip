@@ -38,6 +38,12 @@ namespace polyscip {
               weighted_obj_val_{weighted_obj_val} {}
 
 
+    WeightSpaceVertex::WeightSpaceVertex(const WeightSpaceVertex *obs,
+                                         const WeightSpaceVertex *non_obs,
+                                         const Polyscip::OutcomeType &outcome) {
+        //todo implementation
+    }
+
     WeightType WeightSpaceVertex::getWeight() const {
         return weight_;
     }

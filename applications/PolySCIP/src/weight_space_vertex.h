@@ -50,6 +50,11 @@ namespace polyscip {
                                    Polyscip::WeightType weight,
                                    Polyscip::ValueType weighted_obj_);
 
+
+        explicit WeightSpaceVertex(const WeightSpaceVertex* obs,
+                                   const WeightSpaceVertex* non_obs,
+                                   const Polyscip::OutcomeType& outcome);
+
         /** Checks whether given outcome makes vertex obsolete, i.e. whether
          * vertex weight \cdot outcome >= rhs
          * @param outcome point or ray in objective space

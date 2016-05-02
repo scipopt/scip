@@ -165,6 +165,7 @@ namespace polyscip {
          */
         void setMarkedVertex(Polyscip::WeightType::size_type unit_weight_index);
 
+        //TODO adjust documentation
         /** The initial weight space vertex v* having weight which coincides with
          * given ray_weight is changed, i.e., for each adjacent vertex of v* a new vertex/node with weight
          * slightly leaning towards the adjacent vertex is added and connected via an edge in the
@@ -172,27 +173,28 @@ namespace polyscip {
          * of the new nodes is a complete graph; finally the initial weight space vertex v* is made
          * obsolete and its corresponding node is deleted from the 1-Skeleton graph
          * @param ray computed ray
-         * @param ray_weight associated weight which yields ray
          * @return true if initial weight space vertex with weight coinciding with ray_weight was found
          * (and the weight space polyhedron changed); false otherwiseo
          */
-        bool updateInitialWeightSpacePolyhedron(const Polyscip::OutcomeType& ray,
-                                                const Polyscip::WeightType& ray_weight);
+        bool updateInitialWeightSpacePolyhedron(const Polyscip::OutcomeType& ray);
 
         /** Returns weight w that fulfills the following equations:
-         * 1) w = h1 * weight1 + h2 * weight2 [with h1,h2 >= 0 and h1 + h2 = 1]
+         * 1) w = h * weight1 + (1-h) * weight2 [with h >= 0]
          * 2) w \cdot outcome = 0
-         * weight w is calculated by insertion of 1) into 2)
+         * weight w is calculated by insertion of 1) into 2) yielding
+         * h*(w1-w2) \cdot f + w2 \cdot f = 0
+         * and solving for h leading to
+         * h = \frac{-w2 \cdot f}{(w1-w2) \cdot f}
          * @param weight1 weight of vertex
          * @param weight2 weight of another vertex
          * @param outcome computed outcome
-         * @param h1_shift_value //TODO explaination
+         * @param h_shift_value //TODO explanation
          * @return convex combination w of weight1 and weight2 fulfilling w \cdot outcome = 0
          */
-        Polyscip::WeightType calculateWeight(const Polyscip::WeightType& weight1,
-                                             const Polyscip::WeightType& weight2,
+        Polyscip::WeightType calculateWeight(Polyscip::WeightType weight1,
+                                             Polyscip::WeightType weight2,
                                              const Polyscip::OutcomeType& outcome,
-                                             double h1_shift_value = 0.);
+                                             Polyscip::ValueType h_shift_value = 0.);
 
         /** Template function to print vertices; is used by public print{Marked,Obsolete,Unmarked}Vertices
          * functions

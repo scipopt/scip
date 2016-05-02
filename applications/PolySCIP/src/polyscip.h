@@ -56,6 +56,9 @@ namespace polyscip {
         /**< container type for results; needs to support: empty() */
         using ResultContainer = std::vector <std::pair<OutcomeType, WeightType>>;
 
+        //TODO Bei Berechnung von Rays in Initial Phase darauf achten,
+        //dass ein Ray für mehr als ein Gewicht gültig sein könnte; z.B.
+        //[2,-2,-2] machte WeightSpaceVertices mit Gewicht (0,1,0 und (0,0,1) obsolet!
         void computeSupportedNondomPoints() = delete;
         void computeUnSupportedNondomPoints() = delete;
 
