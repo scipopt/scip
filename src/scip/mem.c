@@ -68,8 +68,8 @@ SCIP_RETCODE SCIPmemFree(
 
    /* print unfreed memory */
 #ifndef NDEBUG
-   BMSblockMemoryCheckEmpty((*mem)->setmem, NULL);
-   BMSblockMemoryCheckEmpty((*mem)->probmem, NULL);
+   (void) BMSblockMemoryCheckEmpty((*mem)->setmem, NULL);
+   (void) BMSblockMemoryCheckEmpty((*mem)->probmem, NULL);
 #endif
 
    /* free block memory */
