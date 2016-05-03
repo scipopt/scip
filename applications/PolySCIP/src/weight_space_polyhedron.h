@@ -67,6 +67,9 @@ namespace polyscip {
         /** Destructor */
         ~WeightSpacePolyhedron();
 
+        //todo test
+        void test();
+
         /** Checks whether there is an unmarked weight space vertex with an untested weight
          *  @return true if there is an unmarked weight space vertex with untested weight; false otherwise
          */
@@ -178,23 +181,7 @@ namespace polyscip {
          */
         bool updateInitialWeightSpacePolyhedron(const Polyscip::OutcomeType& ray);
 
-        /** Returns weight w that fulfills the following equations:
-         * 1) w = h * weight1 + (1-h) * weight2 [with h >= 0]
-         * 2) w \cdot outcome = 0
-         * weight w is calculated by insertion of 1) into 2) yielding
-         * h*(w1-w2) \cdot f + w2 \cdot f = 0
-         * and solving for h leading to
-         * h = \frac{-w2 \cdot f}{(w1-w2) \cdot f}
-         * @param weight1 weight of vertex
-         * @param weight2 weight of another vertex
-         * @param outcome computed outcome
-         * @param h_shift_value //TODO explanation
-         * @return convex combination w of weight1 and weight2 fulfilling w \cdot outcome = 0
-         */
-        Polyscip::WeightType calculateWeight(Polyscip::WeightType weight1,
-                                             Polyscip::WeightType weight2,
-                                             const Polyscip::OutcomeType& outcome,
-                                             Polyscip::ValueType h_shift_value = 0.);
+
 
         /** Template function to print vertices; is used by public print{Marked,Obsolete,Unmarked}Vertices
          * functions

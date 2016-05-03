@@ -45,15 +45,17 @@ namespace polyscip {
          * @param incident_facets Facets defining of the weight space polyhedron defining the vertex
          * @param weight Corresponding weight
          * @param weighted_obj_val Corresponding maximal weight objective val in weight space polyhedron
+         * @param sort_facets if true, incident facets are sorted
          */
         explicit WeightSpaceVertex(FacetContainer incident_facets,
                                    Polyscip::WeightType weight,
-                                   Polyscip::ValueType weighted_obj_);
-
+                                   Polyscip::ValueType weighted_obj_,
+                                   bool sort_facets = true);
 
         explicit WeightSpaceVertex(const WeightSpaceVertex* obs,
                                    const WeightSpaceVertex* non_obs,
-                                   const Polyscip::OutcomeType& outcome);
+                                   const Polyscip::OutcomeType& outcome,
+                                   bool outcome_is_ray);
 
         /** Checks whether given outcome makes vertex obsolete, i.e. whether
          * vertex weight \cdot outcome >= rhs
@@ -74,6 +76,11 @@ namespace polyscip {
          * @return weight of vertex
          */
         Polyscip::WeightType getWeight() const;
+
+        /** Return weighted objective value of associated vertex
+         * @return weighted objective value
+         */
+        Polyscip::ValueType getWOV() const;
 
         /** Checks whether weight of vertex corresponds to unit weight
          * @param index index of 1 in unit weight
@@ -98,6 +105,29 @@ namespace polyscip {
         Polyscip::WeightType weight_;
         /**< corresponding weighted objective value */
         Polyscip::ValueType weighted_obj_val_;
+
+        /** Returns the coefficient h for which the following equation is fulfilled:
+         *  (h * weight1 + (1-h) * weight2) \cdot outcome = 0
+         * h is computed by solving
+         * h = \frac{-weight2 \cdot outcome}{(weight1 - weight2) \cdot f}
+         * @param weight1 weight of vertex
+         * @param weight2 weight of another vertex
+         * @param outcome computed outcome
+         * @return combination coefficient h
+         */
+        static Polyscip::ValueType calculateCombinationValue(const Polyscip::WeightType& weight1,
+                                                             const Polyscip::WeightType& weight2,
+                                                             const Polyscip::OutcomeType& outcome);
+
+        /** Returns the weight h * weight1 + (1-h) * weight2
+         * @param weight1 weight of vertex
+         * @param weight2 weight of another vertex
+         * @param h combination coefficient
+         * @return convex combination h * weight1 + (1-h) * weight2
+         */
+        static Polyscip::WeightType calculateWeightCombination(Polyscip::WeightType weight1,
+                                                               Polyscip::WeightType weight2,
+                                                               Polyscip::ValueType h);
 
     };
 

@@ -80,6 +80,19 @@ namespace polyscip {
         delete curr_investigated_vertex_;
     }
 
+    void WeightSpacePolyhedron::test() {
+        auto iter = unmarked_vertices_.front();
+        std::cout << "first vertex:\n";
+        iter->print(std::cout, true);
+        auto iter2 = unmarked_vertices_.back();
+        std::cout << "second vertex:\n";
+        iter2->print(std::cout, true);
+        auto w = WeightSpaceVertex(iter, iter2, {-2,2,2}, true);
+        std::cout << "new vertex\n";
+        //todo check definiton of facets!
+        w.print(std::cout, true);
+    }
+
     bool WeightSpacePolyhedron::hasUntestedWeight() const {
         return !unmarked_vertices_.empty();
     }
@@ -137,38 +150,7 @@ namespace polyscip {
 
     }
 
-    WeightType WeightSpacePolyhedron::calculateWeight(WeightType weight1,
-                                                      WeightType weight2,
-                                                      const OutcomeType &outcome,
-                                                      ValueType h_shift_value) {
-        assert(weight1.size() == weight2.size());
 
-        // h = \frac{-weight2 \cdot outcome}{weight1 \cdot outcome - weight2 \cdot outcome}
-        ValueType numerator = -1.0 * inner_product(weight2.begin(),
-                                                   weight2.end(),
-                                                   outcome.begin(),
-                                                   0.);
-        ValueType denominator = inner_product(weight1.begin(),
-                                              weight1.end(),
-                                              outcome.begin(),
-                                              0.)
-                                + numerator;
-        assert(denominator != 0.);
-        ValueType h = numerator / denominator;
-        assert(0 <= h && h <= 1);
-        h += h_shift_value; // incorporate shift
-        // set weight1 = h*weight1
-        transform(weight1.begin(), weight1.end(), weight1.begin(),
-                  std::bind1st(std::multiplies<ValueType>(), h));
-        // set weight2 = (1-h)*weight2
-        transform(weight2.begin(), weight2.end(), weight2.begin(),
-                  std::bind1st(std::multiplies<ValueType>(), 1.0 - h));
-        // set weight1 = weight1 + weight2
-        transform(weight1.begin(), weight1.end(), weight2.begin(),
-                  weight1.begin(), std::plus<ValueType>());
-        // return h*weight1 + (1-h)*weight2
-        return weight1;
-    }
 
     void WeightSpacePolyhedron::createInitialVertices(unsigned num_objs,
                                                       OutcomeType point,

@@ -15,6 +15,7 @@
 #include "weight_space_facet.h"
 
 #include <ostream>
+#include <tuple> // std::tie
 #include <vector>
 
 #include "polyscip.h"
@@ -26,6 +27,10 @@ namespace polyscip {
 
     using OutcomeType = Polyscip::OutcomeType;
     using ValueType = Polyscip::ValueType;
+
+    bool operator<(const WeightSpaceFacet& facet1, const WeightSpaceFacet& facet2) {
+        return std::tie(facet1.rhs_,facet1.lhs_) < std::tie(facet2.rhs_,facet2.lhs_);
+    }
 
     WeightSpaceFacet::WeightSpaceFacet(unsigned num_objs,
                                        unsigned index)

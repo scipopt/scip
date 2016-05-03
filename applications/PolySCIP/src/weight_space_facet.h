@@ -34,6 +34,9 @@ namespace polyscip {
     /** Facet of the (partial) weight space polyhedron. */
     class WeightSpaceFacet {
     public:
+        bool friend operator<(const WeightSpaceFacet& facet1,
+                              const WeightSpaceFacet& facet2);
+
         /** Creates the facet point \cdot w >= weighted_obj_val
          *  @param point computed (weakly non-dominated) point in objective space
          *  @param weighted_obj_val weighted objective value of point
