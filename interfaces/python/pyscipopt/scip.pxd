@@ -70,11 +70,39 @@ cdef extern from "scip/scip.h":
         SCIP_STATUS_UNBOUNDED      = 13
         SCIP_STATUS_INFORUNBD      = 14
 
+    ctypedef enum SCIP_STAGE:
+        SCIP_STAGE_INIT         =  0
+        SCIP_STAGE_PROBLEM      =  1
+        SCIP_STAGE_TRANSFORMING =  2
+        SCIP_STAGE_TRANSFORMED  =  3
+        SCIP_STAGE_INITPRESOLVE =  4
+        SCIP_STAGE_PRESOLVING   =  5
+        SCIP_STAGE_EXITPRESOLVE =  6
+        SCIP_STAGE_PRESOLVED    =  7
+        SCIP_STAGE_INITSOLVE    =  8
+        SCIP_STAGE_SOLVING      =  9
+        SCIP_STAGE_SOLVED       = 10
+        SCIP_STAGE_EXITSOLVE    = 11
+        SCIP_STAGE_FREETRANS    = 12
+        SCIP_STAGE_FREE         = 13
+
     ctypedef enum SCIP_PARAMSETTING:
         SCIP_PARAMSETTING_DEFAULT    = 0
         SCIP_PARAMSETTING_AGGRESSIVE = 1
         SCIP_PARAMSETTING_FAST       = 2
         SCIP_PARAMSETTING_OFF        = 3
+
+    ctypedef enum SCIP_PARAMEMPHASIS:
+        SCIP_PARAMEMPHASIS_DEFAULT      = 0
+        SCIP_PARAMEMPHASIS_CPSOLVER     = 1
+        SCIP_PARAMEMPHASIS_EASYCIP      = 2
+        SCIP_PARAMEMPHASIS_FEASIBILITY  = 3
+        SCIP_PARAMEMPHASIS_HARDLP       = 4
+        SCIP_PARAMEMPHASIS_OPTIMALITY   = 5
+        SCIP_PARAMEMPHASIS_COUNTER      = 6
+        SCIP_PARAMEMPHASIS_PHASEFEAS    = 7
+        SCIP_PARAMEMPHASIS_PHASEIMPROVE = 8
+        SCIP_PARAMEMPHASIS_PHASEPROOF   = 9
 
     ctypedef enum SCIP_PROPTIMING:
         SCIP_PROPTIMING_BEFORELP     = 0x001u
@@ -83,10 +111,10 @@ cdef extern from "scip/scip.h":
         SCIP_PROPTIMING_AFTERLPNODE  = 0x008u
 
     ctypedef enum SCIP_PRESOLTIMING:
-        SCIP_PRESOLTIMING_NONE       = 0x000u
-        SCIP_PRESOLTIMING_FAST       = 0x002u
-        SCIP_PRESOLTIMING_MEDIUM     = 0x004u
-        SCIP_PRESOLTIMING_EXHAUSTIVE = 0x008u
+        SCIP_PRESOLTIMING_NONE       = 0x002u
+        SCIP_PRESOLTIMING_FAST       = 0x004u
+        SCIP_PRESOLTIMING_MEDIUM     = 0x008u
+        SCIP_PRESOLTIMING_EXHAUSTIVE = 0x010u
 
     ctypedef enum SCIP_HEURTIMING:
         SCIP_HEURTIMING_BEFORENODE        = 0x001u
@@ -230,6 +258,7 @@ cdef extern from "scip/scip.h":
     SCIP_Real SCIPgetSolvingTime(SCIP* scip)
     SCIP_Real SCIPgetReadingTime(SCIP* scip)
     SCIP_Real SCIPgetPresolvingTime(SCIP* scip)
+    SCIP_STAGE SCIPgetStage(SCIP* scip)
 
     # Global Problem Methods
     SCIP_RETCODE SCIPcreateProbBasic(SCIP* scip, char* name)
@@ -267,6 +296,7 @@ cdef extern from "scip/scip.h":
     SCIP_RETCODE SCIPaddPricedVar(SCIP* scip, SCIP_VAR* var, SCIP_Real score)
     SCIP_RETCODE SCIPreleaseVar(SCIP* scip, SCIP_VAR** var)
     SCIP_RETCODE SCIPtransformVar(SCIP* scip, SCIP_VAR* var, SCIP_VAR** transvar)
+    SCIP_RETCODE SCIPaddVarLocks(SCIP* scip, SCIP_VAR* var, int nlocksdown, int nlocksup)
     SCIP_VAR** SCIPgetVars(SCIP* scip)
     SCIP_VAR** SCIPgetOrigVars(SCIP* scip)
     const char* SCIPvarGetName(SCIP_VAR* var)
@@ -277,16 +307,30 @@ cdef extern from "scip/scip.h":
     SCIP_Bool SCIPvarIsTransformed(SCIP_VAR* var)
     SCIP_COL* SCIPvarGetCol(SCIP_VAR* var)
     SCIP_Bool SCIPvarIsInLP(SCIP_VAR* var)
+    SCIP_Real SCIPvarGetLbLocal(SCIP_VAR* var)
+    SCIP_Real SCIPvarGetUbLocal(SCIP_VAR* var)
 
     # Constraint Methods
     SCIP_RETCODE SCIPcaptureCons(SCIP* scip, SCIP_CONS* cons)
     SCIP_RETCODE SCIPreleaseCons(SCIP* scip, SCIP_CONS** cons)
     SCIP_RETCODE SCIPtransformCons(SCIP* scip, SCIP_CONS* cons, SCIP_CONS** transcons)
+    SCIP_RETCODE SCIPgetTransformedCons(SCIP* scip, SCIP_CONS* cons, SCIP_CONS** transcons)
     SCIP_CONS** SCIPgetConss(SCIP* scip)
     const char* SCIPconsGetName(SCIP_CONS* cons)
     int SCIPgetNConss(SCIP* scip)
     SCIP_Bool SCIPconsIsOriginal(SCIP_CONS* cons)
     SCIP_Bool SCIPconsIsTransformed(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsInitial(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsSeparated(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsEnforced(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsChecked(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsPropagated(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsLocal(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsModifiable(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsDynamic(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsRemovable(SCIP_CONS* cons)
+    SCIP_Bool SCIPconsIsStickingAtNode(SCIP_CONS* cons)
+    SCIP_CONSDATA* SCIPconsGetData(SCIP_CONS* cons)
 
     # Primal Solution Methods
     SCIP_SOL** SCIPgetSols(SCIP* scip)
@@ -545,6 +589,7 @@ cdef extern from "scip/scip.h":
     SCIP_RETCODE SCIPsetStringParam(SCIP* scip, char* name, char* value)
     SCIP_RETCODE SCIPreadParams(SCIP* scip, char* file)
     SCIP_RETCODE SCIPreadProb(SCIP* scip, char* file, char* extension)
+    SCIP_RETCODE SCIPsetEmphasis(SCIP* scip, SCIP_PARAMEMPHASIS paramemphasis, SCIP_Bool quiet);
 
     # LPI Functions
     SCIP_RETCODE SCIPlpiCreate(SCIP_LPI** lpi, SCIP_MESSAGEHDLR* messagehdlr, const char* name, SCIP_OBJSENSE objsen)
@@ -690,3 +735,7 @@ cdef extern from "scip/cons_sos2.h":
     SCIP_RETCODE SCIPappendVarSOS2(SCIP* scip,
                                    SCIP_CONS* cons,
                                    SCIP_VAR* var)
+
+cdef extern from "blockmemshell/memory.h":
+    void BMScheckEmptyMemory()
+    long long BMSgetMemoryUsed()

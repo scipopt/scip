@@ -9,8 +9,36 @@ def _is_number(e):
     except TypeError: # for other types (Variable, LinExpr)
         return False
 
-class LinExpr(object):
+
+def _expr_richcmp(self, other, op):
+    if op == 1: # <=
+        if isinstance(other, LinExpr):
+            return (self - other) <= 0.0
+        elif _is_number(other):
+            return LinCons(self, ub=float(other))
+        else:
+            raise NotImplementedError
+    elif op == 5: # >=
+        if isinstance(other, LinExpr):
+            return (self - other) >= 0.0
+        elif _is_number(other):
+            return LinCons(self, lb=float(other))
+        else:
+            raise NotImplementedError
+    elif op == 2: # ==
+        if isinstance(other, LinExpr):
+            return (self - other) == 0.0
+        elif _is_number(other):
+            return LinCons(self, lb=float(other), ub=float(other))
+        else:
+            raise NotImplementedError
+    else:
+        raise NotImplementedError
+
+
+cdef class LinExpr:
     '''Linear expressions of variables with operator overloading.'''
+    cdef public terms
 
     def __init__(self, terms=None):
         '''terms is a dict of variables to coefficients.
@@ -27,13 +55,20 @@ class LinExpr(object):
         return self.terms.get(key, 0.0)
 
     def __add__(self, other):
-        terms = self.terms.copy()
-        if isinstance(other, LinExpr):
+        left = self
+        right = other
+
+        if _is_number(self):
+            assert isinstance(other, LinExpr)
+            left,right = right,left
+        terms = left.terms.copy()
+
+        if isinstance(right, LinExpr):
             # merge the terms by component-wise addition
-            for v,c in other.terms.items():
+            for v,c in right.terms.items():
                 terms[v] = terms.get(v, 0.0) + c
-        elif _is_number(other):
-            c = float(other)
+        elif _is_number(right):
+            c = float(right)
             terms[CONST] = terms.get(CONST, 0.0) + c
         else:
             raise NotImplementedError
@@ -54,6 +89,9 @@ class LinExpr(object):
         if _is_number(other):
             f = float(other)
             return LinExpr({v:f*c for v,c in self.terms.items()})
+        elif _is_number(self):
+            f = float(self)
+            return LinExpr({v:f*c for v,c in other.terms.items()})
         elif isinstance(other, LinExpr):
             terms = {}
             for v1, c1 in self.terms.items():
@@ -64,7 +102,7 @@ class LinExpr(object):
         else:
             raise NotImplementedError
 
-    def __pow__(self, other):
+    def __pow__(self, other, modulo):
         if float(other).is_integer() and other >= 0:
             exp = int(other)
         else:
@@ -90,32 +128,9 @@ class LinExpr(object):
     def __rsub__(self, other):
         return -1.0 * self + other
 
-    def __le__(self, other):
+    def __richcmp__(self, other, op):
         '''turn it into a constraint'''
-        if isinstance(other, LinExpr):
-            return (self - other) <= 0.0
-        elif _is_number(other):
-            return LinCons(self, ub=float(other))
-        else:
-            raise NotImplementedError
-
-    def __ge__(self, other):
-        '''turn it into a constraint'''
-        if isinstance(other, LinExpr):
-            return (self - other) >= 0.0
-        elif _is_number(other):
-            return LinCons(self, lb=float(other))
-        else:
-            raise NotImplementedError
-
-    def __eq__(self, other):
-        '''turn it into a constraint'''
-        if isinstance(other, LinExpr):
-            return (self - other) == 0.0
-        elif _is_number(other):
-            return LinCons(self, lb=float(other), ub=float(other))
-        else:
-            raise NotImplementedError
+        return _expr_richcmp(self, other, op)
 
     def __repr__(self):
         return 'LinExpr(%s)' % repr(self.terms)
@@ -125,8 +140,11 @@ class LinExpr(object):
         return max(len(v) for v in self.terms)
 
 
-class LinCons(object):
+cdef class LinCons:
     '''Constraints with a linear expressions and lower/upper bounds.'''
+    cdef public expr
+    cdef public lb
+    cdef public ub
 
     def __init__(self, expr, lb=None, ub=None):
         self.expr = expr
@@ -145,33 +163,37 @@ class LinCons(object):
         self.expr -= c
         assert self.expr[CONST] == 0.0
 
-    def __le__(self, other):
-        '''self <= other'''
-        if not self.ub is None:
-            raise TypeError('LinCons already has upper bound')
-        assert self.ub is None
-        assert not self.lb is None
+    def __richcmp__(self, other, op):
+        '''turn it into a constraint'''
+        if op == 1: # <=
+           if not self.ub is None:
+               raise TypeError('LinCons already has upper bound')
+           assert self.ub is None
+           assert not self.lb is None
 
-        if not _is_number(other):
-            raise TypeError('Ranged LinCons is not well defined!')
+           if not _is_number(other):
+               raise TypeError('Ranged LinCons is not well defined!')
 
-        return LinCons(self.expr, lb=self.lb, ub=float(other))
+           return LinCons(self.expr, lb=self.lb, ub=float(other))
+        elif op == 5: # >=
+           if not self.lb is None:
+               raise TypeError('LinCons already has lower bound')
+           assert self.lb is None
+           assert not self.ub is None
 
-    def __ge__(self, other):
-        '''self >= other'''
-        if not self.lb is None:
-            raise TypeError('LinCons already has lower bound')
-        assert self.lb is None
-        assert not self.ub is None
+           if not _is_number(other):
+               raise TypeError('Ranged LinCons is not well defined!')
 
-        if not _is_number(other):
-            raise TypeError('Ranged LinCons is not well defined!')
-
-        return LinCons(self.expr, lb=float(other), ub=self.ub)
+           return LinCons(self.expr, lb=float(other), ub=self.ub)
+        else:
+            raise TypeError
 
     def __repr__(self):
         return 'LinCons(%s, %s, %s)' % (self.expr, self.lb, self.ub)
 
+    def __nonzero__(self):
+        '''Make sure that equality of expressions is not asserted with =='''
+        raise TypeError("Can't evaluate constraints as booleans.")
 
 def quicksum(termlist):
     '''add linear expressions and constants much faster than Python's sum

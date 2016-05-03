@@ -36,23 +36,17 @@ def test_knapsack():
 
     s.printStatistics()
 
-    # retrieving the best solution
-    solution = s.getBestSol()
-
     # print solution
     varSolutions = []
     for i in range(len(weights)):
-        solValue = round(s.getVal(knapsackVars[i], solution))
+        solValue = round(s.getVal(knapsackVars[i]))
         varSolutions.append(solValue)
         if solValue > 0:
             print (varNames[i], "Times Selected:", solValue)
             print ("\tIncluded Weight:", weights[i]*solValue, "\tItem Cost:", costs[i]*solValue)
 
-        s.releaseVar(knapsackVars[i])
-
     includedWeight = sum([weights[i]*varSolutions[i] for i in range(len(weights))])
     assert includedWeight > 0 and includedWeight <= knapsackSize
-    
-    
+
 if __name__ == "__main__":
     test_knapsack()
