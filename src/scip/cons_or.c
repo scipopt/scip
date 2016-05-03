@@ -1576,7 +1576,7 @@ SCIP_DECL_CONSCHECK(consCheckOr)
          *result = SCIP_INFEASIBLE;
          return SCIP_OKAY;
       }
-   } 
+   }
    *result = SCIP_FEASIBLE;
 
    return SCIP_OKAY;

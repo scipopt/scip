@@ -860,7 +860,7 @@ SCIP_RETCODE boundchgApplyGlobal(
    newbound = SCIPboundchgGetNewbound(boundchg);
    boundtype = SCIPboundchgGetBoundtype(boundchg);
 
-   /* check if the bound change is redundant which can happen due to a (better) global bound change which was perforemed
+   /* check if the bound change is redundant which can happen due to a (better) global bound change which was performed
     * after that bound change was applied
     *
     * @note a global bound change is not captured by the redundant member of the bound change data structure

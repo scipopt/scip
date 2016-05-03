@@ -17,6 +17,8 @@ features:
   number of nodes exceeding the reference value and the number of early backtracks -- path switches in the tree when
   a child node with lower bound smaller than the reference value was available.
 - add new presolving step to disaggregate second order cone constraints
+- added reading capabilities for partial solutions with extension *.mst
+- new heuristic that tries to complete partial solutions
 
 parameters:
 - new parameter "solvingphases/enabled" to activate adaptive behavior during the solution process; several further parameters
@@ -49,6 +51,7 @@ fixed bugs:
 - fixed bug in XML reader concerning comments
 - fixed wrong representation of SOC constraints in NLP
 - fixed possible segmentation fault in genvbounds propagator
+- fixed bug with solutions from previous runs not satisfying an objective limit
 
 SCIP version 3.2.1
 ==================

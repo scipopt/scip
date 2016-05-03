@@ -27,6 +27,16 @@ doc/*.tmp
 .project
 .settings/
 hooks/
+
+###############################
+## files created by `make lint`
+################################
+lint.out
+lint/gcc-include-path.lnt
+lint/lint_cmac.h
+lint/lint_cppmac.h
+lint/size-options.lnt
+
 localhooks/
 src/scip/githash.c
 settings/

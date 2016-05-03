@@ -465,6 +465,7 @@ struct SCIP_Set
 
    /* Writing */
    SCIP_Bool             write_allconss;     /**< should all constraints be written (including the redundant constraints)? */
+   SCIP_Bool             write_printzeros;   /**< should variables set to zero be printed? */
    int                   write_genoffset;    /**< when writing the problem with generic names, we start with index
                                               *   0; using this parameter we can change the starting index to be
                                               *   different */

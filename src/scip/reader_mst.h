@@ -13,22 +13,48 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   presol_dualcomp.h
- * @brief  dual compensation presolver
- * @author Dieter Weninger
+/**@file   reader_mst.h
+ * @ingroup FILEREADERS
+ * @brief  file reader for partial primal solutions
+ * @author Jakob Witzig
  *
- * This presolver looks for variables with
- *         i) objcoef >= 0 and exactly one downlock
- *        ii) objcoef <= 0 and exactly one uplock
- * and fixes the variable in case i) at the lower bound and in case ii) at the
- * upper bound if a combination of singleton continuous variables can compensate
- * the downlock in case i) and the uplock in case ii).
+ * This reader handles solutions in two formats:
+ *
+ * - <b>SCIP raw format</b>@n
+ *   The format is as follows:@n@n
+ *   line 1: "solution status: <status>"@n
+ *   line 2: "objective value: <value>"@n
+ *   line 3+i: \<variable name\> \<value\> (obj: \<objective coefficient of variable\>)
+ *   @n@n
+ *   Only known values need to be listed.
+ *   @par
+ *   Example:
+ *   @code
+ *     solution status: optimal
+ *     objective value: 1
+ *     x1  1 (obj:1)
+ *     x2  1 (obj:0)
+ *   @endcode
+ * - <b>XML format</b>@n
+ *   This format is used by CPLEX, for example. For reading we require a section of @p
+ *   \<variables\>. Each entry in this section consists of@n
+ *   \<variable name="<name>" index="<number>" value="<value>"/>
+ *   @par
+ *   Example:
+ *   @code
+ *   <?xml version = "1.0" standalone="yes"?>
+ *   <variables>
+ *      <variable name="x1" index="1" value="1"/>
+ *      <variable name="x2" index="2" value="1"/>
+ *   </variables>
+ *   </xml>
+ *   @endcode
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
-#ifndef __SCIP_PRESOL_DUALCOMP_H__
-#define __SCIP_PRESOL_DUALCOMP_H__
+#ifndef __SCIP_READER_MST_H__
+#define __SCIP_READER_MST_H__
 
 
 #include "scip/scip.h"
@@ -37,9 +63,9 @@
 extern "C" {
 #endif
 
-/** creates the dualcomp presolver and includes it in SCIP */
+/** includes the mst file reader into SCIP */
 EXTERN
-SCIP_RETCODE SCIPincludePresolDualcomp(
+SCIP_RETCODE SCIPincludeReaderMst(
    SCIP*                 scip                /**< SCIP data structure */
    );
 
