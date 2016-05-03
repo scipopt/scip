@@ -2709,7 +2709,7 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
          break;
       }
 
-      case SCIP_EXPR_POLYNOMIAL :
+      case SCIP_EXPR_POLYNOMIAL:
       {
          SCIP_EXPRDATA_MONOMIAL* monom;
          int m;
@@ -2750,15 +2750,39 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
          break;
       }
 
-      case SCIP_EXPR_SIGNPOWER:
       case SCIP_EXPR_EXP:
+      {
+         assert(nchildren == 1);
+         assert(children[0] != NULL);
+
+         SCIP_CALL( SCIPcreateConsExprExprExp(scip, consexprhdlr, expr, children[0]) );
+
+         break;
+      }
       case SCIP_EXPR_LOG:
+      {
+         assert(nchildren == 1);
+         assert(children[0] != NULL);
+
+         SCIP_CALL( SCIPcreateConsExprExprLog(scip, consexprhdlr, expr, children[0]) );
+
+         break;
+      }
+      case SCIP_EXPR_ABS:
+      {
+         assert(nchildren == 1);
+         assert(children[0] != NULL);
+
+         SCIP_CALL( SCIPcreateConsExprExprAbs(scip, consexprhdlr, expr, children[0]) );
+
+         break;
+      }
+      case SCIP_EXPR_SIGNPOWER:
       case SCIP_EXPR_SIN:
       case SCIP_EXPR_COS:
       case SCIP_EXPR_TAN:
       case SCIP_EXPR_MIN:
       case SCIP_EXPR_MAX:
-      case SCIP_EXPR_ABS:
       case SCIP_EXPR_SIGN:
       case SCIP_EXPR_USER:
       default:
