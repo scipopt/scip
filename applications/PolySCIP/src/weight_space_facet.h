@@ -16,9 +16,10 @@
  *
  * Data structure representing a facet of the (partial) weight space
  * polyhedron P={(w,a) : w \cdot y >= a \forall y \in Y} where Y is
- * the (current) set of non-dominated points. A facet (lhs,rhs) is
- * represented by coefficients 'lhs_' and a right hand side 'rhs_'
- * yielding an inequality of the form lhs_ \cdot w >= rhs_ 
+ * the (current) set of non-dominated points. A facet (w_coeffs_, wov_coeff_) is
+ * represented by coefficients 'w_coeffs_' and a right hand side 'wov_coeff_'
+ * yielding an inequality of the form w_coeffs_ \cdot w >= wov_coeff_ * wov
+ * where wov stands for weighted objective value
  */
 
 #ifndef POLYSCIP_SRC_WEIGHT_SPACE_FACET_H_INCLUDED
@@ -37,12 +38,12 @@ namespace polyscip {
         bool friend operator<(const WeightSpaceFacet& facet1,
                               const WeightSpaceFacet& facet2);
 
-        /** Creates the facet point \cdot w >= weighted_obj_val
-         *  @param point computed (weakly non-dominated) point in objective space
-         *  @param weighted_obj_val weighted objective value of point
+        /** Creates the facet: outcome \cdot w >= wov_coeff*weighted_obj_val
+         *  @param outcome outcome in objective space
+         *  @param wov_coeff coefficient for weighted objective value
          */
-        explicit WeightSpaceFacet(const Polyscip::OutcomeType& point,
-                                  Polyscip::ValueType weighted_obj_val);
+        explicit WeightSpaceFacet(const Polyscip::OutcomeType& outcome,
+                                  Polyscip::ValueType wov_coeff);
 
         /** Creates the weight space facet w_i >= 0
          *  @param num_objs number of objectives of given problem
@@ -55,10 +56,10 @@ namespace polyscip {
         void print(std::ostream& os) const;
 
     private:
-        /**< left hand side coefficients of the facet inequality */
-        std::vector<Polyscip::ValueType> lhs_;
-        /**< right hand side value of the facet inequality */
-        Polyscip::ValueType rhs_;
+        /**< coefficients for the weight of the facet inequality */
+        std::vector<Polyscip::ValueType> w_coeffs_;
+        /**< coefficient for the weighted objective value of the facet inequality */
+        Polyscip::ValueType wov_coeff_;
     };
 
 }

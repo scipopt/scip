@@ -14,6 +14,7 @@
 
 #include "weight_space_facet.h"
 
+#include <algorithm>
 #include <ostream>
 #include <tuple> // std::tie
 #include <vector>
@@ -28,27 +29,33 @@ namespace polyscip {
     using OutcomeType = Polyscip::OutcomeType;
     using ValueType = Polyscip::ValueType;
 
-    bool operator<(const WeightSpaceFacet& facet1, const WeightSpaceFacet& facet2) {
-        return std::tie(facet1.rhs_,facet1.lhs_) < std::tie(facet2.rhs_,facet2.lhs_);
+    bool operator<(const WeightSpaceFacet &facet1, const WeightSpaceFacet &facet2) {
+        return std::tie(facet1.wov_coeff_, facet1.w_coeffs_) <
+               std::tie(facet2.wov_coeff_, facet2.w_coeffs_);
     }
 
     WeightSpaceFacet::WeightSpaceFacet(unsigned num_objs,
                                        unsigned index)
-            : lhs_(num_objs, 0.),
-              rhs_{0.} {
-      lhs_.at(index) = 1.;
+            : w_coeffs_(num_objs, 0.),
+              wov_coeff_(0.) {
+        w_coeffs_.at(index) = 1.;
     }
 
-    WeightSpaceFacet::WeightSpaceFacet(const OutcomeType& point,
-                                       ValueType weighted_obj_val)
-            : lhs_(point.begin(), point.end()),
-              rhs_{weighted_obj_val} {}
+    WeightSpaceFacet::WeightSpaceFacet(const OutcomeType& outcome,
+                                       ValueType wov_coeff)
+            : w_coeffs_(begin(outcome), end(outcome)),
+              wov_coeff_{wov_coeff} { }
 
-    void WeightSpaceFacet::print(ostream& os) const {
-      os << " Facet: lhs_coeffs = [ ";
-      for (const auto &coeff : lhs_)
-        os << coeff << " ";
-      os << "], rhs = " << rhs_ << "\n";
+    void WeightSpaceFacet::print(ostream &os) const {
+        os << " Facet: ";
+        unsigned counter{0};
+        std::for_each(w_coeffs_.cbegin(), --w_coeffs_.cend(),
+                      [&](ValueType val){os << val << " w_" << counter++ << " + ";});
+        os << w_coeffs_.back() << " w_" << counter << " >= ";
+        if (wov_coeff_ != 0.0)
+            os << "wov\n";
+        else
+            os << "0\n";
     }
 
 }

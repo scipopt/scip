@@ -157,7 +157,7 @@ namespace polyscip {
                                                       ValueType weighted_obj_val,
                                                       FacetContainer boundary_facets) {
         // make facet: point \cdot w >= weighted_obj_val to facets_
-        auto point_facet = make_shared<const WeightSpaceFacet>(point, weighted_obj_val);
+        auto point_facet = make_shared<const WeightSpaceFacet>(point,1.0);
         // create initial weight space vertices
         for (auto i = 0; i < num_objs; ++i) {
             auto facets = FacetContainer(begin(boundary_facets), end(boundary_facets));

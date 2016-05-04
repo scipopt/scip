@@ -49,7 +49,7 @@ namespace polyscip {
          */
         explicit WeightSpaceVertex(FacetContainer incident_facets,
                                    Polyscip::WeightType weight,
-                                   Polyscip::ValueType weighted_obj_,
+                                   Polyscip::ValueType weighted_obj_val,
                                    bool sort_facets = true);
 
         explicit WeightSpaceVertex(const WeightSpaceVertex* obs,
@@ -91,7 +91,7 @@ namespace polyscip {
         /** Checks whether weight of vertex corresponds with given weight
          * @param weight weight to check against
          */
-        bool hasSameWeight(const Polyscip::WeightType& weight);
+        bool hasSameWeight(const Polyscip::WeightType& weight) const;
 
         /** Prints weight space vertex information to output stream.
          * @param printFacets if true, then defining facets are printed

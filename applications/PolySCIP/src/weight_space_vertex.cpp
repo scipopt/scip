@@ -65,7 +65,9 @@ namespace polyscip {
                               compare_facet_ptr);
         assert(incident_facets_.size() + 1 == obs->incident_facets_.size());
         // add additional facet with respect to outcome
-        auto new_facet = std::make_shared<const WeightSpaceFacet>(outcome,0.);
+        polyscip::print(outcome, {"outcome : "}, std::cout);
+        auto wov_coeff = outcome_is_ray ? 0.0 : 1.0;
+        auto new_facet = std::make_shared<const WeightSpaceFacet>(outcome, wov_coeff);
         auto upper_it = std::upper_bound(begin(incident_facets_),
                                          end(incident_facets_),
                                          new_facet, compare_facet_ptr);
@@ -84,14 +86,12 @@ namespace polyscip {
         auto h = calculateCombinationValue(weight_non_obs, weight_obs, outcome);
         assert (0. < h && h < 1.0);
         if (outcome_is_ray) // shift combination towards non-obsolete vertex
-            h += 1e-5;
+            h += 1e-7;
         weight_ = calculateWeightCombination(std::move(weight_non_obs),
                                              std::move(weight_obs),
                                              h);
         // computed weighted objective value
-        weighted_obj_val_ = h*non_obs->getWOV();
-        if (!outcome_is_ray)
-            weighted_obj_val_ += (1.0-h)*obs->getWOV();
+        weighted_obj_val_ = h*non_obs->getWOV() + (1.0-h)*obs->getWOV();
     }
 
     WeightType WeightSpaceVertex::getWeight() const {
@@ -112,13 +112,13 @@ namespace polyscip {
                                                             const OutcomeType& outcome) {
         assert(weight1.size() == weight2.size());
         // h = \frac{-weight2 \cdot outcome}{weight1 \cdot outcome - weight2 \cdot outcome}
-        ValueType numerator = -1.0 * inner_product(weight2.begin(),
-                                                   weight2.end(),
-                                                   outcome.begin(),
+        ValueType numerator = -1.0 * inner_product(begin(weight2),
+                                                   end(weight2),
+                                                   begin(outcome),
                                                    0.);
-        ValueType denominator = inner_product(weight1.begin(),
-                                              weight1.end(),
-                                              outcome.begin(),
+        ValueType denominator = inner_product(begin(weight1),
+                                              end(weight1),
+                                              begin(outcome),
                                               0.)
                                 + numerator;
         assert(denominator != 0.);
@@ -131,14 +131,14 @@ namespace polyscip {
                                                              ValueType h) {
         assert (weight1.size() == weight2.size());
         // set weight1 = h*weight1
-        transform(weight1.begin(), weight1.end(), weight1.begin(),
+        transform(begin(weight1), end(weight1), begin(weight1),
                   [h](ValueType w){return h*w;});
         // set weight2 = (1-h)*weight2
-        transform(weight2.begin(), weight2.end(), weight2.begin(),
+        transform(begin(weight2), end(weight2), begin(weight2),
                   [h](ValueType w){return (1.0-h)*w;});
         // set weight1 = weight1 + weight2
-        transform(weight1.begin(), weight1.end(), weight2.begin(),
-                  weight1.begin(), std::plus<ValueType>());
+        transform(begin(weight1), end(weight1), begin(weight2),
+                  begin(weight1), std::plus<ValueType>());
         return weight1;
     }
 
@@ -146,31 +146,22 @@ namespace polyscip {
         return isMadeObsolete(outcome, weighted_obj_val_);
     }
 
-    bool WeightSpaceVertex::hasSameWeight(const Polyscip::WeightType& weight) {
+    bool WeightSpaceVertex::hasSameWeight(const Polyscip::WeightType& weight) const {
         return weight_ == weight;
     }
 
     bool WeightSpaceVertex::hasUnitWeight(Polyscip::WeightType::size_type index) const {
         assert(index < weight_.size());
-        for (auto i = 0; i != weight_.size(); ++i) {
-            if (i == index) { // check if value one in both weights are at the same position
-                if (weight_[i] != 1.)
-                    return false;
-            }
-            else { // check if other elements of vertex weight are zero
-                if (weight_[i] != 0.)
-                    return false;
-            }
-        }
-        return true;
+        auto weight = WeightType(weight_.size(),0.);
+        weight[index] = 1.;
+        return hasSameWeight(weight);
     }
-
 
     void WeightSpaceVertex::print(ostream& os, bool printFacets) const {
         os << "WeightSpaceVertex:\n weight = [ ";
         std::ostream_iterator <ValueType> out_it(os, " ");
         std::copy(weight_.cbegin(), weight_.cend(), out_it);
-        os << "]\n weighted objective value = " << weighted_obj_val_ << "\n";
+        os << "]\n wov = " << weighted_obj_val_ << "\n";
         if (printFacets) {
             os << " defining facets: \n";
             for (const auto &facet : incident_facets_)
