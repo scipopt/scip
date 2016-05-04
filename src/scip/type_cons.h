@@ -774,10 +774,10 @@ typedef struct SCIP_ConsSetChg SCIP_CONSSETCHG;   /**< tracks additions and remo
  *  - scip            : SCIP main data structure
  *  - conshdlr        : the constraint handler itself
  *  - cons            : the constraint that should return its variable data
+ *  - varssize        : available slots in vars array which is needed to check if the array is large enough
  *
  *  output:
  *  - vars            : array to store/copy the involved variables of the constraint
- *  - varssize        : available slots in vars array which is needed to check if the array is large enough
  *  - success         : pointer to store whether the variables are successfully copied
  */
 #define SCIP_DECL_CONSGETVARS(x) SCIP_RETCODE x (SCIP* scip, SCIP_CONSHDLR* conshdlr, SCIP_CONS* cons, \
