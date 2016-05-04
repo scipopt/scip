@@ -6,6 +6,7 @@ fixed bugs:
 - fixed wrong representation of SOC constraints in NLP
 - fixed possible segmentation fault in genvbounds propagator
 - fixed bug with solutions from previous runs not satisfying an objective limit
+- the AMPL interface now writes a solve status (solve_result_num) into the .sol file
 
 SCIP version 3.2.1
 ==================
