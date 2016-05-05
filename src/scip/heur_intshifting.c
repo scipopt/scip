@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -886,9 +886,6 @@ SCIP_DECL_HEUREXEC(heurExecIntshifting) /*lint --e{715}*/
          int rowidx;
          int rowpos;
          int direction;
-
-         rowpos = -1;
-         row = NULL;
 
          assert(nviolfracrows == 0 || nfrac > 0);
          /* violated rows containing fractional variables are preferred; if such a row exists, choose the last one from the list

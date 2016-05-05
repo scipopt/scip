@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -770,10 +770,13 @@ SCIP_DECL_CONSINITLP(consInitlpSuperindicator)
 
    assert(scip != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
+   assert(infeasible != NULL);
+
+   *infeasible = FALSE;
 
    SCIPdebugMessage("executing initlp callback\n");
 
-   for( c = nconss-1; c >= 0; c-- )
+   for( c = nconss-1; c >= 0 && !(*infeasible); c-- )
    {
       SCIP_CONSDATA* consdata;
 
@@ -789,7 +792,7 @@ SCIP_DECL_CONSINITLP(consInitlpSuperindicator)
          SCIPdebugMessage("binvar <%s> == 1 --> SCIPinitlpCons() on constraint <%s>\n",
             SCIPvarGetName(consdata->binvar), SCIPconsGetName(consdata->slackcons));
 
-         SCIP_CALL( SCIPinitlpCons(scip, consdata->slackcons) );
+         SCIP_CALL( SCIPinitlpCons(scip, consdata->slackcons, infeasible) );
       }
    }
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -882,7 +882,7 @@ SCIP_RETCODE SCIPincludeSepaDisjunctive(
    SCIP_CALL( SCIPsetSepaInitsol(scip, sepa, sepaInitsolDisjunctive) );
 
    /* add separator parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "separating/"SEPA_NAME"/strengthen",
+   SCIP_CALL( SCIPaddBoolParam(scip, "separating/" SEPA_NAME "/strengthen",
          "strengthen cut if integer variables are present.",
          &sepadata->strengthen, TRUE, DEFAULT_STRENGTHEN, NULL, NULL) );
 

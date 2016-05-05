@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -3555,7 +3555,7 @@ SCIP_RETCODE checkOrigPbCons(
        */
       if( andcons == NULL )
       {
-	 andcons = consdata->consanddatas[c]->cons;
+         andcons = consdata->consanddatas[c]->cons;
       }
       assert(andcons != NULL);
 
@@ -8016,6 +8016,7 @@ SCIP_DECL_CONSCHECK(consCheckPseudoboolean)
             if( consdata->issoftcons )
             {
                assert(consdata->indvar != NULL);
+
                if( SCIPisEQ(scip, SCIPgetSolVal(scip, sol, consdata->indvar), 1.0) )
                   continue;
             }
