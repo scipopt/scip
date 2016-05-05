@@ -3356,6 +3356,7 @@ SCIP_RETCODE propAndSolve(
    SCIP_Bool             solvelp,            /**< should we solve the lp */
    SCIP_Bool             solverelax,         /**< should we solve the relaxation */
    SCIP_Bool             forcedlpsolve,      /**< is there a need for a solve lp */
+   SCIP_HEURTIMING*      heurtiming,         /**< timing for running heuristics after propagation call */
    int*                  nlperrors,          /**< pointer to store the number of lp errors */
    SCIP_Bool*            fullpropagation,    /**< pointer to store whether we want to do a fullpropagation next time */
    SCIP_Bool*            propagateagain,     /**< pointer to store whether we want to propagate again */
@@ -3364,6 +3365,7 @@ SCIP_RETCODE propAndSolve(
    SCIP_Bool*            solverelaxagain,    /**< pointer to store whether we want to solve the relaxation again */
    SCIP_Bool*            cutoff,             /**< pointer to store whether the node can be cut off */
    SCIP_Bool*            unbounded,          /**< pointer to store whether the focus node is unbounded */
+   SCIP_Bool*            stopped,            /**< pointer to store whether solving was interrupted */
    SCIP_Bool*            lperror,            /**< pointer to store TRUE, if an unresolved error in LP solving occured */
    SCIP_Bool*            pricingaborted,     /**< pointer to store TRUE, if the pricing was aborted and the lower bound must not be used */
    SCIP_Bool*            forcedenforcement   /**< pointer to store whether the enforcement of pseudo solution should be forced */
@@ -3389,6 +3391,7 @@ SCIP_RETCODE propAndSolve(
    assert(eventfilter != NULL);
    assert(eventqueue != NULL);
    assert(focusnode != NULL);
+   assert(heurtiming != NULL);
    assert(nlperrors != NULL);
    assert(fullpropagation != NULL);
    assert(propagateagain != NULL);
@@ -3466,9 +3469,34 @@ SCIP_RETCODE propAndSolve(
    if( !(*cutoff) && !SCIPtreeProbing(tree) && timingmask == SCIP_PROPTIMING_BEFORELP )
    {
       /* if the heuristics find a new incumbent solution, propagate again */
-      SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, NULL, NULL, SCIP_HEURTIMING_AFTERPROPLOOP,
+      SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, *heurtiming,
             FALSE, propagateagain) );
       assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
+
+      *heurtiming = SCIP_HEURTIMING_AFTERPROPLOOP;
+
+      /* check if primal heuristics found a solution and we therefore reached a solution limit */
+      if( SCIPsolveIsStopped(set, stat, FALSE) )
+      {
+         SCIP_NODE* node;
+
+         /* we reached a solution limit and do not want to continue the processing of the current node, but in order to
+          * allow restarting the optimization process later, we need to create a "branching" with only one child node that
+          * is a copy of the focusnode
+          */
+         SCIPtreeSetFocusNodeLP(tree, FALSE);
+         SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, 1.0, focusnode->estimate) );
+         assert(tree->nchildren >= 1);
+         *stopped = TRUE;
+         return SCIP_OKAY;
+      }
+
+      /* if diving produced an LP error, switch back to non-LP node */
+      if( lp->resolvelperror )
+      {
+         SCIPtreeSetFocusNodeLP(tree, FALSE);
+         lp->resolvelperror = FALSE;
+      }
    }
 
    /* solve external relaxations with non-negative priority */
@@ -3655,6 +3683,7 @@ SCIP_RETCODE solveNode(
    SCIP_Longint lastdomchgcount;
    SCIP_Real restartfac;
    SCIP_Longint lastlpcount;
+   SCIP_HEURTIMING heurtiming;
    int actdepth;
    int nlperrors;
    int nloops;
@@ -3721,33 +3750,6 @@ SCIP_RETCODE solveNode(
    focusnodehaslp = set->reopt_enable ? focusnodehaslp && SCIPreoptGetSolveLP(reopt, set, focusnode) : focusnodehaslp;
    SCIPtreeSetFocusNodeLP(tree, focusnodehaslp);
 
-   /* call primal heuristics that should be applied before the node was solved */
-   SCIP_CALL( SCIPprimalHeuristics(set, stat, transprob, primal, tree, lp, NULL, SCIP_HEURTIMING_BEFORENODE, FALSE, &foundsol) );
-   assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
-
-   /* check if primal heuristics found a solution and we therefore reached a solution limit */
-   if( SCIPsolveIsStopped(set, stat, FALSE) )
-   {
-      SCIP_NODE* node;
-
-      /* we reached a solution limit and do not want to continue the processing of the current node, but in order to
-       * allow restarting the optimization process later, we need to create a "branching" with only one child node that
-       * is a copy of the focusnode
-       */
-      SCIPtreeSetFocusNodeLP(tree, FALSE);
-      SCIP_CALL( SCIPnodeCreateChild(&node, blkmem, set, stat, tree, 1.0, focusnode->estimate) );
-      assert(tree->nchildren >= 1);
-      *stopped = TRUE;
-      return SCIP_OKAY;
-   }
-
-   /* if diving produced an LP error, switch back to non-LP node */
-   if( lp->resolvelperror )
-   {
-      SCIPtreeSetFocusNodeLP(tree, FALSE);
-      lp->resolvelperror = FALSE;
-   }
-
    /* external node solving loop:
     *  - propagate domains
     *  - solve SCIP_LP
@@ -3760,6 +3762,7 @@ SCIP_RETCODE solveNode(
    lastdomchgcount = stat->domchgcount;
    lastlpcount = stat->lpcount;
    initiallpsolved = FALSE;
+   heurtiming = SCIP_HEURTIMING_BEFORENODE;
    nlperrors = 0;
    stat->npricerounds = 0;
    stat->nseparounds = 0;
@@ -3801,9 +3804,13 @@ SCIP_RETCODE solveNode(
       SCIPdebugMessage(" -> node solving loop: call propagators that are applicable before LP is solved\n");
       SCIP_CALL( propAndSolve(blkmem, set, messagehdlr, stat, mem, origprob, transprob, primal, tree, reopt, lp, relaxation, pricestore, sepastore,
             branchcand, cutpool, delayedcutpool, conflict, eventfilter, eventqueue, cliquetable, focusnode, actdepth, SCIP_PROPTIMING_BEFORELP,
-            propagate, solvelp, solverelax, forcedlpsolve, &nlperrors, &fullpropagation, &propagateagain,
-            &initiallpsolved, &solvelpagain, &solverelaxagain, cutoff, unbounded, &lperror, &pricingaborted,
+            propagate, solvelp, solverelax, forcedlpsolve, &heurtiming, &nlperrors, &fullpropagation, &propagateagain,
+            &initiallpsolved, &solvelpagain, &solverelaxagain, cutoff, unbounded, stopped, &lperror, &pricingaborted,
             &forcedenforcement) );
+
+      /* time or solution limit was hit and we already created a dummy child node to terminate fast */
+      if( *stopped )
+         return SCIP_OKAY;
 
       if( !(*cutoff) && !propagateagain )
       {
@@ -3817,9 +3824,11 @@ SCIP_RETCODE solveNode(
          SCIPdebugMessage(" -> node solving loop: call propagators that are applicable after LP has been solved\n");
          SCIP_CALL( propAndSolve(blkmem, set, messagehdlr, stat, mem, origprob, transprob, primal, tree, reopt, lp, relaxation, pricestore, sepastore,
                branchcand, cutpool, delayedcutpool, conflict, eventfilter, eventqueue, cliquetable, focusnode, actdepth, SCIP_PROPTIMING_AFTERLPLOOP,
-               propagate, solvelp, solverelax, forcedlpsolve, &nlperrors, &fullpropagation, &propagateagain,
-               &initiallpsolved, &solvelpagain, &solverelaxagain, cutoff, unbounded, &lperror, &pricingaborted,
+               propagate, solvelp, solverelax, forcedlpsolve, &heurtiming, &nlperrors, &fullpropagation, &propagateagain,
+               &initiallpsolved, &solvelpagain, &solverelaxagain, cutoff, unbounded, stopped, &lperror, &pricingaborted,
                &forcedenforcement) );
+
+         assert(!(*stopped));
       }
 
       /* update the cutoff, propagateagain, and solverelaxagain status of current solving loop */

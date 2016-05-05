@@ -296,7 +296,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->lhs = lhs;
    (*consdata)->rhs = rhs;
    (*consdata)->row = NULL;
-   (*consdata)->propagated = FALSE;
    (*consdata)->presolved = FALSE;
    (*consdata)->varboundsadded = FALSE;
    (*consdata)->changed = TRUE;
@@ -1037,7 +1036,6 @@ SCIP_RETCODE chgLhs(
    /* if left hand side got tighter, we want to do additional presolving on this constraint */
    if( SCIPisLT(scip, consdata->lhs, lhs) )
    {
-      consdata->propagated = FALSE;
       consdata->varboundsadded = FALSE;
       consdata->tightened = FALSE;
    }
@@ -1119,7 +1117,6 @@ SCIP_RETCODE chgRhs(
    /* if right hand side got tighter, we want to do additional presolving on this constraint */
    if( SCIPisGT(scip, consdata->rhs, rhs) )
    {
-      consdata->propagated = FALSE;
       consdata->varboundsadded = FALSE;
       consdata->tightened = FALSE;
    }
@@ -1171,10 +1168,6 @@ SCIP_RETCODE propagateCons(
    {
       SCIP_CALL( SCIPincConsAge(scip, cons) );
    }
-
-   /* check, if constraint is already propagated */
-   if( consdata->propagated )
-      return SCIP_OKAY;
 
    /* get current bounds of variables */
    xlb = SCIPvarGetLbLocal(consdata->var);
@@ -1464,8 +1457,7 @@ SCIP_RETCODE propagateCons(
          (*ndelconss)++;
    }
 
-   /* mark the constraint propagated */
-   consdata->propagated = TRUE;
+   SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -2124,7 +2116,8 @@ SCIP_RETCODE preprocessConstraintPairs(
                rhs = MIN(consdata1->rhs, rhs);
                coef = rhs - MIN(consdata1->rhs - consdata1->vbdcoef, consdata0->rhs - coef);
             }
-	    consdata0->propagated = FALSE;
+
+            SCIP_CALL( SCIPmarkConsPropagate(scip, cons0) );
          }
          else if( SCIPisPositive(scip, coef) == SCIPisPositive(scip, consdata1->vbdcoef)
             && ((!SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, -consdata1->lhs))
@@ -2354,11 +2347,12 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* mark to add new varbound information */
             consdata0->varboundsadded = FALSE;
 	    consdata0->tightened = FALSE;
-	    consdata0->propagated = FALSE;
 	    consdata0->presolved = FALSE;
 	    consdata0->changed = FALSE;
 
 	    consdata0->vbdcoef = coef;
+
+            SCIP_CALL( SCIPmarkConsPropagate(scip, cons0) );
          }
 
          /* update lhs and rhs of cons0 */
@@ -3434,7 +3428,7 @@ SCIP_RETCODE upgradeConss(
             continue;
       }
 
-      if( !consdata->propagated )
+      if( SCIPconsIsMarkedPropagate(cons) )
       {
          /* propagate constraint */
          SCIP_CALL( propagateCons(scip, cons, conshdlrdata->usebdwidening, cutoff, nchgbds, nchgsides, ndelconss) );
@@ -3974,7 +3968,6 @@ SCIP_DECL_CONSPROP(consPropVarbound)
    for( i = 0; i < nmarkedconss && !cutoff; i++ )
    {
       SCIP_CALL( propagateCons(scip, conss[i], conshdlrdata->usebdwidening, &cutoff, &nchgbds, &nchgsides, NULL) );
-      SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
    }
 
    if( cutoff )
@@ -4041,9 +4034,6 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       if( consdata->presolved )
          continue;
       consdata->presolved = TRUE;
-
-      /* make sure that the constraint is propagated */
-      consdata->propagated = FALSE;
 
       /* incorporate fixings and aggregations in constraint */
       SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, &cutoff, nchgbds, ndelconss, naddconss) );
@@ -4456,7 +4446,6 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
    {
       assert((SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0);
 
-      consdata->propagated = FALSE;
       consdata->presolved = FALSE;
       consdata->tightened = FALSE;
 

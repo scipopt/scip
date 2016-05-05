@@ -7557,8 +7557,13 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 #endif
          int v;
 
+         for( v = conshdlr->nmarkedpropconss - 1; v >= 0; --v )
+         {
+            SCIP_CALL( SCIPconsUnmarkPropagate(conshdlr->propconss[v], set) );
+         }
+
          /* mark all previously marked constraint, which were marked before probing */
-         for( v = conshdlr->storednmarkedpropconss - 1; v >= 0; --v )
+         for( v = 0; v < conshdlr->storednmarkedpropconss; ++v )
          {
             SCIP_CONS* cons = conshdlr->storedpropconss[v];
             assert(cons != NULL);
@@ -7573,6 +7578,7 @@ SCIP_RETCODE SCIPconshdlrsResetPropagationStatus(
 #endif
             SCIP_CALL( SCIPconsRelease(&cons, blkmem, set) );
          }
+
          assert(conshdlr->storednmarkedpropconss - ndisabled <= conshdlr->npropconss);
          assert(conshdlr->nmarkedpropconss + ndisabled >= conshdlr->storednmarkedpropconss || (conshdlrAreUpdatesDelayed(conshdlr) && conshdlr->nupdateconss + ndisabled >= conshdlr->storednmarkedpropconss));
 
