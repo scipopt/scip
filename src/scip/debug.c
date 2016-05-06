@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -263,7 +263,7 @@ SCIP_RETCODE readSolfile(
    }
 #endif
 
-   if( debugsol == NULL )
+   if( debugsolptr != NULL )
    {
       /* create SCIP solution */
       SCIP_CALL( SCIPcreateOrigSol(set->scip, &debugsol, NULL) );
@@ -602,6 +602,45 @@ SCIP_RETCODE isSolutionInNode(
    return SCIP_OKAY;
 }
 
+/** frees the debug solution */
+SCIP_RETCODE SCIPdebugFreeSol(
+   SCIP_SET*             set
+   )
+{
+   SCIP_DEBUGSOLDATA* debugsoldata;
+
+   debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
+
+   if( debugsoldata->debugsol != NULL && ((SCIPgetStage(set->scip) > SCIP_STAGE_PROBLEM && debugsoldata->debugsolstage > SCIP_STAGE_PROBLEM)
+         || (SCIPgetStage(set->scip) <= SCIP_STAGE_PROBLEM && debugsoldata->debugsolstage <= SCIP_STAGE_PROBLEM)) )
+   {
+      SCIP_CALL( SCIPfreeSol(set->scip, &debugsoldata->debugsol) );
+   }
+
+   return SCIP_OKAY;
+}
+
+/** resets the data structure after restart */
+SCIP_RETCODE SCIPdebugReset(
+   SCIP_SET*             set
+   )
+{
+   SCIP_DEBUGSOLDATA* debugsoldata;
+
+   assert(set != NULL);
+
+   debugsoldata = SCIPsetGetDebugSolData(set);
+   assert(debugsoldata != NULL);
+
+   if( debugsoldata->solinnode != NULL )
+   {
+      SCIP_CALL( SCIPhashmapRemoveAll(debugsoldata->solinnode) );
+   }
+
+   return SCIP_OKAY;
+}
+
 /** frees all debugging solution data */
 SCIP_RETCODE SCIPdebugFreeDebugData(
    SCIP_SET*             set                 /**< global SCIP settings */
@@ -628,11 +667,8 @@ SCIP_RETCODE SCIPdebugFreeDebugData(
    if( debugsoldata->solinnode != NULL)
       SCIPhashmapFree(&debugsoldata->solinnode);
 
-   if( debugsoldata->debugsol != NULL && ((SCIPgetStage(set->scip) > SCIP_STAGE_PROBLEM && debugsoldata->debugsolstage > SCIP_STAGE_PROBLEM)
-         || (SCIPgetStage(set->scip) <= SCIP_STAGE_PROBLEM && debugsoldata->debugsolstage <= SCIP_STAGE_PROBLEM)) )
-   {
-      SCIP_CALL( SCIPfreeSol(set->scip, &debugsoldata->debugsol) );
-   }
+   /* free the debug solution */
+   SCIP_CALL( SCIPdebugFreeSol(set) );
 
    BMSfreeMemoryNull(&debugsoldata);
 
@@ -1406,13 +1442,15 @@ SCIP_RETCODE SCIPdebugCheckConflictFrontier(
    if( debugCheckBdchginfos(set, forcedbdchgqueued, NULL, nforcedbdchgqueued) )
       return SCIP_OKAY;
 
-   SCIPerrorMessage("invalid conflict frontier:");
+   SCIPerrorMessage("invalid conflict frontier");
 
    if( bdchginfo != NULL )
    {
+      printf(" (after resolving bound change ");
       printBdchginfo(set, bdchginfo, SCIPbdchginfoGetNewbound(bdchginfo));
-      printf(" ");
+      printf(")");
    }
+   printf(":");
 
    /* print bound changes which are already part of the conflict set */
    SCIP_CALL( printBdchginfos(set, bdchginfos, relaxedbds, nbdchginfos) );

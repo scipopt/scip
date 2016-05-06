@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1177,13 +1177,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolution)
 {  /*lint --e{715}*/
    SCIP_VAR** fixedvars;
    SCIP_VAR* var;
+   SCIP_Bool printzeros;
    int nfixedvars;
    int v;
 
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+   SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
 
    SCIPdialogMessage(scip, NULL, "\n");
-   SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+   SCIP_CALL( SCIPprintBestSol(scip, NULL, printzeros) );
    SCIPdialogMessage(scip, NULL, "\n");
 
    /* check if there are infinite fixings and print a reference to 'display finitesolution', if needed */
@@ -1226,14 +1228,17 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayFiniteSolution)
    {
       SCIP_SOL* sol;
       SCIP_Bool success;
-      SCIP_Bool retcode;
+      SCIP_RETCODE retcode;
 
       /* create copy of solution with finite values */
       retcode = SCIPcreateFiniteSolCopy(scip, &sol, bestsol, &success);
 
       if( retcode == SCIP_OKAY && success )
       {
-         retcode = SCIPprintSol(scip, sol, NULL, FALSE);
+         SCIP_Bool printzeros;
+
+         SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
+         retcode = SCIPprintSol(scip, sol, NULL, printzeros);
          SCIPdialogMessage(scip, NULL, "\n");
       }
       else
@@ -1249,7 +1254,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplayFiniteSolution)
    }
    else
    {
-      SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+      SCIP_Bool printzeros;
+
+      SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
+      SCIP_CALL( SCIPprintBestSol(scip, NULL, printzeros) );
       SCIPdialogMessage(scip, NULL, "\n");
    }
 
@@ -1314,11 +1322,15 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecDisplaySolutionPool)
 
    if ( SCIPstrToIntValue(idxstr, &idx, &endstr) )
    {
+      SCIP_Bool printzeros;
+
       if ( idx < 0 || idx >= nsols )
       {
          SCIPdialogMessage(scip, NULL, "Solution index out of bounds [0-%d].\n", nsols-1);
          return SCIP_OKAY;
       }
+
+      SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
 
       sols = SCIPgetSols(scip);
       assert( sols[idx] != NULL );
@@ -2015,7 +2027,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetParam)
 
       SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, valuestr, TRUE) );
 
-      if( sscanf(valuestr, "%"SCIP_LONGINT_FORMAT, &longintval) != 1 )
+      if( sscanf(valuestr, "%" SCIP_LONGINT_FORMAT, &longintval) != 1 )
       {
          SCIPdialogMessage(scip, NULL, "\ninvalid input <%s>\n\n", valuestr);
          return SCIP_OKAY;
@@ -2138,7 +2150,7 @@ SCIP_DECL_DIALOGDESC(SCIPdialogDescSetParam)
       break;
 
    case SCIP_PARAMTYPE_LONGINT:
-      (void) SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%"SCIP_LONGINT_FORMAT, SCIPparamGetLongint(param));
+      (void) SCIPsnprintf(valuestr, SCIP_MAXSTRLEN, "%" SCIP_LONGINT_FORMAT, SCIPparamGetLongint(param));
       break;
 
    case SCIP_PARAMTYPE_REAL:
@@ -2396,6 +2408,18 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsAggressive)
    return SCIP_OKAY;
 }
 
+/** dialog execution method for the set heuristics default command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsDefault)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   SCIP_CALL( SCIPsetHeuristics(scip, SCIP_PARAMSETTING_DEFAULT, FALSE) );
+
+   return SCIP_OKAY;
+}
+
 /** dialog execution method for the set heuristics fast command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsFast)
 {  /*lint --e{715}*/
@@ -2420,7 +2444,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetHeuristicsOff)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the set heuristics aggressive command */
+/** dialog execution method for the set presolving aggressive command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingAggressive)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -2432,7 +2456,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingAggressive)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the set heuristics fast command */
+/** dialog execution method for the set presolving default command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingDefault)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   SCIP_CALL( SCIPsetPresolving(scip, SCIP_PARAMSETTING_DEFAULT, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set presolving fast command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingFast)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -2444,7 +2480,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingFast)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the set heuristics off command */
+/** dialog execution method for the set presolving off command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingOff)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -2456,7 +2492,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetPresolvingOff)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the set heuristics aggressive command */
+/** dialog execution method for the set separating aggressive command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingAggressive)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -2468,7 +2504,19 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingAggressive)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the set heuristics fast command */
+/** dialog execution method for the set separating default command */
+SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingDefault)
+{  /*lint --e{715}*/
+   SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
+
+   *nextdialog = SCIPdialoghdlrGetRoot(dialoghdlr);
+
+   SCIP_CALL( SCIPsetSeparating(scip, SCIP_PARAMSETTING_DEFAULT, FALSE) );
+
+   return SCIP_OKAY;
+}
+
+/** dialog execution method for the set separating fast command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingFast)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -2480,7 +2528,7 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingFast)
    return SCIP_OKAY;
 }
 
-/** dialog execution method for the set heuristics off command */
+/** dialog execution method for the set separating off command */
 SCIP_DECL_DIALOGEXEC(SCIPdialogExecSetSeparatingOff)
 {  /*lint --e{715}*/
    SCIP_CALL( SCIPdialoghdlrAddHistory(dialoghdlr, dialog, NULL, FALSE) );
@@ -2945,8 +2993,12 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteSolution)
          }
          else
          {
+            SCIP_Bool printzeros;
+
+            SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
+
             SCIPinfoMessage(scip, file, "\n");
-            retcode = SCIPprintBestSol(scip, file, FALSE);
+            retcode = SCIPprintBestSol(scip, file, printzeros);
             if( retcode != SCIP_OKAY )
             {
                fclose(file);
@@ -3068,7 +3120,10 @@ SCIP_DECL_DIALOGEXEC(SCIPdialogExecWriteFiniteSolution)
                   }
                   else
                   {
-                     retcode = SCIPprintSol(scip, sol, file, FALSE);
+                     SCIP_Bool printzeros;
+
+                     SCIP_CALL( SCIPgetBoolParam(scip, "write/printzeros", &printzeros) );
+                     retcode = SCIPprintSol(scip, sol, file, printzeros);
                      SCIPdialogMessage(scip, NULL, "written solution information to file <%s>\n", filename);
                   }
 
@@ -4427,6 +4482,16 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+   /* set heuristics emphasis default */
+   if( !SCIPdialogHasEntry(emphasismenu, "default") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL, SCIPdialogExecSetHeuristicsDefault, NULL, NULL,
+            "default", "sets heuristics settings to <default> ", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, emphasismenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    /* set heuristics emphasis fast */
    if( !SCIPdialogHasEntry(emphasismenu, "fast") )
    {
@@ -4630,6 +4695,16 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }
 
+   /* set presolving emphasis default */
+   if( !SCIPdialogHasEntry(emphasismenu, "default") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL, SCIPdialogExecSetPresolvingDefault, NULL, NULL,
+            "default", "sets presolving settings to <default>", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, emphasismenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
    /* set presolving emphasis fast */
    if( !SCIPdialogHasEntry(emphasismenu, "fast") )
    {
@@ -4765,6 +4840,16 @@ SCIP_RETCODE SCIPincludeDialogDefaultSet(
       SCIP_CALL( SCIPincludeDialog(scip, &dialog,
             NULL, SCIPdialogExecSetSeparatingAggressive, NULL, NULL,
             "aggressive", "sets separating <aggressive>", FALSE, NULL) );
+      SCIP_CALL( SCIPaddDialogEntry(scip, emphasismenu, dialog) );
+      SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
+   }
+
+   /* set separating emphasis default */
+   if( !SCIPdialogHasEntry(emphasismenu, "default") )
+   {
+      SCIP_CALL( SCIPincludeDialog(scip, &dialog,
+            NULL, SCIPdialogExecSetSeparatingDefault, NULL, NULL,
+            "default", "sets separating settings to <default>", FALSE, NULL) );
       SCIP_CALL( SCIPaddDialogEntry(scip, emphasismenu, dialog) );
       SCIP_CALL( SCIPreleaseDialog(scip, &dialog) );
    }

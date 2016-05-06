@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -296,7 +296,6 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->lhs = lhs;
    (*consdata)->rhs = rhs;
    (*consdata)->row = NULL;
-   (*consdata)->propagated = FALSE;
    (*consdata)->presolved = FALSE;
    (*consdata)->varboundsadded = FALSE;
    (*consdata)->changed = TRUE;
@@ -371,7 +370,8 @@ SCIP_RETCODE createRelaxation(
 static
 SCIP_RETCODE addRelaxation(
    SCIP*                 scip,               /**< SCIP data structure */
-   SCIP_CONS*            cons                /**< variable bound constraint */
+   SCIP_CONS*            cons,               /**< variable bound constraint */
+   SCIP_Bool*            infeasible          /**< pointer to store whether infeasibility was detected */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -406,12 +406,9 @@ SCIP_RETCODE addRelaxation(
 
    if( !SCIProwIsInLP(consdata->row) )
    {
-      SCIP_Bool infeasible;
-
       SCIPdebugMessage("adding relaxation of variable bound constraint <%s>: ", SCIPconsGetName(cons));
       SCIPdebug( SCIP_CALL( SCIPprintRow(scip, consdata->row, NULL)) );
-      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, &infeasible) );
-      assert( ! infeasible );   /* this function is only called from initlp -> row should be feasible */
+      SCIP_CALL( SCIPaddCut(scip, NULL, consdata->row, FALSE, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -1039,7 +1036,6 @@ SCIP_RETCODE chgLhs(
    /* if left hand side got tighter, we want to do additional presolving on this constraint */
    if( SCIPisLT(scip, consdata->lhs, lhs) )
    {
-      consdata->propagated = FALSE;
       consdata->varboundsadded = FALSE;
       consdata->tightened = FALSE;
    }
@@ -1121,7 +1117,6 @@ SCIP_RETCODE chgRhs(
    /* if right hand side got tighter, we want to do additional presolving on this constraint */
    if( SCIPisGT(scip, consdata->rhs, rhs) )
    {
-      consdata->propagated = FALSE;
       consdata->varboundsadded = FALSE;
       consdata->tightened = FALSE;
    }
@@ -1173,10 +1168,6 @@ SCIP_RETCODE propagateCons(
    {
       SCIP_CALL( SCIPincConsAge(scip, cons) );
    }
-
-   /* check, if constraint is already propagated */
-   if( consdata->propagated )
-      return SCIP_OKAY;
 
    /* get current bounds of variables */
    xlb = SCIPvarGetLbLocal(consdata->var);
@@ -1466,8 +1457,7 @@ SCIP_RETCODE propagateCons(
          (*ndelconss)++;
    }
 
-   /* mark the constraint propagated */
-   consdata->propagated = TRUE;
+   SCIP_CALL( SCIPunmarkConsPropagate(scip, cons) );
 
    return SCIP_OKAY;
 }
@@ -2126,7 +2116,8 @@ SCIP_RETCODE preprocessConstraintPairs(
                rhs = MIN(consdata1->rhs, rhs);
                coef = rhs - MIN(consdata1->rhs - consdata1->vbdcoef, consdata0->rhs - coef);
             }
-	    consdata0->propagated = FALSE;
+
+            SCIP_CALL( SCIPmarkConsPropagate(scip, cons0) );
          }
          else if( SCIPisPositive(scip, coef) == SCIPisPositive(scip, consdata1->vbdcoef)
             && ((!SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, -consdata1->lhs))
@@ -2356,11 +2347,12 @@ SCIP_RETCODE preprocessConstraintPairs(
             /* mark to add new varbound information */
             consdata0->varboundsadded = FALSE;
 	    consdata0->tightened = FALSE;
-	    consdata0->propagated = FALSE;
 	    consdata0->presolved = FALSE;
 	    consdata0->changed = FALSE;
 
 	    consdata0->vbdcoef = coef;
+
+            SCIP_CALL( SCIPmarkConsPropagate(scip, cons0) );
          }
 
          /* update lhs and rhs of cons0 */
@@ -3209,6 +3201,9 @@ SCIP_RETCODE tightenCoefs(
       {
          SCIP_Real newcoef;
          SCIP_Real newrhs;
+         SCIP_Real oldrhs;
+
+         oldrhs = consdata->rhs;
 
          /* constraint has positive slack for both non-restricting cases y = 0, or y = 1, respectively
           * -> modify coefficients such that constraint is tight in at least one of the non-restricting cases
@@ -3228,11 +3223,25 @@ SCIP_RETCODE tightenCoefs(
          consdata->rhs = newrhs;
          (*nchgcoefs)++;
          (*nchgsides)++;
+
+         /* some of the cases 1. to 5. might be applicable after changing the rhs to an integral value; one example is
+          * the varbound constraint 0.225 <= x - 1.225 y <= 0.775 for which none of the above cases apply but after
+          * tightening the lhs to 0.0 it is possible to reduce the rhs by applying the 1. reduction
+          */
+         if( !SCIPisFeasIntegral(scip, oldrhs) && SCIPisFeasIntegral(scip, newrhs) )
+         {
+            consdata->tightened = FALSE;
+            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
+            assert(consdata->tightened);
+         }
       }
       else if( consdata->vbdcoef < 0.0 && SCIPisFeasGT(scip, xlb, consdata->lhs) && SCIPisFeasLT(scip, xub, consdata->rhs - consdata->vbdcoef) )
       {
          SCIP_Real newcoef;
          SCIP_Real newlhs;
+         SCIP_Real oldlhs;
+
+         oldlhs = consdata->lhs;
 
          /* constraint has positive slack for both non-restricting cases y = 0, or y = 1, respectively
           * -> modify coefficients such that constraint is tight in at least one of the non-restricting cases
@@ -3252,6 +3261,17 @@ SCIP_RETCODE tightenCoefs(
          consdata->lhs = newlhs;
          (*nchgcoefs)++;
          (*nchgsides)++;
+
+         /* some of the cases 1. to 5. might be applicable after changing the rhs to an integral value; one example is
+          * the varbound constraint 0.225 <= x - 1.225 y <= 0.775 for which none of the above cases apply but after
+          * tightening the lhs to 0.0 it is possible to reduce the rhs by applying the 1. reduction
+          */
+         if( !SCIPisFeasIntegral(scip, oldlhs) && SCIPisFeasIntegral(scip, newlhs) )
+         {
+            consdata->tightened = FALSE;
+            SCIP_CALL( tightenCoefs(scip, cons, nchgcoefs, nchgsides, ndelconss) );
+            assert(consdata->tightened);
+         }
       }
    }
    else if( !SCIPisInfinity(scip, -consdata->lhs) && SCIPisInfinity(scip, consdata->rhs) )
@@ -3408,7 +3428,7 @@ SCIP_RETCODE upgradeConss(
             continue;
       }
 
-      if( !consdata->propagated )
+      if( SCIPconsIsMarkedPropagate(cons) )
       {
          /* propagate constraint */
          SCIP_CALL( propagateCons(scip, cons, conshdlrdata->usebdwidening, cutoff, nchgbds, nchgsides, ndelconss) );
@@ -3744,10 +3764,12 @@ SCIP_DECL_CONSINITLP(consInitlpVarbound)
 {  /*lint --e{715}*/
    int i;
 
-   for( i = 0; i < nconss; i++ )
+   *infeasible = FALSE;
+
+   for( i = 0; i < nconss && !(*infeasible); i++ )
    {
       assert(SCIPconsIsInitial(conss[i]));
-      SCIP_CALL( addRelaxation(scip, conss[i]) );
+      SCIP_CALL( addRelaxation(scip, conss[i], infeasible) );
    }
 
    return SCIP_OKAY;
@@ -3946,7 +3968,6 @@ SCIP_DECL_CONSPROP(consPropVarbound)
    for( i = 0; i < nmarkedconss && !cutoff; i++ )
    {
       SCIP_CALL( propagateCons(scip, conss[i], conshdlrdata->usebdwidening, &cutoff, &nchgbds, &nchgsides, NULL) );
-      SCIP_CALL( SCIPunmarkConsPropagate(scip, conss[i]) );
    }
 
    if( cutoff )
@@ -4013,9 +4034,6 @@ SCIP_DECL_CONSPRESOL(consPresolVarbound)
       if( consdata->presolved )
          continue;
       consdata->presolved = TRUE;
-
-      /* make sure that the constraint is propagated */
-      consdata->propagated = FALSE;
 
       /* incorporate fixings and aggregations in constraint */
       SCIP_CALL( applyFixings(scip, cons, conshdlrdata->eventhdlr, &cutoff, nchgbds, ndelconss, naddconss) );
@@ -4428,7 +4446,6 @@ SCIP_DECL_EVENTEXEC(eventExecVarbound)
    {
       assert((SCIPeventGetType(event) & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0);
 
-      consdata->propagated = FALSE;
       consdata->presolved = FALSE;
       consdata->tightened = FALSE;
 

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -238,7 +238,7 @@ struct SCIP_ConsData
    unsigned int          hascontvar:1;       /**< does the constraint contain at least one continuous variable? */
    unsigned int          hasnonbinvar:1;     /**< does the constraint contain at least one non-binary variable? */
    unsigned int          hasnonbinvalid:1;   /**< is the information stored in hasnonbinvar and hascontvar valid? */
-   unsigned int          rangedrowpropagation:1; /**< did we perform ranged row propagation on this constraint? */
+   unsigned int          rangedrowpropagated:1; /**< did we perform ranged row propagation on this constraint? */
 };
 
 /** event data for bound change event */
@@ -961,7 +961,7 @@ SCIP_RETCODE consdataCreate(
    (*consdata)->binvarssorted = FALSE;
    (*consdata)->nbinvars = -1;
    (*consdata)->varsdeleted = FALSE;
-   (*consdata)->rangedrowpropagation = FALSE;
+   (*consdata)->rangedrowpropagated = FALSE;
 
    if( SCIPisTransformed(scip) )
    {
@@ -2827,7 +2827,7 @@ SCIP_Real consdataGetActivity(
       activity = 0.0;
       nposinf = 0;
       nneginf = 0;
-      negsign = 0;
+      negsign = FALSE;
 
       for( v = 0; v < consdata->nvars; ++v )
       {
@@ -3288,7 +3288,7 @@ SCIP_RETCODE chgLhs(
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
-   consdata->rangedrowpropagation = FALSE;
+   consdata->rangedrowpropagated = FALSE;
 
    /* update the lhs of the LP row */
    if( consdata->row != NULL )
@@ -3405,7 +3405,7 @@ SCIP_RETCODE chgRhs(
    consdata->changed = TRUE;
    consdata->normalized = FALSE;
    consdata->upgradetried = FALSE;
-   consdata->rangedrowpropagation = FALSE;
+   consdata->rangedrowpropagated = FALSE;
 
    /* update the rhs of the LP row */
    if( consdata->row != NULL )
@@ -3525,7 +3525,7 @@ SCIP_RETCODE addCoef(
    consdata->upgradetried = FALSE;
    consdata->cliquesadded = FALSE;
    consdata->implsadded = FALSE;
-   consdata->rangedrowpropagation = FALSE;
+   consdata->rangedrowpropagated = FALSE;
 
    if( consdata->nvars == 1 )
    {
@@ -3660,7 +3660,7 @@ SCIP_RETCODE delCoefPos(
    consdata->upgradetried = FALSE;
    consdata->cliquesadded = FALSE;
    consdata->implsadded = FALSE;
-   consdata->rangedrowpropagation = FALSE;
+   consdata->rangedrowpropagated = FALSE;
 
    /* check if hasnonbinvar flag might be incorrect now */
    if( consdata->hasnonbinvar && SCIPvarGetType(var) != SCIP_VARTYPE_BINARY )
@@ -3737,7 +3737,7 @@ SCIP_RETCODE chgCoefPos(
    consdata->upgradetried = FALSE;
    consdata->cliquesadded = FALSE;
    consdata->implsadded = FALSE;
-   consdata->rangedrowpropagation = FALSE;
+   consdata->rangedrowpropagated = FALSE;
 
    return SCIP_OKAY;
 }
@@ -3965,7 +3965,7 @@ SCIP_RETCODE normalizeCons(
       /* all coefficients are in absolute value equal, so change them to (-)1.0 */
       if( abscoefsequ )
       {
-	 SCIPdebugMessage("divide linear constraint with %g, because all coefficents are in absolute value the same\n", maxabsval);
+	 SCIPdebugMessage("divide linear constraint with %g, because all coefficients are in absolute value the same\n", maxabsval);
 	 SCIPdebugPrintCons(scip, cons, NULL);
 	 SCIP_CALL( scaleCons(scip, cons, 1/maxabsval) );
 
@@ -5408,7 +5408,7 @@ SCIP_RETCODE analyzeConflictRangedRow(
  *  Example:
  *  c1: 12 x1 + 9  x2 - x3 = 0  with x1, x2 free and 1 <= x3 <= 2
  *
- *  x3 needs to be a multiple of 3, so the instance is infeasibile.
+ *  x3 needs to be a multiple of 3, so the instance is infeasible.
  *
  *  Example:
  *  c1: 12 x1 + 9  x2 - x3 = 1  with x1, x2 free and 1 <= x3 <= 2
@@ -5471,14 +5471,6 @@ SCIP_RETCODE rangedRowPropagation(
 
    /* at least three variables are needed */
    if( consdata->nvars < 3 )
-      return SCIP_OKAY;
-
-   /* if we already presolved this constraint */
-   if( consdata->rangedrowpropagation )
-      return SCIP_OKAY;
-
-   /* if we have too many continuous variables, so stop here */
-   if( (consdata->sorted || consdata->binvarssorted) && SCIPvarGetType(consdata->vars[1]) == SCIP_VARTYPE_CONTINUOUS )
       return SCIP_OKAY;
 
    /* do nothing on normal inequalities */
@@ -5587,6 +5579,10 @@ SCIP_RETCODE rangedRowPropagation(
     *       with k \in Z, c \in (d,d + 1], d \in Z, (a_1*y_1 + ... + a_n*y_n) \in (c-1 + d,d + 1]
     */
    if( v == consdata->nvars )
+      goto TERMINATE;
+
+   /* we need at least two non-continuous variables */
+   if( ncontvars + 2 > consdata->nvars - nfixedconsvars )
       goto TERMINATE;
 
    assert(!SCIPisEQ(scip, SCIPvarGetLbLocal(consdata->vars[v]), SCIPvarGetUbLocal(consdata->vars[v])));
@@ -5768,7 +5764,7 @@ SCIP_RETCODE rangedRowPropagation(
          SCIP_Real maxvalue = SCIP_INVALID;
          int nsols = 0;
 
-         value = minactinfvars;
+         value = SCIPceil(scip, minactinfvars - SCIPfeastol(scip));
 
          /* check how many possible solutions exist */
          while( SCIPisLE(scip, value, maxactinfvars) )
@@ -5792,24 +5788,28 @@ SCIP_RETCODE rangedRowPropagation(
          }
          assert(nsols < 2 || minvalue <= maxvalue);
 
-	 /* determine last possible solution for better bounding */
-	 if( nsols == 3 )
-	 {
-	    value = maxactinfvars;
+         /* determine last possible solution for better bounding */
+         if( nsols == 3 )
+         {
+#ifndef NDEBUG
+            SCIP_Real secondsolval = maxvalue;
+#endif
+            value = SCIPfloor(scip, maxactinfvars + SCIPfeastol(scip));
 
-	    /* check how many possible solutions exist */
-	    while( SCIPisGE(scip, value, minactinfvars) )
-	    {
-	       value2 = value + gcd * (SCIPfloor(scip, (rhs - value) / gcd));
+            /* check how many possible solutions exist */
+            while( SCIPisGE(scip, value, minactinfvars) )
+            {
+               value2 = value + gcd * (SCIPfloor(scip, (rhs - value) / gcd));
 
-	       if( SCIPisGE(scip, value2, lhs) && SCIPisLE(scip, value2, rhs) )
-	       {
-		  maxvalue = value;
-		  assert(maxvalue > minvalue);
-		  break;
-	       }
-	       value -= gcdinfvars;
-	    }
+               if( SCIPisGE(scip, value2, lhs) && SCIPisLE(scip, value2, rhs) )
+               {
+                  maxvalue = value;
+                  assert(maxvalue > minvalue);
+                  break;
+               }
+               value -= gcdinfvars;
+            }
+            assert(maxvalue > secondsolval);
          }
 
          SCIPdebugMessage("here nsols %s %d, minsolvalue = %g, maxsolvalue = %g, ninfcheckvars = %d, nunfixedvars = %d\n",
@@ -6371,7 +6371,7 @@ SCIP_RETCODE rangedRowPropagation(
    SCIPfreeBufferArray(scip, &infcheckvals);
    SCIPfreeBufferArray(scip, &infcheckvars);
 
-   consdata->rangedrowpropagation = TRUE;
+   consdata->rangedrowpropagated = TRUE;
 
    return SCIP_OKAY;
 }
@@ -7199,11 +7199,11 @@ SCIP_RETCODE propagateCons(
    assert(consdata != NULL);
 
    *cutoff = FALSE;
-
+#if 0
    /* check, if constraint is already propagated */
-   if( consdata->propagated && (!tightenbounds || consdata->boundstightened) )
+   if( consdata->propagated && (!tightenbounds || consdata->boundstightened) && SCIPgetStage(scip) < SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
-
+#endif
    /* mark constraint as propagated */
    consdata->propagated = TRUE;
 
@@ -9628,11 +9628,9 @@ SCIP_Bool checkEqualObjective(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSDATA*        consdata,           /**< linear constraint data */
    SCIP_Real*            scale,              /**< pointer to store the scaling factor between the constraint and the
-					      *   objective function
-					      */
+					      *   objective function */
    SCIP_Real*            offset              /**< pointer to store the offset of the objective function resulting by
-					      *   this constraint
-					      */
+					      *   this constraint */
    )
 {
    SCIP_VAR** vars;
@@ -9768,7 +9766,7 @@ SCIP_RETCODE checkPartialObjective(
    return SCIP_OKAY;
 }
 
-/** updates the cutoff if the given primal bound  (which is implied by the given constraint) is better */
+/** updates the cutoff if the given primal bound (which is implied by the given constraint) is better */
 static
 SCIP_RETCODE updateCutoffbound(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -9836,7 +9834,7 @@ SCIP_RETCODE checkParallelObjective(
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* ignore equalities since these are covert by the method checkPartialObjective() */
+   /* ignore equalities since these are covered by the method checkPartialObjective() */
    if( SCIPisEQ(scip, consdata->lhs, consdata->rhs) )
       return SCIP_OKAY;
 
@@ -9851,6 +9849,12 @@ SCIP_RETCODE checkParallelObjective(
 
    offset = 0.0;
    scale = 1.0;
+
+   /* There are no variables in the ojective function and in the constraint. Thus, the constraint is redundant or proves
+    * infeasibility. Since we have a pure feasibility problem, we do not want to set a cutoff or lower bound.
+    */
+   if( nobjvars == 0 )
+      return SCIP_OKAY;
 
    /* checks if the variables and their coefficients are equal (w.r.t. scaling factor) to the objective function */
    applicable = checkEqualObjective(scip, consdata, &scale, &offset);
@@ -10988,7 +10992,7 @@ SCIP_RETCODE simplifyInequalities(
 
    feastol = SCIPfeastol(scip);
 
-   SCIPdebugMessage("starting simplification of coeffcients\n");
+   SCIPdebugMessage("starting simplification of coefficients\n");
    SCIPdebugPrintCons(scip, cons, NULL);
 
    /* get global activities */
@@ -11009,7 +11013,7 @@ SCIP_RETCODE simplifyInequalities(
    offsetv = -1;
    side = haslhs ? lhs : rhs;
 
-   /* we now determine coefficients as large as the side of the constraint to might retrieve a better reduction were we
+   /* we now determine coefficients as large as the side of the constraint to retrieve a better reduction where we
     * do not need to look at the large coefficients
     *
     * e.g.  all x are binary, z are positive integer
@@ -11027,17 +11031,17 @@ SCIP_RETCODE simplifyInequalities(
    /* if the minimal activity is negative and we found more than one variable with a coefficient bigger than the left
     * hand side, we cannot apply the extra reduction step and need to reset v
     *
-    * e.g. 7x1 + 7x2 - 4x3 - 4x4 >= 7 => xi = 1 forall i is not a solution, but if we would do a change on the
-    *      coeffcients due to the gcd on the "small" coeffcients we would get 8x1 + 8x2 - 4x3 - 4x4 >= 8 were xi = 1
-    *      forall i is a solution
+    * e.g. 7x1 + 7x2 - 4x3 - 4x4 >= 7 => xi = 1 for all i is not a solution, but if we would do a change on the
+    *      coefficients due to the gcd on the "small" coefficients we would get 8x1 + 8x2 - 4x3 - 4x4 >= 8 were xi = 1
+    *      for all i is a solution
     *
-    * also redundancy of variables would not be correct determined in such a case
+    * also redundancy of variables would not be correctly determined in such a case
     */
    if( nvars > 2 && SCIPisEQ(scip, vals[0], side) && !SCIPisNegative(scip, minactsub) )
    {
-      ++v;
+      v = 1;
 
-      while( SCIPisEQ(scip, side, vals[v]) )
+      while( v < nvars && SCIPisEQ(scip, side, vals[v]) )
       {
          /* if we have integer variable with "side"-coefficients but also with a lower bound greater than 0 we stop this
           * extra step, which might have worked
@@ -11049,8 +11053,12 @@ SCIP_RETCODE simplifyInequalities(
          }
 
          ++v;
-         assert(v < nvars);
       }
+
+      /* easy and quick fix: if all coefficients were equal to the side, we cannot apply further simplifications */
+      /* todo find numerically stable normalization conditions to scale this cons to have coefficients almost equal to 1 */
+      if( v == nvars )
+         return SCIP_OKAY;
 
       /* cannot work with continuous variables which have a big coefficient */
       if( v > 0 && SCIPvarGetType(vars[v - 1]) == SCIP_VARTYPE_CONTINUOUS )
@@ -11060,7 +11068,7 @@ SCIP_RETCODE simplifyInequalities(
       if( SCIPisEQ(scip, side, -vals[v]) )
          v = 0;
 
-      /* all but one variable are processed or the next variables is continuous we cannot perform the extra coefficient
+      /* all but one variable are processed or the next variable is continuous we cannot perform the extra coefficient
        * reduction
        */
       if( v == nvars - 1 || SCIPvarGetType(vars[v]) == SCIP_VARTYPE_CONTINUOUS )
@@ -11087,9 +11095,9 @@ SCIP_RETCODE simplifyInequalities(
       }
    }
 
-   /* find and remove redundant variables which do not interact with the (in-)feasible of a constraints
+   /* find and remove redundant variables which do not interact with the (in-)feasibility of this constraint
     *
-    * e.g. assume all x are binary and y1 is continuous with bounds [-3,1] then we can reduce
+    * e.g. let all x are binary and y1 is continuous with bounds [-3,1] then we can reduce
     *
     *        15x1 + 15x2 + 7x3 + 3x4 + y1 <= 26
     * to
@@ -14338,6 +14346,8 @@ SCIP_DECL_CONSTRANS(consTransLinear)
 
    if( SCIPisTransformed(scip) && needEvents(scip) )
    {
+      assert(FALSE);
+
       /* catch bound change events of variables */
       SCIP_CALL( consCatchAllEvents(scip, *targetcons, conshdlrdata->eventhdlr) );
       assert(targetdata->eventdata != NULL);
@@ -14351,17 +14361,17 @@ SCIP_DECL_CONSTRANS(consTransLinear)
 static
 SCIP_DECL_CONSINITLP(consInitlpLinear)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff;
    int c;
 
    assert(scip != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
-   for( c = 0; c < nconss; ++c )
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addRelaxation(scip, conss[c], NULL, &cutoff) );
-      /* cannot use cutoff here, since initlp has no return value */
+      SCIP_CALL( addRelaxation(scip, conss[c], NULL, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -14716,7 +14726,6 @@ SCIP_DECL_CONSPROP(consPropLinear)
 
    cutoff = FALSE;
    nchgbds = 0;
-
 
    /* process constraints marked for propagation */
    for( i = 0; i < nmarkedconss && !cutoff; i++ )
@@ -15552,7 +15561,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       }
 
       consdata->presolved = FALSE;
-      consdata->rangedrowpropagation = FALSE;
+      consdata->rangedrowpropagated = FALSE;
 
       /* bound change can turn the constraint infeasible or redundant only if it was a tightening */
       if( (eventtype & SCIP_EVENTTYPE_BOUNDTIGHTENED) != 0 )
@@ -15616,7 +15625,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       /* we want to remove the fixed variable */
       consdata->presolved = FALSE;
       consdata->removedfixings = FALSE;
-      consdata->rangedrowpropagation = FALSE;
+      consdata->rangedrowpropagated = FALSE;
 
       /* reset maximal activity delta, so that it will be recalculated on the next real propagation */
       if( consdata->maxactdeltavar == var )
@@ -15648,7 +15657,7 @@ SCIP_DECL_EVENTEXEC(eventExecLinear)
       assert(consdata->vars[varpos] == var);
       val = consdata->vals[varpos];
 
-      consdata->rangedrowpropagation = FALSE;
+      consdata->rangedrowpropagated = FALSE;
 
       /* update the activity values */
       if( (eventtype & SCIP_EVENTTYPE_GLBCHANGED) != 0 )
@@ -15728,7 +15737,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
       char consname[SCIP_MAXSTRLEN];
 
       /* create a constraint out of the conflict set */
-      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%" SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, nbdchginfos, vars, vals, lhs, SCIPinfinity(scip),
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 
@@ -16246,7 +16255,7 @@ SCIP_RETCODE SCIPcreateConsLinear(
    SCIP_CALL( SCIPcreateCons(scip, cons, name, conshdlr, consdata, initial, separate, enforce, check, propagate,
          local, modifiable, dynamic, removable, stickingatnode) );
 
-   if( SCIPisTransformed(scip) && needEvents(scip) )
+   if( needEvents(scip) )
    {
       /* catch bound change events of variables */
       SCIP_CALL( consCatchAllEvents(scip, *cons, conshdlrdata->eventhdlr) );

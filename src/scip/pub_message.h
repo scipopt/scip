@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -111,6 +111,7 @@ extern "C" {
 
 /** Creates and captures a message handler which deals with warning, information, and dialog (interactive shell) methods.
  *
+ *  Use SCIPsetMessagehdlr() to make SCIP aware of the created message handler.
  *  @note The message handler does not handle error messages. For that see SCIPmessageSetErrorPrinting()
  *  @note Creating a message handler automatically captures it.
  */

@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -118,6 +118,12 @@ typedef struct SCIP_Bt SCIP_BT;
 
 /** search node of \ref SCIP_BT "binary tree" */
 typedef struct SCIP_BtNode SCIP_BTNODE;
+
+/** regression data structure to compute an incremental linear regression of paired observations
+ *
+ *  - \ref Regression "List of all available methods"
+ */
+typedef struct SCIP_Regression SCIP_REGRESSION;
 
 /** compares two element indices
  *  result:
