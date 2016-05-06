@@ -30,6 +30,7 @@ struct SCIP_ProbData
    SCIP_VAR*             targetvar;        /**< variable that enters the target-function */
    SCIP_VAR**            absvar;           /**< variables for linearizing the absolute value in the irreversibility constraints */
    SCIP_Real**           cmatrix;          /**< matrix to save the transition matrix */
+   SCIP_Real             big_M;
    int                   nbins;
    int                   ncluster;
 };
@@ -123,6 +124,23 @@ SCIP_RETCODE freeMatrix(
    return SCIP_OKAY;
 }
 
+static
+SCIP_Real bigM(
+   SCIP_Real**cmatrix,
+   int nbins)
+{
+	SCIP_Real max = 0;
+	int i,j;
+	for( i = 0 ; i < nbins; ++i )
+	{
+	   for( j = 0; j < i; ++j )
+	   {
+            max += REALABS(cmatrix[i][j] - cmatrix[j][i]);
+      }
+	}
+	return max;
+}
+
 
 static
 SCIP_RETCODE createVariables(
@@ -198,7 +216,7 @@ SCIP_RETCODE createVariables(
       }
    }
    /* add the lower bound on irreversibility variable that enters the target function */
-   SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->targetvar, "epsI", 0.0, nbins, 1.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &probdata->targetvar, "epsI", 0.0, probdata->big_M, 1.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, probdata->targetvar) );
 
    return SCIP_OKAY;
@@ -336,9 +354,9 @@ SCIP_RETCODE createProbEdgeRep(
       for( c2 = 0; c2 < c1; ++c2 )
       {
          (void)SCIPsnprintf( consname, SCIP_MAXSTRLEN, "irrev1_%d_%d", c1 + 1, c2 + 1 );
-         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0 ) );
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), probdata->big_M ) );
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->targetvar, 1.0) );
-         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c1 + ncluster * c2], 1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c1 + ncluster * c2], probdata->big_M) );
          /* add all cut edges between cluster c1 and c2 */
          for( i = 0; i < nbins; ++i )
          {
@@ -353,9 +371,9 @@ SCIP_RETCODE createProbEdgeRep(
 
 
          (void)SCIPsnprintf( consname, SCIP_MAXSTRLEN, "irrev2_%d_%d", c1 + 1, (c1 + 2) % ncluster );
-         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0) );
+         SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), probdata->big_M) );
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->targetvar, 1.0) );
-         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c2 + ncluster * c1], 1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c2 + ncluster * c1], probdata->big_M) );
          for( i = 0; i < nbins; ++i )
          {
             for( j = 0; j < i; ++j )
@@ -435,11 +453,11 @@ SCIP_RETCODE createProbEdgeRep(
    }
    /* add constraint that ensures irreversibility between clusters is 0 if we have only one cluster */
    (void)SCIPsnprintf( consname, SCIP_MAXSTRLEN, "nontrivial");
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), -1.0) );
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), -probdata->big_M) );
    SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->targetvar, 1.0));
    for ( c1 = 0; c1 < ncluster; ++c1 )
    {
-      SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->indicatorvar[c1], -1.0) );
+      SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->indicatorvar[c1], -probdata->big_M) );
    }
 
    SCIP_CALL( SCIPaddCons(scip, temp) );
@@ -687,9 +705,9 @@ SCIP_RETCODE createProbBinRep(
       {
          (void)SCIPsnprintf( consname, SCIP_MAXSTRLEN, "irrev1_%d_%d", c1 + 1,c2 + 1 );
          /* use the absolute value for the irreversibility-measure */
-         SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, -SCIPinfinity(scip), BIG_M ) );
+         SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, -SCIPinfinity(scip), probdata->big_M ) );
          SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, probdata->targetvar, 1.0) );
-         SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, probdata->absvar[c1 + ncluster * c2], BIG_M) );
+         SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, probdata->absvar[c1 + ncluster * c2], probdata->big_M) );
 
          /* add all the bilinear terms to the constraint */
          for( i = 0; i < nbins; ++i )
@@ -708,9 +726,9 @@ SCIP_RETCODE createProbBinRep(
 
          /* add the second part of the constraint */
          (void)SCIPsnprintf( consname, SCIP_MAXSTRLEN, "irrev2_%d_%d", c1 + 1, c2 + 1 );
-         SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, -SCIPinfinity(scip), BIG_M) );
+         SCIP_CALL( SCIPcreateConsBasicQuadratic(scip, &temp, consname, 0, NULL, NULL, 0, NULL, NULL, NULL, -SCIPinfinity(scip), probdata->big_M) );
          SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, probdata->targetvar, 1.0) );
-         SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, probdata->absvar[c2 + ncluster * c1], BIG_M) );
+         SCIP_CALL( SCIPaddLinearVarQuadratic(scip, temp, probdata->absvar[c2 + ncluster * c1], probdata->big_M) );
 
          /* add all the bilinear terms to the constraint */
          for( i = 0; i < nbins; ++i )
@@ -793,11 +811,11 @@ SCIP_RETCODE createProbBinRep(
    }
    /* add constraint that ensures irreversibility between clusters is 0 if we have only one cluster */
    (void)SCIPsnprintf( consname, SCIP_MAXSTRLEN, "nontrivial");
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), -1.0) );
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), -probdata->big_M) );
    SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->targetvar, 1.0));
    for ( c1 = 0; c1 < ncluster; ++c1 )
    {
-      SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->indicatorvar[c1], -1.0) );
+      SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->indicatorvar[c1], -probdata->big_M) );
    }
    SCIP_CALL( SCIPaddCons(scip, temp) );
    SCIP_CALL( SCIPreleaseCons(scip, &temp) );
@@ -1334,6 +1352,8 @@ SCIP_RETCODE SCIPcreateProbSpa(
       SCIP_CALL( SCIPallocMemoryArray(scip, &(probdata->cmatrix[i]), nbins) );
    }
    SCIP_CALL( createCMatrix( scip, probdata->cmatrix, edges, sd, nedges, nbins) );
+
+   probdata->big_M = bigM(probdata->cmatrix, nbins);
 
    assert(epsC >= 0 && epsC <= 1.0);
    SCIPinfoMessage(scip, NULL, "Creating problem: %s \n", name);
