@@ -112,6 +112,18 @@ SCIP_RETCODE SCIPappendConsExprExprProductExpr(
    SCIP_CONSEXPR_EXPR*   child,              /**< expression to be appended */
    SCIP_Real             childcoef           /**< child's coefficient */
    );
+
+/** multiplies given sum expr by a constant */
+void SCIPmultiplyConsExprExprSumByConstant(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_Real             constant            /**< constant that multiplies sum expression */
+   );
+
+/** exponentiate given product expr by a constant */
+void SCIPexponentiateConsExprExprProductByConstant(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_Real             constant            /**< constant that exponentiates the product expression */
+   );
 #ifdef __cplusplus
 }
 #endif

@@ -494,7 +494,7 @@ SCIP_RETCODE SCIPparseConsExprExpr(
 /** compare expressions
  * The given expressions are assumed to be simplified */
 EXTERN
-int SCIPcompareExprs(
+int SCIPcompareConsExprExprs(
    SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
    SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
    );
@@ -592,6 +592,12 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*   expr,               /**< original expression */
    SCIP_CONSEXPR_EXPR**  copyexpr            /**< buffer to store duplicate of expr */
+   );
+
+/** simplifies an expression */
+SCIP_RETCODE SCIPsimplifyConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR**    expr              /**< expression to be simplified */
    );
 /** @} */
 

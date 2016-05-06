@@ -660,3 +660,46 @@ SCIP_RETCODE SCIPappendConsExprExprProductExpr(
 
    return SCIP_OKAY;
 }
+
+/** multiplies given sum expr by a constant */
+void SCIPmultiplyConsExprExprSumByConstant(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_Real             constant            /**< constant that multiplies sum expression */
+   )
+{
+   int i;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
+   assert(expr != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+   {
+      exprdata->coefficients[i] *= constant;
+   }
+   exprdata->constant *= constant;
+}
+
+/** exponentiate given product expr by a constant
+ * TODO: should this function create abs children when exponent is fractional and resulting exponent is odd? */
+void SCIPexponentiateConsExprExprProductByConstant(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_Real             exponent            /**< exponent */
+   )
+{
+   int i;
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
+   assert(expr != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr); ++i )
+   {
+      exprdata->coefficients[i] *= exponent;
+   }
+   exprdata->constant = pow(exprdata->constant, exponent);
+}
