@@ -16882,6 +16882,7 @@ SCIP_RETCODE SCIPlpGetDualfarkas(
    }
 
    /* free temporary memory */
+   SCIPsetFreeBufferArray(set, &dualsol);
    SCIPsetFreeBufferArray(set, &dualfarkas);
 
    return SCIP_OKAY;
