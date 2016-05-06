@@ -711,6 +711,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  *    - no exponent is 0
  *    ? at most one child is an exp
  *    ? at most one child is an abs
+ *    ? if it consists of a single child, then its exponent != 1.0 (otherwise, should be written as a sum) [Selected]
  * - is a sum expression such that
  *    - every child is simplified
  *    - no child is a sum
@@ -718,6 +719,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  *    - no two children are the same expression (those should be summed up)
  *    - the children are sorted [commutative rule]
  *    - any product child has constant 1.0
+ *    ? if it consists of a single child, then its constant != 0.0 (otherwise, should be written as a product)
  * - it is a function with simplified arguments
  * ? a logarithm doesn't have a product as a child
  * ? the exponent of an exponential is always 1
@@ -727,6 +729,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  * ============================================
  * This is a partial order for *simplified* expressions. Just a copy of the order from
  * the book so feel very free to modify.
+ *
+ * Equal type expressions:
  * - u,v value expressions: u < v <=> val(u) < val(v)
  * - u,v var expressions: u < v <=> SCIPvarGetIndex(var(u)) < SCIPvarGetIndex(var(v)) <=> SCIPvarCompare(var(u),var(v))
  * - u,v are both sum or product expression: < is a lexicographical order on the terms,
@@ -740,6 +744,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  *    (the first argument and so on), if all common arguments are equal, then the one with less arguments < other one
  *       Example: f(x) < f(y), g(x) < g(x,y)
  *       Note: Kind is the type of operator
+ *
+ * Different type expressions:
  * - u value expr, v other: u < v always
  * - u product, v sum, var or func: u < v <=> u < 1*v
  *       Note: This means we compare u with the 1*v product. Though 1*v is unsimplified, the rule applies.
@@ -747,6 +753,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
  * - u^p, v sum, var or func: u^p < v <=> u^p < v^1 (I think this is the same as the previous one)
  * - u sum, v var or func: u < v <=> u < 0+v
  * - u sum, v var or func: u < v <=> u < 0+v
+ * - u var, v func: u < v always
  * - u, v and none of the rules apply: u < v <=> ! v < u
  *    Example: is x < x^2 ? x is var and x^2 product, so none applies, then
  *    we try to answer if x^2 < x <=> x^2 < x^1 <=> 2 < 1 <=> False, so x < x^2 is True
