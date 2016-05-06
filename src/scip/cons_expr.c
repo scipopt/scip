@@ -3151,6 +3151,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    void*                 data                          /**< data to be passed on to callback methods, or NULL */
    )
 {
+   SCIP_CONSEXPREXPRWALK_STAGE  stage;
    SCIP_CONSEXPREXPRWALK_RESULT result;
    SCIP_CONSEXPR_EXPR*          child;
    SCIP_CONSEXPR_EXPR*          oldparent;
@@ -3168,106 +3169,130 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    root->walkparent = NULL;
 
    /* traverse the tree */
+   stage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
    while( TRUE )
    {
-      if( root->walkcurrentchild == 0 && enterexpr != NULL )
+      switch( stage )
       {
-         SCIP_CALL( (*enterexpr)(scip, root, SCIP_CONSEXPREXPRWALK_ENTEREXPR, data, &result) );
-         switch( result )
-         {
-            case SCIP_CONSEXPREXPRWALK_CONTINUE :
-               break;
-            case SCIP_CONSEXPREXPRWALK_SKIP :
-               root->walkcurrentchild = root->nchildren;
-               break;
-            case SCIP_CONSEXPREXPRWALK_ABORT :
-               return SCIP_OKAY;
-         }
-      }
-
-      /* if there are no more children to visit, try to go up */
-      if( root->walkcurrentchild >= root->nchildren )
-      {
-         assert(root->walkcurrentchild == root->nchildren);
-
-         if( leaveexpr != NULL )
-         {
-            SCIP_CONSEXPR_EXPR* parent = root->walkparent;   /* store parent in case the callback frees root */
-
-            SCIP_CALL( (*leaveexpr)(scip, root, SCIP_CONSEXPREXPRWALK_LEAVEEXPR, data, &result) );
-            switch( result )
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
+            assert(root->walkcurrentchild == 0);
+            if( enterexpr != NULL )
             {
-               case SCIP_CONSEXPREXPRWALK_CONTINUE :
-                  break;
-               case SCIP_CONSEXPREXPRWALK_SKIP :
-                  /* this result is not allowed here */
-                  SCIPABORT();
-                  break;
-               case SCIP_CONSEXPREXPRWALK_ABORT :
-                  return SCIP_OKAY;
+               SCIP_CALL( (*enterexpr)(scip, root, stage, data, &result) );
+               switch( result )
+               {
+                  case SCIP_CONSEXPREXPRWALK_CONTINUE :
+                     break;
+                  case SCIP_CONSEXPREXPRWALK_SKIP :
+                     root->walkcurrentchild = root->nchildren;
+                     break;
+                  case SCIP_CONSEXPREXPRWALK_ABORT :
+                     return SCIP_OKAY;
+               }
             }
+            /* goto start visiting children */
+            stage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
+            break;
 
-            /* go up */
-            root = parent;
-         }
-         else
-         {
-            /* go up */
-            root = root->walkparent;
-         }
-
-         /* if we finished with the real root (walkparent == NULL), we are done */
-         if( root == NULL )
-            return SCIP_OKAY;
-
-         /* call visitedchild of parent (now root) */
-         if( visitedchild != NULL )
-         {
-            SCIP_CALL( (*visitedchild)(scip, root, SCIP_CONSEXPREXPRWALK_VISITEDCHILD, data, &result) );
-            switch( result )
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD:
+            /* if there are no more children to visit, goto leave */
+            if( root->walkcurrentchild >= root->nchildren )
             {
-               case SCIP_CONSEXPREXPRWALK_CONTINUE :
-                  /* visit next child of parent (if any) */
+               assert(root->walkcurrentchild == root->nchildren);
+               stage = SCIP_CONSEXPREXPRWALK_LEAVEEXPR;
+               break;
+            }
+            /* prepare visit */
+            if( visitingchild != NULL )
+            {
+               SCIP_CALL( (*visitingchild)(scip, root, stage, data, &result) );
+               if( result == SCIP_CONSEXPREXPRWALK_SKIP )
+               {
+                  /* ok, we don't go down, but skip the child: continue and try again with next child (if any) */
                   ++root->walkcurrentchild;
-                  break;
-               case SCIP_CONSEXPREXPRWALK_SKIP :
-                  /* skip visiting the rest of the children */
-                  root->walkcurrentchild = root->nchildren;
-                  break;
-               case SCIP_CONSEXPREXPRWALK_ABORT :
+                  continue;
+               }
+               else if( result == SCIP_CONSEXPREXPRWALK_ABORT )
+               {
                   return SCIP_OKAY;
+               }
             }
-         }
-         else
-         {
-            /* visit next child of parent (if any) */
-            ++root->walkcurrentchild;
-         }
+            /* remember the parent and set the first child that should be visited of the new root */
+            child = root->children[root->walkcurrentchild];
+            child->walkparent = root;
+            child->walkcurrentchild = 0;
+            root = child;
+            /* visit child */
+            stage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
+            break;
 
-         continue;
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
+            if( visitedchild != NULL )
+            {
+               SCIP_CALL( (*visitedchild)(scip, root, stage, data, &result) );
+               switch( result )
+               {
+                  case SCIP_CONSEXPREXPRWALK_CONTINUE :
+                     /* visit next (if any) */
+                     ++root->walkcurrentchild;
+                     break;
+                  case SCIP_CONSEXPREXPRWALK_SKIP :
+                     /* skip visiting the rest of the children */
+                     root->walkcurrentchild = root->nchildren;
+                     break;
+                  case SCIP_CONSEXPREXPRWALK_ABORT :
+                     return SCIP_OKAY;
+               }
+            }
+            else
+            {
+               /* visit next child (if any) */
+               ++root->walkcurrentchild;
+            }
+            /* goto visitng (next) */
+            stage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
+            break;
+
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
+            if( leaveexpr != NULL )
+            {
+               SCIP_CONSEXPR_EXPR* parent;
+
+               /* store parent in case the callback frees root */
+               parent = root->walkparent;
+
+               SCIP_CALL( (*leaveexpr)(scip, root, stage, data, &result) );
+               switch( result )
+               {
+                  case SCIP_CONSEXPREXPRWALK_CONTINUE :
+                     break;
+                  case SCIP_CONSEXPREXPRWALK_SKIP :
+                     /* this result is not allowed here */
+                     SCIPABORT();
+                     break;
+                  case SCIP_CONSEXPREXPRWALK_ABORT :
+                     return SCIP_OKAY;
+               }
+
+               /* go up */
+               root = parent;
+            }
+            else
+            {
+               /* go up */
+               root = root->walkparent;
+            }
+            /* if we finished with the real root (walkparent == NULL), we are done */
+            if( root == NULL )
+               return SCIP_OKAY;
+
+            /* goto visited */
+            stage = SCIP_CONSEXPREXPRWALK_VISITEDCHILD;
+            break;
+         default:
+            /* unknown stage */
+            SCIPABORT();
       }
-
-      /* keep on going down (visit next child) */
-      if( visitingchild != NULL )
-      {
-         SCIP_CALL( (*visitingchild)(scip, root, SCIP_CONSEXPREXPRWALK_VISITINGCHILD, data, &result) );
-         if( result == SCIP_CONSEXPREXPRWALK_SKIP )
-         {
-            /* ok, we don't go down, but skip the child: continue and try again with next child (if any) */
-            ++root->walkcurrentchild;
-            continue;
-         }
-         else if( result == SCIP_CONSEXPREXPRWALK_ABORT )
-         {
-            return SCIP_OKAY;
-         }
-      }
-
-      /* remember the parent and set the first child that should be visited of the new root */
-      child = root->children[root->walkcurrentchild];
-      child->walkparent = root;
-      child->walkcurrentchild = 0;
-      root = child;
    }
 
    /* recover previous information */
