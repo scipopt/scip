@@ -491,6 +491,13 @@ SCIP_RETCODE SCIPparseConsExprExpr(
    SCIP_CONSEXPR_EXPR**  expr                /**< pointer to store the expr parsed */
    );
 
+/** compare expressions
+ * The given expressions are assumed to be simplified */
+EXTERN
+int SCIPcompareExprs(
+   SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
+   SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
+   );
 /** @} */
 
 
