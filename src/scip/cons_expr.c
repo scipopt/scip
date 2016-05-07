@@ -157,6 +157,7 @@ typedef struct
 struct SCIP_ConsExpr_PrintDotData
 {
    FILE*                   file;             /**< file to print to */
+   SCIP_Bool               closefile;        /**< whether file need to be closed when finished printing */
    SCIP_HASHMAP*           visitedexprs;     /**< hashmap storing expressions that have been printed already */
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint;  /**< flags that indicate what to print for each expression */
 };
@@ -3036,11 +3037,38 @@ SCIP_RETCODE SCIPprintConsExprExprDotInit(
    SCIP_CALL( SCIPallocBlockMemory(scip, dotdata) );
 
    (*dotdata)->file = file;
+   (*dotdata)->closefile = FALSE;
    SCIP_CALL( SCIPhashmapCreate(&(*dotdata)->visitedexprs, SCIPblkmem(scip), 1000) );
    (*dotdata)->whattoprint = whattoprint;
 
    SCIPinfoMessage(scip, file, "strict digraph exprgraph {\n");
    SCIPinfoMessage(scip, file, "node [fontcolor=white, style=filled, rankdir=LR]\n");
+
+   return SCIP_OKAY;
+}
+
+/** initializes printing of expressions in dot format to a file with given filename */
+SCIP_RETCODE SCIPprintConsExprExprDotInit2(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
+   const char*             filename,         /**< name of file to print to */
+   SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
+   )
+{
+   FILE* f;
+
+   assert(dotdata != NULL);
+   assert(filename != NULL);
+
+   f = fopen(filename, "w");
+   if( f == NULL )
+   {
+      SCIPerrorMessage("could not open file <%s> for writing\n", filename);  /* error code would be in errno */
+      return SCIP_WRITEERROR;
+   }
+
+   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, dotdata, f, whattoprint) );
+   (*dotdata)->closefile = TRUE;
 
    return SCIP_OKAY;
 }
@@ -3071,6 +3099,9 @@ SCIP_RETCODE SCIPprintConsExprExprDotFinal(
    SCIPinfoMessage(scip, (*dotdata)->file, "}\n");
 
    SCIPhashmapFree(&(*dotdata)->visitedexprs);
+
+   if( (*dotdata)->closefile )
+      fclose((*dotdata)->file);
 
    SCIPfreeBlockMemory(scip, dotdata);
 

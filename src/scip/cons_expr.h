@@ -262,12 +262,21 @@ SCIP_RETCODE SCIPprintConsExprExpr(
    FILE*                   file              /**< file to print to, or NULL for stdout */
    );
 
-/** initializes printing of expressions in dot format */
+/** initializes printing of expressions in dot format to a give FILE* pointer */
 EXTERN
 SCIP_RETCODE SCIPprintConsExprExprDotInit(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
    FILE*                   file,             /**< file to print to, or NULL for stdout */
+   SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
+   );
+
+/** initializes printing of expressions in dot format to a file with given filename */
+EXTERN
+SCIP_RETCODE SCIPprintConsExprExprDotInit2(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
+   const char*             filename,         /**< name of file to print to */
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
    );
 
