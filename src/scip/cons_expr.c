@@ -560,7 +560,11 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExprDot)
 
    /* print expression as dot node */
 
-   color = 0.0; /* (SCIP_Real)node->op / (SCIP_Real)SCIP_EXPR_LAST; */
+   /* make up some color from the expression type (it's name) */
+   color = 0.0;
+   for( c = 0; expr->exprhdlr->name[c] != '\0'; ++c )
+      color += (tolower(expr->exprhdlr->name[c]) - 'a') / 26.0;
+   color = SCIPfrac(scip, color);
    SCIPinfoMessage(scip, dotdata->file, "n%p [fillcolor=\"%g,%g,%g\", label=\"", expr, color, color, color);
 
    if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EXPRHDLR )
