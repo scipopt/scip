@@ -154,6 +154,12 @@ typedef struct
    SCIP_Bool               valid;            /**< indicates whether every variable copy was valid */
 } COPY_MAPVAR_DATA;
 
+struct SCIP_ConsExpr_PrintDotData
+{
+   FILE*                   file;             /**< file to print to */
+   SCIP_HASHMAP*           visitedexprs;     /**< hashmap storing expressions that have been printed already */
+};
+
 /*
  * Local methods
  */
@@ -522,6 +528,67 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExpr)
       /* redirect to expression callback */
       SCIP_CALL( (*expr->exprhdlr->print)(scip, expr, stage, file) );
    }
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   return SCIP_OKAY;
+}
+
+/** expression walk callback to print an expression in dot format */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExprDot)
+{
+   SCIP_CONSEXPR_PRINTDOTDATA* dotdata;
+   SCIP_CONSEXPR_EXPR* parentbackup;
+   SCIP_Real color;
+   int c;
+
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+   assert(data != NULL);
+
+   dotdata = (SCIP_CONSEXPR_PRINTDOTDATA*)data;
+
+   /* skip expressions that have been printed already */
+   if( SCIPhashmapExists(dotdata->visitedexprs, (void*)expr) )
+   {
+      *result = SCIP_CONSEXPREXPRWALK_SKIP;
+      return SCIP_OKAY;
+   }
+
+   /* print expression as dot node */
+
+   color = 0.0; /* (SCIP_Real)node->op / (SCIP_Real)SCIP_EXPR_LAST; */
+   SCIPinfoMessage(scip, dotdata->file, "n%p [fillcolor=\"%g,%g,%g\", label=\"", expr, color, color, color);
+
+   /* print expression string as label */
+   parentbackup = expr->walkparent;
+   assert(expr->walkcurrentchild == 0); /* as we are in enterexpr */
+   SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_ENTEREXPR, (void*)dotdata->file, result) );
+   for( c = 0; c < expr->nchildren; ++c )
+   {
+      expr->walkcurrentchild = c;
+      SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITINGCHILD, (void*)dotdata->file, result) );
+      SCIPinfoMessage(scip, dotdata->file, "c%d", c);
+      SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITEDCHILD, (void*)dotdata->file, result) );
+   }
+   SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_LEAVEEXPR, (void*)dotdata->file, result) );
+   expr->walkcurrentchild = 0;
+   expr->walkparent = parentbackup;
+
+   /* add current bounds to label */
+   /* SCIPinfoMessage(scip, dotdata->file, "\\n[%g,%g]", expr->interval.inf, expr->interval.sup); */
+
+   SCIPinfoMessage(scip, dotdata->file, "\"");
+   SCIPinfoMessage(scip, dotdata->file, "]\n");
+
+   /* add edges from expr to its children */
+   for( c = 0; c < expr->nchildren; ++c )
+      SCIPinfoMessage(scip, dotdata->file, "n%p -> n%p [label=\"c%d\"]\n", (void*)expr, (void*)expr->children[c], c);
+
+   /* remember that we have printed this expression */
+   SCIP_CALL( SCIPhashmapInsert(dotdata->visitedexprs, (void*)expr, NULL) );
 
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
@@ -2905,6 +2972,61 @@ SCIP_RETCODE SCIPprintConsExprExpr(
    assert(expr != NULL);
 
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, printExpr, printExpr, printExpr, printExpr, (void*)file) );
+
+   return SCIP_OKAY;
+}
+
+/** initializes printing of expressions in dot format */
+SCIP_RETCODE SCIPprintConsExprExprDotInit(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
+   FILE*                   file              /**< file to print to, or NULL for stdout */
+   )
+{
+   assert(dotdata != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, dotdata) );
+
+   (*dotdata)->file = file;
+   SCIP_CALL( SCIPhashmapCreate(&(*dotdata)->visitedexprs, SCIPblkmem(scip), 1000) );
+
+   SCIPinfoMessage(scip, file, "strict digraph exprgraph {\n");
+   SCIPinfoMessage(scip, file, "node [fontcolor=white, style=filled, rankdir=LR]\n");
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPprintConsExprExprDot(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA* dotdata,      /**< data as initialized by \ref SCIPprintConsExprExprDotInit() */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to be printed */
+   )
+{
+   assert(dotdata != NULL);
+   assert(expr != NULL);
+
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, printExprDot, NULL, NULL, NULL, (void*)dotdata) );
+
+   return SCIP_OKAY;
+}
+
+/** finishes printing of expressions in dot format */
+SCIP_RETCODE SCIPprintConsExprExprDotFinal(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA** dotdata      /**< buffer where dot printing data has been stored */
+   )
+{
+   assert(dotdata != NULL);
+   assert(*dotdata != NULL);
+
+   SCIPinfoMessage(scip, (*dotdata)->file, "}\n");
+
+   SCIPhashmapFree(&(*dotdata)->visitedexprs);
+
+   SCIPfreeBlockMemory(scip, dotdata);
 
    return SCIP_OKAY;
 }

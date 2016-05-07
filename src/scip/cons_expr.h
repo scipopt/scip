@@ -262,6 +262,28 @@ SCIP_RETCODE SCIPprintConsExprExpr(
    FILE*                   file              /**< file to print to, or NULL for stdout */
    );
 
+/** initializes printing of expressions in dot format */
+EXTERN
+SCIP_RETCODE SCIPprintConsExprExprDotInit(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
+   FILE*                   file              /**< file to print to, or NULL for stdout */
+   );
+
+EXTERN
+SCIP_RETCODE SCIPprintConsExprExprDot(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA* dotdata,      /**< data as initialized by \ref SCIPprintConsExprExprDotInit() */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to be printed */
+   );
+
+/** finishes printing of expressions in dot format */
+EXTERN
+SCIP_RETCODE SCIPprintConsExprExprDotFinal(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA** dotdata      /**< buffer where dot printing data has been stored */
+   );
+
 /** evaluate an expression in a point
  *
  * Initiates an expression walk to also evaluate children, if necessary.
