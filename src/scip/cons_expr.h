@@ -294,6 +294,21 @@ SCIP_RETCODE SCIPprintConsExprExprDotFinal(
    SCIP_CONSEXPR_PRINTDOTDATA** dotdata      /**< buffer where dot printing data has been stored */
    );
 
+/** shows a single expression by use of dot
+ *
+ * This function is meant for debugging purposes.
+ * It's signature is kept as simple as possible to make it
+ * easily callable from gdb, for example.
+ *
+ * It prints the expression into a temporary file in dot format, then calls dot to create a postscript file, then calls ghostview (gv) to show the file.
+ * SCIP will hold until ghostscript is closed.
+ */
+EXTERN
+SCIP_RETCODE SCIPshowConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to be printed */
+   );
+
 /** evaluate an expression in a point
  *
  * Initiates an expression walk to also evaluate children, if necessary.
