@@ -267,7 +267,8 @@ EXTERN
 SCIP_RETCODE SCIPprintConsExprExprDotInit(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
-   FILE*                   file              /**< file to print to, or NULL for stdout */
+   FILE*                   file,             /**< file to print to, or NULL for stdout */
+   SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
    );
 
 EXTERN

@@ -833,6 +833,7 @@ SCIP_RETCODE testExpreval(void)
    SCIP_CONSEXPR_EXPR* prodexpr;
    SCIP_CONSEXPR_EXPR* sumexpr;
    SCIP_CONSEXPR_EXPR* mainexpr;
+   SCIP_CONSEXPR_PRINTDOTDATA* dotdata;
    int i;
 
    SCIP_CALL( SCIPcreate(&scip) );
@@ -859,9 +860,12 @@ SCIP_RETCODE testExpreval(void)
    SCIP_CALL( SCIPsetSolVal(scip, sol, x, 2.0) );
    SCIP_CALL( SCIPsetSolVal(scip, sol, y, 4.0) );
 
-   /* evaluate main expression and check values for sub-expressions */
+   /* evaluate main expression, print it, and check values for sub-expressions */
    printf("evaluate and check expressions\n");
    SCIP_CALL( SCIPevalConsExprExpr(scip, mainexpr, sol, 1) );
+   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, &dotdata, NULL, SCIP_CONSEXPR_PRINTDOT_EXPRSTRING | SCIP_CONSEXPR_PRINTDOT_EVALTAG) );
+   SCIP_CALL( SCIPprintConsExprExprDot(scip, dotdata, mainexpr) );
+   SCIP_CALL( SCIPprintConsExprExprDotFinal(scip, &dotdata) );
    SCIP_CALL( checkExprEval(scip, xexpr, yexpr, const_expr, prodexpr, sumexpr, mainexpr, 2.0, 4.0, 1) );
 
    /* modify solution and evaluate expression with the same tag again; values should not change */

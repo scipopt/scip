@@ -246,6 +246,25 @@ typedef union
    void* data, \
    SCIP_CONSEXPREXPRWALK_RESULT* result)
 
+/** @name bitflags that customize what is printed by dot-format printer
+ * @{
+ */
+#define SCIP_CONSEXPR_PRINTDOT_EXPRSTRING   0x1u /**< print the math. function that the expression represents (e.g., "c0+c1") */
+#define SCIP_CONSEXPR_PRINTDOT_EXPRHDLR     0x2u /**< print expression handler name */
+#define SCIP_CONSEXPR_PRINTDOT_NUSES        0x4u /**< print number of uses (reference counting) */
+#define SCIP_CONSEXPR_PRINTDOT_EVALVALUE    0x8u /**< print evaluation value */
+#define SCIP_CONSEXPR_PRINTDOT_EVALTAG     0x18u /**< print evaluation value and tag */
+#define SCIP_CONSEXPR_PRINTDOT_INTERVAL    0x20u /**< print interval value */
+#define SCIP_CONSEXPR_PRINTDOT_INTERVALTAG 0x60u /**< print interval value and tag */
+
+/** print everything */
+#define SCIP_CONSEXPR_PRINTDOT_ALL SCIP_CONSEXPR_PRINTDOT_EXPRSTRING | SCIP_CONSEXPR_PRINTDOT_EXPRHDLR | SCIP_CONSEXPR_PRINTDOT_NUSES | SCIP_CONSEXPR_PRINTDOT_EVALTAG | SCIP_CONSEXPR_PRINTDOT_INTERVALTAG
+
+/** type for printdot bitflags
+ * @todo find a better name
+ */
+typedef unsigned int SCIP_CONSEXPR_PRINTDOT_WHAT;
+/** @} */
 
 typedef struct SCIP_ConsExpr_ExprData     SCIP_CONSEXPR_EXPRDATA;     /**< expression data */
 typedef struct SCIP_ConsExpr_ExprHdlr     SCIP_CONSEXPR_EXPRHDLR;     /**< expression handler */
