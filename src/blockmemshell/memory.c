@@ -2380,13 +2380,13 @@ long long BMScheckEmptyBlockMemory_call(
             if( nelems != neagerelems + chkmem->lazyfreesize )
             {
 #ifndef NDEBUG
-               printInfo("%" LONGINT_FORMAT " bytes (%d elements of size %" LONGINT_FORMAT ") not freed. First Allocator: %s:%d\n",
+               errorMessage("%" LONGINT_FORMAT " bytes (%d elements of size %" LONGINT_FORMAT ") not freed. First Allocator: %s:%d\n",
                   (((long long)nelems - (long long)neagerelems) - (long long)chkmem->lazyfreesize)
                   * (long long)(chkmem->elemsize),
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize),
                   chkmem->filename, chkmem->line);
 #else
-               printInfo("%" LONGINT_FORMAT " bytes (%d elements of size %" LONGINT_FORMAT ") not freed.\n",
+               errorMessage("%" LONGINT_FORMAT " bytes (%d elements of size %" LONGINT_FORMAT ") not freed.\n",
                   ((nelems - neagerelems) - chkmem->lazyfreesize) * (long long)(chkmem->elemsize),
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize));
 #endif
@@ -2397,7 +2397,9 @@ long long BMScheckEmptyBlockMemory_call(
    }
 
    if( allocedmem != freemem )
-      printInfo("%" LONGINT_FORMAT " bytes not freed in total.\n", allocedmem - freemem);
+   {
+      errorMessage("%" LONGINT_FORMAT " bytes not freed in total.\n", allocedmem - freemem);
+   }
 
    return allocedmem - freemem;
 }
