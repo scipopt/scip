@@ -3094,10 +3094,25 @@ SCIP_RETCODE SCIPprintConsExprExprDotFinal(
    SCIP_CONSEXPR_PRINTDOTDATA** dotdata      /**< buffer where dot printing data has been stored */
    )
 {
+   SCIP_HASHMAPLIST* list;
+   FILE* file;
+   int l;
+
    assert(dotdata != NULL);
    assert(*dotdata != NULL);
 
-   SCIPinfoMessage(scip, (*dotdata)->file, "}\n");
+   file = (*dotdata)->file;
+   assert(file != NULL);
+
+   SCIPinfoMessage(scip, file, "}\n");
+
+   /* tell dot that all expressions without children have the same rank */
+   SCIPinfoMessage(scip, file, "{rank=same;");
+   for( l = 0; l < SCIPhashmapGetNLists((*dotdata)->visitedexprs); ++l )
+      for( list = SCIPhashmapGetList((*dotdata)->visitedexprs, l); list != NULL; list = SCIPhashmapListGetNext(list) )
+         if( SCIPgetConsExprExprNChildren((SCIP_CONSEXPR_EXPR*)SCIPhashmapListGetOrigin(list)) == 0 )
+            SCIPinfoMessage(scip, file, " n%p", SCIPhashmapListGetOrigin(list));
+   SCIPinfoMessage(scip, file, "}\n");
 
    SCIPhashmapFree(&(*dotdata)->visitedexprs);
 
