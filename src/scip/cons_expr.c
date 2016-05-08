@@ -577,6 +577,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExprDot)
    {
       /* print expression string as label */
       parentbackup = expr->walkparent;
+      expr->walkparent = NULL;
       assert(expr->walkcurrentchild == 0); /* as we are in enterexpr */
 
       SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_ENTEREXPR, (void*)dotdata->file, result) );
