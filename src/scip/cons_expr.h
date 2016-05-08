@@ -294,7 +294,7 @@ SCIP_RETCODE SCIPprintConsExprExprDotFinal(
    SCIP_CONSEXPR_PRINTDOTDATA** dotdata      /**< buffer where dot printing data has been stored */
    );
 
-/** shows a single expression by use of dot
+/** shows a single expression by use of dot and gv
  *
  * This function is meant for debugging purposes.
  * It's signature is kept as simple as possible to make it

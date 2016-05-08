@@ -24,7 +24,6 @@
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
-#include <stdlib.h>  /* for mktemp in SCIPshowConsExprExpr */
 
 #include "scip/cons_expr.h"
 #include "scip/struct_cons_expr.h"
@@ -3109,7 +3108,7 @@ SCIP_RETCODE SCIPprintConsExprExprDotFinal(
    return SCIP_OKAY;
 }
 
-/** shows a single expression by use of dot
+/** shows a single expression by use of dot and gv
  *
  * This function is meant for debugging purposes.
  * It prints the expression into a temporary file in dot format, then calls dot to create a postscript file, then calls ghostview (gv) to show the file.
@@ -3121,54 +3120,36 @@ SCIP_RETCODE SCIPshowConsExprExpr(
    )
 {
    SCIP_CONSEXPR_PRINTDOTDATA* dotdata;
-   char tmpdotfile[100];
-   char systemcall[100];
+   FILE* f;
 
    assert(expr != NULL);
 
-   /* this function is for developers, so don't bother with non-developer os */
+   /* this function is for developers, so don't bother with systems other than unix */
 #if ! (defined(__unix) || defined(__unix__) || defined(unix))
    SCIPerrorMessage("No proper operating system. Try http://distrowatch.com/.")
    return SCIP_ERROR;
 #else
 
-   /* get name of a temporary file */
-   strcpy(tmpdotfile, "/tmp/scipprintdotXXXXXX");
-   (void) mktemp(tmpdotfile);
-   if( tmpdotfile[0] == '\0')  /* mktemp sets tmpfilename to empty string in case of an error */
+   /* call dot to generate postscript output and show it via ghostview */
+   f = popen("dot -Tps | gv -", "w");
+   if( f == NULL )
    {
-      SCIPerrorMessage("could not make up temporary file name\n");
-      return SCIP_WRITEERROR;
+      SCIPerrorMessage("Calling popen() failed");
+      return SCIP_FILECREATEERROR;
    }
 
-   /* print all of the expression to tmpdotfile */
-   SCIPdebugMessage("printing expression to %s in dot format\n", tmpdotfile);
-   SCIP_CALL( SCIPprintConsExprExprDotInit2(scip, &dotdata, tmpdotfile, SCIP_CONSEXPR_PRINTDOT_ALL) );
+   /* print all of the expression into the pipe */
+   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, &dotdata, f, SCIP_CONSEXPR_PRINTDOT_ALL) );
    SCIP_CALL( SCIPprintConsExprExprDot(scip, dotdata, expr) );
    SCIP_CALL( SCIPprintConsExprExprDotFinal(scip, &dotdata) );
 
-   /* call dot to create a ps file */
-   sprintf(systemcall, "dot -Tps -o%s.ps %s", tmpdotfile, tmpdotfile);
-   SCIPdebugMessage("executing %s\n", systemcall);
-   if( system(systemcall) != EXIT_SUCCESS )
-   {
-      SCIPwarningMessage(scip, "dot returned with nonzero exitcode.\n");
-   }
-
-   /* call gv to show ps file */
-   sprintf(systemcall, "gv %s.ps", tmpdotfile);
-   SCIPdebugMessage("executing %s\n", systemcall);
-   system(systemcall);
-
-   /* delete temporary files */
-   remove(tmpdotfile);
-   strcat(tmpdotfile, ".ps");
-   remove(tmpdotfile);
-
-#endif
+   /* close the pipe */
+   pclose(f);
 
    return SCIP_OKAY;
+#endif
 }
+
 
 /** evaluate an expression in a point
  *
