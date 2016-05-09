@@ -26,6 +26,7 @@
 #define __STDC_LIMIT_MACROS
 #endif
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
@@ -2332,14 +2333,12 @@ void BMSdisplayBlockMemory_call(
    printInfo("\n");
 }
 
-/** prints allocated elements in the block memory and returns number of unfreed bytes */
+/** outputs error messages, if there are allocated elements in the block memory and returns number of unfreed bytes */
 long long BMScheckEmptyBlockMemory_call(
-   const BMS_BLKMEM*     blkmem,             /**< block memory */
-   FILE*                 file                /**< file to print to, or NULL for using SCIPerrorMessage (if in SCIP, otherwise stdout) */
-)
+   const BMS_BLKMEM*     blkmem              /**< block memory */
+   )
 {
    const BMS_CHKMEM* chkmem;
-   char buffer[1024];
    long long allocedmem = 0;
    long long freemem = 0;
    int i;
@@ -2367,7 +2366,7 @@ long long BMScheckEmptyBlockMemory_call(
             nelems += chunk->storesize;
             if( chunk->eagerfree != NULL )
                neagerelems += chunk->eagerfreesize;
-         }
+	 }
 
          assert(nchunks == chkmem->nchunks);
          assert(nelems == chkmem->storesize);
@@ -2381,20 +2380,16 @@ long long BMScheckEmptyBlockMemory_call(
             if( nelems != neagerelems + chkmem->lazyfreesize )
             {
 #ifndef NDEBUG
-               sprintf(buffer, "%" LONGINT_FORMAT " bytes (%d elements of size %" LONGINT_FORMAT ") not freed. First Allocator: %s:%d\n",
+               errorMessage("%" LONGINT_FORMAT " bytes (%d elements of size %" LONGINT_FORMAT ") not freed. First Allocator: %s:%d\n",
                   (((long long)nelems - (long long)neagerelems) - (long long)chkmem->lazyfreesize)
                   * (long long)(chkmem->elemsize),
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize),
                   chkmem->filename, chkmem->line);
 #else
-               sprintf(buffer, "%" LONGINT_FORMAT " bytes (%d elements of size %" LONGINT_FORMAT ") not freed.\n",
+               errorMessage("%" LONGINT_FORMAT " bytes (%d elements of size %" LONGINT_FORMAT ") not freed.\n",
                   ((nelems - neagerelems) - chkmem->lazyfreesize) * (long long)(chkmem->elemsize),
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize));
 #endif
-               if( file != NULL )
-                  fputs(buffer, file);
-               else
-                  errorMessage(buffer);
             }
          }
          chkmem = chkmem->nextchkmem;
@@ -2403,11 +2398,7 @@ long long BMScheckEmptyBlockMemory_call(
 
    if( allocedmem != freemem )
    {
-      sprintf(buffer, "%" LONGINT_FORMAT " bytes not freed in total.\n", allocedmem - freemem);
-      if( file != NULL )
-         fputs(buffer, file);
-      else
-         errorMessage(buffer);
+      errorMessage("%" LONGINT_FORMAT " bytes not freed in total.\n", allocedmem - freemem);
    }
 
    return allocedmem - freemem;
