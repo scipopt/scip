@@ -368,7 +368,8 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
             maxcluster =  k;
          }
       }
-      clustering[i][maxcluster] = 1;
+      assert(maxcluster >= 0);
+      clustering[i][maxcluster] = 1.0;
    }
    assert(isPartition(clustering, nbins, ncluster));
 
@@ -376,7 +377,7 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
 
    SCIP_CALL( SCIPcreateSol(scip, &sol, heur) );
    assignVars(scip, sol, clustering, nbins, ncluster, qmatrix);
-   SCIP_CALL( SCIPtrySolFree(scip, &sol, TRUE, FALSE, FALSE, FALSE, &feasible) );
+   SCIP_CALL( SCIPtrySolFree(scip, &sol, FALSE, TRUE, TRUE, TRUE, &feasible) );
    if( feasible )
       *result = SCIP_FOUNDSOL;
    else

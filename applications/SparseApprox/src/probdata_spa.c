@@ -329,6 +329,7 @@ SCIP_RETCODE createProbEdgeRep(
          SCIP_CALL( SCIPreleaseCons(scip, &temp) );
       }
    }
+
    /* create cohrerence constraints */
    for( c1 = 0; c1 < ncluster; ++c1 )
    {
@@ -348,6 +349,7 @@ SCIP_RETCODE createProbEdgeRep(
       SCIP_CALL( SCIPaddCons(scip, temp) );
       SCIP_CALL( SCIPreleaseCons(scip, &temp) );
    }
+
    /* create irreversibility - constraints */
    for( c1 = 0; c1 < ncluster; ++c1 )
    {
@@ -386,6 +388,7 @@ SCIP_RETCODE createProbEdgeRep(
          SCIP_CALL( SCIPreleaseCons(scip, &temp) );
       }
    }
+
    /* add constraints for the relation between the absvar and the indicator-variables */
    for ( c1 = 0; c1 < ncluster; ++c1 )
    {
@@ -410,6 +413,21 @@ SCIP_RETCODE createProbEdgeRep(
          SCIP_CALL( SCIPaddCons(scip, temp) );
          SCIP_CALL( SCIPreleaseCons(scip, &temp) );
       }
+   }
+
+   /* symmetry between clusters:
+    *          c_{i+1}         <= c_{i}
+    *    <==>  c_{i+1} - c_{i} <= 0            for all i = 1,...,|C|-1
+    */
+   for ( c1 = 0; c1 < ncluster-1; ++c1 )
+   {
+         (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "sym_c%d_c%d", c1+1, c1+2 );
+         SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 0.0, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE, TRUE, FALSE) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->indicatorvar[c1], -1.0) );
+         SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->indicatorvar[c1+1], 1.0) );
+
+         SCIP_CALL( SCIPaddCons(scip, temp) );
+         SCIP_CALL( SCIPreleaseCons(scip, &temp) );
    }
 
    /* add more constraints for better separation */
@@ -451,6 +469,7 @@ SCIP_RETCODE createProbEdgeRep(
 
       }
    }
+
    /* add constraint that ensures irreversibility between clusters is 0 if we have only one cluster */
    (void)SCIPsnprintf( consname, SCIP_MAXSTRLEN, "nontrivial");
    SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), -probdata->big_M) );
