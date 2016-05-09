@@ -63,10 +63,6 @@ namespace polyscip {
                               non_obs->incident_facets_.cend(),
                               std::back_inserter(incident_facets_),
                               compare_facet_ptr);
-        std::cout << "FIRST: ";
-        obs->print(std::cout, true);
-        std::cout << "SECOND: ";
-        non_obs->print(std::cout, true);
         assert(incident_facets_.size() + 1 == obs->incident_facets_.size());
         // add additional facet with respect to outcome
         auto wov_coeff = outcome_is_ray ? 0.0 : 1.0;

@@ -178,11 +178,11 @@ namespace polyscip {
          */
         bool updateInitialWeightSpacePolyhedron(const Polyscip::OutcomeType& ray);
 
-        void addVerticesToSkeleton(const std::vector< std::pair<WeightSpaceVertex*, WeightSpaceVertex*> >&vertex_pairs);
+        void addNewVerticesToSkeleton(const std::vector< std::pair<WeightSpaceVertex*, Node> >&vertex_pairs);
 
         void deleteVertexFromSkeleton(WeightSpaceVertex* v);
 
-        void incorporateObsoleteVertex(WeightSpaceVertex* v);
+        void setVertexFromUnmarkedToObsolete(WeightSpaceVertex* v);
 
         Node getNode(WeightSpaceVertex* vertex) {return vertices_to_nodes_.at(vertex);};
         WeightSpaceVertex* getVertex(Node n) {return nodes_to_vertices_[n];};
