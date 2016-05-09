@@ -8,6 +8,9 @@ fixed bugs:
 - fixed bug with solutions from previous runs not satisfying an objective limit
 - the AMPL interface now writes a solve status (solve_result_num) into the .sol file
 
+interface:
+- time limit of SCIP-infinity is converted to LPI-infinity when setting it
+
 SCIP version 3.2.1
 ==================
 
