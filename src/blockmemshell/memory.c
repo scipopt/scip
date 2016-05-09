@@ -2333,7 +2333,7 @@ void BMSdisplayBlockMemory_call(
    printInfo("\n");
 }
 
-/** outputs warning messages, if there are allocated elements in the block memory and returns number of unfreed bytes */
+/** outputs error messages, if there are allocated elements in the block memory and returns number of unfreed bytes */
 long long BMScheckEmptyBlockMemory_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    )
@@ -2351,31 +2351,31 @@ long long BMScheckEmptyBlockMemory_call(
       chkmem = blkmem->chkmemhash[i];
       while( chkmem != NULL )
       {
-	 const CHUNK* chunk;
-	 int nchunks = 0;
-	 int nelems = 0;
-	 int neagerelems = 0;
+         const CHUNK* chunk;
+         int nchunks = 0;
+         int nelems = 0;
+         int neagerelems = 0;
 
          for( c = 0; c < chkmem->nchunks; ++c )
          {
             chunk = chkmem->chunks[c];
             assert(chunk != NULL);
-	    assert(chunk->elemsize == chkmem->elemsize);
-	    assert(chunk->chkmem == chkmem);
-	    nchunks++;
-	    nelems += chunk->storesize;
-	    if( chunk->eagerfree != NULL )
-	       neagerelems += chunk->eagerfreesize;
+            assert(chunk->elemsize == chkmem->elemsize);
+            assert(chunk->chkmem == chkmem);
+            nchunks++;
+            nelems += chunk->storesize;
+            if( chunk->eagerfree != NULL )
+               neagerelems += chunk->eagerfreesize;
 	 }
 
-	 assert(nchunks == chkmem->nchunks);
-	 assert(nelems == chkmem->storesize);
-	 assert(neagerelems == chkmem->eagerfreesize);
+         assert(nchunks == chkmem->nchunks);
+         assert(nelems == chkmem->storesize);
+         assert(neagerelems == chkmem->eagerfreesize);
 
-	 if( nelems > 0 )
-	 {
-	    allocedmem += (long long)chkmem->elemsize * (long long)nelems;
-	    freemem += (long long)chkmem->elemsize * ((long long)neagerelems + (long long)chkmem->lazyfreesize);
+         if( nelems > 0 )
+         {
+            allocedmem += (long long)chkmem->elemsize * (long long)nelems;
+            freemem += (long long)chkmem->elemsize * ((long long)neagerelems + (long long)chkmem->lazyfreesize);
 
             if( nelems != neagerelems + chkmem->lazyfreesize )
             {
@@ -2391,8 +2391,8 @@ long long BMScheckEmptyBlockMemory_call(
                   (nelems - neagerelems) - chkmem->lazyfreesize, (long long)(chkmem->elemsize));
 #endif
             }
-	 }
-	 chkmem = chkmem->nextchkmem;
+         }
+         chkmem = chkmem->nextchkmem;
       }
    }
 

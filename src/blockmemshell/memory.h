@@ -607,7 +607,7 @@ void BMSdisplayBlockMemory_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
    );
 
-/** outputs warning messages, if there are allocated elements in the block memory and returns number of unfreed bytes */
+/** outputs error messages, if there are allocated elements in the block memory and returns number of unfreed bytes */
 EXTERN
 long long BMScheckEmptyBlockMemory_call(
    const BMS_BLKMEM*     blkmem              /**< block memory */
