@@ -53,22 +53,19 @@ namespace polyscip {
         * @param num_objs number of objectives of given problem
         * @param point first computed (weakly non-dominated) point
         * @param point_weighted_obj_val weighted objective value of first point
+        * @param initial_rays rays which were computed while computing the first non-dominated point
         * @param unit_weight_info pair indicating whether first point was computed by using
         * a unit weight; if unit_weight_info.first is true, then unit_weight_info.second contains the
         * index with value 1; note: first index is 0
-        * @param initial_rays rays which were computed while computing the first non-dominated point
         */
         explicit WeightSpacePolyhedron(unsigned num_objs,
                                        Polyscip::OutcomeType point,
                                        Polyscip::ValueType point_weighted_obj_val,
-                                       std::pair<bool, Polyscip::WeightType::size_type> unit_weight_info,
-                                       const Polyscip::ResultContainer& initial_rays);
+                                       const Polyscip::RayContainer& initial_rays,
+                                       std::pair<bool, Polyscip::WeightType::size_type> unit_weight_info);
 
         /** Destructor */
         ~WeightSpacePolyhedron();
-
-        //todo test
-        void test();
 
         /** Checks whether there is an unmarked weight space vertex with an untested weight
          *  @return true if there is an unmarked weight space vertex with untested weight; false otherwise
@@ -181,7 +178,14 @@ namespace polyscip {
          */
         bool updateInitialWeightSpacePolyhedron(const Polyscip::OutcomeType& ray);
 
+        void addVerticesToSkeleton(const std::vector< std::pair<WeightSpaceVertex*, WeightSpaceVertex*> >&vertex_pairs);
 
+        void deleteVertexFromSkeleton(WeightSpaceVertex* v);
+
+        void incorporateObsoleteVertex(WeightSpaceVertex* v);
+
+        Node getNode(WeightSpaceVertex* vertex) {return vertices_to_nodes_.at(vertex);};
+        WeightSpaceVertex* getVertex(Node n) {return nodes_to_vertices_[n];};
 
         /** Template function to print vertices; is used by public print{Marked,Obsolete,Unmarked}Vertices
          * functions

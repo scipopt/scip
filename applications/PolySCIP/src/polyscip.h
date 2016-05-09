@@ -53,8 +53,10 @@ namespace polyscip {
         using OutcomeType = std::vector<ValueType>;
         /**< type for weights; needs to support: at(), size() */
         using WeightType = std::vector<ValueType>;
-        /**< container type for results; needs to support: empty() */
-        using ResultContainer = std::vector <std::pair<OutcomeType, WeightType>>;
+        /**< container type for nondominated points */
+        using PointContainer = std::vector <std::pair<OutcomeType, WeightType>>;
+        /**< container type for nondominated rays; needs to support: empty()*/
+        using RayContainer = std::vector<OutcomeType>;
 
         //TODO Bei Berechnung von Rays in Initial Phase darauf achten,
         //dass ein Ray für mehr als ein Gewicht gültig sein könnte; z.B.
@@ -75,9 +77,9 @@ namespace polyscip {
         void printRay(const OutcomeType& ray, std::ostream& os = std::cout);
 
     private:
-        ResultContainer supported_nondom_points_;
-        ResultContainer unsupported_nondom_points_;
-        ResultContainer unbounded_nondom_rays_;
+        PointContainer supported_nondom_points_;
+        PointContainer unsupported_nondom_points_;
+        RayContainer unbounded_nondom_rays_;
 
     };
 

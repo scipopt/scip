@@ -57,15 +57,18 @@ namespace polyscip {
                                          const Polyscip::OutcomeType &outcome,
                                          bool outcome_is_ray) {
         // get intersection of facets of obs and non_obs
-        std::set_intersection(obs->incident_facets_.begin(),
-                              obs->incident_facets_.end(),
-                              non_obs->incident_facets_.begin(),
-                              non_obs->incident_facets_.end(),
+        std::set_intersection(obs->incident_facets_.cbegin(),
+                              obs->incident_facets_.cend(),
+                              non_obs->incident_facets_.cbegin(),
+                              non_obs->incident_facets_.cend(),
                               std::back_inserter(incident_facets_),
                               compare_facet_ptr);
+        std::cout << "FIRST: ";
+        obs->print(std::cout, true);
+        std::cout << "SECOND: ";
+        non_obs->print(std::cout, true);
         assert(incident_facets_.size() + 1 == obs->incident_facets_.size());
         // add additional facet with respect to outcome
-        polyscip::print(outcome, {"outcome : "}, std::cout);
         auto wov_coeff = outcome_is_ray ? 0.0 : 1.0;
         auto new_facet = std::make_shared<const WeightSpaceFacet>(outcome, wov_coeff);
         auto upper_it = std::upper_bound(begin(incident_facets_),
