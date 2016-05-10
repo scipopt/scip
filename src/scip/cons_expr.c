@@ -681,6 +681,83 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
    return SCIP_OKAY;
 }
 
+/* prints structure a la Maple's dismantle */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
+{
+   assert(expr != NULL);
+
+   switch( stage )
+   {
+      case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
+      {
+         int* depth;
+         int nspaces;
+         const char* type;
+
+         depth = (int *)data;
+         ++*depth;
+         nspaces = 3 * *depth;
+         type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
+
+         /* use depth of expression to align output */
+         printf("%*s[%s]: ", nspaces, "", type);
+
+         if(strcmp(type, "var") == 0)
+            printf("%s\n", SCIPvarGetName(SCIPgetConsExprExprVarVar(expr)));
+         else if(strcmp(type, "sum") == 0)
+            printf("%g\n", SCIPgetConsExprExprSumConstant(expr));
+         else if(strcmp(type, "prod") == 0)
+            printf("%g\n", SCIPgetConsExprExprProductCoef(expr));
+         else if(strcmp(type, "val") == 0)
+            printf("%g\n", SCIPgetConsExprExprValueValue(expr));
+         else
+            printf("NOT IMPLEMENTED YET\n");
+         break;
+      }
+      case SCIP_CONSEXPREXPRWALK_VISITINGCHILD:
+      {
+         int* depth;
+         int nspaces;
+         const char* type;
+
+         depth = (int *)data;
+         nspaces = 3 * *depth;
+         type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
+
+         if(strcmp(type, "sum") == 0)
+         {
+            printf("%*s   ", nspaces, "");
+            printf("[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPgetConsExprExprWalkCurrentChild(expr)]);
+         }
+         else if(strcmp(type, "prod") == 0)
+         {
+            printf("%*s   ", nspaces, "");
+            printf("[expo]: %g\n", SCIPgetConsExprExprProductExponents(expr)[SCIPgetConsExprExprWalkCurrentChild(expr)]);
+         }
+         break;
+      }
+      case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
+      {
+         int* depth;
+
+         depth = (int *)data;
+         --*depth;
+         break;
+      }
+      default:
+      {
+         /* shouldn't be here */
+         SCIPABORT();
+         *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+         return SCIP_OKAY;
+      }
+   }
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   return SCIP_OKAY;
+}
+
 /** TODO: FIXME: DELETE expression walk callback to simplify an expression
  * simplifies bottom up */
 static
@@ -4946,6 +5023,21 @@ SCIP_RETCODE SCIPsimplifyConsExprExpr(
    *expr = (SCIP_CONSEXPR_EXPR*)(*expr)->walkio.ptrval;
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
+
+   return SCIP_OKAY;
+}
+
+/** prints structure of an expression a la Maple's dismantle */
+SCIP_RETCODE SCIPdismantleConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
+   )
+{
+   int depth;
+
+   depth = -1;
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, dismantleExpr, dismantleExpr, NULL, dismantleExpr, &depth) );
+   assert(depth == -1);
 
    return SCIP_OKAY;
 }
