@@ -24,8 +24,8 @@
 #define POLYSCIP_SRC_WEIGHT_SPACE_POLYHEDRON_H_INCLUDED
 
 
-#include <iostream>
 #include <list>
+#include <iostream>
 #include <memory> // std::shared_ptr
 #include <ostream>
 #include <string>
@@ -130,19 +130,6 @@ namespace polyscip {
          */
         bool isNewOutcome(const Polyscip::OutcomeType& outcome, bool outcome_is_ray);
 
-        /** Incorporates a newly found (non-dominated) outcome [point or ray] into the partial
-         * weight space polyhedron; is only called after fundction isNewOutcome returned true
-         * @param outcome newly found point or ray
-         * @param outcome_is_ray true if computed outcome is an unbounded ray
-         */
-        void incorporateNewOutcome(const Polyscip::OutcomeType& outcome, bool outcome_is_ray);
-
-        /** Incorporates an already known outcome [point], i.e, the current investigated vertex is marked;
-         * is only called after function isNewOutcome returned false
-         * @param outcome computed outcome
-         */
-        void incorporateOldOutcome(const Polyscip::OutcomeType& outcome);
-
         /** Creates initial weight space vertices
          *  @param num_objs number of objectives of given problem
          *  @param point first computed (weakly non-dominated) point
@@ -178,11 +165,22 @@ namespace polyscip {
          */
         bool updateInitialWeightSpacePolyhedron(const Polyscip::OutcomeType& ray);
 
-        void addNewVerticesToSkeleton(const std::vector< std::pair<WeightSpaceVertex*, Node> >&vertex_pairs);
+        void updateWeightSpacePolyhedron(const std::vector<WeightSpaceVertex*>& obsolete_vertices,
+                                         const Polyscip::OutcomeType& outcome,
+                                         bool outcome_is_ray);
 
-        void deleteVertexFromSkeleton(WeightSpaceVertex* v);
+        std::vector<WeightSpaceVertex*> computeObsoleteVertices(const Polyscip::OutcomeType& outcome,
+                                                                bool outcome_is_ray);
 
-        void setVertexFromUnmarkedToObsolete(WeightSpaceVertex* v);
+        std::vector<WeightSpaceVertex*> computeObsoleteVertices(WeightSpaceVertex* init_obs_vertex,
+                                                                const Polyscip::OutcomeType& outcome,
+                                                                bool outcome_is_ray);
+
+        void addToSkeleton(const std::vector< std::pair<WeightSpaceVertex*, Node> >&vertex_pairs);
+
+        void deleteFromSkeleton(WeightSpaceVertex* v);
+
+        void setStatusToObsolete(WeightSpaceVertex* v);
 
         Node getNode(WeightSpaceVertex* vertex) {return vertices_to_nodes_.at(vertex);};
         WeightSpaceVertex* getVertex(Node n) {return nodes_to_vertices_[n];};
