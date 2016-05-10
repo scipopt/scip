@@ -99,6 +99,7 @@ SCIP_RETCODE fromCommandLine(
    SCIPinfoMessage(scip, NULL, "Coherence bound is set to %f \n", eps);
    SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
    SCIPinfoMessage(scip, NULL, "=============\n\n");
+
    SCIP_CALL( SCIPsolve(scip) );
 
    /*******************

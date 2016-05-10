@@ -395,7 +395,7 @@ SCIP_RETCODE createProbEdgeRep(
       for( c2 = 0; c2 < c1; ++c2 )
       {
          (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "sum_d1_%d_%d", c1 + 1, c2 + 1 );
-         SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c1 + ncluster * c2], 1.0) );
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c2 + ncluster * c1], 1.0) );
 
@@ -403,7 +403,7 @@ SCIP_RETCODE createProbEdgeRep(
          SCIP_CALL( SCIPreleaseCons(scip, &temp) );
 
          (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "sum_d2_%d_%d", c1 + 1, c2 + 1 );
-         SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c1 + ncluster * c2], -1.0) );
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c2 + ncluster * c1], -1.0) );
 
@@ -430,6 +430,7 @@ SCIP_RETCODE createProbEdgeRep(
          SCIP_CALL( SCIPreleaseCons(scip, &temp) );
    }
 
+#if 0 /* todo: check that this constraints do exactly */
    /* add more constraints for better separation */
    for ( c1 = 0; c1 < ncluster; ++c1 )
    {
@@ -469,14 +470,21 @@ SCIP_RETCODE createProbEdgeRep(
 
       }
    }
+#endif
 
-   /* add constraint that ensures irreversibility between clusters is 0 if we have only one cluster */
+   /* add constraint that ensures irreversibility between clusters is 0 if we have only one cluster
+    * due to numerical reasons we use 1.0 instead of big_M; the constraint basically says:
+    *
+    *    epsilon <= sum_{k in Clusters} c_{k} - 1.0
+    *
+    * If more than one cluster is open, the constraint is trivially fulfilled, otherwise epsilon has to be zero.
+    */
    (void)SCIPsnprintf( consname, SCIP_MAXSTRLEN, "nontrivial");
-   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), -probdata->big_M) );
+   SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), -1.0) );
    SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->targetvar, 1.0));
    for ( c1 = 0; c1 < ncluster; ++c1 )
    {
-      SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->indicatorvar[c1], -probdata->big_M) );
+      SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->indicatorvar[c1], -1.0) );
    }
 
    SCIP_CALL( SCIPaddCons(scip, temp) );
@@ -769,7 +777,7 @@ SCIP_RETCODE createProbBinRep(
       for( c2 = 0; c2 < c1; ++c2 )
       {
          (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "sum_d1_%d_%d", c1 + 1, c2 + 1 );
-         SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c1 + ncluster * c2], 1.0) );
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c2 + ncluster * c1], 1.0) );
 
@@ -777,7 +785,7 @@ SCIP_RETCODE createProbBinRep(
          SCIP_CALL( SCIPreleaseCons(scip, &temp) );
 
          (void)SCIPsnprintf(consname, SCIP_MAXSTRLEN, "sum_d2_%d_%d", c1 + 1, c2 + 1 );
-         SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
+         SCIP_CALL( SCIPcreateConsLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), 1.0, TRUE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, FALSE, FALSE) );
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c1 + ncluster * c2], -1.0) );
          SCIP_CALL( SCIPaddCoefLinear(scip, temp, probdata->absvar[c2 + ncluster * c1], -1.0) );
 
@@ -789,6 +797,7 @@ SCIP_RETCODE createProbBinRep(
       }
    }
 
+#if 0 /* todo: check that this constraints do exactly */
    /* add more constraints for better separation */
    for ( c1 = 0; c1 < ncluster; ++c1 )
    {
@@ -828,6 +837,8 @@ SCIP_RETCODE createProbBinRep(
 
       }
    }
+#endif
+
    /* add constraint that ensures irreversibility between clusters is 0 if we have only one cluster */
    (void)SCIPsnprintf( consname, SCIP_MAXSTRLEN, "nontrivial");
    SCIP_CALL( SCIPcreateConsBasicLinear(scip, &temp, consname, 0, NULL, NULL, -SCIPinfinity(scip), -probdata->big_M) );

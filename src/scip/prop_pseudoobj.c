@@ -90,36 +90,21 @@ struct SCIP_PropData
    SCIP_VAR**            maxactvars;         /**< binary variables with non-zero objective contribution w.r.t. maximum activity of the objective function */
    SCIP_Real*            maxactchgs;         /**< the maximal potential change of the objective if the binary variable
                                               *   is fixed to its best bound w.r.t. maximum activity of the objective function */
-<<<<<<< HEAD
-   SCIP_VAR**            objintvars;         /**< nonbinary variable with non-zero objective coefficient */
-=======
    SCIP_VAR**            objintvars;         /**< non-binary variable with non-zero objective coefficient */
->>>>>>> v32-bugfix
    SCIP_HASHTABLE*       addedvars;          /**< hash table used during resolving of a bound change (conflict analysis) */
    SCIP_Real             lastlowerbound;     /**< last lower bound which was propagated */
    SCIP_Real             cutoffbound;        /**< last cutoff bound used for propagation */
    SCIP_Real             glbpseudoobjval;    /**< last global pseudo objective used in presolving */
-<<<<<<< HEAD
-   SCIP_Real             maxvarsfrac;        /**< maximal fraction of nonbinary variables with non-zero objective
-=======
    SCIP_Real             maxvarsfrac;        /**< maximal fraction of non-binary variables with non-zero objective
->>>>>>> v32-bugfix
                                               *   without a bound reduction before aborted */
    SCIP_Real             maxpseudoobjact;    /**< maximal global pseudo objective activity */
    int                   maxpseudoobjactinf; /**< number of coefficients contributing with infinite value to maxpseudoobjact */
    int                   nminactvars;        /**< number of binary variables with non-zero objective contribution w.r.t. minimum activity of the objective function */
    int                   nmaxactvars;        /**< number of binary variables with non-zero objective contribution w.r.t. maximum activity of the objective function */
-<<<<<<< HEAD
-   int                   nobjintvars;        /**< number of nonbinary variables with non-zero objective */
-   int                   minuseless;         /**< minimal number of successive nonbinary variable propagator whithout
-                                              *   a bound reduction before aborted */
-   int                   lastvarnum;         /**< last nonbinary variable number that was looked at */
-=======
    int                   nobjintvars;        /**< number of non-binary variables with non-zero objective */
    int                   minuseless;         /**< minimal number of successive non-binary variable propagator whithout
                                               *   a bound reduction before aborted */
    int                   lastvarnum;         /**< last non-binary variable number that was looked at */
->>>>>>> v32-bugfix
    int                   glbfirstnonfixed;   /**< index of first globally non-fixed binary variable in minactvars array */
    int                   maxactfirstnonfixed;/**< index of first globally non-fixed binary variable in maxctvars array */
    int                   firstnonfixed;      /**< index of first locally non-fixed binary variable in minactvars array */
@@ -1684,11 +1669,7 @@ SCIP_RETCODE propdataInit(
          }
          else
          {
-<<<<<<< HEAD
-            /* only consider nonbinary variables with a non-zero objective */
-=======
             /* only consider non-binary variables with a non-zero objective */
->>>>>>> v32-bugfix
             if( SCIPisZero(scip, objval) )
                continue;
 
@@ -1809,11 +1790,7 @@ SCIP_RETCODE propdataInit(
    return SCIP_OKAY;
 }
 
-<<<<<<< HEAD
-/** adds for the given nonbinary variable a conflict bound depending on its objective contribution */
-=======
 /** adds for the given non-binary variable a conflict bound depending on its objective contribution */
->>>>>>> v32-bugfix
 static
 SCIP_RETCODE addConflictBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -2569,11 +2546,7 @@ SCIP_RETCODE propagateCutoffboundGlobally(
 #endif
 #endif
 
-<<<<<<< HEAD
-   /* propagate the nonbinary variables completely */
-=======
    /* propagate the non-binary variables completely */
->>>>>>> v32-bugfix
    for( v = 0; v < nobjintvars; ++v )
    {
       var = objintvars[v];
@@ -2838,11 +2811,7 @@ SCIP_RETCODE propagateCutoffbound(
       return SCIP_OKAY;
    }
 
-<<<<<<< HEAD
-   /* tighten domains of nonbinary variables, if they would increase the pseudo objective value above the cutoff
-=======
    /* tighten domains of non-binary variables, if they would increase the pseudo objective value above the cutoff
->>>>>>> v32-bugfix
     * bound
     */
    if( propdata->propfullinroot && SCIPgetDepth(scip) == 0 )
@@ -2857,11 +2826,7 @@ SCIP_RETCODE propagateCutoffbound(
       nobjintvars = propdata->nobjintvars;
       assert(nobjintvars == 0 || objintvars != NULL);
 
-<<<<<<< HEAD
-      /* propagate all nonbinary variables */
-=======
       /* propagate all non-binary variables */
->>>>>>> v32-bugfix
       for( v = 0; v < nobjintvars; ++v )
       {
          var = objintvars[v];
@@ -3736,29 +3701,17 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    /* add pseudoobj propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/minuseless",
-<<<<<<< HEAD
-         "minimal number of successive nonbinary variable propagator whithout a bound reduction before aborted",
-=======
          "minimal number of successive non-binary variable propagator whithout a bound reduction before aborted",
->>>>>>> v32-bugfix
          &propdata->minuseless, TRUE, DEFAULT_MINUSELESS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "propagating/" PROP_NAME "/maxvarsfrac",
-<<<<<<< HEAD
-         "maximal fraction of nonbinary variables with non-zero objective without a bound reduction before aborted",
-=======
          "maximal fraction of non-binary variables with non-zero objective without a bound reduction before aborted",
->>>>>>> v32-bugfix
          &propdata->maxvarsfrac, TRUE, DEFAULT_MAXVARSFRAC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/propfullinroot",
-<<<<<<< HEAD
-         "do we want to propagate all nonbinary variables if we are propagating the root node",
-=======
          "do we want to propagate all non-binary variables if we are propagating the root node",
->>>>>>> v32-bugfix
          &propdata->propfullinroot, TRUE, DEFAULT_PROPFULLINROOT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,

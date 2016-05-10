@@ -12,7 +12,6 @@
 #include "tclique/tclique.h"
 #include "scip/cons_setppc.h"
 #include "scip/type_cons.h"
-#include "scip/scip.h"
 #include "scip/def.h"
 
 
