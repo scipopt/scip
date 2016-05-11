@@ -854,15 +854,16 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
  * - is a value expression
  * - is a var expression
  * - is a product expression such that
- *    - every child is simplified
- *    - no child with integer exponent is a product
- *    - no child with integer exponent is a sum with a single term (y*(2*x)^2 -> 4*x^2*y)
- *    - no two children are the same expression (those should be multiplied)
- *    - the children are sorted [commutative rule]
- *    - no exponent is 0
- *    - no child is a value
- *    - its coefficient is 1.0 (otherwise should be written as sum)
- *    - if it consists of a single child, then its exponent != 1.0
+ *    SP1:  every child is simplified
+ *    SP2:  no child with integer exponent is a product
+ *    SP3:  no child with integer exponent is a sum with a single term (y*(2*x)^2 -> 4*x^2*y)
+ *    SP4:  no two children are the same expression (those should be multiplied)
+ *    SP5:  the children are sorted [commutative rule]
+ *    SP6:  no exponent is 0
+ *    SP7:  no child is a value
+ *    SP8:  its coefficient is 1.0 (otherwise should be written as sum)
+ *    SP9:  if it consists of a single child, then its exponent != 1.0
+ *    SP10: it has at least one child
  *    ? at most one child is an exp
  *    ? at most one child is an abs
  * - is a sum expression such that
@@ -871,7 +872,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
  *    - no child is a value (values should go in the constant of the sum)
  *    - no two children are the same expression (those should be summed up)
  *    - the children are sorted [commutative rule]
- *    - any product child has constant 1.0
  *    x if it consists of a single child, then its constant != 0.0 (otherwise, should be written as a product)
  * - it is a function with simplified arguments
  * ? a logarithm doesn't have a product as a child
@@ -1017,10 +1017,25 @@ typedef struct exprnode
 } EXPRNODE;
 
 static
-void insertFirstList(EXPRNODE** list, EXPRNODE* newnode)
+void insertFirstList(EXPRNODE* newnode, EXPRNODE** list)
 {
    newnode->next = *list;
    *list = newnode;
+}
+
+static
+EXPRNODE* listPopFirst(EXPRNODE** list)
+{
+   EXPRNODE* first;
+
+   if( *list == NULL )
+      return NULL;
+
+   first = *list;
+   *list = (*list)->next;
+   first->next = NULL;
+
+   return first;
 }
 
 static
@@ -1038,28 +1053,43 @@ int listLength(EXPRNODE* list)
    return length;
 }
 
+/* creates node and captures expression */
 static
-void freeExprlist(SCIP* scip, EXPRNODE** exprlist)
+SCIP_RETCODE createExprNode(SCIP* scip, SCIP_CONSEXPR_EXPR* expr, SCIP_Real coef, EXPRNODE** newnode)
+{
+   SCIP_CALL( SCIPallocBuffer(scip, newnode) );
+   (*newnode)->expr = expr;
+   (*newnode)->coef = coef;
+   (*newnode)->next = NULL;
+   SCIPcaptureConsExprExpr(expr);
+
+   return SCIP_OKAY;
+}
+
+/* frees list and releases expressions */
+static
+SCIP_RETCODE freeExprlist(SCIP* scip, EXPRNODE** exprlist)
 {
    EXPRNODE* current;
-   EXPRNODE* next;
 
    if( *exprlist == NULL )
-      return;
+      return SCIP_OKAY;
 
    current = *exprlist;
-   next = current->next;
-   while( next != NULL )
+   while( current != NULL )
    {
-      SCIPfreeBuffer(scip, &current);
-      current = next;
-      next = next->next;
-   }
-   SCIPfreeBuffer(scip, &current);
-   assert(current == NULL);
-   assert(next == NULL);
+      EXPRNODE* aux;
 
+      aux = current->next;
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(current->expr)) );
+      SCIPfreeBuffer(scip, &current);
+      current = aux;
+   }
+
+   assert(current == NULL);
    *exprlist = NULL;
+
+   return SCIP_OKAY;
 }
 
 static
@@ -1075,14 +1105,11 @@ SCIP_RETCODE buildExprlistFromExprs(SCIP* scip, SCIP_CONSEXPR_EXPR** exprs, SCIP
    {
       EXPRNODE* newnode;
 
-      SCIP_CALL( SCIPallocBuffer(scip, &newnode) );
-      newnode->expr = exprs[i];
-      newnode->coef = coefs[i];
-      insertFirstList(list, newnode);
+      SCIP_CALL( createExprNode(scip, exprs[i], coefs[i], &newnode) );
+      insertFirstList(newnode, list);
    }
 
    assert(nexprs > 1 || (*list)->next == NULL);
-
 
    return SCIP_OKAY;
 }
@@ -1137,7 +1164,8 @@ SCIP_RETCODE mergeSumExprlist(SCIP* scip, EXPRNODE* list, EXPRNODE** outlist, SC
 
          /* destroy currentlistnode (since won't use it) */
          aux = currentlistnode->next;
-         SCIPfreeBuffer(scip, &currentlistnode);
+         currentlistnode->next = NULL; /* FIXME: this is horrible, maybe introduce freeExprNode ? maybe introduce EXPRLIST and EXPRNODE TODO: check if somewhere else this might be happening! */
+         SCIP_CALL( freeExprlist(scip, &currentlistnode) );
          currentlistnode = aux;
 
          /* if new coefficient is 0, remove term */
@@ -1149,7 +1177,8 @@ SCIP_RETCODE mergeSumExprlist(SCIP* scip, EXPRNODE* list, EXPRNODE** outlist, SC
             else
                *outlist = currentoutlistnode->next;
             aux = currentoutlistnode->next;
-            SCIPfreeBuffer(scip, &currentoutlistnode);
+            currentoutlistnode->next = NULL; /* FIXME: this is horrible, maybe introduce freeExprNode ? maybe introduce EXPRLIST and EXPRNODE TODO: check if somewhere else this might be happening! */
+            SCIP_CALL( freeExprlist(scip, &currentoutlistnode) );
             currentoutlistnode = aux;
             debugSimplify("finish handling 0: %p\n", (void*)currentoutlistnode);
          }
@@ -1173,7 +1202,7 @@ SCIP_RETCODE mergeSumExprlist(SCIP* scip, EXPRNODE* list, EXPRNODE** outlist, SC
          if( previousoutlistnode == NULL )
          {
             aux = currentlistnode->next;
-            insertFirstList(outlist, currentlistnode);
+            insertFirstList(currentlistnode, outlist);
             previousoutlistnode = *outlist;
             currentlistnode = aux;
          }
@@ -1267,55 +1296,88 @@ SCIP_RETCODE buildExprProductFromExprlist(SCIP* scip, EXPRNODE* exprlist, SCIP_R
    return SCIP_OKAY;
 }
 
-/* simplifies a product expression (power_expr)^integer
- * TODO: deal with a possible constant here! */
+/** simplifies a product expression (base)^exponent
+ * @note: in constrast to other simplify methods, this does *not* return a simplified expression.
+ * Instead, the method is intended to be called only when simplifying a product expression,
+ * Since in general, (base)^exponent is not a simplified child of a product expression, this method returns
+ * a list of expressions (with exponents) L, such that (prod L) = (base)^exponent *and* each expression in L
+ * is a valid child of a simplified product expression.
+ * TODO: handle more cases when exponent is non-integer and base >= 0 (of course one has to adapt the definition
+ * of a simplified product)
+ */
 static
-SCIP_RETCODE simplifyIntegerPower(SCIP* scip, SCIP_Real exponent, SCIP_CONSEXPR_EXPR* expr, EXPRNODE** list,
-      SCIP_CONSEXPR_EXPR** simplifiedexpr)
+SCIP_RETCODE simplifyPower(
+   SCIP*                 scip,
+   SCIP_CONSEXPR_EXPR*   base,
+   SCIP_Real             exponent,
+   SCIP_Real*            simplifiedcoef,
+   EXPRNODE**            simplifiedpower
+   )
 {
-   const char* type;
-   SCIP_Real one;
+   const char* basetype;
+   SCIP_CONSEXPR_EXPR* simplifiedbase;
 
-   assert(SCIPisIntegral(scip, exponent));
-   assert(list != NULL);
-   assert(*list == NULL);
+   assert(simplifiedpower != NULL);
+   assert(*simplifiedpower == NULL);
+   assert(base != NULL);
 
+   basetype = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(base));
+
+   /* implements SP7 */
+   if( strcmp(basetype, "val") == 0 )
+   {
+      /* TODO: if val < 0 and exponent non integer -> domain error/undefined etc */
+      debugSimplify("[simplifyPower] seeing a value with val %g, exponent %g\n", SCIPgetConsExprExprValueValue(base), exponent);
+      *simplifiedcoef *= pow(SCIPgetConsExprExprValueValue(base), exponent);
+      return SCIP_OKAY;
+   }
+
+   /* currently, for a non-value base, we only try to do something for integer exponents
+    * TODO: maybe put this as an extra condition in each sub-case so that later is easier to extend */
+   if( !SCIPisIntegral(scip, exponent) )
+   {
+      SCIP_CALL( createExprNode(scip, base, exponent, simplifiedpower) );
+      return SCIP_OKAY;
+   }
+
+   /* implements SP6
+    * (base)^0 return empty list, which is the same as value 1
+    */
    if( exponent == 0.0 )
    {
-      /* TODO: return value 1? or nothing? */
-   }
-   if( exponent == 1.0 )
-   {
-      /* TODO: return expr */
+      return SCIP_OKAY;
    }
 
-   /* pushes exponent one level down, so expr is no longer simplified (though its children are) */
-   SCIPexponentiateConsExprExprProductByConstant(expr, exponent);
+   /* implements SP2 */
+   if( strcmp(basetype, "prod") == 0 )
+   {
+      assert(SCIPgetConsExprExprProductCoef(base) == 1.0);
 
-   /* simplify expr: expr was once simplified, this means that no children is a value
-    * no children is a product with an integer exponent
-    * This will do nothing to children that still have non-integer exponents or are not products (so far)
-    * This will affect children that are products and have integer exponents
-    * Maybe we can say something about the outcome of this method? */
-   SCIP_CALL( SCIPsimplifyConsExprExprProduct(scip, expr, simplifiedexpr) );
+      /* if base is a product and exponent is not 1, we distribute the exponent among the base children.
+       * this operation can render base unsimplified (e.g., ((x^0.5 * y^0.5)^0.5)^4 -> (x^0.5 * y^0.5)^2).
+       * we simplify it and re-call the method with the simplified base since its type could have changed
+       * e.g., (<any_expr>^0.5)^2 is a product-> <any_expr> which is any expression
+       */
+      if( exponent != 1.0 )
+      {
+         SCIPexponentiateConsExprExprProductByConstant(base, exponent);
+         SCIP_CALL( SCIPsimplifyConsExprExprProduct(scip, base, &simplifiedbase) );
+         SCIP_CALL( simplifyPower(scip, simplifiedbase, 1.0, simplifiedcoef, simplifiedpower) );
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &simplifiedbase) );
+      }
+      else
+      {
+         SCIP_CALL( buildExprlistFromExprs(scip, SCIPgetConsExprExprChildren(base),
+                  SCIPgetConsExprExprProductExponents(base), SCIPgetConsExprExprNChildren(base), simplifiedpower) );
+      }
 
-   /* now build list to be merged */
-   one = 1.0;
-   type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(*simplifiedexpr));
-   if( strcmp(type, "val") == 0 )
-   {
-      /* TODO: can something become a val after exponentiating? */
-      printf("ERROR: not implemented yet\n");
-      exit(0);
+      return SCIP_OKAY;
    }
-   if( strcmp(type, "prod") != 0 )
+   else /* TODO FIXME: this should be further separated in sum, etc */
    {
-      SCIP_CALL( buildExprlistFromExprs(scip, simplifiedexpr, &one, 1, list) );
-   }
-   else
-   {
-      SCIP_CALL( buildExprlistFromExprs(scip, SCIPgetConsExprExprChildren(*simplifiedexpr),
-               SCIPgetConsExprExprProductExponents(*simplifiedexpr), SCIPgetConsExprExprNChildren(*simplifiedexpr), list) );
+      /* TODO FIXME: does NOT implement SP3 */
+      SCIP_CALL( createExprNode(scip, base, exponent, simplifiedpower) );
+      return SCIP_OKAY;
    }
 
    return SCIP_OKAY;
@@ -1328,136 +1390,115 @@ SCIP_RETCODE simplifyIntegerPower(SCIP* scip, SCIP_Real exponent, SCIP_CONSEXPR_
  * handling multiplication instead of addition when two expressions are equal
  */
 static
-SCIP_RETCODE mergeProductExprlist(SCIP* scip, EXPRNODE* list, EXPRNODE** outlist, SCIP_Real* coef)
+SCIP_RETCODE mergeProductExprlist(SCIP* scip, EXPRNODE* tomerge, EXPRNODE** finalchildren, EXPRNODE** unsimplifiedchildren)
 {
-   EXPRNODE* currentlistnode;
-   EXPRNODE* currentoutlistnode;
-   EXPRNODE* previousoutlistnode;
+   EXPRNODE* tomergenode;
+   EXPRNODE* current;
+   EXPRNODE* previous;
 
-   if( list == NULL )
+   if( tomerge == NULL )
    {
       return SCIP_OKAY;
    }
-   if( *outlist == NULL )
+
+   if( *finalchildren == NULL )
    {
-      *outlist = list;
+      *finalchildren = tomerge;
       return SCIP_OKAY;
    }
 
-   currentlistnode = list;
-   currentoutlistnode = *outlist;
-   previousoutlistnode = NULL;
+   tomergenode = tomerge;
+   current = *finalchildren;
+   previous = NULL;
 
-   while( currentlistnode != NULL && currentoutlistnode != NULL )
+   while( tomergenode != NULL && current != NULL )
    {
       int compareres;
       EXPRNODE* aux;
 
       /* assert invariants */
-      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(currentlistnode->expr)), "val") != 0);
-      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(currentoutlistnode->expr)), "val") != 0);
-      assert(previousoutlistnode == NULL || previousoutlistnode->next == currentoutlistnode);
+      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(tomergenode->expr)), "val") != 0);
+      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(current->expr)), "val") != 0);
+      assert(previous == NULL || previous->next == current);
 
-      compareres = SCIPcompareConsExprExprs(currentoutlistnode->expr, currentlistnode->expr);
+      compareres = SCIPcompareConsExprExprs(current->expr, tomergenode->expr);
       if( compareres == 0 )
       {
-         /* multiply them */
-         currentoutlistnode->coef += currentlistnode->coef;
+         /* implements SP4 */
+         current->coef += tomergenode->coef;
 
-         /* destroy currentlistnode (since will not use the node again) */
-         aux = currentlistnode->next;
-         SCIPfreeBuffer(scip, &currentlistnode);
-         currentlistnode = aux;
+         /* destroy tomergenode (since will not use the node again) */
+         aux = tomergenode->next;
+         tomergenode->next = NULL; /* FIXME: this is horrible, maybe introduce freeExprNode ? maybe introduce EXPRLIST and EXPRNODE TODO: check if somewhere else this might be happening! */
+         SCIP_CALL( freeExprlist(scip, &tomergenode) );
+         tomergenode = aux;
 
-         /* if node's expression is a product and exponent turn into integer, simplify.
-          * will remove node from list, simplify its expression, build list from simplified expression
-          * and merge that list before continuing
+         /* the product might have render current unsimplified, so remove it from finalchildren list and put it back
+          * to unsimplified children
+          * TODO: we can say if current became unsimplified and don't touch it if it didn't
           */
-         if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(currentoutlistnode->expr)), "prod") == 0 &&
-             SCIPisIntegral(scip, currentoutlistnode->coef) )
+         /* remove: if current is the first node, then pop; otherwise, use previous and current to remove */
+         if( current == *finalchildren )
          {
-            EXPRNODE* tmplist;
-            SCIP_CONSEXPR_EXPR* tmpexpr;
-            tmplist = NULL;
-
-            /* remember node */
-            aux = currentoutlistnode;
-
-            /* remove node from list */
-            if( *outlist == currentoutlistnode )
-            {
-               *outlist = currentoutlistnode->next;
-               currentoutlistnode = *outlist;
-            }
-            else
-            {
-               assert(previousoutlistnode != NULL);
-               assert(previousoutlistnode->next == currentoutlistnode);
-
-               currentoutlistnode = currentoutlistnode->next;
-               previousoutlistnode->next = currentoutlistnode;
-            }
-
-            /* simplify and build list */
-            SCIP_CALL( simplifyIntegerPower(scip, aux->coef, aux->expr, &tmplist, &tmpexpr) );
-
-            /* merge it */
-            SCIP_CALL( mergeProductExprlist(scip, tmplist, outlist, coef) );
-
-            /* TODO: the merge could have added elements in between previous and current, set previous to the correct position
-             * but is this possible? the merge could have also deleted nodes.. */
-            currentoutlistnode = *outlist;
-            previousoutlistnode = NULL;
-
-            /* free tmpexpr and node; tmplist was freed while merging */
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &tmpexpr) );
-            SCIPfreeBuffer(scip, &aux);
+            assert(previous == NULL);
+            aux = listPopFirst(finalchildren);
+            current = *finalchildren;
+         }
+         else
+         {
+            assert(previous != NULL);
+            aux = current;
+            current = current->next;
+            previous->next = current;
          }
 
-         /* TODO: could probably move both, because the same node should NOT appear in currentlistnode */
+         insertFirstList(aux, unsimplifiedchildren);
+
          continue;
       }
+
       if( compareres == -1 )
       {
-         /* outlistnode < listnode => move outlistnode */
-         previousoutlistnode = currentoutlistnode;
-         currentoutlistnode = currentoutlistnode->next;
+         /* current < tomergenode => move current */
+         previous = current;
+         current = current->next;
          continue;
       }
       else
       {
          assert(compareres == 1);
-         /* insert currentlistnode between previous and current outlist nodes
-          * note: if previous is NULL, currentlistnode has to be inserted at the beginning;
-          * since they are sorted this only happens once */
-         if( previousoutlistnode == NULL )
+
+         /* insert: if current is the first node, then insert at beginning; otherwise, insert between previous and current */
+         if( current == *finalchildren )
          {
-            aux = currentlistnode->next;
-            insertFirstList(outlist, currentlistnode);
-            previousoutlistnode = *outlist;
-            currentlistnode = aux;
+            assert(previous == NULL);
+            aux = tomergenode->next;
+            insertFirstList(tomergenode, finalchildren);
+            previous = *finalchildren;
+            tomergenode = aux;
          }
          else
          {
-            aux = currentlistnode->next;
-            previousoutlistnode->next = currentlistnode;
-            currentlistnode->next = currentoutlistnode;
-            previousoutlistnode = previousoutlistnode->next;
-            currentlistnode = aux;
+            assert(previous != NULL);
+            aux = tomergenode->next;
+            previous->next = tomergenode;
+            tomergenode->next = current;
+            previous = previous->next;
+            tomergenode = aux;
          }
       }
    }
 
-   /* if all nodes of list were merged, we are done */
-   if( currentlistnode == NULL )
+   /* if all nodes of tomerge were merged, we are done */
+   if( tomergenode == NULL )
    {
       return SCIP_OKAY;
    }
 
-   /* still nodes from list unmerged, all this nodes are larger than outlist's nodes; so append at end */
-   assert(currentoutlistnode == NULL);
-   assert(previousoutlistnode->next == NULL);
-   previousoutlistnode->next = currentlistnode;
+   /* there are still nodes of tomerge unmerged; these nodes are larger than finalchildren, so append at end */
+   assert(current == NULL);
+   assert(previous != NULL && previous->next == NULL);
+   previous->next = tomergenode;
 
    return SCIP_OKAY;
 }
@@ -1612,144 +1653,88 @@ SCIP_RETCODE SCIPsimplifyConsExprExprProduct(
    SCIP_CONSEXPR_EXPR**  simplifiedexpr      /**< pointer to store the simplified expression */
    )
 {
-   int nchildren;
-   SCIP_CONSEXPR_EXPR** children;
-   SCIP_Real* exponents;
-   SCIP_Real coef;
-   EXPRNODE* exprlist;
+   EXPRNODE* unsimplifiedchildren;
+   EXPRNODE* finalchildren;
    SCIP_Real simplifiedcoef;
-   const char* typeofchild;
-   int i;
 
+   assert(expr != NULL);
+   assert(simplifiedexpr != NULL);
    assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "prod") == 0);
 
-   exprlist = NULL;
+   /* set up list of current children (when looking at each of them individually, they are simplified, but as
+    * children of a product expression they might be unsimplified) */
+   unsimplifiedchildren = NULL;
+   SCIP_CALL( buildExprlistFromExprs(scip, SCIPgetConsExprExprChildren(expr),
+            SCIPgetConsExprExprProductExponents(expr), SCIPgetConsExprExprNChildren(expr), &unsimplifiedchildren) );
 
-   nchildren = SCIPgetConsExprExprNChildren(expr);
-   children  = SCIPgetConsExprExprChildren(expr);
-   coef      = SCIPgetConsExprExprProductCoef(expr);
-   exponents = SCIPgetConsExprExprProductExponents(expr);
-
-   simplifiedcoef = coef;
-   for( i = 0; i < nchildren; ++i )
+   /* while there are still children to process */
+   finalchildren  = NULL;
+   simplifiedcoef = SCIPgetConsExprExprProductCoef(expr);
+   while( unsimplifiedchildren != NULL )
    {
-      EXPRNODE* auxlist;
-
-      /* do simple simplification over current child and obtain list to be merged */
-
-      auxlist = NULL;
+      EXPRNODE* tomerge;
+      EXPRNODE* first;
 
       /* if the simplified coefficient is 0, we can return vaule 0 */
       if( simplifiedcoef == 0.0 )
       {
-         freeExprlist(scip, &exprlist);
-         assert(exprlist == NULL);
+         freeExprlist(scip, &finalchildren);
+         freeExprlist(scip, &unsimplifiedchildren);
+         assert(finalchildren == NULL);
          break;
       }
-      /* if exponent of children[i] is 0, we can ignore it */
-      if( exponents[i] == 0.0 )
-         continue;
 
-      typeofchild = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(children[i]));
+      first = listPopFirst(&unsimplifiedchildren);
+      assert(first != NULL);
 
-      debugSimplify("Simplifying[Prod]: %s\n", typeofchild);
-      /* value child -> multiply value into simplifiedcoef */
-      if( strcmp(typeofchild, "val") == 0 )
-      {
-         /* TODO: if val < 0 and exponent non integer -> domain error/undefined etc */
-         simplifiedcoef *= pow(SCIPgetConsExprExprValueValue(children[i]), exponents[i]);
-         continue;
-      }
+      tomerge = NULL;
+      SCIP_CALL( simplifyPower(scip, first->expr, first->coef, &simplifiedcoef, &tomerge) );
 
-      /* anything that is not a product should be treated as a single expression
-       * TODO: should expressions with negative domain raise domain error when exponent is not integer? */
-      if( strcmp(typeofchild, "prod") != 0 )
-      {
-         SCIP_CALL( buildExprlistFromExprs(scip, &children[i], &exponents[i], 1, &auxlist) );
-      }
-      else
-      {
-         assert(strcmp(typeofchild, "prod") == 0);
+      /* note: merge frees (or uses) the nodes of the list tomerge */
+      SCIP_CALL( mergeProductExprlist(scip, tomerge, &finalchildren, &unsimplifiedchildren) );
 
-         /* if exponent of children[i] is an integer != 1.0, we want to exponentiate (distribute the exponent)
-          * its children; this *can* make children[i] unsimplified (eg: ((x^0.5 * y^0.5)^0.5)^4 -> (x^0.5 * y^0.5)^2)
-          * so we have to simplify it again to recover the invariant that all children are simplified; afterwards, we have to
-          * repeat this iteration, since the type of the child could have changed! [eg: ((x^0.5)^0.5)^4 -> x];
-          */
-         if( SCIPisIntegral(scip, exponents[i]) && exponents[i] != 1.0 )
-         {
-
-            /* SCIP_CALL( simplifyIntegerPower(scip, exponent[i], children[i], &auxlist) ); */
-            SCIP_CONSEXPR_EXPR* simplifiedchild;
-            /* TODO: is domain error when appropiate */
-            SCIPexponentiateConsExprExprProductByConstant(children[i], exponents[i]);
-
-            SCIP_CALL( SCIPsimplifyConsExprExprProduct(scip, children[i], &simplifiedchild) );
-
-            /* replace children[i] with simplifiedchild */
-            SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[i]) );
-            children[i] = simplifiedchild;
-            exponents[i] = 1.0;
-
-            /* repeat call */
-            --i;
-            continue;
-         }
-         else if( exponents[i] == 1.0 )
-         {
-            /* exprlist to merge are the children of children[i] */
-            simplifiedcoef *= SCIPgetConsExprExprProductCoef(children[i]);
-            SCIP_CALL( buildExprlistFromExprs(scip, SCIPgetConsExprExprChildren(children[i]),
-                     SCIPgetConsExprExprProductExponents(children[i]), SCIPgetConsExprExprNChildren(children[i]), &auxlist) );
-         }
-         else
-         {
-            /* we can not distribute the exponent of this product (power) children, treat it as a single node */
-            SCIP_CALL( buildExprlistFromExprs(scip, &children[i], &exponents[i], 1, &auxlist) );
-         }
-      }
-
-      /* merge auxlist with exprlist */
-      assert(auxlist != NULL);
-      SCIP_CALL( mergeProductExprlist(scip, auxlist, &exprlist, &simplifiedcoef) );
+      /* free first */
+      SCIP_CALL( freeExprlist(scip, &first) );
    }
 
-   /* build expression from list
-    * post simplify: product with only one child and exponent 1 -> sum, etc */
-   debugSimplify("what to do? exprlist = %p has length %d\n", (void *)exprlist, listLength(exprlist));
+   /* build product expression from finalchildren and post-simplify */
+   debugSimplify("what to do? finalchildren = %p has length %d\n", (void *)finalchildren, listLength(finalchildren));
 
-   /* if list is empty, return value */
-   if( exprlist == NULL )
+   /* implements SP10: if list is empty, return value */
+   if( finalchildren == NULL )
    {
       debugSimplify("got empty list, return value\n");
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr, simplifiedcoef) );
    }
-   /* if list contains one element with exponent 1.0 and coef 1.0, return that element */
-   else if( exprlist->next == NULL && exprlist->coef == 1.0 && simplifiedcoef == 1.0 )
+   /* implements SP9
+    * if finalchildren has only one expr and its exponent is 1.0 and coef 1.0, return that expr */
+   else if( finalchildren->next == NULL && finalchildren->coef == 1.0 && simplifiedcoef == 1.0 )
    {
-      *simplifiedexpr = exprlist->expr;
+      *simplifiedexpr = finalchildren->expr;
       SCIPcaptureConsExprExpr(*simplifiedexpr);
    }
-   /* if list contains one element with exponent 1.0 and coef != 1.0, transform it into a sum with unique element */
-   else if( exprlist->next == NULL && exprlist->coef == 1.0 )
+   /* implements SP8 and SP9
+    * if finalchildren has only one expr and its exponent is 1.0, but coef != 1.0, return sum with the expr as unique child */
+   else if( finalchildren->next == NULL && finalchildren->coef == 1.0 )
    {
       SCIP_CONSEXPR_EXPR* aux;
 
       SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), &aux,
-               1, &(exprlist->expr), &simplifiedcoef, 0.0) );
+               1, &(finalchildren->expr), &simplifiedcoef, 0.0) );
 
       /* simplifying here is necessary, the product could have sums as children
-       * e.g., (prod 2 (sum 1 <x>)) -> (sum 2 (sum 1 <x>)) that needs to be simplified
+       * e.g., (prod 2 (sum 1 <x>)) -> (sum 2 (sum 1 <x>)) and that needs to be simplified
        */
       SCIP_CALL( SCIPsimplifyConsExprExprSum(scip, aux, simplifiedexpr) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
    }
-   /* if simplifiedcoef != 1.0, transform it into a sum with the (simplified) product as child */
+   /* implements SP8
+    * if simplifiedcoef != 1.0, transform it into a sum with the (simplified) product as child */
    else if( simplifiedcoef != 1.0 )
    {
       SCIP_CONSEXPR_EXPR* aux;
 
-      SCIP_CALL( buildExprProductFromExprlist(scip, exprlist, 1.0, &aux) );
+      SCIP_CALL( buildExprProductFromExprlist(scip, finalchildren, 1.0, &aux) );
       SCIP_CALL( SCIPcreateConsExprExprSum(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr,
                1, &aux, &simplifiedcoef, 0.0) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
@@ -1757,13 +1742,14 @@ SCIP_RETCODE SCIPsimplifyConsExprExprProduct(
    /* build product expression from list */
    else
    {
-      SCIP_CALL( buildExprProductFromExprlist(scip, exprlist, simplifiedcoef, simplifiedexpr) );
+      SCIP_CALL( buildExprProductFromExprlist(scip, finalchildren, simplifiedcoef, simplifiedexpr) );
    }
 
    /* free memory */
-   freeExprlist(scip, &exprlist);
-   assert(exprlist == NULL);
+   freeExprlist(scip, &finalchildren);
+   assert(finalchildren == NULL);
 
+   assert(*simplifiedexpr != NULL);
    return SCIP_OKAY;
 }
 
