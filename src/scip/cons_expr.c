@@ -856,12 +856,13 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
  * - is a product expression such that
  *    - every child is simplified
  *    - no child with integer exponent is a product
- *    - every product child has constant 1.0 [should probably be +-1]
- *    - no child is a value (values should go in the constant of the product)
+ *    - no child with integer exponent is a sum with a single term (y*(2*x)^2 -> 4*x^2*y)
  *    - no two children are the same expression (those should be multiplied)
  *    - the children are sorted [commutative rule]
  *    - no exponent is 0
- *    - if it consists of a single child, then its exponent != 1.0 (otherwise, should be written as a sum)
+ *    - no child is a value
+ *    - its coefficient is 1.0 (otherwise should be written as sum)
+ *    - if it consists of a single child, then its exponent != 1.0
  *    ? at most one child is an exp
  *    ? at most one child is an abs
  * - is a sum expression such that
