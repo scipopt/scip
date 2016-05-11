@@ -26,7 +26,8 @@
 #include <utility> // std::pair
 #include <vector>
 
-#include "scip/def.h"
+#include "cmd_line_args.h"
+#include "objscip/objscip.h"
 
 namespace polyscip {
 
@@ -58,6 +59,8 @@ namespace polyscip {
         /**< container type for nondominated rays; needs to support: empty()*/
         using RayContainer = std::vector<OutcomeType>;
 
+        Polyscip(int argc, char** argv);
+
         void computeSupportedNondomPoints() = delete;
         void computeUnSupportedNondomPoints() = delete;
 
@@ -74,6 +77,16 @@ namespace polyscip {
         void printRay(const OutcomeType& ray, std::ostream& os = std::cout);
 
     private:
+        bool filenameIsOkay(const std::string& filename);
+        /** Reads SCIP parameter settings */
+        SCIP_RETCODE readParamSettings();
+        /** Reads given problem file */
+        SCIP_RETCODE readProblemFile();
+
+        CmdLineArgs cmd_line_args_;
+        SCIP* scip_;
+        SCIP_Objsense obj_sense_;                      /**< objective sense of given problem */
+        unsigned no_objs_;                             /**< number of objectives */
         PointContainer supported_nondom_points_;
         PointContainer unsupported_nondom_points_;
         RayContainer unbounded_nondom_rays_;
