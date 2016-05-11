@@ -63,6 +63,11 @@ SCIP_Real SCIPgetConsExprExprSumConstant(
    SCIP_CONSEXPR_EXPR*   expr                /**< sum expression */
    );
 
+EXTERN
+void SCIPsetConsExprExprSumConstant(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_Real             constant            /**< constant */
+   );
 
 /** creates the handler for product expressions and includes it into the expression constraint handler */
 EXTERN

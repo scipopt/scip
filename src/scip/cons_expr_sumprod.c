@@ -534,6 +534,23 @@ SCIP_Real SCIPgetConsExprExprSumConstant(
    return exprdata->constant;
 }
 
+/** sets the constant of a summation expression */
+void SCIPsetConsExprExprSumConstant(
+   SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
+   SCIP_Real             constant            /**< constant */
+   )
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+
+   assert(expr != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   exprdata->constant = constant;
+}
+
+
 
 /** creates the handler for product expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
