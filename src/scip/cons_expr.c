@@ -856,7 +856,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
  * - is a product expression such that
  *    SP1:  every child is simplified
  *    SP2:  no child with integer exponent is a product
- *    SP3:  no child with integer exponent is a sum with a single term (y*(2*x)^2 -> 4*x^2*y)
+ *    SP3:  no child with integer exponent is a sum with a single term ((2*x)^2 -> 4*x^2)
  *    SP4:  no two children are the same expression (those should be multiplied)
  *    SP5:  the children are sorted [commutative rule]
  *    SP6:  no exponent is 0
@@ -1472,9 +1472,31 @@ SCIP_RETCODE simplifyPower(
 
       return SCIP_OKAY;
    }
-   else /* TODO FIXME: this should be further separated in sum, etc */
+
+   /* implements SP3
+    * given (prod C ... n (sum 0.0 coef expr) ...) we can take coef out of the sum:
+    * (prod C*coef^n ... n (sum 0.0 1 expr) ...) -> (prod C*coef^n ... n expr ...)
+    * se we have to update simplifiedcoef and base = (sum 0.0 coef expr) changes to expr
+    * notes: - since base is simplified and its constant is 0, then coef != 1.0 (SS7)
+    *        - n is an integer (including 1, but not 0; see SP6 above)
+    */
+   if( strcmp(basetype, "sum") == 0 && SCIPgetConsExprExprNChildren(base) == 1 && SCIPgetConsExprExprSumConstant(base) == 0.0 )
    {
-      /* TODO FIXME: does NOT implement SP3 */
+      debugSimplify("[simplifyPower] seing a sum with one term, exponent %g: base should be its child\n", exponent);
+      /* assert SS7 holds */
+      assert(SCIPgetConsExprExprSumCoefs(base)[0] != 1.0);
+
+      /* update simplifiedcoef and simplify new base */
+      *simplifiedcoef *= pow(SCIPgetConsExprExprSumCoefs(base)[0], exponent);
+      SCIP_CALL( simplifyPower(scip, SCIPgetConsExprExprChildren(base)[0], exponent, simplifiedcoef, simplifiedpower) );
+
+      return SCIP_OKAY;
+   }
+   else
+   {
+      /* other types of (simplified) expressions can be children of a simplified sum */
+      assert(strcmp(basetype, "prod") != 0);
+      assert(strcmp(basetype, "val") != 0);
       SCIP_CALL( createExprNode(scip, base, exponent, simplifiedpower) );
       return SCIP_OKAY;
    }
