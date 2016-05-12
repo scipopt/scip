@@ -1177,7 +1177,7 @@ SCIP_RETCODE mergeSumExprlist(SCIP* scip, EXPRNODE* tomerge, EXPRNODE** finalchi
 
       if( compareres == 0 )
       {
-         /* implements SS4 and SS8 */
+         /* enforces SS4 and SS8 */
          current->coef += tomergenode->coef;
 
          /* destroy tomergenode (since will not use the node again) */
@@ -1207,7 +1207,7 @@ SCIP_RETCODE mergeSumExprlist(SCIP* scip, EXPRNODE* tomerge, EXPRNODE** finalchi
             SCIP_CALL( freeExprNode(scip, &aux) );
          }
       }
-      /* implements SS5 */
+      /* enforces SS5 */
       else if( compareres == -1 )
       {
          /* current < tomergenode => move current */
@@ -1339,14 +1339,14 @@ SCIP_RETCODE simplifyTerm(
 
    exprtype = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
 
-   /* implements SS3 */
+   /* enforces SS3 */
    if( strcmp(exprtype, "val") == 0 )
    {
       *simplifiedconstant += coef * SCIPgetConsExprExprValueValue(expr);
       return SCIP_OKAY;
    }
 
-   /* implements SS2 */
+   /* enforces SS2 */
    if( strcmp(exprtype, "sum") == 0 )
    {
       *simplifiedconstant += coef * SCIPgetConsExprExprSumConstant(expr);
@@ -1422,7 +1422,7 @@ SCIP_RETCODE simplifyPower(
 
    basetype = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(base));
 
-   /* implements SP7 */
+   /* enforces SP7 */
    if( strcmp(basetype, "val") == 0 )
    {
       /* TODO: if val < 0 and exponent non integer -> domain error/undefined etc */
@@ -1440,7 +1440,7 @@ SCIP_RETCODE simplifyPower(
       return SCIP_OKAY;
    }
 
-   /* implements SP6
+   /* enforces SP6
     * (base)^0 return empty list, which is the same as value 1
     */
    if( exponent == 0.0 )
@@ -1449,7 +1449,7 @@ SCIP_RETCODE simplifyPower(
       return SCIP_OKAY;
    }
 
-   /* implements SP2 */
+   /* enforces SP2 */
    if( strcmp(basetype, "prod") == 0 )
    {
       assert(SCIPgetConsExprExprProductCoef(base) == 1.0);
@@ -1476,7 +1476,7 @@ SCIP_RETCODE simplifyPower(
       return SCIP_OKAY;
    }
 
-   /* implements SP3
+   /* enforces SP3
     * given (prod C ... n (sum 0.0 coef expr) ...) we can take coef out of the sum:
     * (prod C*coef^n ... n (sum 0.0 1 expr) ...) -> (prod C*coef^n ... n expr ...)
     * se we have to update simplifiedcoef and base = (sum 0.0 coef expr) changes to expr
@@ -1548,7 +1548,7 @@ SCIP_RETCODE mergeProductExprlist(SCIP* scip, EXPRNODE* tomerge, EXPRNODE** fina
       compareres = SCIPcompareConsExprExprs(current->expr, tomergenode->expr);
       if( compareres == 0 )
       {
-         /* implements SP4 */
+         /* enforces SP4 */
          current->coef += tomergenode->coef;
 
          /* destroy tomergenode (since will not use the node again) */
@@ -1664,15 +1664,15 @@ SCIP_RETCODE SCIPsimplifyConsExprExprSum(
    {
       EXPRNODE* tomerge;
 
-      /* implements SS8 */
+      /* enforces SS8 */
       if( coefs[i] == 0.0 )
          continue;
 
-      /* implements SS1 */
+      /* enforces SS1 */
       tomerge = NULL;
       SCIP_CALL( simplifyTerm(scip, children[i], coefs[i], &simplifiedconstant, &tomerge) );
 
-      /* implements SS4 and SS5
+      /* enforces SS4 and SS5
        * note: merge frees (or uses) the nodes of the list tomerge */
       SCIP_CALL( mergeSumExprlist(scip, tomerge, &finalchildren) );
    }
@@ -1680,13 +1680,13 @@ SCIP_RETCODE SCIPsimplifyConsExprExprSum(
    /* build sum expression from finalchildren and post-simplify */
    debugSimplify("what to do? finalchildren = %p has length %d\n", (void *)finalchildren, listLength(finalchildren));
 
-   /* implements SS6: if list is empty, return value */
+   /* enforces SS6: if list is empty, return value */
    if( finalchildren == NULL )
    {
       debugSimplify("got empty list, return value\n");
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr, simplifiedconstant) );
    }
-   /* implements SS7
+   /* enforces SS7
     * if list contains one expr with coef 1.0 and constant is 0, return that expr */
    else if( finalchildren->next == NULL && finalchildren->coef == 1.0 && simplifiedconstant == 0.0 )
    {
@@ -1762,11 +1762,11 @@ SCIP_RETCODE SCIPsimplifyConsExprExprProduct(
       first = listPopFirst(&unsimplifiedchildren);
       assert(first != NULL);
 
-      /* implements SP1 */
+      /* enforces SP1 */
       tomerge = NULL;
       SCIP_CALL( simplifyPower(scip, first->expr, first->coef, &simplifiedcoef, &tomerge) );
 
-      /* implements SP4 and SP5
+      /* enforces SP4 and SP5
        * note: merge frees (or uses) the nodes of the list tomerge */
       SCIP_CALL( mergeProductExprlist(scip, tomerge, &finalchildren, &unsimplifiedchildren) );
 
@@ -1777,20 +1777,20 @@ SCIP_RETCODE SCIPsimplifyConsExprExprProduct(
    /* build product expression from finalchildren and post-simplify */
    debugSimplify("what to do? finalchildren = %p has length %d\n", (void *)finalchildren, listLength(finalchildren));
 
-   /* implements SP10: if list is empty, return value */
+   /* enforces SP10: if list is empty, return value */
    if( finalchildren == NULL )
    {
       debugSimplify("got empty list, return value\n");
       SCIP_CALL( SCIPcreateConsExprExprValue(scip, SCIPfindConshdlr(scip, "expr"), simplifiedexpr, simplifiedcoef) );
    }
-   /* implements SP9
+   /* enforces SP9
     * if finalchildren has only one expr and its exponent is 1.0 and coef 1.0, return that expr */
    else if( finalchildren->next == NULL && finalchildren->coef == 1.0 && simplifiedcoef == 1.0 )
    {
       *simplifiedexpr = finalchildren->expr;
       SCIPcaptureConsExprExpr(*simplifiedexpr);
    }
-   /* implements SP8 and SP9
+   /* enforces SP8 and SP9
     * if finalchildren has only one expr and its exponent is 1.0, but coef != 1.0, return sum with the expr as unique child */
    else if( finalchildren->next == NULL && finalchildren->coef == 1.0 )
    {
@@ -1805,7 +1805,7 @@ SCIP_RETCODE SCIPsimplifyConsExprExprProduct(
       SCIP_CALL( SCIPsimplifyConsExprExprSum(scip, aux, simplifiedexpr) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &aux) );
    }
-   /* implements SP8
+   /* enforces SP8
     * if simplifiedcoef != 1.0, transform it into a sum with the (simplified) product as child */
    else if( simplifiedcoef != 1.0 )
    {
