@@ -1915,7 +1915,7 @@ SCIP_RETCODE testSimplify(void)
       SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "-<x>+2*<y>-<y>-<y>", "sum") );
       SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "-<x>+2*<y>+2*(0+0.5*<x>-<y>)", "val") );
       SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "<x>*<x>", "prod") );
-      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(2*<x>)*(2*<x>)", "prod") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(2*<x>)*(2*<x>)", "sum") );
       SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "<x>*<x>^2", "prod") );
       SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(<x>^0.5)^2", "var") );
       SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(<y>^2)^2", "prod") );
@@ -1929,12 +1929,12 @@ SCIP_RETCODE testSimplify(void)
       SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "2+3*<x>^2-<y>*<x>*4*(<x>+<y>)", "sum") );
       SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "2*<x>*<y>", "sum") );
       SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "<x>^10 + <x>^9.5 + <x>^9 + <x>^8.5 + <x>^8 + <x>^7.5", "sum") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "<x>/<x>", "val") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(2*<x>)^2", "sum") );
+      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(2*<x>)*(2*<x>) - 4 * <x>^2", "val") );
 
       /* failing tests */
       #ifdef FAILING_TESTS
-      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "<x>/<x>", "val") );
-      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(2*<x>)^2", "sum") );
-      SCIP_CALL( parsePrintSimplifyPrint(scip, conshdlr, "(0.2*<x>)*(0.2*<x>) - 4 * <x>^2", "val") );
       #endif
    }
 

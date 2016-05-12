@@ -1426,7 +1426,7 @@ SCIP_RETCODE simplifyPower(
    if( strcmp(basetype, "val") == 0 )
    {
       /* TODO: if val < 0 and exponent non integer -> domain error/undefined etc */
-      debugSimplify("[simplifyPower] seeing a value with val %g, exponent %g\n", SCIPgetConsExprExprValueValue(base), exponent);
+      debugSimplify("[simplifyPower] seeing value %g, exponent %g -> include in coef\n", SCIPgetConsExprExprValueValue(base), exponent);
       *simplifiedcoef *= pow(SCIPgetConsExprExprValueValue(base), exponent);
       return SCIP_OKAY;
    }
@@ -1435,6 +1435,7 @@ SCIP_RETCODE simplifyPower(
     * TODO: maybe put this as an extra condition in each sub-case so that later is easier to extend */
    if( !SCIPisIntegral(scip, exponent) )
    {
+      debugSimplify("[simplifyPower] seeing some expr with non-integer exponent %g -> potential child\n", exponent);
       SCIP_CALL( createExprNode(scip, base, exponent, simplifiedpower) );
       return SCIP_OKAY;
    }
@@ -1444,6 +1445,7 @@ SCIP_RETCODE simplifyPower(
     */
    if( exponent == 0.0 )
    {
+      debugSimplify("[simplifyPower] exponent %g (zero), ignore child\n", exponent);
       return SCIP_OKAY;
    }
 
@@ -1451,6 +1453,7 @@ SCIP_RETCODE simplifyPower(
    if( strcmp(basetype, "prod") == 0 )
    {
       assert(SCIPgetConsExprExprProductCoef(base) == 1.0);
+      debugSimplify("[simplifyPower] seing a producut with exponent %g: include its children\n", exponent);
 
       /* if base is a product and exponent is not 1, we distribute the exponent among the base children.
        * this operation can render base unsimplified (e.g., ((x^0.5 * y^0.5)^0.5)^4 -> (x^0.5 * y^0.5)^2).
