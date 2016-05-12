@@ -29,35 +29,13 @@
 
 #include "cmd_line_args.h"
 #include "objscip/objscip.h"
+#include "polyscip_types.h"
 #include "weight_space_polyhedron.h"
 
 namespace polyscip {
 
-
-
-    /** General print function
-    * @param container Container to be printed
-    * @param description Corresponding description
-    * @param os Output stream to print to
-    */
-    template <typename Container>
-    void print(const Container& container,
-               std::string description,
-               std::ostream& os = std::cout) {
-        os << description << "[ ";
-        for (const auto& elem : container)
-            os << elem << " ";
-        os << "]\n";
-    };
-
     class Polyscip {
     public:
-        /**< type for computed values */
-        using ValueType = SCIP_Real;
-        /**< type for points, rays in outcome space; needs to support: begin(), size(), operator[] */
-        using OutcomeType = std::vector<ValueType>;
-        /**< type for weights; needs to support: at(), size() */
-        using WeightType = std::vector<ValueType>;
         /**< container type for nondominated points */
         using PointContainer = std::vector <std::pair<OutcomeType, WeightType>>;
         /**< container type for nondominated rays; needs to support: empty()*/
@@ -68,6 +46,10 @@ namespace polyscip {
 
         void computeSupportedNondomPoints() = delete;
         void computeUnSupportedNondomPoints() = delete;
+
+        void initWeightSpace(const OutcomeType& point,
+                             const std::vector<OutcomeType>& initial_rays,
+                             std::pair<bool, unsigned> unit_weight_info);
 
         /** Prints given weight to given output stream
          */
@@ -90,7 +72,7 @@ namespace polyscip {
         SCIP* scip_;
         SCIP_Objsense obj_sense_;                      /**< objective sense of given problem */
         unsigned no_objs_;                             /**< number of objectives */
-        WeightSpacePolyhedron* test_;
+        std::unique_ptr<WeightSpacePolyhedron> weight_space_poly_;
         PointContainer supported_nondom_points_;
         PointContainer unsupported_nondom_points_;
         RayContainer unbounded_nondom_rays_;
@@ -98,4 +80,4 @@ namespace polyscip {
 
 }
 
-#endif // POLYSCIP_SRC_POLYSCIP_H_INCLUDED
+#endif //POLYSCIP_SRC_POLYSCIP_H_INCLUDED

@@ -28,7 +28,7 @@
 #include <iosfwd>
 #include <vector>
 
-#include "polyscip.h"
+#include "polyscip_types.h"
 
 namespace polyscip {
 
@@ -42,8 +42,8 @@ namespace polyscip {
          *  @param outcome outcome in objective space
          *  @param wov_coeff coefficient for weighted objective value
          */
-        explicit WeightSpaceFacet(const Polyscip::OutcomeType& outcome,
-                                  Polyscip::ValueType wov_coeff);
+        explicit WeightSpaceFacet(const OutcomeType& outcome,
+                                  ValueType wov_coeff);
 
         /** Creates the weight space facet w_i >= 0
          *  @param num_objs number of objectives of given problem
@@ -57,11 +57,10 @@ namespace polyscip {
 
     private:
         /**< coefficients for the weight of the facet inequality */
-        std::vector<Polyscip::ValueType> w_coeffs_;
+        std::vector<ValueType> w_coeffs_;
         /**< coefficient for the weighted objective value of the facet inequality */
-        Polyscip::ValueType wov_coeff_;
+        ValueType wov_coeff_;
     };
-
 }
 
 #endif // POLYSCIP_SRC_WEIGHT_SPACE_FACET_H_INCLUDED

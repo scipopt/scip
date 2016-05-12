@@ -19,9 +19,11 @@
 #include <stdexcept>
 #include <string>
 
+#include "own_make_unique.h"
 #include "objscip/objscip.h"
 #include "objscip/objscipdefplugins.h"
 #include "cmd_line_args.h"
+#include "polyscip_types.h"
 //ToDo change ReaderMOP
 #include "ReaderMOP.h"
 
@@ -47,6 +49,12 @@ namespace polyscip {
         assert (scip_ != nullptr);
         SCIPincludeDefaultPlugins(scip_);
         SCIPincludeObjReader(scip_, new ReaderMOP(scip_), TRUE);
+    }
+
+    void Polyscip::initWeightSpace(const OutcomeType& point,
+                                   const std::vector<OutcomeType> &initial_rays,
+                                   std::pair<bool, unsigned> unit_weight_info) {
+        weight_space_poly_ = own_stl::make_unique<WeightSpacePolyhedron>(no_objs_, point, initial_rays, unit_weight_info);
     }
 
     Polyscip::~Polyscip() {

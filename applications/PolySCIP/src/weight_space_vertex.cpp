@@ -20,7 +20,7 @@
 #include <numeric>   // std::inner_product;
 #include <ostream>
 
-#include "polyscip.h"
+#include "polyscip_types.h"
 #include "weight_space_facet.h"
 #include "weight_space_polyhedron.h"
 
@@ -35,10 +35,6 @@ namespace polyscip {
                            const std::shared_ptr<const WeightSpaceFacet>& f2) {
         return *f1 < *f2;
     }
-
-    using OutcomeType = Polyscip::OutcomeType;
-    using ValueType = Polyscip::ValueType;
-    using WeightType = Polyscip::WeightType;
 
     WeightSpaceVertex::WeightSpaceVertex(WeightSpacePolyhedron::FacetContainer incident_facets,
                                          WeightType weight,
@@ -57,7 +53,7 @@ namespace polyscip {
 
     WeightSpaceVertex::WeightSpaceVertex(const WeightSpaceVertex *obs,
                                          const WeightSpaceVertex *non_obs,
-                                         const Polyscip::OutcomeType &outcome,
+                                         const OutcomeType &outcome,
                                          bool outcome_is_ray) {
         // get intersection of facets of obs and non_obs
         std::set_intersection(obs->incident_facets_.cbegin(),

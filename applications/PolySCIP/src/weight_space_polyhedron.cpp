@@ -26,7 +26,7 @@
 
 #include "lemon/list_graph.h"
 
-#include "polyscip.h"
+#include "polyscip_types.h"
 #include "weight_space_facet.h"
 #include "weight_space_vertex.h"
 
@@ -40,15 +40,9 @@ using std::vector;
 
 namespace polyscip {
 
-    using OutcomeType = Polyscip::OutcomeType;
-    using ValueType = Polyscip::ValueType;
-    using WeightType = Polyscip::WeightType;
-    using RayContainer = Polyscip::RayContainer;
-
     WeightSpacePolyhedron::WeightSpacePolyhedron(unsigned num_objs,
                                                  const OutcomeType& point,
-                                                 ValueType weighted_obj_val,
-                                                 const RayContainer& initial_rays,
+                                                 const vector<OutcomeType>& initial_rays,
                                                  pair<bool, unsigned> unit_weight_info)
             : curr_investigated_vertex_(nullptr),
               skeleton_(),
@@ -57,7 +51,7 @@ namespace polyscip {
         auto facets = FacetContainer{};
         for (decltype(num_objs) i=0; i < num_objs; ++i)
             facets.push_back(make_shared<const WeightSpaceFacet>(num_objs, i));
-        createInitialVertices(num_objs, point, weighted_obj_val, std::move(facets));
+        createInitialVertices(num_objs, point, std::move(facets));
         createInitialSkeleton();
         // incorporate non-dominated rays computed in initial phase
         for (const auto& ray : initial_rays) {
@@ -122,7 +116,7 @@ namespace polyscip {
         obsolete_vertices_.push_back(v);
     }
 
-    bool WeightSpacePolyhedron::updateInitialWeightSpacePolyhedron(const OutcomeType &ray) {
+    bool WeightSpacePolyhedron::updateInitialWeightSpacePolyhedron(const OutcomeType& ray) {
         auto obsolete = computeObsoleteVertices(ray, true); // find all vertices made obsolete by ray
         if (obsolete.empty())
             return false;
@@ -159,7 +153,6 @@ namespace polyscip {
 
     void WeightSpacePolyhedron::createInitialVertices(unsigned num_objs,
                                                       const OutcomeType& point,
-                                                      ValueType weighted_obj_val,
                                                       FacetContainer boundary_facets) {
         // make facet: point \cdot w >= weighted_obj_val to facets_
         auto point_facet = make_shared<const WeightSpaceFacet>(point,1.0);
@@ -257,7 +250,7 @@ namespace polyscip {
     }
 
 
-    bool WeightSpacePolyhedron::isNewOutcome(const Polyscip::OutcomeType &outcome,
+    bool WeightSpacePolyhedron::isNewOutcome(const OutcomeType &outcome,
                                              bool outcome_is_ray) {
         if (outcome_is_ray)
             return curr_investigated_vertex_->isMadeObsolete(outcome, 0.);

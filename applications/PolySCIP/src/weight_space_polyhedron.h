@@ -36,13 +36,13 @@
 
 #undef GCC_VERSION /* lemon/core.h redefines GCC_VERSION additionally to scip/def.h */
 #include "lemon/list_graph.h"
-#include "polyscip.h"
+#include "polyscip_types.h"
+#include "weight_space_facet.h"
+
 
 namespace polyscip {
 
-    class WeightSpaceFacet;
     class WeightSpaceVertex;
-
 
     /** 1-skeleton of the (partial) weight space polyhedron. */
     class WeightSpacePolyhedron {
@@ -61,9 +61,8 @@ namespace polyscip {
         * index with value 1; note: first index is 0
         */
         explicit WeightSpacePolyhedron(unsigned num_objs,
-                                       const Polyscip::OutcomeType& point,
-                                       Polyscip::ValueType point_weighted_obj_val,
-                                       const Polyscip::RayContainer& initial_rays,
+                                       const OutcomeType& point,
+                                       const std::vector<OutcomeType>& initial_rays,
                                        std::pair<bool, unsigned> unit_weight_info);
 
         /** Destructor */
@@ -78,7 +77,7 @@ namespace polyscip {
          * returned true
          *  @return an untested weight
          */
-        Polyscip::WeightType getUntestedWeight();
+        WeightType getUntestedWeight();
 
         /** Incorporates an newly found unbounded non-dominated ray
          * into the (partial) weight space polyhedron
@@ -88,8 +87,8 @@ namespace polyscip {
          *  @param old_vertex the vertex (yielding weight and weight
          * objective value) that was considered in last computation
          */
-        void incorporateOutcome(const Polyscip::OutcomeType& outcome,
-                                const Polyscip::WeightType& weight,
+        void incorporateOutcome(const OutcomeType& outcome,
+                                const WeightType& weight,
                                 bool outcome_is_ray);
 
         /** Prints unmarked vertices to output stream
@@ -130,7 +129,7 @@ namespace polyscip {
          * @param outcome computed outcome
          * @param outcome_is_ray true if computed outcome corresponds to unbounded ray; false otherwise
          */
-        bool isNewOutcome(const Polyscip::OutcomeType& outcome, bool outcome_is_ray);
+        bool isNewOutcome(const OutcomeType& outcome, bool outcome_is_ray);
 
         /** Creates initial weight space vertices
          *  @param num_objs number of objectives of given problem
@@ -139,8 +138,7 @@ namespace polyscip {
          *  @param boundary_facets initial boundary facets of the weight space polyhedron
         */
         void createInitialVertices(unsigned num_objs,
-                                   const Polyscip::OutcomeType& point,
-                                   Polyscip::ValueType weighted_obj_val,
+                                   const OutcomeType& point,
                                    FacetContainer boundary_facets);
 
         /** Creates initial 1-skeleton of complete graph with number of
@@ -165,17 +163,17 @@ namespace polyscip {
          * @return true if initial weight space vertex with weight coinciding with ray_weight was found
          * (and the weight space polyhedron changed); false otherwiseo
          */
-        bool updateInitialWeightSpacePolyhedron(const Polyscip::OutcomeType& ray);
+        bool updateInitialWeightSpacePolyhedron(const OutcomeType& ray);
 
         void updateWeightSpacePolyhedron(const std::vector<WeightSpaceVertex*>& obsolete_vertices,
-                                         const Polyscip::OutcomeType& outcome,
+                                         const OutcomeType& outcome,
                                          bool outcome_is_ray);
 
-        std::vector<WeightSpaceVertex*> computeObsoleteVertices(const Polyscip::OutcomeType& outcome,
+        std::vector<WeightSpaceVertex*> computeObsoleteVertices(const OutcomeType& outcome,
                                                                 bool outcome_is_ray);
 
         std::vector<WeightSpaceVertex*> computeObsoleteVertices(WeightSpaceVertex* init_obs_vertex,
-                                                                const Polyscip::OutcomeType& outcome,
+                                                                const OutcomeType& outcome,
                                                                 bool outcome_is_ray);
 
         void addToSkeleton(const std::vector< std::pair<WeightSpaceVertex*, Node> >&vertex_pairs);
@@ -229,4 +227,4 @@ namespace polyscip {
 
 }
 
-#endif // POLYSCIP_SRC_WEIGHT_SPACE_POLYHEDRON_H_INCLUDED 
+#endif //POLYSCIP_SRC_WEIGHT_SPACE_POLYHEDRON_H_INCLUDED

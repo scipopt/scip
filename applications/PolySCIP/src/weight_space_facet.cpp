@@ -17,17 +17,10 @@
 #include <algorithm>
 #include <ostream>
 #include <tuple> // std::tie
-#include <vector>
-
-#include "polyscip.h"
 
 using std::ostream;
-using std::vector;
 
 namespace polyscip {
-
-    using OutcomeType = Polyscip::OutcomeType;
-    using ValueType = Polyscip::ValueType;
 
     bool operator<(const WeightSpaceFacet &facet1, const WeightSpaceFacet &facet2) {
         return std::tie(facet1.wov_coeff_, facet1.w_coeffs_) <

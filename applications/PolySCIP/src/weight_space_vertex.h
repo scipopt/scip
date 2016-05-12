@@ -30,12 +30,10 @@
 #include <memory> // std::shared_ptr
 #include <vector>
 
-#include "polyscip.h"
+#include "polyscip_types.h"
 #include "weight_space_polyhedron.h"
 
 namespace polyscip {
-
-    class WeightSpaceFacet;
 
     /** Vertex of the weight space polyhedron. */
     class WeightSpaceVertex {
@@ -48,13 +46,13 @@ namespace polyscip {
          * @param sort_facets if true, incident facets are sorted
          */
         explicit  WeightSpaceVertex(WeightSpacePolyhedron::FacetContainer incident_facets,
-                                    Polyscip::WeightType weight,
-                                    Polyscip::ValueType weighted_obj_val,
+                                    WeightType weight,
+                                    ValueType weighted_obj_val,
                                     bool sort_facets = true);
 
         explicit WeightSpaceVertex(const WeightSpaceVertex* obs,
                                    const WeightSpaceVertex* non_obs,
-                                   const Polyscip::OutcomeType& outcome,
+                                   const OutcomeType& outcome,
                                    bool outcome_is_ray);
 
         /** Checks whether given outcome makes vertex obsolete, i.e. whether
@@ -63,24 +61,24 @@ namespace polyscip {
          * @param rhs value to compare
          * @return true if vertex is made obsolete, false otherwise
          */
-        bool isMadeObsolete(const Polyscip::OutcomeType& outcome, Polyscip::ValueType rhs) const;
+        bool isMadeObsolete(const OutcomeType& outcome, ValueType rhs) const;
 
         /** Checks whether given outcome makes vertex obsolete, i.e. whether
          * vertex weight \cdot outcome >= weighted objective value of vertex
          * @param outcome point or ray in objective space
          * @return true if vertex is made obsolete, false otherwise
          */
-        bool isMadeObsolete(const Polyscip::OutcomeType& outcome) const;
+        bool isMadeObsolete(const OutcomeType& outcome) const;
 
         /** Return associated weight of weight space vertex
          * @return weight of vertex
          */
-        Polyscip::WeightType getWeight() const;
+        WeightType getWeight() const;
 
         /** Return weighted objective value of associated vertex
          * @return weighted objective value
          */
-        Polyscip::ValueType getWOV() const;
+        ValueType getWOV() const;
 
         /** Checks whether weight of vertex corresponds to unit weight
          * @param index index of 1 in unit weight
@@ -91,7 +89,7 @@ namespace polyscip {
         /** Checks whether weight of vertex corresponds with given weight
          * @param weight weight to check against
          */
-        bool hasSameWeight(const Polyscip::WeightType& weight);
+        bool hasSameWeight(const WeightType& weight);
 
         /** Prints weight space vertex information to output stream.
          * @param printFacets if true, then defining facets are printed
@@ -108,9 +106,9 @@ namespace polyscip {
          * @param outcome computed outcome
          * @return combination coefficient h
          */
-        static Polyscip::ValueType calculateCombinationValue(const Polyscip::WeightType& weight1,
-                                                             const Polyscip::WeightType& weight2,
-                                                             const Polyscip::OutcomeType& outcome);
+        static ValueType calculateCombinationValue(const WeightType& weight1,
+                                                   const WeightType& weight2,
+                                                   const OutcomeType& outcome);
 
         /** Returns the weight h * weight1 + (1-h) * weight2
          * @param weight1 weight of vertex
@@ -118,21 +116,20 @@ namespace polyscip {
          * @param h combination coefficient
          * @return convex combination h * weight1 + (1-h) * weight2
          */
-        static Polyscip::WeightType calculateWeightCombination(Polyscip::WeightType weight1,
-                                                               Polyscip::WeightType weight2,
-                                                               Polyscip::ValueType h);
-
+        static WeightType calculateWeightCombination(WeightType weight1,
+                                                     WeightType weight2,
+                                                     ValueType h);
 
 
         /**< incident facets */
         WeightSpacePolyhedron::FacetContainer incident_facets_;
         /**< used weight */
-        Polyscip::WeightType weight_;
+        WeightType weight_;
         /**< corresponding weighted objective value */
-        Polyscip::ValueType weighted_obj_val_;
+        ValueType weighted_obj_val_;
 
     };
 
 }
 
-#endif // POLYSCIP_SRC_WEIGHT_SPACE_VERTEX_H_INCLUDED
+#endif //POLYSCIP_SRC_WEIGHT_SPACE_VERTEX_H_INCLUDED
