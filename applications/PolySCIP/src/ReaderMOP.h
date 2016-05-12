@@ -36,9 +36,9 @@ class ReaderMOP : public scip::ObjReader {
 
  ReaderMOP(SCIP* scip)
    : scip::ObjReader(scip, "MOP Reader", "file reader for MOP file", "mop")
-    {}  
+ {};
   
-  virtual ~ReaderMOP() {}
+  virtual ~ReaderMOP(){};
   
   virtual SCIP_DECL_READERFREE(scip_free);
   

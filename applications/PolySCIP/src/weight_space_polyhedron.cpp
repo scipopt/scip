@@ -34,31 +34,30 @@ using std::inner_product;
 using std::make_shared;
 using std::ostream;
 using std::pair;
+using std::shared_ptr;
 using std::transform;
 using std::vector;
 
 namespace polyscip {
 
-
     using OutcomeType = Polyscip::OutcomeType;
     using ValueType = Polyscip::ValueType;
     using WeightType = Polyscip::WeightType;
     using RayContainer = Polyscip::RayContainer;
-    using FacetContainer = WeightSpaceVertex::FacetContainer;
 
     WeightSpacePolyhedron::WeightSpacePolyhedron(unsigned num_objs,
-                                                 OutcomeType point,
+                                                 const OutcomeType& point,
                                                  ValueType weighted_obj_val,
                                                  const RayContainer& initial_rays,
-                                                 pair<bool, WeightType::size_type> unit_weight_info)
+                                                 pair<bool, unsigned> unit_weight_info)
             : curr_investigated_vertex_(nullptr),
               skeleton_(),
               nodes_to_vertices_(skeleton_) {
         // create initial boundary facets w_i > 0 for i \in [num_objs]
         auto facets = FacetContainer{};
-        for (auto i = 0; i < num_objs; ++i)
-            facets.emplace_back(make_shared<const WeightSpaceFacet>(num_objs, i));
-        createInitialVertices(num_objs, std::move(point), weighted_obj_val, std::move(facets));
+        for (decltype(num_objs) i=0; i < num_objs; ++i)
+            facets.push_back(make_shared<const WeightSpaceFacet>(num_objs, i));
+        createInitialVertices(num_objs, point, weighted_obj_val, std::move(facets));
         createInitialSkeleton();
         // incorporate non-dominated rays computed in initial phase
         for (const auto& ray : initial_rays) {
@@ -159,14 +158,14 @@ namespace polyscip {
     }
 
     void WeightSpacePolyhedron::createInitialVertices(unsigned num_objs,
-                                                      OutcomeType point,
+                                                      const OutcomeType& point,
                                                       ValueType weighted_obj_val,
                                                       FacetContainer boundary_facets) {
         // make facet: point \cdot w >= weighted_obj_val to facets_
         auto point_facet = make_shared<const WeightSpaceFacet>(point,1.0);
         // create initial weight space vertices
-        for (auto i = 0; i < num_objs; ++i) {
-            auto facets = FacetContainer(begin(boundary_facets), end(boundary_facets));
+        for (decltype(num_objs) i = 0; i < num_objs; ++i) {
+            auto facets = FacetContainer(boundary_facets);
             facets.at(i) = point_facet; // replace i-th boundary facet
             auto weight = WeightType(num_objs, 0.);
             weight[i] = 1.; // set unit weight
@@ -188,12 +187,12 @@ namespace polyscip {
         }
     }
 
-    void WeightSpacePolyhedron::setMarkedVertex(WeightType::size_type unit_weight_index) {
-        for (auto vertex_it = begin(unmarked_vertices_); vertex_it != end(unmarked_vertices_); ++vertex_it) {
-            if ((*vertex_it)->hasUnitWeight(unit_weight_index)) {
-                marked_vertices_.push_back(*vertex_it);
-                unmarked_vertices_.erase(vertex_it);
-                return;
+    void WeightSpacePolyhedron::setMarkedVertex(unsigned unit_weight_index) {
+        for (auto it = begin(unmarked_vertices_); it != end(unmarked_vertices_); ++it) {
+            if ((*it)->hasUnitWeight(unit_weight_index)) {
+                marked_vertices_.push_back(*it);
+                unmarked_vertices_.erase(it);
+                break;
             }
         }
     }

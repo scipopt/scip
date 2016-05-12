@@ -22,31 +22,35 @@
 #include "objscip/objscip.h"
 #include "objscip/objscipdefplugins.h"
 #include "cmd_line_args.h"
-
+//ToDo change ReaderMOP
+#include "ReaderMOP.h"
 
 using std::ostream;
 using std::string;
 
 namespace polyscip {
 
-    Polyscip::Polyscip(int argc, char **argv)
+    Polyscip::Polyscip(int argc, const char *const *argv)
             : cmd_line_args_(argc, argv),
               scip_(nullptr),
               obj_sense_(SCIP_OBJSENSE_MINIMIZE), // default objective sense is minimization
               no_objs_(0)
     {
-        if (cmd_line_args_.getTimeLimit() <= 0)
+        if (cmd_line_args_.hasTimeLimit() && cmd_line_args_.getTimeLimit() <= 0)
             throw std::domain_error("Invalid time limit.\n");
-        if (!filenameIsOkay(cmd_line_args_.getParameterSettingsFile()))
+        if (cmd_line_args_.hasParameterFile() && !filenameIsOkay(cmd_line_args_.getParameterFile()))
             throw std::invalid_argument("Invalid parameter settings file.\n");
         if (!filenameIsOkay(cmd_line_args_.getProblemFile()))
             throw std::invalid_argument("Invalid problem file.\n");
 
-        //SCIPcreate(&scip_);
-        //assert (scip_ != nullptr);
-        //SCIPincludeDefaultPlugins(scip_);
-        //todo include ReaderMOP
-        //SCIPincludeObjReader(scip_, new ReaderMOP(scip_), TRUE);
+        SCIPcreate(&scip_);
+        assert (scip_ != nullptr);
+        SCIPincludeDefaultPlugins(scip_);
+        SCIPincludeObjReader(scip_, new ReaderMOP(scip_), TRUE);
+    }
+
+    Polyscip::~Polyscip() {
+        SCIPfree(&scip_);
     }
 
     void Polyscip::printPoint(const OutcomeType& point, ostream& os) {
@@ -66,10 +70,11 @@ namespace polyscip {
         return file.good();
     }
 
-    SCIP_RETCODE Polyscip::readParamSettings() {
-        auto param_file = cmd_line_args_.getParameterSettingsFile();
-        //SCIP_CALL( SCIPreadParams(scip_, param_file.c_str()) );
-        return SCIP_OKAY;
-    }
+
+//    SCIP_RETCODE Polyscip::readParamSettings() {
+//        auto param_file = cmd_line_args_.getParameterSettingsFile();
+//        SCIP_CALL( SCIPreadParams(scip_, param_file.c_str()) );
+//        return SCIP_OKAY;
+//    }
 
 }

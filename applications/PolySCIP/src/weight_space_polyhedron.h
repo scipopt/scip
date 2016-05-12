@@ -36,16 +36,18 @@
 
 #undef GCC_VERSION /* lemon/core.h redefines GCC_VERSION additionally to scip/def.h */
 #include "lemon/list_graph.h"
-
 #include "polyscip.h"
-#include "weight_space_facet.h"
-#include "weight_space_vertex.h"
 
 namespace polyscip {
+
+    class WeightSpaceFacet;
+    class WeightSpaceVertex;
+
 
     /** 1-skeleton of the (partial) weight space polyhedron. */
     class WeightSpacePolyhedron {
     public:
+        using FacetContainer = std::vector<std::shared_ptr<const WeightSpaceFacet>>;
 
         /** Creates the skeleton of the initial (partial) weight
         * space polyhedron P = {(w,a) \in \Lambda \times R : w \cdot y^1
@@ -59,10 +61,10 @@ namespace polyscip {
         * index with value 1; note: first index is 0
         */
         explicit WeightSpacePolyhedron(unsigned num_objs,
-                                       Polyscip::OutcomeType point,
+                                       const Polyscip::OutcomeType& point,
                                        Polyscip::ValueType point_weighted_obj_val,
                                        const Polyscip::RayContainer& initial_rays,
-                                       std::pair<bool, Polyscip::WeightType::size_type> unit_weight_info);
+                                       std::pair<bool, unsigned> unit_weight_info);
 
         /** Destructor */
         ~WeightSpacePolyhedron();
@@ -137,9 +139,9 @@ namespace polyscip {
          *  @param boundary_facets initial boundary facets of the weight space polyhedron
         */
         void createInitialVertices(unsigned num_objs,
-                                   Polyscip::OutcomeType point,
+                                   const Polyscip::OutcomeType& point,
                                    Polyscip::ValueType weighted_obj_val,
-                                   WeightSpaceVertex::FacetContainer boundary_facets);
+                                   FacetContainer boundary_facets);
 
         /** Creates initial 1-skeleton of complete graph with number of
          * objectives many vertices
@@ -150,7 +152,7 @@ namespace polyscip {
          *  unit_weight_index) an marked vertex
          *  @param unit_weight_index index of 1 in unit weight
          */
-        void setMarkedVertex(Polyscip::WeightType::size_type unit_weight_index);
+        void setMarkedVertex(unsigned unit_weight_index);
 
         //TODO adjust documentation
         /** The initial weight space vertex v* having weight which coincides with
@@ -223,7 +225,7 @@ namespace polyscip {
         for (const auto& elem : container)
             elem->print(os, printFacets);
         os << "\n";
-    }
+    };
 
 }
 

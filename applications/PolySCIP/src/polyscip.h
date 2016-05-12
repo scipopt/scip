@@ -22,14 +22,18 @@
 
 #include <iostream>
 #include <ostream>
+#include <memory>
 #include <string>
 #include <utility> // std::pair
 #include <vector>
 
 #include "cmd_line_args.h"
 #include "objscip/objscip.h"
+#include "weight_space_polyhedron.h"
 
 namespace polyscip {
+
+
 
     /** General print function
     * @param container Container to be printed
@@ -44,7 +48,7 @@ namespace polyscip {
         for (const auto& elem : container)
             os << elem << " ";
         os << "]\n";
-    }
+    };
 
     class Polyscip {
     public:
@@ -59,7 +63,8 @@ namespace polyscip {
         /**< container type for nondominated rays; needs to support: empty()*/
         using RayContainer = std::vector<OutcomeType>;
 
-        Polyscip(int argc, char** argv);
+        Polyscip(int argc, const char *const *argv);
+        ~Polyscip();
 
         void computeSupportedNondomPoints() = delete;
         void computeUnSupportedNondomPoints() = delete;
@@ -79,18 +84,16 @@ namespace polyscip {
     private:
         bool filenameIsOkay(const std::string& filename);
         /** Reads SCIP parameter settings */
-        SCIP_RETCODE readParamSettings();
-        /** Reads given problem file */
-        SCIP_RETCODE readProblemFile();
+        SCIP_RETCODE readParamSettings() = delete;
 
         CmdLineArgs cmd_line_args_;
         SCIP* scip_;
         SCIP_Objsense obj_sense_;                      /**< objective sense of given problem */
         unsigned no_objs_;                             /**< number of objectives */
+        WeightSpacePolyhedron* test_;
         PointContainer supported_nondom_points_;
         PointContainer unsupported_nondom_points_;
         RayContainer unbounded_nondom_rays_;
-
     };
 
 }

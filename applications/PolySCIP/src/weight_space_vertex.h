@@ -31,26 +31,26 @@
 #include <vector>
 
 #include "polyscip.h"
-#include "weight_space_facet.h"
+#include "weight_space_polyhedron.h"
 
 namespace polyscip {
+
+    class WeightSpaceFacet;
 
     /** Vertex of the weight space polyhedron. */
     class WeightSpaceVertex {
 
     public:
-        using FacetContainer = std::vector<std::shared_ptr<const WeightSpaceFacet>>;
-
         /** Creates a vertex of the (partial) weight space polyhedron.
          * @param incident_facets Facets defining of the weight space polyhedron defining the vertex
          * @param weight Corresponding weight
          * @param weighted_obj_val Corresponding maximal weight objective val in weight space polyhedron
          * @param sort_facets if true, incident facets are sorted
          */
-        explicit WeightSpaceVertex(FacetContainer incident_facets,
-                                   Polyscip::WeightType weight,
-                                   Polyscip::ValueType weighted_obj_val,
-                                   bool sort_facets = true);
+        explicit  WeightSpaceVertex(WeightSpacePolyhedron::FacetContainer incident_facets,
+                                    Polyscip::WeightType weight,
+                                    Polyscip::ValueType weighted_obj_val,
+                                    bool sort_facets = true);
 
         explicit WeightSpaceVertex(const WeightSpaceVertex* obs,
                                    const WeightSpaceVertex* non_obs,
@@ -86,12 +86,12 @@ namespace polyscip {
          * @param index index of 1 in unit weight
          * @return true if weight of vertex is unit weight with 1 at index; false otherwise
          */
-        bool hasUnitWeight(Polyscip::WeightType::size_type index) const;
+        bool hasUnitWeight(unsigned ind);
 
         /** Checks whether weight of vertex corresponds with given weight
          * @param weight weight to check against
          */
-        bool hasSameWeight(const Polyscip::WeightType& weight) const;
+        bool hasSameWeight(const Polyscip::WeightType& weight);
 
         /** Prints weight space vertex information to output stream.
          * @param printFacets if true, then defining facets are printed
@@ -99,13 +99,6 @@ namespace polyscip {
         void print(std::ostream& os, bool printFacets = false) const;
 
     private:
-        /**< incident facets */
-        FacetContainer incident_facets_;
-        /**< used weight */
-        Polyscip::WeightType weight_;
-        /**< corresponding weighted objective value */
-        Polyscip::ValueType weighted_obj_val_;
-
         /** Returns the coefficient h for which the following equation is fulfilled:
          *  (h * weight1 + (1-h) * weight2) \cdot outcome = 0
          * h is computed by solving
@@ -128,6 +121,15 @@ namespace polyscip {
         static Polyscip::WeightType calculateWeightCombination(Polyscip::WeightType weight1,
                                                                Polyscip::WeightType weight2,
                                                                Polyscip::ValueType h);
+
+
+
+        /**< incident facets */
+        WeightSpacePolyhedron::FacetContainer incident_facets_;
+        /**< used weight */
+        Polyscip::WeightType weight_;
+        /**< corresponding weighted objective value */
+        Polyscip::ValueType weighted_obj_val_;
 
     };
 

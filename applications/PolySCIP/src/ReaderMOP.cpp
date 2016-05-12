@@ -2308,7 +2308,7 @@ SCIP_RETCODE readMOP(
 
 /** destructor of file reader to free user data (called when SCIP is exiting) */
 SCIP_DECL_READERFREE(ReaderMOP::scip_free) {
-   return SCIP_OKAY;
+        return SCIP_OKAY;
 }
 
 SCIP_DECL_READERREAD(ReaderMOP::scip_read) {

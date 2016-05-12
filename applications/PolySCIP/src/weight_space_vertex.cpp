@@ -21,9 +21,12 @@
 #include <ostream>
 
 #include "polyscip.h"
+#include "weight_space_facet.h"
+#include "weight_space_polyhedron.h"
 
 using std::ostream;
 using std::shared_ptr;
+using std::sort;
 using std::vector;
 
 namespace polyscip {
@@ -37,7 +40,7 @@ namespace polyscip {
     using ValueType = Polyscip::ValueType;
     using WeightType = Polyscip::WeightType;
 
-    WeightSpaceVertex::WeightSpaceVertex(FacetContainer incident_facets,
+    WeightSpaceVertex::WeightSpaceVertex(WeightSpacePolyhedron::FacetContainer incident_facets,
                                          WeightType weight,
                                          ValueType weighted_obj_val,
                                          bool sort_facets)
@@ -45,7 +48,7 @@ namespace polyscip {
               weight_(std::move(weight)),
               weighted_obj_val_{weighted_obj_val} {
         if (sort_facets) // sort facets in order to be able to use std::set_intersection in other constructor
-            std:sort(begin(incident_facets_), end(incident_facets_), compare_facet_ptr);
+            sort(begin(incident_facets_), end(incident_facets_), compare_facet_ptr);
     }
 
     ValueType WeightSpaceVertex::getWOV() const {
@@ -145,15 +148,15 @@ namespace polyscip {
         return isMadeObsolete(outcome, weighted_obj_val_);
     }
 
-    bool WeightSpaceVertex::hasSameWeight(const Polyscip::WeightType& weight) const {
+    bool WeightSpaceVertex::hasSameWeight(const WeightType& weight) {
         return weight_ == weight;
     }
 
-    bool WeightSpaceVertex::hasUnitWeight(Polyscip::WeightType::size_type index) const {
+    bool WeightSpaceVertex::hasUnitWeight(unsigned index) {
         assert(index < weight_.size());
         auto weight = WeightType(weight_.size(),0.);
         weight[index] = 1.;
-        return hasSameWeight(weight);
+        return weight_ == weight;
     }
 
     void WeightSpaceVertex::print(ostream& os, bool printFacets) const {

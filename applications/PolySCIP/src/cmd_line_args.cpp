@@ -27,24 +27,24 @@ using TCLAP::UnlabeledValueArg;
 
 namespace polyscip {
 
-    CmdLineArgs::CmdLineArgs(int argc, char **argv)
+    CmdLineArgs::CmdLineArgs(int argc, const char *const *argv)
             : executable_name_(EXECUTABLE_NAME)
     {
         version_no_ = std::to_string(POLYSCIP_VERSION_MAJOR) + string(".") + std::to_string(POLYSCIP_VERSION_MINOR);
         CmdLine cmd(executable_name_,' ', version_no_);
         //cmd.setExceptionHandling(false); // set internal exception handling
-        SwitchArg compute_unsupported_arg("c", "computeUnsupported", "computes unsupported non-dominated points", true);
-        cmd.add(compute_unsupported_arg);
+        SwitchArg with_unsupported_arg("u", "unsupported", "switch off computation of unsupported non-dominated points", true);
+        cmd.add(with_unsupported_arg);
         SwitchArg be_verbose_arg("v", "verbose", "verbose PolySCIP cmd line output ", false);
         cmd.add(be_verbose_arg);
-        SwitchArg write_sols_arg("w", "writeSols", "write solutions to file", false);
+        SwitchArg write_sols_arg("w", "writeSols", "write solutions to file; default path is ./", false);
         cmd.add(write_sols_arg);
-        ValueArg<TimeLimitType> time_limit_arg("T", "timeLimit",
+        ValueArg<TimeLimitType> time_limit_arg("t", "timeLimit",
                                                "time limit in seconds for total computation time",
-                                               false, 0, "seconds");
+                                               false, TIME_LIMIT_INF, "seconds");
         cmd.add(time_limit_arg);
         ValueArg<string> write_sols_path_arg("W", "writeSolsPath",
-                                             "PATH for -w; if only -w is given the default path is ./",
+                                             "PATH for -w",
                                              false, "./", "PATH");
         cmd.add(write_sols_path_arg);
         ValueArg<string> param_file_arg("p", "paramSets", "parameter settings file for SCIP",
@@ -55,7 +55,7 @@ namespace polyscip {
         cmd.add(prob_file_arg);
         cmd.parse(argc, argv);
 
-        compute_unsupported_ = compute_unsupported_arg.getValue();
+        with_unsupported_ = with_unsupported_arg.getValue();
         be_verbose_ = be_verbose_arg.getValue();
         write_sols_ = write_sols_arg.getValue();
         time_limit_ = time_limit_arg.getValue();
