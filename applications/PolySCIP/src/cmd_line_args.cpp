@@ -32,7 +32,7 @@ namespace polyscip {
     {
         version_no_ = std::to_string(POLYSCIP_VERSION_MAJOR) + string(".") + std::to_string(POLYSCIP_VERSION_MINOR);
         CmdLine cmd(executable_name_,' ', version_no_);
-        //cmd.setExceptionHandling(false); // set internal exception handling
+        cmd.setExceptionHandling(false); // set internal exception handling
         SwitchArg with_unsupported_arg("u", "unsupported", "switch off computation of unsupported non-dominated points", true);
         cmd.add(with_unsupported_arg);
         SwitchArg be_verbose_arg("v", "verbose", "verbose PolySCIP cmd line output ", false);

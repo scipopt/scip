@@ -18,14 +18,22 @@
  */
 
 #include <iostream>
+#include <stdexcept>
 
 #include "polyscip.h"
+#include "scip/def.h"
 
 using polyscip::Polyscip;
 
 int main(int argc, char** argv) {
-    std::cout << "Starting PolySCIP...\n";
-    Polyscip p(argc, (const char *const *) argv);
-
+    try {
+        std::cout << "Starting PolySCIP...\n";
+        Polyscip polyscip(argc, (const char *const *) argv);
+        SCIP_CALL( polyscip.readProblem() );
+        polyscip.computeNondomPoints();
+    }
+    catch (std::exception& e) {
+        std::cerr << "ERROR: " << e.what() << "\n";
+    }
     return 0;
 }

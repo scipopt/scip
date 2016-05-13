@@ -35,20 +35,6 @@ namespace polyscip {
     /**< type for weights; needs to support: at(), size() */
     using WeightType = std::vector<ValueType>;
 
-    /** General print function
-    * @param container Container to be printed
-    * @param description Corresponding description
-    * @param os Output stream to print to
-    */
-    template <typename Container>
-    void print(const Container& container,
-               std::string description,
-               std::ostream& os = std::cout) {
-        os << description << "[ ";
-        for (const auto& elem : container)
-            os << elem << " ";
-        os << "]\n";
-    };
 }
 
 #endif //POLYSCIP_SRC_POLYSCIP_TYPES_H_INCLUDED

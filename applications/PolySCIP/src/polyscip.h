@@ -24,7 +24,7 @@
 #include <ostream>
 #include <memory>
 #include <string>
-#include <utility> // std::pair
+#include <tuple>
 #include <vector>
 
 #include "cmd_line_args.h"
@@ -36,20 +36,12 @@ namespace polyscip {
 
     class Polyscip {
     public:
-        /**< container type for nondominated points */
-        using PointContainer = std::vector <std::pair<OutcomeType, WeightType>>;
-        /**< container type for nondominated rays; needs to support: empty()*/
-        using RayContainer = std::vector<OutcomeType>;
-
         Polyscip(int argc, const char *const *argv);
         ~Polyscip();
 
-        void computeSupportedNondomPoints() = delete;
-        void computeUnSupportedNondomPoints() = delete;
+        SCIP_RETCODE readProblem();
 
-        void initWeightSpace(const OutcomeType& point,
-                             const std::vector<OutcomeType>& initial_rays,
-                             std::pair<bool, unsigned> unit_weight_info);
+        void computeNondomPoints();
 
         /** Prints given weight to given output stream
          */
@@ -64,18 +56,47 @@ namespace polyscip {
         void printRay(const OutcomeType& ray, std::ostream& os = std::cout);
 
     private:
+        /**< A result comprises of a solution in feasible space,
+         * the non-dominated point in objective space and a corresponding weight
+         * for which solution is optimal
+        */
+        using Result = std::tuple<SCIP_SOL*, OutcomeType, WeightType>;
+        /** Corresponding fields for Result */
+        enum class ResultField {Solution, Outcome, Weight};
+
+        using ResultContainer = std::vector<Result>;
+
         bool filenameIsOkay(const std::string& filename);
-        /** Reads SCIP parameter settings */
-        SCIP_RETCODE readParamSettings() = delete;
+
+        /** Computes first non-dominated point and initializes
+         * the weight space polyhedron or finds out that there is no non-dominated point
+         * @return true if first non-dom point was found and weight space polyhedron initialized;
+         * false otherwise
+         */
+        bool initWeightSpace();
+
+        /** Computes the supported solutions and corresponding non-dominated points
+         */
+        void computeSupported();
+
+        /** Computes the unsupported solutions and corresponding non-dominated points
+         */
+        void computeUnsupported();
+
+        SCIP_RETCODE restartClockIteration();
 
         CmdLineArgs cmd_line_args_;
         SCIP* scip_;
         SCIP_Objsense obj_sense_;                      /**< objective sense of given problem */
         unsigned no_objs_;                             /**< number of objectives */
+        SCIP_CLOCK* clock_iteration_;      /**< clock measuring the time needed for every iteration */
+        SCIP_CLOCK* clock_total_;          /**< clock measuring the time needed for the entire program */
         std::unique_ptr<WeightSpacePolyhedron> weight_space_poly_;
-        PointContainer supported_nondom_points_;
-        PointContainer unsupported_nondom_points_;
-        RayContainer unbounded_nondom_rays_;
+        ResultContainer supported_;
+        ResultContainer unsupported_;
+        ResultContainer unbounded_;
+
+
     };
 
 }

@@ -24,8 +24,8 @@
 #include <utility> // std::move, std::pair
 #include <vector>
 
+#include "global_functions.h"
 #include "lemon/list_graph.h"
-
 #include "polyscip_types.h"
 #include "weight_space_facet.h"
 #include "weight_space_vertex.h"
@@ -57,8 +57,8 @@ namespace polyscip {
         for (const auto& ray : initial_rays) {
             auto wspoly_changed = updateInitialWeightSpacePolyhedron(ray);
             if (!wspoly_changed)
-                print(ray,
-                      {"INITIAL WEIGHT SPACE POLYHEDRON UNCHANGED: no vertex made obsolete by ray: "});
+                global::print(ray,
+                              {"INITIAL WEIGHT SPACE POLYHEDRON UNCHANGED: no vertex made obsolete by ray: "});
         }
         if (unit_weight_info.first) // mark initial vertex correspoding to non-dominated point
             setMarkedVertex(unit_weight_info.second);
