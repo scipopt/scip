@@ -20,13 +20,16 @@
 
 /*--+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
 
+#include <assert.h>
+#include <string.h>
+
 #include "probdata_spa.h"
 #include "event_newsol.h"
-#include "scip/cons_logicor.h"
-#include <string.h>
 
 #define EVENTHDLR_NAME         "newsol"
 #define EVENTHDLR_DESC         "event handler for solution events"
+
+
 
 /** copy method for event handler plugins (called when SCIP copies plugins) */
 static
@@ -51,7 +54,7 @@ SCIP_DECL_EVENTINIT(eventInitNewsol)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
    /* notify SCIP that your event handler wants to react on the event type best solution found */
-   SCIP_CALL( SCIPcatchEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND | SCIP_EVENTTYPE_POORSOLFOUND, eventhdlr, NULL, NULL) );
+   SCIP_CALL( SCIPcatchEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, NULL) );
 
    return SCIP_OKAY;
 }
@@ -65,7 +68,7 @@ SCIP_DECL_EVENTEXIT(eventExitNewsol)
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
    /* notify SCIP that your event handler wants to drop the event type best solution found */
-   SCIP_CALL( SCIPdropEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND | SCIP_EVENTTYPE_POORSOLFOUND, eventhdlr, NULL, -1) );
+   SCIP_CALL( SCIPdropEvent( scip, SCIP_EVENTTYPE_BESTSOLFOUND, eventhdlr, NULL, -1) );
 
    return SCIP_OKAY;
 }
@@ -76,7 +79,7 @@ SCIP_DECL_EVENTEXEC(eventExecNewsol)
 {  /*lint --e{715}*/
    SCIP_VAR*** varmatrix;
    SCIP_SOL* newsol;
-   SCIP_CONS* cons;
+   SCIP_ROW* row;
    SCIP_Bool varfound = FALSE;
    char name[SCIP_MAXSTRLEN];
    int nbins;
@@ -89,6 +92,7 @@ SCIP_DECL_EVENTEXEC(eventExecNewsol)
    assert(event != NULL);
    assert(scip != NULL);
    assert(SCIPeventGetType(event) == SCIP_EVENTTYPE_BESTSOLFOUND || SCIPeventGetType(event) == SCIP_EVENTTYPE_POORSOLFOUND);
+
    if( SCIPgetStage(scip) != SCIP_STAGE_SOLVING )
       return SCIP_OKAY;
 
@@ -107,11 +111,10 @@ SCIP_DECL_EVENTEXEC(eventExecNewsol)
    assert(ncluster >= 0);
    assert(varmatrix != NULL);
 
-   /* create a logic-or constraint to separate the current clustering */
    (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "newsol_%d", SCIPsolGetIndex(newsol));
-   SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, name, 0, NULL, TRUE, TRUE, TRUE, FALSE, TRUE, FALSE, FALSE, TRUE, FALSE, TRUE) );
 
-   /* iterate through all bins */
+   SCIP_CALL( SCIPcreateEmptyRowUnspec(scip, &row, name, -SCIPinfinity(scip), -1.0, FALSE, FALSE, FALSE) );
+
    for( b = 0; b < nbins; b++ )
    {
       /* iterate through all clusters */
@@ -125,21 +128,17 @@ SCIP_DECL_EVENTEXEC(eventExecNewsol)
             continue;
          assert(SCIPvarGetType(var) == SCIP_VARTYPE_BINARY);
 
-         if( !SCIPvarIsNegated(var) )
-         {
-            /* get transformed variable */
-            if( !SCIPvarIsTransformed(var) )
-               var = SCIPvarGetTransVar(var);
-         }
-         assert(var != NULL);
-
-         /* skip variabls that are not active */
-         if( !SCIPvarIsActive(var) )
-            continue;
-
          /* skip vars that are globally fixed */
          if( SCIPisGE(scip, SCIPvarGetLbGlobal(var), SCIPvarGetUbGlobal(var)) )
             continue;
+
+         if( !SCIPvarIsOriginal(var) )
+         {
+            SCIP_Real constant = 0.0;
+            SCIP_Real scalar = 1.0;
+            SCIP_CALL( SCIPvarGetOrigvarSum(&var, &scalar, &constant) );
+            assert(var != NULL);
+         }
 
          solval = SCIPgetSolVal(scip, newsol, var);
          assert(!SCIPisInfinity(scip, REALABS(solval)));
@@ -150,25 +149,17 @@ SCIP_DECL_EVENTEXEC(eventExecNewsol)
             continue;
          assert(SCIPisEQ(scip, solval, 1.0));
 
-         if( !SCIPvarIsNegated(var) )
-         {
-            SCIP_CALL( SCIPgetNegatedVar(scip, var, &var) );
-         }
-         assert(var != NULL);
-
-         /* add variable to constraint */
-         SCIP_CALL( SCIPaddCoefLogicor(scip, cons, var) );
-         varfound = TRUE;
-
-         /* we can break at this point, because there is at most one varibale set to 1.0 per cluster */
-         break;
+         SCIP_CALL( SCIPaddVarToRow(scip, row, var, 1.0) );
+         SCIP_CALL( SCIPchgRowRhs(scip, row, SCIProwGetRhs(row)+1.0) );
       }
    }
 
    /* add and release constraint */
    if( varfound )
-      SCIP_CALL( SCIPaddCons(scip, cons) );
-   SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   {
+      SCIP_CALL( SCIPaddPoolCut(scip, row) );
+   }
+   SCIP_CALL( SCIPreleaseRow(scip, &row) );
 
    return SCIP_OKAY;
 }

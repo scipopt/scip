@@ -13653,7 +13653,7 @@ SCIP_RETCODE lpAlgorithm(
    assert(lperror != NULL);
 
    /* check if a time limit is set, and set time limit for LP solver accordingly */
-   lptimelimit = SCIPsetInfinity(set);
+   lptimelimit = SCIPlpiInfinity(lp->lpi);
    if( set->istimelimitfinite )
       lptimelimit = set->limit_time - SCIPclockGetTime(stat->solvingtime);
 
@@ -19956,6 +19956,8 @@ SCIP_RETCODE SCIPlpComputeRelIntPoint(
 #endif
 
    /* set time limit */
+   if( SCIPsetIsInfinity(set, timelimit) )
+      timelimit = SCIPlpiInfinity(lpi);
    retcode = SCIPlpiSetRealpar(lpi, SCIP_LPPAR_LPTILIM, timelimit);
 
    /* check, if parameter is unknown */
