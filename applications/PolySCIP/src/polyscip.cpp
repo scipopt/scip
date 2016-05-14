@@ -40,10 +40,10 @@ namespace polyscip {
 
     Polyscip::Polyscip(int argc, const char *const *argv)
             : cmd_line_args_(argc, argv),
+              polyscip_status_(PolyscipStatus::Unsolved),
               scip_(nullptr),
               obj_sense_(SCIP_OBJSENSE_MINIMIZE), // default objective sense is minimization
               no_objs_(0),
-              clock_iteration_(nullptr),
               clock_total_(nullptr)
     {
         if (cmd_line_args_.hasTimeLimit() && cmd_line_args_.getTimeLimit() <= 0)
@@ -58,7 +58,6 @@ namespace polyscip {
         SCIPincludeObjReader(scip_, new ReaderMOP(scip_), TRUE);
         if (cmd_line_args_.hasParameterFile())
             SCIPreadParams(scip_, cmd_line_args_.getParameterFile().c_str());
-        SCIPcreateClock(scip_, addressof(clock_iteration_));
         SCIPcreateClock(scip_, addressof(clock_total_));
     }
 
@@ -86,16 +85,67 @@ namespace polyscip {
     }
 
     SCIP_RETCODE Polyscip::initWeightSpace() {
+        SCIP_CALL( SCIPstartClock(scip_, clock_total_) );
         decltype(no_objs_) obj_counter{0}; // objCounter has same type as no_objs
         auto initial_weight = WeightType(no_objs_,0.);
-        SCIP_CALL( SCIPstartClock(scip_, clock_total_) );
-        auto found_point = false;
-        while (obj_counter < no_objs_) {
+
+        while (polyscip_status_ == PolyscipStatus::Unsolved && obj_counter < no_objs_) {
             initial_weight[obj_counter] = 1.;
-            SCIP_CALL( restartClockIteration() );
+            SCIP_CALL( setWeightedObjective(initial_weight) );
+            SCIP_CALL( solve() );
+            auto scip_status = SCIPgetStatus(scip_);
+            if (scip_status == SCIP_STATUS_INFORUNBD)
+                scip_status = separateINFORUNBD(initial_weight);
+            SCIP_CALL( handleStatus(scip_status) );
             //todo
             ++obj_counter;
         }
+        return SCIP_OKAY;
+    }
+
+    SCIP_STATUS Polyscip::separateINFORUNBD(const WeightType& weight) {
+        auto zero_weight = WeightType(no_objs_,0.);
+        setWeightedObjective(zero_weight);
+        solve(); // re-compute with zero objective
+        auto status = SCIPgetStatus(scip_);
+        if (status == SCIP_STATUS_INFORUNBD) {
+            throw std::runtime_error("INFORUNBD Status with zero objective.");
+        }
+        else if (status == SCIP_STATUS_OPTIMAL) { // previous problem was unbounded
+            setWeightedObjective(weight); // re-set to previous weighted objective
+            return SCIP_STATUS_UNBOUNDED;
+        }
+        else {
+            return status;
+        }
+    }
+
+    SCIP_RETCODE Polyscip::handleStatus(SCIP_STATUS status) {
+        if (status == SCIP_STATUS_OPTIMAL) {
+            //todo
+        }
+        else if (status == SCIP_STATUS_UNBOUNDED) {
+            //todo
+        }
+        else if (status == SCIP_STATUS_INFORUNBD) {
+            //todo
+        }
+        else if (status == SCIP_STATUS_INFEASIBLE) {
+            polyscip_status_ = PolyscipStatus::Solved;
+        }
+        else if (status == SCIP_STATUS_TIMELIMIT) {
+            polyscip_status_ = PolyscipStatus::TimeLimitReached;
+        }
+        return SCIP_OKAY;
+    }
+
+    SCIP_RETCODE Polyscip::solve() {
+        if (cmd_line_args_.hasTimeLimit()) { // set SCIP timelimit
+            auto remaining_time_limit = cmd_line_args_.getTimeLimit() -
+                                        SCIPgetClockTime(scip_, clock_total_);
+            SCIP_CALL(SCIPsetRealParam(scip_, "limits/time", remaining_time_limit));
+        }
+        SCIP_CALL( SCIPsolve(scip_) );    // actual SCIP solver call
         return SCIP_OKAY;
     }
 
@@ -109,12 +159,6 @@ namespace polyscip {
             auto val = objs->getWeightedObjVal(vars[i], weight);
             SCIP_CALL( SCIPchgVarObj(scip_, vars[i], val) );
         }
-        return SCIP_OKAY;
-    }
-
-    SCIP_RETCODE Polyscip::restartClockIteration() {
-        SCIP_CALL( SCIPresetClock(scip_, clock_iteration_) );
-        SCIP_CALL( SCIPstartClock(scip_, clock_iteration_) );
         return SCIP_OKAY;
     }
 

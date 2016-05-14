@@ -68,6 +68,10 @@ namespace polyscip {
             Solution, Outcome, Weight
         };
 
+        enum class PolyscipStatus {
+            Solved, TimeLimitReached, Unsolved
+        };
+
         using ResultContainer = std::vector<Result>;
 
         bool filenameIsOkay(const std::string &filename);
@@ -81,6 +85,12 @@ namespace polyscip {
 
         SCIP_RETCODE setWeightedObjective(const WeightType& weight);
 
+        SCIP_RETCODE solve();
+
+        SCIP_STATUS separateINFORUNBD(const WeightType& weight);
+
+        SCIP_RETCODE handleStatus(SCIP_STATUS status);
+
         /** Computes the supported solutions and corresponding non-dominated points
          */
         void computeSupported();
@@ -89,18 +99,16 @@ namespace polyscip {
          */
         void computeUnsupported();
 
-        SCIP_RETCODE restartClockIteration();
-
         CmdLineArgs cmd_line_args_;
+        PolyscipStatus polyscip_status_;
         SCIP *scip_;
-        SCIP_Objsense obj_sense_;
         /**< objective sense of given problem */
-        std::size_t no_objs_;
+        SCIP_Objsense obj_sense_;
         /**< number of objectives */
-        SCIP_CLOCK *clock_iteration_;
-        /**< clock measuring the time needed for every iteration */
-        SCIP_CLOCK *clock_total_;
+        std::size_t no_objs_;
         /**< clock measuring the time needed for the entire program */
+        SCIP_CLOCK* clock_total_;
+
         std::unique_ptr<WeightSpacePolyhedron> weight_space_poly_;
         ResultContainer supported_;
         ResultContainer unsupported_;
