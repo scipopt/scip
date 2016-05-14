@@ -1014,6 +1014,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
 #else
 #define debugSimplify                   while( FALSE ) printf
 #endif
+
 /** node for linked list of expressions */
 typedef struct exprnode
 {
@@ -1130,9 +1131,15 @@ SCIP_RETCODE buildExprlistFromExprs(SCIP* scip, SCIP_CONSEXPR_EXPR** exprs, SCIP
    return SCIP_OKAY;
 }
 
-/* merges list into outlist
- * if list has more than one element, then they are the children of a simplified sum expression
- * (ie, no val, nor sum), otherwise is a product a variable or a function node */
+/* merges tomerge into finalchildren
+ * Both, tomerge and finalchildren contain expressions that could be the children of a simplified sum
+ * (except for SS6 and SS7 which are enforced later).
+ * However, the concatenation of both lists, will not in general yield a simplified sum expression,
+ * because both SS4 and SS5 could be violated. So the purpose of this method is to enforce SS4 and SS5.
+ * In the process of enforcing SS4, it could happen that SS8 get violated, but this is easy to fix.
+ * note: if list has more than one element, then they are the children of a simplified sum expression
+ * (ie, no val, nor sum), otherwise is a product, a variable or a function node
+ */
 static
 SCIP_RETCODE mergeSumExprlist(SCIP* scip, EXPRNODE* tomerge, EXPRNODE** finalchildren)
 {
@@ -1254,6 +1261,7 @@ SCIP_RETCODE mergeSumExprlist(SCIP* scip, EXPRNODE* tomerge, EXPRNODE** finalchi
 }
 
 
+/* builds a sum expression with the elements of exprlist as its children */
 static
 SCIP_RETCODE buildExprSumFromExprlist(SCIP* scip, EXPRNODE* exprlist, SCIP_Real constant, SCIP_CONSEXPR_EXPR** expr)
 {
@@ -1507,11 +1515,16 @@ SCIP_RETCODE simplifyPower(
    return SCIP_OKAY;
 }
 
-/* merges list into outlist
- * if list has more than one element, then they are the children of a simplified product expression
- * note that it can contain products, but only because they are acting as powers!
- * TODO: maybe both merge methods can be merged? the code is similar except for some invariants and
- * handling multiplication instead of addition when two expressions are equal
+/* merges tomerge into finalchildren
+ * Both, tomerge and finalchildren contain expressions that could be the children of a simplified product
+ * (except for SP8-SP10 which are enforced later).
+ * However, the concatenation of both lists, will not in general yield a simplified propduct expression,
+ * because both SP4 and SP5 could be violated. So the purpose of this method is to enforce SP4 and SP5.
+ * In the process of enforcing SP4, it could happen that SP2 and SP3 get violated. Since enforcing those
+ * could in principle generate further violations, we remove the affected children from finalchildren
+ * and include them in unsimplifiedchildren for further processing.
+ * note: if tomerge has more than one element, then they are the children of a simplified product expression;
+ * it can contain products, but only because they are acting as powers!
  */
 static
 SCIP_RETCODE mergeProductExprlist(SCIP* scip, EXPRNODE* tomerge, EXPRNODE** finalchildren, EXPRNODE** unsimplifiedchildren)
@@ -1623,17 +1636,18 @@ SCIP_RETCODE mergeProductExprlist(SCIP* scip, EXPRNODE* tomerge, EXPRNODE** fina
    return SCIP_OKAY;
 }
 
-/* idea of the algorithm:
- * we have a sum expr, which has simplified children (children)
- * we store a list of the children that should go to the simplified expr (exprlist)
- * For each children:
- * - if it is not a sum, build a list auxlist = [child]
- * - if it is a sum and coef != 1, distribution coef to the sum and simplify it again; repeat call
- * - if coef = 1, build auxlist = [children of child]
- * merge auxlist into exprlist
- * build sum expression from exprlist
- * - if exprlist is empty -> build value expression
- * - if exprlist is has only one child and constant is 0.0 -> the child is the simplified expression
+/* Algorithm for simplifying a sum expression:
+ * Summary: we first build a list of expressions (called finalchildren) which will be the children of the simplified sum
+ * and then we process this list in order to enforce SS6 and SS7.
+ * Description: To build finalchildren, each child of sum is manipulated (see simplifyTerm) in order to satisfy
+ * SS2, SS3 and SS8 as follows
+ * SS8: if the child's coefficient is 0, ignore it
+ * SS3: if the child is a value, add the value to the sum's constant
+ * SS2: if the child is a sum, we distribution that child's coefficient to its children and then build a list with the
+ *      child's children. Note that distributing will not render the child unsimplified.
+ * Otherwise (if it satisfies SS2, SS3 and SS8) we build a list with that child.
+ * Then, we merge the built list into finalchildren (see mergeSumExprlist).
+ * After finalchildren is done, we build the simplified sum expression out of it, taking care that SS6 and SS7 are satisfied
  */
 static
 SCIP_RETCODE SCIPsimplifyConsExprExprSum(
@@ -1668,7 +1682,7 @@ SCIP_RETCODE SCIPsimplifyConsExprExprSum(
       if( coefs[i] == 0.0 )
          continue;
 
-      /* enforces SS1 */
+      /* enforces SS2 and SS3 */
       tomerge = NULL;
       SCIP_CALL( simplifyTerm(scip, children[i], coefs[i], &simplifiedconstant, &tomerge) );
 
@@ -1706,20 +1720,21 @@ SCIP_RETCODE SCIPsimplifyConsExprExprSum(
    return SCIP_OKAY;
 }
 
-/* idea of the algorithm:
- * we have a prod expr, which has simplified children (children)
- * we store a list of the children that should go to the simplified expr (exprlist)
- * For each children:
- * - if it is not a prod or prod and exponent is fractional, build a list auxlist = [child]
- * - if it is a prod and exponent is integer != 1, distribute exponent to the prod and simplify it again; repeat call
- * - if exponent = 1, build auxlist = [children of child]
- * merge auxlist into exprlist
- * build prod expression from exprlist
- * - if exprlist is empty -> build value expression
- * - if exprlist is has only one child, exponent is 1.0 and coef is 1.0 -> the child is the simplified expression
- * - if exprlist is has only one child and exponent is 1.0 -> build a sum expression
- *   note: 1) products are *not* use to represent number*expr, we use sums
- *         2) when building this sum expression, it needs to be simplified!
+/* Algorithm for simplifying a product expression:
+ * Summary: we first build a list of expressions (called finalchildren) which will be the children of the simplified product
+ * and then we process this list in order to enforce SP8-10
+ * Description: In order to build finalchildren, we first build list of unsimplified children (called unsimplifiedchildren)
+ * with the children of the product. Each node of the list is manipulated (see simplifyPower) in order to satisfy
+ * SP2, SP3, SP6 and SP7 as follows
+ * SP7: if the node's expression is a value, multiply the value^exponent to the products's coef
+ * SP6: if the node's exponent is 0, ignore it
+ * SP2: if the node's expression is a product and its exponent is integer != 1, distribute exponent among its children
+ *      and simplify again. If its exponent equals 1, then build a list with the child's children
+ * SP3: if the node's expression is a sum with constant 0 with a unique child, multiply child's coef^exponent to the
+ *      products coef and consider the sum's child as the child of product (simplify again)
+ * Then, we merge the built list (or the simplified node) into finalchildren. While merging, nodes from finalchildren can
+ * go back to unsimplifiedchildren for further processing (see mergeProductExprlist for more details)
+ * After finalchildren is done, we build the simplified product expression out of it, taking care that SP8-10 are satisfied
  */
 static
 SCIP_RETCODE SCIPsimplifyConsExprExprProduct(
@@ -1762,7 +1777,7 @@ SCIP_RETCODE SCIPsimplifyConsExprExprProduct(
       first = listPopFirst(&unsimplifiedchildren);
       assert(first != NULL);
 
-      /* enforces SP1 */
+      /* enforces SP2, SP3, SP6 and SP7 */
       tomerge = NULL;
       SCIP_CALL( simplifyPower(scip, first->expr, first->coef, &simplifiedcoef, &tomerge) );
 
