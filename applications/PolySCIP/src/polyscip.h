@@ -20,6 +20,7 @@
 #ifndef POLYSCIP_SRC_POLYSCIP_H_INCLUDED
 #define POLYSCIP_SRC_POLYSCIP_H_INCLUDED
 
+#include <cstdlib>
 #include <iostream>
 #include <ostream>
 #include <memory>
@@ -37,6 +38,7 @@ namespace polyscip {
     class Polyscip {
     public:
         Polyscip(int argc, const char *const *argv);
+
         ~Polyscip();
 
         SCIP_RETCODE readProblem();
@@ -45,35 +47,39 @@ namespace polyscip {
 
         /** Prints given weight to given output stream
          */
-        void printWeight(const WeightType& weight, std::ostream& os = std::cout);
+        void printWeight(const WeightType &weight, std::ostream &os = std::cout);
 
         /** Prints given point to given output stream
          */
-        void printPoint(const OutcomeType& point, std::ostream& os = std::cout);
+        void printPoint(const OutcomeType &point, std::ostream &os = std::cout);
 
         /** Prints given ray to given output stream
          */
-        void printRay(const OutcomeType& ray, std::ostream& os = std::cout);
+        void printRay(const OutcomeType &ray, std::ostream &os = std::cout);
 
     private:
         /**< A result comprises of a solution in feasible space,
          * the non-dominated point in objective space and a corresponding weight
          * for which solution is optimal
         */
-        using Result = std::tuple<SCIP_SOL*, OutcomeType, WeightType>;
+        using Result = std::tuple<SCIP_SOL *, OutcomeType, WeightType>;
         /** Corresponding fields for Result */
-        enum class ResultField {Solution, Outcome, Weight};
+        enum class ResultField {
+            Solution, Outcome, Weight
+        };
 
         using ResultContainer = std::vector<Result>;
 
-        bool filenameIsOkay(const std::string& filename);
+        bool filenameIsOkay(const std::string &filename);
 
         /** Computes first non-dominated point and initializes
          * the weight space polyhedron or finds out that there is no non-dominated point
          * @return true if first non-dom point was found and weight space polyhedron initialized;
          * false otherwise
          */
-        bool initWeightSpace();
+        SCIP_RETCODE initWeightSpace();
+
+        SCIP_RETCODE setWeightedObjective(const WeightType& weight);
 
         /** Computes the supported solutions and corresponding non-dominated points
          */
@@ -86,17 +92,19 @@ namespace polyscip {
         SCIP_RETCODE restartClockIteration();
 
         CmdLineArgs cmd_line_args_;
-        SCIP* scip_;
-        SCIP_Objsense obj_sense_;                      /**< objective sense of given problem */
-        unsigned no_objs_;                             /**< number of objectives */
-        SCIP_CLOCK* clock_iteration_;      /**< clock measuring the time needed for every iteration */
-        SCIP_CLOCK* clock_total_;          /**< clock measuring the time needed for the entire program */
+        SCIP *scip_;
+        SCIP_Objsense obj_sense_;
+        /**< objective sense of given problem */
+        std::size_t no_objs_;
+        /**< number of objectives */
+        SCIP_CLOCK *clock_iteration_;
+        /**< clock measuring the time needed for every iteration */
+        SCIP_CLOCK *clock_total_;
+        /**< clock measuring the time needed for the entire program */
         std::unique_ptr<WeightSpacePolyhedron> weight_space_poly_;
         ResultContainer supported_;
         ResultContainer unsupported_;
         ResultContainer unbounded_;
-
-
     };
 
 }

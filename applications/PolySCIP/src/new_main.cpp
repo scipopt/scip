@@ -22,6 +22,7 @@
 
 #include "polyscip.h"
 #include "scip/def.h"
+#include "tclap/ArgException.h"
 
 using polyscip::Polyscip;
 
@@ -32,8 +33,13 @@ int main(int argc, char** argv) {
         SCIP_CALL( polyscip.readProblem() );
         polyscip.computeNondomPoints();
     }
+    catch (TCLAP::ArgException& e) {
+        std::cerr << "ERROR: " << e.error() << " " << e.argId() << "\n";
+    }
     catch (std::exception& e) {
         std::cerr << "ERROR: " << e.what() << "\n";
+    }
+    catch (TCLAP::ExitException& e) {
     }
     return 0;
 }

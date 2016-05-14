@@ -22,14 +22,12 @@
 #include <string>
 #include <tuple>
 
-#include "own_make_unique.h"
 #include "objscip/objscip.h"
 #include "objscip/objscipdefplugins.h"
 #include "cmd_line_args.h"
 #include "global_functions.h"
 #include "polyscip_types.h"
-//ToDo change ReaderMOP und ProbDataObjs
-#include "ProbDataObjectives.h"
+#include "prob_data_objectives.h"
 #include "ReaderMOP.h"
 
 using std::addressof;
@@ -44,7 +42,9 @@ namespace polyscip {
             : cmd_line_args_(argc, argv),
               scip_(nullptr),
               obj_sense_(SCIP_OBJSENSE_MINIMIZE), // default objective sense is minimization
-              no_objs_(0)
+              no_objs_(0),
+              clock_iteration_(nullptr),
+              clock_total_(nullptr)
     {
         if (cmd_line_args_.hasTimeLimit() && cmd_line_args_.getTimeLimit() <= 0)
             throw std::domain_error("Invalid time limit.");
@@ -85,18 +85,31 @@ namespace polyscip {
             computeUnsupported();
     }
 
-    bool Polyscip::initWeightSpace() {
+    SCIP_RETCODE Polyscip::initWeightSpace() {
         decltype(no_objs_) obj_counter{0}; // objCounter has same type as no_objs
         auto initial_weight = WeightType(no_objs_,0.);
         SCIP_CALL( SCIPstartClock(scip_, clock_total_) );
         auto found_point = false;
         while (obj_counter < no_objs_) {
+            initial_weight[obj_counter] = 1.;
             SCIP_CALL( restartClockIteration() );
             //todo
             ++obj_counter;
         }
+        return SCIP_OKAY;
+    }
 
-        return false;
+    SCIP_RETCODE Polyscip::setWeightedObjective(const WeightType& weight){
+        if (SCIPisTransformed(scip_))
+            SCIP_CALL( SCIPfreeTransform(scip_) );
+        ProbDataObjectives* objs = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
+        auto vars = SCIPgetOrigVars(scip_);
+        auto no_vars = SCIPgetNOrigVars(scip_);
+        for (auto i=0; i<no_vars; ++i) {
+            auto val = objs->getWeightedObjVal(vars[i], weight);
+            SCIP_CALL( SCIPchgVarObj(scip_, vars[i], val) );
+        }
+        return SCIP_OKAY;
     }
 
     SCIP_RETCODE Polyscip::restartClockIteration() {
@@ -106,7 +119,7 @@ namespace polyscip {
     }
 
     void Polyscip::computeSupported() {
-        auto point_found = initWeightSpace();
+        initWeightSpace();
         //TODO
     }
 
@@ -135,12 +148,13 @@ namespace polyscip {
     SCIP_RETCODE Polyscip::readProblem() {
         auto filename = cmd_line_args_.getProblemFile();
         SCIP_CALL( SCIPreadProb(scip_, filename.c_str(), "mop") );
-        no_objs_ = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_))->getNObjs();
-        if (SCIPgetObjsense(scip_) == SCIP_OBJSENSE_MAXIMIZE) { // objective sense of read problem is maximization
+        ProbDataObjectives* objs = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
+        no_objs_ = objs->getNObjs();
+        if (SCIPgetObjsense(scip_) == SCIP_OBJSENSE_MAXIMIZE) {
             obj_sense_ = SCIP_OBJSENSE_MAXIMIZE;
-            //internally we treat problem as min problem and negate objective values
+            // internally we treat problem as min problem and negate objective coefficients
             SCIPsetObjsense(scip_, SCIP_OBJSENSE_MINIMIZE);
-            dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_))->negateAllObjCoeffs();
+            objs->negateAllCoeffs();
         }
         if (cmd_line_args_.beVerbose()) {
             cout << "No of objectives: " << no_objs_;
@@ -149,8 +163,8 @@ namespace polyscip {
                 cout << "MAXIMIZE\n";
             else
                 cout << "MINIMIZE\n";
-
         }
+        objs = nullptr;
         return SCIP_OKAY;
     }
 

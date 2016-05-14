@@ -5,8 +5,8 @@ set(HEADERS_FILES
         cmd_line_args.h
         polyscip.h
         #LiftedWeightSpaceSolver.h
-        ProbDataObjectives.h
-	ReaderMOP.h
+        prob_data_objectives.h
+        ReaderMOP.h
         #Skeleton.h
         #WeightedSolver.h
         #WeightSpaceVertex.h
@@ -20,7 +20,7 @@ set(SOURCE_FILES
         polyscip.cpp
         new_main.cpp
         #LiftedWeightSpaceSolver.cpp
-        ProbDataObjectives.cpp
+        prob_data_objectives.cpp
         ReaderMOP.cpp
         #Skeleton.cpp
         #WeightedSolver.cpp

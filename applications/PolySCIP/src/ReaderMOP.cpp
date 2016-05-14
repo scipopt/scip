@@ -12,29 +12,15 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   ReaderMOP.cpp
- * @brief  mop reader
- * @author Sebastian Schenker, Timo Strunk
- *
- * The mop-reader adapts the mps-reader of SCIP by the functionality to read multiple objectives.
- *
- * The input file has to follow some simple conventions
- * - It has to contain a problem in 
- * <a href="http://en.wikipedia.org/wiki/MPS_%28format%29">MPS</a> format
- * - The file extension must be <code>.mop</code>
- * - Every row marked <code>N</code> is treated as an objective
- *
- */
-
 #include "ReaderMOP.h"
-#include "objscip/objscip.h"
-#include "ProbDataObjectives.h"
 
 #include <iostream>
 #include <assert.h>
 #include <string.h>
 #include <ctype.h>
 
+#include "objscip/objscip.h"
+#include "prob_data_objectives.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"
@@ -2014,7 +2000,7 @@ SCIP_RETCODE readRowsMop(
    SCIP*                 scip                /**< SCIP data structure */
    )
 {
-  ProbDataObjectives* probdata;
+   ProbDataObjectives* probdata;
    SCIP_Bool dynamicrows;
    SCIP_Bool dynamicconss;
 
@@ -2043,9 +2029,8 @@ SCIP_RETCODE readRowsMop(
 
       if( *mpsinputField1(mpsi) == 'N' )
       {
-	probdata = dynamic_cast<ProbDataObjectives *>(SCIPgetObjProbData(scip));
-	bool added = probdata->addObjName(mpsinputField2(mpsi));
-	assert(added);
+         probdata = dynamic_cast<ProbDataObjectives *>(SCIPgetObjProbData(scip));
+         probdata->addObjName(mpsinputField2(mpsi));
       }
       else
       {
@@ -2172,9 +2157,8 @@ SCIP* scip /**< SCIP data structure */
       cons = SCIPfindCons(scip, mpsinputField2(mpsi));
       if( cons == NULL ) 
       {
-	 /* row is objective */
-	bool added = probdata->addObjValue(var, mpsinputField2(mpsi), val);
-	assert(added);
+         /* row is objective */
+         probdata->addObjCoeff(var, mpsinputField2(mpsi), val);
       }
       else if( !SCIPisZero(scip, val) )
       {
@@ -2191,8 +2175,7 @@ SCIP* scip /**< SCIP data structure */
          if( cons == NULL )
          {
             /* row is objective */
-      	   bool added = probdata->addObjValue(var, mpsinputField4(mpsi), val);
-	      assert(added);
+            probdata->addObjCoeff(var, mpsinputField4(mpsi), val);
          }
          else if( !SCIPisZero(scip, val) )
          {
