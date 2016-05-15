@@ -236,9 +236,13 @@ ADTape<Base>*  AD<Base>::tape_manage(tape_manage_job job)
 
 	if( tape_table[thread] == CPPAD_NULL )
 	{	// allocate separate memroy to avoid false sharing
+#if CPPAD_MAX_NUM_THREADS > 1
 		if( thread == 0 )
 			tape_table[thread] = &tape_zero;
 		else	tape_table[thread] = new ADTape<Base>();
+#else
+			tape_table[thread] = &tape_zero;
+#endif
 		tape_table[thread]->id_ = tape_id_save[thread];
 		*tape_id                = &tape_table[thread]->id_;
 
