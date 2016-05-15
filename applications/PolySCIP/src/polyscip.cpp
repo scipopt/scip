@@ -14,10 +14,15 @@
 
 #include "polyscip.h"
 
+#include <algorithm> //std::transform, std::max
+#include <cmath> //std::abs
 #include <fstream>
+#include <functional> //std::plus
 #include <iostream>
+#include <limits>
 #include <ostream>
 #include <memory> //std::addressof
+#include <numeric> //std::inner_product
 #include <stdexcept>
 #include <string>
 #include <tuple>
@@ -35,6 +40,8 @@ using std::cout;
 using std::get;
 using std::ostream;
 using std::string;
+using polyscip::OutcomeType;
+using polyscip::ValueType;
 
 namespace polyscip {
 
@@ -53,12 +60,13 @@ namespace polyscip {
         if (!filenameIsOkay(cmd_line_args_.getProblemFile()))
             throw std::invalid_argument("Invalid problem file.");
 
-        SCIPcreate(addressof(scip_));
+        SCIPcreate(&scip_);
+        assert (scip_ != nullptr);
         SCIPincludeDefaultPlugins(scip_);
         SCIPincludeObjReader(scip_, new ReaderMOP(scip_), TRUE);
+        SCIPcreateClock(scip_, addressof(clock_total_));
         if (cmd_line_args_.hasParameterFile())
             SCIPreadParams(scip_, cmd_line_args_.getParameterFile().c_str());
-        SCIPcreateClock(scip_, addressof(clock_total_));
     }
 
     Polyscip::~Polyscip() {
@@ -74,14 +82,16 @@ namespace polyscip {
             auto sol = get<global::toField(ResultField::Solution)>(result);
             SCIPfreeSol(scip_, addressof(sol));
         }
+        SCIPfreeClock(scip_, addressof(clock_total_));
         SCIPfree(addressof(scip_));
     }
 
 
-    void Polyscip::computeNondomPoints() {
-        computeSupported();
+    SCIP_RETCODE Polyscip::computeNondomPoints() {
+        SCIP_CALL( computeSupported() );
         if (!cmd_line_args_.withUnsupported())
-            computeUnsupported();
+            std::cerr << "NOT IMPLEMENTED.\n";
+        return SCIP_OKAY;
     }
 
     SCIP_RETCODE Polyscip::initWeightSpace() {
@@ -94,10 +104,11 @@ namespace polyscip {
             SCIP_CALL( setWeightedObjective(initial_weight) );
             SCIP_CALL( solve() );
             auto scip_status = SCIPgetStatus(scip_);
-            if (scip_status == SCIP_STATUS_INFORUNBD)
+            if (scip_status == SCIP_STATUS_INFORUNBD) {
                 scip_status = separateINFORUNBD(initial_weight);
-            SCIP_CALL( handleStatus(scip_status) );
-            //todo
+            }
+            SCIP_CALL( handleStatus(scip_status, initial_weight, std::numeric_limits<ValueType>::max()) );
+            initial_weight[obj_counter] = 0.;
             ++obj_counter;
         }
         return SCIP_OKAY;
@@ -120,11 +131,14 @@ namespace polyscip {
         }
     }
 
-    SCIP_RETCODE Polyscip::handleStatus(SCIP_STATUS status) {
+    SCIP_RETCODE Polyscip::handleStatus(SCIP_STATUS status, const WeightType& weight,
+                                        ValueType current_wov) {
         if (status == SCIP_STATUS_OPTIMAL) {
-            //todo
+            std::cout << "OPTIMAL STATUS\n";
+            SCIP_CALL( handleOptimalStatus(weight, current_wov) );
         }
         else if (status == SCIP_STATUS_UNBOUNDED) {
+            std::cout << "UNBOUNDED STATUS\n";
             //todo
         }
         else if (status == SCIP_STATUS_INFORUNBD) {
@@ -139,11 +153,55 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
+    SCIP_RETCODE Polyscip::handleOptimalStatus(const WeightType& weight,
+                                               ValueType current_wov) {
+        SCIP_SOL* best_sol = SCIPgetBestSol(scip_);
+        SCIP_SOL* finite_sol = nullptr;
+        SCIP_Bool same_obj_val = FALSE;
+        SCIP_CALL( SCIPcreateFiniteSolCopy(scip_, addressof(finite_sol), best_sol, addressof(same_obj_val)) );
+        if (!same_obj_val) {
+            auto diff = std::abs(SCIPgetSolOrigObj(scip_, best_sol) -
+                                 SCIPgetSolOrigObj(scip_, finite_sol));
+            if (diff > 1.0e-5) {
+                std::cerr << "absolute value difference after calling SCIPcreateFiniteSolCopy: " << diff << "\n";
+                SCIP_CALL( SCIPfreeSol(scip_, addressof(finite_sol)) );
+                throw std::runtime_error("SCIPcreateFiniteSolCopy: unacceptable difference in objective values.");
+            }
+        }
+        auto outcome = getOutcome(finite_sol);
+        auto new_wov = std::inner_product(begin(weight), end(weight), begin(outcome), 0.);
+        if (new_wov < current_wov) {
+            supported_.push_back(std::make_tuple(finite_sol, outcome, weight));
+        }
+        else {
+            SCIP_CALL( SCIPfreeSol(scip_, addressof(finite_sol)) );
+        }
+        return SCIP_OKAY;
+    }
+
+    OutcomeType Polyscip::getOutcome(SCIP_SOL* sol) {
+        auto objs = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
+        auto no_vars = SCIPgetNOrigVars(scip_);
+        auto vars = SCIPgetOrigVars(scip_);
+        auto point = OutcomeType(no_objs_,0.);
+        for (auto i=0; i<no_vars; ++i) {
+            auto current_var_sol_val = SCIPgetSolVal(scip_, sol, vars[i]);
+            auto current_var_obj_vals = OutcomeType(no_objs_,0.);
+            for (decltype(no_objs_) j=0; j<no_objs_; ++j)
+                current_var_obj_vals[j] = objs->getObjVal(vars[i], j, current_var_sol_val);
+            std::transform(begin(point), end(point),
+                           begin(current_var_obj_vals),
+                           begin(point),
+                           std::plus<ValueType>());
+        }
+        return point;
+    }
+
     SCIP_RETCODE Polyscip::solve() {
         if (cmd_line_args_.hasTimeLimit()) { // set SCIP timelimit
-            auto remaining_time_limit = cmd_line_args_.getTimeLimit() -
-                                        SCIPgetClockTime(scip_, clock_total_);
-            SCIP_CALL(SCIPsetRealParam(scip_, "limits/time", remaining_time_limit));
+            auto remaining_time = std::max(cmd_line_args_.getTimeLimit() -
+                                           SCIPgetClockTime(scip_, clock_total_), 0.);
+            SCIP_CALL(SCIPsetRealParam(scip_, "limits/time", remaining_time));
         }
         SCIP_CALL( SCIPsolve(scip_) );    // actual SCIP solver call
         return SCIP_OKAY;
@@ -152,24 +210,20 @@ namespace polyscip {
     SCIP_RETCODE Polyscip::setWeightedObjective(const WeightType& weight){
         if (SCIPisTransformed(scip_))
             SCIP_CALL( SCIPfreeTransform(scip_) );
-        ProbDataObjectives* objs = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
+        auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
+        assert (obj_probdata != nullptr);
         auto vars = SCIPgetOrigVars(scip_);
         auto no_vars = SCIPgetNOrigVars(scip_);
         for (auto i=0; i<no_vars; ++i) {
-            auto val = objs->getWeightedObjVal(vars[i], weight);
+            auto val = obj_probdata->getWeightedObjVal(vars[i], weight);
             SCIP_CALL( SCIPchgVarObj(scip_, vars[i], val) );
         }
         return SCIP_OKAY;
     }
 
-    void Polyscip::computeSupported() {
-        initWeightSpace();
-        //TODO
-    }
-
-    void Polyscip::computeUnsupported() {
-        //TODO
-        ;
+    SCIP_RETCODE Polyscip::computeSupported() {
+        SCIP_CALL( initWeightSpace() );
+        return SCIP_OKAY;
     }
 
     void Polyscip::printPoint(const OutcomeType& point, ostream& os) {
@@ -192,13 +246,14 @@ namespace polyscip {
     SCIP_RETCODE Polyscip::readProblem() {
         auto filename = cmd_line_args_.getProblemFile();
         SCIP_CALL( SCIPreadProb(scip_, filename.c_str(), "mop") );
-        ProbDataObjectives* objs = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
-        no_objs_ = objs->getNObjs();
+        auto obj_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
+        assert (obj_probdata != nullptr);
+        no_objs_ = obj_probdata->getNObjs();
         if (SCIPgetObjsense(scip_) == SCIP_OBJSENSE_MAXIMIZE) {
             obj_sense_ = SCIP_OBJSENSE_MAXIMIZE;
             // internally we treat problem as min problem and negate objective coefficients
             SCIPsetObjsense(scip_, SCIP_OBJSENSE_MINIMIZE);
-            objs->negateAllCoeffs();
+            obj_probdata->negateAllCoeffs();
         }
         if (cmd_line_args_.beVerbose()) {
             cout << "No of objectives: " << no_objs_;
@@ -208,7 +263,7 @@ namespace polyscip {
             else
                 cout << "MINIMIZE\n";
         }
-        objs = nullptr;
+        obj_probdata = nullptr;
         return SCIP_OKAY;
     }
 

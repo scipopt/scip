@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
         std::cout << "Starting PolySCIP...\n";
         Polyscip polyscip(argc, (const char *const *) argv);
         SCIP_CALL( polyscip.readProblem() );
-        polyscip.computeNondomPoints();
+        SCIP_CALL( polyscip.computeNondomPoints() );
     }
     catch (TCLAP::ArgException& e) {
         std::cerr << "ERROR: " << e.error() << " " << e.argId() << "\n";

@@ -36,7 +36,7 @@ class ProbDataObjectives : public scip::ObjProbData {
   virtual ~ProbDataObjectives(); /** destructor */
 
   /** return number of objectives given in problem */
-  unsigned getNObjs(); 
+  std::size_t getNObjs();
 
   /** add identifier of objective; return true in case of success */
   bool addObjName(const std::string& name); 

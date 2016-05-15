@@ -43,7 +43,7 @@ namespace polyscip {
 
         SCIP_RETCODE readProblem();
 
-        void computeNondomPoints();
+        SCIP_RETCODE computeNondomPoints();
 
         /** Prints given weight to given output stream
          */
@@ -89,15 +89,19 @@ namespace polyscip {
 
         SCIP_STATUS separateINFORUNBD(const WeightType& weight);
 
-        SCIP_RETCODE handleStatus(SCIP_STATUS status);
+        SCIP_RETCODE handleStatus(SCIP_STATUS status, const WeightType& weight, ValueType current_wov);
+
+        SCIP_RETCODE handleOptimalStatus(const WeightType& weight, ValueType current_wov);
+
+        OutcomeType getOutcome(SCIP_SOL* sol);
 
         /** Computes the supported solutions and corresponding non-dominated points
          */
-        void computeSupported();
+        SCIP_RETCODE computeSupported();
 
         /** Computes the unsupported solutions and corresponding non-dominated points
          */
-        void computeUnsupported();
+        void computeUnsupported() = delete;
 
         CmdLineArgs cmd_line_args_;
         PolyscipStatus polyscip_status_;
