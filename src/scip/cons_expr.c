@@ -3141,16 +3141,15 @@ SCIP_RETCODE SCIPshowConsExprExpr(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression to be printed */
    )
 {
+   /* this function is for developers, so don't bother with C variants that don't have popen() */
+#if _POSIX_C_SOURCE < 2
+   SCIPerrorMessage("No POSIX version 2. Try http://distrowatch.com/.");
+   return SCIP_ERROR;
+#else
    SCIP_CONSEXPR_PRINTDOTDATA* dotdata;
    FILE* f;
 
    assert(expr != NULL);
-
-   /* this function is for developers, so don't bother with systems other than unix */
-#if ! (defined(__unix) || defined(__unix__) || defined(unix))
-   SCIPerrorMessage("No proper operating system. Try http://distrowatch.com/.")
-   return SCIP_ERROR;
-#else
 
    /* call dot to generate postscript output and show it via ghostview */
    f = popen("dot -Tps | gv -", "w");
