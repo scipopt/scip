@@ -20,8 +20,7 @@
 #include <ctype.h>
 
 #include "objscip/objscip.h"
-//#include "prob_data_objectives.h"
-#include "ProbDataObjectives.h"
+#include "prob_data_objectives.h"
 #include "scip/cons_knapsack.h"
 #include "scip/cons_indicator.h"
 #include "scip/cons_linear.h"

@@ -32,8 +32,7 @@
 #include "cmd_line_args.h"
 #include "global_functions.h"
 #include "polyscip_types.h"
-//#include "prob_data_objectives.h"
-#include "ProbDataObjectives.h"
+#include "prob_data_objectives.h"
 #include "ReaderMOP.h"
 
 using std::addressof;
@@ -255,12 +254,14 @@ namespace polyscip {
             printPoint(point, os);
             auto sol = get<global::toField(ResultField::Solution)>(result);
             printSol(sol, os);
+            os << "\n";
         }
         for (const auto& result : unbounded_) {
             auto ray = get<global::toField(ResultField::Outcome)>(result);
             printRay(ray, os);
             auto sol = get<global::toField(ResultField::Solution)>(result);
             printSol(sol, os);
+            os << "\n";
         }
     }
 
