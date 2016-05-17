@@ -25,7 +25,7 @@
 #include <ostream>
 #include <memory>
 #include <string>
-#include <tuple>
+#include <utility>
 #include <vector>
 
 #include "cmd_line_args.h"
@@ -45,13 +45,11 @@ namespace polyscip {
 
         SCIP_RETCODE computeNondomPoints();
 
+        void printSupportedResults(std::ostream& os = std::cout);
+
         /** Prints given weight to given output stream
          */
         void printWeight(const WeightType &weight, std::ostream &os = std::cout);
-
-        /** Prints given point to given output stream
-         */
-        void printPoint(const OutcomeType &point, std::ostream &os = std::cout);
 
         /** Prints given ray to given output stream
          */
@@ -62,10 +60,10 @@ namespace polyscip {
          * the non-dominated point in objective space and a corresponding weight
          * for which solution is optimal
         */
-        using Result = std::tuple<SCIP_SOL *, OutcomeType, WeightType>;
+        using Result = std::pair<SolType, OutcomeType>;
         /** Corresponding fields for Result */
         enum class ResultField {
-            Solution, Outcome, Weight
+            Solution, Outcome
         };
 
         enum class PolyscipStatus {
@@ -89,11 +87,13 @@ namespace polyscip {
 
         SCIP_STATUS separateINFORUNBD(const WeightType& weight);
 
-        SCIP_RETCODE handleStatus(SCIP_STATUS status, const WeightType& weight, ValueType current_wov);
+        SCIP_RETCODE handleStatus(SCIP_STATUS status, ValueType current_wov);
 
-        SCIP_RETCODE handleOptimalStatus(const WeightType& weight, ValueType current_wov);
+        SCIP_RETCODE handleOptimalStatus(ValueType current_wov);
 
-        OutcomeType getOutcome(SCIP_SOL* sol);
+        SCIP_RETCODE handleUnboundedStatus();
+
+        void addResult(bool outcome_is_bounded, SCIP_SOL* primal_sol= nullptr);
 
         /** Computes the supported solutions and corresponding non-dominated points
          */
@@ -102,6 +102,11 @@ namespace polyscip {
         /** Computes the unsupported solutions and corresponding non-dominated points
          */
         void computeUnsupported() = delete;
+
+        void printSol(const SolType& sol, std::ostream& os);
+
+        /** Prints given point to given output stream */
+        void printPoint(const OutcomeType &point, std::ostream& os);
 
         CmdLineArgs cmd_line_args_;
         PolyscipStatus polyscip_status_;

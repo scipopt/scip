@@ -327,7 +327,7 @@ vector<SCIP_Real>* LiftedWeightSpaceSolver::setPrimalRayAndGetCostVector() {
     if (!SCIPisZero(scip_,val)) {
       (*rayVals)[SCIPvarGetName(vars[i])] = val;
       for (unsigned j=0; j<nObjs_; ++j) 
-	tmp[j] = objs->getObjVal(vars[i], j, val);
+        tmp[j] = objs->getObjVal(vars[i], j, val);
     }
     else 
       fill(tmp.begin(), tmp.end(), 0.0);

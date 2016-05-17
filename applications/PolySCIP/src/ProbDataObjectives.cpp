@@ -21,7 +21,7 @@
 
 #include "ProbDataObjectives.h"
 #include "objscip/objscip.h"
-
+#include "polyscip_types.h"
 #include <algorithm> // std::transform
 #include <functional> // std::negate
 #include <numeric> // std::inner_product
@@ -36,6 +36,7 @@ using std::out_of_range;
 using std::string;
 using std::vector;
 
+using polyscip::WeightType;
 using uint = unsigned;
 using objMap = std::unordered_map<std::string, uint>;
 using varMap = std::unordered_map<SCIP_VAR*, std::vector<SCIP_Real> >;
@@ -53,7 +54,7 @@ ProbDataObjectives::~ProbDataObjectives() {
 }
 
 /** return number of objectives given in problem */
-uint ProbDataObjectives::getNObjs() {
+std::size_t ProbDataObjectives::getNObjs() {
   return objNameToObjNo_->size();
 }
 
@@ -74,7 +75,7 @@ bool ProbDataObjectives::addObjName(const string& name) {
 
 /** adds objective coefficient w.r.t. given variable and objective; 
     return true in case of success */
-bool ProbDataObjectives::addObjValue(SCIP_VAR* var, const string& objName, SCIP_Real val) {
+bool ProbDataObjectives::addObjCoeff(SCIP_VAR* var, const string& objName, SCIP_Real val) {
   if (varToObjVals_->count(var) == 0) 
     varToObjVals_->emplace(var, vector<SCIP_Real>(getNObjs(),0.0) );
   try {
@@ -103,6 +104,13 @@ SCIP_Real ProbDataObjectives::getWeightedObjVal(SCIP_VAR* var, const vector<SCIP
     return 0.0;
 }
 
+SCIP_Real ProbDataObjectives::getWeightedObjVal(SCIP_VAR* var, const polyscip::WeightType& weight) {
+  if (varToObjVals_->count(var))
+    return inner_product(weight.begin(), weight.end(), (*varToObjVals_)[var].begin(), 0.0);
+  else
+    return 0.0;
+}
+
 /** return product of given solution value and objective coefficient w.r.t. given 
     objective number and variable */
 SCIP_Real ProbDataObjectives::getObjVal(SCIP_VAR* var, unsigned objNo, SCIP_Real varSolVal) {
@@ -113,7 +121,7 @@ SCIP_Real ProbDataObjectives::getObjVal(SCIP_VAR* var, unsigned objNo, SCIP_Real
 }
 
 /* negate all objective coefficients of all variables */
-void ProbDataObjectives::negateAllObjCoeffs() {
+void ProbDataObjectives::negateAllCoeffs() {
   for (auto it=varToObjVals_->begin(); it!=varToObjVals_->end(); ++it)
     std::transform(it->second.begin(), it->second.end(), 
                    it->second.begin(), std::negate<SCIP_Real>());

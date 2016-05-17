@@ -58,7 +58,7 @@ namespace polyscip {
                     std::is_array<T>(),std::forward<Args>(args)... );
         }
 
-        /** Allows to get a field of tuple via corresponding field of enum class via std::get
+        /** Allows to get a field of a tuple via corresponding field of enum class via std::get
          */
         template<typename E>
         constexpr typename std::underlying_type<E>::type
@@ -78,7 +78,7 @@ namespace polyscip {
             os << description << "[ ";
             for (const auto &elem : container)
                 os << elem << " ";
-            os << "]\n";
+            os << "]";
         };
     }
 }

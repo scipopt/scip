@@ -23,6 +23,7 @@
 #include <string>
 #include <iostream>
 #include <ostream>
+#include <utility>
 #include <vector>
 #include "scip/def.h"
 
@@ -30,9 +31,11 @@ namespace polyscip {
 
     /**< type for computed values */
     using ValueType = SCIP_Real;
-    /**< type for points, rays in outcome space; needs to support: begin(), size(), operator[] */
+    /**< type for points, rays in outcome space */
     using OutcomeType = std::vector<ValueType>;
-    /**< type for weights; needs to support: at(), size() */
+    /**< type for solutions in feasible space */
+    using SolType = std::vector<std::pair<std::string, ValueType>>;
+    /**< type for weights */
     using WeightType = std::vector<ValueType>;
 
 }

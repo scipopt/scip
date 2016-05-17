@@ -24,6 +24,7 @@
 
 #include "objscip/objscip.h"
 #include "scip/def.h"
+#include "polyscip_types.h"
 
 #include <unordered_map>
 #include <string>
@@ -43,12 +44,13 @@ class ProbDataObjectives : public scip::ObjProbData {
   
   /** adds objective coefficient w.r.t. given variable and objective; 
       return true in case of success */
-  bool addObjValue(SCIP_VAR* var, const std::string& objName, SCIP_Real val); 
+  bool addObjCoeff(SCIP_VAR* var, const std::string& objName, SCIP_Real val);
   
   /** return the scalar product of given weight and objectives w.r.t. given variable; 
       if var was not encountered before, return 0.0 because var can only have zero objective 
       function coefficients in given problem file */
   SCIP_Real getWeightedObjVal(SCIP_VAR* var, const std::vector<SCIP_Real>* weight);
+    SCIP_Real getWeightedObjVal(SCIP_VAR* var, const polyscip::WeightType& weight);
 
   /** return product of given solution value and objective coefficient w.r.t. given 
       objective number and variable */
@@ -58,7 +60,7 @@ class ProbDataObjectives : public scip::ObjProbData {
   std::string getObjectiveName(unsigned i);
 
   /** negates all objective coefficients of all variables */
-  void negateAllObjCoeffs();
+  void negateAllCoeffs();
   
   virtual SCIP_RETCODE scip_delorig(SCIP* scip);
   
