@@ -1736,6 +1736,7 @@ SCIP_DECL_CONSTRANS(consTransExpr)
 
    copydata.targetscip = scip;
    copydata.mapvar = transformVar;
+   copydata.mapvardata = NULL;
 
    /* get a copy of sourceexpr with transformed vars */
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, sourceexpr, copyExpr, NULL, copyExpr, NULL, &copydata) );
@@ -2608,7 +2609,9 @@ SCIP_RETCODE SCIPcreateConsExprExpr2(
 
    if( child1 != NULL && child2 != NULL )
    {
-      SCIP_CONSEXPR_EXPR* pair[2] = {child1, child2};
+      SCIP_CONSEXPR_EXPR* pair[2];
+      pair[0] = child1;
+      pair[1] = child2;
 
       SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, exprhdlr, exprdata, 2, pair) );
    }
@@ -2810,7 +2813,10 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
             }
             else
             {
-               SCIP_CONSEXPR_EXPR* prodchildren[2] = {children[quadelem.idx1], children[quadelem.idx2]};
+               SCIP_CONSEXPR_EXPR* prodchildren[2];
+               prodchildren[0] = children[quadelem.idx1];
+               prodchildren[1] = children[quadelem.idx2];
+
                SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prod, 2, prodchildren, NULL, 1.0) );
             }
 
@@ -3934,6 +3940,7 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
 
    copydata.targetscip = scip;
    copydata.mapvar = NULL;
+   copydata.mapvardata = NULL;
 
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, copyExpr, NULL, copyExpr, NULL, &copydata) );
    *copyexpr = (SCIP_CONSEXPR_EXPR*)expr->walkio.ptrval;
