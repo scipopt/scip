@@ -5,6 +5,8 @@ CXXFLAGS	+=	$(GXXWARN) -funit-at-a-time
 
 
 # enable sanitizers if GCC >= 4.9
+# the default is to only enable the UndefinedBehaviorSanitizer (SANITIZE=true)
+# if user specifies SANITIZE=full, then also other sanitizers are enabled
 GCCVERSION := $(shell $(CC) -dumpversion | cut -f1-2 -d.)
 SANITIZE = $(word $(shell expr \( $(GCCVERSION) \>= 4.9 \) + 1), false, true)
 
@@ -17,7 +19,7 @@ ifeq ($(PARASCIP),true)
 # enable ThreadSanitizer (https://github.com/google/sanitizers/wiki/ThreadSanitizerCppManual)
 SANITZERFLAGS += -fsanitize=thread
 
-#enable LeakSanitizer (https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer)
+# enable LeakSanitizer (https://github.com/google/sanitizers/wiki/AddressSanitizerLeakSanitizer)
 SANITZERFLAGS += -fsanitize=leak
 
 else
