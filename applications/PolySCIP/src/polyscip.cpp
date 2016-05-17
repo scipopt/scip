@@ -70,18 +70,6 @@ namespace polyscip {
     }
 
     Polyscip::~Polyscip() {
-//        for (auto& result : supported_) {
-//            auto sol = get<global::toField(ResultField::Solution)>(result);
-//            SCIPfreeSol(scip_, addressof(sol));
-//        }
-//        for (auto& result : unsupported_) {
-//            auto sol = get<global::toField(ResultField::Solution)>(result);
-//            SCIPfreeSol(scip_, addressof(sol));
-//        }
-//        for (auto& result : unbounded_) {
-//            auto sol = get<global::toField(ResultField::Solution)>(result);
-//            SCIPfreeSol(scip_, addressof(sol));
-//        }
         SCIPfreeClock(scip_, addressof(clock_total_));
         SCIPfree(addressof(scip_));
     }
@@ -108,6 +96,7 @@ namespace polyscip {
                 scip_status = separateINFORUNBD(initial_weight);
             }
             SCIP_CALL( handleStatus(scip_status, std::numeric_limits<ValueType>::max()) );
+            //todo
             initial_weight[obj_counter] = 0.;
             ++obj_counter;
         }
@@ -163,7 +152,7 @@ namespace polyscip {
             if (!SCIPhasPrimalRay(scip_))
                 throw std::runtime_error("Existence of primal ray expected.\n");
         }
-        addResult(false);
+        addResult();
         return SCIP_OKAY;
     }
 
@@ -277,10 +266,6 @@ namespace polyscip {
 
     void Polyscip::printRay(const OutcomeType& ray, ostream& os) {
         global::print(ray, {"Ray = "}, os);
-    }
-
-    void Polyscip::printWeight(const WeightType& weight, ostream& os) {
-        global::print(weight, {"Weight = "}, os);
     }
 
     bool Polyscip::filenameIsOkay(const string& filename) {

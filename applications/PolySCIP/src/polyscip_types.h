@@ -34,7 +34,7 @@ namespace polyscip {
     /**< type for points, rays in outcome space */
     using OutcomeType = std::vector<ValueType>;
     /**< type for solutions in feasible space */
-    using SolType = std::vector<std::pair<std::string, ValueType>>;
+    using SolType = std::vector< std::pair<std::string, ValueType> >;
     /**< type for weights */
     using WeightType = std::vector<ValueType>;
 

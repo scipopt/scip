@@ -47,30 +47,21 @@ namespace polyscip {
 
         void printSupportedResults(std::ostream& os = std::cout);
 
-        /** Prints given weight to given output stream
-         */
-        void printWeight(const WeightType &weight, std::ostream &os = std::cout);
-
-        /** Prints given ray to given output stream
-         */
-        void printRay(const OutcomeType &ray, std::ostream &os = std::cout);
-
     private:
-        /**< A result comprises of a solution in feasible space,
-         * the non-dominated point in objective space and a corresponding weight
-         * for which solution is optimal
-        */
+        /**< A result comprises of a solution/ray in feasible space and corresponding
+         * non-dominated point in objective space
+         */
         using Result = std::pair<SolType, OutcomeType>;
         /** Corresponding fields for Result */
         enum class ResultField {
             Solution, Outcome
         };
 
+        using ResultContainer = std::vector<Result>;
+
         enum class PolyscipStatus {
             Solved, TimeLimitReached, Unsolved
         };
-
-        using ResultContainer = std::vector<Result>;
 
         bool filenameIsOkay(const std::string &filename);
 
@@ -93,17 +84,18 @@ namespace polyscip {
 
         SCIP_RETCODE handleUnboundedStatus();
 
-        void addResult(bool outcome_is_bounded, SCIP_SOL* primal_sol= nullptr);
+        void addResult(bool outcome_is_bounded = false, SCIP_SOL* primal_sol = nullptr);
 
-        /** Computes the supported solutions and corresponding non-dominated points
-         */
+        /** Computes the supported solutions/rays and corresponding non-dominated points */
         SCIP_RETCODE computeSupported();
 
-        /** Computes the unsupported solutions and corresponding non-dominated points
-         */
+        /** Computes the unsupported solutions and corresponding non-dominated points */
         void computeUnsupported() = delete;
 
         void printSol(const SolType& sol, std::ostream& os);
+
+        /** Prints given ray to given output stream */
+        void printRay(const OutcomeType &ray, std::ostream &os = std::cout);
 
         /** Prints given point to given output stream */
         void printPoint(const OutcomeType &point, std::ostream& os);
