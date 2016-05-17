@@ -1100,14 +1100,16 @@ int createChunk(
 
    debugMessage("allocated new chunk %p: %d elements with size %d\n", (void*)newchunk, newchunk->storesize, newchunk->elemsize);
 
-   /* add new memory to the lazy free list */
+   /* add new memory to the lazy free list
+    * (due to the BMSisAligned assert above, we know that elemsize is divisible by the size of pointers)
+    */
    for( i = 0; i < newchunk->storesize - 1; ++i )
    {
-      freelist = (FREELIST*) ((char*) (newchunk->store) + i * chkmem->elemsize); /*lint !e826*/
-      freelist->next = (FREELIST*) ((char*) (newchunk->store) + (i + 1) * chkmem->elemsize); /*lint !e826*/
+      freelist = (FREELIST*) newchunk->store + i * chkmem->elemsize / sizeof(FREELIST*);
+      freelist->next = (FREELIST*) newchunk->store + (i + 1) * chkmem->elemsize / sizeof(FREELIST*);
    }
 
-   freelist = (FREELIST*) ((char*) (newchunk->store) + (newchunk->storesize - 1) * chkmem->elemsize); /*lint !e826*/
+   freelist = (FREELIST*) newchunk->store + (newchunk->storesize - 1) * chkmem->elemsize / sizeof(FREELIST*);
    freelist->next = chkmem->lazyfree;
    chkmem->lazyfree = (FREELIST*) (newchunk->store);
    chkmem->lazyfreesize += newchunk->storesize;
