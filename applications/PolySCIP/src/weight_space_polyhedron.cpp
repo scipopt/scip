@@ -15,6 +15,7 @@
 #include "weight_space_polyhedron.h"
 
 #include <algorithm> // std::transform
+#include <cstddef>
 #include <iostream>
 #include <iterator> // std::next
 #include <forward_list>
@@ -40,10 +41,10 @@ using std::vector;
 
 namespace polyscip {
 
-    WeightSpacePolyhedron::WeightSpacePolyhedron(unsigned num_objs,
+    WeightSpacePolyhedron::WeightSpacePolyhedron(std::size_t num_objs,
                                                  const OutcomeType& point,
-                                                 const vector<OutcomeType>& initial_rays,
-                                                 pair<bool, unsigned> unit_weight_info)
+                                                 const ResultContainer& initial_rays,
+                                                 pair<bool, std::size_t> unit_weight_info)
             : curr_investigated_vertex_(nullptr),
               skeleton_(),
               nodes_to_vertices_(skeleton_) {
@@ -55,9 +56,9 @@ namespace polyscip {
         createInitialSkeleton();
         // incorporate non-dominated rays computed in initial phase
         for (const auto& ray : initial_rays) {
-            auto wspoly_changed = updateInitialWeightSpacePolyhedron(ray);
+            auto wspoly_changed = updateInitialWeightSpacePolyhedron(ray.second);
             if (!wspoly_changed)
-                global::print(ray,
+                global::print(ray.second,
                               {"INITIAL WEIGHT SPACE POLYHEDRON UNCHANGED: no vertex made obsolete by ray: "});
         }
         if (unit_weight_info.first) // mark initial vertex correspoding to non-dominated point
@@ -84,6 +85,11 @@ namespace polyscip {
         curr_investigated_vertex_ = unmarked_vertices_.front();
         unmarked_vertices_.pop_front();
         return curr_investigated_vertex_->getWeight();
+    }
+
+    ValueType WeightSpacePolyhedron::getUntestedVertexWOV() const {
+        assert (curr_investigated_vertex_ != nullptr);
+        return curr_investigated_vertex_->getWOV();
     }
 
     void WeightSpacePolyhedron::addToSkeleton(const vector<pair<WeightSpaceVertex*, Node>>& pairs) {
@@ -128,7 +134,7 @@ namespace polyscip {
     void WeightSpacePolyhedron::updateWeightSpacePolyhedron(const vector<WeightSpaceVertex*>& obsolete_vertices,
                                                             const OutcomeType& outcome,
                                                             bool outcome_is_ray) {
-        auto new_vertices = vector<pair<WeightSpaceVertex*, Node>>{}; // pair: new vertex, node of adjacent vertex
+        auto new_vertices = vector< pair<WeightSpaceVertex*, Node> >{}; // pair: new vertex, node of adjacent vertex
         // create new vertices between obsolete and non-obsolete vertices
         for (auto obs_vertex : obsolete_vertices) {
             for (Graph::IncEdgeIt edge(skeleton_, getNode(obs_vertex)); edge != lemon::INVALID; ++edge) {
@@ -151,7 +157,7 @@ namespace polyscip {
         }
     }
 
-    void WeightSpacePolyhedron::createInitialVertices(unsigned num_objs,
+    void WeightSpacePolyhedron::createInitialVertices(std::size_t num_objs,
                                                       const OutcomeType& point,
                                                       FacetContainer boundary_facets) {
         // make facet: point \cdot w >= weighted_obj_val to facets_
@@ -180,7 +186,7 @@ namespace polyscip {
         }
     }
 
-    void WeightSpacePolyhedron::setMarkedVertex(unsigned unit_weight_index) {
+    void WeightSpacePolyhedron::setMarkedVertex(std::size_t unit_weight_index) {
         for (auto it = begin(unmarked_vertices_); it != end(unmarked_vertices_); ++it) {
             if ((*it)->hasUnitWeight(unit_weight_index)) {
                 marked_vertices_.push_back(*it);
@@ -230,32 +236,22 @@ namespace polyscip {
             if (is_obsolete)
                 obsolete.push_back(vertex);
         }
+        assert (!obsolete.empty());
         return obsolete;
     }
 
-    void WeightSpacePolyhedron::incorporateOutcome(const OutcomeType &outcome,
-                                                   const WeightType &weight,
-                                                   bool outcome_is_ray) {
+    void WeightSpacePolyhedron::incorporateNewOutcome(ValueType new_wov,
+                                                      const OutcomeType &outcome,
+                                                      bool outcome_is_ray) {
         assert(curr_investigated_vertex_ != nullptr);
-        assert(curr_investigated_vertex_->hasSameWeight(weight));
-        if (isNewOutcome(outcome, outcome_is_ray)) {
-            auto obsolete = computeObsoleteVertices(curr_investigated_vertex_, outcome, outcome_is_ray);
-            updateWeightSpacePolyhedron(obsolete, outcome, outcome_is_ray);
-        }
-        else {
-            assert(!outcome_is_ray);
-            marked_vertices_.push_back(curr_investigated_vertex_);
-        }
+        auto obsolete = computeObsoleteVertices(curr_investigated_vertex_, outcome, outcome_is_ray);
+        updateWeightSpacePolyhedron(obsolete, outcome, outcome_is_ray);
         curr_investigated_vertex_ = nullptr;
     }
 
 
-    bool WeightSpacePolyhedron::isNewOutcome(const OutcomeType &outcome,
-                                             bool outcome_is_ray) {
-        if (outcome_is_ray)
-            return curr_investigated_vertex_->isMadeObsolete(outcome, 0.);
-        else
-            return curr_investigated_vertex_->isMadeObsolete(outcome);
+    void WeightSpacePolyhedron::weightYieldedKnownOutcome() {
+        marked_vertices_.push_back(curr_investigated_vertex_);
     }
 
     void WeightSpacePolyhedron::printUnmarkedVertices(ostream &os, bool printFacets) const {

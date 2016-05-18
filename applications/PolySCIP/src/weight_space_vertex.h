@@ -26,6 +26,7 @@
 #ifndef POLYSCIP_SRC_WEIGHT_SPACE_VERTEX_H_INCLUDED
 #define POLYSCIP_SRC_WEIGHT_SPACE_VERTEX_H_INCLUDED
 
+#include <cstddef>
 #include <iosfwd>
 #include <memory> // std::shared_ptr
 #include <vector>
@@ -84,7 +85,7 @@ namespace polyscip {
          * @param index index of 1 in unit weight
          * @return true if weight of vertex is unit weight with 1 at index; false otherwise
          */
-        bool hasUnitWeight(unsigned ind);
+        bool hasUnitWeight(std::size_t ind);
 
         /** Checks whether weight of vertex corresponds with given weight
          * @param weight weight to check against
@@ -127,6 +128,7 @@ namespace polyscip {
         WeightType weight_;
         /**< corresponding weighted objective value */
         ValueType weighted_obj_val_;
+
 
     };
 

@@ -37,7 +37,10 @@ namespace polyscip {
     using SolType = std::vector< std::pair<std::string, ValueType> >;
     /**< type for weights */
     using WeightType = std::vector<ValueType>;
-
+    /**< A result comprises of a solution/ray in feasible space and corresponding
+     * non-dominated point in objective space */
+    using Result = std::pair<SolType, OutcomeType>;
+    using ResultContainer = std::vector<Result>;
 }
 
 #endif //POLYSCIP_SRC_POLYSCIP_TYPES_H_INCLUDED

@@ -18,7 +18,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wall")
 
 
 # configure a header file to pass CMake settings to source code
-configure_file("${PROJECT_SOURCE_DIR}/${CMAKE}/PolySCIPConfig.h.in" "${PROJECT_SOURCE_DIR}/${SRC}/PolySCIPConfig.h" ESCAPE_QUOTES)
+configure_file(
+        "${PROJECT_SOURCE_DIR}/${CMAKE}/PolySCIPConfig.h.in"
+        "${PROJECT_SOURCE_DIR}/${SRC}/PolySCIPConfig.h"
+        ESCAPE_QUOTES
+)
 
 include(FindPackageHandleStandardArgs)
 find_package(LEMON REQUIRED)

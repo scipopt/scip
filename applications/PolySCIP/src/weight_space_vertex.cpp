@@ -15,11 +15,13 @@
 #include "weight_space_vertex.h"
 
 #include <algorithm> // std::copy, std::set_intersection, std::sort
+#include <cstddef>
 #include <iterator>  // std::ostream_iterator, std::back_inserter
 #include <memory> //std::shared
 #include <numeric>   // std::inner_product;
 #include <ostream>
 
+#include "global_functions.h"
 #include "polyscip_types.h"
 #include "weight_space_facet.h"
 #include "weight_space_polyhedron.h"
@@ -80,9 +82,12 @@ namespace polyscip {
         }
         // compute convex combination of weights of obsolete vertex and non-obsolete vertex
         auto weight_non_obs = non_obs->getWeight();
+        non_obs->print(std::cout);
         auto weight_obs = obs->getWeight();
+        obs->print(std::cout);
+        global::print(outcome, "new facet : ");
         auto h = calculateCombinationValue(weight_non_obs, weight_obs, outcome);
-        assert (0. < h && h < 1.0);
+        std::cout << "h = " << h << "\n";
         if (outcome_is_ray) // shift combination towards non-obsolete vertex
             h += 1e-7;
         weight_ = calculateWeightCombination(std::move(weight_non_obs),
@@ -91,6 +96,7 @@ namespace polyscip {
         // computed weighted objective value
         weighted_obj_val_ = h*non_obs->getWOV() + (1.0-h)*obs->getWOV();
     }
+
 
     WeightType WeightSpaceVertex::getWeight() const {
         return weight_;
@@ -114,11 +120,12 @@ namespace polyscip {
                                                    end(weight2),
                                                    begin(outcome),
                                                    0.);
+        std::cout << "numerator = " << numerator << "\n";
         ValueType denominator = inner_product(begin(weight1),
                                               end(weight1),
                                               begin(outcome),
-                                              0.)
-                                + numerator;
+                                              0.) + numerator;
+        std::cout << "denominnator = " << denominator << "\n";
         assert(denominator != 0.);
         return numerator / denominator;
     }
@@ -148,7 +155,7 @@ namespace polyscip {
         return weight_ == weight;
     }
 
-    bool WeightSpaceVertex::hasUnitWeight(unsigned index) {
+    bool WeightSpaceVertex::hasUnitWeight(std::size_t index) {
         assert(index < weight_.size());
         auto weight = WeightType(weight_.size(),0.);
         weight[index] = 1.;

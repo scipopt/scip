@@ -58,14 +58,6 @@ namespace polyscip {
                     std::is_array<T>(),std::forward<Args>(args)... );
         }
 
-        /** Allows to get a field of a tuple via corresponding field of enum class via std::get
-         */
-        template<typename E>
-        constexpr typename std::underlying_type<E>::type
-        toField(E enumerator) noexcept {
-            return static_cast<typename std::underlying_type<E>::type>(enumerator);
-        };
-
         /** General print function
          * @param container Container to be printed
          * @param description Corresponding description

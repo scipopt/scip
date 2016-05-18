@@ -23,7 +23,7 @@
 #ifndef POLYSCIP_SRC_WEIGHT_SPACE_POLYHEDRON_H_INCLUDED
 #define POLYSCIP_SRC_WEIGHT_SPACE_POLYHEDRON_H_INCLUDED
 
-
+#include <cstddef>
 #include <list>
 #include <iostream>
 #include <memory> // std::shared_ptr
@@ -60,10 +60,10 @@ namespace polyscip {
         * a unit weight; if unit_weight_info.first is true, then unit_weight_info.second contains the
         * index with value 1; note: first index is 0
         */
-        explicit WeightSpacePolyhedron(unsigned num_objs,
+        explicit WeightSpacePolyhedron(std::size_t num_objs,
                                        const OutcomeType& point,
-                                       const std::vector<OutcomeType>& initial_rays,
-                                       std::pair<bool, unsigned> unit_weight_info);
+                                       const ResultContainer& initial_rays,
+                                       std::pair<bool, std::size_t> unit_weight_info);
 
         /** Destructor */
         ~WeightSpacePolyhedron();
@@ -79,17 +79,17 @@ namespace polyscip {
          */
         WeightType getUntestedWeight();
 
+        ValueType getUntestedVertexWOV() const;
+
         /** Incorporates an newly found unbounded non-dominated ray
          * into the (partial) weight space polyhedron
-         * @param new_ray the newly found non-dominated ray that was
-         * computed by considering the weight and weighted objective
-         * value given by old_vertex
-         *  @param old_vertex the vertex (yielding weight and weight
-         * objective value) that was considered in last computation
+         //todo
          */
-        void incorporateOutcome(const OutcomeType& outcome,
-                                const WeightType& weight,
-                                bool outcome_is_ray);
+        void incorporateNewOutcome(ValueType new_wov,
+                                   const OutcomeType& outcome,
+                                   bool outcome_is_ray = false);
+
+        void weightYieldedKnownOutcome();
 
         /** Prints unmarked vertices to output stream
          *  @param printFacets if true, facet information of unmarked vertices is also printed
@@ -129,7 +129,7 @@ namespace polyscip {
          * @param outcome computed outcome
          * @param outcome_is_ray true if computed outcome corresponds to unbounded ray; false otherwise
          */
-        bool isNewOutcome(const OutcomeType& outcome, bool outcome_is_ray);
+        //bool isNewOutcome(const OutcomeType& outcome, bool outcome_is_ray);
 
         /** Creates initial weight space vertices
          *  @param num_objs number of objectives of given problem
@@ -137,7 +137,7 @@ namespace polyscip {
          *	@param weighted_obj_val weighted objective value of given point
          *  @param boundary_facets initial boundary facets of the weight space polyhedron
         */
-        void createInitialVertices(unsigned num_objs,
+        void createInitialVertices(std::size_t num_objs,
                                    const OutcomeType& point,
                                    FacetContainer boundary_facets);
 
@@ -150,7 +150,7 @@ namespace polyscip {
          *  unit_weight_index) an marked vertex
          *  @param unit_weight_index index of 1 in unit weight
          */
-        void setMarkedVertex(unsigned unit_weight_index);
+        void setMarkedVertex(std::size_t unit_weight_index);
 
         //TODO adjust documentation
         /** The initial weight space vertex v* having weight which coincides with

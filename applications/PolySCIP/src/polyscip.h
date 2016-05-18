@@ -48,19 +48,9 @@ namespace polyscip {
         void printSupportedResults(std::ostream& os = std::cout);
 
     private:
-        /**< A result comprises of a solution/ray in feasible space and corresponding
-         * non-dominated point in objective space
-         */
-        using Result = std::pair<SolType, OutcomeType>;
-        /** Corresponding fields for Result */
-        enum class ResultField {
-            Solution, Outcome
-        };
-
-        using ResultContainer = std::vector<Result>;
 
         enum class PolyscipStatus {
-            Solved, TimeLimitReached, Unsolved
+            Unsolved, InitPhase, WeightSpacePhase, CompUnsupportedPhase, Finished, TimeLimitReached,
         };
 
         bool filenameIsOkay(const std::string &filename);
@@ -76,11 +66,11 @@ namespace polyscip {
 
         SCIP_RETCODE solve();
 
-        SCIP_STATUS separateINFORUNBD(const WeightType& weight);
+        SCIP_STATUS separateINFORUNBD(const WeightType& weight, bool with_presolving = true);
 
-        SCIP_RETCODE handleStatus(SCIP_STATUS status, ValueType current_wov);
+        SCIP_RETCODE handleStatus(SCIP_STATUS status, bool init_phase = false, std::size_t obj_count = 0);
 
-        SCIP_RETCODE handleOptimalStatus(ValueType current_wov);
+        SCIP_RETCODE handleOptimalStatus();
 
         SCIP_RETCODE handleUnboundedStatus();
 

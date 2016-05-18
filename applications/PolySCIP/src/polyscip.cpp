@@ -25,7 +25,9 @@
 #include <numeric> //std::inner_product
 #include <stdexcept>
 #include <string>
-#include <tuple>
+#include <tuple> //std::get
+#include <utility> //std::make_pair
+#include <vector>
 
 #include "objscip/objscip.h"
 #include "objscip/objscipdefplugins.h"
@@ -34,12 +36,14 @@
 #include "polyscip_types.h"
 #include "prob_data_objectives.h"
 #include "ReaderMOP.h"
+#include "weight_space_polyhedron.h"
 
 using std::addressof;
 using std::cout;
 using std::get;
 using std::ostream;
 using std::string;
+using std::vector;
 using polyscip::OutcomeType;
 using polyscip::ValueType;
 
@@ -83,59 +87,68 @@ namespace polyscip {
     }
 
     SCIP_RETCODE Polyscip::initWeightSpace() {
+        polyscip_status_ = PolyscipStatus::InitPhase;
         SCIP_CALL( SCIPstartClock(scip_, clock_total_) );
-        decltype(no_objs_) obj_counter{0}; // objCounter has same type as no_objs
+        std::size_t obj_counter = 0;
         auto initial_weight = WeightType(no_objs_,0.);
-
-        while (polyscip_status_ == PolyscipStatus::Unsolved && obj_counter < no_objs_) {
+        while (polyscip_status_ == PolyscipStatus::InitPhase) {
             initial_weight[obj_counter] = 1.;
             SCIP_CALL( setWeightedObjective(initial_weight) );
             SCIP_CALL( solve() );
             auto scip_status = SCIPgetStatus(scip_);
-            if (scip_status == SCIP_STATUS_INFORUNBD) {
+            if (scip_status == SCIP_STATUS_INFORUNBD)
                 scip_status = separateINFORUNBD(initial_weight);
-            }
-            SCIP_CALL( handleStatus(scip_status, std::numeric_limits<ValueType>::max()) );
-            //todo
+            SCIP_CALL( handleStatus(scip_status, true, obj_counter) );
             initial_weight[obj_counter] = 0.;
             ++obj_counter;
         }
         return SCIP_OKAY;
     }
 
-    SCIP_STATUS Polyscip::separateINFORUNBD(const WeightType& weight) {
-        auto zero_weight = WeightType(no_objs_,0.);
+    SCIP_STATUS Polyscip::separateINFORUNBD(const WeightType& weight, bool with_presolving) {
+        if (!with_presolving)
+            SCIPsetPresolving(scip_, SCIP_PARAMSETTING_OFF, TRUE);
+        auto zero_weight = WeightType(no_objs_, 0.);
         setWeightedObjective(zero_weight);
         solve(); // re-compute with zero objective
+        if (!with_presolving)
+            SCIPsetPresolving(scip_, SCIP_PARAMSETTING_DEFAULT, TRUE);
         auto status = SCIPgetStatus(scip_);
         setWeightedObjective(weight); // re-set to previous objective
-        if (status == SCIP_STATUS_INFORUNBD)
-            throw std::runtime_error("INFORUNBD Status for problem with zero objective.\n");
-        else if (status == SCIP_STATUS_UNBOUNDED)
-            throw std::runtime_error("UNBOUNDED Status for problem with zero objective.\n");
-        else if (status == SCIP_STATUS_OPTIMAL) // previous problem was unbounded
-            return SCIP_STATUS_UNBOUNDED;
-        else
-            return status;
-    }
-
-    SCIP_RETCODE Polyscip::handleStatus(SCIP_STATUS status, ValueType current_wov) {
-        if (status == SCIP_STATUS_OPTIMAL) {
-            std::cout << "OPTIMAL STATUS\n";
-            SCIP_CALL( handleOptimalStatus(current_wov) );
+        if (status == SCIP_STATUS_INFORUNBD) {
+            if (with_presolving)
+                separateINFORUNBD(weight, false);
+            else
+                throw std::runtime_error("INFORUNBD Status for problem with zero objective and no presolving.\n");
         }
         else if (status == SCIP_STATUS_UNBOUNDED) {
-            std::cout << "UNBOUNDED STATUS\n";
+            throw std::runtime_error("UNBOUNDED Status for problem with zero objective.\n");
+        }
+        else if (status == SCIP_STATUS_OPTIMAL) { // previous problem was unbounded
+            return SCIP_STATUS_UNBOUNDED;
+        }
+        return status;
+    }
+
+    SCIP_RETCODE Polyscip::handleStatus(SCIP_STATUS status, bool init_phase, std::size_t obj_count) {
+        if (status == SCIP_STATUS_OPTIMAL) {
+            SCIP_CALL( handleOptimalStatus() );
+            if (init_phase)
+                polyscip_status_ = PolyscipStatus::WeightSpacePhase;
+        }
+        else if (status == SCIP_STATUS_UNBOUNDED) {
             SCIP_CALL( handleUnboundedStatus() );
+            if (init_phase && obj_count == no_objs_ - 1)
+                polyscip_status_ = PolyscipStatus::Finished;
         }
         else if (status == SCIP_STATUS_INFORUNBD) {
-            //todo
-        }
-        else if (status == SCIP_STATUS_INFEASIBLE) {
-            polyscip_status_ = PolyscipStatus::Solved;
+            throw std::runtime_error("INFORUNBD Status unexpected at this stage.\n");
         }
         else if (status == SCIP_STATUS_TIMELIMIT) {
             polyscip_status_ = PolyscipStatus::TimeLimitReached;
+        }
+        else {
+            polyscip_status_ = PolyscipStatus::Finished;
         }
         return SCIP_OKAY;
     }
@@ -147,7 +160,7 @@ namespace polyscip {
                 SCIP_CALL( SCIPfreeTransform(scip_) );
             SCIP_CALL( solve() );
             SCIP_CALL( SCIPsetPresolving(scip_, SCIP_PARAMSETTING_DEFAULT, TRUE) );
-            if (SCIPgetStatus(scip_)!=SCIP_STATUS_UNBOUNDED)
+            if (SCIPgetStatus(scip_) != SCIP_STATUS_UNBOUNDED)
                 throw std::runtime_error("Status UNBOUNDED expected.\n");
             if (!SCIPhasPrimalRay(scip_))
                 throw std::runtime_error("Existence of primal ray expected.\n");
@@ -156,36 +169,31 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    SCIP_RETCODE Polyscip::handleOptimalStatus(ValueType current_wov) {
-        auto new_wov = SCIPgetPrimalbound(scip_);
-        if (SCIPisLT(scip_, new_wov, current_wov)) {
-            auto best_sol = SCIPgetBestSol(scip_);
-            SCIP_SOL* finite_sol = nullptr;
-            SCIP_Bool same_obj_val = FALSE;
-            SCIP_CALL(SCIPcreateFiniteSolCopy(scip_, addressof(finite_sol), best_sol, addressof(same_obj_val)));
-            if (!same_obj_val) {
-                auto diff = std::abs(SCIPgetSolOrigObj(scip_, best_sol) -
-                                     SCIPgetSolOrigObj(scip_, finite_sol));
-                if (diff > 1.0e-5) {
-                    std::cerr << "absolute value difference after calling SCIPcreateFiniteSolCopy: " << diff << "\n";
-                    SCIP_CALL(SCIPfreeSol(scip_, addressof(finite_sol)));
-                    throw std::runtime_error("SCIPcreateFiniteSolCopy: unacceptable difference in objective values.");
-                }
+    SCIP_RETCODE Polyscip::handleOptimalStatus() {
+        auto best_sol = SCIPgetBestSol(scip_);
+        SCIP_SOL *finite_sol = nullptr;
+        SCIP_Bool same_obj_val = FALSE;
+        SCIP_CALL(SCIPcreateFiniteSolCopy(scip_, addressof(finite_sol), best_sol, addressof(same_obj_val)));
+        if (!same_obj_val) {
+            auto diff = std::abs(SCIPgetSolOrigObj(scip_, best_sol) -
+                                 SCIPgetSolOrigObj(scip_, finite_sol));
+            if (diff > 1.0e-5) {
+                std::cerr << "absolute value difference after calling SCIPcreateFiniteSolCopy: " << diff << "\n";
+                SCIP_CALL(SCIPfreeSol(scip_, addressof(finite_sol)));
+                throw std::runtime_error("SCIPcreateFiniteSolCopy: unacceptable difference in objective values.");
             }
-            addResult(true, finite_sol);
-            SCIP_CALL(SCIPfreeSol(scip_, addressof(finite_sol)));
         }
+        addResult(true, finite_sol);
+        SCIP_CALL(SCIPfreeSol(scip_, addressof(finite_sol)));
         return SCIP_OKAY;
     }
-
-
 
     void Polyscip::addResult(bool outcome_is_bounded, SCIP_SOL* primal_sol) {
         SolType sol;
         auto outcome = OutcomeType(no_objs_,0.);
         auto no_vars = SCIPgetNOrigVars(scip_);
         auto vars = SCIPgetOrigVars(scip_);
-        auto objs = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
+        auto objs_probdata = dynamic_cast<ProbDataObjectives*>(SCIPgetObjProbData(scip_));
         for (auto i=0; i<no_vars; ++i) {
             auto var_sol_val = outcome_is_bounded ? SCIPgetSolVal(scip_, primal_sol, vars[i]) :
                                SCIPgetPrimalRayVal(scip_, vars[i]);
@@ -193,7 +201,7 @@ namespace polyscip {
                 sol.emplace_back(SCIPvarGetName(vars[i]), var_sol_val);
                 auto var_obj_vals = OutcomeType(no_objs_,0.);
                 for (decltype(no_objs_) j=0; j<no_objs_; ++j)
-                    var_obj_vals[j] = objs->getObjVal(vars[i], j, var_sol_val);
+                    var_obj_vals[j] = objs_probdata->getObjVal(vars[i], j, var_sol_val);
                 std::transform(begin(outcome), end(outcome),
                                begin(var_obj_vals),
                                begin(outcome),
@@ -234,22 +242,60 @@ namespace polyscip {
 
     SCIP_RETCODE Polyscip::computeSupported() {
         SCIP_CALL( initWeightSpace() );
+        if (polyscip_status_ == PolyscipStatus::WeightSpacePhase) {
+            auto unit_weight_info = std::make_pair(true, unbounded_.size());
+            weight_space_poly_ = global::make_unique<WeightSpacePolyhedron>(no_objs_,
+                                                                            supported_.front().second,
+                                                                            unbounded_,
+                                                                            unit_weight_info);
+            auto iteration = 0;
+            while (weight_space_poly_->hasUntestedWeight() && ++iteration < 5) {
+                std::cout << "ITERATION = " << iteration << "\n";
+                auto untested_weight = weight_space_poly_->getUntestedWeight();
+                global::print(untested_weight, "untested weight: ");
+                SCIP_CALL( setWeightedObjective(untested_weight) );
+                SCIP_CALL( solve() );
+                auto scip_status = SCIPgetStatus(scip_);
+                if (scip_status == SCIP_STATUS_INFORUNBD)
+                    scip_status = separateINFORUNBD(untested_weight);
+
+                if (scip_status == SCIP_STATUS_OPTIMAL) {
+                    auto computed_wov = SCIPgetPrimalbound(scip_);
+                    std::cout << "computed wov = " << computed_wov << "\n";
+                    std::cout << "untested wov = " << weight_space_poly_->getUntestedVertexWOV() << "\n";
+                    if (SCIPisLT(scip_, computed_wov, weight_space_poly_->getUntestedVertexWOV())) {
+                        SCIP_CALL( handleStatus(scip_status) ); //adds bounded result to supported_
+                        weight_space_poly_->incorporateNewOutcome(computed_wov,supported_.back().second);
+                    }
+                    else {
+                        std::cout << "NO NEW VERTEX\n";
+                        weight_space_poly_->weightYieldedKnownOutcome();
+                    }
+                }
+                else if (scip_status == SCIP_STATUS_UNBOUNDED) {
+                    SCIP_CALL( handleStatus(scip_status) ); //adds unbounded result to unbounded_
+                    weight_space_poly_->incorporateNewOutcome(0,unbounded_.back().second, true);
+                }
+                else {
+                    SCIP_CALL( handleStatus(scip_status) ); //polyscip_status_ is set to finished or time limit reached
+                    SCIP_CALL(SCIPstopClock(scip_, clock_total_));
+                    return SCIP_OKAY;
+                }
+            }
+            polyscip_status_ = PolyscipStatus::CompUnsupportedPhase;
+        }
         return SCIP_OKAY;
     }
 
     void Polyscip::printSupportedResults(ostream& os) {
         for (const auto& result : supported_) {
-            auto point = get<global::toField(ResultField::Outcome)>(result);
-            printPoint(point, os);
-            auto sol = get<global::toField(ResultField::Solution)>(result);
-            printSol(sol, os);
+            printPoint(result.second, os);
+            printSol(result.first, os);
             os << "\n";
         }
         for (const auto& result : unbounded_) {
-            auto ray = get<global::toField(ResultField::Outcome)>(result);
-            printRay(ray, os);
-            auto sol = get<global::toField(ResultField::Solution)>(result);
-            printSol(sol, os);
+            printRay(result.second, os);
+            printSol(result.first, os);
             os << "\n";
         }
     }
