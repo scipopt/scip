@@ -110,13 +110,14 @@ class PrimalBoundHistoryReader(StatisticReader):
                self.inTable = False
             elif self.inTable and "Repeating presolve." in line:
                self.inTable = False
+            elif self.inTable and "Covers:" in line:
+               self.inTable = False
             elif self.inTable and len(line) > 0 and line.startswith(" ") or line.startswith("*"):
                if line=="\n":
                   return None
                nodeinlineidx = 7
                while line[nodeinlineidx] != " " and line[nodeinlineidx] != "+":
                   nodeinlineidx += 1
-               print line
                nnodes = int(line[:nodeinlineidx].split()[-1].strip('*+')) + 1
                if line.startswith("*") or line.startswith("+"):
                   print line
