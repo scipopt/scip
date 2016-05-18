@@ -7298,10 +7298,6 @@
   *   - Removed method SCIPreallocBufferSize()
   *   - Removed method SCIPfreeBufferSize()
   *   - Removed method callback SCIPdialogExecConflictgraph()
-  *
-  * <br>
-  * @section MISCELLANEOUS7 Miscellaneous
-  *
   * <br>
   * For further information we refer to the \ref RELEASENOTES "Release notes" and the \ref CHANGELOG "Changelog".
   */

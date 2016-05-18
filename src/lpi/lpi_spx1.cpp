@@ -13,7 +13,7 @@
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-/**@file   lpi_spx.cpp
+/**@file   lpi_spx1.cpp
  * @ingroup LPIS
  * @brief  LP interface for SoPlex version 1.4 and higher
  * @author Tobias Achterberg

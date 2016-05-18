@@ -142,6 +142,7 @@ BLIS            =       blis
 SHELL		= 	bash
 READ		=	read -e
 LN_s		= 	ln -s
+LN_sf		=	ln -sf
 
 #initial compiler and linker flags
 FLAGS		=	-I$(SRCDIR) -DWITH_SCIPDEF -I$(SCIPDIR)/src
