@@ -42681,3 +42681,16 @@ int SCIPgetPtrarrayMaxIdx(
 
    return SCIPptrarrayGetMaxIdx(ptrarray);
 }
+
+SCIP_RETCODE SCIPupdateDualRayStat(
+   SCIP*                 scip,
+   int                   initsize,
+   int                   heursize,
+   int                   nconfsets,
+   int                   nclauses
+   )
+{
+   SCIP_CALL( SCIPconflictstoreDualRayStats(scip->conflictstore, initsize, heursize, nconfsets, nclauses) );
+
+   return SCIP_OKAY;
+}
