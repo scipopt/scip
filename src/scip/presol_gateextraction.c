@@ -183,7 +183,7 @@ SCIP_DECL_HASHKEYVAL(hashdataKeyValCons)
    assert(hashdata->nvars == 2);
 
    /* if we have only two variables we store at each 16 bits of the hash value the index of a variable */
-   hashval = (SCIPvarGetIndex(hashdata->vars[1]) << 16) + SCIPvarGetIndex(hashdata->vars[0]); /*lint !e701*/
+   hashval = ((unsigned int)SCIPvarGetIndex(hashdata->vars[1]) << 16) + SCIPvarGetIndex(hashdata->vars[0]); /*lint !e701*/
 
    return hashval;
 }
@@ -253,7 +253,7 @@ SCIP_DECL_HASHKEYVAL(setppcHashdataKeyValCons)
     * all variables these bitfields are combined by an or operation to get a good hashvalue for distinguishing the data
     */
    for( v = 1; v >= 0; --v )
-      hashval |= (1 << (SCIPvarGetIndex(hashdata->vars[v]) % 32)); /*lint !e701*/
+      hashval |= (1U << (SCIPvarGetIndex(hashdata->vars[v]) % 32)); /*lint !e701*/
 
    return hashval;
 }

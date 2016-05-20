@@ -234,7 +234,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
 {  /*lint --e{715}*/
    SCIP_ROW* row;
    unsigned int keyval;
-   int maxabsval;
+   unsigned int maxabsval;
    SCIP_Real maxval;  
    SCIP_SET* set;
 
@@ -249,11 +249,11 @@ SCIP_DECL_HASHKEYVAL(hashKeyValCut)
    if( maxval > (SCIP_Real) INT_MAX )
       maxabsval = 0;
    else if( maxval < 1.0 )
-      maxabsval = (int) (10000*maxval);
+      maxabsval = (unsigned int) (10000*maxval);
    else
-      maxabsval = (int) maxval;
+      maxabsval = (unsigned int) maxval;
 
-   keyval = (row->maxidx << 29) + (row->len << 22) + (row->minidx << 11) + maxabsval; /*lint !e701*/
+   keyval = ((unsigned int)row->maxidx << 29) + ((unsigned int)row->len << 22) + ((unsigned int)row->minidx << 11) + maxabsval; /*lint !e701*/
 
    return keyval;
 }

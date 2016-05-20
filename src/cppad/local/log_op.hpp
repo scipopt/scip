@@ -32,6 +32,9 @@ The C++ source code corresponding to this operation is
 \copydetails forward_unary1_op
 */
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490
+__attribute__((no_sanitize_undefined))
+#endif
 inline void forward_log_op(
 	size_t q           ,
 	size_t p           ,
@@ -117,6 +120,9 @@ The C++ source code corresponding to this operation is
 */
 
 template <class Base>
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490
+__attribute__((no_sanitize_undefined))
+#endif
 inline void reverse_log_op(
 	size_t      d            ,
 	size_t      i_z          ,

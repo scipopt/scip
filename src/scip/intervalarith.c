@@ -4001,14 +4001,24 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
                ymin = -ay * bx + sqrt(MAX(d, 0.0));
                ymin /= axy * ay;
 
-               val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
-               minval = MIN(val, minval);
+               if( ymin > ybnds.inf && ymin < ybnds.sup )
+               {
+                  assert(bx + axy * ymin != 0.0);
+
+                  val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
+                  minval = MIN(val, minval);
+               }
 
                ymin = -ay * bx - sqrt(MAX(d, 0.0));
                ymin /= axy * ay;
 
-               val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
-               minval = MIN(val, minval);
+               if(ymin > ybnds.inf && ymin < ybnds.sup )
+               {
+                  assert(bx + axy * ymin != 0.0);
+
+                  val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
+                  minval = MIN(val, minval);
+               }
             }
          }
       }
