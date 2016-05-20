@@ -142,7 +142,10 @@ do
         export CLIENTTMPDIR
         export CHECKERPATH=$SCIPPATH/solchecker
         if [ `uname` == Linux ] && (ldd ${EXECNAME} | grep -q lib[at]san) ; then
-           # skip hard mem limit if using AddressSanitizer (libasan) or LeakSanitizer (libtsan) 
+           # skip hard mem limit if using AddressSanitizer (libasan) or LeakSanitizer (libtsan)
+           echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT
+        elif [ `uname` == Linux ] && (nm ${EXECNAME} | grep -q __[alt]san) ; then
+           # skip hard mem limit if using AddressSanitizer, LeakSanitizer, or ThreadSanitizer linked statitically (__[alt]san symbols)
            echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT
         else
            ULIMITMEM="ulimit -v $HARDMEMLIMIT k;"
