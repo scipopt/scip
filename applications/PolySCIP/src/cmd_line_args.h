@@ -33,6 +33,7 @@ namespace polyscip {
         CmdLineArgs(int argc, const char *const *argv);
 
         bool beVerbose() const {return be_verbose_;};
+        bool withCompleteLoopForObsolete() const {return complete_loop_for_obsolete_;};
         bool withUnsupported() const {return with_unsupported_;};
         bool writeSolutions() const {return write_sols_;};
         bool hasTimeLimit() const {return time_limit_ != TIME_LIMIT_INF;}
@@ -50,6 +51,7 @@ namespace polyscip {
         bool be_verbose_;
         bool with_unsupported_;
         bool write_sols_;
+        bool complete_loop_for_obsolete_;
         TimeLimitType time_limit_;
         std::string param_file_;
         std::string prob_file_;

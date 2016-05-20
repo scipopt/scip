@@ -31,6 +31,7 @@
 #include <memory> // std::shared_ptr
 #include <vector>
 
+#include "objscip/objscip.h"
 #include "polyscip_types.h"
 #include "weight_space_polyhedron.h"
 
@@ -51,25 +52,28 @@ namespace polyscip {
                                     ValueType weighted_obj_val,
                                     bool sort_facets = true);
 
-        explicit WeightSpaceVertex(const WeightSpaceVertex* obs,
+        explicit WeightSpaceVertex(SCIP* scip,
+                                   const WeightSpaceVertex* obs,
                                    const WeightSpaceVertex* non_obs,
                                    const OutcomeType& outcome,
                                    bool outcome_is_ray);
 
         /** Checks whether given outcome makes vertex obsolete, i.e. whether
          * vertex weight \cdot outcome >= rhs
+         //todo param
          * @param outcome point or ray in objective space
          * @param rhs value to compare
          * @return true if vertex is made obsolete, false otherwise
          */
-        bool isMadeObsolete(const OutcomeType& outcome, ValueType rhs) const;
+        bool isMadeObsolete(SCIP* scip, const OutcomeType& outcome, ValueType rhs) const = delete;
 
         /** Checks whether given outcome makes vertex obsolete, i.e. whether
          * vertex weight \cdot outcome >= weighted objective value of vertex
+         //todo param
          * @param outcome point or ray in objective space
          * @return true if vertex is made obsolete, false otherwise
          */
-        bool isMadeObsolete(const OutcomeType& outcome) const;
+        bool isMadeObsolete(SCIP* scip, const OutcomeType& outcome) const = delete;
 
         /** Return associated weight of weight space vertex
          * @return weight of vertex
@@ -79,7 +83,11 @@ namespace polyscip {
         /** Return weighted objective value of associated vertex
          * @return weighted objective value
          */
-        ValueType getWOV() const;
+        ValueType getCurrentWOV() const;
+
+        bool isCorner() const {return isWeightSpaceCorner_;}
+
+        ValueType getWeightedOutcome(const OutcomeType& outcome) const;
 
         /** Checks whether weight of vertex corresponds to unit weight
          * @param index index of 1 in unit weight
@@ -105,11 +113,14 @@ namespace polyscip {
          * @param weight1 weight of vertex
          * @param weight2 weight of another vertex
          * @param outcome computed outcome
+        //todo Doku anpassen
          * @return combination coefficient h
          */
-        static ValueType calculateCombinationValue(const WeightType& weight1,
-                                                   const WeightType& weight2,
-                                                   const OutcomeType& outcome);
+        static ValueType calculateCombinationValue(const WeightSpaceVertex* non_obs,
+                                                   const WeightSpaceVertex* obs,
+                                                   const OutcomeType& outcome,
+                                                   bool outcome_is_ray);
+
 
         /** Returns the weight h * weight1 + (1-h) * weight2
          * @param weight1 weight of vertex
@@ -117,11 +128,12 @@ namespace polyscip {
          * @param h combination coefficient
          * @return convex combination h * weight1 + (1-h) * weight2
          */
-        static WeightType calculateWeightCombination(WeightType weight1,
-                                                     WeightType weight2,
+        static WeightType calculateWeightCombination(const WeightType& weight1,
+                                                     const WeightType& weight2,
                                                      ValueType h);
 
 
+        bool isWeightSpaceCorner_;
         /**< incident facets */
         WeightSpacePolyhedron::FacetContainer incident_facets_;
         /**< used weight */

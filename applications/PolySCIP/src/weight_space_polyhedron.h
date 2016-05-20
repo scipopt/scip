@@ -26,6 +26,7 @@
 #include <cstddef>
 #include <list>
 #include <iostream>
+#include <map>
 #include <memory> // std::shared_ptr
 #include <ostream>
 #include <string>
@@ -36,6 +37,7 @@
 
 #undef GCC_VERSION /* lemon/core.h redefines GCC_VERSION additionally to scip/def.h */
 #include "lemon/list_graph.h"
+#include "objscip/objscip.h"
 #include "polyscip_types.h"
 #include "weight_space_facet.h"
 
@@ -60,7 +62,8 @@ namespace polyscip {
         * a unit weight; if unit_weight_info.first is true, then unit_weight_info.second contains the
         * index with value 1; note: first index is 0
         */
-        explicit WeightSpacePolyhedron(std::size_t num_objs,
+        explicit WeightSpacePolyhedron(SCIP* scip,
+                                       std::size_t num_objs,
                                        const OutcomeType& point,
                                        const ResultContainer& initial_rays,
                                        std::pair<bool, std::size_t> unit_weight_info);
@@ -79,17 +82,19 @@ namespace polyscip {
          */
         WeightType getUntestedWeight();
 
-        ValueType getUntestedVertexWOV() const;
+        ValueType getUntestedVertexWOV(const WeightType& untested_weight) const;
 
         /** Incorporates an newly found unbounded non-dominated ray
          * into the (partial) weight space polyhedron
          //todo
          */
-        void incorporateNewOutcome(ValueType new_wov,
+        void incorporateNewOutcome(SCIP* scip,
+                                   bool completeLoopForObsolete,
+                                   const WeightType& used_weight,
                                    const OutcomeType& outcome,
                                    bool outcome_is_ray = false);
 
-        void weightYieldedKnownOutcome();
+        void incorporateKnownOutcome(const WeightType& weight);
 
         /** Prints unmarked vertices to output stream
          *  @param printFacets if true, facet information of unmarked vertices is also printed
@@ -105,6 +110,9 @@ namespace polyscip {
          * @param printFacets if true, facet information of obsolete vertices is also printed
          */
         void printObsoleteVertices(std::ostream& os = std::cout, bool printFacets = false) const;
+
+
+        std::size_t getNumberOfGraphNodes() const;
 
     private:
         using Graph = lemon::ListGraph;
@@ -123,6 +131,8 @@ namespace polyscip {
         using NodeMap = Graph::NodeMap<WeightSpaceVertex*>;
         using VertexMap = std::unordered_map<WeightSpaceVertex*, Node>;
 
+        using WeightMap = std::map<OutcomeType, WeightType>;
+
         /** Checks whether outcome is newly found (non-dominated) outcome, i.e,
          * whether weighted objective value of outcome with respect to the weight of the currently
          * considered weight space vertex is less than previously known weighted objective value
@@ -130,6 +140,11 @@ namespace polyscip {
          * @param outcome_is_ray true if computed outcome corresponds to unbounded ray; false otherwise
          */
         //bool isNewOutcome(const OutcomeType& outcome, bool outcome_is_ray);
+
+        bool isVertexObsolete(SCIP* scip,
+                              const WeightSpaceVertex* vertex,
+                              const OutcomeType& outcome,
+                              bool outcome_is_ray = false);
 
         /** Creates initial weight space vertices
          *  @param num_objs number of objectives of given problem
@@ -163,24 +178,31 @@ namespace polyscip {
          * @return true if initial weight space vertex with weight coinciding with ray_weight was found
          * (and the weight space polyhedron changed); false otherwiseo
          */
-        bool updateInitialWeightSpacePolyhedron(const OutcomeType& ray);
+        void updateInitialWeightSpacePolyhedron(SCIP* scip, const OutcomeType& ray);
 
-        void updateWeightSpacePolyhedron(const std::vector<WeightSpaceVertex*>& obsolete_vertices,
+        void updateWeightSpacePolyhedron(SCIP* scip, const std::vector<WeightSpaceVertex*>& obsolete_vertices,
                                          const OutcomeType& outcome,
                                          bool outcome_is_ray);
 
-        std::vector<WeightSpaceVertex*> computeObsoleteVertices(const OutcomeType& outcome,
-                                                                bool outcome_is_ray);
+        std::vector<WeightSpaceVertex*> computeObsoleteVerticesWithCompleteLoop(SCIP* scip,
+                                                                                const OutcomeType& outcome,
+                                                                                bool outcome_is_ray);
 
-        std::vector<WeightSpaceVertex*> computeObsoleteVertices(WeightSpaceVertex* init_obs_vertex,
+        std::vector<WeightSpaceVertex*> computeObsoleteVertices(SCIP* scip,
                                                                 const OutcomeType& outcome,
                                                                 bool outcome_is_ray);
+
+        void resetCurrentInvestigatedVertex() {
+            curr_investigated_vertex_ = nullptr;
+        }
 
         void addToSkeleton(const std::vector< std::pair<WeightSpaceVertex*, Node> >&vertex_pairs);
 
         void deleteFromSkeleton(WeightSpaceVertex* v);
 
         void setStatusToObsolete(WeightSpaceVertex* v);
+
+
 
         Node getNode(WeightSpaceVertex* vertex) {return vertices_to_nodes_.at(vertex);};
         WeightSpaceVertex* getVertex(Node n) {return nodes_to_vertices_[n];};
@@ -211,6 +233,8 @@ namespace polyscip {
         NodeMap nodes_to_vertices_;
         /**< maps vertices to nodes */
         VertexMap vertices_to_nodes_;
+        /**< maps outcomes to weights */
+        WeightMap outcomes_to_weights_;
 
     };
 
