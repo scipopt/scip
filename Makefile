@@ -1010,7 +1010,7 @@ ifeq ($(COMP),msvc)
 		@echo "-> generating library $@"
 		$(LINKCC) $(LIBBUILDFLAGS) $(LINKCC_L)$(LIBDIR) -dll $(LIBBUILD_o)$(LIBDIR)/$(DLLFILENAME) \
 			$(SCIPLIBOBJFILES) $(OBJSCIPLIBOBJFILES) $(NLPILIBOBJFILES) $(LPILIBOBJFILES) \
-			$(LPSLDFLAGS)
+			$(LPSLDFLAGS) $(LDFLAGS)
 else
 		@echo "can not use 'make dll' without MSVC"
 endif
