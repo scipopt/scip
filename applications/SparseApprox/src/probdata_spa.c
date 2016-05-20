@@ -1327,15 +1327,20 @@ SCIP_DECL_PROBCOPY(probcopySpa)
 
       if( i < ncluster )
       {
-         SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcedata->indicatorvar[i], &var) );
-
-         if( SCIPvarIsActive(var) && sourcedata->indicatorvar[i] != NULL )
+         if( sourcedata->indicatorvar[i] != NULL )
          {
             SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcedata->indicatorvar[i], &var) );
-            SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &((*targetdata)->indicatorvar[i]), varmap, consmap, global, &success) );
-            assert(success);
-            assert((*targetdata)->indicatorvar[i] != NULL);
-            SCIP_CALL( SCIPcaptureVar(scip, (*targetdata)->indicatorvar[i]) );
+
+            if( SCIPvarIsActive(var) )
+            {
+               SCIP_CALL( SCIPgetTransformedVar(sourcescip, sourcedata->indicatorvar[i], &var) );
+               SCIP_CALL( SCIPgetVarCopy(sourcescip, scip, var, &((*targetdata)->indicatorvar[i]), varmap, consmap, global, &success) );
+               assert(success);
+               assert((*targetdata)->indicatorvar[i] != NULL);
+               SCIP_CALL( SCIPcaptureVar(scip, (*targetdata)->indicatorvar[i]) );
+            }
+            else
+               (*targetdata)->indicatorvar[i] = NULL;
          }
          else
             (*targetdata)->indicatorvar[i] = NULL;
