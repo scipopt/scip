@@ -477,14 +477,10 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
    if( bestsol == NULL || heurdata->lastsolindex == SCIPsolGetIndex(bestsol) )
       return SCIP_OKAY;
 
-
    /* reset the timing mask to its default value (at the root node it could be different) */
    if( SCIPgetNNodes(scip) > 1 )
       SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
-   /* create the working solution*/
-
-   SCIP_CALL( SCIPcreateSol(scip, &worksol, heur) );
    /* get problem variables */
    nbins = SCIPspaGetNrBins(scip);
    ncluster = SCIPspaGetNrCluster(scip);
@@ -493,9 +489,16 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
    cmatrix = SCIPspaGetCmatrix(scip);
    targetvar = SCIPspaGetTargetvar(scip);
 
-   objective = SCIPvarGetLbGlobal(targetvar);
-   if( objective == 0.0 )
+   /* we do not want to run the heurtistic if there is no 'flow' between the clusters.
+    * in case of a (ideally) full reversible problem there cannot be a better solution, in the other case, i.e., the
+    * problem has irreversible parts, it seems the heuristic will not find solutions respecting the coherence conditions
+    */
+   if( SCIPisZero(scip, SCIPgetSolOrigObj(scip, worksol)) )
       return SCIP_OKAY;
+
+   /* create the working solution */
+   SCIP_CALL( SCIPcreateSol(scip, &worksol, heur) );
+
    assert(nbins >= 0);
    assert(ncluster >= 0);
    assert(varmatrix != NULL);
