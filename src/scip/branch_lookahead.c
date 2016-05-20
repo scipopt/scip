@@ -25,6 +25,7 @@
 
 #include "scip/branch_lookahead.h"
 #include "scip/branch_fullstrong.h"
+#include "scip/cons_bounddisjunction.h"
 
 #define BRANCHRULE_NAME            "lookahead"
 #define BRANCHRULE_DESC            "fullstrong branching with depth of 2" /* TODO CS: expand description */
@@ -33,10 +34,10 @@
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
 
-#define DEFAULT_MAXPROPROUNDS       0        /**< maximum number of propagation rounds to be performed during multaggr branching
-                                              *   before solving the LP (-1: no limit, -2: parameter settings) */
-#define DEFAULT_PROBINGBOUNDS    TRUE        /**< should valid bounds be identified in a probing-like fashion during multi-aggr
-                                              *   branching (only with propagation)? */
+#define DEFAULT_MAXPROPROUNDS       0        /**< maximum number of propagation rounds to be performed during multaggr
+                                              *   branching before solving the LP (-1: no limit, -2: parameter settings) */
+#define DEFAULT_PROBINGBOUNDS    TRUE        /**< should valid bounds be identified in a probing-like fashion during
+                                              *   lookahead branching (only with propagation)? */
 
 /*
  * Data structures
@@ -50,8 +51,8 @@ struct SCIP_BranchruleData
    SCIP_Bool             probingbounds;      /**< should valid bounds be identified in a probing-like fashion during strong
                                               *   branching (only with propagation)? */
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
-   int                   maxproprounds;      /**< maximum number of propagation rounds to be performed during strong branching
-                                              *   before solving the LP (-1: no limit, -2: parameter settings) */
+   int                   maxproprounds;      /**< maximum number of propagation rounds to be performed during strong
+                                              *   branching before solving the LP (-1: no limit, -2: parameter settings) */
    SCIP_Bool*            skipdown;           /**< should be branching on down child be skipped? */
    SCIP_Bool*            skipup;             /**< should be branching on up child be skipped? */
 };
@@ -63,6 +64,118 @@ struct SCIP_BranchruleData
 
 /* put your local methods here, and declare them static */
 
+static SCIP_RETCODE selectVarLookaheadBranching(
+   SCIP*          scip,    /**< original SCIP data structure */
+   SCIP_RESULT*   result   /**< pointer to store results of branching */){
+
+   SCIP_VAR** fixvars;
+   SCIP_VAR** deepfixvars;
+   SCIP_LPSOLSTAT solstatdown;
+   SCIP_LPSOLSTAT deepsolstatdown;
+   SCIP_Real downobjval;
+   SCIP_Real deepdownobjval;
+   SCIP_Real fixvarssol;
+   SCIP_Real deepfixvarssol;
+   SCIP_Bool lperror;
+   SCIP_Bool deeplperror;
+   SCIP_Bool downinf;
+   SCIP_Bool deepdowninf;
+   int nfixvars;
+   int deepnfixvars;
+   int i;
+   int j;
+
+   assert(scip != NULL);
+
+   if( SCIPgetDepthLimit(scip) <= (SCIPgetDepth(scip) + 1) )
+   {
+      SCIPdebugMessage("cannot perform probing in selectVarLookaheadBranching, depth limit reached.\n");
+      *result = SCIP_DIDNOTRUN;
+      return SCIP_OKAY;
+   }
+
+   fixvars = SCIPgetFixedVars(scip);
+   nfixvars = SCIPgetNFixedVars(scip);
+
+   if( nfixvars != 0)
+   {
+      SCIP_CALL( SCIPstartProbing(scip) );
+      SCIPdebugMessage("PROBING MODE:\n");
+
+      for( i = 0; i < nfixvars; i++ )
+      {
+         assert(fixvars[i] != NULL);
+         fixvarssol = SCIPvarGetLPSol(fixvars[i]);
+
+         if (SCIPvarGetType(fixvars[i]) == SCIP_VARTYPE_INTEGER && !SCIPisFeasIntegral(scip, fixvarssol))
+         {
+            /* NOTE CS: Start of the probe branching on x <= floor(x') */
+
+            SCIP_CALL( SCIPnewProbingNode(scip) );
+            SCIP_CALL( SCIPchgVarUbProbing(scip, fixvars[i], SCIPfeasFloor(scip, fixvarssol)) );
+
+            /* ASK CS: why downinf == 0? wouldn't only !downind be clearer? */
+            SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &downinf) );
+            solstatdown = SCIPgetLPSolstat(scip);
+            lperror = lperror || (solstatdown == SCIP_LPSOLSTAT_NOTSOLVED && downinf == 0) ||
+                  (solstatdown == SCIP_LPSOLSTAT_ITERLIMIT) || (solstatdown == SCIP_LPSOLSTAT_TIMELIMIT);
+            assert(solstatdown != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+
+            if( lperror )
+            {
+               /* ASk CS:  up or down?*/
+               SCIPdebugMessage("error solving down node probing LP: status=%d\n", solstatdown);
+               break;
+            }
+
+            downobjval = SCIPgetLPObjval(scip);
+            downinf = downinf || SCIPisGE(scip, downobjval, SCIPgetCutoffbound(scip));
+            assert(((solstatdown != SCIP_LPSOLSTAT_INFEASIBLE) && (solstatdown != SCIP_LPSOLSTAT_OBJLIMIT)) || downinf);
+
+            deepfixvars = SCIPgetFixedVars(scip);
+            deepnfixvars = SCIPgetNFixedVars(scip);
+
+            if( deepnfixvars != 0 )
+            {
+               for( j = 0; j < deepnfixvars; j++ )
+               {
+                  assert( deepfixvars != NULL );
+                  deepfixvarssol = SCIPvarGetLPSol(fixvars[i]);
+
+                  if (SCIPvarGetType(deepfixvars[j]) == SCIP_VARTYPE_INTEGER && !SCIPisFeasIntegral(scip, deepfixvarssol) )
+                  {
+                     /* NOTE CS: Start of the probe branching on x <= floor(x') and y <= floor(y') */
+                     SCIP_CALL( SCIPnewProbingNode(scip) );
+                     SCIP_CALL( SCIPchgVarUbProbing(scip, deepfixvars[j], SCIPfeasFloor(scip, deepfixvarssol)) );
+
+                     /* ASK CS: why downinf == 0? wouldn't only !downind be clearer? */
+                     SCIP_CALL( SCIPsolveProbingLP(scip, -1, &deeplperror, &deepdowninf) );
+                     deepsolstatdown = SCIPgetLPSolstat(scip);
+                     deeplperror = deeplperror || (deepsolstatdown == SCIP_LPSOLSTAT_NOTSOLVED && deepdowninf == 0) ||
+                           (deepsolstatdown == SCIP_LPSOLSTAT_ITERLIMIT) || (deepsolstatdown == SCIP_LPSOLSTAT_TIMELIMIT);
+                     assert(deepsolstatdown != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+
+                     if( deeplperror )
+                     {
+                        /* ASk CS:  up or down?*/
+                        SCIPdebugMessage("error solving down node probing LP: status=%d\n", deepsolstatdown);
+                        break;
+                     }
+
+                     deepdownobjval = SCIPgetLPObjval(scip);
+                     deepdowninf = deepdowninf || SCIPisGE(scip, deepdownobjval, SCIPgetCutoffbound(scip));
+                     assert(((deepsolstatdown != SCIP_LPSOLSTAT_INFEASIBLE) && (deepsolstatdown != SCIP_LPSOLSTAT_OBJLIMIT)) || deepdowninf);
+                  }
+               }
+            }
+         }
+      }
+
+      SCIP_CALL( SCIPendProbing(scip) );
+   }
+
+   return SCIP_OKAY;
+}
 
 /*
  * Callback methods of branching rule
@@ -174,10 +287,16 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
          branchruledata->maxproprounds, branchruledata->probingbounds, TRUE,
          &bestcandpos, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
 
+   /**/
+
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
-      SCIP_VAR* bestcand = lpcands[bestcandpos];
-      SCIP_Real bestsol = lpcandssol[bestcandpos];
+      /*SCIP_VAR* bestcand = lpcands[bestcandpos];
+      SCIP_Real bestsol = lpcandssol[bestcandpos];*/
+
+      SCIP_CALL( selectVarLookaheadBranching(scip, result) );
+
+
 
    }
 
