@@ -39,7 +39,7 @@ SCIP_RETCODE SCIPincludeSpaPlugins(
    SCIP_CALL( SCIPincludeHeurSpaGreedy(scip) );
    SCIP_CALL( SCIPincludeHeurSpaswitch(scip) );
    SCIP_CALL( SCIPincludeEventHdlrNewsol(scip) );
-   SCIP_CALL( SCIPincludeSepaSparseApprox(scip) );
+/*   SCIP_CALL( SCIPincludeSepaSparseApprox(scip) );*/
    SCIP_CALL( SCIPincludeHeurFuzzyround(scip) );
    SCIP_CALL( SCIPincludeHeurSpakerlin(scip) );
 

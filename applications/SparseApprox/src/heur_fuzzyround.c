@@ -1,3 +1,4 @@
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -383,6 +384,15 @@ SCIP_DECL_HEUREXEC(heurExecFuzzyround)
    else
       *result = SCIP_DIDNOTFIND;
 
+   /** free allocated memory */
+
+   for( i = 0; i < nbins; ++i )
+   {
+      SCIPfreeMemoryArray(scip, &clustering[i]);
+      SCIPfreeMemoryArray(scip, &qmatrix[i]);
+   }
+   SCIPfreeMemoryArray(scip, &clustering);
+   SCIPfreeMemoryArray(scip, &qmatrix);
    return SCIP_OKAY;
 }
 

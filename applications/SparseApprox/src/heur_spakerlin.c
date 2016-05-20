@@ -34,7 +34,7 @@
 #define HEUR_DESC             "switch heuristic that tries to improve solution by trading bins betweeen clusters, similar to the famous kernighan/lin heuristic"
 #define HEUR_DISPCHAR         '@'
 #define HEUR_PRIORITY         536870900
-#define HEUR_FREQ             100
+#define HEUR_FREQ             10
 #define HEUR_FREQOFS          0
 #define HEUR_MAXDEPTH         -1
 #define HEUR_TIMING           SCIP_HEURTIMING_AFTERNODE
@@ -275,7 +275,9 @@ SCIP_Bool switchNext(
    int*                  switchedbin,        /**< The bins swithced in each iteration */
    int*                  switchedcluster,    /**< The cluster to witch the bin was assigned in each iteration */
    SCIP_Real*            switchbound,        /**< The objective achieved in each iteration */
+   SCIP_Real*            switchcoherence,    /**< Array to save the coherence after an exchange */
    SCIP_Real*            maxbound,           /**< The best objective value so far */
+   SCIP_Real             coherence,          /**< The necessary cohernce. We do not want to produce infeasible solutions */
    int*                  bestlength,         /**< The amount of switches with the best objective value so far */
    int                   iteration           /**< which iteration are we in */
 )
@@ -287,6 +289,7 @@ SCIP_Bool switchNext(
    SCIP_Real qkl;
    SCIP_Real qlk;
    SCIP_Real maxboundlocal;
+   SCIP_Real newcoherence;
    int maxbin;
    int maxcluster;
    int nbins = SCIPspaGetNrBins(scip);
@@ -336,18 +339,25 @@ SCIP_Bool switchNext(
    }
    if( maxbin == -1 )
       return FALSE;
-   assert(maxbin > 0 && maxcluster >= 0);
+   assert(maxbin >= 0 && maxcluster >= 0);
    assert(maxbin < nbins && maxcluster < ncluster);
    assert(maxboundlocal >= 0);
    /* assign the exchange and update all saving-structures */
    setBinToCluster(clustering, cmatrix, qmatrix, maxbin, clusterofbin[maxbin], FALSE, nbins, ncluster);
    setBinToCluster(clustering, cmatrix, qmatrix, maxbin, maxcluster, TRUE, nbins, ncluster);
+   newcoherence = SCIPinfinity(scip);
+   for( k = 0; k < ncluster; ++k )
+   {
+      if( qmatrix[k][k] < newcoherence )
+         newcoherence = qmatrix[k][k];
+   }
+   switchcoherence[iteration] = newcoherence;
    clusterofbin[maxbin] = maxcluster;
    binprocessed[maxbin] = TRUE;
    switchedbin[iteration] = maxbin;
    switchedcluster[iteration] = maxcluster;
    switchbound[iteration] = getIrrevBound(scip, qmatrix, ncluster);
-   if( switchbound[iteration] > *maxbound )
+   if( switchbound[iteration] > *maxbound && switchcoherence[iteration] > coherence )
    {
       *maxbound = switchbound[iteration];
       *bestlength = iteration;
@@ -617,13 +627,15 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
    int c;
    int i;
    int nrswitches;
-   int bestlength = 0;
+   int bestlength = -1;
    SCIP_Real max;
    int* switchedbin;
    int* switchedcluster;
    SCIP_Real* switchbound;
+   SCIP_Real* switchcoherence;
    SCIP_Bool* binprocessed;
    SCIP_Real maxbound;
+   SCIP_Real coherence;
 
    assert(heur != NULL);
    assert(scip != NULL);
@@ -643,13 +655,12 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
    if( SCIPgetNNodes(scip) > 1 )
       SCIPheurSetTimingmask(heur, HEUR_TIMING);
 
-   /* create the working solution*/
-
 
    /* get problem variables */
    nbins = SCIPspaGetNrBins(scip);
    ncluster = SCIPspaGetNrCluster(scip);
    cmatrix = SCIPspaGetCmatrix(scip);
+   SCIP_CALL( SCIPgetRealParam(scip, "coherence_bound", &coherence) );
 
    objective = SCIPvarGetLbGlobal(SCIPspaGetTargetvar(scip));
    if( objective == 0.0 )
@@ -667,6 +678,7 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
    nrswitches = nbins;
 
    SCIPallocClearMemoryArray(scip, &switchbound, nrswitches);
+   SCIPallocClearMemoryArray(scip, &switchcoherence, nrswitches);
    SCIPallocClearMemoryArray(scip, &switchedbin, nrswitches);
    SCIPallocClearMemoryArray(scip, &switchedcluster, nrswitches);
    SCIPallocClearMemoryArray(scip, &binprocessed, nrswitches);
@@ -701,19 +713,21 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
          }
          binprocessed[i] = FALSE;
       }
-      bestlength = 0;
+      bestlength = -1;
       /* initialize qmatrix */
       computeIrrevMat(solclustering, qmatrix, cmatrix, nbins, ncluster);
       maxbound = getIrrevBound(scip, qmatrix, ncluster);
       for( i = 0; i < nrswitches; ++i )
       {
-         if( !switchNext(scip, cmatrix, qmatrix, clustering, binfixed, binprocessed, clusterofbin, switchedbin, switchedcluster, switchbound, &maxbound, &bestlength, i) )
+         if( !switchNext(scip, cmatrix, qmatrix, clustering, binfixed, binprocessed, clusterofbin, switchedbin, switchedcluster, switchbound, switchcoherence, &maxbound, coherence, &bestlength, i) )
          {
             nrswitches = i;
             break;
          }
+         if( bestlength > -1 )
+           assert( coherence <= switchcoherence[bestlength] );
       }
-      for( i = 0; i < bestlength; ++i )
+      for( i = 0; i <= bestlength; ++i )
       {
          for( c = 0; c < ncluster; ++c )
          {
@@ -725,14 +739,17 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
       computeIrrevMat(solclustering, qmatrix, cmatrix, nbins, ncluster);
       max = getIrrevBound(scip, qmatrix, ncluster);
       feasible = FALSE;
-      SCIP_CALL( SCIPcreateSol(scip, &worksol, heur) );
       if( max > objective )
       {
+         SCIP_CALL( SCIPcreateSol(scip, &worksol, heur) );
          assignVars(scip, worksol, solclustering, nbins, ncluster, qmatrix);
-         SCIPtrySolFree(scip, &worksol, TRUE, FALSE, FALSE, FALSE, &feasible);
+         SCIPtrySolFree(scip, &worksol, TRUE, TRUE, TRUE, TRUE, &feasible);
       }
       if( feasible )
+      {
          *result = SCIP_FOUNDSOL;
+         objective = max;
+      }
       else
       {
          *result = SCIP_DIDNOTFIND;
@@ -761,6 +778,7 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
    SCIPfreeMemoryArray(scip, &switchbound);
    SCIPfreeMemoryArray(scip, &switchedbin);
    SCIPfreeMemoryArray(scip, &switchedcluster);
+   SCIPfreeMemoryArray(scip, &switchcoherence);
    SCIPfreeMemoryArray(scip, &solclustering);
    SCIPfreeMemoryArray(scip, &clustering);
    SCIPfreeMemoryArray(scip, &binfixed);
@@ -797,6 +815,5 @@ SCIP_RETCODE SCIPincludeHeurSpakerlin(
    SCIP_CALL( SCIPsetHeurFree(scip, heur, heurFreeSpakerlin) );
    SCIP_CALL( SCIPsetHeurExitsol(scip, heur, heurExitsolSpakerlin) );
    SCIP_CALL( SCIPsetHeurInit(scip, heur, heurInitSpakerlin) );
-
    return SCIP_OKAY;
 }
