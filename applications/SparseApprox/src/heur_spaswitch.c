@@ -439,7 +439,6 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
 
    SCIP_VAR*** varmatrix;                     /* SCIP variables                */
    SCIP_VAR***** edgevars;
-   SCIP_VAR* targetvar;
    SCIP_Real** solclustering;                 /* the working cluster-assignment. We start with the one given by the solution */
    SCIP_Bool** binfixed;
    SCIP_Real** cmatrix;
@@ -487,13 +486,13 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
    varmatrix = SCIPspaGetBinvars(scip);
    edgevars = SCIPspaGetEdgevars(scip);
    cmatrix = SCIPspaGetCmatrix(scip);
-   targetvar = SCIPspaGetTargetvar(scip);
 
    /* we do not want to run the heurtistic if there is no 'flow' between the clusters.
     * in case of a (ideally) full reversible problem there cannot be a better solution, in the other case, i.e., the
     * problem has irreversible parts, it seems the heuristic will not find solutions respecting the coherence conditions
     */
-   if( SCIPisZero(scip, SCIPgetSolOrigObj(scip, worksol)) )
+   objective = SCIPgetSolOrigObj(scip, bestsol);
+   if( SCIPisZero(scip, objective) )
       return SCIP_OKAY;
 
    /* create the working solution */
