@@ -3756,7 +3756,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
          /* first find all y >= 0 such that rcoef_y * y + rcoef_yy * y^2 in -rhs2, if ybnds.sup > 0.0
           * and evaluate -b(y) w.r.t. these values */
-         if( ybnds.sup > 0.0 )
+         if( ybnds.sup >= 0.0 )
          {
             SCIP_INTERVAL ypos;
 
@@ -3798,7 +3798,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
 
          /* next find all y <= 0 such that rcoef_y * y + rcoef_yy * y^2 in -rhs2, if ybnds.inf < 0.0
           * and evaluate -b(y) w.r.t. these values */
-         if( ybnds.inf < 0.0 )
+         if( ybnds.inf <= 0.0 )
          {
             SCIP_INTERVAL yneg;
 
