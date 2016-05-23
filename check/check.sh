@@ -78,8 +78,8 @@ else
 fi
 
 # check if we can set hard memory limit (address, leak, or thread sanitzer don't like ulimit -v)
-if [ `uname` == Linux ] && (ldd ${EXECNAME} | grep -q lib[at]san) ; then
-   # skip hard mem limit if using AddressSanitizer (libasan) or LeakSanitizer (libtsan)
+if [ `uname` == Linux ] && (ldd ${EXECNAME} | grep -q lib[alt]san) ; then
+   # skip hard mem limit if using AddressSanitizer (libasan), LeakSanitizer (liblsan), or ThreadSanitizer (libtsan)
    HARDMEMLIMIT="none"
 elif [ `uname` == Linux ] && (nm ${EXECNAME} | grep -q __[alt]san) ; then
    # skip hard mem limit if using AddressSanitizer, LeakSanitizer, or ThreadSanitizer linked statitically (__[alt]san symbols)
