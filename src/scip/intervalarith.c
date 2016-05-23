@@ -3408,7 +3408,8 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       if( rhs.sup >= infinity )
       {
          /* we can't do much if rhs.sup is infinite
-          * but we may to a bit of xbnds isn't too huge and rhs.inf > -infinity  */
+          * but we may do a bit of xbnds isn't too huge and rhs.inf > -infinity
+          */
          minvalleft  = -infinity;
          maxvalright =  infinity;
       }
@@ -3733,7 +3734,7 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
       }
 
       /* evaluate the case r(rhs,y) = 0, which is to min/max -b(y) w.r.t. r(rhs,y) = 0, y in ybnds
-       * with the above assigments
+       * with the above assignments
        *   rcoef_y     = axy * bx  / (2.0*ax) - by;
        *   rcoef_yy    = axy * axy / (4.0*ax) - ay;
        *   rcoef_const = bx  * bx  / (4.0*ax);
@@ -3850,13 +3851,19 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
           * this is only possible if rhs.inf > -infinity, otherwise the value for maxvalleft is not valid (but tightening wouldn't be possible for sure anyway) */
          assert(EPSGE(minvalright, minvalleft, 1e-9)); /* right interval should not be above lower bound of left interval */
          if( minvalright > -infinity )
+         {
+            assert(minvalright < infinity);
             resultant->inf = (SCIP_Real)(minvalright / sqrtax);
+         }
       }
       else
       {
          /* otherwise, tighten lower bound of sqrt(ax)*x to lower bound of -sqrt(r(rhs,y))-b(y) */
          if( minvalleft > -infinity )
+         {
+            assert(minvalleft < infinity);
             resultant->inf = (SCIP_Real)(minvalleft / sqrtax);
+         }
       }
 
       if( rhs.inf > -infinity && xbnds.sup < infinity && EPSLT(xbnds.sup, minvalright / sqrtax, 1e-9) )
@@ -3865,13 +3872,19 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
           * this is only possible if rhs.inf > -infinity, otherwise the value for minvalright is not valid (but tightening wouldn't be possible for sure anyway) */
          assert(EPSLE(maxvalleft, maxvalright, 1e-9)); /* left interval should not be above upper bound of right interval */
          if( maxvalleft < infinity )
+         {
+            assert(maxvalleft > -infinity);
             resultant->sup = (SCIP_Real)(maxvalleft / sqrtax);
+         }
       }
       else
       {
          /* otherwise, tighten upper bound of sqrt(ax)*x to upper bound of sqrt(r(rhs,y))-b(y) */
          if( maxvalright < infinity )
+         {
+            assert(maxvalright > -infinity);
             resultant->sup = (SCIP_Real)(maxvalright / sqrtax);
+         }
       }
 
       resultant->inf -= 1e-10 * REALABS(resultant->inf);
