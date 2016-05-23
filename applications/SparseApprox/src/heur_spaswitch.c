@@ -26,9 +26,6 @@
 #include "probdata_spa.h"
 #include "heur_spaswitch.h"
 #include "scip/cons_and.h"
-/* @note If the heuristic runs in the root node, the timing is changed to (SCIP_HEURTIMING_DURINGLPLOOP |
- *       SCIP_HEURTIMING_BEFORENODE), see SCIP_DECL_HEURINITSOL callback.
- */
 
 #define HEUR_NAME             "spaswitch"
 #define HEUR_DESC             "switch heuristic that tries to improve solution by trading bins betweeen clusters"
@@ -459,22 +456,27 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
 
    SCIP_SOL* bestsol;                        /* incumbent solution */
    SCIP_SOL* worksol;                        /* working solution */
-   SCIP_HEURDATA* heurdata;
-   SCIP_Bool feasible;
-   SCIP_Bool possible = TRUE;
+   SCIP_HEURDATA* heurdata;                  /* the heuristic data */
+   SCIP_Bool feasible;                       /* True if a found solution is feasible */
+   SCIP_Bool possible = TRUE;                /* True if it is possible to call the heuristic */
 
-   SCIP_VAR** vars;
-   SCIP_VAR*** varmatrix;                     /* SCIP variables                */
-   SCIP_VAR***** edgevars;
+   SCIP_VAR** vars;                          /* SCIP variables */
+   SCIP_VAR*** varmatrix;                    /* SCIP variables */
+   SCIP_VAR***** edgevars;                    /* SCIP variables */
+
    SCIP_Real** solclustering;                 /* the working cluster-assignment. We start with the one given by the solution */
-   SCIP_Bool** binfixed;
-   SCIP_Real** cmatrix;
-   SCIP_Real** qmatrix;
+   SCIP_Bool** binfixed;                      /* Is a bin fixed from scip */
+   SCIP_Real** cmatrix;                       /* The transition matrix */
+   SCIP_Real** qmatrix;                       /* The transition matrix projected down onto the current clustering */
    SCIP_Real* bincoherence;                   /* coherence influence of one bin on one cluster */
    SCIP_Real* mincoherence;                   /* minimal coherence influence for each cluster */
+
    SCIP_Real objective;                       /* value of the objective function */
    SCIP_Bool improvement = FALSE;             /* we switch bins until we can no longer find an imrpovement */
-   SCIP_Real epsI;
+   SCIP_Real epsI;                            /* irreversibility */
+   SCIP_Real qkl;
+   SCIP_Real qlk;
+   SCIP_Real neweps;
    int* clusterofbin;                         /* hold the cluster that each bin is in */
    int* minbin;
    int bin;
@@ -487,16 +489,21 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
    int bin1;
    int bin2;
    int nvars;
-   SCIP_Real qkl;
-   SCIP_Real qlk;
-   SCIP_Real neweps;
    int changecounter = 0;
+
+   char model;
+
 
    assert(heur != NULL);
    assert(scip != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
+
+   /* for now: do not use heurisitc if weighted objective is used */
+   model = SCIPspaGetModel(scip);
+   if( model == 'w')
+      return SCIP_OKAY;
 
    /* we only want to process each solution once */
    heurdata = SCIPheurGetData(heur);

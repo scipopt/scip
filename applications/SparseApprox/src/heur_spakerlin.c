@@ -613,35 +613,45 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
    SCIP_SOL* bestsol;                        /* incumbent solution */
    SCIP_SOL* worksol;                        /* working solution */
    SCIP_HEURDATA* heurdata;
-   SCIP_Bool heurpossible = TRUE;
-   SCIP_Bool feasible;
-   SCIP_Real   objective;
+
    SCIP_Real** solclustering;                 /* the assignment given from the solution */
    SCIP_Real** clustering;                    /* the working cluster-assignment. We start with the one given by the solution */
-   SCIP_Bool** binfixed;
+   SCIP_Bool** binfixed;                      /* The bins that are fixed from scip */
    SCIP_Real** cmatrix;
    SCIP_Real** qmatrix;
+
    int* clusterofbin;                         /* hold the cluster that each bin is in */
+   int* switchedbin;                          /* holds the bins that were exchanged in each iteration */
+   int* switchedcluster;                      /* The clusters that the bins were switched to in each iteration */
+   SCIP_Real* switchbound;                    /* The objective value after each exchange */
+   SCIP_Real* switchcoherence;                /* The coherence after each exchange */
+   SCIP_Bool* binprocessed;                   /* Has a bin been processed already ? */
+
+   SCIP_Bool heurpossible = TRUE;             /* True if the heuristic can run */
+   SCIP_Bool feasible;                        /* True if a found solution is feasible */
+   SCIP_Real objective;                       /* The value of the objective function */
+   SCIP_Real maxbound;
+   SCIP_Real coherence;
+   SCIP_Real max;
+
    int nbins;
    int ncluster;
    int c;
    int i;
    int nrswitches;
    int bestlength = -1;
-   SCIP_Real max;
-   int* switchedbin;
-   int* switchedcluster;
-   SCIP_Real* switchbound;
-   SCIP_Real* switchcoherence;
-   SCIP_Bool* binprocessed;
-   SCIP_Real maxbound;
-   SCIP_Real coherence;
+   char model;
 
    assert(heur != NULL);
    assert(scip != NULL);
    assert(result != NULL);
 
    *result = SCIP_DIDNOTRUN;
+
+   /* for now: do not use heurisitc if weighted objective is used */
+   model = SCIPspaGetModel(scip);
+   if( model == 'w')
+      return SCIP_OKAY;
 
    /* we only want to process each solution once */
    heurdata = SCIPheurGetData(heur);
@@ -660,11 +670,16 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
    nbins = SCIPspaGetNrBins(scip);
    ncluster = SCIPspaGetNrCluster(scip);
    cmatrix = SCIPspaGetCmatrix(scip);
-   SCIP_CALL( SCIPgetRealParam(scip, "coherence_bound", &coherence) );
+   coherence = SCIPspaGetCoherence(scip);
 
-   objective = SCIPvarGetLbGlobal(SCIPspaGetTargetvar(scip));
-   if( objective == 0.0 )
+   /* we do not want to run the heurtistic if there is no 'flow' between the clusters.
+    * in case of a (ideally) full reversible problem there cannot be a better solution, in the other case, i.e., the
+    * problem has irreversible parts, it seems the heuristic will not find solutions respecting the coherence conditions
+    */
+   objective = SCIPgetSolOrigObj(scip, bestsol);
+   if( SCIPisZero(scip, objective) )
       return SCIP_OKAY;
+
    assert(nbins >= 0);
    assert(ncluster >= 0);
 
@@ -725,7 +740,7 @@ SCIP_DECL_HEUREXEC(heurExecSpakerlin)
             break;
          }
          if( bestlength > -1 )
-           assert( coherence <= switchcoherence[bestlength] );
+            assert( coherence <= switchcoherence[bestlength] );
       }
       for( i = 0; i <= bestlength; ++i )
       {

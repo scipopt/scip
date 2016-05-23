@@ -90,6 +90,7 @@ SCIP_RETCODE readSpa(
    SCIP_Real begin;
    SCIP_Real end;
    SCIP_Real weight;
+   SCIP_Real objweight;
    int i;
 
    assert(scip != NULL);
@@ -131,6 +132,8 @@ SCIP_RETCODE readSpa(
    nbins = (int) getNextNumber(&char_p);
    nedges = (int) getNextNumber(&char_p);
    ncluster = (int) getNextNumber(&char_p);
+   objweight = getNextNumber(&char_p);
+
    if ( nbins <= 0 )
    {
       SCIPerrorMessage("Number of bins must be positive!\n");
@@ -213,7 +216,7 @@ SCIP_RETCODE readSpa(
 
    ncluster = 3;
    /* create problem data */
-   SCIP_CALL( SCIPcreateProbSpa(scip, filename, nbins, nedges, ncluster, edges, sd) );
+   SCIP_CALL( SCIPcreateProbSpa(scip, filename, nbins, nedges, ncluster, edges, sd, objweight) );
    SCIPinfoMessage(scip, NULL, "Original problem: \n");
 
    for ( i = nedges-1; i >= 0; i-- )

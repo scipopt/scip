@@ -54,16 +54,6 @@ struct SCIP_HeurData
 };
 
 
-
-/** function to be able to quickly change the measure to logarithm, if so desired */
-static
-SCIP_Real dist(
-   SCIP_Real         in                      /**< The input-value */
-)
-{
-   return (in);
-}
-
 #ifndef NDEBUG
 /** checks if the assignment is finished, i.e. all columns have exactly one 1 and rest 0 values */
 static
@@ -98,7 +88,6 @@ static
 SCIP_Real getIrrevBound(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_Real**           qmatrix,            /**< The irreversibility matrix*/
-   SCIP_Real             shift,              /**< A shit for the values (only necessary with log-metrix)*/
    int                   ncluster            /**< The number of cluster*/
 )
 {
@@ -110,7 +99,7 @@ SCIP_Real getIrrevBound(
       for( j = 0; j < i; ++j )
       {
          SCIP_Real temp;
-         temp = REALABS( dist(qmatrix[i][j]+shift) - dist(qmatrix[j][i]+shift) );
+         temp = REALABS( qmatrix[i][j] - qmatrix[j][i] );
          if( SCIPisPositive(scip, temp) && SCIPisGT(scip, epsI, temp) )
             epsI = temp;
       }
@@ -278,7 +267,7 @@ SCIP_RETCODE assignVars(
       SCIPallocClearMemoryArray(scip, &matrixtest[i], ncluster);
    }
 
-   epsI = getIrrevBound(scip, qmatrix, 0, ncluster);
+   epsI = getIrrevBound(scip, qmatrix, ncluster);
    for ( c = 0; c < ncluster; ++c )
    {
       /* set indicatorvar whether cluster is nonempty */
@@ -450,7 +439,7 @@ void assignFirstPair(
    isassigned[maxind] = TRUE;
 
    computeIrrevMat(clusterassignment, qmatrix, cmatrix, nbins, ncluster);
-   *epsI = getIrrevBound(scip, qmatrix, 0, ncluster);
+   *epsI = getIrrevBound(scip, qmatrix, ncluster);
 }
 
 /** Get the temporary irreversibility bound after newbin would be added to newcluster but don not change anything with the clustering */
@@ -508,7 +497,7 @@ SCIP_Real getTempIrrevBound(
       {
          if( i == newcluster || j == newcluster )
             continue;
-         temp = REALABS( dist(qmatrix[i][j]) - dist(qmatrix[j][i]) );
+         temp = REALABS( qmatrix[i][j] - qmatrix[j][i] );
          if( SCIPisPositive(scip, temp) && SCIPisLT(scip, temp, epsI) )
          {
             epsI = temp;
@@ -725,7 +714,7 @@ SCIP_RETCODE assignNextBin(
 
       updateIrrevMat(clusterassignment, qmatrix, cmatrix, ind, bestcluster[ind], nbins, ncluster);
 
-      *epsI = getIrrevBound(scip, qmatrix, 0, ncluster);
+      *epsI = getIrrevBound(scip, qmatrix, ncluster);
    }
 
    /* free the allocated memory */
@@ -908,9 +897,9 @@ SCIP_DECL_HEURINIT(heurInitSpaGreedy)
 static
 SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
 {
-   SCIP_Real** cmatrix;
-   SCIP_Real** qmatrix;
-   SCIP_VAR*** binvars;
+   SCIP_Real** cmatrix;       /* The transition matrixx */
+   SCIP_Real** qmatrix;       /* The low-dimensional transition matrix between clusters */
+   SCIP_VAR*** binvars;       /* SCIP variables */
    SCIP_VAR***** edgevars;
    SCIP_VAR** absvars;
    int nbins;
@@ -927,10 +916,15 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
    SCIP_Bool possible = TRUE;
    SCIP_Bool feasible;
    SCIP_Real epsI = 0.0;
-   SCIP_Real q_minvalue;
    SCIP_HEURDATA* heurdata;
+   char model;
 
    *result = SCIP_DIDNOTRUN;
+
+   /* for now: do not use heurisitc if weighted objective is used */
+   model = SCIPspaGetModel(scip);
+   if( model == 'w')
+      return SCIP_OKAY;
 
    heurdata = SCIPheurGetData(heur);
    if( SCIPgetEffectiveRootDepth(scip) == heurdata->lasteffectrootdepth )
@@ -941,7 +935,6 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
    cmatrix = SCIPspaGetCmatrix(scip);
    nbins = SCIPspaGetNrBins(scip);
    ncluster = SCIPspaGetNrCluster(scip);
-   q_minvalue = getMinNonZero(scip, cmatrix, nbins);
    binvars = SCIPspaGetBinvars(scip);
    edgevars = SCIPspaGetEdgevars(scip);
    absvars = SCIPspaGetAbsvars(scip);
@@ -1050,7 +1043,7 @@ SCIP_DECL_HEUREXEC(heurExecSpaGreedy)
    {
       /* initialize the qmatrix and the lower irreversibility bound */
       computeIrrevMat(clusterassignment, qmatrix, cmatrix, nbins, ncluster);
-      epsI = getIrrevBound(scip, qmatrix, q_minvalue, ncluster);
+      epsI = getIrrevBound(scip, qmatrix, ncluster);
       /* if no bins are assigned, then choose the first two bins manually */
       if( 1 == amountassigned )
       {
