@@ -3754,8 +3754,9 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          SCIPintervalSet(&rcoef_y_int, (SCIP_Real)rcoef_y);
          SCIPintervalSetBounds(&rhs2, (SCIP_Real)(-rhs.sup - rcoef_const), (SCIP_Real)(-rhs.inf - rcoef_const));
 
-         /* first find all y >= 0 such that rcoef_y * y + rcoef_yy * y^2 in -rhs2, if ybnds.sup > 0.0
-          * and evaluate -b(y) w.r.t. these values */
+         /* first find all y >= 0 such that rcoef_y * y + rcoef_yy * y^2 in -rhs2, if ybnds.sup >= 0.0
+          * and evaluate -b(y) w.r.t. these values
+          */
          if( ybnds.sup >= 0.0 )
          {
             SCIP_INTERVAL ypos;
@@ -3797,8 +3798,10 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
          }
 
          /* next find all y <= 0 such that rcoef_y * y + rcoef_yy * y^2 in -rhs2, if ybnds.inf < 0.0
-          * and evaluate -b(y) w.r.t. these values */
-         if( ybnds.inf <= 0.0 )
+          * and evaluate -b(y) w.r.t. these values
+          * (the case y fixed to 0 has been handled in the ybnds.sup >= 0 case above)
+          */
+         if( ybnds.inf < 0.0 )
          {
             SCIP_INTERVAL yneg;
 
