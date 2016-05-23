@@ -1,3 +1,4 @@
+
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 /*                                                                           */
 /*                  This file is part of the program and library             */
@@ -58,8 +59,10 @@ SCIP_RETCODE fromCommandLine(
 )
 {
    SCIP_RETCODE retcode;
+   char outname[SCIP_MAXSTRLEN];
    SCIP_Bool outputorigsol = FALSE;
    SCIP_Real eps;
+   char model;
    /********************
     * Problem Creation *
     ********************/
@@ -93,54 +96,64 @@ SCIP_RETCODE fromCommandLine(
    /*******************
     * Problem Solving *
     *******************/
-
-   /* solve problem */
-   SCIP_CALL( SCIPgetRealParam(scip, "coherence_bound", &eps) );
-   SCIPinfoMessage(scip, NULL, "Coherence bound is set to %f \n", eps);
-   SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
-   SCIPinfoMessage(scip, NULL, "=============\n\n");
-
-   SCIP_CALL( SCIPsolve(scip) );
-
-   /*******************
-    * Solution Output *
-    *******************/
-
-   SCIP_CALL( SCIPgetBoolParam(scip, "misc/outputorigsol", &outputorigsol) );
-   if ( outputorigsol )
+   model = SCIPspaGetModel(scip);
+   if( model == 'p' )
    {
-      SCIP_SOL* bestsol;
-      SCIPinfoMessage(scip, NULL, "\nprimal solution (original space):\n");
-      SCIPinfoMessage(scip, NULL, "=================================\n\n");
-
-      bestsol = SCIPgetBestSol(scip);
-      if ( bestsol == NULL )
-         SCIPinfoMessage(scip, NULL, "no solution available\n");
-      else
-      {
-         SCIP_SOL* origsol;
-
-         SCIP_CALL( SCIPcreateSolCopy(scip, &origsol, bestsol) );
-         SCIP_CALL( SCIPretransformSol(scip, origsol) );
-         SCIP_CALL( SCIPprintSol(scip, origsol, NULL, FALSE) );
-         SCIP_CALL( SCIPfreeSol(scip, &origsol) );
-      }
+      SCIPinfoMessage(scip, NULL, "Do not solve the problem but write it to file for use in PolySCIP \n");
+      SCIPsnprintf(outname, 50, filename);
+      strcat(outname, ".mps" );
+      SCIP_CALL( SCIPwriteOrigProblem(scip, outname, NULL, FALSE) );
    }
    else
    {
-      SCIPinfoMessage(scip, NULL, "\nprimal solution (transformed space):\n");
-      SCIPinfoMessage(scip, NULL, "====================================\n\n");
-      SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+      /* solve problem */
+      SCIP_CALL( SCIPgetRealParam(scip, "coherence_bound", &eps) );
+      SCIPinfoMessage(scip, NULL, "Coherence bound is set to %f \n", eps);
+      SCIPinfoMessage(scip, NULL, "\nsolve problem\n");
+      SCIPinfoMessage(scip, NULL, "=============\n\n");
+
+
+      SCIP_CALL( SCIPsolve(scip) );
+
+      /*******************
+       * Solution Output *
+       *******************/
+
+      SCIP_CALL( SCIPgetBoolParam(scip, "misc/outputorigsol", &outputorigsol) );
+      if ( outputorigsol )
+      {
+         SCIP_SOL* bestsol;
+         SCIPinfoMessage(scip, NULL, "\nprimal solution (original space):\n");
+         SCIPinfoMessage(scip, NULL, "=================================\n\n");
+
+         bestsol = SCIPgetBestSol(scip);
+         if ( bestsol == NULL )
+            SCIPinfoMessage(scip, NULL, "no solution available\n");
+         else
+         {
+            SCIP_SOL* origsol;
+
+            SCIP_CALL( SCIPcreateSolCopy(scip, &origsol, bestsol) );
+            SCIP_CALL( SCIPretransformSol(scip, origsol) );
+            SCIP_CALL( SCIPprintSol(scip, origsol, NULL, FALSE) );
+            SCIP_CALL( SCIPfreeSol(scip, &origsol) );
+         }
+      }
+      else
+      {
+         SCIPinfoMessage(scip, NULL, "\nprimal solution (transformed space):\n");
+         SCIPinfoMessage(scip, NULL, "====================================\n\n");
+         SCIP_CALL( SCIPprintBestSol(scip, NULL, FALSE) );
+      }
+
+      /**************
+       * Statistics *
+       **************/
+
+      SCIPinfoMessage(scip, NULL, "\nStatistics\n");
+      SCIPinfoMessage(scip, NULL, "==========\n\n");
+      SCIP_CALL( SCIPprintStatistics(scip, NULL) );
    }
-
-   /**************
-    * Statistics *
-    **************/
-
-   SCIPinfoMessage(scip, NULL, "\nStatistics\n");
-   SCIPinfoMessage(scip, NULL, "==========\n\n");
-   SCIP_CALL( SCIPprintStatistics(scip, NULL) );
-
    return SCIP_OKAY;
 }
 
@@ -259,24 +272,28 @@ SCIP_RETCODE processArguments(
       {
          SCIP_CALL( readParams(scip, defaultsetname) );
       }
-
-      /** create the output-name */
-      SCIPgetRealParam( scip, "coherence_bound", &eps );
-      snprintf(name_eps, 50, "_eps_%.2f", eps) ;
-      strcat(name_file, name_eps );
-      strcat(name_file, ".sol");
-
       /**************
        * Start SCIP *
        **************/
 
       if( probname != NULL )
       {
+         /* run scip */
          SCIP_CALL( fromCommandLine(scip, probname) );
-         output = fopen(name_file, "w+");
-         SCIP_CALL( SCIPprintSol(scip, SCIPgetBestSol(scip), output, FALSE) );
-         SCIP_CALL( SCIPprintStatistics(scip, output) );
-         fclose(output);
+
+         /* create the output-name */
+         SCIPgetRealParam( scip, "coherence_bound", &eps );
+         snprintf(name_eps, 50, "_eps_%.2f", eps) ;
+         strcat(name_file, name_eps );
+         strcat(name_file, ".sol");
+
+         if( SCIPspaGetModel(scip) != 'p' )
+         {
+            output = fopen(name_file, "w+");
+            SCIP_CALL( SCIPprintSol(scip, SCIPgetBestSol(scip), output, FALSE) );
+            SCIP_CALL( SCIPprintStatistics(scip, output) );
+            fclose(output);
+         }
       }
       else
       {

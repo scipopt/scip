@@ -462,22 +462,21 @@ SCIP_DECL_HEUREXEC(heurExecSpaswitch)
 
    SCIP_VAR** vars;                          /* SCIP variables */
    SCIP_VAR*** varmatrix;                    /* SCIP variables */
-   SCIP_VAR***** edgevars;                    /* SCIP variables */
+   SCIP_VAR***** edgevars;                   /* SCIP variables */
 
-   SCIP_Real** solclustering;                 /* the working cluster-assignment. We start with the one given by the solution */
-   SCIP_Bool** binfixed;                      /* Is a bin fixed from scip */
-   SCIP_Real** cmatrix;                       /* The transition matrix */
-   SCIP_Real** qmatrix;                       /* The transition matrix projected down onto the current clustering */
-   SCIP_Real* bincoherence;                   /* coherence influence of one bin on one cluster */
-   SCIP_Real* mincoherence;                   /* minimal coherence influence for each cluster */
-
-   SCIP_Real objective;                       /* value of the objective function */
-   SCIP_Bool improvement = FALSE;             /* we switch bins until we can no longer find an imrpovement */
-   SCIP_Real epsI;                            /* irreversibility */
+   SCIP_Real** solclustering;                /* the working cluster-assignment. We start with the one given by the solution */
+   SCIP_Bool** binfixed;                     /* Is a bin fixed from scip */
+   SCIP_Real** cmatrix;                      /* The transition matrix */
+   SCIP_Real** qmatrix;                      /* The transition matrix projected down onto the current clustering */
+   SCIP_Real* bincoherence;                  /* coherence influence of one bin on one cluster */
+   SCIP_Real* mincoherence;                  /* minimal coherence influence for each cluster */
+   SCIP_Real objective;                      /* value of the objective function */
+   SCIP_Bool improvement = FALSE;            /* we switch bins until we can no longer find an imrpovement */
+   SCIP_Real epsI;                           /* irreversibility */
    SCIP_Real qkl;
    SCIP_Real qlk;
    SCIP_Real neweps;
-   int* clusterofbin;                         /* hold the cluster that each bin is in */
+   int* clusterofbin;                        /* hold the cluster that each bin is in */
    int* minbin;
    int bin;
    int nbins;
