@@ -389,6 +389,38 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
    return SCIP_OKAY;
 }
 
+/** sum hash callback */
+static
+SCIP_DECL_CONSEXPR_EXPRHASH(hashSum)
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   int c;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   expr->hashkey = SCIPcalcFibHash(SCIPgetConsExprExprHdlrPrecedence(expr->exprhdlr));
+   expr->hashkey ^= SCIPcalcFibHash(exprdata->constant);
+
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      int childhash;
+
+      childhash = SCIPgetConsExprExprHashkey(SCIPgetConsExprExprChildren(expr)[c]);
+      assert(childhash >= 0);
+
+      expr->hashkey ^= childhash;
+   }
+
+   /* this assert should be true since we only use xor operations and start from a positive integer number */
+   assert(expr->hashkey >= 0);
+
+   return SCIP_OKAY;
+}
+
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
 {
@@ -464,6 +496,14 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
    return SCIP_OKAY;
 }
 
+/** product hash callback */
+static
+SCIP_DECL_CONSEXPR_EXPRHASH(hashProduct)
+{
+   /* we hash products in the same way as sums */
+   return hashSum(scip, expr);
+}
+
 /** creates the handler for sum expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -480,6 +520,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSum) );
 
    return SCIP_OKAY;
 }
@@ -551,6 +592,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashProduct) );
 
    return SCIP_OKAY;
 }

@@ -170,6 +170,27 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalLog)
    return SCIP_OKAY;
 }
 
+/** expression hash callback */
+static
+SCIP_DECL_CONSEXPR_EXPRHASH(hashLog)
+{
+   int childhash;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(expr->nchildren == 1);
+
+   expr->hashkey = SCIPcalcFibHash(SCIPgetConsExprExprHdlrPrecedence(expr->exprhdlr));
+
+   childhash = SCIPgetConsExprExprHashkey(SCIPgetConsExprExprChildren(expr)[0]);
+   assert(childhash >= 0);
+
+   expr->hashkey ^= childhash;
+   assert(expr->hashkey >= 0);
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for logarithmic expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrLog(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -187,6 +208,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrLog(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printLog) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseLog) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalLog) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashLog) );
 
    return SCIP_OKAY;
 }

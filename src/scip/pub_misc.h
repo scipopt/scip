@@ -5561,6 +5561,10 @@ SCIP_Longint SCIPcalcBinomCoef(
    int                   m                   /**< number to choose out of the above */
    );
 
+/** returns hash index by using Fibonacci hashing */
+EXTERN
+int SCIPcalcFibHash(SCIP_Real v);
+
 /**@} */
 
 /*

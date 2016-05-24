@@ -117,6 +117,25 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalVar)
    return SCIP_OKAY;
 }
 
+/** variable hash callback */
+static
+SCIP_DECL_CONSEXPR_EXPRHASH(hashVar)
+{
+   SCIP_VAR* var;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+
+   var = (SCIP_VAR*) SCIPgetConsExprExprData(expr);
+   assert(var != NULL);
+
+   expr->hashkey = SCIPcalcFibHash(SCIPgetConsExprExprHdlrPrecedence(expr->exprhdlr));
+   expr->hashkey ^= SCIPcalcFibHash(SCIPvarGetIndex(var));
+   assert(expr->hashkey >= 0);
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for variable expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -132,6 +151,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrVar(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataVar, freedataVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printVar) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalVar) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashVar) );
 
    return SCIP_OKAY;
 }

@@ -143,6 +143,29 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalExp)
    return SCIP_OKAY;
 }
 
+
+/** expression hash callback */
+static
+SCIP_DECL_CONSEXPR_EXPRHASH(hashExp)
+{
+   int childhash;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(expr->nchildren == 1);
+
+   expr->hashkey = SCIPcalcFibHash(SCIPgetConsExprExprHdlrPrecedence(expr->exprhdlr));
+
+   childhash = SCIPgetConsExprExprHashkey(SCIPgetConsExprExprChildren(expr)[0]);
+   assert(childhash >= 0);
+
+   expr->hashkey ^= childhash;
+   assert(expr->hashkey >= 0);
+
+   return SCIP_OKAY;
+}
+
+
 /** expression interval evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalExp)
@@ -178,6 +201,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalExp) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashExp) );
 
    return SCIP_OKAY;
 }
