@@ -64,6 +64,36 @@ struct SCIP_BranchruleData
 
 /* put your local methods here, and declare them static */
 
+static SCIP_Bool executeBranchingOnUpperBound(
+   SCIP* scip,
+   SCIP_VAR* fixedvar,
+   SCIP_Real fixedvarsol,
+   SCIP_LPSOLSTAT* solstatdown,
+   SCIP_Real* downobjval
+   )
+{
+   SCIP_Bool downinf;
+   SCIP_Bool lperror;
+
+   SCIP_CALL( SCIPnewProbingNode(scip) );
+   SCIP_CALL( SCIPchgVarUbProbing(scip, fixedvar, SCIPfeasFloor(scip, fixedvarsol)) );
+
+   SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &downinf) );
+   *solstatdown = SCIPgetLPSolstat(scip);
+   /* ASK CS: why downinf == 0? wouldn't only !downinf be clearer? or at least downinf == FALSE*/
+   lperror = lperror || (*solstatdown == SCIP_LPSOLSTAT_NOTSOLVED && downinf == 0) ||
+         (*solstatdown == SCIP_LPSOLSTAT_ITERLIMIT) || (*solstatdown == SCIP_LPSOLSTAT_TIMELIMIT);
+   assert(*solstatdown != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+
+   if( !lperror )
+   {
+      *downobjval = SCIPgetLPObjval(scip);
+      downinf = downinf || SCIPisGE(scip, *downobjval, SCIPgetCutoffbound(scip));
+      assert(((solstatdown != SCIP_LPSOLSTAT_INFEASIBLE) && (solstatdown != SCIP_LPSOLSTAT_OBJLIMIT)) || downinf);
+   }
+   return lperror;
+}
+
 static SCIP_RETCODE selectVarLookaheadBranching(
    SCIP*          scip,    /**< original SCIP data structure */
    SCIP_RESULT*   result   /**< pointer to store results of branching */){
@@ -77,9 +107,6 @@ static SCIP_RETCODE selectVarLookaheadBranching(
    SCIP_Real fixvarssol;
    SCIP_Real deepfixvarssol;
    SCIP_Bool lperror;
-   SCIP_Bool deeplperror;
-   SCIP_Bool downinf;
-   SCIP_Bool deepdowninf;
    int nfixvars;
    int deepnfixvars;
    int i;
@@ -110,27 +137,13 @@ static SCIP_RETCODE selectVarLookaheadBranching(
          if (SCIPvarGetType(fixvars[i]) == SCIP_VARTYPE_INTEGER && !SCIPisFeasIntegral(scip, fixvarssol))
          {
             /* NOTE CS: Start of the probe branching on x <= floor(x') */
-
-            SCIP_CALL( SCIPnewProbingNode(scip) );
-            SCIP_CALL( SCIPchgVarUbProbing(scip, fixvars[i], SCIPfeasFloor(scip, fixvarssol)) );
-
-            /* ASK CS: why downinf == 0? wouldn't only !downind be clearer? */
-            SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &downinf) );
-            solstatdown = SCIPgetLPSolstat(scip);
-            lperror = lperror || (solstatdown == SCIP_LPSOLSTAT_NOTSOLVED && downinf == 0) ||
-                  (solstatdown == SCIP_LPSOLSTAT_ITERLIMIT) || (solstatdown == SCIP_LPSOLSTAT_TIMELIMIT);
-            assert(solstatdown != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+            lperror = executeBranchingOnUpperBound(scip, fixvars[i], fixvarssol, &solstatdown, &downobjval);
 
             if( lperror )
             {
-               /* ASk CS:  up or down?*/
                SCIPdebugMessage("error solving down node probing LP: status=%d\n", solstatdown);
                break;
             }
-
-            downobjval = SCIPgetLPObjval(scip);
-            downinf = downinf || SCIPisGE(scip, downobjval, SCIPgetCutoffbound(scip));
-            assert(((solstatdown != SCIP_LPSOLSTAT_INFEASIBLE) && (solstatdown != SCIP_LPSOLSTAT_OBJLIMIT)) || downinf);
 
             deepfixvars = SCIPgetFixedVars(scip);
             deepnfixvars = SCIPgetNFixedVars(scip);
@@ -140,31 +153,19 @@ static SCIP_RETCODE selectVarLookaheadBranching(
                for( j = 0; j < deepnfixvars; j++ )
                {
                   assert( deepfixvars != NULL );
-                  deepfixvarssol = SCIPvarGetLPSol(fixvars[i]);
+                  deepfixvarssol = SCIPvarGetLPSol(deepfixvars[j]);
 
                   if (SCIPvarGetType(deepfixvars[j]) == SCIP_VARTYPE_INTEGER && !SCIPisFeasIntegral(scip, deepfixvarssol) )
                   {
                      /* NOTE CS: Start of the probe branching on x <= floor(x') and y <= floor(y') */
-                     SCIP_CALL( SCIPnewProbingNode(scip) );
-                     SCIP_CALL( SCIPchgVarUbProbing(scip, deepfixvars[j], SCIPfeasFloor(scip, deepfixvarssol)) );
+                     lperror = executeBranchingOnUpperBound(scip, deepfixvars[j], deepfixvarssol, &deepsolstatdown, &deepdownobjval);
 
-                     /* ASK CS: why downinf == 0? wouldn't only !downind be clearer? */
-                     SCIP_CALL( SCIPsolveProbingLP(scip, -1, &deeplperror, &deepdowninf) );
-                     deepsolstatdown = SCIPgetLPSolstat(scip);
-                     deeplperror = deeplperror || (deepsolstatdown == SCIP_LPSOLSTAT_NOTSOLVED && deepdowninf == 0) ||
-                           (deepsolstatdown == SCIP_LPSOLSTAT_ITERLIMIT) || (deepsolstatdown == SCIP_LPSOLSTAT_TIMELIMIT);
-                     assert(deepsolstatdown != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
-
-                     if( deeplperror )
+                     if( lperror )
                      {
                         /* ASk CS:  up or down?*/
                         SCIPdebugMessage("error solving down node probing LP: status=%d\n", deepsolstatdown);
                         break;
                      }
-
-                     deepdownobjval = SCIPgetLPObjval(scip);
-                     deepdowninf = deepdowninf || SCIPisGE(scip, deepdownobjval, SCIPgetCutoffbound(scip));
-                     assert(((deepsolstatdown != SCIP_LPSOLSTAT_INFEASIBLE) && (deepsolstatdown != SCIP_LPSOLSTAT_OBJLIMIT)) || deepdowninf);
                   }
                }
             }
