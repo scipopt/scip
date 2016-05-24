@@ -286,25 +286,36 @@ void regressionRecompute(
    xvariance = regression->nobservations * regression->sumx2 - squaredsumx;
    yvariance = regression->nobservations * regression->sumy2 - squaredsumy;
 
-   /* regression coefficients require two or more observations and variance in x and y */
-   if( regression->nobservations <= 1 || EPSZ(xvariance, 1e-9) || EPSZ(yvariance, 1e-9) )
+   /* regression coefficients require two or more observations and variance in x */
+   if( regression->nobservations <= 1 || EPSZ(xvariance, 1e-9) )
    {
       regression->slope = SCIP_INVALID;
       regression->intercept = SCIP_INVALID;
       regression->corrcoef = SCIP_INVALID;
-
-      return;
    }
+   else if( EPSZ(yvariance, 1e-9) )
+   {
+      /* if there is no variance in the y's (but in the x's), the regression line is horizontal with y-intercept through the mean y */
+      regression->slope = 0.0;
+      regression->corrcoef = 0.0;
+      regression->intercept = regression->sumy / regression->nobservations;
+   }
+   else
+   {
+      /* we ruled this case out already, but to please some compilers... */
+      assert(xvariance > 0.0);
+      assert(yvariance > 0.0);
 
-   /* compute slope */
-   regression->slope = (regression->nobservations * regression->sumxy  - regression->sumx * regression->sumy) / xvariance;
+      /* compute slope */
+      regression->slope = (regression->nobservations * regression->sumxy  - regression->sumx * regression->sumy) / xvariance;
 
-   /* compute y-intercept */
-   regression->intercept = (regression->sumy * regression->sumx2  -  regression->sumx * regression->sumxy) / xvariance;
+      /* compute y-intercept */
+      regression->intercept = (regression->sumy * regression->sumx2  -  regression->sumx * regression->sumxy) / xvariance;
 
-   /* compute empirical correlation coefficient */
-   regression->corrcoef = (regression->sumxy * regression->nobservations - regression->sumx * regression->sumy) /
-      sqrt(xvariance * yvariance);
+      /* compute empirical correlation coefficient */
+      regression->corrcoef = (regression->sumxy * regression->nobservations - regression->sumx * regression->sumy) /
+         sqrt(xvariance * yvariance);
+   }
 }
 
 /** removes an observation (x,y) from the regression */
@@ -363,6 +374,7 @@ void SCIPregressionReset(
 {
    regression->intercept = SCIP_INVALID;
    regression->slope = SCIP_INVALID;
+   regression->corrcoef = SCIP_INVALID;
    regression->sumx = 0;
    regression->sumx2 = 0;
    regression->sumxy = 0;
