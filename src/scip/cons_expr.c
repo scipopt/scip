@@ -161,6 +161,14 @@ typedef struct
    SCIP_HASHMAP*           key2expr;
 } COMMONSUBEXPR_DATA;
 
+struct SCIP_ConsExpr_PrintDotData
+{
+   FILE*                   file;             /**< file to print to */
+   SCIP_Bool               closefile;        /**< whether file need to be closed when finished printing */
+   SCIP_HASHMAP*           visitedexprs;     /**< hashmap storing expressions that have been printed already */
+   SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint;  /**< flags that indicate what to print for each expression */
+};
+
 /*
  * Local methods
  */
@@ -529,6 +537,111 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExpr)
       /* redirect to expression callback */
       SCIP_CALL( (*expr->exprhdlr->print)(scip, expr, stage, file) );
    }
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   return SCIP_OKAY;
+}
+
+/** expression walk callback to print an expression in dot format */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(printExprDot)
+{
+   SCIP_CONSEXPR_PRINTDOTDATA* dotdata;
+   SCIP_CONSEXPR_EXPR* parentbackup;
+   SCIP_Real color;
+   int c;
+
+   assert(expr != NULL);
+   assert(expr->exprhdlr != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+   assert(data != NULL);
+
+   dotdata = (SCIP_CONSEXPR_PRINTDOTDATA*)data;
+
+   /* skip expressions that have been printed already */
+   if( SCIPhashmapExists(dotdata->visitedexprs, (void*)expr) )
+   {
+      *result = SCIP_CONSEXPREXPRWALK_SKIP;
+      return SCIP_OKAY;
+   }
+
+   /* print expression as dot node */
+
+   /* make up some color from the expression type (it's name) */
+   color = 0.0;
+   for( c = 0; expr->exprhdlr->name[c] != '\0'; ++c )
+      color += (tolower(expr->exprhdlr->name[c]) - 'a') / 26.0;
+   color = SCIPfrac(scip, color);
+   SCIPinfoMessage(scip, dotdata->file, "n%p [fillcolor=\"%g,%g,%g\", label=\"", expr, color, color, color);
+
+   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EXPRHDLR )
+   {
+      SCIPinfoMessage(scip, dotdata->file, "%s\\n", SCIPgetConsExprExprHdlrName(expr->exprhdlr));
+   }
+
+   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EXPRSTRING )
+   {
+      /* print expression string as label */
+      parentbackup = expr->walkparent;
+      expr->walkparent = NULL;
+      assert(expr->walkcurrentchild == 0); /* as we are in enterexpr */
+
+      SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_ENTEREXPR, (void*)dotdata->file, result) );
+      for( c = 0; c < expr->nchildren; ++c )
+      {
+         expr->walkcurrentchild = c;
+         SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITINGCHILD, (void*)dotdata->file, result) );
+         SCIPinfoMessage(scip, dotdata->file, "c%d", c);
+         SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_VISITEDCHILD, (void*)dotdata->file, result) );
+      }
+      SCIP_CALL( printExpr(scip, expr, SCIP_CONSEXPREXPRWALK_LEAVEEXPR, (void*)dotdata->file, result) );
+      SCIPinfoMessage(scip, dotdata->file, "\\n");
+
+      expr->walkcurrentchild = 0;
+      expr->walkparent = parentbackup;
+   }
+
+   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_NUSES )
+   {
+      /* print number of uses */
+      SCIPinfoMessage(scip, dotdata->file, "%d uses\\n", expr->nuses);
+   }
+
+   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EVALVALUE )
+   {
+      /* print eval value */
+      SCIPinfoMessage(scip, dotdata->file, "val=%g", expr->evalvalue);
+
+      if( (dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_EVALTAG) == SCIP_CONSEXPR_PRINTDOT_EVALTAG )
+      {
+         /* print also eval tag */
+         SCIPinfoMessage(scip, dotdata->file, " (%u)", expr->evaltag);
+      }
+      SCIPinfoMessage(scip, dotdata->file, "\\n");
+   }
+
+   if( dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_INTERVAL )
+   {
+      /* print interval value */
+      SCIPinfoMessage(scip, dotdata->file, "[%g,%g]", expr->interval.inf, expr->interval.sup);
+
+      if( (dotdata->whattoprint & SCIP_CONSEXPR_PRINTDOT_INTERVALTAG) == SCIP_CONSEXPR_PRINTDOT_INTERVALTAG )
+      {
+         /* print also interval eval tag */
+         SCIPinfoMessage(scip, dotdata->file, " (%u)", expr->intevaltag);
+      }
+      SCIPinfoMessage(scip, dotdata->file, "\\n");
+   }
+
+   SCIPinfoMessage(scip, dotdata->file, "\"]\n");  /* end of label and end of node */
+
+   /* add edges from expr to its children */
+   for( c = 0; c < expr->nchildren; ++c )
+      SCIPinfoMessage(scip, dotdata->file, "n%p -> n%p [label=\"c%d\"]\n", (void*)expr, (void*)expr->children[c], c);
+
+   /* remember that we have printed this expression */
+   SCIP_CALL( SCIPhashmapInsert(dotdata->visitedexprs, (void*)expr, NULL) );
 
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
@@ -1704,6 +1817,7 @@ SCIP_DECL_CONSTRANS(consTransExpr)
 
    copydata.targetscip = scip;
    copydata.mapvar = transformVar;
+   copydata.mapvardata = NULL;
 
    /* get a copy of sourceexpr with transformed vars */
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, sourceexpr, copyExpr, NULL, copyExpr, NULL, &copydata) );
@@ -2594,7 +2708,9 @@ SCIP_RETCODE SCIPcreateConsExprExpr2(
 
    if( child1 != NULL && child2 != NULL )
    {
-      SCIP_CONSEXPR_EXPR* pair[2] = {child1, child2};
+      SCIP_CONSEXPR_EXPR* pair[2];
+      pair[0] = child1;
+      pair[1] = child2;
 
       SCIP_CALL( SCIPcreateConsExprExpr(scip, expr, exprhdlr, exprdata, 2, pair) );
    }
@@ -2796,7 +2912,10 @@ SCIP_RETCODE SCIPcreateConsExprExpr3(
             }
             else
             {
-               SCIP_CONSEXPR_EXPR* prodchildren[2] = {children[quadelem.idx1], children[quadelem.idx2]};
+               SCIP_CONSEXPR_EXPR* prodchildren[2];
+               prodchildren[0] = children[quadelem.idx1];
+               prodchildren[1] = children[quadelem.idx2];
+
                SCIP_CALL( SCIPcreateConsExprExprProduct(scip, consexprhdlr, &prod, 2, prodchildren, NULL, 1.0) );
             }
 
@@ -3007,6 +3126,150 @@ SCIP_RETCODE SCIPprintConsExprExpr(
 
    return SCIP_OKAY;
 }
+
+/** initializes printing of expressions in dot format */
+SCIP_RETCODE SCIPprintConsExprExprDotInit(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
+   FILE*                   file,             /**< file to print to, or NULL for stdout */
+   SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
+   )
+{
+   assert(dotdata != NULL);
+
+   if( file == NULL )
+      file = stdout;
+
+   SCIP_CALL( SCIPallocBlockMemory(scip, dotdata) );
+
+   (*dotdata)->file = file;
+   (*dotdata)->closefile = FALSE;
+   SCIP_CALL( SCIPhashmapCreate(&(*dotdata)->visitedexprs, SCIPblkmem(scip), 1000) );
+   (*dotdata)->whattoprint = whattoprint;
+
+   SCIPinfoMessage(scip, file, "strict digraph exprgraph {\n");
+   SCIPinfoMessage(scip, file, "node [fontcolor=white, style=filled, rankdir=LR]\n");
+
+   return SCIP_OKAY;
+}
+
+/** initializes printing of expressions in dot format to a file with given filename */
+SCIP_RETCODE SCIPprintConsExprExprDotInit2(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
+   const char*             filename,         /**< name of file to print to */
+   SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
+   )
+{
+   FILE* f;
+
+   assert(dotdata != NULL);
+   assert(filename != NULL);
+
+   f = fopen(filename, "w");
+   if( f == NULL )
+   {
+      SCIPerrorMessage("could not open file <%s> for writing\n", filename);  /* error code would be in errno */
+      return SCIP_FILECREATEERROR;
+   }
+
+   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, dotdata, f, whattoprint) );
+   (*dotdata)->closefile = TRUE;
+
+   return SCIP_OKAY;
+}
+
+SCIP_RETCODE SCIPprintConsExprExprDot(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA* dotdata,      /**< data as initialized by \ref SCIPprintConsExprExprDotInit() */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to be printed */
+   )
+{
+   assert(dotdata != NULL);
+   assert(expr != NULL);
+
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, printExprDot, NULL, NULL, NULL, (void*)dotdata) );
+
+   return SCIP_OKAY;
+}
+
+/** finishes printing of expressions in dot format */
+SCIP_RETCODE SCIPprintConsExprExprDotFinal(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA** dotdata      /**< buffer where dot printing data has been stored */
+   )
+{
+   SCIP_HASHMAPLIST* list;
+   FILE* file;
+   int l;
+
+   assert(dotdata != NULL);
+   assert(*dotdata != NULL);
+
+   file = (*dotdata)->file;
+   assert(file != NULL);
+
+   SCIPinfoMessage(scip, file, "}\n");
+
+   /* tell dot that all expressions without children have the same rank */
+   SCIPinfoMessage(scip, file, "{rank=same;");
+   for( l = 0; l < SCIPhashmapGetNLists((*dotdata)->visitedexprs); ++l )
+      for( list = SCIPhashmapGetList((*dotdata)->visitedexprs, l); list != NULL; list = SCIPhashmapListGetNext(list) )
+         if( SCIPgetConsExprExprNChildren((SCIP_CONSEXPR_EXPR*)SCIPhashmapListGetOrigin(list)) == 0 )
+            SCIPinfoMessage(scip, file, " n%p", SCIPhashmapListGetOrigin(list));
+   SCIPinfoMessage(scip, file, "}\n");
+
+   SCIPhashmapFree(&(*dotdata)->visitedexprs);
+
+   if( (*dotdata)->closefile )
+      fclose((*dotdata)->file);
+
+   SCIPfreeBlockMemory(scip, dotdata);
+
+   return SCIP_OKAY;
+}
+
+/** shows a single expression by use of dot and gv
+ *
+ * This function is meant for debugging purposes.
+ * It prints the expression into a temporary file in dot format, then calls dot to create a postscript file, then calls ghostview (gv) to show the file.
+ * SCIP will hold until ghostscript is closed.
+ */
+SCIP_RETCODE SCIPshowConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to be printed */
+   )
+{
+   /* this function is for developers, so don't bother with C variants that don't have popen() */
+#if _POSIX_C_SOURCE < 2
+   SCIPerrorMessage("No POSIX version 2. Try http://distrowatch.com/.");
+   return SCIP_ERROR;
+#else
+   SCIP_CONSEXPR_PRINTDOTDATA* dotdata;
+   FILE* f;
+
+   assert(expr != NULL);
+
+   /* call dot to generate postscript output and show it via ghostview */
+   f = popen("dot -Tps | gv -", "w");
+   if( f == NULL )
+   {
+      SCIPerrorMessage("Calling popen() failed");
+      return SCIP_FILECREATEERROR;
+   }
+
+   /* print all of the expression into the pipe */
+   SCIP_CALL( SCIPprintConsExprExprDotInit(scip, &dotdata, f, SCIP_CONSEXPR_PRINTDOT_ALL) );
+   SCIP_CALL( SCIPprintConsExprExprDot(scip, dotdata, expr) );
+   SCIP_CALL( SCIPprintConsExprExprDotFinal(scip, &dotdata) );
+
+   /* close the pipe */
+   pclose(f);
+
+   return SCIP_OKAY;
+#endif
+}
+
 
 /** evaluate an expression in a point
  *
@@ -3284,6 +3547,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    void*                 data                          /**< data to be passed on to callback methods, or NULL */
    )
 {
+   SCIP_CONSEXPREXPRWALK_STAGE  stage;
    SCIP_CONSEXPREXPRWALK_RESULT result;
    SCIP_CONSEXPR_EXPR*          child;
    SCIP_CONSEXPR_EXPR*          oldparent;
@@ -3301,106 +3565,130 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    root->walkparent = NULL;
 
    /* traverse the tree */
+   stage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
    while( TRUE )
    {
-      if( root->walkcurrentchild == 0 && enterexpr != NULL )
+      switch( stage )
       {
-         SCIP_CALL( (*enterexpr)(scip, root, SCIP_CONSEXPREXPRWALK_ENTEREXPR, data, &result) );
-         switch( result )
-         {
-            case SCIP_CONSEXPREXPRWALK_CONTINUE :
-               break;
-            case SCIP_CONSEXPREXPRWALK_SKIP :
-               root->walkcurrentchild = root->nchildren;
-               break;
-            case SCIP_CONSEXPREXPRWALK_ABORT :
-               return SCIP_OKAY;
-         }
-      }
-
-      /* if there are no more children to visit, try to go up */
-      if( root->walkcurrentchild >= root->nchildren )
-      {
-         assert(root->walkcurrentchild == root->nchildren);
-
-         if( leaveexpr != NULL )
-         {
-            SCIP_CONSEXPR_EXPR* parent = root->walkparent;   /* store parent in case the callback frees root */
-
-            SCIP_CALL( (*leaveexpr)(scip, root, SCIP_CONSEXPREXPRWALK_LEAVEEXPR, data, &result) );
-            switch( result )
+         case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
+            assert(root->walkcurrentchild == 0);
+            if( enterexpr != NULL )
             {
-               case SCIP_CONSEXPREXPRWALK_CONTINUE :
-                  break;
-               case SCIP_CONSEXPREXPRWALK_SKIP :
-                  /* this result is not allowed here */
-                  SCIPABORT();
-                  break;
-               case SCIP_CONSEXPREXPRWALK_ABORT :
-                  return SCIP_OKAY;
+               SCIP_CALL( (*enterexpr)(scip, root, stage, data, &result) );
+               switch( result )
+               {
+                  case SCIP_CONSEXPREXPRWALK_CONTINUE :
+                     break;
+                  case SCIP_CONSEXPREXPRWALK_SKIP :
+                     root->walkcurrentchild = root->nchildren;
+                     break;
+                  case SCIP_CONSEXPREXPRWALK_ABORT :
+                     return SCIP_OKAY;
+               }
             }
+            /* goto start visiting children */
+            stage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
+            break;
 
-            /* go up */
-            root = parent;
-         }
-         else
-         {
-            /* go up */
-            root = root->walkparent;
-         }
-
-         /* if we finished with the real root (walkparent == NULL), we are done */
-         if( root == NULL )
-            return SCIP_OKAY;
-
-         /* call visitedchild of parent (now root) */
-         if( visitedchild != NULL )
-         {
-            SCIP_CALL( (*visitedchild)(scip, root, SCIP_CONSEXPREXPRWALK_VISITEDCHILD, data, &result) );
-            switch( result )
+         case SCIP_CONSEXPREXPRWALK_VISITINGCHILD:
+            /* if there are no more children to visit, goto leave */
+            if( root->walkcurrentchild >= root->nchildren )
             {
-               case SCIP_CONSEXPREXPRWALK_CONTINUE :
-                  /* visit next child of parent (if any) */
+               assert(root->walkcurrentchild == root->nchildren);
+               stage = SCIP_CONSEXPREXPRWALK_LEAVEEXPR;
+               break;
+            }
+            /* prepare visit */
+            if( visitingchild != NULL )
+            {
+               SCIP_CALL( (*visitingchild)(scip, root, stage, data, &result) );
+               if( result == SCIP_CONSEXPREXPRWALK_SKIP )
+               {
+                  /* ok, we don't go down, but skip the child: continue and try again with next child (if any) */
                   ++root->walkcurrentchild;
-                  break;
-               case SCIP_CONSEXPREXPRWALK_SKIP :
-                  /* skip visiting the rest of the children */
-                  root->walkcurrentchild = root->nchildren;
-                  break;
-               case SCIP_CONSEXPREXPRWALK_ABORT :
+                  continue;
+               }
+               else if( result == SCIP_CONSEXPREXPRWALK_ABORT )
+               {
                   return SCIP_OKAY;
+               }
             }
-         }
-         else
-         {
-            /* visit next child of parent (if any) */
-            ++root->walkcurrentchild;
-         }
+            /* remember the parent and set the first child that should be visited of the new root */
+            child = root->children[root->walkcurrentchild];
+            child->walkparent = root;
+            child->walkcurrentchild = 0;
+            root = child;
+            /* visit child */
+            stage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
+            break;
 
-         continue;
+         case SCIP_CONSEXPREXPRWALK_VISITEDCHILD:
+            if( visitedchild != NULL )
+            {
+               SCIP_CALL( (*visitedchild)(scip, root, stage, data, &result) );
+               switch( result )
+               {
+                  case SCIP_CONSEXPREXPRWALK_CONTINUE :
+                     /* visit next (if any) */
+                     ++root->walkcurrentchild;
+                     break;
+                  case SCIP_CONSEXPREXPRWALK_SKIP :
+                     /* skip visiting the rest of the children */
+                     root->walkcurrentchild = root->nchildren;
+                     break;
+                  case SCIP_CONSEXPREXPRWALK_ABORT :
+                     return SCIP_OKAY;
+               }
+            }
+            else
+            {
+               /* visit next child (if any) */
+               ++root->walkcurrentchild;
+            }
+            /* goto visitng (next) */
+            stage = SCIP_CONSEXPREXPRWALK_VISITINGCHILD;
+            break;
+
+         case SCIP_CONSEXPREXPRWALK_LEAVEEXPR:
+            if( leaveexpr != NULL )
+            {
+               SCIP_CONSEXPR_EXPR* parent;
+
+               /* store parent in case the callback frees root */
+               parent = root->walkparent;
+
+               SCIP_CALL( (*leaveexpr)(scip, root, stage, data, &result) );
+               switch( result )
+               {
+                  case SCIP_CONSEXPREXPRWALK_CONTINUE :
+                     break;
+                  case SCIP_CONSEXPREXPRWALK_SKIP :
+                     /* this result is not allowed here */
+                     SCIPABORT();
+                     break;
+                  case SCIP_CONSEXPREXPRWALK_ABORT :
+                     return SCIP_OKAY;
+               }
+
+               /* go up */
+               root = parent;
+            }
+            else
+            {
+               /* go up */
+               root = root->walkparent;
+            }
+            /* if we finished with the real root (walkparent == NULL), we are done */
+            if( root == NULL )
+               return SCIP_OKAY;
+
+            /* goto visited */
+            stage = SCIP_CONSEXPREXPRWALK_VISITEDCHILD;
+            break;
+         default:
+            /* unknown stage */
+            SCIPABORT();
       }
-
-      /* keep on going down (visit next child) */
-      if( visitingchild != NULL )
-      {
-         SCIP_CALL( (*visitingchild)(scip, root, SCIP_CONSEXPREXPRWALK_VISITINGCHILD, data, &result) );
-         if( result == SCIP_CONSEXPREXPRWALK_SKIP )
-         {
-            /* ok, we don't go down, but skip the child: continue and try again with next child (if any) */
-            ++root->walkcurrentchild;
-            continue;
-         }
-         else if( result == SCIP_CONSEXPREXPRWALK_ABORT )
-         {
-            return SCIP_OKAY;
-         }
-      }
-
-      /* remember the parent and set the first child that should be visited of the new root */
-      child = root->children[root->walkcurrentchild];
-      child->walkparent = root;
-      child->walkcurrentchild = 0;
-      root = child;
    }
 
    /* recover previous information */
@@ -3784,6 +4072,7 @@ SCIP_RETCODE SCIPduplicateConsExprExpr(
 
    copydata.targetscip = scip;
    copydata.mapvar = NULL;
+   copydata.mapvardata = NULL;
 
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, copyExpr, NULL, copyExpr, NULL, &copydata) );
    *copyexpr = (SCIP_CONSEXPR_EXPR*)expr->walkio.ptrval;

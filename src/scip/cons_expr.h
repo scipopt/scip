@@ -271,6 +271,53 @@ SCIP_RETCODE SCIPprintConsExprExpr(
    FILE*                   file              /**< file to print to, or NULL for stdout */
    );
 
+/** initializes printing of expressions in dot format to a give FILE* pointer */
+EXTERN
+SCIP_RETCODE SCIPprintConsExprExprDotInit(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
+   FILE*                   file,             /**< file to print to, or NULL for stdout */
+   SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
+   );
+
+/** initializes printing of expressions in dot format to a file with given filename */
+EXTERN
+SCIP_RETCODE SCIPprintConsExprExprDotInit2(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA** dotdata,     /**< buffer to store dot printing data */
+   const char*             filename,         /**< name of file to print to */
+   SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint   /**< info on what to print for each expression */
+   );
+
+EXTERN
+SCIP_RETCODE SCIPprintConsExprExprDot(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA* dotdata,      /**< data as initialized by \ref SCIPprintConsExprExprDotInit() */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to be printed */
+   );
+
+/** finishes printing of expressions in dot format */
+EXTERN
+SCIP_RETCODE SCIPprintConsExprExprDotFinal(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_PRINTDOTDATA** dotdata      /**< buffer where dot printing data has been stored */
+   );
+
+/** shows a single expression by use of dot and gv
+ *
+ * This function is meant for debugging purposes.
+ * It's signature is kept as simple as possible to make it
+ * easily callable from gdb, for example.
+ *
+ * It prints the expression into a temporary file in dot format, then calls dot to create a postscript file, then calls ghostview (gv) to show the file.
+ * SCIP will hold until ghostscript is closed.
+ */
+EXTERN
+SCIP_RETCODE SCIPshowConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to be printed */
+   );
+
 /** evaluate an expression in a point
  *
  * Initiates an expression walk to also evaluate children, if necessary.
