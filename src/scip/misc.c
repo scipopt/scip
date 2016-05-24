@@ -10180,6 +10180,18 @@ SCIP_Longint SCIPcalcBinomCoef(
    }
 }
 
+/** calculates hash for floating-point number by using Fibonacci hashing */
+int SCIPcalcFibHash(
+   SCIP_Real             v                   /**< number to hash */
+   )
+{
+   int res;
+
+   res = ((unsigned int)(v * 2654435769)) % INT_MAX;
+
+   return res = res < 0 ? -res : res;
+}
+
 /** negates a number */
 SCIP_Real SCIPnegateReal(
    SCIP_Real             x                   /**< value to negate */
