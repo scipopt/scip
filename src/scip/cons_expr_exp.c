@@ -26,7 +26,7 @@
 
 #include "scip/cons_expr_exp.h"
 
-#define EXP_PRECEDENCE  60000
+#define EXP_PRECEDENCE  85000
 
 /*
  * Data structures

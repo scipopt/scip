@@ -1892,6 +1892,36 @@ SCIP_RETCODE testAbs(void)
    return SCIP_OKAY;
 }
 
+/** helper function to test correctness of the computed hashkeys */
+static
+SCIP_RETCODE checkHashkey(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression to be tested */
+   SCIP_CONSEXPR_EXPR*   expr2               /**< second expression to be tested (might be NULL) */
+   )
+{
+   assert(expr1 != NULL);
+
+   SCIP_CALL( SCIPhashConsExprExpr(scip, expr1) );
+   SCIPinfoMessage(scip, NULL, "hash key of expression: ");
+   SCIP_CALL( SCIPprintConsExprExpr(scip, expr1, NULL) );
+   SCIPinfoMessage(scip, NULL, " = %d\n", SCIPgetConsExprExprHashkey(expr1));
+   assert(SCIPgetConsExprExprHashkey(expr1) >= 0);
+
+   if( expr2 != NULL )
+   {
+      SCIP_CALL( SCIPhashConsExprExpr(scip, expr2) );
+      SCIPinfoMessage(scip, NULL, "hash key of expression: ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr2, NULL) );
+      SCIPinfoMessage(scip, NULL, " = %d\n", SCIPgetConsExprExprHashkey(expr2));
+      assert(SCIPgetConsExprExprHashkey(expr2) >= 0);
+
+      assert(SCIPgetConsExprExprHashkey(expr1) == SCIPgetConsExprExprHashkey(expr2));
+   }
+
+   return SCIP_OKAY;
+}
+
 /** test absolute expressions */
 static
 SCIP_RETCODE testHash(void)
@@ -1900,6 +1930,11 @@ SCIP_RETCODE testHash(void)
    SCIP_CONSHDLR* conshdlr;
    SCIP_VAR* x;
    SCIP_VAR* y;
+   SCIP_CONSEXPR_EXPR* xexpr;
+   SCIP_CONSEXPR_EXPR* yexpr;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* expr2;
+   int i;
 
    SCIP_CALL( SCIPcreate(&scip) );
 
@@ -1919,27 +1954,84 @@ SCIP_RETCODE testHash(void)
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
 
-   /* check single independent expressions */
+
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
+
+   /* value expressions */
+   for( i = -2; i < 2; ++i )
    {
-      SCIP_CONSEXPR_EXPR* expr;
-
-      /* value expression */
-      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "1", NULL, &expr) );
-      SCIP_CALL( SCIPhashConsExprExpr(scip, expr) );
-      SCIPinfoMessage(scip, NULL, "hash key of expression: ");
-      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
-      SCIPinfoMessage(scip, NULL, " = %d\n", SCIPgetConsExprExprHashkey(expr));
-      assert(SCIPgetConsExprExprHashkey(expr) >= 0);
+      SCIP_CALL( SCIPcreateConsExprExprValue(scip, conshdlr, &expr, i) );
+      SCIP_CALL( checkHashkey(scip, expr, NULL) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
-
-      /* variable expression */
-
-      /* sum expression */
-
-      /* product expression */
    }
 
+   /* variable expressions */
+   SCIP_CALL( checkHashkey(scip, xexpr, NULL) );
+   SCIP_CALL( checkHashkey(scip, yexpr, NULL) );
+
+   /* sum expressions */
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr, 0, NULL, NULL, 2.5) );
+   SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, xexpr, 14.3) );
+   SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr, yexpr, -2.3) );
+
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr2, 0, NULL, NULL, 2.5) );
+   SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr2, yexpr, -2.3) );
+   SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, expr2, xexpr, 14.3) );
+
+   SCIP_CALL( checkHashkey(scip, expr, expr2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+   /* product expressions */
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr, 0, NULL, NULL, 2.5) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr, xexpr, 14.3) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr, yexpr, -2.3) );
+
+   SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr2, 0, NULL, NULL, 2.5) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr, yexpr, -2.3) );
+   SCIP_CALL( SCIPappendConsExprExprProductExpr(scip, expr, xexpr, 14.3) );
+
+   SCIP_CALL( checkHashkey(scip, expr, expr2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+   /* absolute expression */
+   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "abs(<x>)", NULL, &expr)) );
+   SCIP_CALL( checkHashkey(scip, expr, NULL) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+   /* logarithmic expression */
+   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "exp(<x>)", NULL, &expr)) );
+   SCIP_CALL( checkHashkey(scip, expr, NULL) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+   /* exponential expression */
+   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "log(<x>)", NULL, &expr)) );
+   SCIP_CALL( checkHashkey(scip, expr, NULL) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+   /* complicated expression */
+   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "abs(exp(<x>*<y>^2/<x>^4) - log(2*<x>)*(3+5*<x>-2*<y>)*(<x>+<y>)^(-3.5)) + 2", NULL, &expr)) );
+   SCIP_CALL( checkHashkey(scip, expr, NULL) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+   /* equal expressions */
+   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "<x> * <y>", NULL, &expr)) );
+   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "<y> * <x>", NULL, &expr2)) );
+   SCIP_CALL( checkHashkey(scip, expr, expr2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "2*<x> + 3.3*<y>", NULL, &expr)) );
+   SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "3.3*<y> + 2*<x>", NULL, &expr2)) );
+   SCIP_CALL( checkHashkey(scip, expr, expr2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr2) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
    /* free allocated memory */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPfree(&scip) );

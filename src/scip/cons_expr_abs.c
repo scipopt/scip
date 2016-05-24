@@ -26,7 +26,7 @@
 
 #include "scip/cons_expr_abs.h"
 
-#define ABS_PRECEDENCE  60000
+#define ABS_PRECEDENCE  70000
 
 /*
  * Data structures

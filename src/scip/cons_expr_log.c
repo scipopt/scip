@@ -26,7 +26,7 @@
 
 #include "scip/cons_expr_log.h"
 
-#define LOG_PRECEDENCE  60000
+#define LOG_PRECEDENCE  80000
 
 /*
  * Data structures
