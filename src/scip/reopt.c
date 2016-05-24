@@ -1986,6 +1986,8 @@ SCIP_RETCODE saveConsLinear(
    allocbuffervals = FALSE;
    reoptconsdata->linear = TRUE;
 
+   vars = NULL;
+   vals = NULL;
    SCIP_CALL( SCIPconsGetNVars(cons, set, &reoptconsdata->nvars, success) );
    assert(*success);
 
@@ -2051,11 +2053,16 @@ SCIP_RETCODE saveConsLinear(
          return SCIP_OKAY;
       }
    }
-#ifndef NDEBUG
    else
+   {
       assert(strcmp(SCIPconshdlrGetName(conshdlr), "linear") == 0 || strcmp(SCIPconshdlrGetName(conshdlr), "logicor") == 0
          || strcmp(SCIPconshdlrGetName(conshdlr), "setppc") == 0);
-#endif
+
+      SCIPerrorMessage("Cannot handle constraints of type <%s> in saveConsLinear.\n", SCIPconshdlrGetName(conshdlr));
+      return SCIP_INVALIDDATA;
+   }
+   assert(vars != NULL);
+   assert(vals != NULL);
 
    /* transform all variables into the original space */
    for( v = 0; v < reoptconsdata->nvars; v++ )
@@ -2111,6 +2118,12 @@ SCIP_RETCODE saveConsBounddisjuction(
    conshdlr = SCIPconsGetHdlr(cons);
    assert(conshdlr != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), "bounddisjunction") == 0);
+
+   if( strcmp(SCIPconshdlrGetName(conshdlr), "bounddisjunction") != 0 )
+   {
+      SCIPerrorMessage("Cannot handle constraints of type <%s> in saveConsBounddisjuction.\n", SCIPconshdlrGetName(conshdlr));
+      return SCIP_INVALIDDATA;
+   }
 
    SCIP_CALL( SCIPconsGetNVars(cons, set, &reoptconsdata->nvars, success) );
    assert(*success);
