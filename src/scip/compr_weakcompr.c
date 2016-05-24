@@ -277,9 +277,12 @@ SCIP_RETCODE constructCompression(
    /* create 2 candidates for the fixed variables */
    if( nvars[0] >= 1 )
    {
+      SCIP_Bool linear;
       int v;
 
       assert(pos_repr_fix < comprdata->nrepresentatives);
+
+      linear = TRUE; /* todo: we have to adapt the compression to handle integer variables */
 
       /* create a representative at position 1 with fixed branching path */
       assert(SCIPreoptnodeGetNVars(comprdata->representatives[pos_repr_fix]) == 0);
@@ -300,7 +303,7 @@ SCIP_RETCODE constructCompression(
        */
       assert(comprdata->representatives[pos_repr_fix-1] != NULL);
       SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[pos_repr_fix-1], vars[0], vals[0], boundtypes[k],
-            1.0, SCIPinfinity(scip), nvars[0], REOPT_CONSTYPE_DUALREDS) );
+            1.0, SCIPinfinity(scip), nvars[0], REOPT_CONSTYPE_DUALREDS, linear) );
 
    }
 
@@ -309,9 +312,12 @@ SCIP_RETCODE constructCompression(
    /* create nconss[0] nodes for the added constraints */
    for(k = 0; k < nconss[0]; k++)
    {
+      SCIP_Bool linear;
       int v;
 
       assert(pos_repr_fix < comprdata->nrepresentatives);
+
+      linear = TRUE; /* todo: we have to adapt the compression to handle integer variables */
 
       /* create a node with fixed bounds corresponding to constraint at position k */
 
@@ -326,7 +332,7 @@ SCIP_RETCODE constructCompression(
       for(r = pos_repr_fix+1; r < comprdata->nrepresentatives; r++)
       {
          SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[r], conss_var[0][k], conss_val[0][k],
-               conss_boundtypes[0][k], 1.0, SCIPinfinity(scip), conss_nvars[0][k], REOPT_CONSTYPE_DUALREDS) );
+               conss_boundtypes[0][k], 1.0, SCIPinfinity(scip), conss_nvars[0][k], REOPT_CONSTYPE_DUALREDS, linear) );
       }
 
       pos_repr_fix++;

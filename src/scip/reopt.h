@@ -530,7 +530,8 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
    SCIP_Real             lhs,                /**< lhs of the constraint */
    SCIP_Real             rhs,                /**< rhs of the constraint */
    int                   nvars,              /**< number of variables */
-   REOPT_CONSTYPE        constype            /**< type of the constraint */
+   REOPT_CONSTYPE        constype,           /**< type of the constraint */
+   SCIP_Bool             linear              /**< the given constraint has a linear representation */
    );
 
 /** return the branching path of the given node in the reoptimization tree */

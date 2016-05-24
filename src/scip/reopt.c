@@ -5881,7 +5881,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
                }
 
                SCIP_CALL( SCIPreoptnodeAddCons(reopt->reopttree->reoptnodes[0], set, blkmem, cutvars, cutvals, NULL,
-                     lhs, rhs, ncutvars, REOPT_CONSTYPE_CUT) );
+                     lhs, rhs, ncutvars, REOPT_CONSTYPE_CUT, TRUE) );
 
                SCIPsetFreeBufferArray(set, &cutvars);
             }
@@ -6613,7 +6613,8 @@ SCIP_RETCODE SCIPreoptApplyCompression(
             SCIP_CALL( SCIPreoptnodeAddCons(reopttree->reoptnodes[id], set, blkmem, representatives[r]->conss[c]->vars,
                   representatives[r]->conss[c]->vals, representatives[r]->conss[c]->boundtypes,
                   representatives[r]->conss[c]->lhs, representatives[r]->conss[c]->rhs,
-                  representatives[r]->conss[c]->nvars, representatives[r]->conss[c]->constype) );
+                  representatives[r]->conss[c]->nvars, representatives[r]->conss[c]->constype,
+                  representatives[r]->conss[c]->linear) );
          }
       }
 
@@ -7940,7 +7941,8 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
    SCIP_Real             lhs,                /**< lhs of the constraint */
    SCIP_Real             rhs,                /**< rhs of the constraint */
    int                   nvars,              /**< number of variables */
-   REOPT_CONSTYPE        constype            /**< type of the constraint */
+   REOPT_CONSTYPE        constype,           /**< type of the constraint */
+   SCIP_Bool             linear              /**< the given constraint has a linear representation */
    )
 {
    int nconss;
@@ -8002,6 +8004,7 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptnode->conss[nconss]->vals, bounds, nvars) );
       if( boundtypes != NULL )
       {
+         assert(!linear);
          SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptnode->conss[nconss]->boundtypes, boundtypes, nvars) );
       }
       else
@@ -8012,6 +8015,7 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
       reoptnode->conss[nconss]->lhs = lhs;
       reoptnode->conss[nconss]->rhs = rhs;
       reoptnode->conss[nconss]->constype = constype;
+      reoptnode->conss[nconss]->linear = linear;
       ++reoptnode->nconss;
    }
    return SCIP_OKAY;

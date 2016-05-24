@@ -496,6 +496,7 @@ SCIP_RETCODE constructCompression(
             SCIP_Real* pathvals;
             SCIP_BOUNDTYPE* pathboundtypes;
             SCIP_Real lhs;
+            SCIP_Bool linear;
             int pathvarssize;
             int npathvars;
             int npathafterdualvars;
@@ -513,6 +514,8 @@ SCIP_RETCODE constructCompression(
                   &npathvars, &npathafterdualvars);
 
             lhs = 1.0;
+            linear = TRUE; /* todo: we have to adapt the compression to handle integer variables */
+
             /* negate the branching path */
             for( i = 0; i < npathvars; i++ )
             {
@@ -544,7 +547,7 @@ SCIP_RETCODE constructCompression(
             }
 
             SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[r], pathvars, pathvals, NULL, lhs,
-                  SCIPinfinity(scip), npathvars, REOPT_CONSTYPE_DUALREDS) );
+                  SCIPinfinity(scip), npathvars, REOPT_CONSTYPE_DUALREDS, linear) );
 
             /* free buffer */
             SCIPfreeBufferArray(scip, &pathboundtypes);
