@@ -66,7 +66,6 @@ namespace polyscip {
     }
 
     bool WeightSpacePolyhedron::hasUntestedWeight() const {
-        assert (getNumberOfGraphNodes() == unmarked_vertices_.size() + marked_vertices_.size());
         return !unmarked_vertices_.empty();
     }
 
@@ -221,16 +220,6 @@ namespace polyscip {
             vertices_to_nodes_.insert({vertex, new_node});
         }
     }
-
-//    void WeightSpacePolyhedron::markVertex(std::size_t unit_weight_index) {
-//        for (auto it = begin(unmarked_vertices_); it != end(unmarked_vertices_); ++it) {
-//            if ((*it)->hasUnitWeight(unit_weight_index)) {
-//                marked_vertices_.push_back(*it);
-//                unmarked_vertices_.erase(it);
-//                return;
-//            }
-//        }
-//    }
 
     vector<WeightSpaceVertex*> WeightSpacePolyhedron::computeObsoleteVertices(SCIP* scip,
                                                                               const OutcomeType& outcome,

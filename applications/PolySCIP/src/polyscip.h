@@ -70,6 +70,8 @@ namespace polyscip {
 
         SCIP_RETCODE handleStatusInitPhase(SCIP_STATUS status, std::size_t obj_count);
 
+        SCIP_RETCODE handleStatusInitPhase(SCIP_STATUS status, bool& outcome_is_ray);
+
         SCIP_RETCODE handleNonOptNonUnbdStatus(SCIP_STATUS status);
 
         SCIP_RETCODE handleOptimalStatus();
