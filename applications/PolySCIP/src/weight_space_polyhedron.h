@@ -25,6 +25,7 @@
 
 #include <cstddef>
 #include <list>
+#include <iomanip> //std::set_precision
 #include <iostream>
 #include <map>
 #include <memory> // std::shared_ptr
@@ -165,7 +166,7 @@ namespace polyscip {
          *  unit_weight_index) an marked vertex
          *  @param unit_weight_index index of 1 in unit weight
          */
-        void setMarkedVertex(std::size_t unit_weight_index);
+        void markVertex(std::size_t unit_weight_index);
 
         //TODO adjust documentation
         /** The initial weight space vertex v* having weight which coincides with
@@ -222,8 +223,9 @@ namespace polyscip {
 
         /**< all marked weight space vertices */
         MarkedVertexContainer marked_vertices_;
-        /**< all unmarked weight space vertices  */
+        /**< all unmarked weight space vertices */
         UnmarkedVertexContainer unmarked_vertices_;
+        /**< all obsolete weight space vertices */
         ObsoleteVertexContainer obsolete_vertices_;
         /**< unmarked weight space vertex currently investigated */
         WeightSpaceVertex* curr_investigated_vertex_;
@@ -243,7 +245,7 @@ namespace polyscip {
                                               std::string description,
                                               std::ostream &os,
                                               bool printFacets) const {
-        os << description << "\n";
+        os << std::setprecision(9) << description << "\n";
         for (const auto& elem : container)
             elem->print(os, printFacets);
         os << "\n";

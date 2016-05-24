@@ -76,7 +76,7 @@ namespace polyscip {
 
         SCIP_RETCODE handleUnboundedStatus();
 
-        std::size_t setObjCounter(std::size_t current_counter) const;
+        std::size_t getFirstNonnegEntryOfAllRays() const;
 
         void addResult(bool outcome_is_bounded = false, SCIP_SOL* primal_sol = nullptr);
 
