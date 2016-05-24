@@ -511,6 +511,7 @@ SCIP_RETCODE SCIPreoptnodeDelete(
 extern
 SCIP_RETCODE SCIPreoptnodeAddBndchg(
    SCIP_REOPTNODE*       reoptnode,          /**< node of the reopttree */
+   SCIP_SET*             set,                /**< global SCIP settings */
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_VAR*             var,                /**< variable to add */
    SCIP_Real             val,                /**< value of the variable */

@@ -16669,7 +16669,6 @@ SCIP_Real SCIPgetLhsLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -16693,7 +16692,6 @@ SCIP_Real SCIPgetRhsLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -16756,7 +16754,6 @@ int SCIPgetNVarsLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -16780,7 +16777,6 @@ SCIP_VAR** SCIPgetVarsLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )
@@ -16804,7 +16800,6 @@ SCIP_Real* SCIPgetValsLinear(
 {
    SCIP_CONSDATA* consdata;
 
-   assert(scip != NULL);
    assert(cons != NULL);
 
    if( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), CONSHDLR_NAME) != 0 )

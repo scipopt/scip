@@ -61,7 +61,8 @@ enum Reopt_ConsType
 {
    REOPT_CONSTYPE_INFSUBTREE   = 0,               /**< constraint cutoffs an LP infeasible subtree */
    REOPT_CONSTYPE_DUALREDS     = 1,               /**< constraint reconstructs dual reductions */
-   REOPT_CONSTYPE_CUT          = 2                /**< constraint representing a cut, e.g., to separate a solution */
+   REOPT_CONSTYPE_CUT          = 2,               /**< constraint representing a cut, e.g., to separate a solution */
+   REOPT_CONSTYPE_UNKNOWN      = 3                /**< constraint was added by SCIP, e.g., a (local) conflict */
 };
 typedef enum Reopt_ConsType REOPT_CONSTYPE;       /**< tye of constraunts added during reoptimization */
 

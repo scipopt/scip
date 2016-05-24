@@ -58,11 +58,14 @@ struct SCIP_SolTree
 struct SCIP_ReoptConsData
 {
    SCIP_VAR**            vars;               /**< array of variables */
-   SCIP_Real*            bounds;             /**< array of variable bounds */
+   SCIP_Real*            vals;               /**< array of variable coefficients or bounds */
    SCIP_BOUNDTYPE*       boundtypes;         /**< array of variable bounds */
    SCIP_Real             lhs;                /**< left hand side of the constraint */
    SCIP_Real             rhs;                /**< right hand side of the constraint */
    REOPT_CONSTYPE        constype;           /**< type of the constraint */
+   SCIP_Bool             linear;             /**< TRUE, iff the constraint is linear, otherwise the constraint is of
+                                              *   type bounddisjunction
+                                              */
    int                   varssize;           /**< available size in the arrays */
    int                   nvars;              /**< number of entries in the arrays */
 };
@@ -73,14 +76,14 @@ struct SCIP_ReoptNode
    SCIP_REOPTCONSDATA**  conss;                   /**< array of constraints added to the node, i.e., logic-or constraints */
    SCIP_VAR**            vars;                    /**< variables along the branching path up to the next stored node */
    SCIP_VAR**            afterdualvars;           /**< variables along the branching path after the first decision based on dual information */
-   SCIP_REOPTCONSDATA*   dualconscur;             /**< dual constraint that need to be added the current round */
-   SCIP_REOPTCONSDATA*   dualconsnex;             /**< dual constraint that need to be added the next round */
+   SCIP_REOPTCONSDATA*   dualredscur;             /**< dual reductions that need to be reconstructed the current round */
+   SCIP_REOPTCONSDATA*   dualredsnex;             /**< dual reductions that need to be reconstructed the next round */
    SCIP_BOUNDTYPE*       varboundtypes;           /**< boundtypes along the branching path up to the next stored node */
    SCIP_BOUNDTYPE*       afterdualvarboundtypes;  /**< boundtypes along the branching path after the first dual information */
    SCIP_Real*            varbounds;               /**< bounds along the branching path up to the next stored node */
    SCIP_Real*            afterdualvarbounds;      /**< bounds along the branching path after the first decision based on dual information */
    SCIP_Real             lowerbound;              /**< the last lowerbound of this node in the previous iteration */
-   SCIP_Bool             dualfixing;              /**< flag whether bound changes based on dual decisions exist */
+   SCIP_Bool             dualreds;                /**< flag whether dual reduction were performed */
    int                   nvars;                   /**< number of branching decisions up to the next stored node */
    int                   varssize;                /**< size of allocated memory */
    int                   nafterdualvars;          /**< number of branching decisions after the first dual information */
@@ -121,7 +124,7 @@ struct SCIP_Reopt
    SCIP_Real**           objs;                    /**< list of objective coefficients */
    SCIP_HISTORY***       varhistory;              /**< collected variable history */
    SCIP_REOPTCONSDATA**  glbconss;                /**< global constraints that need to be added at the beginning of the next iteration */
-   SCIP_REOPTCONSDATA*   dualcons;                /**< constraint describing bound changes based on dual information */
+   SCIP_REOPTCONSDATA*   dualreds;                /**< dual reductions that probably need to be reconstructed at this node */
    SCIP_REOPTTREE*       reopttree;               /**< data structure to store the current reoptimization search tree */
    SCIP_SOLTREE*         soltree;                 /**< tree to handle all saved solutions */
    SCIP_CLOCK*           savingtime;              /**< time needed to store the nodes */

@@ -14616,7 +14616,6 @@ SCIP_RETCODE SCIPsolve(
             {
                assert(scip->transprob != NULL);
                SCIP_CALL( SCIPreoptMergeVarHistory(scip->reopt, scip->set, scip->stat, scip->origprob, scip->transprob, scip->origprob->vars, scip->origprob->nvars) );
-
             }
          }
 
@@ -15120,7 +15119,7 @@ SCIP_RETCODE SCIPaddReoptnodeBndchg(
 
    SCIP_CALL( checkStage(scip, "SCIPaddReoptnodeBndchg", FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE) );
 
-   SCIP_CALL( SCIPreoptnodeAddBndchg(reoptnode, scip->mem->probmem, var, bound, boundtype) );
+   SCIP_CALL( SCIPreoptnodeAddBndchg(reoptnode, scip->set, scip->mem->probmem, var, bound, boundtype) );
 
    return SCIP_OKAY;
 }
