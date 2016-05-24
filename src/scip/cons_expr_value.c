@@ -104,8 +104,14 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalValue)
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashValue)
 {
+   SCIP_Real v;
    assert(scip != NULL);
    assert(expr != NULL);
+
+   v = SCIPgetConsExprExprValueValue(expr);
+
+   /* use fibonacci hashing */
+   expr->hashkey = v * UINTMAX_C(0x4f1bbcdd);
 
    return SCIP_OKAY;
 }

@@ -806,11 +806,11 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
 /** expression walk callback to compute an hash value for an expression */
 /* TODO skip expressions which have been hashed already */
 static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprVisitChild)
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprLeaveExpr)
 {
    assert(expr != NULL);
    assert(data == NULL);
-   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
 
    if( expr->exprhdlr->hash != NULL )
    {
@@ -3425,7 +3425,7 @@ SCIP_RETCODE SCIPhashConsExprExpr(
    SCIP_CONSEXPR_EXPR*     expr              /**< expression to be evaluated */
    )
 {
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, hashExprVisitChild, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, hashExprLeaveExpr, NULL) );
 
    return SCIP_OKAY;
 }
