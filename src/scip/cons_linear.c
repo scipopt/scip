@@ -2827,7 +2827,7 @@ SCIP_Real consdataGetActivity(
       activity = 0.0;
       nposinf = 0;
       nneginf = 0;
-      negsign = 0;
+      negsign = FALSE;
 
       for( v = 0; v < consdata->nvars; ++v )
       {
@@ -2902,7 +2902,7 @@ SCIP_Longint getVarSignature(
    assert(var != NULL);
 
    sigidx = SCIPvarGetIndex(var) % (int)(8*sizeof(SCIP_Longint));
-   return ((SCIP_Longint)1) << sigidx; /*lint !e703*/
+   return ((unsigned SCIP_Longint)1) << sigidx; /*lint !e703*/
 }
 
 /** updates bit signatures after adding a single coefficient */
@@ -5408,7 +5408,7 @@ SCIP_RETCODE analyzeConflictRangedRow(
  *  Example:
  *  c1: 12 x1 + 9  x2 - x3 = 0  with x1, x2 free and 1 <= x3 <= 2
  *
- *  x3 needs to be a multiple of 3, so the instance is infeasibile.
+ *  x3 needs to be a multiple of 3, so the instance is infeasible.
  *
  *  Example:
  *  c1: 12 x1 + 9  x2 - x3 = 1  with x1, x2 free and 1 <= x3 <= 2
@@ -5768,7 +5768,7 @@ SCIP_RETCODE rangedRowPropagation(
          SCIP_Real maxvalue = SCIP_INVALID;
          int nsols = 0;
 
-         value = minactinfvars;
+         value = SCIPceil(scip, minactinfvars - SCIPfeastol(scip));
 
          /* check how many possible solutions exist */
          while( SCIPisLE(scip, value, maxactinfvars) )
@@ -5792,24 +5792,28 @@ SCIP_RETCODE rangedRowPropagation(
          }
          assert(nsols < 2 || minvalue <= maxvalue);
 
-	 /* determine last possible solution for better bounding */
-	 if( nsols == 3 )
-	 {
-	    value = maxactinfvars;
+         /* determine last possible solution for better bounding */
+         if( nsols == 3 )
+         {
+#ifndef NDEBUG
+            SCIP_Real secondsolval = maxvalue;
+#endif
+            value = SCIPfloor(scip, maxactinfvars + SCIPfeastol(scip));
 
-	    /* check how many possible solutions exist */
-	    while( SCIPisGE(scip, value, minactinfvars) )
-	    {
-	       value2 = value + gcd * (SCIPfloor(scip, (rhs - value) / gcd));
+            /* check how many possible solutions exist */
+            while( SCIPisGE(scip, value, minactinfvars) )
+            {
+               value2 = value + gcd * (SCIPfloor(scip, (rhs - value) / gcd));
 
-	       if( SCIPisGE(scip, value2, lhs) && SCIPisLE(scip, value2, rhs) )
-	       {
-		  maxvalue = value;
-		  assert(maxvalue > minvalue);
-		  break;
-	       }
-	       value -= gcdinfvars;
-	    }
+               if( SCIPisGE(scip, value2, lhs) && SCIPisLE(scip, value2, rhs) )
+               {
+                  maxvalue = value;
+                  assert(maxvalue > minvalue);
+                  break;
+               }
+               value -= gcdinfvars;
+            }
+            assert(maxvalue > secondsolval);
          }
 
          SCIPdebugMessage("here nsols %s %d, minsolvalue = %g, maxsolvalue = %g, ninfcheckvars = %d, nunfixedvars = %d\n",
@@ -10131,7 +10135,7 @@ SCIP_RETCODE dualPresolve(
       maxotherlocks = 1;
 
    /* if this constraint has both sides, it also provides a lock for the other side and thus we can allow one more lock */
-   if( lhsexists && rhsexists )
+   if( lhsexists && rhsexists && maxotherlocks < INT_MAX )
       maxotherlocks++;
 
    for( i = 0; i < consdata->nvars && bestisint; ++i )
@@ -12422,7 +12426,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    int minidx;
    int mididx;
    int maxidx;
-   int addval;
+   unsigned int addval;
 #ifndef NDEBUG
    SCIP* scip;
 
@@ -12442,21 +12446,21 @@ SCIP_DECL_HASHKEYVAL(hashKeyValLinearcons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   addval = (int) REALABS(consdata->vals[0]);
-   addval += (((int) REALABS(consdata->vals[consdata->nvars / 2])) << 4); /*lint !e701*/
-   addval += (((int) REALABS(consdata->vals[consdata->nvars - 1])) << 8); /*lint !e701*/
+   addval = (unsigned int) REALABS(consdata->vals[0]);
+   addval += (((unsigned int) REALABS(consdata->vals[consdata->nvars / 2])) << 4); /*lint !e701*/
+   addval += (((unsigned int) REALABS(consdata->vals[consdata->nvars - 1])) << 8); /*lint !e701*/
 
    maxabsrealval = consdataGetMaxAbsval(consdata);
    /* hash value depends on vectors of variable indices */
    if( maxabsrealval < (SCIP_Real) INT_MAX )
    {
       if( maxabsrealval < 1.0 )
-         addval += (int) (MULTIPLIER * maxabsrealval);
+         addval += (unsigned int) (MULTIPLIER * maxabsrealval);
       else
-         addval += (int) maxabsrealval;
+         addval += (unsigned int) maxabsrealval;
    }
 
-   hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx + addval; /*lint !e701*/
+   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + (unsigned int)maxidx + addval; /*lint !e701*/
 
    return hashval;
 }
@@ -14359,17 +14363,17 @@ SCIP_DECL_CONSTRANS(consTransLinear)
 static
 SCIP_DECL_CONSINITLP(consInitlpLinear)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff;
    int c;
 
    assert(scip != NULL);
    assert(strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0);
 
-   for( c = 0; c < nconss; ++c )
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addRelaxation(scip, conss[c], NULL, &cutoff) );
-      /* cannot use cutoff here, since initlp has no return value */
+      SCIP_CALL( addRelaxation(scip, conss[c], NULL, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -15736,7 +15740,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecLinear)
       char consname[SCIP_MAXSTRLEN];
 
       /* create a constraint out of the conflict set */
-      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%"SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%" SCIP_LONGINT_FORMAT, SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsLinear(scip, &cons, consname, nbdchginfos, vars, vals, lhs, SCIPinfinity(scip),
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
 

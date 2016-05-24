@@ -29,6 +29,7 @@
 #include "blockmemshell/memory.h"
 #include "scip/type_set.h"
 #include "scip/type_stat.h"
+#include "scip/type_cons.h"
 #include "scip/type_event.h"
 #include "scip/type_lp.h"
 #include "scip/type_var.h"

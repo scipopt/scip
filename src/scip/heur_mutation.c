@@ -49,7 +49,8 @@
                                              * otherwise, the copy constructors of the constraints handlers are used */
 #define DEFAULT_COPYCUTS      TRUE          /* if DEFAULT_USELPROWS is FALSE, then should all active cuts from the
                                              * cutpool of the original scip be copied to constraints of the subscip */
-
+#define DEFAULT_BESTSOLLIMIT   -1           /* limit on number of improving incumbent solutions in sub-CIP            */
+#define DEFAULT_USEUCT         FALSE        /* should uct node selection be used at the beginning of the search?     */
 
 /*
  * Data structures
@@ -71,6 +72,8 @@ struct SCIP_HeurData
    SCIP_Bool             copycuts;           /**< if uselprows == FALSE, should all active cuts from cutpool be copied
                                               *   to constraints in subproblem?
                                               */
+   int                   bestsollimit;       /**< limit on number of improving incumbent solutions in sub-CIP            */
+   SCIP_Bool             useuct;             /**< should uct node selection be used at the beginning of the search?  */
 };
 
 
@@ -510,6 +513,7 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    SCIP_CALL( SCIPsetLongintParam(subscip, "limits/nodes", nsubnodes) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/time", timelimit) );
    SCIP_CALL( SCIPsetRealParam(subscip, "limits/memory", memorylimit) );
+   SCIP_CALL( SCIPsetIntParam(subscip, "limits/bestsol", heurdata->bestsollimit) );
 
    /* forbid recursive call of heuristics and separators solving subMIPs */
    SCIP_CALL( SCIPsetSubscipsOff(subscip, TRUE) );
@@ -524,6 +528,12 @@ SCIP_DECL_HEUREXEC(heurExecMutation)
    if( SCIPfindNodesel(subscip, "estimate") != NULL && !SCIPisParamFixed(subscip, "nodeselection/estimate/stdpriority") )
    {
       SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/estimate/stdpriority", INT_MAX/4) );
+   }
+
+   /* activate uct node selection at the top of the tree */
+   if( heurdata->useuct && SCIPfindNodesel(subscip, "uct") != NULL && !SCIPisParamFixed(subscip, "nodeselection/uct/stdpriority") )
+   {
+      SCIP_CALL( SCIPsetIntParam(subscip, "nodeselection/uct/stdpriority", INT_MAX/2) );
    }
 
    /* use inference branching */
@@ -698,6 +708,15 @@ SCIP_RETCODE SCIPincludeHeurMutation(
    SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/copycuts",
          "if uselprows == FALSE, should all active cuts from cutpool be copied to constraints in subproblem?",
          &heurdata->copycuts, TRUE, DEFAULT_COPYCUTS, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddIntParam(scip, "heuristics/" HEUR_NAME "/bestsollimit",
+         "limit on number of improving incumbent solutions in sub-CIP",
+         &heurdata->bestsollimit, FALSE, DEFAULT_BESTSOLLIMIT, -1, INT_MAX, NULL, NULL) );
+
+   SCIP_CALL( SCIPaddBoolParam(scip, "heuristics/" HEUR_NAME "/useuct",
+         "should uct node selection be used at the beginning of the search?",
+         &heurdata->useuct, TRUE, DEFAULT_USEUCT, NULL, NULL) );
+
 
    return SCIP_OKAY;
 }

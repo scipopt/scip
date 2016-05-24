@@ -95,10 +95,10 @@ scip:
 
 .PHONY: doc
 doc:
-		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/scip.css);
-		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/pictures/scippy.png);
-		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/pictures/miniscippy.png);
-		@-(cd doc && $(LN_s) ../$(SCIPDIR)/doc/scipfooter.html footer.html);
+		@-(cd doc && $(LN_sf) ../$(SCIPDIR)/doc/scip.css);
+		@-(cd doc && $(LN_sf) ../$(SCIPDIR)/doc/pictures/scippy.png);
+		@-(cd doc && $(LN_sf) ../$(SCIPDIR)/doc/pictures/miniscippy.png);
+		@-(cd doc && $(LN_sf) ../$(SCIPDIR)/doc/scipfooter.html footer.html);
 		cd doc; $(DOXY) scheduler.dxy
 
 $(MAINSHORTLINK):	$(MAINFILE)

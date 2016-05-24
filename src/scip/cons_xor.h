@@ -118,6 +118,13 @@ SCIP_VAR** SCIPgetVarsXor(
    SCIP_CONS*            cons                /**< constraint data */
    );
 
+/** gets integer variable in xor constraint */
+EXTERN
+SCIP_VAR* SCIPgetIntVarXor(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS*            cons                /**< constraint data */
+   );
+
 /** gets the right hand side of the xor constraint */
 EXTERN
 SCIP_Bool SCIPgetRhsXor(

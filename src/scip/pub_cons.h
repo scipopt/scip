@@ -456,6 +456,17 @@ SCIP_PROPTIMING SCIPconshdlrGetPropTiming(
    SCIP_CONSHDLR*        conshdlr            /**< constraint handler */
    );
 
+/*
+ * Methods for constraint change sets
+ */
+/** gets added constraints data for a constraint set change */
+EXTERN
+void SCIPconssetchgGetAddedConsData(
+   SCIP_CONSSETCHG*      conssetchg,         /**< constraint set change to get data from */
+   SCIP_CONS***          conss,              /**< reference to constraints array added in the conssetchg, or NULL */
+   int*                  nconss              /**< reference to store the size of the constraints array, or NULL */
+   );
+
 /** sets the timing mask of the propagation method of the constraint handler */
 EXTERN
 void SCIPconshdlrSetPropTiming(
@@ -476,7 +487,6 @@ void SCIPconshdlrSetPresolTiming(
    SCIP_CONSHDLR*        conshdlr,           /**< constraint handler */
    SCIP_PRESOLTIMING     presoltiming        /** timing mask to be set */
    );
-
 
 /*
  * Constraint methods

@@ -141,12 +141,18 @@ do
         export SOLNAME=$SOLCHECKFILE
         export CLIENTTMPDIR
         export CHECKERPATH=$SCIPPATH/solchecker
-        echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT
+        if [ `uname` == Linux ] && (ldd ${EXECNAME} | grep -q lib[at]san) ; then
+           # skip hard mem limit if using AddressSanitizer (libasan) or LeakSanitizer (libtsan) 
+           echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT
+        else
+           ULIMITMEM="ulimit -v $HARDMEMLIMIT k;"
+           echo Solving instance $INSTANCE with settings $SETNAME, hard time $HARDTIMELIMIT, hard mem $HARDMEMLIMIT
+        fi
         if [ $MAXJOBS -eq 1 ]
         then
-            bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh"
+            bash -c "ulimit -t $HARDTIMELIMIT s; $ULIMITMEM ulimit -f 200000; ./run.sh"
         else
-            bash -c "ulimit -t $HARDTIMELIMIT s; ulimit -v $HARDMEMLIMIT k; ulimit -f 200000; ./run.sh" &
+            bash -c "ulimit -t $HARDTIMELIMIT s; $ULIMITMEM ulimit -f 200000; ./run.sh" &
         fi
         #./run.sh
     done

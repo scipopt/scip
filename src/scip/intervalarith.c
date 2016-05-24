@@ -2068,7 +2068,7 @@ void SCIPintervalPowerScalar(
          else
             resultant->sup = SCIPintervalPowerScalarIntegerSup(MAX(-operand1.inf, operand1.sup), (int)operand2);
       }
-      else if( operand2 <= 0.0 && ceil(operand2/2) != operand2/2 )
+      else if( operand2 <= 0.0 && ceil(operand2/2) == operand2/2 )
       {
          /* n even negative integer */
          resultant->sup = infinity;  /* since 0^n = infinity */
@@ -4001,14 +4001,24 @@ void SCIPintervalSolveBivariateQuadExpressionAllScalar(
                ymin = -ay * bx + sqrt(MAX(d, 0.0));
                ymin /= axy * ay;
 
-               val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
-               minval = MIN(val, minval);
+               if( ymin > ybnds.inf && ymin < ybnds.sup )
+               {
+                  assert(bx + axy * ymin != 0.0);
+
+                  val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
+                  minval = MIN(val, minval);
+               }
 
                ymin = -ay * bx - sqrt(MAX(d, 0.0));
                ymin /= axy * ay;
 
-               val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
-               minval = MIN(val, minval);
+               if(ymin > ybnds.inf && ymin < ybnds.sup )
+               {
+                  assert(bx + axy * ymin != 0.0);
+
+                  val = (c - ay * ymin * ymin - by * ymin) / (bx + axy * ymin);
+                  minval = MIN(val, minval);
+               }
             }
          }
       }

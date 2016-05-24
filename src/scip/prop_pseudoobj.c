@@ -48,9 +48,9 @@
 #define EVENTHDLR_NAME         "pseudoobj"
 #define EVENTHDLR_DESC         "bound change event handler for pseudo objective function propagator"
 
-#define DEFAULT_MINUSELESS          100 /**< minimal number of successive none binary variable propagator whithout a
+#define DEFAULT_MINUSELESS          100 /**< minimal number of successive non-binary variable propagator whithout a
                                          *   bound reduction before aborted */
-#define DEFAULT_MAXVARSFRAC         0.1 /**< maximal fraction of none binary variables with non-zero objective
+#define DEFAULT_MAXVARSFRAC         0.1 /**< maximal fraction of non-binary variables with non-zero objective
                                          *   without a bound reduction before aborted */
 #define DEFAULT_PROPFULLINROOT     TRUE /**< do we want to propagate all non-binary variables if we are propagating the root node? */
 #define DEFAULT_PROPCUTOFFBOUND    TRUE /**< propagate new cutoff bound directly globally */
@@ -90,21 +90,22 @@ struct SCIP_PropData
    SCIP_VAR**            maxactvars;         /**< binary variables with non-zero objective contribution w.r.t. maximum activity of the objective function */
    SCIP_Real*            maxactchgs;         /**< the maximal potential change of the objective if the binary variable
                                               *   is fixed to its best bound w.r.t. maximum activity of the objective function */
-   SCIP_VAR**            objintvars;         /**< none binary variable with non-zero objective coefficient */
+
+   SCIP_VAR**            objintvars;         /**< non-binary variable with non-zero objective coefficient */
    SCIP_HASHTABLE*       addedvars;          /**< hash table used during resolving of a bound change (conflict analysis) */
    SCIP_Real             lastlowerbound;     /**< last lower bound which was propagated */
    SCIP_Real             cutoffbound;        /**< last cutoff bound used for propagation */
    SCIP_Real             glbpseudoobjval;    /**< last global pseudo objective used in presolving */
-   SCIP_Real             maxvarsfrac;        /**< maximal fraction of none binary variables with non-zero objective
+   SCIP_Real             maxvarsfrac;        /**< maximal fraction of non-binary variables with non-zero objective
                                               *   without a bound reduction before aborted */
    SCIP_Real             maxpseudoobjact;    /**< maximal global pseudo objective activity */
    int                   maxpseudoobjactinf; /**< number of coefficients contributing with infinite value to maxpseudoobjact */
    int                   nminactvars;        /**< number of binary variables with non-zero objective contribution w.r.t. minimum activity of the objective function */
    int                   nmaxactvars;        /**< number of binary variables with non-zero objective contribution w.r.t. maximum activity of the objective function */
-   int                   nobjintvars;        /**< number of none binary variables with non-zero objective */
-   int                   minuseless;         /**< minimal number of successive none binary variable propagator whithout
+   int                   nobjintvars;        /**< number of non-binary variables with non-zero objective */
+   int                   minuseless;         /**< minimal number of successive non-binary variable propagator whithout
                                               *   a bound reduction before aborted */
-   int                   lastvarnum;         /**< last none binary variable number that was looked at */
+   int                   lastvarnum;         /**< last non-binary variable number that was looked at */
    int                   glbfirstnonfixed;   /**< index of first globally non-fixed binary variable in minactvars array */
    int                   maxactfirstnonfixed;/**< index of first globally non-fixed binary variable in maxctvars array */
    int                   firstnonfixed;      /**< index of first locally non-fixed binary variable in minactvars array */
@@ -1385,7 +1386,7 @@ SCIP_RETCODE collectMinactVar(
          SCIP_BOUNDTYPE_LOWER, 0, nlbcontributors);
 
       /* ignore implications if the variable has a zero objective coefficient and implications only one variable, since
-       * this covered by that implied variable
+       * this is covered by that implied variable
        */
       if( !(*collect) && nlbcontributors == 1 )
       {
@@ -1405,7 +1406,7 @@ SCIP_RETCODE collectMinactVar(
          SCIP_BOUNDTYPE_UPPER, 0, nubcontributors);
 
       /* ignore implications if the variable has a zero objective coefficient and implications only one variable, since
-       * this covered by that implied variable
+       * this is covered by that implied variable
        */
       if( !(*collect) && nubcontributors == 1 )
       {
@@ -1669,7 +1670,7 @@ SCIP_RETCODE propdataInit(
          }
          else
          {
-            /* only consider none binary variables with a non-zero objective */
+            /* only consider non-binary variables with a non-zero objective */
             if( SCIPisZero(scip, objval) )
                continue;
 
@@ -1790,7 +1791,7 @@ SCIP_RETCODE propdataInit(
    return SCIP_OKAY;
 }
 
-/** adds for the given none binary variable a conflict bound depending on its objective contribution */
+/** adds for the given non-binary variable a conflict bound depending on its objective contribution */
 static
 SCIP_RETCODE addConflictBounds(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1850,7 +1851,7 @@ SCIP_RETCODE addConflictBounds(
    return SCIP_OKAY;
 }
 
-/** check for the given implication variables of they also contribute to the required minimum activity */
+/** check for the given implication variables if they also contribute to the required minimum activity */
 static
 SCIP_RETCODE getConflictImplics(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -1858,7 +1859,7 @@ SCIP_RETCODE getConflictImplics(
    int                   start,              /**< start index */
    int                   end,                /**< end index */
    SCIP_BDCHGIDX*        bdchgidx,           /**< bound change index (time stamp of bound change), or NULL for current time */
-   SCIP_HASHTABLE*       addedvars,          /**< hash table containing variables which are already add directly or implicitly due to implications */
+   SCIP_HASHTABLE*       addedvars,          /**< hash table containing variables which are already added directly or implicitly due to implications */
    SCIP_Real*            reqpseudoobjval,    /**< pointer to store the remaining minimum activity which has to be proven */
    SCIP_Bool*            foundimplics        /**< pointer to store if an implication is found */
    )
@@ -1877,8 +1878,11 @@ SCIP_RETCODE getConflictImplics(
       assert(var != NULL);
       assert(SCIPvarIsBinary(var));
 
-      lb = SCIPvarGetLbAtIndex(var, bdchgidx, FALSE);
-      ub = SCIPvarGetUbAtIndex(var, bdchgidx, FALSE);
+      /* we need to take the bounds after the bdchgidx here, since the variable of the bound change may be the implied one;
+       * we already counted its contribution before, so we want to see it as fixed here, which it is after the bound change.
+       */
+      lb = SCIPvarGetLbAtIndex(var, bdchgidx, TRUE);
+      ub = SCIPvarGetUbAtIndex(var, bdchgidx, TRUE);
 
       if( lb < 0.5 && ub > 0.5 && !SCIPhashtableExists(addedvars, (void*)var) )
       {
@@ -2012,7 +2016,7 @@ SCIP_RETCODE adjustCutoffbound(
       objimplics = propdata->minactimpls[inferinfo];
       assert(objimplics != NULL);
 
-      /* get the objective contribution if we would fix the binray inference variable to its other bound */
+      /* get the objective contribution if we would fix the binary inference variable to its other bound */
       (*cutoffbound) -= getVarObjchg(var, SCIPvarGetBestBoundType(var), boundtype);
       foundimplics = FALSE;
 
@@ -2543,7 +2547,7 @@ SCIP_RETCODE propagateCutoffboundGlobally(
 #endif
 #endif
 
-   /* propagate the none binary variables completely */
+   /* propagate the non-binary variables completely */
    for( v = 0; v < nobjintvars; ++v )
    {
       var = objintvars[v];
@@ -2808,7 +2812,7 @@ SCIP_RETCODE propagateCutoffbound(
       return SCIP_OKAY;
    }
 
-   /* tighten domains of none binary variables, if they would increase the pseudo objective value above the cutoff
+   /* tighten domains of non-binary variables, if they would increase the pseudo objective value above the cutoff
     * bound
     */
    if( propdata->propfullinroot && SCIPgetDepth(scip) == 0 )
@@ -2823,7 +2827,7 @@ SCIP_RETCODE propagateCutoffbound(
       nobjintvars = propdata->nobjintvars;
       assert(nobjintvars == 0 || objintvars != NULL);
 
-      /* propagate all none binary variables */
+      /* propagate all non-binary variables */
       for( v = 0; v < nobjintvars; ++v )
       {
          var = objintvars[v];
@@ -3250,7 +3254,7 @@ SCIP_RETCODE propagateLowerbound(
             /* the binary variables are sorted in non-increasing manner w.r.t. the absolute value of their objective
              * contribution w.r.t. maximum activity of the objective function; These values are the decrease we would
              * get with the maximum pseudo objective activity if we fix the variable to its best bound; hence, we can
-             * stop if for a variable this potential decrease is not enough anymore too fall below the lower bound.
+             * stop if for a variable this potential decrease is not enough anymore to fall below the lower bound.
              *
              * @note In case a fixing was performed. The variable might not be globally fixed right away since this would
              *       destroy the local internal data structure of a search node; the bound change is in that case pending;
@@ -3698,17 +3702,17 @@ SCIP_RETCODE SCIPincludePropPseudoobj(
    /* add pseudoobj propagator parameters */
    SCIP_CALL( SCIPaddIntParam(scip,
          "propagating/" PROP_NAME "/minuseless",
-         "minimal number of successive none binary variable propagator whithout a bound reduction before aborted",
+         "minimal number of successive non-binary variable propagator whithout a bound reduction before aborted",
          &propdata->minuseless, TRUE, DEFAULT_MINUSELESS, 0, INT_MAX, NULL, NULL) );
 
    SCIP_CALL( SCIPaddRealParam(scip,
          "propagating/" PROP_NAME "/maxvarsfrac",
-         "maximal fraction of none binary variables with non-zero objective without a bound reduction before aborted",
+         "maximal fraction of non-binary variables with non-zero objective without a bound reduction before aborted",
          &propdata->maxvarsfrac, TRUE, DEFAULT_MAXVARSFRAC, 0.0, 1.0, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,
          "propagating/" PROP_NAME "/propfullinroot",
-         "do we want to propagate all none binary variables if we are propagating the root node",
+         "do we want to propagate all non-binary variables if we are propagating the root node",
          &propdata->propfullinroot, TRUE, DEFAULT_PROPFULLINROOT, NULL, NULL) );
 
    SCIP_CALL( SCIPaddBoolParam(scip,

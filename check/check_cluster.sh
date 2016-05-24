@@ -177,6 +177,7 @@ do
                 export HARDTIMELIMIT
                 export HARDMEMLIMIT
                 export CHECKERPATH=$SCIPPATH/solchecker
+                export SETFILE
                 sbatch --job-name=${JOBNAME} --mem=$HARDMEMLIMIT -p $CLUSTERQUEUE -A $ACCOUNT $NICE --time=${HARDTIMELIMIT} ${EXCLUSIVE} --output=/dev/null run.sh
             else
                 # -V to copy all environment variables

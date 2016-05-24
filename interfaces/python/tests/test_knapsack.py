@@ -1,4 +1,4 @@
-from pyscipopt import Model
+from pyscipopt import Model, quicksum
 
 def test_knapsack():
     # create solver instance
@@ -28,31 +28,24 @@ def test_knapsack():
 
 
     # adding a linear constraint for the knapsack constraint
-    coeffs = {knapsackVars[i]: weights[i] for i in range(len(weights))}
-    s.addCons(coeffs, lhs=None, rhs=knapsackSize)
+    s.addCons(quicksum(w*v for (w, v) in zip(weights, knapsackVars)) <= knapsackSize)
 
     # solve problem
     s.optimize()
 
     s.printStatistics()
 
-    # retrieving the best solution
-    solution = s.getBestSol()
-
     # print solution
     varSolutions = []
     for i in range(len(weights)):
-        solValue = round(s.getVal(knapsackVars[i], solution))
+        solValue = round(s.getVal(knapsackVars[i]))
         varSolutions.append(solValue)
         if solValue > 0:
             print (varNames[i], "Times Selected:", solValue)
             print ("\tIncluded Weight:", weights[i]*solValue, "\tItem Cost:", costs[i]*solValue)
 
-        s.releaseVar(knapsackVars[i])
-
     includedWeight = sum([weights[i]*varSolutions[i] for i in range(len(weights))])
     assert includedWeight > 0 and includedWeight <= knapsackSize
-    
-    
+
 if __name__ == "__main__":
     test_knapsack()

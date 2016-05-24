@@ -119,6 +119,12 @@ typedef struct SCIP_Bt SCIP_BT;
 /** search node of \ref SCIP_BT "binary tree" */
 typedef struct SCIP_BtNode SCIP_BTNODE;
 
+/** regression data structure to compute an incremental linear regression of paired observations
+ *
+ *  - \ref Regression "List of all available methods"
+ */
+typedef struct SCIP_Regression SCIP_REGRESSION;
+
 /** compares two element indices
  *  result:
  *    < 0: ind1 comes before (is better than) ind2

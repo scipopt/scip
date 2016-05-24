@@ -6,6 +6,7 @@ cdef SCIP_RETCODE PyPricerFree (SCIP* scip, SCIP_PRICER* pricer):
     pricerdata = SCIPpricerGetData(pricer)
     PyPricer = <Pricer>pricerdata
     PyPricer.pricerfree()
+    Py_DECREF(PyPricer)
     return SCIP_OKAY
 
 cdef SCIP_RETCODE PyPricerInit (SCIP* scip, SCIP_PRICER* pricer):
@@ -54,7 +55,7 @@ cdef SCIP_RETCODE PyPricerFarkas (SCIP* scip, SCIP_PRICER* pricer, SCIP_RESULT* 
     return SCIP_OKAY
 
 cdef class Pricer:
-    cdef public object data     # storage for the python user
+    #cdef public object data     # storage for the python user
     cdef public Model model
 
     def pricerfree(self):

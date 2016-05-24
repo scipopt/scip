@@ -698,7 +698,7 @@ SCIP_Longint getVarSignature(
    int sigidx;
 
    sigidx = SCIPvarGetIndex(var) % (int)(8*sizeof(SCIP_Longint));
-   return ((SCIP_Longint)1) << sigidx; /*lint !e703*/
+   return ((unsigned SCIP_Longint)1) << sigidx; /*lint !e703*/
 }
 
 /** returns the bit signature of the given constraint data */
@@ -2576,7 +2576,7 @@ SCIP_DECL_HASHKEYVAL(hashKeyValSetppccons)
    maxidx = SCIPvarGetIndex(consdata->vars[consdata->nvars - 1]);
    assert(minidx >= 0 && minidx <= maxidx);
 
-   hashval = (consdata->nvars << 29) + (minidx << 22) + (mididx << 11) + maxidx; /*lint !e701*/
+   hashval = ((unsigned int)consdata->nvars << 29) + ((unsigned int)minidx << 22) + ((unsigned int)mididx << 11) + (unsigned int)maxidx; /*lint !e701*/
 
    return hashval;
 }
@@ -7244,14 +7244,14 @@ SCIP_DECL_CONSTRANS(consTransSetppc)
 static
 SCIP_DECL_CONSINITLP(consInitlpSetppc)
 {  /*lint --e{715}*/
-   SCIP_Bool cutoff = FALSE;
    int c;
 
-   for( c = 0; c < nconss; ++c )
+   *infeasible = FALSE;
+
+   for( c = 0; c < nconss && !(*infeasible); ++c )
    {
       assert(SCIPconsIsInitial(conss[c]));
-      SCIP_CALL( addCut(scip, conss[c], NULL, &cutoff) );
-      /* ignore cutoff, cannot return value */
+      SCIP_CALL( addCut(scip, conss[c], NULL, infeasible) );
    }
 
    return SCIP_OKAY;
@@ -7483,7 +7483,7 @@ SCIP_RETCODE branchLP(
             char name[SCIP_MAXSTRLEN];
 
             /* add set covering constraint x(S) >= 1 */
-            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "BSB%"SCIP_LONGINT_FORMAT, SCIPgetNTotalNodes(scip));
+            (void) SCIPsnprintf(name, SCIP_MAXSTRLEN, "BSB%" SCIP_LONGINT_FORMAT, SCIPgetNTotalNodes(scip));
 
             SCIP_CALL( SCIPcreateConsSetcover(scip, &newcons, name, nselcands, sortcands,
                   FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE, TRUE, TRUE, FALSE) );
@@ -8702,7 +8702,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       }
 
       /* create a constraint out of the conflict set */
-      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsSetpack(scip, &cons, consname, 2, twovars,
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
@@ -8754,7 +8754,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecSetppc)
       char consname[SCIP_MAXSTRLEN];
 
       /* create a constraint out of the conflict set */
-      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
+      (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
       SCIP_CALL( SCIPcreateConsSetcover(scip, &cons, consname, nbdchginfos, vars,
             FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
       SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );

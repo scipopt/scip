@@ -111,6 +111,7 @@ extern "C" {
 
 /** Creates and captures a message handler which deals with warning, information, and dialog (interactive shell) methods.
  *
+ *  Use SCIPsetMessagehdlr() to make SCIP aware of the created message handler.
  *  @note The message handler does not handle error messages. For that see SCIPmessageSetErrorPrinting()
  *  @note Creating a message handler automatically captures it.
  */
