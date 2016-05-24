@@ -27,6 +27,7 @@
 #include <list>
 #include <iomanip> //std::set_precision
 #include <iostream>
+#include <iterator>
 #include <map>
 #include <memory> // std::shared_ptr
 #include <ostream>
@@ -41,7 +42,6 @@
 #include "objscip/objscip.h"
 #include "polyscip_types.h"
 #include "weight_space_facet.h"
-
 
 namespace polyscip {
 
@@ -63,11 +63,7 @@ namespace polyscip {
         * a unit weight; if unit_weight_info.first is true, then unit_weight_info.second contains the
         * index with value 1; note: first index is 0
         */
-        explicit WeightSpacePolyhedron(SCIP* scip,
-                                       std::size_t num_objs,
-                                       const OutcomeType& point,
-                                       const ResultContainer& initial_rays,
-                                       std::pair<bool, std::size_t> unit_weight_info);
+        explicit WeightSpacePolyhedron(std::size_t num_objs, const OutcomeType& point);
 
         /** Destructor */
         ~WeightSpacePolyhedron();
@@ -97,6 +93,26 @@ namespace polyscip {
 
         void incorporateKnownOutcome(const WeightType& weight);
 
+        /** Makes unmarked vertex with unit weight (1 in unit weight is at
+         *  unit_weight_index) an marked vertex
+         *  @param unit_weight_index index of 1 in unit weight
+         */
+        void markVertex(std::size_t unit_weight_index) = delete;
+
+        //TODO adjust documentation
+        /** The initial weight space vertex v* having weight which coincides with
+         * given ray_weight is changed, i.e., for each adjacent vertex of v* a new vertex/node with weight
+         * slightly leaning towards the adjacent vertex is added and connected via an edge in the
+         * 1-Skeleton; then edges among all new nodes are added in the 1-Skeleton such that the subgraph
+         * of the new nodes is a complete graph; finally the initial weight space vertex v* is made
+         * obsolete and its corresponding node is deleted from the 1-Skeleton graph
+         * @param ray computed ray
+         * @return true if weight space polyhedron changed
+         */
+        bool updateInitialWSP(SCIP* scip, std::size_t unit_weight_index, const OutcomeType& outcome, bool outcome_is_ray = false);
+
+        void addCliqueEdgesToSkeleton() {addCliqueEdgesToSkeleton(unmarked_vertices_);};
+
         /** Prints unmarked vertices to output stream
          *  @param printFacets if true, facet information of unmarked vertices is also printed
          */
@@ -111,6 +127,7 @@ namespace polyscip {
          * @param printFacets if true, facet information of obsolete vertices is also printed
          */
         void printObsoleteVertices(std::ostream& os = std::cout, bool printFacets = false) const;
+
 
 
         std::size_t getNumberOfGraphNodes() const;
@@ -162,24 +179,7 @@ namespace polyscip {
          */
         void createInitialSkeleton();
 
-        /** Makes unmarked vertex with unit weight (1 in unit weight is at
-         *  unit_weight_index) an marked vertex
-         *  @param unit_weight_index index of 1 in unit weight
-         */
-        void markVertex(std::size_t unit_weight_index);
 
-        //TODO adjust documentation
-        /** The initial weight space vertex v* having weight which coincides with
-         * given ray_weight is changed, i.e., for each adjacent vertex of v* a new vertex/node with weight
-         * slightly leaning towards the adjacent vertex is added and connected via an edge in the
-         * 1-Skeleton; then edges among all new nodes are added in the 1-Skeleton such that the subgraph
-         * of the new nodes is a complete graph; finally the initial weight space vertex v* is made
-         * obsolete and its corresponding node is deleted from the 1-Skeleton graph
-         * @param ray computed ray
-         * @return true if initial weight space vertex with weight coinciding with ray_weight was found
-         * (and the weight space polyhedron changed); false otherwiseo
-         */
-        void updateInitialWeightSpacePolyhedron(SCIP* scip, const OutcomeType& ray);
 
         void updateWeightSpacePolyhedron(SCIP* scip, const std::vector<WeightSpaceVertex*>& obsolete_vertices,
                                          const OutcomeType& outcome,
@@ -197,7 +197,11 @@ namespace polyscip {
             curr_investigated_vertex_ = nullptr;
         }
 
-        void addToSkeleton(const std::vector< std::pair<WeightSpaceVertex*, Node> >&vertex_pairs);
+        void addToSkeleton(const std::vector<WeightSpaceVertex*>& new_vertices,
+                           const std::vector< std::pair<WeightSpaceVertex*, Node> >& new_edges);
+
+        template <typename Container>
+        void addCliqueEdgesToSkeleton(const Container& vertices);
 
         void deleteFromSkeleton(WeightSpaceVertex* v);
 
@@ -206,6 +210,7 @@ namespace polyscip {
 
 
         Node getNode(WeightSpaceVertex* vertex) {return vertices_to_nodes_.at(vertex);};
+
         WeightSpaceVertex* getVertex(Node n) {return nodes_to_vertices_[n];};
 
         /** Template function to print vertices; is used by public print{Marked,Obsolete,Unmarked}Vertices
@@ -238,6 +243,15 @@ namespace polyscip {
         /**< maps outcomes to weights */
         WeightMap outcomes_to_weights_;
 
+    };
+
+    template <typename Container>
+    void WeightSpacePolyhedron::addCliqueEdgesToSkeleton(const Container& vertices) {
+        for (auto it = std::begin(vertices); it!=std::end(vertices); ++it ) {
+            for (auto succ_it = std::begin(vertices); succ_it!=std::end(vertices); ++succ_it) {
+                skeleton_.addEdge(getNode(*it), getNode(*succ_it));
+            }
+        }
     };
 
     template <typename Container>

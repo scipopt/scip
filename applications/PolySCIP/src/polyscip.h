@@ -68,15 +68,13 @@ namespace polyscip {
 
         SCIP_STATUS separateINFORUNBD(const WeightType& weight, bool with_presolving = true);
 
-        SCIP_RETCODE handleInitPhaseStatus(SCIP_STATUS status, std::size_t& obj_count);
+        SCIP_RETCODE handleStatusInitPhase(SCIP_STATUS status, std::size_t obj_count);
 
         SCIP_RETCODE handleNonOptNonUnbdStatus(SCIP_STATUS status);
 
         SCIP_RETCODE handleOptimalStatus();
 
         SCIP_RETCODE handleUnboundedStatus();
-
-        std::size_t getFirstNonnegEntryOfAllRays() const;
 
         void addResult(bool outcome_is_bounded = false, SCIP_SOL* primal_sol = nullptr);
 
