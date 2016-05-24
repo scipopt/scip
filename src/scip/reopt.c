@@ -123,8 +123,8 @@ SCIP_DECL_EVENTEXITSOL(eventExitsolReopt)
 {
    SCIP_VAR** vars;
    int varnr;
-
    assert(scip != NULL);
+
    assert(eventhdlr != NULL);
    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
@@ -1963,13 +1963,14 @@ SCIP_RETCODE saveAncestorBranchings(
    return SCIP_OKAY;
 }
 
+/** transform a constraint with linear representation into reoptimization constraint data */
 static
 SCIP_RETCODE saveConsLinear(
-   SCIP_REOPTCONSDATA*   reoptconsdata,
-   SCIP_SET*             set,
-   BMS_BLKMEM*           blkmem,
-   SCIP_CONS*            cons,
-   SCIP_Bool*            success
+   SCIP_REOPTCONSDATA*   reoptconsdata,      /**< reoptimization constraint data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CONS*            cons,               /**< linear constraint that should be stored */
+   SCIP_Bool*            success             /**< pointer to store the success */
    )
 {
    SCIP_VAR** vars;
@@ -2088,13 +2089,14 @@ SCIP_RETCODE saveConsLinear(
    return SCIP_OKAY;
 }
 
+/** transform a bounddisjunction constraint into reoptimization constraint data */
 static
 SCIP_RETCODE saveConsBounddisjuction(
-   SCIP_REOPTCONSDATA*   reoptconsdata,
-   SCIP_SET*             set,
-   BMS_BLKMEM*           blkmem,
-   SCIP_CONS*            cons,
-   SCIP_Bool*            success
+   SCIP_REOPTCONSDATA*   reoptconsdata,      /**< reoptimization constraint data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_CONS*            cons,               /**< bounddisjuction constraint that should be stored */
+   SCIP_Bool*            success             /**< pointer to store the success */
    )
 {
    SCIP_CONSHDLR* conshdlr;
@@ -2155,9 +2157,6 @@ SCIP_RETCODE saveLocalConssData(
    )
 {
    SCIP_CONS** addedcons;
-   SCIP_Real constant;
-   SCIP_Real scalar;
-   int var;
    int naddedconss;
    int addedconsssize;
    int nconss;
@@ -2925,15 +2924,15 @@ SCIP_RETCODE reoptnodeResetDualConss(
  */
 static
 SCIP_RETCODE addGlobalCut(
-   SCIP_REOPT*           reopt,
-   BMS_BLKMEM*           blkmem,
-   SCIP_SET*             set,
-   SCIP_VAR**            vars,
-   SCIP_Real*            vals,
-   SCIP_BOUNDTYPE*       boundtypes,
-   int                   nvars,
-   int                   nbinvars,
-   int                   nintvars
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_VAR**            vars,               /**< variables of the cut */
+   SCIP_Real*            vals,               /**< values of the cut */
+   SCIP_BOUNDTYPE*       boundtypes,         /**< bounds of the cut */
+   int                   nvars,              /**< number of variables in the cut */
+   int                   nbinvars,           /**< number of binary variables */
+   int                   nintvars            /**< number of integer variables */
    )
 {
    SCIP_REOPTCONSDATA* reoptconsdata;
@@ -3904,8 +3903,8 @@ SCIP_RETCODE addLocalConss(
       SCIP_VAR** consvars;
       SCIP_Real* consvals;
       SCIP_BOUNDTYPE* consboundtypes;
-#endif
       int v;
+#endif
 
       reoptconsdata = reopt->reopttree->reoptnodes[id]->conss[c];
       assert(reoptconsdata != NULL);
@@ -4037,13 +4036,13 @@ SCIP_RETCODE addLocalConss(
          if( reoptconsdata->linear )
          {
             SCIP_CALL( SCIPcreateConsLinear(scip, &cons, name, reoptconsdata->nvars, reoptconsdata->vars, reoptconsdata->vals,
-               reoptconsdata->lhs, reoptconsdata->rhs, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) ); // ?????? check = FALSE ?????
+               reoptconsdata->lhs, reoptconsdata->rhs, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
          }
          else
          {
             assert(reoptconsdata->boundtypes != NULL);
             SCIP_CALL( SCIPcreateConsBounddisjunction(scip, &cons, name, reoptconsdata->nvars, reoptconsdata->vars, reoptconsdata->boundtypes,
-               reoptconsdata->vals, FALSE, FALSE, TRUE, FALSE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) ); // ?????? check = FALSE ?????
+               reoptconsdata->vals, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, FALSE, FALSE, FALSE, TRUE) );
          }
 #ifdef SCIP_DEBUG_CONSS
          SCIPdebugPrintCons(scip, cons, NULL);
@@ -4052,7 +4051,7 @@ SCIP_RETCODE addLocalConss(
          SCIP_CALL( SCIPreleaseCons(scip, &cons) );
       }
       else
-         assert(FALSE); /// ?????
+         assert(FALSE); /* ???? */
 
 #if 0
       /* free buffer */
@@ -4616,12 +4615,13 @@ void permuteRandom(
    }
 }
 
+/** create a global constraint to separate the given solution */
 static
 SCIP_RETCODE separateSolution(
-   SCIP_REOPT*           reopt,
-   BMS_BLKMEM*           blkmem,
-   SCIP_SET*             set,
-   SCIP_STAT*            stat,
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_STAT*            stat,               /**< dynamic SCIP statistics */
    SCIP_SOL*             sol,                /**< solution to separate */
    SCIP_VAR**            vars,               /**< array of original problem variables */
    int                   nvars               /**< number of original problem variables */
@@ -5776,7 +5776,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
    BMS_BLKMEM*           blkmem,             /**< block memory */
    SCIP_NODE*            node,               /**< node of the search tree */
    SCIP_EVENTTYPE        eventtype,          /**< eventtype */
-   SCIP_LP*              lp,
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPSOLSTAT        lpsolstat,          /**< solution status of the LP */
    SCIP_Bool             isrootnode,         /**< the node is the root */
    SCIP_Bool             isfocusnode,        /**< the node is the current focus node */
@@ -6629,13 +6629,16 @@ SCIP_RETCODE SCIPreoptApplyCompression(
    return SCIP_OKAY;
 }
 
+/** transforms a set of dual reductions into a linear constraint */
 static
 SCIP_RETCODE tranformDualredsToLinear(
-   SCIP_REOPT*           reopt,
-   SCIP_SET*             set,
-   BMS_BLKMEM*           blkmem,
-   SCIP_REOPTCONSDATA*   consdata,
-   SCIP_REOPTCONSDATA*   dualreds
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_REOPTCONSDATA*   consdata,           /**< reoptimization constraint data that should represent to set of solutions
+                                               *  pruned by the dual reductions
+                                               */
+   SCIP_REOPTCONSDATA*   dualreds            /**< set of dual reductions */
    )
 {
    int v;
@@ -6688,13 +6691,17 @@ SCIP_RETCODE tranformDualredsToLinear(
    return SCIP_OKAY;
 }
 
+
+/** transforms a set of dual reductions into a bounddisjuction constraint */
 static
 SCIP_RETCODE tranformDualredsToBounddisjunction(
-   SCIP_REOPT*           reopt,
-   SCIP_SET*             set,
-   BMS_BLKMEM*           blkmem,
-   SCIP_REOPTCONSDATA*   consdata,
-   SCIP_REOPTCONSDATA*   dualreds
+   SCIP_REOPT*           reopt,              /**< reoptimization data structure */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_REOPTCONSDATA*   consdata,           /**< reoptimization constraint data that should represent to set of solutions
+                                               *  pruned by the dual reductions
+                                               */
+   SCIP_REOPTCONSDATA*   dualreds            /**< set of dual reductions */
    )
 {
    int v;

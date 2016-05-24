@@ -270,7 +270,7 @@ SCIP_RETCODE SCIPreoptCheckCutoff(
    BMS_BLKMEM*           blkmem,             /**< block memery */
    SCIP_NODE*            node,               /**< node of the search tree */
    SCIP_EVENTTYPE        eventtype,          /**< eventtype */
-   SCIP_LP*              lp,
+   SCIP_LP*              lp,                 /**< LP data */
    SCIP_LPSOLSTAT        lpsolstat,          /**< solution status of the LP */
    SCIP_Bool             isrootnode,         /**< the node is the root */
    SCIP_Bool             isfocusnode,        /**< the node is the current focus node */
