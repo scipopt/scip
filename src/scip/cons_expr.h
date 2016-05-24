@@ -97,6 +97,15 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval))/**< interval evaluation callback (can be NULL) */
 );
 
+/** set the hash callback of an expression handler */
+EXTERN
+SCIP_RETCODE SCIPsetConsExprExprHdlrHash(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRHASH((*hash))      /**< hash callback (can be NULL) */
+);
+
 /** gives expression handlers */
 EXTERN
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
@@ -335,6 +344,26 @@ void SCIPsetConsExprExprEvalValue(
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
    SCIP_Real               value,            /**< value to set */
    unsigned int            tag               /**< tag of solution that was evaluated, or 0 */
+   );
+
+/** computes a hash key for an expression  */
+EXTERN
+SCIP_RETCODE SCIPhashConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to be evaluated */
+   );
+
+/** returns the hash key of an expression; < 0 if no hash key is available */
+EXTERN
+int SCIPgetConsExprExprHashkey(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   );
+
+/** sets the hash key of an expression; < 0 to invalidate hash key */
+EXTERN
+void SCIPsetConsExprExprHashkey(
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   int                     hashkey           /**< hash key */
    );
 
 /** sets the evaluation interval */

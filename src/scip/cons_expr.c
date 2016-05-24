@@ -154,6 +154,13 @@ typedef struct
    SCIP_Bool               valid;            /**< indicates whether every variable copy was valid */
 } COPY_MAPVAR_DATA;
 
+/** expression mapping data passed on during the search for common sub-expressions */
+typedef struct
+{
+   SCIP_HASHMAP*           expr2key;
+   SCIP_HASHMAP*           key2expr;
+} COMMONSUBEXPR_DATA;
+
 /*
  * Local methods
  */
@@ -683,6 +690,47 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
    return SCIP_OKAY;
 }
 
+/** expression walk callback to compute an hash value for an expression */
+/* TODO skip expressions which have been hashed already */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprVisitChild)
+{
+   assert(expr != NULL);
+   assert(data == NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+
+   if( expr->exprhdlr->hash != NULL )
+   {
+      SCIP_CALL( (*expr->exprhdlr->hash)(scip, expr) );
+   }
+
+   /* stop if no proper hash key could be computed, i.e., hash key < 0 */
+   *result = expr->hashkey < 0 ? SCIP_CONSEXPREXPRWALK_ABORT : SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonSubexpr)
+{
+   COMMONSUBEXPR_DATA* subexprdata;
+
+   assert(expr != NULL);
+   assert(data != NULL);
+   assert(result != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_ENTEREXPR);
+
+   subexprdata = (EXPRLOCK_DATA*)data;
+   assert(subexprdata->key2expr != NULL);
+   assert(subexprdata->expr2key != NULL);
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   return SCIP_OKAY;
+}
+
+
+
 /**@} */  /* end of walking methods */
 
 
@@ -721,6 +769,39 @@ SCIP_RETCODE computeViolation(
 
    return SCIP_OKAY;
 }
+
+/** replaces common sub-expressions in the current expression graph by using an unique hash for each expression
+ *
+ *  1.) iterate through the full expression graph by using the root of each constraint and store unique key of each
+ *      expression; store each expression which should be replaced in an auxiliary array
+ *
+ *  2.) replace all duplicated expressions by choosing a representative for each expression
+ */
+static
+SCIP_RETCODE replaceCommonSubexpressions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss              /**< total number of constraints */
+   )
+{
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(conss != NULL);
+   assert(nconss >= 0);
+
+   for( i = 0; i < nconss; ++i )
+   {
+      assert(conss[i] != NULL);
+
+      consdata = SCIPconsGetData(conss[i]);
+      assert(consdata != NULL);
+   }
+
+   return SCIP_OKAY;
+}
+
 
 /** @name Parsing methods
  * @{
@@ -2315,6 +2396,21 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    return SCIP_OKAY;
 }
 
+/** set the hash callback of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrHash(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRHASH((*hash))      /**< hash callback (can be NULL) */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->hash = hash;
+
+   return SCIP_OKAY;
+}
+
 /** gives expression handlers */
 SCIP_CONSEXPR_EXPRHDLR** SCIPgetConsExprExprHdlrs(
    SCIP_CONSHDLR*             conshdlr       /**< expression constraint handler */
@@ -2458,6 +2554,9 @@ SCIP_RETCODE SCIPcreateConsExprExpr(
 
    (*expr)->exprhdlr = exprhdlr;
    (*expr)->exprdata = exprdata;
+
+   /* invalidate hash key */
+   (*expr)->hashkey = -1;
 
    /* initialize an empty interval for interval evaluation */
    SCIPintervalSetEntire(SCIPinfinity(scip), &(*expr)->interval);
@@ -3056,6 +3155,40 @@ void SCIPsetConsExprExprEvalInterval(
    SCIPintervalSetBounds(&expr->interval, SCIPintervalGetInf(*interval), SCIPintervalGetSup(*interval));
    expr->intevaltag = tag;
 }
+
+/** computes a hash key for an expression  */
+SCIP_RETCODE SCIPhashConsExprExpr(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression to be evaluated */
+   )
+{
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, hashExprVisitChild, NULL, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
+
+/** returns the hash key of an expression; < 0 if no hash key is available */
+int SCIPgetConsExprExprHashkey(
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   )
+{
+   assert(expr != NULL);
+
+   return expr->hashkey;
+}
+
+/** sets the hash key of an expression; < 0 to invalidate hash key */
+void SCIPsetConsExprExprHashkey(
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   int                     hashkey           /**< hash key */
+   )
+{
+   assert(expr != NULL);
+
+   expr->hashkey = hashkey;
+}
+
+
 
 /** walks the expression graph in depth-first manner and executes callbacks at certain places
  *

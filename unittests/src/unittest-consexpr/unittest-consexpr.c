@@ -1888,6 +1888,64 @@ SCIP_RETCODE testAbs(void)
    return SCIP_OKAY;
 }
 
+/** test absolute expressions */
+static
+SCIP_RETCODE testHash(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* currently expr constraints cannot be created */
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+
+   /* check single independent expressions */
+   {
+      SCIP_CONSEXPR_EXPR* expr;
+
+      /* value expression */
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "1", NULL, &expr) );
+      SCIP_CALL( SCIPhashConsExprExpr(scip, expr) );
+      SCIPinfoMessage(scip, NULL, "hash key of expression: ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, expr, NULL) );
+      SCIPinfoMessage(scip, NULL, " = %d\n", SCIPgetConsExprExprHashkey(expr));
+      assert(SCIPgetConsExprExprHashkey(expr) >= 0);
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+      /* variable expression */
+
+      /* sum expression */
+
+      /* product expression */
+   }
+
+   /* free allocated memory */
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
+
+
 /** main function */
 int
 main(
@@ -1924,6 +1982,8 @@ main(
    CHECK_TEST( testLog() );
 
    CHECK_TEST( testAbs() );
+
+   CHECK_TEST( testHash() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");

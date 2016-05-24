@@ -201,6 +201,18 @@ extern "C" {
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_INTERVAL* interval)
 
+/** expression hash callback
+ *
+ * The method hashes an expression by taking the hash keys of its children into account.
+ *
+ * input:
+ *  - scip : SCIP main data structure
+ *  - expr : expression to be hashed
+ */
+#define SCIP_DECL_CONSEXPR_EXPRHASH(x) SCIP_RETCODE x (\
+   SCIP* scip, \
+   SCIP_CONSEXPR_EXPR* expr)
+
 /** stages of expression walker in which the walker callbacks are called */
 typedef enum
 {

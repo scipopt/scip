@@ -49,6 +49,7 @@ struct SCIP_ConsExpr_ExprHdlr
    SCIP_DECL_CONSEXPR_EXPRPARSE((*parse));        /**< parse callback (can be NULL) */
    SCIP_DECL_CONSEXPR_EXPREVAL((*eval));          /**< point evaluation callback (can never be NULL) */
    SCIP_DECL_CONSEXPR_EXPRINTEVAL((*inteval));    /**< interval evaluation callback (can be NULL) */
+   SCIP_DECL_CONSEXPR_EXPRHASH((*hash));          /**< hash callback (can be NULL) */
 };
 
 /** a node in the expression graph that is handled by the expression constraint handler */
@@ -62,6 +63,7 @@ struct SCIP_ConsExpr_Expr
    SCIP_CONSEXPR_EXPR**    children;      /**< children expressions */
 
    int                     nuses;         /**< reference counter */
+   int                     hashkey;       /**< hash key of the expression; < 0 if no hash could be computed */
 
    /* point-evaluation */
    unsigned int            evaltag;       /**< tag of point for which the expression has been evaluated last, or 0 */
