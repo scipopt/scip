@@ -14294,10 +14294,13 @@ SCIP_RETCODE compressReoptTree(
 
    noldnodes = SCIPreoptGetNNodes(scip->reopt, scip->tree->root);
 
+   /* do not run if there exists only the root node */
    if( noldnodes <= 1 )
-   {
       return SCIP_OKAY;
-   }
+
+   /* do not run a tree compression if the problem contains (implicit) integer variables */
+   if( scip->transprob->nintvars > 0 || scip->transprob->nimplvars > 0 )
+      return SCIP_OKAY;
 
    SCIPmessagePrintVerbInfo(scip->messagehdlr, scip->set->disp_verblevel, SCIP_VERBLEVEL_HIGH,
          "tree compression:\n");

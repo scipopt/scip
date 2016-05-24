@@ -217,8 +217,7 @@ SCIP_RETCODE constructCompression(
       SCIPdebugMessage("+---+ start round %d +---+\n", start_id+1);
 
       /* try to find common representatives */
-      while( nreps-1 <= comprdata->niters
-          && (nreps == -1 || (current_id % nleaveids) != start_id) )
+      while( nreps-1 <= comprdata->niters && (nreps == -1 || (current_id % nleaveids) != start_id) )
       {
          int* idx_common_vars;
          int* idx_non_zero;
@@ -298,10 +297,8 @@ SCIP_RETCODE constructCompression(
             {
                /* go to the next node if the intersection is empty */
                if( (signature0[current_id] | signature0[next_id % nleaveids]) != signature0[current_id]
-                || (signature1[current_id] | signature1[next_id % nleaveids]) != signature1[current_id])
-               {
+                || (signature1[current_id] | signature1[next_id % nleaveids]) != signature1[current_id] )
                   next_id++;
-               }
                else
                   break;
             }
@@ -491,15 +488,18 @@ SCIP_RETCODE constructCompression(
          int r;
 
          /* add a constraint (corresponding to the branching path of k) to all representatives
-          * in the subtree induced by the sibling of k */
+          * in the subtree induced by the sibling of k
+          */
          for( r = k+1; r < comprdata->nrepresentatives; r++ )
          {
             SCIP_VAR** pathvars;
             SCIP_Real* pathvals;
             SCIP_BOUNDTYPE* pathboundtypes;
+            SCIP_Real lhs;
             int pathvarssize;
             int npathvars;
             int npathafterdualvars;
+            int i;
 
             pathvarssize = SCIPreoptnodeGetNVars(comprdata->representatives[k]);
 
@@ -512,7 +512,38 @@ SCIP_RETCODE constructCompression(
             SCIPgetReoptnodePath(scip, comprdata->representatives[k], pathvars, pathvals, pathboundtypes, pathvarssize,
                   &npathvars, &npathafterdualvars);
 
-            SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[r], pathvars, pathvals, pathboundtypes, 1.0,
+            lhs = 1.0;
+            /* negate the branching path */
+            for( i = 0; i < npathvars; i++ )
+            {
+               assert(SCIPvarIsOriginal(pathvars[i]));
+
+               /* we have to construct a linear constraint that can be upgraded to a logic-or constraint
+                *
+                * each variable i with pathvals[i] == 0 and pathboundtypes[i] == SCIP_BOUNDTYPE_UPPER needs a coefficient
+                * of 1.0, all remaining variables (i.e., pathvals[i] == 1 and pathboundtypes[i] == SCIP_BOUNDTYPE_LOWER)
+                * need a -1.0 and we have to reduce the lhs by -1.0.
+                *
+                *        sum_{i : pathvals[i] == 0.0} x_i + sum_{j : pathvals[j] == 1.0} (1.0-x_{j}) >= 1.0
+                *  <==>  sum_{i : pathvals[i] == 0.0} x_i + sum_{j : pathvals[j] == 1.0}     -x_{j}  >= 1.0 - sum_{j : pathvals[j] == 1.0} 1.0
+                */
+               if( SCIPisEQ(scip, pathvals[i], 0.0) )
+               {
+                  assert(pathboundtypes[i] == SCIP_BOUNDTYPE_UPPER);
+
+                  pathvals[i] = 1.0;
+               }
+               else
+               {
+                  assert(SCIPisEQ(scip, pathvals[i], 1.0));
+                  assert(pathboundtypes[i] == SCIP_BOUNDTYPE_LOWER);
+
+                  pathvals[i] = -1.0;
+                  lhs -= 1.0;
+               }
+            }
+
+            SCIP_CALL( SCIPaddReoptnodeCons(scip, comprdata->representatives[r], pathvars, pathvals, NULL, lhs,
                   SCIPinfinity(scip), npathvars, REOPT_CONSTYPE_DUALREDS) );
 
             /* free buffer */

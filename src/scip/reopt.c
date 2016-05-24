@@ -8000,10 +8000,9 @@ SCIP_RETCODE SCIPreoptnodeAddCons(
       SCIP_ALLOC( BMSallocBlockMemory(blkmem, &reoptnode->conss[nconss]) ); /*lint !e866*/
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptnode->conss[nconss]->vars, vars, nvars) );
       SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptnode->conss[nconss]->vals, bounds, nvars) );
-
-      if( constype != REOPT_CONSTYPE_CUT )
+      if( boundtypes != NULL )
       {
-         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptnode->conss[nconss]->vals, boundtypes, nvars) );
+         SCIP_ALLOC( BMSduplicateBlockMemoryArray(blkmem, &reoptnode->conss[nconss]->boundtypes, boundtypes, nvars) );
       }
       else
          reoptnode->conss[nconss]->boundtypes = NULL;
