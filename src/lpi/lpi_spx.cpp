@@ -4226,6 +4226,8 @@ SCIP_RETCODE SCIPlpiGetBInvRow(
          int* bind;
          int idx;
 
+         bind = NULL;
+
          /**@todo should bind be stored globally in lpi?  */
          /* get ordering of column basis matrix */
          SCIP_ALLOC( BMSallocMemoryArray(&bind, nRows) ); /*lint !e530*/
@@ -4355,6 +4357,8 @@ SCIP_RETCODE lpiGetBInvVec(
          DSVector rowrhs(nCols);
          SSVector y(nCols);
          int* bind;
+
+         bind = NULL;
 
          /**@todo should bind be stored globally in lpi?  */
          /* get ordering of column basis matrix */
