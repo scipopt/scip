@@ -62,23 +62,27 @@ namespace polyscip {
          */
         SCIP_RETCODE initWeightSpace();
 
+        SCIP_RETCODE computeUnitWeightOutcomes();
+
         SCIP_RETCODE setWeightedObjective(const WeightType& weight);
 
         SCIP_RETCODE solve();
 
         SCIP_STATUS separateINFORUNBD(const WeightType& weight, bool with_presolving = true);
 
-        SCIP_RETCODE handleStatusInitPhase(SCIP_STATUS status, std::size_t obj_count);
-
-        SCIP_RETCODE handleStatusInitPhase(SCIP_STATUS status, bool& outcome_is_ray);
-
         SCIP_RETCODE handleNonOptNonUnbdStatus(SCIP_STATUS status);
 
-        SCIP_RETCODE handleOptimalStatus();
+        SCIP_RETCODE handleOptimalStatus(bool check_if_new_result=true);
 
-        SCIP_RETCODE handleUnboundedStatus();
+        SCIP_RETCODE handleUnboundedStatus(bool check_if_new_result=true);
 
-        void addResult(bool outcome_is_bounded = false, SCIP_SOL* primal_sol = nullptr);
+        bool outcomeIsNew(const OutcomeType& outcome, bool outcome_is_bounded) const;
+
+        void addResult(bool check_if_new_result, bool outcome_is_bounded = false, SCIP_SOL* primal_sol = nullptr);
+
+        std::vector<std::pair<WeightType, ValueType>> computeVRepresentation() const;
+
+        std::vector<std::pair<WeightType, ValueType>> getInitialVRepresentation(const std::pair<OutcomeType, ValueType>& inequality) const;
 
         /** Computes the supported solutions/rays and corresponding non-dominated points */
         SCIP_RETCODE computeSupported();

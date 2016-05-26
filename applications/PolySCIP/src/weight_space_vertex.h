@@ -85,7 +85,7 @@ namespace polyscip {
          */
         ValueType getCurrentWOV() const;
 
-        bool isCorner() const {return isWeightSpaceCorner_;}
+        void setNewWOV(ValueType new_wov) {weighted_obj_val_ = new_wov;};
 
         ValueType getWeightedOutcome(const OutcomeType& outcome) const;
 
@@ -133,7 +133,6 @@ namespace polyscip {
                                                      ValueType h);
 
 
-        bool isWeightSpaceCorner_;
         /**< incident facets */
         WeightSpacePolyhedron::FacetContainer incident_facets_;
         /**< used weight */

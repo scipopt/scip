@@ -42,6 +42,7 @@ using std::addressof;
 using std::cout;
 using std::get;
 using std::ostream;
+using std::pair;
 using std::string;
 using std::vector;
 using polyscip::OutcomeType;
@@ -88,48 +89,54 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    SCIP_RETCODE Polyscip::initWeightSpace() {
-        std::size_t obj_counter = 0;
+    SCIP_RETCODE Polyscip::computeUnitWeightOutcomes() {
+        polyscip_status_ = PolyscipStatus::InitPhase;
         auto weight = WeightType(no_objs_,0.);
-        while (polyscip_status_ == PolyscipStatus::Unsolved) {
-            weight[obj_counter] = 1.;
-            SCIP_CALL( setWeightedObjective(weight) );
-            SCIP_CALL( solve() );
+        std::size_t unit_weight_index=0;
+        while (unit_weight_index<no_objs_ && polyscip_status_==PolyscipStatus::InitPhase) {
+            weight[unit_weight_index] = 1.;
+            SCIP_CALL(setWeightedObjective(weight));
+            SCIP_CALL(solve());
             auto scip_status = SCIPgetStatus(scip_);
             if (scip_status == SCIP_STATUS_INFORUNBD)
                 scip_status = separateINFORUNBD(weight);
-            weight[obj_counter] = 0.;
-            ++obj_counter;
-            SCIP_CALL( handleStatusInitPhase(scip_status, obj_counter) );
-        }
-        if (polyscip_status_ == PolyscipStatus::InitPhase) { // bounded outcome was found
-            assert (!supported_.empty());
-            weight_space_poly_ = global::make_unique<WeightSpacePolyhedron>(no_objs_, supported_.front().second);
-            for (std::size_t i=0; i<unbounded_.size(); ++i) { // incorporate computed non-dominated rays
-                auto wsp_changed = weight_space_poly_->updateInitialWSP(scip_, i, unbounded_[i].second, true);
-                if (!wsp_changed)
-                    throw std::runtime_error("No change in weight space polyhedron despite unbounded ray.\n");
+            if (scip_status == SCIP_STATUS_OPTIMAL) {
+                SCIP_CALL( handleOptimalStatus() );
             }
-
-            while (obj_counter < no_objs_) {
-                weight[obj_counter] = 1.;
-                SCIP_CALL( setWeightedObjective(weight) );
-                SCIP_CALL( solve() );
-                auto scip_status = SCIPgetStatus(scip_);
-                if (scip_status == SCIP_STATUS_INFORUNBD)
-                    scip_status = separateINFORUNBD(weight);
-                weight[obj_counter] = 0.;
-                //todo nice way to incorporate unmarked vertices
-
-                if (polyscip_status_ != PolyscipStatus::InitPhase)
-                    return SCIP_OKAY;
-                ++obj_counter;
+            else if (scip_status == SCIP_STATUS_UNBOUNDED) {
+                SCIP_CALL( handleUnboundedStatus() );
             }
-            weight_space_poly_->addCliqueEdgesToSkeleton();
-            polyscip_status_ = PolyscipStatus::WeightSpacePhase;
+            else {
+                SCIP_CALL( handleNonOptNonUnbdStatus(scip_status) );
+            }
+            weight[unit_weight_index] = 0.;
+            ++unit_weight_index;
         }
         return SCIP_OKAY;
     }
+
+    SCIP_RETCODE Polyscip::initWeightSpace() {
+        SCIP_CALL( computeUnitWeightOutcomes() ); // computes optimal outcomes for all unit weights
+        auto v_presentation = computeVRepresentation();
+        return SCIP_OKAY;
+    }
+
+    vector<pair<WeightType, ValueType>> Polyscip::computeVRepresentation() const {
+        auto h_rep = vector<pair<OutcomeType ,ValueType>> {};
+        for (const auto& bounded : supported_)
+            h_rep.push_back({bounded.second, -1.});
+        for (const auto& unbounded : unbounded_)
+            h_rep.push_back({unbounded.second, 0.});
+        auto current_v_rep = getInitialVRepresentation(h_rep.back());
+        h_rep.pop_back();
+        return current_v_rep;
+    };
+
+    vector<pair<WeightType, ValueType>> Polyscip::getInitialVRepresentation(const pair<OutcomeType, ValueType>& inequality) const {
+        auto v_rep = vector<pair<WeightType, ValueType>> {};
+        
+        return v_rep;
+    };
 
     SCIP_STATUS Polyscip::separateINFORUNBD(const WeightType& weight, bool with_presolving) {
         if (!with_presolving)
@@ -157,37 +164,6 @@ namespace polyscip {
     }
 
 
-    SCIP_RETCODE Polyscip::handleStatusInitPhase(SCIP_STATUS status, bool& outcome_is_ray) {
-        if (status == SCIP_STATUS_OPTIMAL) {
-            SCIP_CALL( handleOptimalStatus() );
-            outcome_is_ray = false;
-        }
-        else if (status == SCIP_STATUS_UNBOUNDED) {
-            SCIP_CALL( handleUnboundedStatus() );
-            outcome_is_ray = true;
-        }
-        else {
-            SCIP_CALL( handleNonOptNonUnbdStatus(status) );
-        }
-        return SCIP_OKAY;
-    }
-
-    SCIP_RETCODE Polyscip::handleStatusInitPhase(SCIP_STATUS status, std::size_t obj_count) {
-        if (status == SCIP_STATUS_OPTIMAL) {
-            SCIP_CALL( handleOptimalStatus() );
-            polyscip_status_ = PolyscipStatus::InitPhase;
-        }
-        else if (status == SCIP_STATUS_UNBOUNDED) {
-            SCIP_CALL( handleUnboundedStatus() );
-            if (obj_count >= no_objs_)
-                polyscip_status_ = PolyscipStatus::Finished;
-        }
-        else {
-            SCIP_CALL( handleNonOptNonUnbdStatus(status) );
-        }
-        return SCIP_OKAY;
-    }
-
     SCIP_RETCODE Polyscip::handleNonOptNonUnbdStatus(SCIP_STATUS status) {
         assert (status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_UNBOUNDED);
         if (status == SCIP_STATUS_INFORUNBD) {
@@ -202,7 +178,7 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
-    SCIP_RETCODE Polyscip::handleUnboundedStatus() {
+    SCIP_RETCODE Polyscip::handleUnboundedStatus(bool check_if_new_result) {
         if (!SCIPhasPrimalRay(scip_)) {
             SCIP_CALL( SCIPsetPresolving(scip_, SCIP_PARAMSETTING_OFF, TRUE) );
             if (SCIPisTransformed(scip_))
@@ -214,11 +190,11 @@ namespace polyscip {
             if (!SCIPhasPrimalRay(scip_))
                 throw std::runtime_error("Existence of primal ray expected.\n");
         }
-        addResult();
+        addResult(check_if_new_result);
         return SCIP_OKAY;
     }
 
-    SCIP_RETCODE Polyscip::handleOptimalStatus() {
+    SCIP_RETCODE Polyscip::handleOptimalStatus(bool check_if_new_result) {
         auto best_sol = SCIPgetBestSol(scip_);
         SCIP_SOL *finite_sol = nullptr;
         SCIP_Bool same_obj_val = FALSE;
@@ -233,12 +209,12 @@ namespace polyscip {
             }
         }
         assert (finite_sol != nullptr);
-        addResult(true, finite_sol);
+        addResult(check_if_new_result, true, finite_sol);
         SCIP_CALL(SCIPfreeSol(scip_, addressof(finite_sol)));
         return SCIP_OKAY;
     }
 
-    void Polyscip::addResult(bool outcome_is_bounded, SCIP_SOL* primal_sol) {
+    void Polyscip::addResult(bool check_if_new_result, bool outcome_is_bounded, SCIP_SOL* primal_sol) {
         SolType sol;
         auto outcome = OutcomeType(no_objs_,0.);
         auto no_vars = SCIPgetNOrigVars(scip_);
@@ -262,13 +238,23 @@ namespace polyscip {
 
         }
 
-        if (outcome_is_bounded)
-            supported_.push_back({sol,outcome});
-        else
-            unbounded_.push_back({sol,outcome});
+        if (!check_if_new_result || outcomeIsNew(outcome, outcome_is_bounded)) {
+            if (outcome_is_bounded)
+                supported_.push_back({sol, outcome});
+            else
+                unbounded_.push_back({sol, outcome});
+        }
+        else {
+            global::print(outcome, "Outcome: ");
+            std::cout << "not added to results.\n";
+        }
     }
 
-
+    bool Polyscip::outcomeIsNew(const OutcomeType& outcome, bool outcome_is_bounded) const {
+        auto it_beg = outcome_is_bounded ? begin(supported_) : begin(unbounded_);
+        auto it_end = outcome_is_bounded ? begin(supported_) : end(unbounded_);
+        return std::find_if(it_beg, it_end, [&outcome](const Result& res){return outcome == res.second;}) == it_end;
+    }
 
     SCIP_RETCODE Polyscip::solve() {
         if (cmd_line_args_.hasTimeLimit()) { // set SCIP timelimit
@@ -299,44 +285,36 @@ namespace polyscip {
         if (polyscip_status_ == PolyscipStatus::WeightSpacePhase) {
             while (weight_space_poly_->hasUntestedWeight()) {
                 auto untested_weight = weight_space_poly_->getUntestedWeight();
-                global::print(untested_weight, "\nTESTING WEIGHT: ");
                 SCIP_CALL( setWeightedObjective(untested_weight) );
                 SCIP_CALL( solve() );
                 auto scip_status = SCIPgetStatus(scip_);
                 if (scip_status == SCIP_STATUS_INFORUNBD)
                     scip_status = separateINFORUNBD(untested_weight);
                 if (scip_status == SCIP_STATUS_OPTIMAL) {
+                    global::print(untested_weight, "\nTESTED WEIGHT: ");
                     auto new_wov = SCIPgetPrimalbound(scip_);
                     if (SCIPisLT(scip_, new_wov, weight_space_poly_->getUntestedVertexWOV(untested_weight))==TRUE) {
-                        std::cout << " found better optimum\n";
                         SCIP_CALL( handleOptimalStatus() ); //adds bounded result to supported_
                         auto last_added_outcome = supported_.back().second; //was added by handleStatus
-                        std::cout << "incorportating new outcome: ";
-                        global::print(last_added_outcome, " ");
+                        global::print(last_added_outcome, "new outcome = ");
                         weight_space_poly_->incorporateNewOutcome(scip_, cmd_line_args_.withCompleteLoopForObsolete(),
                                                                   untested_weight, last_added_outcome);
                     }
                     else {
-                        std::cout << " did not find better optimum\n";
                         weight_space_poly_->incorporateKnownOutcome(untested_weight);
                     }
                 }
                 else if (scip_status == SCIP_STATUS_UNBOUNDED) {
-                    std::cout << "UNBOUNDED STATUS\n";
                     SCIP_CALL( handleUnboundedStatus() ); //adds unbounded result to unbounded_
                     auto last_added_outcome = unbounded_.back().second; //was added by handleStatus
                     weight_space_poly_->incorporateNewOutcome(scip_, cmd_line_args_.withCompleteLoopForObsolete(),
                                                               untested_weight, last_added_outcome, true);
                 }
                 else {
-                    std::cout << "NON OPTIMAL AND NON-UNBOUNDED STATUS\n";
                     SCIP_CALL( handleNonOptNonUnbdStatus(scip_status) ); //polyscip_status_ is set to finished or time limit reached
-                    break;
+                    return SCIP_OKAY;
                 }
             }
-            //weight_space_poly_->printMarkedVertices();
-            //weight_space_poly_->printObsoleteVertices();
-            //weight_space_poly_->printUnmarkedVertices();
             polyscip_status_ = PolyscipStatus::CompUnsupportedPhase;
         }
         return SCIP_OKAY;

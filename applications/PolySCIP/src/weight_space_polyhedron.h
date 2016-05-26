@@ -81,6 +81,8 @@ namespace polyscip {
 
         ValueType getUntestedVertexWOV(const WeightType& untested_weight) const;
 
+        ValueType getMarkedVertexWOV(std::size_t unit_weight_index) const;
+
         /** Incorporates an newly found unbounded non-dominated ray
          * into the (partial) weight space polyhedron
          //todo
@@ -109,7 +111,7 @@ namespace polyscip {
          * @param ray computed ray
          * @return true if weight space polyhedron changed
          */
-        bool updateInitialWSP(SCIP* scip, std::size_t unit_weight_index, const OutcomeType& outcome, bool outcome_is_ray = false);
+        void updateInitialWSP(SCIP* scip, std::size_t unit_weight_index, const OutcomeType& outcome, bool outcome_is_ray = false);
 
         void addCliqueEdgesToSkeleton() {addCliqueEdgesToSkeleton(unmarked_vertices_);};
 
@@ -179,15 +181,15 @@ namespace polyscip {
          */
         void createInitialSkeleton();
 
-
-
         void updateWeightSpacePolyhedron(SCIP* scip, const std::vector<WeightSpaceVertex*>& obsolete_vertices,
                                          const OutcomeType& outcome,
                                          bool outcome_is_ray);
 
-        std::vector<WeightSpaceVertex*> computeObsoleteVerticesWithCompleteLoop(SCIP* scip,
-                                                                                const OutcomeType& outcome,
-                                                                                bool outcome_is_ray);
+        template <typename Container>
+        std::vector<WeightSpaceVertex*> computeObsoleteVertices(SCIP* scip,
+                                                                const Container& container,
+                                                                const OutcomeType& outcome,
+                                                                bool outcome_is_ray);
 
         std::vector<WeightSpaceVertex*> computeObsoleteVertices(SCIP* scip,
                                                                 const OutcomeType& outcome,
@@ -206,8 +208,6 @@ namespace polyscip {
         void deleteFromSkeleton(WeightSpaceVertex* v);
 
         void setStatusToObsolete(WeightSpaceVertex* v);
-
-
 
         Node getNode(WeightSpaceVertex* vertex) {return vertices_to_nodes_.at(vertex);};
 
@@ -243,6 +243,20 @@ namespace polyscip {
         /**< maps outcomes to weights */
         WeightMap outcomes_to_weights_;
 
+    };
+
+    template <typename Container>
+    std::vector<WeightSpaceVertex*> WeightSpacePolyhedron::computeObsoleteVertices(SCIP* scip,
+                                                                                   const Container& container,
+                                                                                   const OutcomeType& outcome,
+                                                                                   bool outcome_is_ray) {
+        auto obsolete = std::vector<WeightSpaceVertex*> {};
+        for (auto vertex : container) {
+            if (isVertexObsolete(scip, vertex, outcome, outcome_is_ray)) {
+                obsolete.push_back(vertex);
+            }
+        }
+        return obsolete;
     };
 
     template <typename Container>

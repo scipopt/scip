@@ -41,8 +41,7 @@ namespace polyscip {
                                          WeightType weight,
                                          ValueType weighted_obj_val,
                                          bool sort_facets)
-            : isWeightSpaceCorner_(true),
-              incident_facets_(std::move(incident_facets)),
+            : incident_facets_(std::move(incident_facets)),
               weight_(std::move(weight)),
               weighted_obj_val_{weighted_obj_val} {
         if (sort_facets) // sort facets in order to be able to use std::set_intersection in other constructor
@@ -58,7 +57,6 @@ namespace polyscip {
                                          const WeightSpaceVertex *non_obs,
                                          const OutcomeType &outcome,
                                          bool outcome_is_ray)
-            : isWeightSpaceCorner_(false)
     {
         // get intersection of facets of obs and non_obs
         std::set_intersection(obs->incident_facets_.cbegin(),
@@ -76,7 +74,7 @@ namespace polyscip {
                                          new_facet, compare_facet_ptr);
         incident_facets_.insert(upper_it, std::move(new_facet));
         auto h = calculateCombinationValue(non_obs, obs, outcome, outcome_is_ray);
-        assert (SCIPisGE(scip, h, 0.) && SCIPisLE(scip, h, 1.));
+        assert (SCIPisGT(scip, h, 0.) && SCIPisLT(scip, h, 1.));
         if (outcome_is_ray) // shift combination towards non-obsolete vertex
             h += 1e-7;
         weight_ = calculateWeightCombination(non_obs->weight_, obs->weight_, h);
