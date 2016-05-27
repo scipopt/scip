@@ -1,6 +1,10 @@
-check/check.sh
 check/check.awk
 check/evalcheck.sh
+check/evalcheck_cluster.sh
+check/getlastprob.awk
+check/configuration_logfiles.sh
+check/configuration_set.sh
+check/configuration_tmpfile_setup_scip.sh
 check/getlastprob.awk
 check/locks/
 check/results/
