@@ -1697,7 +1697,7 @@ SCIP_RETCODE SCIPincludeBranchruleRelpscost(
 
    SCIP_CALL( SCIPaddBoolParam(scip, "branching/relpscost/dynamicweights",
          "should the weights of the branching rule be adjusted dynamically during solving based on objective and infeasible leaf counters?",
-         &branchruledata->randinitorder, TRUE, DEFAULT_DYNAMICWEIGHTS,
+         &branchruledata->dynamicweights, TRUE, DEFAULT_DYNAMICWEIGHTS,
          NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip, "branching/relpscost/startrandseed", "start seed for random number generation",
          &branchruledata->startrandseed, TRUE, DEFAULT_STARTRANDSEED, 0, INT_MAX, NULL, NULL) );
