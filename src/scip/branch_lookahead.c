@@ -64,53 +64,81 @@ struct SCIP_BranchruleData
 
 /* put your local methods here, and declare them static */
 
-static SCIP_Bool executeBranchingOnUpperBound(
+/* TODO CS: reduce to the needed checks and "return" (via parameter?) the objective value and the pruning status */
+static SCIP_RETCODE executeBranchingOnUpperBound(
    SCIP* scip,
-   SCIP_VAR* fixedvar,
-   SCIP_Real fixedvarsol,
-   SCIP_LPSOLSTAT* solstatdown,
-   SCIP_Real* downobjval
+   SCIP_VAR* branchingvar,
+   SCIP_Real branchingvarsolvalue,
+   SCIP_Real* objval,
+   SCIP_Bool* cutoff
    )
 {
-   SCIP_Bool downinf;
    SCIP_Bool lperror;
+   SCIP_LPSOLSTAT solstat;
 
    SCIP_CALL( SCIPnewProbingNode(scip) );
-   SCIP_CALL( SCIPchgVarUbProbing(scip, fixedvar, SCIPfeasFloor(scip, fixedvarsol)) );
+   SCIP_CALL( SCIPchgVarUbProbing(scip, branchingvar, SCIPfeasFloor(scip, branchingvarsolvalue)) );
 
-   SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, &downinf) );
-   *solstatdown = SCIPgetLPSolstat(scip);
-   /* ASK CS: why downinf == 0? wouldn't only !downinf be clearer? or at least downinf == FALSE*/
-   lperror = lperror || (*solstatdown == SCIP_LPSOLSTAT_NOTSOLVED && downinf == 0) ||
-         (*solstatdown == SCIP_LPSOLSTAT_ITERLIMIT) || (*solstatdown == SCIP_LPSOLSTAT_TIMELIMIT);
-   assert(*solstatdown != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+   SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, cutoff) );
+   solstat = SCIPgetLPSolstat(scip);
+
+   lperror = lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && *cutoff == 0) ||
+         (solstat == SCIP_LPSOLSTAT_ITERLIMIT) || (solstat == SCIP_LPSOLSTAT_TIMELIMIT);
+   assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
 
    if( !lperror )
    {
-      *downobjval = SCIPgetLPObjval(scip);
-      downinf = downinf || SCIPisGE(scip, *downobjval, SCIPgetCutoffbound(scip));
-      assert(((solstatdown != SCIP_LPSOLSTAT_INFEASIBLE) && (solstatdown != SCIP_LPSOLSTAT_OBJLIMIT)) || downinf);
+      *objval = SCIPgetLPObjval(scip);
+      *cutoff = *cutoff || SCIPisGE(scip, *objval, SCIPgetCutoffbound(scip));
+      assert(((solstat != SCIP_LPSOLSTAT_INFEASIBLE) && (solstat != SCIP_LPSOLSTAT_OBJLIMIT)) || *cutoff);
    }
-   return lperror;
+   return SCIP_OKAY;
 }
 
-static SCIP_RETCODE selectVarLookaheadBranching(
+/* TODO CS: reduce to the needed checks and "return" (via parameter?) the objective value and the pruning status */
+static SCIP_Bool executeBranchingOnLowerBound(
+   SCIP* scip,
+   SCIP_VAR* fixedvar,
+   SCIP_Real fixedvarsol,
+   SCIP_Real* upobjval,
+   SCIP_Bool* cutoff
+   )
+{
+   SCIP_Bool lperror;
+   SCIP_LPSOLSTAT solstat;
+
+   SCIP_CALL( SCIPnewProbingNode(scip) );
+   SCIP_CALL( SCIPchgVarLbProbing(scip, fixedvar, SCIPfeasCeil(scip, fixedvarsol)) );
+
+   SCIP_CALL( SCIPsolveProbingLP(scip, -1, &lperror, cutoff) );
+   solstat = SCIPgetLPSolstat(scip);
+
+   lperror = lperror || (solstat == SCIP_LPSOLSTAT_NOTSOLVED && *cutoff == 0) ||
+         (solstat == SCIP_LPSOLSTAT_ITERLIMIT) || (solstat == SCIP_LPSOLSTAT_TIMELIMIT);
+   assert(solstat != SCIP_LPSOLSTAT_UNBOUNDEDRAY);
+
+   if( !lperror )
+   {
+      *upobjval = SCIPgetLPObjval(scip);
+      *cutoff = *cutoff || SCIPisGE(scip, *upobjval, SCIPgetCutoffbound(scip));
+      assert(((solstat != SCIP_LPSOLSTAT_INFEASIBLE) && (solstat != SCIP_LPSOLSTAT_OBJLIMIT)) || *cutoff);
+   }
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE selectVarLookaheadBranching(
    SCIP*          scip,    /**< original SCIP data structure */
    SCIP_RESULT*   result   /**< pointer to store results of branching */){
 
    SCIP_VAR** fixvars;
-   SCIP_VAR** deepfixvars;
-   SCIP_LPSOLSTAT solstatdown;
-   SCIP_LPSOLSTAT deepsolstatdown;
    SCIP_Real downobjval;
-   SCIP_Real deepdownobjval;
+   SCIP_Bool downcutoff;
+   SCIP_Real upobjval;
+   SCIP_Bool upcutoff;
    SCIP_Real fixvarssol;
-   SCIP_Real deepfixvarssol;
-   SCIP_Bool lperror;
    int nfixvars;
-   int deepnfixvars;
    int i;
-   int j;
 
    assert(scip != NULL);
 
@@ -131,44 +159,89 @@ static SCIP_RETCODE selectVarLookaheadBranching(
 
       for( i = 0; i < nfixvars; i++ )
       {
+         SCIP_VAR** deepfixvars;
+         SCIP_Real deepdownobjval;
+         SCIP_Bool deepdowncutoff;
+         SCIP_Real deepupobjval;
+         SCIP_Bool deepupcutoff;
+         int deepnfixvars;
+         int j;
+
          assert(fixvars[i] != NULL);
          fixvarssol = SCIPvarGetLPSol(fixvars[i]);
 
          if (SCIPvarGetType(fixvars[i]) == SCIP_VARTYPE_INTEGER && !SCIPisFeasIntegral(scip, fixvarssol))
          {
             /* NOTE CS: Start of the probe branching on x <= floor(x') */
-            lperror = executeBranchingOnUpperBound(scip, fixvars[i], fixvarssol, &solstatdown, &downobjval);
+            SCIP_CALL( executeBranchingOnUpperBound(scip, fixvars[i], fixvarssol, &downobjval, &downcutoff) );
 
-            if( lperror )
+            if( !downcutoff )
             {
-               SCIPdebugMessage("error solving down node probing LP: status=%d\n", solstatdown);
-               break;
-            }
+               deepfixvars = SCIPgetFixedVars(scip);
+               deepnfixvars = SCIPgetNFixedVars(scip);
 
-            deepfixvars = SCIPgetFixedVars(scip);
-            deepnfixvars = SCIPgetNFixedVars(scip);
-
-            if( deepnfixvars != 0 )
-            {
-               for( j = 0; j < deepnfixvars; j++ )
+               if( deepnfixvars != 0 )
                {
-                  assert( deepfixvars != NULL );
-                  deepfixvarssol = SCIPvarGetLPSol(deepfixvars[j]);
-
-                  if (SCIPvarGetType(deepfixvars[j]) == SCIP_VARTYPE_INTEGER && !SCIPisFeasIntegral(scip, deepfixvarssol) )
+                  for( j = 0; j < deepnfixvars; j++ )
                   {
-                     /* NOTE CS: Start of the probe branching on x <= floor(x') and y <= floor(y') */
-                     lperror = executeBranchingOnUpperBound(scip, deepfixvars[j], deepfixvarssol, &deepsolstatdown, &deepdownobjval);
+                     SCIP_Real deepfixvarssol;
 
-                     if( lperror )
+                     assert( deepfixvars != NULL );
+                     deepfixvarssol = SCIPvarGetLPSol(deepfixvars[j]);
+
+                     if (SCIPvarGetType(deepfixvars[j]) == SCIP_VARTYPE_INTEGER && !SCIPisFeasIntegral(scip, deepfixvarssol) )
                      {
-                        /* ASk CS:  up or down?*/
-                        SCIPdebugMessage("error solving down node probing LP: status=%d\n", deepsolstatdown);
-                        break;
+                        /* NOTE CS: Start of the probe branching on x <= floor(x') and y <= floor(y') */
+                        SCIP_CALL( executeBranchingOnUpperBound(scip, deepfixvars[j], deepfixvarssol, &deepdownobjval, &deepdowncutoff) );
+
+                        /* go back one layer (we are currently in depth 2) */
+                        SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
+
+                        /* NOTE CS: Start of the probe branching on x <= floor(x') and y >= ceil(y') */
+                        SCIP_CALL( executeBranchingOnUpperBound(scip, deepfixvars[j], deepfixvarssol, &deepupobjval, &deepupcutoff) );
+
+                        /* go back one layer (we are currently in depth 2) */
+                        SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
                      }
                   }
                }
             }
+            SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
+
+            SCIP_CALL( executeBranchingOnLowerBound(scip, fixvars[i], fixvarssol, &upobjval, &upcutoff) );
+
+            if( !upcutoff )
+            {
+               deepfixvars = SCIPgetFixedVars(scip);
+               deepnfixvars = SCIPgetNFixedVars(scip);
+
+               if( deepnfixvars != 0 )
+               {
+                  for( j = 0; j < deepnfixvars; j++ )
+                  {
+                     SCIP_Real deepfixvarssol;
+
+                     assert( deepfixvars != NULL );
+                     deepfixvarssol = SCIPvarGetLPSol(deepfixvars[j]);
+
+                     if (SCIPvarGetType(deepfixvars[j]) == SCIP_VARTYPE_INTEGER && !SCIPisFeasIntegral(scip, deepfixvarssol) )
+                     {
+                        /* NOTE CS: Start of the probe branching on x >= ceil(x') and y <= floor(y') */
+                        SCIP_CALL( executeBranchingOnUpperBound(scip, deepfixvars[j], deepfixvarssol, &deepdownobjval, &deepdowncutoff) );
+
+                        /* go back one layer (we are currently in depth 2) */
+                        SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
+
+                        /* NOTE CS: Start of the probe branching on x >= ceil(x') and y >= ceil(y') */
+                        SCIP_CALL( executeBranchingOnUpperBound(scip, deepfixvars[j], deepfixvarssol, &deepupobjval, &deepupcutoff) );
+
+                        /* go back one layer (we are currently in depth 2) */
+                        SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
+                     }
+                  }
+               }
+            }
+            SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
          }
       }
 
