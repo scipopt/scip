@@ -117,24 +117,39 @@ namespace polyscip {
 
     SCIP_RETCODE Polyscip::initWeightSpace() {
         SCIP_CALL( computeUnitWeightOutcomes() ); // computes optimal outcomes for all unit weights
-        auto v_presentation = computeVRepresentation();
+        if (polyscip_status_ == PolyscipStatus::InitPhase) {
+            if (supported_.empty()) {
+                polyscip_status_ = PolyscipStatus::Finished;
+            }
+            else {
+                auto v_presentation = computeVRepresentation();
+                //polyscip_status_ = PolyscipStatus::WeightSpacePhase;
+            }
+        }
         return SCIP_OKAY;
     }
 
     vector<pair<WeightType, ValueType>> Polyscip::computeVRepresentation() const {
-        auto h_rep = vector<pair<OutcomeType ,ValueType>> {};
-        for (const auto& bounded : supported_)
-            h_rep.push_back({bounded.second, -1.});
-        for (const auto& unbounded : unbounded_)
-            h_rep.push_back({unbounded.second, 0.});
-        auto current_v_rep = getInitialVRepresentation(h_rep.back());
-        h_rep.pop_back();
+        auto current_v_rep = getInitialVRepresentation(supported_.front().second);
+
         return current_v_rep;
     };
 
-    vector<pair<WeightType, ValueType>> Polyscip::getInitialVRepresentation(const pair<OutcomeType, ValueType>& inequality) const {
+    vector<pair<WeightType, ValueType>> getExtendedVRepresentation(vector<pair<WeightType, ValueType>> v_rep, const OutcomeType& outcome, bool outcome_is_ray) {
+        return v_rep;
+    };
+
+
+
+    vector<pair<WeightType, ValueType>> Polyscip::getInitialVRepresentation(const OutcomeType& bounded) const {
         auto v_rep = vector<pair<WeightType, ValueType>> {};
-        
+        v_rep.emplace_back({(no_objs_,0),-1.});
+        assert (bounded.size() == no_objs_);
+        for (std::size_t i=0; i<bounded.size(); ++i) {
+            auto ray = WeightType(no_objs_,0);
+            ray[i] = 1.;
+            v_rep.push_back({ray,bounded[i]});
+        }
         return v_rep;
     };
 

@@ -82,7 +82,16 @@ namespace polyscip {
 
         std::vector<std::pair<WeightType, ValueType>> computeVRepresentation() const;
 
-        std::vector<std::pair<WeightType, ValueType>> getInitialVRepresentation(const std::pair<OutcomeType, ValueType>& inequality) const;
+        /** Computes initial v-representation for the following h-representation:
+         * 1) inequality.first \cdot (w_1,...,w_k) - a >= 0
+         * 2) w_1 >= 0
+         * ...
+         * k+1) w_k >= 0
+         * @return V-representation
+         */
+        std::vector<std::pair<WeightType, ValueType>> getInitialVRepresentation(const OutcomeType& bounded) const;
+
+        std::vector<std::pair<WeightType, ValueType>> getExtendedVRepresentation(std::vector<std::pair<WeightType, ValueType>> v_rep, const OutcomeType& outcome, bool outcome_is_ray = false);
 
         /** Computes the supported solutions/rays and corresponding non-dominated points */
         SCIP_RETCODE computeSupported();
