@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -65,6 +65,31 @@ SCIP_RETCODE ensureSolsSize(
    return SCIP_OKAY;
 }
 
+/** ensures, that partialsols array can store at least num entries */
+static
+SCIP_RETCODE ensurePartialsolsSize(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   int                   num                 /**< minimum number of entries to store */
+   )
+{
+   assert(primal->npartialsols <= primal->partialsolssize);
+
+   if( num > primal->partialsolssize )
+   {
+      int newsize;
+
+      newsize = SCIPsetCalcMemGrowSize(set, num);
+      newsize = MIN(newsize, set->limit_maxorigsol);
+
+      SCIP_ALLOC( BMSreallocMemoryArray(&primal->partialsols, newsize) );
+      primal->partialsolssize = newsize;
+   }
+   assert(num <= primal->partialsolssize);
+
+   return SCIP_OKAY;
+}
+
 /** ensures, that existingsols array can store at least num entries */
 static
 SCIP_RETCODE ensureExistingsolsSize(
@@ -97,11 +122,14 @@ SCIP_RETCODE SCIPprimalCreate(
 
    SCIP_ALLOC( BMSallocMemory(primal) );
    (*primal)->sols = NULL;
+   (*primal)->partialsols = NULL;
    (*primal)->existingsols = NULL;
    (*primal)->currentsol = NULL;
    (*primal)->primalray = NULL;
    (*primal)->solssize = 0;
+   (*primal)->partialsolssize = 0;
    (*primal)->nsols = 0;
+   (*primal)->npartialsols = 0;
    (*primal)->existingsolssize = 0;
    (*primal)->nexistingsols = 0;
    (*primal)->nsolsfound = 0;
@@ -142,9 +170,15 @@ SCIP_RETCODE SCIPprimalFree(
    {
       SCIP_CALL( SCIPsolFree(&(*primal)->sols[s], blkmem, *primal) );
    }
+   /* free partial CIP solutions */
+   for( s = 0; s < (*primal)->npartialsols; ++s )
+   {
+      SCIP_CALL( SCIPsolFree(&(*primal)->partialsols[s], blkmem, *primal) );
+   }
    assert((*primal)->nexistingsols == 0);
 
    BMSfreeMemoryArrayNull(&(*primal)->sols);
+   BMSfreeMemoryArrayNull(&(*primal)->partialsols);
    BMSfreeMemoryArrayNull(&(*primal)->existingsols);
    BMSfreeMemory(primal);
 
@@ -329,7 +363,7 @@ SCIP_RETCODE SCIPprimalUpdateObjlimit(
    SCIP_SET*             set,                /**< global SCIP settings */
    SCIP_STAT*            stat,               /**< problem statistics data */
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
-   SCIP_PROB*            transprob,          /**< tranformed problem data */
+   SCIP_PROB*            transprob,          /**< transformed problem data */
    SCIP_PROB*            origprob,           /**< original problem data */
    SCIP_TREE*            tree,               /**< branch and bound tree */
    SCIP_REOPT*           reopt,              /**< reoptimization data structure */
@@ -679,6 +713,7 @@ SCIP_RETCODE primalAddOrigSol(
    assert(prob != NULL);
    assert(sol != NULL);
    assert(0 <= insertpos && insertpos < set->limit_maxorigsol);
+   assert(!set->reopt_enable);
 
    SCIPdebugMessage("insert primal solution candidate %p with obj %g at position %d:\n", (void*)sol, SCIPsolGetOrigObj(sol), insertpos);
 
@@ -708,6 +743,38 @@ SCIP_RETCODE primalAddOrigSol(
 
    SCIPdebugMessage(" -> stored at position %d of %d solutions, found %" SCIP_LONGINT_FORMAT " solutions\n",
       insertpos, primal->nsols, primal->nsolsfound);
+
+   return SCIP_OKAY;
+}
+
+/** adds primal solution to solution storage */
+static
+SCIP_RETCODE primalAddOrigPartialSol(
+   SCIP_PRIMAL*          primal,             /**< primal data */
+   BMS_BLKMEM*           blkmem,             /**< block memory */
+   SCIP_SET*             set,                /**< global SCIP settings */
+   SCIP_PROB*            prob,               /**< original problem data */
+   SCIP_SOL*             sol                 /**< primal CIP solution */
+   )
+{
+   assert(primal != NULL);
+   assert(set != NULL);
+   assert(prob != NULL);
+   assert(sol != NULL);
+
+   if( primal->npartialsols >= set->limit_maxorigsol )
+   {
+      SCIPerrorMessage("Cannot add partial solution to storage: limit reached.\n");
+      return SCIP_INVALIDCALL;
+   }
+
+   SCIPdebugMessage("insert partial solution candidate %p:\n", (void*)sol);
+
+   /* allocate memory for solution storage */
+   SCIP_CALL( ensurePartialsolsSize(primal, set, primal->npartialsols+1) );
+
+   primal->partialsols[primal->npartialsols] = sol;
+   ++primal->npartialsols;
 
    return SCIP_OKAY;
 }
@@ -985,7 +1052,7 @@ SCIP_Bool origsolOfInterest(
    /* find insert position for the solution */
    (*insertpos) = primalSearchOrigSolPos(primal, sol);
 
-   if( (*insertpos) < set->limit_maxorigsol && !primalExistsOrigSol(primal, set, stat, origprob, sol, *insertpos) )
+   if( !set->reopt_enable && (*insertpos) < set->limit_maxorigsol && !primalExistsOrigSol(primal, set, stat, origprob, sol, *insertpos) )
       return TRUE;
 
    return FALSE;
@@ -1013,12 +1080,22 @@ SCIP_RETCODE SCIPprimalAddSol(
    int insertpos;
 
    assert(primal != NULL);
-   assert(transprob != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(messagehdlr != NULL);
+   assert(stat != NULL);
    assert(origprob != NULL);
+   assert(transprob != NULL);
+   assert(tree != NULL);
+   assert(lp != NULL);
+   assert(eventqueue != NULL);
+   assert(eventfilter != NULL);
    assert(sol != NULL);
    assert(stored != NULL);
 
    insertpos = -1;
+
+   assert(!SCIPsolIsPartial(sol));
 
    if( solOfInterest(primal, set, stat, origprob, transprob, sol, &insertpos, &replace) )
    {
@@ -1118,17 +1195,32 @@ SCIP_RETCODE SCIPprimalAddOrigSol(
    int insertpos;
 
    assert(primal != NULL);
+   assert(blkmem != NULL);
+   assert(set != NULL);
+   assert(stat != NULL);
    assert(sol != NULL);
    assert(SCIPsolIsOriginal(sol));
    assert(stored != NULL);
 
    insertpos = -1;
 
-   if( origsolOfInterest(primal, set, stat, prob, sol, &insertpos) )
+   if( SCIPsolIsPartial(sol) )
+   {
+      SCIP_SOL* solcopy;
+
+      /* create a copy of the solution */
+      SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
+
+      SCIP_CALL( primalAddOrigPartialSol(primal, blkmem, set, prob, solcopy) );
+
+      *stored = TRUE;
+   }
+   else if( origsolOfInterest(primal, set, stat, prob, sol, &insertpos) )
    {
       SCIP_SOL* solcopy;
 
       assert(insertpos >= 0 && insertpos < set->limit_maxorigsol);
+      assert(!set->reopt_enable);
 
       /* create a copy of the solution */
       SCIP_CALL( SCIPsolCopy(&solcopy, blkmem, set, stat, primal, sol) );
@@ -1165,9 +1257,20 @@ SCIP_RETCODE SCIPprimalAddOrigSolFree(
 
    insertpos = -1;
 
-   if( origsolOfInterest(primal, set, stat, prob, *sol, &insertpos) )
+   if( SCIPsolIsPartial(*sol) )
+   {
+      /* insert solution into solution storage */
+      SCIP_CALL( primalAddOrigPartialSol(primal, blkmem, set, prob, *sol) );
+
+      /* clear the pointer, such that the user cannot access the solution anymore */
+      *sol = NULL;
+
+      *stored = TRUE;
+   }
+   else if( origsolOfInterest(primal, set, stat, prob, *sol, &insertpos) )
    {
       assert(insertpos >= 0 && insertpos < set->limit_maxorigsol);
+      assert(!set->reopt_enable);
 
       /* insert solution into solution storage */
       SCIP_CALL( primalAddOrigSol(primal, blkmem, set, prob, *sol, insertpos) );
@@ -1262,10 +1365,10 @@ SCIP_RETCODE SCIPprimalTrySol(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL*             sol,                /**< primal CIP solution */
-   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
-   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was feasible and good enough to keep */
    )
 {
@@ -1330,10 +1433,10 @@ SCIP_RETCODE SCIPprimalTrySolFree(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_SOL**            sol,                /**< pointer to primal CIP solution; is cleared in function call */
-   SCIP_Bool             printreason,        /**< should all the reasons of violations be printed? */
-   SCIP_Bool             checkbounds,        /**< should the bounds of the variables be checked? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< Should all the reasons of violations be printed? */
+   SCIP_Bool             checkbounds,        /**< Should the bounds of the variables be checked? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether solution was feasible and good enough to keep */
    )
 {
@@ -1402,9 +1505,9 @@ SCIP_RETCODE SCIPprimalTryCurrentSol(
    SCIP_EVENTQUEUE*      eventqueue,         /**< event queue */
    SCIP_EVENTFILTER*     eventfilter,        /**< event filter for global (not variable dependent) events */
    SCIP_HEUR*            heur,               /**< heuristic that found the solution (or NULL if it's from the tree) */
-   SCIP_Bool             printreason,        /**< should all reasons of violations be printed? */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
+   SCIP_Bool             printreason,        /**< Should all reasons of violations be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
    SCIP_Bool*            stored              /**< stores whether given solution was good enough to keep */
    )
 {

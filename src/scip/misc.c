@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -20,6 +20,7 @@
  * @author Stefan Heinz
  * @author Michael Winkler
  * @author Kati Wolter
+ * @author Gregor Hendel
  */
 
 /*---+----1----+----2----+----3----+----4----+----5----+----6----+----7----+----8----+----9----+----0----+----1----+----2*/
@@ -41,7 +42,12 @@
 #include "scip/struct_misc.h"
 #endif
 
+/*
+ * methods for statistical tests
+ */
+
 #define SQRTOFTWO                  1.4142136 /**< the square root of 2 with sufficient precision */
+#define SQUARED(x) ((x) * (x))
 
 /**< contains all critical values for a one-sided two sample t-test up to 15 degrees of freedom
  *   a critical value represents a threshold for rejecting the null-hypothesis in hypothesis testing at
@@ -227,6 +233,178 @@ SCIP_Real SCIPnormalCDF(
 
       return 0.5 - erfresult / 2.0;
    }
+}
+
+/*
+ * SCIP regression methods
+ */
+
+/** returns the number of observations of this regression */
+int SCIPregressionGetNObservations(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   assert(regression != NULL);
+
+   return regression->nobservations;
+}
+
+/** return the current slope of the regression */
+SCIP_Real SCIPregressionGetSlope(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   assert(regression != NULL);
+
+   return regression->slope;
+}
+
+/** get the current y-intercept of the regression */
+SCIP_Real SCIPregressionGetIntercept(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   assert(regression != NULL);
+
+   return regression->intercept;
+}
+
+/** recomputes regression coefficients from available observation data */
+static
+void regressionRecompute(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   SCIP_Real xvariance;
+   SCIP_Real yvariance;
+   SCIP_Real squaredsumx;
+   SCIP_Real squaredsumy;
+
+   /* compute variance in x observations */
+   squaredsumx = SQUARED(regression->sumx);
+   squaredsumy = SQUARED(regression->sumy);
+   xvariance = regression->nobservations * regression->sumx2 - squaredsumx;
+   yvariance = regression->nobservations * regression->sumy2 - squaredsumy;
+
+   /* regression coefficients require two or more observations and variance in x */
+   if( regression->nobservations <= 1 || EPSZ(xvariance, 1e-9) )
+   {
+      regression->slope = SCIP_INVALID;
+      regression->intercept = SCIP_INVALID;
+      regression->corrcoef = SCIP_INVALID;
+   }
+   else if( EPSZ(yvariance, 1e-9) )
+   {
+      /* if there is no variance in the y's (but in the x's), the regression line is horizontal with y-intercept through the mean y */
+      regression->slope = 0.0;
+      regression->corrcoef = 0.0;
+      regression->intercept = regression->sumy / regression->nobservations;
+   }
+   else
+   {
+      /* we ruled this case out already, but to please some compilers... */
+      assert(xvariance > 0.0);
+      assert(yvariance > 0.0);
+
+      /* compute slope */
+      regression->slope = (regression->nobservations * regression->sumxy  - regression->sumx * regression->sumy) / xvariance;
+
+      /* compute y-intercept */
+      regression->intercept = (regression->sumy * regression->sumx2  -  regression->sumx * regression->sumxy) / xvariance;
+
+      /* compute empirical correlation coefficient */
+      regression->corrcoef = (regression->sumxy * regression->nobservations - regression->sumx * regression->sumy) /
+         sqrt(xvariance * yvariance);
+   }
+}
+
+/** removes an observation (x,y) from the regression */
+void SCIPregressionRemoveObservation(
+   SCIP_REGRESSION*      regression,         /**< regression data structure */
+   SCIP_Real             x,                  /**< X of observation */
+   SCIP_Real             y                   /**< Y of the observation */
+   )
+{
+   assert(regression != NULL);
+   assert(regression->nobservations > 0);
+
+   /* simply call the reset function in the case of a single remaining observation to avoid numerical troubles */
+   if( regression->nobservations == 1 )
+   {
+      SCIPregressionReset(regression);
+   }
+   else
+   {
+      regression->sumx2 -= SQUARED(x);
+      regression->sumy2 -= SQUARED(y);
+      regression->sumy -= y;
+      regression->sumx -= x;
+      regression->sumxy -= (x * y);
+      --regression->nobservations;
+   }
+
+   /* recompute regression parameters */
+   regressionRecompute(regression);
+}
+
+/** update regression by a new observation (x,y) */
+void SCIPregressionAddObservation(
+   SCIP_REGRESSION*      regression,         /**< regression data structure */
+   SCIP_Real             x,                  /**< X of observation */
+   SCIP_Real             y                   /**< Y of the observation */
+   )
+{
+   assert(regression != NULL);
+
+   ++(regression->nobservations);
+
+   regression->sumx += x;
+   regression->sumx2 += SQUARED(x);
+   regression->sumxy += x * y;
+   regression->sumy += y;
+   regression->sumy2 += SQUARED(y);
+
+   regressionRecompute(regression);
+}
+
+/** reset regression data structure */
+void SCIPregressionReset(
+   SCIP_REGRESSION*      regression          /**< regression data structure */
+   )
+{
+   regression->intercept = SCIP_INVALID;
+   regression->slope = SCIP_INVALID;
+   regression->corrcoef = SCIP_INVALID;
+   regression->sumx = 0;
+   regression->sumx2 = 0;
+   regression->sumxy = 0;
+   regression->sumy = 0;
+   regression->sumy2 = 0;
+   regression->nobservations = 0;
+}
+
+/** creates and resets a regression */
+SCIP_RETCODE SCIPregressionCreate(
+   SCIP_REGRESSION**     regression          /**< regression data structure */
+   )
+{
+   assert(regression != NULL);
+
+   /* allocate necessary memory */
+   SCIP_ALLOC (BMSallocMemory(regression) );
+
+   /* reset the regression */
+   SCIPregressionReset(*regression);
+
+   return SCIP_OKAY;
+}
+
+/** creates and resets a regression */
+void SCIPregressionFree(
+   SCIP_REGRESSION**     regression          /**< regression data structure */
+   )
+{
+   BMSfreeMemory(regression);
 }
 
 /** calculate memory size for dynamically allocated arrays (copied from scip/set.c) */
@@ -2235,7 +2413,7 @@ void SCIPhashmapPrintStatistics(
 /** indicates whether a hash map has no entries */
 SCIP_Bool SCIPhashmapIsEmpty(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-)
+   )
 {
    int i;
    assert(hashmap != NULL);
@@ -2250,7 +2428,7 @@ SCIP_Bool SCIPhashmapIsEmpty(
 /** gives the number of entries in a hash map */ 
 int SCIPhashmapGetNEntries(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-)
+   )
 {
    int count = 0;
    int i;
@@ -2265,7 +2443,7 @@ int SCIPhashmapGetNEntries(
 /** gives the number of lists (buckets) in a hash map */ 
 int SCIPhashmapGetNLists(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-)
+   )
 {
    assert(hashmap != NULL);
 
@@ -2276,7 +2454,7 @@ int SCIPhashmapGetNLists(
 SCIP_HASHMAPLIST* SCIPhashmapGetList(
    SCIP_HASHMAP*         hashmap,            /**< hash map */
    int                   listindex           /**< index of hash map list */
-)
+   )
 {
    assert(hashmap != NULL);
    assert(listindex >= 0);
@@ -2288,7 +2466,7 @@ SCIP_HASHMAPLIST* SCIPhashmapGetList(
 /** gives the number of entries in a list of a hash map */ 
 int SCIPhashmapListGetNEntries(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list, can be NULL */
-)
+   )
 {
    int count = 0;
 
@@ -2301,7 +2479,7 @@ int SCIPhashmapListGetNEntries(
 /** retrieves origin of given entry in a hash map */ 
 void* SCIPhashmapListGetOrigin(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-)
+   )
 {
    assert(hashmaplist != NULL);
 
@@ -2311,7 +2489,7 @@ void* SCIPhashmapListGetOrigin(
 /** retrieves image of given entry in a hash map */ 
 void* SCIPhashmapListGetImage(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-)
+   )
 {
    assert(hashmaplist != NULL);
 
@@ -2321,7 +2499,7 @@ void* SCIPhashmapListGetImage(
 /** retrieves next entry from given entry in a hash map list, or NULL if at end of list. */ 
 SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
    SCIP_HASHMAPLIST*     hashmaplist         /**< hash map list */
-)
+   )
 {
    assert(hashmaplist != NULL);
 
@@ -2331,7 +2509,7 @@ SCIP_HASHMAPLIST* SCIPhashmapListGetNext(
 /** removes all entries in a hash map. */ 
 SCIP_RETCODE SCIPhashmapRemoveAll(
    SCIP_HASHMAP*         hashmap             /**< hash map */
-)
+   )
 {
    int listidx;
 
@@ -6462,6 +6640,7 @@ SCIP_RETCODE SCIPdigraphComputeDirectedComponents(
    assert(nstorednodes == digraph->componentstarts[compidx + 1] - digraph->componentstarts[compidx]);
 
    /* to simplify the iteration over all strongly connected components */
+   assert(*nstrongcomponents < digraph->nnodes + 1);
    strongcompstartidx[*nstrongcomponents] = nstorednodes;
 
    assert(retcode == SCIP_OKAY);

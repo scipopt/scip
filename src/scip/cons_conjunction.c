@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -211,9 +211,9 @@ SCIP_RETCODE checkAllConss(
    SCIP_CONS**           conss,              /**< active conjunction constraints */
    int                   nconss,             /**< number of active conjunction constraints */
    SCIP_SOL*             sol,                /**< solution to check */
-   SCIP_Bool             checkintegrality,   /**< has integrality to be checked? */
-   SCIP_Bool             checklprows,        /**< have current LP rows to be checked? */
-   SCIP_Bool             printreason,        /**< should the reason for the violation be printed? */
+   SCIP_Bool             checkintegrality,   /**< Has integrality to be checked? */
+   SCIP_Bool             checklprows,        /**< Do constraints represented by rows in the current LP have to be checked? */
+   SCIP_Bool             printreason,        /**< Should the reason for the violation be printed? */
    SCIP_RESULT*          result              /**< pointer to store the result */
    )
 {
@@ -237,7 +237,8 @@ SCIP_RETCODE checkAllConss(
 
       if( printreason && *result == SCIP_INFEASIBLE )
       {
-	 SCIPinfoMessage(scip, NULL, "conjunction constraint %s is violated, at least the sub-constraint %s is violated by this given solution\n", SCIPconsGetName(conss[c]), SCIPconsGetName(consdata->conss[i-1]));
+	 SCIPinfoMessage(scip, NULL, "conjunction constraint %s is violated, at least the sub-constraint %s is violated by this given solution\n",
+            SCIPconsGetName(conss[c]), SCIPconsGetName(consdata->conss[i-1]));
 	 SCIPdebug( SCIP_CALL( SCIPprintCons(scip, conss[c], NULL) ) );
       }
    }

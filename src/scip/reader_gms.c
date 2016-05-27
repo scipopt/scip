@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1355,7 +1355,7 @@ SCIP_RETCODE printExpr(
    SCIP_Bool             transformed,        /**< expression belongs to transformed constraint? */
    SCIP_EXPR*            expr,               /**< expression to print */
    SCIP_VAR**            exprvars            /**< variables of expression */
-)
+   )
 {
    char buffer[GMS_MAX_PRINTLEN];
 

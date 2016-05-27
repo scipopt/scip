@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -61,11 +61,14 @@
  * \image html binpacking.png
  * </CENTER>
  *
- * This problem can be formulated as a set covering problem. Therefore, we introduce a binary variable \f$x_{S}\f$ for
- * each feasible packing \f$S\f$. A <b>packing</b> \f$S\f$ is an assignment vector \f$ \lambda_{S}\in\{0,1\}^n \f$ which
- * states the items belonging to that packing. It is <b>feasible</b>, if and only if the total size of the items
-  contained in this assignment is not greater than the given capacity \f$\kappa\f$. Let \f$\mathcal{S}\f$ be the set of
- * all feasible packing, this measns:
+ * This problem can be formulated as a set covering problem as discussed by Gilmore and Gomory in the following two classical papers:
+ * - Gilmore P. C., R. E. Gomory: A linear programming approach to the cutting-stock problem. Operations Research 9 (1961): 849-859.
+ * - Gilmore P. C., R. E. Gomory: A linear programming approach to the cutting-stock problem - Part II. Operations Research 11 (1963): 863-888
+ *
+ * We introduce a binary variable \f$x_{S}\f$ for each feasible packing \f$S\f$. A <b>packing</b> \f$S\f$ is an
+ * assignment vector \f$ \lambda_{S}\in\{0,1\}^n \f$ which states the items belonging to that packing. It is
+ * <b>feasible</b>, if and only if the total size of the items contained in this assignment is not greater than the
+ * given capacity \f$\kappa\f$. Let \f$\mathcal{S}\f$ be the set of all feasible packing, this measns:
  *
  * \f[
  *    \mathcal{S} := \{S\subseteq [n] \mid \sum_{i:i\in S} s_{i} \leq \kappa \}

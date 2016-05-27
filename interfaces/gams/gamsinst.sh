@@ -45,7 +45,7 @@ fi
 # keep backup of current gmscmpun.txt file
 cp -f "$gmscmp" "$gmscmpbak"
 
-awk -vlib="$lib" '
+awk -v lib="$lib" '
 BEGIN {
    fileType      = 111; 
    dictType      = 0; 
@@ -74,7 +74,7 @@ function writeConfig(solverID) {
    written[solverID] = 1;
 }
 
-(/^*/ || /^ *$/) { print $0 }
+(/^\*/ || /^ *$/) { print $0 }
 
 /^DEFAULTS/ {
    for( solverID in written )

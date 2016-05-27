@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -2369,8 +2369,12 @@ SCIP_RETCODE performFixing(
    *infeas = FALSE;
    if( SCIPisUbBetter(scip, val, oldlb, oldub) )
    {
-      /* create next probing node */
-      SCIP_CALL( SCIPnewProbingNode(scip) );
+      /* we only want to open a new probing node if we do not exceed the maximal tree depth */
+      if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+      {
+         /* create next probing node */
+         SCIP_CALL( SCIPnewProbingNode(scip) );
+      }
       SCIP_CALL( SCIPchgVarUbProbing(scip, var, val) );
 
       SCIPdebugMessage("tentatively decreasing upper bound of variable <%s> to %g for probing\n",
@@ -2410,8 +2414,12 @@ SCIP_RETCODE performFixing(
    *infeas = FALSE;
    if( SCIPisLbBetter(scip, val, oldlb, oldub) )
    {
-      /* create next probing node */
-      SCIP_CALL( SCIPnewProbingNode(scip) );
+      /* we only want to open a new probing node if we do not exceed the maximal tree depth */
+      if( SCIPgetDepth(scip) < SCIPgetDepthLimit(scip) )
+      {
+         /* create next probing node */
+         SCIP_CALL( SCIPnewProbingNode(scip) );
+      }
       SCIP_CALL( SCIPchgVarLbProbing(scip, var, val) );
 
       SCIPdebugMessage("tentatively increasing lower bound of variable <%s> to %g for probing\n",

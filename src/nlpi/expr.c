@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -1631,6 +1631,9 @@ SCIP_DECL_EXPRCURV( exprcurvMult )
 
 /** point evaluation for EXPR_DIV */
 static
+#if defined(__GNUC__) && __GNUC__ * 100 + __GNUC_MINOR__ * 10 >= 490
+__attribute__((no_sanitize_undefined))
+#endif
 SCIP_DECL_EXPREVAL( exprevalDiv )
 {   /*lint --e{715}*/
    assert(result  != NULL);
@@ -12467,6 +12470,7 @@ SCIP_RETCODE exprgraphAddExpr(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
    SCIP_EXPR*            expr,               /**< expression to add */
    void**                vars,               /**< variables corresponding to VARIDX expressions */
+   SCIP_Real*            params,             /**< parameter values */
    SCIP_EXPRGRAPHNODE**  exprnode,           /**< buffer to store expression graph node corresponding to root of this expression */
    SCIP_Bool*            exprnodeisnew       /**< buffer to indicate whether the node in *exprnode has been newly created for this expression (otherwise, expression was already in graph) */
    )
@@ -12514,7 +12518,23 @@ SCIP_RETCODE exprgraphAddExpr(
       return SCIP_OKAY;
    }
 
-   /* expression should be variable or constant or have children, i.e., parameters are not allowed here (so far) */
+   if( expr->op == SCIP_EXPR_PARAM )
+   {
+      /* find node corresponding to constant corresponding to parameter and add if not existing yet */
+      assert(expr->nchildren == 0);
+      assert(params != NULL);
+
+      SCIP_CALL( SCIPexprgraphAddConst(exprgraph, params[expr->data.intval], exprnode) );
+      assert(*exprnode != NULL);
+      assert((*exprnode)->op == SCIP_EXPR_CONST);
+      assert((*exprnode)->data.dbl == params[expr->data.intval]);  /*lint !e777*/
+
+      *exprnodeisnew = (*exprnode)->nuses == 0 && (*exprnode)->nparents == 0;
+
+      return SCIP_OKAY;
+   }
+
+   /* expression should be variable or constant or have children */
    assert(expr->nchildren > 0);
 
    /* add children expressions into expression graph
@@ -12524,7 +12544,7 @@ SCIP_RETCODE exprgraphAddExpr(
    nochildisnew = TRUE;
    for( i = 0; i < expr->nchildren; ++i )
    {
-      SCIP_CALL( exprgraphAddExpr(exprgraph, expr->children[i], vars, &childnodes[i], &childisnew) );  /*lint !e644*/
+      SCIP_CALL( exprgraphAddExpr(exprgraph, expr->children[i], vars, params, &childnodes[i], &childisnew) );  /*lint !e644*/
       assert(childnodes[i] != NULL);
       nochildisnew &= !childisnew;  /*lint !e514*/
    }
@@ -14820,9 +14840,9 @@ SCIP_RETCODE SCIPexprgraphCreate(
    SCIP_EXPRGRAPH**      exprgraph,          /**< buffer to store pointer to expression graph */
    int                   varssizeinit,       /**< minimal initial size for variables array, or -1 to choose automatically */
    int                   depthinit,          /**< minimal initial depth of expression graph, or -1 to choose automatically */
-   SCIP_DECL_EXPRGRAPHVARADDED((*exprgraphvaradded)), /** callback method to invoke when a variable has been added to the expression graph, or NULL if not needed */
-   SCIP_DECL_EXPRGRAPHVARREMOVE((*exprgraphvarremove)), /** callback method to invoke when a variable will be removed from the expression graph, or NULL if not needed */
-   SCIP_DECL_EXPRGRAPHVARCHGIDX((*exprgraphvarchgidx)), /** callback method to invoke when a variable changes its index in the expression graph, or NULL if not needed */
+   SCIP_DECL_EXPRGRAPHVARADDED((*exprgraphvaradded)), /**< callback method to invoke when a variable has been added to the expression graph, or NULL if not needed */
+   SCIP_DECL_EXPRGRAPHVARREMOVE((*exprgraphvarremove)), /**< callback method to invoke when a variable will be removed from the expression graph, or NULL if not needed */
+   SCIP_DECL_EXPRGRAPHVARCHGIDX((*exprgraphvarchgidx)), /**< callback method to invoke when a variable changes its index in the expression graph, or NULL if not needed */
    void*                 userdata            /**< user data to pass to callback functions */
    )
 {
@@ -15104,6 +15124,8 @@ SCIP_RETCODE SCIPexprgraphAddConst(
 /** adds sum of expression trees into expression graph
  *
  *  node will also be captured.
+ *
+ *  @note Parameters will be converted into constants
  */
 SCIP_RETCODE SCIPexprgraphAddExprtreeSum(
    SCIP_EXPRGRAPH*       exprgraph,          /**< expression graph */
@@ -15129,7 +15151,7 @@ SCIP_RETCODE SCIPexprgraphAddExprtreeSum(
       assert(exprtrees[0] != NULL);
       assert(exprtrees[0]->vars != NULL || exprtrees[0]->nvars == 0);
 
-      SCIP_CALL( exprgraphAddExpr(exprgraph, exprtrees[0]->root, exprtrees[0]->vars, rootnode, rootnodeisnew) );
+      SCIP_CALL( exprgraphAddExpr(exprgraph, exprtrees[0]->root, exprtrees[0]->vars, exprtrees[0]->params, rootnode, rootnodeisnew) );
    }
    else
    {
@@ -15147,7 +15169,7 @@ SCIP_RETCODE SCIPexprgraphAddExprtreeSum(
          assert(exprtrees[i] != NULL);
          assert(exprtrees[i]->vars != NULL || exprtrees[i]->nvars == 0);
 
-         SCIP_CALL( exprgraphAddExpr(exprgraph, exprtrees[i]->root, exprtrees[i]->vars, &rootnodes[i], &rootnodeisnew_) );  /*lint !e644*/
+         SCIP_CALL( exprgraphAddExpr(exprgraph, exprtrees[i]->root, exprtrees[i]->vars, exprtrees[i]->params, &rootnodes[i], &rootnodeisnew_) );  /*lint !e644*/
          assert(rootnodes[i] != NULL);
          *rootnodeisnew &= rootnodeisnew_;
 

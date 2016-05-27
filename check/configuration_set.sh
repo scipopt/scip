@@ -4,7 +4,7 @@
 #*                  This file is part of the program and library             *
 #*         SCIP --- Solving Constraint Integer Programs                      *
 #*                                                                           *
-#*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            *
+#*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            *
 #*                            fuer Informationstechnik Berlin                *
 #*                                                                           *
 #*  SCIP is distributed under the terms of the ZIB Academic License.         *
@@ -24,6 +24,7 @@
 #    SETCUTOFF - should optimal solution value (from solu file) be passed as objective limit?
 #    SOLUFILE - .solu file for this test set, for parsing optimal solution values
 #    VALGRINDCMD - the valgrind command to use
+#    INSTANCELIST - list of all instances with complete path
 
 # function to capitalize a whole string
 function capitalize {
@@ -35,7 +36,7 @@ function stripversion {
     NAMENOPATH=`basename $1`
     # by '%%', Trim the longest match from the end
     NAMENOVERSION=${NAMENOPATH%%-*}
-    NAMENOVERSION=${NAMENOVERSION%%.*}
+    NAMENOVERSION=${NAMENOVERSION%%\.*}
     echo $NAMENOVERSION
 }
 
@@ -77,11 +78,20 @@ then
     mkdir $SCIPPATH/../settings
 fi
 
+# figure out the correct settings file extension
+if test $BINNAME = cplex
+then
+    SETEXTEXTENSION="prm"
+else
+    SETEXTEXTENSION="set"
+fi
+
+
 # check if all settings files exist
 SETTINGSLIST=(${SETNAMES//,/ })
 for SETNAME in ${SETTINGSLIST[@]}
 do
-    SETTINGS=$SCIPPATH/../settings/$SETNAME.set
+    SETTINGS="${SCIPPATH}/../settings/${SETNAME}.${SETEXTEXTENSION}"
     if test $SETNAME != "default" && test ! -e $SETTINGS
     then
         echo Skipping test since the settings file $SETTINGS does not exist.
@@ -89,18 +99,19 @@ do
     fi
 done
 
-# if cutoff should be passed, check for solu file
+SOLUFILE=""
+for SOLU in testset/$TSTNAME.solu testset/all.solu
+do
+    if test -e $SOLU
+    then
+        SOLUFILE=$SOLU
+        break
+    fi
+done
+
+# if cutoff should be passed, solu file must exist
 if test $SETCUTOFF = 1
 then
-    SOLUFILE=""
-    for SOLU in testset/$TSTNAME.solu testset/all.solu
-    do
-        if test -e $SOLU
-        then
-            SOLUFILE=$SOLU
-            break
-        fi
-    done
     if test $SOLUFILE = ""
     then
         echo "Skipping test: SETCUTOFF=1 set, but no .solu file (testset/$TSTNAME.solu or testset/all.solu) available"
@@ -159,4 +170,22 @@ then
     POSSIBLEPATHS="${POSSIBLEPATHS} `cat paths.txt`"
 fi
 POSSIBLEPATHS="${POSSIBLEPATHS} / DONE"
-echo $POSSIBLEPATHS
+# echo $POSSIBLEPATHS
+
+INSTANCELIST=""
+for INSTANCE in `cat testset/$TSTNAME.test`
+do
+    # check if problem instance exists
+    for IPATH in ${POSSIBLEPATHS[@]}
+    do
+        #echo $IPATH
+        if test "$IPATH" = "DONE"
+        then
+            echo "input file $INSTANCE not found!"
+        elif test -f $IPATH/$INSTANCE
+        then
+            INSTANCELIST="${INSTANCELIST} ${IPATH}/${INSTANCE}"
+            break
+        fi
+    done
+done

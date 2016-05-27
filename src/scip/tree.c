@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -47,7 +47,6 @@
 #include "lpi/lpi.h"
 
 
-#define MAXDEPTH          65535  /**< maximal depth level for nodes; must correspond to node data structure */
 #define MAXREPROPMARK       511  /**< maximal subtree repropagation marker; must correspond to node data structure */
 
 
@@ -4448,6 +4447,21 @@ SCIP_RETCODE SCIPnodeFocus(
          SCIP_CALL( treeNodesToQueue(tree, reopt, blkmem, set, stat, eventqueue, lp, tree->siblings, &tree->nsiblings, tree->focuslpstatefork,
                primal->cutoffbound) );
 
+         /* encounter an early backtrack if there is a child which does not exceed given reference bound */
+         if( !SCIPsetIsInfinity(set, stat->referencebound) )
+         {
+            int c;
+
+            /* loop over children and stop if we find a child with a lower bound below given reference bound */
+            for( c = 0; c < tree->nchildren; ++c )
+            {
+               if( SCIPsetIsLT(set, SCIPnodeGetLowerbound(tree->children[c]), stat->referencebound) )
+               {
+                  ++stat->nearlybacktracks;
+                  break;
+               }
+            }
+         }
          /* move children to the queue, make them LEAFs */
          SCIP_CALL( treeNodesToQueue(tree, reopt, blkmem, set, stat, eventqueue, lp, tree->children, &tree->nchildren, childrenlpstatefork,
                primal->cutoffbound) );
@@ -5415,7 +5429,7 @@ SCIP_RETCODE SCIPtreeBranchVar(
          /* create child nodes with x <= x'-1, x = x', and x >= x'+1 */
          assert(SCIPsetIsEQ(set, SCIPsetFeasCeil(set, val), SCIPsetFeasFloor(set, val)));
 
-         fixval = val;
+         fixval = SCIPsetFeasCeil(set, val); /* get rid of numerical issues */
 
          /* create child node with x <= x'-1, if this would be feasible */
          if( SCIPsetIsFeasGE(set, fixval-1.0, lb) )
@@ -6978,6 +6992,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPnodeGetEstimate
 #undef SCIPnodeGetDomchg
 #undef SCIPnodeGetParent
+#undef SCIPnodeGetConssetchg
 #undef SCIPnodeIsActive
 #undef SCIPnodeIsPropagatedAgain
 #undef SCIPtreeGetNLeaves
@@ -6985,6 +7000,7 @@ SCIP_Real SCIPtreeGetAvgLowerbound(
 #undef SCIPtreeGetNSiblings
 #undef SCIPtreeGetNNodes
 #undef SCIPtreeIsPathComplete
+#undef SCIPtreeGetDepthLimit
 #undef SCIPtreeProbing
 #undef SCIPtreeGetProbingRoot
 #undef SCIPtreeGetProbingDepth
@@ -7219,7 +7235,7 @@ void SCIPnodeGetDualBoundchgs(
                                               *   if this is larger than the array size, arrays should be reallocated and method
                                               *   should be called again */
    int                   varssize            /**< available slots in arrays */
-)
+   )
 {  /*lint --e{641}*/
    SCIP_BOUNDCHG* boundchgs;
    int nboundchgs;
@@ -7778,6 +7794,16 @@ SCIP_Bool SCIPnodeIsPropagatedAgain(
    return node->reprop;
 }
 
+/* returns the set of changed constraints for a particular node */
+SCIP_CONSSETCHG* SCIPnodeGetConssetchg(
+   SCIP_NODE*            node                /**< node data */
+   )
+{
+   assert(node != NULL);
+
+   return node->conssetchg;
+}
+
 /** gets number of children of the focus node */
 int SCIPtreeGetNChildren(
    SCIP_TREE*            tree                /**< branch and bound tree */
@@ -7968,6 +7994,16 @@ int SCIPtreeGetCurrentDepth(
       || tree->path[tree->focusnode->depth] == tree->focusnode);
 
    return tree->pathlen-1;
+}
+
+/** gets the maximal allowed tree depth */
+int SCIPtreeGetDepthLimit(
+   SCIP_TREE*            tree                /**< branch and bound tree */
+   )
+{
+   assert(tree != NULL);
+
+   return (int)MAXDEPTH;
 }
 
 /** returns, whether the LP was or is to be solved in the current node */

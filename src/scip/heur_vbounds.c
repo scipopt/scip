@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -358,9 +358,7 @@ SCIP_RETCODE applyVboundsFixings(
    )
 {
    SCIP_VAR* var;
-   SCIP_RETCODE retcode;
    SCIP_BOUNDTYPE bound;
-   SCIP_Bool newnode = TRUE;
    int v;
 
    /* for each variable in topological order: start at best bound (MINIMIZE: neg coeff --> ub, pos coeff: lb) */
@@ -384,15 +382,10 @@ SCIP_RETCODE applyVboundsFixings(
       if( obj && ((SCIPvarGetObj(var) >= 0) == (bound == SCIP_BOUNDTYPE_LOWER)) )
          continue;
 
-      if( newnode )
+      /* only open a new probing node if we will not exceed the maximal tree depth */
+      if( SCIPgetDepthLimit(scip) > SCIPgetDepth(scip) )
       {
-         retcode = SCIPnewProbingNode(scip);
-         if( retcode == SCIP_MAXDEPTHLEVEL )
-            newnode = FALSE;
-         else
-         {
-            SCIP_CALL( retcode );
-         }
+         SCIP_CALL( SCIPnewProbingNode(scip) );
       }
 
       *lastvar = var;
@@ -553,12 +546,15 @@ SCIP_RETCODE applyVbounds(
 
    if( !SCIPisLPConstructed(scip) && solvelp )
    {
-      SCIP_Bool nodecutoff;
+      SCIP_Bool cutoff;
 
-      SCIP_CALL( SCIPconstructLP(scip, &nodecutoff) );
-      SCIP_CALL( SCIPflushLP(scip) );
-      if( nodecutoff )
+      SCIP_CALL( SCIPconstructLP(scip, &cutoff) );
+
+      /* return if infeasibility was detected during LP construction */
+      if( cutoff )
          return SCIP_OKAY;
+
+      SCIP_CALL( SCIPflushLP(scip) );
    }
 
 

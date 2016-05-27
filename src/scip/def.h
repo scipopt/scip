@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -23,6 +23,9 @@
 #ifndef __SCIP_DEF_H__
 #define __SCIP_DEF_H__
 
+#ifdef __cplusplus
+#define __STDC_LIMIT_MACROS
+#endif
 
 #include <stdio.h>
 #include <stdint.h>
@@ -83,9 +86,9 @@ extern "C" {
 #endif
 
 
-#define SCIP_VERSION                320 /**< SCIP version number (multiplied by 100 to get integer number) */
-#define SCIP_SUBVERSION               1 /**< SCIP sub version number */
-#define SCIP_COPYRIGHT   "Copyright (c) 2002-2015 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
+#define SCIP_VERSION                321 /**< SCIP version number (multiplied by 100 to get integer number) */
+#define SCIP_SUBVERSION               2 /**< SCIP sub version number */
+#define SCIP_COPYRIGHT   "Copyright (c) 2002-2016 Konrad-Zuse-Zentrum fuer Informationstechnik Berlin (ZIB)"
 
 
 /*

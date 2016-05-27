@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -749,7 +749,7 @@ SCIP_DECL_CONFLICTEXEC(conflictExecIndicator)
          SCIPdebugMessage("Generated logicor conflict constraint.\n");
 
          /* create a logicor constraint out of the conflict set */
-         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%"SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
+         (void) SCIPsnprintf(consname, SCIP_MAXSTRLEN, "cf%d_%" SCIP_LONGINT_FORMAT, SCIPgetNRuns(scip), SCIPgetNConflictConssApplied(scip));
          SCIP_CALL( SCIPcreateConsLogicor(scip, &cons, consname, nbdchginfos, vars, 
                FALSE, separate, FALSE, FALSE, TRUE, local, FALSE, dynamic, removable, FALSE) );
          SCIP_CALL( SCIPaddConsNode(scip, node, cons, validnode) );
@@ -855,8 +855,8 @@ SCIP_DECL_PARAMCHGD(paramChangedIndicator)
 #ifdef SCIP_ENABLE_IISCHECK
 /** Check that indicator constraints corresponding to nonnegative entries in @a vector are infeasible in original problem
  *
- *  This function will probably fail if the has been presolved by the cons_linear presolver - to
- *  make it complete we would have to substitute active variables.
+ *  @note This function will probably fail if the has been presolved by the cons_linear presolver. To make it complete
+ *  we would have to substitute active variables.
  */
 static
 SCIP_RETCODE checkIIS(
@@ -866,6 +866,7 @@ SCIP_RETCODE checkIIS(
    SCIP_Real*            vector              /**< vector */
    )
 {
+   SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_CONSHDLR* conshdlr;
    SCIP_HASHMAP* varhash;   /* hash map from variable to column index in auxiliary LP */
    SCIP_LPI* lp;
@@ -880,6 +881,9 @@ SCIP_RETCODE checkIIS(
    /* now check indicator constraints */
    conshdlr = SCIPfindConshdlr(scip, "indicator");
    assert( conshdlr != NULL );
+
+   conshdlrdata = SCIPconshdlrGetData(conshdlr);
+   assert( conshdlrdata != NULL );
 
    conss = SCIPconshdlrGetConss(conshdlr);
    nconss = SCIPconshdlrGetNConss(conshdlr);
@@ -911,8 +915,8 @@ SCIP_RETCODE checkIIS(
          int matbeg;
          int* matind;
          SCIP_Real* matval;
-         SCIP_VAR** newVars;
-         int nNewVars;
+         SCIP_VAR** newvars;
+         int nnewvars;
          SCIP_Real lhs;
          SCIP_Real rhs;
          int cnt;
@@ -964,17 +968,17 @@ SCIP_RETCODE checkIIS(
          assert( SCIPisInfinity(scip, -linlhs) || SCIPisInfinity(scip, linrhs) );
          if ( SCIPisInfinity(scip, linrhs) )
          {
-            linrhs = linlhs;
+            linrhs = -linlhs;
             assert( linrhs > -SCIPinfinity(scip) );
             sign = -1.0;
          }
 
          SCIP_CALL( SCIPallocBufferArray(scip, &matind, 4*nlinvars) );
          SCIP_CALL( SCIPallocBufferArray(scip, &matval, 4*nlinvars) );
-         SCIP_CALL( SCIPallocBufferArray(scip, &newVars, nlinvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &newvars, nlinvars) );
 
          /* set up row */
-         nNewVars = 0;
+         nnewvars = 0;
          for (v = 0; v < nlinvars; ++v)
          {
             SCIP_VAR* var;
@@ -995,28 +999,28 @@ SCIP_RETCODE checkIIS(
                nvars++;
 
                /* store new variables */
-               newVars[nNewVars++] = var;
+               newvars[nnewvars++] = var;
             }
             assert( SCIPhashmapExists(varhash, var) );
          }
 
          /* add new columns */
-         if ( nNewVars > 0 )
+         if ( nnewvars > 0 )
          {
             SCIP_Real* lb;
             SCIP_Real* ub;
             SCIP_Real* obj;
             char** colnames;
 
-            SCIP_CALL( SCIPallocBufferArray(scip, &lb, nNewVars) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &ub, nNewVars) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &obj, nNewVars) );
-            SCIP_CALL( SCIPallocBufferArray(scip, &colnames, nNewVars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &lb, nnewvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &ub, nnewvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &obj, nnewvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &colnames, nnewvars) );
 
-            for (v = 0; v < nNewVars; ++v)
+            for (v = 0; v < nnewvars; ++v)
             {
                SCIP_VAR* var;
-               var = newVars[v];
+               var = newvars[v];
                obj[v] = 0.0;
                lb[v] = SCIPvarGetLbLocal(var);
                ub[v] = SCIPvarGetUbLocal(var);
@@ -1025,9 +1029,9 @@ SCIP_RETCODE checkIIS(
             }
 
             /* now add columns */
-            SCIP_CALL( SCIPlpiAddCols(lp, nNewVars, obj, lb, ub, colnames, 0, NULL, NULL, NULL) );
+            SCIP_CALL( SCIPlpiAddCols(lp, nnewvars, obj, lb, ub, colnames, 0, NULL, NULL, NULL) );
 
-            for (v = nNewVars - 1; v >= 0; --v)
+            for (v = nnewvars - 1; v >= 0; --v)
             {
                SCIPfreeBufferArray(scip, &(colnames[v]));
             }
@@ -1064,7 +1068,7 @@ SCIP_RETCODE checkIIS(
 
          SCIPfreeBufferArray(scip, &matind);
          SCIPfreeBufferArray(scip, &matval);
-         SCIPfreeBufferArray(scip, &newVars);
+         SCIPfreeBufferArray(scip, &newvars);
 
          assert( slackvar != NULL );
          if ( SCIPvarGetStatus(slackvar) == SCIP_VARSTATUS_AGGREGATED )
@@ -1075,17 +1079,144 @@ SCIP_RETCODE checkIIS(
       }
    }
 
+   /* possibly handle additional linear constraints */
+   if ( conshdlrdata->useotherconss )
+   {
+      /* get all linear constraints */
+      conss = SCIPgetConss(scip);
+      nconss = SCIPgetNConss(scip);
+
+      /* loop through constraints */
+      for (c = 0; c < nconss; ++c)
+      {
+         SCIP_CONS* cons;
+         SCIP_VAR** linvars;
+         SCIP_Real* linvals;
+         SCIP_Real linrhs;
+         SCIP_Real linlhs;
+         SCIP_Real* matval;
+         SCIP_VAR** newvars;
+         int nnewvars = 0;
+         int* matind;
+         int nlinvars;
+         int matbeg = 0;
+         int cnt = 0;
+         int v;
+
+         cons = conss[c];
+         assert( cons != NULL );
+
+         /* avoid non-active, local constraints */
+         if ( ! SCIPconsIsEnabled(cons) || ! SCIPconsIsActive(cons) || SCIPconsIsLocal(cons) )
+            continue;
+
+         /* check type of constraint (only take linear constraints) */
+         if ( strcmp(SCIPconshdlrGetName(SCIPconsGetHdlr(cons)), "linear") != 0 )
+            continue;
+
+         /* avoid adding linear constraints that correspond to indicator constraints */
+         if ( strncmp(SCIPconsGetName(cons), "indlin", 6) == 0 )
+            continue;
+
+         /* get data of linear constraint */
+         linvars = SCIPgetVarsLinear(scip, cons);
+         linvals = SCIPgetValsLinear(scip, cons);
+         nlinvars = SCIPgetNVarsLinear(scip, cons);
+         linlhs = SCIPgetLhsLinear(scip, cons);
+         linrhs = SCIPgetRhsLinear(scip, cons);
+
+         /* reserve space */
+         SCIP_CALL( SCIPallocBufferArray(scip, &matind, 4*nlinvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &matval, 4*nlinvars) );
+         SCIP_CALL( SCIPallocBufferArray(scip, &newvars, nlinvars) );
+
+         /* collect possibly new variables */
+         for (v = 0; v < nlinvars; ++v)
+         {
+            SCIP_VAR* var;
+            var = linvars[v];
+            assert( var != NULL );
+
+            /* if variable is new */
+            if ( ! SCIPhashmapExists(varhash, var) )
+            {
+               /* add variable in map */
+               SCIP_CALL( SCIPhashmapInsert(varhash, var, (void*) (size_t) nvars) );
+               assert( nvars == (int) (size_t) SCIPhashmapGetImage(varhash, var) );
+               /* SCIPdebugMessage("Inserted variable <%s> into hashmap (%d).\n", SCIPvarGetName(var), nvars); */
+               nvars++;
+
+               /* store new variables */
+               newvars[nnewvars++] = var;
+            }
+            assert( SCIPhashmapExists(varhash, var) );
+         }
+
+         /* add new columns */
+         if ( nnewvars > 0 )
+         {
+            SCIP_Real* lb;
+            SCIP_Real* ub;
+            SCIP_Real* obj;
+            char** colnames;
+
+            SCIP_CALL( SCIPallocBufferArray(scip, &lb, nnewvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &ub, nnewvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &obj, nnewvars) );
+            SCIP_CALL( SCIPallocBufferArray(scip, &colnames, nnewvars) );
+
+            for (v = 0; v < nnewvars; ++v)
+            {
+               SCIP_VAR* var;
+               var = newvars[v];
+               obj[v] = 0.0;
+               lb[v] = SCIPvarGetLbLocal(var);
+               ub[v] = SCIPvarGetUbLocal(var);
+               SCIP_CALL( SCIPallocBufferArray(scip, &(colnames[v]), SCIP_MAXSTRLEN) ); /*lint !e866*/
+               (void) SCIPsnprintf(colnames[v], SCIP_MAXSTRLEN, "%s", SCIPvarGetName(var));
+            }
+
+            /* now add columns */
+            SCIP_CALL( SCIPlpiAddCols(lp, nnewvars, obj, lb, ub, colnames, 0, NULL, NULL, NULL) );
+
+            for (v = nnewvars - 1; v >= 0; --v)
+            {
+               SCIPfreeBufferArray(scip, &(colnames[v]));
+            }
+            SCIPfreeBufferArray(scip, &colnames);
+            SCIPfreeBufferArray(scip, &obj);
+            SCIPfreeBufferArray(scip, &ub);
+            SCIPfreeBufferArray(scip, &lb);
+         }
+
+         /* set up row */
+         for (v = 0; v < nlinvars; ++v)
+         {
+            SCIP_VAR* var;
+            var = linvars[v];
+            assert( var != NULL );
+
+            assert( SCIPhashmapExists(varhash, var) );
+            matind[cnt] = (int) (size_t) SCIPhashmapGetImage(varhash, var);
+            matval[cnt] = linvals[v];
+            ++cnt;
+         }
+
+         /* add new row */
+         SCIP_CALL( SCIPlpiAddRows(lp, 1, &linlhs, &linrhs, NULL, cnt, &matbeg, matind, matval) );
+
+         SCIPfreeBufferArray(scip, &matind);
+         SCIPfreeBufferArray(scip, &matval);
+         SCIPfreeBufferArray(scip, &newvars);
+      }
+   }
+
    /* solve LP and check status */
    SCIP_CALL( SCIPlpiSolvePrimal(lp) );
 
    if ( ! SCIPlpiIsPrimalInfeasible(lp) )
    {
-      SCIP_CONSHDLRDATA* conshdlrdata;
-
       SCIPerrorMessage("Detected IIS is not infeasible in original problem!\n");
-
-      conshdlrdata = SCIPconshdlrGetData(conshdlr);
-      assert( conshdlrdata != NULL );
 
       SCIP_CALL( SCIPlpiWriteLP(lp, "check.lp") );
       SCIP_CALL( SCIPlpiWriteLP(conshdlrdata->altlp, "altdebug.lp") );
@@ -2491,20 +2622,16 @@ SCIP_RETCODE checkAltLPInfeasible(
       else
          retcode = SCIPlpiSolveDual(lp);    /* use dual simplex */
 
+      /* reset parameters */
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
+      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
+
       if ( retcode == SCIP_LPERROR )
       {
-         /* reset parameters */
-         SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
-         SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
-
          *error = TRUE;
          return SCIP_OKAY;
       }
       SCIP_CALL( retcode );
-
-      /* reset parameters */
-      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, FALSE) );
-      SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
    }
 
    /* check whether we want to ignore the result, because the condition number is too large */
@@ -2539,9 +2666,10 @@ SCIP_RETCODE checkAltLPInfeasible(
     * If we ran the dual simplex algorithm, then we run again with the primal simplex
     */
    if ( ! SCIPlpiIsPrimalInfeasible(lp) && ! SCIPlpiIsPrimalUnbounded(lp) &&
-        ! SCIPlpiIsOptimal(lp) && SCIPlpiExistsPrimalRay(lp) && !primal )
+        ! SCIPlpiIsOptimal(lp) && SCIPlpiExistsPrimalRay(lp) && ! primal )
    {
       SCIPwarningMessage(scip, "The dual simplex produced a primal ray. Retrying with primal ...\n");
+
       /* the following settings might be changed: */
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_FROMSCRATCH, TRUE) );
       SCIP_CALL_PARAM( SCIPlpiSetIntpar(lp, SCIP_LPPAR_PRESOLVING, TRUE) );
@@ -2560,6 +2688,7 @@ SCIP_RETCODE checkAltLPInfeasible(
    {
       assert( ! SCIPlpiIsPrimalUnbounded(lp) );   /* can't be unbounded or optimal */
       assert( ! SCIPlpiIsOptimal(lp) );           /* if it is infeasible! */
+
       *infeasible = TRUE;                         /* LP is infeasible */
       return SCIP_OKAY;
    }
@@ -2571,13 +2700,10 @@ SCIP_RETCODE checkAltLPInfeasible(
       {
          /* We have a status different from unbounded or optimal. This should not be the case ... */
          if (primal)
-         {
             SCIPwarningMessage(scip, "Primal simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
-         }
          else
-         {
             SCIPwarningMessage(scip, "Dual simplex returned with unknown status: %d\n", SCIPlpiGetInternalStatus(lp));
-         }
+
          /* SCIP_CALL( SCIPlpiWriteLP(lp, "debug.lp") ); */
          *error = TRUE;
          return SCIP_OKAY;
@@ -2615,6 +2741,7 @@ SCIP_RETCODE extendToCover(
    SCIP_Real*            value,              /**< objective value of S */
    SCIP_Bool*            chgupperbound,      /**< Has the upper bound been changed? */
    SCIP_Bool*            error,              /**< output: whether an error occured */
+   SCIP_Bool*            cutoff,             /**< whether we detected a cutoff by an infeasible inequality */
    int*                  nGen                /**< number of generated cuts */
    )
 {
@@ -2633,10 +2760,12 @@ SCIP_RETCODE extendToCover(
    assert( value != NULL );
    assert( chgupperbound != NULL );
    assert( error != NULL );
+   assert( cutoff != NULL );
    assert( nGen != NULL );
 
    *chgupperbound = FALSE;
    *error = FALSE;
+   *cutoff = FALSE;
    *nGen = 0;
 
    SCIP_CALL( SCIPlpiGetNCols(lp, &nCols) );
@@ -2764,10 +2893,10 @@ SCIP_RETCODE extendToCover(
          norm = 1.0; /*lint !e527*/
       }
 
-      /* update new set S */
       SCIPdebugMessage("   size: %4d  add %4d with objective value %6g and alt-LP solution value %-8.4g  (IIS size: %4d, eff.: %g).\n",
          *size, candidate, candObj, primsol[SCIPconsGetData(conss[candidate])->colindex], sizeIIS, (sum - (SCIP_Real) (sizeIIS - 1))/norm);
 
+      /* update new set S */
       S[candidate] = TRUE;
       ++(*size);
       *value += candObj;
@@ -2845,7 +2974,6 @@ SCIP_RETCODE extendToCover(
          else
          {
             SCIP_ROW* row;
-            SCIP_Bool rowinfeasible;
 
             /* create row */
 #ifdef SCIP_DEBUG
@@ -2882,8 +3010,12 @@ SCIP_RETCODE extendToCover(
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, &rowinfeasible) );
-            assert( ! rowinfeasible );
+            SCIP_CALL( SCIPaddCut(scip, sol, row, FALSE, cutoff) );
+            if ( *cutoff )
+            {
+               SCIPfreeBufferArray(scip, &primsol);
+               return SCIP_OKAY;
+            }
 
             /* cut should be violated: */
             assert( SCIPisFeasNegative(scip, SCIPgetRowSolFeasibility(scip, row, sol)) );
@@ -3709,8 +3841,9 @@ SCIP_RETCODE enforceCuts(
    SCIP_CONS**           conss,              /**< indicator constraints */
    SCIP_SOL*             sol,                /**< solution to be enforced */
    SCIP_Bool             genlogicor,         /**< whether logicor constraint should be generated */
+   SCIP_Bool*            cutoff,             /**< whether we detected a cutoff by an infeasible inequality */
    int*                  nGen                /**< number of cuts generated */
-)
+   )
 {
    SCIP_CONSHDLRDATA* conshdlrdata;
    SCIP_LPI* lp;
@@ -3725,9 +3858,11 @@ SCIP_RETCODE enforceCuts(
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
+   assert( cutoff != NULL );
    assert( nGen != NULL );
 
    SCIPdebugMessage("Enforcing via cuts ...\n");
+   *cutoff = FALSE;
    *nGen = 0;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -3781,7 +3916,7 @@ SCIP_RETCODE enforceCuts(
    error = FALSE;
    do
    {
-      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, genlogicor, nconss, conss, S, &size, &value, &chgupperbound, &error, &nCuts) );
+      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, genlogicor, nconss, conss, S, &size, &value, &chgupperbound, &error, cutoff, &nCuts) );
 
       /* update upper bound */
       if ( chgupperbound )
@@ -3789,7 +3924,7 @@ SCIP_RETCODE enforceCuts(
          SCIP_CALL( updateObjUpperbound(scip, conshdlr, conshdlrdata) );
       }
    }
-   while ( chgupperbound && nCuts == 0 && ! error );
+   while ( chgupperbound && nCuts == 0 && ! error && ! (*cutoff) );
    *nGen = nCuts;
 
    /* return with an error if no cuts have been produced and and error occured in extendToCover() */
@@ -3921,9 +4056,17 @@ SCIP_RETCODE enforceIndicators(
    /* if some constraint has a linear constraint that is not active, we need to check feasibility via the alternative polyhedron */
    if ( (someLinconsNotActive || conshdlrdata->enforcecuts) && conshdlrdata->sepaalternativelp )
    {
+      SCIP_Bool cutoff;
       int ngen;
 
-      SCIP_CALL( enforceCuts(scip, conshdlr, nconss, conss, NULL, genlogicor, &ngen) );
+      SCIP_CALL( enforceCuts(scip, conshdlr, nconss, conss, NULL, genlogicor, &cutoff, &ngen) );
+      if ( cutoff )
+      {
+         conshdlrdata->niiscutsgen += ngen;
+         *result = SCIP_CUTOFF;
+         return SCIP_OKAY;
+      }
+
       if ( ngen > 0 )
       {
          conshdlrdata->niiscutsgen += ngen;
@@ -4007,6 +4150,7 @@ SCIP_RETCODE separateIISRounding(
    int                   nconss,             /**< number of constraints */
    SCIP_CONS**           conss,              /**< indicator constraints */
    int                   maxsepacuts,        /**< maximal number of cuts to be generated */
+   SCIP_Bool*            cutoff,             /**< whether we detected a cutoff by an infeasible inequality */
    int*                  nGen                /**< number of domain changes */
    )
 { /*lint --e{850}*/
@@ -4022,11 +4166,13 @@ SCIP_RETCODE separateIISRounding(
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( conss != NULL );
+   assert( cutoff != NULL );
    assert( nGen != NULL );
 
    if ( *nGen >= maxsepacuts )
       return SCIP_OKAY;
 
+   *cutoff = FALSE;
    rounds = 0;
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
@@ -4061,8 +4207,8 @@ SCIP_RETCODE separateIISRounding(
 
    /* loop through the possible thresholds */
    for (threshold = conshdlrdata->roundingmaxthres;
-        rounds < conshdlrdata->maxroundingrounds && threshold >= conshdlrdata->roundingminthres && *nGen < maxsepacuts;
-        threshold -= conshdlrdata->roundingoffset)
+        rounds < conshdlrdata->maxroundingrounds && threshold >= conshdlrdata->roundingminthres && *nGen < maxsepacuts && ! (*cutoff);
+        threshold -= conshdlrdata->roundingoffset )
    {
       SCIP_Bool chgupperbound = FALSE;
       SCIP_Real value = 0.0;
@@ -4150,7 +4296,7 @@ SCIP_RETCODE separateIISRounding(
       SCIP_CALL( fixAltLPVariables(scip, lp, nconss, conss, S) );
 
       /* extend set S to a cover and generate cuts */
-      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, conshdlrdata->genlogicor, nconss, conss, S, &size, &value, &chgupperbound, &error, &nCuts) );
+      SCIP_CALL( extendToCover(scip, conshdlr, conshdlrdata, lp, sol, conshdlrdata->removable, conshdlrdata->genlogicor, nconss, conss, S, &size, &value, &chgupperbound, &error, cutoff, &nCuts) );
 
       /* we ignore errors in extendToCover */
       if ( nCuts > 0 )
@@ -4530,6 +4676,7 @@ SCIP_RETCODE separateIndicators(
    /* separate cuts from the alternative lp (if required) */
    if ( conshdlrdata->sepaalternativelp && ncuts < SEPAALTTHRESHOLD )
    {
+      SCIP_Bool cutoff;
       int noldcuts;
 
       SCIPdebugMessage("Separating inequalities for indicator constraints.\n");
@@ -4539,10 +4686,12 @@ SCIP_RETCODE separateIndicators(
          *result = SCIP_DIDNOTFIND;
 
       /* start separation */
-      SCIP_CALL( separateIISRounding(scip, conshdlr, sol, nconss, conss, maxsepacuts, &ncuts) );
+      SCIP_CALL( separateIISRounding(scip, conshdlr, sol, nconss, conss, maxsepacuts, &cutoff, &ncuts) );
       SCIPdebugMessage("Separated %d cuts from indicator constraints.\n", ncuts - noldcuts);
 
-      if ( ncuts > noldcuts )
+      if ( cutoff )
+         *result = SCIP_CUTOFF;
+      else if ( ncuts > noldcuts )
       {
          conshdlrdata->niiscutsgen += ncuts;
 
@@ -4914,6 +5063,9 @@ SCIP_DECL_CONSEXIT(consExitIndicator)
 
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
 
+   if ( conshdlrdata->binvarhash != NULL )
+      SCIPhashmapFree(&conshdlrdata->binvarhash);
+
    SCIPfreeBlockMemoryArrayNull(scip, &conshdlrdata->addlincons, conshdlrdata->maxaddlincons);
    conshdlrdata->maxaddlincons = 0;
    conshdlrdata->naddlincons = 0;
@@ -4966,6 +5118,10 @@ SCIP_DECL_CONSINITSOL(consInitsolIndicator)
    assert( scip != NULL );
    assert( conshdlr != NULL );
    assert( strcmp(SCIPconshdlrGetName(conshdlr), CONSHDLR_NAME) == 0 );
+
+   if ( SCIPgetStatus(scip) == SCIP_STATUS_OPTIMAL || SCIPgetStatus(scip) == SCIP_STATUS_INFEASIBLE ||
+        SCIPgetStatus(scip) == SCIP_STATUS_UNBOUNDED || SCIPgetStatus(scip) == SCIP_STATUS_INFORUNBD )
+      return SCIP_OKAY;
 
    SCIPdebugMessage("Initsol for indicator constraints.\n");
 
@@ -5283,13 +5439,14 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
 
    if ( conshdlrdata->sepaalternativelp )
    {
-      assert( conshdlrdata->altlp != NULL || nconss == 0 );
-      assert( conshdlrdata->slackhash != NULL );
-
+      if ( conshdlrdata->slackhash != NULL )
+      {
 #ifdef SCIP_DEBUG
-      SCIPinfoMessage(scip, NULL, "\nStatistics for slack hash:\n");
-      SCIPhashmapPrintStatistics(conshdlrdata->slackhash, SCIPgetMessagehdlr(scip));
+         SCIPinfoMessage(scip, NULL, "\nStatistics for slack hash:\n");
+         SCIPhashmapPrintStatistics(conshdlrdata->slackhash, SCIPgetMessagehdlr(scip));
 #endif
+         SCIPhashmapFree(&conshdlrdata->slackhash);
+      }
 
       if ( conshdlrdata->altlp != NULL )
       {
@@ -5300,8 +5457,6 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
 #ifdef SCIP_DEBUG
          SCIPinfoMessage(scip, NULL, "\nStatistics for var hash:\n");
          SCIPhashmapPrintStatistics(conshdlrdata->varhash, SCIPgetMessagehdlr(scip));
-         SCIPinfoMessage(scip, NULL, "\nStatistics for slack hash:\n");
-         SCIPhashmapPrintStatistics(conshdlrdata->slackhash, SCIPgetMessagehdlr(scip));
          SCIPinfoMessage(scip, NULL, "\nStatistics for lower bound hash:\n");
          SCIPhashmapPrintStatistics(conshdlrdata->lbhash, SCIPgetMessagehdlr(scip));
          SCIPinfoMessage(scip, NULL, "\nStatistics for upper bound hash:\n");
@@ -5327,9 +5482,13 @@ SCIP_DECL_CONSEXITSOL(consExitsolIndicator)
             consdata->colindex = -1;
          }
       }
-      SCIPhashmapFree(&conshdlrdata->slackhash);
-      if ( conshdlrdata->binvarhash != NULL )
-         SCIPhashmapFree(&conshdlrdata->binvarhash);
+   }
+   else
+   {
+      assert( conshdlrdata->slackhash == NULL );
+      assert( conshdlrdata->varhash == NULL );
+      assert( conshdlrdata->lbhash == NULL );
+      assert( conshdlrdata->ubhash == NULL );
    }
 
    return SCIP_OKAY;
@@ -5629,7 +5788,7 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
          {
             consdata->slacktypechecked = TRUE;
             /* check if slack variable can be made implicit integer. */
-            if ( SCIPvarGetType(consdata->slackvar) != SCIP_VARTYPE_IMPLINT )
+            if ( SCIPvarGetType(consdata->slackvar) == SCIP_VARTYPE_CONTINUOUS )
             {
                SCIP_Real* vals;
                SCIP_VAR** vars;
@@ -5659,9 +5818,24 @@ SCIP_DECL_CONSPRESOL(consPresolIndicator)
                if ( j == nvars && foundslackvar )
                {
                   SCIP_Bool infeasible;
+                  SCIP_Real lb;
+                  SCIP_Real ub;
 
-                  SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
-                  /* don't assert feasibility here because the presolver should detect infeasibility */
+                  lb = SCIPvarGetLbGlobal(consdata->slackvar);
+                  ub = SCIPvarGetUbGlobal(consdata->slackvar);
+                  if ( (SCIPisInfinity(scip, -lb) || SCIPisIntegral(scip, lb)) && (SCIPisInfinity(scip, ub) || SCIPisIntegral(scip, ub)) )
+                  {
+                     SCIP_CALL( SCIPchgVarType(scip, consdata->slackvar, SCIP_VARTYPE_IMPLINT, &infeasible) );
+                     /* don't assert feasibility here because the presolver should detect infeasibility */
+                  }
+                  else
+                  {
+                     /* It can happen that the bounds of the slack variable have been changed to be non-integral in
+                      * previous presolving steps. We then might get a problem with tightening the bounds. In this case,
+                      * we just leave the slack variable to be continuous. */
+                     SCIPdebugMessage("Cannot change type of slack variable (<%s>) to IMPLINT, since global bound is non-integral: (%g, %g).\n",
+                        SCIPvarGetName(consdata->slackvar), SCIPvarGetLbGlobal(consdata->slackvar), SCIPvarGetUbGlobal(consdata->slackvar));
+                  }
                }
             }
          }
@@ -5728,6 +5902,8 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
+   *infeasible = FALSE;
+
    /* check whether coupling constraints should be added */
    if ( ! conshdlrdata->addcoupling )
       return SCIP_OKAY;
@@ -5739,7 +5915,7 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
    SCIPdebugMessage("Handle initial rows for %d indicator constraints.\n", nconss);
 
    /* check each constraint */
-   for (c = 0; c < nconss; ++c)
+   for (c = 0; c < nconss && !(*infeasible); ++c)
    {
       SCIP_CONSDATA* consdata;
       SCIP_Real ub;
@@ -5786,7 +5962,6 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
          else
          {
             SCIP_ROW* row;
-            SCIP_Bool infeasible;
 
             SCIP_CALL( SCIPcreateEmptyRowCons(scip, &row, conshdlr, name, -SCIPinfinity(scip), ub, FALSE, FALSE, FALSE) );
             SCIP_CALL( SCIPcacheRowExtensions(scip, row) );
@@ -5799,10 +5974,12 @@ SCIP_DECL_CONSINITLP(consInitlpIndicator)
 #ifdef SCIP_OUTPUT
             SCIP_CALL( SCIPprintRow(scip, row, NULL) );
 #endif
-            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, &infeasible) );
-            assert( ! infeasible );
+            SCIP_CALL( SCIPaddCut(scip, NULL, row, FALSE, infeasible) );
 
-            SCIP_CALL( SCIPaddPoolCut(scip, row) );
+            if( !(*infeasible) )
+            {
+               SCIP_CALL( SCIPaddPoolCut(scip, row) );
+            }
             SCIP_CALL( SCIPreleaseRow(scip, &row));
          }
       }
@@ -5923,12 +6100,11 @@ SCIP_DECL_CONSCHECK(consCheckIndicator)
    conshdlrdata = SCIPconshdlrGetData(conshdlr);
    assert( conshdlrdata != NULL );
 
-   /* copy solution if it makes sense (will send solution to trysol heuristic in any case (see below) */
+   /* try to repair solution below, if it makes sense (will send solution to trysol heuristic in any case (see below) */
    if ( SCIPgetStage(scip) > SCIP_STAGE_PROBLEM && SCIPgetStage(scip) < SCIP_STAGE_SOLVED && conshdlrdata->trysolutions && conshdlrdata->heurtrysol != NULL )
    {
       SCIP_CALL( SCIPcreateSolCopy(scip, &trysol, sol) );
       assert( trysol != NULL );
-      SCIP_CALL( SCIPunlinkSol(scip, trysol) );
    }
 
    /* check each constraint */
@@ -7804,10 +7980,15 @@ SCIP_RETCODE SCIPmakeIndicatorFeasible(
             SCIP_CALL( SCIPsetSolVal(scip, sol, slackvar, val) );
             *changed = TRUE;
          }
-         if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+         /* check whether binary variable is fixed or its negated variable is fixed */
+         if ( SCIPvarGetStatus(binvar) != SCIP_VARSTATUS_FIXED &&
+            ( SCIPvarGetStatus(binvar) != SCIP_VARSTATUS_NEGATED || SCIPvarGetStatus(SCIPvarGetNegationVar(binvar)) != SCIP_VARSTATUS_FIXED ) )
          {
-            SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
-            *changed = TRUE;
+            if ( ! SCIPisFeasEQ(scip, SCIPgetSolVal(scip, sol, binvar), 0.0) )
+            {
+               SCIP_CALL( SCIPsetSolVal(scip, sol, binvar, 0.0) );
+               *changed = TRUE;
+            }
          }
       }
       else

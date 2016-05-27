@@ -3,7 +3,7 @@
 /*                  This file is part of the program and library             */
 /*         SCIP --- Solving Constraint Integer Programs                      */
 /*                                                                           */
-/*    Copyright (C) 2002-2015 Konrad-Zuse-Zentrum                            */
+/*    Copyright (C) 2002-2016 Konrad-Zuse-Zentrum                            */
 /*                            fuer Informationstechnik Berlin                */
 /*                                                                           */
 /*  SCIP is distributed under the terms of the ZIB Academic License.         */
@@ -209,10 +209,10 @@ SCIP_RETCODE performRelaxSimpleRounding(
    SCIP_VAR** vars;
    SCIP_VAR** relaxcands;
    SCIP_Real* relaxcandssol;
-   int nrelaxcands;
+   int nrelaxcands = 0;
    int nbinvars;
    int nintvars;
-   int nvars;
+   int nbinintvars;
    int v;
 
    /* do not call heuristic if no relaxation solution is available */
@@ -220,21 +220,20 @@ SCIP_RETCODE performRelaxSimpleRounding(
       return SCIP_OKAY;
 
    /* get variables */
-   SCIP_CALL( SCIPgetVarsData(scip, &vars, &nvars, &nbinvars, &nintvars, NULL, NULL) );
-   nvars = nbinvars + nintvars; /* consider integral variables (don't have to care for implicit ints) */
+   SCIP_CALL( SCIPgetVarsData(scip, &vars, NULL, &nbinvars, &nintvars, NULL, NULL) );
+   nbinintvars = nbinvars + nintvars; /* consider binary and integral variables (don't have to care for implicit ints) */
 
    /* get storage */
-   SCIP_CALL( SCIPallocBufferArray(scip, &relaxcands, nvars) );
-   SCIP_CALL( SCIPallocBufferArray(scip, &relaxcandssol, nvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &relaxcands, nbinintvars) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &relaxcandssol, nbinintvars) );
 
    /* get fractional variables, that should be integral */
-   nrelaxcands = 0;
-   for (v = 0; v < nvars; ++v)
+   for (v = 0; v < nbinintvars; ++v)
    {
       SCIP_Real val;
 
       val = SCIPgetRelaxSolVal(scip, vars[v]);
-      if ( ! SCIPisFeasZero(scip, val) )
+      if ( ! SCIPisFeasIntegral(scip, val) )
       {
          relaxcands[nrelaxcands] = vars[v];
          relaxcandssol[nrelaxcands++] = val;
@@ -354,7 +353,7 @@ SCIP_DECL_HEURINITSOL(heurInitsolSimplerounding)
    assert(heurdata != NULL);
    heurdata->lastlp = -1;
 
-   /* change the heuristic's timingmask, if nit should be called only once per node */
+   /* change the heuristic's timingmask, if it should be called only once per node */
    if( heurdata->oncepernode )
       SCIPheurSetTimingmask(heur, SCIP_HEURTIMING_AFTERLPNODE);
 
@@ -405,14 +404,14 @@ SCIP_DECL_HEUREXEC(heurExecSimplerounding) /*lint --e{715}*/
    if( heurdata->nroundablevars == -1  || heurtiming == SCIP_HEURTIMING_DURINGPRICINGLOOP )
    {
       SCIP_VAR** vars;
-      int nvars;
+      int nbinintvars;
       int nroundablevars;
       int i;
 
       vars = SCIPgetVars(scip);
-      nvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
+      nbinintvars = SCIPgetNBinVars(scip) + SCIPgetNIntVars(scip);
       nroundablevars = 0;
-      for( i = 0; i < nvars; ++i )
+      for( i = 0; i < nbinintvars; ++i )
       {
          if( SCIPvarMayRoundDown(vars[i]) || SCIPvarMayRoundUp(vars[i]) )
             nroundablevars++;
