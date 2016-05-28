@@ -65,7 +65,7 @@
 #define DEFAULT_STARTRANDSEED  12345    /**< start random seed for random number generation */
 #define DEFAULT_RANDINITORDER  FALSE    /**< should candidates be initialized in randomized order? */
 #define DEFAULT_USESMALLWEIGHTSITLIM FALSE /**< should smaller weights be used for pseudo cost updates after hitting the LP iteration limit? */
-#define DEFAULT_DYNAMICWEIGHTS FALSE    /**< should the weights of the branching rule be adjusted dynamically during solving based infeasible and objective leaf counters? */
+#define DEFAULT_DYNAMICWEIGHTS TRUE     /**< should the weights of the branching rule be adjusted dynamically during solving based infeasible and objective leaf counters? */
 /** branching rule data */
 struct SCIP_BranchruleData
 {
