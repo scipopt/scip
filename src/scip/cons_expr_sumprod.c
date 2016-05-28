@@ -700,7 +700,9 @@ void SCIPmultiplyConsExprExprSumByConstant(
 }
 
 /** exponentiate given product expr by a constant
- * TODO: should this function create abs children when exponent is fractional and resulting exponent is odd? */
+ * TODO: should this function create abs children when exponent is fractional and resulting exponent is odd?
+ * FIXME: No! Somebody (who?) should have enforced (add a constraint?, change bound, etc) that the child
+ * with fractional exponent is positive */
 void SCIPexponentiateConsExprExprProductByConstant(
    SCIP_CONSEXPR_EXPR*   expr,               /**< sum expression */
    SCIP_Real             exponent            /**< exponent */
