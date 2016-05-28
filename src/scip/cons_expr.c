@@ -793,7 +793,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
          assert(SCIPgetConsExprExprWalkCurrentChild(expr) < expr->nchildren);
 
          child = expr->children[currentchild];
-         expr->children[currentchild] = (SCIP_CONSEXPR_EXPR*)expr->children[currentchild]->walkio.ptrval;
+         SCIP_CALL( SCIPsetConsExprExprChild(scip, expr, currentchild,
+                     (SCIP_CONSEXPR_EXPR*)expr->children[currentchild]->walkio.ptrval) );
 
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &child) );
 
@@ -5122,6 +5123,26 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
    depth = -1;
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, dismantleExpr, dismantleExpr, NULL, dismantleExpr, &depth) );
    assert(depth == -1);
+
+   return SCIP_OKAY;
+}
+
+/** overwrites/replaces a child of an expressions
+ * @note: in the future this function will need the SCIP pointer and to return a RETCODE; delete this note when it does
+ * and don't forget to delete it from the .h as well */
+SCIP_RETCODE SCIPsetConsExprExprChild(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression which is going to replace a child */
+   int                     childidx,         /**< index of child being replaced */
+   SCIP_CONSEXPR_EXPR*     newchild          /**< the new child */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(newchild != NULL);
+   assert(childidx < SCIPgetConsExprExprNChildren(expr));
+
+   expr->children[childidx] = newchild;
 
    return SCIP_OKAY;
 }

@@ -607,6 +607,16 @@ SCIP_RETCODE SCIPdismantleConsExprExpr(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr              /**< expression to dismantle */
    );
+
+/** overwrites/replaces a child of an expressions
+ * @note: in the future this function will need the SCIP pointer and to return a RETCODE; delete this note when it does
+ * and don't forget to delete it from the .h as well */
+SCIP_RETCODE SCIPsetConsExprExprChild(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression which is going to replace a child */
+   int                     childidx,         /**< index of child being replaced */
+   SCIP_CONSEXPR_EXPR*     newchild          /**< the new child */
+   );
 /** @} */
 
 #ifdef __cplusplus
