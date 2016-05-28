@@ -1451,6 +1451,8 @@ SCIP_RETCODE simplifyPower(
       SCIP_CALL( createExprNode(scip, base, exponent, simplifiedpower) );
       return SCIP_OKAY;
    }
+   /* round exponent so that is actually an integer */
+   exponent = SCIPround(scip, exponent);
 
    /* enforces SP6
     * (base)^0 return empty list, which is the same as value 1
@@ -1529,6 +1531,7 @@ SCIP_RETCODE simplifyPower(
  * and include them in unsimplifiedchildren for further processing.
  * note: if tomerge has more than one element, then they are the children of a simplified product expression;
  * it can contain products, but only because they are acting as powers!
+ * TODO: this function and mergeSumExprlist are very similar... merge them?
  */
 static
 SCIP_RETCODE mergeProductExprlist(SCIP* scip, EXPRNODE* tomerge, EXPRNODE** finalchildren, EXPRNODE** unsimplifiedchildren)
