@@ -1887,8 +1887,8 @@ SCIP_RETCODE SCIPsimplifyConsExprExprProduct(
  */
 
 /** compare expressions
- *
- * The given expressions are assumed to be simplified.
+ * returns -1, 0 or 1 if expr1 <, =, > expr2 respectively.
+ * @note: The given expressions are assumed to be simplified.
  */
 int SCIPcompareConsExprExprs(
    SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
