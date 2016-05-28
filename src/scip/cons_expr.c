@@ -681,7 +681,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
    return SCIP_OKAY;
 }
 
-/* prints structure a la Maple's dismantle */
+/** prints structure a la Maple's dismantle */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
 {
@@ -695,7 +695,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
          int nspaces;
          const char* type;
 
-         depth = (int *)data;
+         depth = (int*)data;
          ++*depth;
          nspaces = 3 * *depth;
          type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
@@ -721,16 +721,16 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
          int nspaces;
          const char* type;
 
-         depth = (int *)data;
+         depth = (int*)data;
          nspaces = 3 * *depth;
          type = SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr));
 
-         if(strcmp(type, "sum") == 0)
+         if( strcmp(type, "sum") == 0 )
          {
             printf("%*s   ", nspaces, "");
             printf("[coef]: %g\n", SCIPgetConsExprExprSumCoefs(expr)[SCIPgetConsExprExprWalkCurrentChild(expr)]);
          }
-         else if(strcmp(type, "prod") == 0)
+         else if( strcmp(type, "prod") == 0 )
          {
             printf("%*s   ", nspaces, "");
             printf("[expo]: %g\n", SCIPgetConsExprExprProductExponents(expr)[SCIPgetConsExprExprWalkCurrentChild(expr)]);
@@ -741,7 +741,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(dismantleExpr)
       {
          int* depth;
 
-         depth = (int *)data;
+         depth = (int*)data;
          --*depth;
          break;
       }
@@ -775,7 +775,8 @@ SCIP_RETCODE SCIPsimplifyConsExprExprProduct(
 
 /** expression walk callback to simplify an expression
  * simplifies bottom up; when leaving an expression it simplifies it and stores the simplified expr in its walkio ptr;
- * after the child was visited, it is replaced with the simpified expr*/
+ * after the child was visited, it is replaced with the simpified expr
+ */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
 {
@@ -850,7 +851,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
  * ============================================
  * Definition of simplified expressions
  * ============================================
- * An expression is simplified if
+ * An expression is simplified if it
  * - is a value expression
  * - is a var expression
  * - is a product expression such that
@@ -964,7 +965,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
  *    return expr->exprhdlr->simplify(expr)
  * end
  *
- * Important: Whatever is returned by a simplify callback **has** to be symplified.
+ * Important: Whatever is returned by a simplify callback **has** to be simplified.
  * Also, all children of the given expression **are** already simplified
  *
  * Here is an outline of the algorithm for simplifying sum expressions:
@@ -981,9 +982,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
  *    1. if child's coef is 0: continue
  *    2. if child is value: add it to simplified_coefficient and continue
  *    3. if child is not a sum: build list L = [(coef,child)]
- *    4. if child is sum:
- *       4.1. if coef is not 1.0: multiply child by coef, simplify again and repeat call (*)
- *       4.2. if coef is 1.0: build list with the children of child, L = [(val, expr) for val in child->coeffs, expr in child->children)]
+ *    4. if child is sum: build list with the children of child,
+ *         L = [(coef * val, expr) for val in child->coeffs, expr in child->children)]
  *    5. mergeSum(L, expr_list)
  * if expr_list is empty, return value expression with value simplified_coefficient
  * if expr_list has only one child and simplified_coefficient is 1, return child
@@ -992,19 +992,19 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
  * The method mergeSum simply inserts the elements of L into expr_list. Note that both lists are sorted.
  * While inserting, collisions can happen. A collision means that we have to add the two expressions.
  * However, after adding them, we need to simplify the resulting expression (e.g., the coefficient may become 0.0).
- * Fortunately, the coefficient being 0 is the only case we have to handle
+ * Fortunately, the coefficient being 0 is the only case we have to handle.
  * PROOF: all expressions in expr_list are simplified wrt to the sum, meaning that if we would build a sum
  * expression from them, it would yield a simplified sum expression. If there is a collision, then the expression
  * in L has to be in expr_list. The sum yields coef*expr and from the previous one can easily verify that it is
  * a valid child of a simplified sum (it is not a sum, etc), except for the case coef = 0.
  * Note: the context where the proof works is while merging (adding) children. Before this step, the children
  * go through a "local" simplification (i.e., 1-4 above). There, we *do* have to take care of other cases.
- * But, in constrast to Products, after this steps, no child in finalchildren is a sum and the proof works.
+ * But, in contrast to products, after this steps, no child in finalchildren is a sum and the proof works.
  *
  * The algorithm for simplifying a product is basically the same. However, collisions while merging are
- * more complicated to handle, since the product can actually render a simplified expression, unsimplified.
+ * more complicated to handle, since the product can actually render a simplified expression unsimplified.
  * To handle this, one basically needs to simulate (*) while merging. Hence, a further merge might be necessary
- * (and then all the book-keeping information to perform the original merge faster is lost)
+ * (and then all the book-keeping information to perform the original merge faster is lost).
  *
  * @{
  */
@@ -1060,7 +1060,7 @@ int listLength(EXPRNODE* list)
    return length;
 }
 
-/* creates node and captures expression */
+/** creates node and captures expression */
 static
 SCIP_RETCODE createExprNode(SCIP* scip, SCIP_CONSEXPR_EXPR* expr, SCIP_Real coef, EXPRNODE** newnode)
 {
@@ -1073,7 +1073,7 @@ SCIP_RETCODE createExprNode(SCIP* scip, SCIP_CONSEXPR_EXPR* expr, SCIP_Real coef
    return SCIP_OKAY;
 }
 
-/* free node and release expression */
+/** frees node and releases expression */
 static
 SCIP_RETCODE freeExprNode(SCIP* scip, EXPRNODE** newnode)
 {
@@ -1083,7 +1083,7 @@ SCIP_RETCODE freeExprNode(SCIP* scip, EXPRNODE** newnode)
    return SCIP_OKAY;
 }
 
-/* frees list and releases expressions */
+/** frees list and releases expressions */
 static
 SCIP_RETCODE freeExprlist(SCIP* scip, EXPRNODE** exprlist)
 {
@@ -1131,12 +1131,13 @@ SCIP_RETCODE buildExprlistFromExprs(SCIP* scip, SCIP_CONSEXPR_EXPR** exprs, SCIP
    return SCIP_OKAY;
 }
 
-/* merges tomerge into finalchildren
+/** merges tomerge into finalchildren
+ *
  * Both, tomerge and finalchildren contain expressions that could be the children of a simplified sum
  * (except for SS6 and SS7 which are enforced later).
  * However, the concatenation of both lists, will not in general yield a simplified sum expression,
  * because both SS4 and SS5 could be violated. So the purpose of this method is to enforce SS4 and SS5.
- * In the process of enforcing SS4, it could happen that SS8 get violated, but this is easy to fix.
+ * In the process of enforcing SS4, it could happen that SS8 is violated, but this is easy to fix.
  * note: if list has more than one element, then they are the children of a simplified sum expression
  * (ie, no val, nor sum), otherwise is a product, a variable or a function node
  */
@@ -1148,9 +1149,8 @@ SCIP_RETCODE mergeSumExprlist(SCIP* scip, EXPRNODE* tomerge, EXPRNODE** finalchi
    EXPRNODE* previous;
 
    if( tomerge == NULL )
-   {
       return SCIP_OKAY;
-   }
+
    if( *finalchildren == NULL )
    {
       *finalchildren = tomerge;
@@ -1178,7 +1178,7 @@ SCIP_RETCODE mergeSumExprlist(SCIP* scip, EXPRNODE* tomerge, EXPRNODE** finalchi
       #ifdef SIMPLIFY_DEBUG
       SCIP_CALL( SCIPprintConsExprExpr(scip, current->expr, NULL) );
       SCIPinfoMessage(scip, NULL, " vs ");
-      SCIP_CALL( SCIPprintConsExprExpr(scip, current->expr, NULL) );
+      SCIP_CALL( SCIPprintConsExprExpr(scip, tomergenode->expr, NULL) );
       SCIPinfoMessage(scip, NULL, ": won %d\n", compareres);
       #endif
 
@@ -1261,7 +1261,7 @@ SCIP_RETCODE mergeSumExprlist(SCIP* scip, EXPRNODE* tomerge, EXPRNODE** finalchi
 }
 
 
-/* builds a sum expression with the elements of exprlist as its children */
+/** builds a sum expression with the elements of exprlist as its children */
 static
 SCIP_RETCODE buildExprSumFromExprlist(SCIP* scip, EXPRNODE* exprlist, SCIP_Real constant, SCIP_CONSEXPR_EXPR** expr)
 {
@@ -1324,7 +1324,7 @@ SCIP_RETCODE buildExprProductFromExprlist(SCIP* scip, EXPRNODE* exprlist, SCIP_R
 }
 
 /** simplifies a term expression constant * expr
- * @note: in constrast to other simplify methods, this does *not* return a simplified expression.
+ * @note: in contrast to other simplify methods, this does *not* return a simplified expression.
  * Instead, the method is intended to be called only when simplifying a sum expression,
  * Since in general, constant*expr is not a simplified child of a sum expression, this method returns
  * a list of expressions L, such that (sum L) = constant * expr *and* each expression in L
@@ -1371,7 +1371,7 @@ SCIP_RETCODE simplifyTerm(
           * multiply expr by coef before grabbing its children for merging (SS2). After multiplying we obtain
           * expr' = (sum coef1' expr1 coef2' expr2...) which will clearly satisfy SS1-SS4, SS6 and SS8.
           * SS5 is satisfied, because if coef1 expr1 < coef2 expr2 are children in a simplified sum, then expr1 != expr2.
-          * Therefore expr1 < expr2, which implies that C1 * expr1 < C2 * expr2 for any C1, C2 diifferent from 0
+          * Therefore expr1 < expr2, which implies that C1 * expr1 < C2 * expr2 for any C1, C2 different from 0
           * So the only condition that can fail is SS7. In that case, expr = (sum coef1 expr1) and expr' = (sum 1 expr1)
           * and so simplifying expr' gives  expr1
           */
@@ -1404,7 +1404,7 @@ SCIP_RETCODE simplifyTerm(
 }
 
 /** simplifies a product expression (base)^exponent
- * @note: in constrast to other simplify methods, this does *not* return a simplified expression.
+ * @note: in contrast to other simplify methods, this does *not* return a simplified expression.
  * Instead, the method is intended to be called only when simplifying a product expression,
  * Since in general, (base)^exponent is not a simplified child of a product expression, this method returns
  * a list of expressions (with exponents) L, such that (prod L) = (base)^exponent *and* each expression in L
@@ -1515,10 +1515,10 @@ SCIP_RETCODE simplifyPower(
    return SCIP_OKAY;
 }
 
-/* merges tomerge into finalchildren
+/** merges tomerge into finalchildren
  * Both, tomerge and finalchildren contain expressions that could be the children of a simplified product
  * (except for SP8-SP10 which are enforced later).
- * However, the concatenation of both lists, will not in general yield a simplified propduct expression,
+ * However, the concatenation of both lists will not in general yield a simplified product expression,
  * because both SP4 and SP5 could be violated. So the purpose of this method is to enforce SP4 and SP5.
  * In the process of enforcing SP4, it could happen that SP2 and SP3 get violated. Since enforcing those
  * could in principle generate further violations, we remove the affected children from finalchildren
@@ -1534,9 +1534,7 @@ SCIP_RETCODE mergeProductExprlist(SCIP* scip, EXPRNODE* tomerge, EXPRNODE** fina
    EXPRNODE* previous;
 
    if( tomerge == NULL )
-   {
       return SCIP_OKAY;
-   }
 
    if( *finalchildren == NULL )
    {
@@ -1636,7 +1634,8 @@ SCIP_RETCODE mergeProductExprlist(SCIP* scip, EXPRNODE* tomerge, EXPRNODE** fina
    return SCIP_OKAY;
 }
 
-/* Algorithm for simplifying a sum expression:
+/** simplifies a sum expression
+ *
  * Summary: we first build a list of expressions (called finalchildren) which will be the children of the simplified sum
  * and then we process this list in order to enforce SS6 and SS7.
  * Description: To build finalchildren, each child of sum is manipulated (see simplifyTerm) in order to satisfy
@@ -1720,7 +1719,8 @@ SCIP_RETCODE SCIPsimplifyConsExprExprSum(
    return SCIP_OKAY;
 }
 
-/* Algorithm for simplifying a product expression:
+/** simplifies a product expression
+ *
  * Summary: we first build a list of expressions (called finalchildren) which will be the children of the simplified product
  * and then we process this list in order to enforce SP8-10
  * Description: In order to build finalchildren, we first build list of unsimplified children (called unsimplifiedchildren)
@@ -1880,7 +1880,9 @@ SCIP_RETCODE SCIPsimplifyConsExprExprProduct(
  */
 
 /** compare expressions
- * The given expressions are assumed to be simplified */
+ *
+ * The given expressions are assumed to be simplified.
+ */
 int SCIPcompareConsExprExprs(
    SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
    SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */

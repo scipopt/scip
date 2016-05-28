@@ -492,7 +492,9 @@ SCIP_RETCODE SCIPparseConsExprExpr(
    );
 
 /** compare expressions
- * The given expressions are assumed to be simplified */
+ *
+ * The given expressions are assumed to be simplified.
+ */
 EXTERN
 int SCIPcompareConsExprExprs(
    SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
