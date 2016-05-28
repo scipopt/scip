@@ -982,8 +982,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
  *    1. if child's coef is 0: continue
  *    2. if child is value: add it to simplified_coefficient and continue
  *    3. if child is not a sum: build list L = [(coef,child)]
- *    4. if child is sum: build list with the children of child,
- *         L = [(coef * val, expr) for val in child->coeffs, expr in child->children)]
+ *    4. if child is sum:
+ *       4.1. if coef is not 1.0: multiply child by coef (*)
+ *       4.2. build list with the children of child, L = [(val, expr) for val in child->coeffs, expr in child->children)]
  *    5. mergeSum(L, expr_list)
  * if expr_list is empty, return value expression with value simplified_coefficient
  * if expr_list has only one child and simplified_coefficient is 1, return child
@@ -1001,10 +1002,12 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(simplifyExpr)
  * go through a "local" simplification (i.e., 1-4 above). There, we *do* have to take care of other cases.
  * But, in contrast to products, after this steps, no child in finalchildren is a sum and the proof works.
  *
- * The algorithm for simplifying a product is basically the same. However, collisions while merging are
- * more complicated to handle, since the product can actually render a simplified expression unsimplified.
- * To handle this, one basically needs to simulate (*) while merging. Hence, a further merge might be necessary
- * (and then all the book-keeping information to perform the original merge faster is lost).
+ * The algorithm for simplifying a product is basically the same. One extra difficulty occurs at (*):
+ * The distribution of the exponent over a product children can only happen if the exponent is integral.
+ * Also, in that case, the resulting new child could be unsimplified, so it must be re-simplified.
+ * While merging, multiplying similar product expressions can render them unsimplified. So to handle it
+ * one basically needs to simulate (the new) (*) while merging. Hence, a further merge might be necessary
+ * (and then all the book-keeping information to perform the original merge faster is lost)
  *
  * @{
  */
