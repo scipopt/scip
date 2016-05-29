@@ -1881,7 +1881,7 @@ SCIP_RETCODE SCIPsimplifyConsExprExprProduct(
  */
 
 /** compare expressions
- * returns -1, 0 or 1 if expr1 <, =, > expr2 respectively.
+ * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
  * @note: The given expressions are assumed to be simplified.
  */
 int SCIPcompareConsExprExprs(
@@ -1951,7 +1951,7 @@ int SCIPcompareConsExprExprs(
             }
          }
 
-         /* all children of one expression are children of the other expression, use amount of children as a tie-breaker */
+         /* all children of one expression are children of the other expression, use number of children as a tie-breaker */
          if( i < j )
          {
             assert(i == -1);
@@ -2011,7 +2011,7 @@ int SCIPcompareConsExprExprs(
             }
          }
 
-         /* all children of one expression are children of the other expression, use amount of children as a tie-breaker */
+         /* all children of one expression are children of the other expression, use number of children as a tie-breaker */
          if( i < j )
          {
             assert(i == -1);

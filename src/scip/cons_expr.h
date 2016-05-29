@@ -492,8 +492,8 @@ SCIP_RETCODE SCIPparseConsExprExpr(
    );
 
 /** compare expressions
- *
- * The given expressions are assumed to be simplified.
+ * @return -1, 0 or 1 if expr1 <, =, > expr2, respectively
+ * @note: The given expressions are assumed to be simplified.
  */
 EXTERN
 int SCIPcompareConsExprExprs(
