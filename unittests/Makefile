@@ -46,15 +46,15 @@ VERSION		=	unittests
 #-----------------------------------------------------------------------------
 
 # add new unit tests here:
-UNITTESTS	=  unittest-boundchg unittest-setters unittest-relax unittest-cons unittest-presol unittest-depthlevel unittest-slack unittest-lpibases
+UNITTESTS	=  unittest-boundchg unittest-setters unittest-relax unittest-cons unittest-presol unittest-depthlevel unittest-slack unittest-lpibases unittest-regression
 EXTRASRC	=  unittest-relax/relax_unittest unittest-cons/cons_unittest unittest-presol/presol_unittest
 
 
 # UNITTESTS, EXECCOMMANDS, and TESTCASES depend on each other
 # command which should be used to start the unittest, e.g. optimize or presolve
-EXECCOMMANDS    =       NOEXEC NOEXEC NOEXEC NOEXEC NOEXEC NOEXEC testslack NOEXEC
+EXECCOMMANDS    =       NOEXEC NOEXEC NOEXEC NOEXEC NOEXEC NOEXEC testslack NOEXEC NOEXEC
 # testsets or NOTEST if there is no testset
-TESTCASES       =       nofile nofile nofile nofile nofile nofile short nofile
+TESTCASES       =       nofile nofile nofile nofile nofile nofile short nofile nofile
 
 UNITTESTSSRC	=	$(addprefix $(SRCDIR)/, $(join $(addsuffix /,$(UNITTESTS)), $(addsuffix .c, $(UNITTESTS))))
 UNITTESTSOBJ	=	$(addprefix $(OBJDIR)/, $(addsuffix .o, $(UNITTESTS)))
