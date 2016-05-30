@@ -28,16 +28,16 @@
 
 namespace polyscip {
 
-    class V_Representation {
+    class VRepresentation {
     public:
         using H_RepT = std::pair<OutcomeType, ValueType>;
         using V_RepT = std::pair<WeightType, ValueType>;
 
-        V_Representation(SCIP* scip, const ResultContainer& bounded, const ResultContainer& unbounded);
+        VRepresentation(SCIP* scip, const ResultContainer& bounded, const ResultContainer& unbounded);
 
-        void computeV_Rep();
+        void computeVRep();
 
-        std::vector<V_RepT> getV_Rep() const {return v_rep_;};
+        std::vector<V_RepT> getVRep() const {return v_rep_;};
 
     private:
         /** Computes initial v-representation for the following h-representation:
@@ -48,11 +48,14 @@ namespace polyscip {
          */
         void computeInitialRep(const OutcomeType& bounded);
 
-        std::vector<std::size_t> computeZeroSet(const std::pair<WeightType, ValueType>& ray) = delete;
+        std::vector<std::size_t> computeZeroSet(const V_RepT& ray) = delete;
 
-        std::vector<V_RepT> extendV_Rep(std::vector<V_RepT> current_v_rep, const H_RepT& ineq);
+        std::vector<V_RepT> extendVRep(std::vector<V_RepT> current_v_rep, const H_RepT& ineq);
 
         V_RepT getNewVertex(const V_RepT& ray_plus, const V_RepT& ray_minus, const H_RepT& ineq) const;
+
+        void normalizeVRep();
+        void deleteZeroWeightRay();
 
         SCIP* scip_;
         std::vector<OutcomeType> bounded_;

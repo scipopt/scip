@@ -123,7 +123,16 @@ namespace polyscip {
                 polyscip_status_ = PolyscipStatus::Finished;
             }
             else {
-                auto v_rep = V_Representation(scip_, supported_, unbounded_);
+                auto v_rep = VRepresentation(scip_, supported_, unbounded_);
+                v_rep.computeVRep();
+                auto vrep = v_rep.getVRep();
+                std::cout << "VREP:\n";
+                for (const auto& v : vrep) {
+                    std::cout << "\nA_Coeff: " << v.second << " ";
+                    global::print(v.first,"Weight: ");
+
+                }
+
                 //polyscip_status_ = PolyscipStatus::WeightSpacePhase;
             }
         }
