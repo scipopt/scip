@@ -299,7 +299,7 @@ void regressionRecompute(
       regression->slope = (regression->sumxy  - regression->nobservations * regression->meanx * regression->meany) / regression->variancesumx;
 
       /* compute y-intercept */
-      regression->intercept = (regression->meany * regression->variancesumx  -  regression->meanx * regression->sumxy) / regression->variancesumx;
+      regression->intercept = regression->meany - regression->slope * regression->meanx;
 
       /* compute empirical correlation coefficient */
       regression->corrcoef = (regression->sumxy - regression->nobservations * regression->meanx * regression->meany) /
@@ -328,7 +328,7 @@ void incrementalStatsUpdate(
 
    oldmean = *meanptr;
    *meanptr = oldmean + addfactor * (value - oldmean)/(SCIP_Real)nobservations;
-   *sumvarptr += addfactor * (value - oldmean) * (value - *meanptr);
+   *sumvarptr += addfactor * (value - oldmean) * (value - (*meanptr));
 }
 
 /** removes an observation (x,y) from the regression */
@@ -353,7 +353,7 @@ void SCIPregressionRemoveObservation(
 
       /* decrement individual means and variances */
       incrementalStatsUpdate(x, &regression->meanx, &regression->variancesumx, regression->nobservations, add);
-      incrementalStatsUpdate(y, &regression->meanx, &regression->variancesumy, regression->nobservations, add);
+      incrementalStatsUpdate(y, &regression->meany, &regression->variancesumy, regression->nobservations, add);
 
       /* decrement product sum */
       regression->sumxy -= (x * y);
