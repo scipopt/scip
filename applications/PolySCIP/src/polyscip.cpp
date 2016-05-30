@@ -29,6 +29,7 @@
 #include <utility> //std::make_pair
 #include <vector>
 
+#include "double_description_method.h"
 #include "objscip/objscip.h"
 #include "objscip/objscipdefplugins.h"
 #include "cmd_line_args.h"
@@ -122,36 +123,14 @@ namespace polyscip {
                 polyscip_status_ = PolyscipStatus::Finished;
             }
             else {
-                auto v_presentation = computeVRepresentation();
+                auto v_rep = V_Representation(scip_, supported_, unbounded_);
                 //polyscip_status_ = PolyscipStatus::WeightSpacePhase;
             }
         }
         return SCIP_OKAY;
     }
 
-    vector<pair<WeightType, ValueType>> Polyscip::computeVRepresentation() const {
-        auto current_v_rep = getInitialVRepresentation(supported_.front().second);
 
-        return current_v_rep;
-    };
-
-    vector<pair<WeightType, ValueType>> getExtendedVRepresentation(vector<pair<WeightType, ValueType>> v_rep, const OutcomeType& outcome, bool outcome_is_ray) {
-        return v_rep;
-    };
-
-
-
-    vector<pair<WeightType, ValueType>> Polyscip::getInitialVRepresentation(const OutcomeType& bounded) const {
-        auto v_rep = vector<pair<WeightType, ValueType>> {};
-        v_rep.emplace_back({(no_objs_,0),-1.});
-        assert (bounded.size() == no_objs_);
-        for (std::size_t i=0; i<bounded.size(); ++i) {
-            auto ray = WeightType(no_objs_,0);
-            ray[i] = 1.;
-            v_rep.push_back({ray,bounded[i]});
-        }
-        return v_rep;
-    };
 
     SCIP_STATUS Polyscip::separateINFORUNBD(const WeightType& weight, bool with_presolving) {
         if (!with_presolving)

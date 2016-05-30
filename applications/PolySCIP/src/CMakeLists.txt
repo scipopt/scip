@@ -3,6 +3,7 @@ set(HEADERS_FILES
         weight_space_vertex.h
         weight_space_polyhedron.h
         cmd_line_args.h
+        double_description_method.h
         polyscip.h
         #LiftedWeightSpaceSolver.h
         prob_data_objectives.h
@@ -17,6 +18,7 @@ set(SOURCE_FILES
         weight_space_facet.cpp
         weight_space_vertex.cpp
         weight_space_polyhedron.cpp
+        double_description_method.cpp
         cmd_line_args.cpp
         polyscip.cpp
         new_main.cpp
