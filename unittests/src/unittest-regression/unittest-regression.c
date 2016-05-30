@@ -50,6 +50,50 @@ SCIP_RETCODE regressionUnittestCreateAndFree(
    return SCIP_OKAY;
 }
 
+static
+SCIP_RETCODE testRegressionSlope(
+   SCIP_REGRESSION*      regression,
+   SCIP_Real             value
+   )
+{
+   /* test slope of regression */
+   if( !EPSEQ(value, SCIPregressionGetSlope(regression), 1e-4) )
+   {
+      printf("Error: Slope <%.1f> and regression slope <%.4f> are not equal within tolerance.\n", value, SCIPregressionGetSlope(regression));
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE testRegressionIntercept(
+   SCIP_REGRESSION*      regression,
+   SCIP_Real             value
+   )
+{
+   if( !EPSEQ(value, SCIPregressionGetIntercept(regression), 1e-4) )
+   {
+      printf("Error: Y intercept <%.1f> and regression intercept <%.4f> are not equal within tolerance.\n", value, SCIPregressionGetIntercept(regression));
+      return SCIP_ERROR;
+   }
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE testRegressionSlopeAndIntercept(
+   SCIP_REGRESSION*      regression,
+   SCIP_Real             slope,
+   SCIP_Real             intercept
+   )
+{
+   SCIP_CALL( testRegressionSlope(regression, slope) );
+   SCIP_CALL( testRegressionIntercept(regression, intercept) );
+
+   return SCIP_OKAY;
+}
+
 /** try determine the regression and slope of a cloud of points that is actually a line */
 static
 SCIP_RETCODE regressionUnittestLineProperties(
@@ -78,38 +122,171 @@ SCIP_RETCODE regressionUnittestLineProperties(
    }
 
    /* test slope of regression */
-   if( !EPSEQ(slope, SCIPregressionGetSlope(regression), 1e-4) )
-   {
-      printf("Error: Slope <%.1f> and regression slope <%.4f> are not equal within tolerance.\n", slope, SCIPregressionGetSlope(regression));
-      result = SCIP_ERROR;
-   }
+   SCIP_CALL( testRegressionSlope(regression, slope) );
 
    /* test intercept of regression */
-   else if( !EPSEQ(yintercept, SCIPregressionGetIntercept(regression), 1e-4) )
-   {
-      printf("Error: Y intercept <%.1f> and regression intercept <%.4f> are not equal within tolerance.\n", yintercept, SCIPregressionGetIntercept(regression));
-      result = SCIP_ERROR;
-   }
+   SCIP_CALL( testRegressionIntercept(regression, yintercept) );
 
 
    SCIPregressionFree(&regression);
-   return result;
+
+   return SCIP_OKAY;
 }
 
+/* if all points are actually equal, there is no best-fit line */
+static
+SCIP_RETCODE regressionUnittestManyEqualPoints(
+   void
+   )
+{
+   SCIP_REGRESSION* regression;
+   int i;
+   SCIP_Real x = 0;
+   SCIP_Real y = 500;
+
+   SCIP_CALL( SCIPregressionCreate(&regression) );
+
+   printf("Testing regression slope and intercept on many equal points\n");
+   /* add 10000 times the same point */
+   for (i = 0; i < 10000; ++i) {
+      SCIPregressionAddObservation(regression, x, y);
+   }
+
+   SCIP_CALL( testRegressionSlopeAndIntercept(regression, SCIP_INVALID, SCIP_INVALID) );
+
+   SCIPregressionFree(&regression);
+
+   return SCIP_OKAY;
+}
+
+/* test for same Y's over many observations. In this case, the best fit line is horizontal, i.e. it has zero slope
+ * and a y-intercept equal to the average y-value
+ */
+static
+SCIP_RETCODE regressionUnittestSameY(
+   void
+   )
+{
+   SCIP_REGRESSION* regression;
+   int i;
+   SCIP_Real x = 0;
+   SCIP_Real y = 500;
+
+   SCIP_CALL( SCIPregressionCreate(&regression) );
+
+   printf("Testing same y points\n");
+   /* add 10000 times a point with a new x coordinate, but the same y */
+   for (i = 0; i < 10000; ++i) {
+
+      /* use positive and negative x */
+      x = i % 2 == 0 ? i : -1;
+
+      SCIPregressionAddObservation(regression, x, y);
+   }
+
+   SCIP_CALL( testRegressionSlopeAndIntercept(regression, 0.0, y) );
+
+   SCIPregressionFree(&regression);
+
+   return SCIP_OKAY;
+}
+
+/* test for same X values over many points. In this case, a best fit line is the vertical line going through
+ * the mean value of the X observations, with infinite slope and no y-intercept
+ */
+static
+SCIP_RETCODE regressionUnittestSameX(
+   void
+   )
+{
+   SCIP_REGRESSION* regression;
+   int i;
+   SCIP_Real x = 42;
+   SCIP_Real y;
+
+   SCIP_CALL( SCIPregressionCreate(&regression) );
+
+   printf("Testing same X points\n");
+   /* add 10000 times a point with a new x coordinate, but the same y */
+   for (i = 0; i < 10000; ++i) {
+
+      /* use positive and negative x */
+      y = i % 2 == 0 ? i : -1;
+
+      SCIPregressionAddObservation(regression, x, y);
+   }
+
+   SCIP_CALL( testRegressionSlopeAndIntercept(regression, SCIP_INVALID, SCIP_INVALID) );
+
+   SCIPregressionFree(&regression);
+
+   return SCIP_OKAY;
+}
+
+/* test that no slope and intercept SCIP_INVALID for zero or one observation */
+static
+SCIP_RETCODE regressionUnittestZeroOrOneObservation(
+   void
+   )
+{
+   SCIP_REGRESSION* regression;
+
+   SCIP_CALL( SCIPregressionCreate(&regression) );
+
+   printf("Testing regression slope and intercept on zero and one observation\n");
+   do
+   {
+      SCIP_CALL( testRegressionSlopeAndIntercept(regression, SCIP_INVALID, SCIP_INVALID) );
+      SCIPregressionAddObservation(regression, 14, 1986);
+   }
+   while ( SCIPregressionGetNObservations(regression) <= 1);
+
+   SCIPregressionFree(&regression);
+
+   return SCIP_OKAY;
+}
+
+/* test that observations on a straight line from which you remove some observations still fits
+ * the remaining points
+ */
+static
+SCIP_RETCODE regressionUnittestRemovingPoints(
+   void
+   )
+{
+   SCIP_REGRESSION* regression;
+   int i;
+   SCIP_Real slope = 0.4;
+   SCIP_Real intercept = -83;
+
+   SCIP_CALL( SCIPregressionCreate(&regression) );
+
+   printf("Testing removal of points\n");
+   for( i = 0; i < 20; ++i )
+      SCIPregressionAddObservation(regression, i, slope * i + intercept);
+
+   /* remove every second previously added point */
+   for( i = 19; i >= 1; i -= 2 )
+      SCIPregressionRemoveObservation(regression, i, slope * i + intercept);
+
+   SCIP_CALL( testRegressionSlopeAndIntercept(regression, slope, intercept) );
+   SCIPregressionFree(&regression);
+
+   return SCIP_OKAY;
+}
 
 int main(
    int argc,
    char **argv
    )
 {
-   /* todo unit test for 0,1 observations such that it correctly returns SCIP_INVALID */
-   /* todo check for many points but all the same */
-   /* todo check for slope 0 */
-   /* todo check for infinite slope */
-   /* todo add if removing points produces correct results */
    CHECK_TEST( regressionUnittestCreateAndFree() );
+   CHECK_TEST( regressionUnittestZeroOrOneObservation() );
    CHECK_TEST( regressionUnittestLineProperties() );
-
+   CHECK_TEST( regressionUnittestManyEqualPoints() );
+   CHECK_TEST( regressionUnittestSameX() );
+   CHECK_TEST( regressionUnittestSameY() );
+   CHECK_TEST( regressionUnittestRemovingPoints() );
    printf("Unit test for regression passed\n");
 
    /* for automatic testing output the following */
