@@ -1229,25 +1229,13 @@ SCIP_RETCODE checkMemDualCons(
       reopt->dualreds->varssize = size;
       reopt->dualreds->nvars = 0;
    }
-   else
+   else if( reopt->dualreds->varssize < size )
    {
-      if( reopt->dualreds->varssize > 0 )
-      {
-         int newsize = SCIPsetCalcMemGrowSize(set, size+1);
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->dualreds->vars, reopt->dualreds->varssize, newsize) );
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->dualreds->vals, reopt->dualreds->varssize, newsize) );
-         SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->dualreds->boundtypes, reopt->dualreds->varssize, newsize) );
-         reopt->dualreds->varssize = newsize;
-      }
-      else
-      {
-         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->dualreds->vars, size) );
-         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->dualreds->vals, size) );
-         SCIP_ALLOC( BMSallocBlockMemoryArray(blkmem, &reopt->dualreds->boundtypes, size) );
-         reopt->dualreds->nvars = 0;
-         reopt->dualreds->varssize = size;
-      }
-
+      int newsize = SCIPsetCalcMemGrowSize(set, size+1);
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->dualreds->vars, reopt->dualreds->varssize, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->dualreds->vals, reopt->dualreds->varssize, newsize) );
+      SCIP_ALLOC( BMSreallocBlockMemoryArray(blkmem, &reopt->dualreds->boundtypes, reopt->dualreds->varssize, newsize) );
+      reopt->dualreds->varssize = newsize;
    }
 
    return SCIP_OKAY;
@@ -6139,9 +6127,20 @@ SCIP_RETCODE SCIPreoptAddDualBndchg(
    if( var != NULL )
    {
       SCIP_BOUNDTYPE boundtype;
+      int resizelength;
       int allocmem;
 
-      allocmem = (reopt->dualreds == NULL || reopt->dualreds->varssize == 0) ? DEFAULT_MEM_DUALCONS : reopt->dualreds->varssize+2;
+      if( SCIPsetFindBranchrule(set, "relpscost") != NULL )
+      {
+         SCIP_CALL( SCIPsetGetIntParam(set, "branching/relpscost/maxlookahead", &resizelength) );
+      }
+      else
+         resizelength = 1;
+
+      if( reopt->dualreds == NULL || reopt->dualreds->varssize == 0 )
+         allocmem = DEFAULT_MEM_DUALCONS;
+      else
+         allocmem = reopt->dualreds->nvars + resizelength;
 
       /* allocate memory of necessary */
       SCIP_CALL( checkMemDualCons(reopt, set, blkmem, allocmem) );
