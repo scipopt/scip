@@ -4436,7 +4436,7 @@ int SCIPcompareExprs(
 
    /* should not get here */
    SCIPerrorMessage("Unexpected behavior in comparison\n");
-   assert(0);
+   return SCIP_ERROR;
 }
 
 
