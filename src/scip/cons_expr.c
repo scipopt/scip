@@ -264,9 +264,10 @@ SCIP_RETCODE findEqualExpr(
       *newexpr = SCIPhashmapGetImage(key2expr, (void*)(size_t) hashkey);
       assert(*newexpr != NULL);
 
-      /* check if expr and newexpr are equal but not the same expression */
-      /* @todo replace SCIPcompareExpr by an (faster and non-recursive) isEqual() function */
-      *newexpr = (*newexpr == expr || SCIPcompareExprs(*newexpr, expr) != 0) ? NULL : *newexpr;
+      /* forget newexpr if expr and newexpr are not equal or are the same expression struct */
+      /** @todo replace SCIPcompareExpr by an (faster and non-recursive) isEqual() function */
+      if( *newexpr == expr || SCIPcompareExprs(*newexpr, expr) != 0 )
+         *newexpr = NULL;
    }
    else
    {
