@@ -3693,6 +3693,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    root->walkparent = NULL;
 
    /* traverse the tree */
+   result = SCIP_CONSEXPREXPRWALK_CONTINUE;
    stage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
    while( TRUE )
    {
