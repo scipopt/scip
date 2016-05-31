@@ -166,7 +166,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalAbs)
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashAbs)
 {
-   int childhash;
+   unsigned int childhash;
 
    assert(scip != NULL);
    assert(expr != NULL);
