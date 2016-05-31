@@ -542,7 +542,7 @@ SCIP_RETCODE SCIPincludeComprWeakcompr(
    SCIP_CALL( SCIPsetComprFree(scip, compr, comprFreeWeakcompr) );
 
    /* add weakcompr tree compression parameters */
-   SCIP_CALL( SCIPaddBoolParam(scip, "compression/"COMPR_NAME"/convertconss", "convert constraints into nodes", &comprdata->convertconss, FALSE, FALSE, NULL, NULL) );
+   SCIP_CALL( SCIPaddBoolParam(scip, "compression/" COMPR_NAME "/convertconss", "convert constraints into nodes", &comprdata->convertconss, FALSE, FALSE, NULL, NULL) );
 
    return SCIP_OKAY;
 }

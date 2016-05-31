@@ -1481,12 +1481,12 @@ SCIP_RETCODE sortGenVBounds(
    assert(SCIPdigraphGetNComponents(graph) == propdata->ncomponents);
 
    /* allocate memory for genvboundssorted and componentsstart array */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &genvboundssorted, propdata->ngenvbounds) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &genvboundssorted, propdata->ngenvbounds) );
    SCIP_CALL( SCIPallocMemoryArray(scip, &(propdata->componentsstart), propdata->ncomponents + 1) );
 
    /* allocate memory for strong component arrays */
-   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcomponents, SCIPdigraphGetNNodes(graph)) ); /*lint !e666*/
-   SCIP_CALL( SCIPallocMemoryArray(scip, &strongcompstartidx, SCIPdigraphGetNNodes(graph)) ); /*lint !e666*/
+   SCIP_CALL( SCIPallocBufferArray(scip, &strongcomponents, SCIPdigraphGetNNodes(graph)) ); /*lint !e666*/
+   SCIP_CALL( SCIPallocBufferArray(scip, &strongcompstartidx, SCIPdigraphGetNNodes(graph) + 1) ); /*lint !e666*/
 
    /* compute sorted genvbounds array, fill componentsstart array */
    sortedindex = 0;
@@ -1533,13 +1533,6 @@ SCIP_RETCODE sortGenVBounds(
    }
    assert(sortedindex == propdata->ngenvbounds);
 
-   /* free strong component arrays */
-   SCIPfreeMemoryArray(scip, &strongcompstartidx);
-   SCIPfreeMemoryArray(scip, &strongcomponents);
-
-   /* free digraph */
-   SCIPdigraphFree(&graph);
-
    /* copy sorted genvbounds into genvboundstore */
    for( i = 0; i < propdata->ngenvbounds; i++ )
    {
@@ -1548,7 +1541,14 @@ SCIP_RETCODE sortGenVBounds(
       propdata->genvboundstore[i] = genvboundssorted[i];
       propdata->genvboundstore[i]->index = i;
    }
-   SCIPfreeMemoryArray(scip, &(genvboundssorted));
+   SCIPfreeBufferArray(scip, &(genvboundssorted));
+
+   /* free strong component arrays */
+   SCIPfreeBufferArray(scip, &strongcompstartidx);
+   SCIPfreeBufferArray(scip, &strongcomponents);
+
+   /* free digraph */
+   SCIPdigraphFree(&graph);
 
    /* remember genvboundstore as sorted */
    propdata->issorted = TRUE;

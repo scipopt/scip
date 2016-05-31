@@ -1551,9 +1551,9 @@ SCIP_RETCODE SCIPexprgraphCreate(
    SCIP_EXPRGRAPH**      exprgraph,          /**< buffer to store pointer to expression graph */
    int                   varssizeinit,       /**< minimal initial size for variables array, or -1 to choose automatically */
    int                   depthinit,          /**< minimal initial depth of expression graph, or -1 to choose automatically */
-   SCIP_DECL_EXPRGRAPHVARADDED((*exprgraphvaradded)), /** callback method to invoke when a variable has been added to the expression graph, or NULL if not needed */
-   SCIP_DECL_EXPRGRAPHVARREMOVE((*exprgraphvarremove)), /** callback method to invoke when a variable will be removed from the expression graph, or NULL if not needed */
-   SCIP_DECL_EXPRGRAPHVARCHGIDX((*exprgraphvarchgidx)), /** callback method to invoke when a variable changes its index in the expression graph, or NULL if not needed */
+   SCIP_DECL_EXPRGRAPHVARADDED((*exprgraphvaradded)), /**< callback method to invoke when a variable has been added to the expression graph, or NULL if not needed */
+   SCIP_DECL_EXPRGRAPHVARREMOVE((*exprgraphvarremove)), /**< callback method to invoke when a variable will be removed from the expression graph, or NULL if not needed */
+   SCIP_DECL_EXPRGRAPHVARCHGIDX((*exprgraphvarchgidx)), /**< callback method to invoke when a variable changes its index in the expression graph, or NULL if not needed */
    void*                 userdata            /**< user data to pass to callback functions */
    );
 

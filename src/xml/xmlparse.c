@@ -700,7 +700,7 @@ void handleDecl(
       switch(key[beg].what)
       {
       case IS_COMMENT :
-         if ( doComment(ppos) )
+         if ( ! doComment(ppos) )
             ppos->state = XML_STATE_ERROR;
          break;
       case IS_CDATA :
