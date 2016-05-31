@@ -7973,13 +7973,13 @@ SCIP_Longint SCIPcalcBinomCoef(
 }
 
 /** returns hash index by using Fibonacci hashing */
-int SCIPcalcFibHash(double v)
+unsigned int SCIPcalcFibHash(double v)
 {
-   int res;
+   unsigned int res;
 
-   res = ((unsigned int)(v * 2654435769)) % INT_MAX;
+   res = ((unsigned int)(v * 2654435769)) % UINT_MAX;
 
-   return res = res < 0 ? -res : res;
+   return res;
 }
 
 /** negates a number */

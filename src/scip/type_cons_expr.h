@@ -215,7 +215,7 @@ extern "C" {
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
    SCIP_HASHMAP* expr2key, \
-   int* hashkey)
+   unsigned int* hashkey)
 
 /** stages of expression walker in which the walker callbacks are called */
 typedef enum

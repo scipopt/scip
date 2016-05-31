@@ -27,7 +27,7 @@
 #include "scip/cons_expr_abs.h"
 
 #define ABS_PRECEDENCE  70000
-
+#define ABS_HASHKEY      7187
 /*
  * Data structures
  */
@@ -174,14 +174,12 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashAbs)
    assert(expr2key != NULL);
    assert(hashkey != NULL);
 
-   *hashkey = SCIPcalcFibHash(SCIPgetConsExprExprHdlrPrecedence(expr->exprhdlr));
+   *hashkey = SCIPcalcFibHash(ABS_HASHKEY);
 
    assert(SCIPhashmapExists(expr2key, (void*) SCIPgetConsExprExprChildren(expr)[0]));
-   childhash = (int)(size_t) SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
-   assert(childhash >= 0);
+   childhash = (unsigned int)(size_t) SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
 
    *hashkey ^= childhash;
-   assert(*hashkey >= 0);
 
    return SCIP_OKAY;
 }

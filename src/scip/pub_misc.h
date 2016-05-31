@@ -5563,7 +5563,7 @@ SCIP_Longint SCIPcalcBinomCoef(
 
 /** returns hash index by using Fibonacci hashing */
 EXTERN
-int SCIPcalcFibHash(SCIP_Real v);
+unsigned int SCIPcalcFibHash(SCIP_Real v);
 
 /**@} */
 

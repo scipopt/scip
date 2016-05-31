@@ -867,7 +867,8 @@ static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprLeaveExpr)
 {
    SCIP_HASHMAP* expr2key;
-   int hashkey;
+   unsigned int hashkey;
+   int i;
 
    assert(expr != NULL);
    assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
@@ -881,24 +882,21 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprLeaveExpr)
    if( expr->exprhdlr->hash != NULL )
    {
       SCIP_CALL( (*expr->exprhdlr->hash)(scip, expr, expr2key, &hashkey) );
-      assert(hashkey >= 0);
    }
    else
    {
-      /* compute hash from expression handler name */
-      hashkey = SCIPcalcFibHash(SCIPgetConsExprExprHdlrPrecedence(expr->exprhdlr));
+      /* compute hash from expression handler name if callback is not implemented; this can lead to a larger number of
+       * expensive expression compare calls
+       */
+      hashkey = 0;
+      for( i = 0; expr->exprhdlr->name[i] != '\0'; i++ )
+         hashkey += (unsigned int) expr->exprhdlr->name[i];
+
+      hashkey = SCIPcalcFibHash(hashkey);
    }
 
-   /* stop if we could not compute a proper hash key */
-   if( hashkey < 0 )
-   {
-      *result = SCIP_CONSEXPREXPRWALK_ABORT;
-   }
-   else
-   {
-      /* put the hash key into expr2key map */
-      SCIP_CALL( SCIPhashmapInsert(expr2key, (void*)expr, (void*)(size_t)hashkey) );
-   }
+   /* put the hash key into expr2key map */
+   SCIP_CALL( SCIPhashmapInsert(expr2key, (void*)expr, (void*)(size_t)hashkey) );
 
    return SCIP_OKAY;
 }

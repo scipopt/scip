@@ -27,6 +27,7 @@
 #include "scip/cons_expr_log.h"
 
 #define LOG_PRECEDENCE  80000
+#define LOG_HASHKEY     16273
 
 /*
  * Data structures
@@ -174,7 +175,7 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalLog)
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashLog)
 {
-   int childhash;
+   unsigned int childhash;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -182,14 +183,12 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashLog)
    assert(expr2key != NULL);
    assert(hashkey != NULL);
 
-   *hashkey = SCIPcalcFibHash(SCIPgetConsExprExprHdlrPrecedence(expr->exprhdlr));
+   *hashkey = SCIPcalcFibHash(LOG_HASHKEY);
 
    assert(SCIPhashmapExists(expr2key, (void*)SCIPgetConsExprExprChildren(expr)[0]));
-   childhash = (int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
-   assert(childhash >= 0);
+   childhash = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
 
    *hashkey ^= childhash;
-   assert(*hashkey >= 0);
 
    return SCIP_OKAY;
 }

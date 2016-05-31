@@ -1921,14 +1921,12 @@ SCIP_RETCODE checkHashkey(
    SCIPinfoMessage(scip, NULL, "hash key of expression: ");
    SCIP_CALL( SCIPprintConsExprExpr(scip, expr1, NULL) );
    SCIPinfoMessage(scip, NULL, " = %d\n", SCIPgetConsExprExprHashkey(scip, expr1));
-   assert(SCIPgetConsExprExprHashkey(scip, expr1) >= 0);
 
    if( expr2 != NULL )
    {
       SCIPinfoMessage(scip, NULL, "hash key of expression: ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr2, NULL) );
       SCIPinfoMessage(scip, NULL, " = %d\n", SCIPgetConsExprExprHashkey(scip, expr2));
-      assert(SCIPgetConsExprExprHashkey(scip, expr2) >= 0);
       assert(SCIPgetConsExprExprHashkey(scip, expr1) == SCIPgetConsExprExprHashkey(scip, expr2));
    }
 
