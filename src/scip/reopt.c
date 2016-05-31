@@ -2416,7 +2416,34 @@ SCIP_RETCODE addNode(
 
       id = SCIPnodeGetReoptID(node);
       assert(id < reopt->reopttree->reoptnodessize);
-      assert(reopt->reopttree->reoptnodes[id] != NULL);
+
+      /* this is a special case:
+       *   due to re-propagation of the parent node it can happen that we try to update a node that was created by
+       *   reoptimization and already removed by deleteChildrenBelow. In this case we do not want to save the current
+       *   node
+       */
+      if( reopt->reopttree->reoptnodes[id] == NULL )
+      {
+         parent = SCIPnodeGetParent(node);
+         assert(parent != NULL);
+
+         parentid = SCIPnodeGetReoptID(parent);
+
+         /* the parent node has to be part of the reoptimization tree and marked to be a leaf, pruned or feasible */
+         assert(reopt->reopttree->reoptnodes[parentid] != NULL);
+         assert(reopt->reopttree->reoptnodes[parentid]->reopttype == SCIP_REOPTTYPE_FEASIBLE
+             || reopt->reopttree->reoptnodes[parentid]->reopttype == SCIP_REOPTTYPE_INFSUBTREE
+             || reopt->reopttree->reoptnodes[parentid]->reopttype == SCIP_REOPTTYPE_LEAF
+             || reopt->reopttree->reoptnodes[parentid]->reopttype == SCIP_REOPTTYPE_PRUNED);
+
+         SCIPdebugMessage(" -> skip saving (parent is already part of the reoptimization tree with status:%d)\n",
+               reopt->reopttree->reoptnodes[parentid]->reopttype);
+
+         /* stop clock */
+         SCIPclockStop(reopt->savingtime, set);
+
+         return SCIP_OKAY;
+      }
 
       SCIPdebugMessage("update node %lld at ID %u:\n", SCIPnodeGetNumber(node), id);
 
@@ -7810,7 +7837,7 @@ SCIP_Bool SCIPreoptGetSolveLP(
       return TRUE;
 
    /* return always true if the parameter is set to 1.0 */
-   if( SCIPsetIsEQ(set, set->reopt_objsimrootlp, 1.0) )
+   if( SCIPsetIsGE(set, set->reopt_objsimrootlp, 1.0) )
       return TRUE;
 
    /* current node is the root */

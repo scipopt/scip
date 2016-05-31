@@ -14704,14 +14704,14 @@ SCIP_RETCODE SCIPsolve(
          int nchildren;
          int nsiblings;
 
-      /* get all open leave nodes */
-      SCIP_CALL( SCIPgetLeaves(scip, &leaves, &nleaves) );
+         /* get all open leave nodes */
+         SCIP_CALL( SCIPgetLeaves(scip, &leaves, &nleaves) );
 
-      /* get all open children nodes */
-      SCIP_CALL( SCIPgetChildren(scip, &children, &nchildren) );
+         /* get all open children nodes */
+         SCIP_CALL( SCIPgetChildren(scip, &children, &nchildren) );
 
-      /* get all open sibling nodes */
-      SCIP_CALL( SCIPgetSiblings(scip, &siblings, &nsiblings) );
+         /* get all open sibling nodes */
+         SCIP_CALL( SCIPgetSiblings(scip, &siblings, &nsiblings) );
 
          /* add all open node to the reoptimization tree */
          SCIP_CALL( SCIPreoptSaveOpenNodes(scip->reopt, scip->set, scip->mem->probmem, leaves, nleaves, children, nchildren, siblings, nsiblings) );

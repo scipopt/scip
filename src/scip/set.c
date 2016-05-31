@@ -572,17 +572,15 @@ SCIP_RETCODE SCIPsetSetReoptimizationParams(
 
    if( set->reopt_enable )
    {
-      /* disable conflict analysis
+      /* disable some parts of conflict analysis
        *
-       * TODO we may want to enable conflict analysis but disable it for bound exceeding LPs. hence, we have
-       * to ensure that conflict analysis based on dual information is not performed, therefore we have treat the case
-       * usesb = TRUE and useboundlp = FALSE with special care.
+       * TODO we may want to have usesb = TRUE
        */
-      if( SCIPsetIsParamFixed(set, "conflict/enable") )
-      {
-         SCIP_CALL( SCIPsetChgParamFixed(set, "conflict/enable", FALSE) );
-      }
-      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/enable", FALSE) );
+      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/useboundlp", FALSE) );
+      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/usepseudo", FALSE) );
+      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/usesb", FALSE) );
+      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/useinflp", TRUE) );
+      SCIP_CALL( SCIPsetSetBoolParam(set, messagehdlr, "conflict/useprop", TRUE) );
 
       /* TODO check wheather multi aggregation can be enabled in reoptimization */
       if( SCIPsetIsParamFixed(set, "presolving/donotmultaggr") )
