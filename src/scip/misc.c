@@ -10181,15 +10181,15 @@ SCIP_Longint SCIPcalcBinomCoef(
 }
 
 /** calculates hash for floating-point number by using Fibonacci hashing */
-int SCIPcalcFibHash(
+unsigned int SCIPcalcFibHash(
    SCIP_Real             v                   /**< number to hash */
    )
 {
-   int res;
+   unsigned int res;
 
-   res = ((unsigned int)(v * 2654435769)) % INT_MAX;
+   res = ((unsigned int)(v * 2654435769)) % UINT_MAX;
 
-   return res = res < 0 ? -res : res;
+   return res;
 }
 
 /** negates a number */

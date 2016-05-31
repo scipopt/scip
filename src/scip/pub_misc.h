@@ -1795,7 +1795,7 @@ SCIP_Longint SCIPcalcBinomCoef(
 
 /** calculates hash for floating-point number by using Fibonacci hashing */
 SCIP_EXPORT
-int SCIPcalcFibHash(
+unsigned int SCIPcalcFibHash(
    SCIP_Real             v                   /**< number to hash */
    );
 
