@@ -2123,18 +2123,14 @@ SCIP_DECL_CONSPROP(consPropExpr)
 
 
 /** presolving method of constraint handler */
-#if 0
 static
 SCIP_DECL_CONSPRESOL(consPresolExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
 
    return SCIP_OKAY;
 }
-#else
-#define consPresolExpr NULL
-#endif
 
 
 /** propagation conflict resolving method of constraint handler */
