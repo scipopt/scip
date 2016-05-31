@@ -106,10 +106,13 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashValue)
 {
    assert(scip != NULL);
    assert(expr != NULL);
+   assert(expr->nchildren == 0);
+   assert(expr2key != NULL);
+   assert(hashkey != NULL);
 
-   expr->hashkey = SCIPcalcFibHash(SCIPgetConsExprExprHdlrPrecedence(expr->exprhdlr));
-   expr->hashkey ^= SCIPcalcFibHash(SCIPgetConsExprExprValueValue(expr));
-   assert(expr->hashkey >= 0);
+   *hashkey = SCIPcalcFibHash(SCIPgetConsExprExprHdlrPrecedence(expr->exprhdlr));
+   *hashkey ^= SCIPcalcFibHash(SCIPgetConsExprExprValueValue(expr));
+   assert(*hashkey >= 0);
 
    return SCIP_OKAY;
 }

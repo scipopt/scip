@@ -39,6 +39,8 @@
 
 #include "scip/nodesel_bfs.h" /* to be able to transform a problem */
 
+#include "scip/cons_expr.c"
+
 /** macro to check the return of tests
  *
  *  @note assumes the existence of SCIP_RETCODE retcode
@@ -1902,21 +1904,18 @@ SCIP_RETCODE checkHashkey(
 {
    assert(expr1 != NULL);
 
-   SCIP_CALL( SCIPhashConsExprExpr(scip, expr1) );
    SCIPinfoMessage(scip, NULL, "hash key of expression: ");
    SCIP_CALL( SCIPprintConsExprExpr(scip, expr1, NULL) );
-   SCIPinfoMessage(scip, NULL, " = %d\n", SCIPgetConsExprExprHashkey(expr1));
-   assert(SCIPgetConsExprExprHashkey(expr1) >= 0);
+   SCIPinfoMessage(scip, NULL, " = %d\n", SCIPgetConsExprExprHashkey(scip, expr1));
+   assert(SCIPgetConsExprExprHashkey(scip, expr1) >= 0);
 
    if( expr2 != NULL )
    {
-      SCIP_CALL( SCIPhashConsExprExpr(scip, expr2) );
       SCIPinfoMessage(scip, NULL, "hash key of expression: ");
       SCIP_CALL( SCIPprintConsExprExpr(scip, expr2, NULL) );
-      SCIPinfoMessage(scip, NULL, " = %d\n", SCIPgetConsExprExprHashkey(expr2));
-      assert(SCIPgetConsExprExprHashkey(expr2) >= 0);
-
-      assert(SCIPgetConsExprExprHashkey(expr1) == SCIPgetConsExprExprHashkey(expr2));
+      SCIPinfoMessage(scip, NULL, " = %d\n", SCIPgetConsExprExprHashkey(scip, expr2));
+      assert(SCIPgetConsExprExprHashkey(scip, expr2) >= 0);
+      assert(SCIPgetConsExprExprHashkey(scip, expr1) == SCIPgetConsExprExprHashkey(scip, expr2));
    }
 
    return SCIP_OKAY;
@@ -2041,6 +2040,104 @@ SCIP_RETCODE testHash(void)
    return SCIP_OKAY;
 }
 
+/** test absolute expressions */
+static
+SCIP_RETCODE testCommonSubexpr(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_CONS* conss[4];
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_CONSEXPR_EXPR* expr;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* currently expr constraints cannot be created */
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+
+   /* single constraint */
+   {
+      SCIP_CONSEXPR_EXPR* children[2];
+      SCIP_Real exponents[2] = {2, 2};
+
+      SCIPinfoMessage(scip, NULL, "test single constraint\n");
+
+      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "<x> * <y>", NULL, &children[0])) );
+      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "<x> * <y>", NULL, &children[1])) );
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr, 2, children, exponents, 1) );
+
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &conss[0], "cons", expr, -1.0, 1.0) );
+
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[1]) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &children[0]) );
+
+      SCIP_CALL( replaceCommonSubexpressions(scip, conss, 1) );
+      assert(SCIPgetExprConsExpr(scip, conss[0])->children[0] == SCIPgetExprConsExpr(scip, conss[0])->children[1]);
+
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[0]) );
+   }
+
+   /* multiple constraint */
+   {
+      SCIPinfoMessage(scip, NULL, "test multiple constraints\n");
+
+      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "<x> * <y>", NULL, &expr)) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &conss[0], "cons", expr, -1.0, 1.0) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "exp(<x> * <y>)", NULL, &expr)) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &conss[1], "cons", expr, -1.0, 1.0) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "abs(exp(<x> * <y>))", NULL, &expr)) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &conss[2], "cons", expr, -1.0, 1.0) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "log(abs(exp(<x> * <y>)))", NULL, &expr)) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &conss[3], "cons", expr, -1.0, 1.0) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+
+      SCIP_CALL( replaceCommonSubexpressions(scip, conss, 4) );
+
+      assert(SCIPgetExprConsExpr(scip, conss[0]) == SCIPgetExprConsExpr(scip, conss[1])->children[0]);
+      assert(SCIPgetExprConsExpr(scip, conss[0]) == SCIPgetExprConsExpr(scip, conss[2])->children[0]->children[0]);
+      assert(SCIPgetExprConsExpr(scip, conss[0]) == SCIPgetExprConsExpr(scip, conss[3])->children[0]->children[0]->children[0]);
+
+      assert(SCIPgetExprConsExpr(scip, conss[1]) == SCIPgetExprConsExpr(scip, conss[2])->children[0]);
+      assert(SCIPgetExprConsExpr(scip, conss[1]) == SCIPgetExprConsExpr(scip, conss[3])->children[0]->children[0]);
+
+      assert(SCIPgetExprConsExpr(scip, conss[2]) == SCIPgetExprConsExpr(scip, conss[3])->children[0]);
+
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[3]) );
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[2]) );
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[1]) );
+      SCIP_CALL( SCIPreleaseCons(scip, &conss[0]) );
+   }
+
+   /* free allocated memory */
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
 
 /** main function */
 int
@@ -2080,6 +2177,8 @@ main(
    CHECK_TEST( testAbs() );
 
    CHECK_TEST( testHash() );
+
+   CHECK_TEST( testCommonSubexpr() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");

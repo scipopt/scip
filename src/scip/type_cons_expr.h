@@ -208,10 +208,14 @@ extern "C" {
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression to be hashed
+ *  - expr2key : hash map containing keys for sub-expressions
+ *  - hashkey: pointer to store the hash key
  */
 #define SCIP_DECL_CONSEXPR_EXPRHASH(x) SCIP_RETCODE x (\
    SCIP* scip, \
-   SCIP_CONSEXPR_EXPR* expr)
+   SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_HASHMAP* expr2key, \
+   int* hashkey)
 
 /** stages of expression walker in which the walker callbacks are called */
 typedef enum

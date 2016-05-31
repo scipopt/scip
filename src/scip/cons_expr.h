@@ -393,24 +393,11 @@ void SCIPsetConsExprExprEvalValue(
    unsigned int            tag               /**< tag of solution that was evaluated, or 0 */
    );
 
-/** computes a hash key for an expression  */
-EXTERN
-SCIP_RETCODE SCIPhashConsExprExpr(
-   SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONSEXPR_EXPR*     expr              /**< expression to be evaluated */
-   );
-
 /** returns the hash key of an expression; < 0 if no hash key is available */
 EXTERN
 int SCIPgetConsExprExprHashkey(
+   SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
-   );
-
-/** sets the hash key of an expression; < 0 to invalidate hash key */
-EXTERN
-void SCIPsetConsExprExprHashkey(
-   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
-   int                     hashkey           /**< hash key */
    );
 
 /** sets the evaluation interval */
@@ -565,6 +552,14 @@ SCIP_RETCODE SCIPparseConsExprExpr(
    const char*           exprstr,            /**< string with the expr to parse */
    const char**          finalpos,           /**< buffer to store the position of exprstr where we finished reading, or NULL if not of interest */
    SCIP_CONSEXPR_EXPR**  expr                /**< pointer to store the expr parsed */
+   );
+
+/** compare expressions
+ * The given expressions are assumed to be simplified */
+EXTERN
+int SCIPcompareExprs(
+   SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
+   SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
    );
 
 /** @} */

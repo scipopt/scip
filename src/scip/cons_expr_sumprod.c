@@ -398,25 +398,27 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashSum)
 
    assert(scip != NULL);
    assert(expr != NULL);
+   assert(expr2key != NULL);
+   assert(hashkey != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
-   expr->hashkey = SCIPcalcFibHash(SCIPgetConsExprExprHdlrPrecedence(expr->exprhdlr));
-   expr->hashkey ^= SCIPcalcFibHash(exprdata->constant);
+   *hashkey = SCIPcalcFibHash(SCIPgetConsExprExprHdlrPrecedence(expr->exprhdlr));
+   *hashkey ^= SCIPcalcFibHash(exprdata->constant);
 
    for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
       int childhash;
 
-      childhash = SCIPgetConsExprExprHashkey(SCIPgetConsExprExprChildren(expr)[c]);
+      assert(SCIPhashmapExists(expr2key, (void*)SCIPgetConsExprExprChildren(expr)[c]));
+      childhash = (int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[c]);
       assert(childhash >= 0);
 
-      expr->hashkey ^= childhash;
+      *hashkey ^= childhash;
    }
 
-   /* this assert should be true since we only use xor operations and start from a positive integer number */
-   assert(expr->hashkey >= 0);
+   assert(*hashkey >= 0);
 
    return SCIP_OKAY;
 }
@@ -501,7 +503,7 @@ static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashProduct)
 {
    /* we hash products in the same way as sums */
-   return hashSum(scip, expr);
+   return hashSum(scip, expr, expr2key, hashkey);
 }
 
 /** creates the handler for sum expressions and includes it into the expression constraint handler */

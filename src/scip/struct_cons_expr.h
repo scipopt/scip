@@ -63,7 +63,6 @@ struct SCIP_ConsExpr_Expr
    SCIP_CONSEXPR_EXPR**    children;      /**< children expressions */
 
    int                     nuses;         /**< reference counter */
-   int                     hashkey;       /**< hash key of the expression; < 0 if no hash could be computed */
 
    /* point-evaluation */
    unsigned int            evaltag;       /**< tag of point for which the expression has been evaluated last, or 0 */

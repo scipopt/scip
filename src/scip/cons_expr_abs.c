@@ -171,14 +171,17 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashAbs)
    assert(scip != NULL);
    assert(expr != NULL);
    assert(expr->nchildren == 1);
+   assert(expr2key != NULL);
+   assert(hashkey != NULL);
 
-   expr->hashkey = SCIPcalcFibHash(SCIPgetConsExprExprHdlrPrecedence(expr->exprhdlr));
+   *hashkey = SCIPcalcFibHash(SCIPgetConsExprExprHdlrPrecedence(expr->exprhdlr));
 
-   childhash = SCIPgetConsExprExprHashkey(SCIPgetConsExprExprChildren(expr)[0]);
+   assert(SCIPhashmapExists(expr2key, (void*) SCIPgetConsExprExprChildren(expr)[0]));
+   childhash = (int)(size_t) SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
    assert(childhash >= 0);
 
-   expr->hashkey ^= childhash;
-   assert(expr->hashkey >= 0);
+   *hashkey ^= childhash;
+   assert(*hashkey >= 0);
 
    return SCIP_OKAY;
 }
