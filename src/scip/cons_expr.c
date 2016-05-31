@@ -154,13 +154,6 @@ typedef struct
    SCIP_Bool               valid;            /**< indicates whether every variable copy was valid */
 } COPY_MAPVAR_DATA;
 
-/** expression mapping data passed on during the search for common sub-expressions */
-typedef struct
-{
-   SCIP_HASHMAP*           expr2key;
-   SCIP_HASHMAP*           key2expr;
-} COMMONSUBEXPR_DATA;
-
 struct SCIP_ConsExpr_PrintDotData
 {
    FILE*                   file;             /**< file to print to */
@@ -237,41 +230,38 @@ static
 SCIP_RETCODE findEqualExpr(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR *  expr,               /**< expression to replace */
-   SCIP_HASHMAP*         expr2key,           /**< mapping of expression to hashes */
-   SCIP_HASHMAP*         key2expr,           /**< mapping of hashes to expressions */
+   SCIP_HASHTABLE*       key2expr,           /**< mapping of hashes to expressions */
    SCIP_CONSEXPR_EXPR**  newexpr             /**< pointer to store an equivalent expression (NULL if there is none) */
    )
 {
-   int hashkey;
+   SCIP_HASHTABLELIST* hashtablelist;
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(expr2key != NULL);
    assert(key2expr != NULL);
    assert(newexpr != NULL);
 
    *newexpr = NULL;
+   hashtablelist = NULL;
 
-   hashkey = SCIPhashmapExists(expr2key, (void*)expr) ? (int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr) : -1;
-
-   /* do nothing if no hash key is available */
-   if( hashkey < 0 )
-      return SCIP_OKAY;
-
-   /* check if there is an expression with the same hash key */
-   if( SCIPhashmapExists(key2expr, (void*)(size_t) hashkey) )
+   do
    {
-      *newexpr = SCIPhashmapGetImage(key2expr, (void*)(size_t) hashkey);
-      assert(*newexpr != NULL);
+      /* search for an equivalent expression */
+      *newexpr = (SCIP_CONSEXPR_EXPR*)(SCIPhashtableRetrieveNext(key2expr, &hashtablelist, (void*)expr));
 
-      /* check if expr and newexpr are equal but not the same expression */
-      /* @todo replace SCIPcompareExpr by an (faster and non-recursive) isEqual() function */
-      *newexpr = (*newexpr == expr || SCIPcompareExprs(*newexpr, expr) != 0) ? NULL : *newexpr;
+      if( *newexpr == NULL )
+      {
+         /* processed all expressions like expr from hash table, so insert expr */
+         SCIP_CALL( SCIPhashtableInsert(key2expr, (void*) expr) );
+         break;
+      }
+      else if( expr != *newexpr )
+      {
+         assert(SCIPcompareExprs(expr, *newexpr) == 0);
+         break;
+      }
    }
-   else
-   {
-      SCIP_CALL( SCIPhashmapInsert(key2expr, (void*)(size_t) hashkey, expr) );
-   }
+   while( TRUE );
 
    return SCIP_OKAY;
 }
@@ -888,10 +878,15 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprLeaveExpr)
    hashkey = -1;
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
-
    if( expr->exprhdlr->hash != NULL )
    {
       SCIP_CALL( (*expr->exprhdlr->hash)(scip, expr, expr2key, &hashkey) );
+      assert(hashkey >= 0);
+   }
+   else
+   {
+      /* compute hash from expression handler name */
+      hashkey = SCIPcalcFibHash(SCIPgetConsExprExprHdlrPrecedence(expr->exprhdlr));
    }
 
    /* stop if we could not compute a proper hash key */
@@ -912,7 +907,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprLeaveExpr)
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
 {
-   COMMONSUBEXPR_DATA* subexprdata;
+   SCIP_HASHTABLE* key2expr;
    SCIP_CONSEXPR_EXPR* newchild;
    SCIP_CONSEXPR_EXPR* child;
 
@@ -921,9 +916,8 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
    assert(result != NULL);
    assert(stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
 
-   subexprdata = (COMMONSUBEXPR_DATA*) data;
-   assert(subexprdata->expr2key != NULL);
-   assert(subexprdata->key2expr != NULL);
+   key2expr = (SCIP_HASHTABLE*)data;
+   assert(key2expr != NULL);
 
    assert(expr->walkcurrentchild < expr->nchildren);
    child = expr->children[expr->walkcurrentchild];
@@ -932,11 +926,14 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
    /* try to find an equivalent expression */
-   SCIP_CALL( findEqualExpr(scip, child, subexprdata->expr2key, subexprdata->key2expr, &newchild) );
+   SCIP_CALL( findEqualExpr(scip, child, key2expr, &newchild) );
 
    /* replace child with newchild */
    if( newchild != NULL )
    {
+      assert(child != newchild);
+      assert(SCIPcompareExprs(child, newchild) == 0);
+
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &child) );
 
       expr->children[expr->walkcurrentchild] = newchild;
@@ -990,8 +987,58 @@ SCIP_RETCODE computeViolation(
    return SCIP_OKAY;
 }
 
+/** get key of hash element */
+static
+SCIP_DECL_HASHGETKEY(hashCommonSubexprGetKey)
+{
+   return elem;
+}  /*lint !e715*/
 
-/** replaces common sub-expressions in the current expression graph by using a hash key for each expression */
+/** checks if two expressions are structurally the same */
+static
+SCIP_DECL_HASHKEYEQ(hashCommonSubexprEq)
+{
+   SCIP_CONSEXPR_EXPR* expr1;
+   SCIP_CONSEXPR_EXPR* expr2;
+
+   expr1 = (SCIP_CONSEXPR_EXPR*)key1;
+   expr2 = (SCIP_CONSEXPR_EXPR*)key2;
+   assert(expr1 != NULL);
+   assert(expr2 != NULL);
+
+   return expr1 == expr2 || SCIPcompareExprs(expr1, expr2) == 0;
+}  /*lint !e715*/
+
+/** get value of hash element when comparing with another expression */
+static
+SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_HASHMAP* expr2key;
+
+   expr = (SCIP_CONSEXPR_EXPR*) key;
+   assert(expr != NULL);
+
+   expr2key = (SCIP_HASHMAP*) userptr;
+   assert(expr2key != NULL);
+   assert(SCIPhashmapExists(expr2key, (void*)expr));
+
+   return (int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);
+}  /*lint !e715*/
+
+/** replaces common sub-expressions in the current expression graph by using a hash key for each expression; the
+ *  algorithm consists of two steps:
+ *
+ *  1. traverse through all given expressions trees inside constraints and compute for each of them an (not necessarily
+ *     unique) hash
+ *
+ *  2. initialize an empty hash table and traverse through all expression; check for each of them if we can find a
+ *     structural equivalent expression in the hash table; if yes we replace the expression by the expression inside the
+ *     hash table otherwise we add it to the hash table
+ *
+ *  @note the hash keys of the expressions are used for the hashing inside the hash table; to compute if two expressions
+ *  (with the same hash) are structurally the same we use the function SCIPcompareExprs()
+ */
 static
 SCIP_RETCODE replaceCommonSubexpressions(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -999,7 +1046,8 @@ SCIP_RETCODE replaceCommonSubexpressions(
    int                   nconss              /**< total number of constraints */
    )
 {
-   COMMONSUBEXPR_DATA subexprdata;
+   SCIP_HASHMAP* expr2key;
+   SCIP_HASHTABLE* key2expr;
    SCIP_CONSDATA* consdata;
    int i;
 
@@ -1008,7 +1056,7 @@ SCIP_RETCODE replaceCommonSubexpressions(
    assert(nconss >= 0);
 
    /* create empty map to store all sub-expression hashes */
-   SCIP_CALL( SCIPhashmapCreate(&subexprdata.expr2key, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
+   SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
 
    /* compute all hashes for each sub-expression */
    for( i = 0; i < nconss; ++i )
@@ -1018,11 +1066,12 @@ SCIP_RETCODE replaceCommonSubexpressions(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, NULL, hashExprVisitingExpr, NULL, hashExprLeaveExpr, (void*)subexprdata.expr2key) );
+      SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, NULL, hashExprVisitingExpr, NULL, hashExprLeaveExpr, (void*)expr2key) );
    }
 
    /* replace equivalent sub-expressions */
-   SCIP_CALL( SCIPhashmapCreate(&subexprdata.key2expr, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPhashmapGetNEntries(subexprdata.expr2key))) );
+   SCIP_CALL( SCIPhashtableCreate(&key2expr, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPhashmapGetNEntries(expr2key)),
+         hashCommonSubexprGetKey, hashCommonSubexprEq, hashCommonSubexprKeyval, (void*)expr2key) );
 
    for( i = 0; i < nconss; ++i )
    {
@@ -1032,10 +1081,13 @@ SCIP_RETCODE replaceCommonSubexpressions(
       assert(consdata != NULL);
 
       /* since the root is not called in stage SCIP_CONSEXPREXPRWALK_VISITINGCHILD it has to be checked separetely */
-      SCIP_CALL( findEqualExpr(scip, consdata->expr, subexprdata.expr2key, subexprdata.key2expr, &newroot) );
+      SCIP_CALL( findEqualExpr(scip, consdata->expr, key2expr, &newroot) );
 
       if( newroot != NULL )
       {
+         assert(newroot != consdata->expr);
+         assert(SCIPcompareExprs(consdata->expr, newroot) == 0);
+
          SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
 
          consdata->expr = newroot;
@@ -1046,13 +1098,13 @@ SCIP_RETCODE replaceCommonSubexpressions(
       else
       {
          /* replace equivalent sub-expressions in the tree */
-         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, NULL, commonExprVisitingExpr, NULL, NULL, (void*)&subexprdata) );
+         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, NULL, commonExprVisitingExpr, NULL, NULL, (void*)key2expr) );
       }
    }
 
    /* free memory */
-   SCIPhashmapFree(&subexprdata.key2expr);
-   SCIPhashmapFree(&subexprdata.expr2key);
+   SCIPhashtableFree(&key2expr);
+   SCIPhashmapFree(&expr2key);
 
    return SCIP_OKAY;
 }
