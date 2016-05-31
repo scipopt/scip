@@ -5124,9 +5124,15 @@ SCIP_RETCODE SCIPlpiSetIntpar(
       lpi->spx->setTiming((Timer::TYPE) ival);
       break;
 #endif
-#if SOPLEX_VERSION >= 230 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
+#if SOPLEX_VERSION >= 220 || (SOPLEX_VERSION == 220 && SOPLEX_SUBVERSION >= 3)
    case SCIP_LPPAR_RANDOMSEED:
       lpi->spx->random.setSeed((unsigned int) ival);
+      break;
+#endif
+#if SOPLEX_VERSION >= 221 && SOPLEX_SUBVERSION > 1 || SOPLEX_VERSION > 221
+   case SCIP_LPPAR_POLISHING:
+      assert(ival >= 0 && ival < 3);
+      lpi->spx->setSolutionPolishing((SPxSolver::SolutionPolish) ival);
       break;
 #endif
 
