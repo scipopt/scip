@@ -207,13 +207,22 @@ SCIP_RETCODE testWalk(void)
       /* create expression for product of -5, x, and y, and constant factor -2 (TODO should have something to add children to an existing product expr) */
       {
          SCIP_Real exponents[3] = {1.0, -1.0, 1.0};
-         SCIP_CONSEXPR_EXPR* xy5[3] = {expr_x, expr_y, expr_5};
+         SCIP_CONSEXPR_EXPR* xy5[3];
+
+         xy5[0] = expr_x;
+         xy5[1] = expr_y;
+         xy5[2] = expr_5;
+
          SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 3, xy5, exponents, -2.0) );
       }
 
       /* create expression for sum of x and product (expr_xy5) */
       {
-         SCIP_CONSEXPR_EXPR* terms[2] = {expr_x, expr_xy5};
+         SCIP_CONSEXPR_EXPR* terms[2];
+
+         terms[0] = expr_x;
+         terms[1] = expr_xy5;
+
          SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr_sum, 2, terms, NULL, 0) );
       }
 
@@ -588,7 +597,12 @@ SCIP_RETCODE testFree(void)
 
       /* create expression for product of 5, x, and y (TODO should have something to add children to an existing product expr) */
       {
-         SCIP_CONSEXPR_EXPR* xy5[3] = {expr_x, expr_y, expr_5};
+         SCIP_CONSEXPR_EXPR* xy5[3];
+
+         xy5[0] = expr_x;
+         xy5[1] = expr_y;
+         xy5[2] = expr_5;
+
          SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr_xy5, 3, xy5, NULL, 2.0) );
       }
 
