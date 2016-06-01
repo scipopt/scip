@@ -839,7 +839,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
    return SCIP_OKAY;
 }
 
-/** expression walk callback to skip expression which have been already hashed */
+/** expression walk callback to skip expression which have already been hashed */
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprVisitingExpr)
 {
@@ -876,7 +876,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprLeaveExpr)
    expr2key = (SCIP_HASHMAP*) data;
    assert(expr2key != NULL);
 
-   hashkey = -1;
+   hashkey = 0;
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
    if( expr->exprhdlr->hash != NULL )
@@ -885,10 +885,9 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprLeaveExpr)
    }
    else
    {
-      /* compute hash from expression handler name if callback is not implemented; this can lead to a larger number of
-       * expensive expression compare calls
+      /* compute hash from expression handler name if callback is not implemented
+       * this can lead to more collisions and thus a larger number of expensive expression compare calls
        */
-      hashkey = 0;
       for( i = 0; expr->exprhdlr->name[i] != '\0'; i++ )
          hashkey += (unsigned int) expr->exprhdlr->name[i];
 
@@ -932,6 +931,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
       assert(child != newchild);
       assert(SCIPcompareExprs(child, newchild) == 0);
 
+      /** @todo use SCIPsetConsExprExprChild() (simplify-branch) to replace child */
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &child) );
 
       expr->children[expr->walkcurrentchild] = newchild;
@@ -1021,18 +1021,18 @@ SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
    assert(expr2key != NULL);
    assert(SCIPhashmapExists(expr2key, (void*)expr));
 
-   return (int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);
+   return (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);
 }  /*lint !e715*/
 
 /** replaces common sub-expressions in the current expression graph by using a hash key for each expression; the
  *  algorithm consists of two steps:
  *
- *  1. traverse through all given expressions trees inside constraints and compute for each of them an (not necessarily
+ *  1. traverse through all expressions trees of given constraints and compute for each of them an (not necessarily
  *     unique) hash
  *
  *  2. initialize an empty hash table and traverse through all expression; check for each of them if we can find a
  *     structural equivalent expression in the hash table; if yes we replace the expression by the expression inside the
- *     hash table otherwise we add it to the hash table
+ *     hash table, otherwise we add it to the hash table
  *
  *  @note the hash keys of the expressions are used for the hashing inside the hash table; to compute if two expressions
  *  (with the same hash) are structurally the same we use the function SCIPcompareExprs()
@@ -1064,7 +1064,10 @@ SCIP_RETCODE replaceCommonSubexpressions(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, NULL, hashExprVisitingExpr, NULL, hashExprLeaveExpr, (void*)expr2key) );
+      if( consdata->expr != NULL )
+      {
+         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, NULL, hashExprVisitingExpr, NULL, hashExprLeaveExpr, (void*)expr2key) );
+      }
    }
 
    /* replace equivalent sub-expressions */
@@ -1078,7 +1081,10 @@ SCIP_RETCODE replaceCommonSubexpressions(
       consdata = SCIPconsGetData(conss[i]);
       assert(consdata != NULL);
 
-      /* since the root is not called in stage SCIP_CONSEXPREXPRWALK_VISITINGCHILD it has to be checked separetely */
+      if( consdata->expr == NULL )
+         continue;
+
+      /* since the root has not been checked for equivalence, it has to be checked separately */
       SCIP_CALL( findEqualExpr(scip, consdata->expr, key2expr, &newroot) );
 
       if( newroot != NULL )
@@ -3604,21 +3610,23 @@ void SCIPsetConsExprExprEvalInterval(
    expr->intevaltag = tag;
 }
 
-/** returns the hash key of an expression; < 0 if no hash key is available */
-int SCIPgetConsExprExprHashkey(
+/** returns the hash key of an expression */
+unsigned int SCIPgetConsExprExprHashkey(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    )
 {
    SCIP_HASHMAP* expr2key;
-   int hashkey;
+   unsigned int hashkey;
 
    assert(expr != NULL);
 
    SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
 
    SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, hashExprLeaveExpr, (void*)expr2key) );
-   hashkey = SCIPhashmapExists(expr2key, (void*)expr) ? (int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr) : -1;
+
+   assert(SCIPhashmapExists(expr2key, (void*)expr));  /* we just computed the hash, so should be in the map */
+   hashkey = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);
 
    SCIPhashmapFree(&expr2key);
 

@@ -28,7 +28,7 @@
 
 #include "scip/scip.h"
 #include "scip/type_cons_expr.h"
-#include "scip/struct_cons_expr.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -393,9 +393,9 @@ void SCIPsetConsExprExprEvalValue(
    unsigned int            tag               /**< tag of solution that was evaluated, or 0 */
    );
 
-/** returns the hash key of an expression; < 0 if no hash key is available */
+/** returns the hash key of an expression */
 EXTERN
-int SCIPgetConsExprExprHashkey(
+unsigned int SCIPgetConsExprExprHashkey(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr              /**< expression */
    );

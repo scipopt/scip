@@ -127,7 +127,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashVar)
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(expr->nchildren == 0);
+   assert(SCIPgetConsExprExprNChildren(expr) == 0);
    assert(expr2key != NULL);
    assert(hashkey != NULL);
 
