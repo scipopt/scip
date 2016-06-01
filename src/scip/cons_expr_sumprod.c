@@ -35,9 +35,9 @@
 #include "scip/cons_expr_sumprod.h"
 
 #define SUM_PRECEDENCE      40000
-#define SUM_HASHKEY         47161
+#define SUM_HASHKEY         SCIPcalcFibHash(47161)
 #define PRODUCT_PRECEDENCE  50000
-#define PRODUCT_HASHKEY     54949
+#define PRODUCT_HASHKEY     SCIPcalcFibHash(54949)
 
 /** ensures that a block memory array has at least a given size
  *
@@ -407,9 +407,9 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashSumProduct)
    assert(exprdata != NULL);
 
    if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum") )
-      *hashkey = SCIPcalcFibHash(SUM_HASHKEY);
+      *hashkey = SUM_HASHKEY;
    else
-      *hashkey = SCIPcalcFibHash(PRODUCT_HASHKEY);
+      *hashkey = PRODUCT_HASHKEY;
 
    *hashkey ^= SCIPcalcFibHash(exprdata->constant);
 
@@ -418,7 +418,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashSumProduct)
       unsigned int childhash;
 
       assert(SCIPhashmapExists(expr2key, (void*)SCIPgetConsExprExprChildren(expr)[c]));
-      childhash = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[c]);
+      childhash = SCIPcalcFibHash(exprdata->coefficients[c]) ^ (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[c]);
 
       *hashkey ^= childhash;
    }

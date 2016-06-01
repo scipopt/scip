@@ -27,7 +27,7 @@
 #include "scip/cons_expr_exp.h"
 
 #define EXP_PRECEDENCE  85000
-#define EXP_HASHKEY     10181
+#define EXP_HASHKEY     SCIPcalcFibHash(10181)
 
 /*
  * Data structures
@@ -157,7 +157,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashExp)
    assert(expr2key != NULL);
    assert(hashkey != NULL);
 
-   *hashkey = SCIPcalcFibHash(EXP_HASHKEY);
+   *hashkey = EXP_HASHKEY;
 
    assert(SCIPhashmapExists(expr2key, (void*)SCIPgetConsExprExprChildren(expr)[0]));
    childhash = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);

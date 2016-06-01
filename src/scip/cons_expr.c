@@ -1027,7 +1027,7 @@ SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
 /** replaces common sub-expressions in the current expression graph by using a hash key for each expression; the
  *  algorithm consists of two steps:
  *
- *  1. traverse through all expressions trees of given constraints and compute for each of them an (not necessarily
+ *  1. traverse through all expressions trees of given constraints and compute for each of them a (not necessarily
  *     unique) hash
  *
  *  2. initialize an empty hash table and traverse through all expression; check for each of them if we can find a

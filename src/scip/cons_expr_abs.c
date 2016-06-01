@@ -27,7 +27,7 @@
 #include "scip/cons_expr_abs.h"
 
 #define ABS_PRECEDENCE  70000
-#define ABS_HASHKEY      7187
+#define ABS_HASHKEY     SCIPcalcFibHash(7187)
 /*
  * Data structures
  */

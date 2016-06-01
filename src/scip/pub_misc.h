@@ -5561,9 +5561,11 @@ SCIP_Longint SCIPcalcBinomCoef(
    int                   m                   /**< number to choose out of the above */
    );
 
-/** returns hash index by using Fibonacci hashing */
+/** returns a non-negative integer hash key for a given real number by using Fibonacci hashing */
 EXTERN
-unsigned int SCIPcalcFibHash(SCIP_Real v);
+unsigned int SCIPcalcFibHash(
+   SCIP_Real             v                   /**< value to be hashed */
+   );
 
 /**@} */
 

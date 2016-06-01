@@ -23,7 +23,7 @@
 
 #include "scip/cons_expr_var.h"
 
-#define VAR_HASHKEY     22153
+#define VAR_HASHKEY     SCIPcalcFibHash(22153)
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrVar)
@@ -134,7 +134,7 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashVar)
    var = (SCIP_VAR*) SCIPgetConsExprExprData(expr);
    assert(var != NULL);
 
-   *hashkey = SCIPcalcFibHash(VAR_HASHKEY);
+   *hashkey = VAR_HASHKEY;
    *hashkey ^= SCIPcalcFibHash(SCIPvarGetIndex(var));
 
    return SCIP_OKAY;
