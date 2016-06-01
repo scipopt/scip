@@ -816,6 +816,56 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    return SCIP_OKAY;
 }
 
+/** expression walk callback when applying reverse propagation, called before child is visited */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(reversepropExpr)
+{
+   SCIP_CONSEXPR_EXPR* child;
+   int nreds;
+
+   assert(expr != NULL);
+   assert(data == NULL);
+
+   nreds = 0;
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   switch( stage )
+   {
+   case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
+      assert(expr->walkcurrentchild == 0);
+
+      /* abort if expression handler did not implement the reverse propagation callback */
+      if( expr->exprhdlr->reverseprop == NULL )
+         *result = SCIP_CONSEXPREXPRWALK_ABORT;
+
+      /* skip expressions that do not have children */
+      if( expr->nchildren == 0 )
+         *result = SCIP_CONSEXPREXPRWALK_SKIP;
+
+      /* call reverse propagation callback */
+      SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, &nreds) );
+      assert(nreds >= 0);
+
+      break;
+
+   case SCIP_CONSEXPREXPRWALK_VISITINGCHILD:
+      child = expr->children[expr->walkcurrentchild];
+      assert(child != NULL);
+
+      /* skip expressions that do not have children */
+      if( child->nchildren == 0 )
+         *result = SCIP_CONSEXPREXPRWALK_SKIP;
+
+      break;
+
+   default:
+      /* unknown stage */
+      SCIPABORT();
+   }
+
+   return SCIP_OKAY;
+}
+
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
 {
@@ -948,6 +998,32 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
 
 /**@} */  /* end of walking methods */
 
+/* @todo remove this function */
+SCIP_RETCODE reversePropagationCons(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONS* cons
+   )
+{
+   SCIP_CONSDATA* consdata;
+   SCIP_INTERVAL conssides;
+
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   /* call forward propagation first */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, 0) );
+
+   /* intersect expression interval with [lhs,rhs] */
+   SCIPintervalSetBounds(&conssides, consdata->lhs, consdata->rhs);
+   SCIPintervalIntersect(&consdata->expr->interval, consdata->expr->interval, conssides);
+
+   /* call reverse propagation callbacks */
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, reversepropExpr, reversepropExpr, NULL, NULL, NULL) );
+
+   return SCIP_OKAY;
+}
 
 /** computes violation of a constraint */
 static
@@ -2694,6 +2770,21 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    assert(exprhdlr != NULL);
 
    exprhdlr->inteval = inteval;
+
+   return SCIP_OKAY;
+}
+
+/** set the reverse propagation callback of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrReverseProp(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_REVERSEPROP((*reverseprop))/**< reverse propagation callback (can be NULL) */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->reverseprop = reverseprop;
 
    return SCIP_OKAY;
 }

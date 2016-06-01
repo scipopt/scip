@@ -2151,6 +2151,63 @@ SCIP_RETCODE testCommonSubexpr(void)
    return SCIP_OKAY;
 }
 
+/** test reverse propagation */
+static
+SCIP_RETCODE testReversePropagation(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_CONSEXPR_EXPR* xexpr;
+   SCIP_CONSEXPR_EXPR* yexpr;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONS* cons;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* currently expr constraints cannot be created */
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 0.5, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 3.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
+
+   {
+      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "<x> + <y>", NULL, &expr)) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 1.0, 2.5) );
+
+      reversePropagationCons(scip, cons);
+
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   /* free allocated memory */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
+
+
 /** main function */
 int
 main(
@@ -2191,6 +2248,8 @@ main(
    CHECK_TEST( testHash() );
 
    CHECK_TEST( testCommonSubexpr() );
+
+   CHECK_TEST( testReversePropagation() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");
