@@ -999,6 +999,7 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
 /**@} */  /* end of walking methods */
 
 /* @todo remove this function */
+static
 SCIP_RETCODE reversePropagationCons(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONS* cons
