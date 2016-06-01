@@ -1799,6 +1799,10 @@ unsigned int SCIPcalcFibHash(
    SCIP_Real             v                   /**< number to hash */
    );
 
+#ifdef NDEBUG
+#define SCIPcalcFibHash(v)   (((unsigned int)(v * 2654435769)) % UINT_MAX)
+#endif
+
 /** converts a real number into a (approximate) rational representation, and returns TRUE iff the conversion was
  *  successful
  */
