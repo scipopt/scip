@@ -30,8 +30,8 @@ using std::vector;
 
 namespace polyscip {
 
-    VRepresentation::VRepresentation(SCIP *scip, const ResultContainer &bounded_results,
-                                     const ResultContainer &unbounded_results)
+    DoubleDescription::DoubleDescription(SCIP *scip, const ResultContainer &bounded_results,
+                                         const ResultContainer &unbounded_results)
             : scip_(scip) {
         for (const auto &bd : bounded_results)
             bounded_.push_back(bd.second);
@@ -39,40 +39,54 @@ namespace polyscip {
             unbounded_.push_back(unbd.second);
     }
 
-    void VRepresentation::computeVRep() {
+    void DoubleDescription::computeVRep() {
         assert (!bounded_.empty());
         computeInitialRep(bounded_.front());
         auto current_v_rep = initial_v_rep_;
-        std::cout << "INITIAL VREP:\n";
-        printVRep(current_v_rep);
         for (auto bd = std::next(begin(bounded_)); bd != end(bounded_); ++bd) {
             auto new_constraint = H_RepT(*bd,-1);
             current_v_rep = extendVRep(std::move(current_v_rep), new_constraint);
-            current_h_rep_.push_back(new_constraint);
-            std::cout << "NEW VREP:\n";
-            printVRep(current_v_rep);
+            h_rep_.push_back(new_constraint);
         }
         for (auto unbd = begin(unbounded_); unbd != end(unbounded_); ++unbd) {
             auto new_constraint = H_RepT(*unbd, 0.);
             current_v_rep = extendVRep(std::move(current_v_rep), new_constraint);
-            current_h_rep_.push_back(new_constraint);
+            h_rep_.push_back(new_constraint);
         }
         v_rep_ = current_v_rep;
         deleteZeroWeightRay();
+        computeAdjacencies();
         normalizeVRep();
     }
 
-    vector<VRepresentation::V_RepT> VRepresentation::extendVRep(vector<V_RepT> current_rep,
-                                                                const H_RepT &constraint) {
+    /* compute the adjacency relationships
+     * NOTE: if i-th elem is adjacent to j-th elem with i < j, then j is inserted into adj_[i], but
+     * not i in adj_[j]; in other words, no redundant information is saved
+     */
+    void DoubleDescription::computeAdjacencies() {
+        auto zero_slacks = SlackContainer {};
+        for (const auto& ray : v_rep_)
+            zero_slacks.emplace_back(computeZeroSlackSet(ray));
+        for (size_t i=0; i<v_rep_.size(); ++i) {
+            adj_.emplace_back();
+            for (size_t j=i+1; j<v_rep_.size(); ++j) {
+                if (rayPairIsAdjacent(i,j,zero_slacks,v_rep_))
+                    adj_[i].push_back(j);
+            }
+        }
+    }
+
+    vector<DoubleDescription::V_RepT> DoubleDescription::extendVRep(vector<V_RepT> current_rep,
+                                                                    const H_RepT &constraint) {
 
         auto extended_v_rep = vector<V_RepT> {};
         auto plus_inds = vector<std::size_t> {};
         auto minus_inds = vector<std::size_t> {};
-        auto zero_slack_map = SlackMap {};
+        auto zero_slacks = SlackContainer {};
 
         // partition current v-representation
         for (size_t i = 0; i < current_rep.size(); ++i) {
-            zero_slack_map.emplace(i, computeZeroSlackSet(current_rep[i]));
+            zero_slacks.emplace_back(computeZeroSlackSet(current_rep[i]));
             auto result = std::inner_product(begin(current_rep[i].first), end(current_rep[i].first),
                                              begin(constraint.first), current_rep[i].second * constraint.second);
             if (SCIPisNegative(scip_, result)) {
@@ -88,7 +102,7 @@ namespace polyscip {
             }
         }
 
-        auto adj_pairs = computeAdjacentPairs(plus_inds, minus_inds, zero_slack_map, current_rep);
+        auto adj_pairs = computeAdjacentPairs(plus_inds, minus_inds, zero_slacks, current_rep);
         for (const auto& p : adj_pairs) {
             extended_v_rep.push_back(computeNewRay(current_rep[p.first],
                                                    current_rep[p.second],
@@ -97,9 +111,9 @@ namespace polyscip {
         return extended_v_rep;
     }
 
-    vector<pair<size_t, size_t>> VRepresentation::computeAdjacentPairs(const vector<size_t>& plus_inds,
+    vector<pair<size_t, size_t>> DoubleDescription::computeAdjacentPairs(const vector<size_t>& plus_inds,
                                                                        const vector<size_t>& minus_inds,
-                                                                       const SlackMap& zero_slacks,
+                                                                       const SlackContainer& zero_slacks,
                                                                        const vector<V_RepT>& current_rep) const {
         auto adj_pairs = vector<pair<size_t, size_t>> {};
         for (const auto& plus_index : plus_inds) {
@@ -111,33 +125,34 @@ namespace polyscip {
         return adj_pairs;
     };
 
-    bool VRepresentation::rayPairIsAdjacent(size_t plus_ind,
-                                            size_t minus_ind,
-                                            const SlackMap& zero_slack,
+    bool DoubleDescription::rayPairIsAdjacent(size_t index1,
+                                            size_t index2,
+                                            const SlackContainer& zero_slacks,
                                             const vector<V_RepT>& current_rep) const {
+        assert (std::max(index1, index2) < zero_slacks.size());
         auto intersec = vector<size_t> {};
-        std::set_intersection(begin(zero_slack.at(plus_ind)),
-                              end(zero_slack.at(plus_ind)),
-                              begin(zero_slack.at(minus_ind)),
-                              end(zero_slack.at(minus_ind)),
+        std::set_intersection(begin(zero_slacks[index1]),
+                              end(zero_slacks[index1]),
+                              begin(zero_slacks[index2]),
+                              end(zero_slacks[index2]),
                               std::back_inserter(intersec));
 
-        for (const auto& kv : zero_slack) {
-            if (kv.first == plus_ind || kv.first == minus_ind || kv.second.size() <= intersec.size())
+        for (size_t i=0; i<zero_slacks.size(); ++i) {
+            if (i == index1 || i == index2 || zero_slacks[i].size() <= intersec.size())
                 continue;
-            auto includes = std::includes(begin(kv.second),
-                                          end(kv.second),
+            auto includes = std::includes(begin(zero_slacks[i]),
+                                          end(zero_slacks[i]),
                                           begin(intersec),
                                           end(intersec));
 
-            if (includes && !isMultiple(current_rep[kv.first], current_rep[plus_ind]) &&
-                !isMultiple(current_rep[kv.first], current_rep[minus_ind]))
+            if (includes && !isMultiple(current_rep[i], current_rep[index1]) &&
+                !isMultiple(current_rep[i], current_rep[index2]))
                 return false;
         }
         return true;
     }
 
-    bool VRepresentation::isMultiple(const V_RepT& ray, const V_RepT& ray2) const {
+    bool DoubleDescription::isMultiple(const V_RepT& ray, const V_RepT& ray2) const {
         assert (ray.first.size() == ray2.first.size());
         if (SCIPisZero(scip_, ray.second) && !SCIPisZero(scip_, ray2.second)) {
             return false;
@@ -163,11 +178,11 @@ namespace polyscip {
         }
     }
 
-    vector<size_t> VRepresentation::computeZeroSlackSet(const VRepresentation::V_RepT& ray) const {
+    vector<size_t> DoubleDescription::computeZeroSlackSet(const V_RepT& ray) const {
         auto zeroSet = vector<size_t> {};
-        for (size_t i = 0; i < current_h_rep_.size(); ++i) {
-            auto weight_coeff = current_h_rep_[i].first;
-            auto a_coeff = current_h_rep_[i].second;
+        for (size_t i = 0; i < h_rep_.size(); ++i) {
+            auto weight_coeff = h_rep_[i].first;
+            auto a_coeff = h_rep_[i].second;
             auto result = std::inner_product(begin(weight_coeff), end(weight_coeff),
                                              begin(ray.first), a_coeff*ray.second);
             if (SCIPisZero(scip_, result))
@@ -176,7 +191,7 @@ namespace polyscip {
         return zeroSet;
     }
 
-    void VRepresentation::normalizeVRep() {
+    void DoubleDescription::normalizeVRep() {
         for (auto &v : v_rep_) {
             auto weight_length = std::accumulate(begin(v.first), end(v.first), 0.);
             assert (!SCIPisZero(scip_, weight_length));
@@ -186,7 +201,7 @@ namespace polyscip {
         }
     }
 
-    VRepresentation::V_RepT VRepresentation::computeNewRay(const V_RepT &plus_ray, const V_RepT &minus_ray,
+    DoubleDescription::V_RepT DoubleDescription::computeNewRay(const V_RepT &plus_ray, const V_RepT &minus_ray,
                                                        const H_RepT &ineq) const {
         auto size = plus_ray.first.size();
         assert (size == minus_ray.first.size());
@@ -208,19 +223,19 @@ namespace polyscip {
     }
 
 
-    void VRepresentation::computeInitialRep(const OutcomeType &bd_outcome) {
+    void DoubleDescription::computeInitialRep(const OutcomeType &bd_outcome) {
         auto size = bd_outcome.size();
         initial_v_rep_.emplace_back(WeightType(size, 0), -1.);
-        current_h_rep_.emplace_back(bd_outcome, -1.);
+        h_rep_.emplace_back(bd_outcome, -1.);
         for (size_t i = 0; i < bd_outcome.size(); ++i) {
             auto ray = WeightType(size, 0.);
             ray[i] = 1.;
             initial_v_rep_.push_back({ray, bd_outcome[i]});
-            current_h_rep_.push_back({ray, 0.});
+            h_rep_.push_back({ray, 0.});
         }
     }
 
-    void VRepresentation::deleteZeroWeightRay() {
+    void DoubleDescription::deleteZeroWeightRay() {
         for (auto it = begin(v_rep_); it != end(v_rep_); ++it) {
             auto weight_length = std::accumulate(begin(it->first), end(it->first), 0.);
             if (SCIPisZero(scip_, weight_length)) {

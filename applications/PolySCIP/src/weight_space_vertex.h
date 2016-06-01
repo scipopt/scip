@@ -93,7 +93,7 @@ namespace polyscip {
          * @param index index of 1 in unit weight
          * @return true if weight of vertex is unit weight with 1 at index; false otherwise
          */
-        bool hasUnitWeight(std::size_t ind);
+        bool hasUnitWeight() const;
 
         /** Checks whether weight of vertex corresponds with given weight
          * @param weight weight to check against
@@ -116,10 +116,10 @@ namespace polyscip {
         //todo Doku anpassen
          * @return combination coefficient h
          */
-        static ValueType calculateCombinationValue(const WeightSpaceVertex* non_obs,
-                                                   const WeightSpaceVertex* obs,
-                                                   const OutcomeType& outcome,
-                                                   bool outcome_is_ray);
+        static long double calculateCombinationValue(const WeightSpaceVertex* non_obs,
+                                                     const WeightSpaceVertex* obs,
+                                                     const OutcomeType& outcome,
+                                                     bool outcome_is_ray);
 
 
         /** Returns the weight h * weight1 + (1-h) * weight2

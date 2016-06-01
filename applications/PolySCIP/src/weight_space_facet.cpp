@@ -27,16 +27,22 @@ namespace polyscip {
                std::tie(facet2.wov_coeff_, facet2.w_coeffs_);
     }
 
-    WeightSpaceFacet::WeightSpaceFacet(unsigned num_objs,
+    /*WeightSpaceFacet::WeightSpaceFacet(unsigned num_objs,
                                        unsigned index)
             : w_coeffs_(num_objs, 0.),
               wov_coeff_(0.) {
         w_coeffs_.at(index) = 1.;
+    }*/
+
+    ValueType WeightSpaceFacet::getWeightedWeight(const WeightType& weight) const {
+        assert (weight.size() == w_coeffs_.size());
+        return std::inner_product(begin(w_coeffs_), end(w_coeffs_),
+                                  begin(weight), 0.);
     }
 
-    WeightSpaceFacet::WeightSpaceFacet(const OutcomeType& outcome,
+    WeightSpaceFacet::WeightSpaceFacet(OutcomeType outcome,
                                        ValueType wov_coeff)
-            : w_coeffs_(begin(outcome), end(outcome)),
+            : w_coeffs_(outcome),
               wov_coeff_{wov_coeff} { }
 
     void WeightSpaceFacet::print(ostream &os) const {

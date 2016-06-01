@@ -18,6 +18,7 @@
 #include <cmath> //std::abs
 #include <fstream>
 #include <functional> //std::plus
+#include <iomanip> //std::set_precision
 #include <iostream>
 #include <limits>
 #include <ostream>
@@ -123,17 +124,14 @@ namespace polyscip {
                 polyscip_status_ = PolyscipStatus::Finished;
             }
             else {
-                auto v_rep = VRepresentation(scip_, supported_, unbounded_);
+                auto v_rep = DoubleDescription(scip_, supported_, unbounded_);
                 v_rep.computeVRep();
-                auto vrep = v_rep.getVRep();
-                std::cout << "VREP:\n";
-                for (const auto& v : vrep) {
-                    std::cout << "\nA_Coeff: " << v.second << " ";
-                    global::print(v.first,"Weight: ");
-
-                }
-
-                //polyscip_status_ = PolyscipStatus::WeightSpacePhase;
+                v_rep.printVRep();
+                weight_space_poly_ = global::make_unique<WeightSpacePolyhedron>(scip_,
+                                                                                std::move(v_rep.moveVRep()),
+                                                                                std::move(v_rep.getHRep()),
+                                                                                std::move(v_rep.getVRepAdjacencies()));
+                polyscip_status_ = PolyscipStatus::WeightSpacePhase;
             }
         }
         return SCIP_OKAY;
@@ -294,12 +292,12 @@ namespace polyscip {
                 if (scip_status == SCIP_STATUS_INFORUNBD)
                     scip_status = separateINFORUNBD(untested_weight);
                 if (scip_status == SCIP_STATUS_OPTIMAL) {
-                    global::print(untested_weight, "\nTESTED WEIGHT: ");
                     auto new_wov = SCIPgetPrimalbound(scip_);
-                    if (SCIPisLT(scip_, new_wov, weight_space_poly_->getUntestedVertexWOV(untested_weight))==TRUE) {
+                    //todo find better comparison
+                    if (SCIPisLT(scip_, new_wov, weight_space_poly_->getUntestedVertexWOV(untested_weight))) {
+                    //if (new_wov < weight_space_poly_->getUntestedVertexWOV(untested_weight)) {
                         SCIP_CALL( handleOptimalStatus() ); //adds bounded result to supported_
                         auto last_added_outcome = supported_.back().second; //was added by handleStatus
-                        global::print(last_added_outcome, "new outcome = ");
                         weight_space_poly_->incorporateNewOutcome(scip_, cmd_line_args_.withCompleteLoopForObsolete(),
                                                                   untested_weight, last_added_outcome);
                     }
@@ -324,6 +322,7 @@ namespace polyscip {
     }
 
     void Polyscip::printSupportedResults(ostream& os) {
+        os << std::setprecision(6);
         for (const auto& result : supported_) {
             printPoint(result.second, os);
             printSol(result.first, os);

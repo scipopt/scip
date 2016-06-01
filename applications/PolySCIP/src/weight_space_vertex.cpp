@@ -58,6 +58,11 @@ namespace polyscip {
                                          const OutcomeType &outcome,
                                          bool outcome_is_ray)
     {
+
+        std::cout << "\nobsolete: ";
+        obs->print(std::cout);
+        std::cout << "non-obsolete: ";
+        non_obs->print(std::cout);
         // get intersection of facets of obs and non_obs
         std::set_intersection(obs->incident_facets_.cbegin(),
                               obs->incident_facets_.cend(),
@@ -74,7 +79,8 @@ namespace polyscip {
                                          new_facet, compare_facet_ptr);
         incident_facets_.insert(upper_it, std::move(new_facet));
         auto h = calculateCombinationValue(non_obs, obs, outcome, outcome_is_ray);
-        assert (SCIPisGT(scip, h, 0.) && SCIPisLT(scip, h, 1.));
+        std::cout << "h value = " << std::setprecision(30) << h << std::setprecision(3) << "\n";
+        assert (SCIPisGE(scip, h, 0.) && SCIPisLE(scip, h, 1.));
         if (outcome_is_ray) // shift combination towards non-obsolete vertex
             h += 1e-7;
         weight_ = calculateWeightCombination(non_obs->weight_, obs->weight_, h);
@@ -107,21 +113,21 @@ namespace polyscip {
 //        return SCIPisLT(scip, result, rhs) == TRUE;
 //    }
 
-    ValueType WeightSpaceVertex::calculateCombinationValue(const WeightSpaceVertex* non_obs,
+    long double WeightSpaceVertex::calculateCombinationValue(const WeightSpaceVertex* non_obs,
                                                            const WeightSpaceVertex* obs,
                                                            const OutcomeType& outcome,
                                                            bool outcome_is_ray) {
         auto wov_obs = outcome_is_ray ? 0. : obs->getCurrentWOV();
         auto wov_non_obs = outcome_is_ray ? 0. : non_obs->getCurrentWOV();
-        auto numerator = wov_obs - std::inner_product(begin(obs->weight_),
-                                                           end(obs->weight_),
-                                                           begin(outcome),
-                                                           0.);
-        auto denominator = numerator - wov_non_obs + std::inner_product(begin(non_obs->weight_),
-                                                                        end(non_obs->weight_),
-                                                                        begin(outcome),
-                                                                        0.);
-        assert (denominator != 0);
+        long double numerator = wov_obs - std::inner_product(begin(obs->weight_),
+                                                             end(obs->weight_),
+                                                             begin(outcome),
+                                                             0.);
+        long double denominator = numerator - wov_non_obs + std::inner_product(begin(non_obs->weight_),
+                                                                               end(non_obs->weight_),
+                                                                               begin(outcome),
+                                                                               0.);
+        assert (denominator != 0.);
         return numerator / denominator;
     }
 
@@ -142,11 +148,14 @@ namespace polyscip {
         return weight_ == weight;
     }
 
-    bool WeightSpaceVertex::hasUnitWeight(std::size_t index) {
-        assert(index < weight_.size());
-        auto weight = WeightType(weight_.size(),0.);
-        weight[index] = 1.;
-        return weight_ == weight;
+    bool WeightSpaceVertex::hasUnitWeight() const {
+        for (std::size_t i=0; i<weight_.size(); ++i) {
+            auto weight = WeightType(weight_.size(), 0.);
+            weight[i] = 1.;
+            if (weight_ == weight)
+                return true;
+        }
+        return false;
     }
 
     void WeightSpaceVertex::print(ostream& os, bool printFacets) const {

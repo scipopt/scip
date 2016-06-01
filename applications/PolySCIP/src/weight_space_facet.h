@@ -42,22 +42,26 @@ namespace polyscip {
          *  @param outcome outcome in objective space
          *  @param wov_coeff coefficient for weighted objective value
          */
-        explicit WeightSpaceFacet(const OutcomeType& outcome,
+        explicit WeightSpaceFacet(OutcomeType outcome,
                                   ValueType wov_coeff);
 
         /** Creates the weight space facet w_i >= 0
          *  @param num_objs number of objectives of given problem
          *  @param index index i of w_i >= 0
          */
-        explicit WeightSpaceFacet(unsigned num_objs, unsigned index);
+        explicit WeightSpaceFacet(unsigned num_objs, unsigned index) = delete;
 
         /** Prints facet information to output stream.
          */
         void print(std::ostream& os) const;
 
+        ValueType getWeightedWeight(const WeightType& weight) const;
+
+        ValueType getWOVCoeff() const {return wov_coeff_;};
+
     private:
         /**< coefficients for the weight of the facet inequality */
-        std::vector<ValueType> w_coeffs_;
+        OutcomeType w_coeffs_;
         /**< coefficient for the weighted objective value of the facet inequality */
         ValueType wov_coeff_;
     };

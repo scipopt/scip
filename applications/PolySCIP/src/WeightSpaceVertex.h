@@ -34,21 +34,21 @@ class WeightSpaceVertex
 {
  public:
    /** creates inital vertex */
-   WeightSpaceVertex(
-      std::vector< const std::vector<SCIP_Real>* >     incident_facets,  /**< incident nondominated points */
-      std::vector<SCIP_Real>*                          weight,           /**< weight vector */
-      SCIP_Real                                        weighted_objval   /**< weighted objective value */
-      );
+   explicit WeightSpaceVertex(
+           std::vector<const std::vector<SCIP_Real> *> incident_facets,  /**< incident nondominated points */
+           std::vector<SCIP_Real> *weight,           /**< weight vector */
+           SCIP_Real weighted_objval   /**< weighted objective value */
+   );
 
-   /** creates a new point between obsolete and adjacent non obsolete point */
-   WeightSpaceVertex(
-      const WeightSpaceVertex*          obsolete,           /**< vertex cut off by new solution */
-      const WeightSpaceVertex*          adjacent,           /**< adjacent non obsolete vertex */
-      const std::vector<SCIP_Real>*     new_facet           /**< new solution cutting off the obsolete vertex */
-      );
+    /** creates a new point between obsolete and adjacent non obsolete point */
+    explicit WeightSpaceVertex(
+            const WeightSpaceVertex *obsolete,           /**< vertex cut off by new solution */
+            const WeightSpaceVertex *adjacent,           /**< adjacent non obsolete vertex */
+            const std::vector<SCIP_Real> *new_facet           /**< new solution cutting off the obsolete vertex */
+    );
 
    /** creates dummy point */
-   WeightSpaceVertex();
+   WeightSpaceVertex() = delete;
 
    /** destructor */
    ~WeightSpaceVertex();
