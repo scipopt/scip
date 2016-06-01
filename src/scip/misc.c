@@ -7972,6 +7972,20 @@ SCIP_Longint SCIPcalcBinomCoef(
    }
 }
 
+#ifndef NDEBUG
+/** returns a non-negative integer hash key for a given real number by using Fibonacci hashing */
+unsigned int SCIPcalcFibHash(
+   SCIP_Real             v                   /**< value to be hashed */
+   )
+{
+   unsigned int res;
+
+   res = ((unsigned int)(v * 2654435769)) % UINT_MAX;
+
+   return res;
+}
+#endif
+
 /** negates a number */
 SCIP_Real SCIPnegateReal(
    SCIP_Real             x                   /**< value to negate */

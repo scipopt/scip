@@ -26,7 +26,8 @@
 
 #include "scip/cons_expr_exp.h"
 
-#define EXP_PRECEDENCE  60000
+#define EXP_PRECEDENCE  85000
+#define EXP_HASHKEY     SCIPcalcFibHash(10181)
 
 /*
  * Data structures
@@ -143,6 +144,30 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalExp)
    return SCIP_OKAY;
 }
 
+
+/** expression hash callback */
+static
+SCIP_DECL_CONSEXPR_EXPRHASH(hashExp)
+{
+   unsigned int childhash;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(expr2key != NULL);
+   assert(hashkey != NULL);
+
+   *hashkey = EXP_HASHKEY;
+
+   assert(SCIPhashmapExists(expr2key, (void*)SCIPgetConsExprExprChildren(expr)[0]));
+   childhash = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
+
+   *hashkey ^= childhash;
+
+   return SCIP_OKAY;
+}
+
+
 /** expression interval evaluation callback */
 static
 SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalExp)
@@ -178,6 +203,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrExp(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseExp) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalExp) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashExp) );
 
    return SCIP_OKAY;
 }

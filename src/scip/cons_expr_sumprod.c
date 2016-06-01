@@ -35,7 +35,9 @@
 #include "scip/cons_expr_sumprod.h"
 
 #define SUM_PRECEDENCE      40000
+#define SUM_HASHKEY         SCIPcalcFibHash(47161)
 #define PRODUCT_PRECEDENCE  50000
+#define PRODUCT_HASHKEY     SCIPcalcFibHash(54949)
 
 /** ensures that a block memory array has at least a given size
  *
@@ -389,6 +391,41 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalSum)
    return SCIP_OKAY;
 }
 
+/** sum and products hash callback */
+static
+SCIP_DECL_CONSEXPR_EXPRHASH(hashSumProduct)
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   int c;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(expr2key != NULL);
+   assert(hashkey != NULL);
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   if( strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(expr)), "sum") )
+      *hashkey = SUM_HASHKEY;
+   else
+      *hashkey = PRODUCT_HASHKEY;
+
+   *hashkey ^= SCIPcalcFibHash(exprdata->constant);
+
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
+   {
+      unsigned int childhash;
+
+      assert(SCIPhashmapExists(expr2key, (void*)SCIPgetConsExprExprChildren(expr)[c]));
+      childhash = SCIPcalcFibHash(exprdata->coefficients[c]) ^ (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[c]);
+
+      *hashkey ^= childhash;
+   }
+
+   return SCIP_OKAY;
+}
+
 static
 SCIP_DECL_CONSEXPR_EXPREVAL(evalProduct)
 {
@@ -480,6 +517,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSumProduct) );
 
    return SCIP_OKAY;
 }
@@ -551,6 +589,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSumProduct) );
 
    return SCIP_OKAY;
 }

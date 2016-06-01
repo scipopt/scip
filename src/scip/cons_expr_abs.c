@@ -26,8 +26,8 @@
 
 #include "scip/cons_expr_abs.h"
 
-#define ABS_PRECEDENCE  60000
-
+#define ABS_PRECEDENCE  70000
+#define ABS_HASHKEY     SCIPcalcFibHash(7187)
 /*
  * Data structures
  */
@@ -162,6 +162,28 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalAbs)
    return SCIP_OKAY;
 }
 
+/** expression hash callback */
+static
+SCIP_DECL_CONSEXPR_EXPRHASH(hashAbs)
+{
+   unsigned int childhash;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(expr2key != NULL);
+   assert(hashkey != NULL);
+
+   *hashkey = ABS_HASHKEY;
+
+   assert(SCIPhashmapExists(expr2key, (void*) SCIPgetConsExprExprChildren(expr)[0]));
+   childhash = (unsigned int)(size_t) SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
+
+   *hashkey ^= childhash;
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for absolute expression and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrAbs(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -179,6 +201,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrAbs(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseAbs) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalAbs) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashAbs) );
 
    return SCIP_OKAY;
 }

@@ -223,6 +223,49 @@ SCIP_RETCODE copyConshdlrExprExprHdlr(
    return SCIP_OKAY;
 }
 
+/** returns an equivalent expression for a given expression if possible; it adds the expression to key2expr if the map
+ *  does not contain the key
+ */
+static
+SCIP_RETCODE findEqualExpr(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR *  expr,               /**< expression to replace */
+   SCIP_HASHTABLE*       key2expr,           /**< mapping of hashes to expressions */
+   SCIP_CONSEXPR_EXPR**  newexpr             /**< pointer to store an equivalent expression (NULL if there is none) */
+   )
+{
+   SCIP_HASHTABLELIST* hashtablelist;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(key2expr != NULL);
+   assert(newexpr != NULL);
+
+   *newexpr = NULL;
+   hashtablelist = NULL;
+
+   do
+   {
+      /* search for an equivalent expression */
+      *newexpr = (SCIP_CONSEXPR_EXPR*)(SCIPhashtableRetrieveNext(key2expr, &hashtablelist, (void*)expr));
+
+      if( *newexpr == NULL )
+      {
+         /* processed all expressions like expr from hash table, so insert expr */
+         SCIP_CALL( SCIPhashtableInsert(key2expr, (void*) expr) );
+         break;
+      }
+      else if( expr != *newexpr )
+      {
+         assert(SCIPcompareExprs(expr, *newexpr) == 0);
+         break;
+      }
+   }
+   while( TRUE );
+
+   return SCIP_OKAY;
+}
+
 /** @name Walking methods
  *
  * Several operations need to traverse the whole expression tree: print, evaluate, free, etc.
@@ -796,6 +839,113 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
    return SCIP_OKAY;
 }
 
+/** expression walk callback to skip expression which have already been hashed */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprVisitingExpr)
+{
+   SCIP_HASHMAP* expr2key;
+   SCIP_CONSEXPR_EXPR* child;
+
+   assert(expr != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+
+   expr2key = (SCIP_HASHMAP*) data;
+   assert(expr2key != NULL);
+
+   assert(expr->walkcurrentchild < expr->nchildren);
+   child = expr->children[expr->walkcurrentchild];
+   assert(child != NULL);
+
+   /* skip child if the expression is already in the map */
+   *result = SCIPhashmapExists(expr2key, (void*) child) ? SCIP_CONSEXPREXPRWALK_SKIP : SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   return SCIP_OKAY;
+}
+
+/** expression walk callback to compute an hash value for an expression */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(hashExprLeaveExpr)
+{
+   SCIP_HASHMAP* expr2key;
+   unsigned int hashkey;
+   int i;
+
+   assert(expr != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+
+   expr2key = (SCIP_HASHMAP*) data;
+   assert(expr2key != NULL);
+
+   hashkey = 0;
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   if( expr->exprhdlr->hash != NULL )
+   {
+      SCIP_CALL( (*expr->exprhdlr->hash)(scip, expr, expr2key, &hashkey) );
+   }
+   else
+   {
+      /* compute hash from expression handler name if callback is not implemented
+       * this can lead to more collisions and thus a larger number of expensive expression compare calls
+       */
+      for( i = 0; expr->exprhdlr->name[i] != '\0'; i++ )
+         hashkey += (unsigned int) expr->exprhdlr->name[i];
+
+      hashkey = SCIPcalcFibHash(hashkey);
+   }
+
+   /* put the hash key into expr2key map */
+   SCIP_CALL( SCIPhashmapInsert(expr2key, (void*)expr, (void*)(size_t)hashkey) );
+
+   return SCIP_OKAY;
+}
+
+/** expression walk callback to replace common sub-expression */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
+{
+   SCIP_HASHTABLE* key2expr;
+   SCIP_CONSEXPR_EXPR* newchild;
+   SCIP_CONSEXPR_EXPR* child;
+
+   assert(expr != NULL);
+   assert(data != NULL);
+   assert(result != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_VISITINGCHILD);
+
+   key2expr = (SCIP_HASHTABLE*)data;
+   assert(key2expr != NULL);
+
+   assert(expr->walkcurrentchild < expr->nchildren);
+   child = expr->children[expr->walkcurrentchild];
+   assert(child != NULL);
+
+   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
+
+   /* try to find an equivalent expression */
+   SCIP_CALL( findEqualExpr(scip, child, key2expr, &newchild) );
+
+   /* replace child with newchild */
+   if( newchild != NULL )
+   {
+      assert(child != newchild);
+      assert(SCIPcompareExprs(child, newchild) == 0);
+
+      /** @todo use SCIPsetConsExprExprChild() (simplify-branch) to replace child */
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &child) );
+
+      expr->children[expr->walkcurrentchild] = newchild;
+      SCIPcaptureConsExprExpr(newchild);
+
+      SCIPdebugMessage("replace common inner node expression\n");
+
+      *result = SCIP_CONSEXPREXPRWALK_SKIP;
+   }
+
+   return SCIP_OKAY;
+}
+
+
 /**@} */  /* end of walking methods */
 
 
@@ -834,6 +984,135 @@ SCIP_RETCODE computeViolation(
 
    return SCIP_OKAY;
 }
+
+/** get key of hash element */
+static
+SCIP_DECL_HASHGETKEY(hashCommonSubexprGetKey)
+{
+   return elem;
+}  /*lint !e715*/
+
+/** checks if two expressions are structurally the same */
+static
+SCIP_DECL_HASHKEYEQ(hashCommonSubexprEq)
+{
+   SCIP_CONSEXPR_EXPR* expr1;
+   SCIP_CONSEXPR_EXPR* expr2;
+
+   expr1 = (SCIP_CONSEXPR_EXPR*)key1;
+   expr2 = (SCIP_CONSEXPR_EXPR*)key2;
+   assert(expr1 != NULL);
+   assert(expr2 != NULL);
+
+   return expr1 == expr2 || SCIPcompareExprs(expr1, expr2) == 0;
+}  /*lint !e715*/
+
+/** get value of hash element when comparing with another expression */
+static
+SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_HASHMAP* expr2key;
+
+   expr = (SCIP_CONSEXPR_EXPR*) key;
+   assert(expr != NULL);
+
+   expr2key = (SCIP_HASHMAP*) userptr;
+   assert(expr2key != NULL);
+   assert(SCIPhashmapExists(expr2key, (void*)expr));
+
+   return (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);
+}  /*lint !e715*/
+
+/** replaces common sub-expressions in the current expression graph by using a hash key for each expression; the
+ *  algorithm consists of two steps:
+ *
+ *  1. traverse through all expressions trees of given constraints and compute for each of them a (not necessarily
+ *     unique) hash
+ *
+ *  2. initialize an empty hash table and traverse through all expression; check for each of them if we can find a
+ *     structural equivalent expression in the hash table; if yes we replace the expression by the expression inside the
+ *     hash table, otherwise we add it to the hash table
+ *
+ *  @note the hash keys of the expressions are used for the hashing inside the hash table; to compute if two expressions
+ *  (with the same hash) are structurally the same we use the function SCIPcompareExprs()
+ */
+static
+SCIP_RETCODE replaceCommonSubexpressions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss              /**< total number of constraints */
+   )
+{
+   SCIP_HASHMAP* expr2key;
+   SCIP_HASHTABLE* key2expr;
+   SCIP_CONSDATA* consdata;
+   int i;
+
+   assert(scip != NULL);
+   assert(conss != NULL);
+   assert(nconss >= 0);
+
+   /* create empty map to store all sub-expression hashes */
+   SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
+
+   /* compute all hashes for each sub-expression */
+   for( i = 0; i < nconss; ++i )
+   {
+      assert(conss[i] != NULL);
+
+      consdata = SCIPconsGetData(conss[i]);
+      assert(consdata != NULL);
+
+      if( consdata->expr != NULL )
+      {
+         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, NULL, hashExprVisitingExpr, NULL, hashExprLeaveExpr, (void*)expr2key) );
+      }
+   }
+
+   /* replace equivalent sub-expressions */
+   SCIP_CALL( SCIPhashtableCreate(&key2expr, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPhashmapGetNEntries(expr2key)),
+         hashCommonSubexprGetKey, hashCommonSubexprEq, hashCommonSubexprKeyval, (void*)expr2key) );
+
+   for( i = 0; i < nconss; ++i )
+   {
+      SCIP_CONSEXPR_EXPR* newroot;
+
+      consdata = SCIPconsGetData(conss[i]);
+      assert(consdata != NULL);
+
+      if( consdata->expr == NULL )
+         continue;
+
+      /* since the root has not been checked for equivalence, it has to be checked separately */
+      SCIP_CALL( findEqualExpr(scip, consdata->expr, key2expr, &newroot) );
+
+      if( newroot != NULL )
+      {
+         assert(newroot != consdata->expr);
+         assert(SCIPcompareExprs(consdata->expr, newroot) == 0);
+
+         SCIP_CALL( SCIPreleaseConsExprExpr(scip, &consdata->expr) );
+
+         consdata->expr = newroot;
+         SCIPcaptureConsExprExpr(newroot);
+
+         SCIPdebugMessage("replace common root expression\n");
+      }
+      else
+      {
+         /* replace equivalent sub-expressions in the tree */
+         SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, NULL, commonExprVisitingExpr, NULL, NULL, (void*)key2expr) );
+      }
+   }
+
+   /* free memory */
+   SCIPhashtableFree(&key2expr);
+   SCIPhashmapFree(&expr2key);
+
+   return SCIP_OKAY;
+}
+
 
 /** @name Parsing methods
  * @{
@@ -1900,18 +2179,14 @@ SCIP_DECL_CONSPROP(consPropExpr)
 
 
 /** presolving method of constraint handler */
-#if 0
 static
 SCIP_DECL_CONSPRESOL(consPresolExpr)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of expr constraint handler not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+
+   SCIP_CALL( replaceCommonSubexpressions(scip, conss, nconss) );
 
    return SCIP_OKAY;
 }
-#else
-#define consPresolExpr NULL
-#endif
 
 
 /** propagation conflict resolving method of constraint handler */
@@ -2425,6 +2700,21 @@ SCIP_RETCODE SCIPsetConsExprExprHdlrIntEval(
    assert(exprhdlr != NULL);
 
    exprhdlr->inteval = inteval;
+
+   return SCIP_OKAY;
+}
+
+/** set the hash callback of an expression handler */
+SCIP_RETCODE SCIPsetConsExprExprHdlrHash(
+   SCIP*                      scip,          /**< SCIP data structure */
+   SCIP_CONSHDLR*             conshdlr,      /**< expression constraint handler */
+   SCIP_CONSEXPR_EXPRHDLR*    exprhdlr,      /**< expression handler */
+   SCIP_DECL_CONSEXPR_EXPRHASH((*hash))      /**< hash callback (can be NULL) */
+   )
+{
+   assert(exprhdlr != NULL);
+
+   exprhdlr->hash = hash;
 
    return SCIP_OKAY;
 }
@@ -3320,6 +3610,31 @@ void SCIPsetConsExprExprEvalInterval(
    expr->intevaltag = tag;
 }
 
+/** returns the hash key of an expression */
+unsigned int SCIPgetConsExprExprHashkey(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr              /**< expression */
+   )
+{
+   SCIP_HASHMAP* expr2key;
+   unsigned int hashkey;
+
+   assert(expr != NULL);
+
+   SCIP_CALL( SCIPhashmapCreate(&expr2key, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
+
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, hashExprLeaveExpr, (void*)expr2key) );
+
+   assert(SCIPhashmapExists(expr2key, (void*)expr));  /* we just computed the hash, so should be in the map */
+   hashkey = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);
+
+   SCIPhashmapFree(&expr2key);
+
+   return hashkey;
+}
+
+
+
 /** walks the expression graph in depth-first manner and executes callbacks at certain places
  *
  * Many algorithms over expression trees need to traverse the tree in depth-first manner and a
@@ -3432,6 +3747,7 @@ SCIP_RETCODE SCIPwalkConsExprExprDF(
    root->walkparent = NULL;
 
    /* traverse the tree */
+   result = SCIP_CONSEXPREXPRWALK_CONTINUE;
    stage = SCIP_CONSEXPREXPRWALK_ENTEREXPR;
    while( TRUE )
    {
@@ -3906,6 +4222,278 @@ SCIP_RETCODE SCIPparseConsExprExpr(
 
    return retcode;
 }
+
+/*
+ * ============================================
+ * ORDER
+ * ============================================
+ * This is a partial order for *simplified* expressions. Just a copy of the order from
+ * the book so feel very free to modify.
+ * Comparing equal type expressions:
+ * - u,v value expressions: u < v <=> val(u) < val(v) [DONE]
+ * - u,v var expressions: u < v <=> SCIPvarGetIndex(var(u)) < SCIPvarGetIndex(var(v)) <=> SCIPvarCompare(var(u),var(v)) [DONE]
+ * - u,v are both sum or product expression: < is a lexicographical order on the terms, [DONE]
+ *    starting from the _last_ finds the first index i where they differ and u < v <=> u_i < v_i
+ *    If they are the same in all indices, then u < v <=> nchildren(u) < nchildren(v)
+ *       Note: we are assuming expression are simplified, so within u, we have u_1 < u_2, etc
+ *       Example: y + z < x + y + z, 2*x + 3*y < 3*x + 3*y
+ *       Question: Quadratics are one of the most important cases, does this make sense for quadratics?
+ * - u, v expressions p,q numbers: u^q < v^p <=> u < v, and in case they are equal, q < p [DONE:considered in the above case]
+ * - u, v are functional expressions (exp, log, etc): u < v <=> Kind(u) < Kind(v), or if they are equal, args(u) < args(v)
+ *    (the first argument and so on), if all common arguments are equal, then the one with less arguments < other one
+ *       Example: f(x) < f(y), g(x) < g(x,y)
+ *       Note: Kind is the type of operator
+ *
+ * Different type expressions:
+ * - u value expr, v other: u < v always [DONE]
+ * - u product (this is a proper product in the book, not a power), v sum, var or func: u < v <=> u < 1*v <=> u_n < v
+ *       Note: This means we compare u with the 1*v product. Though 1*v is unsimplified, the rule applies.
+ *       Example: 2*x^0.5 < x [Note that x is a var expression]
+ * - u^p, v sum, var or func: u^p < v <=> u^p < v^1 (I think this is the same as the previous one)
+ *       This means that u^p < v <=> u < v and if they are equal, if p < 1
+ * - u sum, v var or func: u < v <=> u < 0+v
+ * - u sum, v var or func: u < v <=> u < 0+v
+ * - u, v and none of the rules apply: u < v <=> ! v < u
+ *    Example: is x < x^2 ? x is var and x^2 product, so none applies, then
+ *    we try to answer if x^2 < x <=> x^2 < x^1 <=> 2 < 1 <=> False, so x < x^2 is True
+ */
+
+/** compare expressions
+ * The given expressions are assumed to be simplified */
+int SCIPcompareExprs(
+   SCIP_CONSEXPR_EXPR*   expr1,              /**< first expression */
+   SCIP_CONSEXPR_EXPR*   expr2               /**< second expression */
+   )
+{
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr1;
+   SCIP_CONSEXPR_EXPRHDLR* exprhdlr2;
+
+   exprhdlr1 = SCIPgetConsExprExprHdlr(expr1);
+   exprhdlr2 = SCIPgetConsExprExprHdlr(expr2);
+
+   if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), SCIPgetConsExprExprHdlrName(exprhdlr2)) == 0 )
+   { /* expressions are of the same kind/type */
+      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "val") == 0 )
+      {
+         SCIP_Real val1;
+         SCIP_Real val2;
+
+         val1 = SCIPgetConsExprExprValueValue(expr1);
+         val2 = SCIPgetConsExprExprValueValue(expr2);
+
+         return val1 < val2 ? -1 : val1 == val2 ? 0 : 1;
+      }
+      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "var") == 0 )
+      {
+         int index1;
+         int index2;
+
+         index1 = SCIPvarGetIndex(SCIPgetConsExprExprVarVar(expr1));
+         index2 = SCIPvarGetIndex(SCIPgetConsExprExprVarVar(expr2));
+
+         return index1 < index2 ? -1 : index1 == index2 ? 0 : 1;
+      }
+      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "sum") == 0 )
+      {
+         int nchildren1;
+         int nchildren2;
+         int compareresult;
+         int i;
+         int j;
+         SCIP_Real* coefs1;
+         SCIP_Real* coefs2;
+         SCIP_Real  const1;
+         SCIP_Real  const2;
+
+         nchildren1 = SCIPgetConsExprExprNChildren(expr1);
+         nchildren2 = SCIPgetConsExprExprNChildren(expr2);
+         coefs1 = SCIPgetConsExprExprSumCoefs(expr1);
+         coefs2 = SCIPgetConsExprExprSumCoefs(expr2);
+
+         for( i = nchildren1 - 1, j = nchildren2 -1; i >= 0 && j >= 0; --i, --j )
+         {
+            compareresult = SCIPcompareExprs(SCIPgetConsExprExprChildren(expr1)[i], SCIPgetConsExprExprChildren(expr2)[j]);
+            if( compareresult != 0 )
+               return compareresult;
+            else
+            {
+               /* expressions are equal, compare coefficient */
+               if( coefs1[i] < coefs2[j] )
+                  return -1;
+               if( coefs1[i] > coefs2[j] )
+                  return 1;
+
+               /* coefficients are equal, continue */
+            }
+         }
+
+         /* all children of one expression are children of the other expression, use amount of children as a tie-breaker */
+         if( i < j )
+         {
+            assert(i == -1);
+            /* expr1 has less elements, hence expr1 < expr2 */
+            return -1;
+         }
+         if( i > j )
+         {
+            assert(j == -1);
+            /* expr1 has more elements, hence expr1 > expr2 */
+            return 1;
+         }
+
+         /* everything is equal, use constant as tie-breaker */
+         assert(i == -1 && j == -1);
+         const1 = SCIPgetConsExprExprSumConstant(expr1);
+         const2 = SCIPgetConsExprExprSumConstant(expr2);
+         if( const1 < const2 )
+            return -1;
+         if( const1 > const2 )
+            return 1;
+
+         /* they are equal */
+         return 0;
+      }
+      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "prod") == 0 )
+      {
+         int nchildren1;
+         int nchildren2;
+         int compareresult;
+         int i;
+         int j;
+         SCIP_Real* exponents1;
+         SCIP_Real* exponents2;
+         SCIP_Real  coef1;
+         SCIP_Real  coef2;
+
+         nchildren1 = SCIPgetConsExprExprNChildren(expr1);
+         nchildren2 = SCIPgetConsExprExprNChildren(expr2);
+         exponents1 = SCIPgetConsExprExprProductExponents(expr1);
+         exponents2 = SCIPgetConsExprExprProductExponents(expr2);
+
+         for( i = nchildren1 - 1, j = nchildren2 -1; i >= 0 && j >= 0; --i, --j )
+         {
+            compareresult = SCIPcompareExprs(SCIPgetConsExprExprChildren(expr1)[i], SCIPgetConsExprExprChildren(expr2)[j]);
+            if( compareresult != 0 )
+               return compareresult;
+            else
+            {
+               /* expressions are equal, compare exponents */
+               if( exponents1[i] < exponents2[j] )
+                  return -1;
+               if( exponents1[i] > exponents2[j] )
+                  return 1;
+
+               /* exponents are equal, continue */
+            }
+         }
+
+         /* all children of one expression are children of the other expression, use amount of children as a tie-breaker */
+         if( i < j )
+         {
+            assert(i == -1);
+            return -1;
+         }
+         if( i > j )
+         {
+            assert(j == -1);
+            return 1;
+         }
+
+         /* everything is equal, use coefficient as tie-breaker */
+         assert(i == -1 && j == -1);
+         coef1 = SCIPgetConsExprExprProductCoef(expr1);
+         coef2 = SCIPgetConsExprExprProductCoef(expr2);
+         if( coef1 < coef2 )
+            return -1;
+         if( coef1 > coef2 )
+            return 1;
+
+         /* they are equal */
+         return 0;
+      }
+      /* TODO: the same function! */
+      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "abs") == 0 )
+      {
+         return SCIPcompareExprs(SCIPgetConsExprExprChildren(expr1)[0], SCIPgetConsExprExprChildren(expr2)[0]);
+      }
+
+      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "exp") == 0 )
+      {
+         return SCIPcompareExprs(SCIPgetConsExprExprChildren(expr1)[0], SCIPgetConsExprExprChildren(expr2)[0]);
+      }
+
+      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "log") == 0 )
+      {
+         return SCIPcompareExprs(SCIPgetConsExprExprChildren(expr1)[0], SCIPgetConsExprExprChildren(expr2)[0]);
+      }
+   }
+   else
+   { /* expressions are of different kind/type */
+      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "val") == 0 )
+      {
+         return -1;
+      }
+      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "val") == 0 )
+         return -1 * SCIPcompareExprs(expr2, expr1);
+
+      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "prod") == 0 )
+      {
+         int compareresult;
+         int nchildren;
+
+         nchildren = SCIPgetConsExprExprNChildren(expr1);
+         compareresult = SCIPcompareExprs(SCIPgetConsExprExprChildren(expr1)[nchildren-1], expr2);
+
+         if( compareresult != 0 )
+            return compareresult;
+
+         /* base of the largest expression of the product is equal to expr2, exponent might tell us that expr2 is larger */
+         if( SCIPgetConsExprExprProductExponents(expr1)[nchildren-1] < 1.0 )
+            return -1;
+
+         /* largest expression of product is larger or equal than expr2 => expr1 >= expr2 */
+         return 1;
+      }
+      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "prod") == 0 )
+         return -1 * SCIPcompareExprs(expr2, expr1);
+
+      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "sum") == 0 )
+      {
+         int compareresult;
+         int nchildren;
+
+         nchildren = SCIPgetConsExprExprNChildren(expr1);
+         compareresult = SCIPcompareExprs(SCIPgetConsExprExprChildren(expr1)[nchildren-1], expr2);
+
+         if( compareresult != 0 )
+            return compareresult;
+
+         /* "base" of the largest expression of the sum is equal to expr2, coefficient might tell us that expr2 is larger */
+         if( SCIPgetConsExprExprSumCoefs(expr1)[nchildren-1] < 1.0 )
+            return -1;
+
+         /* largest expression of sum is larger or equal than expr2 => expr1 >= expr2 */
+         return 1;
+      }
+      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "sum") == 0 )
+         return -1 * SCIPcompareExprs(expr2, expr1);
+
+      /* at this point we know type(expr1) != type(expr2) and neither is value, product nor sum;
+       * if type(expr2) is var, then exp1 is some function */
+      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr2), "var") == 0 )
+         return 1;
+      if( strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), "var") == 0 )
+         return -1;
+
+      /* both are a different function */
+      return strcmp(SCIPgetConsExprExprHdlrName(exprhdlr1), SCIPgetConsExprExprHdlrName(exprhdlr2));
+   }
+
+   /* should not get here */
+   SCIPerrorMessage("Unexpected behavior in comparison\n");
+   return SCIP_ERROR;
+}
+
 
 /** appends child to the children list of expr */
 SCIP_RETCODE SCIPappendConsExprExpr(
