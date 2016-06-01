@@ -5567,6 +5567,10 @@ unsigned int SCIPcalcFibHash(
    SCIP_Real             v                   /**< value to be hashed */
    );
 
+#ifdef NDEBUG
+#define SCIPcalcFibHash(v)   (((unsigned int)(v * 2654435769)) % UINT_MAX)
+#endif
+
 /**@} */
 
 /*
