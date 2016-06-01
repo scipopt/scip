@@ -821,11 +821,13 @@ static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(reversepropExpr)
 {
    SCIP_CONSEXPR_EXPR* child;
+   SCIP_Bool cutoff;
    int nreds;
 
    assert(expr != NULL);
    assert(data == NULL);
 
+   cutoff = FALSE;
    nreds = 0;
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
@@ -843,8 +845,16 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(reversepropExpr)
          *result = SCIP_CONSEXPREXPRWALK_SKIP;
 
       /* call reverse propagation callback */
-      SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, &nreds) );
+      SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, &cutoff, &nreds) );
       assert(nreds >= 0);
+
+      /* stop propagation if we could find a cutoff */
+      if( cutoff )
+      {
+         SCIPdebugMessage("found a cutoff during reverse bound propagation\n");
+         *result = SCIP_CONSEXPREXPRWALK_ABORT;
+         return SCIP_OKAY;
+      }
 
       break;
 
@@ -3631,6 +3641,46 @@ SCIP_RETCODE SCIPevalConsExprExprInterval(
    {
       SCIPintervalSetEmpty(&expr->interval);
       expr->intevaltag = boxtag;
+   }
+
+   return SCIP_OKAY;
+}
+
+/** tightens the bounds of an expression; the new bounds are stored in the interval variable */
+EXTERN
+SCIP_RETCODE SCIPtightenConsExprExprInterval(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
+   SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
+   SCIP_Bool*              success,          /**< buffer to store whether we could find a bound reduction or not */
+   SCIP_Bool*              cutoff            /**< buffer to store whether a node's bounds were propagated to an empty interval */
+   )
+{
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(success != NULL);
+   assert(cutoff != NULL);
+
+   *success = FALSE;
+   *cutoff = FALSE;
+
+   if( SCIPintervalGetInf(newbounds) > SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))
+      || SCIPintervalGetSup(newbounds) < SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)) )
+   {
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* @todo use something similar to the minstrength in expr.c */
+   if( SCIPisGT(scip, SCIPintervalGetInf(newbounds), SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)))
+      || SCIPisLT(scip, SCIPintervalGetSup(newbounds), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))) )
+   {
+      *success = TRUE;
+
+      /* store new bounds */
+      SCIPdebugMessage("tighten bounds from [%e, %e] -> ", expr->interval.inf, expr->interval.sup);
+      SCIPintervalIntersect(&expr->interval, expr->interval, newbounds);
+      SCIPdebugMessage("[%e, %e]\n", expr->interval.inf, expr->interval.sup);
    }
 
    return SCIP_OKAY;

@@ -401,21 +401,24 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
    SCIP_INTERVAL childbounds;
    SCIP_Real minlinactivity;
    SCIP_Real maxlinactivity;
+   SCIP_Bool success;
    int minlinactivityinf;
    int maxlinactivityinf;
    int c;
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(expr->nchildren > 0);
+   assert(SCIPgetConsExprExprNChildren(expr) > 0);
+   assert(cutoff != NULL);
    assert(nreds != NULL);
 
    exprdata = SCIPgetConsExprExprData(expr);
    assert(exprdata != NULL);
 
+   *cutoff = FALSE;
    *nreds = 0;
 
    /* not possible to conclude finite bounds if the interval of the expression is [-inf,inf] */
-   if( SCIPintervalIsEntire(SCIPinfinity(scip), expr->interval) )
+   if( SCIPintervalIsEntire(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)) )
       return SCIP_OKAY;
 
    prevroundmode = SCIPintervalGetRoundingMode();
@@ -426,12 +429,13 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
    minlinactivityinf = 0;
    maxlinactivityinf = 0;
 
-   SCIP_CALL( SCIPallocBufferArray(scip, &bounds, expr->nchildren) );
+   SCIP_CALL( SCIPallocBufferArray(scip, &bounds, SCIPgetConsExprExprNChildren(expr)) );
 
    /* shift coefficients into the intervals of the children; compute the min and max activities */
-   for( c = 0; c < expr->nchildren; ++c )
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr); ++c )
    {
-      SCIPintervalMulScalar(SCIPinfinity(scip), &bounds[c], expr->children[c]->interval, exprdata->coefficients[c]);
+      SCIPintervalMulScalar(SCIPinfinity(scip), &bounds[c], SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[c]),
+         exprdata->coefficients[c]);
 
       if( SCIPisInfinity(scip, SCIPintervalGetSup(bounds[c])) )
          ++maxlinactivityinf;
@@ -451,32 +455,32 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
    }
 
    /* if there are too many unbounded bounds, then could only compute infinite bounds for children, so give up */
-   if( (minlinactivityinf >= 2 || SCIPisInfinity(scip, SCIPintervalGetSup(expr->interval))) &&
-      ( maxlinactivityinf >= 2 || SCIPisInfinity(scip, -SCIPintervalGetInf(expr->interval)))
+   if( (minlinactivityinf >= 2 || SCIPisInfinity(scip, SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)))) &&
+      ( maxlinactivityinf >= 2 || SCIPisInfinity(scip, -SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr))))
       )
    {
       SCIPintervalSetRoundingMode(prevroundmode);
       goto TERMINATE;
    }
 
-   for( c = 0; c < expr->nchildren; ++c )
+   for( c = 0; c < SCIPgetConsExprExprNChildren(expr) && !(*cutoff); ++c )
    {
       /* upper bounds of c_i is
        *   node->bounds.sup - (minlinactivity - c_i.inf), if c_i.inf > -infinity and minlinactivityinf == 0
        *   node->bounds.sup - minlinactivity, if c_i.inf == -infinity and minlinactivityinf == 1
        */
       SCIPintervalSetEntire(SCIPinfinity(scip), &childbounds);
-      if( !SCIPisInfinity(scip, SCIPintervalGetSup(expr->interval)) )
+      if( !SCIPisInfinity(scip, SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))) )
       {
          /* we are still in downward rounding mode, so negate and negate to get upward rounding */
          if( bounds[c].inf <= -SCIPinfinity(scip) && minlinactivityinf <= 1 )
          {
             assert(minlinactivityinf == 1);
-            childbounds.sup = SCIPintervalNegateReal(minlinactivity - expr->interval.sup);
+            childbounds.sup = SCIPintervalNegateReal(minlinactivity - SCIPgetConsExprExprInterval(expr).sup);
          }
          else if( minlinactivityinf == 0 )
          {
-            childbounds.sup = SCIPintervalNegateReal(minlinactivity - expr->interval.sup - bounds[c].inf);
+            childbounds.sup = SCIPintervalNegateReal(minlinactivity - SCIPgetConsExprExprInterval(expr).sup - bounds[c].inf);
          }
       }
 
@@ -484,30 +488,23 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
        *   node->bounds.inf - (maxlinactivity - c_i.sup), if c_i.sup < infinity and maxlinactivityinf == 0
        *   node->bounds.inf - maxlinactivity, if c_i.sup == infinity and maxlinactivityinf == 1
        */
-      if( expr->interval.inf > -SCIPinfinity(scip) )
+      if( SCIPgetConsExprExprInterval(expr).inf > -SCIPinfinity(scip) )
       {
          if( bounds[c].sup >= SCIPinfinity(scip) && maxlinactivityinf <= 1 )
          {
             assert(maxlinactivityinf == 1);
-            childbounds.inf = expr->interval.inf - maxlinactivity;
+            childbounds.inf = SCIPgetConsExprExprInterval(expr).inf - maxlinactivity;
          }
          else
          {
-            childbounds.inf = expr->interval.inf - maxlinactivity + bounds[c].sup;
+            childbounds.inf = SCIPgetConsExprExprInterval(expr).inf - maxlinactivity + bounds[c].sup;
          }
       }
 
-      /* check whether we have found better bounds */
-      if( SCIPisLT(scip, bounds[c].inf, childbounds.inf) || SCIPisGT(scip, bounds[c].sup, childbounds.sup) )
-      {
-         /* @todo call some global tightening function */
+      /* try to tighten the bounds of the expression */
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[c], childbounds, &success, cutoff) );
 
-         ++(*nreds);
-
-         printf("tightened bound from [%e, %e] -> ", expr->children[c]->interval.inf, expr->children[c]->interval.sup);
-         SCIPintervalIntersect(&expr->children[c]->interval, expr->children[c]->interval, childbounds);
-         printf("[%e, %e]\n", expr->children[c]->interval.inf, expr->children[c]->interval.sup);
-      }
+      /* @todo use success to set status of expr (mabye move expr to SCIPtightenConsExprExprInterval) */
    }
 
    SCIPintervalSetRoundingMode(prevroundmode);

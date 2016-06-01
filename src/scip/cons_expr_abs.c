@@ -167,28 +167,24 @@ static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropAbs)
 {
    SCIP_INTERVAL childbound;
+   SCIP_Bool success;
 
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(expr->nchildren == 1);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
    assert(nreds != NULL);
-   assert(SCIPintervalGetInf(expr->interval) >= 0.0);
+   assert(SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)) >= 0.0);
 
    *nreds = 0;
 
-   SCIPintervalSetBounds(&childbound, -SCIPintervalGetSup(expr->interval), SCIPintervalGetSup(expr->interval));
+   /* f = abs(c0) => c0 = -f union f */
+   SCIPintervalSetBounds(&childbound, -SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)),
+      SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)));
 
-   /* check whether we have found better bounds */
-   if( SCIPisLT(scip, bounds[c].inf, childbounds.inf) || SCIPisGT(scip, bounds[c].sup, childbounds.sup) )
-   {
-      /* @todo call some global tightening function */
+   /* try to tighten the bounds of the child node */
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, &success, cutoff) );
 
-      ++(*nreds);
-
-      printf("tightened bound from [%e, %e] -> ", expr->children[c]->interval.inf, expr->children[c]->interval.sup);
-      SCIPintervalIntersect(&expr->children[c]->interval, expr->children[c]->interval, childbounds);
-      printf("[%e, %e]\n", expr->children[c]->interval.inf, expr->children[c]->interval.sup);
-   }
+   /* @todo use success to set status of expr (mabye move expr to SCIPtightenConsExprExprInterval) */
 
    return SCIP_OKAY;
 }

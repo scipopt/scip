@@ -2159,8 +2159,6 @@ SCIP_RETCODE testReversePropagation(void)
    SCIP_CONSHDLR* conshdlr;
    SCIP_VAR* x;
    SCIP_VAR* y;
-   SCIP_CONSEXPR_EXPR* xexpr;
-   SCIP_CONSEXPR_EXPR* yexpr;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONS* cons;
 
@@ -2182,22 +2180,43 @@ SCIP_RETCODE testReversePropagation(void)
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
 
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
-   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
-
+   /* sum */
    {
+      SCIPinfoMessage(scip, NULL, "test sum expression\n");
+
       SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "<x> + <y>", NULL, &expr)) );
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 1.0, 2.5) );
 
       reversePropagationCons(scip, cons);
+      assert(SCIPisEQ(scip, expr->children[0]->interval.inf, 0.0));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.sup, 0.5));
+      assert(SCIPisEQ(scip, expr->children[1]->interval.inf, 0.5));
+      assert(SCIPisEQ(scip, expr->children[1]->interval.sup, 2.5));
 
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
+   /* abs */
+   {
+      SCIPinfoMessage(scip, NULL, "test abs expression\n");
+
+      SCIP_CALL( SCIPchgVarLb(scip, x, -3.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, 4.0) );
+
+      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "abs(<x>)", NULL, &expr)) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 1.0, 2.5) );
+
+      reversePropagationCons(scip, cons);
+      assert(SCIPisEQ(scip, expr->children[0]->interval.inf, -2.5));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.sup, 2.5));
+
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+
+   }
+
    /* free allocated memory */
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
-   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );

@@ -195,11 +195,13 @@ extern "C" {
  * input:
  *  - scip : SCIP main data structure
  *  - expr : expression to be evaluated
+ *  - cutoff: buffer to store whether an expression's bounds were propagated to an empty interval
  *  - nreds : buffer to store the number of interval reductions of all children
  */
 #define SCIP_DECL_CONSEXPR_REVERSEPROP(x) SCIP_RETCODE x (\
    SCIP* scip, \
    SCIP_CONSEXPR_EXPR* expr, \
+   SCIP_Bool* cutoff, \
    int* nreds)
 
 /** expression (interval-) evaluation callback
