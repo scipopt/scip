@@ -26,7 +26,7 @@
 #include "scip/cons_expr_value.h"
 
 #define VALUE_PRECEDENCE     10000
-#define VALUE_HASHKEY        36787
+#define VALUE_HASHKEY        SCIPcalcFibHash(36787)
 
 static
 SCIP_DECL_CONSEXPR_EXPRCOPYHDLR(copyhdlrValue)
@@ -117,11 +117,11 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashValue)
 {
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(expr->nchildren == 0);
+   assert(SCIPgetConsExprExprNChildren(expr) == 0);
    assert(expr2key != NULL);
    assert(hashkey != NULL);
 
-   *hashkey = SCIPcalcFibHash(VALUE_HASHKEY);
+   *hashkey = VALUE_HASHKEY;
    *hashkey ^= SCIPcalcFibHash(SCIPgetConsExprExprValueValue(expr));
 
    return SCIP_OKAY;
