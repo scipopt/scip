@@ -18,6 +18,11 @@
 #@author  Ambros Gleixner
 #@author  Marc Pfetsch
 
+# We need to compile different test in different folders. The idea is, given
+# the target binary we want to generate, to decide which are its dependencies
+# The dependencies should be all objects generated from the files in the test's
+# folder. We achieve this by using SECONDEXPANSION and the functions define
+# below.
 
 #-----------------------------------------------------------------------------
 # paths
@@ -63,11 +68,28 @@ UNITTESTSBIN	=	$(addprefix $(BINDIR)/, $(addsuffix $(BASESUFFIX), $(UNITTESTS)))
 UNITTESTSEXECS	=	$(addsuffix $(BASESUFFIX), $(UNITTESTS))
 UNITTESTSDEP	=	$(SRCDIR)/depend.$(OPT)
 
+# where files should be looked in for targets and pre-requisites
+VPATH = $(addprefix $(SRCDIR)/, $(UNITTESTS))
+
 # number of test cases in the whole unittest
 NUMBERS        :=       $(shell seq 1 $(words $(UNITTESTSEXECS)))
 
-# where files should be looked in
-VPATH = $(addprefix $(SRCDIR)/, $(UNITTESTS))
+#-----------------------------------------------------------------------------
+# Functions
+#-----------------------------------------------------------------------------
+
+# given for instance unittest-cons, returns all the (basename named) files on unittest-cons/
+# NOTE: given unittest-cons, filter $(1)% removes any string which doesn't begin with unittest-cons
+gettestfiles = $(notdir $(filter $(1), $(UNITTESTS)) $(filter $(1)/%,$(EXTRASRC)))
+#$(warning gettestfiles fun: $(call gettestfiles, unittest-cons)) # expect: unittest-cons cons_unittest
+
+# given test files, for instance, unittest-cons and cons_unittest, creates the corresponding objects
+testfiles2obj = $(addprefix $(OBJDIR)/, $(addsuffix .o, $(1)))
+#$(warning testfiles2obj fun: $(call testfiles2obj, unittest-cons cons_unittest)) # expect obj/bla/unittest-cons.o idem for cons_unittest
+
+# given a binary target, returns the test file
+# NOTE: $(var:word1=word2) replaces the word1 suffix with word2, so in this case we are removing the $BASESUFFIX)
+bin2testfile = $(notdir $(1:$(BASESUFFIX)=))
 
 #-----------------------------------------------------------------------------
 # Rules
@@ -78,7 +100,7 @@ ifeq ($(VERBOSE),false)
 endif
 
 .PHONY: all
-all:            $(SCIPDIR) $(UNITTESTSBIN)
+all:            $(OBJDIR) $(SCIPDIR) $(UNITTESTSBIN)
 
 .PHONY: lint
 lint:		$(UNITTESTSSRC)
@@ -133,7 +155,8 @@ depend:		$(SCIPDIR)
 
 -include	$(UNITTESTSDEP)
 
-$(UNITTESTSBIN): $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(UNITTESTSOBJ) | t_bin
+.SECONDEXPANSION:
+$(UNITTESTSBIN): $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $$(call testfiles2obj, $$(call gettestfiles, $$(call bin2testfile, $$@))) | t_bin $(OBJDIR)
 		@echo "-> linking $@"
 		$(LINKCXX) $(OBJDIR)/$(notdir $(patsubst %$(BASESUFFIX),%,$@)).o \
 		$(addprefix $(OBJDIR)/, $(addsuffix .o, $(notdir $(filter $(notdir $(patsubst %$(BASESUFFIX),%,$@))/%, $(EXTRASRC))))) \
@@ -141,7 +164,6 @@ $(UNITTESTSBIN): $(OBJDIR) $(SCIPLIBFILE) $(LPILIBFILE) $(NLPILIBFILE) $(UNITTES
                 $(LINKCXX_l)$(OBJSCIPLIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(LPILIB)$(LINKLIBSUFFIX) $(LINKCXX_l)$(NLPILIB)$(LINKLIBSUFFIX) \
                 $(OFLAGS) $(LPSLDFLAGS) \
 		$(LDFLAGS) $(LINKCXX_o)$@
-
 
 $(OBJDIR)/%.o:	%.c
 		@echo "-> compiling $@"
