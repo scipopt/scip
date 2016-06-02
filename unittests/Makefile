@@ -80,7 +80,7 @@ NUMBERS        :=       $(shell seq 1 $(words $(UNITTESTSEXECS)))
 
 # given for instance unittest-cons, returns all the (basename named) files on unittest-cons/
 # NOTE: given unittest-cons, filter $(1)% removes any string which doesn't begin with unittest-cons
-gettestfiles = $(notdir $(filter $(1)%, $(UNITTESTS) $(EXTRASRC)))
+gettestfiles = $(notdir $(filter $(1), $(UNITTESTS)) $(filter $(1)/%,$(EXTRASRC)))
 #$(warning gettestfiles fun: $(call gettestfiles, unittest-cons)) # expect: unittest-cons cons_unittest
 
 # given test files, for instance, unittest-cons and cons_unittest, creates the corresponding objects
