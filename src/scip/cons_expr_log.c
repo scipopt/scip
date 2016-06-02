@@ -171,6 +171,37 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalLog)
    return SCIP_OKAY;
 }
 
+/** expression reverse propagaton callback */
+static
+SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropLog)
+{
+   SCIP_INTERVAL childbound;
+   SCIP_Bool success;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+   assert(nreds != NULL);
+
+   *nreds = 0;
+
+   if( SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)) < 0 )
+   {
+      *cutoff = TRUE;
+      return SCIP_OKAY;
+   }
+
+   /* f = log(c0) -> c0 = exp(f) */
+   SCIPintervalExp(SCIPinfinity(scip), &childbound, SCIPgetConsExprExprInterval(expr));
+
+   /* try to tighten the bounds of the child node */
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, &success, cutoff) );
+
+   /* @todo use success to set status of expr (mabye move expr to SCIPtightenConsExprExprInterval) */
+
+   return SCIP_OKAY;
+}
+
 /** expression hash callback */
 static
 SCIP_DECL_CONSEXPR_EXPRHASH(hashLog)
@@ -210,6 +241,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrLog(
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printLog) );
    SCIP_CALL( SCIPsetConsExprExprHdlrParse(scip, consexprhdlr, exprhdlr, parseLog) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalLog) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropLog) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashLog) );
 
    return SCIP_OKAY;

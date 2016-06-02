@@ -2245,6 +2245,26 @@ SCIP_RETCODE testReversePropagation(void)
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
+   /* log */
+   {
+      SCIPinfoMessage(scip, NULL, "test log expression\n");
+
+      SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, 7.0) );
+
+      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "log(<x>)", NULL, &expr)) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 1.0) );
+
+      reversePropagationCons(scip, cons);
+      assert(SCIPisEQ(scip, expr->interval.inf, -1.0));
+      assert(SCIPisEQ(scip, expr->interval.sup, 1.0));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.inf, exp(-1.0)));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.sup, exp(1.0)));
+
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
    /* free allocated memory */
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
