@@ -838,7 +838,10 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(reversepropExpr)
 
       /* abort if expression handler did not implement the reverse propagation callback */
       if( expr->exprhdlr->reverseprop == NULL )
+      {
          *result = SCIP_CONSEXPREXPRWALK_ABORT;
+         return SCIP_OKAY;
+      }
 
       /* skip expressions that do not have children */
       if( expr->nchildren == 0 )
