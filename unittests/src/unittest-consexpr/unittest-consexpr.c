@@ -2175,24 +2175,34 @@ SCIP_RETCODE testReversePropagation(void)
    /* create problem */
    SCIP_CALL( SCIPcreateProbBasic(scip, "test_problem") );
 
-   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", 0.0, 0.5, 0.0, SCIP_VARTYPE_CONTINUOUS) );
-   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", 0.0, 3.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -2.0, 2.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -3.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
 
    /* sum */
    {
+      SCIP_CONSEXPR_EXPR* exprs[2];
+      SCIP_Real coeffs[2] = {2.0, -1.0};
+
       SCIPinfoMessage(scip, NULL, "test sum expression\n");
 
-      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "<x> + <y>", NULL, &expr)) );
-      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 1.0, 2.5) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[0], x) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[1], y) );
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &expr, 2, exprs, coeffs, 0.5) );
+
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 0.5, 1.5) );
 
       reversePropagationCons(scip, cons);
-      assert(SCIPisEQ(scip, expr->children[0]->interval.inf, 0.0));
-      assert(SCIPisEQ(scip, expr->children[0]->interval.sup, 0.5));
-      assert(SCIPisEQ(scip, expr->children[1]->interval.inf, 0.5));
-      assert(SCIPisEQ(scip, expr->children[1]->interval.sup, 2.5));
+      assert(SCIPisEQ(scip, expr->interval.inf, 0.5));
+      assert(SCIPisEQ(scip, expr->interval.sup, 1.5));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.inf, -1.5));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.sup, 1.0));
+      assert(SCIPisEQ(scip, expr->children[1]->interval.inf, -3.0));
+      assert(SCIPisEQ(scip, expr->children[1]->interval.sup, 1.0));
 
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[1]) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[0]) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }

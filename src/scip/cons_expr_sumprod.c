@@ -424,8 +424,8 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
    prevroundmode = SCIPintervalGetRoundingMode();
    SCIPintervalSetRoundingModeDownwards();
 
-   minlinactivity = 0.0;
-   maxlinactivity = 0.0;
+   minlinactivity = exprdata->constant;
+   maxlinactivity = -exprdata->constant; /* use -constant because of the rounding mode */
    minlinactivityinf = 0;
    maxlinactivityinf = 0;
 
@@ -442,7 +442,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
       else
       {
          assert(SCIPintervalGetSup(bounds[c]) > -SCIPinfinity(scip));
-         maxlinactivity += SCIPintervalGetSup(bounds[c]);
+         maxlinactivity -= SCIPintervalGetSup(bounds[c]);
       }
 
       if( SCIPisInfinity(scip, -SCIPintervalGetInf(bounds[c])) )
@@ -453,6 +453,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
          minlinactivity += SCIPintervalGetInf(bounds[c]);
       }
    }
+   maxlinactivity = -maxlinactivity; /* correct sign */
 
    /* if there are too many unbounded bounds, then could only compute infinite bounds for children, so give up */
    if( (minlinactivityinf >= 2 || SCIPisInfinity(scip, SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr)))) &&
@@ -500,6 +501,9 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
             childbounds.inf = SCIPgetConsExprExprInterval(expr).inf - maxlinactivity + bounds[c].sup;
          }
       }
+
+      /* divide by the child coefficient */
+      SCIPintervalDivScalar(SCIPinfinity(scip), &childbounds, childbounds, exprdata->coefficients[c]);
 
       /* try to tighten the bounds of the expression */
       SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[c], childbounds, &success, cutoff) );
