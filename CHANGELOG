@@ -7,6 +7,7 @@ fixed bugs:
 - fixed possible segmentation fault in genvbounds propagator
 - fixed bug with solutions from previous runs not satisfying an objective limit
 - the AMPL interface now writes a solve status (solve_result_num) into the .sol file
+- fix wrong propagation of product expressions
 
 interface:
 - time limit of SCIP-infinity is converted to LPI-infinity when setting it

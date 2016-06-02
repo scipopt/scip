@@ -10494,7 +10494,7 @@ void exprgraphNodePropagateBounds(
          if( j == node->nchildren )
          {
             SCIPintervalDiv(infinity, &childbounds, node->bounds, childbounds); /* f / prod_{j:j!=i} c_j */
-            SCIPexprgraphTightenNodeBounds(exprgraph, node->children[i], childbounds, minstrength, infinity, cutoff);
+            SCIPexprgraphTightenNodeBounds(exprgraph, node->children[j], childbounds, minstrength, infinity, cutoff);
          }
       }
 
