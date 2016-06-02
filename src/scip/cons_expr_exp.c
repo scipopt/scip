@@ -144,6 +144,24 @@ SCIP_DECL_CONSEXPR_EXPREVAL(evalExp)
    return SCIP_OKAY;
 }
 
+/** expression interval evaluation callback */
+static
+SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalExp)
+{
+   SCIP_INTERVAL childinterval;
+
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprData(expr) == NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) == 1);
+
+   childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
+   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
+
+   SCIPintervalExp(SCIPinfinity(scip), interval, childinterval);
+
+   return SCIP_OKAY;
+}
+
 /** expression reverse propagaton callback */
 static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropExp)
@@ -194,25 +212,6 @@ SCIP_DECL_CONSEXPR_EXPRHASH(hashExp)
    childhash = (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, SCIPgetConsExprExprChildren(expr)[0]);
 
    *hashkey ^= childhash;
-
-   return SCIP_OKAY;
-}
-
-
-/** expression interval evaluation callback */
-static
-SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalExp)
-{
-   SCIP_INTERVAL childinterval;
-
-   assert(expr != NULL);
-   assert(SCIPgetConsExprExprData(expr) == NULL);
-   assert(SCIPgetConsExprExprNChildren(expr) == 1);
-
-   childinterval = SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[0]);
-   assert(!SCIPintervalIsEmpty(SCIPinfinity(scip), childinterval));
-
-   SCIPintervalExp(SCIPinfinity(scip), interval, childinterval);
 
    return SCIP_OKAY;
 }
