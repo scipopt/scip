@@ -821,13 +821,14 @@ static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(reversepropExpr)
 {
    SCIP_CONSEXPR_EXPR* child;
-   SCIP_Bool cutoff;
+   SCIP_Bool* cutoff;
    int nreds;
 
    assert(expr != NULL);
-   assert(data == NULL);
 
-   cutoff = FALSE;
+   cutoff = (SCIP_Bool*) data;
+   assert(cutoff != NULL);
+
    nreds = 0;
    *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
 
@@ -848,11 +849,11 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(reversepropExpr)
          *result = SCIP_CONSEXPREXPRWALK_SKIP;
 
       /* call reverse propagation callback */
-      SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, &cutoff, &nreds) );
+      SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, cutoff, &nreds) );
       assert(nreds >= 0);
 
       /* stop propagation if we could find a cutoff */
-      if( cutoff )
+      if( *cutoff )
       {
          SCIPdebugMessage("found a cutoff during reverse bound propagation\n");
          *result = SCIP_CONSEXPREXPRWALK_ABORT;
@@ -1011,30 +1012,85 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
 
 /**@} */  /* end of walking methods */
 
-/* @todo remove this function */
+/** propagates bounds for each sub-expression in the constraint by using variable bounds; the resulting bounds for the
+ *  root expression will be intersected with the [lhs,rhs] which might lead to a cutoff
+ *
+ *  @note when using forward and reverse propagation alternatingly we do not want to recompute sub-expression bounds but
+ *  rather tighten them
+ */
 static
-SCIP_RETCODE reversePropagationCons(
+SCIP_RETCODE forwardPropCons(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONS* cons
+   SCIP_CONS*              cons,             /**< constraint to propagate */
+   SCIP_Bool*              cutoff            /**< buffer to store whether the current node can be cutoff */
    )
 {
+   SCIP_INTERVAL interval;
    SCIP_CONSDATA* consdata;
-   SCIP_INTERVAL conssides;
 
+   assert(scip != NULL);
    assert(cons != NULL);
+   assert(cutoff != NULL);
 
    consdata = SCIPconsGetData(cons);
    assert(consdata != NULL);
 
-   /* call forward propagation first */
+   *cutoff = FALSE;
+
+   /* use 0 tag to recompute intervals */
    SCIP_CALL( SCIPevalConsExprExprInterval(scip, consdata->expr, 0) );
 
-   /* intersect expression interval with [lhs,rhs] */
-   SCIPintervalSetBounds(&conssides, consdata->lhs, consdata->rhs);
-   SCIPintervalIntersect(&consdata->expr->interval, consdata->expr->interval, conssides);
+   /* compare root interval with constraint sides; store the result in the root expression */
+   SCIPintervalSetBounds(&interval, consdata->lhs, consdata->rhs);
+   SCIPtightenConsExprExprInterval(scip, consdata->expr, interval, cutoff);
+
+#ifdef SCIP_DEBUG
+   if( *cutoff )
+   {
+      SCIPdebugMessage(" -> found cutoff during forward propagation of constraint %s\n", SCIPconsGetName(cons));
+   }
+#endif
+
+   return SCIP_OKAY;
+}
+
+/** propagates bounds for each sub-expression in the constraint by using root expression bounds; this might lead to a
+ *  cutoff because of an empty expression interval;
+ *
+ *  @note calling this function requires feasible bounds for each sub-expression; this can be done by calling
+ *  forwardPropCons() before calling this function
+ */
+static
+SCIP_RETCODE reversePropCons(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONS*              cons,             /**< constraint to propagate */
+   SCIP_Bool*              cutoff            /**< buffer to store whether the current node can be cutoff */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(scip != NULL);
+   assert(cons != NULL);
+   assert(cutoff != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   *cutoff = FALSE;
 
    /* call reverse propagation callbacks */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, reversepropExpr, reversepropExpr, NULL, NULL, NULL) );
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, reversepropExpr, reversepropExpr, NULL, NULL, cutoff) );
+
+   /* @todo iterate through all variable expressions and try to tighten the bounds; alternatively we can tighten the
+    * bounds when calling SCIPtightenConsExprExprInterval for a child during reverse propagation
+    */
+
+#ifdef SCIP_DEBUG
+   if( *cutoff )
+   {
+      SCIPdebugMessage(" -> found cutoff during reverse propagation of constraint %s\n", SCIPconsGetName(cons));
+   }
+#endif
 
    return SCIP_OKAY;
 }
@@ -3655,16 +3711,13 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    SCIP*                   scip,             /**< SCIP data structure */
    SCIP_CONSEXPR_EXPR*     expr,             /**< expression to be tightened */
    SCIP_INTERVAL           newbounds,        /**< new bounds for the expression */
-   SCIP_Bool*              success,          /**< buffer to store whether we could find a bound reduction or not */
    SCIP_Bool*              cutoff            /**< buffer to store whether a node's bounds were propagated to an empty interval */
    )
 {
    assert(scip != NULL);
    assert(expr != NULL);
-   assert(success != NULL);
    assert(cutoff != NULL);
 
-   *success = FALSE;
    *cutoff = FALSE;
 
    if( SCIPintervalGetInf(newbounds) > SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))
@@ -3678,8 +3731,6 @@ SCIP_RETCODE SCIPtightenConsExprExprInterval(
    if( SCIPisGT(scip, SCIPintervalGetInf(newbounds), SCIPintervalGetInf(SCIPgetConsExprExprInterval(expr)))
       || SCIPisLT(scip, SCIPintervalGetSup(newbounds), SCIPintervalGetSup(SCIPgetConsExprExprInterval(expr))) )
    {
-      *success = TRUE;
-
       /* store new bounds */
       SCIPdebugMessage("tighten bounds from [%e, %e] -> ", expr->interval.inf, expr->interval.sup);
       SCIPintervalIntersect(&expr->interval, expr->interval, newbounds);

@@ -2161,6 +2161,7 @@ SCIP_RETCODE testReversePropagation(void)
    SCIP_VAR* y;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONS* cons;
+   SCIP_Bool cutoff;
 
    SCIP_CALL( SCIPcreate(&scip) );
 
@@ -2193,13 +2194,53 @@ SCIP_RETCODE testReversePropagation(void)
 
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 0.5, 1.5) );
 
-      reversePropagationCons(scip, cons);
+      forwardPropCons(scip, cons, &cutoff);
+      assert(!cutoff);
+      reversePropCons(scip, cons, &cutoff);
+      assert(!cutoff);
+
       assert(SCIPisEQ(scip, expr->interval.inf, 0.5));
       assert(SCIPisEQ(scip, expr->interval.sup, 1.5));
       assert(SCIPisEQ(scip, expr->children[0]->interval.inf, -1.5));
       assert(SCIPisEQ(scip, expr->children[0]->interval.sup, 1.0));
       assert(SCIPisEQ(scip, expr->children[1]->interval.inf, -3.0));
       assert(SCIPisEQ(scip, expr->children[1]->interval.sup, 1.0));
+
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[1]) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[0]) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+   }
+
+   /* prod */
+   {
+      SCIP_CONSEXPR_EXPR* exprs[2];
+      SCIP_Real coeffs[2] = {2.0, -1.0};
+
+      SCIPinfoMessage(scip, NULL, "test prod expression\n");
+
+      SCIP_CALL( SCIPchgVarLb(scip, x, 1.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, 3.0) );
+      SCIP_CALL( SCIPchgVarLb(scip, y, 2.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, y, 4.0) );
+
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[0], x) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &exprs[1], y) );
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &expr, 2, exprs, coeffs, 0.5) );
+
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 0.0, 1.0) );
+
+      forwardPropCons(scip, cons, &cutoff);
+      assert(!cutoff);
+      reversePropCons(scip, cons, &cutoff);
+      assert(!cutoff);
+
+      assert(SCIPisEQ(scip, expr->interval.inf, 1.0 / 8.0));
+      assert(SCIPisEQ(scip, expr->interval.sup, 1.0));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.inf, 1.0));
+      assert(SCIPisEQ(scip, expr->children[0]->interval.sup, SQRT(8)));
+      assert(SCIPisEQ(scip, expr->children[1]->interval.inf, 2.0));
+      assert(SCIPisEQ(scip, expr->children[1]->interval.sup, 4.0));
 
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[1]) );
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &exprs[0]) );
@@ -2214,10 +2255,14 @@ SCIP_RETCODE testReversePropagation(void)
       SCIP_CALL( SCIPchgVarLb(scip, x, -3.0) );
       SCIP_CALL( SCIPchgVarUb(scip, x, 4.0) );
 
-      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "abs(<x>)", NULL, &expr)) );
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "abs(<x>)", NULL, &expr) );
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 1.0, 2.5) );
 
-      reversePropagationCons(scip, cons);
+      forwardPropCons(scip, cons, &cutoff);
+      assert(!cutoff);
+      reversePropCons(scip, cons, &cutoff);
+      assert(!cutoff);
+
       assert(SCIPisEQ(scip, expr->children[0]->interval.inf, -2.5));
       assert(SCIPisEQ(scip, expr->children[0]->interval.sup, 2.5));
 
@@ -2232,10 +2277,14 @@ SCIP_RETCODE testReversePropagation(void)
       SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
       SCIP_CALL( SCIPchgVarUb(scip, x, 3.0) );
 
-      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "exp(<x>)", NULL, &expr)) );
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "exp(<x>)", NULL, &expr) );
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 2.0) );
 
-      reversePropagationCons(scip, cons);
+      forwardPropCons(scip, cons, &cutoff);
+      assert(!cutoff);
+      reversePropCons(scip, cons, &cutoff);
+      assert(!cutoff);
+
       assert(SCIPisEQ(scip, expr->interval.inf, exp(-1)));
       assert(SCIPisEQ(scip, expr->interval.sup, 2.0));
       assert(SCIPisEQ(scip, expr->children[0]->interval.inf, -1.0));
@@ -2252,10 +2301,14 @@ SCIP_RETCODE testReversePropagation(void)
       SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
       SCIP_CALL( SCIPchgVarUb(scip, x, 7.0) );
 
-      SCIP_CALL( (SCIPparseConsExprExpr(scip, conshdlr, "log(<x>)", NULL, &expr)) );
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "log(<x>)", NULL, &expr) );
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 1.0) );
 
-      reversePropagationCons(scip, cons);
+      forwardPropCons(scip, cons, &cutoff);
+      assert(!cutoff);
+      reversePropCons(scip, cons, &cutoff);
+      assert(!cutoff);
+
       assert(SCIPisEQ(scip, expr->interval.inf, -1.0));
       assert(SCIPisEQ(scip, expr->interval.sup, 1.0));
       assert(SCIPisEQ(scip, expr->children[0]->interval.inf, exp(-1.0)));

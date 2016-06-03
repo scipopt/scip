@@ -401,7 +401,6 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
    SCIP_INTERVAL childbounds;
    SCIP_Real minlinactivity;
    SCIP_Real maxlinactivity;
-   SCIP_Bool success;
    int minlinactivityinf;
    int maxlinactivityinf;
    int c;
@@ -506,9 +505,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropSum)
       SCIPintervalDivScalar(SCIPinfinity(scip), &childbounds, childbounds, exprdata->coefficients[c]);
 
       /* try to tighten the bounds of the expression */
-      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[c], childbounds, &success, cutoff) );
-
-      /* @todo use success to set status of expr (mabye move expr to SCIPtightenConsExprExprInterval) */
+      SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[c], childbounds, cutoff) );
    }
 
    SCIPintervalSetRoundingMode(prevroundmode);
@@ -629,6 +626,71 @@ SCIP_DECL_CONSEXPR_EXPRINTEVAL(intevalProduct)
    return SCIP_OKAY;
 }
 
+/** expression reverse propagaton callback */
+static
+SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropProduct)
+{
+   SCIP_CONSEXPR_EXPRDATA* exprdata;
+   SCIP_INTERVAL childbounds;
+   SCIP_INTERVAL tmp;
+   int i;
+   int j;
+
+   assert(scip != NULL);
+   assert(expr != NULL);
+   assert(SCIPgetConsExprExprNChildren(expr) > 0);
+   assert(cutoff != NULL);
+   assert(nreds != NULL);
+
+   *nreds = 0;
+   *cutoff = FALSE;
+
+   /* too expensive (runtime here is quadratic in number of children) */
+   if( SCIPgetConsExprExprNChildren(expr) > 10 )
+      return SCIP_OKAY;
+
+   /* not possible to learn bounds if expression interval is unbounded in both directions */
+   if( SCIPintervalIsEntire(SCIPinfinity(scip), SCIPgetConsExprExprInterval(expr)) )
+      return SCIP_OKAY;
+
+   exprdata = SCIPgetConsExprExprData(expr);
+   assert(exprdata != NULL);
+
+   /* f = const * prod_i c_i ^ n_i => c_i = (f / const * prod_{j:j!=i} c_j ^ n_j )^ (-n_i) */
+   for( i = 0; i < SCIPgetConsExprExprNChildren(expr) && !(*cutoff); ++i )
+   {
+      SCIPintervalSet(&childbounds, exprdata->constant);
+
+      /* compute prod_{j:j!=i} c_j */
+      for( j = 0; j < SCIPgetConsExprExprNChildren(expr); ++j )
+      {
+         if( i == j )
+            continue;
+
+         SCIPintervalPowerScalar(SCIPinfinity(scip), &tmp, SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[j]), exprdata->coefficients[j]);
+         SCIPintervalMul(SCIPinfinity(scip), &childbounds, childbounds, tmp);
+
+         /* if there is 0.0 in the product, then later division will hardly give useful bounds, so give up for this i */
+         if( childbounds.inf <= 0.0 && childbounds.sup >= 0.0 )
+            break;
+      }
+
+      if( j == SCIPgetConsExprExprNChildren(expr) )
+      {
+         /* f / const * prod_{j:j!=i} c_j ^ n_j */
+         SCIPintervalDiv(SCIPinfinity(scip), &childbounds, SCIPgetConsExprExprInterval(expr), childbounds);
+
+         SCIPintervalPowerScalarInverse(SCIPinfinity(scip), &childbounds,
+            SCIPgetConsExprExprInterval(SCIPgetConsExprExprChildren(expr)[i]), exprdata->coefficients[i], childbounds);
+
+         /* try to tighten the bounds of the expression */
+         SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[i], childbounds, cutoff) );
+      }
+   }
+
+   return SCIP_OKAY;
+}
+
 /** creates the handler for sum expressions and includes it into the expression constraint handler */
 SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP*                 scip,               /**< SCIP data structure */
@@ -645,8 +707,8 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrSum(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printSum) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalSum) );
-   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSumProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropSum) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSumProduct) );
 
    return SCIP_OKAY;
 }
@@ -718,6 +780,7 @@ SCIP_RETCODE SCIPincludeConsExprExprHdlrProduct(
    SCIP_CALL( SCIPsetConsExprExprHdlrCopyFreeData(scip, consexprhdlr, exprhdlr, copydataSumProduct, freedataSumProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrPrint(scip, consexprhdlr, exprhdlr, printProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrIntEval(scip, consexprhdlr, exprhdlr, intevalProduct) );
+   SCIP_CALL( SCIPsetConsExprExprHdlrReverseProp(scip, consexprhdlr, exprhdlr, reversepropProduct) );
    SCIP_CALL( SCIPsetConsExprExprHdlrHash(scip, consexprhdlr, exprhdlr, hashSumProduct) );
 
    return SCIP_OKAY;

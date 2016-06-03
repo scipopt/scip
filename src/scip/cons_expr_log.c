@@ -176,7 +176,6 @@ static
 SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropLog)
 {
    SCIP_INTERVAL childbound;
-   SCIP_Bool success;
 
    assert(scip != NULL);
    assert(expr != NULL);
@@ -195,9 +194,7 @@ SCIP_DECL_CONSEXPR_REVERSEPROP(reversepropLog)
    SCIPintervalExp(SCIPinfinity(scip), &childbound, SCIPgetConsExprExprInterval(expr));
 
    /* try to tighten the bounds of the child node */
-   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, &success, cutoff) );
-
-   /* @todo use success to set status of expr (mabye move expr to SCIPtightenConsExprExprInterval) */
+   SCIP_CALL( SCIPtightenConsExprExprInterval(scip, SCIPgetConsExprExprChildren(expr)[0], childbound, cutoff) );
 
    return SCIP_OKAY;
 }
