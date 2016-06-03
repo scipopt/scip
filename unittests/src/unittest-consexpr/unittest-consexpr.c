@@ -60,6 +60,9 @@
    }                                             \
    while( FALSE )
 
+/** macro to check interval of an expression */
+#define CHECK_EXPRINTERVAL(scip,expr,a,b) (SCIPisEQ((scip), SCIPgetConsExprExprInterval((expr)).inf, (a)) && SCIPisEQ((scip), SCIPgetConsExprExprInterval((expr)).sup, (b)))
+
 /* BIG = 75000 produces a seg fault because of stack overflow */
 #define BIG 100
 
@@ -2151,14 +2154,16 @@ SCIP_RETCODE testCommonSubexpr(void)
    return SCIP_OKAY;
 }
 
-/** test reverse propagation */
+
+/** test forward and reverse propagation */
 static
-SCIP_RETCODE testReversePropagation(void)
+SCIP_RETCODE testPropagation(void)
 {
    SCIP* scip;
    SCIP_CONSHDLR* conshdlr;
    SCIP_VAR* x;
    SCIP_VAR* y;
+   SCIP_VAR* z;
    SCIP_CONSEXPR_EXPR* expr;
    SCIP_CONS* cons;
    SCIP_Bool cutoff;
@@ -2178,8 +2183,10 @@ SCIP_RETCODE testReversePropagation(void)
 
    SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -2.0, 2.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -3.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -3.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
    SCIP_CALL( SCIPaddVar(scip, x) );
    SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
 
    /* sum */
    {
@@ -2318,7 +2325,89 @@ SCIP_RETCODE testReversePropagation(void)
       SCIP_CALL( SCIPreleaseCons(scip, &cons) );
    }
 
+   /* complicated expression */
+   {
+      SCIP_CONSEXPR_EXPR* xexpr;
+      SCIP_CONSEXPR_EXPR* yexpr;
+      SCIP_CONSEXPR_EXPR* zexpr;
+      SCIP_CONSEXPR_EXPR* rootexpr;
+      SCIP_CONSEXPR_EXPR* prodexpr;
+      SCIP_CONSEXPR_EXPR* sumexpr;
+      SCIP_CONSEXPR_EXPR* logexpr;
+      SCIP_CONSEXPR_EXPR* exprs[2];
+      SCIP_Real coeffs[2];
+
+      /* set variable bounds */
+      SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
+      SCIP_CALL( SCIPchgVarLb(scip, y, 2.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, y, 3.0) );
+      SCIP_CALL( SCIPchgVarLb(scip, z, 1.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, z, 2.0) );
+
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &xexpr, x) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &yexpr, y) );
+      SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
+
+      /*
+       * create constraint 0 <= (-x^2 + log(y)) / z <= 2
+       */
+
+      /* log(y) */
+      SCIP_CALL( SCIPcreateConsExprExprLog(scip, conshdlr, &logexpr, yexpr) );
+
+      /* x^2 */
+      coeffs[0] = 2.0;
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &prodexpr, 1, &xexpr, coeffs, 1.0) );
+
+      /* log(y) - x^2 */
+      coeffs[0] = 1.0;
+      exprs[0] = logexpr;
+      coeffs[1] = -1.0;
+      exprs[1] = prodexpr;
+      SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr, 2, exprs, coeffs, 0.0) );
+
+      /* (-x^2 + log(y)) / z */
+      coeffs[0] = 1.0;
+      exprs[0] = sumexpr;
+      coeffs[1] = -1.0;
+      exprs[1] = zexpr;
+      SCIP_CALL( SCIPcreateConsExprExprProduct(scip, conshdlr, &rootexpr, 2, exprs, coeffs, 1.0) );
+
+      SCIPinfoMessage(scip, NULL, "test more complicated expression: ");
+      SCIP_CALL( SCIPprintConsExprExpr(scip, rootexpr, NULL) );
+      SCIPinfoMessage(scip, NULL, "\n");
+
+      /* create constraint */
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", rootexpr, 0.0, 2.0) );
+
+      /* apply forward propagation */
+      forwardPropCons(scip, cons, &cutoff);
+      assert(!cutoff);
+      assert(CHECK_EXPRINTERVAL(scip, xexpr, -1, 1));
+      assert(CHECK_EXPRINTERVAL(scip, yexpr, 2, 3));
+      assert(CHECK_EXPRINTERVAL(scip, zexpr, 1, 2));
+      assert(CHECK_EXPRINTERVAL(scip, logexpr, log(2), log(3)));
+      assert(CHECK_EXPRINTERVAL(scip, prodexpr, 0, 1));
+      assert(CHECK_EXPRINTERVAL(scip, sumexpr, log(2) - 1, log(3)));
+      assert(CHECK_EXPRINTERVAL(scip, rootexpr, (log(2) - 1) / 2, log(3)));
+
+      /* apply reverse propagation */
+      reversePropCons(scip, cons, &cutoff);
+      assert(!cutoff);
+
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &rootexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &prodexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &logexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &zexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &yexpr) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &xexpr) );
+   }
+
    /* free allocated memory */
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
    SCIP_CALL( SCIPreleaseVar(scip, &y) );
    SCIP_CALL( SCIPreleaseVar(scip, &x) );
    SCIP_CALL( SCIPfree(&scip) );
@@ -2370,7 +2459,7 @@ main(
 
    CHECK_TEST( testCommonSubexpr() );
 
-   CHECK_TEST( testReversePropagation() );
+   CHECK_TEST( testPropagation() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");
