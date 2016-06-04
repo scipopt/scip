@@ -18,10 +18,10 @@
 #@author  Ambros Gleixner
 #@author  Marc Pfetsch
 
-# We need to compile different test in different folders. The idea is, given
+# We need to compile different test in different directories. The idea is, given
 # the target binary we want to generate, to decide which are its dependencies
 # The dependencies should be all objects generated from the files in the test's
-# folder. We achieve this by using SECONDEXPANSION and the functions define
+# directory. We achieve this by using SECONDEXPANSION and the functions define
 # below.
 
 #-----------------------------------------------------------------------------
