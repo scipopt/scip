@@ -3400,14 +3400,14 @@ SCIP_RETCODE SCIPprintConsExprExprDotFinal(
    file = (*dotdata)->file;
    assert(file != NULL);
 
-   SCIPinfoMessage(scip, file, "}\n");
-
    /* tell dot that all expressions without children have the same rank */
    SCIPinfoMessage(scip, file, "{rank=same;");
    for( l = 0; l < SCIPhashmapGetNLists((*dotdata)->visitedexprs); ++l )
       for( list = SCIPhashmapGetList((*dotdata)->visitedexprs, l); list != NULL; list = SCIPhashmapListGetNext(list) )
          if( SCIPgetConsExprExprNChildren((SCIP_CONSEXPR_EXPR*)SCIPhashmapListGetOrigin(list)) == 0 )
             SCIPinfoMessage(scip, file, " n%p", SCIPhashmapListGetOrigin(list));
+   SCIPinfoMessage(scip, file, "}\n");
+
    SCIPinfoMessage(scip, file, "}\n");
 
    SCIPhashmapFree(&(*dotdata)->visitedexprs);
