@@ -39,7 +39,14 @@
 
 #include "scip/nodesel_bfs.h" /* to be able to transform a problem */
 
-#include "scip/cons_expr.c"
+
+/* declaration as in cons_expr.c */
+SCIP_RETCODE replaceCommonSubexpressions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss              /**< total number of constraints */
+   );
+
 
 /** macro to check the return of tests
  *

@@ -1024,6 +1024,7 @@ SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
    return (unsigned int)(size_t)SCIPhashmapGetImage(expr2key, (void*)expr);
 }  /*lint !e715*/
 
+/* export this function here, so it can be used by unittests but is not really part of the API */
 /** replaces common sub-expressions in the current expression graph by using a hash key for each expression; the
  *  algorithm consists of two steps:
  *
@@ -1037,7 +1038,11 @@ SCIP_DECL_HASHKEYVAL(hashCommonSubexprKeyval)
  *  @note the hash keys of the expressions are used for the hashing inside the hash table; to compute if two expressions
  *  (with the same hash) are structurally the same we use the function SCIPcompareExprs()
  */
-static
+SCIP_RETCODE replaceCommonSubexpressions(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_CONS**           conss,              /**< constraints */
+   int                   nconss              /**< total number of constraints */
+   );
 SCIP_RETCODE replaceCommonSubexpressions(
    SCIP*                 scip,               /**< SCIP data structure */
    SCIP_CONS**           conss,              /**< constraints */
