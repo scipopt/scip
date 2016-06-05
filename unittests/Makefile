@@ -147,11 +147,22 @@ endif
 tags:
 		rm -f TAGS; ctags -e src/*.c src/*.h $(SCIPDIR)/src/scip/*.c $(SCIPDIR)/src/scip/*.h;
 
+# The sed command was the same as the one in the SCIP Makefile.
+# sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/]*\).c|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\''
+# However, for some unknown reason, unittests are named unittest-testname.c.
+# This implies that the sed command breaks, because it expects unittest_testname.c. We need to add - in the regexpr:
+# sed '\''s|^\([0-9A-Za-z\_-]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z_/-]*\).c|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\''
+# Also, SCIP stores its obj in obj/build-folder/{scip, xml, etc}/*.o. Actually, this is the point of the sed command
+# to identify the correct place of the object file.
+# Currently, the object files of unittests are in obj/build-folder/*.o So we do not need to do anything special, just append $(OBJDIR)
+# Later we might want to rename the tests to test_bla.c and place them on some special folder.
+# NOTE: the sed command does the following: is substitutes each line that contains a .o file with the same line but with $(OBJDIR) appended
 .PHONY: depend
 depend:		$(SCIPDIR)
 		$(SHELL) -ec '$(DCC) $(FLAGS) $(DFLAGS) $(UNITTESTSSRC) \
-		| sed '\''s|^\([0-9A-Za-z\_]\{1,\}\)\.o *: *$(SRCDIR)/\([0-9A-Za-z\_]*\).c|$$\(OBJDIR\)/\2.o: $(SRCDIR)/\2.c|g'\'' \
+		| sed '\''s|\(.*\.o *:.*\)|$$\(OBJDIR\)/\1|'\'' \
 		>$(UNITTESTSDEP)'
+
 
 -include	$(UNITTESTSDEP)
 
