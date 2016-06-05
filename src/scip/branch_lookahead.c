@@ -12,7 +12,7 @@
 /*  along with SCIP; see the file COPYING. If not email to scip@zib.de.      */
 /*                                                                           */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
-
+#define SCIP_DEBUG
 /**@file   branch_lookahead.c
  * @brief  lookahead branching rule
  * @author Christoph Schubert
@@ -25,15 +25,17 @@
 
 #include "scip/branch_lookahead.h"
 #include "scip/branch_fullstrong.h"
-#include "scip/cons_bounddisjunction.h"
+#include "scip/var.h"
 
 #define BRANCHRULE_NAME            "lookahead"
 #define BRANCHRULE_DESC            "fullstrong branching with depth of 2" /* TODO CS: expand description */
-#define BRANCHRULE_PRIORITY        1000000000
+#define BRANCHRULE_PRIORITY        536870911
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
 
+#define DEFAULT_REEVALAGE         0LL        /**< number of intermediate LPs solved to trigger reevaluation of strong branching
+                                              *   value for a variable that was already evaluated at the current node */
 #define DEFAULT_MAXPROPROUNDS       0        /**< maximum number of propagation rounds to be performed during multaggr
                                               *   branching before solving the LP (-1: no limit, -2: parameter settings) */
 #define DEFAULT_PROBINGBOUNDS    TRUE        /**< should valid bounds be identified in a probing-like fashion during
@@ -48,6 +50,8 @@
 /** branching rule data */
 struct SCIP_BranchruleData
 {
+   SCIP_Longint          reevalage;          /**< number of intermediate LPs solved to trigger reevaluation of strong branching
+                                              *   value for a variable that was already evaluated at the current node */
    SCIP_Bool             probingbounds;      /**< should valid bounds be identified in a probing-like fashion during strong
                                               *   branching (only with propagation)? */
    int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
@@ -76,6 +80,11 @@ static SCIP_RETCODE executeBranchingOnUpperBound(
    SCIP_Bool lperror;
    SCIP_LPSOLSTAT solstat;
 
+   assert( scip != NULL);
+   assert( branchingvar != NULL);
+
+   SCIPdebugMessage("Started branching on upper bound.\n");
+
    SCIP_CALL( SCIPnewProbingNode(scip) );
    SCIP_CALL( SCIPchgVarUbProbing(scip, branchingvar, SCIPfeasFloor(scip, branchingvarsolvalue)) );
 
@@ -92,6 +101,9 @@ static SCIP_RETCODE executeBranchingOnUpperBound(
       *cutoff = *cutoff || SCIPisGE(scip, *objval, SCIPgetCutoffbound(scip));
       assert(((solstat != SCIP_LPSOLSTAT_INFEASIBLE) && (solstat != SCIP_LPSOLSTAT_OBJLIMIT)) || *cutoff);
    }
+
+   SCIPdebugMessage("Finished branching on upper bound.\n");
+
    return SCIP_OKAY;
 }
 
@@ -106,6 +118,11 @@ static SCIP_Bool executeBranchingOnLowerBound(
 {
    SCIP_Bool lperror;
    SCIP_LPSOLSTAT solstat;
+
+   assert( scip != NULL);
+   assert( fixedvar != NULL);
+
+   SCIPdebugMessage("Started branching on lower bound.\n");
 
    SCIP_CALL( SCIPnewProbingNode(scip) );
    SCIP_CALL( SCIPchgVarLbProbing(scip, fixedvar, SCIPfeasCeil(scip, fixedvarsol)) );
@@ -123,20 +140,51 @@ static SCIP_Bool executeBranchingOnLowerBound(
       *cutoff = *cutoff || SCIPisGE(scip, *upobjval, SCIPgetCutoffbound(scip));
       assert(((solstat != SCIP_LPSOLSTAT_INFEASIBLE) && (solstat != SCIP_LPSOLSTAT_OBJLIMIT)) || *cutoff);
    }
+
+   SCIPdebugMessage("Finished branching on lower bound.\n");
+
+   return SCIP_OKAY;
+}
+
+static
+SCIP_RETCODE calculateWeight(SCIP* scip, SCIP_Real lowerbounddiff, SCIP_Real upperbounddiff, SCIP_Real* result)
+{
+   SCIP_Real min;
+   SCIP_Real max;
+   SCIP_Real minweight = 4;
+   SCIP_Real maxweight = 1;
+
+   if( SCIPisFeasGE(scip, lowerbounddiff, upperbounddiff) )
+   {
+      min = upperbounddiff;
+      max = lowerbounddiff;
+   }
+   else
+   {
+      min = lowerbounddiff;
+      max = upperbounddiff;
+   }
+
+   *result = minweight * min + maxweight * max;
+
    return SCIP_OKAY;
 }
 
 static
 SCIP_RETCODE selectVarLookaheadBranching(
    SCIP*          scip,    /**< original SCIP data structure */
+   SCIP_VAR*      branchingvariable,
    SCIP_RESULT*   result   /**< pointer to store results of branching */){
 
    SCIP_VAR** fixvars;
+   SCIP_Real lpobjval;
    SCIP_Real downobjval;
    SCIP_Bool downcutoff;
    SCIP_Real upobjval;
    SCIP_Bool upcutoff;
    SCIP_Real fixvarssol;
+   SCIP_Real highestweight = 0;
+   int highestweightindex = -1;
    int nfixvars;
    int i;
 
@@ -148,7 +196,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
       *result = SCIP_DIDNOTRUN;
       return SCIP_OKAY;
    }
-
+   lpobjval = SCIPgetLPObjval(scip);
    fixvars = SCIPgetFixedVars(scip);
    nfixvars = SCIPgetNFixedVars(scip);
 
@@ -164,6 +212,15 @@ SCIP_RETCODE selectVarLookaheadBranching(
          SCIP_Bool deepdowncutoff;
          SCIP_Real deepupobjval;
          SCIP_Bool deepupcutoff;
+         SCIP_Real sumweightupperbound = 0;
+         SCIP_Real sumweightsupperbound = 0;
+         SCIP_Real sumweightlowerbound = 0;
+         SCIP_Real sumweightslowerbound = 0;
+         SCIP_Real highestweightupperbound = 0;
+         SCIP_Real highestweightlowerbound = 0;
+         SCIP_Real ncutoffs = 0;
+         SCIP_Real lambda;
+         SCIP_Real totalweight;
          int deepnfixvars;
          int j;
 
@@ -185,6 +242,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
                   for( j = 0; j < deepnfixvars; j++ )
                   {
                      SCIP_Real deepfixvarssol;
+                     SCIP_Real upperbounddiff;
+                     SCIP_Real lowerbounddiff;
+                     SCIP_Real currentweight;
 
                      assert( deepfixvars != NULL );
                      deepfixvarssol = SCIPvarGetLPSol(deepfixvars[j]);
@@ -202,6 +262,31 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
                         /* go back one layer (we are currently in depth 2) */
                         SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
+
+                        if( !deepdowncutoff && !deepupcutoff )
+                        {
+                           upperbounddiff = lpobjval - deepdownobjval;
+                           lowerbounddiff = lpobjval - deepupobjval;
+
+                           assert( SCIPisFeasPositive(scip, upperbounddiff) );
+                           assert( SCIPisFeasPositive(scip, lowerbounddiff) );
+
+                           SCIP_CALL( calculateWeight(scip, lowerbounddiff, upperbounddiff, &currentweight) );
+                           if( SCIPisFeasGE(scip, currentweight, highestweightupperbound) )
+                           {
+                              highestweightupperbound = currentweight;
+                           }
+                           sumweightupperbound = sumweightupperbound + currentweight;
+                           sumweightsupperbound = sumweightsupperbound + 1;
+                        }
+                        if( deepdowncutoff )
+                        {
+                           ncutoffs = ncutoffs + 1;
+                        }
+                        if( deepdowncutoff )
+                        {
+                           ncutoffs = ncutoffs + 1;
+                        }
                      }
                   }
                }
@@ -220,6 +305,9 @@ SCIP_RETCODE selectVarLookaheadBranching(
                   for( j = 0; j < deepnfixvars; j++ )
                   {
                      SCIP_Real deepfixvarssol;
+                     SCIP_Real upperbounddiff;
+                     SCIP_Real lowerbounddiff;
+                     SCIP_Real currentweight;
 
                      assert( deepfixvars != NULL );
                      deepfixvarssol = SCIPvarGetLPSol(deepfixvars[j]);
@@ -237,15 +325,53 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
                         /* go back one layer (we are currently in depth 2) */
                         SCIP_CALL( SCIPbacktrackProbing(scip, 1) );
+
+                        if( !deepdowncutoff && !deepupcutoff )
+                        {
+                           upperbounddiff = lpobjval - deepdownobjval;
+                           lowerbounddiff = lpobjval - deepupobjval;
+
+                           assert( SCIPisFeasPositive(scip, upperbounddiff) );
+                           assert( SCIPisFeasPositive(scip, lowerbounddiff) );
+
+                           SCIP_CALL( calculateWeight(scip, lowerbounddiff, upperbounddiff, &currentweight) );
+                           if( SCIPisFeasGE(scip, currentweight, highestweightlowerbound) )
+                           {
+                              highestweightlowerbound = currentweight;
+                           }
+                           sumweightlowerbound = sumweightlowerbound + currentweight;
+                           sumweightslowerbound = sumweightslowerbound + 1;
+                        }
+                        if( deepdowncutoff )
+                        {
+                           ncutoffs = ncutoffs + 1;
+                        }
+                        if( deepdowncutoff )
+                        {
+                           ncutoffs = ncutoffs + 1;
+                        }
                      }
                   }
                }
             }
             SCIP_CALL( SCIPbacktrackProbing(scip, 0) );
+
+            lambda = (1/sumweightsupperbound)*sumweightupperbound + (1/sumweightslowerbound)*sumweightlowerbound;
+            totalweight = highestweightlowerbound + highestweightupperbound + lambda*ncutoffs;
+            if( SCIPisFeasGT(scip, totalweight, highestweight) )
+            {
+               highestweight = totalweight;
+               highestweightindex = i;
+            }
          }
       }
 
       SCIP_CALL( SCIPendProbing(scip) );
+
+      if( highestweightindex != -1 )
+      {
+         *branchingvariable = *fixvars[highestweightindex];
+      }
    }
 
    return SCIP_OKAY;
@@ -260,8 +386,11 @@ SCIP_RETCODE selectVarLookaheadBranching(
 static
 SCIP_DECL_BRANCHCOPY(branchCopyLookahead)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of lookahead branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   assert(scip != NULL);
+   assert(branchrule != NULL);
+   assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
+
+   SCIP_CALL( SCIPincludeBranchruleLookahead(scip) );
 
    return SCIP_OKAY;
 }
@@ -270,8 +399,17 @@ SCIP_DECL_BRANCHCOPY(branchCopyLookahead)
 static
 SCIP_DECL_BRANCHFREE(branchFreeLookahead)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of lookahead branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   /* free branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipdown);
+   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipup);
+
+   SCIPfreeMemory(scip, &branchruledata);
+   SCIPbranchruleSetData(branchrule, NULL);
 
    return SCIP_OKAY;
 }
@@ -281,8 +419,12 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
 static
 SCIP_DECL_BRANCHINIT(branchInitLookahead)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of lookahead branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+
+   branchruledata->lastcand = 0;
 
    return SCIP_OKAY;
 }
@@ -292,8 +434,13 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
 static
 SCIP_DECL_BRANCHEXIT(branchExitLookahead)
 {  /*lint --e{715}*/
-   SCIPerrorMessage("method of lookahead branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_BRANCHRULEDATA* branchruledata;
+   SCIPstatistic(int j = 0);
+
+   /* initialize branching rule data */
+   branchruledata = SCIPbranchruleGetData(branchrule);
+   assert(branchruledata != NULL);
+   assert((branchruledata->skipdown != NULL) == (branchruledata->skipup != NULL));
 
    return SCIP_OKAY;
 }
@@ -317,6 +464,7 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    SCIP_Real provedbound;
    SCIP_Bool bestdownvalid;
    SCIP_Bool bestupvalid;
+   SCIP_Longint oldreevalage;
    int nlpcands;
    int npriolpcands;
    int bestcandpos;
@@ -326,11 +474,14 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execlp method of lookahead branching\n ");
+   SCIPdebugMessage("Execlp method of lookahead branching\n");
    *result = SCIP_DIDNOTRUN;
 
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
+
+   SCIP_CALL( SCIPgetLongintParam(scip, "branching/fullstrong/reevalage", &oldreevalage) );
+   SCIP_CALL( SCIPsetLongintParam(scip, "branching/fullstrong/reevalage", branchruledata->reevalage) );
 
    SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, &nlpcands, &npriolpcands, NULL) );
    assert(nlpcands > 0);
@@ -365,17 +516,26 @@ SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 
    if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
    {
-      /*SCIP_VAR* bestcand = lpcands[bestcandpos];
-      SCIP_Real bestsol = lpcandssol[bestcandpos];*/
+      SCIP_VAR* branchingvariable = NULL;
+      SCIP_NODE* lbnode = NULL;
+      SCIP_NODE* ubnode = NULL;
 
-      SCIP_CALL( selectVarLookaheadBranching(scip, result) );
+      SCIP_CALL( selectVarLookaheadBranching(scip, branchingvariable, result) );
 
+      if( branchingvariable != NULL )
+      {
+         SCIP_CALL( SCIPcreateChild(scip, &lbnode, 1, 0) );
+         SCIP_CALL( SCIPchgVarLbNode(scip, lbnode, branchingvariable, SCIPvarGetLPSol(branchingvariable)) );
 
+         SCIP_CALL( SCIPcreateChild(scip, &ubnode, 1, 0) );
+         SCIP_CALL( SCIPchgVarUbNode(scip, ubnode, branchingvariable, SCIPvarGetLPSol(branchingvariable)) );
+
+         *result = SCIP_BRANCHED;
+      }
 
    }
 
-   SCIPerrorMessage("method of lookahead branching rule not implemented yet\n");
-   SCIPABORT(); /*lint --e{527}*/
+   SCIP_CALL( SCIPsetLongintParam(scip, "branching/fullstrong/reevalage", oldreevalage) );
 
    return SCIP_OKAY;
 }
@@ -413,6 +573,10 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpLookahead) );
 
    /* add lookahead branching rule parameters */
+   SCIP_CALL( SCIPaddLongintParam(scip,
+         "branching/lookahead/reevalage",
+         "number of intermediate LPs solved to trigger reevaluation of strong branching value for a variable that was already evaluated at the current node",
+         &branchruledata->reevalage, TRUE, DEFAULT_REEVALAGE, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
    SCIP_CALL( SCIPaddIntParam(scip,
          "branching/lookahead/maxproprounds",
          "maximum number of propagation rounds to be performed during lookahead branching before solving the LP (-1: no limit, -2: parameter settings)",
