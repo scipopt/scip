@@ -2541,7 +2541,7 @@ SCIP_RETCODE cliqueCleanup(
 
       w = clique->startcleanup;
 
-      SCIPdebugMessage("Starting clean up of clique %d (size %d) from position %d\n", clique->id, clique->nvars, w);
+      SCIPdebugMessage("Starting clean up of clique %u (size %d) from position %d\n", clique->id, clique->nvars, w);
 
       /* exchange inactive by active variables */
       for( v = w; v < clique->nvars; ++v )

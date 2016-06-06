@@ -4359,7 +4359,7 @@ SCIP_RETCODE SCIPsolveCIP(
       SCIP_Longint nsuccessconflicts;
       SCIP_Bool afternodeheur;
       SCIP_Bool stopped;
-      SCIP_Bool branched = FALSE;
+      SCIP_Bool branched;
 
       assert(BMSgetNUsedBufferMemory(mem->buffer) == 0);
 
