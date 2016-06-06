@@ -2350,7 +2350,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
 
       /*
-       * create constraint 0 <= (-x^2 + log(y)) / z <= 2
+       * create constraint -1 <= (-x^2 + log(y)) / z <= 2
        */
 
       /* log(y) */
@@ -2379,7 +2379,7 @@ SCIP_RETCODE testPropagation(void)
       SCIPinfoMessage(scip, NULL, "\n");
 
       /* create constraint */
-      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", rootexpr, 0.0, 2.0) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", rootexpr, -1.0, 2.0) );
 
       /* apply forward propagation */
       forwardPropCons(scip, cons, &cutoff);
@@ -2390,7 +2390,7 @@ SCIP_RETCODE testPropagation(void)
       assert(CHECK_EXPRINTERVAL(scip, logexpr, log(2), log(3)));
       assert(CHECK_EXPRINTERVAL(scip, prodexpr, 0, 1));
       assert(CHECK_EXPRINTERVAL(scip, sumexpr, log(2) - 1, log(3)));
-      assert(CHECK_EXPRINTERVAL(scip, rootexpr, (log(2) - 1) / 2, log(3)));
+      assert(CHECK_EXPRINTERVAL(scip, rootexpr, log(2) - 1, log(3)));
 
       /* apply reverse propagation */
       reversePropCons(scip, cons, &cutoff);
