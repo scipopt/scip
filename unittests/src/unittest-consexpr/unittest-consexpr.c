@@ -2491,6 +2491,38 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
    }
 
+   /* test if forward propagation uses stored expression bounds */
+   {
+      SCIPinfoMessage(scip, NULL, "test if forward propagation uses stored bounds\n");
+
+      /* set variable bounds */
+      SCIP_CALL( SCIPchgVarLb(scip, x, 0.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
+      SCIP_CALL( SCIPchgVarLb(scip, y, 0.0) );
+      SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
+
+      SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "<x> + <y>", NULL, &expr) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 0.5) );
+
+      forwardPropCons(scip, cons, FALSE, &cutoff);
+      assert(!cutoff);
+      assert(CHECK_EXPRINTERVAL(scip, expr, 0.0, 0.5));
+
+      /* change variable expressions */
+      expr->children[0]->interval.inf = -1.0;
+      expr->children[0]->interval.sup = 0.2;
+      expr->children[1]->interval.inf = -1.0;
+      expr->children[1]->interval.sup = 0.2;
+
+      /* new interval should be [0,1] intersected with [-2, 0.4] */
+      forwardPropCons(scip, cons, TRUE, &cutoff);
+      assert(!cutoff);
+      assert(CHECK_EXPRINTERVAL(scip, expr, 0.0, 0.4));
+
+      SCIP_CALL( SCIPreleaseCons(scip, &cons) );
+      SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   }
+
    /* infeasible after forward propagation */
    {
       SCIPinfoMessage(scip, NULL, "test expressions leading to an empty interval after forward propagation\n");
