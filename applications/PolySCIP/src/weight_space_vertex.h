@@ -89,16 +89,18 @@ namespace polyscip {
 
         ValueType getWeightedOutcome(const OutcomeType& outcome) const;
 
+        //todo
         /** Checks whether weight of vertex corresponds to unit weight
          * @param index index of 1 in unit weight
          * @return true if weight of vertex is unit weight with 1 at index; false otherwise
          */
         bool hasUnitWeight() const;
 
+
         /** Checks whether weight of vertex corresponds with given weight
          * @param weight weight to check against
          */
-        bool hasSameWeight(const WeightType& weight);
+        bool hasSameWeight(const WeightType& weight) const;
 
         /** Prints weight space vertex information to output stream.
          * @param printFacets if true, then defining facets are printed
@@ -106,6 +108,8 @@ namespace polyscip {
         void print(std::ostream& os, bool printFacets = false) const;
 
     private:
+        friend bool WeightSpacePolyhedron::areAdjacent(const WeightSpaceVertex* v, const WeightSpaceVertex* w) const;
+
         /** Returns the coefficient h for which the following equation is fulfilled:
          *  (h * weight1 + (1-h) * weight2) \cdot outcome = 0
          * h is computed by solving

@@ -108,6 +108,10 @@ namespace polyscip {
          */
         void markVertex(std::size_t unit_weight_index) = delete;
 
+        void printNoVertices() const {
+            std::cout << "no of vertices = " << unmarked_vertices_.size() + marked_vertices_.size() + obsolete_vertices_.size() << "\n";
+        }
+
         //TODO adjust documentation
         /** The initial weight space vertex v* having weight which coincides with
          * given ray_weight is changed, i.e., for each adjacent vertex of v* a new vertex/node with weight
@@ -137,7 +141,7 @@ namespace polyscip {
          */
         void printObsoleteVertices(std::ostream& os = std::cout, bool printFacets = false) const;
 
-
+        bool areAdjacent(const WeightSpaceVertex* v, const WeightSpaceVertex* w) const;
 
         std::size_t getNumberOfGraphNodes() const;
 
@@ -157,6 +161,7 @@ namespace polyscip {
 
         using NodeMap = Graph::NodeMap<WeightSpaceVertex*>;
         using VertexMap = std::unordered_map<WeightSpaceVertex*, Node>;
+
 
 
 
@@ -259,13 +264,13 @@ namespace polyscip {
 
     };
 
-
-
+    //todo make sure it is correct
     template <typename Container>
     void WeightSpacePolyhedron::addCliqueEdgesToSkeleton(const Container& vertices) {
         for (auto it = std::begin(vertices); it!=std::end(vertices); ++it ) {
-            for (auto succ_it = std::begin(vertices); succ_it!=std::end(vertices); ++succ_it) {
-                skeleton_.addEdge(getNode(*it), getNode(*succ_it));
+            for (auto succ_it = std::begin(vertices); succ_it!=it; ++succ_it) {
+                if (areAdjacent(*it, *succ_it))
+                    skeleton_.addEdge(getNode(*it), getNode(*succ_it));
             }
         }
     };
@@ -276,8 +281,10 @@ namespace polyscip {
                                               std::ostream &os,
                                               bool printFacets) const {
         os << std::setprecision(9) << description << "\n";
-        for (const auto& elem : container)
+        for (const auto& elem : container) {
             elem->print(os, printFacets);
+            os << "\n";
+        }
         os << "\n";
     };
 

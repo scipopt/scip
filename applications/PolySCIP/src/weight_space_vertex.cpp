@@ -16,11 +16,12 @@
 
 #include <algorithm> // std::copy, std::set_intersection, std::sort
 #include <cstddef>
-#include <iterator>  // std::ostream_iterator, std::back_inserter
+#include <iterator>  // std::back_inserter
 #include <memory> //std::shared
 #include <numeric>   // std::inner_product;
 #include <ostream>
 
+#include "global_functions.h" //global::print
 #include "polyscip_types.h"
 #include "weight_space_facet.h"
 #include "weight_space_polyhedron.h"
@@ -32,10 +33,6 @@ using std::vector;
 
 namespace polyscip {
 
-    bool compare_facet_ptr(const std::shared_ptr<const WeightSpaceFacet>& f1,
-                           const std::shared_ptr<const WeightSpaceFacet>& f2) {
-        return *f1 < *f2;
-    }
 
     WeightSpaceVertex::WeightSpaceVertex(WeightSpacePolyhedron::FacetContainer incident_facets,
                                          WeightType weight,
@@ -45,7 +42,7 @@ namespace polyscip {
               weight_(std::move(weight)),
               weighted_obj_val_{weighted_obj_val} {
         if (sort_facets) // sort facets in order to be able to use std::set_intersection in other constructor
-            sort(begin(incident_facets_), end(incident_facets_), compare_facet_ptr);
+            sort(begin(incident_facets_), end(incident_facets_), WeightSpaceFacet::compare_facet_ptr);
     }
 
     ValueType WeightSpaceVertex::getCurrentWOV() const {
@@ -58,28 +55,23 @@ namespace polyscip {
                                          const OutcomeType &outcome,
                                          bool outcome_is_ray)
     {
-
-        std::cout << "\nobsolete: ";
-        obs->print(std::cout);
-        std::cout << "non-obsolete: ";
-        non_obs->print(std::cout);
+        assert (obs != non_obs);
         // get intersection of facets of obs and non_obs
         std::set_intersection(obs->incident_facets_.cbegin(),
                               obs->incident_facets_.cend(),
                               non_obs->incident_facets_.cbegin(),
                               non_obs->incident_facets_.cend(),
                               std::back_inserter(incident_facets_),
-                              compare_facet_ptr);
+                              WeightSpaceFacet::compare_facet_ptr);
         assert(incident_facets_.size() + 1 == obs->incident_facets_.size());
         // add additional facet with respect to outcome
         auto wov_coeff = outcome_is_ray ? 0.0 : 1.0;
         auto new_facet = std::make_shared<const WeightSpaceFacet>(outcome, wov_coeff);
         auto upper_it = std::upper_bound(begin(incident_facets_),
                                          end(incident_facets_),
-                                         new_facet, compare_facet_ptr);
+                                         new_facet, WeightSpaceFacet::compare_facet_ptr);
         incident_facets_.insert(upper_it, std::move(new_facet));
         auto h = calculateCombinationValue(non_obs, obs, outcome, outcome_is_ray);
-        std::cout << "h value = " << std::setprecision(30) << h << std::setprecision(3) << "\n";
         assert (SCIPisGE(scip, h, 0.) && SCIPisLE(scip, h, 1.));
         if (outcome_is_ray) // shift combination towards non-obsolete vertex
             h += 1e-7;
@@ -144,7 +136,7 @@ namespace polyscip {
 
 
 
-    bool WeightSpaceVertex::hasSameWeight(const WeightType& weight) {
+    bool WeightSpaceVertex::hasSameWeight(const WeightType& weight) const {
         return weight_ == weight;
     }
 
@@ -152,17 +144,15 @@ namespace polyscip {
         for (std::size_t i=0; i<weight_.size(); ++i) {
             auto weight = WeightType(weight_.size(), 0.);
             weight[i] = 1.;
-            if (weight_ == weight)
+            if (hasSameWeight(weight))
                 return true;
         }
         return false;
     }
 
     void WeightSpaceVertex::print(ostream& os, bool printFacets) const {
-        os << "WeightSpaceVertex:\n weight = [ ";
-        std::ostream_iterator <ValueType> out_it(os, " ");
-        std::copy(weight_.cbegin(), weight_.cend(), out_it);
-        os << "]\n wov = " << weighted_obj_val_ << "\n";
+        global::print(weight_, "WeightSpaceVertex: weight = ", os);
+        os << "\n wov = " << weighted_obj_val_ << "\n";
         if (printFacets) {
             os << " defining facets: \n";
             for (const auto &facet : incident_facets_)

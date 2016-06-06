@@ -44,7 +44,7 @@ namespace polyscip {
         computeInitialRep(bounded_.front());
         auto current_v_rep = initial_v_rep_;
         for (auto bd = std::next(begin(bounded_)); bd != end(bounded_); ++bd) {
-            auto new_constraint = H_RepT(*bd,-1);
+            auto new_constraint = H_RepT(*bd,1);
             current_v_rep = extendVRep(std::move(current_v_rep), new_constraint);
             h_rep_.push_back(new_constraint);
         }
@@ -88,7 +88,7 @@ namespace polyscip {
         for (size_t i = 0; i < current_rep.size(); ++i) {
             zero_slacks.emplace_back(computeZeroSlackSet(current_rep[i]));
             auto result = std::inner_product(begin(current_rep[i].first), end(current_rep[i].first),
-                                             begin(constraint.first), current_rep[i].second * constraint.second);
+                                             begin(constraint.first), -(current_rep[i].second * constraint.second));
             if (SCIPisNegative(scip_, result)) {
                 minus_inds.push_back(i);
             }
@@ -184,7 +184,7 @@ namespace polyscip {
             auto weight_coeff = h_rep_[i].first;
             auto a_coeff = h_rep_[i].second;
             auto result = std::inner_product(begin(weight_coeff), end(weight_coeff),
-                                             begin(ray.first), a_coeff*ray.second);
+                                             begin(ray.first), -a_coeff*ray.second);
             if (SCIPisZero(scip_, result))
                 zeroSet.push_back(i);
         }
@@ -208,10 +208,10 @@ namespace polyscip {
         assert (size == ineq.first.size());
         // m_coeff = ineq \cdot ray_plus
         auto m_coeff = std::inner_product(begin(ineq.first), end(ineq.first),
-                                          begin(plus_ray.first), ineq.second * plus_ray.second);
+                                          begin(plus_ray.first), -(ineq.second * plus_ray.second));
         // p_coeff = ineq \cdot ray_minus
         auto p_coeff = std::inner_product(begin(ineq.first), end(ineq.first),
-                                          begin(minus_ray.first), ineq.second * minus_ray.second);
+                                          begin(minus_ray.first), -(ineq.second * minus_ray.second));
         // return m_coeff * ray_minus - p_coeff * ray_plus
         auto new_weight = WeightType(size, 0.);
         std::transform(begin(minus_ray.first), end(minus_ray.first),
@@ -226,7 +226,7 @@ namespace polyscip {
     void DoubleDescription::computeInitialRep(const OutcomeType &bd_outcome) {
         auto size = bd_outcome.size();
         initial_v_rep_.emplace_back(WeightType(size, 0), -1.);
-        h_rep_.emplace_back(bd_outcome, -1.);
+        h_rep_.emplace_back(bd_outcome, 1.);
         for (size_t i = 0; i < bd_outcome.size(); ++i) {
             auto ray = WeightType(size, 0.);
             ray[i] = 1.;

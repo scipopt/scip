@@ -15,6 +15,7 @@
 #include "weight_space_facet.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <ostream>
 #include <tuple> // std::tie
 
@@ -34,27 +35,29 @@ namespace polyscip {
         w_coeffs_.at(index) = 1.;
     }*/
 
+    WeightSpaceFacet::WeightSpaceFacet(OutcomeType outcome,
+                                       ValueType wov_coeff)
+            : w_coeffs_(outcome),
+              wov_coeff_{wov_coeff} { }
+
     ValueType WeightSpaceFacet::getWeightedWeight(const WeightType& weight) const {
         assert (weight.size() == w_coeffs_.size());
         return std::inner_product(begin(w_coeffs_), end(w_coeffs_),
                                   begin(weight), 0.);
     }
 
-    WeightSpaceFacet::WeightSpaceFacet(OutcomeType outcome,
-                                       ValueType wov_coeff)
-            : w_coeffs_(outcome),
-              wov_coeff_{wov_coeff} { }
+
 
     void WeightSpaceFacet::print(ostream &os) const {
         os << " Facet: ";
-        unsigned counter{0};
+        std::size_t counter{0};
         std::for_each(w_coeffs_.cbegin(), --w_coeffs_.cend(),
                       [&](ValueType val){os << val << " w_" << counter++ << " + ";});
         os << w_coeffs_.back() << " w_" << counter << " >= ";
-        if (wov_coeff_ != 0.0)
-            os << "wov\n";
-        else
+        if (wov_coeff_ == 0.0)
             os << "0\n";
+        else
+            os << wov_coeff_ << " wov\n";
     }
 
 }

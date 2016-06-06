@@ -21,6 +21,7 @@
 #ifndef POLYSCIP_SRC_GLOBAL_FUNCTIONS_H_INCLUDED
 #define POLYSCIP_SRC_GLOBAL_FUNCTIONS_H_INCLUDED
 
+#include <iomanip>
 #include <iostream>
 #include <ostream>
 #include <memory>
@@ -66,8 +67,8 @@ namespace polyscip {
         template<typename Container>
         void print(const Container &container,
                    std::string description,
-                   std::ostream &os = std::cout) {
-            os << description << "[ ";
+                   std::ostream &os = std::cout, int prec = 5) {
+            os << std::setprecision(prec) << description << "[ ";
             for (const auto &elem : container)
                 os << elem << " ";
             os << "]";

@@ -17,8 +17,8 @@
 #include <algorithm> // std::transform
 #include <cstddef> // std::size_t
 #include <iostream>
-#include <iterator> // std::next
 #include <forward_list>
+#include <functional> // std::negate
 #include <memory> // std::make_shared
 #include <numeric> // std::inner_product
 #include <ostream>
@@ -66,13 +66,13 @@ namespace polyscip {
             : curr_investigated_vertex_(nullptr),
               skeleton_(),
               nodes_to_vertices_(skeleton_) {
-        createInitialFacets(std::move(h_rep));
-        createInitialVerticesAndSkeleton(scip, std::move(v_rep), std::move(adjacencies));
+        createInitialFacets(h_rep);
+        createInitialVerticesAndSkeleton(scip, v_rep, adjacencies);
     }
 
     void WeightSpacePolyhedron::createInitialFacets(DD::H_RepContainer h_rep) {
         for (auto& h : h_rep) {
-            facets_.emplace_back(make_shared<WeightSpaceFacet>(std::move(h.first), std::move(h.second)));
+            facets_.emplace_back(make_shared<WeightSpaceFacet>(h.first, h.second));
         }
     }
 
@@ -85,6 +85,8 @@ namespace polyscip {
             auto vertex = new WeightSpaceVertex(std::move(inc_facets),
                                                 std::move(v.first),
                                                 std::move(v.second));
+            std::cout << "new vertex = ";
+            vertex->print(std::cout, true);
             auto node = skeleton_.addNode();
             vrep_to_node.push_back(node); // maps v to node; used below for adding adjacent edges
             nodes_to_vertices_[node] = vertex;
@@ -123,8 +125,7 @@ namespace polyscip {
                                                                                        const DD::V_RepT& v) const {
         auto facets = FacetContainer {};
         for (const auto& f : facets_) {
-            auto result = f->getWeightedWeight(v.first) + f->getWOVCoeff()*v.second;
-            if (SCIPisZero(scip, result))
+            if (SCIPisEQ(scip, f->getWeightedWeight(v.first), f->getWOVCoeff()*v.second))
                 facets.push_back(f);
         }
         return facets;
@@ -232,6 +233,18 @@ namespace polyscip {
         addToSkeleton(new_vertices, new_edges);
     }*/
 
+    bool WeightSpacePolyhedron::areAdjacent(const WeightSpaceVertex* v, const WeightSpaceVertex* w) const {
+        auto inc_facets = FacetContainer {};
+        assert (v->incident_facets_.size() == w->incident_facets_.size());
+        std::set_intersection(v->incident_facets_.cbegin(),
+                              v->incident_facets_.cend(),
+                              w->incident_facets_.cbegin(),
+                              w->incident_facets_.cend(),
+                              std::back_inserter(inc_facets),
+                              WeightSpaceFacet::compare_facet_ptr);
+        return (inc_facets.size() + 1) == w->incident_facets_.size();
+    }
+
     void WeightSpacePolyhedron::updateWeightSpacePolyhedron(SCIP* scip,
                                                             const vector<WeightSpaceVertex*>& obsolete_vertices,
                                                             const OutcomeType& outcome,
@@ -243,10 +256,16 @@ namespace polyscip {
             for (Graph::IncEdgeIt edge(skeleton_, getNode(obs_vertex)); edge != lemon::INVALID; ++edge) {
                 auto adj_node = skeleton_.oppositeNode(getNode(obs_vertex), edge);
                 auto adj_vertex = getVertex(adj_node);
-                auto adj_is_obsolete = isVertexObsolete(scip, adj_vertex, outcome, outcome_is_ray);
-                if (!adj_is_obsolete) {
+                if (!isVertexObsolete(scip, adj_vertex, outcome, outcome_is_ray)) {
+                    std::cout << "obs vertex: ";
+                    obs_vertex->print(std::cout, false);
+                    std::cout << "nonobs vertex :";
+                    adj_vertex->print(std::cout);
                     auto new_vertex = new WeightSpaceVertex(scip, obs_vertex, adj_vertex, outcome,
                                                             outcome_is_ray); // new vertex between obsolete and non-obsolete verts
+                    std::cout << "new vertex: ";
+                    new_vertex->print(std::cout);
+                    std::cout << "\n";
                     unmarked_vertices_.push_back(new_vertex); // add to unmarked vertices
                     new_vertices.push_back(new_vertex);
                     new_edges.push_back({new_vertex, adj_node});
@@ -311,10 +330,10 @@ namespace polyscip {
     std::vector<WeightSpaceVertex *> WeightSpacePolyhedron::computeObsoleteVerticesCompleteLoop(SCIP *scip,
                                                                                                 const OutcomeType &outcome,
                                                                                                 bool outcome_is_ray) {
+        auto obsolete = std::vector<WeightSpaceVertex *> {curr_investigated_vertex_};
         for (const auto& mv : marked_vertices_)
             assert (!isVertexObsolete(scip, mv, outcome, outcome_is_ray));
-        auto obsolete = std::vector<WeightSpaceVertex *> {curr_investigated_vertex_};
-        for (auto uv : unmarked_vertices_) {
+        for (const auto& uv : unmarked_vertices_) {
             if (isVertexObsolete(scip, uv, outcome, outcome_is_ray))
                 obsolete.push_back(uv);
         }
@@ -331,8 +350,10 @@ namespace polyscip {
         /*auto obsolete = completeLoopForObsolete ? computeObsoleteVerticesCompleteLoop(scip, outcome, outcome_is_ray) :
                         computeObsoleteVertices(scip, outcome, outcome_is_ray);*/
         auto obsolete = computeObsoleteVerticesCompleteLoop(scip, outcome, outcome_is_ray);
-        auto obsolete2 = computeObsoleteVertices(scip, outcome, outcome_is_ray);
-        assert (obsolete == obsolete2);
+        //auto obsolete = computeObsoleteVertices(scip, outcome, outcome_is_ray);
+        //global::print(obsolete, "obsComplete = ");
+        //global::print(obsolete2, "obsNoncomplete = ");
+        //assert (obsolete.size() == obsolete2.size());
         updateWeightSpacePolyhedron(scip, obsolete, outcome, outcome_is_ray);
         resetCurrentInvestigatedVertex(); // requirement: call after updateWeightSpacePolyhedron;
     }

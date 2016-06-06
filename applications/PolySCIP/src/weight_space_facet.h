@@ -26,6 +26,7 @@
 #define POLYSCIP_SRC_WEIGHT_SPACE_FACET_H_INCLUDED
 
 #include <iosfwd>
+#include <memory>
 #include <vector>
 
 #include "polyscip_types.h"
@@ -35,6 +36,11 @@ namespace polyscip {
     /** Facet of the (partial) weight space polyhedron. */
     class WeightSpaceFacet {
     public:
+        static bool compare_facet_ptr(const std::shared_ptr<const WeightSpaceFacet>& f1,
+                                      const std::shared_ptr<const WeightSpaceFacet>& f2) {
+            return *f1 < *f2;
+        }
+
         bool friend operator<(const WeightSpaceFacet& facet1,
                               const WeightSpaceFacet& facet2);
 

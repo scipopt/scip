@@ -1,34 +1,26 @@
 set(HEADERS_FILES
-        weight_space_facet.h
-        weight_space_vertex.h
-        weight_space_polyhedron.h
         cmd_line_args.h
         double_description_method.h
+        global_functions.h
         polyscip.h
-        #LiftedWeightSpaceSolver.h
+        polyscip_types.h
         prob_data_objectives.h
-        #ProbDataObjectives.h
         ReaderMOP.h
-        #Skeleton.h
-        #WeightedSolver.h
-        #WeightSpaceVertex.h
+        weight_space_facet.h
+        weight_space_polyhedron.h
+        weight_space_vertex.h
         )
 
 set(SOURCE_FILES
-        weight_space_facet.cpp
-        weight_space_vertex.cpp
-        weight_space_polyhedron.cpp
-        double_description_method.cpp
         cmd_line_args.cpp
-        polyscip.cpp
+        double_description_method.cpp
         new_main.cpp
-        #LiftedWeightSpaceSolver.cpp
+        polyscip.cpp
         prob_data_objectives.cpp
-        #ProbDataObjectives.cpp
         ReaderMOP.cpp
-        #Skeleton.cpp
-        #WeightedSolver.cpp
-        #WeightSpaceVertex.cpp
+        weight_space_facet.cpp
+        weight_space_polyhedron.cpp
+        weight_space_vertex.cpp
         )
 
 # check for libsoplex in ${SCIP_ROOT_DIR}/lib directory

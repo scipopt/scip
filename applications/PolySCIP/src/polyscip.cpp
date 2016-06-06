@@ -117,6 +117,8 @@ namespace polyscip {
         return SCIP_OKAY;
     }
 
+
+
     SCIP_RETCODE Polyscip::initWeightSpace() {
         SCIP_CALL( computeUnitWeightOutcomes() ); // computes optimal outcomes for all unit weights
         if (polyscip_status_ == PolyscipStatus::InitPhase) {
@@ -128,9 +130,9 @@ namespace polyscip {
                 v_rep.computeVRep();
                 v_rep.printVRep();
                 weight_space_poly_ = global::make_unique<WeightSpacePolyhedron>(scip_,
-                                                                                std::move(v_rep.moveVRep()),
-                                                                                std::move(v_rep.getHRep()),
-                                                                                std::move(v_rep.getVRepAdjacencies()));
+                                                                                v_rep.getVRep(),
+                                                                                v_rep.getHRep(),
+                                                                                v_rep.getVRepAdjacencies());
                 polyscip_status_ = PolyscipStatus::WeightSpacePhase;
             }
         }
@@ -293,9 +295,11 @@ namespace polyscip {
                     scip_status = separateINFORUNBD(untested_weight);
                 if (scip_status == SCIP_STATUS_OPTIMAL) {
                     auto new_wov = SCIPgetPrimalbound(scip_);
-                    //todo find better comparison
+                    //todo is it getUntestVertexWOV( weight ) oder nur getUntestedVertexWOV
                     if (SCIPisLT(scip_, new_wov, weight_space_poly_->getUntestedVertexWOV(untested_weight))) {
-                    //if (new_wov < weight_space_poly_->getUntestedVertexWOV(untested_weight)) {
+                    //todo
+                        //if (new_wov < weight_space_poly_->getUntestedVertexWOV(untested_weight)) {
+                        std::cout << "new wov = " << new_wov << std::endl;
                         SCIP_CALL( handleOptimalStatus() ); //adds bounded result to supported_
                         auto last_added_outcome = supported_.back().second; //was added by handleStatus
                         weight_space_poly_->incorporateNewOutcome(scip_, cmd_line_args_.withCompleteLoopForObsolete(),
@@ -316,6 +320,10 @@ namespace polyscip {
                     return SCIP_OKAY;
                 }
             }
+            weight_space_poly_->printNoVertices();
+            weight_space_poly_->printUnmarkedVertices(std::cout, true);
+            weight_space_poly_->printMarkedVertices(std::cout, true);
+            weight_space_poly_->printObsoleteVertices(std::cout, true);
             polyscip_status_ = PolyscipStatus::CompUnsupportedPhase;
         }
         return SCIP_OKAY;

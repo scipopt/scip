@@ -29,6 +29,7 @@
 #include "global_functions.h"
 #include "objscip/objscip.h"
 #include "polyscip_types.h"
+#include "weight_space_facet.h"
 
 namespace polyscip {
 
