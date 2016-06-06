@@ -870,7 +870,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(reversepropExpr)
       /* stop propagation if we could find a cutoff */
       if( *cutoff )
       {
-         SCIPdebugMessage("found a cutoff during reverse bound propagation\n");
          *result = SCIP_CONSEXPREXPRWALK_ABORT;
          return SCIP_OKAY;
       }
