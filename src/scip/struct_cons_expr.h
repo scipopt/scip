@@ -73,6 +73,9 @@ struct SCIP_ConsExpr_Expr
    unsigned int            intevaltag;    /**< tag of domains for which tag for which the expression has been evaluated last, or 0 */
    SCIP_INTERVAL           interval;      /**< interval from the last interval evaluation */
 
+   /* propagation */
+   SCIP_Bool               hastightened;  /**< flag to store whether expression has been tightened during reverse propagation */
+
    /* expression walker data */
    SCIP_CONSEXPR_EXPR*     walkparent;    /**< parent expression in expression walk */
    int                     walkcurrentchild; /**< child that is currently visited (or will be visited next) by expression walk */

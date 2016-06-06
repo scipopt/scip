@@ -47,6 +47,20 @@ SCIP_RETCODE replaceCommonSubexpressions(
    int                   nconss              /**< total number of constraints */
    );
 
+/* declaration as in cons_expr.c */
+SCIP_RETCODE forwardPropCons(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONS*              cons,             /**< constraint to propagate */
+   SCIP_Bool               intersect,        /**< should the new expr. bounds be intersected with the previous ones? */
+   SCIP_Bool*              cutoff            /**< buffer to store whether the current node can be cutoff */
+   );
+
+/* declaration as in cons_expr.c */
+SCIP_RETCODE reversePropCons(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONS*              cons,             /**< constraint to propagate */
+   SCIP_Bool*              cutoff            /**< buffer to store whether the current node can be cutoff */
+   );
 
 /** macro to check the return of tests
  *
@@ -1035,15 +1049,15 @@ SCIP_RETCODE testExprinteval(void)
     * check interval evaluation method for constant expressions
     */
    printf("check interval-evaluation of constant expressions\n");
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, const_expr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, const_expr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, const_expr, 5.0, 5.0, FALSE, 0) );
 
    /*
     * check interval evaluation method for variable expressions
     */
    printf("check interval-evaluation of variable expressions\n");
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, xexpr, 0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, yexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, xexpr, FALSE, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, yexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, xexpr, 0.0, 10.0, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, yexpr, -5.0, 5.0, FALSE, 0) );
 
@@ -1053,7 +1067,7 @@ SCIP_RETCODE testExprinteval(void)
    printf("check interval-evaluation of sum expression\n");
    SCIP_CALL( SCIPchgVarLb(scip, x, 2.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 7.5) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sumexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sumexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, sumexpr, 5.0, 16.0, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, xexpr, 2.0, 7.5, FALSE, 0) );
 
@@ -1065,7 +1079,7 @@ SCIP_RETCODE testExprinteval(void)
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
    SCIP_CALL( SCIPchgVarLb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 2.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, prodexpr, pow(5,-4.0) / 8.0 , pow(5,-4.0), FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, xexpr, 0.5, 1.0, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, yexpr, 1.0, 2.0, FALSE, 0) );
@@ -1094,7 +1108,7 @@ SCIP_RETCODE testExprinteval(void)
                inf *= b < 0 ? b : a;
                sup *= b < 0 ? a : b;
 
-               SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+               SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 0) );
 
                /* check all expressions */
                SCIP_CALL( checkExprIntEval(scip, mainexpr, MIN(inf,sup), MAX(inf,sup), FALSE, 0) );
@@ -1115,17 +1129,17 @@ SCIP_RETCODE testExprinteval(void)
    SCIP_CALL( SCIPchgVarUb(scip, x, -0.5) );
    SCIP_CALL( SCIPchgVarLb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    SCIP_CALL( SCIPchgVarLb(scip, y, 0.0) );
    SCIP_CALL( SCIPchgVarUb(scip, y, 0.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    /* (1/y)^2 should lead to [0,inf] */
@@ -1133,7 +1147,7 @@ SCIP_RETCODE testExprinteval(void)
    SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarLb(scip, x, 0.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, mainexpr, 0.0, SCIPinfinity(scip), FALSE, 0) );
 
    /* (1/y)^2 should lead to [0,inf] but because of 1/(1+2*x)^3 we should get [-inf,inf] */
@@ -1141,7 +1155,7 @@ SCIP_RETCODE testExprinteval(void)
    SCIP_CALL( SCIPchgVarUb(scip, y, 1.0) );
    SCIP_CALL( SCIPchgVarLb(scip, x, -10.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 10.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, mainexpr, -SCIPinfinity(scip), SCIPinfinity(scip), FALSE, 0) );
 
    /*
@@ -1150,23 +1164,23 @@ SCIP_RETCODE testExprinteval(void)
    printf("check interval-evaluation for undefined expressions like (-1)^2\n");
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, -1.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, sqrtexpr, 0, 0, TRUE, 0) );
 
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, -0.5) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, sqrtexpr, 0, 0, TRUE, 0) );
 
    /* the result of sqrt([-1,2]) should be [0,sqrt(2)] and not an empty interval */
    SCIP_CALL( SCIPchgVarLb(scip, x, -1.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 2.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, sqrtexpr, 0, sqrt(2), FALSE, 0) );
 
    SCIP_CALL( SCIPchgVarLb(scip, x, 0.0) );
    SCIP_CALL( SCIPchgVarUb(scip, x, 1.0) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, 0) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sqrtexpr, FALSE, 0) );
    SCIP_CALL( checkExprIntEval(scip, sqrtexpr, 0.0, 1.0, FALSE, 0) );
 
    /*
@@ -1182,7 +1196,7 @@ SCIP_RETCODE testExprinteval(void)
    for( i = 0; i < 10; ++i )
    {
       int tag = i % 3;
-      SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, tag) );
+      SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, tag) );
       SCIP_CALL( checkExprIntEval(scip, mainexpr, 0.0, 0.0, FALSE, tag) );
       SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, tag) );
       SCIP_CALL( checkExprIntEval(scip, sumexpr, 1.0, 1.0, FALSE, tag) );
@@ -1192,25 +1206,25 @@ SCIP_RETCODE testExprinteval(void)
    }
 
    /* set another tag for some subexpression; result should not change */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 1) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 1) );
    SCIP_CALL( checkExprIntEval(scip, mainexpr, 0.0, 0.0, FALSE, 1) );
    SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, 1) );
    SCIP_CALL( checkExprIntEval(scip, sumexpr, 1.0, 1.0, FALSE, 1) );
 
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, 2) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sumexpr, 2) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 1) ); /* this should not trigger a reevaluation */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, FALSE, 2) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, sumexpr, FALSE, 2) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 1) ); /* this should not trigger a reevaluation */
    SCIP_CALL( checkExprIntEval(scip, mainexpr, 0.0, 0.0, FALSE, 1) );
    SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, 2) );
    SCIP_CALL( checkExprIntEval(scip, sumexpr, 1.0, 1.0, FALSE, 2) );
 
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, 3) ); /* this should trigger a reevaluation */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, mainexpr, FALSE, 3) ); /* this should trigger a reevaluation */
    SCIP_CALL( checkExprIntEval(scip, mainexpr, 0.0, 0.0, FALSE, 3) );
    SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, 3) );
    SCIP_CALL( checkExprIntEval(scip, sumexpr, 1.0, 1.0, FALSE, 3) );
 
    /* manipulate evaluation interval */
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, 1) );
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, FALSE, 1) );
    SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, 1) );
    SCIP_CALL( checkExprIntEval(scip, xexpr, 0.0, 0.0, FALSE, 1) );
    SCIP_CALL( checkExprIntEval(scip, yexpr, 1.0, 1.0, FALSE, 1) );
@@ -1218,10 +1232,10 @@ SCIP_RETCODE testExprinteval(void)
    /* set bounds of x to [1,1] in xexpr */
    SCIPintervalSetBounds(&interval, 1.0, 1.0);
    SCIPsetConsExprExprEvalInterval(xexpr, &interval, 2);
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, 2) ); /* should use [1,1] for xexpr */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, FALSE, 2) ); /* should use [1,1] for xexpr */
    SCIP_CALL( checkExprIntEval(scip, prodexpr, pow(5.0,-4), pow(5.0,-4), FALSE, 2) );
    SCIP_CALL( checkExprIntEval(scip, xexpr, 1.0, 1.0, FALSE, 2) );
-   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, 3) ); /* should use [0,0] for xexpr */
+   SCIP_CALL( SCIPevalConsExprExprInterval(scip, prodexpr, FALSE, 3) ); /* should use [0,0] for xexpr */
    SCIP_CALL( checkExprIntEval(scip, prodexpr, 0.0, 0.0, FALSE, 3) );
    SCIP_CALL( checkExprIntEval(scip, xexpr, 0.0, 0.0, FALSE, 3) );
 
@@ -1627,7 +1641,7 @@ SCIP_RETCODE testExp(void)
          /* propagate expression */
          SCIP_CALL( SCIPchgVarLb(scip, x, i) );
          SCIP_CALL( SCIPchgVarUb(scip, x, i + 1.0 / (ABS(i) + 1)) );
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0) );
+         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
          interval = SCIPgetConsExprExprInterval(expr);
          assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), 2*exp(i)));
          assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), 2*exp(i + 1.0 / (ABS(i) + 1))));
@@ -1661,7 +1675,7 @@ SCIP_RETCODE testExp(void)
          SCIP_CALL( SCIPchgVarUb(scip, x,  1.0 / i) );
          SCIP_CALL( SCIPchgVarLb(scip, y, i) );
          SCIP_CALL( SCIPchgVarUb(scip, y, i + 1.0 / i) );
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0) );
+         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
          interval = SCIPgetConsExprExprInterval(expr);
          assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), exp(exp(-1.0 / i)) * exp(2*i)));
          assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), exp(exp(1.0 / i)) * exp(2*i + 2.0 / i)));
@@ -1743,7 +1757,7 @@ SCIP_RETCODE testLog(void)
          xub = i + 1.0 / (ABS(i) + 1);
          SCIP_CALL( SCIPchgVarLb(scip, x, xlb) );
          SCIP_CALL( SCIPchgVarUb(scip, x, xub) );
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0) );
+         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
          interval = SCIPgetConsExprExprInterval(expr);
 
          /* interval is empty if both bounds are non-positive */
@@ -1788,7 +1802,7 @@ SCIP_RETCODE testLog(void)
          SCIP_CALL( SCIPchgVarUb(scip, x,  2.0 / i) );
          SCIP_CALL( SCIPchgVarLb(scip, y,  3.0 / i) );
          SCIP_CALL( SCIPchgVarUb(scip, y,  4.0 / i) );
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0) );
+         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
          interval = SCIPgetConsExprExprInterval(expr);
          assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), log(1.0 / i + 3.0 / i)));
          assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), log(2.0 / i + 4.0 / i)));
@@ -1863,7 +1877,7 @@ SCIP_RETCODE testAbs(void)
          /* propagate expression */
          SCIP_CALL( SCIPchgVarLb(scip, x, -REALABS(i)) );
          SCIP_CALL( SCIPchgVarUb(scip, x, i*i) );
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0) );
+         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
          interval = SCIPgetConsExprExprInterval(expr);
 
          assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), 0));
@@ -1898,7 +1912,7 @@ SCIP_RETCODE testAbs(void)
          SCIP_CALL( SCIPchgVarUb(scip, x, REALABS(i)) );
          SCIP_CALL( SCIPchgVarLb(scip, y, -REALABS(i)) );
          SCIP_CALL( SCIPchgVarUb(scip, y, REALABS(i)) );
-         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, 0) );
+         SCIP_CALL( SCIPevalConsExprExprInterval(scip, expr, FALSE, 0) );
          interval = SCIPgetConsExprExprInterval(expr);
          assert(SCIPisRelEQ(scip, SCIPintervalGetInf(interval), 0));
          assert(SCIPisRelEQ(scip, SCIPintervalGetSup(interval), 2 * pow(REALABS(i),5)));
@@ -2208,7 +2222,7 @@ SCIP_RETCODE testPropagation(void)
 
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 0.5, 1.5) );
 
-      forwardPropCons(scip, cons, &cutoff);
+      forwardPropCons(scip, cons, FALSE, &cutoff);
       assert(!cutoff);
       reversePropCons(scip, cons, &cutoff);
       assert(!cutoff);
@@ -2244,7 +2258,7 @@ SCIP_RETCODE testPropagation(void)
 
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 0.0, 1.0) );
 
-      forwardPropCons(scip, cons, &cutoff);
+      forwardPropCons(scip, cons, FALSE, &cutoff);
       assert(!cutoff);
       reversePropCons(scip, cons, &cutoff);
       assert(!cutoff);
@@ -2272,7 +2286,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "abs(<x>)", NULL, &expr) );
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, 1.0, 2.5) );
 
-      forwardPropCons(scip, cons, &cutoff);
+      forwardPropCons(scip, cons, FALSE, &cutoff);
       assert(!cutoff);
       reversePropCons(scip, cons, &cutoff);
       assert(!cutoff);
@@ -2294,7 +2308,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "exp(<x>)", NULL, &expr) );
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 2.0) );
 
-      forwardPropCons(scip, cons, &cutoff);
+      forwardPropCons(scip, cons, FALSE, &cutoff);
       assert(!cutoff);
       reversePropCons(scip, cons, &cutoff);
       assert(!cutoff);
@@ -2318,7 +2332,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "log(<x>)", NULL, &expr) );
       SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", expr, -1.0, 1.0) );
 
-      forwardPropCons(scip, cons, &cutoff);
+      forwardPropCons(scip, cons, FALSE, &cutoff);
       assert(!cutoff);
       reversePropCons(scip, cons, &cutoff);
       assert(!cutoff);
@@ -2357,7 +2371,7 @@ SCIP_RETCODE testPropagation(void)
       SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &zexpr, z) );
 
       /*
-       * create constraint -1 <= (-x^2 + log(y)) / z <= 2
+       * create constraint 0 <= (-x^2 + log(y)) / z <= 2
        */
 
       /* log(y) */
@@ -2386,10 +2400,10 @@ SCIP_RETCODE testPropagation(void)
       SCIPinfoMessage(scip, NULL, "\n");
 
       /* create constraint */
-      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", rootexpr, -1.0, 2.0) );
+      SCIP_CALL( SCIPcreateConsExprBasic(scip, &cons, "cons", rootexpr, 0.0, 2.0) );
 
       /* apply forward propagation */
-      forwardPropCons(scip, cons, &cutoff);
+      forwardPropCons(scip, cons, FALSE, &cutoff);
       assert(!cutoff);
       assert(CHECK_EXPRINTERVAL(scip, xexpr, -1, 1));
       assert(CHECK_EXPRINTERVAL(scip, yexpr, 2, 3));
@@ -2397,7 +2411,7 @@ SCIP_RETCODE testPropagation(void)
       assert(CHECK_EXPRINTERVAL(scip, logexpr, log(2), log(3)));
       assert(CHECK_EXPRINTERVAL(scip, prodexpr, 0, 1));
       assert(CHECK_EXPRINTERVAL(scip, sumexpr, log(2) - 1, log(3)));
-      assert(CHECK_EXPRINTERVAL(scip, rootexpr, log(2) - 1, log(3)));
+      assert(CHECK_EXPRINTERVAL(scip, rootexpr, 0, log(3)));
 
       /* apply reverse propagation */
       reversePropCons(scip, cons, &cutoff);
