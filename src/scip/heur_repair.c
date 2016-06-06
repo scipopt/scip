@@ -951,7 +951,7 @@ SCIP_DECL_HEUREXEC(heurExecRepair)
    SCIP_CALL(SCIPsetLongintParam(subscip, "limits/nodes", nstallnodes));*/
    SCIP_CALL(SCIPsetRealParam(subscip, "limits/time", timelimit));
    SCIP_CALL(SCIPsetRealParam(subscip, "limits/memory", memorylimit));
-   SCIP_CALL(SCIPsetLongintParam(subscip, "limits/nodes", 1));
+   /*SCIP_CALL(SCIPsetLongintParam(subscip, "limits/nodes", 1));*/
 
    /* forbid recursive call of heuristics and separators solving sub-SCIPs */
    SCIP_CALL(SCIPsetSubscipsOff(subscip, TRUE));
