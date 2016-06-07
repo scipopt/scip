@@ -33,14 +33,6 @@
 #define BRANCHRULE_MAXDEPTH        -1
 #define BRANCHRULE_MAXBOUNDDIST    1.0
 
-
-#define DEFAULT_REEVALAGE         0LL        /**< number of intermediate LPs solved to trigger reevaluation of strong branching
-                                              *   value for a variable that was already evaluated at the current node */
-#define DEFAULT_MAXPROPROUNDS       0        /**< maximum number of propagation rounds to be performed during multaggr
-                                              *   branching before solving the LP (-1: no limit, -2: parameter settings) */
-#define DEFAULT_PROBINGBOUNDS    TRUE        /**< should valid bounds be identified in a probing-like fashion during
-                                              *   lookahead branching (only with propagation)? */
-
 /*
  * Data structures
  */
@@ -50,15 +42,7 @@
 /** branching rule data */
 struct SCIP_BranchruleData
 {
-   SCIP_Longint          reevalage;          /**< number of intermediate LPs solved to trigger reevaluation of strong branching
-                                              *   value for a variable that was already evaluated at the current node */
-   SCIP_Bool             probingbounds;      /**< should valid bounds be identified in a probing-like fashion during strong
-                                              *   branching (only with propagation)? */
-   int                   lastcand;           /**< last evaluated candidate of last branching rule execution */
-   int                   maxproprounds;      /**< maximum number of propagation rounds to be performed during strong
-                                              *   branching before solving the LP (-1: no limit, -2: parameter settings) */
-   SCIP_Bool*            skipdown;           /**< should be branching on down child be skipped? */
-   SCIP_Bool*            skipup;             /**< should be branching on up child be skipped? */
+   SCIP_Bool somerandomfield;
 };
 
 
@@ -203,7 +187,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
    if( nfixvars != 0)
    {
       SCIP_CALL( SCIPstartProbing(scip) );
-      SCIPdebugMessage("PROBING MODE:\n");
+      SCIPdebugMessage("Start Probing Mode\n");
 
       for( i = 0; i < nfixvars; i++ )
       {
@@ -251,6 +235,8 @@ SCIP_RETCODE selectVarLookaheadBranching(
 
                      if (SCIPvarGetType(deepfixvars[j]) == SCIP_VARTYPE_INTEGER && !SCIPisFeasIntegral(scip, deepfixvarssol) )
                      {
+                        SCIPdebugMessage("Going to branch on variable <%s>\n", SCIPvarGetName(deepfixvars[j]));
+
                         /* NOTE CS: Start of the probe branching on x <= floor(x') and y <= floor(y') */
                         SCIP_CALL( executeBranchingOnUpperBound(scip, deepfixvars[j], deepfixvarssol, &deepdownobjval, &deepdowncutoff) );
 
@@ -366,6 +352,7 @@ SCIP_RETCODE selectVarLookaheadBranching(
          }
       }
 
+      SCIPdebugMessage("End Probing Mode\n");
       SCIP_CALL( SCIPendProbing(scip) );
 
       if( highestweightindex != -1 )
@@ -405,9 +392,6 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
    branchruledata = SCIPbranchruleGetData(branchrule);
    assert(branchruledata != NULL);
 
-   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipdown);
-   SCIPfreeMemoryArrayNull(scip, &branchruledata->skipup);
-
    SCIPfreeMemory(scip, &branchruledata);
    SCIPbranchruleSetData(branchrule, NULL);
 
@@ -419,13 +403,6 @@ SCIP_DECL_BRANCHFREE(branchFreeLookahead)
 static
 SCIP_DECL_BRANCHINIT(branchInitLookahead)
 {  /*lint --e{715}*/
-   SCIP_BRANCHRULEDATA* branchruledata;
-
-   branchruledata = SCIPbranchruleGetData(branchrule);
-   assert(branchruledata != NULL);
-
-   branchruledata->lastcand = 0;
-
    return SCIP_OKAY;
 }
 
@@ -434,14 +411,6 @@ SCIP_DECL_BRANCHINIT(branchInitLookahead)
 static
 SCIP_DECL_BRANCHEXIT(branchExitLookahead)
 {  /*lint --e{715}*/
-   SCIP_BRANCHRULEDATA* branchruledata;
-   SCIPstatistic(int j = 0);
-
-   /* initialize branching rule data */
-   branchruledata = SCIPbranchruleGetData(branchrule);
-   assert(branchruledata != NULL);
-   assert((branchruledata->skipdown != NULL) == (branchruledata->skipup != NULL));
-
    return SCIP_OKAY;
 }
 
@@ -451,91 +420,39 @@ static
 SCIP_DECL_BRANCHEXECLP(branchExeclpLookahead)
 {  /*lint --e{715}*/
 
-   SCIP_BRANCHRULEDATA* branchruledata;
-   SCIP_VAR** tmplpcands;
-   SCIP_VAR** lpcands;
-   SCIP_Real* tmplpcandssol;
-   SCIP_Real* tmplpcandsfrac;
-   SCIP_Real* lpcandsfrac;
-   SCIP_Real* lpcandssol;
-   SCIP_Real bestup;
-   SCIP_Real bestdown;
-   SCIP_Real bestscore;
-   SCIP_Real provedbound;
-   SCIP_Bool bestdownvalid;
-   SCIP_Bool bestupvalid;
-   SCIP_Longint oldreevalage;
-   int nlpcands;
-   int npriolpcands;
-   int bestcandpos;
+   SCIP_VAR* branchingvariable = NULL;
 
    assert(branchrule != NULL);
    assert(strcmp(SCIPbranchruleGetName(branchrule), BRANCHRULE_NAME) == 0);
    assert(scip != NULL);
    assert(result != NULL);
 
-   SCIPdebugMessage("Execlp method of lookahead branching\n");
+   /*SCIPdebugMessage("Execlp method of lookahead branching\n");*/
    *result = SCIP_DIDNOTRUN;
 
-   branchruledata = SCIPbranchruleGetData(branchrule);
-   assert(branchruledata != NULL);
+   SCIP_CALL( selectVarLookaheadBranching(scip, branchingvariable, result) );
 
-   SCIP_CALL( SCIPgetLongintParam(scip, "branching/fullstrong/reevalage", &oldreevalage) );
-   SCIP_CALL( SCIPsetLongintParam(scip, "branching/fullstrong/reevalage", branchruledata->reevalage) );
-
-   SCIP_CALL( SCIPgetLPBranchCands(scip, &tmplpcands, &tmplpcandssol, &tmplpcandsfrac, &nlpcands, &npriolpcands, NULL) );
-   assert(nlpcands > 0);
-   assert(npriolpcands > 0);
-
-   /* copy LP branching candidates and solution values, because they will be updated w.r.t. the strong branching LP
-    * solution
-    */
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcands, tmplpcands, nlpcands) );
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandssol, tmplpcandssol, nlpcands) );
-   SCIP_CALL( SCIPduplicateBufferArray(scip, &lpcandsfrac, tmplpcandsfrac, nlpcands) );
-
-   if( branchruledata->skipdown == NULL )
+   if( branchingvariable != NULL )
    {
-      int nvars = SCIPgetNVars(scip);
-
-      assert(branchruledata->skipup == NULL);
-
-      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipdown, nvars) );
-      SCIP_CALL( SCIPallocMemoryArray(scip, &branchruledata->skipup, nvars) );
-      BMSclearMemoryArray(branchruledata->skipdown, nvars);
-      BMSclearMemoryArray(branchruledata->skipup, nvars);
-   }
-
-   /* compute strong branching among the array of fractional variables in order to get the best one */
-   SCIP_CALL( SCIPselectVarStrongBranching(scip, lpcands, lpcandssol, lpcandsfrac, branchruledata->skipdown,
-         branchruledata->skipup, nlpcands, npriolpcands, nlpcands, &branchruledata->lastcand, allowaddcons,
-         branchruledata->maxproprounds, branchruledata->probingbounds, TRUE,
-         &bestcandpos, &bestdown, &bestup, &bestscore, &bestdownvalid, &bestupvalid, &provedbound, result) );
-
-   /**/
-
-   if( *result != SCIP_CUTOFF && *result != SCIP_REDUCEDDOM && *result != SCIP_CONSADDED )
-   {
-      SCIP_VAR* branchingvariable = NULL;
       SCIP_NODE* lbnode = NULL;
       SCIP_NODE* ubnode = NULL;
 
-      SCIP_CALL( selectVarLookaheadBranching(scip, branchingvariable, result) );
+      /* TODO CS: adjust prio and estimate */
+      SCIP_CALL( SCIPcreateChild(scip, &lbnode, 1, 0) );
+      SCIP_CALL( SCIPchgVarLbNode(scip, lbnode, branchingvariable, SCIPvarGetLPSol(branchingvariable)) );
 
-      if( branchingvariable != NULL )
-      {
-         SCIP_CALL( SCIPcreateChild(scip, &lbnode, 1, 0) );
-         SCIP_CALL( SCIPchgVarLbNode(scip, lbnode, branchingvariable, SCIPvarGetLPSol(branchingvariable)) );
+      /* TODO CS: adjust prio and estimate */
+      SCIP_CALL( SCIPcreateChild(scip, &ubnode, 1, 0) );
+      SCIP_CALL( SCIPchgVarUbNode(scip, ubnode, branchingvariable, SCIPvarGetLPSol(branchingvariable)) );
 
-         SCIP_CALL( SCIPcreateChild(scip, &ubnode, 1, 0) );
-         SCIP_CALL( SCIPchgVarUbNode(scip, ubnode, branchingvariable, SCIPvarGetLPSol(branchingvariable)) );
-
-         *result = SCIP_BRANCHED;
-      }
-
+      SCIPdebugMessage("Branched on variable <%s>\n", SCIPvarGetName(branchingvariable));
+      *result = SCIP_BRANCHED;
    }
-
-   SCIP_CALL( SCIPsetLongintParam(scip, "branching/fullstrong/reevalage", oldreevalage) );
+   else
+   {
+      SCIPdebugMessage("Could not find any variable to branch\n");
+      *result = SCIP_DIDNOTFIND;
+   }
 
    return SCIP_OKAY;
 }
@@ -554,9 +471,6 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
 
    /* create lookahead branching rule data */
    SCIP_CALL( SCIPallocMemory(scip, &branchruledata) );
-   branchruledata->lastcand = 0;
-   branchruledata->skipup = NULL;
-   branchruledata->skipdown = NULL;
    /* TODO: (optional) create branching rule specific data here */
 
    /* include branching rule */
@@ -573,18 +487,6 @@ SCIP_RETCODE SCIPincludeBranchruleLookahead(
    SCIP_CALL( SCIPsetBranchruleExecLp(scip, branchrule, branchExeclpLookahead) );
 
    /* add lookahead branching rule parameters */
-   SCIP_CALL( SCIPaddLongintParam(scip,
-         "branching/lookahead/reevalage",
-         "number of intermediate LPs solved to trigger reevaluation of strong branching value for a variable that was already evaluated at the current node",
-         &branchruledata->reevalage, TRUE, DEFAULT_REEVALAGE, 0LL, SCIP_LONGINT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddIntParam(scip,
-         "branching/lookahead/maxproprounds",
-         "maximum number of propagation rounds to be performed during lookahead branching before solving the LP (-1: no limit, -2: parameter settings)",
-         &branchruledata->maxproprounds, TRUE, DEFAULT_MAXPROPROUNDS, -2, INT_MAX, NULL, NULL) );
-   SCIP_CALL( SCIPaddBoolParam(scip,
-         "branching/lookahead/probingbounds",
-         "should valid bounds be identified in a probing-like fashion during lookahead branching (only with propagation)?",
-         &branchruledata->probingbounds, TRUE, DEFAULT_PROBINGBOUNDS, NULL, NULL) );
 
    return SCIP_OKAY;
 }
