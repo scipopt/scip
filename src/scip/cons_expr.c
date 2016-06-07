@@ -88,11 +88,19 @@
  * Data structures
  */
 
+/** eventdata for variable bound change events in constraints */
+typedef struct
+{
+   SCIP_CONS*            cons;               /**< constraint */
+   SCIP_CONSEXPR_EXPR*   varexpr;            /**< variable expression */
+} SCIP_VAREVENTDATA;
+
 /** constraint data for expr constraints */
 struct SCIP_ConsData
 {
    SCIP_CONSEXPR_EXPR**  varexprs;           /**< array containing all variable expressions */
    int                   nvarexprs;          /**< total number of variable expressions */
+   SCIP_VAREVENTDATA**   vareventdata;       /**< array containing eventdata for bound change of variables */
 
    SCIP_CONSEXPR_EXPR*   expr;               /**< expression that represents this constraint (must evaluate to 0 (FALSE) or 1 (TRUE)) */
    SCIP_Real             lhs;                /**< left-hand side */
@@ -115,6 +123,8 @@ struct SCIP_ConshdlrData
    SCIP_CONSEXPR_EXPRHDLR*  exprprodhdlr;    /**< product expression handler */
 
    unsigned int             lastsoltag;      /**< last solution tag used to evaluate current solution */
+
+   SCIP_EVENTHDLR*          eventhdlr;       /**< handler for variable bound change events */
 };
 
 /** data passed on during expression evaluation in a point */
@@ -1280,6 +1290,52 @@ SCIP_RETCODE computeViolation(
    return SCIP_OKAY;
 }
 
+/** catch variable events */
+static
+SCIP_RETCODE catchVarEvents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_CONS*            cons                /**< constraint for which to catch bound change events */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(eventhdlr != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return SCIP_OKAY;
+}
+
+/** drop variable events */
+static
+SCIP_RETCODE dropVarEvents(
+   SCIP*                 scip,               /**< SCIP data structure */
+   SCIP_EVENTHDLR*       eventhdlr,          /**< event handler */
+   SCIP_CONS*            cons                /**< constraint for which to drop bound change events */
+   )
+{
+   SCIP_CONSDATA* consdata;
+
+   assert(eventhdlr != NULL);
+   assert(cons != NULL);
+
+   consdata = SCIPconsGetData(cons);
+   assert(consdata != NULL);
+
+   return SCIP_OKAY;
+}
+
+/** processes variable fixing or bound change event */
+static
+SCIP_DECL_EVENTEXEC(processVarEvent)
+{
+   return SCIP_OKAY;
+}
+
+
 /** get key of hash element */
 static
 SCIP_DECL_HASHGETKEY(hashCommonSubexprGetKey)
@@ -2292,6 +2348,12 @@ SCIP_DECL_CONSDELETE(consDeleteExpr)
    assert((*consdata)->expr != NULL);
 
    SCIP_CALL( SCIPreleaseConsExprExpr(scip, &(*consdata)->expr) );
+
+   /* free variable expression array */
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->varexprs, (*consdata)->nvarexprs);
+
+   /* free variable event data array */
+   SCIPfreeBlockMemoryArrayNull(scip, &(*consdata)->vareventdata, (*consdata)->nvarexprs);
 
    SCIPfreeBlockMemory(scip, consdata);
 
@@ -4424,6 +4486,12 @@ SCIP_RETCODE SCIPincludeConshdlrExpr(
    /* include handler for absolute expression */
    SCIP_CALL( SCIPincludeConsExprExprHdlrAbs(scip, conshdlr) );
    assert(conshdlrdata->nexprhdlrs > 0 && strcmp(conshdlrdata->exprhdlrs[conshdlrdata->nexprhdlrs-1]->name, "abs") == 0);
+
+   /* include handler for bound change events */
+   conshdlrdata->eventhdlr = NULL;
+   SCIP_CALL( SCIPincludeEventhdlrBasic(scip, &(conshdlrdata->eventhdlr),CONSHDLR_NAME"_boundchange",
+         "signals a bound change to an expression constraint", processVarEvent, NULL) );
+   assert(conshdlrdata->eventhdlr != NULL);
 
    return SCIP_OKAY;
 }
