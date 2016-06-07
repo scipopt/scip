@@ -1415,21 +1415,18 @@ SCIP_RETCODE readBounds(
          /* remember variable type */
          oldvartype = SCIPvarGetType(var);
 
-         /* if a bound of a binary variable is given, the variable is converted into an integer variable
-          * with default bounds 0 <= x <= infinity
+         /* If a bound of a binary variable is given, the variable is converted into an integer variable
+          * with default bounds 0 <= x <= infinity before applying the bound. Note that integer variables
+          * are by default assumed to be binary, but an explicit lower bound of 0 turns them into integer variables.
+          * Only if the upper bound is explicitly set to 1, we leave the variable as a binary one.
           */
-         if( oldvartype == SCIP_VARTYPE_BINARY )
+         if( oldvartype == SCIP_VARTYPE_BINARY && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisFeasEQ(scip, val, 1.0)) )
          {
-            if( (mpsinputField1(mpsi)[1] == 'I') /* CPLEX extension (Integer Bound) */
-               || (!(mpsinputField1(mpsi)[0] == 'L' && SCIPisFeasEQ(scip, val, 0.0))
-                  && !(mpsinputField1(mpsi)[0] == 'U' && SCIPisFeasEQ(scip, val, 1.0))) )
-            {
-               SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
-               assert(!infeasible);
+            SCIP_CALL( SCIPchgVarType(scip, var, SCIP_VARTYPE_INTEGER, &infeasible) );
+            assert(!infeasible);
 
-               oldvartype =  SCIP_VARTYPE_INTEGER;
-               SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
-            }
+            oldvartype =  SCIP_VARTYPE_INTEGER;
+            SCIP_CALL( SCIPchgVarUb(scip, var, SCIPinfinity(scip)) );
          }
 
          /* switch variable type to continuous before applying the bound, this is necessary for stupid non-integral
