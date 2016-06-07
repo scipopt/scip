@@ -91,6 +91,9 @@
 /** constraint data for expr constraints */
 struct SCIP_ConsData
 {
+   SCIP_CONSEXPR_EXPR**  varexprs;           /**< array containing all variable expressions */
+   int                   nvarexprs;          /**< total number of variable expressions */
+
    SCIP_CONSEXPR_EXPR*   expr;               /**< expression that represents this constraint (must evaluate to 0 (FALSE) or 1 (TRUE)) */
    SCIP_Real             lhs;                /**< left-hand side */
    SCIP_Real             rhs;                /**< right-hand side */
@@ -137,6 +140,14 @@ typedef struct
    int                     nlockspos;        /**< number of positive locks */
    int                     nlocksneg;        /**< number of negative locks */
 } EXPRLOCK_DATA;
+
+/** data passed on during collecting all expression variables */
+typedef struct
+{
+   SCIP_CONSEXPR_EXPR**  varexprs;           /**< array containing all variable expressions */
+   int                   nvarexprs;          /**< total number of variable expressions */
+   SCIP_HASHMAP*         varexprsmap;        /**< map to decide which variable expression have been already seen */
+} GETVARS_DATA;
 
 /** data passed on during copying expressions */
 typedef struct
@@ -968,6 +979,32 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(commonExprVisitingExpr)
    return SCIP_OKAY;
 }
 
+/** expression walk callback to collect all variable expressions */
+static
+SCIP_DECL_CONSEXPREXPRWALK_VISIT(getVarExprsLeaveExpr)
+{
+   GETVARS_DATA* getvarsdata;
+
+   assert(expr != NULL);
+   assert(result != NULL);
+   assert(stage == SCIP_CONSEXPREXPRWALK_LEAVEEXPR);
+
+   getvarsdata = (GETVARS_DATA*) data;
+   assert(getvarsdata != NULL);
+
+   /* @todo use faster check */
+   /* add variable expression if not seen so far */
+   if( strcmp(expr->exprhdlr->name, "var") == 0 && !SCIPhashmapExists(getvarsdata->varexprsmap, (void*) expr) )
+   {
+      assert(SCIPgetNVars(scip) >= getvarsdata->nvarexprs + 1);
+
+      getvarsdata->varexprs[ getvarsdata->nvarexprs ] = expr;
+      ++(getvarsdata->nvarexprs);
+      SCIP_CALL( SCIPhashmapInsert(getvarsdata->varexprsmap, (void*) expr, NULL) );
+   }
+
+   return SCIP_OKAY;
+}
 
 /**@} */  /* end of walking methods */
 
@@ -1016,6 +1053,44 @@ SCIP_RETCODE forwardPropCons(
       SCIPdebugMessage(" -> found cutoff during forward propagation of constraint %s\n", SCIPconsGetName(cons));
    }
 #endif
+
+   return SCIP_OKAY;
+}
+
+/* export this function here, so it can be used by unittests but is not really part of the API */
+/** stores all variable expressions contained in a given expression */
+SCIP_RETCODE getVarExprs(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions; array needs to be large enough */
+   int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
+   );
+SCIP_RETCODE getVarExprs(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions; array needs to be large enough */
+   int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
+   )
+{
+   GETVARS_DATA getvarsdata;
+
+   assert(expr != NULL);
+   assert(varexprs != NULL);
+   assert(nvarexprs != NULL);
+
+   getvarsdata.nvarexprs = 0;
+   getvarsdata.varexprs = varexprs;
+
+   /* use a hash map to dicide (fast) whether we have seen a variable expression already */
+   SCIP_CALL( SCIPhashmapCreate(&getvarsdata.varexprsmap, SCIPblkmem(scip), SCIPcalcHashtableSize(SCIPgetNVars(scip))) );
+
+   /* collect all variable expressions */
+   SCIP_CALL( SCIPwalkConsExprExprDF(scip, expr, NULL, NULL, NULL, getVarExprsLeaveExpr, (void*)&getvarsdata) );
+   *nvarexprs = getvarsdata.nvarexprs;
+
+   /* @todo sort variable expressions here? */
+
+   SCIPhashmapFree(&getvarsdata.varexprsmap);
 
    return SCIP_OKAY;
 }

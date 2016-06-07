@@ -63,6 +63,14 @@ SCIP_RETCODE reversePropConss(
    SCIP_Bool*              cutoff            /**< buffer to store whether the current node can be cutoff */
    );
 
+/* declaration as in cons_expr.c */
+SCIP_RETCODE getVarExprs(
+   SCIP*                   scip,             /**< SCIP data structure */
+   SCIP_CONSEXPR_EXPR*     expr,             /**< expression */
+   SCIP_CONSEXPR_EXPR**    varexprs,         /**< array to store all variable expressions; array needs to be large enough */
+   int*                    nvarexprs         /**< buffer to store the total number of variable expressions */
+   );
+
 /** macro to check the return of tests
  *
  *  @note assumes the existence of SCIP_RETCODE retcode
@@ -2644,6 +2652,95 @@ SCIP_RETCODE testPropagation(void)
    return SCIP_OKAY;
 }
 
+/** test collecting of variable expression */
+static
+SCIP_RETCODE testGetVarExprs(void)
+{
+   SCIP* scip;
+   SCIP_CONSHDLR* conshdlr;
+   SCIP_VAR* w;
+   SCIP_VAR* x;
+   SCIP_VAR* y;
+   SCIP_VAR* z;
+   SCIP_CONSEXPR_EXPR* expr;
+   SCIP_CONSEXPR_EXPR* wexpr;
+   SCIP_CONSEXPR_EXPR* sumexpr;
+   SCIP_CONSEXPR_EXPR** varexprs;
+   int nvarexprs;
+   int i;
+
+   SCIP_CALL( SCIPcreate(&scip) );
+
+   /* include cons_expr: this adds the operator handlers */
+   SCIP_CALL( SCIPincludeConshdlrExpr(scip) );
+
+   /* currently expr constraints cannot be created */
+   /* get expr conshdlr */
+   conshdlr = SCIPfindConshdlr(scip, "expr");
+   assert(conshdlr != NULL);
+
+   /* create problem */
+   SCIP_CALL( SCIPcreateProbBasic(scip, "test_getvars") );
+
+   SCIP_CALL( SCIPcreateVarBasic(scip, &w, "w", -3.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &x, "x", -2.0, 2.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &y, "y", -3.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPcreateVarBasic(scip, &z, "z", -3.0, 1.0, 0.0, SCIP_VARTYPE_CONTINUOUS) );
+   SCIP_CALL( SCIPaddVar(scip, w) );
+   SCIP_CALL( SCIPaddVar(scip, x) );
+   SCIP_CALL( SCIPaddVar(scip, y) );
+   SCIP_CALL( SCIPaddVar(scip, z) );
+
+   SCIP_CALL( SCIPallocBufferArray(scip, &varexprs, SCIPgetNVars(scip)) );
+
+   /*
+    * test expression not containing all variables
+    */
+   SCIP_CALL( SCIPparseConsExprExpr(scip, conshdlr, "1.1*<x>*<y>/<z> + 3.2*<x>^2*<y>^(-5)*<z> + 0.5*<z>^3", NULL, &expr) );
+
+   SCIP_CALL( getVarExprs(scip, expr, varexprs, &nvarexprs) );
+   assert(nvarexprs == 3);
+
+   for( i = 0; i < nvarexprs; ++i )
+   {
+      assert(varexprs[i] != NULL);
+      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(varexprs[i])), "var") == 0);
+   }
+
+   /*
+    * test expression containing all variables
+    */
+   SCIP_CALL( SCIPcreateConsExprExprSum(scip, conshdlr, &sumexpr, 0, NULL, NULL, 0) );
+   SCIP_CALL( SCIPcreateConsExprExprVar(scip, conshdlr, &wexpr, w) );
+   SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, sumexpr, wexpr, 1.0) );
+   SCIP_CALL( SCIPappendConsExprExprSumExpr(scip, sumexpr, expr, 1.0) );
+
+   SCIP_CALL( getVarExprs(scip, sumexpr, varexprs, &nvarexprs) );
+   assert(nvarexprs == 4);
+   assert(strcmp(SCIPvarGetName(SCIPgetConsExprExprVarVar(varexprs[0])), "w") == 0);
+
+   for( i = 0; i < nvarexprs; ++i )
+   {
+      assert(varexprs[i] != NULL);
+      assert(strcmp(SCIPgetConsExprExprHdlrName(SCIPgetConsExprExprHdlr(varexprs[i])), "var") == 0);
+   }
+
+   SCIPfreeBufferArray(scip, &varexprs);
+
+   /* free allocated memory */
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &sumexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &wexpr) );
+   SCIP_CALL( SCIPreleaseConsExprExpr(scip, &expr) );
+   SCIP_CALL( SCIPreleaseVar(scip, &z) );
+   SCIP_CALL( SCIPreleaseVar(scip, &y) );
+   SCIP_CALL( SCIPreleaseVar(scip, &x) );
+   SCIP_CALL( SCIPreleaseVar(scip, &w) );
+   SCIP_CALL( SCIPfree(&scip) );
+
+   BMScheckEmptyMemory();
+
+   return SCIP_OKAY;
+}
 
 /** main function */
 int
@@ -2687,6 +2784,8 @@ main(
    CHECK_TEST( testCommonSubexpr() );
 
    CHECK_TEST( testPropagation() );
+
+   CHECK_TEST( testGetVarExprs() );
 
    /* for automatic testing output the following */
    printf("SCIP Status        : all tests passed\n");
