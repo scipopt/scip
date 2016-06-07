@@ -2108,6 +2108,10 @@ SCIP_RETCODE testCommonSubexpr(void)
       SCIP_CALL( replaceCommonSubexpressions(scip, conss, 1) );
       assert(SCIPgetExprConsExpr(scip, conss[0])->children[0] == SCIPgetExprConsExpr(scip, conss[0])->children[1]);
 
+      /* this should not change anything */
+      SCIP_CALL( replaceCommonSubexpressions(scip, conss, 1) );
+      assert(SCIPgetExprConsExpr(scip, conss[0])->children[0] == SCIPgetExprConsExpr(scip, conss[0])->children[1]);
+
       SCIP_CALL( SCIPreleaseCons(scip, &conss[0]) );
    }
 
