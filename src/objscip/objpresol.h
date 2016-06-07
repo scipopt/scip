@@ -61,7 +61,7 @@ public:
    const int scip_maxrounds_;
 
    /**< timing mask of the presolver */
-   const unsigned int scip_timing_;
+   const SCIP_PRESOLTIMING scip_timing_;
 
    /** default constructor */
    ObjPresol(
@@ -70,7 +70,7 @@ public:
       const char*        desc,               /**< description of presolver */
       int                priority,           /**< priority of the presolver */
       int                maxrounds,          /**< maximal number of presolving rounds the presolver participates in (-1: no limit) */
-      SCIP_Bool          timing              /**< timing mask of the presolver */
+      SCIP_PRESOLTIMING  timing              /**< timing mask of the presolver */
       )
       : scip_(scip),
         scip_name_(0),
