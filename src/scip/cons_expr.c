@@ -280,6 +280,13 @@ SCIP_RETCODE findEqualExpr(
          assert(SCIPcompareExprs(expr, *newexpr) == 0);
          break;
       }
+      else
+      {
+         /* can not replace expr since it is already contained in the hashtablelist */
+         assert(expr == *newexpr);
+         *newexpr = NULL;
+         break;
+      }
    }
    while( TRUE );
 
