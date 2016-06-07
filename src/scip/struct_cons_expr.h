@@ -74,6 +74,7 @@ struct SCIP_ConsExpr_Expr
    SCIP_INTERVAL           interval;      /**< interval from the last interval evaluation */
 
    /* propagation */
+   SCIP_Bool               inqueue;       /**< flag to store whether an expression is in the queue of reverse propagation */
    SCIP_Bool               hastightened;  /**< flag to store whether expression has been tightened during reverse propagation */
 
    /* expression walker data */

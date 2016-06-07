@@ -163,6 +163,14 @@ struct SCIP_ConsExpr_PrintDotData
    SCIP_CONSEXPR_PRINTDOT_WHAT whattoprint;  /**< flags that indicate what to print for each expression */
 };
 
+/** data for storing elements of a queue */
+typedef struct Queueelem QUEUEELEM;
+struct Queueelem
+{
+   SCIP_CONSEXPR_EXPR* expr;
+   QUEUEELEM*          next;
+};
+
 /*
  * Local methods
  */
@@ -831,69 +839,6 @@ SCIP_DECL_CONSEXPREXPRWALK_VISIT(intevalExprLeaveExpr)
    return SCIP_OKAY;
 }
 
-/** expression walk callback when applying reverse propagation, called before child is visited */
-static
-SCIP_DECL_CONSEXPREXPRWALK_VISIT(reversepropExpr)
-{
-   SCIP_CONSEXPR_EXPR* child;
-   SCIP_Bool* cutoff;
-   int nreds;
-
-   assert(expr != NULL);
-
-   cutoff = (SCIP_Bool*) data;
-   assert(cutoff != NULL);
-
-   nreds = 0;
-   *result = SCIP_CONSEXPREXPRWALK_CONTINUE;
-
-   switch( stage )
-   {
-   case SCIP_CONSEXPREXPRWALK_ENTEREXPR:
-      assert(expr->walkcurrentchild == 0);
-
-      /* abort if expression handler did not implement the reverse propagation callback */
-      if( expr->exprhdlr->reverseprop == NULL )
-      {
-         *result = SCIP_CONSEXPREXPRWALK_ABORT;
-         return SCIP_OKAY;
-      }
-
-      /* skip expressions that do not have children */
-      if( expr->nchildren == 0 )
-         *result = SCIP_CONSEXPREXPRWALK_SKIP;
-
-      /* call reverse propagation callback */
-      SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, cutoff, &nreds) );
-      assert(nreds >= 0);
-
-      /* stop propagation if we could find a cutoff */
-      if( *cutoff )
-      {
-         *result = SCIP_CONSEXPREXPRWALK_ABORT;
-         return SCIP_OKAY;
-      }
-
-      break;
-
-   case SCIP_CONSEXPREXPRWALK_VISITINGCHILD:
-      child = expr->children[expr->walkcurrentchild];
-      assert(child != NULL);
-
-      /* skip expressions that do not have children or have not been tighted */
-      if( child->nchildren == 0 || !child->hastightened )
-         *result = SCIP_CONSEXPREXPRWALK_SKIP;
-
-      break;
-
-   default:
-      /* unknown stage */
-      SCIPABORT();
-   }
-
-   return SCIP_OKAY;
-}
-
 static
 SCIP_DECL_CONSEXPREXPRWALK_VISIT(lockVar)
 {
@@ -1076,55 +1021,143 @@ SCIP_RETCODE forwardPropCons(
 }
 
 /* export this function here, so it can be used by unittests but is not really part of the API */
-/** propagates bounds for each sub-expression in the constraint by using root expression bounds; this might lead to a
- *  cutoff because of an empty expression interval;
+/** propagates bounds for each sub-expression of a given set of constraints by starting from the root expressions; the
+ *  expression will be traversed in breadth first search by using a queue
  *
  *  @note calling this function requires feasible bounds for each sub-expression; this can be done by calling
  *  forwardPropCons() before calling this function
  */
-SCIP_RETCODE reversePropCons(
+SCIP_RETCODE reversePropConss(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONS*              cons,             /**< constraint to propagate */
+   SCIP_CONS**             conss,            /**< constraints to propagate */
+   int                     nconss,           /**< total number of constraints to propagate */
    SCIP_Bool*              cutoff            /**< buffer to store whether the current node can be cutoff */
    );
-SCIP_RETCODE reversePropCons(
+SCIP_RETCODE reversePropConss(
    SCIP*                   scip,             /**< SCIP data structure */
-   SCIP_CONS*              cons,             /**< constraint to propagate */
+   SCIP_CONS**             conss,            /**< constraints to propagate */
+   int                     nconss,           /**< total number of constraints to propagate */
    SCIP_Bool*              cutoff            /**< buffer to store whether the current node can be cutoff */
    )
 {
    SCIP_CONSDATA* consdata;
+   QUEUEELEM* first;
+   QUEUEELEM* last;
+   QUEUEELEM* tuple;
+   int i;
 
    assert(scip != NULL);
-   assert(cons != NULL);
+   assert(conss != NULL);
+   assert(nconss >= 0);
    assert(cutoff != NULL);
 
-   consdata = SCIPconsGetData(cons);
-   assert(consdata != NULL);
-
    *cutoff = FALSE;
+   first = NULL;
+   last = NULL;
 
-   /* do not run if expression did not change */
-   if( !consdata->expr->hastightened )
-   {
-      SCIPdebugMessage("skip reverse propagation for constraint %s because the expression bounds did not change\n",
-         SCIPconsGetName(cons));
+   if( nconss == 0 )
       return SCIP_OKAY;
-   }
 
-   /* call reverse propagation callbacks */
-   SCIP_CALL( SCIPwalkConsExprExprDF(scip, consdata->expr, reversepropExpr, reversepropExpr, NULL, NULL, cutoff) );
-
-   /* @todo iterate through all variable expressions and try to tighten the bounds; alternatively we can tighten the
-    * bounds when calling SCIPtightenConsExprExprInterval for a child during reverse propagation
-    */
-
-#ifdef SCIP_DEBUG
-   if( *cutoff )
+   /* create tuples for root expressions */
+   for( i = 0; i < nconss; ++i )
    {
-      SCIPdebugMessage(" -> found cutoff during reverse propagation of constraint %s\n", SCIPconsGetName(cons));
+      assert(conss[i] != NULL);
+      consdata = SCIPconsGetData(conss[i]);
+      assert(consdata != NULL);
+
+      /* skip expression that could not have been tightened or not implement the reverseprop callback */
+      if( !consdata->expr->hastightened || consdata->expr->exprhdlr->reverseprop == NULL )
+         continue;
+
+      /* add expressions which are not in the queue so far */
+      if( !consdata->expr->inqueue )
+      {
+         SCIP_CALL( SCIPallocBlockMemory(scip, &tuple) );
+         tuple->expr = consdata->expr;
+         tuple->next = NULL;
+
+         /* mark that the expression is in the queue */
+         consdata->expr->inqueue = TRUE;
+
+         if( first == NULL )
+         {
+            assert(last == NULL);
+            first = tuple;
+            last = tuple;
+         }
+         else
+         {
+            assert(last != NULL);
+            assert(last->next == NULL);
+            last->next = tuple;
+            last = tuple;
+         }
+      }
    }
-#endif
+   assert((first != NULL) == (last != NULL));
+
+   /* main loop */
+   while( first != NULL )
+   {
+      SCIP_CONSEXPR_EXPR* expr;
+      int nreds;
+
+      expr = first->expr;
+      assert(expr != NULL);
+      assert(expr->exprhdlr->reverseprop != NULL);
+
+      /* stop propagating if we have found a cutoff; do not leave the loop until all elements have been released */
+      if( !(*cutoff) )
+      {
+         nreds = 0;
+
+         /* call reverse propagation callback */
+         SCIP_CALL( (*expr->exprhdlr->reverseprop)(scip, expr, cutoff, &nreds) );
+         assert(nreds >= 0);
+
+         /* add tightened children with at least one children to the queue */
+         for( i = 0; i < expr->nchildren; ++i )
+         {
+            SCIP_CONSEXPR_EXPR* child;
+
+            child = expr->children[i];
+            assert(child != NULL);
+
+            if( child->hastightened && child->nchildren > 0 && child->exprhdlr->reverseprop != NULL )
+            {
+               if( !child->inqueue )
+               {
+                  SCIP_CALL( SCIPallocBlockMemory(scip, &tuple) );
+                  tuple->expr = child;
+                  tuple->next = NULL;
+
+                  assert(last != NULL);
+                  last->next = tuple;
+                  last = tuple;
+
+                  /* mark that the child is in the queue */
+                  child->inqueue = TRUE;
+               }
+               else
+               {
+                  /* @todo put child to the end of the queue */
+               }
+            }
+         }
+      }
+
+      /* remove first element in the queue */
+      tuple = first->next;
+      SCIPfreeBlockMemory(scip, &first);
+      first = tuple;
+
+      /* mark that the expression is not in the queue anymore */
+      expr->inqueue = FALSE;
+
+      if( first == NULL )
+         last = NULL;
+   }
+   assert(first == NULL && last == NULL);
 
    return SCIP_OKAY;
 }
