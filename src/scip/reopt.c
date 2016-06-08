@@ -410,7 +410,7 @@ SCIP_Real reoptSimilarity(
          int probidx;
 
          probidx = SCIPvarGetIndex(origvar);
-         assert(0 <= probidx && probidx <= nvars);
+         assert(0 <= probidx && probidx < reopt->nobjvars);
 
          c1 = reopt->objs[obj1_id][probidx];
          c2 = reopt->objs[obj2_id][probidx];
@@ -4511,8 +4511,19 @@ SCIP_RETCODE reoptSaveNewObj(
    /* check memory */
    SCIP_CALL( ensureRunSize(reopt, set, reopt->run, blkmem) );
 
-   /* get memory */
-   SCIP_ALLOC( BMSallocClearMemoryArray(&reopt->objs[reopt->run-1], norigvars) ); /*lint !e866*/
+   /* get memory and check whether we have to resize all previous objectives */
+   if( reopt->nobjvars < norigvars )
+   {
+      int i;
+      for( i = 0; i < reopt->run-1; i++ )
+      {
+         SCIP_ALLOC( BMSreallocMemoryArray(&reopt->objs[i], norigvars) );
+         for( v = reopt->nobjvars-1; v < norigvars; v++ )
+            reopt->objs[i][v] = 0.0;
+      }
+      reopt->nobjvars = norigvars;
+   }
+   SCIP_ALLOC( BMSallocClearMemoryArray(&reopt->objs[reopt->run-1], reopt->nobjvars) ); /*lint !e866*/
 
    /* save coefficients */
    for( v = 0; v < norigvars; v++ )
@@ -4520,7 +4531,23 @@ SCIP_RETCODE reoptSaveNewObj(
       assert(SCIPvarIsOriginal(origvars[v]));
 
       probidx = SCIPvarGetIndex(origvars[v]);
-      assert(0 <= probidx && probidx <= norigvars);
+
+      /* it can happen that the index is greater than the number of problem varibales,
+       * i.e., not all created variables were added
+       */
+      if( probidx >= reopt->nobjvars )
+      {
+         int i;
+         int j;
+         for( i = 0; i < reopt->run; i++ )
+         {
+            SCIP_ALLOC( BMSreallocMemoryArray(&reopt->objs[i], probidx+1) );
+            for( j = reopt->nobjvars; j < probidx+1; j++ )
+               reopt->objs[i][j] = 0.0;
+         }
+         reopt->nobjvars = probidx+1;
+      }
+      assert(0 <= probidx && probidx < reopt->nobjvars);
 
       reopt->objs[reopt->run-1][probidx] = SCIPvarGetObj(origvars[v]);
 
@@ -4900,6 +4927,7 @@ SCIP_RETCODE SCIPreoptCreate(
    (*reopt)->ntotallocrestarts = 0;
    (*reopt)->firstrestart = 0;
    (*reopt)->lastrestart = 0;
+   (*reopt)->nobjvars = 0;
    (*reopt)->objhaschanged = FALSE;
    (*reopt)->consadded = FALSE;
    (*reopt)->addedconss = NULL;

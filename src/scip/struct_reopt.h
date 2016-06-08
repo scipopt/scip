@@ -133,6 +133,7 @@ struct SCIP_Reopt
    SCIP_Real             simtofirstobj;           /**< similarity to the first objective function */
    SCIP_Longint          lastbranched;            /**< number of the last branched node */
    SCIP_Longint          lastseennode;            /**< node number of the last caught event */
+   int                   nobjvars;                /**< number of variables in the objective function */
    int                   addedconsssize;          /**< size of addedconss array */
    int                   naddedconss;             /**< number of constraints added */
    SCIP_Bool             objhaschanged;           /**< TRUE iff the objective fucntion has changd */
